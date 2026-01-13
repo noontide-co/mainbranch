@@ -13,16 +13,21 @@ This is the full toolkit for Main Branch. Members clone this locally to access s
 ```
 .claude/skills/     → Skills Claude can invoke
 templates/
-  core/             → Business OS scaffold (copy to your repo)
   modules/          → Optional add-ons (marketing, clients, etc.)
+```
+
+**Note:** `templates/core/` (Business OS scaffold) is now in the free plugin. Install via:
+```bash
+claude /plugin install main-branch
 ```
 
 ## How Members Use This
 
-1. Clone this repo locally
-2. Copy `templates/core/` to start a new project
-3. Add modules from `templates/modules/` as needed
-4. Skills become available in Claude Code
+1. Install free plugin: `claude /plugin install main-branch`
+2. Clone this repo locally for advanced skills
+3. Copy `templates/core/` from free plugin to start a new project
+4. Add modules from `templates/modules/` as needed
+5. Skills from both repos become available in Claude Code
 
 ## Skills Available
 
