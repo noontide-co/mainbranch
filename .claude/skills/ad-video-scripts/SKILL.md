@@ -9,7 +9,16 @@ Creates diverse video ad scripts using a systematic 6-step process.
 
 ## Context Required
 
-Project must have: offer doc, audience doc, proof doc, angles doc. Look in docs or marketing folder. If missing, ask user.
+Business repo must have these files in `context/`:
+
+| File | What It Contains |
+|------|------------------|
+| `context/offer.md` | What you sell, price, mechanism, benefits |
+| `context/audience.md` | Who buys, their pains, desires |
+| `context/proof/testimonials.md` | Testimonials with names and outcomes |
+| `context/angles/*.md` | Different messaging entry points |
+
+If context files are missing, ask user to create them first.
 
 ## 6-Step Process
 
@@ -40,7 +49,9 @@ Simplify to ~5th grade reading level:
 - Simple words: "use" not "utilize"
 
 ### Step 6: Save Output
-Save to `campaigns/outputs/{batch#}_VID_{angle}_{date}.md`
+Save to business repo: `campaigns/{date}-{batch-name}/{batch#}_VID_{angle}.md`
+
+Example: `campaigns/2026-01-15-january-launch/001_VID_transformation.md`
 
 ## Templates & Hooks
 

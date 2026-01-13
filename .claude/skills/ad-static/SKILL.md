@@ -9,13 +9,16 @@ Create static/image ads with copy (multiple styles) + AI image prompts.
 
 ## Context Required
 
-Before creating ads, the project must have:
-- **Offer doc**: What you sell, price, benefits
-- **Audience doc**: Who buys, their pains, desires
-- **Proof doc**: Testimonials with names and specifics
-- **Angles doc**: Different entry points/hooks
+Before creating ads, the business repo must have these files in `context/`:
 
-Look for these in the project's docs or marketing folder. If missing, ask user to provide.
+| File | What It Contains |
+|------|------------------|
+| `context/offer.md` | What you sell, price, mechanism, benefits |
+| `context/audience.md` | Who buys, their pains, desires, psychographics |
+| `context/proof/testimonials.md` | Testimonials with names and specific outcomes |
+| `context/angles/*.md` | Different messaging entry points/hooks |
+
+If context files are missing, ask user to create them first. Skills cannot generate good ads without solid context.
 
 ## Terminology
 
@@ -89,7 +92,9 @@ Campaign Batch 001 — [Campaign Name]
 
 ## Output Format
 
-Save to `campaigns/outputs/{batch#}_IMG_{campaign-name}_{date}.md`
+Save to business repo: `campaigns/{date}-{batch-name}/{batch#}_IMG_{campaign-name}.md`
+
+Example: `campaigns/2026-01-15-january-launch/001_IMG_overwhelm-relief.md`
 
 See [references/output-template.md](references/output-template.md) for full template.
 

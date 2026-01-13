@@ -142,7 +142,9 @@ For each P1/P2 issue, provide:
 
 ## Output Location
 
-Save review reports to: `artifacts/reviews/{date}-{campaign-name}-review.md`
+Save review reports to business repo: `campaigns/{batch-folder}/review-{date}.md`
+
+Example: `campaigns/2026-01-15-january-launch/review-2026-01-16.md`
 
 ## Quick Review (Single Lens)
 
@@ -154,10 +156,16 @@ If you only need one lens (e.g., "just check FTC compliance"):
 
 ## Context Files
 
-The skill may reference:
-- `context/compliance/` — Niche-specific rules beyond standard lenses
-- `context/proof/` — Available testimonials for substantiation check
-- `context/language-bank.md` — Customer phrases for voice check
+The skill references files in both the engine and business repo:
+
+**From engine (main-branch-premium):**
+- `.claude/lenses/` — The 6 review lenses
+- `.claude/context/compliance/` — Shared compliance frameworks
+
+**From business repo:**
+- `context/proof/testimonials.md` — Available testimonials for substantiation check
+- `compliance/typicality/` — Outcome data for claim validation
+- `context/offer.md` — To verify claims match actual offering
 
 ## Example Review Flow
 

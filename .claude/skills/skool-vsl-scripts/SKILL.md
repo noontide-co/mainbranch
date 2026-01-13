@@ -9,15 +9,19 @@ Creates complete Video Sales Letter scripts using an 18-section conversion frame
 
 ## Context Required
 
-Before writing scripts, gather:
-- **Offer**: Community/course name, price, what's included
-- **Transformation**: What result members achieve
-- **Your story**: How you discovered the solution (for epiphany bridge)
-- **Social proof**: Member success stories with specific results
-- **Objections**: Common doubts prospects have
-- **Guarantee**: Money-back period or risk reversal offer
+Business repo must have these files in `context/`:
 
-If context is missing, ask before proceeding.
+| File | What It Contains |
+|------|------------------|
+| `context/offer.md` | Community/course name, price, what's included, guarantee |
+| `context/audience.md` | Transformation, objections, doubts |
+| `context/proof/testimonials.md` | Member success stories with specific results |
+
+**Also helpful:**
+- Your personal story (for epiphany bridge) — can be in offer.md or separate file
+- `context/angles/*.md` — Different ways to frame the transformation
+
+If context files are missing, ask user to create them first.
 
 ## VSL Structure Overview
 
