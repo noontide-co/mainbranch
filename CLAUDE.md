@@ -1,127 +1,199 @@
 # Main Branch Premium
 
-Private skills library and business OS scaffold for Main Branch members.
+AI-native business operating system. Your context is the fuel, Claude is the engine.
 
-## What This Repo Is
+---
 
-This is the full toolkit for Main Branch. Members clone this locally to access skills and templates.
+## Philosophy: Active Context Management
 
-**This is not a project repo.** This is a tools/templates repo that members use to build their own project repos.
+**You learn your business by building your context.**
 
-## Folder Structure
+This is not passive memory like ChatGPT. There is no magic background system remembering things for you. Instead:
+
+- **You actively manage** what Claude knows about your business
+- **You see files change** as decisions get made
+- **You synthesize research** into evergreen context
+- **You discuss and refine** until the context is right
+- **You control** exactly what informs every output
+
+This active engagement is the learning. By forcing yourself to articulate your offer, your audience, your angles — you understand your business more deeply than you would if a chat just "remembered" things automatically.
+
+**The insight:** Passive memory feels convenient but keeps you shallow. Active context management is work, but that work IS the thinking that makes your marketing effective.
+
+---
+
+## Philosophy: Compound Context
+
+**Each piece of context you save makes the next output better.**
+
+The cycle:
+1. **Research** → Explore questions, gather information (dated)
+2. **Decide** → Make choices with rationale (dated, links to research)
+3. **Codify** → Update evergreen context (offer, audience, angles)
+4. **Generate** → Skills consume context, produce outputs
+5. **Learn** → Outputs inform new research
+
+Your business knowledge compounds. The more you feed it, the better it performs. Unlike a chat that forgets or hallucinates context, your repo IS the truth.
+
+---
+
+## How It Works
+
+**Engine + Data = Output**
 
 ```
-.claude/skills/     → Skills Claude can invoke
-templates/
-  modules/          → Optional add-ons (marketing, clients, etc.)
+main-branch-premium (ENGINE)          your-repo (DATA)
+├── .claude/skills/                   ├── context/
+├── .claude/lenses/                   │   ├── offer.md
+└── .claude/context/compliance/       │   ├── audience.md
+        │                             │   ├── proof/
+        │                             │   └── angles/
+        │                             ├── research/
+        │                             ├── decisions/
+        │                             ├── campaigns/
+        └──────────────┬──────────────└── compliance/
+                       │
+               Skills read context/,
+               output to campaigns/,
+               enforce compliance/
 ```
 
-**Note:** `templates/core/` (Business OS scaffold) is now in the free plugin. Install via:
+**Same engine + different data = different outputs for each business.**
+
+This is like a game engine (Unity, Unreal) — the engine provides capabilities, each game provides its own assets. Main Branch Premium is the engine. Your business repo is the game.
+
+---
+
+## Multi-Repo Workflow
+
+1. Open your project/client repo as **primary working directory**
+2. Add main-branch-premium as **additional working directory**
+3. Skills and lenses from the engine become available
+4. All outputs go to your project repo
+
 ```bash
-claude /plugin install main-branch
+# In Claude Code settings, add main-branch-premium as additional directory
+# Then work in your business repo - skills are automatically available
 ```
 
-## How Members Use This
+---
 
-### Initial Setup
+## What Lives Where
 
-1. Install free plugin: `claude /plugin install main-branch`
-2. Clone this repo locally for advanced skills
-3. Create your own project repo (or client repos)
+| Content | Location | Why |
+|---------|----------|-----|
+| Skills (ad-static, ad-review) | Engine | Shared with all members |
+| Lenses (FTC, Meta, Copy) | Engine | Shared with all members |
+| Compliance frameworks | Engine | Shared with all members |
+| Your offer, audience, angles | Your repo | Business-specific |
+| Your research and decisions | Your repo | Business-specific |
+| Your campaign outputs | Your repo | Business-specific |
+| Your testimonials/proof | Your repo | Business-specific |
+| Your typicality data | Your repo | Business-specific |
 
-### Multi-Repo Workflow
+---
 
-**Main-branch-premium is an "operating system" that works across your other repos.**
+## Context Tiers
 
-When using Claude Code:
-1. Open your project/client repo as primary working directory
-2. Add main-branch-premium as an additional working directory
-3. Skills and lenses from main-branch-premium become available
-4. Client-specific outputs go to your project repo
+Skills load context progressively to stay token-efficient:
 
+| Tier | What | When Loaded |
+|------|------|-------------|
+| **Always** | CLAUDE.md | Every session |
+| **Just-in-time** | context/*.md | When generating |
+| **On-demand** | research/, decisions/ | When reasoning about choices |
+| **Deep reference** | compliance/typicality/ | When reviewing outcome claims |
+
+---
+
+## File Conventions
+
+### Frontmatter
+
+All markdown files should have frontmatter:
+
+```yaml
+---
+type: research | decision | context | campaign
+status: draft | active | complete | archived
+date: 2026-01-13
+linked_decisions: []  # For research files
+---
 ```
-YOUR WORKFLOW:
-┌─────────────────────────────────────────────────────────┐
-│  main-branch-premium (additional working directory)     │
-│  ├── .claude/skills/      → Generic skills              │
-│  ├── .claude/lenses/      → Review criteria             │
-│  └── context/compliance/  → Templates & frameworks      │
-└─────────────────────────────────────────────────────────┘
-                          │
-                          │ Skills read frameworks,
-                          │ output goes to your repo
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│  your-project-repo (primary working directory)          │
-│  ├── .claude/context/     → Your offer, audience, etc.  │
-│  ├── campaigns/           → Your ad outputs             │
-│  └── compliance/typicality/ → Your client-specific data │
-└─────────────────────────────────────────────────────────┘
-```
 
-### What Lives Where
+### Naming
 
-| Content Type | Location | Why |
-|--------------|----------|-----|
-| Generic skills (ad-static, ad-review) | main-branch-premium | Shared with all members |
-| Review lenses (FTC, Meta, etc.) | main-branch-premium | Shared with all members |
-| Compliance frameworks/templates | main-branch-premium | Shared with all members |
-| Your offer.md, audience.md | Your repo | Client-specific |
-| Your campaign outputs | Your repo | Client-specific |
-| Your typicality data | Your repo | Client-specific |
-| Your testimonials/proof | Your repo | Client-specific |
+| Type | Format | Example |
+|------|--------|---------|
+| Evergreen context | `slug.md` | `offer.md`, `audience.md` |
+| Research | `YYYY-MM-DD-slug.md` | `2026-01-13-competitor-analysis.md` |
+| Decisions | `YYYY-MM-DD-slug.md` | `2026-01-13-angle-strategy.md` |
+| Campaign batches | `YYYY-MM-DD-batch-name/` | `2026-01-13-january-launch/` |
 
-### Adding main-branch-premium in Claude Code
+### Rules
 
-In your Claude Code settings, add main-branch-premium as an additional working directory. The skills will automatically become available when you work in any repo.
+1. **Frontmatter on all markdown** — type, status, date minimum
+2. **Research links to decisions** via `linked_decisions: []` in frontmatter
+3. **Decisions reference research** via `## Research` section
+4. **Max ~500 lines per file** — split if larger
+5. **Edit existing > create new**
+6. **Flat > deep** — max 2 levels of folder nesting
+
+---
 
 ## Skills Available
 
 | Skill | Domain | Description |
 |-------|--------|-------------|
-| ad-review | Compliance | Multi-lens review (FTC, Meta, Copy, Visual, Voice, Substantiation) |
-| skool-manager | System Ops | Community engagement with Chrome |
-| ad-static | Marketing | Static image ads + AI prompts |
-| ad-video-scripts | Marketing | Video ad scripts (15-30+) |
-| skool-vsl-scripts | Marketing | VSL scripts (18-section) |
+| `/ad-static` | Marketing | Generate static image ad copy from context |
+| `/ad-video-scripts` | Marketing | Generate video ad scripts (15-60s) |
+| `/ad-review` | Compliance | Multi-lens review (FTC, Meta, Copy, Visual, Voice, Substantiation) |
+| `/skool-manager` | System Ops | Community engagement with Chrome |
+| `/skool-vsl-scripts` | Marketing | VSL scripts (18-section structure) |
+
+---
 
 ## Lenses Available
 
-Review criteria for the ad-review skill:
+Review criteria for the `/ad-review` skill:
 
 | Lens | What It Checks |
 |------|----------------|
-| ftc-compliance | FTC regulations, earnings claims, disclosures |
-| meta-policy | Platform triggers, Personal Attributes, bans |
-| copy-quality | Schwartz, Hormozi, Suby frameworks |
-| visual-standards | Safe zones, OCR triggers, prohibited visuals |
-| voice-authenticity | AI tells, brand voice consistency |
-| substantiation | Claims inventory, proof matching, typicality |
+| `ftc-compliance` | FTC regulations, earnings claims, required disclosures |
+| `meta-policy` | Platform triggers, Personal Attributes policy, ban risks |
+| `copy-quality` | Schwartz awareness levels, Hormozi value equation, Suby frameworks |
+| `visual-standards` | Safe zones, OCR triggers, prohibited visual elements |
+| `voice-authenticity` | AI tells, brand voice consistency, authenticity markers |
+| `substantiation` | Claims inventory, proof matching, typicality requirements |
 
-## Compliance References
+---
 
-Pre-campaign planning resources in `context/compliance/`:
+## Compliance Frameworks
+
+Pre-campaign planning resources in `.claude/context/compliance/`:
 
 | File | Purpose |
 |------|---------|
-| ftc-scrutiny-categories.md | Which industries get extra FTC attention |
-| angle-playbook.md | 10 persuasion angles with rules for each |
-| testimonial-decision-rubric.md | When outcome testimonials are worth it |
-| typicality/README.md | How to collect FTC-required outcome data |
+| `ftc-scrutiny-categories.md` | Which industries get extra FTC attention (Tier 1/2/3) |
+| `angle-playbook.md` | 10 persuasion angles with compliance rules for each |
+| `testimonial-decision-rubric.md` | When outcome testimonials are worth the risk |
+| `typicality/README.md` | How to collect FTC-required outcome data |
+
+---
 
 ## The Three Domains
 
-| Domain | What AI Handles |
-|--------|-----------------|
+| Domain | What Skills Handle |
+|--------|-------------------|
 | **Marketing** | Ads, content, emails, campaigns |
-| **System Ops** | Community, tools, automation |
+| **System Ops** | Community management, tools, automation |
 | **Biz Ops** | Finance, compliance, bookkeeping |
 
-Research is interwoven into all domains.
+Research weaves through all domains.
+
+---
 
 ## Git Commit Convention
-
-Use this format for all commits:
 
 ```
 [type] Brief description
@@ -132,24 +204,11 @@ Use this format for all commits:
 Context: Why this change was made
 ```
 
-**Types:**
-- `[add]` — New content
-- `[update]` — Improved existing
-- `[fix]` — Corrected error
-- `[remove]` — Deleted content
-- `[refactor]` — Reorganized
+**Types:** `[add]`, `[update]`, `[fix]`, `[remove]`, `[refactor]`
 
-**Example:**
-```
-[add] New ad-review agent for compliance checking
+---
 
-- FTC compliance lens
-- Industry-specific lens (configurable)
-- Voice/culture match lens
+## See Also
 
-Context: Multi-lens review pattern from Compound Engineering
-```
-
-## Contributing (VIP Only)
-
-VIP members have write access. Submit PRs to improve skills or add new ones.
+- `docs/system-architecture.md` — Full technical explanation of how the system works
+- `templates/modules/business-repo-scaffold/` — Template for creating new business repos
