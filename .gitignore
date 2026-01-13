@@ -1,0 +1,9 @@
+# Obsidian
+.obsidian/
+
+# OS
+.DS_Store
+
+# Environment
+.env
+.env.local
