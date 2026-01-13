@@ -12,8 +12,6 @@ This is the full toolkit for Main Branch. Members clone this locally to access s
 
 ```
 .claude/skills/     → Skills Claude can invoke
-agents/             → Specialized AI agents (coming)
-commands/           → Workflow commands (coming)
 templates/
   core/             → Business OS scaffold (copy to your repo)
   modules/          → Optional add-ons (marketing, clients, etc.)
@@ -44,6 +42,37 @@ templates/
 | **Biz Ops** | Finance, compliance, bookkeeping |
 
 Research is interwoven into all domains.
+
+## Git Commit Convention
+
+Use this format for all commits:
+
+```
+[type] Brief description
+
+- Detail 1
+- Detail 2
+
+Context: Why this change was made
+```
+
+**Types:**
+- `[add]` — New content
+- `[update]` — Improved existing
+- `[fix]` — Corrected error
+- `[remove]` — Deleted content
+- `[refactor]` — Reorganized
+
+**Example:**
+```
+[add] New ad-review agent for compliance checking
+
+- FTC compliance lens
+- Industry-specific lens (configurable)
+- Voice/culture match lens
+
+Context: Multi-lens review pattern from Compound Engineering
+```
 
 ## Contributing (VIP Only)
 
