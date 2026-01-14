@@ -1,60 +1,72 @@
 # Main Branch Premium
 
-Full skills library for Main Branch members. Private repo - access via GitHub invite.
+AI-native business operating system. This is the **engine** — your business repo is the **data**.
+
+## How It Works
+
+```
+main-branch-premium (ENGINE)     +     your-repo (DATA)     =     Output
+├── skills/                            ├── context/
+├── lenses/                            │   ├── offer.md
+└── compliance frameworks/             │   ├── audience.md
+                                       │   └── proof/
+                                       └── campaigns/
+```
+
+Same engine + different data = different outputs for each business.
 
 ## Skills
 
 | Skill | Description |
 |-------|-------------|
-| `skool-manager` | Skool community engagement with Chrome automation |
-| `ad-static` | Static image ads with copy + AI image prompts |
-| `ad-video-scripts` | Video ad scripts (15-30+ per batch) |
-| `skool-vsl-scripts` | Video Sales Letter scripts (18-section framework) |
+| `/repo-setup` | Bootstrap your repo - dump context, get it sorted |
+| `/ad-static` | Static image ads with copy + AI image prompts |
+| `/ad-video-scripts` | Video ad scripts (15-30+ per batch) |
+| `/ad-review` | Multi-lens compliance review (FTC, Meta, Copy, Visual, Voice, Substantiation) |
+| `/skool-manager` | Skool community engagement with Chrome automation |
+| `/skool-vsl-scripts` | Video Sales Letter scripts (18-section framework) |
 
-## Installation
+## Setup
 
-Clone this repo locally:
+1. Clone this repo locally
+2. Add as **additional working directory** in Claude Code
+3. Open your business repo as primary directory
+4. Skills become available via `/skill-name`
 
-```bash
-git clone git@github.com:YOUR_ORG/main-branch-premium.git
+## Getting Started
+
+```
+/repo-setup
 ```
 
-## Usage
+Dump everything you have about your business. The skill sorts it into the right files.
+
+## Context Structure
+
+Your business repo needs:
 
 ```
-/skool-manager "Check the feed and draft responses"
-/ad-static "Create a batch of 6 ads for our launch"
-/ad-video-scripts "Write 20 video scripts for cold traffic"
-/skool-vsl-scripts "Write VSL for our about page"
+context/
+├── offer.md           # What you sell
+├── audience.md        # Who buys
+├── proof/
+│   ├── testimonials.md
+│   └── typicality.md  # For outcome claims (FTC)
+└── angles/            # Messaging entry points
 ```
 
-## Context Required
+## Philosophy
 
-Most skills need project context to work well:
-- **Offer doc**: What you sell, price, benefits
-- **Audience doc**: Who buys, their pains, desires
-- **Proof doc**: Testimonials with names and specifics
-- **Angles doc**: Different entry points/messaging
+**Marketing reflects the present moment.**
 
-Put these in your project's docs or marketing folder. Skills will read them automatically.
+Your context files are living documents. Times change. Seasons change. Markets shift. What worked last quarter might not land today.
 
-## Requirements
-
-Some skills require:
-- Claude in Chrome extension (for browser automation)
-- Voice profile configured (template provided in skool-manager)
+The cycle: Dump context → Sort → Generate → Learn → Update → Repeat
 
 ## Access
 
-- **$99 Premium**: Read access (pull updates, use skills)
-- **$199 VIP**: Write access (contribute skills, see how they're built)
-
-Cancel → GitHub access revoked → no more updates.
+Members get GitHub access. Cancel → access revoked → no more updates.
 
 ## Community
 
-[skool.com/main](https://skool.com/main)
-
-## License
-
-Proprietary - Main Branch members only
+[skool.com/main-branch](https://skool.com/main-branch)

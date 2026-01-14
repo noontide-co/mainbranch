@@ -20,6 +20,8 @@ This active engagement is the learning. By forcing yourself to articulate your o
 
 **The insight:** Passive memory feels convenient but keeps you shallow. Active context management is work, but that work IS the thinking that makes your marketing effective.
 
+**Marketing reflects the present moment.** Times change. Seasons change. Markets shift. Your context files stay current with reality, not just accumulate history. What worked last quarter might not land today. Feed learnings back continuously.
+
 ---
 
 ## Philosophy: Compound Context
@@ -47,15 +49,15 @@ main-branch-premium (ENGINE)          your-repo (DATA)
 ├── .claude/lenses/                   │   ├── offer.md
 └── .claude/context/compliance/       │   ├── audience.md
         │                             │   ├── proof/
+        │                             │   │   ├── testimonials.md
+        │                             │   │   └── typicality.md
         │                             │   └── angles/
         │                             ├── research/
         │                             ├── decisions/
-        │                             ├── campaigns/
-        └──────────────┬──────────────└── compliance/
+        └──────────────┬──────────────└── campaigns/
                        │
                Skills read context/,
-               output to campaigns/,
-               enforce compliance/
+               output to campaigns/
 ```
 
 **Same engine + different data = different outputs for each business.**
@@ -102,7 +104,7 @@ Skills load context progressively to stay token-efficient:
 | **Always** | CLAUDE.md | Every session |
 | **Just-in-time** | context/*.md | When generating |
 | **On-demand** | research/, decisions/ | When reasoning about choices |
-| **Deep reference** | compliance/typicality/ | When reviewing outcome claims |
+| **Deep reference** | context/proof/typicality.md | When reviewing outcome claims |
 
 ---
 
@@ -145,6 +147,7 @@ linked_decisions: []  # For research files
 
 | Skill | Domain | Description |
 |-------|--------|-------------|
+| `/repo-setup` | Setup | Bootstrap repo - dump context, sort into proper files |
 | `/ad-static` | Marketing | Generate static image ad copy from context |
 | `/ad-video-scripts` | Marketing | Generate video ad scripts (15-60s) |
 | `/ad-review` | Compliance | Multi-lens review (FTC, Meta, Copy, Visual, Voice, Substantiation) |
