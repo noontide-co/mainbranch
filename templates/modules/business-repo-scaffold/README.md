@@ -35,12 +35,8 @@ your-business/
 ├── decisions/                   # DATED — Choices with rationale
 │   └── README.md
 │
-├── campaigns/                   # OUTPUT — Generated content
-│   └── README.md
-│
-└── compliance/                  # FTC — Typicality data
-    └── typicality/
-        └── README.md
+└── campaigns/                   # OUTPUT — Generated content
+    └── README.md
 ```
 
 ---
@@ -52,13 +48,11 @@ main-branch-premium (ENGINE)     your-business (DATA)
 ├── skills/                      ├── context/
 ├── lenses/                      ├── research/
 └── frameworks/                  ├── decisions/
-         │                       ├── campaigns/
-         │                       └── compliance/
+         │                       └── campaigns/
          └────────────┬───────────────────┘
                       │
               Skills read context/,
-              output to campaigns/,
-              enforce compliance/
+              output to campaigns/
 ```
 
 ---
@@ -88,7 +82,7 @@ To start generating ads, you need at minimum:
 
 Optional but recommended:
 - `context/proof/testimonials.md` — For social proof
-- `compliance/typicality/` — Required for outcome testimonials
+- `context/proof/typicality.md` — Required for outcome testimonials in regulated industries
 - `research/` — Dated research sessions
 - `decisions/` — Decision records with rationale
 

@@ -32,13 +32,13 @@ For earnings/results claims, you need data on the *average* user, not the best u
 
 Before reviewing testimonial ads, check if typicality data exists:
 
-**Location:** `context/compliance/typicality/{client}-typicality.md`
+**Location:** `context/proof/typicality.md`
 
 - If file exists and has data → Use that data for disclosure language
 - If file exists but says "DATA NEEDED" → P1 block until data collected
-- If no file exists → P1 block, create research task to collect data
+- If no file exists and outcome testimonials used → P1 block, note typicality data needed
 
-**Critical:** Auditing #wins channel is NOT sufficient. FTC requires outcomes for ALL users who START, not just those who succeed and post.
+**Critical:** Success stories alone are NOT sufficient. FTC requires outcomes for ALL users who START, not just those who succeed and share results.
 
 ### "Results Not Typical" Is Dead
 
