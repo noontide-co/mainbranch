@@ -17,21 +17,28 @@ Bootstrap a business repo by sorting raw context into structured files.
 
 ## Philosophy: Active Context Management
 
-**This is not a one-time setup.** Your context files are living documents that evolve as you:
+**This is not a one-time setup.** Marketing is a reflection of the present moment.
 
-1. Run campaigns and see what resonates
-2. Talk to customers and hear new language
-3. Test angles and find winners
-4. Collect proof and testimonials
+Times change. Seasons change. Markets shift. Your audience's problems evolve. What worked last quarter might not land today. Your context files need to stay current with reality - not just accumulate history.
+
+Your context files are living documents that evolve as:
+
+1. You run campaigns and see what resonates
+2. You talk to customers and hear new language
+3. The market shifts and new pains emerge
+4. Your offer matures and positioning sharpens
+5. Seasons change and timely angles appear
 
 The cycle:
 ```
 Dump context → Sort into files → Generate outputs → Learn from results → Update context → Repeat
 ```
 
-Every ad you run teaches you something. Every customer conversation reveals language. Feed it back into your context files. The system gets smarter because YOU get clearer on your business.
+Every ad you run teaches you something. Every customer conversation reveals language. Every market shift creates new angles. Feed it back into your context files.
 
-**Start messy. Refine continuously.**
+The system gets smarter because YOU stay present with your business.
+
+**Start messy. Refine continuously. Stay current.**
 
 ---
 
