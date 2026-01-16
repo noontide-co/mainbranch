@@ -1,20 +1,19 @@
 ---
 name: repo-setup
 description: |
-  Bootstrap a new business repo with the complete Main Branch structure. Use when:
-  (1) Setting up a new client/business repo from scratch
-  (2) User says "set up my repo", "initialize my business", or "create my KB"
-  (3) Migrating existing business context into structured reference files
-  (4) User asks how to organize their business information for AI
+  Get a new user fully set up with Claude Code + Main Branch. Use when:
+  (1) New user needs Claude Code environment configured
+  (2) User says "set up my repo", "get me started", "initialize my business"
+  (3) User is new to Main Branch and needs the full onboarding
+  (4) Migrating existing business context into the Main Branch structure
 
-  Creates: CLAUDE.md, README.md, full folder structure, core reference files.
-  Applies domain rubrics (e-commerce, community, coaching) based on business type.
-  Uses GitHub CLI for proper version control from the start.
+  Sets up: Chrome extension, two-repo model, business repo with full structure.
+  Gathers context aggressively until complete. Applies domain rubrics by business type.
 ---
 
 # Repo Setup
 
-Bootstrap a business repo by gathering context, creating structure, and drafting core files.
+Get a new user fully configured with Claude Code and their business repo.
 
 ---
 
@@ -50,6 +49,19 @@ Start messy. Refine continuously. The system gets smarter because the owner stay
 
 ## Workflow
 
+### 0. Verify Chrome Extension (REQUIRED for Skool)
+
+**Before gathering ANY context, check Chrome extension status:**
+
+> Type `/chrome` to verify you have the Claude in Chrome extension installed.
+
+If not installed:
+> "The Chrome extension is fundamental for Main Branch — it lets me read your sales pages, Skool community, and web content directly. Install it now: https://claude.ai/chrome (requires Google Chrome)"
+
+**If user declines:** Proceed with Playwright or manual screenshots, but note this limits what can be gathered automatically.
+
+**Context tip:** If your conversation gets compacted (summarized), you can always re-invoke `/repo-setup` to reload the full skill context.
+
 ### 1. Confirm Git + Working Directory
 
 ```bash
@@ -68,24 +80,37 @@ git init
 
 | Type | Domain Rubric |
 |------|---------------|
-| **E-commerce** | Products, fulfillment, materials |
 | **Community/Skool** | Classroom, membership, funnel |
+| **E-commerce** | Products, fulfillment, materials |
 | **Coaching/Services** | Offers, delivery, packages |
 | **Agency** | Services, clients, processes |
 | **Other** | Core only, no domain-specific |
 
+**IMPORTANT:** If user has a Skool community, choose **Community/Skool** even if they also do coaching, courses, or services outside Skool. The community is the hub — other offerings feed into it.
+
 Read the appropriate rubric from `main-branch-premium/.claude/reference/domain-rubrics/`.
 
-### 3. Request Context Dump
+### 3. Gather Context (Be a Ruthless Journalist)
 
+Your job: extract every fact possible. Don't settle for partial info. Users provide context in batches — keep asking until YOU say "we have enough."
+
+See **[references/context-gathering.md](references/context-gathering.md)** for:
+- URL fetching fallback chain (WebFetch → Chrome → Playwright → manual)
+- Business-type specific checklists (Skool, E-commerce, Coaching)
+- Completeness criteria
+
+**Opening prompt:**
 > Dump everything about this business — sales pages, offer details, testimonials, notes, whatever exists. Paste text, share file paths, or give me URLs to fetch. I'll sort it into the right files.
 
-Accept:
-- Pasted text
-- File paths to read
-- URLs to fetch (WebFetch)
-- "Read my existing [file]"
-- Voice memos transcribed
+**After each batch, assess gaps:**
+> "Got it. I still need [X, Y, Z] to complete your reference files. Can you share those?"
+
+**Only say "we have enough" when you can fill:**
+- offer.md (price, mechanism, deliverables, guarantee)
+- audience.md (who, pains, desires, objections)
+- voice.md (tone, phrases, personality)
+- testimonials.md (3-5 with specific outcomes)
+- domain/ (business-type specific structure)
 
 ### 4. Create Folder Structure
 
@@ -221,6 +246,7 @@ See `references/git-workflow.md` for full guide.
 
 ## References
 
+- **Context Gathering:** `references/context-gathering.md` — Checklists by business type, completeness criteria
 - **Templates:** `references/templates.md` — All file templates
 - **CLAUDE.md Guide:** `references/claude-md-guide.md` — How to draft a good CLAUDE.md
 - **Git Workflow:** `references/git-workflow.md` — Commit messages and CLI usage
