@@ -23,6 +23,7 @@ For Skool businesses, gather ALL of these before creating files:
 |------|------------|------------|
 | About page | URL or screenshot | Offer, positioning, owner story |
 | **Plans page** | Auto-fetch `skool.com/{community}/plans` | Pricing tiers, what's included per tier |
+| **Dashboard** | Settings → Dashboard screenshots (all 4 tabs) | Business health metrics |
 | Classroom structure | Screenshot of classroom tab | Course catalog for domain/ |
 | Course modules | Screenshots of individual courses | Curriculum depth |
 | **Calendar** | Screenshot + brain dump explanation | Events, calls, rhythm |
@@ -51,6 +52,9 @@ If no calendar:
 
 If no testimonials yet:
 > "Any member wins or testimonials? Screenshots from the community feed work great."
+
+If no dashboard yet:
+> "Click the Settings gear icon, then Dashboard. Screenshot the overview, then click each of the 4 metrics (Members, MRR, Conversion, Retention) and screenshot those too. This helps me understand your business health."
 
 **Also valuable:**
 - Client call recordings or transcripts
