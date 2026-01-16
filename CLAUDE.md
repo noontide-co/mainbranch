@@ -1,41 +1,41 @@
 # Main Branch Premium
 
-AI-native business operating system. Your context is the fuel, Claude is the engine.
+AI-native business operating system. Your reference is the fuel, Claude is the engine.
 
 ---
 
-## Philosophy: Active Context Management
+## Philosophy: Active Reference Management
 
-**You learn your business by building your context.**
+**You learn your business by building your reference.**
 
 This is not passive memory like ChatGPT. There is no magic background system remembering things for you. Instead:
 
 - **You actively manage** what Claude knows about your business
 - **You see files change** as decisions get made
-- **You synthesize research** into evergreen context
-- **You discuss and refine** until the context is right
+- **You synthesize research** into evergreen reference
+- **You discuss and refine** until the reference is right
 - **You control** exactly what informs every output
 
 This active engagement is the learning. By forcing yourself to articulate your offer, your audience, your angles — you understand your business more deeply than you would if a chat just "remembered" things automatically.
 
-**The insight:** Passive memory feels convenient but keeps you shallow. Active context management is work, but that work IS the thinking that makes your marketing effective.
+**The insight:** Passive memory feels convenient but keeps you shallow. Active reference management is work, but that work IS the thinking that makes your marketing effective.
 
-**Marketing reflects the present moment.** Times change. Seasons change. Markets shift. Your context files stay current with reality, not just accumulate history. What worked last quarter might not land today. Feed learnings back continuously.
+**Marketing reflects the present moment.** Times change. Seasons change. Markets shift. Your reference files stay current with reality, not just accumulate history. What worked last quarter might not land today. Feed learnings back continuously.
 
 ---
 
-## Philosophy: Compound Context
+## Philosophy: Compound Knowledge
 
-**Each piece of context you save makes the next output better.**
+**Each piece of reference you save makes the next output better.**
 
 The cycle:
-1. **Research** → Explore questions, gather information (dated)
+1. **Research** → Investigate questions, gather information (dated)
 2. **Decide** → Make choices with rationale (dated, links to research)
-3. **Codify** → Update evergreen context (offer, audience, angles)
-4. **Generate** → Skills consume context, produce outputs
+3. **Codify** → Update evergreen reference (offer, audience, angles)
+4. **Generate** → Skills consume reference, produce outputs
 5. **Learn** → Outputs inform new research
 
-Your business knowledge compounds. The more you feed it, the better it performs. Unlike a chat that forgets or hallucinates context, your repo IS the truth.
+Your business knowledge compounds. The more you feed it, the better it performs. Unlike a chat that forgets or hallucinates, your repo IS the truth.
 
 ---
 
@@ -45,24 +45,107 @@ Your business knowledge compounds. The more you feed it, the better it performs.
 
 ```
 main-branch-premium (ENGINE)          your-repo (DATA)
-├── .claude/skills/                   ├── context/
-├── .claude/lenses/                   │   ├── offer.md
-└── .claude/context/compliance/       │   ├── audience.md
+├── .claude/skills/                   ├── reference/
+├── .claude/lenses/                   │   ├── core/
+├── .claude/reference/compliance/       │   │   ├── offer.md
+└── .claude/reference/domain-rubrics/   │   │   ├── audience.md
+        │                             │   │   └── voice.md
+        │                             │   ├── brand/
         │                             │   ├── proof/
-        │                             │   │   ├── testimonials.md
-        │                             │   │   └── typicality.md
-        │                             │   └── angles/
+        │                             │   └── domain/
         │                             ├── research/
         │                             ├── decisions/
-        └──────────────┬──────────────└── campaigns/
+        └──────────────┬──────────────└── outputs/
                        │
-               Skills read context/,
-               output to campaigns/
+               Skills read reference/,
+               output to outputs/
 ```
 
 **Same engine + different data = different outputs for each business.**
 
 This is like a game engine (Unity, Unreal) — the engine provides capabilities, each game provides its own assets. Main Branch Premium is the engine. Your business repo is the game.
+
+---
+
+## Folder Structure
+
+Every business repo follows this structure:
+
+```
+[business]/
+├── CLAUDE.md              # Always loaded - business summary
+│
+├── reference/             # Evergreen truth (skills consume this)
+│   ├── core/              # REQUIRED - same files every business
+│   │   ├── offer.md       # What we sell
+│   │   ├── audience.md    # Who buys
+│   │   └── voice.md       # How we sound (quick reference)
+│   │
+│   ├── brand/             # Deep brand systems
+│   │   ├── voice-system.md
+│   │   ├── guardrails.md
+│   │   └── [brand-specific].md
+│   │
+│   ├── proof/             # Evidence + proven messaging
+│   │   ├── testimonials.md
+│   │   ├── typicality.md  # FTC outcome data (if paid ads)
+│   │   └── angles/        # Proven messaging angles
+│   │
+│   └── domain/            # Business-type specific
+│       └── [see domain rubrics]
+│
+├── research/              # Dated investigations
+│   └── YYYY-MM-DD-topic-[source].md
+│
+├── decisions/             # Dated choices with rationale
+│   └── YYYY-MM-DD-topic.md
+│
+└── outputs/               # Generated deliverables
+    └── [batch-name]/
+```
+
+---
+
+## Domain Rubrics
+
+Every business has a `reference/domain/` folder. Contents depend on business type.
+
+| Business Type | Domain Contents | Rubric |
+|---------------|-----------------|--------|
+| **E-commerce** | `products/`, `materials/`, `sizing/` | `.claude/reference/domain-rubrics/ecommerce.md` |
+| **Community** | `classroom/`, `funnel/`, `membership/` | `.claude/reference/domain-rubrics/community.md` |
+| **SaaS** | `features/`, `pricing/`, `integrations/` | `.claude/reference/domain-rubrics/saas.md` |
+| **Content** | `pillars/`, `editorial/` | `.claude/reference/domain-rubrics/content.md` |
+| **Service** | `process/`, `deliverables/` | `.claude/reference/domain-rubrics/service.md` |
+
+Use `/repo-setup` skill to scaffold the correct structure for your business type.
+
+---
+
+## Research Naming Convention
+
+All research files: `YYYY-MM-DD-topic-[source].md`
+
+| Suffix | Source | Example |
+|--------|--------|---------|
+| `-gemini.md` | Gemini deep research | `2026-01-15-popup-strategy-gemini.md` |
+| `-gpt.md` | ChatGPT/GPT-4 | `2026-01-15-brand-positioning-gpt.md` |
+| `-claude-code.md` | Claude Code session | `2026-01-16-architecture-claude-code.md` |
+| `-claude-web.md` | Claude.ai web | `2026-01-15-brainstorm-claude-web.md` |
+| `-mining.md` | Internal data mining | `2026-01-15-email-voice-mining.md` |
+| `-audit.md` | Site/system audit | `2026-01-15-live-site-audit.md` |
+| (no suffix) | General/mixed | `2026-01-15-competitor-analysis.md` |
+
+**Frontmatter includes source details:**
+```yaml
+---
+type: research
+date: 2026-01-16
+source: claude-code
+model: opus-4.5
+status: draft
+---
+```
 
 ---
 
@@ -84,27 +167,29 @@ This is like a game engine (Unity, Unreal) — the engine provides capabilities,
 
 | Content | Location | Why |
 |---------|----------|-----|
-| Skills (ad-static, ad-review) | Engine | Shared with all members |
-| Lenses (FTC, Meta, Copy) | Engine | Shared with all members |
+| Skills, lenses, rubrics | Engine | Shared with all members |
 | Compliance frameworks | Engine | Shared with all members |
-| Your offer, audience, angles | Your repo | Business-specific |
-| Your research and decisions | Your repo | Business-specific |
-| Your campaign outputs | Your repo | Business-specific |
-| Your testimonials/proof | Your repo | Business-specific |
-| Your typicality data | Your repo | Business-specific |
+| Your offer, audience, voice | Your repo (`reference/core/`) | Business-specific |
+| Your brand systems | Your repo (`reference/brand/`) | Business-specific |
+| Your proof and angles | Your repo (`reference/proof/`) | Business-specific |
+| Your domain-specific data | Your repo (`reference/domain/`) | Business-specific |
+| Your research | Your repo (`research/`) | Business-specific |
+| Your decisions | Your repo (`decisions/`) | Business-specific |
+| Your generated outputs | Your repo (`outputs/`) | Business-specific |
 
 ---
 
-## Context Tiers
+## Reference Tiers
 
-Skills load context progressively to stay token-efficient:
+Skills load reference progressively to stay token-efficient:
 
 | Tier | What | When Loaded |
 |------|------|-------------|
 | **Always** | CLAUDE.md | Every session |
-| **Just-in-time** | context/*.md | When generating |
+| **Core** | reference/core/*.md | When generating |
 | **On-demand** | research/, decisions/ | When reasoning about choices |
-| **Deep reference** | context/proof/typicality.md | When reviewing outcome claims |
+| **Deep reference** | reference/brand/, reference/proof/ | When writing copy |
+| **Domain** | reference/domain/ | When business-type matters |
 
 ---
 
@@ -116,9 +201,11 @@ All markdown files should have frontmatter:
 
 ```yaml
 ---
-type: research | decision | context | campaign
+type: research | decision | reference | output
 status: draft | active | complete | archived
-date: 2026-01-13
+date: 2026-01-16
+source: gemini | gpt | claude-code | claude-web | mining | audit  # For research
+model: opus-4.5 | sonnet-3.5  # When relevant
 linked_decisions: []  # For research files
 ---
 ```
@@ -127,10 +214,10 @@ linked_decisions: []  # For research files
 
 | Type | Format | Example |
 |------|--------|---------|
-| Evergreen context | `slug.md` | `offer.md`, `audience.md` |
-| Research | `YYYY-MM-DD-slug.md` | `2026-01-13-competitor-analysis.md` |
-| Decisions | `YYYY-MM-DD-slug.md` | `2026-01-13-angle-strategy.md` |
-| Campaign batches | `YYYY-MM-DD-batch-name/` | `2026-01-13-january-launch/` |
+| Core reference | `slug.md` | `offer.md`, `audience.md` |
+| Research | `YYYY-MM-DD-slug-[source].md` | `2026-01-16-analysis-gemini.md` |
+| Decisions | `YYYY-MM-DD-slug.md` | `2026-01-16-angle-strategy.md` |
+| Output batches | `###_TYPE_name_date.md` | `001_IMG_get-funded_2026-01-16.md` |
 
 ### Rules
 
@@ -143,12 +230,30 @@ linked_decisions: []  # For research files
 
 ---
 
+## The Flow
+
+```
+RESEARCH (investigate)
+    ↓
+DECISIONS (choose with rationale)
+    ↓
+REFERENCE (update evergreen truth)
+    ↓
+OUTPUTS (generate via skills)
+    ↓
+PLATFORM (publish)
+    ↓
+MINE PERFORMANCE → back to RESEARCH
+```
+
+---
+
 ## Skills Available
 
 | Skill | Domain | Description |
 |-------|--------|-------------|
-| `/repo-setup` | Setup | Bootstrap repo - dump context, sort into proper files |
-| `/ad-static` | Marketing | Generate static image ad copy from context |
+| `/repo-setup` | Setup | Bootstrap repo with correct structure for your business type |
+| `/ad-static` | Marketing | Generate static image ad copy from reference |
 | `/ad-video-scripts` | Marketing | Generate video ad scripts (15-60s) |
 | `/ad-review` | Compliance | Multi-lens review (FTC, Meta, Copy, Visual, Voice, Substantiation) |
 | `/skool-manager` | System Ops | Community engagement with Chrome |
@@ -173,7 +278,7 @@ Review criteria for the `/ad-review` skill:
 
 ## Compliance Frameworks
 
-Pre-campaign planning resources in `.claude/context/compliance/`:
+Pre-campaign planning resources in `.claude/reference/compliance/`:
 
 | File | Purpose |
 |------|---------|
@@ -181,18 +286,6 @@ Pre-campaign planning resources in `.claude/context/compliance/`:
 | `angle-playbook.md` | 10 persuasion angles with compliance rules for each |
 | `testimonial-decision-rubric.md` | When outcome testimonials are worth the risk |
 | `typicality/README.md` | How to collect FTC-required outcome data |
-
----
-
-## The Three Domains
-
-| Domain | What Skills Handle |
-|--------|-------------------|
-| **Marketing** | Ads, content, emails, campaigns |
-| **System Ops** | Community management, tools, automation |
-| **Biz Ops** | Finance, compliance, bookkeeping |
-
-Research weaves through all domains.
 
 ---
 
@@ -213,5 +306,5 @@ Context: Why this change was made
 
 ## See Also
 
-- `docs/system-architecture.md` — Full technical explanation of how the system works
-- `templates/modules/business-repo-scaffold/` — Template for creating new business repos
+- `docs/system-architecture.md` — Full technical explanation
+- `.claude/reference/domain-rubrics/` — Business type templates
