@@ -1,5 +1,5 @@
 ---
-name: Repo Setup
+name: repo-setup
 description: |
   Bootstrap a new business repo with the complete Main Branch structure. Use when:
   (1) Setting up a new client/business repo from scratch
