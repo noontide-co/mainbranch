@@ -1,124 +1,166 @@
 ---
 name: Repo Setup
 description: |
-  Initialize a new business repo with proper reference structure. Use when:
+  Bootstrap a new business repo with the complete Main Branch structure. Use when:
   (1) Setting up a new client/business repo from scratch
-  (2) User says "set up my repo" or "initialize my business"
-  (3) User wants to organize existing business info into reference files
+  (2) User says "set up my repo", "initialize my business", or "create my KB"
+  (3) Migrating existing business context into structured reference files
+  (4) User asks how to organize their business information for AI
 
-  Workflow: User dumps raw context (sales pages, notes, offers) → skill sorts into reference/core/, reference/proof/, etc.
+  Creates: CLAUDE.md, README.md, full folder structure, core reference files.
+  Applies domain rubrics (e-commerce, community, coaching) based on business type.
+  Uses GitHub CLI for proper version control from the start.
 ---
 
 # Repo Setup
 
-Bootstrap a business repo by sorting raw context into structured reference files.
+Bootstrap a business repo by gathering context, creating structure, and drafting core files.
 
 ---
 
-## Philosophy: Active Reference Management
+## Philosophy
 
-**This is not a one-time setup.** Marketing is a reflection of the present moment.
+**This is not a one-time setup.** Reference files are living documents.
 
-Times change. Seasons change. Markets shift. Your audience's problems evolve. What worked last quarter might not land today. Your reference files need to stay current with reality - not just accumulate history.
-
-Your reference files are living documents that evolve as:
-
-1. You run campaigns and see what resonates
-2. You talk to customers and hear new language
-3. The market shifts and new pains emerge
-4. Your offer matures and positioning sharpens
-5. Seasons change and timely angles appear
-
-The cycle:
 ```
-Research → Decide → Codify reference → Generate outputs → Learn from results → Repeat
+Research → Decide → Codify reference → Generate outputs → Learn → Repeat
 ```
 
-Every ad you run teaches you something. Every customer conversation reveals language. Every market shift creates new angles. Feed it back into your reference files.
-
-The system gets smarter because YOU stay present with your business.
-
-**Start messy. Refine continuously. Stay current.**
+Start messy. Refine continuously. The system gets smarter because the owner stays present with the business.
 
 ---
 
-## Process
+## Workflow
 
-### 1. Check Current State
+### 1. Confirm Git + Working Directory
 
 ```bash
-ls -la reference/ 2>/dev/null || echo "No reference folder yet"
+git status  # Verify we're in a git repo
+pwd         # Confirm working directory
 ```
 
-If reference/ exists with files, confirm user wants to overwrite or merge.
+If not a git repo:
+```bash
+git init
+```
 
-### 2. Request Context Dump
+### 2. Ask Business Type
 
-Ask user to paste or point to their raw business context:
+> What type of business is this?
 
-> Dump everything you have about this business - sales pages, offer details, testimonials, notes, whatever exists. I'll sort it into the right files.
+| Type | Domain Rubric |
+|------|---------------|
+| **E-commerce** | Products, fulfillment, materials |
+| **Community/Skool** | Classroom, membership, funnel |
+| **Coaching/Services** | Offers, delivery, packages |
+| **Agency** | Services, clients, processes |
+| **Other** | Core only, no domain-specific |
 
-Accept any format:
+Read the appropriate rubric from `main-branch-premium/.claude/reference/domain-rubrics/`.
+
+### 3. Request Context Dump
+
+> Dump everything about this business — sales pages, offer details, testimonials, notes, whatever exists. Paste text, share file paths, or give me URLs to fetch. I'll sort it into the right files.
+
+Accept:
 - Pasted text
 - File paths to read
-- URLs to fetch
+- URLs to fetch (WebFetch)
 - "Read my existing [file]"
+- Voice memos transcribed
 
-### 3. Create Folder Structure
+### 4. Create Folder Structure
 
-```
-reference/
-├── core/
-│   ├── offer.md
-│   ├── audience.md
-│   └── voice.md
-├── brand/
-│   └── [brand-specific].md
-├── proof/
-│   ├── testimonials.md
-│   └── angles/
-│       └── [angle-name].md
-└── domain/
-    └── [business-type-specific]/
+```bash
+mkdir -p reference/core reference/brand reference/proof/angles reference/domain
+mkdir -p research decisions outputs
 ```
 
-### 4. Sort Content
+Full structure:
+```
+{business-name}/
+├── CLAUDE.md              # Always loaded - business brain
+├── README.md              # Human-readable overview
+│
+├── reference/             # Evergreen truth
+│   ├── core/              # REQUIRED
+│   │   ├── offer.md       # What you sell
+│   │   ├── audience.md    # Who buys
+│   │   └── voice.md       # How you sound
+│   ├── brand/             # Deep brand systems (optional)
+│   ├── proof/
+│   │   ├── testimonials.md
+│   │   └── angles/        # Proven messaging entry points
+│   └── domain/            # Business-type specific
+│
+├── research/              # Dated investigations
+│   └── YYYY-MM-DD-topic-[source].md
+│
+├── decisions/             # Dated choices with rationale
+│   └── YYYY-MM-DD-topic.md
+│
+└── outputs/               # Generated content
+    └── YYYY-MM-DD-batch-name/
+```
 
-Extract and organize into:
+### 5. Sort Content into Files
 
-**core/offer.md**
-- Product/service name
-- Price points
-- What's included
-- Mechanism (how it works)
-- Transformation promise
+Use templates from `references/templates.md`.
 
-**core/audience.md**
-- Who they are (demographics, psychographics)
-- Current state (pains, frustrations)
-- Desired state (goals, dreams)
-- Objections and fears
-- Language they use
+**Priority order:**
+1. `reference/core/offer.md` — What you sell
+2. `reference/core/audience.md` — Who buys
+3. `reference/core/voice.md` — How you sound
+4. `reference/proof/testimonials.md` — Social proof
+5. `reference/proof/angles/` — Messaging entry points
 
-**core/voice.md**
-- Tone and cadence
-- Vocabulary patterns
-- Core phrases
-- What to avoid
+### 6. Apply Domain Rubric
 
-**proof/testimonials.md**
-- Customer results and quotes
-- Case studies
-- Before/after stories
-- Note: preserve exact quotes, add source if known
+Based on business type, create domain-specific folders:
 
-**proof/angles/** (one file per angle)
-- Distinct messaging entry points found in the content
-- Name each angle file descriptively: `price-anchor.md`, `mechanism.md`, `community.md`
+**E-commerce:** `reference/domain/products/`, `reference/domain/fulfillment/`
+**Community:** `reference/domain/classroom/`, `reference/domain/membership/`, `reference/domain/funnel/`
 
-### 5. Flag Gaps
+See `main-branch-premium/.claude/reference/domain-rubrics/` for full specifications.
 
-After sorting, note what's missing:
+### 7. Draft CLAUDE.md
+
+See `references/claude-md-guide.md` for structure.
+
+**Key sections:**
+- One-line description
+- Engine reference (main-branch-premium)
+- Folder structure diagram
+- Business summary
+- Quick reference (audience, voice, offer)
+- Key decisions/research index
+- Reference tiers
+
+### 8. Create README.md
+
+Simple human-readable overview:
+- What the business is
+- How to use the repo with main-branch-premium
+- Quick stats
+
+### 9. Initial Commit
+
+```bash
+git add -A
+git commit -m "$(cat <<'EOF'
+[init] Bootstrap business repo with Main Branch structure
+
+- Created reference/core/ (offer, audience, voice)
+- Created reference/proof/ (testimonials, angles)
+- Created reference/domain/ ([domain-type] specific)
+- Drafted CLAUDE.md and README.md
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+EOF
+)"
+```
+
+### 10. Report Gaps
 
 | File | Status |
 |------|--------|
@@ -126,130 +168,55 @@ After sorting, note what's missing:
 | core/audience.md | ✅ Complete / ⚠️ Missing [X] |
 | core/voice.md | ✅ Complete / ⚠️ Missing [X] |
 | proof/testimonials.md | ✅ Has content / ❌ Empty |
-| proof/angles/ | ✅ [N] angles / ⚠️ None identified |
+| proof/angles/ | ✅ [N] angles / ⚠️ None yet |
+| domain/ | ✅ Populated / ⚠️ Needs [X] |
 
-Ask user to provide missing pieces or note for later.
-
----
-
-## File Templates
-
-### core/offer.md
-
-```markdown
-# [Business Name] Offer
-
-## Product
-[Name and one-line description]
-
-## Price
-[Price point(s)]
-
-## What's Included
-- [Item 1]
-- [Item 2]
-
-## Mechanism
-[How it works - the unique approach]
-
-## Transformation
-[Before state] → [After state]
-```
-
-### core/audience.md
-
-```markdown
-# [Business Name] Audience
-
-## Who They Are
-[Demographics, role, situation]
-
-## Current State
-- [Pain 1]
-- [Pain 2]
-- [Frustration]
-
-## Desired State
-- [Goal 1]
-- [Goal 2]
-- [Dream outcome]
-
-## Objections
-- [Objection 1]
-- [Objection 2]
-
-## Their Language
-[Phrases they use, how they describe the problem]
-```
-
-### core/voice.md
-
-```markdown
-# [Business Name] Voice
-
-## Tone
-[Calm, energetic, professional, casual, etc.]
-
-## Cadence
-[Short sentences, long flowing prose, etc.]
-
-## Vocabulary
-[Words to use, words to avoid]
-
-## Core Phrases
-- [Phrase 1]
-- [Phrase 2]
-```
-
-### proof/testimonials.md
-
-```markdown
-# Testimonials
-
-## [Customer Name/Type]
-> "[Exact quote]"
-
-**Result:** [Specific outcome if stated]
-**Source:** [Where this came from]
+Ask user for missing pieces or note for later.
 
 ---
 
-[Repeat for each testimonial]
+## Git Workflow
+
+Always use GitHub CLI with descriptive commits:
+
+**Commit message format:**
+```
+[type] Brief description
+
+- Detail 1
+- Detail 2
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 ```
 
-### proof/angles/[angle-name].md
+**Types:**
+- `[init]` — Initial setup
+- `[add]` — New files/features
+- `[update]` — Changes to existing
+- `[fix]` — Bug fixes
+- `[refactor]` — Structure changes
+- `[docs]` — Documentation only
 
-```markdown
-# [Angle Name]
-
-## Hook
-[The entry point / attention grabber]
-
-## Core Idea
-[What this angle emphasizes]
-
-## Best For
-[When to use this angle]
-```
+See `references/git-workflow.md` for full guide.
 
 ---
 
-## Notes
+## References
 
-- Preserve original language when possible - don't over-polish
-- If content is thin, create files with what exists + TODO markers
-- Angles emerge from the content - don't force categories
-- v1 is just the start - come back after every campaign with new learnings
+- **Templates:** `references/templates.md` — All file templates
+- **CLAUDE.md Guide:** `references/claude-md-guide.md` — How to draft a good CLAUDE.md
+- **Git Workflow:** `references/git-workflow.md` — Commit messages and CLI usage
 
 ---
 
 ## When to Run Again
 
-Use this skill anytime you have new context to sort:
+Use this skill to merge new context:
 
 - "I just wrote a new sales page, update my reference"
 - "Here's feedback from 10 customer calls"
 - "This angle crushed it, let's document why"
 - "Got 5 new testimonials this month"
+- "I changed my pricing, update everything"
 
-The skill merges new content into existing files, preserving what's there.
+The skill merges new content, preserving what exists.
