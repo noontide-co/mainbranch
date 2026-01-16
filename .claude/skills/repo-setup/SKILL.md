@@ -18,6 +18,24 @@ Bootstrap a business repo by gathering context, creating structure, and drafting
 
 ---
 
+## The Two-Repo Model
+
+```
+ENGINE (main-branch-premium)     +     DATA (your business repo)
+├── Skills                             ├── reference/
+├── Lenses                             ├── research/
+├── Domain rubrics                     ├── decisions/
+└── You PULL updates                   └── You OWN and EDIT this
+```
+
+**main-branch-premium** = The engine. You clone it, pull updates, but never edit it.
+
+**your-business-repo** = Your data. You create it, own it, commit to it. This is where YOUR business context lives.
+
+**How they connect:** In Claude Code, add main-branch-premium as an "additional working directory." Skills from the engine read your business repo's `reference/` and output to your `outputs/`.
+
+---
+
 ## Philosophy
 
 **This is not a one-time setup.** Reference files are living documents.

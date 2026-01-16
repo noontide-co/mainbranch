@@ -27,11 +27,17 @@ CLAUDE.md is the **always-loaded business brain**. Claude reads this file at the
 
 ## Engine
 
-This project is powered by **main-branch-premium**.
+This repo contains your **business data**. It's powered by **main-branch-premium** (the engine).
 
-To use skills, lenses, and frameworks:
-1. Add `main-branch-premium` as an additional working directory in Claude Code
-2. Skills read from `reference/` and output to `outputs/`
+**Setup:**
+1. Clone main-branch-premium: `git clone https://github.com/noontide-co/main-branch-premium.git`
+2. In Claude Code, add main-branch-premium as an "additional working directory"
+3. Work in THIS repo as your primary directory
+
+**How it works:**
+- Engine (main-branch-premium): Contains skills, lenses, frameworks. You pull updates but never edit.
+- Data (this repo): Contains your business context. You own and edit this.
+- Skills read from your `reference/` and output to your `outputs/`
 
 ---
 

@@ -398,13 +398,31 @@ status: complete
 
 ## This Repo
 
-This is the knowledge base for [Business Name]. Uses [main-branch-premium](https://github.com/noontide-co/main-branch-premium) as the engine.
+This is the **data repo** (knowledge base) for [Business Name].
 
-### How to Use
+It uses [main-branch-premium](https://github.com/noontide-co/main-branch-premium) as the **engine** — skills, lenses, and frameworks that generate content from your data.
 
-1. Clone this repo
-2. Add `main-branch-premium` as additional working directory in Claude Code
-3. Skills read from `reference/` and output to `outputs/`
+### Setup
+
+1. **Clone the engine** (if you haven't):
+   ```bash
+   git clone https://github.com/noontide-co/main-branch-premium.git
+   ```
+
+2. **In Claude Code**, add main-branch-premium as an additional working directory
+
+3. **Work in this repo** as your primary directory
+
+### How It Works
+
+```
+ENGINE (main-branch-premium)     +     DATA (this repo)     =     OUTPUT
+├── Skills                             ├── reference/            ├── Ads
+├── Lenses                             ├── research/             ├── Emails
+└── Pull updates, don't edit           └── You own this          └── Content
+```
+
+Skills from the engine read your `reference/` files and generate content to `outputs/`.
 
 ---
 
