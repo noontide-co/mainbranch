@@ -64,6 +64,29 @@ If no dashboard yet:
 
 ---
 
+## Open-Ended Discovery Questions
+
+After gathering the structured items, ask these to surface context only the owner knows:
+
+**History & Context:**
+> "What's the backstory? Did you have an offer before Skool? How long have you been doing this?"
+
+**Goals:**
+> "What are your goals for this community? Revenue targets? Member count? Something else?"
+
+**What makes you different:**
+> "What do members get from you that they can't get elsewhere? What's your unfair advantage?"
+
+**Current challenges:**
+> "What's working well right now? What's frustrating you or not working?"
+
+**Anything else:**
+> "Anything else I should know? Special context, upcoming launches, experiments you're running, changes you're planning?"
+
+These questions often surface the most valuable positioning and messaging insights.
+
+---
+
 ## E-commerce Checklist
 
 | Item | How to Get | Why Needed |
