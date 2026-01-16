@@ -7,18 +7,18 @@ description: Create static/image ads with copy and AI image prompts. Use when as
 
 Create static/image ads with copy (multiple styles) + AI image prompts.
 
-## Context Required
+## Reference Required
 
-Before creating ads, the business repo must have these files in `context/`:
+Before creating ads, the business repo must have these files in `reference/`:
 
 | File | What It Contains |
 |------|------------------|
-| `context/offer.md` | What you sell, price, mechanism, benefits |
-| `context/audience.md` | Who buys, their pains, desires, psychographics |
-| `context/proof/testimonials.md` | Testimonials with names and specific outcomes |
-| `context/angles/*.md` | Different messaging entry points/hooks |
+| `reference/core/offer.md` | What you sell, price, mechanism, benefits |
+| `reference/core/audience.md` | Who buys, their pains, desires, psychographics |
+| `reference/proof/testimonials.md` | Testimonials with names and specific outcomes |
+| `reference/proof/angles/*.md` | Different messaging entry points/hooks |
 
-If context files are missing, ask user to create them first. Skills cannot generate good ads without solid context.
+If reference files are missing, ask user to create them first. Skills cannot generate good ads without solid reference.
 
 ## Terminology
 
@@ -92,9 +92,9 @@ Campaign Batch 001 — [Campaign Name]
 
 ## Output Format
 
-Save to business repo: `campaigns/{date}-{batch-name}/{batch#}_IMG_{campaign-name}.md`
+Save to business repo: `outputs/{date}-{batch-name}/{batch#}_IMG_{campaign-name}.md`
 
-Example: `campaigns/2026-01-15-january-launch/001_IMG_overwhelm-relief.md`
+Example: `outputs/2026-01-15-january-launch/001_IMG_overwhelm-relief.md`
 
 See [references/output-template.md](references/output-template.md) for full template.
 

@@ -7,18 +7,18 @@ description: Write high-converting video ad scripts for Meta ads. Use when asked
 
 Creates diverse video ad scripts using a systematic 6-step process.
 
-## Context Required
+## Reference Required
 
-Business repo must have these files in `context/`:
+Business repo must have these files in `reference/`:
 
 | File | What It Contains |
 |------|------------------|
-| `context/offer.md` | What you sell, price, mechanism, benefits |
-| `context/audience.md` | Who buys, their pains, desires |
-| `context/proof/testimonials.md` | Testimonials with names and outcomes |
-| `context/angles/*.md` | Different messaging entry points |
+| `reference/core/offer.md` | What you sell, price, mechanism, benefits |
+| `reference/core/audience.md` | Who buys, their pains, desires |
+| `reference/proof/testimonials.md` | Testimonials with names and outcomes |
+| `reference/proof/angles/*.md` | Different messaging entry points |
 
-If context files are missing, ask user to create them first.
+If reference files are missing, ask user to create them first.
 
 ## 6-Step Process
 
@@ -49,9 +49,9 @@ Simplify to ~5th grade reading level:
 - Simple words: "use" not "utilize"
 
 ### Step 6: Save Output
-Save to business repo: `campaigns/{date}-{batch-name}/{batch#}_VID_{angle}.md`
+Save to business repo: `outputs/{date}-{batch-name}/{batch#}_VID_{angle}.md`
 
-Example: `campaigns/2026-01-15-january-launch/001_VID_transformation.md`
+Example: `outputs/2026-01-15-january-launch/001_VID_transformation.md`
 
 ## Templates & Hooks
 

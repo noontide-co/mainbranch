@@ -51,7 +51,7 @@ await pptx.writeFile('output.pptx');
 
 ## Using Brand Colors
 
-Read colors from the user's `context/brand/visual-style.md` and create a colors object:
+Read colors from the user's `reference/brand/visual-style.md` and create a colors object:
 
 ```javascript
 // Example: Extract from user's style guide
@@ -120,7 +120,7 @@ fontFace: "Courier New"
 
 ## Workflow
 
-1. **Read user's style guide** from `context/brand/visual-style.md`
+1. **Read user's style guide** from `reference/brand/visual-style.md`
 2. **Create HTML slides** with brand colors/fonts
 3. **Rasterize gradients/icons** to PNG using Sharp FIRST
 4. **Convert with html2pptx**

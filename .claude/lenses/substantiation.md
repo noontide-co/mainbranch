@@ -32,7 +32,7 @@ For earnings/results claims, you need data on the *average* user, not the best u
 
 Before reviewing testimonial ads, check if typicality data exists:
 
-**Location:** `context/proof/typicality.md`
+**Location:** `reference/proof/typicality.md`
 
 - If file exists and has data → Use that data for disclosure language
 - If file exists but says "DATA NEEDED" → P1 block until data collected

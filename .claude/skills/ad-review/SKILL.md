@@ -142,9 +142,9 @@ For each P1/P2 issue, provide:
 
 ## Output Location
 
-Save review reports to business repo: `campaigns/{batch-folder}/review-{date}.md`
+Save review reports to business repo: `outputs/{batch-folder}/review-{date}.md`
 
-Example: `campaigns/2026-01-15-january-launch/review-2026-01-16.md`
+Example: `outputs/2026-01-15-january-launch/review-2026-01-16.md`
 
 ## Quick Review (Single Lens)
 
@@ -160,12 +160,12 @@ The skill references files in both the engine and business repo:
 
 **From engine (main-branch-premium):**
 - `.claude/lenses/` — The 6 review lenses
-- `.claude/context/compliance/` — Shared compliance frameworks
+- `.claude/reference/compliance/` — Shared compliance frameworks
 
 **From business repo:**
-- `context/proof/testimonials.md` — Available testimonials for substantiation check
-- `compliance/typicality/` — Outcome data for claim validation
-- `context/offer.md` — To verify claims match actual offering
+- `reference/proof/testimonials.md` — Available testimonials for substantiation check
+- `reference/proof/typicality.md` — Outcome data for claim validation
+- `reference/core/offer.md` — To verify claims match actual offering
 
 ## Example Review Flow
 

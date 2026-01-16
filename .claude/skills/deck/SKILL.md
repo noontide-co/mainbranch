@@ -10,7 +10,7 @@ Create branded PowerPoint presentations using your business context and visual i
 ## Overview
 
 This skill is a fork of Anthropic's PPTX skill, enhanced with:
-- **Brand-aware generation** — Reads your style guide from `context/brand/`
+- **Brand-aware generation** — Reads your style guide from `reference/brand/`
 - **Asset integration** — Uses your logos, textures, and decorative elements
 - **Gemini integration** for AI image generation (optional)
 
@@ -20,10 +20,10 @@ Before creating presentations, the business repo should have:
 
 | File | What It Contains |
 |------|------------------|
-| `context/brand/visual-style.md` | Visual identity, color palettes, typography |
-| `context/brand/assets/logo/` | Logo variants for different backgrounds |
-| `context/brand/assets/textures/` | Background textures, overlays |
-| `context/brand/assets/decorative/` | Decorative elements, dividers |
+| `reference/brand/visual-style.md` | Visual identity, color palettes, typography |
+| `reference/brand/assets/logo/` | Logo variants for different backgrounds |
+| `reference/brand/assets/textures/` | Background textures, overlays |
+| `reference/brand/assets/decorative/` | Decorative elements, dividers |
 
 If brand context is missing, ask the user to create it or offer to help define their visual identity.
 
@@ -32,7 +32,7 @@ If brand context is missing, ask the user to create it or offer to help define t
 **Always read the user's style guide first** before creating any presentation:
 
 ```
-context/brand/visual-style.md
+reference/brand/visual-style.md
 ```
 
 If no style guide exists, offer to help create one using the template at:
@@ -44,7 +44,7 @@ templates/modules/brand-style-template.md
 
 ### Creating a New Presentation
 
-1. **Read brand context**: Read user's `context/brand/visual-style.md`
+1. **Read brand context**: Read user's `reference/brand/visual-style.md`
 2. **Plan content**: Create outline with slide-by-slide breakdown
 3. **Choose theme**: Based on user's defined themes (if multiple exist)
 4. **Generate assets**: If AI images needed, use Gemini integration
@@ -65,7 +65,7 @@ See [`html2pptx.md`](html2pptx.md) for detailed instructions.
 
 ### Reading User's Palette
 
-Extract colors from `context/brand/visual-style.md`:
+Extract colors from `reference/brand/visual-style.md`:
 - Background colors (primary, secondary)
 - Text colors (primary, muted, accent)
 - Accent colors (success, warning, error, links)

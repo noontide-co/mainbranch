@@ -24,8 +24,8 @@ Draft and post community responses with Chrome MCP.
 1. Navigate to Skool community URL
 2. `read_page depth=8` to scan feed
 3. Find: unanswered questions, new intros, member wins
-4. Read voice profile from `context/voice-profile.md` (if exists)
-5. Draft responses to `campaigns/community/inbox-{date}.md`
+4. Read voice profile from `reference/core/voice.md` (if exists)
+5. Draft responses to `outputs/community/inbox-{date}.md`
 6. **STOP** - wait for approval
 7. Post approved responses, like relevant posts
 
@@ -69,7 +69,7 @@ Use refs from `read_page` output to interact with elements.
 
 ## Voice Profile
 
-Create `context/voice-profile.md` in your business repo. Copy template from [references/voice-profile-template.md](references/voice-profile-template.md).
+Use `reference/core/voice.md` in your business repo. Copy template from [references/voice-profile-template.md](references/voice-profile-template.md) if starting fresh.
 
 If no voice profile exists, use neutral helpful tone.
 

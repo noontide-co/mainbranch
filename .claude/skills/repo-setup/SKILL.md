@@ -1,27 +1,27 @@
 ---
 name: Repo Setup
 description: |
-  Initialize a new business repo with proper context structure. Use when:
+  Initialize a new business repo with proper reference structure. Use when:
   (1) Setting up a new client/business repo from scratch
   (2) User says "set up my repo" or "initialize my business"
-  (3) User wants to organize existing business info into context files
+  (3) User wants to organize existing business info into reference files
 
-  Workflow: User dumps raw context (sales pages, notes, offers) → skill sorts into offer.md, audience.md, angles/, proof/
+  Workflow: User dumps raw context (sales pages, notes, offers) → skill sorts into reference/core/, reference/proof/, etc.
 ---
 
 # Repo Setup
 
-Bootstrap a business repo by sorting raw context into structured files.
+Bootstrap a business repo by sorting raw context into structured reference files.
 
 ---
 
-## Philosophy: Active Context Management
+## Philosophy: Active Reference Management
 
 **This is not a one-time setup.** Marketing is a reflection of the present moment.
 
-Times change. Seasons change. Markets shift. Your audience's problems evolve. What worked last quarter might not land today. Your context files need to stay current with reality - not just accumulate history.
+Times change. Seasons change. Markets shift. Your audience's problems evolve. What worked last quarter might not land today. Your reference files need to stay current with reality - not just accumulate history.
 
-Your context files are living documents that evolve as:
+Your reference files are living documents that evolve as:
 
 1. You run campaigns and see what resonates
 2. You talk to customers and hear new language
@@ -31,10 +31,10 @@ Your context files are living documents that evolve as:
 
 The cycle:
 ```
-Dump context → Sort into files → Generate outputs → Learn from results → Update context → Repeat
+Research → Decide → Codify reference → Generate outputs → Learn from results → Repeat
 ```
 
-Every ad you run teaches you something. Every customer conversation reveals language. Every market shift creates new angles. Feed it back into your context files.
+Every ad you run teaches you something. Every customer conversation reveals language. Every market shift creates new angles. Feed it back into your reference files.
 
 The system gets smarter because YOU stay present with your business.
 
@@ -47,10 +47,10 @@ The system gets smarter because YOU stay present with your business.
 ### 1. Check Current State
 
 ```bash
-ls -la context/ 2>/dev/null || echo "No context folder yet"
+ls -la reference/ 2>/dev/null || echo "No reference folder yet"
 ```
 
-If context/ exists with files, confirm user wants to overwrite or merge.
+If reference/ exists with files, confirm user wants to overwrite or merge.
 
 ### 2. Request Context Dump
 
@@ -67,32 +67,44 @@ Accept any format:
 ### 3. Create Folder Structure
 
 ```
-context/
-├── offer.md
-├── audience.md
+reference/
+├── core/
+│   ├── offer.md
+│   ├── audience.md
+│   └── voice.md
+├── brand/
+│   └── [brand-specific].md
 ├── proof/
-│   └── testimonials.md
-└── angles/
-    └── [angle-name].md
+│   ├── testimonials.md
+│   └── angles/
+│       └── [angle-name].md
+└── domain/
+    └── [business-type-specific]/
 ```
 
 ### 4. Sort Content
 
 Extract and organize into:
 
-**offer.md**
+**core/offer.md**
 - Product/service name
 - Price points
 - What's included
 - Mechanism (how it works)
 - Transformation promise
 
-**audience.md**
+**core/audience.md**
 - Who they are (demographics, psychographics)
 - Current state (pains, frustrations)
 - Desired state (goals, dreams)
 - Objections and fears
 - Language they use
+
+**core/voice.md**
+- Tone and cadence
+- Vocabulary patterns
+- Core phrases
+- What to avoid
 
 **proof/testimonials.md**
 - Customer results and quotes
@@ -100,7 +112,7 @@ Extract and organize into:
 - Before/after stories
 - Note: preserve exact quotes, add source if known
 
-**angles/** (one file per angle)
+**proof/angles/** (one file per angle)
 - Distinct messaging entry points found in the content
 - Name each angle file descriptively: `price-anchor.md`, `mechanism.md`, `community.md`
 
@@ -110,10 +122,11 @@ After sorting, note what's missing:
 
 | File | Status |
 |------|--------|
-| offer.md | ✅ Complete / ⚠️ Missing [X] |
-| audience.md | ✅ Complete / ⚠️ Missing [X] |
+| core/offer.md | ✅ Complete / ⚠️ Missing [X] |
+| core/audience.md | ✅ Complete / ⚠️ Missing [X] |
+| core/voice.md | ✅ Complete / ⚠️ Missing [X] |
 | proof/testimonials.md | ✅ Has content / ❌ Empty |
-| angles/ | ✅ [N] angles / ⚠️ None identified |
+| proof/angles/ | ✅ [N] angles / ⚠️ None identified |
 
 Ask user to provide missing pieces or note for later.
 
@@ -121,7 +134,7 @@ Ask user to provide missing pieces or note for later.
 
 ## File Templates
 
-### offer.md
+### core/offer.md
 
 ```markdown
 # [Business Name] Offer
@@ -143,7 +156,7 @@ Ask user to provide missing pieces or note for later.
 [Before state] → [After state]
 ```
 
-### audience.md
+### core/audience.md
 
 ```markdown
 # [Business Name] Audience
@@ -169,7 +182,26 @@ Ask user to provide missing pieces or note for later.
 [Phrases they use, how they describe the problem]
 ```
 
-### testimonials.md
+### core/voice.md
+
+```markdown
+# [Business Name] Voice
+
+## Tone
+[Calm, energetic, professional, casual, etc.]
+
+## Cadence
+[Short sentences, long flowing prose, etc.]
+
+## Vocabulary
+[Words to use, words to avoid]
+
+## Core Phrases
+- [Phrase 1]
+- [Phrase 2]
+```
+
+### proof/testimonials.md
 
 ```markdown
 # Testimonials
@@ -185,7 +217,7 @@ Ask user to provide missing pieces or note for later.
 [Repeat for each testimonial]
 ```
 
-### angles/[angle-name].md
+### proof/angles/[angle-name].md
 
 ```markdown
 # [Angle Name]
@@ -215,7 +247,7 @@ Ask user to provide missing pieces or note for later.
 
 Use this skill anytime you have new context to sort:
 
-- "I just wrote a new sales page, update my context"
+- "I just wrote a new sales page, update my reference"
 - "Here's feedback from 10 customer calls"
 - "This angle crushed it, let's document why"
 - "Got 5 new testimonials this month"

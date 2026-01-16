@@ -7,21 +7,21 @@ description: Write high-converting Video Sales Letter (VSL) scripts using a prov
 
 Creates complete Video Sales Letter scripts using an 18-section conversion framework.
 
-## Context Required
+## Reference Required
 
-Business repo must have these files in `context/`:
+Business repo must have these files in `reference/`:
 
 | File | What It Contains |
 |------|------------------|
-| `context/offer.md` | Community/course name, price, what's included, guarantee |
-| `context/audience.md` | Transformation, objections, doubts |
-| `context/proof/testimonials.md` | Member success stories with specific results |
+| `reference/core/offer.md` | Community/course name, price, what's included, guarantee |
+| `reference/core/audience.md` | Transformation, objections, doubts |
+| `reference/proof/testimonials.md` | Member success stories with specific results |
 
 **Also helpful:**
 - Your personal story (for epiphany bridge) — can be in offer.md or separate file
-- `context/angles/*.md` — Different ways to frame the transformation
+- `reference/proof/angles/*.md` — Different ways to frame the transformation
 
-If context files are missing, ask user to create them first.
+If reference files are missing, ask user to create them first.
 
 ## VSL Structure Overview
 

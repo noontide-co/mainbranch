@@ -10,9 +10,9 @@ Main Branch Premium operates on a fundamental separation:
 
 ```
 ENGINE (main-branch-premium)     +     DATA (your business repo)     =     OUTPUT
-├── Skills                             ├── Context                         ├── Ads
+├── Skills                             ├── Reference                       ├── Ads
 ├── Lenses                             ├── Research                        ├── Scripts
-└── Frameworks                         ├── Decisions                       └── Campaigns
+└── Frameworks                         ├── Decisions                       └── Outputs
                                        └── Compliance
 ```
 
@@ -23,7 +23,7 @@ ENGINE (main-branch-premium)     +     DATA (your business repo)     =     OUTPU
 This is analogous to:
 - A game engine (Unity) + game assets = a game
 - A CMS engine (WordPress) + content = a website
-- Main Branch Premium + your context = your marketing
+- Main Branch Premium + your reference = your marketing
 
 ---
 
@@ -62,7 +62,7 @@ Main Branch Premium inverts this:
 └─────────┘    └─────────┘    └─────────┘    └─────────┘
      │              │              │              │
      ▼              ▼              ▼              ▼
-  research/     decisions/     context/      campaigns/
+  research/     decisions/     reference/      outputs/
 ```
 
 ### 1. Research (Dated)
@@ -142,14 +142,18 @@ See: `research/2026-01-10-competitor-pricing-analysis.md`
 Update permanent context based on decisions. These files are what skills consume.
 
 ```
-context/
-├── offer.md           # What you sell, pricing, mechanism
-├── audience.md        # Who you sell to, psychographics
+reference/
+├── core/
+│   ├── offer.md           # What you sell, pricing, mechanism
+│   ├── audience.md        # Who you sell to, psychographics
+│   └── voice.md           # How you sound
+├── brand/                 # Deep brand systems
 ├── proof/
-│   └── testimonials.md
-└── angles/
-    ├── overwhelm-to-clarity.md
-    └── professional-credibility.md
+│   ├── testimonials.md
+│   └── angles/
+│       ├── overwhelm-to-clarity.md
+│       └── professional-credibility.md
+└── domain/                # Business-type specific
 ```
 
 **Evergreen files don't have dates in the filename.** They represent current truth, not point-in-time snapshots.
@@ -159,7 +163,7 @@ context/
 Skills consume context and produce outputs.
 
 ```
-campaigns/
+outputs/
 ├── 2026-01-15-january-launch/
 │   ├── batch-001-static-ads.md
 │   ├── batch-002-video-scripts.md
@@ -179,13 +183,18 @@ Outputs inform new research. What worked? What didn't? This becomes new research
 your-business/
 ├── CLAUDE.md                    # Instructions + engine reference
 │
-├── context/                     # EVERGREEN — What skills consume
-│   ├── offer.md                 # What you sell
-│   ├── audience.md              # Who you sell to
-│   ├── proof/                   # Approved testimonials
-│   │   └── testimonials.md
-│   └── angles/                  # Messaging entry points
-│       └── [angle-name].md
+├── reference/                   # EVERGREEN — What skills consume
+│   ├── core/                    # REQUIRED — Fundamental context
+│   │   ├── offer.md             # What you sell
+│   │   ├── audience.md          # Who you sell to
+│   │   └── voice.md             # How you sound
+│   ├── brand/                   # Deep brand systems
+│   ├── proof/
+│   │   ├── testimonials.md      # Approved testimonials
+│   │   ├── typicality.md        # FTC outcome data
+│   │   └── angles/              # Messaging entry points
+│   │       └── [angle-name].md
+│   └── domain/                  # Business-type specific
 │
 ├── research/                    # DATED — Point-in-time exploration
 │   └── YYYY-MM-DD-slug.md
@@ -193,12 +202,8 @@ your-business/
 ├── decisions/                   # DATED — Choices with rationale
 │   └── YYYY-MM-DD-slug.md
 │
-├── campaigns/                   # OUTPUT — Generated content
-│   └── YYYY-MM-DD-batch-name/
-│
-└── compliance/                  # FTC — Typicality data
-    └── typicality/
-        └── [metric]-typicality.md
+└── outputs/                     # OUTPUT — Generated content
+    └── YYYY-MM-DD-batch-name/
 ```
 
 ### Design Principles
@@ -206,7 +211,7 @@ your-business/
 1. **Flat > Deep** — Max 2 levels of nesting. Agents navigate via grep, not directory walking.
 2. **Semantic names** — Folder names describe content type, not arbitrary categories.
 3. **Dated vs Evergreen** — Dated content uses `YYYY-MM-DD-` prefix. Evergreen doesn't.
-4. **First-timer friendly** — Someone new sees: context, research, decisions, campaigns, compliance. Self-explanatory.
+4. **First-timer friendly** — Someone new sees: reference, research, decisions, outputs. Self-explanatory.
 
 ---
 
@@ -237,18 +242,21 @@ main-branch-premium/
 │   │   ├── voice-authenticity.md
 │   │   └── substantiation.md
 │   │
-│   └── context/
-│       └── compliance/              # Shared compliance frameworks
-│           ├── README.md
-│           ├── ftc-scrutiny-categories.md
-│           ├── angle-playbook.md
-│           ├── testimonial-decision-rubric.md
-│           └── typicality/
-│               └── README.md
+│   └── reference/
+│       ├── compliance/              # Shared compliance frameworks
+│       │   ├── README.md
+│       │   ├── ftc-scrutiny-categories.md
+│       │   ├── angle-playbook.md
+│       │   ├── testimonial-decision-rubric.md
+│       │   └── typicality/
+│       │       └── README.md
+│       └── domain-rubrics/          # Domain-specific folder structures
+│           ├── ecommerce.md
+│           └── community.md
 │
 └── templates/
     └── modules/
-        └── business-repo-scaffold/  # Template for new business repos
+        └── brand-style-template.md  # Visual style guide template
 ```
 
 ---
@@ -295,11 +303,12 @@ Skills expect business context in standardized locations:
 
 | Context Type | Where to Look | Required |
 |--------------|---------------|----------|
-| Offer | `context/offer.md` | Yes |
-| Audience | `context/audience.md` | Yes |
-| Angles | `context/angles/*.md` | At least one |
-| Proof | `context/proof/testimonials.md` | Recommended |
-| Typicality | `compliance/typicality/*.md` | For outcome claims |
+| Offer | `reference/core/offer.md` | Yes |
+| Audience | `reference/core/audience.md` | Yes |
+| Voice | `reference/core/voice.md` | Recommended |
+| Angles | `reference/proof/angles/*.md` | At least one |
+| Testimonials | `reference/proof/testimonials.md` | Recommended |
+| Typicality | `reference/proof/typicality.md` | For outcome claims |
 
 Skills should fail gracefully with clear errors if required context is missing.
 
@@ -367,7 +376,7 @@ The `/ad-review` skill spawns parallel agents, one per lens:
 
 ### Three Layers
 
-1. **Planning Layer** (`.claude/context/compliance/`)
+1. **Planning Layer** (`.claude/reference/compliance/`)
    - FTC scrutiny categories
    - Angle playbook with rules
    - Testimonial decision rubric
@@ -411,9 +420,9 @@ Skills should load context progressively:
 | Tier | What | When | Token Cost |
 |------|------|------|------------|
 | **Always** | CLAUDE.md | Every session | Low |
-| **Just-in-time** | context/*.md | When generating | Medium |
+| **Just-in-time** | reference/core/*.md | When generating | Medium |
 | **On-demand** | research/, decisions/ | When reasoning | Medium |
-| **Deep reference** | compliance/typicality/, lenses/ | When reviewing | High |
+| **Deep reference** | reference/proof/, lenses/ | When reviewing | High |
 
 **Why this matters:** Token efficiency. Don't load everything upfront. Load what's needed when it's needed.
 
@@ -433,8 +442,8 @@ Skills should load context progressively:
 ```
 Claude Code Session:
 ├── Primary: ~/projects/my-business/
-│   ├── context/
-│   ├── campaigns/
+│   ├── reference/
+│   ├── outputs/
 │   └── ...
 │
 └── Additional: ~/main-branch-premium/
@@ -445,8 +454,8 @@ Claude Code Session:
 
 When you invoke `/ad-static`:
 1. Claude loads skill from main-branch-premium
-2. Skill reads context from my-business/context/
-3. Output goes to my-business/campaigns/
+2. Skill reads context from my-business/reference/
+3. Output goes to my-business/outputs/
 4. Review uses lenses from main-branch-premium
 
 ---
@@ -487,8 +496,8 @@ Decisions note what context they updated:
 
 ```markdown
 ## Action Items
-- [x] Update context/offer.md with new pricing
-- [x] Add new angle to context/angles/value-stack.md
+- [x] Update reference/core/offer.md with new pricing
+- [x] Add new angle to reference/proof/angles/value-stack.md
 ```
 
 This creates a traceable chain: Research → Decision → Context → Output
@@ -499,11 +508,11 @@ This creates a traceable chain: Research → Decision → Context → Output
 
 | Content Type | Format | Example |
 |--------------|--------|---------|
-| Evergreen context | `slug.md` | `offer.md` |
+| Core context | `slug.md` | `offer.md`, `audience.md`, `voice.md` |
 | Research | `YYYY-MM-DD-slug.md` | `2026-01-10-competitor-analysis.md` |
 | Decisions | `YYYY-MM-DD-slug.md` | `2026-01-11-pricing-strategy.md` |
-| Campaign batches | `YYYY-MM-DD-batch-name/` | `2026-01-15-january-launch/` |
-| Typicality data | `[metric]-typicality.md` | `revenue-typicality.md` |
+| Output batches | `YYYY-MM-DD-batch-name/` | `2026-01-15-january-launch/` |
+| Typicality data | `typicality.md` | `reference/proof/typicality.md` |
 
 ### Why Dates in Filenames
 

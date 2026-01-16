@@ -143,7 +143,7 @@ If no typicality file exists for a client, the ad-review skill should:
 Client-specific typicality data lives in each client's own repo:
 
 ```
-{client-repo}/.claude/context/compliance/typicality/{client}-typicality.md
+{client-repo}/reference/proof/typicality.md
 ```
 
 Copy the template below to create a new client typicality file.

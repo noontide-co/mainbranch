@@ -6,11 +6,12 @@ AI-native business operating system. This is the **engine** — your business re
 
 ```
 main-branch-premium (ENGINE)     +     your-repo (DATA)     =     Output
-├── skills/                            ├── context/
-├── lenses/                            │   ├── offer.md
-└── compliance frameworks/             │   ├── audience.md
-                                       │   └── proof/
-                                       └── campaigns/
+├── skills/                            ├── reference/
+├── lenses/                            │   ├── core/
+└── compliance frameworks/             │   ├── brand/
+                                       │   ├── proof/
+                                       │   └── domain/
+                                       └── outputs/
 ```
 
 Same engine + different data = different outputs for each business.
@@ -41,27 +42,31 @@ Same engine + different data = different outputs for each business.
 
 Dump everything you have about your business. The skill sorts it into the right files.
 
-## Context Structure
+## Reference Structure
 
 Your business repo needs:
 
 ```
-context/
-├── offer.md           # What you sell
-├── audience.md        # Who buys
+reference/
+├── core/              # REQUIRED
+│   ├── offer.md       # What you sell
+│   ├── audience.md    # Who buys
+│   └── voice.md       # How you sound
+├── brand/             # Deep brand systems
 ├── proof/
 │   ├── testimonials.md
-│   └── typicality.md  # For outcome claims (FTC)
-└── angles/            # Messaging entry points
+│   ├── typicality.md  # For outcome claims (FTC)
+│   └── angles/        # Messaging entry points
+└── domain/            # Business-type specific
 ```
 
 ## Philosophy
 
 **Marketing reflects the present moment.**
 
-Your context files are living documents. Times change. Seasons change. Markets shift. What worked last quarter might not land today.
+Your reference files are living documents. Times change. Seasons change. Markets shift. What worked last quarter might not land today.
 
-The cycle: Dump context → Sort → Generate → Learn → Update → Repeat
+The cycle: Research → Decide → Codify → Generate → Learn → Repeat
 
 ## Access
 
