@@ -118,7 +118,7 @@ Every business has a `reference/domain/` folder. Contents depend on business typ
 | **Content** | `pillars/`, `editorial/` | `.claude/reference/domain-rubrics/content.md` |
 | **Service** | `process/`, `deliverables/` | `.claude/reference/domain-rubrics/service.md` |
 
-Use `/repo-setup` skill to scaffold the correct structure for your business type.
+Use `/setup` skill to scaffold the correct structure for your business type.
 
 ---
 
@@ -252,7 +252,9 @@ MINE PERFORMANCE → back to RESEARCH
 
 | Skill | Domain | Description |
 |-------|--------|-------------|
-| `/repo-setup` | Setup | Bootstrap repo with correct structure for your business type |
+| `/start` | Onboarding | Main entry point — detects user state, routes to right skill |
+| `/setup` | Onboarding | Bootstrap repo with correct structure for your business type |
+| `/enrich` | Onboarding | Add context to existing repo — audit gaps, gather, merge |
 | `/think` | Knowledge | Research topics, make decisions, codify to reference files |
 | `/ad-static` | Marketing | Generate static image ad copy from reference |
 | `/ad-video-scripts` | Marketing | Generate video ad scripts (15-60s) |

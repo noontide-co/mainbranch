@@ -53,7 +53,7 @@ templates/modules/brand-style-template.md
 
 ### Using the html2pptx Workflow
 
-See [`html2pptx.md`](html2pptx.md) for detailed instructions.
+See [`references/html2pptx.md`](references/html2pptx.md) for detailed instructions.
 
 **Brand-aware additions:**
 - Use colors from user's style guide
@@ -107,8 +107,9 @@ Same as base PPTX skill:
 ## Base Skill Documentation
 
 For complete PPTX creation, editing, and analysis workflows, see:
-- [`html2pptx.md`](html2pptx.md) - HTML to PowerPoint conversion
-- [`ooxml.md`](ooxml.md) - OOXML format reference
+- [`references/html2pptx.md`](references/html2pptx.md) - HTML to PowerPoint conversion
+- [`references/ooxml.md`](references/ooxml.md) - OOXML format reference
+- [`references/svg-guide.md`](references/svg-guide.md) - SVG handling guide
 
 ---
 

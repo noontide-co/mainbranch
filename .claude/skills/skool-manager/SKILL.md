@@ -1,6 +1,14 @@
 ---
 name: skool-manager
-description: Manage Skool community engagement with Chrome browser automation. Use when responding to members, doing daily community management, checking the Skool feed, or drafting responses to posts.
+description: |
+  Manage Skool community engagement with Chrome browser automation. Use when:
+  (1) Responding to member posts in your community
+  (2) Doing daily community management rounds
+  (3) Checking the Skool feed for new posts needing replies
+  (4) Drafting responses that match your voice profile
+  (5) User says "check skool", "respond to posts", "community management"
+
+  Requires Chrome extension and Skool login. Reads voice profile from reference files.
 ---
 
 # Skool Manager

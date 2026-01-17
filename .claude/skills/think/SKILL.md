@@ -1,7 +1,14 @@
 ---
 name: think
 description: |
-  Combined research and decision workflow. Use when exploring topics, making decisions, or documenting choices. Supports modes: full flow, research-only, decide-only, codify.
+  Combined research and decision workflow. Use when:
+  (1) Exploring a question before committing to an approach
+  (2) Making a decision that needs documentation and rationale
+  (3) User says "research", "decide", "figure out", "explore"
+  (4) Updating reference files based on a completed decision
+  (5) Any time user would open multiple tabs to investigate something
+
+  Supports modes: full flow, research-only, decide-only, codify.
 ---
 
 # Think

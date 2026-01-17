@@ -30,7 +30,7 @@ git checkout -b feature/your-improvement
 
 Name it something descriptive:
 - `feature/new-skill-name`
-- `fix/repo-setup-typo`
+- `fix/setup-typo`
 - `improve/ad-review-lens`
 
 ### 3. Make Your Changes

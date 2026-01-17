@@ -1,5 +1,5 @@
 ---
-name: repo-setup
+name: setup
 description: |
   Get a new user fully set up with Claude Code + Main Branch. Use when:
   (1) New user needs Claude Code environment configured
@@ -81,7 +81,7 @@ If not installed:
 
 **If user declines:** Proceed with Playwright or manual screenshots, but note this limits what can be gathered automatically.
 
-**Context tip:** If your conversation gets compacted (summarized), you can always re-invoke `/repo-setup` to reload the full skill context.
+**Context tip:** If your conversation gets compacted (summarized), you can always re-invoke `/setup` to reload the full skill context.
 
 ### 1. Confirm Git + Working Directory
 

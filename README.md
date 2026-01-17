@@ -52,7 +52,7 @@ Open Claude Code (the terminal app, not the website).
 
 You will see a prompt. Type:
 ```
-/repo-setup
+/start
 ```
 
 This walks you through everything. Just answer the questions.
@@ -94,7 +94,9 @@ No prompt engineering. No explaining what you want. Just type the command.
 
 | Command | What It Does |
 |---------|-------------|
-| `/repo-setup` | Set up your business repo (run this first) |
+| `/start` | Main entry point — figures out what you need and routes you there |
+| `/setup` | Set up your business repo (run this first if you're new) |
+| `/enrich` | Add context to your existing repo — fills gaps, adds testimonials |
 | `/think` | Research topics, make decisions, update reference files |
 | `/ad-static` | Create static image ad copy for Meta |
 | `/ad-video-scripts` | Write 15-60 second video ad scripts |
@@ -122,7 +124,7 @@ The engine reads your files. Then it generates content specific to you.
 
 ## Your Business Repo Structure
 
-After running `/repo-setup`, your business folder looks like this:
+After running `/start`, your business folder looks like this:
 
 ```
 your-business/
@@ -149,7 +151,7 @@ Post in the Main Branch group. Tag @Devon for technical questions.
 
 **Common issues:**
 - "Claude does not see my files" - Make sure you added vip as an additional working directory
-- "Skills are not working" - Run `/repo-setup` first to set everything up
+- "Skills are not working" - Run `/start` first to set everything up
 - "Output sounds generic" - Add more detail to your reference files, especially voice.md
 
 ---
@@ -178,7 +180,7 @@ ChatGPT forgets everything between sessions. Main Branch Premium remembers becau
 
 **I am stuck. What do I do?**
 
-Type `/repo-setup` again. It picks up where you left off.
+Type `/start` again. It picks up where you left off.
 
 ---
 
