@@ -41,6 +41,7 @@ ENGINE (main-branch-premium)     +     DATA (your business repo)
 
 ```
 ┌─────────────────────────────────────────────────────┐
+│  YOUR BUSINESS REPO (not main-branch-premium)       │
 │                                                     │
 │  RESEARCH → DECIDE → CODIFY → GENERATE → LEARN ────┘
 │      │          │        │         │
@@ -58,6 +59,8 @@ ENGINE (main-branch-premium)     +     DATA (your business repo)
 - **Codify** = Update evergreen reference (what skills consume)
 - **Generate** = Skills produce outputs from reference
 - **Learn** = Outputs inform new research
+
+**All of this happens in YOUR business repo.** Main-branch-premium is the engine — you pull updates but never edit it. Your repo is your data — you own it, commit to it, and evolve it.
 
 **Reference files are living documents.** Not set-it-and-forget-it. Markets shift, you learn, the reference evolves.
 
