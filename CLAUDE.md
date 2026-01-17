@@ -44,7 +44,7 @@ Your business knowledge compounds. The more you feed it, the better it performs.
 **Engine + Data = Output**
 
 ```
-main-branch-premium (ENGINE)          your-repo (DATA)
+vip (ENGINE)          your-repo (DATA)
 ├── .claude/skills/                   ├── reference/
 ├── .claude/lenses/                   │   ├── core/
 ├── .claude/reference/compliance/       │   │   ├── offer.md
@@ -152,12 +152,12 @@ status: draft
 ## Multi-Repo Workflow
 
 1. Open your project/client repo as **primary working directory**
-2. Add main-branch-premium as **additional working directory**
+2. Add vip as **additional working directory**
 3. Skills and lenses from the engine become available
 4. All outputs go to your project repo
 
 ```bash
-# In Claude Code settings, add main-branch-premium as additional directory
+# In Claude Code settings, add vip as additional directory
 # Then work in your business repo - skills are automatically available
 ```
 

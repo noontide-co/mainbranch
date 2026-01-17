@@ -158,7 +158,7 @@ If you only need one lens (e.g., "just check FTC compliance"):
 
 The skill references files in both the engine and business repo:
 
-**From engine (main-branch-premium):**
+**From engine (vip):**
 - `.claude/lenses/` — The 6 review lenses
 - `.claude/reference/compliance/` — Shared compliance frameworks
 

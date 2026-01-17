@@ -148,7 +148,7 @@ You fill in the reference files. Claude reads them when generating.
 Post in the Main Branch group. Tag @Devon for technical questions.
 
 **Common issues:**
-- "Claude does not see my files" - Make sure you added main-branch-premium as an additional working directory
+- "Claude does not see my files" - Make sure you added vip as an additional working directory
 - "Skills are not working" - Run `/repo-setup` first to set everything up
 - "Output sounds generic" - Add more detail to your reference files, especially voice.md
 

@@ -20,18 +20,18 @@ Get a new user fully configured with Claude Code and their business repo.
 ## The Two-Repo Model
 
 ```
-ENGINE (main-branch-premium)     +     DATA (your business repo)
+ENGINE (vip)     +     DATA (your business repo)
 ├── Skills                             ├── reference/
 ├── Lenses                             ├── research/
 ├── Domain rubrics                     ├── decisions/
 └── You PULL updates                   └── You OWN and EDIT this
 ```
 
-**main-branch-premium** = The engine. You clone it, pull updates, but never edit it.
+**vip** = The engine. You clone it, pull updates, but never edit it.
 
 **your-business-repo** = Your data. You create it, own it, commit to it. This is where YOUR business context lives.
 
-**How they connect:** In Claude Code, add main-branch-premium as an "additional working directory." Skills from the engine read your business repo's `reference/` and output to your `outputs/`.
+**How they connect:** In Claude Code, add vip as an "additional working directory." Skills from the engine read your business repo's `reference/` and output to your `outputs/`.
 
 ---
 
@@ -41,7 +41,7 @@ ENGINE (main-branch-premium)     +     DATA (your business repo)
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  YOUR BUSINESS REPO (not main-branch-premium)       │
+│  YOUR BUSINESS REPO (not vip)       │
 │                                                     │
 │  RESEARCH → DECIDE → CODIFY → GENERATE → LEARN ────┘
 │      │          │        │         │
@@ -109,7 +109,7 @@ git init
 
 **IMPORTANT:** If user has a Skool community, choose **Community/Skool** even if they also do coaching, courses, or services outside Skool. The community is the hub — other offerings feed into it.
 
-Read the appropriate rubric from `main-branch-premium/.claude/reference/domain-rubrics/`.
+Read the appropriate rubric from `vip/.claude/reference/domain-rubrics/`.
 
 ### 3. Gather Context (Be a Ruthless Journalist)
 
@@ -185,7 +185,7 @@ Based on business type, create domain-specific folders:
 **E-commerce:** `reference/domain/products/`, `reference/domain/fulfillment/`
 **Community:** `reference/domain/classroom/`, `reference/domain/membership/`, `reference/domain/funnel/`
 
-See `main-branch-premium/.claude/reference/domain-rubrics/` for full specifications.
+See `vip/.claude/reference/domain-rubrics/` for full specifications.
 
 ### 7. Draft CLAUDE.md
 
@@ -193,7 +193,7 @@ See `references/claude-md-guide.md` for structure.
 
 **Key sections:**
 - One-line description
-- Engine reference (main-branch-premium)
+- Engine reference (vip)
 - Folder structure diagram
 - Business summary
 - Quick reference (audience, voice, offer)
@@ -204,7 +204,7 @@ See `references/claude-md-guide.md` for structure.
 
 Simple human-readable overview:
 - What the business is
-- How to use the repo with main-branch-premium
+- How to use the repo with vip
 - Quick stats
 
 ### 9. Initial Commit

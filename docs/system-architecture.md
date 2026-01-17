@@ -9,7 +9,7 @@ Complete technical reference for how Main Branch Premium works as an AI-native b
 Main Branch Premium operates on a fundamental separation:
 
 ```
-ENGINE (main-branch-premium)     +     DATA (your business repo)     =     OUTPUT
+ENGINE (vip)     +     DATA (your business repo)     =     OUTPUT
 ├── Skills                             ├── Reference                       ├── Ads
 ├── Lenses                             ├── Research                        ├── Scripts
 └── Frameworks                         ├── Decisions                       └── Outputs
@@ -218,7 +218,7 @@ your-business/
 ## Folder Structure: Engine Repo
 
 ```
-main-branch-premium/
+vip/
 ├── CLAUDE.md                        # Philosophy + reference
 ├── docs/
 │   └── system-architecture.md       # This file
@@ -453,9 +453,9 @@ Skills should load context progressively:
 
 ### Setup
 
-1. Clone main-branch-premium locally
+1. Clone vip locally
 2. Create or clone your business repo
-3. In Claude Code, add main-branch-premium as additional working directory
+3. In Claude Code, add vip as additional working directory
 4. Work in your business repo as primary directory
 
 ### In Practice
@@ -467,17 +467,17 @@ Claude Code Session:
 │   ├── outputs/
 │   └── ...
 │
-└── Additional: ~/main-branch-premium/
+└── Additional: ~/vip/
     ├── .claude/skills/
     ├── .claude/lenses/
     └── ...
 ```
 
 When you invoke `/ad-static`:
-1. Claude loads skill from main-branch-premium
+1. Claude loads skill from vip
 2. Skill reads context from my-business/reference/
 3. Output goes to my-business/outputs/
-4. Review uses lenses from main-branch-premium
+4. Review uses lenses from vip
 
 ---
 
@@ -597,7 +597,7 @@ updated: 2026-01-13
 | Tier | Repo | Who | Contains |
 |------|------|-----|----------|
 | **Public** | main-branch | Everyone | Free Claude plugin |
-| **Members** | main-branch-premium | Paying members | Engine (skills, lenses, frameworks) |
+| **Members** | vip | Paying members | Engine (skills, lenses, frameworks) |
 | **Team** | noontide-projects | Employees, contractors | Internal project work |
 | **Owners** | noontide-ops | Founders | Legal, accounting, sensitive |
 

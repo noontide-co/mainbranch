@@ -21,7 +21,7 @@ Structured workflow for research, decisions, and codifying knowledge.
 
 ## Where Files Go
 
-**All files are saved to YOUR business repo, not main-branch-premium.**
+**All files are saved to YOUR business repo, not the engine (vip).**
 
 ```
 your-business-repo/          <- Files saved here
@@ -29,7 +29,7 @@ your-business-repo/          <- Files saved here
 ├── decisions/                <- /think decide output
 └── reference/                <- /think codify updates this
 
-main-branch-premium/          <- Never modified by /think
+vip/ (engine)             <- Never modified by /think
 └── .claude/skills/think/     <- This skill lives here
 ```
 

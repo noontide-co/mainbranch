@@ -27,15 +27,15 @@ CLAUDE.md is the **always-loaded business brain**. Claude reads this file at the
 
 ## Engine
 
-This repo contains your **business data**. It's powered by **main-branch-premium** (the engine).
+This repo contains your **business data**. It's powered by **vip** (the engine).
 
 **Setup:**
-1. Clone main-branch-premium: `git clone https://github.com/noontide-co/main-branch-premium.git`
-2. In Claude Code, add main-branch-premium as an "additional working directory"
+1. Clone vip: `git clone https://github.com/mainbranch-ai/vip.git`
+2. In Claude Code, add vip as an "additional working directory"
 3. Work in THIS repo as your primary directory
 
 **How it works:**
-- Engine (main-branch-premium): Contains skills, lenses, frameworks. You pull updates but never edit.
+- Engine (vip): Contains skills, lenses, frameworks. You pull updates but never edit.
 - Data (this repo): Contains your business context. You own and edit this.
 - Skills read from your `reference/` and output to your `outputs/`
 

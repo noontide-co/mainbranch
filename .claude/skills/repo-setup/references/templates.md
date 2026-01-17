@@ -400,23 +400,23 @@ status: complete
 
 This is the **data repo** (knowledge base) for [Business Name].
 
-It uses [main-branch-premium](https://github.com/noontide-co/main-branch-premium) as the **engine** — skills, lenses, and frameworks that generate content from your data.
+It uses [vip](https://github.com/mainbranch-ai/vip) as the **engine** — skills, lenses, and frameworks that generate content from your data.
 
 ### Setup
 
 1. **Clone the engine** (if you haven't):
    ```bash
-   git clone https://github.com/noontide-co/main-branch-premium.git
+   git clone https://github.com/mainbranch-ai/vip.git
    ```
 
-2. **In Claude Code**, add main-branch-premium as an additional working directory
+2. **In Claude Code**, add vip as an additional working directory
 
 3. **Work in this repo** as your primary directory
 
 ### How It Works
 
 ```
-ENGINE (main-branch-premium)     +     DATA (this repo)     =     OUTPUT
+ENGINE (vip)     +     DATA (this repo)     =     OUTPUT
 ├── Skills                             ├── reference/            ├── Ads
 ├── Lenses                             ├── research/             ├── Emails
 └── Pull updates, don't edit           └── You own this          └── Content
