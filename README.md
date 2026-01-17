@@ -8,6 +8,7 @@ Turn Claude into your personal marketing team. Create ads, scripts, and communit
 
 Once set up, you can:
 
+- Research topics and document decisions
 - Generate batches of ad copy in your voice
 - Create video scripts for Meta ads
 - Write VSL scripts for your community
@@ -94,6 +95,7 @@ No prompt engineering. No explaining what you want. Just type the command.
 | Command | What It Does |
 |---------|-------------|
 | `/repo-setup` | Set up your business repo (run this first) |
+| `/think` | Research topics, make decisions, update reference files |
 | `/ad-static` | Create static image ad copy for Meta |
 | `/ad-video-scripts` | Write 15-60 second video ad scripts |
 | `/ad-review` | Check ads for FTC and Meta compliance |

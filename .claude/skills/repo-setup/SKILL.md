@@ -35,15 +35,33 @@ ENGINE (main-branch-premium)     +     DATA (your business repo)
 
 ---
 
-## Philosophy
+## Philosophy: The Core Loop
 
-**This is not a one-time setup.** Reference files are living documents.
+**This is the heart of Main Branch.** Everything else exists to support this cycle:
 
 ```
-Research → Decide → Codify reference → Generate outputs → Learn → Repeat
+┌─────────────────────────────────────────────────────┐
+│                                                     │
+│  RESEARCH → DECIDE → CODIFY → GENERATE → LEARN ────┘
+│      │          │        │         │
+│      ▼          ▼        ▼         ▼
+│  research/  decisions/ reference/ outputs/
+│
+│  Use /think to run this cycle.
+│
+└─────────────────────────────────────────────────────
 ```
 
-Start messy. Refine continuously. The system gets smarter because the owner stays present with the business.
+**Why this matters:**
+- **Research** = Investigate before committing (dated, exploratory)
+- **Decide** = Make choices with rationale (dated, links to research)
+- **Codify** = Update evergreen reference (what skills consume)
+- **Generate** = Skills produce outputs from reference
+- **Learn** = Outputs inform new research
+
+**Reference files are living documents.** Not set-it-and-forget-it. Markets shift, you learn, the reference evolves.
+
+After setup, teach users: "Use `/think` to research topics and make decisions. Your reference files get smarter over time."
 
 ---
 

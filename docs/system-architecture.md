@@ -370,6 +370,27 @@ The `/ad-review` skill spawns parallel agents, one per lens:
 └─────────────────────────────────────────────────────────┘
 ```
 
+### Spawning Subagents: Permissions
+
+**Critical:** When spawning subagents with the Task tool, they inherit limited permissions. If your agent needs to:
+
+- Create folders or move files → **Needs Bash access**
+- Write files outside working directories → **Needs explicit paths**
+- Run git commands → **Needs Bash access**
+
+**Pattern for agents that need Bash:**
+
+```
+Spawn agent with prompt that includes:
+"You have Bash access. Create directories and move files as needed."
+
+Use allowedPrompts in ExitPlanMode:
+{ "tool": "Bash", "prompt": "create directories" }
+{ "tool": "Bash", "prompt": "move files" }
+```
+
+**Avoid stuck loops:** If an agent keeps retrying the same denied permission, it will loop indefinitely. Always verify the agent has the permissions it needs before spawning, or instruct it to report back if permissions are missing rather than retry.
+
 ---
 
 ## Compliance Framework
