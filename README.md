@@ -40,7 +40,7 @@ Open GitHub Desktop. Click **File > Clone Repository**.
 
 Paste this URL:
 ```
-https://github.com/noontide-projects/main-branch-premium
+https://github.com/mainbranch-ai/vip
 ```
 
 Choose where to save it. Click **Clone**.
