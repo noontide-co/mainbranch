@@ -70,6 +70,50 @@ After setup, teach users: "Use `/think` to research topics and make decisions. Y
 
 ## Workflow
 
+### CRITICAL: Check Location First
+
+**Before doing ANYTHING, verify we're NOT in the vip (engine) repository:**
+
+```bash
+# If this succeeds, we're in vip — STOP
+ls .claude/skills/setup/SKILL.md 2>/dev/null
+```
+
+**If we're in vip, STOP and tell the user:**
+
+> "Hold on — you're in the **vip** repository. That's the engine, not your business repo.
+>
+> I cannot create your business files here because:
+> 1. You only have read-only access to vip (you can't push changes)
+> 2. Your business data needs its own separate repository
+>
+> **Here's what to do:**
+>
+> 1. Create a folder for your business:
+>    ```bash
+>    mkdir ~/my-business-name
+>    cd ~/my-business-name
+>    git init
+>    ```
+>
+> 2. Start Claude in that folder:
+>    ```bash
+>    claude
+>    ```
+>
+> 3. Add vip as an additional directory so you still have skills:
+>    ```
+>    /add-dir ~/vip
+>    ```
+>
+> 4. Run `/setup` again
+>
+> Need more help? See `docs/BEGINNER-SETUP.md` in the vip repo."
+
+**Do not proceed if we're in vip.**
+
+---
+
 ### 0. Verify Chrome Extension (REQUIRED for Skool)
 
 **Before gathering ANY context, check Chrome extension status:**

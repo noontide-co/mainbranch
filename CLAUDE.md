@@ -4,6 +4,17 @@ AI-native business operating system. Your reference is the fuel, Claude is the e
 
 ---
 
+> **FOR CLAUDE: This is the ENGINE repository (vip). Do NOT write files here.**
+>
+> - Users have READ-ONLY access — they cannot push changes
+> - All business data belongs in the USER'S OWN repository
+> - If asked to save files, create them in the user's business repo, not here
+> - Run `/start` to help users set up their own repo if they don't have one
+>
+> **For humans:** If you're reading this, your business files should go in YOUR OWN separate repository, not in vip. See `docs/BEGINNER-SETUP.md` for help.
+
+---
+
 ## Philosophy: Active Reference Management
 
 **You learn your business by building your reference.**
