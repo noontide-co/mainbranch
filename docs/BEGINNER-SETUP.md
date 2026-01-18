@@ -4,11 +4,31 @@ Complete setup guide for people new to Claude Code, Git, or terminal.
 
 ---
 
+## Read This First
+
+**If this feels over your head, that's okay.** You're not alone.
+
+This guide involves some technical stuff — terminal commands, GitHub, cloning repos. If you've never done any of this before, it might feel foreign. But here's what I want you to know:
+
+**This is one of the biggest opportunities I've ever seen.** And whether you're technical or not, it is absolutely worth the small effort it's going to take you — probably under an hour — to get through this setup.
+
+Here's the thing: **most of this is one-time setup.** You're not going to be typing terminal commands every day. You're not going to need to memorize any of this. Once you're set up, you're mostly just chatting with Claude like normal.
+
+**So why do we need the terminal at all?**
+
+Because this tool needs to create and edit files on your computer. That's what makes it so powerful. Instead of Claude forgetting everything between conversations, your business context lives in actual files that Claude reads every time. That's the magic — and the terminal is just the door that lets Claude do this work for you.
+
+**You can do this.** Even if Git and GitHub feel weird right now, you'll start to get familiar with it over time. Don't let the unfamiliarity stop you. Just focus on one step at a time.
+
+Let's go.
+
+---
+
 ## Before You Do Anything Else
 
 ### Step 0: Get Repository Access
 
-The vip repository is private. You need access before you can clone it.
+The vip repository is private. You need access before anything else will work.
 
 **How to get access:**
 1. Create a GitHub account if you don't have one: [github.com/signup](https://github.com/signup)
@@ -20,294 +40,277 @@ The vip repository is private. You need access before you can clone it.
 - "Repository not found"
 - "Could not read Username"
 
-Don't proceed until you have access confirmed.
+Don't move forward until Devon confirms you have access.
 
 ---
 
 ## Required Accounts
 
-| Account | What For | Link |
-|---------|----------|------|
-| GitHub | Access the vip repository | [github.com/signup](https://github.com/signup) |
-| Anthropic (Pro or Max) | Use Claude Code | [claude.ai](https://claude.ai) |
+| Account | What It's For | Link |
+|---------|---------------|------|
+| GitHub | This is where the code lives. Think of it like a shared folder in the cloud. | [github.com/signup](https://github.com/signup) |
+| Anthropic (Pro or Max) | Your Claude subscription. You need a paid plan to use Claude Code. | [claude.ai](https://claude.ai) |
 
-You need a paid Claude subscription (Pro at $20/month or Max at $100-200/month) to use Claude Code.
+Claude Code requires Pro ($20/month) or Max ($100-200/month).
 
 ---
 
 ## Install These Tools
 
-### 1. GitHub Desktop (Strongly Recommended for Beginners)
+### 1. GitHub Desktop (Strongly Recommended)
 
-GitHub Desktop lets you clone repositories and see when updates are available — all without touching the terminal.
+GitHub Desktop is a visual app that makes Git easy. No commands to remember — just buttons to click.
 
 **Install:**
 - Download from [desktop.github.com](https://desktop.github.com)
 - Sign in with your GitHub account
 
-**Why GitHub Desktop:**
-- Visual indicator when there are updates to pull
-- No need to remember git commands
-- Works the same on Mac and Windows
+**Why you'll love it:**
+- Shows you when updates are available (little badge appears)
+- Lets you see exactly what changed
+- No need to remember Git commands
 
-**Already comfortable with git?** You can skip GitHub Desktop and use terminal commands instead. But for most people new to this, GitHub Desktop makes life easier.
+**Already comfortable with Git?** You can skip this and use terminal commands. But for most people, GitHub Desktop removes a lot of headaches.
 
 ### 2. Claude Code (Required)
 
-Claude Code is the terminal app that runs Main Branch skills.
+Claude Code is a terminal app. "Terminal" is just a text-based way to talk to your computer — you type commands, it does things.
 
-**Mac:**
+**To install on Mac:**
+
+1. Open Terminal (find it in Applications → Utilities → Terminal)
+2. Copy and paste this entire line, then press Enter:
+
 ```bash
 curl -fsSL https://claude.ai/install.sh | bash
 ```
 
-**Windows:**
+**To install on Windows:**
+
+1. Open PowerShell (search for "PowerShell" in your Start menu)
+2. Copy and paste this entire line, then press Enter:
+
 ```powershell
 irm https://claude.ai/install.ps1 | iex
 ```
 
-After installing, you'll need to authenticate with your Anthropic account the first time you run it.
+That's it. The installer does the rest.
 
 ---
 
 ## Setup Steps
 
+Don't overthink this. Just follow each step.
+
 ### Step 1: Clone the Repository
 
-Open GitHub Desktop and clone the vip repository.
+"Cloning" just means downloading a copy of the files to your computer.
 
 1. Open GitHub Desktop
 2. Click **File → Clone Repository**
 3. Click the **URL** tab
-4. Paste: `https://github.com/mainbranch-ai/vip`
-5. Choose where to save it (remember this location!)
+4. Paste this: `https://github.com/mainbranch-ai/vip`
+5. Choose where to save it — your Documents folder is fine. **Remember this location!**
 6. Click **Clone**
 
 **If you get an error:** You probably don't have access yet. Go back to Step 0.
 
 ### Step 2: Open Terminal in the vip Folder
 
-**Mac:**
+Now you need to open your terminal "inside" the folder you just downloaded. This tells Claude Code where to look for files.
+
+**On Mac:**
+
+Option A (easiest):
 1. Open Terminal (Applications → Utilities → Terminal)
-2. Type `cd ` (with a space after it)
-3. Drag the vip folder from Finder into the Terminal window
+2. Type `cd ` (that's "cd" followed by a space)
+3. Open Finder, find the vip folder, and drag it into the Terminal window
 4. Press Enter
 
-Or if you cloned to your home folder:
+Option B (if you know where you saved it):
 ```bash
-cd ~/vip
+cd ~/Documents/vip
 ```
 
-**Windows:**
-1. Open the folder where you cloned vip in File Explorer
-2. Right-click inside the folder
-3. Select "Open in Terminal" or "Git Bash Here"
+**On Windows:**
 
-Or in Git Bash:
-```bash
-cd /c/Users/YourName/path/to/vip
-```
+1. Open File Explorer and navigate to the vip folder
+2. Right-click inside the folder (not on a file)
+3. Click "Open in Terminal" or "Git Bash Here"
+
+**What does "cd" mean?** It stands for "change directory." It's just telling your computer "go to this folder."
 
 ### Step 3: Start Claude Code
 
-In your terminal, type:
+Now, in that same terminal window, type:
+
 ```bash
 claude
 ```
 
-The first time, you'll be asked to authenticate. Follow the prompts.
+And press Enter.
+
+The first time you do this, Claude will ask you to log in. Just follow the prompts — it'll open a browser window.
 
 ### Step 4: Run the Start Command
 
-Once Claude is running, type:
+Once Claude is running, you'll see a prompt where you can type. Type:
+
 ```
 /start
 ```
 
-Claude will guide you from here. It will:
-1. Check if you have a business repo set up
-2. If not, guide you through `/setup` to create one
-3. Help you add your business context
+And press Enter.
+
+**That's it.** From here, Claude takes over and guides you through everything else. You're just chatting now.
 
 ---
 
 ## Understanding the Two Repos
 
-This is the most important concept to understand.
+This is the key concept. Once you get this, everything else makes sense.
 
 ### vip (The Engine)
 
-- Contains skills, lenses, compliance frameworks
-- You **PULL** updates from this — never edit it
-- You have **read-only access** on GitHub
-- Even if you edit files locally, you cannot push changes
+This is the shared system that everyone uses. It contains all the skills, templates, and frameworks.
+
+- You **download updates** from this — you never edit it
+- You have **read-only access** (you can look but not change the original)
+- Think of it like software you install — you use it, you don't rewrite it
 
 ### Your Business Repo (Your Data)
 
-- Contains your offer, audience, voice, testimonials
-- You **create this** via the `/setup` command
-- You **own and edit** this
-- You can push changes to your own GitHub
+This is YOUR personal folder. It contains everything about YOUR business — your offer, your audience, how you talk, your testimonials.
+
+- You **create this** when you run `/setup`
+- You **own and control** everything in it
+- This is what makes your outputs sound like YOU
 
 ```
 vip/                          your-business/
-├── .claude/skills/           ├── reference/
-├── .claude/lenses/           │   ├── core/
-├── .claude/reference/        │   ├── proof/
-└── (DO NOT EDIT)             │   └── domain/
-                              ├── research/
-                              ├── decisions/
-                              └── outputs/
-                              (YOU OWN THIS)
+├── Skills                    ├── Your offer
+├── Templates                 ├── Your audience
+├── Frameworks                ├── Your voice
+└── (shared, read-only)       └── (yours, you own it)
 ```
 
-**The two work together:** vip provides the skills. Your business repo provides the data. Skills read your data and generate outputs.
+**How they work together:** The engine (vip) reads your business data and generates content that sounds like you. Same engine, different data = different outputs for each business.
 
 ---
 
 ## Keeping vip Updated
 
-Devon updates the vip repository with new skills and improvements.
+Devon regularly adds new skills and improvements. Here's the good news:
 
-### Automatic Updates (Built In)
+### Updates Happen Automatically
 
-**Good news: updates happen automatically.** Every skill (`/start`, `/setup`, `/ad-static`, etc.) pulls the latest vip changes before running. You don't need to do anything.
+**You don't need to do anything.** Every time you use a skill (`/start`, `/ad-static`, etc.), it automatically checks for updates and pulls them. If there were updates, Claude will briefly mention it and keep going.
 
-If updates were pulled, Claude will briefly note "Pulled latest vip updates" and continue.
+### GitHub Desktop (If You're Curious)
 
-### Using GitHub Desktop (Optional)
+Want to see what changed? Open GitHub Desktop:
+- A number badge means updates are available
+- Click **Pull origin** to get them
+- Click on commits in the History tab to see exactly what's new
 
-GitHub Desktop is useful for:
-- **Seeing when updates are available** — Look for a number badge or arrow icon
-- **Viewing what changed** — Click on commits to see exactly what's new
-- **Manually pulling** — If you want updates before running a skill
-
-**To pull manually:**
-1. Open GitHub Desktop
-2. Select the **vip** repository from the dropdown
-3. Click **Fetch origin** to check for updates
-4. If updates exist, click **Pull origin**
-
-**To see what changed:**
-1. After pulling, click on the commits in the History tab
-2. GitHub Desktop shows you exactly which files changed and what's different
+But again — you don't need to do this. Skills auto-update.
 
 ---
 
 ## Common Errors and Fixes
 
-| Error | What Happened | Fix |
-|-------|---------------|-----|
-| "404 error" or "Repository not found" | No access to the repo | Share your GitHub username with Devon |
-| "Could not read Username" | Git can't authenticate | Sign into GitHub Desktop first |
-| "command not found: claude" | Claude Code not installed | Run the install command again |
-| "Skills not working" | Not in the vip folder | Make sure you ran `claude` from inside the vip folder |
-| Made changes to vip but can't push | You only have read access | This is expected — vip is read-only. Your business data goes in YOUR repo |
+Everyone hits these at some point. Here's what they mean:
+
+| What You See | What Happened | How to Fix It |
+|--------------|---------------|---------------|
+| "404 error" or "Repository not found" | You don't have access yet | Share your GitHub username with Devon and wait for confirmation |
+| "Could not read Username" | Git isn't logged in | Open GitHub Desktop and make sure you're signed in |
+| "command not found: claude" | Claude Code isn't installed | Run the install command again (Step 2 of Install) |
+| "Skills not working" | You're not in the right folder | Make sure you ran `claude` from inside the vip folder |
+| Made changes but can't push | vip is read-only (this is normal!) | Your business data goes in YOUR repo, not vip |
 
 ---
 
 ## What NOT to Do
 
-### Don't Enter GitHub URLs into Claude
+### Don't Paste GitHub URLs into Claude
 
-Claude Code doesn't fetch repositories. If you paste a GitHub URL into Claude, you'll get a 404 error.
+Claude Code works with files on your computer. It can't fetch things from the internet.
 
-**Wrong:**
+**This won't work:**
 ```
 > https://github.com/mainbranch-ai/vip
 Error: Request failed status code 404
 ```
 
-**Right:**
-1. Clone the repo using GitHub Desktop first
+**Do this instead:**
+1. Clone the repo first (GitHub Desktop)
 2. Open terminal in that folder
 3. Run `claude`
 4. Type `/start`
 
-### Don't Edit the vip Repository
+### Don't Edit the vip Folder
 
-Even though you can edit files locally, you:
-- Cannot push changes (read-only access)
-- Will create conflicts when you try to pull updates
-- Should put all your business data in YOUR separate repo
+Even if you accidentally edit something in vip:
+- You can't push those changes (it's read-only)
+- It might cause problems when you try to update
 
-If Claude ever tries to write to the vip folder, something went wrong.
+All your business stuff goes in YOUR separate repo. Claude will guide you to set that up.
 
 ### Don't Use Claude Desktop App or Cowork for Main Branch
 
-These are great tools, but they don't support the two-directory workflow that Main Branch requires.
-
-| Tool | Works for Main Branch? | Why |
-|------|----------------------|-----|
-| Claude Code (Terminal) | Yes | Supports `/add-dir` for multiple directories |
-| Claude Desktop App | No | Designed for single-repo workflows |
-| Cowork | No | Sandboxed to one folder |
+Those are great tools, but they work differently. Main Branch needs the terminal version because it works with two folders at once (vip + your business).
 
 ---
 
-## Adding Your Business Repo (After Initial Setup)
+## After Initial Setup
 
-Once you've created your business repo with `/setup`, you'll want Claude to see both repos.
+Once you've created your business repo with `/setup`, you'll want Claude to see both folders.
 
-### Option 1: Add vip as Additional Directory
+This is easy. In Claude, just type:
 
-Work from your business repo, add vip:
-
-```bash
-cd ~/your-business-repo
-claude
+```
+/add-dir ~/path/to/other/folder
 ```
 
-Then in Claude:
+For example, if you're working in vip and want to add your business repo:
 ```
-/add-dir ~/vip
-```
-
-### Option 2: Add Your Business Repo to vip
-
-Work from vip, add your business repo:
-
-```bash
-cd ~/vip
-claude
+/add-dir ~/Documents/my-business
 ```
 
-Then in Claude:
+Or if you're in your business repo and want to add vip:
 ```
-/add-dir ~/your-business-repo
+/add-dir ~/Documents/vip
 ```
 
-Either way works. The point is Claude needs to see both directories.
+Now Claude can see both and use the skills to work with your data.
 
 ---
 
-## IDE Integration (Skip for Now)
+## Skip IDE Integration For Now
 
-Claude Code can integrate with VS Code and other editors. This is useful but adds complexity.
+You might hear about VS Code integration or other fancy setups. Ignore all that for now.
 
-**Skip this until you're comfortable with the basics.**
+Get the basics working first:
+1. Clone vip ✓
+2. Run `/start` ✓
+3. Create your business repo ✓
+4. Generate some outputs ✓
 
-Once you've successfully:
-1. Cloned vip
-2. Run `/start`
-3. Created your business repo
-4. Generated some outputs
-
-Then consider adding IDE integration. We'll cover that in a separate guide.
+Once you're comfortable, we can talk about other tools. But honestly? Many people never need them.
 
 ---
 
 ## Getting Help
 
-**In the Skool community:**
-- Post in the Main Branch group
+**Stuck? Post in the Skool community.**
 - Tag @Devon for technical questions
-- Share screenshots of errors
+- Share a screenshot of the error — it helps a lot
 
-**Before asking for help, check:**
-1. Do you have repository access? (Step 0)
-2. Are you in the right folder? (run `pwd` to check)
-3. Is Claude Code installed? (run `claude --version`)
+**Quick checks before asking:**
+1. Do you have repository access? (Devon confirmed?)
+2. Did you run `claude` from inside the vip folder?
+3. Is Claude Code installed? (Try typing `claude --version` in terminal)
 
 ---
 
@@ -318,24 +321,30 @@ Then consider adding IDE integration. We'll cover that in a separate guide.
 1. Get GitHub access from Devon
 2. Install GitHub Desktop
 3. Install Claude Code
-4. Clone vip via GitHub Desktop
-5. cd into vip folder
-6. Run: claude
+4. Clone vip using GitHub Desktop
+5. Open terminal in the vip folder
+6. Type: claude
 7. Type: /start
+8. Follow the prompts
 ```
 
-### Daily Workflow
+### Daily Use (After Setup)
 ```
 1. Open terminal
-2. cd ~/vip (or your business repo)
-3. Run: claude
-4. Use /add-dir to add the other repo
-5. Use skills like /ad-static, /think, etc.
+2. Go to your business folder: cd ~/my-business
+3. Type: claude
+4. Add vip if needed: /add-dir ~/vip
+5. Use skills: /ad-static, /think, etc.
 ```
 
-### Getting Updates
-```
-1. Open GitHub Desktop
-2. Select vip repository
-3. Click "Pull origin" if updates available
-```
+---
+
+## You've Got This
+
+Seriously. If you made it through this guide, the hard part is over.
+
+From here on out, you're just having conversations with Claude — except now Claude actually knows your business, remembers everything, and can create real files and outputs for you.
+
+That's the power of this system. And you just unlocked it.
+
+Let's go build something.
