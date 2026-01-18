@@ -1,4 +1,4 @@
-# Main Branch Premium
+# Main Branch VIP
 
 Turn Claude into your personal marketing team. Create ads, scripts, and community content that sounds like YOU.
 
