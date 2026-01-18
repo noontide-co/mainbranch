@@ -167,24 +167,30 @@ vip/                          your-business/
 
 ## Keeping vip Updated
 
-Devon will update the vip repository with new skills and improvements. Here's how to get those updates:
+Devon updates the vip repository with new skills and improvements.
 
-### Using GitHub Desktop
+### Automatic Updates (Built In)
 
+**Good news: updates happen automatically.** Every skill (`/start`, `/setup`, `/ad-static`, etc.) pulls the latest vip changes before running. You don't need to do anything.
+
+If updates were pulled, Claude will briefly note "Pulled latest vip updates" and continue.
+
+### Using GitHub Desktop (Optional)
+
+GitHub Desktop is useful for:
+- **Seeing when updates are available** — Look for a number badge or arrow icon
+- **Viewing what changed** — Click on commits to see exactly what's new
+- **Manually pulling** — If you want updates before running a skill
+
+**To pull manually:**
 1. Open GitHub Desktop
 2. Select the **vip** repository from the dropdown
-3. Look for **Fetch origin** or **Pull origin** button
-4. If there's a number badge or arrow, updates are available
-5. Click **Pull** to get them
+3. Click **Fetch origin** to check for updates
+4. If updates exist, click **Pull origin**
 
-**Check weekly** or when Devon announces updates in Skool.
-
-### What Updates Look Like
-
-In GitHub Desktop, you'll see:
-- An arrow icon indicating changes available
-- "Pull origin" button becomes active
-- The number of commits behind
+**To see what changed:**
+1. After pulling, click on the commits in the History tab
+2. GitHub Desktop shows you exactly which files changed and what's different
 
 ---
 

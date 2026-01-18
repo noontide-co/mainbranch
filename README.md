@@ -199,13 +199,9 @@ You fill in the reference files. Claude reads them when generating.
 
 Devon updates the vip repository with new skills and improvements.
 
-**Using GitHub Desktop:**
-1. Open GitHub Desktop
-2. Select **vip** from the repository dropdown
-3. Look for the **Pull origin** button (or an arrow/number badge)
-4. Click it to get updates
+**Updates happen automatically.** Every skill pulls the latest changes before running. You don't need to do anything.
 
-Check weekly or when Devon announces changes in Skool.
+**GitHub Desktop (optional):** If you want to see what changed or pull updates manually, open GitHub Desktop, select vip, and click Pull origin. The History tab shows exactly what changed in each update.
 
 ---
 
