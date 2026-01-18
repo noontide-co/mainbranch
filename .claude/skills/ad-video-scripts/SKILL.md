@@ -7,6 +7,16 @@ description: Write high-converting video ad scripts for Meta ads. Use when asked
 
 Creates diverse video ad scripts using a systematic 6-step process.
 
+## Pull Latest Updates (Always)
+
+```bash
+cd ~/vip 2>/dev/null && git pull origin main 2>/dev/null && cd - >/dev/null || true
+```
+
+If updates pulled: briefly note "Pulled latest vip updates." then continue silently.
+
+---
+
 ## Reference Required
 
 Business repo must have these files in `reference/`:

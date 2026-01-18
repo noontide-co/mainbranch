@@ -37,7 +37,7 @@ You need a paid Claude subscription (Pro at $20/month or Max at $100-200/month) 
 
 ## Install These Tools
 
-### 1. GitHub Desktop (Required)
+### 1. GitHub Desktop (Strongly Recommended for Beginners)
 
 GitHub Desktop lets you clone repositories and see when updates are available â€” all without touching the terminal.
 
@@ -49,6 +49,8 @@ GitHub Desktop lets you clone repositories and see when updates are available â€
 - Visual indicator when there are updates to pull
 - No need to remember git commands
 - Works the same on Mac and Windows
+
+**Already comfortable with git?** You can skip GitHub Desktop and use terminal commands instead. But for most people new to this, GitHub Desktop makes life easier.
 
 ### 2. Claude Code (Required)
 

@@ -7,6 +7,16 @@ description: Write high-converting Video Sales Letter (VSL) scripts using a prov
 
 Creates complete Video Sales Letter scripts using an 18-section conversion framework.
 
+## Pull Latest Updates (Always)
+
+```bash
+cd ~/vip 2>/dev/null && git pull origin main 2>/dev/null && cd - >/dev/null || true
+```
+
+If updates pulled: briefly note "Pulled latest vip updates." then continue silently.
+
+---
+
 ## Reference Required
 
 Business repo must have these files in `reference/`:

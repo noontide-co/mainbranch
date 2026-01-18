@@ -7,6 +7,16 @@ description: Create branded presentations from your business context. Use when a
 
 Create branded PowerPoint presentations using your business context and visual identity.
 
+## Pull Latest Updates (Always)
+
+```bash
+cd ~/vip 2>/dev/null && git pull origin main 2>/dev/null && cd - >/dev/null || true
+```
+
+If updates pulled: briefly note "Pulled latest vip updates." then continue silently.
+
+---
+
 ## Overview
 
 This skill is a fork of Anthropic's PPTX skill, enhanced with:
