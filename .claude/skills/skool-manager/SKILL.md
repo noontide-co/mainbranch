@@ -15,6 +15,16 @@ description: |
 
 Draft and post community responses with Chrome MCP.
 
+## Pull Latest Updates (Always)
+
+```bash
+cd ~/vip 2>/dev/null && git pull origin main 2>/dev/null && cd - >/dev/null || true
+```
+
+If updates pulled: briefly note "Pulled latest vip updates." then continue silently.
+
+---
+
 ## Prerequisites
 
 - Claude in Chrome extension installed and connected

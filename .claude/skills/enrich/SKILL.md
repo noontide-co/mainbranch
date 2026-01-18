@@ -30,6 +30,16 @@ Add context to an existing Main Branch business repo.
 
 ## Workflow
 
+### 0. Pull Latest Updates (Always)
+
+```bash
+cd ~/vip 2>/dev/null && git pull origin main 2>/dev/null && cd - >/dev/null || true
+```
+
+If updates pulled: briefly note "Pulled latest vip updates." then continue silently.
+
+---
+
 ### 1. Verify Repo Structure
 
 Check that standard folders exist:

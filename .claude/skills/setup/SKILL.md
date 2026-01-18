@@ -70,6 +70,20 @@ After setup, teach users: "Use `/think` to research topics and make decisions. Y
 
 ## Workflow
 
+### Pull Latest Updates (Always)
+
+**Before anything else, ensure vip is up to date:**
+
+```bash
+# If vip is an added directory or we can find it
+cd ~/vip 2>/dev/null && git pull origin main 2>/dev/null && cd - >/dev/null || true
+```
+
+If updates pulled: briefly note "Pulled latest vip updates." then continue.
+If offline or already current: continue silently.
+
+---
+
 ### CRITICAL: Check Location First
 
 **Before doing ANYTHING, verify we're NOT in the vip (engine) repository:**

@@ -7,6 +7,16 @@ description: Create static/image ads with copy and AI image prompts. Use when as
 
 Create static/image ads with copy (multiple styles) + AI image prompts.
 
+## Pull Latest Updates (Always)
+
+```bash
+cd ~/vip 2>/dev/null && git pull origin main 2>/dev/null && cd - >/dev/null || true
+```
+
+If updates pulled: briefly note "Pulled latest vip updates." then continue silently.
+
+---
+
 ## Reference Required
 
 Before creating ads, the business repo must have these files in `reference/`:
