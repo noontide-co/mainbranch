@@ -41,13 +41,28 @@ This is a private repository. You need access before you can clone it.
 
 ### 2. Install These Tools
 
+#### GitHub Desktop (Strongly Recommended)
+
+GitHub Desktop is a visual app that makes Git easy. No commands to remember — just buttons to click.
+
+- Download from [desktop.github.com](https://desktop.github.com)
+- Sign in with your GitHub account
+
+**Why you'll love it:**
+- Shows you when updates are available (little badge appears)
+- Lets you see exactly what changed
+- No need to remember Git commands
+
+*Already comfortable with Git? You can skip this and use terminal commands instead.*
+
+#### Claude Code (Required)
+
+Claude Code is a terminal app that runs skills.
+
 | Requirement | What It Is | How to Get It |
 |-------------|-----------|---------------|
-| GitHub Desktop | Clone repos and see when updates are available | [desktop.github.com](https://desktop.github.com) |
 | Claude Code | Terminal app that runs skills | See install commands below |
 | Chrome Extension | Lets Claude see your web pages (optional) | [claude.ai/chrome](https://claude.ai/chrome) |
-
-*GitHub Desktop is strongly recommended for beginners. If you're comfortable with git, you can use terminal commands instead.*
 
 **Install Claude Code:**
 
@@ -184,8 +199,14 @@ your-business/
 │   │   ├── offer.md       <- What you sell
 │   │   ├── audience.md    <- Who buys
 │   │   └── voice.md       <- How you sound
-│   └── proof/
-│       └── testimonials.md <- Social proof
+│   ├── brand/             <- Deep brand systems
+│   │   ├── voice-system.md
+│   │   └── guardrails.md
+│   ├── proof/
+│   │   ├── testimonials.md <- Social proof
+│   │   └── angles/        <- Proven messaging angles
+│   └── domain/            <- Business-type specific
+│       └── [see domain rubrics]
 ├── research/              <- Your investigations
 ├── decisions/             <- Your choices
 └── outputs/               <- Generated content
