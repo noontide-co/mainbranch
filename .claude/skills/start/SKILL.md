@@ -24,8 +24,7 @@ Single entry point for Main Branch. Detect user state, route to the right skill.
 │
 ├── Pull latest vip updates ──────────→ (always, silently)
 │
-├── In vip (engine) repo? ─────────→ STOP — need user's business repo
-│   (.claude/skills/ exists)
+├── In vip + needs setup? ────────────→ /setup (creates repo automatically)
 │
 ├── No business repo? ──────────────→ /setup
 │   (no reference/ folder)
@@ -71,33 +70,20 @@ This ensures users always have the latest skills without needing to remember to 
 
 ---
 
-## Step 0: Check Location (CRITICAL)
+## Step 0: Check Location
 
-**Before doing anything else, check if we're in the vip (engine) repo:**
+**Check if we're in the vip (engine) repo:**
 
 ```bash
-# If this succeeds, we're in vip — don't write here
+# If this succeeds, we're in vip
 ls .claude/skills/start/SKILL.md 2>/dev/null
 ```
 
-**If we're in vip:**
+**If we're in vip AND user needs setup:** Route to `/setup`.
 
-> "You're currently in the **vip** repository — that's the engine.
->
-> I can't save your business files here because:
-> 1. You only have read-only access (you can't push changes)
-> 2. Your business data should live in YOUR OWN separate repo
->
-> **To fix this:**
-> - Create a new folder for your business (e.g., `~/my-business`)
-> - Run `claude` from that folder
-> - Use `/add-dir` to add vip so you still have access to skills
->
-> Or if you already have a business repo, navigate there first.
->
-> Need help? See `docs/BEGINNER-SETUP.md` in this repo."
+The `/setup` skill will handle creating their business repo automatically — it asks for a business name, creates the folder, and continues. No manual steps needed.
 
-**Do not proceed with setup or file creation if we're in vip.**
+**If we're in vip AND user already has a business repo:** Ask them to add it via `/add-dir` or navigate there.
 
 ---
 

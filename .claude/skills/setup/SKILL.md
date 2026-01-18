@@ -84,47 +84,39 @@ If offline or already current: continue silently.
 
 ---
 
-### CRITICAL: Check Location First
+### Check Location — Create Business Repo if Needed
 
-**Before doing ANYTHING, verify we're NOT in the vip (engine) repository:**
+**Check if we're in the vip (engine) repository:**
 
 ```bash
-# If this succeeds, we're in vip — STOP
+# If this succeeds, we're in vip
 ls .claude/skills/setup/SKILL.md 2>/dev/null
 ```
 
-**If we're in vip, STOP and tell the user:**
+**If we're in vip, CREATE the business repo for them:**
 
-> "Hold on — you're in the **vip** repository. That's the engine, not your business repo.
->
-> I cannot create your business files here because:
-> 1. You only have read-only access to vip (you can't push changes)
-> 2. Your business data needs its own separate repository
->
-> **Here's what to do:**
->
-> 1. Create a folder for your business:
->    ```bash
->    mkdir ~/my-business-name
->    cd ~/my-business-name
->    git init
->    ```
->
-> 2. Start Claude in that folder:
->    ```bash
->    claude
->    ```
->
-> 3. Add vip as an additional directory so you still have skills:
->    ```
->    /add-dir ~/vip
->    ```
->
-> 4. Run `/setup` again
->
-> Need more help? See `docs/BEGINNER-SETUP.md` in the vip repo."
+> "You're in vip — that's the engine. Let me create your business repo."
 
-**Do not proceed if we're in vip.**
+1. **Ask for business name:**
+   > "What do you want to call your business folder? (e.g., 'my-agency', 'acme-coaching')"
+
+2. **Create the folder and init git:**
+   ```bash
+   mkdir -p ~/[business-name]
+   cd ~/[business-name] && git init
+   ```
+
+3. **Add it as a working directory:**
+   ```
+   /add-dir ~/[business-name]
+   ```
+
+4. **Set the business repo as the target for all file writes:**
+   From this point forward, write all files to `~/[business-name]/` NOT to the current directory.
+
+5. **Continue with setup** — proceed to Step 0 (Chrome extension) and beyond.
+
+**If NOT in vip:** You're already in the user's business repo. Continue normally.
 
 ---
 
@@ -179,7 +171,11 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 - Completeness criteria
 
 **Opening prompt:**
-> Dump everything about this business — sales pages, offer details, testimonials, notes, whatever exists. Paste text, share file paths, or give me URLs to fetch. I'll sort it into the right files.
+> Dump everything about this business — sales pages, offer details, testimonials, notes, whatever exists.
+>
+> **Pro tip:** You can drag screenshots directly into this terminal window and I'll read them. If you have a Skool community, screenshot your about page, classroom, pricing — drag them all in. Fastest way to get me up to speed.
+>
+> Paste text, share file paths, give me URLs to fetch, or drag in images. I'll sort it all into the right files.
 
 **After each batch, assess gaps:**
 > "Got it. I still need [X, Y, Z] to complete your reference files. Can you share those?"
