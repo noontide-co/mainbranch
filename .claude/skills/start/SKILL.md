@@ -22,6 +22,9 @@ Single entry point for Main Branch. Detect user state, route to the right skill.
 ```
 /start
 │
+├── In vip (engine) repo? ─────────→ STOP — need user's business repo
+│   (.claude/skills/ exists)
+│
 ├── No business repo? ──────────────→ /setup
 │   (no reference/ folder)
 │
@@ -39,6 +42,36 @@ Single entry point for Main Branch. Detect user state, route to the right skill.
 │
 └── "help" / confused? ─────────────→ Explain concepts
 ```
+
+---
+
+## Step 0: Check Location (CRITICAL)
+
+**Before doing anything else, check if we're in the vip (engine) repo:**
+
+```bash
+# If this succeeds, we're in vip — don't write here
+ls .claude/skills/start/SKILL.md 2>/dev/null
+```
+
+**If we're in vip:**
+
+> "You're currently in the **vip** repository — that's the engine.
+>
+> I can't save your business files here because:
+> 1. You only have read-only access (you can't push changes)
+> 2. Your business data should live in YOUR OWN separate repo
+>
+> **To fix this:**
+> - Create a new folder for your business (e.g., `~/my-business`)
+> - Run `claude` from that folder
+> - Use `/add-dir` to add vip so you still have access to skills
+>
+> Or if you already have a business repo, navigate there first.
+>
+> Need help? See `docs/BEGINNER-SETUP.md` in this repo."
+
+**Do not proceed with setup or file creation if we're in vip.**
 
 ---
 

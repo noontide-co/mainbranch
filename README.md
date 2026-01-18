@@ -4,6 +4,18 @@ Turn Claude into your personal marketing team. Create ads, scripts, and communit
 
 ---
 
+## First Time? Start Here
+
+**New to Claude Code, Git, or terminal?** Read the complete beginner guide:
+
+**[docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md)**
+
+It covers everything step-by-step, including common errors and how to fix them.
+
+**Already comfortable with terminal and git?** Keep reading below.
+
+---
+
 ## What You Can Do
 
 Once set up, you can:
@@ -21,15 +33,33 @@ All of this happens through simple commands. No prompting skills required.
 
 ## Before You Start
 
-You need three things installed:
+### 1. Get Repository Access (Required First)
+
+This is a private repository. You need access before you can clone it.
+
+**Share your GitHub username with Devon in the Skool community.** Wait for confirmation before proceeding.
+
+### 2. Install These Tools
 
 | Requirement | What It Is | How to Get It |
 |-------------|-----------|---------------|
-| Claude Code | The terminal app that runs these skills | [claude.ai/code](https://claude.ai/code) |
-| Chrome Extension | Lets Claude see your web pages | [claude.ai/chrome](https://claude.ai/chrome) |
-| GitHub Desktop | Keeps your files synced | [desktop.github.com](https://desktop.github.com) |
+| GitHub Desktop | Clone repos and see when updates are available | [desktop.github.com](https://desktop.github.com) |
+| Claude Code | Terminal app that runs skills | See install commands below |
+| Chrome Extension | Lets Claude see your web pages (optional) | [claude.ai/chrome](https://claude.ai/chrome) |
 
-New to all this? That is okay. Each install takes about 2 minutes.
+**Install Claude Code:**
+
+Mac:
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+```
+
+Windows (PowerShell):
+```powershell
+irm https://claude.ai/install.ps1 | iex
+```
+
+You need a Claude Pro ($20/mo) or Max subscription to use Claude Code.
 
 ---
 
@@ -44,20 +74,39 @@ Paste this URL:
 https://github.com/mainbranch-ai/vip
 ```
 
-Choose where to save it. Click **Clone**.
+Choose where to save it (remember the location!). Click **Clone**.
 
-### Step 2: Open Claude Code
+### Step 2: Open Terminal in the vip Folder
 
-Open Claude Code (the terminal app, not the website).
+**Mac:**
+```bash
+cd ~/path/to/vip
+```
 
-You will see a prompt. Type:
+**Windows (Git Bash):**
+```bash
+cd /c/Users/YourName/path/to/vip
+```
+
+### Step 3: Run Claude Code
+
+In your terminal, type:
+```bash
+claude
+```
+
+The first time, you will authenticate with your Anthropic account.
+
+### Step 4: Start Setup
+
+Once Claude is running, type:
 ```
 /start
 ```
 
 This walks you through everything. Just answer the questions.
 
-### Step 3: Tell Claude About Your Business
+### Step 5: Tell Claude About Your Business
 
 Claude will ask you to share:
 - Your offer (what you sell)
@@ -144,15 +193,31 @@ You fill in the reference files. Claude reads them when generating.
 
 ---
 
+## Keeping vip Updated
+
+Devon updates the vip repository with new skills and improvements.
+
+**Using GitHub Desktop:**
+1. Open GitHub Desktop
+2. Select **vip** from the repository dropdown
+3. Look for the **Pull origin** button (or an arrow/number badge)
+4. Click it to get updates
+
+Check weekly or when Devon announces changes in Skool.
+
+---
+
 ## Need Help?
 
 **In the Skool community:**
 Post in the Main Branch group. Tag @Devon for technical questions.
 
 **Common issues:**
-- "Claude does not see my files" - Make sure you added vip as an additional working directory
-- "Skills are not working" - Run `/start` first to set everything up
-- "Output sounds generic" - Add more detail to your reference files, especially voice.md
+- "404 error" or "Repository not found" — You need access first. Share your GitHub username with Devon.
+- "Claude does not see my files" — Make sure you added vip as an additional working directory using `/add-dir`
+- "Skills are not working" — Make sure you ran `claude` from inside the vip folder, then run `/start`
+- "Output sounds generic" — Add more detail to your reference files, especially voice.md
+- "I edited vip but can't push" — That's expected. vip is read-only. Your business data goes in YOUR repo.
 
 ---
 
