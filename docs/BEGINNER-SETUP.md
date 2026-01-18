@@ -166,6 +166,28 @@ And press Enter.
 
 ---
 
+## Once Claude is Running, Just Ask
+
+Here's the thing most people don't realize at first:
+
+**Claude can help you with everything.** You don't need to memorize commands. You don't need to follow this guide perfectly. Once Claude is running, you can just... ask.
+
+Stuck on something? Just type:
+- "I'm confused about the two repo thing, can you explain?"
+- "Help me connect my git"
+- "What should I do next?"
+- "I got an error, here's what it says..."
+
+**Skills vs. Just Chatting:**
+- Skills like `/start`, `/ad-static`, `/think` are carefully built workflows that guide you through specific tasks
+- But you can also just have a normal conversation — ask questions, get help, troubleshoot
+
+**Pro tip:** If you're ever stuck and this guide isn't helping, paste the whole thing into your Claude conversation and say "I'm stuck at step X, help me." Claude can read it and help you through.
+
+The reason this guide exists isn't so you memorize it — it's so Claude (and you) have a reference. Use it however helps you most.
+
+---
+
 ## Understanding the Two Repos
 
 This is the key concept. Once you get this, everything else makes sense.
@@ -333,9 +355,10 @@ Once you're comfortable, we can talk about other tools. But honestly? Many peopl
 1. Open terminal
 2. Go to your business folder: cd ~/my-business
 3. Type: claude
-4. Add vip if needed: /add-dir ~/vip
-5. Use skills: /ad-static, /think, etc.
+4. Chat, use skills, or just ask for help
 ```
+
+That's it. Once Claude is running, you can ask it to help you with the rest — including adding vip if you forgot.
 
 ---
 
@@ -344,6 +367,8 @@ Once you're comfortable, we can talk about other tools. But honestly? Many peopl
 Seriously. If you made it through this guide, the hard part is over.
 
 From here on out, you're just having conversations with Claude — except now Claude actually knows your business, remembers everything, and can create real files and outputs for you.
+
+**And remember:** If you ever get stuck, just ask Claude. It's read all these docs. It knows the system. It can help you troubleshoot, explain concepts, or guide you through whatever you're trying to do.
 
 That's the power of this system. And you just unlocked it.
 
