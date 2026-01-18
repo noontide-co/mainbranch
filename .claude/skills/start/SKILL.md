@@ -22,6 +22,8 @@ Single entry point for Main Branch. Detect user state, route to the right skill.
 ```
 /start
 │
+├── Pull latest vip updates ──────────→ (always, silently)
+│
 ├── In vip (engine) repo? ─────────→ STOP — need user's business repo
 │   (.claude/skills/ exists)
 │
@@ -42,6 +44,30 @@ Single entry point for Main Branch. Detect user state, route to the right skill.
 │
 └── "help" / confused? ─────────────→ Explain concepts
 ```
+
+---
+
+## Step -1: Pull Latest Updates (Always Do This)
+
+**Before anything else, ensure vip has the latest skills:**
+
+```bash
+# Find vip directory and pull updates
+# If we're in vip:
+if [ -f ".claude/skills/start/SKILL.md" ]; then
+  git pull origin main 2>/dev/null || true
+fi
+
+# If vip is an added directory, find and pull it:
+# (Claude Code shows added directories - pull from there if found)
+```
+
+**If updates were pulled:**
+> "Pulled latest updates from vip."
+
+**If already up to date or offline:** Continue silently (don't block on network issues).
+
+This ensures users always have the latest skills without needing to remember to pull manually.
 
 ---
 

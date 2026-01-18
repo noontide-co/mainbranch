@@ -47,6 +47,8 @@ This is a private repository. You need access before you can clone it.
 | Claude Code | Terminal app that runs skills | See install commands below |
 | Chrome Extension | Lets Claude see your web pages (optional) | [claude.ai/chrome](https://claude.ai/chrome) |
 
+*GitHub Desktop is strongly recommended for beginners. If you're comfortable with git, you can use terminal commands instead.*
+
 **Install Claude Code:**
 
 Mac:
