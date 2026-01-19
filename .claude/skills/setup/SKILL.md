@@ -84,7 +84,9 @@ If offline or already current: continue silently.
 
 ---
 
-### Check Location — Create Business Repo if Needed
+### Check Location — Create Business Repo if Needed (CRITICAL: DO THIS FIRST)
+
+**This must happen BEFORE context gathering.** If the conversation compacts later, the essential config is already saved.
 
 **Check if we're in the vip (engine) repository:**
 
@@ -102,21 +104,37 @@ ls .claude/skills/setup/SKILL.md 2>/dev/null
 
 2. **Create the folder and init git:**
    ```bash
-   mkdir -p ~/[business-name]
-   cd ~/[business-name] && git init
+   mkdir -p ~/Documents/GitHub/[business-name]
+   cd ~/Documents/GitHub/[business-name] && git init
    ```
 
-3. **Add it as a working directory:**
+3. **IMMEDIATELY save the path to user-level settings:**
+
+   This is critical — it ensures `/start` can find the business repo in future sessions.
+
+   Create/update `~/.claude/settings.json` (user's home directory, outside any git repo):
+   ```json
+   {
+     "business_repo_path": "/Users/[username]/Documents/GitHub/[business-name]"
+   }
    ```
-   /add-dir ~/[business-name]
+
+   Use the actual expanded path (not ~). This file lives outside vip, so it never causes git conflicts.
+
+4. **Add it as a working directory:**
+   ```
+   /add-dir ~/Documents/GitHub/[business-name]
    ```
 
-4. **Set the business repo as the target for all file writes:**
-   From this point forward, write all files to `~/[business-name]/` NOT to the current directory.
+5. **Set the business repo as the target for all file writes:**
+   From this point forward, write all files to `~/Documents/GitHub/[business-name]/` NOT to the current directory.
 
-5. **Continue with setup** — proceed to Step 0 (Chrome extension) and beyond.
+6. **Confirm the setup is saved:**
+   > "Created [business-name] and saved the path. From now on, just run `/start` in vip and it'll load your business repo automatically."
 
-**If NOT in vip:** You're already in the user's business repo. Continue normally.
+7. **Continue with setup** — proceed to Step 0 (Chrome extension) and beyond.
+
+**If NOT in vip:** You're already in the user's business repo. Check if vip path is configured, continue normally.
 
 ---
 

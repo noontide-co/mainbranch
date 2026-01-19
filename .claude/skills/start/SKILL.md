@@ -15,6 +15,8 @@ description: |
 
 Single entry point for Main Branch. Detect user state, route to the right skill.
 
+**Recommended workflow:** Always start Claude in vip, run `/start`. It handles everything.
+
 ---
 
 ## Detection Flow
@@ -24,24 +26,23 @@ Single entry point for Main Branch. Detect user state, route to the right skill.
 │
 ├── Pull latest vip updates ──────────→ (always, silently)
 │
-├── In vip + needs setup? ────────────→ /setup (creates repo automatically)
+├── Load business repo automatically ─→ (from settings.local.json)
 │
-├── No business repo? ──────────────→ /setup
-│   (no reference/ folder)
+├── No business repo configured? ─────→ /setup (creates repo, saves path)
 │
-├── Has repo but thin? ─────────────→ /enrich
+├── Has repo but thin? ───────────────→ /enrich
 │   (reference files exist but incomplete)
 │
-├── Ready to work? ─────────────────→ Route by intent:
+├── Ready to work? ───────────────────→ Route by intent:
 │   │
-│   ├── "research" / "decide" ──────→ /think
-│   ├── "ads" / "copy" ─────────────→ /ad-static or /ad-video-scripts
-│   ├── "review" / "compliance" ────→ /ad-review
-│   ├── "skool" / "community" ──────→ /skool-manager
-│   ├── "vsl" / "sales video" ──────→ /skool-vsl-scripts
-│   └── unclear ────────────────────→ Show options
+│   ├── "research" / "decide" ────────→ /think
+│   ├── "ads" / "copy" ───────────────→ /ad-static or /ad-video-scripts
+│   ├── "review" / "compliance" ──────→ /ad-review
+│   ├── "skool" / "community" ────────→ /skool-manager
+│   ├── "vsl" / "sales video" ────────→ /skool-vsl-scripts
+│   └── unclear ──────────────────────→ Show options
 │
-└── "help" / confused? ─────────────→ Explain concepts
+└── "help" / confused? ───────────────→ Explain concepts
 ```
 
 ---
@@ -51,14 +52,10 @@ Single entry point for Main Branch. Detect user state, route to the right skill.
 **Before anything else, ensure vip has the latest skills:**
 
 ```bash
-# Find vip directory and pull updates
 # If we're in vip:
 if [ -f ".claude/skills/start/SKILL.md" ]; then
   git pull origin main 2>/dev/null || true
 fi
-
-# If vip is an added directory, find and pull it:
-# (Claude Code shows added directories - pull from there if found)
 ```
 
 **If updates were pulled:**
@@ -66,24 +63,46 @@ fi
 
 **If already up to date or offline:** Continue silently (don't block on network issues).
 
-This ensures users always have the latest skills without needing to remember to pull manually.
-
 ---
 
-## Step 0: Check Location
+## Step 0: Load Business Repo (CRITICAL)
 
-**Check if we're in the vip (engine) repo:**
+**This is what makes the daily workflow seamless.**
+
+Check if we're in vip and have a stored business repo path:
 
 ```bash
-# If this succeeds, we're in vip
+# Check if we're in vip
 ls .claude/skills/start/SKILL.md 2>/dev/null
 ```
 
-**If we're in vip AND user needs setup:** Route to `/setup`.
+**If in vip, check for stored business repo path:**
 
-The `/setup` skill will handle creating their business repo automatically — it asks for a business name, creates the folder, and continues. No manual steps needed.
+Read `~/.claude/settings.json` (user-level, outside any git repo):
 
-**If we're in vip AND user already has a business repo:** Ask them to add it via `/add-dir` or navigate there.
+```json
+{
+  "business_repo_path": "/Users/christian/Documents/GitHub/yoga-pain-pro"
+}
+```
+
+This file lives at `~/.claude/settings.json` (NOT inside vip). It's user-specific and won't cause git conflicts.
+
+**If business_repo_path exists:**
+1. Verify the path still exists: `ls [path]/reference/core 2>/dev/null`
+2. If valid → Run `/add-dir [path]` to add it to the session
+3. Briefly confirm: "Loaded yoga-pain-pro. Ready to work."
+
+**If business_repo_path is missing or invalid:**
+- If missing entirely → Route to `/setup` (new user)
+- If path exists but folder doesn't → Ask: "I have [path] saved but it doesn't exist. Where's your business repo?"
+- Update ~/.claude/settings.json with the correct path
+
+**If NOT in vip:**
+- User started in their business repo directly
+- Check if vip is accessible (skills work)
+- If skills work → continue normally
+- If skills don't work → Suggest starting from vip next time
 
 ---
 
@@ -141,13 +160,19 @@ If user says "help" or seems confused, explain the system:
 
 > "Main Branch works like this:
 >
-> 1. **Your business repo** has reference files (offer, audience, voice, proof)
-> 2. **Skills** read those files and generate outputs
-> 3. **Better reference = better outputs**
+> 1. **vip** is the engine (skills, templates) — you always start here
+> 2. **Your business repo** has your data (offer, audience, voice, proof)
+> 3. **`/start`** loads your business repo automatically and routes you
+>
+> **Daily workflow:**
+> ```
+> cd ~/Documents/GitHub/vip && claude
+> /start
+> ```
 >
 > **Getting started:**
-> - New here? Run `/setup` to create your business repo
-> - Have a repo? Run `/enrich` to add more context
+> - New here? `/start` will run `/setup` to create your business repo
+> - Have a repo? `/start` loads it and asks what you want to do
 > - Ready to generate? Try `/ad-static` or `/think`
 >
 > What would you like to do?"
@@ -183,6 +208,50 @@ Use these to auto-detect what user wants:
 | "review", "compliance", "ftc", "check" | `/ad-review` |
 | "skool", "community", "posts", "respond" | `/skool-manager` |
 | "vsl", "sales video", "about page video" | `/skool-vsl-scripts` |
+
+---
+
+## Troubleshooting: Business Repo Not Loading
+
+If `/start` can't find the business repo, check `~/.claude/settings.json`:
+
+```json
+{
+  "business_repo_path": "/Users/yourname/Documents/GitHub/your-business"
+}
+```
+
+This file lives in the user's home directory (outside any git repo), so it never causes conflicts with vip updates.
+
+**Common fixes:**
+
+| Problem | Solution |
+|---------|----------|
+| File doesn't exist | Run `/setup` to create it, OR create manually |
+| Path is wrong | Update the path in ~/.claude/settings.json |
+| Folder was moved | Update the path to new location |
+| Multiple business repos | Change the path to switch between them |
+
+**To manually configure (for existing users like Christian):**
+
+If user already has a business repo but no settings.json:
+
+1. Ask: "What's the full path to your business repo folder?"
+2. Create/update `~/.claude/settings.json` with that path
+3. Run `/add-dir [path]` for this session
+4. Confirm: "Saved. Next time just run `/start` and it'll load automatically."
+
+---
+
+## Daily Workflow (Tell Users This)
+
+```bash
+cd ~/Documents/GitHub/vip
+claude
+/start
+```
+
+That's it. `/start` pulls updates, loads the business repo, and routes to the right skill.
 
 ---
 
