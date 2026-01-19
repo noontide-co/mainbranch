@@ -108,12 +108,24 @@ Don't overthink this. Just follow each step.
 
 1. Open GitHub Desktop
 2. Click **File → Clone Repository**
-3. Click the **URL** tab
-4. Paste this: `https://github.com/mainbranch-ai/vip`
-5. Choose where to save it — your Documents folder is fine. **Remember this location!**
+3. Click the **GitHub.com** tab (not URL)
+4. You should see `mainbranch-ai/vip` in the list. Select it.
+5. Choose where to save it. Your Documents folder is fine. **Remember this location!**
 6. Click **Clone**
 
-**If you get an error:** You probably don't have access yet. Go back to Step 0.
+**If you don't see `mainbranch-ai/vip` in the list:**
+- You're either not logged in, or not logged into the right account
+- Go to **GitHub Desktop → Preferences → Accounts**
+- Sign in with the GitHub account you gave Devon
+- Try again
+
+**Alternate method (URL tab):**
+If for some reason the GitHub.com tab doesn't work, you can use the URL tab instead:
+1. Click the **URL** tab
+2. Paste: `https://github.com/mainbranch-ai/vip`
+3. Click Clone
+
+But the GitHub.com tab is easier because if the repo shows up, you know you're logged in correctly.
 
 ### Step 2: Open Terminal in the vip Folder
 
@@ -245,11 +257,40 @@ Everyone hits these at some point. Here's what they mean:
 
 | What You See | What Happened | How to Fix It |
 |--------------|---------------|---------------|
+| "We couldn't find that repository" | You don't have access yet | Share your GitHub username with Devon and wait for confirmation |
 | "404 error" or "Repository not found" | You don't have access yet | Share your GitHub username with Devon and wait for confirmation |
 | "Could not read Username" | Git isn't logged in | Open GitHub Desktop and make sure you're signed in |
 | "command not found: claude" | Claude Code isn't installed | Run the install command again (Step 2 of Install) |
 | "Skills not working" | You're not in the right folder | Make sure you ran `claude` from inside the vip folder |
 | Made changes but can't push | vip is read-only (this is normal!) | Your business data goes in YOUR repo, not vip |
+
+### "We couldn't find that repository" — The Most Common Issue
+
+This error means GitHub can't access the vip repo. 99% of the time it's one of these:
+
+**1. You don't have access yet (most likely)**
+- The vip repo is private — you must be invited
+- Share your GitHub username with Devon
+- Wait for confirmation before trying again
+
+**2. You're not logged into GitHub Desktop**
+- Open GitHub Desktop
+- Go to GitHub Desktop → Preferences → Accounts
+- Make sure you're signed into GitHub.com with the account Devon added
+
+**3. You're logged into the wrong GitHub account**
+- Some people have multiple GitHub accounts
+- Check which account you gave Devon — that's the one you need to be signed into
+
+### Duplicate App Icons in Dock
+
+If you see two GitHub Desktop icons (or restored an app from Trash):
+
+1. Quit GitHub Desktop completely (Cmd+Q)
+2. Open Trash → delete the GitHub Desktop items permanently
+3. Check Applications folder — is GitHub Desktop there?
+4. If not, download fresh from [desktop.github.com](https://desktop.github.com)
+5. Open the fresh install and sign in again
 
 ---
 
