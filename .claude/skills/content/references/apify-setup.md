@@ -35,19 +35,23 @@ That's your token. Don't create a new one - the default works fine.
 
 ### 3. Add MCP to Claude Code (2 min)
 
-**Easy way - build the command step by step:**
+This command tells Claude Code how to connect to Apify. We'll build it in pieces so you don't have to edit the middle of a long command.
 
-1. First, paste this part and add a space:
+**Step by step:**
+
+1. Paste this first part:
    ```
    claude mcp add apify -e APIFY_TOKEN=
    ```
 
-2. Paste your token right after the `=` (no space)
+2. Paste your token right after the `=` (no space between `=` and token)
 
-3. Add this to the end (with a space before the `--`):
+3. **Add a space** after your token, then paste this part:
    ```
-    -- npx -y @apify/mcp-server-rag-web-browser
+   -- npx -y @apify/mcp-server-rag-web-browser
    ```
+
+   (Make sure there's a space before the `--`)
 
 4. Press Enter
 
