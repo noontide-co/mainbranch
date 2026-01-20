@@ -36,7 +36,7 @@ Comprehensive help for Main Branch. Answer questions, troubleshoot issues, expla
 | "Why this approach?" / "How does this help me?" | [philosophy.md](references/philosophy.md) |
 | "How do I use /think?" / "Research and decisions" | [the-think-cycle.md](references/the-think-cycle.md) |
 | "command not found" / errors | [troubleshooting.md](references/troubleshooting.md) |
-| "How do I get started?" / setup | [BEGINNER-SETUP.md](../../../docs/BEGINNER-SETUP.md) |
+| "How do I get started?" / setup | Route to `/setup` or `/start` |
 | "Which skill should I use?" | [skills-guide.md](references/skills-guide.md) |
 | "How do I migrate from GPT?" | [gpt-migration.md](references/gpt-migration.md) |
 | Content questions / "Reels" / "TikTok" / "organic" | [content-help.md](references/content-help.md) |
@@ -82,7 +82,7 @@ Load these as needed based on the question:
 - [the-think-cycle.md](references/the-think-cycle.md) - The core loop that makes everything work
 - [two-repos.md](references/two-repos.md) - Engine + data model explained
 - [troubleshooting.md](references/troubleshooting.md) - Error fixes
-- [BEGINNER-SETUP.md](../../../docs/BEGINNER-SETUP.md) - Setup guide
+- Route to `/setup` or `/start` for setup questions
 - [skills-guide.md](references/skills-guide.md) - When to use which skill
 - [gpt-migration.md](references/gpt-migration.md) - Bringing GPT knowledge over
 - [content-help.md](references/content-help.md) - Organic content creation (Reels, TikTok, carousels)
