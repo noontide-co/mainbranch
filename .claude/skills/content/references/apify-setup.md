@@ -38,21 +38,23 @@ That's your token. Don't create a new one - the default works fine.
 Open a **new terminal window** and run this command:
 
 ```
-claude mcp add apify -e APIFY_TOKEN=YOUR_TOKEN -- npx -y @apify/mcp-server-rag-web-browser
+claude mcp add apify -e APIFY_TOKEN=YOUR_TOKEN --scope user -- npx -y @apify/mcp-server-rag-web-browser
 ```
 
 Replace `YOUR_TOKEN` with your actual token (no spaces around it).
 
 ---
 
-**Why a separate terminal?** Best practice is to keep API tokens local - not paste them in chat where they'd pass through external servers. Your terminal keeps it on your machine only.
+**Why `--scope user`?** This saves Apify to your global settings so it works from any directory. Without it, the MCP only works in the folder where you ran the command.
+
+**Why a separate terminal?** Keeps your API token local instead of passing through chat servers.
 
 ---
 
-**Tip:** Copy the command first, paste it, then replace `YOUR_TOKEN` with your copied token. Or build it in pieces:
+**Tip:** Build the command in pieces:
 1. Type: `claude mcp add apify -e APIFY_TOKEN=`
 2. Paste your token
-3. Type: ` -- npx -y @apify/mcp-server-rag-web-browser`
+3. Type: ` --scope user -- npx -y @apify/mcp-server-rag-web-browser`
 4. Press Enter
 
 ---
