@@ -67,44 +67,25 @@ fi
 
 ---
 
-## Step 0: Load Business Repo (CRITICAL)
+## Step 0: Find Business Repo
 
-**This is what makes the daily workflow seamless.**
+**Search all working directories for business repos (folders with `reference/core/`).**
 
-Check if we're in vip and have a stored business repo path:
+1. List working directories (vip + any added via `/add-dir`)
+2. For each, check if `reference/core/*.md` exists
+3. Skip vip (has `.claude/skills/`, not `reference/core/`)
 
-```bash
-# Check if we're in vip
-ls .claude/skills/start/SKILL.md 2>/dev/null
-```
+**If ONE business repo found:** Use it. Confirm briefly: "Using [name]. Ready to work."
 
-**If in vip, check for stored business repo path:**
+**If MULTIPLE business repos found:** Ask which one to use for this session:
+> "I found multiple business repos: main-branch, newsignal. Which one are you working on today?"
 
-Read `~/.claude/settings.json` (user-level, outside any git repo):
+**If NONE found:**
+- Check if user has a parent folder with multiple businesses inside (like `noontide-projects/main-branch/`)
+- If found nested, use that
+- If truly none, route to `/setup`
 
-```json
-{
-  "business_repo_path": "/Users/christian/Documents/GitHub/yoga-pain-pro"
-}
-```
-
-This file lives at `~/.claude/settings.json` (NOT inside vip). It's user-specific and won't cause git conflicts.
-
-**If business_repo_path exists:**
-1. Verify the path still exists: `ls [path]/reference/core 2>/dev/null`
-2. If valid → Run `/add-dir [path]` to add it to the session
-3. Briefly confirm: "Loaded yoga-pain-pro. Ready to work."
-
-**If business_repo_path is missing or invalid:**
-- If missing entirely → Route to `/setup` (new user)
-- If path exists but folder doesn't → Ask: "I have [path] saved but it doesn't exist. Where's your business repo?"
-- Update ~/.claude/settings.json with the correct path
-
-**If NOT in vip:**
-- User started in their business repo directly
-- Check if vip is accessible (skills work)
-- If skills work → continue normally
-- If skills don't work → Suggest starting from vip next time
+**Note:** `/add-dir` is a Claude Code command, not bash. Don't try to run it via Bash tool. The user adds directories through the Claude Code interface or it's already in their workspace.
 
 ---
 
@@ -219,35 +200,16 @@ Use these to auto-detect what user wants:
 
 ---
 
-## Troubleshooting: Business Repo Not Loading
-
-If `/start` can't find the business repo, check `~/.claude/settings.json`:
-
-```json
-{
-  "business_repo_path": "/Users/yourname/Documents/GitHub/your-business"
-}
-```
-
-This file lives in the user's home directory (outside any git repo), so it never causes conflicts with vip updates.
-
-**Common fixes:**
+## Troubleshooting: Business Repo Not Found
 
 | Problem | Solution |
 |---------|----------|
-| File doesn't exist | Run `/setup` to create it, OR create manually |
-| Path is wrong | Update the path in ~/.claude/settings.json |
-| Folder was moved | Update the path to new location |
-| Multiple business repos | Change the path to switch between them |
+| No `reference/core/` found | User needs to add their business repo via `/add-dir` in Claude Code |
+| Business repo nested (e.g., `projects/main-branch/`) | Search inside parent folders for `reference/core/` |
+| Multiple business repos | Ask which one to use for this session |
+| User has repo but not added | Ask for the path, then tell them to `/add-dir` it |
 
-**To manually configure (for existing users like Christian):**
-
-If user already has a business repo but no settings.json:
-
-1. Ask: "What's the full path to your business repo folder?"
-2. Create/update `~/.claude/settings.json` with that path
-3. Run `/add-dir [path]` for this session
-4. Confirm: "Saved. Next time just run `/start` and it'll load automatically."
+**Key insight:** Don't try to persist paths to settings.json (strict schema). Just search working directories each session.
 
 ---
 

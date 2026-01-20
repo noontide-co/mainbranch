@@ -23,7 +23,7 @@ Mine competitor content, extract winning concepts, generate scripts in your voic
 
 Requires `reference/core/voice.md`, `audience.md`, and `offer.md`.
 
-**Two-repo model:** vip is the engine (skills). The user's business repo has their data. `/start` loads the business repo automatically via `~/.claude/settings.json`. If not loaded, tell user to run `/start` first.
+**Two-repo model:** vip is the engine (skills). The user's business repo has their data. Search all working directories for `reference/core/`. If not found, ask user which business repo to use.
 
 **Missing these files?** See [references/first-time-setup.md](references/first-time-setup.md) for quick templates, or run `/setup`.
 
@@ -103,9 +103,9 @@ Generate single-post caption from a concept.
 
 ## Finding the Business Repo
 
-1. Check `~/.claude/settings.json` for `business_repo_path`
-2. Search all working directories for `reference/core/`
-3. If unclear or not found, **just ask**: "Which business repo should I use? Or run `/start` to set it up."
+1. Search all working directories for `reference/core/`
+2. If multiple found, ask which one to use
+3. If none found, ask user for the path or suggest `/start`
 
 ## Reference Required
 
