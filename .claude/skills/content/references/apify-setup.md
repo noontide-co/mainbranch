@@ -92,11 +92,11 @@ Every time you run `/content mine` on Instagram, it will use Apify automatically
 
 ## Verify It's Working
 
-In Claude Code, type:
+**Restart Claude Code** — MCPs only load at startup:
 
-```
-/mcp
-```
+1. Type `/exit` to quit
+2. Run `claude` again (or `claude --continue` to resume your conversation)
+3. Type `/mcp`
 
 You should see `apify` in the list of configured servers.
 
