@@ -61,13 +61,13 @@ claude mcp add apify -e APIFY_TOKEN=apify_api_51dJHCm5seER0o3n3re6pQT4EkxTtQ2p4o
 2. Then copy and paste this **all on one line**:
 
 ```
---scope user -- npx -y @apify/mcp-server-rag-web-browser
+--scope user -- npx -y @apify/actors-mcp-server
 ```
 
 **Important:** Make sure the whole thing is on ONE line before pressing Enter. Your full command should look like:
 
 ```
-claude mcp add apify -e APIFY_TOKEN=apify_api_xxxxx --scope user -- npx -y @apify/mcp-server-rag-web-browser
+claude mcp add apify -e APIFY_TOKEN=apify_api_xxxxx --scope user -- npx -y @apify/actors-mcp-server
 ```
 
 ---
