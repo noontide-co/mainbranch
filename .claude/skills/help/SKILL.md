@@ -38,6 +38,7 @@ Comprehensive help for Main Branch. Answer questions, troubleshoot issues, expla
 | "command not found" / errors | [troubleshooting.md](references/troubleshooting.md) |
 | "How do I get started?" / setup | Route to `/setup` or `/start` |
 | "Which skill should I use?" | [skills-guide.md](references/skills-guide.md) |
+| "How do I create my own skill?" / "Notion export" / custom workflows | [skills-guide.md](references/skills-guide.md) (Creating Your Own Skills section) |
 | "How do I migrate from GPT?" | [gpt-migration.md](references/gpt-migration.md) |
 | Content questions / "Reels" / "TikTok" / "organic" | [content-help.md](references/content-help.md) |
 | Skool-specific questions | [skool-help.md](references/skool-help.md) |

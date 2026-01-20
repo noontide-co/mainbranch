@@ -30,6 +30,33 @@ Ask: "Do you have Apify set up? It's a one-time 5-minute setup, then it just wor
 
 For setup walkthrough, see [references/apify-setup.md](references/apify-setup.md).
 
+### Token Awareness
+
+Mining uses significant tokens (~3-5k per competitor). Before running:
+
+```
+Mining scope: 3 competitors × ~10 posts each
+Estimated tokens: ~12-15k
+
+1. Proceed (full scan)
+2. Quick scan (top 5 posts each, ~6-8k tokens)
+3. Pick specific competitors to mine
+```
+
+Let user control scope. Don't auto-run expensive operations.
+
+### Competitor Discovery
+
+If user says "find me competitors" or has thin/empty handles.md:
+
+| Method | When to Use |
+|--------|-------------|
+| Hashtag search | User knows their niche hashtags |
+| Keyword search | User can describe their niche |
+| Similar accounts | User knows 1-2 competitors |
+
+See [references/apify-discovery.md](references/apify-discovery.md) for actor details and workflows.
+
 ---
 
 ## First-Time Setup
@@ -114,6 +141,38 @@ Generate single-post caption from a concept.
 1. Search all working directories for `reference/core/`
 2. If multiple found, ask which one to use
 3. If none found, ask user for the path or suggest `/start`
+
+---
+
+## Context Awareness (Check Before Recommending)
+
+**At session start, scan what's been done:**
+
+1. Check `research/*-competitor-mine.md` — Who was mined? When?
+2. Check `outputs/content-scripts/` — What scripts exist?
+3. Don't suggest re-mining same handles from today
+4. Recommend generating from existing mining if concepts unused
+
+**Example context-aware response:**
+```
+Found today's mining (research/2026-01-20-competitor-mine.md):
+- @cassie.schoonover, @likfoon already mined
+- 10 concepts extracted, 2 scripts generated
+
+Options:
+1. Generate from remaining 8 concepts
+2. Mine new competitors
+3. Start fresh topic
+```
+
+---
+
+## Transparency
+
+Before generating: show which reference files you're using.
+Before saving: show file paths.
+
+---
 
 ## Reference Required
 
@@ -261,33 +320,23 @@ To save winning angles: route to `/think codify` → `reference/proof/angles/`.
 
 ## Examples
 
-### Example 1: Full Flow
+### Example 1: Context-Aware Start
 
 ```
 User: /content
 
-Claude: Let me check for your competitor list...
-[Reads reference/competitors/handles.md]
+Claude: Found ac-repo. Checking existing work...
 
-Found 5 competitors. Want me to mine their top-performing content?
+Today's mining exists (3 competitors, 10 concepts).
+Scripts generated: 2 of 10 concepts used.
 
-User: Yes
+1. Generate from remaining 8 concepts
+2. Mine new competitors
+3. Something else
 
-Claude: [Uses Apify or asks for data]
-[Extracts top 10 concepts]
+User: 1
 
-Here are the winning concepts:
-1. "The one thing successful [audience] do differently" (Story)
-2. "Stop doing [common mistake]" (Problem-Solution)
-3. "3 tools I use every day for [outcome]" (Educational)
-...
-
-Which concepts resonate? I'll generate scripts in your voice.
-
-User: 1 and 4
-
-Claude: [Reads voice.md, generates scripts]
-[Saves to outputs/content-scripts/]
+Claude: [Shows concepts, user picks, generates with voice.md]
 ```
 
 ### Example 2: Video Only
@@ -333,8 +382,8 @@ Run `/content video` or `/content carousel` to generate from these.
 
 ## Pre-Response Checklist
 
-Before responding to user, verify:
-- [ ] Explained Apify's value for Instagram (essential, not nice-to-have)
-- [ ] Used numbered options for multi-choice
-- [ ] Asked which platform (Instagram/TikTok/Both/Other)
-- [ ] Kept response tight (recommend ONE path, not all modes)
+- [ ] Checked existing mining/scripts before recommending
+- [ ] Didn't suggest re-mining same handles from today
+- [ ] Showed token estimate before expensive operations
+- [ ] Offered scope control (full vs quick scan)
+- [ ] Used numbered options

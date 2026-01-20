@@ -206,4 +206,21 @@ Most of the time, `/start` will point you in the right direction.
 
 ## Creating Your Own Skills
 
-As you use Main Branch, you might want custom skills for your specific workflows. This is possible and encouraged. Ask about becoming a contributor or explore the skill-creator resources.
+Want Notion export? Custom CMS posting? Your unique workflow?
+
+**Personal skills live in YOUR repo, not vip.**
+
+```
+your-business-repo/
+└── .claude/skills/my-skill/SKILL.md
+```
+
+Run `/skill-creator` to create one. Skills in your repo work alongside vip skills.
+
+| Example | Purpose |
+|---------|---------|
+| `/notion-export` | Export scripts to Notion |
+| `/publish` | Post to your CMS |
+| `/batch-week` | Weekly content batch |
+
+See [becoming-contributor.md](becoming-contributor.md) to contribute skills back to vip.
