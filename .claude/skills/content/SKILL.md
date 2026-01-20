@@ -19,13 +19,16 @@ Mine competitor content, extract winning concepts, generate scripts in your voic
 - 100x faster (pulls data directly vs slow screenshot-by-screenshot browsing)
 - Handles Instagram's rate limits automatically
 - Free tier covers ~2000 posts/month (~$5/mo after)
+- **One-time 5-minute setup**, then remembered forever in your Claude settings
 
 Offer in order:
 1. **Apify MCP** (strongly recommended for Instagram) — Pull posts with engagement metrics
-2. **Browser MCP** (fallback) — Works but burns tokens on screenshots
+2. **Browser MCP** (fallback) — Works but slow and unreliable
 3. **Manual** (last resort) — User shares screenshots
 
-Ask: "Do you have Apify set up? It's essential for reliable Instagram mining."
+Ask: "Do you have Apify set up? It's a one-time 5-minute setup, then it just works every time."
+
+For setup walkthrough, see [references/apify-setup.md](references/apify-setup.md).
 
 ---
 
@@ -320,7 +323,7 @@ Run `/content video` or `/content carousel` to generate from these.
 
 ## References
 
-**Setup:** [first-time-setup.md](references/first-time-setup.md), [minimal-voice-template.md](references/minimal-voice-template.md)
+**Setup:** [first-time-setup.md](references/first-time-setup.md), [minimal-voice-template.md](references/minimal-voice-template.md), [apify-setup.md](references/apify-setup.md)
 
 **Frameworks:** [organic-frameworks.md](references/organic-frameworks.md)
 
