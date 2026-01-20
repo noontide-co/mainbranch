@@ -14,23 +14,31 @@ Mine competitor content, extract winning concepts, generate scripts in your voic
 
 ## Data Extraction (ALWAYS MENTION FIRST)
 
-When mining, ALWAYS offer these options in order:
+**For Instagram mining, Apify is essential** — not nice-to-have:
+- 95%+ reliable vs 60-70% for browser automation
+- 100x faster (pulls data directly vs slow screenshot-by-screenshot browsing)
+- Handles Instagram's rate limits automatically
+- Free tier covers ~2000 posts/month (~$5/mo after)
+- **One-time 5-minute setup**, then remembered forever in your Claude settings
 
-1. **Apify MCP** (best) — "I can use Apify to pull their posts automatically"
-2. **Browser MCP** (okay) — "I can open Instagram in Chrome and extract data"
-3. **Manual** (fallback) — "Share screenshots of their top 10-15 posts"
+Offer in order:
+1. **Apify MCP** (strongly recommended for Instagram) — Pull posts with engagement metrics
+2. **Browser MCP** (fallback) — Works but slow and unreliable
+3. **Manual** (last resort) — User shares screenshots
 
-Ask: "Do you have Apify set up? If not, I can use browser mode or you can share screenshots."
+Ask: "Do you have Apify set up? It's a one-time 5-minute setup, then it just works every time."
+
+For setup walkthrough, see [references/apify-setup.md](references/apify-setup.md).
 
 ---
 
 ## First-Time Setup
 
-Requires `reference/core/voice.md`, `audience.md`, and `offer.md`.
+Requires `reference/core/voice.md`, `audience.md`, `offer.md`.
 
-**Two-repo model:** vip is the engine (skills). The user's business repo has their data. Search all working directories for `reference/core/`. If not found, ask user which business repo to use.
+Search all working directories for `reference/core/`. If not found, ask user or run `/setup`.
 
-**Missing these files?** See [references/first-time-setup.md](references/first-time-setup.md) for quick templates, or run `/setup`.
+Missing files? See [references/first-time-setup.md](references/first-time-setup.md).
 
 ---
 
@@ -51,9 +59,10 @@ Other modes: `video "topic"`, `carousel "topic"`, `static "topic"`
 Data: I'll ask you to share competitor screenshots (or use Apify MCP if you have it set up).
 
 Platform?
-1. Instagram Reels
+1. Instagram
 2. TikTok
 3. Both
+4. Other (Skool, YouTube, etc.)
 
 (hit a number)
 ```
@@ -131,48 +140,17 @@ If core files are missing, prompt user to create them first or run `/setup`.
 
 ### Step 1: Identify Competitors
 
-Check for `reference/competitors/handles.md`:
+Check `reference/competitors/handles.md`. If missing, ask:
 
-```markdown
-# Competitor Handles
-
-## Primary Competitors (same niche)
-- @competitor1
-- @competitor2
-
-## Adjacent Creators (similar audience)
-- @adjacent1
-- @adjacent2
-
-## Aspirational (bigger accounts to study)
-- @aspirational1
-```
-
-If file missing, ask:
-
-> "Who are 3-5 creators making content for your audience? These can be:
-> - Direct competitors
-> - Adjacent creators (similar audience, different offer)
-> - Bigger accounts you admire"
+> "Who are 3-5 creators making content for your audience?"
 
 ### Step 2: Mine Content
 
-**Option A: Apify MCP (if available)**
+**Apify:** Instagram Profile Scraper → structured JSON with metrics
 
-Use Instagram Profile Scraper actor. Returns structured JSON with engagement metrics. Sort server-side by engagement rate.
+**Manual:** Ask for screenshots of top 10-15 posts with engagement counts
 
-**Option B: Manual (no setup required)**
-
-Ask user to share:
-- Screenshots of competitor's top 10-15 posts
-- Like/comment counts for each
-- Caption text (at least first line)
-
-Either method works. Apify is faster; manual requires no setup.
-
-**Filter for winners:**
-
-Sort by engagement (likes + comments). Extract concepts from top 20%.
+Sort by engagement. Extract concepts from top 20%.
 
 ### Step 3: Extract Concepts
 
@@ -188,218 +166,96 @@ For each winning post, extract:
 
 ### Step 4: Adapt to User's Brand
 
-Map competitor concepts to user's:
-- Offer (what relates to their product)
-- Audience (what resonates with their people)
-- Voice (how they would say it)
+Map concepts to user's offer, audience, and voice.
 
 ### Step 5: Generate Scripts
 
-Based on content type:
-- **Talking head** -> Use video framework
-- **Carousel** -> Use carousel framework
-- **Single post** -> Use static framework
+- Talking head → video framework
+- Carousel → carousel framework
+- Single post → static framework
 
 ### Step 6: Save Output
 
-Save mining results to:
-```
-research/YYYY-MM-DD-competitor-mine.md
-```
-
-Save generated scripts to:
-```
-outputs/content-scripts/YYYY-MM-DD-[concept-slug].md
-```
+- Mining: `research/YYYY-MM-DD-competitor-mine.md`
+- Scripts: `outputs/content-scripts/YYYY-MM-DD-[concept-slug].md`
 
 ---
 
 ## Mine Mode
 
-Research competitor content without generating scripts.
+Research only (no scripts). See [references/mining-template.md](references/mining-template.md).
 
-### Workflow
-
-1. Identify competitors (file or ask)
-2. Gather content data (Apify or manual)
-3. Sort by engagement (server-side)
-4. Extract top concepts
-5. Save to research file
-
-### Output Location
-
-```
-research/YYYY-MM-DD-competitor-mine.md
-```
-
-### Template
-
-See [references/mining-template.md](references/mining-template.md)
-
-### Exit Criteria
-
-Mining is complete when:
-- [ ] Competitors identified
-- [ ] Content data gathered
-- [ ] Sorted by performance
-- [ ] Top 10-20 concepts extracted
-- [ ] Saved to research/
+Output: `research/YYYY-MM-DD-competitor-mine.md`
 
 ---
 
 ## Video Mode
 
-Generate Reels/TikTok scripts from concepts.
-
-### Input
-
-Either:
-- A concept from mining session
-- User-provided topic
-- Reference to research file
-
-### Framework Selection
-
-Detect or ask for framework:
+Input: concept from mining, user topic, or research file.
 
 | Framework | Structure | When to Use |
 |-----------|-----------|-------------|
-| **Educational** | Hook -> Tips -> Takeaway | How-to, lists, advice |
-| **Story-based** | Hook -> Trigger -> Outcome -> Result | Personal narrative |
+| **Educational** | Hook -> Tips -> Takeaway | How-to, lists |
+| **Story-based** | Hook -> Trigger -> Outcome | Personal narrative |
 | **Transformation** | Before -> Turning Point -> After | Journey, case study |
-| **Problem-Solution** | Hook -> Problem -> Solution -> CTA | PAS for organic |
+| **Problem-Solution** | Hook -> Problem -> Solution | PAS for organic |
 
-User can specify: `/content video "topic" --framework story`
+Structure: Hook (0-3s) → Retain (3-45s) → Reward (final 5-15s)
 
-### Hook-Retain-Reward Structure
-
-Every video script follows:
-
-1. **Hook** (0-3 seconds): Stop the scroll
-2. **Retain** (3-45 seconds): Deliver value, maintain attention
-3. **Reward** (last 5-15 seconds): Payoff + soft CTA
-
-See [references/organic-frameworks.md](references/organic-frameworks.md) for detailed breakdown.
-
-### Output
-
-See [references/video-script-template.md](references/video-script-template.md)
+See [references/organic-frameworks.md](references/organic-frameworks.md) and [references/video-script-template.md](references/video-script-template.md).
 
 ---
 
 ## Carousel Mode
 
-Generate multi-slide Instagram carousels.
+7-10 slides: Hook → Value (one idea/slide) → Summary → CTA
 
-### Input
-
-Either:
-- A concept from mining session
-- User-provided topic
-- Number of slides (default: 7-10)
-
-### Structure
-
-| Slide | Purpose |
-|-------|---------|
-| 1 | Hook slide (stops scroll) |
-| 2-8 | Value slides (one idea per slide) |
-| 9 | Summary or recap |
-| 10 | CTA slide |
-
-### Output
-
-See [references/carousel-template.md](references/carousel-template.md)
+See [references/carousel-template.md](references/carousel-template.md).
 
 ---
 
 ## Static Mode
 
-Generate single-post captions.
+Hook (first line) → Body → Soft CTA → Hashtags (optional)
 
-### Input
-
-- Topic or angle
-- Image context (what the image shows)
-- Desired length (short/medium/long)
-
-### Structure
-
-1. **Hook** (first line visible before "more")
-2. **Body** (value or story)
-3. **CTA** (soft: save, comment, follow)
-4. **Hashtags** (optional, user preference)
-
-### Output
-
-See [references/static-template.md](references/static-template.md)
+See [references/static-template.md](references/static-template.md).
 
 ---
 
 ## Voice Adaptation
 
-When generating, always:
+Read `reference/core/voice.md`. Match tone, use their vocabulary, avoid their "never say" list.
 
-1. Read `reference/core/voice.md`
-2. Match tone markers (casual, professional, energetic, etc.)
-3. Use vocabulary from voice file
-4. Avoid phrases marked as "never say"
-
-### Authenticity Checklist
-
-- [ ] Sounds like the creator, not a copywriter
-- [ ] Uses contractions naturally
-- [ ] Matches their energy level
-- [ ] Includes their verbal quirks
-- [ ] Avoids AI tells ("dive into", "unlock", "game-changer")
+**Authenticity:** Sounds like creator (not copywriter). Uses contractions. Matches energy. No AI tells ("dive into", "unlock", "game-changer").
 
 ---
 
 ## CTA Softness
 
-Organic content uses soft CTAs:
-
 | Hard (Avoid) | Soft (Use) |
 |--------------|-----------|
 | "Link in bio to buy" | "Save this for later" |
-| "Sign up now" | "Follow for more like this" |
-| "Limited time offer" | "Comment [word] if you want the full breakdown" |
+| "Sign up now" | "Follow for more" |
+| "Limited time" | "Comment [word] for more" |
 | "Don't miss out" | "Share with someone who needs this" |
 
-**Exception:** If user's voice file shows they use harder CTAs successfully, match their style.
+Exception: Match user's style if their voice file shows harder CTAs work.
 
 ---
 
 ## Integration with /think
 
-When user wants to save winning angles to reference:
-
-> "Want to save these winning concepts to your angles folder? I can route to `/think codify` to add them to `reference/proof/angles/`."
-
-This keeps codification logic in one place.
+To save winning angles: route to `/think codify` → `reference/proof/angles/`.
 
 ---
 
 ## Quality Checklist
 
-Before outputting any script:
+**Content:** Hook stops scroll. One idea. Value before ask. Soft CTA.
 
-**Content:**
-- [ ] Hook stops scroll (first 3 seconds/first line)
-- [ ] One clear idea per piece
-- [ ] Value delivered before any ask
-- [ ] Soft CTA appropriate to platform
+**Voice:** Sounds like creator. Matches energy. Uses vocabulary. No AI tells.
 
-**Voice:**
-- [ ] Sounds like the creator
-- [ ] Matches their energy
-- [ ] Uses their vocabulary
-- [ ] No AI tells
-
-**Platform:**
-- [ ] Appropriate length for format
-- [ ] Structure matches content type
-- [ ] Optimized for the algorithm (retention, saves)
+**Platform:** Appropriate length. Correct structure. Optimized for retention/saves.
 
 ---
 
@@ -467,25 +323,18 @@ Run `/content video` or `/content carousel` to generate from these.
 
 ## References
 
-**Setup (read for new users):**
-- [references/first-time-setup.md](references/first-time-setup.md) - Prerequisites and quick start
-- [references/minimal-voice-template.md](references/minimal-voice-template.md) - Voice file template
+**Setup:** [first-time-setup.md](references/first-time-setup.md), [minimal-voice-template.md](references/minimal-voice-template.md), [apify-setup.md](references/apify-setup.md)
 
-**Frameworks (read when generating):**
-- [references/organic-frameworks.md](references/organic-frameworks.md) - Content structure frameworks
+**Frameworks:** [organic-frameworks.md](references/organic-frameworks.md)
 
-**Templates (read when outputting):**
-- [references/mining-template.md](references/mining-template.md) - Mining output format
-- [references/video-script-template.md](references/video-script-template.md) - Reels/TikTok template
-- [references/carousel-template.md](references/carousel-template.md) - Carousel slide template
-- [references/static-template.md](references/static-template.md) - Single post template
+**Templates:** [mining-template.md](references/mining-template.md), [video-script-template.md](references/video-script-template.md), [carousel-template.md](references/carousel-template.md), [static-template.md](references/static-template.md)
 
 ---
 
 ## Pre-Response Checklist
 
 Before responding to user, verify:
-- [ ] Mentioned data extraction method (Apify > Browser > Manual)
+- [ ] Explained Apify's value for Instagram (essential, not nice-to-have)
 - [ ] Used numbered options for multi-choice
-- [ ] Asked which platform (Instagram/TikTok/Both)
+- [ ] Asked which platform (Instagram/TikTok/Both/Other)
 - [ ] Kept response tight (recommend ONE path, not all modes)

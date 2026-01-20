@@ -14,17 +14,9 @@ Single entry point for Main Branch. Detect user state, route to the right skill.
 
 ## Numbered Options Pattern
 
-**Always use numbered lists for multi-choice prompts.** This lets users reply with just a number.
+Always use numbered lists for multi-choice. User replies with just a number.
 
-```
-1. Option one
-2. Option two
-3. Option three
-
-(hit a number to reply)
-```
-
-Apply this pattern to: business repo selection, skill routing, any multiple choice.
+Apply to: business repo selection, skill routing, any multiple choice.
 
 ---
 
@@ -58,80 +50,49 @@ Apply this pattern to: business repo selection, skill routing, any multiple choi
 
 ---
 
-## Step -1: Pull Latest Updates (Always Do This)
+## Step -1: Pull Updates (Always)
 
-**Before anything else, ensure vip has the latest skills:**
-
-```bash
-# If we're in vip:
-if [ -f ".claude/skills/start/SKILL.md" ]; then
-  git pull origin main 2>/dev/null || true
-fi
-```
-
-**If updates were pulled:**
-> "Pulled latest updates from vip."
-
-**If already up to date or offline:** Continue silently (don't block on network issues).
+Run `git pull origin main` silently. Mention only if updates pulled. Don't block on network issues.
 
 ---
 
 ## Step 0: Find Business Repo
 
-**Search all working directories for business repos (folders with `reference/core/`).**
+Search working directories for `reference/core/`. Skip vip (has `.claude/skills/`).
 
-1. List working directories (vip + any added via `/add-dir`)
-2. For each, check if `reference/core/*.md` exists
-3. Skip vip (has `.claude/skills/`, not `reference/core/`)
+**ONE found:** Use it. "Using [name]. Ready to work."
 
-**If ONE business repo found:** Use it. Confirm briefly: "Using [name]. Ready to work."
+**MULTIPLE found:** Always include options 3, 4, and 5:
 
-**If MULTIPLE business repos found:** Number the options so user can reply with just a number:
 > "I found these business repos:
-> 1. [repo-name-1]
-> 2. [repo-name-2]
-> 3. Another one (tell me the path)
-> 4. Create new (/setup)
 >
-> Which one? (hit a number to reply)"
+> 1. [first-repo-name]
+> 2. [second-repo-name]
+> 3. Another one (tell me the path)
+> 4. Create new (`/setup`)
+> 5. I'm confused (`/help`)
+>
+> Which one? (hit a number)"
 
-**If NONE found:**
-- Check if user has a parent folder with multiple businesses inside (like `noontide-projects/main-branch/`)
-- If found nested, use that
-- If truly none, route to `/setup`
-
-**Note:** `/add-dir` is a Claude Code command, not bash. Don't try to run it via Bash tool. The user adds directories through the Claude Code interface or it's already in their workspace.
+**NONE found:** Check nested folders, then route to `/setup`.
 
 ---
 
 ## Step 1: Detect State
 
-Check for business repo structure:
-
-```bash
-# Check if reference folder exists with content
-ls reference/core/*.md 2>/dev/null | head -3
-```
-
-**If no reference/ folder:** User is new → Route to `/setup`
-
-**If reference/ exists:** Check completeness by reading core files.
+Check `reference/core/*.md`. No folder → `/setup`. Exists → check completeness.
 
 ---
 
 ## Step 2: Assess Completeness
 
-If repo exists, quick-scan key files:
+| File | Complete If |
+|------|------------|
+| offer.md | >50 lines or "Price" section |
+| audience.md | >30 lines or "Pains" section |
+| voice.md | >20 lines or "Tone" section |
 
-| Check | How |
-|-------|-----|
-| offer.md exists and has content | >50 lines or has "Price" section |
-| audience.md exists and has content | >30 lines or has "Pains" section |
-| voice.md exists and has content | >20 lines or has "Tone" section |
-
-**If 2+ files are empty/missing:** Suggest `/enrich` to fill gaps
-
-**If files look complete:** Ready to work — ask what they want to do
+2+ empty/missing → `/enrich`. Complete → route by intent.
 
 ---
 
@@ -158,25 +119,11 @@ If user already stated intent, route directly without asking.
 
 ## Step 4: Help Mode
 
-If user says "help" or seems confused, route to `/help` for comprehensive answers.
+"Help" or confused → route to `/help`. Give quick overview first:
 
-Quick overview to give before routing:
-
-> "Main Branch works like this:
->
-> 1. **vip** is the engine (skills, templates) — you always start here
-> 2. **Your business repo** has your data (offer, audience, voice, proof)
-> 3. **`/start`** loads your business repo automatically and routes you
->
-> **Daily workflow:**
-> ```
-> cd ~/Documents/GitHub/vip && claude
-> /start
-> ```
->
-> **For detailed help:** Type `/help` followed by your question. It has comprehensive answers about Terminal basics, the two-repo model, troubleshooting, skills, and more.
->
-> What would you like to do?"
+> "1. **vip** = engine (skills). 2. **Your repo** = data (offer, audience, voice).
+> Daily: `cd vip && claude` then `/start`.
+> For detailed help: `/help` + your question."
 
 ---
 
@@ -221,33 +168,21 @@ Use these to auto-detect what user wants:
 
 | Problem | Solution |
 |---------|----------|
-| No `reference/core/` found | User needs to add their business repo via `/add-dir` in Claude Code |
-| Business repo nested (e.g., `projects/main-branch/`) | Search inside parent folders for `reference/core/` |
-| Multiple business repos | Ask which one to use for this session |
-| User has repo but not added | Ask for the path, then tell them to `/add-dir` it |
+| No `reference/core/` | Add via `/add-dir` |
+| Nested repo | Search parent folders |
+| Multiple repos | Ask which one |
+| Repo exists but not added | Get path, tell them `/add-dir` |
 
-**Key insight:** Don't try to persist paths to settings.json (strict schema). Just search working directories each session.
+Search working directories each session (don't persist paths).
 
 ---
 
-## Daily Workflow (Tell Users This)
+## Daily Workflow
 
-```bash
-cd ~/Documents/GitHub/vip
-claude
-/start
-```
-
-That's it. `/start` pulls updates, loads the business repo, and routes to the right skill.
+`cd vip && claude` → `/start`. Pulls updates, loads repo, routes.
 
 ---
 
 ## Don't Overthink
 
-This skill is a router, not a worker.
-
-- Detect state quickly
-- Route to the right skill
-- Let that skill do the heavy lifting
-
-If uncertain, ask one clarifying question, then route.
+Router, not worker. Detect state → route → let that skill work. If uncertain, one clarifying question, then route.

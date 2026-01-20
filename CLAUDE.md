@@ -17,36 +17,32 @@ AI-native business operating system. Your reference is the fuel, Claude is the e
 
 ## Philosophy: Active Reference Management
 
-**You learn your business by building your reference.**
+**You learn by building your reference.** No magic passive memory. You:
 
-This is not passive memory like ChatGPT. There is no magic background system remembering things for you. Instead:
+- **Actively manage** what Claude knows
+- **See files change** as decisions get made
+- **Synthesize research** into evergreen reference
+- **Control** exactly what informs every output
 
-- **You actively manage** what Claude knows about your business
-- **You see files change** as decisions get made
-- **You synthesize research** into evergreen reference
-- **You discuss and refine** until the reference is right
-- **You control** exactly what informs every output
+This engagement is the learning. Articulating your offer, audience, angles — you understand your business more deeply than passive memory allows.
 
-This active engagement is the learning. By forcing yourself to articulate your offer, your audience, your angles — you understand your business more deeply than you would if a chat just "remembered" things automatically.
+**Passive memory keeps you shallow.** Active reference is work, but that work IS the thinking.
 
-**The insight:** Passive memory feels convenient but keeps you shallow. Active reference management is work, but that work IS the thinking that makes your marketing effective.
-
-**Marketing reflects the present moment.** Times change. Seasons change. Markets shift. Your reference files stay current with reality, not just accumulate history. What worked last quarter might not land today. Feed learnings back continuously.
+**Marketing reflects the present moment.** Markets shift. Reference stays current with reality. What worked last quarter might not land today.
 
 ---
 
 ## Philosophy: Compound Knowledge
 
-**Each piece of reference you save makes the next output better.**
+**Each piece of reference makes the next output better.**
 
-The cycle:
-1. **Research** → Investigate questions, gather information (dated)
-2. **Decide** → Make choices with rationale (dated, links to research)
-3. **Codify** → Update evergreen reference (offer, audience, angles)
-4. **Generate** → Skills consume reference, produce outputs
+1. **Research** → Investigate (dated)
+2. **Decide** → Choose with rationale (dated, links to research)
+3. **Codify** → Update evergreen reference
+4. **Generate** → Skills consume reference
 5. **Learn** → Outputs inform new research
 
-Your business knowledge compounds. The more you feed it, the better it performs. Unlike a chat that forgets or hallucinates, your repo IS the truth.
+Your repo IS the truth. Unlike chat that forgets or hallucinates.
 
 ---
 
@@ -72,9 +68,9 @@ vip (ENGINE)          your-repo (DATA)
                output to outputs/
 ```
 
-**Same engine + different data = different outputs for each business.**
+**Same engine + different data = different outputs per business.**
 
-This is like a game engine (Unity, Unreal) — the engine provides capabilities, each game provides its own assets. Main Branch Premium is the engine. Your business repo is the game.
+Like Unity/Unreal — engine provides capabilities, each game provides assets.
 
 ---
 
@@ -164,13 +160,8 @@ status: draft
 
 1. Open your project/client repo as **primary working directory**
 2. Add vip as **additional working directory**
-3. Skills and lenses from the engine become available
+3. Skills and lenses become available
 4. All outputs go to your project repo
-
-```bash
-# In Claude Code settings, add vip as additional directory
-# Then work in your business repo - skills are automatically available
-```
 
 ---
 
@@ -207,8 +198,6 @@ Skills load reference progressively to stay token-efficient:
 ## File Conventions
 
 ### Frontmatter
-
-All markdown files should have frontmatter:
 
 ```yaml
 ---
@@ -305,20 +294,11 @@ Pre-campaign planning resources in `.claude/reference/compliance/`:
 
 ## Git Commit Convention
 
-```
-[type] Brief description
-
-- Detail 1
-- Detail 2
-
-Context: Why this change was made
-```
-
-**Types:** `[add]`, `[update]`, `[fix]`, `[remove]`, `[refactor]`
+`[type] Brief description` — Types: `[add]`, `[update]`, `[fix]`, `[remove]`, `[refactor]`
 
 ---
 
 ## See Also
 
-- `docs/system-architecture.md` — Full technical explanation
+- `docs/system-architecture.md` — Technical details
 - `.claude/reference/domain-rubrics/` — Business type templates

@@ -50,6 +50,20 @@ Then type `/start` and follow the prompts.
 
 ---
 
+## Daily Workflow (After Setup)
+
+Every time you use Main Branch:
+
+```bash
+cd ~/Documents/GitHub/vip
+claude
+/start
+```
+
+That's it. `/start` loads your business repo and routes you to the right skill.
+
+---
+
 ## Common Issues
 
 ### "command not found: claude"
