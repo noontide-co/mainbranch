@@ -26,6 +26,8 @@ Go to [apify.com](https://apify.com) → Sign up (free tier works)
 
 ### 2. Get Your API Token (1 min)
 
+**What's a token?** It's like a password that lets Claude use your Apify account. Keep it private - anyone with your token can use your account.
+
 1. Click **Settings** (gear icon, bottom left)
 2. Click **API & Integrations** tab
 3. Under "Personal API tokens" you'll see a default token already created
@@ -99,6 +101,21 @@ Every time you run `/content mine` on Instagram, it will use Apify automatically
 3. Type `/mcp`
 
 You should see `apify` in the list of configured servers.
+
+---
+
+## First Time Using Apify
+
+When Claude first uses Apify, you'll see a permission prompt like:
+
+```
+Do you want to proceed?
+1. Yes
+2. Yes, and don't ask again for apify commands
+3. No
+```
+
+**Hit 2** to always approve Apify commands. Otherwise you'll have to approve every single request.
 
 ---
 
