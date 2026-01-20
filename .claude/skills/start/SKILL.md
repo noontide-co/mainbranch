@@ -77,10 +77,10 @@ fi
 
 **If ONE business repo found:** Use it. Confirm briefly: "Using [name]. Ready to work."
 
-**If MULTIPLE business repos found:** Ask which one, plus offer alternatives:
+**If MULTIPLE business repos found:** List what you found, plus offer alternatives:
 > "I found these business repos:
-> - main-branch
-> - newsignal
+> - [repo-name-1]
+> - [repo-name-2]
 > - **Another one** (tell me the path)
 > - **Create new** (run /setup)
 >
