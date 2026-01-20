@@ -16,8 +16,8 @@ Mine competitor content, extract winning concepts, generate scripts in your voic
 
 **For Instagram mining, Apify is essential** — not nice-to-have:
 - 95%+ reliable vs 60-70% for browser automation
-- 10-100x more token-efficient (500 tokens vs 50,000+)
-- Handles rate limits and proxy rotation automatically
+- 100x faster (pulls data directly vs slow screenshot-by-screenshot browsing)
+- Handles Instagram's rate limits automatically
 - Free tier covers ~2000 posts/month (~$5/mo after)
 
 Offer in order:
