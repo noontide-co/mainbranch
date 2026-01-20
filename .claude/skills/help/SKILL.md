@@ -15,16 +15,13 @@ description: |
 
 # Help
 
-Answer questions, troubleshoot, explain philosophy, suggest next steps.
+Comprehensive help for Main Branch. Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 
 ---
 
-## Workflow
+## How This Skill Works
 
-1. Read question
-2. Detect business type (check reference/core)
-3. Load relevant reference file
-4. Answer clearly + suggest next skill
+1. Read question → 2. Check reference/core for business type → 3. Find topic in references/ → 4. Answer + suggest next skill
 
 **Always end with a next step.**
 
@@ -32,53 +29,63 @@ Answer questions, troubleshoot, explain philosophy, suggest next steps.
 
 ## Quick Router
 
-| Question Type | Reference |
-|---------------|-----------|
-| Terminal basics, drag files | [terminal-basics.md](references/terminal-basics.md) |
-| Two repos, what's vip | [two-repos.md](references/two-repos.md) |
-| Why this approach | [philosophy.md](references/philosophy.md) |
-| /think, research, decisions | [the-think-cycle.md](references/the-think-cycle.md) |
-| Errors, troubleshooting | [troubleshooting.md](references/troubleshooting.md) |
-| Getting started, setup | [getting-started.md](references/getting-started.md) |
-| Which skill to use | [skills-guide.md](references/skills-guide.md) |
-| Migrate from GPT | [gpt-migration.md](references/gpt-migration.md) |
-| Content, Reels, TikTok | [content-help.md](references/content-help.md) |
-| Skool questions | [skool-help.md](references/skool-help.md) |
-| Making outputs better | [making-outputs-better.md](references/making-outputs-better.md) |
-| Contributing | [becoming-contributor.md](references/becoming-contributor.md) |
+| Question Type | Reference File |
+|---------------|----------------|
+| "What is Terminal?" / "How do I drag files?" | [terminal-basics.md](references/terminal-basics.md) |
+| "What are the two repos?" / "What's vip?" | [two-repos.md](references/two-repos.md) |
+| "Why this approach?" / "How does this help me?" | [philosophy.md](references/philosophy.md) |
+| "How do I use /think?" / "Research and decisions" | [the-think-cycle.md](references/the-think-cycle.md) |
+| "command not found" / errors | [troubleshooting.md](references/troubleshooting.md) |
+| "How do I get started?" / setup | [getting-started.md](references/getting-started.md) |
+| "Which skill should I use?" | [skills-guide.md](references/skills-guide.md) |
+| "How do I migrate from GPT?" | [gpt-migration.md](references/gpt-migration.md) |
+| Content questions / "Reels" / "TikTok" / "organic" | [content-help.md](references/content-help.md) |
+| Skool-specific questions | [skool-help.md](references/skool-help.md) |
+| "How do I make outputs better?" / "What next?" | [making-outputs-better.md](references/making-outputs-better.md) |
+| "Can I contribute?" | [becoming-contributor.md](references/becoming-contributor.md) |
 
 ---
 
-## Answering Principles
+## Business Type Detection
 
-### 1. Explain Why
-- "This matters because..."
-- "This compounds because..."
+Check `reference/core/*.md`. For Skool/community, also read domain files.
 
-### 2. Suggest Next Skill
-- "Try `/think` to research further"
-- "Run `/enrich` to add context"
+---
 
-### 3. Teach /think Cycle
-Research → Decide → Codify → Generate
+## Core Principles
 
-Complex questions → suggest `/think`
-
-### 4. Be Beginner-Friendly
-Many users have never used Terminal. Meet them where they are.
+1. **Explain "why"** — Not just steps. Why this approach works.
+2. **Suggest next skill** — Every answer ends with action (`/think`, `/setup`, `/enrich`)
+3. **Teach /think cycle** — Research → Decide → Codify → Generate
+4. **Be beginner-friendly** — Many never used Terminal. Meet them where they are.
 
 ---
 
 ## Quick Answers
 
-**"Start Claude in a folder"?**
-Terminal = text interface. `cd ~/path/to/vip` then `claude` = Claude sees those files.
+**"Start Claude in a folder"** — See [terminal-basics.md](references/terminal-basics.md). Short: `cd ~/vip` then `claude` = Claude sees/works with files there.
 
-**When use slash commands?**
-Anytime you want structured action. `/start`, `/think`, `/ad-static`, `/help`.
+**"When use slash commands?"** — For structured tasks. `/start`, `/think`, `/ad-static`, `/help`. Just type it.
 
-**Drag files?**
-Drag from Finder/Explorer into Terminal. Path appears. Press Enter.
+**"Drag files in?"** — Drag from Finder/Explorer into Terminal. Path appears. Press Enter.
 
-**Voice instead of typing?**
-Mac: Fn twice → speak → Fn again. Or any dictation software.
+**"Voice instead of typing?"** — We recommend [Wispr Flow](https://ref.wisprflow.ai/main) for seamless voice-to-text. (Using this link supports Main Branch — we're affiliates.)
+
+---
+
+## Reference Files
+
+Load these as needed based on the question:
+
+- [philosophy.md](references/philosophy.md) - Vision, compound knowledge, why this works
+- [terminal-basics.md](references/terminal-basics.md) - Terminal 101 for complete beginners
+- [the-think-cycle.md](references/the-think-cycle.md) - The core loop that makes everything work
+- [two-repos.md](references/two-repos.md) - Engine + data model explained
+- [troubleshooting.md](references/troubleshooting.md) - Error fixes
+- [getting-started.md](references/getting-started.md) - Setup guide
+- [skills-guide.md](references/skills-guide.md) - When to use which skill
+- [gpt-migration.md](references/gpt-migration.md) - Bringing GPT knowledge over
+- [content-help.md](references/content-help.md) - Organic content creation (Reels, TikTok, carousels)
+- [skool-help.md](references/skool-help.md) - Skool community specifics
+- [making-outputs-better.md](references/making-outputs-better.md) - Improving quality, next steps
+- [becoming-contributor.md](references/becoming-contributor.md) - Contributing back to Main Branch
