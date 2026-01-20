@@ -62,7 +62,16 @@ Search working directories for `reference/core/`. Skip vip (has `.claude/skills/
 
 **ONE found:** Use it. "Using [name]. Ready to work."
 
-**MULTIPLE found:** Number them + add "Another one (tell me path)" + "Create new (/setup)"
+**MULTIPLE found:** Always include options 3 and 4:
+
+> "I found these business repos:
+>
+> 1. [first-repo-name]
+> 2. [second-repo-name]
+> 3. Another one (tell me the path)
+> 4. Create new (`/setup`)
+>
+> Which one? (hit a number)"
 
 **NONE found:** Check nested folders, then route to `/setup`.
 
