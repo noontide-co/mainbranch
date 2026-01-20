@@ -19,6 +19,36 @@ Mine competitor content, extract winning concepts, generate scripts in your voic
 
 ---
 
+## First-Time Setup
+
+Requires `reference/core/voice.md`, `audience.md`, and `offer.md`.
+
+**Missing these files?** See [references/first-time-setup.md](references/first-time-setup.md) for quick templates, or run `/setup`.
+
+---
+
+## Recommended Path
+
+| User Type | Command | What Happens |
+|-----------|---------|--------------|
+| **First time** | `/content mine` | Research competitors first, then generate |
+| **Have a topic** | `/content video "topic"` | Skip research, generate immediately |
+| **Repeat user** | `/content` | Full flow with fresh research |
+
+---
+
+## Platform Selection
+
+Ask user which platform before generating:
+
+| Platform | Optimal Length |
+|----------|---------------|
+| Instagram Reels | 15-30 seconds |
+| TikTok | 30-90 seconds |
+| Both | 15-45 seconds |
+
+---
+
 ## How It Differs from Ad Skills
 
 | Aspect | /ad-video-scripts | /content |
@@ -110,29 +140,22 @@ If file missing, ask:
 
 ### Step 2: Mine Content
 
-**Data extraction approach:**
+**Option A: Apify MCP (if available)**
 
-For Instagram mining, use Apify MCP if available:
-- Instagram Profile Scraper actor
-- Extracts posts with engagement metrics
-- Returns structured JSON
+Use Instagram Profile Scraper actor. Returns structured JSON with engagement metrics. Sort server-side by engagement rate.
 
-If Apify unavailable, ask user to share:
-- Screenshots of top posts
-- URLs to high-performing content
-- Notes on what they observed
+**Option B: Manual (no setup required)**
+
+Ask user to share:
+- Screenshots of competitor's top 10-15 posts
+- Like/comment counts for each
+- Caption text (at least first line)
+
+Either method works. Apify is faster; manual requires no setup.
 
 **Filter for winners:**
 
-Sort by engagement rate (likes + comments / followers). Top 10-20% are winners.
-
-**Server-side sorting (replaces Sort Feed extension):**
-
-```python
-# Sort posts by engagement, no Chrome extension needed
-sorted_posts = sorted(posts, key=lambda p: p['likes'] + p['comments'], reverse=True)
-top_performers = sorted_posts[:int(len(sorted_posts) * 0.2)]  # Top 20%
-```
+Sort by engagement (likes + comments). Extract concepts from top 20%.
 
 ### Step 3: Extract Concepts
 
@@ -427,8 +450,15 @@ Run `/content video` or `/content carousel` to generate from these.
 
 ## References
 
+**Setup (read for new users):**
+- [references/first-time-setup.md](references/first-time-setup.md) - Prerequisites and quick start
+- [references/minimal-voice-template.md](references/minimal-voice-template.md) - Voice file template
+
+**Frameworks (read when generating):**
 - [references/organic-frameworks.md](references/organic-frameworks.md) - Content structure frameworks
-- [references/mining-template.md](references/mining-template.md) - Template for mining output
+
+**Templates (read when outputting):**
+- [references/mining-template.md](references/mining-template.md) - Mining output format
 - [references/video-script-template.md](references/video-script-template.md) - Reels/TikTok template
 - [references/carousel-template.md](references/carousel-template.md) - Carousel slide template
 - [references/static-template.md](references/static-template.md) - Single post template
