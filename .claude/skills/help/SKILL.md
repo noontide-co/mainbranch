@@ -7,143 +7,146 @@ description: |
   (3) User encounters errors (command not found, repository not found)
   (4) User says "help", "I'm stuck", "I don't understand"
   (5) User asks about daily workflow or getting started
+  (6) User is a complete beginner to Terminal or Claude Code
+  (7) User wants to know what to do next
 
   Answers questions based on documented curriculum. Routes to other skills when appropriate.
 ---
 
 # Help
 
-Answer questions about Main Branch based on documented curriculum.
+Comprehensive help for Main Branch. Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 
 ---
 
-## How to Use
+## How This Skill Works
 
 1. Read the user's question
-2. Find the relevant topic below or in references/
-3. Answer clearly and concisely
-4. Route to appropriate skill if action is needed
+2. Detect their business type (if relevant) by checking reference/core files
+3. Find the relevant topic in references/
+4. Answer clearly, explain the "why", suggest next skill
+
+**Always end with a next step.** Don't just answer - empower them to take action.
 
 ---
 
-## Quick Answers (Most Common Questions)
+## Quick Router
 
-### "What are the two repos?"
-
-**vip** = the engine (skills, templates, frameworks). Shared with everyone. You don't edit it.
-
-**Your business repo** = your data (offer, audience, voice, proof). Yours alone. You own it.
-
-Same engine + different data = different outputs for each business.
-
-Think of it like Unity (game engine) + your game assets. The engine provides capabilities. Your assets make it yours.
-
-### "What does 'working in vip' mean?"
-
-It means you start Claude there. Why:
-1. Skills live in vip. If you start elsewhere, skills may not be available.
-2. Updates happen in vip. `/start` auto-pulls the latest.
-3. It's the consistent starting point. Always works.
-
-### "Do I need /add-dir every session?"
-
-After the latest update: **No.**
-
-Run `/start` from vip. It remembers your business repo path (stored in ~/.claude/settings.json) and loads it automatically.
-
-One-time setup: Tell Claude your business repo path when you first run `/start`.
-
-### "Why does context decay?"
-
-Claude Code reads CLAUDE.md at session start. That context is strongest at the beginning and fades as the conversation gets longer and compacts.
-
-**Solution:** Use slash commands regularly (`/start`, `/think`, `/ad-static`). Each command reloads fresh skill instructions.
-
-### "What can Claude do?"
-
-Claude can work with ANY file on your computer. Drag files in, share paths, paste text. Possibilities are endless.
-
-For Main Branch, we focus on two folders (vip + your business repo) so skills can reliably use your business context.
+| Question Type | Reference File |
+|---------------|----------------|
+| "What is Terminal?" / "How do I drag files?" | [terminal-basics.md](references/terminal-basics.md) |
+| "What are the two repos?" / "What's vip?" | [two-repos.md](references/two-repos.md) |
+| "Why this approach?" / "How does this help me?" | [philosophy.md](references/philosophy.md) |
+| "How do I use /think?" / "Research and decisions" | [the-think-cycle.md](references/the-think-cycle.md) |
+| "command not found" / errors | [troubleshooting.md](references/troubleshooting.md) |
+| "How do I get started?" / setup | [getting-started.md](references/getting-started.md) |
+| "Which skill should I use?" | [skills-guide.md](references/skills-guide.md) |
+| "How do I migrate from GPT?" | [gpt-migration.md](references/gpt-migration.md) |
+| Skool-specific questions | [skool-help.md](references/skool-help.md) |
+| "How do I make outputs better?" / "What next?" | [making-outputs-better.md](references/making-outputs-better.md) |
+| "Can I contribute?" | [becoming-contributor.md](references/becoming-contributor.md) |
 
 ---
 
-## Troubleshooting
+## Business Type Detection
 
-### "command not found: claude"
-
-Terminal doesn't know where Claude is installed.
-
-**Mac (zsh):**
-```bash
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
-```
-
-**Linux/older Mac (bash):**
-```bash
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
-```
-
-### "Repository not found" / 404 error
-
-You don't have access yet. Share your GitHub username with Devon in Skool and wait for confirmation.
-
-### "Can't push to vip"
-
-Expected. vip is read-only. Your business data goes in your own repo (created via `/setup`).
-
-### Xcode Command Line Tools popup (Mac)
-
-Click Install. Needed for Git operations. The time estimate is wrong (says hours, takes minutes).
-
-To reinstall: `xcode-select --install`
-
----
-
-## Daily Workflow
+Some questions need business-type context. Check if reference/core exists:
 
 ```bash
-cd ~/Documents/GitHub/vip
-claude
-/start
+ls reference/core/*.md 2>/dev/null
 ```
 
-That's it. `/start` pulls updates, loads your business repo, routes you to the right skill.
+If Skool/community business, also read relevant domain files for context before answering Skool-specific questions.
 
 ---
 
-## Skills Quick Reference
+## Core Principles When Answering
 
-| Skill | What It Does |
-|-------|--------------|
-| `/start` | Entry point. Loads your business repo, routes to right skill |
-| `/setup` | Create business repo from scratch (first-time users) |
-| `/enrich` | Add context to existing repo |
-| `/think` | Research topics, make decisions, update reference files |
-| `/ad-static` | Generate image ad copy |
-| `/ad-video-scripts` | Generate video ad scripts |
-| `/ad-review` | Check ads for compliance |
-| `/help` | Answer questions (this skill) |
+### 1. Explain the "Why"
+
+Don't just give steps. Explain why this approach works:
+- "This matters because..."
+- "The benefit of recording this is..."
+- "This compounds over time because..."
+
+### 2. Always Suggest a Skill
+
+Every answer should end with a next action:
+- "Try running `/think` to research this further"
+- "Use `/setup` to get your repo created"
+- "Run `/enrich` to add this new context"
+
+### 3. Teach the /think Cycle
+
+Many questions are actually opportunities to teach the core loop:
+- Research → Investigate the question
+- Decide → Make a choice with rationale
+- Codify → Update reference files
+- Generate → Create outputs from reference
+
+When someone asks a complex "how do I..." question, suggest they run `/think` to work through it properly.
+
+### 4. Be Beginner-Friendly
+
+Assume nothing. Many users:
+- Have never used Terminal
+- Don't know what "cd" means
+- Don't understand file paths
+- Are used to ChatGPT's passive memory
+
+Meet them where they are.
 
 ---
 
-## Routing
+## Quick Answers (Most Common)
 
-If user needs action, not just answers:
+### "What does 'start Claude in a folder' mean?"
 
-| User Need | Route To |
-|-----------|----------|
-| "Set up my repo" | `/setup` |
-| "Add more context" | `/enrich` |
-| "Research something" | `/think` |
-| "Create ad copy" | `/ad-static` or `/ad-video-scripts` |
-| "Check my ads" | `/ad-review` |
+See [terminal-basics.md](references/terminal-basics.md) for full explanation.
+
+Short version: Terminal is a text-based way to interact with your computer. When you type `cd ~/Documents/GitHub/vip` and then `claude`, you're telling Claude to start "in" that folder - meaning it can see and work with files there.
+
+### "When do I use slash commands?"
+
+Anytime you want Claude to do something structured. Slash commands load specialized instructions.
+
+Examples:
+- `/start` - Begin a session, load your business repo
+- `/think` - Research a topic, make a decision
+- `/ad-static` - Generate ad copy
+- `/help` - Get answers (you're using it now)
+
+Just type the command. Claude will take it from there.
+
+### "How do I drag files in?"
+
+Literally drag a file from Finder (Mac) or Explorer (Windows) into the Terminal window. The file path appears. Press Enter.
+
+You can also drag folders to add them as working directories.
+
+### "Can I use voice instead of typing?"
+
+Yes. Mac has built-in dictation:
+1. Press Fn twice (or the mic key on newer Macs)
+2. Speak
+3. Press Fn again to stop
+
+Or use any dictation software that types text.
 
 ---
 
-## Detailed References
+## Reference Files
 
-For deeper explanations, see:
+Load these as needed based on the question:
 
-- [references/two-repos.md](references/two-repos.md) - Full explanation of engine + data model
-- [references/troubleshooting.md](references/troubleshooting.md) - All error fixes
-- [references/getting-started.md](references/getting-started.md) - Step-by-step setup guide
+- [philosophy.md](references/philosophy.md) - Vision, compound knowledge, why this works
+- [terminal-basics.md](references/terminal-basics.md) - Terminal 101 for complete beginners
+- [the-think-cycle.md](references/the-think-cycle.md) - The core loop that makes everything work
+- [two-repos.md](references/two-repos.md) - Engine + data model explained
+- [troubleshooting.md](references/troubleshooting.md) - Error fixes
+- [getting-started.md](references/getting-started.md) - Setup guide
+- [skills-guide.md](references/skills-guide.md) - When to use which skill
+- [gpt-migration.md](references/gpt-migration.md) - Bringing GPT knowledge over
+- [skool-help.md](references/skool-help.md) - Skool community specifics
+- [making-outputs-better.md](references/making-outputs-better.md) - Improving quality, next steps
+- [becoming-contributor.md](references/becoming-contributor.md) - Contributing back to Main Branch
