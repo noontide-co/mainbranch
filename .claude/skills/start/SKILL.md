@@ -8,7 +8,7 @@ description: |
   (4) User seems lost or unsure which skill to use
 
   Routes to: /setup (new users), /enrich (add context), /think (research/decide),
-  /ad-static, /ad-video-scripts, /ad-review, /skool-manager, /skool-vsl-scripts
+  /ad-static, /ad-video-scripts, /ad-review, /content, /skool-manager, /skool-vsl-scripts
 ---
 
 # Start
@@ -38,6 +38,7 @@ Single entry point for Main Branch. Detect user state, route to the right skill.
 │   ├── "research" / "decide" ────────→ /think
 │   ├── "ads" / "copy" ───────────────→ /ad-static or /ad-video-scripts
 │   ├── "review" / "compliance" ──────→ /ad-review
+│   ├── "content" / "organic" ────────→ /content
 │   ├── "skool" / "community" ────────→ /skool-manager
 │   ├── "vsl" / "sales video" ────────→ /skool-vsl-scripts
 │   ├── "help" / questions ───────────→ /help
@@ -147,6 +148,7 @@ If user is ready to work, ask or infer intent:
 > - **Research a topic** → `/think`
 > - **Create ad copy** → `/ad-static` (images) or `/ad-video-scripts` (video)
 > - **Review ads for compliance** → `/ad-review`
+> - **Create organic content** → `/content` (Reels, TikTok, carousels)
 > - **Manage Skool community** → `/skool-manager`
 > - **Write a VSL script** → `/skool-vsl-scripts`
 > - **Add more context** → `/enrich`
@@ -191,6 +193,7 @@ Quick overview to give before routing:
 | `/ad-static` | Generate image ad copy | Need Meta ad copy |
 | `/ad-video-scripts` | Generate video ad scripts | Need 15-60s video scripts |
 | `/ad-review` | Check ads for compliance | Before running ads |
+| `/content` | Mine competitors, generate organic scripts | Reels, TikTok, carousels |
 | `/skool-manager` | Manage community engagement | Daily Skool tasks |
 | `/skool-vsl-scripts` | Write video sales letters | Need VSL for about page |
 
@@ -207,8 +210,9 @@ Use these to auto-detect what user wants:
 | "add", "update", "more context", "new testimonials" | `/enrich` |
 | "research", "decide", "figure out", "explore" | `/think` |
 | "ads", "copy", "static", "image ads", "primaries" | `/ad-static` |
-| "video", "scripts", "hooks", "ugc" | `/ad-video-scripts` |
+| "video ads", "ad scripts", "hooks", "ugc" | `/ad-video-scripts` |
 | "review", "compliance", "ftc", "check" | `/ad-review` |
+| "content", "reels", "tiktok", "organic", "mine", "competitors", "carousel" | `/content` |
 | "skool", "community", "posts", "respond" | `/skool-manager` |
 | "vsl", "sales video", "about page video" | `/skool-vsl-scripts` |
 

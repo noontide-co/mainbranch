@@ -96,6 +96,19 @@ Same engine + different data = outputs tailored to each business.
 
 ---
 
+## What You Can Do
+
+Once set up, type these commands:
+
+- `/think` - Research and make decisions
+- `/ad-static` - Generate image ad copy
+- `/ad-video-scripts` - Create video ad scripts
+- `/content` - Mine competitors, create Reels/TikTok/carousels
+- `/ad-review` - Check ads for compliance
+- `/help` - Get answers to any question
+
+---
+
 ## Getting Help
 
 - **Stuck?** Post in Skool with a screenshot. Tag @Devon.

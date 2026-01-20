@@ -42,6 +42,7 @@ Comprehensive help for Main Branch. Answer questions, troubleshoot issues, expla
 | "How do I get started?" / setup | [getting-started.md](references/getting-started.md) |
 | "Which skill should I use?" | [skills-guide.md](references/skills-guide.md) |
 | "How do I migrate from GPT?" | [gpt-migration.md](references/gpt-migration.md) |
+| Content questions / "Reels" / "TikTok" / "organic" | [content-help.md](references/content-help.md) |
 | Skool-specific questions | [skool-help.md](references/skool-help.md) |
 | "How do I make outputs better?" / "What next?" | [making-outputs-better.md](references/making-outputs-better.md) |
 | "Can I contribute?" | [becoming-contributor.md](references/becoming-contributor.md) |
@@ -147,6 +148,7 @@ Load these as needed based on the question:
 - [getting-started.md](references/getting-started.md) - Setup guide
 - [skills-guide.md](references/skills-guide.md) - When to use which skill
 - [gpt-migration.md](references/gpt-migration.md) - Bringing GPT knowledge over
+- [content-help.md](references/content-help.md) - Organic content creation (Reels, TikTok, carousels)
 - [skool-help.md](references/skool-help.md) - Skool community specifics
 - [making-outputs-better.md](references/making-outputs-better.md) - Improving quality, next steps
 - [becoming-contributor.md](references/becoming-contributor.md) - Contributing back to Main Branch
