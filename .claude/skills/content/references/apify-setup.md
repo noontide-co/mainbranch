@@ -33,34 +33,23 @@ Go to [apify.com](https://apify.com) → Sign up (free tier works)
 
 That's your token. Don't create a new one - the default works fine.
 
-### 3. Add MCP to Claude Code (2 min)
+### 3. Add MCP to Claude Code (1 min)
 
-This command tells Claude Code how to connect to Apify. We'll build it in pieces so you don't have to edit the middle of a long command.
+**Easiest way:** Paste your token right here in the chat. Claude will run the setup command for you. Works on Mac and Windows.
 
-**Step by step:**
+---
 
-1. Paste this first part:
-   ```
-   claude mcp add apify -e APIFY_TOKEN=
-   ```
+**Prefer to do it yourself?** Open a new terminal and run:
 
-2. Paste your token right after the `=` (no space between `=` and token)
-
-3. **Add a space** after your token, then paste this part:
-   ```
-   -- npx -y @apify/mcp-server-rag-web-browser
-   ```
-
-   (Make sure there's a space before the `--`)
-
-4. Press Enter
-
-**Your final command should look like:**
 ```
-claude mcp add apify -e APIFY_TOKEN=apify_api_abc123xyz -- npx -y @apify/mcp-server-rag-web-browser
+claude mcp add apify -e APIFY_TOKEN=YOUR_TOKEN -- npx -y @apify/mcp-server-rag-web-browser
 ```
 
-**Is pasting my token safe?** Yes. It gets stored securely in Claude's settings file. You can regenerate the token on Apify anytime if needed.
+Replace `YOUR_TOKEN` with your actual token (the whole thing, no spaces).
+
+---
+
+**Is pasting my token safe?** Yes - it only goes into your local Claude settings file. You can regenerate it on Apify anytime.
 
 ---
 
