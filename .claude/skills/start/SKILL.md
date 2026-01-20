@@ -77,8 +77,14 @@ fi
 
 **If ONE business repo found:** Use it. Confirm briefly: "Using [name]. Ready to work."
 
-**If MULTIPLE business repos found:** Ask which one to use for this session:
-> "I found multiple business repos: main-branch, newsignal. Which one are you working on today?"
+**If MULTIPLE business repos found:** Ask which one, plus offer alternatives:
+> "I found these business repos:
+> - main-branch
+> - newsignal
+> - **Another one** (tell me the path)
+> - **Create new** (run /setup)
+>
+> Which one are you working on today?"
 
 **If NONE found:**
 - Check if user has a parent folder with multiple businesses inside (like `noontide-projects/main-branch/`)
