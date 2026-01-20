@@ -62,7 +62,7 @@ Search working directories for `reference/core/`. Skip vip (has `.claude/skills/
 
 **ONE found:** Use it. "Using [name]. Ready to work."
 
-**MULTIPLE found:** Always include options 3 and 4:
+**MULTIPLE found:** Always include options 3, 4, and 5:
 
 > "I found these business repos:
 >
@@ -70,6 +70,7 @@ Search working directories for `reference/core/`. Skip vip (has `.claude/skills/
 > 2. [second-repo-name]
 > 3. Another one (tell me the path)
 > 4. Create new (`/setup`)
+> 5. I'm confused (`/help`)
 >
 > Which one? (hit a number)"
 
