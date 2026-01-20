@@ -23,6 +23,8 @@ Mine competitor content, extract winning concepts, generate scripts in your voic
 
 Requires `reference/core/voice.md`, `audience.md`, and `offer.md`.
 
+**Two-repo model:** vip is the engine (skills). The user's business repo has their data. `/start` loads the business repo automatically via `~/.claude/settings.json`. If not loaded, tell user to run `/start` first.
+
 **Missing these files?** See [references/first-time-setup.md](references/first-time-setup.md) for quick templates, or run `/setup`.
 
 ---
@@ -90,6 +92,8 @@ Generate single-post caption from a concept.
 ---
 
 ## Reference Required
+
+**Where to look:** Search all working directories for `reference/core/`. The business repo (not vip) contains these files. If not found, user needs to run `/start` to load their business repo.
 
 Business repo must have these files:
 
