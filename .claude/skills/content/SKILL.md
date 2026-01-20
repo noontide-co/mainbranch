@@ -14,12 +14,18 @@ Mine competitor content, extract winning concepts, generate scripts in your voic
 
 ## Data Extraction (ALWAYS MENTION FIRST)
 
-Offer in order:
-1. **Apify MCP** (best) — Pull posts automatically
-2. **Browser MCP** (okay) — Extract via Chrome
-3. **Manual** (fallback) — User shares screenshots
+**For Instagram mining, Apify is essential** — not nice-to-have:
+- 95%+ reliable vs 60-70% for browser automation
+- 10-100x more token-efficient (500 tokens vs 50,000+)
+- Handles rate limits and proxy rotation automatically
+- Free tier covers ~2000 posts/month (~$5/mo after)
 
-Ask: "Do you have Apify set up?"
+Offer in order:
+1. **Apify MCP** (strongly recommended for Instagram) — Pull posts with engagement metrics
+2. **Browser MCP** (fallback) — Works but burns tokens on screenshots
+3. **Manual** (last resort) — User shares screenshots
+
+Ask: "Do you have Apify set up? It's essential for reliable Instagram mining."
 
 ---
 
@@ -53,6 +59,7 @@ Platform?
 1. Instagram
 2. TikTok
 3. Both
+4. Other (Skool, YouTube, etc.)
 
 (hit a number)
 ```
@@ -324,7 +331,7 @@ Run `/content video` or `/content carousel` to generate from these.
 ## Pre-Response Checklist
 
 Before responding to user, verify:
-- [ ] Mentioned data extraction method (Apify > Browser > Manual)
+- [ ] Explained Apify's value for Instagram (essential, not nice-to-have)
 - [ ] Used numbered options for multi-choice
-- [ ] Asked which platform (Instagram/TikTok/Both)
+- [ ] Asked which platform (Instagram/TikTok/Both/Other)
 - [ ] Kept response tight (recommend ONE path, not all modes)
