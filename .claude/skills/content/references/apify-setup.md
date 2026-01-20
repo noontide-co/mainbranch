@@ -26,7 +26,12 @@ Go to [apify.com](https://apify.com) → Sign up (free tier works)
 
 ### 2. Get Your API Token (1 min)
 
-Settings → Integrations → API tokens → Copy your token
+1. Click **Settings** (gear icon, bottom left)
+2. Click **API & Integrations** tab
+3. Under "Personal API tokens" you'll see a default token already created
+4. Click the **copy icon** (looks like two squares) next to the asterisks
+
+That's your token. Don't create a new one - the default works fine.
 
 ### 3. Add MCP to Claude Code (2 min)
 
