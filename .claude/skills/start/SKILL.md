@@ -1,14 +1,7 @@
 ---
 name: start
 description: |
-  Main entry point for Main Branch. Use when:
-  (1) User is new and doesn't know where to begin
-  (2) User returns and wants guidance on next steps
-  (3) User says "start", "help", "what can I do", "get started"
-  (4) User seems lost or unsure which skill to use
-
-  Routes to: /setup (new users), /enrich (add context), /think (research/decide),
-  /ad-static, /ad-video-scripts, /ad-review, /content, /skool-manager, /skool-vsl-scripts
+  Main entry point for Main Branch. Detects user state and routes to the right skill. Use when user is new, returning, lost, or says "start", "help", "what can I do". Routes to /setup, /enrich, /think, /ad-static, /ad-video-scripts, /ad-review, /content, /skool-manager, /skool-vsl-scripts.
 ---
 
 # Start
