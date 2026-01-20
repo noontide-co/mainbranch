@@ -12,6 +12,22 @@ Single entry point for Main Branch. Detect user state, route to the right skill.
 
 ---
 
+## Numbered Options Pattern
+
+**Always use numbered lists for multi-choice prompts.** This lets users reply with just a number.
+
+```
+1. Option one
+2. Option two
+3. Option three
+
+(hit a number to reply)
+```
+
+Apply this pattern to: business repo selection, skill routing, any multiple choice.
+
+---
+
 ## Detection Flow
 
 ```
@@ -70,14 +86,14 @@ fi
 
 **If ONE business repo found:** Use it. Confirm briefly: "Using [name]. Ready to work."
 
-**If MULTIPLE business repos found:** List what you found, plus offer alternatives:
+**If MULTIPLE business repos found:** Number the options so user can reply with just a number:
 > "I found these business repos:
-> - [repo-name-1]
-> - [repo-name-2]
-> - **Another one** (tell me the path)
-> - **Create new** (run /setup)
+> 1. [repo-name-1]
+> 2. [repo-name-2]
+> 3. Another one (tell me the path)
+> 4. Create new (/setup)
 >
-> Which one are you working on today?"
+> Which one? (hit a number to reply)"
 
 **If NONE found:**
 - Check if user has a parent folder with multiple businesses inside (like `noontide-projects/main-branch/`)
@@ -121,18 +137,20 @@ If repo exists, quick-scan key files:
 
 ## Step 3: Route by Intent
 
-If user is ready to work, ask or infer intent:
+If user is ready to work, ask or infer intent. **Use numbered options:**
 
 > "Your reference files look good. What would you like to do?
 >
-> - **Research a topic** → `/think`
-> - **Create ad copy** → `/ad-static` (images) or `/ad-video-scripts` (video)
-> - **Review ads for compliance** → `/ad-review`
-> - **Create organic content** → `/content` (Reels, TikTok, carousels)
-> - **Manage Skool community** → `/skool-manager`
-> - **Write a VSL script** → `/skool-vsl-scripts`
-> - **Add more context** → `/enrich`
-> - **Get help or answers** → `/help`"
+> 1. Research a topic → `/think`
+> 2. Create ad copy → `/ad-static` or `/ad-video-scripts`
+> 3. Review ads for compliance → `/ad-review`
+> 4. Create organic content → `/content`
+> 5. Write a VSL script → `/skool-vsl-scripts`
+> 6. Manage Skool community → `/skool-manager`
+> 7. Add more context → `/enrich`
+> 8. Get help → `/help`
+>
+> (hit a number to reply, or just tell me what you need)"
 
 If user already stated intent, route directly without asking.
 

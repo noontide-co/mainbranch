@@ -1,14 +1,7 @@
 ---
 name: content
 description: |
-  Mine competitor content and generate organic scripts for Reels, TikTok, and carousels. Use when:
-  (1) User wants to research competitor Instagram/TikTok content
-  (2) User says "mine", "competitors", "organic", "reels", "tiktok"
-  (3) User needs scripts for talking-head videos (not ads)
-  (4) User wants carousel copy for Instagram
-  (5) User needs captions for static posts
-
-  Supports modes: full flow (mine -> script), mine-only, video, carousel, static.
+  Mine competitor content and generate organic scripts. ALWAYS offer Apify MCP first for data extraction (manual fallback if unavailable). Use when user says "mine", "competitors", "organic", "reels", "tiktok", or needs scripts for talking-head videos, carousels, static posts. Modes: mine, video, carousel, static.
 ---
 
 # Content
@@ -16,6 +9,18 @@ description: |
 Mine competitor content, extract winning concepts, generate scripts in your voice.
 
 **Need help?** Type `/help` + your question anytime.
+
+---
+
+## Data Extraction (ALWAYS MENTION FIRST)
+
+When mining, ALWAYS offer these options in order:
+
+1. **Apify MCP** (best) — "I can use Apify to pull their posts automatically"
+2. **Browser MCP** (okay) — "I can open Instagram in Chrome and extract data"
+3. **Manual** (fallback) — "Share screenshots of their top 10-15 posts"
+
+Ask: "Do you have Apify set up? If not, I can use browser mode or you can share screenshots."
 
 ---
 
@@ -45,19 +50,13 @@ Other modes: `video "topic"`, `carousel "topic"`, `static "topic"`
 
 Data: I'll ask you to share competitor screenshots (or use Apify MCP if you have it set up).
 
-Which platform? Instagram Reels, TikTok, or both?
+Platform?
+1. Instagram Reels
+2. TikTok
+3. Both
+
+(hit a number)
 ```
-
----
-
-## Data Extraction
-
-**Always mention upfront** how data will be gathered:
-
-- **If Apify MCP available:** "I'll use Apify to pull competitor data automatically."
-- **If no Apify:** "I'll need you to share screenshots of competitor posts (manual mode)."
-
-Check for Apify by looking for MCP tools. If unclear, assume manual mode.
 
 ---
 
@@ -480,3 +479,13 @@ Run `/content video` or `/content carousel` to generate from these.
 - [references/video-script-template.md](references/video-script-template.md) - Reels/TikTok template
 - [references/carousel-template.md](references/carousel-template.md) - Carousel slide template
 - [references/static-template.md](references/static-template.md) - Single post template
+
+---
+
+## Pre-Response Checklist
+
+Before responding to user, verify:
+- [ ] Mentioned data extraction method (Apify > Browser > Manual)
+- [ ] Used numbered options for multi-choice
+- [ ] Asked which platform (Instagram/TikTok/Both)
+- [ ] Kept response tight (recommend ONE path, not all modes)
