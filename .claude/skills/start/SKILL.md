@@ -62,7 +62,7 @@ Search working directories for `reference/core/`. Skip vip (has `.claude/skills/
 
 **ONE found:** Use it. "Using [name]. Ready to work."
 
-**MULTIPLE found:** Number the options for user selection.
+**MULTIPLE found:** Number them + add "Another one (tell me path)" + "Create new (/setup)"
 
 **NONE found:** Check nested folders, then route to `/setup`.
 
