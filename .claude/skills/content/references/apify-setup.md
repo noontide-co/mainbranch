@@ -55,14 +55,24 @@ Your terminal should now show something like:
 claude mcp add apify -e APIFY_TOKEN=apify_api_51dJHCm5seER0o3n3re6pQT4EkxTtQ2p4oSl
 ```
 
-**PIECE 3** — Type a space, then copy and paste this:
+**PIECE 3** — This is the tricky part. Do these in order:
+
+1. **Type a space** (just hit the spacebar once)
+2. Then copy and paste this **all on one line**:
+
 ```
- --scope user -- npx -y @apify/mcp-server-rag-web-browser
+--scope user -- npx -y @apify/mcp-server-rag-web-browser
+```
+
+**Important:** Make sure the whole thing is on ONE line before pressing Enter. Your full command should look like:
+
+```
+claude mcp add apify -e APIFY_TOKEN=apify_api_xxxxx --scope user -- npx -y @apify/mcp-server-rag-web-browser
 ```
 
 ---
 
-**Now press Enter.** You should see "Added stdio MCP server apify..."
+**Now press Enter.** You should see "Added stdio MCP server apify... to user config"
 
 ---
 
