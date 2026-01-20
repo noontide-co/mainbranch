@@ -23,6 +23,7 @@ Once set up, you can:
 - Research topics and document decisions
 - Generate batches of ad copy in your voice
 - Create video scripts for Meta ads
+- Mine competitor content and create organic Reels/TikTok/carousels
 - Write VSL scripts for your community
 - Review ads for compliance before you run them
 - Manage Skool community engagement
@@ -167,6 +168,7 @@ No prompt engineering. No explaining what you want. Just type the command.
 | `/ad-static` | Create static image ad copy for Meta |
 | `/ad-video-scripts` | Write 15-60 second video ad scripts |
 | `/ad-review` | Check ads for FTC and Meta compliance |
+| `/content` | Mine competitors, create Reels/TikTok/carousel scripts |
 | `/skool-vsl-scripts` | Write video sales letter scripts |
 | `/skool-manager` | Respond to Skool community posts |
 

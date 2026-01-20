@@ -87,6 +87,26 @@ See [the-think-cycle.md](the-think-cycle.md) for deep dive.
 
 ---
 
+### /content - Organic Content
+**Use when:** Creating Reels, TikTok, or carousel content (not paid ads).
+
+**What it does:**
+- Mines competitor content for winning concepts
+- Extracts hooks, structures, and angles that perform
+- Generates scripts in your voice
+- Supports video, carousel, and static formats
+
+**Modes:**
+- `/content` - Full flow (mine -> select -> generate)
+- `/content mine` - Research competitors only
+- `/content video "topic"` - Generate Reels/TikTok script
+- `/content carousel "topic"` - Generate carousel slides
+- `/content static "topic"` - Generate post caption
+
+**Key difference from /ad-video-scripts:** Organic uses soft CTAs (save, follow) while ads use hard CTAs (buy, sign up).
+
+---
+
 ### /ad-review - Compliance Check
 **Use when:** Before running ads, want to check for issues.
 
@@ -132,9 +152,12 @@ What do you need?
 ├── Research or decide something?
 │   └── /think
 │
-├── Create ad copy?
+├── Create ad copy? (paid)
 │   ├── Image ads → /ad-static
 │   └── Video scripts → /ad-video-scripts
+│
+├── Create organic content? (free reach)
+│   └── /content (Reels, TikTok, carousels)
 │
 ├── Check ads before running?
 │   └── /ad-review
