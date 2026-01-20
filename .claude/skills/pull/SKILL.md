@@ -9,7 +9,7 @@ description: |
 
 # Pull
 
-Pull latest updates from GitHub. Fast and simple.
+Pull latest updates from GitHub.
 
 ---
 
@@ -23,35 +23,21 @@ Pull latest updates from GitHub. Fast and simple.
 
 ## What It Does
 
-1. Runs `git pull origin main` in vip
-2. Shows what changed (files modified, new skills, etc.)
-3. Done
-
----
-
-## Implementation
-
 ```bash
-# Pull latest
 git pull origin main
 ```
 
-**If changes pulled:**
-> "Pulled latest updates. Changes:
-> - [list of changed files/folders]"
+**Updated:** "Pulled latest. Changes: [list]"
 
-**If already up to date:**
-> "Already up to date."
+**Current:** "Already up to date."
 
-**If error (network, etc.):**
-> "Couldn't pull updates: [error]. You can try again later or continue working."
+**Error:** "Couldn't pull: [error]. Try again later."
 
 ---
 
 ## When to Use
 
 - Quick update check
-- Before starting a work session
-- After Devon announces new features in Skool
+- After Devon announces features in Skool
 
-**Note:** `/start` also pulls automatically, so you don't need `/pull` if you're about to run `/start`.
+Note: `/start` pulls automatically, so skip `/pull` if running `/start` next.
