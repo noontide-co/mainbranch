@@ -15,6 +15,8 @@ description: |
 
 Add context to an existing Main Branch business repo.
 
+**Need help?** Type `/help` + your question anytime. If conversation compacts, `/help` reloads fresh context.
+
 ---
 
 ## When to Use

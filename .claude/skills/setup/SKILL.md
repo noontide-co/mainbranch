@@ -17,6 +17,21 @@ Get a new user fully configured with Claude Code and their business repo.
 
 ---
 
+## Before We Begin
+
+**Need help at any point?** Type `/help` followed by your question.
+
+If the conversation gets long and context feels "off," `/help` reloads fresh instructions and can answer questions about:
+- How Main Branch works
+- What the two repos are
+- Terminal basics (if you're new to it)
+- Troubleshooting errors
+- What to do next
+
+Don't hesitate to use it. That's what it's for.
+
+---
+
 ## The Two-Repo Model
 
 ```
@@ -130,7 +145,9 @@ ls .claude/skills/setup/SKILL.md 2>/dev/null
    From this point forward, write all files to `~/Documents/GitHub/[business-name]/` NOT to the current directory.
 
 6. **Confirm the setup is saved:**
-   > "Created [business-name] and saved the path. From now on, just run `/start` in vip and it'll load your business repo automatically."
+   > "Created [business-name] and saved the path. From now on, just run `/start` in vip and it'll load your business repo automatically.
+   >
+   > **Reminder:** If you ever get confused or the conversation compacts, type `/help` + your question. It has comprehensive answers about how everything works."
 
 7. **Continue with setup** — proceed to Step 0 (Chrome extension) and beyond.
 
@@ -149,7 +166,7 @@ If not installed:
 
 **If user declines:** Proceed with Playwright or manual screenshots, but note this limits what can be gathered automatically.
 
-**Context tip:** If your conversation gets compacted (summarized), you can always re-invoke `/setup` to reload the full skill context.
+**Context tip:** If your conversation gets compacted (summarized), you can re-invoke `/setup` to reload the full skill context. Or type `/help` with any question to get fresh, comprehensive answers.
 
 ### 1. Confirm Git + Working Directory
 
@@ -346,6 +363,31 @@ See `references/git-workflow.md` for full guide.
 
 ---
 
+## After Setup: What's Next
+
+Once setup is complete, tell the user:
+
+> "Your business repo is ready! Here's what to do next:
+>
+> **Daily workflow:**
+> ```
+> cd ~/Documents/GitHub/vip
+> claude
+> /start
+> ```
+>
+> **Key skills to try:**
+> - `/think` — Research topics, make decisions, update reference
+> - `/ad-static` — Generate image ad copy
+> - `/enrich` — Add more context when you have new info
+> - `/help` — Get answers anytime you're stuck
+>
+> **The core loop:** Use `/think` regularly. Research → Decide → Codify. This is how your reference files get smarter over time.
+>
+> **Remember:** Type `/help` + your question anytime. It has comprehensive answers about Terminal basics, the two-repo model, skills, troubleshooting, and more."
+
+---
+
 ## When to Run Again
 
 Use this skill to merge new context:
@@ -357,3 +399,15 @@ Use this skill to merge new context:
 - "I changed my pricing, update everything"
 
 The skill merges new content, preserving what exists.
+
+---
+
+## Help Is Always Available
+
+At any point during or after setup:
+
+- `/help` — Comprehensive answers to any Main Branch question
+- `/help "what is the two-repo model"` — Specific question
+- `/help "I'm stuck"` — Get unstuck
+
+The `/help` skill has 12 reference files covering philosophy, terminal basics, the /think cycle, skills guide, troubleshooting, and more. Use it liberally.

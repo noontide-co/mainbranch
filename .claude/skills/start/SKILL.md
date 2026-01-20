@@ -40,9 +40,10 @@ Single entry point for Main Branch. Detect user state, route to the right skill.
 │   ├── "review" / "compliance" ──────→ /ad-review
 │   ├── "skool" / "community" ────────→ /skool-manager
 │   ├── "vsl" / "sales video" ────────→ /skool-vsl-scripts
-│   └── unclear ──────────────────────→ Show options
+│   ├── "help" / questions ───────────→ /help
+│   └── unclear ──────────────────────→ Show options + mention /help
 │
-└── "help" / confused? ───────────────→ Explain concepts
+└── "confused" / "stuck" ─────────────→ /help
 ```
 
 ---
@@ -148,7 +149,8 @@ If user is ready to work, ask or infer intent:
 > - **Review ads for compliance** → `/ad-review`
 > - **Manage Skool community** → `/skool-manager`
 > - **Write a VSL script** → `/skool-vsl-scripts`
-> - **Add more context** → `/enrich`"
+> - **Add more context** → `/enrich`
+> - **Get help or answers** → `/help`"
 
 If user already stated intent, route directly without asking.
 
@@ -156,7 +158,9 @@ If user already stated intent, route directly without asking.
 
 ## Step 4: Help Mode
 
-If user says "help" or seems confused, explain the system:
+If user says "help" or seems confused, route to `/help` for comprehensive answers.
+
+Quick overview to give before routing:
 
 > "Main Branch works like this:
 >
@@ -170,10 +174,7 @@ If user says "help" or seems confused, explain the system:
 > /start
 > ```
 >
-> **Getting started:**
-> - New here? `/start` will run `/setup` to create your business repo
-> - Have a repo? `/start` loads it and asks what you want to do
-> - Ready to generate? Try `/ad-static` or `/think`
+> **For detailed help:** Type `/help` followed by your question. It has comprehensive answers about Terminal basics, the two-repo model, troubleshooting, skills, and more.
 >
 > What would you like to do?"
 
@@ -183,6 +184,7 @@ If user says "help" or seems confused, explain the system:
 
 | Skill | What It Does | When to Use |
 |-------|--------------|-------------|
+| `/help` | Get answers, troubleshoot, learn | Confused, stuck, have questions |
 | `/setup` | Create business repo from scratch | First-time users |
 | `/enrich` | Add context to existing repo | Returning users with gaps |
 | `/think` | Research topics, make decisions | Before committing to an approach |
@@ -200,6 +202,7 @@ Use these to auto-detect what user wants:
 
 | Keywords | Route To |
 |----------|----------|
+| "help", "confused", "stuck", "don't understand", "how do I" | `/help` |
 | "new", "first time", "get started", "set up" | `/setup` |
 | "add", "update", "more context", "new testimonials" | `/enrich` |
 | "research", "decide", "figure out", "explore" | `/think` |

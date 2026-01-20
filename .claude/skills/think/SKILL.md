@@ -15,6 +15,8 @@ description: |
 
 Structured workflow for research, decisions, and codifying knowledge.
 
+**Need help?** Type `/help` + your question anytime. If conversation compacts, `/help` reloads fresh context.
+
 ## Pull Latest Updates (Always)
 
 ```bash
