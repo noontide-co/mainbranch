@@ -29,25 +29,35 @@ Requires `reference/core/voice.md`, `audience.md`, and `offer.md`.
 
 ---
 
-## Recommended Path
+## Presenting Options (Keep It Tight)
 
-| User Type | Command | What Happens |
-|-----------|---------|--------------|
-| **First time** | `/content mine` | Research competitors first, then generate |
-| **Have a topic** | `/content video "topic"` | Skip research, generate immediately |
-| **Repeat user** | `/content` | Full flow with fresh research |
+Don't list all modes in chunky blocks. Instead:
+
+1. **Recommend ONE path** based on their context
+2. **Mention alternatives briefly** in one line
+3. **State data extraction method** (Apify or manual)
+
+**Example output:**
+```
+Recommended: `/content mine` — research competitors first since your voice file is still draft.
+
+Other modes: `video "topic"`, `carousel "topic"`, `static "topic"`
+
+Data: I'll ask you to share competitor screenshots (or use Apify MCP if you have it set up).
+
+Which platform? Instagram Reels, TikTok, or both?
+```
 
 ---
 
-## Platform Selection
+## Data Extraction
 
-Ask user which platform before generating:
+**Always mention upfront** how data will be gathered:
 
-| Platform | Optimal Length |
-|----------|---------------|
-| Instagram Reels | 15-30 seconds |
-| TikTok | 30-90 seconds |
-| Both | 15-45 seconds |
+- **If Apify MCP available:** "I'll use Apify to pull competitor data automatically."
+- **If no Apify:** "I'll need you to share screenshots of competitor posts (manual mode)."
+
+Check for Apify by looking for MCP tools. If unclear, assume manual mode.
 
 ---
 
