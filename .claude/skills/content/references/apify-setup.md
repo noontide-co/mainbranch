@@ -33,29 +33,42 @@ Go to [apify.com](https://apify.com) → Sign up (free tier works)
 
 That's your token. Don't create a new one - the default works fine.
 
-### 3. Add MCP to Claude Code (1 min)
+### 3. Add MCP to Claude Code (2 min)
 
-Open a **new terminal window** and run this command:
+**Before you start:** This step requires pasting your token into the middle of a command. That's tricky if you're new to terminal! We'll build the command in pieces so you don't have to edit anything.
 
-```
-claude mcp add apify -e APIFY_TOKEN=YOUR_TOKEN --scope user -- npx -y @apify/mcp-server-rag-web-browser
-```
-
-Replace `YOUR_TOKEN` with your actual token (no spaces around it).
+Open a **new terminal window** (not inside Claude Code).
 
 ---
 
-**Why `--scope user`?** This saves Apify to your global settings so it works from any directory. Without it, the MCP only works in the folder where you ran the command.
+**Copy and paste these three pieces, one at a time:**
+
+**PIECE 1** — Copy this and paste into terminal:
+```
+claude mcp add apify -e APIFY_TOKEN=
+```
+
+**PIECE 2** — Paste your Apify token right after the `=` (no space!)
+
+Your terminal should now show something like:
+```
+claude mcp add apify -e APIFY_TOKEN=apify_api_51dJHCm5seER0o3n3re6pQT4EkxTtQ2p4oSl
+```
+
+**PIECE 3** — Type a space, then copy and paste this:
+```
+ --scope user -- npx -y @apify/mcp-server-rag-web-browser
+```
+
+---
+
+**Now press Enter.** You should see "Added stdio MCP server apify..."
+
+---
+
+**Why `--scope user`?** Saves Apify to your global settings so it works from any directory — essential for the two-repo setup.
 
 **Why a separate terminal?** Keeps your API token local instead of passing through chat servers.
-
----
-
-**Tip:** Build the command in pieces:
-1. Type: `claude mcp add apify -e APIFY_TOKEN=`
-2. Paste your token
-3. Type: ` --scope user -- npx -y @apify/mcp-server-rag-web-browser`
-4. Press Enter
 
 ---
 
