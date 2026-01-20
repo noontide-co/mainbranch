@@ -16,7 +16,9 @@ Before using `/content`, you need three files in your business repo:
 
 **Don't have these?** Run `/setup` first.
 
-**Data extraction:** The skill can use Apify MCP to automatically pull competitor data, or you can share screenshots manually. Apify is optional - manual mode works fine with no setup.
+**Data extraction:** For Instagram, Apify MCP is essential (95%+ reliable, 100x faster than browser automation). One-time 5-minute setup. Manual mode (screenshots) works but is slow and unreliable.
+
+**Token awareness:** Mining uses significant context (~3-5k tokens per competitor). The skill shows estimates before running.
 
 ---
 
@@ -127,6 +129,11 @@ Look for:
 
 You want 3-5 accounts minimum. Save them in `reference/competitors/handles.md`.
 
+**Don't know any competitors?** The skill can help discover them via:
+- Hashtag search (find accounts in your niche)
+- Keyword search (find accounts by description)
+- Similar accounts (find accounts like one you know)
+
 ### "What makes content 'top performing'?"
 
 Engagement rate = (likes + comments) / followers
@@ -195,10 +202,22 @@ This makes them available for future generations across all skills.
 
 ### "Apify isn't working"
 
-The skill can work without Apify. Share:
-- Screenshots of top posts
-- URLs to content you want to study
-- Notes on what you observed
+**Check 1: Is it installed?**
+Type `/mcp` - you should see `apify` in the list.
+
+**Check 2: Did you restart Claude?**
+MCPs only load at startup. Type `/exit`, then `claude --continue`.
+
+**Check 3: Is your token valid?**
+Check apify.com → Settings → API & Integrations.
+
+**Fallback:** Share screenshots manually if Apify won't cooperate.
+
+### "Mining used a lot of tokens"
+
+Expected. Each competitor uses ~3-5k tokens. The skill should show estimates before running. To reduce:
+- Mine fewer competitors (2-3 instead of 5)
+- Use "quick scan" (fewer posts per competitor)
 
 ### "Output doesn't sound like me"
 

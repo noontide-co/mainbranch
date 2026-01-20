@@ -109,6 +109,51 @@ Good commands for refreshing context:
 
 ---
 
+## MCP Not Working (Apify, etc.)
+
+### "apify not found" in /mcp
+
+MCP wasn't installed correctly. Re-run the setup:
+
+```bash
+claude mcp add apify -e APIFY_TOKEN=your_token_here --scope user -- npx -y @apify/actors-mcp-server
+```
+
+**Important:** Use `--scope user` so it's saved globally.
+
+### "Invalid token" errors
+
+Check your token at apify.com → Settings → API & Integrations. Copy the default token (don't create a new one).
+
+### MCP installed but not showing
+
+MCPs only load at startup. Restart Claude:
+
+```bash
+/exit
+claude --continue
+```
+
+Then type `/mcp` to verify it appears.
+
+### Permission prompts every time
+
+When Claude first uses an MCP, hit `2` to "always allow" instead of `1` for one-time.
+
+---
+
+## Resuming a Session
+
+If you closed Terminal or need to pick up where you left off:
+
+```bash
+claude --continue
+```
+
+This resumes your previous conversation with full context.
+
+---
+
 ## Business Repo Not Loading Automatically
 
 If `/start` doesn't load your business repo:

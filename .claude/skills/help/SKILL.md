@@ -35,12 +35,13 @@ Comprehensive help for Main Branch. Answer questions, troubleshoot issues, expla
 | "What are the two repos?" / "What's vip?" | [two-repos.md](references/two-repos.md) |
 | "Why this approach?" / "How does this help me?" | [philosophy.md](references/philosophy.md) |
 | "How do I use /think?" / "Research and decisions" | [the-think-cycle.md](references/the-think-cycle.md) |
-| "command not found" / errors | [troubleshooting.md](references/troubleshooting.md) |
+| "command not found" / errors / MCP issues | [troubleshooting.md](references/troubleshooting.md) |
+| "How do I set up Apify?" / MCP setup | [troubleshooting.md](references/troubleshooting.md) or route to `/content` |
 | "How do I get started?" / setup | Route to `/setup` or `/start` |
 | "Which skill should I use?" | [skills-guide.md](references/skills-guide.md) |
 | "How do I create my own skill?" / "Notion export" / custom workflows | [skills-guide.md](references/skills-guide.md) (Creating Your Own Skills section) |
 | "How do I migrate from GPT?" | [gpt-migration.md](references/gpt-migration.md) |
-| Content questions / "Reels" / "TikTok" / "organic" | [content-help.md](references/content-help.md) |
+| Content questions / "Reels" / "TikTok" / "organic" / Apify | [content-help.md](references/content-help.md) |
 | Skool-specific questions | [skool-help.md](references/skool-help.md) |
 | "How do I make outputs better?" / "What next?" | [making-outputs-better.md](references/making-outputs-better.md) |
 | "Can I contribute?" | [becoming-contributor.md](references/becoming-contributor.md) |
@@ -82,7 +83,7 @@ Load these as needed based on the question:
 - [terminal-basics.md](references/terminal-basics.md) - Terminal 101 for complete beginners
 - [the-think-cycle.md](references/the-think-cycle.md) - The core loop that makes everything work
 - [two-repos.md](references/two-repos.md) - Engine + data model explained
-- [troubleshooting.md](references/troubleshooting.md) - Error fixes
+- [troubleshooting.md](references/troubleshooting.md) - Error fixes, MCP setup, session resuming
 - Route to `/setup` or `/start` for setup questions
 - [skills-guide.md](references/skills-guide.md) - When to use which skill
 - [gpt-migration.md](references/gpt-migration.md) - Bringing GPT knowledge over
