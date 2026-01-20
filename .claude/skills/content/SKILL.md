@@ -91,9 +91,13 @@ Generate single-post caption from a concept.
 
 ---
 
-## Reference Required
+## Finding the Business Repo
 
-**Where to look:** Search all working directories for `reference/core/`. The business repo (not vip) contains these files. If not found, user needs to run `/start` to load their business repo.
+1. Check `~/.claude/settings.json` for `business_repo_path`
+2. Search all working directories for `reference/core/`
+3. If unclear or not found, **just ask**: "Which business repo should I use? Or run `/start` to set it up."
+
+## Reference Required
 
 Business repo must have these files:
 
