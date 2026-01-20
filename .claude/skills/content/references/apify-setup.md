@@ -35,15 +35,28 @@ That's your token. Don't create a new one - the default works fine.
 
 ### 3. Add MCP to Claude Code (2 min)
 
-Run this command in terminal (paste your token directly - it's safe):
+**Easy way - build the command step by step:**
 
-```bash
-claude mcp add apify -e APIFY_TOKEN=your_token_here -- npx -y @apify/mcp-server-rag-web-browser
+1. First, paste this part and add a space:
+   ```
+   claude mcp add apify -e APIFY_TOKEN=
+   ```
+
+2. Paste your token right after the `=` (no space)
+
+3. Add this to the end (with a space before the `--`):
+   ```
+    -- npx -y @apify/mcp-server-rag-web-browser
+   ```
+
+4. Press Enter
+
+**Your final command should look like:**
+```
+claude mcp add apify -e APIFY_TOKEN=apify_api_abc123xyz -- npx -y @apify/mcp-server-rag-web-browser
 ```
 
-Replace `your_token_here` with your actual token.
-
-**Is pasting my token safe?** Yes. It appears once in your terminal, then gets stored securely in Claude's settings file. If you're paranoid, you can clear your terminal history after (`history -c` on Mac/Linux). You can also regenerate the token on Apify anytime.
+**Is pasting my token safe?** Yes. It gets stored securely in Claude's settings file. You can regenerate the token on Apify anytime if needed.
 
 ---
 
