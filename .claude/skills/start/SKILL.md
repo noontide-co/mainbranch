@@ -186,6 +186,7 @@ Quick overview to give before routing:
 
 | Skill | What It Does | When to Use |
 |-------|--------------|-------------|
+| `/pull` | Pull latest vip updates | Quick update check |
 | `/help` | Get answers, troubleshoot, learn | Confused, stuck, have questions |
 | `/setup` | Create business repo from scratch | First-time users |
 | `/enrich` | Add context to existing repo | Returning users with gaps |
