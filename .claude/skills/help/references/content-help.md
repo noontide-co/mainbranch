@@ -4,6 +4,22 @@ Help for the `/content` skill - mining competitors and generating organic conten
 
 ---
 
+## First-Time Setup
+
+Before using `/content`, you need three files in your business repo:
+
+| File | What It Contains |
+|------|------------------|
+| `reference/core/voice.md` | How you sound on camera |
+| `reference/core/audience.md` | Who watches your content |
+| `reference/core/offer.md` | What you do/sell |
+
+**Don't have these?** Run `/setup` first.
+
+**Data extraction:** The skill can use Apify MCP to automatically pull competitor data, or you can share screenshots manually. Apify is optional - manual mode works fine with no setup.
+
+---
+
 ## What is /content?
 
 The `/content` skill helps you:

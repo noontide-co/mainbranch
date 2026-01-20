@@ -162,6 +162,7 @@ No prompt engineering. No explaining what you want. Just type the command.
 | Command | What It Does |
 |---------|-------------|
 | `/start` | Main entry point — figures out what you need and routes you there |
+| `/pull` | Quick update — pulls latest skills from GitHub |
 | `/setup` | Set up your business repo (run this first if you're new) |
 | `/enrich` | Add context to your existing repo — fills gaps, adds testimonials |
 | `/think` | Research topics, make decisions, update reference files |
