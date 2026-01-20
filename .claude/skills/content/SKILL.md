@@ -50,7 +50,7 @@ Other modes: `video "topic"`, `carousel "topic"`, `static "topic"`
 Data: I'll ask you to share competitor screenshots (or use Apify MCP if you have it set up).
 
 Platform?
-1. Instagram Reels
+1. Instagram
 2. TikTok
 3. Both
 
