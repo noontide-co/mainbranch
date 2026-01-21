@@ -80,6 +80,25 @@ Each gets its own repo. Same skills, different data, different outputs.
 
 ---
 
+## Conversations Are Disposable
+
+Counterintuitive but critical: **if you're using the system correctly, conversations become disposable.**
+
+The instinct to "save everything" is fear of losing context. That fear is the symptom — you haven't extracted what matters.
+
+**In a good session, value migrates to files:**
+- Insight? → `research/`
+- Decision? → `decisions/`
+- Truth changed? → `reference/`
+
+The conversation is scaffolding. The building stands without it.
+
+**The test:** Feel the urge to save a conversation? Stop. Ask: "What actually mattered?" Put that in the right file. Let the rest go.
+
+**For tracking work across sessions:** See [task-tracking-options.md](task-tracking-options.md).
+
+---
+
 ## The Endgame
 
 Over time, your reference becomes a comprehensive, accurate representation of your business. Every ad, email, piece of content draws from this truth.

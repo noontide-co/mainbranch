@@ -123,6 +123,14 @@ This repo contains your **business data**. It's powered by **vip** (the engine).
 | **On-demand** | research/, decisions/ | When reasoning about choices |
 | **Deep reference** | reference/brand/, reference/proof/ | When writing copy |
 | **Domain** | reference/domain/ | When business-type matters |
+
+---
+
+## Workflow Preferences
+
+**Task tracking:** [decisions/ | GitHub Issues | focus.md | External: ___]
+
+This tells `/start` how you prefer to track ongoing work.
 ```
 
 ---
@@ -140,6 +148,7 @@ This repo contains your **business data**. It's powered by **vip** (the engine).
 
 ### Should Have (if exists)
 - Key decisions index
+- Workflow preferences (task tracking approach)
 - Best sellers / top products
 - Current strategy
 - Known gaps

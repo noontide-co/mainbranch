@@ -332,6 +332,30 @@ Research File → Decision File → Reference Files
 
 ---
 
+## Decisions as Task Anchors
+
+For substantial work, **create a decision file early** — even before you've fully decided. The decision file becomes your task tracker.
+
+**How it works:**
+
+1. Start project → Create `decisions/YYYY-MM-DD-topic.md` with `status: proposed`
+2. Research and iterate → Update the file as you learn
+3. Make the call → Change to `status: accepted`
+4. Execute → Check off action items as you complete them
+5. Finish → Change to `status: codified`
+
+**Why this works:**
+- Progress is visible in the file
+- Rationale captured as you go
+- Next session: check `decisions/` to see where you left off
+- No separate task manager needed
+
+**The `## Other actions` section** captures non-reference tasks (set up Stripe, update sales page, etc.).
+
+**For smaller tasks:** Just do them. Decision files are for substantial work where the "why" matters.
+
+---
+
 ## When NOT to Use
 
 - Quick factual questions (just ask)

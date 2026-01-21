@@ -35,6 +35,7 @@ Comprehensive help for Main Branch. Answer questions, troubleshoot issues, expla
 | "What are the two repos?" / "What's vip?" | [two-repos.md](references/two-repos.md) |
 | "Why this approach?" / "How does this help me?" | [philosophy.md](references/philosophy.md) |
 | "How do I use /think?" / "Research and decisions" | [the-think-cycle.md](references/the-think-cycle.md) |
+| "How do I track tasks?" / "Where did I leave off?" | [task-tracking-options.md](references/task-tracking-options.md) |
 | "command not found" / errors / MCP issues | [troubleshooting.md](references/troubleshooting.md) |
 | "How do I set up Apify?" / MCP setup | [troubleshooting.md](references/troubleshooting.md) or route to `/content` |
 | "How do I get started?" / setup | Route to `/setup` or `/start` |
@@ -82,6 +83,7 @@ Load these as needed based on the question:
 - [philosophy.md](references/philosophy.md) - Vision, compound knowledge, why this works
 - [terminal-basics.md](references/terminal-basics.md) - Terminal 101 for complete beginners
 - [the-think-cycle.md](references/the-think-cycle.md) - The core loop that makes everything work
+- [task-tracking-options.md](references/task-tracking-options.md) - How to track work across sessions
 - [two-repos.md](references/two-repos.md) - Engine + data model explained
 - [troubleshooting.md](references/troubleshooting.md) - Error fixes, MCP setup, session resuming
 - Route to `/setup` or `/start` for setup questions
