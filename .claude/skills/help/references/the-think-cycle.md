@@ -1,6 +1,6 @@
 # The /think Cycle
 
-The heart of Main Branch. Your project management solution for running anything.
+The heart of Main Branch. Research, decisions, and reference files ARE your project management.
 
 ---
 
@@ -123,6 +123,56 @@ If you can't summarize it, you don't understand it yet.
 **Codify:** Execute migration, update reference files.
 
 **Result:** Documented process AND knowledge now in Main Branch.
+
+---
+
+## Decisions as Task Anchors
+
+For substantial work, **create a decision file early** — even before you've fully decided.
+
+**How it works:**
+
+| Status | Meaning |
+|--------|---------|
+| `proposed` | I'm working on this, exploring options |
+| `accepted` | Decision made, now executing |
+| `codified` | Done — reference files updated |
+
+**The decision file becomes your task tracker:**
+- `## Action Items` = Your task list (with checkboxes)
+- `## Other actions` = Non-reference tasks
+- `## Review Date` = When to revisit
+
+**Example workflow:**
+
+1. Start a big project → Create `decisions/2026-01-21-new-pricing-strategy.md` with `status: proposed`
+2. Research, think, iterate → Update the file as you learn
+3. Make the call → Change to `status: accepted`, finalize action items
+4. Execute → Check off action items as you complete them
+5. Finish → Change to `status: codified`
+
+**Why this works:**
+- Progress is visible in the file itself
+- Rationale is captured as you go
+- Next session, check your `decisions/` folder — you know exactly where you left off
+- No separate task manager needed
+
+**For smaller tasks:** Just do them. Decision files are for substantial work where the "why" matters.
+
+---
+
+## Task Tracking Options
+
+Different people prefer different approaches. See [task-tracking-options.md](task-tracking-options.md) for the full spectrum:
+
+| Approach | Best For |
+|----------|----------|
+| **decisions/** as anchors | People who think in choices |
+| **GitHub Issues** | Developers, CLI-native users |
+| **focus.md** file | People who want one status file |
+| **External tools** | Teams, complex workflows |
+
+Pick one and commit. The system adapts.
 
 ---
 
