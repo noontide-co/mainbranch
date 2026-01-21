@@ -258,6 +258,7 @@ MINE PERFORMANCE → back to RESEARCH
 | `/think` | Knowledge | Research topics, make decisions, codify to reference files |
 | `/ad-static` | Marketing | Generate static image ad copy from reference |
 | `/ad-video-scripts` | Marketing | Generate video ad scripts (15-60s) |
+| `/content` | Marketing | Mine competitors, generate organic Reels/TikTok/carousel scripts |
 | `/ad-review` | Compliance | Multi-lens review (FTC, Meta, Copy, Visual, Voice, Substantiation) |
 | `/skool-manager` | System Ops | Community engagement with Chrome |
 | `/skool-vsl-scripts` | Marketing | VSL scripts (18-section structure) |
