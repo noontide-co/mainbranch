@@ -58,23 +58,42 @@ Run `git pull origin main` silently. Mention only if updates pulled. Don't block
 
 ## Step 0: Find Business Repo
 
-Search working directories for `reference/core/`. Skip vip (has `.claude/skills/`).
+**Shortcut:** If user says `/start [repo-name]` or mentions a specific repo, validate that path directly with Read. If valid, confirm with user and proceed.
 
-**ONE found:** Use it. "Using [name]. Ready to work."
+**Why Glob fails:** User may have added subdirectories (like `decisions/` or `research/`) as additional working directories, not the parent repo. Glob from vip can't traverse up to find `reference/core/`.
 
-**MULTIPLE found:** Always include options 3, 4, and 5:
+**Discovery algorithm (when no repo specified):**
 
-> "I found these business repos:
+1. **Extract parent paths from additional working directories**
+   - Look at env info for "Additional working directories"
+   - For each path, walk up to find a folder containing `reference/core/`
+   - Example: if `main-branch/decisions` is listed, check `main-branch/reference/core/`
+
+2. **Use bash to find repos** (if step 1 fails)
+   ```bash
+   find ~/Documents/GitHub -maxdepth 3 -type d -name "reference" -exec test -d "{}/core" \; -print 2>/dev/null
+   ```
+
+3. **Ask the user** (if nothing found)
+
+**Verify with Read, not Glob:** Once you have a candidate path, use `Read` on `[path]/reference/core/offer.md` to confirm it exists.
+
+**Skip vip** — any path containing `.claude/skills/` is the engine, not a business repo.
+
+**ALWAYS present numbered options** — even with ONE repo found:
+
+> "I found this business repo:
 >
-> 1. [first-repo-name]
-> 2. [second-repo-name]
-> 3. Another one (tell me the path)
-> 4. Create new (`/setup`)
-> 5. I'm confused (`/help`)
+> 1. [repo-name]
+> 2. Another one (tell me the path)
+> 3. Create new (`/setup`)
+> 4. I'm confused (`/help`)
 >
 > Which one? (hit a number)"
 
-**NONE found:** Check nested folders, then route to `/setup`.
+**MULTIPLE found:** List all, then options 2-4 above.
+
+**NONE found:** Ask user for path, or route to `/setup`.
 
 ---
 
@@ -168,12 +187,12 @@ Use these to auto-detect what user wants:
 
 | Problem | Solution |
 |---------|----------|
-| No `reference/core/` | Add via `/add-dir` |
-| Nested repo | Search parent folders |
-| Multiple repos | Ask which one |
-| Repo exists but not added | Get path, tell them `/add-dir` |
+| No `reference/core/` | Route to `/setup` |
+| Glob doesn't find it | Use Read tool to check known paths directly |
+| Nested repo | Check parent folders of additional working directories |
+| Multiple repos | List all with numbered options |
 
-Search working directories each session (don't persist paths).
+**Discovery approach:** Don't rely on Glob. Use Read to verify paths exist. Check additional working directories' parent folders for `reference/core/`.
 
 ---
 
