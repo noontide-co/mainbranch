@@ -2,6 +2,8 @@
 
 This is the heart of Main Branch. Everything else exists to support this cycle.
 
+**"/think is my project management solution for running anything now."** - It's not just for marketing. It's how you manage decisions across all your businesses.
+
 ---
 
 ## The Cycle
@@ -66,21 +68,54 @@ This is where decisions become evergreen truth that skills consume.
 
 ## Why Record Everything?
 
-### 1. Context Survives Sessions
+### 1. Context Windows Are Limited
+
+Claude has a context window. When you hit 85k tokens, things start getting compacted. The conversation fades.
+
+**This is why we're leaving a paper trail.** The files persist even when the conversation doesn't.
+
+### 2. Context Survives Sessions
 
 Claude's memory fades. Files don't. When you come back next week, your research and decisions are still there.
 
-### 2. Rationale is Preserved
+### 3. Rationale is Preserved
 
 Six months from now, you'll wonder "why did we do it this way?" The decision file tells you.
 
-### 3. Knowledge Compounds
+### 4. Knowledge Compounds
 
 Each research file adds to your understanding. Each decision builds on the last. Over time, you have a comprehensive record of your business thinking.
 
-### 4. Reference Stays Current
+### 5. Reference Stays Current
 
 When decisions update reference files, your outputs immediately reflect the new reality. No stale information.
+
+### 6. Cross-Tool Portability
+
+Files saved to your repo can be accessed from:
+- Claude Code on desktop
+- Claude on your phone
+- ChatGPT with GitHub connected
+- Any future tool
+
+The conversation is temporary. The files are yours forever.
+
+---
+
+## What Counts as "Research"?
+
+Research is broad. It's not just web search:
+
+| Research Type | Example |
+|---------------|---------|
+| Web research | Gemini deep research on platform updates |
+| Data mining | Download your social media data, parse it for insights |
+| Transcript analysis | Pull a podcast transcript, extract angles |
+| Competitor mining | Study what's working for others |
+| Internal audit | Review your own past campaigns for patterns |
+| Document review | Analyze a contract, policy, or guide |
+
+Research = any investigation that informs a decision.
 
 ---
 
@@ -93,6 +128,8 @@ When decisions update reference files, your outputs immediately reflect the new 
 - Offer structure changes
 - Audience refinement
 - Any "should we...?" question
+- Processing data dumps into insights
+- Making sense of platform changes
 
 **Not needed for:**
 - Quick factual questions (just ask)

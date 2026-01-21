@@ -81,6 +81,45 @@ Separation of engine and data means:
 
 ---
 
+## The Interface is the Commodity
+
+There's a million ways to interact with your data:
+- Claude Code in Terminal
+- Claude Code in an IDE (Cursor, Warp)
+- Claude on your phone with the repo connected
+- ChatGPT with your GitHub as a knowledge base
+- Claude cowork for visual exploration
+
+**The interface doesn't matter. Your reference files do.**
+
+They're the truth. Any tool can read them. You're not locked into anything.
+
+---
+
+## GitHub Sync: Your Data Everywhere
+
+Push your repo to GitHub and:
+- Your team sees the same context
+- Access it from your phone
+- Use it across different AI tools
+- Never lose your work
+
+The conversation in Claude Code is temporary. The files are permanent.
+
+---
+
+## One Engine, Many Businesses
+
+Same vip engine powers:
+- Your main business
+- Client accounts
+- Side projects
+- Even personal life management
+
+Each business gets its own repo. Same skills, different data, different outputs.
+
+---
+
 ## The Endgame
 
 Over time, your reference files become a comprehensive, accurate, up-to-date representation of your business. Every ad, every email, every piece of content draws from this truth.
