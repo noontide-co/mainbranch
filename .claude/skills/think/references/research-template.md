@@ -12,10 +12,10 @@ research/YYYY-MM-DD-topic-[source].md
 
 **Source suffixes:**
 - `-gemini.md` — Gemini deep research
-- `-gpt.md` — ChatGPT/GPT-4 research
+- `-gpt.md` — ChatGPT research
 - `-claude-code.md` — Claude Code session (this tool)
 - `-claude-web.md` — Claude.ai web interface
-- `-mining.md` — Internal data mining (reviews, emails, etc.)
+- `-mining.md` — Data mining (internal: reviews, emails | external: Instagram, competitors via Apify)
 - `-audit.md` — Site or system audit
 - (no suffix) — General or mixed sources
 
@@ -28,6 +28,7 @@ research/YYYY-MM-DD-topic-[source].md
 type: research
 date: YYYY-MM-DD
 source: claude-code
+source_url:                    # Optional: Gemini/GPT share link for provenance
 model: opus-4.5
 status: draft
 linked_decisions: []
@@ -37,9 +38,13 @@ linked_decisions: []
 
 ## Question
 
-[What we're trying to learn. Be specific.]
+[1-3 sentences: What you're trying to learn. Be specific.]
 
-**Why this matters:** [How this connects to business decisions]
+---
+
+## Methodology
+
+[2-4 sentences: How you approached this research. What tools, what context provided, what attachments. Not the full prompt — just enough to reproduce or audit.]
 
 ---
 

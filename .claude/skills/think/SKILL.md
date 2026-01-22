@@ -27,15 +27,6 @@ If updates pulled: briefly note "Pulled latest vip updates." then continue silen
 
 ---
 
-## When to Use
-
-- Exploring a question before committing to an approach
-- Making a decision that needs documentation and rationale
-- Updating reference files based on a completed decision
-- Any time you'd open multiple tabs to "figure something out"
-
----
-
 ## Where Files Go
 
 **All files are saved to YOUR business repo, not the engine (vip).**
@@ -51,6 +42,12 @@ vip/ (engine)             <- Never modified by /think
 ```
 
 Make sure your business repo is the primary working directory.
+
+---
+
+## Check Task Management Preference
+
+Check user's CLAUDE.md for `**Task tracking:**` preference. Common options: `decisions/ as anchors` (default), `GitHub Issues`, or `focus.md`. See [task-tracking-options.md](../../help/references/task-tracking-options.md) for details.
 
 ---
 
@@ -190,10 +187,10 @@ research/
 | Suffix | Source |
 |--------|--------|
 | `-gemini.md` | Gemini deep research |
-| `-gpt.md` | ChatGPT/GPT-4 |
+| `-gpt.md` | ChatGPT research |
 | `-claude-code.md` | This Claude Code session |
 | `-claude-web.md` | Claude.ai web |
-| `-mining.md` | Internal data mining |
+| `-mining.md` | Data mining (internal: emails, reviews | external: Apify, scrapers) |
 | `-audit.md` | Site/system audit |
 | (none) | General/mixed |
 
@@ -353,6 +350,53 @@ For substantial work, **create a decision file early** — even before you've fu
 **The `## Other actions` section** captures non-reference tasks (set up Stripe, update sales page, etc.).
 
 **For smaller tasks:** Just do them. Decision files are for substantial work where the "why" matters.
+
+---
+
+## Recovering from Compaction
+
+When conversations get long, Claude's memory compresses (called "compaction"). If you're mid-/think and this happens:
+
+**For the user:**
+Just type `/think` again and describe where you were:
+- "We're in the middle of researching pricing tiers"
+- "I was working on my guarantee decision"
+- "Pick up where we left off on the VSL structure"
+
+**For Claude:**
+When resuming a /think session:
+
+1. **Check recent files first:**
+   - Look in `research/` for files from today or recent days
+   - Look in `decisions/` for `status: proposed` or `status: accepted`
+
+2. **Read the relevant file(s)** to restore context
+
+3. **Confirm with user:** "I see you were working on [topic]. You're at [stage]. Want to continue from here?"
+
+4. **Resume the workflow** from the appropriate checkpoint
+
+**Why this works:**
+- Files ARE the memory — chat is disposable
+- Decision files track progress via status and checkboxes
+- Research files capture what you learned
+- You're never starting from zero
+
+---
+
+## Natural Language Invocation
+
+You don't need to remember subcommands. Just type `/think` and describe what you need:
+
+| What You Say | What Happens |
+|--------------|--------------|
+| "/think I'm trying to figure out pricing..." | Full flow (research → decide) |
+| "/think research competitor angles" | Research only |
+| "/think we decided to go with X" | Document decision only |
+| "/think apply the pricing decision" | Codify to reference files |
+| "/think where was I on the guarantee thing?" | Resume from files |
+
+The skill detects your intent from natural language. No memorizing required.
 
 ---
 
