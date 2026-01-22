@@ -1,0 +1,154 @@
+# Codify Phase
+
+Apply decisions to reference files. Merges research findings and decisions into evergreen reference.
+
+---
+
+## When to Use
+
+- After a decision with `status: accepted` and action items
+- When research findings should update reference files
+- When user has new context to add (testimonials, angles, proof)
+- When business has changed and reference files need updating
+
+---
+
+## Workflow
+
+1. **Read source** — Decision file or research file
+2. **Extract action items** — What reference files need updating
+3. **For each action item:**
+   - Read target reference file
+   - Apply the specified update
+   - Preserve existing content
+4. **Mark complete** — Update source status to "codified"
+5. **Report changes** — Summary of what was updated
+
+---
+
+## Invoking
+
+```
+/think codify decisions/2026-01-17-pricing-strategy.md
+```
+
+Or naturally: "/think apply the pricing decision to reference files"
+
+---
+
+## Safety Rules
+
+1. **Always read before writing** — Never overwrite without reading first
+2. **Preserve structure** — Keep existing headings and organization
+3. **Add, don't replace** — New content supplements, doesn't overwrite
+4. **Mark additions** — Use date comments for traceability: `<!-- Added 2026-01-17 -->`
+5. **Confirm before large changes** — If changing >30% of a file, ask first
+6. **Atomic updates** — Complete all or none
+
+---
+
+## Merge Patterns
+
+### Adding Testimonials
+
+```markdown
+## Existing Testimonials
+[keep all existing]
+
+## New Testimonials (Added 2026-01-17)
+[add new ones here]
+```
+
+### Adding Objections to Audience
+
+```markdown
+## Objections
+[existing objections]
+- [new objection from today's context]
+```
+
+### Updating Offer
+
+```markdown
+## Pricing
+[existing pricing info]
+
+### Three-Tier Structure (Added 2026-01-17)
+[new tier details]
+```
+
+---
+
+## Audit Before Codify
+
+When user wants to enrich existing files, audit completeness first:
+
+| File | Status | Gaps |
+|------|--------|------|
+| core/offer.md | Good | - |
+| core/audience.md | Thin | Missing objections |
+| core/voice.md | Empty | Needs everything |
+| proof/testimonials.md | Thin | Only 1 testimonial |
+| proof/angles/ | Empty | No angles documented |
+
+**Status icons:**
+- Good — Meets minimum
+- Thin — Exists but incomplete
+- Empty — Missing or no content
+
+**Completeness thresholds:**
+
+| File | Minimum for "Good" |
+|------|-------------------|
+| offer.md | Price + mechanism + deliverables |
+| audience.md | Who + 3 pains + 3 desires + 2 objections |
+| voice.md | Tone + 5 phrases + personality |
+| testimonials.md | 3 testimonials with specific outcomes |
+| angles/ | 2-3 documented angles |
+
+---
+
+## Gathering New Context
+
+When user has new information to add:
+
+**Prompt:** "What would you like to add today? You can:
+- Paste text, URLs, or file paths
+- Share screenshots
+- Brain dump and I'll sort it"
+
+**For URLs:** Try WebFetch, then Chrome, then ask for manual paste.
+
+**Key prompts:**
+- "What else do you have? Sales pages, testimonials, emails?"
+- "Any client calls or DMs that show how you talk?"
+- "What's changed since you last updated these files?"
+
+---
+
+## Change Report
+
+After codifying, show summary:
+
+```markdown
+## Changes Made
+
+| File | Changes |
+|------|---------|
+| core/offer.md | Added three-tier pricing section |
+| core/voice.md | Added 5 phrases, 3 personality markers |
+| proof/testimonials.md | Added 3 new testimonials |
+
+**Still missing:** [anything not addressed]
+```
+
+---
+
+## Exit Criteria
+
+Codification is complete when:
+
+- [ ] All action items from decision applied
+- [ ] Reference files updated
+- [ ] Source status changed to "codified"
+- [ ] User confirms changes are correct

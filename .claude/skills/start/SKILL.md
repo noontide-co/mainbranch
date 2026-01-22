@@ -1,6 +1,6 @@
 ---
 name: start
-description: Main entry point for Main Branch. Detects user state and routes to the right skill. Use when: (1) User says "start", "help", "what can I do", "begin" (2) User is new, returning, lost, or confused (3) User opens vip without a specific task in mind (4) Session starts and user needs triage. Routes to /setup (new users), /enrich (thin repos), /think (research/decide), /ad-static, /ad-video-scripts, /ad-review, /content, /skool-manager, /skool-vsl-scripts, /help.
+description: Main entry point for Main Branch. Detects user state and routes to the right skill. Use when: (1) User says "start", "help", "what can I do", "begin" (2) User is new, returning, lost, or confused (3) User opens vip without a specific task in mind (4) Session starts and user needs triage. Routes to /setup (new users), /think (research/decide/enrich), /ads (static/video/review), /vsl (skool/b2b), /content, /skool-manager, /help.
 ---
 
 # Start
@@ -30,17 +30,16 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │
 ├── No business repo configured? ─────→ /setup (creates repo, saves path)
 │
-├── Has repo but thin? ───────────────→ /enrich
+├── Has repo but thin? ───────────────→ /think codify
 │   (reference files exist but incomplete)
 │
 ├── Ready to work? ───────────────────→ Route by intent:
 │   │
 │   ├── "research" / "decide" ────────→ /think
-│   ├── "ads" / "copy" ───────────────→ /ad-static or /ad-video-scripts
-│   ├── "review" / "compliance" ──────→ /ad-review
+│   ├── "ads" / "copy" ───────────────→ /ads (triages to static/video/review)
+│   ├── "vsl" / "sales video" ────────→ /vsl (triages to skool/b2b)
 │   ├── "content" / "organic" ────────→ /content
 │   ├── "skool" / "community" ────────→ /skool-manager
-│   ├── "vsl" / "sales video" ────────→ /skool-vsl-scripts
 │   ├── "help" / questions ───────────→ /help
 │   └── unclear ──────────────────────→ Show options + mention /help
 │
@@ -110,7 +109,7 @@ Check `reference/core/*.md`. No folder → `/setup`. Exists → check completene
 | audience.md | >30 lines or "Pains" section |
 | voice.md | >20 lines or "Tone" section |
 
-2+ empty/missing → `/enrich`. Complete → route by intent.
+2+ empty/missing → `/think codify`. Complete → route by intent.
 
 ---
 
@@ -121,13 +120,12 @@ If user is ready to work, ask or infer intent. **Use numbered options:**
 > "Your reference files look good. What would you like to do?
 >
 > 1. Research a topic → `/think`
-> 2. Create ad copy → `/ad-static` or `/ad-video-scripts`
-> 3. Review ads for compliance → `/ad-review`
+> 2. Create ads (image or video) → `/ads`
+> 3. Write a VSL script → `/vsl`
 > 4. Create organic content → `/content`
-> 5. Write a VSL script → `/skool-vsl-scripts`
-> 6. Manage Skool community → `/skool-manager`
-> 7. Add more context → `/enrich`
-> 8. Get help → `/help`
+> 5. Manage Skool community → `/skool-manager`
+> 6. Add more context → `/think codify`
+> 7. Get help → `/help`
 >
 > (hit a number to reply, or just tell me what you need)"
 
@@ -152,14 +150,11 @@ If user already stated intent, route directly without asking.
 | `/pull` | Pull latest vip updates |
 | `/help` | Get answers, troubleshoot, learn |
 | `/setup` | Create business repo from scratch |
-| `/enrich` | Add context to existing repo |
-| `/think` | Research topics, make decisions |
-| `/ad-static` | Generate image ad copy |
-| `/ad-video-scripts` | Generate video ad scripts |
-| `/ad-review` | Check ads for compliance |
+| `/think` | Research, decide, codify (includes adding context) |
+| `/ads` | Generate image ads, video scripts, or review for compliance |
+| `/vsl` | Write video sales letters (Skool or B2B frameworks) |
 | `/content` | Mine competitors, generate organic scripts |
 | `/skool-manager` | Manage community engagement |
-| `/skool-vsl-scripts` | Write video sales letters |
 
 ---
 
@@ -171,14 +166,12 @@ Use these to auto-detect what user wants:
 |----------|----------|
 | "help", "confused", "stuck", "don't understand", "how do I" | `/help` |
 | "new", "first time", "get started", "set up" | `/setup` |
-| "add", "update", "more context", "new testimonials" | `/enrich` |
+| "add", "update", "more context", "new testimonials", "enrich" | `/think codify` |
 | "research", "decide", "figure out", "explore" | `/think` |
-| "ads", "copy", "static", "image ads", "primaries" | `/ad-static` |
-| "video ads", "ad scripts", "hooks", "ugc" | `/ad-video-scripts` |
-| "review", "compliance", "ftc", "check" | `/ad-review` |
+| "ads", "copy", "static", "image ads", "video ads", "review", "compliance" | `/ads` |
+| "vsl", "sales video", "about page video", "b2b video" | `/vsl` |
 | "content", "reels", "tiktok", "organic", "mine", "competitors", "carousel" | `/content` |
 | "skool", "community", "posts", "respond" | `/skool-manager` |
-| "vsl", "sales video", "about page video" | `/skool-vsl-scripts` |
 
 ---
 

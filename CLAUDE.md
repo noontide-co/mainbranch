@@ -261,7 +261,7 @@ MINE PERFORMANCE → back to RESEARCH
 | `/content` | Marketing | Mine competitors, generate organic Reels/TikTok/carousel scripts |
 | `/ad-review` | Compliance | Multi-lens review (FTC, Meta, Copy, Visual, Voice, Substantiation) |
 | `/skool-manager` | System Ops | Community engagement with Chrome |
-| `/skool-vsl-scripts` | Marketing | VSL scripts (18-section structure) |
+| `/vsl` | Marketing | VSL scripts — routes to Skool 18-section or B2B Haynes 7-step |
 
 ---
 
