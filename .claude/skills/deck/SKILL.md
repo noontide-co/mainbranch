@@ -1,11 +1,13 @@
 ---
 name: deck
-description: Create branded presentations from your business context. Use when asked to create slides, decks, presentations, or teaching materials. Reads brand guide and assets from your repo, outputs .pptx files matching your visual identity.
+description: Create branded presentations from your business context. Use when: (1) Asked to create slides, decks, presentations, or teaching materials (2) User says "presentation", "deck", "slides", "powerpoint", "pptx" (3) Need to visualize a framework or process for teaching (4) Creating pitch decks, workshop materials, or course content. Reads brand guide and assets from your repo, outputs .pptx files matching your visual identity.
 ---
 
 # Presentation Creator
 
 Create branded PowerPoint presentations using your business context and visual identity.
+
+**Need help?** Type `/help` + your question anytime.
 
 ## Pull Latest Updates (Always)
 
@@ -17,12 +19,22 @@ If updates pulled: briefly note "Pulled latest vip updates." then continue silen
 
 ---
 
-## Overview
+## Where Files Go
 
-This skill is a fork of Anthropic's PPTX skill, enhanced with:
-- **Brand-aware generation** — Reads your style guide from `reference/brand/`
-- **Asset integration** — Uses your logos, textures, and decorative elements
-- **Gemini integration** for AI image generation (optional)
+**All files are saved to YOUR business repo, not the engine (vip).**
+
+```
+your-business-repo/          <- Files saved here
+├── reference/brand/         <- Brand context (read from here)
+│   ├── visual-style.md
+│   └── assets/              <- Logos, textures, decorative elements
+└── outputs/decks/           <- Generated presentations
+
+vip/ (engine)                <- Never modified by /deck
+└── .claude/skills/deck/     <- This skill lives here
+```
+
+---
 
 ## Context Required
 
@@ -50,20 +62,17 @@ If no style guide exists, offer to help create one using the template at:
 templates/modules/brand-style-template.md
 ```
 
-## Workflows
-
-### Creating a New Presentation
+## Workflow
 
 1. **Read brand context**: Read user's `reference/brand/visual-style.md`
 2. **Plan content**: Create outline with slide-by-slide breakdown
 3. **Choose theme**: Based on user's defined themes (if multiple exist)
 4. **Generate assets**: If AI images needed, use Gemini integration
 5. **Build slides**: Use html2pptx workflow from base skill
-6. **Validate**: Generate thumbnails, check brand consistency
+6. **Save output**: Save to `outputs/decks/` in user's repo
+7. **Validate**: Generate thumbnails, check brand consistency
 
-### Using the html2pptx Workflow
-
-See [`references/html2pptx.md`](references/html2pptx.md) for detailed instructions.
+See [`references/html2pptx.md`](references/html2pptx.md) for html2pptx details.
 
 **Brand-aware additions:**
 - Use colors from user's style guide
@@ -102,25 +111,12 @@ Read from user's brand guide:
 
 For AI-generated images, set `GEMINI_API_KEY` in environment.
 
-See project `.env.example` for setup instructions.
+---
 
-## Dependencies
+## References
 
-Same as base PPTX skill:
-- markitdown (text extraction)
-- pptxgenjs (PowerPoint generation)
-- playwright (HTML rendering)
-- sharp (image processing)
-- LibreOffice (PDF conversion)
-- Poppler (PDF to images)
-
-## Base Skill Documentation
-
-For complete PPTX creation, editing, and analysis workflows, see:
 - [`references/html2pptx.md`](references/html2pptx.md) - HTML to PowerPoint conversion
 - [`references/ooxml.md`](references/ooxml.md) - OOXML format reference
 - [`references/svg-guide.md`](references/svg-guide.md) - SVG handling guide
-
----
 
 *Forked from [anthropics/skills/pptx](https://github.com/anthropics/skills/tree/main/skills/pptx)*

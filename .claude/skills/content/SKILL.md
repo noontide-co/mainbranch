@@ -1,14 +1,21 @@
 ---
 name: content
-description: |
-  Mine competitor content and generate organic scripts. ALWAYS offer Apify MCP first for data extraction (manual fallback if unavailable). Use when user says "mine", "competitors", "organic", "reels", "tiktok", or needs scripts for talking-head videos, carousels, static posts. Modes: mine, video, carousel, static.
+description: Mine competitor content and generate organic scripts. ALWAYS offer Apify MCP first for data extraction (manual fallback if unavailable). Use when: (1) User says "mine", "competitors", "organic", "reels", "tiktok", "carousel" (2) User needs scripts for talking-head videos, carousels, static posts (3) User wants to research what content works in their niche (4) User has a topic and wants organic (not paid) content. NOT for paid ads - use /ad-video-scripts or /ad-static instead. Organic = value-first, soft CTAs, engagement focus. Paid = direct response, hard CTAs, conversion focus. Modes: mine, video, carousel, static.
 ---
 
 # Content
 
 Mine competitor content, extract winning concepts, generate scripts in your voice.
 
-**Need help?** Type `/help` + your question anytime.
+**Need help?** Type `/help` + your question anytime. If conversation compacts, `/help` reloads fresh context.
+
+## Pull Latest Updates (Always)
+
+```bash
+cd ~/vip 2>/dev/null && git pull origin main 2>/dev/null && cd - >/dev/null || true
+```
+
+If updates pulled: briefly note "Pulled latest vip updates." then continue silently.
 
 ---
 
@@ -96,18 +103,6 @@ Platform?
 
 ---
 
-## How It Differs from Ad Skills
-
-| Aspect | /ad-video-scripts | /content |
-|--------|-------------------|----------|
-| **Purpose** | Paid traffic conversion | Organic reach and engagement |
-| **Tone** | Direct response, urgency | Authentic, value-first |
-| **CTA** | Hard (link in bio, buy now) | Soft (follow, save, comment) |
-| **Framework** | AIDA, PAS | Hook-Retain-Reward |
-| **Goal** | Clicks and conversions | Views, saves, follows |
-
----
-
 ## Modes
 
 ### `/content` (Full Flow - Default)
@@ -120,7 +115,7 @@ Mine -> Select -> Generate -> Output
 
 ### `/content mine`
 
-Research competitor content only. Saves to `research/`.
+Research competitor content only. Saves to `research/YYYY-MM-DD-competitor-mine.md`. See [references/mining-template.md](references/mining-template.md).
 
 ### `/content video "concept"`
 
@@ -133,14 +128,6 @@ Generate multi-slide carousel copy from a concept.
 ### `/content static "concept"`
 
 Generate single-post caption from a concept.
-
----
-
-## Finding the Business Repo
-
-1. Search all working directories for `reference/core/`
-2. If multiple found, ask which one to use
-3. If none found, ask user for the path or suggest `/start`
 
 ---
 
@@ -174,77 +161,16 @@ Before saving: show file paths.
 
 ---
 
-## Reference Required
-
-Business repo must have these files:
-
-| File | What It Contains |
-|------|------------------|
-| `reference/core/offer.md` | What you sell (for CTA context) |
-| `reference/core/audience.md` | Who watches your content |
-| `reference/core/voice.md` | How you sound on camera |
-
-**Optional but recommended:**
-
-| File | Purpose |
-|------|---------|
-| `reference/competitors/handles.md` | List of competitor handles to mine |
-| `reference/proof/angles/*.md` | Proven angles to adapt |
-
-If core files are missing, prompt user to create them first or run `/setup`.
-
----
-
 ## Full Flow Walkthrough
 
-### Step 1: Identify Competitors
+1. **Identify competitors** — Check `reference/competitors/handles.md` or ask user
+2. **Mine content** — Apify (preferred) or manual screenshots, sort by engagement
+3. **Extract concepts** — Hook, topic, structure, angle, format from top 20%
+4. **Adapt to brand** — Map concepts to user's offer, audience, voice
+5. **Generate scripts** — Use appropriate framework (video/carousel/static)
+6. **Save output** — Mining to `research/`, scripts to `outputs/content-scripts/`
 
-Check `reference/competitors/handles.md`. If missing, ask:
-
-> "Who are 3-5 creators making content for your audience?"
-
-### Step 2: Mine Content
-
-**Apify:** Instagram Profile Scraper → structured JSON with metrics
-
-**Manual:** Ask for screenshots of top 10-15 posts with engagement counts
-
-Sort by engagement. Extract concepts from top 20%.
-
-### Step 3: Extract Concepts
-
-For each winning post, extract:
-
-| Element | What to Capture |
-|---------|-----------------|
-| **Hook** | First line/first 3 seconds |
-| **Topic** | Core subject matter |
-| **Structure** | How content is organized |
-| **Angle** | Emotional entry point |
-| **Format** | Talking head, carousel, text, etc. |
-
-### Step 4: Adapt to User's Brand
-
-Map concepts to user's offer, audience, and voice.
-
-### Step 5: Generate Scripts
-
-- Talking head → video framework
-- Carousel → carousel framework
-- Single post → static framework
-
-### Step 6: Save Output
-
-- Mining: `research/YYYY-MM-DD-competitor-mine.md`
-- Scripts: `outputs/content-scripts/YYYY-MM-DD-[concept-slug].md`
-
----
-
-## Mine Mode
-
-Research only (no scripts). See [references/mining-template.md](references/mining-template.md).
-
-Output: `research/YYYY-MM-DD-competitor-mine.md`
+See [references/mining-template.md](references/mining-template.md) for concept extraction template.
 
 ---
 
@@ -287,18 +213,7 @@ Read `reference/core/voice.md`. Match tone, use their vocabulary, avoid their "n
 
 **Authenticity:** Sounds like creator (not copywriter). Uses contractions. Matches energy. No AI tells ("dive into", "unlock", "game-changer").
 
----
-
-## CTA Softness
-
-| Hard (Avoid) | Soft (Use) |
-|--------------|-----------|
-| "Link in bio to buy" | "Save this for later" |
-| "Sign up now" | "Follow for more" |
-| "Limited time" | "Comment [word] for more" |
-| "Don't miss out" | "Share with someone who needs this" |
-
-Exception: Match user's style if their voice file shows harder CTAs work.
+See [references/organic-frameworks.md](references/organic-frameworks.md) for soft CTA examples.
 
 ---
 
@@ -370,6 +285,22 @@ Run `/content video` or `/content carousel` to generate from these.
 
 ---
 
+## Recovering from Compaction
+
+When conversations get long, Claude's memory compresses. If mid-/content and this happens:
+
+**For the user:** Just type `/content` again and describe where you were:
+- "We were mining @competitor1 and @competitor2"
+- "I was picking concepts from today's mining"
+- "Generate a video script from the morning routine concept"
+
+**For Claude:** When resuming:
+1. Check `research/*-competitor-mine.md` for recent mining
+2. Check `outputs/content-scripts/` for existing scripts
+3. Confirm with user: "I see today's mining has X concepts. Want to continue generating from those?"
+
+---
+
 ## References
 
 **Setup:** [first-time-setup.md](references/first-time-setup.md), [minimal-voice-template.md](references/minimal-voice-template.md), [apify-setup.md](references/apify-setup.md)
@@ -378,12 +309,3 @@ Run `/content video` or `/content carousel` to generate from these.
 
 **Templates:** [mining-template.md](references/mining-template.md), [video-script-template.md](references/video-script-template.md), [carousel-template.md](references/carousel-template.md), [static-template.md](references/static-template.md)
 
----
-
-## Pre-Response Checklist
-
-- [ ] Checked existing mining/scripts before recommending
-- [ ] Didn't suggest re-mining same handles from today
-- [ ] Showed token estimate before expensive operations
-- [ ] Offered scope control (full vs quick scan)
-- [ ] Used numbered options

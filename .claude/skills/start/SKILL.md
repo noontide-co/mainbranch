@@ -1,7 +1,6 @@
 ---
 name: start
-description: |
-  Main entry point for Main Branch. Detects user state and routes to the right skill. Use when user is new, returning, lost, or says "start", "help", "what can I do". Routes to /setup, /enrich, /think, /ad-static, /ad-video-scripts, /ad-review, /content, /skool-manager, /skool-vsl-scripts.
+description: Main entry point for Main Branch. Detects user state and routes to the right skill. Use when: (1) User says "start", "help", "what can I do", "begin" (2) User is new, returning, lost, or confused (3) User opens vip without a specific task in mind (4) Session starts and user needs triage. Routes to /setup (new users), /enrich (thin repos), /think (research/decide), /ad-static, /ad-video-scripts, /ad-review, /content, /skool-manager, /skool-vsl-scripts, /help.
 ---
 
 # Start
@@ -148,19 +147,19 @@ If user already stated intent, route directly without asking.
 
 ## Skill Quick Reference
 
-| Skill | What It Does | When to Use |
-|-------|--------------|-------------|
-| `/pull` | Pull latest vip updates | Quick update check |
-| `/help` | Get answers, troubleshoot, learn | Confused, stuck, have questions |
-| `/setup` | Create business repo from scratch | First-time users |
-| `/enrich` | Add context to existing repo | Returning users with gaps |
-| `/think` | Research topics, make decisions | Before committing to an approach |
-| `/ad-static` | Generate image ad copy | Need Meta ad copy |
-| `/ad-video-scripts` | Generate video ad scripts | Need 15-60s video scripts |
-| `/ad-review` | Check ads for compliance | Before running ads |
-| `/content` | Mine competitors, generate organic scripts | Reels, TikTok, carousels |
-| `/skool-manager` | Manage community engagement | Daily Skool tasks |
-| `/skool-vsl-scripts` | Write video sales letters | Need VSL for about page |
+| Skill | What It Does |
+|-------|--------------|
+| `/pull` | Pull latest vip updates |
+| `/help` | Get answers, troubleshoot, learn |
+| `/setup` | Create business repo from scratch |
+| `/enrich` | Add context to existing repo |
+| `/think` | Research topics, make decisions |
+| `/ad-static` | Generate image ad copy |
+| `/ad-video-scripts` | Generate video ad scripts |
+| `/ad-review` | Check ads for compliance |
+| `/content` | Mine competitors, generate organic scripts |
+| `/skool-manager` | Manage community engagement |
+| `/skool-vsl-scripts` | Write video sales letters |
 
 ---
 
@@ -183,25 +182,6 @@ Use these to auto-detect what user wants:
 
 ---
 
-## Troubleshooting: Business Repo Not Found
+## Remember
 
-| Problem | Solution |
-|---------|----------|
-| No `reference/core/` | Route to `/setup` |
-| Glob doesn't find it | Use Read tool to check known paths directly |
-| Nested repo | Check parent folders of additional working directories |
-| Multiple repos | List all with numbered options |
-
-**Discovery approach:** Don't rely on Glob. Use Read to verify paths exist. Check additional working directories' parent folders for `reference/core/`.
-
----
-
-## Daily Workflow
-
-`cd vip && claude` → `/start`. Pulls updates, loads repo, routes.
-
----
-
-## Don't Overthink
-
-Router, not worker. Detect state → route → let that skill work. If uncertain, one clarifying question, then route.
+Router, not worker. Detect state → route → let the target skill do the work. One clarifying question max.

@@ -1,11 +1,9 @@
 ---
 name: skool-vsl-scripts
-description: Write high-converting Video Sales Letter (VSL) scripts using a proven 18-section framework. Use when asked to create VSL scripts, about page videos, sales videos, community launch videos, or membership sales scripts. Produces complete, camera-ready scripts with hooks, epiphany bridges, social proof stacking, objection handling, and risk reversal.
+description: Write high-converting Video Sales Letter scripts for Skool communities and membership businesses using an 18-section framework. Use when: (1) Creating VSL scripts for Skool about pages or community launches (2) Writing sales videos for membership or community offers (3) User says "VSL", "video sales letter", "about page video", "sales video" (4) Need the 18-section structure: Hook, Epiphany Bridge, Social Proof Stacking, Risk Reversal, CTAs (5) Selling lower-ticket memberships or communities ($47-$497/month). For high-ticket B2B offers ($3K-$50K+), use /b2b-killer-vsl instead. Produces camera-ready scripts optimized for spoken delivery.
 ---
 
 # Skool VSL Script Writer
-
-Creates complete Video Sales Letter scripts using an 18-section conversion framework.
 
 ## Pull Latest Updates (Always)
 
@@ -19,74 +17,51 @@ If updates pulled: briefly note "Pulled latest vip updates." then continue silen
 
 ## Reference Required
 
-Business repo must have these files in `reference/`:
+| File | Purpose |
+|------|---------|
+| `reference/core/offer.md` | Community name, price, inclusions, guarantee |
+| `reference/core/audience.md` | Target transformation, objections, doubts |
+| `reference/proof/testimonials.md` | Member success stories with specifics |
 
-| File | What It Contains |
-|------|------------------|
-| `reference/core/offer.md` | Community/course name, price, what's included, guarantee |
-| `reference/core/audience.md` | Transformation, objections, doubts |
-| `reference/proof/testimonials.md` | Member success stories with specific results |
+**Optional but helpful:** Personal origin story (for epiphany bridge), `reference/proof/angles/*.md`
 
-**Also helpful:**
-- Your personal story (for epiphany bridge) — can be in offer.md or separate file
-- `reference/proof/angles/*.md` — Different ways to frame the transformation
+If missing, ask user to provide or run `/enrich` first.
 
-If reference files are missing, ask user to create them first.
+## The 18-Section Framework
 
-## VSL Structure Overview
+See [references/vsl-framework.md](references/vsl-framework.md) for complete templates and examples per section.
 
-1. Hook → Grab attention with pain/desire
-2. Epiphany Bridge → Share journey from struggle to solution
-3. Peek the Plan → Introduce yourself as guide
-4. Features/Benefits + Soft CTA → Get first "yes"
-5. The Plan → Set agenda, introduce FAQs
-6. Answer Questions → Address common doubts
-7. Stack Social Proof → Diverse testimonials
-8. Change Tone → Slow down, use statistics
-9. Zoom Out → Analogy to simplify
-10. Price Anchor → Establish high perceived value
-11. Low Effort/High Reward → Emphasize ease
-12. Recap Obstacles → Remind what's removed
-13. Address Objections → Handle remaining doubts
-14. Roadmap → Show what happens after joining
-15. Worst vs Best Case → Minimize perceived risk
-16. First Hard CTA → Direct call to action
-17. Risk Reversal → Guarantee presentation
-18. Final CTA → Close with action
+**Quick overview:** Hook → Epiphany Bridge → Peek Plan → Features/Soft CTA → The Plan → Answer Questions → Stack Proof → Change Tone → Zoom Out → Price Anchor → Low Effort/High Reward → Recap Obstacles → Address Objections → Roadmap → Worst/Best Case → Hard CTA → Risk Reversal → Final CTA
 
-For complete section-by-section templates and examples, see [references/vsl-framework.md](references/vsl-framework.md).
+## Process
 
-## Script Creation Process
+### 1. Gather Context
 
-### Step 1: Gather Context
-
-Collect or confirm:
+Confirm you have:
 - Target audience and primary pain
 - Core transformation offered
-- Your personal origin story
+- Personal origin story (for epiphany bridge)
 - 3-5 member success stories with specifics
 - Top 3-5 objections
 - Pricing and guarantee details
 
-### Step 2: Write Each Section
+### 2. Write Sections
 
-Key principles:
-- **Hook**: Lead with specific pain, create recognition
-- **Epiphany Bridge**: Show empathy, share catalyst, prove results
-- **Social Proof**: Variety of backgrounds, specific outcomes
-- **CTAs**: Soft asks first, hard ask after value
-- **Risk Reversal**: Make joining feel safer than not joining
+Follow the 18-section framework. Key principles:
+- **Hook**: Specific pain, create recognition
+- **Epiphany Bridge**: Empathy, catalyst, results
+- **Social Proof**: Diverse backgrounds, specific outcomes
+- **CTAs**: Soft asks build to hard ask
+- **Risk Reversal**: Joining feels safer than not joining
 
-### Step 3: Optimize for Spoken Delivery
+### 3. Optimize for Spoken Delivery
 
-Scripts are read on camera:
-- Use contractions: you're, don't, can't, won't
-- Short sentences for pacing
-- Rhetorical questions: "Sound familiar?" "Make sense?"
-- Flow with commas — think one long sentence with pauses
-- Simple words: ~5th grade reading level
+- Contractions: you're, don't, can't
+- Short sentences, rhetorical questions
+- Flow with commas (one long sentence with pauses)
+- ~5th grade reading level
 
-### Step 4: Format Output
+### 4. Output Format
 
 ```markdown
 # VSL Script: {Community Name}
@@ -115,14 +90,11 @@ Scripts are read on camera:
 
 ## Quality Checklist
 
-1. **Pain Recognition**: Hook makes viewer feel understood
-2. **Story Authenticity**: Epiphany bridge feels genuine
-3. **Proof Variety**: Social proof covers different situations
-4. **Objection Coverage**: All major doubts addressed
-5. **CTA Progression**: Soft asks build to hard ask
-6. **Spoken Flow**: Read aloud sounds natural
-7. **Risk Minimization**: Joining feels safer than not joining
-
-## Reference Material
-
-For complete templates and examples for each section, see [references/vsl-framework.md](references/vsl-framework.md).
+Before delivery, verify:
+- [ ] Hook creates pain recognition
+- [ ] Epiphany bridge feels authentic
+- [ ] Social proof covers diverse situations
+- [ ] All major objections addressed
+- [ ] CTA progression: soft → hard
+- [ ] Reads naturally aloud
+- [ ] Joining feels safer than not joining

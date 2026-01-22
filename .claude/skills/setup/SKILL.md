@@ -1,14 +1,6 @@
 ---
 name: setup
-description: |
-  Get a new user fully set up with Claude Code + Main Branch. Use when:
-  (1) New user needs Claude Code environment configured
-  (2) User says "set up my repo", "get me started", "initialize my business"
-  (3) User is new to Main Branch and needs the full onboarding
-  (4) Migrating existing business context into the Main Branch structure
-
-  Sets up: Chrome extension, two-repo model, business repo with full structure.
-  Gathers context aggressively until complete. Applies domain rubrics by business type.
+description: Bootstrap a new business repo with Main Branch structure. Use when: (1) New user needs Claude Code environment configured (2) User says "set up", "get started", "initialize", "bootstrap", "create my repo", "new business" (3) User is new to Main Branch and needs full onboarding (4) Migrating existing business context into the Main Branch structure. Creates Chrome extension setup, two-repo model, business repo with full structure. Gathers context aggressively until complete. Applies domain rubrics by business type.
 ---
 
 # Repo Setup
@@ -19,67 +11,7 @@ Get a new user fully configured with Claude Code and their business repo.
 
 ## Before We Begin
 
-**Need help at any point?** Type `/help` followed by your question.
-
-If the conversation gets long and context feels "off," `/help` reloads fresh instructions and can answer questions about:
-- How Main Branch works
-- What the two repos are
-- Terminal basics (if you're new to it)
-- Troubleshooting errors
-- What to do next
-
-Don't hesitate to use it. That's what it's for.
-
----
-
-## The Two-Repo Model
-
-```
-ENGINE (vip)     +     DATA (your business repo)
-├── Skills                             ├── reference/
-├── Lenses                             ├── research/
-├── Domain rubrics                     ├── decisions/
-└── You PULL updates                   └── You OWN and EDIT this
-```
-
-**vip** = The engine. You clone it, pull updates, but never edit it.
-
-**your-business-repo** = Your data. You create it, own it, commit to it. This is where YOUR business context lives.
-
-**How they connect:** In Claude Code, add vip as an "additional working directory." Skills from the engine read your business repo's `reference/` and output to your `outputs/`.
-
----
-
-## Philosophy: The Core Loop
-
-**This is the heart of Main Branch.** Everything else exists to support this cycle:
-
-```
-┌─────────────────────────────────────────────────────┐
-│  YOUR BUSINESS REPO (not vip)       │
-│                                                     │
-│  RESEARCH → DECIDE → CODIFY → GENERATE → LEARN ────┘
-│      │          │        │         │
-│      ▼          ▼        ▼         ▼
-│  research/  decisions/ reference/ outputs/
-│
-│  Use /think to run this cycle.
-│
-└─────────────────────────────────────────────────────
-```
-
-**Why this matters:**
-- **Research** = Investigate before committing (dated, exploratory)
-- **Decide** = Make choices with rationale (dated, links to research)
-- **Codify** = Update evergreen reference (what skills consume)
-- **Generate** = Skills produce outputs from reference
-- **Learn** = Outputs inform new research
-
-**All of this happens in YOUR business repo.** Main-branch-premium is the engine — you pull updates but never edit it. Your repo is your data — you own it, commit to it, and evolve it.
-
-**Reference files are living documents.** Not set-it-and-forget-it. Markets shift, you learn, the reference evolves.
-
-After setup, teach users: "Use `/think` to research topics and make decisions. Your reference files get smarter over time."
+**Need help?** Type `/help` + your question anytime. If conversation compacts (gets summarized), `/help` reloads fresh context.
 
 ---
 
@@ -165,8 +97,6 @@ If not installed:
 > "The Chrome extension is fundamental for Main Branch — it lets me read your sales pages, Skool community, and web content directly. Install it now: https://claude.ai/chrome (requires Google Chrome)"
 
 **If user declines:** Proceed with Playwright or manual screenshots, but note this limits what can be gathered automatically.
-
-**Context tip:** If your conversation gets compacted (summarized), you can re-invoke `/setup` to reload the full skill context. Or type `/help` with any question to get fresh, comprehensive answers.
 
 ### 1. Confirm Git + Working Directory
 
@@ -363,6 +293,23 @@ See `references/git-workflow.md` for full guide.
 
 ---
 
+## Recovering from Compaction
+
+If conversation compacts mid-setup:
+
+**For the user:** Type `/setup` again and describe where you were:
+- "We're in the middle of gathering context for my Skool community"
+- "I was giving you screenshots, you hadn't created files yet"
+- "You created the folder structure but we haven't sorted content"
+
+**For Claude:** When resuming:
+1. Check if business repo exists (look for `reference/core/`)
+2. If exists, check which files are populated vs empty
+3. Resume from the appropriate step based on what's done
+4. Confirm with user: "I see [business-name] with [X] files. Looks like we're at step [N]. Continue?"
+
+---
+
 ## After Setup: What's Next
 
 Once setup is complete, tell the user:
@@ -385,29 +332,3 @@ Once setup is complete, tell the user:
 > **The core loop:** Use `/think` regularly. Research → Decide → Codify. This is how your reference files get smarter over time.
 >
 > **Remember:** Type `/help` + your question anytime. It has comprehensive answers about Terminal basics, the two-repo model, skills, troubleshooting, and more."
-
----
-
-## When to Run Again
-
-Use this skill to merge new context:
-
-- "I just wrote a new sales page, update my reference"
-- "Here's feedback from 10 customer calls"
-- "This angle crushed it, let's document why"
-- "Got 5 new testimonials this month"
-- "I changed my pricing, update everything"
-
-The skill merges new content, preserving what exists.
-
----
-
-## Help Is Always Available
-
-At any point during or after setup:
-
-- `/help` — Comprehensive answers to any Main Branch question
-- `/help "what is the two-repo model"` — Specific question
-- `/help "I'm stuck"` — Get unstuck
-
-The `/help` skill has 12 reference files covering philosophy, terminal basics, the /think cycle, skills guide, troubleshooting, and more. Use it liberally.

@@ -1,14 +1,6 @@
 ---
 name: b2b-killer-vsl
-description: |
-  Write high-converting B2B Video Sales Letter scripts using Jeremy Haynes' framework. Use when:
-  (1) Creating a VSL for high-ticket B2B offers ($3K-$50K+)
-  (2) Writing sales video scripts for agency owners or service providers
-  (3) User says "VSL", "video sales letter", "sales video script"
-  (4) Need to sell to affluent B2B buyers who are sophisticated and skeptical
-  (5) Want the 7-step framework: Headline → Story → Offer → Proof → CTA → Urgency → Close
-
-  Optimized for spoken delivery. Never invents facts — asks for missing info.
+description: Write high-converting B2B Video Sales Letter scripts using Jeremy Haynes' framework. Use when: (1) Creating a VSL for high-ticket B2B offers ($3K-$50K+) (2) Writing sales video scripts for agency owners or service providers (3) User says "VSL", "video sales letter", "sales video script" (4) Need to sell to affluent B2B buyers who are sophisticated and skeptical (5) Want the 7-step framework: Headline, Story, Offer, Proof, CTA, Urgency, Close. Optimized for spoken delivery. Never invents facts — asks for missing info.
 ---
 
 # B2B Killer VSL Writer

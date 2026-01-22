@@ -1,32 +1,31 @@
 ---
 name: enrich
-description: |
-  Add context to an existing business repo. Use when:
-  (1) Returning user wants to fill gaps in reference files
-  (2) User has new testimonials, angles, or proof to add
-  (3) Business has changed and reference files need updating
-  (4) User wants to import research findings into reference
-  (5) User says "add context", "update my files", "I have new info"
-
-  Audits existing files, identifies gaps, gathers new context, merges without overwriting.
+description: Add context to an existing business repo. Use when: (1) Returning user wants to fill gaps in reference files (2) User has new testimonials, angles, or proof to add (3) Business has changed and reference files need updating (4) User wants to import research findings into reference (5) User says "add context", "update my files", "I have new info" (6) User brain-dumps new info and wants it sorted into files. Audits existing files, identifies gaps, gathers new context, merges without overwriting. Not for new users — use /setup for first-time setup.
 ---
 
 # Enrich
 
 Add context to an existing Main Branch business repo.
 
-**Need help?** Type `/help` + your question anytime. If conversation compacts, `/help` reloads fresh context.
+**Need help?** Type `/help` + your question anytime.
 
 ---
 
-## When to Use
+## Where Files Go
 
-- User has an existing repo with reference files
-- They want to add more context, not start fresh
-- They have new testimonials, angles, or business changes
-- Reference files exist but are thin or incomplete
+**All changes are saved to YOUR business repo, not the engine (vip).**
 
-**Not for new users** — use `/setup` for first-time setup.
+```
+your-business-repo/          <- Files updated here
+├── reference/core/           <- /enrich updates these
+├── reference/proof/          <- /enrich adds testimonials, angles
+└── reference/domain/         <- /enrich fills gaps
+
+vip/ (engine)             <- Never modified by /enrich
+└── .claude/skills/enrich/    <- This skill lives here
+```
+
+Make sure your business repo is the primary working directory.
 
 ---
 
@@ -165,6 +164,31 @@ Based on what's still thin:
 3. **Add, don't replace** — New content supplements, doesn't overwrite
 4. **Mark additions** — Use date comments for traceability
 5. **Confirm before large changes** — If changing >30% of a file, ask first
+
+---
+
+## Recovering from Compaction
+
+When conversations get long, Claude's memory compresses. If you're mid-/enrich and this happens:
+
+**For the user:**
+Just type `/enrich` again and describe where you were:
+- "We were adding testimonials"
+- "I was updating my voice file"
+- "Pick up where we left off"
+
+**For Claude:**
+When resuming an /enrich session:
+
+1. **Check the audit table** — Re-run the completeness check to see current state
+2. **Look for recent edits** — Check `git diff` or file modification times
+3. **Confirm with user:** "I see [X] was recently updated. Want to continue enriching [Y]?"
+4. **Resume the workflow** from the appropriate step
+
+**Why this works:**
+- Files ARE the memory — chat is disposable
+- Audit table shows current gaps
+- You're never starting from zero
 
 ---
 
