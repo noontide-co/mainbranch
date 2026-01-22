@@ -1,6 +1,6 @@
 ---
 name: start
-description: Main entry point for Main Branch. Detects user state and routes to the right skill. Use when: (1) User says "start", "help", "what can I do", "begin" (2) User is new, returning, lost, or confused (3) User opens vip without a specific task in mind (4) Session starts and user needs triage. Routes to /setup (new users), /think (research/decide/enrich), /ads (static/video/review), /vsl (skool/b2b), /content, /skool-manager, /help.
+description: Main entry point for Main Branch. Detects user state and routes to the right skill. Use when: (1) User says "start", "help", "what can I do", "begin" (2) User is new, returning, lost, or confused (3) User opens vip without a specific task in mind (4) Session starts and user needs triage. Routes to /setup (new users), /think (research/decide/enrich), /ads (static/video/review), /vsl (skool/b2b), /content, /skool-manager, /wiki, /help.
 ---
 
 # Start
@@ -40,6 +40,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │   ├── "vsl" / "sales video" ────────→ /vsl (triages to skool/b2b)
 │   ├── "content" / "organic" ────────→ /content
 │   ├── "skool" / "community" ────────→ /skool-manager
+│   ├── "wiki" / "notes" ─────────────→ /wiki
 │   ├── "help" / questions ───────────→ /help
 │   └── unclear ──────────────────────→ Show options + mention /help
 │
@@ -124,8 +125,9 @@ If user is ready to work, ask or infer intent. **Use numbered options:**
 > 3. Write a VSL script → `/vsl`
 > 4. Create organic content → `/content`
 > 5. Manage Skool community → `/skool-manager`
-> 6. Add more context → `/think codify`
-> 7. Get help → `/help`
+> 6. Work on my wiki → `/wiki`
+> 7. Add more context → `/think codify`
+> 8. Get help → `/help`
 >
 > (hit a number to reply, or just tell me what you need)"
 
@@ -155,6 +157,7 @@ If user already stated intent, route directly without asking.
 | `/vsl` | Write video sales letters (Skool or B2B frameworks) |
 | `/content` | Mine competitors, generate organic scripts |
 | `/skool-manager` | Manage community engagement |
+| `/wiki` | Create atomic notes, publish wiki |
 
 ---
 
@@ -172,6 +175,7 @@ Use these to auto-detect what user wants:
 | "vsl", "sales video", "about page video", "b2b video" | `/vsl` |
 | "content", "reels", "tiktok", "organic", "mine", "competitors", "carousel" | `/content` |
 | "skool", "community", "posts", "respond" | `/skool-manager` |
+| "wiki", "notes", "atomic", "wikilinks", "publish wiki" | `/wiki` |
 
 ---
 

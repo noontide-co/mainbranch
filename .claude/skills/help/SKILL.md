@@ -35,6 +35,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Migrate from GPT, ChatGPT | [gpt-migration.md](references/gpt-migration.md) |
 | Reels, TikTok, organic, /content | [content-help.md](references/content-help.md) |
 | Skool, community | [skool-help.md](references/skool-help.md) |
+| Wiki, atomic notes, publish, WikiLinks | Route to `/wiki` |
 | Better outputs, quality, what next | [making-outputs-better.md](references/making-outputs-better.md) |
 | Contribute, contributor | [becoming-contributor.md](references/becoming-contributor.md) |
 

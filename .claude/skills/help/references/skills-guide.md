@@ -90,6 +90,27 @@ See [the-think-cycle.md](the-think-cycle.md) for deep dive.
 
 ---
 
+### /wiki - Personal Wiki
+**Use when:** Building a public wiki with atomic notes and WikiLinks.
+
+**What it does:**
+- Sets up wiki from Commune Wiki template
+- Creates atomic notes with proper frontmatter
+- Converts Gemini/GPT research to wiki format
+- Auto-deploys to Cloudflare Pages on git push
+
+**Modes:**
+- `/wiki setup` - First-time setup (repo, hosting, config)
+- `/wiki add "Note Title"` - Create new atomic note
+- `/wiki publish` - Commit and push (auto-deploys)
+- `/wiki research [file]` - Convert research to wiki format
+- `/wiki update` - Pull upstream template fixes
+- `/wiki recent` - Generate weekly updates note
+
+**Key difference from business repo:** Wiki is for public evergreen knowledge. Business repo is for private reference files.
+
+---
+
 ### /help - Get Answers
 **Use when:** Confused, stuck, have questions about Main Branch.
 
@@ -125,6 +146,9 @@ What do you need?
 │
 ├── Create organic content? (free reach)
 │   └── /content (Reels, TikTok, carousels)
+│
+├── Build a public wiki?
+│   └── /wiki
 │
 ├── Confused or stuck?
 │   └── /help

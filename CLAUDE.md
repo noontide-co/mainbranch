@@ -259,6 +259,7 @@ MINE PERFORMANCE → back to RESEARCH
 | `/vsl` | Marketing | VSL scripts — routes to Skool 18-section or B2B Haynes 7-step |
 | `/content` | Marketing | Mine competitors, generate organic Reels/TikTok/carousel scripts |
 | `/skool-manager` | System Ops | Community engagement with Chrome |
+| `/wiki` | Knowledge | Personal wiki with atomic notes, WikiLinks, auto-deploy to CF Pages |
 
 ---
 
