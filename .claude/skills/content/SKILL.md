@@ -1,6 +1,6 @@
 ---
 name: content
-description: Mine competitor content and generate organic scripts. ALWAYS offer Apify MCP first for data extraction (manual fallback if unavailable). Use when: (1) User says "mine", "competitors", "organic", "reels", "tiktok", "carousel" (2) User needs scripts for talking-head videos, carousels, static posts (3) User wants to research what content works in their niche (4) User has a topic and wants organic (not paid) content. NOT for paid ads - use /ad-video-scripts or /ad-static instead. Organic = value-first, soft CTAs, engagement focus. Paid = direct response, hard CTAs, conversion focus. Modes: mine, video, carousel, static.
+description: Mine competitor content and generate organic scripts. ALWAYS offer Apify MCP first for data extraction (manual fallback if unavailable). Use when: (1) User says "mine", "competitors", "organic", "reels", "tiktok", "carousel" (2) User needs scripts for talking-head videos, carousels, static posts (3) User wants to research what content works in their niche (4) User has a topic and wants organic (not paid) content. NOT for paid ads - use /ads instead. Organic = value-first, soft CTAs, engagement focus. Paid = direct response, hard CTAs, conversion focus. Modes: mine, video, carousel, static.
 ---
 
 # Content

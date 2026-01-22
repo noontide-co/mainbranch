@@ -141,8 +141,8 @@ E-commerce domain files work alongside universal reference:
 
 | Skill | What It Reads |
 |-------|---------------|
-| `/ad-static` | `products/catalog.md` for product details |
-| `/ad-video-scripts` | `products/catalog.md`, `products/materials.md` |
+| `/ads static` | `products/catalog.md` for product details |
+| `/ads video` | `products/catalog.md`, `products/materials.md` |
 | Product descriptions | `products/catalog.md`, `products/materials.md`, `products/sizing.md` |
 
 ---

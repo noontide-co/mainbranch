@@ -38,7 +38,7 @@ vip/ (engine)
 
 - Claude in Chrome extension installed and connected
 - Logged into Skool in Chrome
-- Voice profile in `reference/core/voice.md` (run `/setup` or `/enrich` if missing)
+- Voice profile in `reference/core/voice.md` (run `/setup` or `/think codify` if missing)
 
 ## Quick Start
 
@@ -123,7 +123,7 @@ Use refs from `read_page` output to interact with elements.
 
 Use `reference/core/voice.md` in your business repo. If missing:
 - Run `/setup` for new users
-- Run `/enrich` to add voice context to existing repo
+- Run `/think codify` to add voice context to existing repo
 
 If no voice profile exists, use neutral helpful tone and flag this to user.
 

@@ -126,7 +126,7 @@ Based on this data, use this disclosure:
 
 ## When Typicality Data Is Missing
 
-If no typicality file exists for a client, the ad-review skill should:
+If no typicality file exists for a client, the `/ads review` mode should:
 
 1. Flag as P1: "No typicality data on file"
 2. Generate research task: "Collect typicality data for [client]"

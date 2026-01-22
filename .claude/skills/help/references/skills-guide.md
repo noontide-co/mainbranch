@@ -32,21 +32,8 @@ Skills are specialized workflows. Each one does something specific. This guide h
 
 ---
 
-### /enrich - Add More Context
-**Use when:** You have new information to add, reference files are thin, business has changed.
-
-**What it does:**
-- Audits your existing files
-- Shows what's missing or incomplete
-- Gathers new context from you
-- Merges into existing files (never overwrites)
-
-**Regular use:** Run whenever you have new testimonials, angles, or updates.
-
----
-
-### /think - Research and Decisions
-**Use when:** Exploring a question, making a strategic decision, need to document rationale.
+### /think - Research, Decisions, and Context
+**Use when:** Exploring a question, making a strategic decision, need to document rationale, or adding new context to reference files.
 
 **What it does:**
 - Researches topics (web, your files, your input)
@@ -54,6 +41,7 @@ Skills are specialized workflows. Each one does something specific. This guide h
 - Helps you make decisions
 - Records everything to files
 - Updates reference when you codify
+- Adds new context (via codify mode)
 
 **Heavy use:** This is the core skill. Use it for any "should we...?" question.
 
@@ -61,29 +49,24 @@ See [the-think-cycle.md](the-think-cycle.md) for deep dive.
 
 ---
 
-### /ad-static - Image Ad Copy
-**Use when:** Need copy for static/image ads (Facebook, Instagram, etc.).
+### /ads - Ad Generation and Review
+**Use when:** Need copy for static ads, video ad scripts, or compliance review.
 
-**What it does:**
-- Reads your reference files
-- Generates multiple ad concepts
-- Creates primaries (main text), headlines, image prompts
-- Outputs organized batches
+**Modes:**
+- `/ads` or `/ads static` - Image ad copy (primaries, headlines, image prompts)
+- `/ads video` - Video ad scripts (15-60 seconds, UGC style)
+- `/ads review` - Multi-lens compliance check (FTC, Meta policy, copy quality)
 
-**Output:** 5-6 distinct concepts, each with variations.
+**Output:** Multiple concepts with variations.
 
 ---
 
-### /ad-video-scripts - Video Ad Scripts
-**Use when:** Need scripts for video ads (15-60 seconds, UGC style).
+### /vsl - Video Sales Letters
+**Use when:** Need long-form sales video scripts.
 
-**What it does:**
-- Reads your reference files
-- Generates spoken-word scripts
-- Optimizes for camera delivery
-- Creates hook variations
-
-**Output:** 15-30+ diverse scripts.
+**Modes:**
+- `/vsl skool` - 18-section framework for Skool communities
+- `/vsl b2b` - Haynes 7-step framework for high-ticket B2B
 
 ---
 
@@ -103,22 +86,7 @@ See [the-think-cycle.md](the-think-cycle.md) for deep dive.
 - `/content carousel "topic"` - Generate carousel slides
 - `/content static "topic"` - Generate post caption
 
-**Key difference from /ad-video-scripts:** Organic uses soft CTAs (save, follow) while ads use hard CTAs (buy, sign up).
-
----
-
-### /ad-review - Compliance Check
-**Use when:** Before running ads, want to check for issues.
-
-**What it does:**
-- Runs multiple review "lenses" in parallel
-- Checks FTC compliance
-- Checks Meta policy
-- Reviews copy quality
-- Checks voice authenticity
-- Identifies claims that need proof
-
-**Output:** P1/P2/P3 prioritized report of issues.
+**Key difference from /ads video:** Organic uses soft CTAs (save, follow) while ads use hard CTAs (buy, sign up).
 
 ---
 
@@ -146,21 +114,17 @@ What do you need?
 ├── First time setup?
 │   └── /setup
 │
-├── Add new context?
-│   └── /enrich
-│
-├── Research or decide something?
+├── Research, decide, or add context?
 │   └── /think
 │
 ├── Create ad copy? (paid)
-│   ├── Image ads → /ad-static
-│   └── Video scripts → /ad-video-scripts
+│   └── /ads (static, video, or review mode)
+│
+├── Write video sales letter?
+│   └── /vsl (skool or b2b)
 │
 ├── Create organic content? (free reach)
 │   └── /content (Reels, TikTok, carousels)
-│
-├── Check ads before running?
-│   └── /ad-review
 │
 ├── Confused or stuck?
 │   └── /help
@@ -177,17 +141,17 @@ Common workflows:
 
 **New campaign:**
 1. `/think` - Research your angle
-2. `/ad-static` or `/ad-video-scripts` - Generate copy
-3. `/ad-review` - Check before running
+2. `/ads static` or `/ads video` - Generate copy
+3. `/ads review` - Check before running
 
 **Learning from results:**
 1. `/think research` - Document what worked
-2. `/enrich` - Add winning angles to reference
+2. `/think codify` - Add winning angles to reference
 3. Next campaign uses updated reference
 
 **Business evolution:**
 1. `/think` - Decide on offer change
-2. `/enrich` - Update reference with decision
+2. `/think codify` - Update reference with decision
 3. Future outputs reflect new offer
 
 ---

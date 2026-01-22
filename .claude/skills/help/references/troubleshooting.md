@@ -75,7 +75,7 @@ Same as the 404 error above. You need access first.
 
 ## Skills Not Working
 
-If slash commands like `/start` or `/ad-static` aren't recognized:
+If slash commands like `/start` or `/ads` aren't recognized:
 
 **Check 1: Are you in vip?**
 ```bash

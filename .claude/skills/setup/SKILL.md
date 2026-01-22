@@ -325,8 +325,8 @@ Once setup is complete, tell the user:
 >
 > **Key skills to try:**
 > - `/think` — Research topics, make decisions, update reference
-> - `/ad-static` — Generate image ad copy
-> - `/enrich` — Add more context when you have new info
+> - `/ads` — Generate image ads, video scripts, or review for compliance
+> - `/vsl` — Write video sales letters (Skool or B2B)
 > - `/help` — Get answers anytime you're stuck
 >
 > **The core loop:** Use `/think` regularly. Research → Decide → Codify. This is how your reference files get smarter over time.

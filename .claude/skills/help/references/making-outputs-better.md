@@ -8,7 +8,7 @@ Your outputs are only as good as your reference files. Here's how to improve qua
 
 **Better reference = Better outputs**
 
-When you run `/ad-static` or any generation skill, Claude reads your reference files. If those files are thin, vague, or outdated, your outputs will be too.
+When you run `/ads` or any generation skill, Claude reads your reference files. If those files are thin, vague, or outdated, your outputs will be too.
 
 The path to better outputs is always the same: improve your reference.
 
@@ -95,7 +95,7 @@ Claude will help you identify gaps by asking questions.
 
 ### "I have content but it's messy"
 
-Run `/enrich` and paste everything you have. Claude will sort it.
+Run `/think codify` and paste everything you have. Claude will sort it.
 
 ### "I need fresh angles"
 
@@ -152,4 +152,4 @@ Your reference files are your competitive advantage. The more you invest in them
 
 ## Next Step
 
-Identify your weakest reference file. Run `/enrich` and focus on improving just that one file. Notice how outputs change.
+Identify your weakest reference file. Run `/think codify` and focus on improving just that one file. Notice how outputs change.

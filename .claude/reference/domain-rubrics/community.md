@@ -182,7 +182,7 @@ Skool uses "Classroom" with Modules → Lessons hierarchy.
 | Skill | What It Reads |
 |-------|---------------|
 | `/skool-manager` | `classroom/modules.md`, `membership/` |
-| `/skool-vsl-scripts` | `funnel/stages.md`, `membership/benefits.md` |
+| `/vsl skool` | `funnel/stages.md`, `membership/benefits.md` |
 
 ---
 

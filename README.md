@@ -142,13 +142,13 @@ That is it. You are ready to generate.
 
 Skills are pre-built commands that do specific jobs.
 
-Instead of figuring out how to prompt Claude, you just type a command like `/ad-static` and Claude knows exactly what to do.
+Instead of figuring out how to prompt Claude, you just type a command like `/ads` and Claude knows exactly what to do.
 
 **Example:**
 
 You type:
 ```
-/ad-static
+/ads
 ```
 
 Claude reads your business files, then generates 5-6 complete ad concepts. Each concept includes headlines, primary text, and image prompts. All in your voice.
@@ -164,13 +164,10 @@ No prompt engineering. No explaining what you want. Just type the command.
 | `/start` | Main entry point — figures out what you need and routes you there |
 | `/pull` | Quick update — pulls latest skills from GitHub |
 | `/setup` | Set up your business repo (run this first if you're new) |
-| `/enrich` | Add context to your existing repo — fills gaps, adds testimonials |
-| `/think` | Research topics, make decisions, update reference files |
-| `/ad-static` | Create static image ad copy for Meta |
-| `/ad-video-scripts` | Write 15-60 second video ad scripts |
-| `/ad-review` | Check ads for FTC and Meta compliance |
+| `/think` | Research, make decisions, add context, update reference files |
+| `/ads` | Create ad copy (static or video) and review for compliance |
+| `/vsl` | Write video sales letter scripts (Skool or B2B) |
 | `/content` | Mine competitors, create Reels/TikTok/carousel scripts |
-| `/skool-vsl-scripts` | Write video sales letter scripts |
 | `/skool-manager` | Respond to Skool community posts |
 
 ---

@@ -30,7 +30,7 @@ Manage community engagement directly from Claude Code.
 
 **Requires:** Chrome extension connected to your Skool login.
 
-### /skool-vsl-scripts
+### /vsl skool
 
 Write Video Sales Letters for your community.
 
@@ -105,7 +105,7 @@ Without extension: Claude can draft responses, you copy-paste them.
 
 1. Document your best testimonials in reference/proof/testimonials.md
 2. Document winning messaging in reference/proof/angles/
-3. Run `/ad-static` or `/ad-video-scripts`
+3. Run `/ads static` or `/ads video`
 4. Skills read your community context automatically
 
 ---
@@ -136,6 +136,6 @@ For now, the Chrome extension is the simplest path. Install it at https://claude
 
 ## Next Step
 
-If you haven't documented your Skool structure yet, run `/enrich` and tell Claude about your classroom, membership tiers, and funnel.
+If you haven't documented your Skool structure yet, run `/think codify` and tell Claude about your classroom, membership tiers, and funnel.
 
 The more Skool context in your reference files, the better your community-focused outputs will be.

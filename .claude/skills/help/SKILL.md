@@ -43,7 +43,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 ## Principles
 
 - **Explain "why"** — Not just steps
-- **End with action** — Suggest next skill (`/think`, `/setup`, `/enrich`)
+- **End with action** — Suggest next skill (`/think`, `/setup`, `/ads`, `/vsl`)
 - **Beginner-friendly** — Many never used Terminal
 
 ---
@@ -53,6 +53,6 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Question | Answer |
 |----------|--------|
 | Start Claude in a folder? | `cd ~/vip && claude` — Claude sees files in that folder |
-| When use slash commands? | For structured tasks: `/start`, `/think`, `/ad-static` |
+| When use slash commands? | For structured tasks: `/start`, `/think`, `/ads`, `/vsl` |
 | Drag files in? | Drag from Finder into Terminal, path appears |
 | Voice input? | [Wispr Flow](https://ref.wisprflow.ai/main) (affiliate link) |

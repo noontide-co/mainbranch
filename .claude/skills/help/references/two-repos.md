@@ -7,7 +7,7 @@ This is the key concept. Once you get this, everything else makes sense.
 ## vip (The Engine)
 
 The shared system everyone uses. Contains:
-- Skills (`/ad-static`, `/think`, `/setup`, etc.)
+- Skills (`/ads`, `/think`, `/setup`, `/vsl`, etc.)
 - Templates and frameworks
 - Compliance resources
 - Domain rubrics

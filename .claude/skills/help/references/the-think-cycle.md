@@ -84,7 +84,7 @@ Research = any investigation that informs a decision.
 **Don't need it for:**
 - Quick factual questions (just ask)
 - Simple file edits (just edit)
-- Content generation (use `/ad-static`, `/content`, etc.)
+- Content generation (use `/ads`, `/content`, `/vsl`, etc.)
 
 ---
 

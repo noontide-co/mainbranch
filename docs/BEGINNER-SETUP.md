@@ -114,11 +114,10 @@ Same engine + different data = outputs tailored to each business.
 
 Once set up, type these commands:
 
-- `/think` - Research and make decisions
-- `/ad-static` - Generate image ad copy
-- `/ad-video-scripts` - Create video ad scripts
+- `/think` - Research, make decisions, add context
+- `/ads` - Generate image ads, video scripts, or review for compliance
+- `/vsl` - Write video sales letters (Skool or B2B)
 - `/content` - Mine competitors, create Reels/TikTok/carousels
-- `/ad-review` - Check ads for compliance
 - `/help` - Get answers to any question
 
 ---

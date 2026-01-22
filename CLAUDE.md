@@ -254,20 +254,17 @@ MINE PERFORMANCE → back to RESEARCH
 |-------|--------|-------------|
 | `/start` | Onboarding | Main entry point — detects user state, routes to right skill |
 | `/setup` | Onboarding | Bootstrap repo with correct structure for your business type |
-| `/enrich` | Onboarding | Add context to existing repo — audit gaps, gather, merge |
-| `/think` | Knowledge | Research topics, make decisions, codify to reference files |
-| `/ad-static` | Marketing | Generate static image ad copy from reference |
-| `/ad-video-scripts` | Marketing | Generate video ad scripts (15-60s) |
-| `/content` | Marketing | Mine competitors, generate organic Reels/TikTok/carousel scripts |
-| `/ad-review` | Compliance | Multi-lens review (FTC, Meta, Copy, Visual, Voice, Substantiation) |
-| `/skool-manager` | System Ops | Community engagement with Chrome |
+| `/think` | Knowledge | Research, decide, codify — includes adding context to reference |
+| `/ads` | Marketing | Generate ads — routes to static, video, or review mode |
 | `/vsl` | Marketing | VSL scripts — routes to Skool 18-section or B2B Haynes 7-step |
+| `/content` | Marketing | Mine competitors, generate organic Reels/TikTok/carousel scripts |
+| `/skool-manager` | System Ops | Community engagement with Chrome |
 
 ---
 
 ## Lenses Available
 
-Review criteria for the `/ad-review` skill:
+Review criteria for `/ads review` mode:
 
 | Lens | What It Checks |
 |------|----------------|

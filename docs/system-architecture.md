@@ -225,15 +225,15 @@ vip/
 │
 ├── .claude/
 │   ├── skills/                      # Invokable capabilities
-│   │   ├── ad-static/
+│   │   ├── ads/
 │   │   │   └── SKILL.md
-│   │   ├── ad-video-scripts/
+│   │   ├── vsl/
 │   │   │   └── SKILL.md
-│   │   ├── ad-review/
+│   │   ├── think/
 │   │   │   └── SKILL.md
 │   │   └── ...
 │   │
-│   ├── lenses/                      # Review criteria for ad-review
+│   ├── lenses/                      # Review criteria for /ads review
 │   │   ├── README.md
 │   │   ├── ftc-compliance.md
 │   │   ├── meta-policy.md
@@ -279,11 +279,11 @@ skills/
 
 ```markdown
 ---
-name: ad-static
-description: Generate static image ad copy from business context. Use when creating Facebook/Instagram image ads.
+name: ads
+description: Generate ad copy and review for compliance. Routes to static, video, or review mode.
 ---
 
-# Ad Static
+# Ads
 
 [Instructions for Claude when this skill is invoked]
 
@@ -316,7 +316,7 @@ Skills should fail gracefully with clear errors if required context is missing.
 
 ## How Lenses Work
 
-Lenses are review criteria used by the `/ad-review` skill. Each lens is a markdown file containing:
+Lenses are review criteria used by `/ads review` mode. Each lens is a markdown file containing:
 
 1. What to check
 2. How to score issues (P1/P2/P3)
@@ -352,11 +352,11 @@ Lenses are review criteria used by the `/ad-review` skill. Each lens is a markdo
 
 ### Multi-Lens Review
 
-The `/ad-review` skill spawns parallel agents, one per lens:
+The `/ads review` mode spawns parallel agents, one per lens:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    /ad-review                           │
+│                    /ads review                          │
 │                        │                                │
 │    ┌───────┬───────┬───────┬───────┬───────┬───────┐   │
 │    ▼       ▼       ▼       ▼       ▼       ▼       │   │
@@ -473,7 +473,7 @@ Claude Code Session:
     └── ...
 ```
 
-When you invoke `/ad-static`:
+When you invoke `/ads`:
 1. Claude loads skill from vip
 2. Skill reads context from my-business/reference/
 3. Output goes to my-business/outputs/

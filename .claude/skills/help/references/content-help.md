@@ -30,7 +30,7 @@ The `/content` skill helps you:
 2. **Extract winning concepts** - Identify hooks, structures, and angles that perform
 3. **Generate scripts** - Create Reels, TikTok, and carousel content in your voice
 
-It's for **organic content** (free reach), not **paid ads** (use `/ad-video-scripts` for ads).
+It's for **organic content** (free reach), not **paid ads** (use `/ads` for ads).
 
 ---
 
@@ -87,10 +87,10 @@ Generate single-post caption:
 
 ---
 
-## How It Differs from /ad-video-scripts
+## How It Differs from /ads video
 
-| Aspect | /ad-video-scripts | /content |
-|--------|-------------------|----------|
+| Aspect | /ads video | /content |
+|--------|------------|----------|
 | **Purpose** | Paid traffic conversion | Organic reach |
 | **Tone** | Direct response, urgency | Value-first, authentic |
 | **CTA** | Hard (buy now, link in bio) | Soft (save, follow, comment) |
@@ -98,7 +98,7 @@ Generate single-post caption:
 | **Goal** | Clicks and sales | Views, saves, follows |
 
 **Rule of thumb:**
-- Spending money to show it? → `/ad-video-scripts`
+- Spending money to show it? → `/ads video`
 - Posting to your feed? → `/content`
 
 ---
@@ -163,7 +163,7 @@ The more detailed your voice file, the better the output.
 ### "What if my content feels generic?"
 
 Usually means:
-1. Voice file is too thin → Run `/enrich` to add more
+1. Voice file is too thin → Run `/think codify` to add more
 2. Topic is too broad → Be more specific
 3. Missing personal examples → Add stories to your reference
 
@@ -226,7 +226,7 @@ Check `reference/core/voice.md`:
 - Does it have examples of how you talk?
 - Does it list phrases to avoid?
 
-Run `/enrich` to add more voice context.
+Run `/think codify` to add more voice context.
 
 ### "I don't know what to create about"
 
@@ -240,7 +240,7 @@ Or run `/think research "content ideas for [your niche]"` to brainstorm.
 
 | Skill | When to Use Instead |
 |-------|---------------------|
-| `/ad-video-scripts` | Paid video ads |
-| `/ad-static` | Paid image ads |
+| `/ads video` | Paid video ads |
+| `/ads static` | Paid image ads |
 | `/think` | Researching content strategy |
-| `/enrich` | Adding more voice/context |
+| `/think codify` | Adding more voice/context |
