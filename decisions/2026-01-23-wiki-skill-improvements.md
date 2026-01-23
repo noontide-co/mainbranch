@@ -124,17 +124,15 @@ All changes align with skill-creator guidelines:
 
 ## Action Items
 
-- [x] Update `.claude/skills/wiki/SKILL.md` setup mode with personalization prompts
-- [x] Update `.claude/skills/wiki/SKILL.md` setup mode with clean install option
 - [x] Update `.claude/skills/wiki/SKILL.md` setup mode with CF warning (GitHub app install note)
 - [x] Update `.claude/skills/wiki/SKILL.md` add mode with frontmatter note
-- [x] Add `.claude/skills/wiki/SKILL.md` domain-setup mode
 - [x] Add dashboard link to `/wiki publish` exit message
 - [x] Create `.claude/skills/wiki/references/customization.md` for post-setup edits
 - [x] Update `.claude/skills/wiki/references/cloudflare-pages-setup.md` with stronger warnings
-- [x] Add note to CF reference about `/wiki domain-setup`
-- [ ] Test full setup flow after changes
+- [x] Restructure: simplified setup (no prompts) + `/wiki configure` for all personalization
+- [x] Footer "Powered by Commune" links to devonmeadows.com even in fresh setup
+- [x] Test full setup flow (joedefilippo wiki deployed to CF Pages)
 
-## Approval
+## Status
 
-Awaiting user approval before implementation.
+Implemented and tested. Ready for PR.
