@@ -1,11 +1,11 @@
 ---
 name: start
-description: Main entry point for Main Branch. Detects user state and routes to the right skill. Use when: (1) User says "start", "help", "what can I do", "begin" (2) User is new, returning, lost, or confused (3) User opens vip without a specific task in mind (4) Session starts and user needs triage. Routes to /setup (new users), /think (research/decide/enrich), /ads (static/video/review), /vsl (skool/b2b), /content, /skool-manager, /wiki, /help.
+description: Main entry point for Main Branch. Detects user state, context level, and experience to route to the right skill. Use when: (1) User says "start", "help", "what can I do", "begin" (2) User is new, returning, lost, or confused (3) User opens vip without a specific task in mind (4) Session starts and user needs triage. Routes to /setup (new users), /think (research/decide/enrich), /ads (static/video/review), /vsl (skool/b2b), /content, /skool-manager, /wiki, /help.
 ---
 
 # Start
 
-Single entry point for Main Branch. Detect user state, route to the right skill.
+Single entry point for Main Branch. Detect user state, context level, experience — route to the right skill.
 
 **Recommended workflow:** Always start Claude in vip, run `/start`. It handles everything.
 
@@ -24,9 +24,18 @@ Apply to: business repo selection, skill routing, any multiple choice.
 ```
 /start
 │
+├── Check context level ──────────────→ Fresh? Full load. Heavy? Warn user.
+│
 ├── Pull latest vip updates ──────────→ (always, silently)
 │
-├── Load business repo automatically ─→ (from settings.local.json)
+├── Load config ──────────────────────→ See [config-system.md](references/config-system.md)
+│   ├── ~/.config/vip/local.yaml ─────→ Default repo for this machine
+│   └── [repo]/.vip/config.yaml ──────→ User preferences
+│
+├── MCP pre-flight ───────────────────→ See [mcp-preflight.md](references/mcp-preflight.md)
+│   └── Missing required MCP? ────────→ Offer setup or skip
+│
+├── Load business repo ───────────────→ (from config OR discovery)
 │
 ├── No business repo configured? ─────→ /setup (creates repo, saves path)
 │
@@ -53,15 +62,21 @@ Apply to: business repo selection, skill routing, any multiple choice.
 
 Run `git pull origin main` silently. Mention only if updates pulled. Don't block on network issues.
 
+```bash
+cd ~/Documents/GitHub/vip 2>/dev/null && git pull origin main 2>/dev/null || true
+```
+
 ---
 
 ## Step 0: Find Business Repo
 
 **Shortcut:** If user says `/start [repo-name]` or mentions a specific repo, validate that path directly with Read. If valid, confirm with user and proceed.
 
+**Config path (fast):** Check `~/.config/vip/local.yaml` for `default_repo`. See [config-system.md](references/config-system.md).
+
 **Why Glob fails:** User may have added subdirectories (like `decisions/` or `research/`) as additional working directories, not the parent repo. Glob from vip can't traverse up to find `reference/core/`.
 
-**Discovery algorithm (when no repo specified):**
+**Discovery algorithm (when no config):**
 
 1. **Extract parent paths from additional working directories**
    - Look at env info for "Additional working directories"
@@ -145,6 +160,27 @@ If user already stated intent, route directly without asking.
 
 ---
 
+## Context Awareness
+
+| Level | Action |
+|-------|--------|
+| Fresh (0-20%) | Full load, explain briefly |
+| Working (20-70%) | Route to task |
+| Heavy (70-85%) | Warn: "Finish this, then new session" |
+| Critical (85%+) | "Context nearly full. Wrap up." |
+
+Show percentage when relevant: "You're at ~60% — plenty of room."
+
+---
+
+## Adapt to Experience
+
+**First-time** (no config, thin reference): Be verbose, route to /setup
+**Returning** (config exists): Quick confirmation, route by intent
+**Expert** (clear intent, short messages): Get out of the way, route fast
+
+---
+
 ## Skill Quick Reference
 
 | Skill | What It Does |
@@ -158,6 +194,7 @@ If user already stated intent, route directly without asking.
 | `/content` | Mine competitors, generate organic scripts |
 | `/skool-manager` | Manage community engagement |
 | `/wiki` | Create atomic notes, publish wiki |
+| `/deck` | Create branded presentations from business context |
 
 ---
 
@@ -176,9 +213,16 @@ Use these to auto-detect what user wants:
 | "content", "reels", "tiktok", "organic", "mine", "competitors", "carousel" | `/content` |
 | "skool", "community", "posts", "respond" | `/skool-manager` |
 | "wiki", "notes", "atomic", "wikilinks", "publish wiki" | `/wiki` |
+| "pull", "update vip", "get latest" | `/pull` |
+| "deck", "slides", "presentation", "powerpoint", "pptx" | `/deck` |
 
 ---
 
 ## Remember
 
 Router, not worker. Detect state → route → let the target skill do the work. One clarifying question max.
+
+**Three jobs:**
+1. Orient Claude to the business (load reference)
+2. Understand what user needs (ask if unclear)
+3. Route to the right skill (fast)

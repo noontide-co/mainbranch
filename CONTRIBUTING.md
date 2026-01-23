@@ -1,100 +1,35 @@
 # Contributing to Main Branch Premium
 
-Welcome! We're excited you want to contribute.
+Main Branch Premium is maintained by a small team of contributors.
 
 ---
 
-## Who Can Contribute
+## Contribution is Invite-Only
 
-Main Branch Premium is a **private repository** for VIP members. To contribute:
+We don't accept open contributions. The codebase requires deep understanding of the system architecture, skill patterns, and community needs.
 
-1. Be an active VIP member
-2. Have used the system and understand how it works
-3. Have an idea that helps the community
+**Want to contribute?**
 
-**Not a VIP yet?** Join at [skool.com/main](https://www.skool.com/main)
-
----
-
-## How to Contribute
-
-### 1. Fork the Repository
-
-Click "Fork" on GitHub to create your own copy.
-
-### 2. Create a Branch
-
-```bash
-git checkout -b feature/your-improvement
-```
-
-Name it something descriptive:
-- `feature/new-skill-name`
-- `fix/setup-typo`
-- `improve/ads-review-lens`
-
-### 3. Make Your Changes
-
-Follow the existing patterns:
-- Skills go in `.claude/skills/`
-- Keep SKILL.md under 500 lines
-- Use `references/` for detailed docs
-- Test your changes before submitting
-
-### 4. Open a Pull Request
-
-Push your branch and open a PR against `main`.
-
-Include:
-- What you changed
-- Why it helps
-- How you tested it
+1. Be an active VIP member at [skool.com/main](https://www.skool.com/main)
+2. Demonstrate value in the community (helping others, sharing insights)
+3. Show deep understanding of how the system works
+4. Get invited by Devon or an existing contributor
 
 ---
 
-## What We're Looking For
+## Found a Bug?
 
-**Great contributions:**
-- New skills that solve real problems you've faced
-- Improvements to existing skills based on actual usage
-- Bug fixes
-- Better documentation
-- Templates and examples
-
-**Before you build:**
-- Check if someone else is working on it (open issues/PRs)
-- Consider if it belongs in VIP or the free tier
-- Think about how beginners will use it
+Report it in the Skool community or DM Devon. Include:
+- What you were trying to do
+- What happened instead
+- Any error messages
 
 ---
 
-## Contribution Levels
+## Have an Idea?
 
-We recognize contributors based on impact:
-
-| Level | What It Means |
-|-------|---------------|
-| **First PR** | You've contributed! Welcome to the builder club. |
-| **Skill Creator** | You've created a skill that shipped. |
-| **Core Contributor** | Multiple accepted PRs, deep system understanding. |
-
-*More details on contributor recognition coming soon.*
+Share it in the Skool community. Great ideas that help everyone may get built by the team or earn you a contributor invite.
 
 ---
 
-## Code Style
-
-- Follow existing patterns in the codebase
-- Keep skills beginner-friendly
-- Use clear, simple language
-- Document the "why" not just the "what"
-
----
-
-## Questions?
-
-Ask in the [Main Branch Skool community](https://www.skool.com/main) or tag Devon in your PR.
-
----
-
-*Thank you for making Main Branch better for everyone.*
+*Thank you for being part of Main Branch.*

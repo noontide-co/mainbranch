@@ -158,20 +158,32 @@ This resumes your previous conversation with full context.
 
 If `/start` doesn't load your business repo:
 
-**Check ~/.claude/settings.json:**
-```json
-{
-  "business_repo_path": "/Users/yourname/Documents/GitHub/your-business"
-}
+**Check machine-local config:**
+```bash
+cat ~/.config/vip/local.yaml
+```
+
+Should show:
+```yaml
+default_repo: /Users/yourname/Documents/GitHub/your-business
+```
+
+**Check repo config:**
+```bash
+cat /path/to/your/repo/.vip/config.yaml
 ```
 
 **Common fixes:**
 
 | Problem | Solution |
 |---------|----------|
-| File doesn't exist | Tell Claude your business repo path when running /start |
-| Path is wrong | Update the path in ~/.claude/settings.json |
-| Folder was moved | Update to new location |
+| No `~/.config/vip/local.yaml` | Run `/start` — it will discover your repo and offer to save the path |
+| Path is wrong | Run `/start` and select your repo when prompted, say "yes" to save |
+| Folder was moved | Delete `~/.config/vip/local.yaml` and run `/start` again |
+| No `.vip/config.yaml` in repo | Run `/start` — it will offer to create config for faster startups |
+
+**Migration from old system:**
+If you have an old `~/.claude/settings.json` with `business_repo_path`, `/start` will detect it and offer to migrate to the new config system.
 
 ---
 
