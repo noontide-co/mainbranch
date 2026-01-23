@@ -48,6 +48,10 @@ Update these files with user's identity:
 
 Created `references/customization.md` with instructions for updating all settings after setup.
 
+**Added from testing:**
+- Welcome page prompts (title, heading, intro text)
+- Generic avatar placeholder instead of Devon's photo
+
 #### 2. Add Clean Install Option
 
 After template merge, ask:

@@ -4,6 +4,26 @@ After initial setup, you can update any of these settings manually.
 
 ---
 
+## Welcome Page
+
+Edit `src/content/notes/my-working-notes.md`:
+
+```markdown
+---
+title: Welcome
+created: "2026-01-23"
+visibility: public
+status: live
+summary: Your tagline here
+---
+
+# Your Heading
+
+Your intro text here.
+```
+
+---
+
 ## Avatar
 
 1. Replace `public/avatar.jpg` (or `.png`) with your image

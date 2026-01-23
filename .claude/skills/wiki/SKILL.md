@@ -93,12 +93,22 @@ First-time wiki setup. Creates repo, configures hosting, deploys.
    | Twitter/X handle | No | skip |
    | GitHub username | No | skip |
    | Website URLs | No | skip (comma-separated) |
+   | Welcome page title | No | `Welcome` |
+   | Welcome heading | No | `Welcome to my wiki` |
+   | Welcome intro | No | Based on tagline |
 
    Update template files with user's info:
    - `src/config.ts` or `astro.config.mjs` — name, tagline, social links
    - `src/components/Header.astro` — brand name
    - `src/pages/index.astro` — meta author, structured data
+   - `src/content/notes/my-working-notes.md` — welcome page content
    - Replace any hardcoded "Devon Meadows" references
+
+   **Replace avatar with generic placeholder:**
+   - Delete `public/avatar.jpg` (Devon's photo)
+   - Create initials-based or generic placeholder, OR
+   - Leave avatar.jpg as a simple placeholder icon
+   - User can replace later (see `references/customization.md`)
 
 5. **Clean install option** — ask:
    > "Include sample notes? (recommended for first-time users) [Y/n]"
