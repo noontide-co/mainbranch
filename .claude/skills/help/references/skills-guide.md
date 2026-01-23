@@ -196,7 +196,7 @@ Most of the time, `/start` will point you in the right direction.
 
 Want Notion export? Custom CMS posting? Your unique workflow?
 
-Run `/skill-creator` to create one. You have **two locations** for custom skills:
+You can create custom skills manually or use Anthropic's `/skill-creator` if you have it installed. You have **two locations** for custom skills:
 
 ### Option 1: Business Repo Skills (Project-Specific)
 
