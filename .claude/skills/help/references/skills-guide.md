@@ -196,19 +196,56 @@ Most of the time, `/start` will point you in the right direction.
 
 Want Notion export? Custom CMS posting? Your unique workflow?
 
-**Personal skills live in YOUR repo, not vip.**
+Run `/skill-creator` to create one. You have **two locations** for custom skills:
+
+### Option 1: Business Repo Skills (Project-Specific)
+
+Skills that only make sense for one business/project:
 
 ```
 your-business-repo/
 └── .claude/skills/my-skill/SKILL.md
 ```
 
-Run `/skill-creator` to create one. Skills in your repo work alongside vip skills.
+**Use for:** Business-specific workflows like `/notion-export`, `/publish`, `/batch-week`
 
-| Example | Purpose |
-|---------|---------|
-| `/notion-export` | Export scripts to Notion |
-| `/publish` | Post to your CMS |
-| `/batch-week` | Weekly content batch |
+### Option 2: Global Skills (Work Everywhere)
+
+Skills you want available in **every** Claude Code session, regardless of which project you're in:
+
+```
+~/.claude/skills/my-skill/SKILL.md
+```
+
+This is your **user-level skills directory** — Claude Code's official location for personal skills that persist across all projects.
+
+**Use for:**
+- Personal productivity workflows (`/daily-standup`)
+- Cross-project utilities (`/git-cleanup`)
+- Admin tools you use everywhere
+
+**Example:**
+```
+~/.claude/skills/
+├── daily-standup/SKILL.md    # Your morning routine
+├── git-cleanup/SKILL.md      # Branch maintenance
+└── review-pr/SKILL.md        # Your PR checklist
+```
+
+### Skill Priority
+
+When the same skill name exists in multiple locations, Claude uses this priority:
+
+1. **Project `.claude/skills/`** (highest priority)
+2. **User `~/.claude/skills/`** (global)
+3. **vip `.claude/skills/`** (shared engine)
+
+This means you can override vip skills with your own version if needed.
+
+| Location | Scope | Example Use |
+|----------|-------|-------------|
+| `your-repo/.claude/skills/` | One project | `/notion-export` for this business |
+| `~/.claude/skills/` | All projects | `/daily-standup` everywhere |
+| `vip/.claude/skills/` | Shared (read-only) | `/ads`, `/think`, `/start` |
 
 See [becoming-contributor.md](becoming-contributor.md) to contribute skills back to vip.
