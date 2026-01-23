@@ -128,6 +128,59 @@ If user says no:
 
 ---
 
+## MCP Pre-Flight Check
+
+After loading config, verify required MCPs are installed. This catches missing setup on new machines.
+
+**Why this matters:** MCPs are installed to the USER'S machine (`~/.claude.json`), not the repo. When a user clones their business repo on a new machine, MCPs won't be there.
+
+### Step 1: Read expected MCPs from config
+
+```yaml
+# From .vip/config.yaml
+mcps:
+  apify:
+    required_for: [content]
+    setup_guide: ".claude/skills/content/references/apify-setup.md"
+```
+
+### Step 2: Check if MCPs are available
+
+The MCP tools appear in the tool list when loaded. Check for tool presence:
+- `mcp__apify__*` tools → Apify is loaded
+- `mcp__youtube-transcript__*` → YouTube transcript is loaded
+
+**Quick heuristic:** If user is routing to `/content` and Apify tools aren't available, MCP is missing.
+
+### Step 3: Prompt if missing
+
+If a required MCP is missing for the skill user wants:
+
+> "The content skill works best with Apify for Instagram mining. It's not set up on this machine yet.
+>
+> 1. Set up Apify now (5 min, one-time)
+> 2. Skip for now (some features limited)
+>
+> Which one?"
+
+If user picks 1, show the setup guide path and walk through it.
+
+### When to check
+
+- **Always check** when routing to a skill that needs MCPs
+- **Don't block** on optional MCPs — just mention limitations
+- **Remember** the check result for the session (don't re-check every route)
+
+### MCP Status in Config
+
+The `mcps:` section in `.vip/config.yaml` documents what's expected, but doesn't store installation state. That's Claude Code's domain (`~/.claude.json`).
+
+This is intentional:
+- Config = "what this business needs" (portable)
+- Installation = "what this machine has" (local)
+
+---
+
 ## Numbered Options Pattern
 
 Always use numbered lists for multi-choice. User replies with just a number.
@@ -152,6 +205,9 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │
 ├── Load repo's .vip/config.yaml ─────→ (user preferences)
 │   └── No .vip/config.yaml? ─────────→ Offer to create (upgrade)
+│
+├── MCP pre-flight check ─────────────→ (verify tools available)
+│   └── Missing required MCP? ────────→ Offer setup or skip
 │
 ├── Load business repo ───────────────→ (from config OR discovery)
 │
