@@ -115,7 +115,8 @@ First-time wiki setup. Creates repo, configures hosting, deploys.
 
    If declined:
    ```bash
-   rm -f src/content/notes/*.md
+   # Keep what-is-commune.md (linked from footer "Powered by Commune")
+   find src/content/notes -name "*.md" ! -name "what-is-commune.md" -delete
    rm -f src/content/updates/*.md
    ```
 
