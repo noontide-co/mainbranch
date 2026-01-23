@@ -9,9 +9,8 @@ description: |
   (5) Pulling upstream template updates from Devon
   (6) Generating "Recent Updates" notes from Git history
   (7) Adding a custom domain after initial setup
-  (8) Checking deployment status after publish
 
-  Triggered by: /wiki, "add a note", "publish wiki", "create wiki", "update my wiki template", "add domain to wiki", "check deploy status"
+  Triggered by: /wiki, "add a note", "publish wiki", "create wiki", "update my wiki template", "add domain to wiki"
 ---
 
 # Wiki Skill
@@ -73,7 +72,6 @@ cat ~/.mainbranch/wiki.json 2>/dev/null || echo "No wiki configured yet"
 | `update` | Pull upstream template changes | When fixes released |
 | `recent` | Generate "Recent Updates" from Git | Weekly or on threshold |
 | `domain-setup` | Add custom domain to existing wiki | After initial setup |
-| `deploy-status` | Check Cloudflare deployment status | After publish |
 
 ---
 
@@ -135,7 +133,7 @@ Commit changes and push to trigger auto-deploy.
 3. Generate commit message if not provided (analyze changed files)
 4. Commit and push: `git add -A && git commit -m "[type] Message" && git push`
 
-**Exit:** "Pushed to GitHub. Cloudflare Pages will auto-deploy in ~90 seconds. Run `/wiki deploy-status` to verify."
+**Exit:** "Pushed to GitHub. Cloudflare Pages will auto-deploy in ~90 seconds. Check status: https://dash.cloudflare.com → Workers & Pages → [project-name]"
 
 ---
 
@@ -213,31 +211,6 @@ Add a custom domain to an existing wiki. Use this if you skipped custom domain d
 See [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md) for detailed dashboard steps.
 
 **Exit:** "Custom domain configured. DNS may take up to 24-48 hours to propagate."
-
----
-
-## Mode: deploy-status
-
-Check Cloudflare Pages deployment status. Useful after `/wiki publish` to verify deployment succeeded.
-
-**Usage:** `/wiki deploy-status`
-
-**Prerequisites:** Requires wrangler CLI (one-time setup):
-```bash
-pnpm add -g wrangler  # Install globally
-wrangler login        # Authenticate with Cloudflare
-```
-
-**Steps:**
-1. Read config: `cat ~/.mainbranch/wiki.json | jq -r '.cf_project'`
-2. List recent deployments:
-   ```bash
-   wrangler pages deployment list --project-name="$CF_PROJECT"
-   ```
-3. Show deployment status (Success, Failed, In Progress)
-4. If failed, show error details and suggest checking Cloudflare dashboard
-
-**Exit:** Display latest deployment status with timestamp and URL.
 
 ---
 
