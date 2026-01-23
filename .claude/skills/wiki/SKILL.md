@@ -115,10 +115,14 @@ First-time wiki setup. Creates repo, configures hosting, deploys.
 
    If declined:
    ```bash
-   # Keep what-is-commune.md (linked from footer "Powered by Commune")
-   find src/content/notes -name "*.md" ! -name "what-is-commune.md" -delete
+   rm -f src/content/notes/*.md
    rm -f src/content/updates/*.md
    ```
+
+   **Update footer link** (always, for clean install):
+   - Change `src/components/Footer.astro` "Powered by Commune" link
+   - From: `/notes/what-is-commune/`
+   - To: `https://devonmeadows.com/` (external, target="_blank")
 
 6. Configure domain in `astro.config.mjs`
 7. Install and test: `pnpm install && pnpm dev`
