@@ -46,6 +46,46 @@ Detailed workflow for research mode in `/think`.
 1. **Codebase** — Existing reference files, past decisions, research
 2. **Web** — Competitors, industry benchmarks, expert perspectives
 3. **User input** — "What else do you know about this?"
+4. **YouTube transcripts** — When researching topics with video content (see below)
+
+---
+
+## YouTube Transcript Research
+
+When user wants to research video content, use the `youtube-transcript` MCP.
+
+**Trigger phrases:**
+- "pull down this YouTube video"
+- "transcribe this video"
+- "what does [creator] say about..."
+- "research this YouTube link"
+
+**How to use:**
+
+```
+mcp__youtube-transcript__get_transcript
+```
+
+Pass the YouTube URL. Returns full transcript text.
+
+**Best for:**
+- Mining competitor messaging from their videos
+- Extracting frameworks from educational content
+- Researching what experts say about a topic
+- Getting exact quotes for proof/angles
+
+**After transcription:**
+1. Synthesize key findings (don't dump raw transcript)
+2. Extract quotable moments
+3. Note messaging patterns
+4. Save to `research/YYYY-MM-DD-[topic]-mining.md`
+
+**Example workflow:**
+> User: "Research what Alex Hormozi says about pricing"
+> 1. Search for relevant Hormozi videos
+> 2. Transcribe 2-3 key videos
+> 3. Extract pricing principles and frameworks
+> 4. Synthesize into actionable findings
 
 ---
 
