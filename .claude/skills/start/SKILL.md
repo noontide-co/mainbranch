@@ -194,6 +194,7 @@ Show percentage when relevant: "You're at ~60% — plenty of room."
 | `/content` | Mine competitors, generate organic scripts |
 | `/skool-manager` | Manage community engagement |
 | `/wiki` | Create atomic notes, publish wiki |
+| `/deck` | Create branded presentations from business context |
 
 ---
 
@@ -212,6 +213,8 @@ Use these to auto-detect what user wants:
 | "content", "reels", "tiktok", "organic", "mine", "competitors", "carousel" | `/content` |
 | "skool", "community", "posts", "respond" | `/skool-manager` |
 | "wiki", "notes", "atomic", "wikilinks", "publish wiki" | `/wiki` |
+| "pull", "update vip", "get latest" | `/pull` |
+| "deck", "slides", "presentation", "powerpoint", "pptx" | `/deck` |
 
 ---
 
