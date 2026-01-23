@@ -1,7 +1,7 @@
 ---
 type: decision
 date: 2026-01-23
-status: proposed
+status: accepted
 linked_research: ["2026-01-23-wiki-skill-improvements-mining.md"]
 github_issue: 39
 ---
@@ -123,11 +123,11 @@ All changes align with skill-creator guidelines:
 - [x] Update `.claude/skills/wiki/SKILL.md` setup mode with personalization prompts
 - [x] Update `.claude/skills/wiki/SKILL.md` setup mode with clean install option
 - [x] Update `.claude/skills/wiki/SKILL.md` setup mode with CF warning (GitHub app install note)
-- [ ] Update `.claude/skills/wiki/SKILL.md` add mode with frontmatter note
+- [x] Update `.claude/skills/wiki/SKILL.md` add mode with frontmatter note
 - [x] Add `.claude/skills/wiki/SKILL.md` domain-setup mode
 - [x] Add dashboard link to `/wiki publish` exit message
 - [x] Create `.claude/skills/wiki/references/customization.md` for post-setup edits
-- [ ] Update `.claude/skills/wiki/references/cloudflare-pages-setup.md` with stronger warnings
+- [x] Update `.claude/skills/wiki/references/cloudflare-pages-setup.md` with stronger warnings
 - [x] Add note to CF reference about `/wiki domain-setup`
 - [ ] Test full setup flow after changes
 

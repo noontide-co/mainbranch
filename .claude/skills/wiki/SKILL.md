@@ -146,6 +146,10 @@ Create a new atomic note following evergreen note principles.
 5. Apply evergreen principles: atomic, concept-oriented, densely linked
 6. Suggest WikiLinks: `grep -r "concept" "$WIKI_REPO/src/content/notes/" --include="*.md" -l`
 
+**Frontmatter validation:**
+- Valid `status` values: `seed`, `growing`, `evergreen`
+- Do NOT use `draft` — causes Astro build failure
+
 **Exit:** "Note created. Run `/wiki publish` to deploy, or continue editing."
 
 ---

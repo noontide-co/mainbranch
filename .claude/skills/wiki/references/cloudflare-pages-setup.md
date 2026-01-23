@@ -36,10 +36,20 @@ Left sidebar: **Build** → **Compute & AI** → **Workers & Pages**
 
 Click **"Create application"** (blue, top right)
 
-**CRITICAL:** Default screen is Workers. Look for small link at bottom:
+---
+
+⚠️ **WARNING: Worker vs Page Confusion**
+
+The default screen is **Workers** (wrong!). You need **Pages**.
+
+Look for the small link at the **BOTTOM** of the page:
 > "Looking to deploy Pages? **Get started**"
 
-Click **"Get started"** to switch to Pages flow.
+Click **"Get started"** to switch to the Pages flow.
+
+If you miss this, you'll create a Worker instead of a Page — it won't work and you'll have to delete it and start over.
+
+---
 
 ### 3. Choose Import Method
 
@@ -47,12 +57,20 @@ Select: **"Import an existing Git repository"** → **Get started**
 
 ### 4. Connect GitHub
 
-- Click **GitHub** tab
+⚠️ **First time connecting Cloudflare to GitHub?** You'll need to install the Cloudflare Pages GitHub app:
+1. Click **"Connect GitHub"** button
+2. Authorize Cloudflare to access your GitHub account
+3. Choose **"Only select repositories"** and pick your wiki repo
+4. Click **"Install & Authorize"**
+
+**Already connected?** Continue below:
+
+- Make sure you're on the **GitHub** tab (not GitLab)
 - Select your GitHub account from dropdown
-- Find and click your wiki repo (e.g., `devon-wiki`)
+- Find and click your wiki repo (e.g., `my-wiki`)
 - Click **"Begin setup"**
 
-*Repo not showing? Click "configure repository access for the Cloudflare Pages app on GitHub"*
+*Repo not showing?* Click "configure repository access for the Cloudflare Pages app on GitHub" to add it.
 
 ### 5. Build Settings
 
@@ -130,12 +148,20 @@ Go to Account home → Domains. Is your domain listed there?
 
 ## Common Issues
 
-**Ended up in Workers flow?**
-Look for "Looking to deploy Pages? Get started" link at bottom. Easy to miss.
+**Created a Worker instead of a Page?**
+Symptoms: "Missing entry point" error, or project appears under Workers instead of Pages.
+Fix:
+1. Go to Workers & Pages → find your project
+2. Click it → Settings → scroll to bottom → **Delete**
+3. Start over from Step 2, but this time click the **"Pages: Get started"** link at the bottom
+
+**Repo not showing when connecting GitHub?**
+Click "configure repository access for the Cloudflare Pages app on GitHub" and add your repo.
 
 **Direct upload project can't add Git?**
 Delete project (Settings → Delete), recreate via this flow.
 
 **Build failing?**
-Check Build command is `pnpm build` (not `npm run build`).
-Check Build output directory is `dist` (not `public` or `/`).
+- Check Build command is `pnpm build` (not `npm run build`)
+- Check Build output directory is `dist` (not `public` or `/`)
+- Check for frontmatter errors — `status` must be `seed`, `growing`, or `evergreen` (not `draft`)
