@@ -50,9 +50,9 @@ The skill reads `~/.mainbranch/wiki.json` to find your wiki repo location.
 ## Prerequisites
 
 Before using this skill:
-1. **GitHub account** with SSH keys configured
-2. **Cloudflare account** (free tier works)
-3. **Wiki repo** cloned locally (created via `/wiki setup` or manually)
+1. **GitHub CLI** (`gh`) installed and authenticated
+2. **pnpm** installed (`npm install -g pnpm`)
+3. **Cloudflare account** (free tier works) — can create during setup via `wrangler login`
 
 Check for existing config:
 ```bash
@@ -77,38 +77,142 @@ cat ~/.mainbranch/wiki.json 2>/dev/null || echo "No wiki configured yet"
 
 ## Mode: setup
 
-Quick first-time wiki setup. Installs default template and deploys. Run `/wiki configure` after to personalize.
+Quick first-time wiki setup. Installs default template and deploys via wrangler CLI. Run `/wiki configure` after to personalize.
 
 **Steps:**
-1. Ask: Repo name? Location?
-2. Create GitHub repo: `gh repo create [user]/[wiki] --private --clone`
-3. Add upstream: `git remote add upstream https://github.com/noontide-co/commune-wiki.git`
-4. Merge template: `git fetch upstream && git merge upstream/main --allow-unrelated-histories`
-5. **Update footer link:**
-   - Change `src/components/Footer.astro` "Powered by Commune" link
-   - To: `https://devonmeadows.com/` (external, target="_blank")
-6. Ask: Domain? (use `[project].pages.dev` or custom)
-7. Update `astro.config.mjs` with site URL
-8. Install and build: `pnpm install && pnpm build`
-9. Deploy to Cloudflare Pages — see [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md)
 
-   **First-time GitHub app install:** If you've never connected Cloudflare to GitHub, you'll need to install the Cloudflare Pages GitHub app first. See the reference for details.
+### 1. Ask: Repo name? Location?
+Default: `wiki` in home directory (`~/wiki`)
 
-10. Commit and push: `git add -A && git commit -m "Initial wiki setup" && git push`
-11. Save config:
-    ```bash
-    mkdir -p ~/.mainbranch
-    cat > ~/.mainbranch/wiki.json << 'EOF'
-    {
-      "wiki_repo": "/path/to/wiki",
-      "hosting": "cloudflare",
-      "domain": "yourdomain.com",
-      "cf_project": "your-project-name"
-    }
-    EOF
-    ```
+### 2. Check GitHub CLI
+```bash
+gh auth status
+```
+If not authenticated, guide user to run `gh auth login`.
 
-**Exit:** "Wiki deployed! Run `/wiki configure` to personalize (name, avatar, social links, etc.)"
+### 3. Create GitHub repo and clone
+```bash
+gh repo create [user]/[wiki] --private --clone
+cd [wiki]
+```
+If repo exists but not cloned: `git clone https://github.com/[user]/[wiki].git`
+
+### 4. Add upstream and merge template
+```bash
+git remote add upstream https://github.com/noontide-co/commune-wiki.git
+git fetch upstream
+git merge upstream/main --allow-unrelated-histories -m "Initial wiki from commune-wiki template"
+```
+
+### 5. Apply Windows compatibility fixes (Windows only)
+On Windows, fix path handling in `astro.backlinks.ts`:
+
+```bash
+# Add fileURLToPath import
+sed -i "s/import path from 'node:path';/import path from 'node:path';\nimport { fileURLToPath } from 'node:url';/" astro.backlinks.ts
+
+# Fix the dist path line
+sed -i "s/path.join(dir.pathname,/path.join(fileURLToPath(dir),/" astro.backlinks.ts
+```
+
+Or manually edit `astro.backlinks.ts`:
+- Add import: `import { fileURLToPath } from 'node:url';`
+- Change: `path.join(dir.pathname, 'backlinks.json')` → `path.join(fileURLToPath(dir), 'backlinks.json')`
+
+### 6. Install dependencies and build
+```bash
+pnpm install
+pnpm build
+```
+
+**If build fails with sitemap error:** Temporarily comment out the sitemap integration in `astro.config.mjs`, rebuild, then uncomment after first deploy.
+
+### 7. Commit and push
+```bash
+git add -A
+git commit -m "Initial wiki setup"
+```
+
+**Check branch name** (Git may default to `master`):
+```bash
+git branch --show-current
+```
+
+If branch is `master`, rename to `main`:
+```bash
+git branch -m master main
+```
+
+Then push:
+```bash
+git push -u origin main
+```
+
+### 8. Check Cloudflare authentication
+```bash
+npx wrangler whoami
+```
+
+**If not logged in:** Run `npx wrangler login` — opens browser for OAuth. User can create a Cloudflare account during this flow if they don't have one (free tier works).
+
+### 9. Create Pages project and deploy
+```bash
+npx wrangler pages project create [wiki] --production-branch main
+npx wrangler pages deploy dist --project-name [wiki]
+```
+
+Wrangler outputs the URL (e.g., `https://wiki-abc.pages.dev`). Note this URL.
+
+### 10. Update site URL and redeploy
+Edit `astro.config.mjs`:
+```javascript
+site: 'https://[your-url].pages.dev',
+```
+
+Then rebuild and deploy:
+```bash
+pnpm build
+git add -A && git commit -m "[update] Set site URL" && git push
+npx wrangler pages deploy dist --project-name [wiki]
+```
+
+### 11. Save config
+```bash
+mkdir -p ~/.mainbranch
+cat > ~/.mainbranch/wiki.json << 'EOF'
+{
+  "wiki_repo": "/absolute/path/to/wiki",
+  "hosting": "cloudflare",
+  "domain": "your-url.pages.dev",
+  "cf_project": "wiki"
+}
+EOF
+```
+
+### 12. Ask: Set up auto-deploy?
+
+Prompt user: "Would you like to set up auto-deploy so `git push` automatically deploys your wiki?"
+
+**If yes:** Guide through Cloudflare dashboard:
+1. Open https://dash.cloudflare.com
+2. Workers & Pages → click project name
+3. Settings tab → Builds & deployments
+4. Click "Connect to Git"
+5. Authorize GitHub if prompted
+6. Select the wiki repository
+7. Build settings:
+   - Build command: `pnpm build`
+   - Build output directory: `dist`
+8. Save
+
+After setup, every `git push` triggers automatic deploy (~90 seconds).
+
+**If no:** Remind user they can deploy manually anytime with:
+```bash
+pnpm build && npx wrangler pages deploy dist --project-name [wiki]
+```
+
+**Exit:** "Wiki deployed at https://[url].pages.dev! Run `/wiki configure` to personalize (name, avatar, social links, etc.)"
 
 ---
 
@@ -213,14 +317,10 @@ Personalize your wiki after setup. All customization in one place.
 |---------|----------|---------|
 | Display name | Yes | — |
 | Short name (mobile) | No | First word of display name |
-| Tagline | No | `{display name}'s Notes` |
 | Avatar image | No | drag & drop to replace |
 | Twitter/X handle | No | skip |
 | GitHub username | No | skip |
 | Website URLs | No | skip (comma-separated) |
-| Welcome page title | No | `Welcome` |
-| Welcome heading | No | `Welcome to my wiki` |
-| Welcome intro | No | Based on tagline |
 | Custom domain | No | keep current |
 | Delete sample notes | No | keep samples |
 
@@ -229,10 +329,11 @@ Personalize your wiki after setup. All customization in one place.
 2. Show current settings, ask what to change
 3. Update files based on selections:
    - `src/components/Header.astro` — display name, short name, avatar alt
-   - `src/pages/index.astro` — meta author, structured data, tagline
+   - `src/components/Footer.astro` — update "Powered by Commune" link to `https://devonmeadows.com/` (external, target="_blank")
+   - `src/pages/index.astro` — meta author, structured data
    - `src/pages/notes/[...slug].astro` — author meta
    - `src/pages/research/[...slug].astro` — footer attribution
-   - `src/content/notes/my-working-notes.md` — welcome page content
+   - `src/content/notes/my-working-notes.md` — social links
    - `astro.config.mjs` — site URL (if domain changed)
    - Replace any "Devon Meadows" references with user's name
 
@@ -240,8 +341,18 @@ Personalize your wiki after setup. All customization in one place.
    - Prompt: "Drag and drop your avatar image here (or paste path):"
    - User drags image into terminal → path is pasted
    - Copy to wiki: `cp "[path]" "$WIKI_REPO/public/avatar.jpg"`
+   - Generate favicon from avatar (uses sharp, already a dependency):
+     ```bash
+     cd "$WIKI_REPO" && node -e "
+       const sharp = require('sharp');
+       sharp('public/avatar.jpg')
+         .resize(32, 32)
+         .png()
+         .toFile('public/favicon-32x32.png');
+     "
+     ```
    - Supported formats: .jpg, .png, .webp (rename to avatar.jpg)
-   - Recommended: 200x200px square crop
+   - Recommended: square image (will be cropped/resized)
 
 5. **If custom domain requested:**
    - Guide through Cloudflare custom domain setup
@@ -253,7 +364,7 @@ Personalize your wiki after setup. All customization in one place.
    rm -f src/content/notes/*.md
    rm -f src/content/updates/*.md
    ```
-   Then create fresh `my-working-notes.md` with user's welcome content.
+   Then create fresh `my-working-notes.md` with default welcome content and social links.
 
 7. Rebuild and push: `pnpm build && git add -A && git commit -m "[configure] Personalize wiki" && git push`
 
@@ -355,6 +466,33 @@ Live at: https://yourdomain.com
 
 **"No wiki configured"**
 Run `/wiki setup` first.
+
+**Build failing on Windows with path error (`C:\C:\Users\...`)**
+The `astro.backlinks.ts` file needs a Windows path fix. Add this import:
+```javascript
+import { fileURLToPath } from 'node:url';
+```
+And change:
+```javascript
+// Before
+const distPath = path.join(dir.pathname, 'backlinks.json');
+// After
+const distPath = path.join(fileURLToPath(dir), 'backlinks.json');
+```
+
+**Build failing with sitemap "reduce" error**
+Temporarily disable sitemap in `astro.config.mjs`:
+```javascript
+integrations: [
+  tailwind({ applyBaseStyles: false }),
+  backlinks(),
+  // sitemap({ ... }),  // Comment out temporarily
+],
+```
+Re-enable after first successful deploy.
+
+**"Not logged in" with wrangler**
+Run `npx wrangler login` — opens browser for Cloudflare OAuth. You can create a free account during this flow.
 
 **Build failing**
 - Check build command is `pnpm build` (not `npm run build`)
