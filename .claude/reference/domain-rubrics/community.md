@@ -177,6 +177,41 @@ Skool uses "Classroom" with Modules → Lessons hierarchy.
 
 ---
 
+## Skool Analytics Reference
+
+When mining performance data, Skool's dashboard (Settings → Dashboard) provides:
+
+### Core Metrics (header row)
+
+| Metric | What It Measures |
+|--------|------------------|
+| **Members** | Total active paying members |
+| **MRR** | Monthly recurring revenue |
+| **Conversion** | About page visitor → member (30-day) |
+| **Retention** | MRR retained month-over-month |
+
+### Dashboard Tabs
+
+| Tab | What It Shows |
+|-----|---------------|
+| **Members** | Monthly breakdown: New, Existing, Churn |
+| **MRR** | Monthly breakdown: New, Upgrades, Existing, Downgrades, Churn |
+| **Unit Economics** | ARPU (average revenue per user), LTV (lifetime value) |
+| **Cashflow** | One-time payments, subscriptions, affiliates, refunds |
+| **About Page** | Daily visitors and conversion rate |
+| **Free Trials** | Trial starts, conversions, churn |
+| **Cohorts** | Retention heatmap by signup month |
+
+### Mining Suggestions
+
+When running `/think` to analyze Skool performance:
+- Screenshot the Dashboard header (Members, MRR, Conversion, Retention)
+- Screenshot the Members tab (shows churn trends)
+- Screenshot the Cohorts tab (shows retention by signup month)
+- Compare to previous mining research files for trends
+
+---
+
 ## Skills That Use This Domain
 
 | Skill | What It Reads |
@@ -186,5 +221,5 @@ Skool uses "Classroom" with Modules → Lessons hierarchy.
 
 ---
 
-*Rubric version: 1.0*
-*Last updated: 2026-01-16*
+*Rubric version: 1.1*
+*Last updated: 2026-01-23*
