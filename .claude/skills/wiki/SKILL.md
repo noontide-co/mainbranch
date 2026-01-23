@@ -157,8 +157,8 @@ Create a new atomic note following evergreen note principles.
 6. Suggest WikiLinks: `grep -r "concept" "$WIKI_REPO/src/content/notes/" --include="*.md" -l`
 
 **Frontmatter validation:**
-- Valid `status` values: `seed`, `growing`, `evergreen`
-- Do NOT use `draft` — causes Astro build failure
+- Valid `status` values: `draft`, `live`, `updated`
+- Valid `visibility` values: `public`, `private`, `draft`
 
 **Exit:** "Note created. Run `/wiki publish` to deploy, or continue editing."
 

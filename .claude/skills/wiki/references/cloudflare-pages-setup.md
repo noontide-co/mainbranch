@@ -164,4 +164,4 @@ Delete project (Settings → Delete), recreate via this flow.
 **Build failing?**
 - Check Build command is `pnpm build` (not `npm run build`)
 - Check Build output directory is `dist` (not `public` or `/`)
-- Check for frontmatter errors — `status` must be `seed`, `growing`, or `evergreen` (not `draft`)
+- Check for frontmatter errors — `status` must be `draft`, `live`, or `updated`
