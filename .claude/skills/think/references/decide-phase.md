@@ -108,6 +108,26 @@ Other actions:
 
 **Be specific:** "Update offer.md" is bad. "Update offer.md — Add 30-day guarantee section after pricing" is good.
 
+### Claude Tasks for Execution
+
+After listing action items, create Claude tasks to track execution:
+
+```
+TaskCreate: "Update offer.md with guarantee section"
+TaskCreate: "Create risk-reversal.md angle file"
+TaskCreate: "Update voice.md vocabulary"
+```
+
+This gives you:
+- Spinner showing current work ("Updating offer.md...")
+- Progress tracking via `TaskList`
+- Clear completion markers
+
+As you complete each item, mark the task complete:
+```
+TaskUpdate: taskId=1, status=completed
+```
+
 ---
 
 ## Decisions as Task Anchors

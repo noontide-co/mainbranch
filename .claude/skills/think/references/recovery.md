@@ -21,16 +21,26 @@ That's it. The skill handles the rest.
 
 When resuming a `/think` session:
 
-### 1. Check Recent Files
+### 1. Check Multiple Sources
 
-Look for context in the user's repo:
+**Claude tasks (current session):**
+```
+TaskList
+```
+Shows any in-progress tasks from this session.
 
+**Recent files in user's repo:**
 ```bash
 # Recent research files
 ls -lt research/*.md 2>/dev/null | head -5
 
 # In-progress decisions
 grep -l "status: proposed\|status: accepted" decisions/*.md 2>/dev/null
+```
+
+**GitHub issues (if using):**
+```bash
+gh issue list --assignee @me --state open --limit 5
 ```
 
 ### 2. Read Relevant File(s)

@@ -79,7 +79,9 @@ Every research output needs:
 
 Present options with pros/cons. Document choice and rationale.
 
-### 6. Action Items
+### 6. Action Items + Tasks
+
+List action items in the decision file AND create Claude tasks:
 
 ```markdown
 ## Action Items
@@ -87,9 +89,22 @@ Present options with pros/cons. Document choice and rationale.
 - [ ] Create reference/proof/angles/risk-reversal.md
 ```
 
+**Create tasks for execution tracking:**
+```
+TaskCreate: "Update offer.md with guarantee section"
+TaskCreate: "Create risk-reversal.md angle file"
+```
+
+Tasks provide:
+- Spinner showing current work
+- Dependencies between items
+- Session-level progress tracking
+
 ### 7. Checkpoint
 
 > "Ready to update reference files now, or save for later?"
+>
+> "I've created tasks for each action item. Want to work through them now?"
 
 ### 8. Codify
 
@@ -133,25 +148,60 @@ See [references/codify-phase.md](references/codify-phase.md) for full workflow.
 
 ---
 
-## Decisions as Task Anchors
+## Task Tracking Layers
 
-For substantial work, create decision file early with `status: proposed`. The file becomes your task tracker:
+Three levels of task tracking, each with a purpose:
+
+| Layer | Scope | Persists | Use For |
+|-------|-------|----------|---------|
+| **Claude tasks** | Current session | Session | Execution tracking, spinners |
+| **Decision files** | Project | Forever | Rationale, anchor for work |
+| **GitHub issues** | Roadmap | Forever | Cross-session, team visibility |
+
+### Decision Files as Anchors
+
+For substantial work, create decision file early with `status: proposed`:
 
 1. `proposed` - Drafted, exploring
 2. `accepted` - Decision made
 3. `codified` - Applied to reference files
 
-Check `decisions/` to see where you left off.
+### Claude Tasks for Execution
+
+When a decision has action items, create Claude tasks:
+- Use `TaskCreate` for each action item
+- Use `TaskUpdate` to mark progress
+- Use `TaskList` to see what's left
+
+### GitHub Issues for Roadmap
+
+For work that spans sessions or needs team visibility:
+- Create issue: `gh issue create --repo [repo] --title "..." --body "..."`
+- Link to decision file in issue body
+- Close issue when decision is codified
+
+Check `decisions/` and `TaskList` to see where you left off.
 
 ---
 
 ## Recovery
 
-If conversation compacted, check recent files:
+If conversation compacted, check multiple sources:
 
+**1. Claude tasks (current session):**
+```
+TaskList
+```
+
+**2. Recent files:**
 ```bash
 ls -lt research/*.md 2>/dev/null | head -5
 grep -l "status: proposed\|status: accepted" decisions/*.md 2>/dev/null
+```
+
+**3. GitHub issues (if using):**
+```bash
+gh issue list --assignee @me --state open
 ```
 
 Then confirm: "I see you were working on [topic]. Continue from here?"
