@@ -213,18 +213,51 @@ Create `.vip/config.yaml` with user preferences:
 
 version: 1
 
+# === USER ===
 user:
   name: "[User's name]"
-  experience: beginner  # Will upgrade as they learn
+  experience: beginner  # beginner | intermediate | advanced
 
+# === SESSION ===
 session:
   auto_load_reference: true
-  show_context_tips: true
+  show_context_tips: true  # Context management tips for beginners
   warn_at_context_pct: 75
 
+# === INFRASTRUCTURE ===
+# Populated when services are connected
+infrastructure:
+  railway:
+    project_id: null
+  postiz:
+    api_url: null
+    api_key_ref: null  # keychain:vip/postiz or env:POSTIZ_API_KEY
+  r2:
+    bucket: null
+    public_url: null
+
+# === MCP SERVERS ===
+# Track which MCPs this business needs
+# /start verifies these are installed, prompts setup if missing
+mcps:
+  apify:
+    required_for: [content]
+    setup_guide: ".claude/skills/content/references/apify-setup.md"
+  youtube-transcript:
+    required_for: [content, think]
+    setup_guide: null  # No special setup needed
+
+# === CONTENT ===
 content:
   default_channels: []
   require_review: true
+
+# === SKILL PREFERENCES ===
+skills:
+  ads:
+    default_format: static
+  think:
+    auto_create_tasks: false
 ```
 
 ### 4b. Create .gitignore
