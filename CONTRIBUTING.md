@@ -18,22 +18,18 @@ Main Branch Premium is a **private repository** for VIP members. To contribute:
 
 ## How to Contribute
 
-### 1. Fork the Repository
+### 1. Create an Issue First (Required)
 
-Click "Fork" on GitHub to create your own copy.
+**Every branch must start from a GitHub issue.** This keeps work tracked and linked.
 
-### 2. Create a Branch
+1. Go to [Issues](https://github.com/mainbranch-ai/vip/issues)
+2. Create a new issue describing what you want to do
+3. Use the **"Create a branch"** button on the issue (right sidebar)
+4. GitHub auto-links the branch to the issue
 
-```bash
-git checkout -b feature/your-improvement
-```
+**Why?** Branch names like `42-add-notion-export-skill` automatically link to issue #42. PRs that merge the branch can auto-close the issue.
 
-Name it something descriptive:
-- `feature/new-skill-name`
-- `fix/setup-typo`
-- `improve/ads-review-lens`
-
-### 3. Make Your Changes
+### 2. Make Your Changes
 
 Follow the existing patterns:
 - Skills go in `.claude/skills/`
@@ -41,14 +37,41 @@ Follow the existing patterns:
 - Use `references/` for detailed docs
 - Test your changes before submitting
 
+**Commit convention:** `[type] Brief description`
+- `[add]` - New feature
+- `[update]` - Enhancement to existing feature
+- `[fix]` - Bug fix
+- `[remove]` - Removal
+- `[refactor]` - Code restructure without behavior change
+
+### 3. Run Regression Tests (Admins)
+
+Before opening a PR, admins should run:
+
+```bash
+bash ~/.claude/skills/test-skills/test-skills.sh
+```
+
+All 54 tests must pass. If tests fail after refactoring, you may have removed critical content.
+
 ### 4. Open a Pull Request
 
 Push your branch and open a PR against `main`.
 
-Include:
-- What you changed
-- Why it helps
-- How you tested it
+**PR checklist:**
+- [ ] Issue linked (happens automatically if you used "Create a branch")
+- [ ] Regression tests pass (admins)
+- [ ] Description explains what changed and why
+- [ ] Tested the changes work as expected
+
+**Post test results as PR comment:**
+```bash
+gh pr comment [PR#] --body "## Test Results
+
+54/54 passed
+
+[paste output]"
+```
 
 ---
 
@@ -82,12 +105,54 @@ We recognize contributors based on impact:
 
 ---
 
+## Skills: Shared vs Admin
+
+There are two skill locations:
+
+| Location | Who | What |
+|----------|-----|------|
+| `vip/.claude/skills/` | Everyone | Shared skills (`/ads`, `/think`, `/start`, etc.) |
+| `noontide-projects/.claude/skills/` | Admins only | Admin tools (`/test-skills`, `/skill-creator`) |
+
+**Shared skills** go through PR review. **Admin skills** are managed by Devon, Joe, and core contributors.
+
+### Becoming an Admin
+
+Admins have access to:
+- `noontide-projects` repo (admin skills with git history)
+- Regression test suite
+- Direct merge permissions
+
+To become an admin: demonstrate consistent contributions and deep system understanding.
+
+---
+
 ## Code Style
 
 - Follow existing patterns in the codebase
 - Keep skills beginner-friendly
 - Use clear, simple language
 - Document the "why" not just the "what"
+
+### Skill Structure
+
+```
+.claude/skills/my-skill/
+├── SKILL.md              # Main file (under 500 lines)
+└── references/           # Detailed docs, examples, templates
+    ├── getting-started.md
+    └── advanced.md
+```
+
+**Keep in SKILL.md:**
+- Core workflow and philosophy
+- Quick reference tables
+- Essential commands
+
+**Move to references:**
+- Detailed implementation steps
+- Edge cases and troubleshooting
+- Long examples
 
 ---
 
