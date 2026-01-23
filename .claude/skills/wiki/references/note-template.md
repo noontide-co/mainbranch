@@ -57,18 +57,6 @@ Links create **associative connections**, not hierarchies.
 
 ---
 
-## Word Count Targets
-
-| Status | Target | Max | Description |
-|--------|--------|-----|-------------|
-| **seed** | 50-150 | 200 | Rough capture, needs work |
-| **growing** | 100-200 | 300 | Being developed, iterating |
-| **evergreen** | 150-250 | 350 | Stable, refined, heavily linked |
-
-Only exceed 350 words with explicit justification.
-
----
-
 ## Frontmatter Template
 
 ```yaml
@@ -76,7 +64,7 @@ Only exceed 350 words with explicit justification.
 title: "Note Title as Concept Statement"
 created: 2026-01-21
 visibility: public
-status: seed | growing | evergreen
+status: draft | live | updated
 summary: "1-2 sentence summary for previews and hover cards"
 tags: [topic1, topic2]
 aliases: ["alternative name", "shorthand"]
@@ -87,7 +75,7 @@ aliases: ["alternative name", "shorthand"]
 - `title` — Concept-oriented statement
 - `created` — Date created
 - `visibility` — public, private, or draft
-- `status` — seed, growing, or evergreen
+- `status` — draft, live, or updated
 - `summary` — 1-2 sentences for previews
 
 **Optional fields:**
@@ -167,7 +155,7 @@ Write like yourself, not like generic AI.
 title: "Externalizing thought builds cognitive scaffold"
 created: 2026-01-21
 visibility: public
-status: evergreen
+status: live
 summary: "Writing ideas down frees working memory and reveals gaps in thinking."
 tags: [thinking, writing, cognition]
 ---
@@ -189,14 +177,13 @@ The best thinkers aren't those with better memories—they're those who external
 
 ## Quality Checklist
 
-Before marking note as `evergreen`:
+Before marking note as `live`:
 
 - [ ] Title is concept-oriented (not event-based or vague)
 - [ ] Content is atomic — one complete idea
-- [ ] Word count is 150-250 words (max 350 with justification)
 - [ ] Minimum 3 WikiLinks included
 - [ ] Link density ~1 per 30-50 words
 - [ ] Summary field is 1-2 sentences
 - [ ] No preamble — opens with core claim
 - [ ] Voice is direct, not generic AI
-- [ ] Status reflects actual state (seed → growing → evergreen)
+- [ ] Status reflects actual state (draft → live → updated)

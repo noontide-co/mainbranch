@@ -1,141 +1,106 @@
 # Cloudflare Pages Setup
 
-One-time setup for auto-deploy. After this, every `git push` deploys automatically.
+Deploy your wiki to Cloudflare Pages with Git-connected auto-deploy.
 
 **Stuck?** Drag a screenshot into chat for help.
 
 ---
 
-## What's a CLI?
+## Create Git-Connected Project (Recommended)
 
-CLI = Command Line Interface. It's the terminal/command prompt where you type commands.
+This method enables auto-deploy — every `git push` automatically deploys.
 
-**UI (dashboard)** = Click buttons in a browser
-**CLI (terminal)** = Type commands like `git push`
+### 1. Open Cloudflare Dashboard
 
-After this one-time UI setup, you'll work entirely in the CLI. That's where I can help you directly — no more dashboard needed.
+Go to https://dash.cloudflare.com (create free account if needed)
 
----
+### 2. Navigate to Workers & Pages
 
-## Quick Path
+Left sidebar: **Workers & Pages**
 
-```
-Workers & Pages → Create application → "Looking to deploy Pages? Get started" (bottom link!)
-→ Import an existing Git repository → Select repo → Fill build settings → Save and Deploy
-```
+### 3. Create Application
 
----
+Click **"Create application"** (blue button, top right)
 
-## Step-by-Step
+### 4. Choose Pages (NOT Workers!)
 
-### 1. Navigate to Pages
+⚠️ **IMPORTANT:** The default screen shows Workers. Look for the small link at the **BOTTOM**:
 
-Left sidebar: **Build** → **Compute & AI** → **Workers & Pages**
-
-### 2. Create Application
-
-Click **"Create application"** (blue, top right)
-
-**CRITICAL:** Default screen is Workers. Look for small link at bottom:
 > "Looking to deploy Pages? **Get started**"
 
-Click **"Get started"** to switch to Pages flow.
+Click **"Get started"** to switch to Pages.
 
-### 3. Choose Import Method
+### 5. Connect to Git
 
-Select: **"Import an existing Git repository"** → **Get started**
+Select **"Connect to Git"** → **Get started**
 
-### 4. Connect GitHub
+### 6. Authorize GitHub
 
-- Click **GitHub** tab
-- Select your GitHub account from dropdown
-- Find and click your wiki repo (e.g., `devon-wiki`)
-- Click **"Begin setup"**
+- Click **"Connect GitHub"** if first time
+- Authorize Cloudflare to access your GitHub
+- Choose **"Only select repositories"** and pick your wiki repo
+- Click **"Install & Authorize"**
 
-*Repo not showing? Click "configure repository access for the Cloudflare Pages app on GitHub"*
+If already connected, just select your wiki repo and click **"Begin setup"**
 
-### 5. Build Settings
+### 7. Configure Build Settings
 
 | Field | Value |
 |-------|-------|
-| Project name | (auto-filled from repo) |
+| Project name | `wiki` (or preferred name) |
 | Production branch | `main` |
-| Framework preset | `Astro` or `None` |
-| **Build command** | `pnpm build` |
-| **Build output directory** | `dist` |
+| Build command | `pnpm build` |
+| Build output directory | `dist` |
 
-Advanced settings (optional, leave defaults):
-- Root directory: `/`
-- Environment variables: none needed
-
-### 6. Deploy
+### 8. Deploy
 
 Click **"Save and Deploy"**
 
-First build takes ~1-2 minutes. Watch progress on screen.
-
-**Build stages you'll see:**
-1. Initializing build environment
-2. Cloning git repository
-3. Building application
-4. Deploying to Cloudflare's global network
-
-**Success screen shows:**
-- "Your project is deployed to Region: Earth"
-- Link to your site: `[project-name].pages.dev`
-- Next steps (you can ignore these)
+First build takes ~1-2 minutes. Success screen shows your URL (e.g., `wiki-abc.pages.dev`).
 
 ---
 
-## You're Done with the Dashboard!
+## After Setup
 
-Once you see the success screen, **you never need to open this dashboard again**.
+Every `git push` to main automatically deploys (~90 seconds).
 
-From now on:
-- Edit files locally
-- `git add . && git commit -m "message" && git push`
-- Cloudflare automatically rebuilds and deploys
-
-I can help you with everything from the terminal now. The dashboard was just the one-time connection step.
+No need for manual deploys or wrangler CLI.
 
 ---
 
 ## Custom Domain (Optional)
 
-Skip this if you're fine with `[project].pages.dev` for now.
+### Domain already on Cloudflare?
 
-### Check: Is your domain already on Cloudflare?
-
-Go to Account home → Domains. Is your domain listed there?
-
-**YES → Easy path:**
 1. Workers & Pages → your project → **Custom domains** tab
 2. **"Set up a custom domain"**
-3. Enter your domain
-4. CF auto-configures DNS — done!
+3. Enter your domain — CF auto-configures DNS
 
-**NO → Two options:**
+### Domain not on Cloudflare?
 
 *Option 1: Add domain to Cloudflare (recommended)*
 1. Account home → Domains → **"Onboard a domain"**
-2. Enter your domain, follow steps to change nameservers at your registrar
+2. Change nameservers at your registrar
 3. Wait for DNS propagation (up to 24-48 hours)
-4. Then follow "YES" path above
+4. Then add custom domain above
 
-*Option 2: Keep domain external*
-- Manually add CNAME record at your registrar pointing to `[project].pages.dev`
-- Less integrated, SSL may have issues
+*Option 2: External domain*
+- Add CNAME record at registrar pointing to `[project].pages.dev`
 
 ---
 
 ## Common Issues
 
-**Ended up in Workers flow?**
-Look for "Looking to deploy Pages? Get started" link at bottom. Easy to miss.
+**Created a Worker instead of a Page?**
+Delete it (Settings → Delete) and start over. Make sure to click "Pages: Get started" link.
 
-**Direct upload project can't add Git?**
-Delete project (Settings → Delete), recreate via this flow.
+**Repo not showing?**
+Click "configure repository access for the Cloudflare Pages app on GitHub" and add your repo.
 
 **Build failing?**
-Check Build command is `pnpm build` (not `npm run build`).
-Check Build output directory is `dist` (not `public` or `/`).
+- Build command must be `pnpm build`
+- Output directory must be `dist`
+- Check for frontmatter errors in notes
+
+**Build failing with path error on Windows?**
+The `astro.backlinks.ts` needs a fix. See Troubleshooting in main skill file.
