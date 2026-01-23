@@ -3,14 +3,14 @@ name: wiki
 description: |
   Create and maintain personal wikis using Commune Wiki architecture. Use when:
   (1) Setting up a new wiki from the commune-wiki template
-  (2) Adding atomic notes with proper frontmatter and WikiLinks
-  (3) Publishing changes (git commit + push for auto-deploy)
-  (4) Converting Gemini/GPT deep research into wiki format
-  (5) Pulling upstream template updates from Devon
-  (6) Generating "Recent Updates" notes from Git history
-  (7) Adding a custom domain after initial setup
+  (2) Personalizing wiki (name, avatar, social links, domain)
+  (3) Adding atomic notes with proper frontmatter and WikiLinks
+  (4) Publishing changes (git commit + push for auto-deploy)
+  (5) Converting Gemini/GPT deep research into wiki format
+  (6) Pulling upstream template updates from Devon
+  (7) Generating "Recent Updates" notes from Git history
 
-  Triggered by: /wiki, "add a note", "publish wiki", "create wiki", "update my wiki template", "add domain to wiki"
+  Triggered by: /wiki, "add a note", "publish wiki", "create wiki", "configure wiki", "personalize wiki"
 ---
 
 # Wiki Skill
@@ -65,85 +65,50 @@ cat ~/.mainbranch/wiki.json 2>/dev/null || echo "No wiki configured yet"
 
 | Mode | What It Does | When to Use |
 |------|--------------|-------------|
-| `setup` | Clone template, configure, deploy to CF Pages | First time |
+| `setup` | Clone template, deploy to CF Pages | First time (quick) |
+| `configure` | Personalize wiki (name, social, domain, etc.) | After setup |
 | `add` | Create atomic note with frontmatter | Daily note-taking |
 | `publish` | Git commit + push (auto-deploy) | After any changes |
 | `research` | Convert Gemini/GPT research to wiki | After deep research |
 | `update` | Pull upstream template changes | When fixes released |
 | `recent` | Generate "Recent Updates" from Git | Weekly or on threshold |
-| `domain-setup` | Add custom domain to existing wiki | After initial setup |
 
 ---
 
 ## Mode: setup
 
-First-time wiki setup. Creates repo, configures hosting, deploys.
+Quick first-time wiki setup. Installs default template and deploys. Run `/wiki configure` after to personalize.
 
 **Steps:**
-1. Create GitHub repo: `gh repo create [user]/[wiki] --private --clone`
-2. Add upstream: `git remote add upstream https://github.com/noontide-co/commune-wiki.git`
-3. Merge template: `git fetch upstream && git merge upstream/main --allow-unrelated-histories`
-4. **Personalize wiki** — prompt user for:
-
-   | Prompt | Required | Default |
-   |--------|----------|---------|
-   | Display name | Yes | — |
-   | Short name (mobile) | No | First word of display name |
-   | Tagline | No | `{display name}'s Notes` |
-   | Twitter/X handle | No | skip |
-   | GitHub username | No | skip |
-   | Website URLs | No | skip (comma-separated) |
-   | Welcome page title | No | `Welcome` |
-   | Welcome heading | No | `Welcome to my wiki` |
-   | Welcome intro | No | Based on tagline |
-
-   Update template files with user's info:
-   - `src/config.ts` or `astro.config.mjs` — name, tagline, social links
-   - `src/components/Header.astro` — brand name
-   - `src/pages/index.astro` — meta author, structured data
-   - `src/content/notes/my-working-notes.md` — welcome page content
-   - Replace any hardcoded "Devon Meadows" references
-
-   **Replace avatar with generic placeholder:**
-   - Delete `public/avatar.jpg` (Devon's photo)
-   - Create initials-based or generic placeholder, OR
-   - Leave avatar.jpg as a simple placeholder icon
-   - User can replace later (see `references/customization.md`)
-
-5. **Clean install option** — ask:
-   > "Include sample notes? (recommended for first-time users) [Y/n]"
-
-   If declined:
-   ```bash
-   rm -f src/content/notes/*.md
-   rm -f src/content/updates/*.md
-   ```
-
-   **Update footer link** (always, for clean install):
+1. Ask: Repo name? Location?
+2. Create GitHub repo: `gh repo create [user]/[wiki] --private --clone`
+3. Add upstream: `git remote add upstream https://github.com/noontide-co/commune-wiki.git`
+4. Merge template: `git fetch upstream && git merge upstream/main --allow-unrelated-histories`
+5. **Update footer link:**
    - Change `src/components/Footer.astro` "Powered by Commune" link
-   - From: `/notes/what-is-commune/`
    - To: `https://devonmeadows.com/` (external, target="_blank")
-
-6. Configure domain in `astro.config.mjs`
-7. Install and test: `pnpm install && pnpm dev`
-8. Deploy to Cloudflare Pages — see [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md)
+6. Ask: Domain? (use `[project].pages.dev` or custom)
+7. Update `astro.config.mjs` with site URL
+8. Install and build: `pnpm install && pnpm build`
+9. Deploy to Cloudflare Pages — see [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md)
 
    **First-time GitHub app install:** If you've never connected Cloudflare to GitHub, you'll need to install the Cloudflare Pages GitHub app first. See the reference for details.
 
-9. Save config:
-   ```bash
-   mkdir -p ~/.mainbranch
-   cat > ~/.mainbranch/wiki.json << 'EOF'
-   {
-     "wiki_repo": "/path/to/wiki",
-     "hosting": "cloudflare",
-     "domain": "yourdomain.com",
-     "cf_project": "your-project-name"
-   }
-   EOF
-   ```
+10. Commit and push: `git add -A && git commit -m "Initial wiki setup" && git push`
+11. Save config:
+    ```bash
+    mkdir -p ~/.mainbranch
+    cat > ~/.mainbranch/wiki.json << 'EOF'
+    {
+      "wiki_repo": "/path/to/wiki",
+      "hosting": "cloudflare",
+      "domain": "yourdomain.com",
+      "cf_project": "your-project-name"
+    }
+    EOF
+    ```
 
-**Exit:** Config saved, wiki live at user's domain. See [references/customization.md](references/customization.md) for how to update settings later.
+**Exit:** "Wiki deployed! Run `/wiki configure` to personalize (name, avatar, social links, etc.)"
 
 ---
 
@@ -236,29 +201,57 @@ Generate "Recent Updates" note from Git history.
 
 ---
 
-## Mode: domain-setup
+## Mode: configure
 
-Add a custom domain to an existing wiki. Use this if you skipped custom domain during initial setup.
+Personalize your wiki after setup. All customization in one place.
 
-**Usage:** `/wiki domain-setup`
+**Usage:** `/wiki configure`
+
+**Prompts:**
+
+| Setting | Required | Default |
+|---------|----------|---------|
+| Display name | Yes | — |
+| Short name (mobile) | No | First word of display name |
+| Tagline | No | `{display name}'s Notes` |
+| Twitter/X handle | No | skip |
+| GitHub username | No | skip |
+| Website URLs | No | skip (comma-separated) |
+| Welcome page title | No | `Welcome` |
+| Welcome heading | No | `Welcome to my wiki` |
+| Welcome intro | No | Based on tagline |
+| Custom domain | No | keep current |
+| Delete sample notes | No | keep samples |
 
 **Steps:**
 1. Read config: `cat ~/.mainbranch/wiki.json`
-2. Ask user for domain name
-3. Check if domain is already on Cloudflare:
-   - **YES:** Workers & Pages → project → Custom domains → Set up a custom domain → Enter domain
-   - **NO:** Guide user to either:
-     - Add domain to Cloudflare (Account home → Domains → Onboard) then configure, OR
-     - Add CNAME record at registrar pointing to `[project].pages.dev`
-4. Update config with new domain:
+2. Show current settings, ask what to change
+3. Update files based on selections:
+   - `src/components/Header.astro` — display name, short name, avatar alt
+   - `src/pages/index.astro` — meta author, structured data, tagline
+   - `src/pages/notes/[...slug].astro` — author meta
+   - `src/pages/research/[...slug].astro` — footer attribution
+   - `src/content/notes/my-working-notes.md` — welcome page content
+   - `astro.config.mjs` — site URL (if domain changed)
+   - Replace any "Devon Meadows" references with user's name
+
+4. **If custom domain requested:**
+   - Guide through Cloudflare custom domain setup
+   - See [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md)
+   - Update config with new domain
+
+5. **If delete sample notes:**
    ```bash
-   jq '.domain = "newdomain.com"' ~/.mainbranch/wiki.json > tmp && mv tmp ~/.mainbranch/wiki.json
+   rm -f src/content/notes/*.md
+   rm -f src/content/updates/*.md
    ```
-5. Update `astro.config.mjs` site URL if needed
+   Then create fresh `my-working-notes.md` with user's welcome content.
 
-See [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md) for detailed dashboard steps.
+6. Rebuild and push: `pnpm build && git add -A && git commit -m "[configure] Personalize wiki" && git push`
 
-**Exit:** "Custom domain configured. DNS may take up to 24-48 hours to propagate."
+**Exit:** "Wiki personalized! Changes will deploy in ~90 seconds."
+
+See [references/customization.md](references/customization.md) for manual edits.
 
 ---
 
