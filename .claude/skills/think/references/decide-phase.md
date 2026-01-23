@@ -108,25 +108,18 @@ Other actions:
 
 **Be specific:** "Update offer.md" is bad. "Update offer.md — Add 30-day guarantee section after pricing" is good.
 
-### Claude Tasks for Execution
+### Claude Tasks for Execution (Optional)
 
-After listing action items, create Claude tasks to track execution:
+For complex action items, optionally create Claude tasks for execution tracking:
 
 ```
 TaskCreate: "Update offer.md with guarantee section"
 TaskCreate: "Create risk-reversal.md angle file"
-TaskCreate: "Update voice.md vocabulary"
 ```
 
-This gives you:
-- Spinner showing current work ("Updating offer.md...")
-- Progress tracking via `TaskList`
-- Clear completion markers
+Tasks provide spinners, progress tracking via `TaskList`, and completion markers. Mark complete with `TaskUpdate: taskId=X, status=completed`.
 
-As you complete each item, mark the task complete:
-```
-TaskUpdate: taskId=1, status=completed
-```
+**Note:** Tasks are session-scoped and ephemeral. The decision file is the permanent anchor — tasks just help track execution within a session.
 
 ---
 
