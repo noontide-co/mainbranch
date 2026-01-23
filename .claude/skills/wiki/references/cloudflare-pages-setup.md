@@ -102,7 +102,7 @@ I can help you with everything from the terminal now. The dashboard was just the
 
 ## Custom Domain (Optional)
 
-Skip this if you're fine with `[project].pages.dev` for now.
+Skip this if you're fine with `[project].pages.dev` for now. **You can add a domain later anytime with `/wiki domain-setup`.**
 
 ### Check: Is your domain already on Cloudflare?
 

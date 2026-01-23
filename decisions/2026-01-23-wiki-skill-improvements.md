@@ -74,6 +74,14 @@ In `add` mode, mention valid status values:
 - Valid: `seed`, `growing`, `evergreen`
 - Invalid: `draft` (causes build failure)
 
+#### 5. Add `/wiki domain-setup` Mode
+
+New mode for adding custom domain after initial setup:
+- Reads existing config
+- Guides user through Cloudflare custom domain setup
+- Updates config and astro.config.mjs with new domain
+- References existing cloudflare-pages-setup.md for dashboard steps
+
 ### Deferred
 
 - **Avatar customization** — Adds complexity, users can manually edit
@@ -98,7 +106,9 @@ All changes align with skill-creator guidelines:
 - [ ] Update `.claude/skills/wiki/SKILL.md` setup mode with clean install option
 - [ ] Update `.claude/skills/wiki/SKILL.md` setup mode with CF warning
 - [ ] Update `.claude/skills/wiki/SKILL.md` add mode with frontmatter note
+- [x] Add `.claude/skills/wiki/SKILL.md` domain-setup mode
 - [ ] Update `.claude/skills/wiki/references/cloudflare-pages-setup.md` with stronger warnings
+- [x] Add note to CF reference about `/wiki domain-setup`
 - [ ] Test full setup flow after changes
 
 ## Approval

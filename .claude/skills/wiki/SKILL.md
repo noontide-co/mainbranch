@@ -8,8 +8,9 @@ description: |
   (4) Converting Gemini/GPT deep research into wiki format
   (5) Pulling upstream template updates from Devon
   (6) Generating "Recent Updates" notes from Git history
+  (7) Adding a custom domain after initial setup
 
-  Triggered by: /wiki, "add a note", "publish wiki", "create wiki", "update my wiki template"
+  Triggered by: /wiki, "add a note", "publish wiki", "create wiki", "update my wiki template", "add domain to wiki"
 ---
 
 # Wiki Skill
@@ -70,6 +71,7 @@ cat ~/.mainbranch/wiki.json 2>/dev/null || echo "No wiki configured yet"
 | `research` | Convert Gemini/GPT research to wiki | After deep research |
 | `update` | Pull upstream template changes | When fixes released |
 | `recent` | Generate "Recent Updates" from Git | Weekly or on threshold |
+| `domain-setup` | Add custom domain to existing wiki | After initial setup |
 
 ---
 
@@ -183,6 +185,32 @@ Generate "Recent Updates" note from Git history.
 2. Categorize: new notes, updated notes, research added
 3. Generate update note — see [references/updates-template.md](references/updates-template.md)
 4. Save to `src/content/updates/YYYY-MM-DD.md`
+
+---
+
+## Mode: domain-setup
+
+Add a custom domain to an existing wiki. Use this if you skipped custom domain during initial setup.
+
+**Usage:** `/wiki domain-setup`
+
+**Steps:**
+1. Read config: `cat ~/.mainbranch/wiki.json`
+2. Ask user for domain name
+3. Check if domain is already on Cloudflare:
+   - **YES:** Workers & Pages → project → Custom domains → Set up a custom domain → Enter domain
+   - **NO:** Guide user to either:
+     - Add domain to Cloudflare (Account home → Domains → Onboard) then configure, OR
+     - Add CNAME record at registrar pointing to `[project].pages.dev`
+4. Update config with new domain:
+   ```bash
+   jq '.domain = "newdomain.com"' ~/.mainbranch/wiki.json > tmp && mv tmp ~/.mainbranch/wiki.json
+   ```
+5. Update `astro.config.mjs` site URL if needed
+
+See [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md) for detailed dashboard steps.
+
+**Exit:** "Custom domain configured. DNS may take up to 24-48 hours to propagate."
 
 ---
 
