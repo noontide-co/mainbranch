@@ -82,6 +82,14 @@ New mode for adding custom domain after initial setup:
 - Updates config and astro.config.mjs with new domain
 - References existing cloudflare-pages-setup.md for dashboard steps
 
+#### 6. Add `/wiki deploy-status` Mode
+
+New mode for checking Cloudflare deployment status after publish:
+- Requires wrangler CLI (optional dependency, one-time setup)
+- Uses `wrangler pages deployment list` to show recent deployments
+- Shows status (Success, Failed, In Progress) with timestamp
+- Updated `/wiki publish` exit message to reference this command
+
 ### Deferred
 
 - **Avatar customization** — Adds complexity, users can manually edit
@@ -107,6 +115,8 @@ All changes align with skill-creator guidelines:
 - [ ] Update `.claude/skills/wiki/SKILL.md` setup mode with CF warning
 - [ ] Update `.claude/skills/wiki/SKILL.md` add mode with frontmatter note
 - [x] Add `.claude/skills/wiki/SKILL.md` domain-setup mode
+- [x] Add `.claude/skills/wiki/SKILL.md` deploy-status mode
+- [x] Update `/wiki publish` exit message to reference deploy-status
 - [ ] Update `.claude/skills/wiki/references/cloudflare-pages-setup.md` with stronger warnings
 - [x] Add note to CF reference about `/wiki domain-setup`
 - [ ] Test full setup flow after changes
