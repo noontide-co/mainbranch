@@ -55,18 +55,23 @@ ls .claude/skills/setup/SKILL.md 2>/dev/null
    cd ~/Documents/GitHub/[business-name] && git init
    ```
 
-3. **IMMEDIATELY save the path to user-level settings:**
+3. **IMMEDIATELY save the path to machine-local settings:**
 
-   This is critical — it ensures `/start` can find the business repo in future sessions.
+   This ensures `/start` can find the business repo in future sessions.
 
-   Create/update `~/.claude/settings.json` (user's home directory, outside any git repo):
-   ```json
-   {
-     "business_repo_path": "/Users/[username]/Documents/GitHub/[business-name]"
-   }
+   Create/update `~/.config/vip/local.yaml`:
+   ```bash
+   mkdir -p ~/.config/vip
    ```
 
-   Use the actual expanded path (not ~). This file lives outside vip, so it never causes git conflicts.
+   ```yaml
+   # ~/.config/vip/local.yaml
+   default_repo: /Users/[username]/Documents/GitHub/[business-name]
+   recent_repos:
+     - /Users/[username]/Documents/GitHub/[business-name]
+   ```
+
+   Use the actual expanded path (not ~). This file is machine-specific and NOT git-tracked.
 
 4. **Add it as a working directory:**
    ```
@@ -155,8 +160,9 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 ### 4. Create Folder Structure
 
 ```bash
+mkdir -p .vip
 mkdir -p reference/core reference/brand reference/proof/angles reference/domain
-mkdir -p research decisions outputs
+mkdir -p research decisions outputs content/drafts content/scheduled content/published
 ```
 
 Full structure:
@@ -164,6 +170,11 @@ Full structure:
 {business-name}/
 ├── CLAUDE.md              # Always loaded - business brain
 ├── README.md              # Human-readable overview
+├── .env                   # Secrets (gitignored)
+├── .gitignore             # Include .env
+│
+├── .vip/                  # VIP configuration (git-tracked)
+│   └── config.yaml        # User preferences, infrastructure refs
 │
 ├── reference/             # Evergreen truth
 │   ├── core/              # REQUIRED
@@ -182,8 +193,55 @@ Full structure:
 ├── decisions/             # Dated choices with rationale
 │   └── YYYY-MM-DD-topic.md
 │
-└── outputs/               # Generated content
+├── content/               # Content lifecycle
+│   ├── drafts/            # WIP content
+│   ├── scheduled/         # Queued for posting
+│   └── published/         # Archive
+│
+└── outputs/               # Generated assets
     └── YYYY-MM-DD-batch-name/
+```
+
+### 4a. Create Initial Config
+
+Create `.vip/config.yaml` with user preferences:
+
+```yaml
+# .vip/config.yaml
+# VIP configuration for this business
+# This file is git-tracked and syncs across machines
+
+version: 1
+
+user:
+  name: "[User's name]"
+  experience: beginner  # Will upgrade as they learn
+
+session:
+  auto_load_reference: true
+  show_context_tips: true
+  warn_at_context_pct: 75
+
+content:
+  default_channels: []
+  require_review: true
+```
+
+### 4b. Create .gitignore
+
+```bash
+cat > .gitignore << 'EOF'
+# Secrets
+.env
+*.env.local
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+EOF
 ```
 
 ### 5. Sort Content into Files

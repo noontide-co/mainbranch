@@ -48,20 +48,83 @@ When context is heavy, warn:
 
 ---
 
-## Config Check (If Available)
+## Config Check (Two-File System)
 
-Check for `~/.config/vip/config.yaml`:
+**Step 1: Check machine-local settings**
 
 ```bash
-cat ~/.config/vip/config.yaml 2>/dev/null
+cat ~/.config/vip/local.yaml 2>/dev/null
 ```
 
-If exists, use saved preferences:
-- `default_business_repo` → Skip repo discovery
-- `experience_level` → Adjust verbosity
-- `auto_load_reference` → Load core/ automatically
+This tells us which business repo is default on THIS machine:
+```yaml
+default_repo: ~/Documents/GitHub/my-business
+```
 
-If no config exists, that's fine — proceed with discovery flow.
+**Step 2: Load business repo config**
+
+If we have a repo path, load its config:
+```bash
+cat [repo]/.vip/config.yaml 2>/dev/null
+```
+
+This has all user preferences (synced via git):
+- `user.experience` → Adjust verbosity
+- `session.auto_load_reference` → Load core/ automatically
+- `infrastructure.*` → Connected services
+
+**If no local.yaml exists:** Check for old settings, then discovery flow.
+**If repo found but no .vip/config.yaml:** Offer to create it (migration).
+
+---
+
+## Migration Logic (Existing Users)
+
+Existing users may have:
+- Old `~/.claude/settings.json` with `business_repo_path`
+- Business repo WITHOUT `.vip/` folder
+
+### Step 1: Check for Old Settings
+
+```bash
+cat ~/.claude/settings.json 2>/dev/null | grep business_repo_path
+```
+
+If found:
+1. Extract the path
+2. Offer to migrate: "I found your business repo in old settings. Want me to set up the new config system? (faster startups, syncs across machines)"
+3. If yes:
+   - Create `~/.config/vip/local.yaml` with that path
+   - Continue to Step 2
+
+### Step 2: Check for Missing .vip/ in Repo
+
+Once we have a repo path (from local.yaml, old settings, or discovery):
+
+```bash
+ls [repo]/.vip/config.yaml 2>/dev/null
+```
+
+If `.vip/config.yaml` doesn't exist but repo has `reference/core/`:
+> "Your business repo exists but doesn't have VIP config yet. Want me to create it?
+> This enables: faster session starts, synced preferences across machines, infrastructure tracking."
+
+If user says yes:
+1. Create `.vip/config.yaml` with defaults
+2. Ask their experience level (beginner/intermediate/advanced)
+3. Save and continue
+
+If user says no:
+> "No problem. I'll use discovery mode. You can run `/setup upgrade` anytime to add config."
+
+### Migration is Non-Breaking
+
+| Scenario | What Happens |
+|----------|--------------|
+| New user, no repo | Normal /setup flow |
+| Existing user, no config | Discovery works, offered upgrade |
+| Existing user, accepts upgrade | Gets fast path going forward |
+| Existing user, declines upgrade | Works exactly as before |
 
 ---
 
@@ -82,7 +145,13 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │
 ├── Pull latest vip updates ──────────→ (always, silently)
 │
-├── Check config (~/.config/vip/) ────→ (skip discovery if configured)
+├── Check local.yaml ─────────────────→ (~/.config/vip/local.yaml)
+│   ├── Has default_repo? ────────────→ Load that repo
+│   └── No local.yaml? ───────────────→ Check old settings (migration)
+│       └── Has ~/.claude/settings.json? → Offer to migrate
+│
+├── Load repo's .vip/config.yaml ─────→ (user preferences)
+│   └── No .vip/config.yaml? ─────────→ Offer to create (upgrade)
 │
 ├── Load business repo ───────────────→ (from config OR discovery)
 │
