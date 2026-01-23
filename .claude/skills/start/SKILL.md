@@ -1,13 +1,67 @@
 ---
 name: start
-description: Main entry point for Main Branch. Detects user state and routes to the right skill. Use when: (1) User says "start", "help", "what can I do", "begin" (2) User is new, returning, lost, or confused (3) User opens vip without a specific task in mind (4) Session starts and user needs triage. Routes to /setup (new users), /think (research/decide/enrich), /ads (static/video/review), /vsl (skool/b2b), /content, /skool-manager, /wiki, /help.
+description: Main entry point for Main Branch. Detects user state, context level, and experience to route to the right skill. Use when: (1) User says "start", "help", "what can I do", "begin" (2) User is new, returning, lost, or confused (3) User opens vip without a specific task in mind (4) Session starts and user needs triage. Routes to /setup (new users), /think (research/decide/enrich), /ads (static/video/review), /vsl (skool/b2b), /content, /skool-manager, /wiki, /help.
 ---
 
 # Start
 
-Single entry point for Main Branch. Detect user state, route to the right skill.
+Single entry point for Main Branch. Detect user state, context level, experience — route to the right skill.
 
-**Recommended workflow:** Always start Claude in vip, run `/start`. It handles everything.
+**Core job:** Orient Claude to the user's business, then route to what they need.
+
+---
+
+## Philosophy: Never Assume
+
+- **Don't assume noob** — Some users know exactly what they want
+- **Don't assume expert** — Some users are lost but won't say so
+- **Ask ONE clarifying question** when intent is unclear
+- **Route fast** when intent is clear
+
+---
+
+## Context Awareness (Critical)
+
+**Users must understand context management.** Teach as you route.
+
+### Check Context State First
+
+Before doing heavy lifting, assess where the session is:
+
+| Context Level | What To Do |
+|---------------|------------|
+| Fresh (0-10%) | Full load: find repo, load reference, orient |
+| Light (10-30%) | Reference may be loaded; verify before reloading |
+| Working (30-70%) | Productive zone; route to task, don't reload |
+| Heavy (70-85%) | Warn user; finish current work, new session soon |
+| Critical (85%+) | "Context is nearly full. Let's wrap up this task, then start fresh." |
+
+**Show context percentage** when relevant: "You're at about 60% context — plenty of room to work."
+
+### Teach Context Management
+
+When context is fresh, briefly explain:
+> "I'm starting fresh — I don't have your business context yet. Let me load your reference files so I know your offer, audience, and voice."
+
+When context is heavy, warn:
+> "We're at about 80% context. I'd recommend finishing this task, then starting a new conversation for the next one."
+
+---
+
+## Config Check (If Available)
+
+Check for `~/.config/vip/config.yaml`:
+
+```bash
+cat ~/.config/vip/config.yaml 2>/dev/null
+```
+
+If exists, use saved preferences:
+- `default_business_repo` → Skip repo discovery
+- `experience_level` → Adjust verbosity
+- `auto_load_reference` → Load core/ automatically
+
+If no config exists, that's fine — proceed with discovery flow.
 
 ---
 
@@ -24,9 +78,13 @@ Apply to: business repo selection, skill routing, any multiple choice.
 ```
 /start
 │
+├── Check context level ──────────────→ (are we fresh or continuing?)
+│
 ├── Pull latest vip updates ──────────→ (always, silently)
 │
-├── Load business repo automatically ─→ (from settings.local.json)
+├── Check config (~/.config/vip/) ────→ (skip discovery if configured)
+│
+├── Load business repo ───────────────→ (from config OR discovery)
 │
 ├── No business repo configured? ─────→ /setup (creates repo, saves path)
 │
@@ -179,6 +237,57 @@ Use these to auto-detect what user wants:
 
 ---
 
+## Adapting to User Experience
+
+### First-Time Users (Detected: no config, thin reference)
+
+Be more verbose. Explain what's happening:
+> "Welcome to Main Branch! I'm going to help you set up your business repo. This is a one-time setup that teaches me about your offer, audience, and voice."
+
+Route to `/setup` with encouragement.
+
+### Returning Users (Detected: config exists, reference complete)
+
+Be efficient. Quick confirmation:
+> "Found your business: [name]. What are we working on today?"
+
+Then numbered options or route by stated intent.
+
+### Confused Users (Detected: "help", "stuck", "don't understand")
+
+Don't assume what they're confused about. Ask:
+> "Happy to help! What specifically is unclear?
+> 1. How this system works
+> 2. What to do next
+> 3. Something technical isn't working
+> 4. Something else"
+
+Route to `/help` with context.
+
+### Expert Users (Detected: clear intent, short messages)
+
+Get out of the way. If they say "ads for my launch", don't ask 5 questions — route to `/ads` and let that skill handle details.
+
+---
+
+## Context Management Tips to Share
+
+When appropriate, teach users these concepts:
+
+1. **"Fresh session = fresh context"** — I don't remember previous conversations
+2. **"/start loads your business"** — Run it first thing each session
+3. **"Context fills up"** — Long sessions need to end and restart
+4. **"Your reference is your memory"** — What's in those files is what I know
+
+Don't lecture. Mention naturally when relevant.
+
+---
+
 ## Remember
 
 Router, not worker. Detect state → route → let the target skill do the work. One clarifying question max.
+
+**Three jobs:**
+1. Orient Claude to the business (load reference)
+2. Understand what user needs (ask if unclear)
+3. Route to the right skill (fast)
