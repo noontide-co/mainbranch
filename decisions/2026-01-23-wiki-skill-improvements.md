@@ -27,15 +27,26 @@ Implement Phase 1 and Phase 2 improvements to the wiki skill setup flow.
 
 #### 1. Add Personalization Prompts to Setup
 
-After template merge, prompt user:
-- **Display name** (required) — Used in site header, meta tags, footer
-- **Short name** (optional) — For mobile display, defaults to first name
+After template merge, prompt user for:
+
+| Prompt | Required | Default |
+|--------|----------|---------|
+| Display name | Yes | — |
+| Short name (mobile) | No | First word of display name |
+| Tagline | No | `{display name}'s Notes` |
+| Twitter/X handle | No | skip |
+| GitHub username | No | skip |
+| Website URLs | No | skip (comma-separated) |
 
 Update these files with user's identity:
-- `astro.config.mjs` — site title
+- `src/config.ts` or `astro.config.mjs` — name, tagline, social links
 - `src/components/Header.astro` — brand name
 - `src/pages/index.astro` — meta author, structured data
 - Any hardcoded "Devon Meadows" references
+
+**Deferred to manual:** Avatar upload — too complex, provide instructions instead.
+
+Created `references/customization.md` with instructions for updating all settings after setup.
 
 #### 2. Add Clean Install Option
 
@@ -109,12 +120,13 @@ All changes align with skill-creator guidelines:
 
 ## Action Items
 
-- [ ] Update `.claude/skills/wiki/SKILL.md` setup mode with personalization prompts
-- [ ] Update `.claude/skills/wiki/SKILL.md` setup mode with clean install option
-- [ ] Update `.claude/skills/wiki/SKILL.md` setup mode with CF warning
+- [x] Update `.claude/skills/wiki/SKILL.md` setup mode with personalization prompts
+- [x] Update `.claude/skills/wiki/SKILL.md` setup mode with clean install option
+- [x] Update `.claude/skills/wiki/SKILL.md` setup mode with CF warning (GitHub app install note)
 - [ ] Update `.claude/skills/wiki/SKILL.md` add mode with frontmatter note
 - [x] Add `.claude/skills/wiki/SKILL.md` domain-setup mode
 - [x] Add dashboard link to `/wiki publish` exit message
+- [x] Create `.claude/skills/wiki/references/customization.md` for post-setup edits
 - [ ] Update `.claude/skills/wiki/references/cloudflare-pages-setup.md` with stronger warnings
 - [x] Add note to CF reference about `/wiki domain-setup`
 - [ ] Test full setup flow after changes

@@ -83,10 +83,39 @@ First-time wiki setup. Creates repo, configures hosting, deploys.
 1. Create GitHub repo: `gh repo create [user]/[wiki] --private --clone`
 2. Add upstream: `git remote add upstream https://github.com/noontide-co/commune-wiki.git`
 3. Merge template: `git fetch upstream && git merge upstream/main --allow-unrelated-histories`
-4. Configure `astro.config.mjs` (title, domain)
-5. Install and test: `pnpm install && pnpm dev`
-6. Deploy to Cloudflare Pages — see [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md)
-7. Save config:
+4. **Personalize wiki** — prompt user for:
+
+   | Prompt | Required | Default |
+   |--------|----------|---------|
+   | Display name | Yes | — |
+   | Short name (mobile) | No | First word of display name |
+   | Tagline | No | `{display name}'s Notes` |
+   | Twitter/X handle | No | skip |
+   | GitHub username | No | skip |
+   | Website URLs | No | skip (comma-separated) |
+
+   Update template files with user's info:
+   - `src/config.ts` or `astro.config.mjs` — name, tagline, social links
+   - `src/components/Header.astro` — brand name
+   - `src/pages/index.astro` — meta author, structured data
+   - Replace any hardcoded "Devon Meadows" references
+
+5. **Clean install option** — ask:
+   > "Include sample notes? (recommended for first-time users) [Y/n]"
+
+   If declined:
+   ```bash
+   rm -f src/content/notes/*.md
+   rm -f src/content/updates/*.md
+   ```
+
+6. Configure domain in `astro.config.mjs`
+7. Install and test: `pnpm install && pnpm dev`
+8. Deploy to Cloudflare Pages — see [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md)
+
+   **First-time GitHub app install:** If you've never connected Cloudflare to GitHub, you'll need to install the Cloudflare Pages GitHub app first. See the reference for details.
+
+9. Save config:
    ```bash
    mkdir -p ~/.mainbranch
    cat > ~/.mainbranch/wiki.json << 'EOF'
@@ -99,7 +128,7 @@ First-time wiki setup. Creates repo, configures hosting, deploys.
    EOF
    ```
 
-**Exit:** Config saved, wiki live at user's domain.
+**Exit:** Config saved, wiki live at user's domain. See [references/customization.md](references/customization.md) for how to update settings later.
 
 ---
 
@@ -294,6 +323,7 @@ Live at: https://yourdomain.com
 ## References
 
 - [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md) — Dashboard walkthrough
+- [references/customization.md](references/customization.md) — Update avatar, name, social links after setup
 - [references/hosting-recommendation.md](references/hosting-recommendation.md) — Why Cloudflare
 - [references/note-template.md](references/note-template.md) — Atomic note guidelines
 - [references/research-format.md](references/research-format.md) — Deep research conversion
