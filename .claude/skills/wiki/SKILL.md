@@ -214,6 +214,7 @@ Personalize your wiki after setup. All customization in one place.
 | Display name | Yes | — |
 | Short name (mobile) | No | First word of display name |
 | Tagline | No | `{display name}'s Notes` |
+| Avatar image | No | drag & drop to replace |
 | Twitter/X handle | No | skip |
 | GitHub username | No | skip |
 | Website URLs | No | skip (comma-separated) |
@@ -235,19 +236,26 @@ Personalize your wiki after setup. All customization in one place.
    - `astro.config.mjs` — site URL (if domain changed)
    - Replace any "Devon Meadows" references with user's name
 
-4. **If custom domain requested:**
+4. **If avatar image provided:**
+   - Prompt: "Drag and drop your avatar image here (or paste path):"
+   - User drags image into terminal → path is pasted
+   - Copy to wiki: `cp "[path]" "$WIKI_REPO/public/avatar.jpg"`
+   - Supported formats: .jpg, .png, .webp (rename to avatar.jpg)
+   - Recommended: 200x200px square crop
+
+5. **If custom domain requested:**
    - Guide through Cloudflare custom domain setup
    - See [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md)
    - Update config with new domain
 
-5. **If delete sample notes:**
+6. **If delete sample notes:**
    ```bash
    rm -f src/content/notes/*.md
    rm -f src/content/updates/*.md
    ```
    Then create fresh `my-working-notes.md` with user's welcome content.
 
-6. Rebuild and push: `pnpm build && git add -A && git commit -m "[configure] Personalize wiki" && git push`
+7. Rebuild and push: `pnpm build && git add -A && git commit -m "[configure] Personalize wiki" && git push`
 
 **Exit:** "Wiki personalized! Changes will deploy in ~90 seconds."
 

@@ -26,6 +26,12 @@ Your intro text here.
 
 ## Avatar
 
+**Via `/wiki configure`:**
+- When prompted, drag and drop your image into the terminal
+- The file path gets pasted automatically
+- Image is copied to your wiki's `public/avatar.jpg`
+
+**Manual:**
 1. Replace `public/avatar.jpg` (or `.png`) with your image
 2. Recommended size: 200x200px, square crop
 3. Run `/wiki publish` to deploy
