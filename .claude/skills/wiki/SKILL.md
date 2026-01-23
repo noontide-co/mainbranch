@@ -52,7 +52,7 @@ The skill reads `~/.mainbranch/wiki.json` to find your wiki repo location.
 Before using this skill:
 1. **GitHub CLI** (`gh`) installed and authenticated
 2. **pnpm** installed (`npm install -g pnpm`)
-3. **Cloudflare account** (free tier works) — can create during setup via `wrangler login`
+3. **Cloudflare account** (free tier works) — can create during setup
 
 Check for existing config:
 ```bash
@@ -148,35 +148,51 @@ Then push:
 git push -u origin main
 ```
 
-### 8. Check Cloudflare authentication
-```bash
-npx wrangler whoami
-```
+### 8. Ensure Cloudflare account exists
 
-**If not logged in:** Run `npx wrangler login` — opens browser for OAuth. User can create a Cloudflare account during this flow if they don't have one (free tier works).
+If user doesn't have a Cloudflare account, guide them to create one:
+1. Go to https://dash.cloudflare.com
+2. Click "Sign up" and create free account
 
-### 9. Create Pages project and deploy
-```bash
-npx wrangler pages project create [wiki] --production-branch main
-npx wrangler pages deploy dist --project-name [wiki]
-```
+### 9. Create Pages project via dashboard (enables auto-deploy)
 
-Wrangler outputs the URL (e.g., `https://wiki-abc.pages.dev`). Note this URL.
+Guide user through Cloudflare dashboard — this creates a Git-connected project with auto-deploy:
 
-### 10. Update site URL and redeploy
-Edit `astro.config.mjs`:
+1. Go to https://dash.cloudflare.com
+2. Left sidebar: **Workers & Pages**
+3. Click **"Create application"** (blue button, top right)
+4. **IMPORTANT:** Click the small link at the bottom: **"Pages: Get started"** (NOT the Worker option)
+5. Select **"Connect to Git"**
+6. Authorize GitHub if prompted, select the wiki repository
+7. Configure build settings:
+   - Project name: `wiki` (or preferred name)
+   - Production branch: `main`
+   - Build command: `pnpm build`
+   - Build output directory: `dist`
+8. Click **"Save and Deploy"**
+
+First build takes ~1-2 minutes. Watch progress on screen.
+
+### 10. Note the deployed URL
+
+After deploy completes, Cloudflare shows the URL (e.g., `https://wiki-abc.pages.dev`).
+
+Ask user: "What URL did Cloudflare assign? (shown on success screen)"
+
+### 11. Update site URL and push
+
+Edit `astro.config.mjs` with the actual URL:
 ```javascript
-site: 'https://[your-url].pages.dev',
+site: 'https://[actual-url].pages.dev',
 ```
 
-Then rebuild and deploy:
+Then commit and push — this triggers auto-deploy:
 ```bash
 pnpm build
 git add -A && git commit -m "[update] Set site URL" && git push
-npx wrangler pages deploy dist --project-name [wiki]
 ```
 
-### 11. Save config
+### 12. Save config
 ```bash
 mkdir -p ~/.mainbranch
 cat > ~/.mainbranch/wiki.json << 'EOF'
@@ -189,30 +205,7 @@ cat > ~/.mainbranch/wiki.json << 'EOF'
 EOF
 ```
 
-### 12. Ask: Set up auto-deploy?
-
-Prompt user: "Would you like to set up auto-deploy so `git push` automatically deploys your wiki?"
-
-**If yes:** Guide through Cloudflare dashboard:
-1. Open https://dash.cloudflare.com
-2. Workers & Pages → click project name
-3. Settings tab → Builds & deployments
-4. Click "Connect to Git"
-5. Authorize GitHub if prompted
-6. Select the wiki repository
-7. Build settings:
-   - Build command: `pnpm build`
-   - Build output directory: `dist`
-8. Save
-
-After setup, every `git push` triggers automatic deploy (~90 seconds).
-
-**If no:** Remind user they can deploy manually anytime with:
-```bash
-pnpm build && npx wrangler pages deploy dist --project-name [wiki]
-```
-
-**Exit:** "Wiki deployed at https://[url].pages.dev! Run `/wiki configure` to personalize (name, avatar, social links, etc.)"
+**Exit:** "Wiki deployed at https://[url].pages.dev with auto-deploy enabled! Every `git push` will automatically deploy. Run `/wiki configure` to personalize (name, avatar, social links, etc.)"
 
 ---
 

@@ -1,121 +1,106 @@
 # Cloudflare Pages Setup
 
-Deploy your wiki to Cloudflare Pages using the wrangler CLI.
+Deploy your wiki to Cloudflare Pages with Git-connected auto-deploy.
 
 **Stuck?** Drag a screenshot into chat for help.
 
 ---
 
-## CLI Deployment (Default)
+## Create Git-Connected Project (Recommended)
 
-### 1. Check wrangler authentication
+This method enables auto-deploy — every `git push` automatically deploys.
 
-```bash
-npx wrangler whoami
-```
+### 1. Open Cloudflare Dashboard
 
-**If not logged in:**
-```bash
-npx wrangler login
-```
-Opens browser for OAuth. You can create a free Cloudflare account during this flow.
+Go to https://dash.cloudflare.com (create free account if needed)
 
-### 2. Create Pages project
+### 2. Navigate to Workers & Pages
 
-```bash
-npx wrangler pages project create [project-name] --production-branch main
-```
+Left sidebar: **Workers & Pages**
 
-This creates an empty project at `https://[project-name].pages.dev`.
+### 3. Create Application
 
-### 3. Deploy
+Click **"Create application"** (blue button, top right)
 
-```bash
-npx wrangler pages deploy dist --project-name [project-name]
-```
+### 4. Choose Pages (NOT Workers!)
 
-Wrangler outputs the URL. Note this for your `astro.config.mjs`.
+⚠️ **IMPORTANT:** The default screen shows Workers. Look for the small link at the **BOTTOM**:
 
-### 4. Subsequent deploys
+> "Looking to deploy Pages? **Get started**"
 
-After any changes:
-```bash
-pnpm build
-npx wrangler pages deploy dist --project-name [project-name]
-```
+Click **"Get started"** to switch to Pages.
 
-Or set up auto-deploy (below) so `git push` deploys automatically.
+### 5. Connect to Git
+
+Select **"Connect to Git"** → **Get started**
+
+### 6. Authorize GitHub
+
+- Click **"Connect GitHub"** if first time
+- Authorize Cloudflare to access your GitHub
+- Choose **"Only select repositories"** and pick your wiki repo
+- Click **"Install & Authorize"**
+
+If already connected, just select your wiki repo and click **"Begin setup"**
+
+### 7. Configure Build Settings
+
+| Field | Value |
+|-------|-------|
+| Project name | `wiki` (or preferred name) |
+| Production branch | `main` |
+| Build command | `pnpm build` |
+| Build output directory | `dist` |
+
+### 8. Deploy
+
+Click **"Save and Deploy"**
+
+First build takes ~1-2 minutes. Success screen shows your URL (e.g., `wiki-abc.pages.dev`).
 
 ---
 
-## Auto-Deploy Setup (Optional)
+## After Setup
 
-Connect GitHub so every `git push` deploys automatically. One-time dashboard setup.
+Every `git push` to main automatically deploys (~90 seconds).
 
-### Quick Path
-
-```
-dash.cloudflare.com → Workers & Pages → [your project] → Settings → Builds & deployments → Connect to Git
-```
-
-### Step-by-Step
-
-1. Go to https://dash.cloudflare.com
-2. Left sidebar: **Workers & Pages**
-3. Click your project name
-4. **Settings** tab → **Builds & deployments**
-5. Click **"Connect to Git"**
-6. Authorize GitHub if prompted
-7. Select your repository
-8. Build settings:
-   - Build command: `pnpm build`
-   - Build output directory: `dist`
-9. **Save**
-
-Now every `git push` triggers automatic deploy.
+No need for manual deploys or wrangler CLI.
 
 ---
 
 ## Custom Domain (Optional)
 
-Skip this if `[project].pages.dev` works for now.
+### Domain already on Cloudflare?
 
-### Check: Is your domain already on Cloudflare?
-
-Go to Account home → Domains.
-
-**YES (domain on Cloudflare) → Easy:**
 1. Workers & Pages → your project → **Custom domains** tab
 2. **"Set up a custom domain"**
-3. Enter your domain
-4. CF auto-configures DNS — done!
+3. Enter your domain — CF auto-configures DNS
 
-**NO (domain external) → Two options:**
+### Domain not on Cloudflare?
 
 *Option 1: Add domain to Cloudflare (recommended)*
 1. Account home → Domains → **"Onboard a domain"**
-2. Change nameservers at your registrar (instructions provided)
+2. Change nameservers at your registrar
 3. Wait for DNS propagation (up to 24-48 hours)
-4. Then follow "YES" path above
+4. Then add custom domain above
 
-*Option 2: Keep domain external*
-- Add CNAME record at your registrar pointing to `[project].pages.dev`
-- Less integrated, SSL may have issues
+*Option 2: External domain*
+- Add CNAME record at registrar pointing to `[project].pages.dev`
 
 ---
 
 ## Common Issues
 
-**"Not logged in" error**
-Run `npx wrangler login` and complete OAuth in browser.
+**Created a Worker instead of a Page?**
+Delete it (Settings → Delete) and start over. Make sure to click "Pages: Get started" link.
 
-**Build failing with path error on Windows**
-See Troubleshooting in main skill file for `astro.backlinks.ts` fix.
+**Repo not showing?**
+Click "configure repository access for the Cloudflare Pages app on GitHub" and add your repo.
 
-**Build failing with sitemap error**
-Temporarily comment out sitemap in `astro.config.mjs`, deploy, then re-enable.
+**Build failing?**
+- Build command must be `pnpm build`
+- Output directory must be `dist`
+- Check for frontmatter errors in notes
 
-**Build failing in general**
-- Check build command is `pnpm build`
-- Check output directory is `dist`
-- Check for frontmatter errors — `status` must be `draft`, `live`, or `updated`
+**Build failing with path error on Windows?**
+The `astro.backlinks.ts` needs a fix. See Troubleshooting in main skill file.
