@@ -137,6 +137,47 @@ check "$THINK_RESEARCH" "5-10 bullets" "/think has bullet count constraint"
 echo ""
 
 # ============================================
+# CROSS-FILE CONSISTENCY TESTS
+# ============================================
+echo -e "${YELLOW}Testing cross-file consistency...${NC}"
+
+TROUBLESHOOT="$SKILL_DIR/help/references/troubleshooting.md"
+
+# All files must use NEW config path
+check "$START_FILE" "~/.config/vip/local.yaml" "/start uses new config path"
+check "$SETUP_FILE" "~/.config/vip/local.yaml" "/setup uses new config path"
+check "$TROUBLESHOOT" "~/.config/vip/local.yaml" "troubleshooting uses new config path"
+
+# OLD config path should NOT be primary in any skill
+# (It's OK in troubleshooting as migration reference)
+if grep -q "business_repo_path" "$START_FILE" 2>/dev/null; then
+    echo -e "${RED}✗ FAIL:${NC} /start still references old business_repo_path"
+    FAIL=1
+else
+    echo -e "${GREEN}✓${NC} /start doesn't use old business_repo_path"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+fi
+TESTS_RUN=$((TESTS_RUN + 1))
+
+if grep -q "~/.claude/settings.json" "$SETUP_FILE" 2>/dev/null; then
+    echo -e "${RED}✗ FAIL:${NC} /setup still references old ~/.claude/settings.json"
+    FAIL=1
+else
+    echo -e "${GREEN}✓${NC} /setup doesn't use old settings.json path"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+fi
+TESTS_RUN=$((TESTS_RUN + 1))
+
+# Troubleshooting should mention migration
+check "$TROUBLESHOOT" "Migration from old system" "troubleshooting mentions migration path"
+
+# Config references must mention BOTH files
+check "$SKILL_DIR/start/references/config-system.md" "local.yaml" "config-system.md documents local.yaml"
+check "$SKILL_DIR/start/references/config-system.md" "config.yaml" "config-system.md documents repo config.yaml"
+
+echo ""
+
+# ============================================
 # REFERENCE FILE EXISTENCE TESTS
 # ============================================
 echo -e "${YELLOW}Testing reference file existence...${NC}"
@@ -170,7 +211,55 @@ else
 fi
 TESTS_RUN=$((TESTS_RUN + 1))
 
+# ============================================
+# /help SKILL TESTS
+# ============================================
+echo -e "${YELLOW}Testing /help skill...${NC}"
+
+HELP_FILE="$SKILL_DIR/help/SKILL.md"
+
+# Must exist and have key references
+if [ -f "$HELP_FILE" ]; then
+    echo -e "${GREEN}✓${NC} /help SKILL.md exists"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+else
+    echo -e "${RED}✗ FAIL:${NC} /help SKILL.md missing"
+    FAIL=1
+fi
+TESTS_RUN=$((TESTS_RUN + 1))
+
+check "$HELP_FILE" "troubleshooting" "/help references troubleshooting"
+
+# Troubleshooting must have key sections
+check "$TROUBLESHOOT" "Context Feels" "troubleshooting covers context issues"
+check "$TROUBLESHOOT" "MCP" "troubleshooting covers MCP issues"
+
 echo ""
+
+# ============================================
+# FRONTMATTER TESTS
+# ============================================
+echo -e "${YELLOW}Testing skill frontmatter...${NC}"
+
+# All main skills must have proper frontmatter
+for skill in start setup think help ads vsl content; do
+    skill_file="$SKILL_DIR/$skill/SKILL.md"
+    if [ -f "$skill_file" ]; then
+        if head -1 "$skill_file" | grep -q "^---$"; then
+            echo -e "${GREEN}✓${NC} /$skill has frontmatter"
+            TESTS_PASSED=$((TESTS_PASSED + 1))
+        else
+            echo -e "${RED}✗ FAIL:${NC} /$skill missing frontmatter"
+            FAIL=1
+        fi
+    else
+        echo -e "${YELLOW}⚠${NC} /$skill SKILL.md not found (may be expected)"
+    fi
+    TESTS_RUN=$((TESTS_RUN + 1))
+done
+
+echo ""
+
 echo "========================================"
 echo "           TEST SUMMARY"
 echo "========================================"
