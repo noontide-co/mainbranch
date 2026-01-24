@@ -164,7 +164,7 @@ No prompt engineering. No explaining what you want. Just type the command.
 | `/start` | Main entry point — figures out what you need and routes you there |
 | `/pull` | Quick update — pulls latest skills from GitHub |
 | `/setup` | Set up your business repo (run this first if you're new) |
-| `/think` | Research, make decisions, add context, update reference files |
+| `/think` | Research, make decisions, add context, transcribe local recordings, update reference files |
 | `/ads` | Create ad copy (static or video) and review for compliance |
 | `/vsl` | Write video sales letter scripts (Skool or B2B) |
 | `/content` | Mine competitors, create Reels/TikTok/carousel scripts |
