@@ -62,13 +62,7 @@ Don't let them spin. Recognize when they need a different skill:
 | Need slides or presentations | `/deck` |
 | Asking questions, troubleshooting | `/help` |
 
-**Intent keywords:**
-- "research", "figure out", "decide", "add context" → `/think`
-- "ads", "copy", "review" → `/ads`
-- "organic", "reels", "tiktok", "mine competitors" → `/content`
-- "VSL", "sales video" → `/vsl`
-- "help", "stuck", "how do I" → `/help`
-- "slides", "deck", "presentation" → `/deck`
+**Quick triggers:** "research/decide" → `/think` · "ads/copy" → `/ads` · "organic/reels" → `/content` · "help/stuck" → `/help`
 
 ---
 
@@ -166,18 +160,6 @@ Research files also add: `linked_decisions: []`
 
 ---
 
-## Domain Rubrics
-
-| Business Type | Rubric |
-|---------------|--------|
-| Community/Skool | `.claude/reference/domain-rubrics/community.md` |
-| E-commerce | `.claude/reference/domain-rubrics/ecommerce.md` |
-| SaaS | `.claude/reference/domain-rubrics/saas.md` |
-| Content | `.claude/reference/domain-rubrics/content.md` |
-| Service | `.claude/reference/domain-rubrics/service.md` |
-
----
-
 ## Skills
 
 | Skill | Purpose |
@@ -196,41 +178,11 @@ Research files also add: `linked_decisions: []`
 
 ---
 
-## Lenses (for `/ads review`)
+## Compliance (for `/ads`)
 
-| Lens | What It Checks |
-|------|----------------|
-| `ftc-compliance` | FTC regulations, earnings claims, disclosures |
-| `meta-policy` | Platform triggers, Personal Attributes, ban risks |
-| `copy-quality` | Schwartz levels, Hormozi equation, Suby frameworks |
-| `visual-standards` | Safe zones, OCR triggers, prohibited elements |
-| `voice-authenticity` | AI tells, brand voice, authenticity |
-| `substantiation` | Claims inventory, proof matching, typicality |
+**Planning:** Check `.claude/reference/compliance/` before creating (FTC tiers, angle playbook, testimonial rubric).
 
----
-
-## Compliance Planning
-
-Before creating ads, check `.claude/reference/compliance/`:
-
-| File | Purpose |
-|------|---------|
-| `ftc-scrutiny-categories.md` | Industry risk tiers (1/2/3) |
-| `angle-playbook.md` | 10 angles with compliance rules |
-| `testimonial-decision-rubric.md` | When testimonials are worth the risk |
-
----
-
-## Context Tiers
-
-Skills load progressively:
-
-| Tier | What | When |
-|------|------|------|
-| Always | CLAUDE.md | Every session |
-| Core | reference/core/*.md | When generating |
-| On-demand | research/, decisions/ | When reasoning |
-| Deep | reference/proof/, lenses/ | When reviewing |
+**Review:** `/ads review` runs 6 lenses in parallel (FTC, Meta policy, copy quality, visual, voice, substantiation).
 
 ---
 
