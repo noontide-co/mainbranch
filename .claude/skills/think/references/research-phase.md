@@ -52,7 +52,7 @@ Detailed workflow for research mode in `/think`.
 
 ## YouTube Transcript Research
 
-When user wants to research video content, use the `youtube-transcript` MCP.
+When user wants to research video content, use **Apify** (`starvibe/youtube-video-transcript`).
 
 **Trigger phrases:**
 - "pull down this YouTube video"
@@ -63,10 +63,18 @@ When user wants to research video content, use the `youtube-transcript` MCP.
 **How to use:**
 
 ```
-mcp__youtube-transcript__get_transcript
+mcp__apify__call-actor
+  actor: "starvibe/youtube-video-transcript"
+  input: {
+    "youtube_url": "https://www.youtube.com/watch?v=VIDEO_ID",
+    "language": "en",
+    "include_transcript_text": true
+  }
 ```
 
-Pass the YouTube URL. Returns full transcript text.
+Then fetch results with `mcp__apify__get-actor-output` using the returned datasetId.
+
+**Cost:** ~$0.005 per video (negligible)
 
 **Best for:**
 - Mining competitor messaging from their videos
@@ -82,8 +90,8 @@ Pass the YouTube URL. Returns full transcript text.
 
 **Example workflow:**
 > User: "Research what Alex Hormozi says about pricing"
-> 1. Search for relevant Hormozi videos
-> 2. Transcribe 2-3 key videos
+> 1. Search YouTube for relevant Hormozi videos
+> 2. Transcribe 2-3 key videos via Apify
 > 3. Extract pricing principles and frameworks
 > 4. Synthesize into actionable findings
 
