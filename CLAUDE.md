@@ -1,6 +1,6 @@
-# Main Branch Premium
+# Main Branch
 
-AI-native business operating system. Your reference is the fuel, Claude is the engine.
+**The system for staying connected to your work while AI handles the execution.**
 
 ---
 
@@ -12,6 +12,79 @@ AI-native business operating system. Your reference is the fuel, Claude is the e
 > - Run `/start` to help users set up their own repo if they don't have one
 >
 > **For humans:** If you're reading this, your business files should go in YOUR OWN separate repository, not in vip. See `docs/BEGINNER-SETUP.md` for help.
+
+---
+
+## What Is Main Branch?
+
+**Main Branch is not a tool. It's a philosophy about how to work with AI — and yourself.**
+
+The surface layer: "AI-native business operating system for creators and coaches. Build the system that runs your business."
+
+But that's marketing copy.
+
+**The real answer: Main Branch is a reconnection mechanism.**
+
+The core insight — from Tony Robbins' interview with Alex Hormozi — is that most business owners become *dissociated* from their work. They execute brilliantly but feel nothing. They get their thousandth testimonial and think "yeah, of course." The magic is gone.
+
+**Reference files are the solution.** Not documentation. Not "AI memory." They're identity work. The act of writing `soul.md`, updating `offer.md`, refining `voice.md` — this keeps you *associated* with WHY you do this.
+
+---
+
+## What Makes It Different
+
+| Others | Main Branch |
+|--------|-------------|
+| Magic passive memory | Active management |
+| Start fresh every chat | `/start` loads your context |
+| Generic outputs | Business-specific |
+| Content treadmill | Think cycle (research → decide → codify) |
+| Rent infrastructure | Own it (portable files) |
+
+---
+
+## The Two Modes
+
+| Mode | What Happens |
+|------|--------------|
+| **Think** | Research what interests you → extract → codify into reference |
+| **Make** | Generate content, ads, scripts — all informed by reference |
+
+**The test:** If the think cycle feels like pushing, you have the wrong offer. If it feels like pull, you're in the right place.
+
+---
+
+## The Test (From soul.md)
+
+1. What do you research when no one's watching?
+2. What intersections excite you when you find them?
+3. What decisions feel like discovery vs obligation?
+
+If your offer doesn't connect to these → you're pushing. You'll burn out or dissociate.
+
+If your offer DOES connect → the think cycle becomes self-sustaining. Pull, not push.
+
+---
+
+## The Name Itself
+
+**"Main Branch" is a git metaphor.**
+
+Your reference files are the *main branch* from which all content branches. Research and decisions are feature branches that eventually merge back into reference. The main branch is the source of truth.
+
+But it's also about *staying on your main branch* — not getting lost in execution, not dissociating into "content creator" mode, not outsourcing your thinking.
+
+---
+
+## The Graduation Path
+
+| Phase | What |
+|-------|------|
+| **Terminal** | Claude Code + skills |
+| **Personal Cloud** | Railway + Postiz |
+| **Local Sovereign** | Commune Box |
+
+Main Branch is Phase 2. The destination for those who want full sovereignty is Phase 3 — but not everyone needs to graduate.
 
 ---
 
@@ -46,17 +119,6 @@ Your repo IS the truth. Unlike chat that forgets or hallucinates.
 
 ---
 
-## Two Modes of Work
-
-| Mode | What You're Doing | Skills |
-|------|-------------------|--------|
-| **Enriching the core** | Pulling insights → reference files | `/think` |
-| **Creating for the world** | Reference files → output | `/ads`, `/vsl`, `/content` |
-
-Both are work. Enriching the core levels up everything downstream.
-
----
-
 ## How It Works
 
 **Engine + Data = Output**
@@ -65,8 +127,9 @@ Both are work. Enriching the core levels up everything downstream.
 vip (ENGINE)          your-repo (DATA)
 ├── .claude/skills/                   ├── reference/
 ├── .claude/lenses/                   │   ├── core/
-├── .claude/reference/compliance/       │   │   ├── offer.md
-└── .claude/reference/domain-rubrics/   │   │   ├── audience.md
+├── .claude/reference/compliance/       │   │   ├── soul.md
+└── .claude/reference/domain-rubrics/   │   │   ├── offer.md
+        │                             │   │   ├── audience.md
         │                             │   │   └── voice.md
         │                             │   ├── brand/
         │                             │   ├── proof/
@@ -85,6 +148,19 @@ Like Unity/Unreal — engine provides capabilities, each game provides assets.
 
 ---
 
+## The Architecture
+
+```
+soul.md     → WHY you exist (reconnection fuel)
+offer.md    → WHAT you sell
+audience.md → WHO buys (real people, not avatars)
+voice.md    → HOW you sound (your "parts")
+```
+
+These aren't filled out once and forgotten. They're **alive**. Every insight, every decision, every realization gets codified into reference. This IS the business.
+
+---
+
 ## Folder Structure
 
 Every business repo follows this structure:
@@ -95,6 +171,7 @@ Every business repo follows this structure:
 │
 ├── reference/             # Evergreen truth (skills consume this)
 │   ├── core/              # REQUIRED - same files every business
+│   │   ├── soul.md        # Why you exist (reconnection fuel)
 │   │   ├── offer.md       # What we sell
 │   │   ├── audience.md    # Who buys
 │   │   └── voice.md       # How we sound (quick reference)
@@ -121,6 +198,16 @@ Every business repo follows this structure:
 └── outputs/               # Generated deliverables
     └── [batch-name]/
 ```
+
+---
+
+## Reference Files as Reconnection
+
+When you're drifting into pure execution, re-read `soul.md`.
+
+"Trench stories" aren't testimonials for social proof — they're fuel that makes you *feel* the impact.
+
+Your "parts" (executor vs connected self) need both — reference keeps them in dialogue.
 
 ---
 
@@ -183,7 +270,7 @@ status: draft
 |---------|----------|-----|
 | Skills, lenses, rubrics | Engine | Shared with all members |
 | Compliance frameworks | Engine | Shared with all members |
-| Your offer, audience, voice | Your repo (`reference/core/`) | Business-specific |
+| Your soul, offer, audience, voice | Your repo (`reference/core/`) | Business-specific |
 | Your brand systems | Your repo (`reference/brand/`) | Business-specific |
 | Your proof and angles | Your repo (`reference/proof/`) | Business-specific |
 | Your domain-specific data | Your repo (`reference/domain/`) | Business-specific |
@@ -226,7 +313,7 @@ linked_decisions: []  # For research files
 
 | Type | Format | Example |
 |------|--------|---------|
-| Core reference | `slug.md` | `offer.md`, `audience.md` |
+| Core reference | `slug.md` | `soul.md`, `offer.md`, `audience.md` |
 | Research | `YYYY-MM-DD-slug-[source].md` | `2026-01-16-analysis-gemini.md` |
 | Decisions | `YYYY-MM-DD-slug.md` | `2026-01-16-angle-strategy.md` |
 | Output batches | `###_TYPE_name_date.md` | `001_IMG_get-funded_2026-01-16.md` |
