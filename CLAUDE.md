@@ -139,7 +139,8 @@ All research files: `YYYY-MM-DD-topic-[source].md`
 | `-gpt.md` | ChatGPT/GPT-4 | `2026-01-15-brand-positioning-gpt.md` |
 | `-claude-code.md` | Claude Code session | `2026-01-16-architecture-claude-code.md` |
 | `-claude-web.md` | Claude.ai web | `2026-01-15-brainstorm-claude-web.md` |
-| `-mining.md` | Internal data mining | `2026-01-15-email-voice-mining.md` |
+| `-mining.md` | Internal data mining (includes local transcription) | `2026-01-15-email-voice-mining.md` |
+| `-transcript.txt` | Raw transcript from local video/audio | `2026-01-15-call-transcript.txt` |
 | `-audit.md` | Site/system audit | `2026-01-15-live-site-audit.md` |
 | (no suffix) | General/mixed | `2026-01-15-competitor-analysis.md` |
 
@@ -254,7 +255,7 @@ MINE PERFORMANCE → back to RESEARCH
 |-------|--------|-------------|
 | `/start` | Onboarding | Main entry point — detects user state, routes to right skill |
 | `/setup` | Onboarding | Bootstrap repo with correct structure for your business type |
-| `/think` | Knowledge | Research, decide, codify — includes adding context to reference |
+| `/think` | Knowledge | Research, decide, codify — includes adding context to reference, local video/audio transcription |
 | `/ads` | Marketing | Generate ads — routes to static, video, or review mode |
 | `/vsl` | Marketing | VSL scripts — routes to Skool 18-section or B2B Haynes 7-step |
 | `/content` | Marketing | Mine competitors, generate organic Reels/TikTok/carousel scripts |

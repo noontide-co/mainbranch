@@ -26,6 +26,7 @@ mcps:
 
 Look for tool presence:
 - `mcp__apify__*` tools → Apify loaded (handles web scraping + YouTube transcripts)
+- `mcp__whisper__*` tools → whisper-mcp loaded (local video/audio transcription)
 
 ### 3. Prompt if missing
 

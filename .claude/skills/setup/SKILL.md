@@ -115,6 +115,18 @@ If not a git repo:
 git init
 ```
 
+### 1a. Check Optional Tools (Inform, Don't Block)
+
+**Local transcription (for mining your own recordings):**
+```bash
+which whisper-cli ffmpeg
+```
+
+If missing, note for later:
+> "Optional: For transcribing your own videos/voice memos, you'll want whisper-cpp. We can set that up later with `/think`."
+
+Don't block setup on this. Continue and mention it at the end.
+
 ### 2. Ask Business Type
 
 > What type of business is this?
@@ -420,3 +432,14 @@ Once setup is complete, tell the user:
 > **The core loop:** Use `/think` regularly. Research → Decide → Codify. This is how your reference files get smarter over time.
 >
 > **Remember:** Type `/help` + your question anytime. It has comprehensive answers about Terminal basics, the two-repo model, skills, troubleshooting, and more."
+
+**If whisper-cpp was missing during setup:**
+
+> "One more thing: To transcribe your own videos and voice memos, install whisper-cpp:
+> ```bash
+> brew install whisper-cpp ffmpeg
+> mkdir -p ~/.whisper
+> curl -o ~/.whisper/ggml-base.en.bin -L \
+>   'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin'
+> ```
+> Then `/think` can mine your recordings directly."

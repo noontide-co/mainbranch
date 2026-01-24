@@ -61,7 +61,9 @@ Research -> Checkpoint -> Decide -> Checkpoint -> Codify
 
 ### 2. Research
 
-Gather from codebase, web, user input. Spawn subagents for parallel research.
+Gather from codebase, web, user input, local recordings. Spawn subagents for parallel research.
+
+**Local video/audio:** If user has recordings to mine, see [references/local-transcription.md](references/local-transcription.md).
 
 ### 3. Synthesize (Required)
 

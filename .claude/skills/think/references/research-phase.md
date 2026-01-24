@@ -35,7 +35,8 @@ Detailed workflow for research mode in `/think`.
 | `-gpt.md` | ChatGPT research |
 | `-claude-code.md` | This Claude Code session |
 | `-claude-web.md` | Claude.ai web interface |
-| `-mining.md` | Data mining (internal: reviews, emails | external: Apify, scrapers) |
+| `-mining.md` | Data mining (internal: reviews, emails, local recordings | external: Apify, scrapers) |
+| `-transcript.txt` | Raw transcript from local video/audio (use `-mining.md` for synthesized) |
 | `-audit.md` | Site or system audit |
 | (none) | General or mixed sources |
 
@@ -47,6 +48,7 @@ Detailed workflow for research mode in `/think`.
 2. **Web** — Competitors, industry benchmarks, expert perspectives
 3. **User input** — "What else do you know about this?"
 4. **YouTube transcripts** — When researching topics with video content (see below)
+5. **Local video/audio** — User's own recordings, voice memos, Loom exports (see [local-transcription.md](local-transcription.md))
 
 ---
 
@@ -126,6 +128,40 @@ Then fetch results with `mcp__apify__get-actor-output` using the returned datase
 > 2. Transcribe 2-3 key videos via Apify
 > 3. Extract pricing principles and frameworks
 > 4. Synthesize into actionable findings
+
+---
+
+## Local Video/Audio Transcription
+
+When user wants to mine their OWN recordings (not YouTube), use local transcription.
+
+**Trigger phrases:**
+- "transcribe this video"
+- "I have a recording to mine"
+- "transcribe my Loom"
+- "process this voice memo"
+- User shares a local `.mp4`, `.mov`, `.m4a`, `.wav` file path
+
+**How to use:**
+
+See [local-transcription.md](local-transcription.md) for full workflow.
+
+**Quick version (CLI):**
+```bash
+# Convert to 16kHz WAV
+ffmpeg -i "video.mp4" -ar 16000 -ac 1 /tmp/audio.wav -y
+
+# Transcribe
+whisper-cli --model ~/.whisper/ggml-base.en.bin --file /tmp/audio.wav --output-txt
+```
+
+**With whisper-mcp:** Use `transcribe_audio` tool directly.
+
+**After transcription:**
+1. Synthesize key findings (don't dump raw transcript)
+2. Extract quotable moments
+3. Note messaging patterns
+4. Save to `research/YYYY-MM-DD-[topic]-mining.md`
 
 ---
 
