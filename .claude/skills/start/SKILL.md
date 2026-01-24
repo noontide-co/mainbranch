@@ -135,7 +135,7 @@ If user is ready to work, ask or infer intent. **Use numbered options:**
 
 > "Your reference files look good. What would you like to do?
 >
-> 1. Research a topic → `/think`
+> 1. Enrich the core (research, decide, mine) → `/think`
 > 2. Create ads (image or video) → `/ads`
 > 3. Write a VSL script → `/vsl`
 > 4. Create organic content → `/content`
@@ -188,7 +188,7 @@ Show percentage when relevant: "You're at ~60% — plenty of room."
 | `/pull` | Pull latest vip updates |
 | `/help` | Get answers, troubleshoot, learn |
 | `/setup` | Create business repo from scratch |
-| `/think` | Research, decide, codify (includes adding context) |
+| `/think` | Enrich the core — research, decide, codify into reference |
 | `/ads` | Generate image ads, video scripts, or review for compliance |
 | `/vsl` | Write video sales letters (Skool or B2B frameworks) |
 | `/content` | Mine competitors, generate organic scripts |
@@ -207,7 +207,7 @@ Use these to auto-detect what user wants:
 | "help", "confused", "stuck", "don't understand", "how do I" | `/help` |
 | "new", "first time", "get started", "set up" | `/setup` |
 | "add", "update", "more context", "new testimonials", "enrich" | `/think codify` |
-| "research", "decide", "figure out", "explore" | `/think` |
+| "research", "decide", "figure out", "explore", "mine", "mining", "transcribe" | `/think` |
 | "ads", "copy", "static", "image ads", "video ads", "review", "compliance" | `/ads` |
 | "vsl", "sales video", "about page video", "b2b video" | `/vsl` |
 | "content", "reels", "tiktok", "organic", "mine", "competitors", "carousel" | `/content` |
