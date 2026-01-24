@@ -9,6 +9,35 @@ Research, decide, and codify knowledge into reference files.
 
 ---
 
+## Don't Overthink Think
+
+This skill is for: **"I don't know what happens next. I just need to start."**
+
+Something came your way — a video, a voice memo, a vague feeling, a problem to solve. You don't need a plan. Just start. The skill finds the overlap between your interest and your offer.
+
+**Re-invoke often.** Saying `/think` again is normal. It reloads context. Do it after:
+- Reading a large transcript (burns tokens)
+- Compaction (context window reset)
+- Switching focus
+- Anytime you feel lost
+
+---
+
+## Two Modes of Work
+
+Before diving in, know which mode you're in:
+
+| Mode | You're doing | Examples |
+|------|--------------|----------|
+| **Enriching the core** | Pulling insights → reference files | Mining videos, making decisions, updating offer.md |
+| **Creating for the world** | Reference files → output | Ads, scripts, courses, code, posts |
+
+`/think` is for **enriching the core**. When you're ready to create, use `/ads`, `/content`, `/vsl`, or just ask.
+
+Both are work. Enriching the core levels up everything downstream.
+
+---
+
 ## Pull Latest Updates
 
 ```bash
@@ -49,6 +78,29 @@ If unclear, ask: "Are you exploring a question, documenting a decision, or updat
 
 ---
 
+## Active Guidance (Your Job)
+
+**Don't just provide templates. Actively move people through the cycle.**
+
+On every `/think` invocation, detect state and guide the next step:
+
+```bash
+# Check for work in progress
+ls -lt research/*.md 2>/dev/null | head -3
+grep -l "status: proposed\|status: accepted" decisions/*.md 2>/dev/null
+```
+
+| If you find... | Then... |
+|----------------|---------|
+| Recent research, no decision | "You have research on [topic]. Ready to make a decision?" |
+| Proposed decision | "Decision [topic] is proposed. Ready to accept it?" |
+| Accepted decision, unchecked items | "Decision [topic] has action items. Ready to codify?" |
+| Nothing in progress | "What are you trying to figure out?" |
+
+**The goal is reference files.** Research and decisions are waypoints. Keep asking: "What needs to happen to get this into reference?"
+
+---
+
 ## Full Flow (Default)
 
 ```
@@ -63,7 +115,18 @@ Research -> Checkpoint -> Decide -> Checkpoint -> Codify
 
 Gather from codebase, web, user input, local recordings. Spawn subagents for parallel research.
 
-**Local video/audio:** If user has recordings to mine, see [references/local-transcription.md](references/local-transcription.md).
+**Mining sources:**
+
+| Source | How | Output suffix |
+|--------|-----|---------------|
+| YouTube videos | Apify transcript MCP | `-mining.md` |
+| Local video/audio | whisper-cpp ([local-transcription.md](references/local-transcription.md)) | `-mining.md` |
+| Voice memos | whisper-cpp | `-mining.md` |
+| Instagram data export | File parsing | `-mining.md` |
+| Competitor sites | Browser MCP or web fetch | `-mining.md` |
+| Your own emails/DMs | Paste into conversation | `-mining.md` |
+| Deep research | Build prompt → Gemini/GPT | `-gemini.md` or `-gpt.md` |
+| Codebase exploration | Grep, read, subagents | `-claude-code.md` |
 
 ### 3. Synthesize (Required)
 
@@ -194,3 +257,18 @@ See [references/recovery.md](references/recovery.md) for details.
 - Generating content (use `/ads`, `/vsl`, `/content`)
 
 Use `/think` when the answer requires investigation and the choice needs documentation.
+
+---
+
+## Why This Matters
+
+Reference files aren't just documentation. They're how you stay connected to why you do this.
+
+The act of researching, deciding, and codifying forces you to articulate:
+- **Why you do this** — Not the marketing reason. The real reason.
+- **Who actually benefits** — Not demographics. Real people whose lives change.
+- **What transformation you enable** — Not features. The before/after.
+
+Research and decisions go stale. Reference files compound. Every update makes all downstream content better.
+
+If the overlaps between your interests and your offer don't make sense, maybe you have the wrong offer. The think cycle should feel like pull, not push.
