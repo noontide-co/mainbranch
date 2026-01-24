@@ -91,37 +91,6 @@ Main Branch is Phase 2. The destination for those who want full sovereignty is P
 
 ---
 
-## Active vs Passive
-
-**Passive memory keeps you shallow.** Traditional AI chat interfaces offer "memory" features that passively accumulate context. This feels convenient but creates problems:
-
-1. **Opacity** — You can't see what the AI "remembers"
-2. **Hallucination risk** — AI may misremember or confuse contexts
-3. **No synthesis** — Raw memories accumulate without being refined
-4. **No learning** — You never have to articulate what matters
-
-**Active reference is work, but that work IS the thinking.**
-
-1. **Transparency** — Context lives in files you can read and edit
-2. **Truth** — The repo IS the truth, not AI's interpretation of it
-3. **Synthesis required** — You must refine research into decisions into context
-4. **Learning built-in** — Articulating context IS understanding your business
-
----
-
-## The Core Architecture
-
-```
-soul.md     → WHY you exist (reconnection fuel)
-offer.md    → WHAT you sell
-audience.md → WHO buys (real people, not avatars)
-voice.md    → HOW you sound (your "parts")
-```
-
-These aren't filled out once and forgotten. They're **alive**. Every insight, every decision, every realization gets codified into reference. This IS the business.
-
----
-
 ## See Also
 
 - `CLAUDE.md` — Operational reference (how the system works)
