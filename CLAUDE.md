@@ -51,14 +51,24 @@ Don't let them spin. Recognize when they need a different skill:
 
 | If they're... | Route to |
 |---------------|----------|
-| Lost, confused, new | `/start` |
-| Exploring a question, need to decide | `/think` |
-| Ready to create ads | `/ads` |
+| Lost, confused, returning | `/start` |
+| Brand new, need repo setup | `/setup` |
+| Exploring, researching, deciding | `/think` |
+| Ready to create paid ads | `/ads` |
 | Need a sales video script | `/vsl` |
-| Want organic content | `/content` |
+| Want organic content (reels, tiktok) | `/content` |
 | Managing Skool community | `/skool-manager` |
+| Building a wiki or notes | `/wiki` |
+| Need slides or presentations | `/deck` |
+| Asking questions, troubleshooting | `/help` |
 
-**Intent keywords:** "research", "figure out" → `/think`. "ads", "copy" → `/ads`. "help", "stuck" → `/help`
+**Intent keywords:**
+- "research", "figure out", "decide", "add context" → `/think`
+- "ads", "copy", "review" → `/ads`
+- "organic", "reels", "tiktok", "mine competitors" → `/content`
+- "VSL", "sales video" → `/vsl`
+- "help", "stuck", "how do I" → `/help`
+- "slides", "deck", "presentation" → `/deck`
 
 ---
 
@@ -173,13 +183,16 @@ Research files also add: `linked_decisions: []`
 | Skill | Purpose |
 |-------|---------|
 | `/start` | Entry point — detects state, routes to right skill |
-| `/setup` | Bootstrap repo with correct structure |
-| `/think` | Research → decide → codify workflow |
+| `/setup` | Bootstrap new repo with correct structure |
+| `/think` | Research → decide → codify into reference |
 | `/ads` | Static ads, video scripts, or compliance review |
 | `/vsl` | VSL scripts (Skool 18-section or B2B Haynes 7-step) |
 | `/content` | Mine competitors, generate organic scripts |
 | `/skool-manager` | Community engagement via Chrome |
 | `/wiki` | Personal wiki with atomic notes |
+| `/deck` | Branded slides and presentations |
+| `/help` | Answer questions, troubleshoot, explain |
+| `/pull` | Quick update vip (auto in /start) |
 
 ---
 
