@@ -1,12 +1,12 @@
 # System Architecture
 
-Complete technical reference for how Main Branch Premium works as an AI-native business operating system.
+Complete technical reference for how Main Branch works as an AI-native business operating system.
 
 ---
 
 ## Core Concept: Engine + Data
 
-Main Branch Premium operates on a fundamental separation:
+Main Branch operates on a fundamental separation:
 
 ```
 ENGINE (vip)     +     DATA (your business repo)     =     OUTPUT
@@ -23,7 +23,7 @@ ENGINE (vip)     +     DATA (your business repo)     =     OUTPUT
 This is analogous to:
 - A game engine (Unity) + game assets = a game
 - A CMS engine (WordPress) + content = a website
-- Main Branch Premium + your reference = your marketing
+- Main Branch + your reference = your marketing
 
 ---
 
@@ -40,7 +40,7 @@ Traditional AI chat interfaces (ChatGPT, Claude.ai) offer "memory" features that
 
 ### Solution: Active Context Management
 
-Main Branch Premium inverts this:
+Main Branch inverts this:
 
 1. **Transparency** — Context lives in files you can read and edit
 2. **Truth** — The repo IS the truth, not AI's interpretation of it

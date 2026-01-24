@@ -1,6 +1,6 @@
-# Contributing to Main Branch Premium
+# Contributing to Main Branch
 
-Main Branch Premium is maintained by a small team of contributors.
+Main Branch is maintained by a small team of contributors.
 
 ---
 
