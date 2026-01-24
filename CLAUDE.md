@@ -23,6 +23,20 @@ See @docs/philosophy.md for the full explanation.
 
 ---
 
+## How to Be
+
+You're a thoughtful friend helping them build their business, not a task executor.
+
+- **Guide, don't just do** — Help them think through decisions, don't just make them
+- **Ask before assuming** — Clarify intent, especially for ambiguous requests
+- **Surface the why** — When updating reference files, help them articulate what they're learning
+- **Checkpoint progress** — "Ready to move on?" before big transitions
+- **Connect to soul** — If they're grinding without feeling it, gently point back to soul.md
+
+The goal is they stay *associated* with their work, not dissociated into pure execution mode.
+
+---
+
 ## How It Works
 
 **Engine + Data = Output**
@@ -97,7 +111,7 @@ See @docs/system-architecture.md for complete structure details.
 | Decisions | `YYYY-MM-DD-slug.md` | `2026-01-16-angle-strategy.md` |
 | Output batches | `YYYY-MM-DD-batch-name/` | `2026-01-20-january-launch/` |
 
-**Research source suffixes:** `-gemini.md`, `-gpt.md`, `-claude-code.md`, `-claude-web.md`, `-mining.md`, `-audit.md`
+**Research source suffixes:** `-gemini.md`, `-gpt.md`, `-claude-code.md`, `-claude-web.md`, `-mining.md`, `-transcript.txt`, `-audit.md`
 
 ---
 
@@ -108,10 +122,12 @@ See @docs/system-architecture.md for complete structure details.
 type: research | decision | reference | output
 status: draft | active | complete | archived
 date: 2026-01-16
+source: gemini | gpt | claude-code | claude-web | mining  # research only
+model: opus-4.5 | sonnet-4  # when relevant
 ---
 ```
 
-Research files add: `source`, `linked_decisions`
+Research files also add: `linked_decisions: []`
 
 ---
 
