@@ -54,6 +54,8 @@ Detailed workflow for research mode in `/think`.
 
 When user wants to research video content, use **Apify** (`starvibe/youtube-video-transcript`).
 
+**IMPORTANT:** Never fall back to browser automation for transcripts. If Apify fails, troubleshoot the MCP — don't open Chrome. Browser automation for transcripts is slow, unreliable, and defeats the purpose of having MCPs.
+
 **Trigger phrases:**
 - "pull down this YouTube video"
 - "transcribe this video"
@@ -75,6 +77,36 @@ mcp__apify__call-actor
 Then fetch results with `mcp__apify__get-actor-output` using the returned datasetId.
 
 **Cost:** ~$0.005 per video (~200 videos for $1, regardless of length)
+
+---
+
+### Best Practices
+
+**Token management:**
+- Full transcripts can be 10-30K tokens for long videos
+- Always use `include_transcript_text: true` to get plain text (not timestamped array)
+- When fetching output, use `fields` parameter to get only what you need:
+  ```
+  fields: "title,channel_name,transcript_text"
+  ```
+- Don't dump raw transcripts into research files — synthesize first
+
+**Efficient workflow:**
+1. Call actor → get datasetId
+2. Fetch with specific fields (title, transcript_text, view_count)
+3. Synthesize immediately — extract frameworks, quotes, patterns
+4. Save synthesis, not raw transcript
+
+**If MCP fails:**
+1. Check Apify account has credits
+2. Verify video has captions (some don't)
+3. Try different language code
+4. Check if video is age-restricted or private
+5. **Never** fall back to Chrome — fix the root cause
+
+---
+
+### Use Cases
 
 **Best for:**
 - Mining competitor messaging from their videos
