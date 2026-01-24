@@ -46,6 +46,17 @@ Your repo IS the truth. Unlike chat that forgets or hallucinates.
 
 ---
 
+## Two Modes of Work
+
+| Mode | What You're Doing | Skills |
+|------|-------------------|--------|
+| **Enriching the core** | Pulling insights → reference files | `/think` |
+| **Creating for the world** | Reference files → output | `/ads`, `/vsl`, `/content` |
+
+Both are work. Enriching the core levels up everything downstream.
+
+---
+
 ## How It Works
 
 **Engine + Data = Output**
