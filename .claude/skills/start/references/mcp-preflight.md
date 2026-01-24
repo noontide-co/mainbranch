@@ -18,18 +18,14 @@ MCPs install to USER'S machine (`~/.claude.json`), not the repo. When someone cl
 # From .vip/config.yaml
 mcps:
   apify:
-    required_for: [content]
+    required_for: [content, think]  # Handles web scraping AND YouTube transcripts
     setup_guide: ".claude/skills/content/references/apify-setup.md"
-  youtube-transcript:
-    required_for: [content, think]
-    setup_guide: null
 ```
 
 ### 2. Check if MCP tools are available
 
 Look for tool presence:
-- `mcp__apify__*` tools → Apify loaded
-- `mcp__youtube-transcript__*` → YouTube transcript loaded
+- `mcp__apify__*` tools → Apify loaded (handles web scraping + YouTube transcripts)
 
 ### 3. Prompt if missing
 

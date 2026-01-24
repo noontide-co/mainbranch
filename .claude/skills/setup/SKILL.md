@@ -241,11 +241,8 @@ infrastructure:
 # /start verifies these are installed, prompts setup if missing
 mcps:
   apify:
-    required_for: [content]
+    required_for: [content, think]  # Handles web scraping AND YouTube transcripts
     setup_guide: ".claude/skills/content/references/apify-setup.md"
-  youtube-transcript:
-    required_for: [content, think]
-    setup_guide: null  # No special setup needed
 
 # === CONTENT ===
 content:

@@ -74,7 +74,7 @@ mcp__apify__call-actor
 
 Then fetch results with `mcp__apify__get-actor-output` using the returned datasetId.
 
-**Cost:** ~$0.005 per video (negligible)
+**Cost:** ~$0.005 per video (~200 videos for $1, regardless of length)
 
 **Best for:**
 - Mining competitor messaging from their videos
