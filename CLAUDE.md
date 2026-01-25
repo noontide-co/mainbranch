@@ -112,17 +112,19 @@ These live in `reference/core/` and are required for all businesses.
 
 ---
 
-## The Graduation Path
+## The Path
 
-Main Branch is Phase 2 of a sovereignty journey:
+The more you lean on big tech, the more you realize what you're trading — data for convenience, control for ease. As AI gets more powerful, everything on someone else's server is risk. They have your data; they have the advantage.
 
-| Phase | What | You Own |
-|-------|------|---------|
-| **1. Terminal** | Claude Code + skills | Your knowledge, your repo |
-| **2. Personal Cloud** | Railway + Postiz | Your infrastructure, always-on |
-| **3. Local Sovereign** | Commune Box | Everything, no cloud dependency |
+Learn the terminal. Learn to manage your own systems. You flip who has the edge.
 
-Not everyone graduates. Some stay at Phase 2 forever — that's fine. The path exists for those who want it.
+| Phase | What | You Learn |
+|-------|------|-----------|
+| **1. Terminal** | Claude Code + skills | How to think with AI |
+| **2. Personal Cloud** | Railway + Postiz | How to run infrastructure |
+| **3. Local** | Your own box | How to depend on no one |
+
+Not everyone goes all the way. Most stay at Phase 2. The path exists for those who want it.
 
 ---
 
