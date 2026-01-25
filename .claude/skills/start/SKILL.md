@@ -199,7 +199,23 @@ If you work across machines or collaborate, your business repo may have changes.
 
 ---
 
-## Step 1: Detect State
+## Step 1: Load Business Context
+
+Read these files (in order) to prep Claude:
+
+```
+[repo]/CLAUDE.md                    - Business brain
+[repo]/reference/core/soul.md       - WHY (philosophy, beliefs)
+[repo]/reference/core/offer.md      - WHAT (product, pricing)
+[repo]/reference/core/audience.md   - WHO (pains, desires)
+[repo]/reference/core/voice.md      - HOW (tone, vocabulary)
+```
+
+**Missing files?** Skip silently. If 2+ core files missing → `/think codify`.
+
+---
+
+## Step 2: Detect State
 
 Check `reference/core/*.md`. No folder → `/setup`. Exists → check completeness.
 
@@ -209,6 +225,7 @@ Check `reference/core/*.md`. No folder → `/setup`. Exists → check completene
 
 | File | Complete If |
 |------|------------|
+| soul.md | >30 lines or "Beliefs" section |
 | offer.md | >50 lines or "Price" section |
 | audience.md | >30 lines or "Pains" section |
 | voice.md | >20 lines or "Tone" section |
