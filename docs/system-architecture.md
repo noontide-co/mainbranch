@@ -1,12 +1,12 @@
 # System Architecture
 
-Complete technical reference for how Main Branch Premium works as an AI-native business operating system.
+Complete technical reference for how Main Branch works as an AI-native business operating system.
 
 ---
 
 ## Core Concept: Engine + Data
 
-Main Branch Premium operates on a fundamental separation:
+Main Branch operates on a fundamental separation:
 
 ```
 ENGINE (vip)     +     DATA (your business repo)     =     OUTPUT
@@ -20,34 +20,15 @@ ENGINE (vip)     +     DATA (your business repo)     =     OUTPUT
 
 **The data is engine-agnostic.** Business repos don't contain skills or logic. They contain context that any compatible engine can consume.
 
-This is analogous to:
-- A game engine (Unity) + game assets = a game
-- A CMS engine (WordPress) + content = a website
-- Main Branch Premium + your reference = your marketing
-
 ---
 
 ## Why This Architecture
 
-### Problem: Chat Memory is Passive
+See `docs/philosophy.md` for the deeper explanation. The short version:
 
-Traditional AI chat interfaces (ChatGPT, Claude.ai) offer "memory" features that passively accumulate context. This feels convenient but creates problems:
+**Passive memory keeps you shallow.** You can't see what AI "remembers," it hallucinates, nothing gets synthesized, you never articulate what matters.
 
-1. **Opacity** — You can't see what the AI "remembers"
-2. **Hallucination risk** — AI may misremember or confuse contexts
-3. **No synthesis** — Raw memories accumulate without being refined
-4. **No learning** — You never have to articulate what matters
-
-### Solution: Active Context Management
-
-Main Branch Premium inverts this:
-
-1. **Transparency** — Context lives in files you can read and edit
-2. **Truth** — The repo IS the truth, not AI's interpretation of it
-3. **Synthesis required** — You must refine research into decisions into context
-4. **Learning built-in** — Articulating context IS understanding your business
-
-**The insight:** The "work" of managing context is not overhead — it's the actual thinking that makes marketing effective.
+**Active reference is work, but that work IS the thinking.** Files you can read, edit, version control. The repo is truth. Articulating context = understanding your business.
 
 ---
 

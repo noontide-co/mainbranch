@@ -174,7 +174,7 @@ No prompt engineering. No explaining what you want. Just type the command.
 
 ## How It Works
 
-Main Branch Premium is the engine. Your business info is the fuel.
+Main Branch is the engine. Your business info is the fuel.
 
 ```
 THIS REPO (engine)          YOUR REPO (fuel)
@@ -260,7 +260,7 @@ You can, but you do not need to. The skills are designed to work out of the box.
 
 **What makes this different from ChatGPT?**
 
-ChatGPT forgets everything between sessions. Main Branch Premium remembers because your business info lives in files that Claude reads every time.
+ChatGPT forgets everything between sessions. Main Branch remembers because your business info lives in files that Claude reads every time.
 
 **I am stuck. What do I do?**
 
