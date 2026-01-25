@@ -232,33 +232,11 @@ Research files also add: `linked_decisions: []`
 
 ---
 
-## Lenses
-
-Review criteria for `/ads review` mode:
-
-| Lens | What It Checks |
-|------|----------------|
-| `ftc-compliance` | FTC regulations, earnings claims, required disclosures |
-| `meta-policy` | Platform triggers, Personal Attributes policy, ban risks |
-| `copy-quality` | Schwartz awareness levels, Hormozi value equation, Suby frameworks |
-| `visual-standards` | Safe zones, OCR triggers, prohibited visual elements |
-| `voice-authenticity` | AI tells, brand voice consistency, authenticity markers |
-| `substantiation` | Claims inventory, proof matching, typicality requirements |
-
----
-
 ## Compliance (for `/ads`)
 
-**Planning:** Check `.claude/reference/compliance/` before creating:
+**Planning:** Check `.claude/reference/compliance/` before creating (FTC tiers, angle playbook, testimonial rubric).
 
-| File | Purpose |
-|------|---------|
-| `ftc-scrutiny-categories.md` | Which industries get extra FTC attention (Tier 1/2/3) |
-| `angle-playbook.md` | 10 persuasion angles with compliance rules for each |
-| `testimonial-decision-rubric.md` | When outcome testimonials are worth the risk |
-| `typicality/README.md` | How to collect FTC-required outcome data |
-
-**Review:** `/ads review` runs 6 lenses in parallel (FTC, Meta policy, copy quality, visual, voice, substantiation).
+**Review:** `/ads review` runs 6 lenses from `.claude/lenses/`.
 
 ---
 
