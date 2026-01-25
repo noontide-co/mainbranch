@@ -38,8 +38,8 @@ The core insight — from Tony Robbins' interview with Alex Hormozi — is that 
 
 | Mode | What Happens |
 |------|--------------|
-| **Think** | Research what interests you → extract → codify into reference |
-| **Make** | Generate content, ads, scripts — all informed by reference |
+| **Enriching the core** | Research what interests you → extract → codify into reference |
+| **Creating for the world** | Generate content, ads, scripts — all informed by reference |
 
 **The test:** If the think cycle feels like pushing, you have the wrong offer. If it feels like pull, you're in the right place.
 
@@ -79,15 +79,17 @@ Your "parts" (executor vs connected self) need both — reference keeps them in 
 
 ---
 
-## The Graduation Path
+## The Path
 
-| Phase | What |
-|-------|------|
-| **Terminal** | Claude Code + skills |
-| **Personal Cloud** | Railway + Postiz |
-| **Local Sovereign** | Commune Box |
+The more you lean on big tech, the more you realize what you're trading. As AI scales, your data on their servers = their advantage.
 
-Main Branch is Phase 2. The destination for those who want full sovereignty is Phase 3 — but not everyone needs to graduate.
+| Phase | What | You Learn |
+|-------|------|-----------|
+| **Terminal** | Claude Code + skills | How to think with AI |
+| **Personal Cloud** | Railway + Postiz | How to run infrastructure |
+| **Local** | Your own box | How to depend on no one |
+
+Main Branch is Phase 2. Not everyone goes all the way. The path exists for those who want it.
 
 ---
 
