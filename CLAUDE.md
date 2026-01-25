@@ -17,7 +17,16 @@
 
 ## What Is Main Branch?
 
-Main Branch is a reconnection mechanism. Reference files aren't documentation — they're identity work that keeps you associated with WHY you do this. The work of managing context IS the thinking.
+**Active Reference Management.** You learn by building your reference. No magic passive memory. You:
+
+- **Actively manage** what Claude knows
+- **See files change** as decisions get made
+- **Synthesize research** into evergreen reference
+- **Control** exactly what informs every output
+
+This engagement is the learning. Articulating your offer, audience, angles — you understand your business more deeply than passive memory allows.
+
+**Reference files as reconnection:** The act of writing and refining reference files isn't just documentation — it's identity work. It keeps you associated with WHY you do this, not dissociated into pure execution.
 
 See @docs/philosophy.md for the full explanation.
 
@@ -103,6 +112,20 @@ These live in `reference/core/` and are required for all businesses.
 
 ---
 
+## The Graduation Path
+
+Main Branch is Phase 2 of a sovereignty journey:
+
+| Phase | What | You Own |
+|-------|------|---------|
+| **1. Terminal** | Claude Code + skills | Your knowledge, your repo |
+| **2. Personal Cloud** | Railway + Postiz | Your infrastructure, always-on |
+| **3. Local Sovereign** | Commune Box | Everything, no cloud dependency |
+
+Not everyone graduates. Some stay at Phase 2 forever — that's fine. The path exists for those who want it.
+
+---
+
 ## Two Modes of Work
 
 | Mode | Direction | Skills |
@@ -128,6 +151,35 @@ These live in `reference/core/` and are required for all businesses.
 ```
 
 See @docs/system-architecture.md for complete structure details.
+
+---
+
+## Domain Rubrics
+
+Every business has a `reference/domain/` folder. Contents depend on business type:
+
+| Business Type | Domain Contents | Rubric |
+|---------------|-----------------|--------|
+| **E-commerce** | `products/`, `materials/`, `sizing/` | `.claude/reference/domain-rubrics/ecommerce.md` |
+| **Community** | `classroom/`, `funnel/`, `membership/` | `.claude/reference/domain-rubrics/community.md` |
+| **SaaS** | `features/`, `pricing/`, `integrations/` | `.claude/reference/domain-rubrics/saas.md` |
+| **Service** | `process/`, `deliverables/` | `.claude/reference/domain-rubrics/service.md` |
+
+Use `/setup` to scaffold the correct structure for your business type.
+
+---
+
+## Reference Tiers
+
+Skills load reference progressively to stay token-efficient:
+
+| Tier | What | When Loaded |
+|------|------|-------------|
+| **Always** | CLAUDE.md | Every session |
+| **Core** | reference/core/*.md | When generating |
+| **On-demand** | research/, decisions/ | When reasoning about choices |
+| **Deep reference** | reference/brand/, reference/proof/ | When writing copy |
+| **Domain** | reference/domain/ | When business-type matters |
 
 ---
 
@@ -178,9 +230,31 @@ Research files also add: `linked_decisions: []`
 
 ---
 
+## Lenses
+
+Review criteria for `/ads review` mode:
+
+| Lens | What It Checks |
+|------|----------------|
+| `ftc-compliance` | FTC regulations, earnings claims, required disclosures |
+| `meta-policy` | Platform triggers, Personal Attributes policy, ban risks |
+| `copy-quality` | Schwartz awareness levels, Hormozi value equation, Suby frameworks |
+| `visual-standards` | Safe zones, OCR triggers, prohibited visual elements |
+| `voice-authenticity` | AI tells, brand voice consistency, authenticity markers |
+| `substantiation` | Claims inventory, proof matching, typicality requirements |
+
+---
+
 ## Compliance (for `/ads`)
 
-**Planning:** Check `.claude/reference/compliance/` before creating (FTC tiers, angle playbook, testimonial rubric).
+**Planning:** Check `.claude/reference/compliance/` before creating:
+
+| File | Purpose |
+|------|---------|
+| `ftc-scrutiny-categories.md` | Which industries get extra FTC attention (Tier 1/2/3) |
+| `angle-playbook.md` | 10 persuasion angles with compliance rules for each |
+| `testimonial-decision-rubric.md` | When outcome testimonials are worth the risk |
+| `typicality/README.md` | How to collect FTC-required outcome data |
 
 **Review:** `/ads review` runs 6 lenses in parallel (FTC, Meta policy, copy quality, visual, voice, substantiation).
 
