@@ -26,7 +26,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │
 ├── Check context level ──────────────→ Fresh? Full load. Heavy? Warn user.
 │
-├── Pull latest vip updates ──────────→ (always, silently)
+├── Pull engine updates ──────────────→ (vip, always, silently)
 │
 ├── Load config ──────────────────────→ See [config-system.md](references/config-system.md)
 │   ├── ~/.config/vip/local.yaml ─────→ Default repo for this machine
@@ -35,9 +35,11 @@ Apply to: business repo selection, skill routing, any multiple choice.
 ├── MCP pre-flight ───────────────────→ See [mcp-preflight.md](references/mcp-preflight.md)
 │   └── Missing required MCP? ────────→ Offer setup or skip
 │
-├── Load business repo ───────────────→ (from config OR discovery)
+├── Find business repo ───────────────→ (from config OR discovery)
 │
 ├── No business repo configured? ─────→ /setup (creates repo, saves path)
+│
+├── Pull business repo updates ───────→ (your repo, silently)
 │
 ├── Has repo but thin? ───────────────→ /think codify
 │   (reference files exist but incomplete)
@@ -58,9 +60,9 @@ Apply to: business repo selection, skill routing, any multiple choice.
 
 ---
 
-## Step -1: Pull Updates (Always)
+## Step -1: Pull Engine Updates (Always)
 
-Run `git pull origin main` silently. Mention only if updates pulled. Don't block on network issues.
+Run `git pull origin main` on vip silently. Mention only if updates pulled. Don't block on network issues.
 
 ```bash
 cd ~/Documents/GitHub/vip 2>/dev/null && git pull origin main 2>/dev/null || true
@@ -108,6 +110,24 @@ cd ~/Documents/GitHub/vip 2>/dev/null && git pull origin main 2>/dev/null || tru
 **MULTIPLE found:** List all, then options 2-4 above.
 
 **NONE found:** Ask user for path, or route to `/setup`.
+
+---
+
+## Step 0.5: Pull Business Repo Updates
+
+Once business repo is confirmed, pull its latest updates:
+
+```bash
+cd [repo-path] && git pull origin main 2>/dev/null || true
+```
+
+**Why both repos:**
+- Engine (vip) → new skills, playbooks, compliance frameworks
+- Business repo → your reference files, decisions, research
+
+If you work across machines or collaborate, your business repo may have changes. Pull them.
+
+**Mention only if updates:** "Pulled latest updates for [repo-name]" — otherwise stay silent.
 
 ---
 
