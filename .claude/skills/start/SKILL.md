@@ -11,6 +11,25 @@ Single entry point for Main Branch. Detect user state, context level, experience
 
 ---
 
+## CRITICAL: Always Ask Which Repo
+
+**Even if config exists with a saved default, ALWAYS ask the user which repo before proceeding:**
+
+> "Found saved repo:
+>
+> 1. [saved-repo-name] (saved)
+> 2. Switch to different repo
+>
+> (hit a number)"
+
+Replace `[saved-repo-name]` with the actual folder name from config (e.g., "acme-coaching", "client-project").
+
+**DO NOT skip this question.** Users have multiple repos. The saved default is a suggestion, not automatic.
+
+**Only exception:** User explicitly ran `/start [repo-name]` with a specific path.
+
+---
+
 ## Numbered Options Pattern
 
 Always use numbered lists for multi-choice. User replies with just a number.
@@ -29,8 +48,8 @@ Apply to: business repo selection, skill routing, any multiple choice.
 ├── Pull engine updates ──────────────→ (vip, always, silently)
 │
 ├── Load config ──────────────────────→ See [config-system.md](references/config-system.md)
-│   ├── ~/.config/vip/local.yaml ─────→ Default repo for this machine
-│   └── [repo]/.vip/config.yaml ──────→ User preferences
+│   ├── ~/.config/vip/local.yaml ─────→ Default repo + user identity (name, experience)
+│   └── [repo]/.vip/config.yaml ──────→ Team settings, MCP requirements
 │
 ├── MCP pre-flight ───────────────────→ See [mcp-preflight.md](references/mcp-preflight.md)
 │   └── Missing required MCP? ────────→ Offer setup or skip
@@ -60,7 +79,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 
 ---
 
-## Step -1: Pull Engine Updates (Always)
+## Step -1: Pull Updates
 
 Run `git pull origin main` on vip silently. Mention only if updates pulled. Don't block on network issues.
 
@@ -70,11 +89,41 @@ cd ~/Documents/GitHub/vip 2>/dev/null && git pull origin main 2>/dev/null || tru
 
 ---
 
-## Step 0: Find Business Repo
+## Step 0: Load Config and Find Business Repo
+
+### Config Reading Flow
+
+```
+1. Read ~/.config/vip/local.yaml
+   ├── Found? → Get default_repo + user identity
+   │            Validate path exists and has reference/core/
+   │            ├── Valid? → STILL ASK (see below)
+   │            └── Invalid? → Clear config, fall to discovery
+   └── Missing? → Fall to discovery
+
+2. If repo found, read [repo]/.vip/config.yaml
+   ├── Found? → Get team settings, MCP requirements
+   └── Missing? → Use defaults, offer to create later
+```
+
+### CRITICAL: Always Offer Switch Option
+
+**Even with valid config, ALWAYS present numbered options:**
+
+> "Found saved repo:
+>
+> 1. [saved-repo-name] (saved) ← use this
+> 2. Switch to different repo
+>
+> (hit a number)"
+
+**Why:** Users may have multiple business repos. The saved default is a convenience, not a lock-in. Skipping this question traps users in one repo.
+
+**Only skip the question if:** User explicitly said `/start [repo-name]` with a specific repo.
 
 **Shortcut:** If user says `/start [repo-name]` or mentions a specific repo, validate that path directly with Read. If valid, confirm with user and proceed.
 
-**Config path (fast):** Check `~/.config/vip/local.yaml` for `default_repo`. See [config-system.md](references/config-system.md).
+**Config path (fast):** Check `~/.config/vip/local.yaml` for `default_repo` and `user.*`. See [config-system.md](references/config-system.md).
 
 **Why Glob fails:** User may have added subdirectories (like `decisions/` or `research/`) as additional working directories, not the parent repo. Glob from vip can't traverse up to find `reference/core/`.
 
@@ -110,6 +159,25 @@ cd ~/Documents/GitHub/vip 2>/dev/null && git pull origin main 2>/dev/null || tru
 **MULTIPLE found:** List all, then options 2-4 above.
 
 **NONE found:** Ask user for path, or route to `/setup`.
+
+### After User Selects Repo
+
+**Offer to save to config:**
+
+> "Want me to save [repo-name] as your default? (faster startup next time)"
+
+If yes, update `~/.config/vip/local.yaml`:
+
+```yaml
+default_repo: /full/path/to/repo
+recent_repos:
+  - /full/path/to/repo
+user:
+  name: "[ask if not set]"
+  experience: "[ask if not set]"  # beginner | intermediate | advanced
+```
+
+**If user.name or user.experience missing:** Ask once, save for future sessions.
 
 ---
 
@@ -195,9 +263,19 @@ Show percentage when relevant: "You're at ~60% — plenty of room."
 
 ## Adapt to Experience
 
+Read `user.experience` from `~/.config/vip/local.yaml` (defaults to `beginner` if missing).
+
+| Experience | Behavior |
+|------------|----------|
+| `beginner` | Verbose explanations, show context tips, more hand-holding |
+| `intermediate` | Balanced — explain when relevant, skip basics |
+| `advanced` | Minimal — get out of the way, route fast |
+
 **First-time** (no config, thin reference): Be verbose, route to /setup
 **Returning** (config exists): Quick confirmation, route by intent
-**Expert** (clear intent, short messages): Get out of the way, route fast
+**Expert** (advanced experience, clear intent): Get out of the way, route fast
+
+**Updating experience:** If user says "I know what I'm doing" or similar, offer to update their experience level in local.yaml.
 
 ---
 

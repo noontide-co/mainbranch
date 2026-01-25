@@ -166,9 +166,14 @@ cat ~/.config/vip/local.yaml
 Should show:
 ```yaml
 default_repo: /Users/yourname/Documents/GitHub/your-business
+recent_repos:
+  - /Users/yourname/Documents/GitHub/your-business
+user:
+  name: "Your Name"
+  experience: intermediate  # beginner | intermediate | advanced
 ```
 
-**Check repo config:**
+**Check repo config (team settings):**
 ```bash
 cat /path/to/your/repo/.vip/config.yaml
 ```
@@ -184,6 +189,29 @@ cat /path/to/your/repo/.vip/config.yaml
 
 **Migration from old system:**
 If you have an old `~/.claude/settings.json` with `business_repo_path`, `/start` will detect it and offer to migrate to the new config system.
+
+---
+
+## Config System Explained
+
+**Two files, different purposes:**
+
+| File | Location | What's In It | Git-tracked? |
+|------|----------|--------------|--------------|
+| `local.yaml` | `~/.config/vip/` | Default repo, your name, your experience level | No (personal) |
+| `config.yaml` | `[repo]/.vip/` | Team settings, MCP requirements, skill defaults | Yes (shared) |
+
+**Why the split?**
+- Multiple people can work on the same business repo
+- Alice can be "advanced" while Bob is "beginner"
+- Team settings (infrastructure, MCPs) travel with the repo
+- Personal settings stay on your machine
+
+**To reset everything:**
+```bash
+rm ~/.config/vip/local.yaml
+# Then run /start — it will rediscover and let you reconfigure
+```
 
 ---
 

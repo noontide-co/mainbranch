@@ -55,7 +55,7 @@ ls .claude/skills/setup/SKILL.md 2>/dev/null
    cd ~/Documents/GitHub/[business-name] && git init
    ```
 
-3. **IMMEDIATELY save the path to machine-local settings:**
+3. **IMMEDIATELY save to machine-local settings:**
 
    This ensures `/start` can find the business repo in future sessions.
 
@@ -66,12 +66,18 @@ ls .claude/skills/setup/SKILL.md 2>/dev/null
 
    ```yaml
    # ~/.config/vip/local.yaml
+   # Machine AND user specific — NOT git-tracked
    default_repo: /Users/[username]/Documents/GitHub/[business-name]
    recent_repos:
      - /Users/[username]/Documents/GitHub/[business-name]
+
+   # User identity lives here (allows multi-user on same repo)
+   user:
+     name: "[User's name]"
+     experience: beginner  # beginner | intermediate | advanced
    ```
 
-   Use the actual expanded path (not ~). This file is machine-specific and NOT git-tracked.
+   Use the actual expanded path (not ~). Ask user for their name and experience level.
 
 4. **Add it as a working directory:**
    ```
@@ -216,21 +222,17 @@ Full structure:
 
 ### 4a. Create Initial Config
 
-Create `.vip/config.yaml` with user preferences:
+Create `.vip/config.yaml` with team/business settings:
 
 ```yaml
 # .vip/config.yaml
 # VIP configuration for this business
-# This file is git-tracked and syncs across machines
+# Git-tracked, shared by all collaborators
+# NOTE: User identity (name, experience) is in ~/.config/vip/local.yaml
 
 version: 1
 
-# === USER ===
-user:
-  name: "[User's name]"
-  experience: beginner  # beginner | intermediate | advanced
-
-# === SESSION ===
+# === SESSION (Team Defaults) ===
 session:
   auto_load_reference: true
   show_context_tips: true  # Context management tips for beginners
