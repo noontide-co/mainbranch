@@ -1,11 +1,11 @@
 ---
 name: ads
-description: Create and review Meta/Facebook/Instagram ads. Routes to static image ads (copy + AI image prompts), video scripts (15-30 spoken-word scripts), or multi-lens compliance review. Use when asked to create ads, write ad copy, generate image prompts, write video scripts, or review ads for compliance. Say "/ads" or ask for "static ads", "video scripts", or "ad review".
+description: Create and review Meta/Facebook/Instagram ads. Routes to static image ads (copy + AI image prompts), video scripts (15-30 spoken-word scripts), one-liners (30 diversified lines for Andromeda), or multi-lens compliance review. Use when asked to create ads, write ad copy, generate image prompts, write video scripts, one-liners, or review ads for compliance. Say "/ads" or ask for "static ads", "video scripts", "one-liners", or "ad review".
 ---
 
 # Ads Skill
 
-Create static ads, video scripts, or review ads for compliance.
+Create static ads, video scripts, one-liners, or review ads for compliance.
 
 ## Triage
 
@@ -15,9 +15,10 @@ Determine mode from user request:
 |------|----------|--------|
 | **Static** | "static ads", "image ads", "primaries", "headlines", "image prompts" | 5-6 concepts, each with 5 primaries + 5 headlines + 3 image prompts |
 | **Video** | "video scripts", "ad scripts", "spoken word", "camera scripts" | 15-30 diverse scripts for spoken delivery |
+| **One-Liner** | "one-liners", "30 one-liners", "Andromeda", "diversified static copy" | 30 diversified one-liners for static image ads |
 | **Review** | "review", "check", "audit", "compliance", "before launch" | P1/P2/P3 report across 6 lenses |
 
-If unclear, ask: "Do you want static image ads, video scripts, or a compliance review?"
+If unclear, ask: "Do you want static image ads, video scripts, one-liners, or a compliance review?"
 
 ---
 
@@ -93,6 +94,57 @@ Campaign Batch 001
 | Interrupt | Pattern interrupt, scroll-stopping |
 
 See [references/static-output-template.md](references/static-output-template.md) for full output format.
+
+---
+
+## Mode: One-Liner
+
+Generate 30 punchy, truly diversified one-liners for static image ads that feed Meta's Andromeda algorithm.
+
+### Why This Mode Exists
+
+Meta's Andromeda algorithm (July 2025) rewards TRUE creative diversification - not surface variations. 30 one-liners = 30 different psychological conversations, each anchored in offer-specific details.
+
+### 6-Step Process
+
+1. **Core Outcome:** Single transformation every buyer achieves
+2. **Extract Specifics:** Roles, timelines, niche pains, value props, failed alternatives, proof points
+3. **Reasons to Buy:** 15-20 fundamentally different reasons (the protein supplement exercise)
+4. **Hook Categories:** Ensure variety across problem agitation, emotional state, transformation, contrarian, identity callout, etc.
+5. **Generate:** 30 one-liners, each with at least one specific anchor
+6. **Output:** Simple numbered list, ready to copy
+
+### The Anchor Rule (Non-Negotiable)
+
+Every one-liner **MUST** include at least one specific element:
+- A specific role, outcome, or company (DevOps Engineer, AWS, 60k)
+- A specific niche pain (service desk 2+ years, no CS degree)
+- A specific value prop (mock interviews with Principal Engineers)
+- A specific timeline or proof point (8 weeks, 500+ community)
+
+**The Specificity Test:** If this one-liner could sell a gym membership, a life coaching program, or a generic course - it fails. Rewrite it.
+
+### Input Modes
+
+| Mode | How to Detect | What to Pull |
+|------|---------------|--------------|
+| **Has business repo** | Reference files exist | `reference/core/offer.md`, `reference/core/audience.md`, `reference/core/voice.md`, testimonials |
+| **No repo** | Nothing found | Ask user for materials |
+
+### Output Format
+
+Simple numbered list. One per line. Ready to copy.
+
+```
+1. [one-liner]
+2. [one-liner]
+...
+30. [one-liner]
+```
+
+See [references/one-liner-methodology.md](references/one-liner-methodology.md) for the complete 6-step process, hook categories, and quality checklist.
+
+See [references/one-liner-examples.md](references/one-liner-examples.md) for real examples by offer type.
 
 ---
 
