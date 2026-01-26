@@ -49,6 +49,58 @@ If user picks 1 → Show setup guide path, walk through it.
 
 ---
 
+## Research Tools Check
+
+These tools enhance `/think` but are optional (except Apify which is important):
+
+| Tool | Check Method | If Missing |
+|------|--------------|------------|
+| **Apify** | `mcp__apify__search-actors` tool exists | Offer setup (important - enables YouTube + Instagram mining) |
+| **Grok** | `$XAI_API_KEY` set OR `mcp__xai__*` exists | Note, don't block (fallback: WebSearch site:x.com) |
+| **Gemini** | `$GOOGLE_API_KEY` set | Note, don't block (fallback: multi-source WebSearch) |
+| **whisper** | `mcp__whisper__*` OR `which whisper-cli` | Offer CLI fallback or manual transcription |
+
+### Detection Order
+
+Run on first `/think` invocation:
+
+```bash
+# 1. Apify - check for MCP tools (most important)
+# If mcp__apify__* tools exist → Apify loaded
+
+# 2. Gemini - env var
+[ -n "$GOOGLE_API_KEY" ] && echo "Gemini available"
+
+# 3. Grok - env var or MCP
+[ -n "$XAI_API_KEY" ] && echo "Grok available"
+# OR check for mcp__xai__* tools
+
+# 4. whisper - MCP or CLI
+which whisper-cli >/dev/null 2>&1 && echo "whisper-cli available"
+# OR check for mcp__whisper__* tools
+```
+
+### Reporting
+
+**Good (all tools):**
+> "Research tools ready: Apify, Gemini, Grok, whisper"
+
+**Partial (common case):**
+> "Research tools: Apify ready. Gemini/Grok not configured (web search fallback available)."
+
+**Missing Apify (important):**
+> "Apify MCP not detected. YouTube and Instagram mining won't work.
+> Set up now? (5 min one-time) Or skip for this session."
+
+### Progressive Disclosure
+
+- Report availability once at session start
+- Don't nag about missing optional tools
+- Only offer setup when user tries to use missing capability
+- Always provide fallback path
+
+---
+
 ## Config vs Installation
 
 | What | Where | Portable? |

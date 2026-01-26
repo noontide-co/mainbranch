@@ -220,7 +220,50 @@ Full structure:
     └── YYYY-MM-DD-batch-name/
 ```
 
-### 4a. Create Initial Config
+### 4a. API Key Environment (Progressive Setup)
+
+Create the env.sh template for optional research tools. This lives outside git repos for security.
+
+```bash
+mkdir -p ~/.config/vip
+cat > ~/.config/vip/env.sh << 'EOF'
+# Main Branch API Keys
+# This file is sourced by your shell. Keep it outside git repos.
+
+# === OPTIONAL RESEARCH TOOLS ===
+# These unlock additional capabilities. Add as needed.
+
+# Gemini - Deep web research (free tier available)
+# Get from: https://aistudio.google.com/apikey
+# export GOOGLE_API_KEY=""
+
+# xAI/Grok - X/Twitter sentiment analysis
+# Get from: https://console.x.ai
+# export XAI_API_KEY=""
+EOF
+```
+
+Add source line to shell config (detects zsh vs bash):
+
+```bash
+# Detect shell and add source line
+if [ -n "$ZSH_VERSION" ] || [ "$SHELL" = "/bin/zsh" ]; then
+  grep -q 'source.*vip/env.sh' ~/.zshrc 2>/dev/null || \
+    echo '[ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"' >> ~/.zshrc
+else
+  grep -q 'source.*vip/env.sh' ~/.bashrc 2>/dev/null || \
+    echo '[ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"' >> ~/.bashrc
+fi
+```
+
+**Explain to user:**
+> "Created `~/.config/vip/env.sh` for API keys. It's outside git repos (security) and sourced on shell startup.
+>
+> You don't need keys now — Apify handles most research. Add Gemini/Grok later if you want deep research capabilities."
+
+**Progressive disclosure:** Don't overwhelm beginners with API setup. The env.sh exists but stays empty until they need it.
+
+### 4b. Create Initial Config
 
 Create `.vip/config.yaml` with team/business settings:
 
@@ -271,7 +314,7 @@ skills:
     auto_create_tasks: false
 ```
 
-### 4b. Create .gitignore
+### 4c. Create .gitignore
 
 ```bash
 cat > .gitignore << 'EOF'

@@ -55,8 +55,8 @@ WHISPER_AVAILABLE=false
 
 # Detection via tool presence
 if mcp__apify__* tools exist → APIFY_AVAILABLE=true
-if mcp__xai__* tools exist → GROK_AVAILABLE=true
-if GEMINI_API_KEY env exists → GEMINI_AVAILABLE=true
+if XAI_API_KEY env exists OR mcp__xai__* tools exist → GROK_AVAILABLE=true
+if GOOGLE_API_KEY env exists → GEMINI_AVAILABLE=true
 if mcp__whisper__* tools exist → WHISPER_AVAILABLE=true
 ```
 
@@ -277,6 +277,8 @@ Format: `research/YYYY-MM-DD-topic-[source].md`
 
 ## Token Management
 
+> **Note:** Token estimates throughout this document are approximate and may vary based on model updates and actual content. Adjust based on your usage patterns.
+
 ### Problem
 
 Research tools return data that becomes Claude tokens. Large outputs can:
@@ -346,6 +348,7 @@ Tool missing + User wants that research type → Offer setup once per session
 |------|------------|
 | Apify | `.claude/skills/content/references/apify-setup.md` |
 | Grok | `.claude/skills/think/references/grok-setup.md` |
+| Gemini | `.claude/skills/think/references/gemini-setup.md` |
 | whisper-mcp | `.claude/skills/think/references/local-transcription.md` |
 
 ---
@@ -556,6 +559,9 @@ Potential additions (not implemented yet):
 ## See Also
 
 - `research-phase.md` — Detailed research workflow
+- `gemini-setup.md` — Gemini API setup guide
+- `gemini-deep-research.md` — Deep research workflow with Gemini
+- `grok-setup.md` — Grok MCP setup guide
 - `grok-social.md` — X/Twitter research specifics
 - `local-transcription.md` — Local audio/video workflow
 - `apify-discovery.md` — Apify actors and token costs

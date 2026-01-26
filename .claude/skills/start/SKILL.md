@@ -199,6 +199,36 @@ If you work across machines or collaborate, your business repo may have changes.
 
 ---
 
+## Step 0.75: Research Tool Detection
+
+After loading config, check available research capabilities:
+
+```bash
+# Check what's available (silent checks)
+APIFY_OK=$([ -n "$APIFY_TOKEN" ] && echo "1" || echo "0")
+GEMINI_OK=$([ -n "$GOOGLE_API_KEY" ] && echo "1" || echo "0")
+GROK_OK=$([ -n "$XAI_API_KEY" ] && echo "1" || echo "0")
+```
+
+**Report based on experience level:**
+
+| Experience | What to Show |
+|------------|--------------|
+| `beginner` | "Research ready: Apify for web/YouTube/Instagram." Only mention missing if they ask about research. |
+| `intermediate` | Brief status: "Research: Apify ✓, Gemini ✗, Grok ✗" |
+| `advanced` | Full grid only if relevant to stated task |
+
+**If key tools missing and user mentions research:**
+
+> "Want to add Gemini for deep research? Takes 3 minutes.
+> 1. Get key: https://aistudio.google.com/apikey
+> 2. Add to `~/.config/vip/env.sh`
+> 3. Restart terminal"
+
+**Don't block or nag.** Apify handles most research needs. Additional tools are opt-in upgrades.
+
+---
+
 ## Step 1: Load Business Context
 
 Read these files (in order) to prep Claude:

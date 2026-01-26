@@ -1,6 +1,6 @@
 # Config System
 
-Two-file system: personal stays local, team settings travel with repo.
+Three-file system: personal settings, team settings, and API keys — each in the right place.
 
 ---
 
@@ -9,11 +9,57 @@ Two-file system: personal stays local, team settings travel with repo.
 | File | Location | Purpose | Git-tracked? |
 |------|----------|---------|--------------|
 | `local.yaml` | `~/.config/vip/` | User identity + which repo is default | No |
+| `env.sh` | `~/.config/vip/` | API keys for optional research tools | No |
 | `config.yaml` | `[repo]/.vip/` | Team/business settings, MCP requirements | Yes |
 
 **Key split:**
 - **Local** = "Who am I? What repo do I want?" (per-person, per-machine)
+- **Env** = "What API keys do I have?" (per-person, sourced by shell)
 - **Repo** = "How does this business/team operate?" (shared)
+
+---
+
+## Environment Variables (~/.config/vip/env.sh)
+
+API keys for optional research tools. Created during `/setup`, sourced by shell on startup.
+
+```bash
+cat ~/.config/vip/env.sh 2>/dev/null
+```
+
+```bash
+# Main Branch API Keys
+# This file is sourced by your shell. Keep it outside git repos.
+
+# === OPTIONAL RESEARCH TOOLS ===
+
+# Gemini - Deep web research (free tier available)
+# Get from: https://aistudio.google.com/apikey
+# export GOOGLE_API_KEY=""
+
+# xAI/Grok - X/Twitter sentiment analysis
+# Get from: https://console.x.ai
+# export XAI_API_KEY=""
+```
+
+| Variable | Tool | Purpose | How to Get |
+|----------|------|---------|------------|
+| `GOOGLE_API_KEY` | Gemini | Deep web research, multi-source synthesis | https://aistudio.google.com/apikey |
+| `XAI_API_KEY` | Grok | X/Twitter sentiment, real-time social | https://console.x.ai |
+| `APIFY_TOKEN` | Apify | (Usually in MCP config, not env.sh) | https://console.apify.com |
+
+**Why this file exists:**
+- Outside git repos (security — keys never committed)
+- Sourced on shell startup (always available)
+- Optional — system works without it (Apify handles most research)
+- Progressive — add keys when you need them, not before
+
+**Shell integration:** `/setup` adds this line to `~/.zshrc` or `~/.bashrc`:
+```bash
+[ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"
+```
+
+**After adding a key:** Restart terminal or run `source ~/.config/vip/env.sh`.
 
 ---
 

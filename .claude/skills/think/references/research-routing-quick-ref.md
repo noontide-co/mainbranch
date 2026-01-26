@@ -9,8 +9,8 @@ Fast lookup table for routing research requests in /think skill.
 | User Says | Route To | Requires | Fallback |
 |-----------|----------|----------|----------|
 | YouTube URL, "transcribe video" | Apify YouTube | `mcp__apify__*` | Ask for manual transcript |
-| "what are people saying", "X sentiment" | Grok X search | `mcp__xai__*` | WebSearch site:x.com |
-| "deep dive", "comprehensive research" | Gemini 2.5 | `GEMINI_API_KEY` | WebSearch + synthesis |
+| "what are people saying", "X sentiment" | Grok X search | `XAI_API_KEY` OR `mcp__xai__*` | WebSearch site:x.com |
+| "deep dive", "comprehensive research" | Gemini 2.5 | `GOOGLE_API_KEY` | WebSearch + synthesis |
 | Local file path, "transcribe recording" | whisper-mcp | `mcp__whisper__*` | CLI fallback |
 | Instagram handle, "mine competitors" | Apify Instagram | `mcp__apify__*` | Manual guidance |
 | "what do we know", "check existing" | Codebase grep | Always available | N/A |
@@ -27,10 +27,10 @@ Fast lookup table for routing research requests in /think skill.
 if mcp__apify__* exists: APIFY=true
 
 # Check for Grok (X/Twitter)
-if mcp__xai__* exists: GROK=true
+if $XAI_API_KEY set OR mcp__xai__* exists: GROK=true
 
 # Check for Gemini (deep research)
-if $GEMINI_API_KEY set: GEMINI=true
+if $GOOGLE_API_KEY set: GEMINI=true
 
 # Check for whisper (local transcription)
 if mcp__whisper__* exists: WHISPER=true
@@ -75,6 +75,7 @@ if mcp__whisper__* exists: WHISPER=true
 |------|-------|
 | Apify | `.claude/skills/content/references/apify-setup.md` |
 | Grok | `.claude/skills/think/references/grok-setup.md` |
+| Gemini | `.claude/skills/think/references/gemini-setup.md` |
 | whisper | `.claude/skills/think/references/local-transcription.md` |
 
 ---
@@ -153,3 +154,7 @@ research/
 - `research-architecture.md` — Full architecture document
 - `research-phase.md` — Detailed workflow
 - `research-template.md` — File template
+- `gemini-setup.md` — Gemini setup guide
+- `gemini-deep-research.md` — Deep research with Gemini
+- `grok-setup.md` — Grok MCP setup guide
+- `grok-social.md` — X/Twitter research details
