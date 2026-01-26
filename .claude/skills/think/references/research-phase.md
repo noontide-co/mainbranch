@@ -2,15 +2,18 @@
 
 Detailed workflow for research mode in `/think`.
 
+**See also:** [research-architecture.md](research-architecture.md) for full routing and tool selection logic.
+
 ---
 
 ## Workflow
 
 1. **Define the question** — What specifically are you trying to learn?
-2. **Identify sources** — Codebase, web, user input
-3. **Gather findings** — Spawn subagents for parallel research when useful
-4. **Synthesize** (required) — Distill findings into actionable insight
-5. **Save** — Write to `research/YYYY-MM-DD-topic-[source].md`
+2. **Detect intent & route** — Determine which research tools to use (see [research-routing-quick-ref.md](research-routing-quick-ref.md))
+3. **Check capabilities** — Are preferred tools available? Offer setup or fallback if not
+4. **Gather findings** — Execute with token management and cost awareness
+5. **Synthesize** (required) — Distill findings into actionable insight
+6. **Save** — Write to `research/YYYY-MM-DD-topic-[source].md`
 
 ---
 
@@ -35,8 +38,14 @@ Detailed workflow for research mode in `/think`.
 | `-gpt.md` | ChatGPT research |
 | `-claude-code.md` | This Claude Code session |
 | `-claude-web.md` | Claude.ai web interface |
-| `-mining.md` | Data mining (internal: reviews, emails, local recordings | external: Apify, scrapers) |
-| `-transcript.txt` | Raw transcript from local video/audio (use `-mining.md` for synthesized) |
+| `-x-social.md` | X/Twitter social research (Grok MCP) |
+| `-yt-mining.md` | YouTube transcript mining (Apify) |
+| `-ig-mining.md` | Instagram mining (Apify or manual) |
+| `-local-mining.md` | Local video/audio transcription |
+| `-voice-mining.md` | Voice memo transcription |
+| `-competitor-mining.md` | Competitor site mining |
+| `-internal-mining.md` | Internal data (emails, DMs, reviews) |
+| `-transcript.txt` | Raw transcript (use specific `-mining.md` for synthesized) |
 | `-audit.md` | Site or system audit |
 | (none) | General or mixed sources |
 
@@ -46,9 +55,10 @@ Detailed workflow for research mode in `/think`.
 
 1. **Codebase** — Existing reference files, past decisions, research
 2. **Web** — Competitors, industry benchmarks, expert perspectives
-3. **User input** — "What else do you know about this?"
-4. **YouTube transcripts** — When researching topics with video content (see below)
-5. **Local video/audio** — User's own recordings, voice memos, Loom exports (see [local-transcription.md](local-transcription.md))
+3. **X/Twitter** — Real-time sentiment, trending topics (see [grok-social.md](grok-social.md))
+4. **User input** — "What else do you know about this?"
+5. **YouTube transcripts** — When researching topics with video content (see below)
+6. **Local video/audio** — User's own recordings, voice memos, Loom exports (see [local-transcription.md](local-transcription.md))
 
 ---
 
@@ -128,6 +138,35 @@ Then fetch results with `mcp__apify__get-actor-output` using the returned datase
 > 2. Transcribe 2-3 key videos via Apify
 > 3. Extract pricing principles and frameworks
 > 4. Synthesize into actionable findings
+
+---
+
+## X/Twitter Social Research
+
+When user wants to know what people are saying about a topic in real-time.
+
+**Trigger phrases:**
+- "what are people saying about..."
+- "sentiment on X"
+- "what's trending in..."
+- "social proof research"
+
+**How to use:** Grok X Insights MCP provides `grok_search_posts`, `grok_analyze_topic`, `grok_get_trends`.
+
+**Setup:** See [grok-setup.md](grok-setup.md)
+**Full workflow:** See [grok-social.md](grok-social.md)
+
+**Quick example:**
+```
+User: "What are people saying about Skool communities?"
+
+1. Check if Grok MCP available
+2. grok_search_posts with query "Skool communities" timeWindow "7d"
+3. Synthesize findings
+4. Save to research/YYYY-MM-DD-skool-sentiment-x-social.md
+```
+
+**Fallback:** If no Grok MCP, use web search or ask user to share X screenshots manually.
 
 ---
 

@@ -15,7 +15,13 @@ research/YYYY-MM-DD-topic-[source].md
 - `-gpt.md` — ChatGPT research
 - `-claude-code.md` — Claude Code session (this tool)
 - `-claude-web.md` — Claude.ai web interface
-- `-mining.md` — Data mining (internal: reviews, emails | external: Instagram, competitors via Apify)
+- `-x-social.md` — X/Twitter social research (Grok MCP)
+- `-yt-mining.md` — YouTube transcript mining (Apify)
+- `-ig-mining.md` — Instagram mining (Apify or manual)
+- `-local-mining.md` — Local video/audio transcription
+- `-voice-mining.md` — Voice memo transcription
+- `-competitor-mining.md` — Competitor site mining
+- `-internal-mining.md` — Internal data (emails, DMs, reviews)
 - `-audit.md` — Site or system audit
 - (no suffix) — General or mixed sources
 

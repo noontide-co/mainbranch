@@ -69,6 +69,7 @@ Detect mode from user's natural language:
 |-----------|------|-----------|
 | "figure out", "explore", "I'm trying to..." | Full Flow | - |
 | "research", "investigate", "what do we know about" | Research | [research-phase.md](references/research-phase.md) |
+| "what are people saying", "sentiment", "X/Twitter", "trending" | Research (Grok) | [grok-social.md](references/grok-social.md) |
 | "decide", "we chose", "document decision" | Decide | [decide-phase.md](references/decide-phase.md) |
 | "codify", "apply", "update reference files" | Codify | [codify-phase.md](references/codify-phase.md) |
 | "add context", "enrich", "I have new info" | Codify | [codify-phase.md](references/codify-phase.md) |
@@ -119,12 +120,13 @@ Gather from codebase, web, user input, local recordings. Spawn subagents for par
 
 | Source | How | Output suffix |
 |--------|-----|---------------|
-| YouTube videos | Apify transcript MCP | `-mining.md` |
-| Local video/audio | whisper-cpp ([local-transcription.md](references/local-transcription.md)) | `-mining.md` |
-| Voice memos | whisper-cpp | `-mining.md` |
-| Instagram data export | File parsing | `-mining.md` |
-| Competitor sites | Browser MCP or web fetch | `-mining.md` |
-| Your own emails/DMs | Paste into conversation | `-mining.md` |
+| YouTube videos | Apify transcript MCP | `-yt-mining.md` |
+| X/Twitter sentiment | Grok X Insights MCP ([grok-social.md](references/grok-social.md)) | `-x-social.md` |
+| Local video/audio | whisper-cpp ([local-transcription.md](references/local-transcription.md)) | `-local-mining.md` |
+| Voice memos | whisper-cpp | `-voice-mining.md` |
+| Instagram mining | Apify or manual | `-ig-mining.md` |
+| Competitor sites | Browser MCP or web fetch | `-competitor-mining.md` |
+| Your own emails/DMs | Paste into conversation | `-internal-mining.md` |
 | Deep research | Build prompt → Gemini/GPT | `-gemini.md` or `-gpt.md` |
 | Codebase exploration | Grep, read, subagents | `-claude-code.md` |
 
