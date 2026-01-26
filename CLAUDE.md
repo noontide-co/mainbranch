@@ -221,7 +221,7 @@ Research files also add: `linked_decisions: []`
 | `/start` | Entry point — detects state, routes to right skill |
 | `/setup` | Bootstrap new repo with correct structure |
 | `/think` | Research → decide → codify into reference |
-| `/ads` | Static ads, video scripts, or compliance review |
+| `/ads` | Static ads, video scripts, one-liners, or compliance review |
 | `/vsl` | VSL scripts (Skool 18-section or B2B Haynes 7-step) |
 | `/content` | Mine competitors, generate organic scripts |
 | `/skool-manager` | Community engagement via Chrome |
