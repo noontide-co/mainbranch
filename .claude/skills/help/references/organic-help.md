@@ -1,12 +1,12 @@
-# Content Skill Help
+# Organic Skill Help
 
-Help for the `/content` skill - mining competitors and generating organic content scripts.
+Help for the `/organic` skill - mining competitors and generating organic content scripts.
 
 ---
 
 ## First-Time Setup
 
-Before using `/content`, you need three files in your business repo:
+Before using `/organic`, you need three files in your business repo:
 
 | File | What It Contains |
 |------|------------------|
@@ -22,9 +22,9 @@ Before using `/content`, you need three files in your business repo:
 
 ---
 
-## What is /content?
+## What is /organic?
 
-The `/content` skill helps you:
+The `/organic` skill helps you:
 
 1. **Mine competitor content** - Find what's working for others in your niche
 2. **Extract winning concepts** - Identify hooks, structures, and angles that perform
@@ -34,9 +34,9 @@ It's for **organic content** (free reach), not **paid ads** (use `/ads` for ads)
 
 ---
 
-## When to Use /content
+## When to Use /organic
 
-Use `/content` when you want to:
+Use `/organic` when you want to:
 
 - Research what's working for competitors
 - Get ideas for Reels or TikTok videos
@@ -48,7 +48,7 @@ Use `/content` when you want to:
 
 ## Modes
 
-### Full Flow: `/content`
+### Full Flow: `/organic`
 
 The complete workflow:
 1. Identify competitors
@@ -56,7 +56,7 @@ The complete workflow:
 3. Extract winning concepts
 4. Generate scripts in your voice
 
-### Mine Only: `/content mine`
+### Mine Only: `/organic mine`
 
 Just research, no script generation:
 - Extracts competitor content data
@@ -64,21 +64,21 @@ Just research, no script generation:
 - Saves research to `research/` folder
 - Use when you want ideas but will generate later
 
-### Video: `/content video "topic"`
+### Video: `/organic video "topic"`
 
 Generate a Reels/TikTok script:
 - From a mined concept
 - From a topic you provide
 - Applies your voice from `reference/core/voice.md`
 
-### Carousel: `/content carousel "topic"`
+### Carousel: `/organic carousel "topic"`
 
 Generate multi-slide carousel:
 - 7-10 slides by default
 - Hook slide, value slides, CTA slide
 - Ready to design
 
-### Static: `/content static "topic"`
+### Static: `/organic static "topic"`
 
 Generate single-post caption:
 - Hook line, body, soft CTA
@@ -89,7 +89,7 @@ Generate single-post caption:
 
 ## How It Differs from /ads video
 
-| Aspect | /ads video | /content |
+| Aspect | /ads video | /organic |
 |--------|------------|----------|
 | **Purpose** | Paid traffic conversion | Organic reach |
 | **Tone** | Direct response, urgency | Value-first, authentic |
@@ -99,7 +99,7 @@ Generate single-post caption:
 
 **Rule of thumb:**
 - Spending money to show it? → `/ads video`
-- Posting to your feed? → `/content`
+- Posting to your feed? → `/organic`
 
 ---
 
@@ -178,7 +178,7 @@ This makes them available for future generations across all skills.
 ## Workflow Example
 
 ```
-1. /content mine
+1. /organic mine
    → Competitor data extracted
    → Top 15 concepts identified
    → Saved to research/
@@ -186,7 +186,7 @@ This makes them available for future generations across all skills.
 2. Review concepts with Claude
    → Select 5 to adapt
 
-3. /content video "concept 1"
+3. /organic video "concept 1"
    → Script generated in your voice
    → Saved to outputs/
 
@@ -230,7 +230,7 @@ Run `/think codify` to add more voice context.
 
 ### "I don't know what to create about"
 
-Run `/content mine` first. Let competitor research inspire topics.
+Run `/organic mine` first. Let competitor research inspire topics.
 
 Or run `/think research "content ideas for [your niche]"` to brainstorm.
 

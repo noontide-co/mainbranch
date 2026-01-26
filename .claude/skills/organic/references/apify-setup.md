@@ -88,7 +88,7 @@ claude mcp add apify -e APIFY_TOKEN=apify_api_xxxxx --scope user -- npx -y @apif
 
 Apify is now saved to your global Claude Code settings (`~/.claude/settings.json`).
 
-Every time you run `/content mine` on Instagram, it will use Apify automatically. No re-setup needed.
+Every time you run `/organic mine` on Instagram, it will use Apify automatically. No re-setup needed.
 
 ---
 

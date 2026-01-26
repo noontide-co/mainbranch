@@ -27,7 +27,7 @@ marketing/
 
 ## Why This Structure
 
-Skills like `/ads`, `/vsl`, and `/content` look for these files. Consistent structure = skills just work.
+Skills like `/ads`, `/vsl`, and `/organic` look for these files. Consistent structure = skills just work.
 
 ## Files
 

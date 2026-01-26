@@ -6,9 +6,9 @@ Template for multi-slide Instagram carousels. Optimized for swipe-through engage
 
 ## Output Format
 
-Save carousels to: `outputs/content-scripts/YYYY-MM-DD-[concept-slug]-carousel.md`
+Save carousels to: `outputs/organic-scripts/YYYY-MM-DD-[concept-slug]-carousel.md`
 
-Example: `outputs/content-scripts/2026-01-19-content-mistakes-carousel.md`
+Example: `outputs/organic-scripts/2026-01-19-content-mistakes-carousel.md`
 
 ---
 

@@ -6,9 +6,9 @@ Template for Reels and TikTok scripts. Optimized for talking-head, camera-facing
 
 ## Output Format
 
-Save scripts to: `outputs/content-scripts/YYYY-MM-DD-[concept-slug].md`
+Save scripts to: `outputs/organic-scripts/YYYY-MM-DD-[concept-slug].md`
 
-Example: `outputs/content-scripts/2026-01-19-morning-routine-story.md`
+Example: `outputs/organic-scripts/2026-01-19-morning-routine-story.md`
 
 ---
 

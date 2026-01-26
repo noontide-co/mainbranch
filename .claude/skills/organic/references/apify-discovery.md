@@ -115,7 +115,7 @@ npx @apify/actors-mcp-server --tools apify/instagram-profile-scraper
 
 ---
 
-## Recommendations for /content Skill
+## Recommendations for /organic Skill
 
 1. **Default to Profile Scraper** — Already configured, most common use
 2. **Offer discovery when handles.md is empty** — "Want me to help find competitors?"

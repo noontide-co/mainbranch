@@ -185,4 +185,4 @@ Casual, energetic, slightly irreverent
 - 5+ example phrases
 - Quirks documented
 
-Start minimal. Add more as you use `/content` and notice what's missing.
+Start minimal. Add more as you use `/organic` and notice what's missing.

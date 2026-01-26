@@ -1,6 +1,6 @@
 # First-Time Setup
 
-Before running `/content`, you need three core reference files. This guide helps you create minimal versions to get started.
+Before running `/organic`, you need three core reference files. This guide helps you create minimal versions to get started.
 
 ---
 
@@ -100,7 +100,7 @@ Tell Claude which platform you're creating for - it affects timing and structure
 ### Option A: Research competitors first (recommended)
 
 ```
-/content mine
+/organic mine
 ```
 
 This extracts winning concepts from competitors, saves to `research/`. Then generate from those concepts.
@@ -108,7 +108,7 @@ This extracts winning concepts from competitors, saves to `research/`. Then gene
 ### Option B: Generate immediately
 
 ```
-/content video "your topic here"
+/organic video "your topic here"
 ```
 
 Skips research, generates a script directly. Good if you already know what you want to say.
@@ -144,8 +144,8 @@ The skill will extract concepts from whatever you provide.
 
 Once you have the three core files:
 
-1. Run `/content` to start the full flow
-2. Or run `/content mine` to just research competitors
-3. Or run `/content video "topic"` to generate immediately
+1. Run `/organic` to start the full flow
+2. Or run `/organic mine` to just research competitors
+3. Or run `/organic video "topic"` to generate immediately
 
 The skill will guide you from there.

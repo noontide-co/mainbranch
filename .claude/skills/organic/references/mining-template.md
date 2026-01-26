@@ -253,5 +253,5 @@ If extracted via Apify or other tools, include raw JSON or CSV here for referenc
 
 1. Review concepts with user
 2. Select 3-5 to adapt
-3. Generate scripts via `/content video` or `/content carousel`
+3. Generate scripts via `/organic video` or `/organic carousel`
 4. (Optional) Codify winning angles via `/think codify`

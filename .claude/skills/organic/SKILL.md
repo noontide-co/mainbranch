@@ -1,9 +1,9 @@
 ---
-name: content
+name: organic
 description: Mine competitor content and generate organic scripts. ALWAYS offer Apify MCP first for data extraction (manual fallback if unavailable). Use when: (1) User says "mine", "competitors", "organic", "reels", "tiktok", "carousel" (2) User needs scripts for talking-head videos, carousels, static posts (3) User wants to research what content works in their niche (4) User has a topic and wants organic (not paid) content. NOT for paid ads - use /ads instead. Organic = value-first, soft CTAs, engagement focus. Paid = direct response, hard CTAs, conversion focus. Modes: mine, video, carousel, static.
 ---
 
-# Content
+# Organic
 
 Mine competitor content, extract winning concepts, generate scripts in your voice.
 
@@ -86,7 +86,7 @@ Don't list all modes in chunky blocks. Instead:
 
 **Example output:**
 ```
-Recommended: `/content mine` — research competitors first since your voice file is still draft.
+Recommended: `/organic mine` — research competitors first since your voice file is still draft.
 
 Other modes: `video "topic"`, `carousel "topic"`, `static "topic"`
 
@@ -105,7 +105,7 @@ Platform?
 
 ## Modes
 
-### `/content` (Full Flow - Default)
+### `/organic` (Full Flow - Default)
 
 Mine competitors -> pick concepts -> generate scripts.
 
@@ -113,19 +113,19 @@ Mine competitors -> pick concepts -> generate scripts.
 Mine -> Select -> Generate -> Output
 ```
 
-### `/content mine`
+### `/organic mine`
 
 Research competitor content only. Saves to `research/YYYY-MM-DD-competitor-mine.md`. See [references/mining-template.md](references/mining-template.md).
 
-### `/content video "concept"`
+### `/organic video "concept"`
 
 Generate Reels/TikTok script from a concept.
 
-### `/content carousel "concept"`
+### `/organic carousel "concept"`
 
 Generate multi-slide carousel copy from a concept.
 
-### `/content static "concept"`
+### `/organic static "concept"`
 
 Generate single-post caption from a concept.
 
@@ -136,7 +136,7 @@ Generate single-post caption from a concept.
 **At session start, scan what's been done:**
 
 1. Check `research/*-competitor-mine.md` — Who was mined? When?
-2. Check `outputs/content-scripts/` — What scripts exist?
+2. Check `outputs/organic-scripts/` — What scripts exist?
 3. Don't suggest re-mining same handles from today
 4. Recommend generating from existing mining if concepts unused
 
@@ -168,7 +168,7 @@ Before saving: show file paths.
 3. **Extract concepts** — Hook, topic, structure, angle, format from top 20%
 4. **Adapt to brand** — Map concepts to user's offer, audience, voice
 5. **Generate scripts** — Use appropriate framework (video/carousel/static)
-6. **Save output** — Mining to `research/`, scripts to `outputs/content-scripts/`
+6. **Save output** — Mining to `research/`, scripts to `outputs/organic-scripts/`
 
 See [references/mining-template.md](references/mining-template.md) for concept extraction template.
 
@@ -238,7 +238,7 @@ To save winning angles: route to `/think codify` → `reference/proof/angles/`.
 ### Example 1: Context-Aware Start
 
 ```
-User: /content
+User: /organic
 
 Claude: Found ac-repo. Checking existing work...
 
@@ -257,7 +257,7 @@ Claude: [Shows concepts, user picks, generates with voice.md]
 ### Example 2: Video Only
 
 ```
-User: /content video "how I structure my morning routine"
+User: /organic video "how I structure my morning routine"
 
 Claude: What framework fits this best?
 - Educational (tips and steps)
@@ -267,36 +267,36 @@ Claude: What framework fits this best?
 User: Story-based
 
 Claude: [Generates script using story framework]
-[Saves to outputs/content-scripts/]
+[Saves to outputs/organic-scripts/]
 ```
 
 ### Example 3: Mine Only
 
 ```
-User: /content mine
+User: /organic mine
 
 Claude: [Gathers competitor data]
 [Extracts concepts]
 [Saves to research/2026-01-19-competitor-mine.md]
 
 Mining complete. 12 winning concepts extracted.
-Run `/content video` or `/content carousel` to generate from these.
+Run `/organic video` or `/organic carousel` to generate from these.
 ```
 
 ---
 
 ## Recovering from Compaction
 
-When conversations get long, Claude's memory compresses. If mid-/content and this happens:
+When conversations get long, Claude's memory compresses. If mid-/organic and this happens:
 
-**For the user:** Just type `/content` again and describe where you were:
+**For the user:** Just type `/organic` again and describe where you were:
 - "We were mining @competitor1 and @competitor2"
 - "I was picking concepts from today's mining"
 - "Generate a video script from the morning routine concept"
 
 **For Claude:** When resuming:
 1. Check `research/*-competitor-mine.md` for recent mining
-2. Check `outputs/content-scripts/` for existing scripts
+2. Check `outputs/organic-scripts/` for existing scripts
 3. Confirm with user: "I see today's mining has X concepts. Want to continue generating from those?"
 
 ---
