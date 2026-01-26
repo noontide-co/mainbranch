@@ -9,7 +9,7 @@
 | Tier | Status | Notes |
 |------|--------|-------|
 | **Tier 1** | **TESTED** | Flash API works via REST endpoint |
-| **Tier 2** | **NOT TESTED** | Interactions API documented but needs verification |
+| **Tier 2** | **TESTED** | Deep Research API works via REST (verified 2026-01-26) |
 
 ---
 
@@ -23,11 +23,11 @@ Two tiers of Gemini research:
 - Good for most questions
 - Tested model: `gemini-2.0-flash`
 
-**Tier 2: Deep Research (Pay-as-you-go)** - NOT YET VERIFIED
-- Agentic multi-step research via Interactions API
-- 5-20 minute autonomous investigation
-- Searches 80-160+ sources, produces comprehensive reports
-- Requires additional testing before production use
+**Tier 2: Deep Research (Pay-as-you-go)** - VERIFIED WORKING
+- Agentic multi-step research via Interactions API (REST, no SDK needed)
+- 5-10 minute typical completion time
+- Searches 80-160+ sources, produces comprehensive markdown reports with citations
+- Token usage: ~500K input, ~16K output per research task
 
 Best for:
 - Competitor analysis
@@ -136,6 +136,22 @@ Gemini Deep Research is now available in /think.
 **"Model not available"**
 - Gemini models may vary by region
 - Check [ai.google.dev/models](https://ai.google.dev/models) for availability
+
+**"background=true is required" (Tier 2)**
+- Deep Research requires `background: true` and `store: true` in the request body
+- This is expected behavior, not an error
+
+**"Internal server error" during Deep Research**
+- Occasionally occurs during long-running research tasks
+- The research may have failed mid-execution
+- Solution: Start a new research request (retry)
+- Poll endpoint returning 500 means the interaction is no longer retrievable
+
+**Research stuck "in_progress" for >20 minutes**
+- Deep Research has a 60-minute maximum duration
+- Most complete in 5-10 minutes
+- If stuck, the task may have failed silently
+- Start a new request with a more focused query
 
 ---
 

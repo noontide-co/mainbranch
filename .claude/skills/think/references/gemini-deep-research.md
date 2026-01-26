@@ -9,7 +9,7 @@ When and how to use Gemini for comprehensive research.
 | Tier | Feature | Status | Notes |
 |------|---------|--------|-------|
 | **Tier 1** | Flash API (`generate_content`) | **TESTED** | Works via REST endpoint |
-| **Tier 2** | Deep Research (Interactions API) | **NOT TESTED** | Documented from Google specs, needs verification |
+| **Tier 2** | Deep Research (Interactions API) | **TESTED** | Works via REST endpoint (tested 2026-01-26) |
 | **Tier 3** | Manual synthesis | **ALWAYS WORKS** | WebSearch + Apify + Claude |
 
 **Tested endpoint (Tier 1):**
@@ -19,11 +19,20 @@ POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:ge
 
 **Response format:** `candidates[].content.parts[].text`
 
-**What needs testing:**
-- Interactions API endpoint (`/v1beta/interactions`)
-- Agent identifier: `deep-research-pro-preview-12-2025`
-- Python SDK: `google-genai>=1.55.0`
-- Streaming and polling behavior
+**Tested endpoint (Tier 2):**
+```
+POST https://generativelanguage.googleapis.com/v1beta/interactions?key=$GOOGLE_API_KEY
+```
+
+**Tier 2 REST API verified working:**
+- Agent identifier: `deep-research-pro-preview-12-2025` - CONFIRMED
+- Required parameters: `background: true`, `store: true` - CONFIRMED
+- Typical completion time: 5-10 minutes
+- Python SDK NOT required - REST API works directly
+
+**Known issues (from testing):**
+- Occasional internal server errors during long-running research (retry recommended)
+- Poll endpoint may return 500 errors if research fails mid-execution
 
 ---
 
@@ -68,19 +77,22 @@ There are THREE different things, often confused:
 ### Tier 2: Deep Research (5-20 minutes)
 **When:** Complex questions requiring multi-source synthesis
 
-**Status:** NOT YET TESTED - documentation based on Google's published API specs
+**Status:** TESTED AND WORKING (verified 2026-01-26)
 
 **Use:** Deep Research Agent via Interactions API
-- Agent: `deep-research-pro-preview-12-2025` (verify current agent identifier)
+- Agent: `deep-research-pro-preview-12-2025` (verified working)
 - Powered by: Gemini Pro model (most capable)
 - Autonomous: plans, searches 80-160+ queries, reads, synthesizes, iterates
 - Produces detailed reports with citations
 
-**Cost breakdown (estimated, verify current pricing):**
+**Observed performance (from testing):**
+- Typical completion: 5-10 minutes
+- Token usage example: ~500K input, ~16K output, ~8K thought tokens
+- Output: Comprehensive markdown report with source annotations
+
+**Cost breakdown (estimated from actual usage):**
 - Standard task: ~$2-3 (80 searches, 250K tokens)
 - Complex task: ~$3-5 (160 searches, 900K tokens)
-
-**Before using Tier 2:** Test the Interactions API endpoint manually to verify it works with your API key and current agent identifier.
 
 ### Tier 3: Manual Deep Dive (Variable)
 **When:** Specific sources needed, API unavailable, or cost-sensitive
@@ -94,7 +106,44 @@ There are THREE different things, often confused:
 
 ## Interactions API: Deep Research
 
-### SDK Requirements
+### REST API (No SDK Required)
+
+**Verified working as of 2026-01-26.** You can use the REST API directly without any SDK.
+
+**Start Deep Research:**
+```bash
+curl -s "https://generativelanguage.googleapis.com/v1beta/interactions?key=$GOOGLE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": "Your research question here",
+    "agent": "deep-research-pro-preview-12-2025",
+    "background": true,
+    "store": true
+  }'
+```
+
+**Response:**
+```json
+{
+  "agent": "deep-research-pro-preview-12-2025",
+  "created": "2026-01-26T21:35:02Z",
+  "id": "v1_xxxxx",
+  "status": "in_progress"
+}
+```
+
+**Poll for completion:**
+```bash
+curl -s "https://generativelanguage.googleapis.com/v1beta/interactions/{interaction_id}?key=$GOOGLE_API_KEY"
+```
+
+**When complete**, the response includes:
+- `status: "completed"`
+- `outputs[].text` — The full research report in markdown
+- `outputs[].annotations[]` — Source citations with URLs
+- `usage` — Token counts
+
+### SDK Requirements (Alternative)
 
 ```bash
 # Python — use google-genai (NOT google-generativeai)

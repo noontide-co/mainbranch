@@ -202,7 +202,20 @@ If !GEMINI_AVAILABLE:
 
 **Important:** Tier 1 (Flash) handles 80% of research needs. Reserve Tier 2 for competitive analysis, industry research, and complex multi-source questions.
 
-**Status:** Tier 1 TESTED and working. Tier 2 documented but not yet tested via actual API call.
+**Status:** Both Tier 1 and Tier 2 TESTED and working (verified 2026-01-26).
+
+**Tier 2 REST API Example:**
+```bash
+# Start research (returns interaction ID)
+curl -s "https://generativelanguage.googleapis.com/v1beta/interactions?key=$GOOGLE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"input": "Your research question", "agent": "deep-research-pro-preview-12-2025", "background": true, "store": true}'
+
+# Poll for completion
+curl -s "https://generativelanguage.googleapis.com/v1beta/interactions/{id}?key=$GOOGLE_API_KEY"
+```
+
+**Known issues:** Occasional internal server errors during long-running research. If poll returns 500 after ~10min, start a new request.
 
 ### Local Transcription
 

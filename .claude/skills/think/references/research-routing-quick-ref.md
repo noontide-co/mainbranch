@@ -19,7 +19,7 @@ Fast lookup table for routing research requests in /think skill.
 
 **Gemini Tier Status:**
 - Tier 1 (Flash): **TESTED** - works via REST API
-- Tier 2 (Deep Research): **NOT TESTED** - documented but needs verification
+- Tier 2 (Deep Research): **TESTED** - works via REST API (verified 2026-01-26, ~6min completion)
 
 ---
 
