@@ -1,12 +1,24 @@
 # Gemini Setup
 
-3-minute setup. Free tier available.
+3-minute setup. Free tier available for quick research.
 
 ---
 
 ## What You Get
 
-Gemini Deep Research for comprehensive web research with synthesis. Best for:
+Two tiers of Gemini research:
+
+**Tier 1: Quick Research (Free tier)**
+- Standard API calls via `generate_content`
+- 30-60 second response times
+- Good for most questions
+
+**Tier 2: Deep Research (Pay-as-you-go)**
+- Agentic multi-step research via Interactions API
+- 5-20 minute autonomous investigation
+- Searches 80-160+ sources, produces comprehensive reports
+
+Best for:
 - Competitor analysis
 - Industry research
 - Complex questions requiring multiple sources
@@ -17,19 +29,19 @@ Gemini Deep Research for comprehensive web research with synthesis. Best for:
 
 ## Cost Upfront
 
-**Free tier available.** Unlike Grok (requires $5 minimum), Google AI Studio has a generous free tier.
+**Free tier available for Tier 1 research.** Google AI Studio has a generous free tier.
 
-| Tier | Cost | Limits |
-|------|------|--------|
-| Free | $0 | 15 RPM, 1M tokens/day |
-| Pay-as-you-go | ~$0.01-0.05/query | Higher limits |
+| Tier | Cost | What You Get |
+|------|------|--------------|
+| Free | $0 | 15 RPM, 1M tokens/day — quick research |
+| Pay-as-you-go (quick) | ~$0.01-0.05/query | Higher limits, Flash/Pro models |
+| Pay-as-you-go (deep) | ~$2-5/task | Full Deep Research Agent |
 
 **What does that mean practically?**
-- A typical deep research query: ~5-10K tokens
-- Free tier: ~100-200 deep research queries per day
-- Plenty for casual to moderate research use
+- Quick research (Tier 1): ~5-10K tokens, ~100-200 queries/day free
+- Deep research (Tier 2): ~250K-900K tokens, $2-5 per research task
 
-**Bottom line:** Start free. Upgrade only if you hit limits.
+**Bottom line:** Start free with Tier 1. Use Tier 2 Deep Research when you need comprehensive multi-source synthesis.
 
 ---
 
