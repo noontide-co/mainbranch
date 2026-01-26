@@ -1,6 +1,6 @@
 ---
 name: ads
-description: Create and review Meta/Facebook/Instagram ads. Routes to static image ads (copy + AI image prompts), video scripts (15-30 spoken-word scripts), one-liners (30 diversified lines for Andromeda), or multi-lens compliance review. Use when asked to create ads, write ad copy, generate image prompts, write video scripts, one-liners, or review ads for compliance. Say "/ads" or ask for "static ads", "video scripts", "one-liners", or "ad review".
+description: "Create and review Meta/Facebook/Instagram ads. Routes to: static image ads (copy + AI image prompts), video scripts (15-30 spoken-word scripts), one-liners (30 diversified copy lines for static images), or multi-lens compliance review. Use when asked to create ads, ad copy, image prompts, video scripts, or review ads. Say /ads or ask for static ads, video scripts, one-liners, or ad review."
 ---
 
 # Ads Skill
@@ -15,7 +15,7 @@ Determine mode from user request:
 |------|----------|--------|
 | **Static** | "static ads", "image ads", "primaries", "headlines", "image prompts" | 5-6 concepts, each with 5 primaries + 5 headlines + 3 image prompts |
 | **Video** | "video scripts", "ad scripts", "spoken word", "camera scripts" | 15-30 diverse scripts for spoken delivery |
-| **One-Liner** | "one-liners", "30 one-liners", "Andromeda", "diversified static copy" | 30 diversified one-liners for static image ads |
+| **One-Liner** | "one-liners", "30 one-liners", "Andromeda", "diversified static copy" | 30 diversified copy lines for static image ads (Andromeda-optimized) |
 | **Review** | "review", "check", "audit", "compliance", "before launch" | P1/P2/P3 report across 6 lenses |
 
 If unclear, ask: "Do you want static image ads, video scripts, one-liners, or a compliance review?"
@@ -133,9 +133,26 @@ Every one-liner **MUST** include at least one specific element:
 
 ### Output Format
 
-Simple numbered list. One per line. Ready to copy.
+**Save to file, not chat.** This enables review to edit the file directly.
 
-```
+1. Create folder: `outputs/YYYY-MM-DD-one-liners-{campaign-name}/`
+2. Save one-liners to: `batch.md`
+3. Tell user: "Saved 30 one-liners to `outputs/2026-01-26-one-liners-{name}/batch.md`"
+4. Offer: "Want me to run `/ads review` to check for compliance issues?"
+
+**batch.md format:**
+
+```markdown
+---
+type: output
+subtype: one-liners
+date: YYYY-MM-DD
+status: draft
+review_status: null
+---
+
+# One-Liners: {Campaign Name}
+
 1. [one-liner]
 2. [one-liner]
 ...

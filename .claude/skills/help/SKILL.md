@@ -1,6 +1,6 @@
 ---
 name: help
-description: Answer questions about Main Branch and Claude Code. Use when: (1) User asks "how do I...", "what is...", "why does...", "explain..." (2) User is confused about the two-repo model, /add-dir, or skills (3) User encounters errors (command not found, repository not found) (4) User says "help", "I'm stuck", "I don't understand" (5) User asks about daily workflow or getting started (6) User is a complete beginner to Terminal or Claude Code (7) User wants to know what to do next (8) User brain-dumps a question — triage intent and answer or route. Answers questions based on documented curriculum. Routes to other skills when appropriate.
+description: "Answer questions about Main Branch and Claude Code. Use when: user asks how/what/why questions, is confused about two-repo model or skills, encounters errors, says help or stuck, asks about workflow, is a beginner, or wants to know what to do next."
 ---
 
 # Help
