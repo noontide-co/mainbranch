@@ -19,17 +19,6 @@ reference/domain/
 
 ## Skool-Specific Skills
 
-### /skool-manager
-
-Manage community engagement directly from Claude Code.
-
-**What it does:**
-- Check your Skool feed for new posts
-- Draft responses that match your voice
-- Daily community management rounds
-
-**Requires:** Chrome extension connected to your Skool login.
-
 ### /vsl skool
 
 Write Video Sales Letters for your community.
@@ -97,9 +86,7 @@ Future: We're building automation to sync classroom content directly.
 
 ### "Can Claude post in my community?"
 
-With Chrome extension: Yes, /skool-manager can help draft and post responses.
-
-Without extension: Claude can draft responses, you copy-paste them.
+Claude can draft responses for you to copy-paste into Skool.
 
 ### "How do I use my community content for ads?"
 

@@ -167,8 +167,7 @@ No prompt engineering. No explaining what you want. Just type the command.
 | `/think` | Research, make decisions, add context, transcribe local recordings, update reference files |
 | `/ads` | Create ad copy (static or video) and review for compliance |
 | `/vsl` | Write video sales letter scripts (Skool or B2B) |
-| `/content` | Mine competitors, create Reels/TikTok/carousel scripts |
-| `/skool-manager` | Respond to Skool community posts |
+| `/organic` | Mine competitors, create Reels/TikTok/carousel scripts |
 
 ---
 

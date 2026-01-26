@@ -216,7 +216,6 @@ When running `/think` to analyze Skool performance:
 
 | Skill | What It Reads |
 |-------|---------------|
-| `/skool-manager` | `classroom/modules.md`, `membership/` |
 | `/vsl skool` | `funnel/stages.md`, `membership/benefits.md` |
 
 ---

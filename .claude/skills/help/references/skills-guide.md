@@ -70,7 +70,7 @@ See [the-think-cycle.md](the-think-cycle.md) for deep dive.
 
 ---
 
-### /content - Organic Content
+### /organic - Organic Content
 **Use when:** Creating Reels, TikTok, or carousel content (not paid ads).
 
 **What it does:**
@@ -80,11 +80,11 @@ See [the-think-cycle.md](the-think-cycle.md) for deep dive.
 - Supports video, carousel, and static formats
 
 **Modes:**
-- `/content` - Full flow (mine -> select -> generate)
-- `/content mine` - Research competitors only
-- `/content video "topic"` - Generate Reels/TikTok script
-- `/content carousel "topic"` - Generate carousel slides
-- `/content static "topic"` - Generate post caption
+- `/organic` - Full flow (mine -> select -> generate)
+- `/organic mine` - Research competitors only
+- `/organic video "topic"` - Generate Reels/TikTok script
+- `/organic carousel "topic"` - Generate carousel slides
+- `/organic static "topic"` - Generate post caption
 
 **Key difference from /ads video:** Organic uses soft CTAs (save, follow) while ads use hard CTAs (buy, sign up).
 
@@ -145,16 +145,13 @@ What do you need?
 │   └── /vsl (skool or b2b)
 │
 ├── Create organic content? (free reach)
-│   └── /content (Reels, TikTok, carousels)
+│   └── /organic (Reels, TikTok, carousels)
 │
 ├── Build a public wiki?
 │   └── /wiki
 │
-├── Confused or stuck?
-│   └── /help
-│
-└── Skool community tasks?
-    └── /skool-manager
+└── Confused or stuck?
+    └── /help
 ```
 
 ---

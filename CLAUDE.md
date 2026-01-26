@@ -65,13 +65,11 @@ Take inventory. Notice what's missing. Proactively suggest skills they haven't i
 | Exploring, researching, deciding | `/think` |
 | Ready to create paid ads | `/ads` |
 | Need a sales video script | `/vsl` |
-| Want organic content (reels, tiktok) | `/content` |
-| Managing Skool community | `/skool-manager` |
+| Want organic content (reels, tiktok) | `/organic` |
 | Building a wiki or notes | `/wiki` |
-| Need slides or presentations | `/deck` |
 | Asking questions, troubleshooting | `/help` |
 
-**Quick triggers:** "research/decide" → `/think` · "ads/copy" → `/ads` · "organic/reels" → `/content` · "help/stuck" → `/help`
+**Quick triggers:** "research/decide" → `/think` · "ads/copy" → `/ads` · "organic/reels" → `/organic` · "help/stuck" → `/help`
 
 ---
 
@@ -133,7 +131,7 @@ Not everyone goes all the way. Most stay at Phase 2. The path exists for those w
 | Mode | Direction | Skills |
 |------|-----------|--------|
 | **Enriching the core** | Insights → reference files | `/think` |
-| **Creating for the world** | Reference files → output | `/ads`, `/vsl`, `/content` |
+| **Creating for the world** | Reference files → output | `/ads`, `/vsl`, `/organic` |
 
 ---
 
@@ -223,10 +221,8 @@ Research files also add: `linked_decisions: []`
 | `/think` | Research → decide → codify into reference |
 | `/ads` | Static ads, video scripts, one-liners, or compliance review |
 | `/vsl` | VSL scripts (Skool 18-section or B2B Haynes 7-step) |
-| `/content` | Mine competitors, generate organic scripts |
-| `/skool-manager` | Community engagement via Chrome |
+| `/organic` | Mine competitors, generate organic scripts |
 | `/wiki` | Personal wiki with atomic notes |
-| `/deck` | Branded slides and presentations |
 | `/help` | Answer questions, troubleshoot, explain |
 | `/pull` | Quick update vip (auto in /start) |
 

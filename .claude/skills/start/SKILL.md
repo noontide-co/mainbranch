@@ -1,6 +1,6 @@
 ---
 name: start
-description: Main entry point for Main Branch. Detects user state, context level, and experience to route to the right skill. Use when: (1) User says "start", "help", "what can I do", "begin" (2) User is new, returning, lost, or confused (3) User opens vip without a specific task in mind (4) Session starts and user needs triage. Routes to /setup (new users), /think (research/decide/enrich), /ads (static/video/review), /vsl (skool/b2b), /content, /skool-manager, /wiki, /help.
+description: Main entry point for Main Branch. Detects user state, context level, and experience to route to the right skill. Use when: (1) User says "start", "help", "what can I do", "begin" (2) User is new, returning, lost, or confused (3) User opens vip without a specific task in mind (4) Session starts and user needs triage. Routes to /setup (new users), /think (research/decide/enrich), /ads (static/video/review), /vsl (skool/b2b), /organic, /wiki, /help.
 ---
 
 # Start
@@ -68,8 +68,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │   ├── "research" / "decide" ────────→ /think
 │   ├── "ads" / "copy" ───────────────→ /ads (triages to static/video/review)
 │   ├── "vsl" / "sales video" ────────→ /vsl (triages to skool/b2b)
-│   ├── "content" / "organic" ────────→ /content
-│   ├── "skool" / "community" ────────→ /skool-manager
+│   ├── "content" / "organic" ────────→ /organic
 │   ├── "wiki" / "notes" ─────────────→ /wiki
 │   ├── "help" / questions ───────────→ /help
 │   └── unclear ──────────────────────→ Show options + mention /help
@@ -273,11 +272,10 @@ If user is ready to work, ask or infer intent. **Use numbered options:**
 > 1. Enrich the core (research, decide, mine) → `/think`
 > 2. Create ads (image or video) → `/ads`
 > 3. Write a VSL script → `/vsl`
-> 4. Create organic content → `/content`
-> 5. Manage Skool community → `/skool-manager`
-> 6. Work on my wiki → `/wiki`
-> 7. Add more context → `/think codify`
-> 8. Get help → `/help`
+> 4. Create organic content → `/organic`
+> 5. Work on my wiki → `/wiki`
+> 6. Add more context → `/think codify`
+> 7. Get help → `/help`
 >
 > (hit a number to reply, or just tell me what you need)"
 
@@ -336,10 +334,8 @@ Read `user.experience` from `~/.config/vip/local.yaml` (defaults to `beginner` i
 | `/think` | Enrich the core — research, decide, codify into reference |
 | `/ads` | Generate image ads, video scripts, or review for compliance |
 | `/vsl` | Write video sales letters (Skool or B2B frameworks) |
-| `/content` | Mine competitors, generate organic scripts |
-| `/skool-manager` | Manage community engagement |
+| `/organic` | Mine competitors, generate organic scripts |
 | `/wiki` | Create atomic notes, publish wiki |
-| `/deck` | Create branded presentations from business context |
 
 ---
 
@@ -355,11 +351,9 @@ Use these to auto-detect what user wants:
 | "research", "decide", "figure out", "explore", "mine", "mining", "transcribe" | `/think` |
 | "ads", "copy", "static", "image ads", "video ads", "review", "compliance" | `/ads` |
 | "vsl", "sales video", "about page video", "b2b video" | `/vsl` |
-| "content", "reels", "tiktok", "organic", "mine", "competitors", "carousel" | `/content` |
-| "skool", "community", "posts", "respond" | `/skool-manager` |
+| "content", "reels", "tiktok", "organic", "mine", "competitors", "carousel" | `/organic` |
 | "wiki", "notes", "atomic", "wikilinks", "publish wiki" | `/wiki` |
 | "pull", "update vip", "get latest" | `/pull` |
-| "deck", "slides", "presentation", "powerpoint", "pptx" | `/deck` |
 
 ---
 
