@@ -1,13 +1,33 @@
 ---
 name: organic
-description: Mine competitor content and generate organic scripts. ALWAYS offer Apify MCP first for data extraction (manual fallback if unavailable). Use when: (1) User says "mine", "competitors", "organic", "reels", "tiktok", "carousel" (2) User needs scripts for talking-head videos, carousels, static posts (3) User wants to research what content works in their niche (4) User has a topic and wants organic (not paid) content. NOT for paid ads - use /ads instead. Organic = value-first, soft CTAs, engagement focus. Paid = direct response, hard CTAs, conversion focus. Modes: mine, video, carousel, static.
+description: CREATE organic content scripts (Reels, TikTok, carousels, static posts). Use when user wants to GENERATE new scripts from concepts. NOT for research/mining competitor content - that's /think. NOT for paid ads - use /ads instead. Modes: video, carousel, static. If user says "mine", "scrape", "research competitors" → route to /think.
 ---
 
 # Organic
 
-Mine competitor content, extract winning concepts, generate scripts in your voice.
+Create organic content scripts in your voice — Reels, TikToks, carousels, static posts.
 
 **Need help?** Type `/help` + your question anytime. If conversation compacts, `/help` reloads fresh context.
+
+---
+
+## Triage
+
+Detect if user is in the right place:
+
+| User Says | They Want | Route To |
+|-----------|-----------|----------|
+| "mine", "scrape", "research competitors", "what are they saying" | Research/Mining | `/think` (research mode) |
+| "transcribe", "extract from video" | Mining | `/think` (research mode) |
+| "create", "generate", "write scripts", "make content" | Create | Continue in `/organic` |
+
+**If mining intent detected:**
+> "Sounds like you want to research/mine competitor content. That's `/think` territory — it saves to `research/` and feeds your reference files. Should I switch you to `/think`?"
+
+**If unclear:**
+> "Are you trying to mine competitor content (research) or create new scripts (generate)?"
+
+---
 
 ## Pull Latest Updates (Always)
 
@@ -19,50 +39,20 @@ If updates pulled: briefly note "Pulled latest vip updates." then continue silen
 
 ---
 
-## Data Extraction (ALWAYS MENTION FIRST)
+## About Mining (Lives in /think Now)
 
-**For Instagram mining, Apify is essential** — not nice-to-have:
-- 95%+ reliable vs 60-70% for browser automation
-- 100x faster (pulls data directly vs slow screenshot-by-screenshot browsing)
-- Handles Instagram's rate limits automatically
-- Free tier covers ~2000 posts/month (~$5/mo after)
-- **One-time 5-minute setup**, then remembered forever in your Claude settings
+Mining competitor content is research work. It belongs in `/think` because:
+- Mining output goes to `research/` folder
+- Extracted insights feed into reference files
+- It's the "Research" phase of the think cycle
 
-Offer in order:
-1. **Apify MCP** (strongly recommended for Instagram) — Pull posts with engagement metrics
-2. **Browser MCP** (fallback) — Works but slow and unreliable
-3. **Manual** (last resort) — User shares screenshots
+**If user wants to mine:** Route them to `/think`. Say:
+> "Mining is research work — `/think` handles that and saves to your `research/` folder. Should I switch you over?"
 
-Ask: "Do you have Apify set up? It's a one-time 5-minute setup, then it just works every time."
-
-For setup walkthrough, see [references/apify-setup.md](references/apify-setup.md).
-
-### Token Awareness
-
-Mining uses significant tokens (~3-5k per competitor). Before running:
-
-```
-Mining scope: 3 competitors × ~10 posts each
-Estimated tokens: ~12-15k
-
-1. Proceed (full scan)
-2. Quick scan (top 5 posts each, ~6-8k tokens)
-3. Pick specific competitors to mine
-```
-
-Let user control scope. Don't auto-run expensive operations.
-
-### Competitor Discovery
-
-If user says "find me competitors" or has thin/empty handles.md:
-
-| Method | When to Use |
-|--------|-------------|
-| Hashtag search | User knows their niche hashtags |
-| Keyword search | User can describe their niche |
-| Similar accounts | User knows 1-2 competitors |
-
-See [references/apify-discovery.md](references/apify-discovery.md) for actor details and workflows.
+**This skill assumes mining already happened.** Users arrive here with:
+- Concepts from `research/*-competitor-mine.md`
+- A topic they want to turn into content
+- Inspiration from their own research
 
 ---
 
@@ -80,44 +70,51 @@ Missing files? See [references/first-time-setup.md](references/first-time-setup.
 
 Don't list all modes in chunky blocks. Instead:
 
-1. **Recommend ONE path** based on their context
-2. **Mention alternatives briefly** in one line
-3. **State data extraction method** (Apify or manual)
+1. **Check for existing concepts** — Is there recent mining in `research/`?
+2. **Recommend ONE path** based on their context
+3. **Mention alternatives briefly** in one line
 
-**Example output:**
+**Example output (concepts exist):**
 ```
-Recommended: `/organic mine` — research competitors first since your voice file is still draft.
+Found recent mining (research/2026-01-20-competitor-mine.md) with 10 concepts.
 
-Other modes: `video "topic"`, `carousel "topic"`, `static "topic"`
+Recommended: Pick a concept and generate a video script.
 
-Data: I'll ask you to share competitor screenshots (or use Apify MCP if you have it set up).
+Other modes: `carousel "concept"`, `static "concept"`
 
-Platform?
-1. Instagram
-2. TikTok
-3. Both
-4. Other (Skool, YouTube, etc.)
+Which concept interests you? Or provide your own topic.
+```
 
-(hit a number)
+**Example output (no concepts):**
+```
+No recent mining found. Two options:
+
+1. Mine competitors first → `/think` (saves to research/, come back here after)
+2. Skip mining, give me a topic → I'll generate directly
+
+Which works better for you?
 ```
 
 ---
 
 ## Modes
 
-### `/organic` (Full Flow - Default)
+### `/organic` (Default)
 
-Mine competitors -> pick concepts -> generate scripts.
+Check for existing mined concepts, pick one, generate scripts.
 
 ```
-Mine -> Select -> Generate -> Output
+Check research/ -> Select concept -> Generate -> Output
 ```
 
-### `/organic mine`
+If no mining exists, prompt: "No mined concepts found. Want to mine competitors first? That's `/think` — should I switch you over?"
 
-Research competitor content only. Saves to `research/YYYY-MM-DD-competitor-mine.md`. See [references/mining-template.md](references/mining-template.md).
+### `/organic mine` (Routes to /think)
 
-**Output path (mining):** `research/YYYY-MM-DD-competitor-mine.md`
+If user types `/organic mine`, redirect:
+> "Mining is research work now. Routing you to `/think` for mining — it'll save to `research/` and you can come back here to generate scripts from those concepts."
+
+Then invoke `/think`.
 
 ### `/organic video "concept"`
 
@@ -154,8 +151,8 @@ Found today's mining (research/2026-01-20-competitor-mine.md):
 
 Options:
 1. Generate from remaining 8 concepts
-2. Mine new competitors
-3. Start fresh topic
+2. Mine new competitors → `/think`
+3. Start fresh with your own topic
 
 What should we call this batch? (e.g., "january-hooks", "transformation-reels")
 ```
@@ -171,15 +168,15 @@ Before saving: show file paths.
 
 ## Full Flow Walkthrough
 
-1. **Identify competitors** — Check `reference/competitors/handles.md` or ask user
-2. **Mine content** — Apify (preferred) or manual screenshots, sort by engagement
-3. **Extract concepts** — Hook, topic, structure, angle, format from top 20%
-4. **Adapt to brand** — Map concepts to user's offer, audience, voice
+1. **Check for concepts** — Look in `research/*-competitor-mine.md` or `research/*-mining.md`
+2. **If no concepts** — Ask if they want to mine first (route to `/think`) or provide a topic directly
+3. **Select concept** — User picks from mined concepts or provides their own
+4. **Adapt to brand** — Map concept to user's offer, audience, voice
 5. **Generate scripts** — Use appropriate framework (video/carousel/static)
-6. **Save output** — Mining to `research/`, scripts to `outputs/YYYY-MM-DD-organic-{campaign}/`
+6. **Save output** — Scripts to `outputs/YYYY-MM-DD-organic-{campaign}/`
 7. **Commit prompt** — "Saved to [path]. Want me to commit this to git?"
 
-See [references/mining-template.md](references/mining-template.md) for concept extraction template.
+**Mining lives in `/think` now.** If user needs to mine competitors, route them there first.
 
 ---
 
@@ -255,8 +252,8 @@ Today's mining exists (3 competitors, 10 concepts).
 Scripts generated: 2 of 10 concepts used.
 
 1. Generate from remaining 8 concepts
-2. Mine new competitors
-3. Something else
+2. Mine new competitors → `/think`
+3. Give me a fresh topic
 
 User: 1
 
@@ -286,17 +283,18 @@ Saved to outputs/2026-01-26-organic-morning-routine/organic-batch-001.md
 Want me to commit this to git?
 ```
 
-### Example 3: Mine Only
+### Example 3: Mining Redirect
 
 ```
 User: /organic mine
 
-Claude: [Gathers competitor data]
-[Extracts concepts]
-[Saves to research/2026-01-19-competitor-mine.md]
+Claude: Mining is research work now — it lives in `/think` so your mined
+concepts go to `research/` and can feed your reference files.
 
-Mining complete. 12 winning concepts extracted.
-Run `/organic video` or `/organic carousel` to generate from these.
+Switching you to `/think` for mining. Once you've got concepts, come back
+to `/organic` to generate scripts from them.
+
+[Routes to /think]
 ```
 
 ---
