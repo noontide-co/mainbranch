@@ -4,19 +4,30 @@
 
 ---
 
+## Verification Status
+
+| Tier | Status | Notes |
+|------|--------|-------|
+| **Tier 1** | **TESTED** | Flash API works via REST endpoint |
+| **Tier 2** | **NOT TESTED** | Interactions API documented but needs verification |
+
+---
+
 ## What You Get
 
 Two tiers of Gemini research:
 
-**Tier 1: Quick Research (Free tier)**
+**Tier 1: Quick Research (Free tier)** - CONFIRMED WORKING
 - Standard API calls via `generate_content`
 - 30-60 second response times
 - Good for most questions
+- Tested model: `gemini-2.0-flash`
 
-**Tier 2: Deep Research (Pay-as-you-go)**
+**Tier 2: Deep Research (Pay-as-you-go)** - NOT YET VERIFIED
 - Agentic multi-step research via Interactions API
 - 5-20 minute autonomous investigation
 - Searches 80-160+ sources, produces comprehensive reports
+- Requires additional testing before production use
 
 Best for:
 - Competitor analysis

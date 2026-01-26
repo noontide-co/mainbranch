@@ -37,6 +37,8 @@ linked_decisions: []
 
 # Competitor Content Mining
 
+> **Remember:** Mining is INPUT. Reference is OUTPUT. The goal is to enrich your reference files, not just collect content.
+
 Mining date: YYYY-MM-DD
 Competitors analyzed: X accounts
 Posts reviewed: X total
@@ -104,11 +106,25 @@ Top performers extracted: X concepts
 2. [Middle content approach]
 3. [Ending/CTA approach]
 
-**Why it worked:**
-[Analysis of what made this perform]
+**Framework Analysis (Human Judgment Required):**
+
+| Dimension | What AI Observes | Why It Worked (YOUR Analysis) |
+|-----------|------------------|-------------------------------|
+| **Visual** | [Format type, production style, visual patterns] | [Your interpretation of WHY this visual approach connects] |
+| **Audible** | [Energy level, pacing, vocal patterns] | [Your interpretation of WHY this delivery resonates] |
+| **Emotional** | [Primary emotion triggered, controversial element] | [Your interpretation of the identity/emotion play] |
+
+**Framework Transfer Notes (Human Work):**
+
+This is where the real value lives. AI showed you WHAT worked. Now you decide WHY and WHETHER it transfers.
+
+- **Why did this work?** [Your interpretation — not AI's guess]
+- **Does it fit my energy?** [Can you authentically deliver this?]
+- **Does it fit my audience?** [Will YOUR people respond to this approach?]
+- **Transfer verdict:** [Use as-is / Adapt heavily / Skip — and why]
 
 **Adaptation potential:** [High / Medium / Low]
-[Notes on how to adapt for user's brand]
+[Specific notes on how to make it yours — or why it doesn't fit]
 
 ---
 
@@ -209,17 +225,27 @@ Most effective hook types observed:
 
 ### Implications for Reference Files
 
+**This is the whole point.** Mining isn't complete until something goes into reference.
+
 | File | Potential Update |
 |------|------------------|
-| reference/proof/angles/*.md | [New angles discovered] |
+| reference/proof/angles/*.md | [New angles discovered — create or update angle files] |
 | reference/core/voice.md | [Voice patterns to adopt/avoid] |
-| reference/competitors/handles.md | [New competitors to add] |
+| reference/core/audience.md | [New understanding of what resonates with them] |
+| reference/brand/guardrails.md | [Patterns to avoid, anti-patterns spotted] |
+
+### Before You Generate: Update Reference First
+
+The path is: Mining → Human Synthesis → Reference Update → THEN Content Generation
+
+**Don't skip straight to scripts.** Extract what you learned, codify it, then generate from enriched reference.
 
 ### Next Steps
 
-- [ ] Generate scripts from concepts 1, 2, 3
-- [ ] Save winning angles to reference
-- [ ] [Other actions]
+- [ ] **REQUIRED:** Update at least one reference file with insights from this mining
+- [ ] Review frameworks with human judgment (Visual/Audible/Emotional)
+- [ ] Codify winning patterns via `/think codify`
+- [ ] THEN generate scripts from concepts (not before)
 
 ---
 
@@ -231,6 +257,52 @@ If extracted via Apify or other tools, include raw JSON or CSV here for referenc
 [Raw data if available]
 ```
 ```
+
+---
+
+## What AI Can and Cannot Do
+
+> "AI can show WHAT worked. Human must judge WHY." — Koston Williams
+
+### AI CAN:
+- Collect posts and metrics
+- Transcribe video content
+- Identify engagement patterns
+- Extract hooks and structure
+- Note format distribution
+- Surface patterns across competitors
+
+### AI CANNOT:
+- Tell you WHY something actually worked
+- Judge framework transferability to YOUR niche
+- Determine if a format fits YOUR personality
+- Know if an angle aligns with YOUR offer
+- Feel the emotional resonance
+
+### YOUR JOB:
+1. **Extract frameworks** — Visual, Audible, Emotional dimensions
+2. **Judge transferability** — Does this fit YOUR voice, energy, offer?
+3. **Apply to your niche** — Same framework, different execution
+4. **Update reference files** — Winning patterns become evergreen
+
+**The goal is reference files.** Mining is INPUT. Reference is OUTPUT. Content generation happens AFTER reference is enriched.
+
+---
+
+## The 6M View Insight
+
+This framework extraction methodology comes from Koston Williams, who used it to create a video with 6 million views. The insight:
+
+**AI can collect and display data. Only you can extract the framework that transfers.**
+
+A competitor's video worked for THEM. The Visual/Audible/Emotional dimensions were calibrated to THEIR audience, THEIR personality, THEIR offer. Your job is to:
+
+1. See the framework beneath the content
+2. Judge whether it transfers to your context
+3. Adapt it to your voice and audience
+4. Codify what you learned into reference files
+
+The skill isn't copying. The skill is framework transfer — same underlying pattern, different execution.
 
 ---
 

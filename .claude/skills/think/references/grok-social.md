@@ -1,6 +1,24 @@
 # X/Twitter Social Research
 
-Real-time social intelligence using Grok X Insights MCP.
+Real-time social intelligence from X/Twitter using xAI's Grok API.
+
+---
+
+## CRITICAL: API Limitations
+
+**The REST API does NOT support X search.** This is a key finding from testing:
+
+| API | Chat Works | X Search Works |
+|-----|------------|----------------|
+| REST API (`api.x.ai/v1/chat/completions`) | YES | NO (search param ignored) |
+| Python SDK with gRPC (`xai_sdk`) | YES | YES |
+
+When you use the REST API with `search: true`, you'll see:
+- `num_sources_used: 0` in the response
+- No actual X posts returned
+- Grok answers from training data, not live X
+
+**To get live X search, you must use the Python SDK.**
 
 ---
 
@@ -30,160 +48,203 @@ Real-time social intelligence using Grok X Insights MCP.
 
 ## Quick Start
 
-**Check if Grok MCP is available:**
+**Three approaches, in order of preference:**
 
-Ask user: "Do you have Grok X Insights MCP set up? (One-time 5-min setup)"
-
-1. Yes → proceed with Grok tools
-2. No → offer setup guide ([grok-setup.md](grok-setup.md))
-3. Skip → fall back to web search (less real-time)
+1. **Python SDK** (full X search) → Requires `xai_sdk` package
+2. **Grok X Insights MCP** (community wrapper) → See [grok-setup.md](grok-setup.md)
+3. **Fallback: WebSearch** → `site:x.com [query]` (less structured)
 
 ---
 
-## Tools Reference
+## Option 1: Python SDK (Recommended for X Search)
 
-### 1. grok_search_posts
+The official xAI Python SDK uses gRPC and supports X search tools that execute server-side.
 
-Search and analyze X posts about any topic.
+### Setup
 
-```json
-{
-  "query": "AI-native business tools",
-  "timeWindow": "24hr",
-  "limit": 50,
-  "analysisType": "both"
-}
+```bash
+pip install xai-sdk
+export XAI_API_KEY="your-api-key"
 ```
 
-**Parameters:**
-- `query` (required): Search query or topic
-- `timeWindow`: "15min", "1hr", "4hr", "24hr", "7d" (default: "4hr")
-- `limit`: 1-50 posts (default: 50)
-- `analysisType`: "sentiment", "themes", "both" (default: "both")
+### How X Search Works
 
-**Returns:**
-- Summary of findings
-- Themes identified
-- Sentiment breakdown (positive/negative/neutral/mixed)
-- Notable observations
-- Citations (links to actual posts)
+X search is **tool-based**. You don't call search directly — you give the model access to search tools and it decides when to use them:
+
+```python
+import asyncio
+from xai_sdk import Client
+from xai_sdk.tools import x_search
+
+async def search_x():
+    client = Client()
+
+    conversation = client.chat.create(
+        model="grok-3",
+        tools=[x_search()]  # Enable X search tools
+    )
+
+    async for token in conversation.add_user_turn(
+        "What are people saying about AI coding assistants on X?"
+    ):
+        print(token.token, end="", flush=True)
+
+    print()
+
+asyncio.run(search_x())
+```
+
+### Available Sub-Tools
+
+When you pass `x_search()`, the model gets access to:
+
+| Sub-Tool | Purpose |
+|----------|---------|
+| `x_user_search` | Find X user accounts |
+| `x_keyword_search` | Keyword-based post search |
+| `x_semantic_search` | Semantic/contextual search |
+| `x_thread_fetch` | Fetch full thread from a post |
+
+### Search Parameters
+
+The model can use these internally when searching:
+
+- **Date filtering:** `from_date`, `to_date` (ISO8601 format: "2026-01-01")
+- **Handle exclusion:** `excluded_handles` (list of handles to skip)
+- **Result limits:** Typically returns 10-20 relevant posts
+
+**Note:** You don't control these directly — the model decides based on your prompt. You can influence by being specific: "What have people said about X in the last week, excluding @spamaccount?"
+
+### Example with Streaming
+
+```python
+import asyncio
+from xai_sdk import Client
+from xai_sdk.tools import x_search
+
+async def research_topic(topic: str):
+    client = Client()
+
+    conversation = client.chat.create(
+        model="grok-3",
+        tools=[x_search()]
+    )
+
+    prompt = f"""Research what people on X are saying about: {topic}
+
+    Provide:
+    1. Overall sentiment (positive/negative/mixed)
+    2. Key themes (3-5 bullet points)
+    3. Notable quotes from actual posts
+    4. Any controversies or debates"""
+
+    result = []
+    async for token in conversation.add_user_turn(prompt):
+        result.append(token.token)
+        print(token.token, end="", flush=True)
+
+    return "".join(result)
+
+asyncio.run(research_topic("Skool communities"))
+```
 
 ---
 
-### 2. grok_analyze_topic
+## Option 2: Grok X Insights MCP (Community Wrapper)
 
-Deep analysis with customizable aspects.
+A third-party MCP server that wraps Grok API. May or may not support live X search depending on implementation.
 
-```json
-{
-  "topic": "Skool communities",
-  "aspects": [
-    "common complaints",
-    "what people love",
-    "competitor comparisons",
-    "pricing sentiment"
-  ],
-  "timeWindow": "7d"
-}
-```
+See [grok-setup.md](grok-setup.md) for setup.
 
-**Use when:** You need specific angles analyzed, not just general sentiment.
+### Tools (if MCP available)
 
-**Good aspects to analyze:**
-- "common complaints"
-- "what people love"
-- "key influencers"
-- "controversy points"
-- "pricing sentiment"
-- "competitor comparisons"
-- "emerging trends"
-- "use cases people share"
+| Tool | Purpose |
+|------|---------|
+| `grok_search_posts` | Search and analyze X posts |
+| `grok_analyze_topic` | Deep analysis with aspects |
+| `grok_get_trends` | Trending topics |
+| `grok_chat` | General chat |
+
+**Warning:** Test if your MCP implementation actually returns X data. Check for `num_sources_used > 0` in responses.
 
 ---
 
-### 3. grok_get_trends
+## Option 3: WebSearch Fallback
 
-Identify what's trending in a category.
+When Python SDK isn't available, use WebSearch with site restriction:
 
-```json
-{
-  "category": "AI tools",
-  "limit": 50
-}
+```
+WebSearch: "AI coding assistants site:x.com"
 ```
 
-**Returns:**
-- Trending topics with volume (high/medium/low)
-- Sentiment per trend
-- Key themes
-- Citations
+**Limitations:**
+- Not real-time (indexed pages only)
+- No sentiment analysis
+- No structured data
+- Can't see replies/threads easily
 
-**Use when:** You want to discover what's hot, not research a specific topic.
-
----
-
-### 4. grok_chat
-
-General chat with Grok, optionally grounded in live X data.
-
-```json
-{
-  "prompt": "What's the current discourse around community-based businesses?",
-  "enableSearch": true,
-  "searchLimit": 50,
-  "temperature": 0.3
-}
-```
-
-**Use when:** You want conversational exploration, not structured analysis.
+Still useful for finding popular/viral posts that have been indexed.
 
 ---
 
 ## Workflow Patterns
 
-### Pattern 1: Sentiment Check
+### Pattern 1: Sentiment Check (Python SDK)
 
 User: "What are people saying about Skool?"
 
-```
-1. grok_search_posts with query "Skool" timeWindow "7d"
-2. Extract: overall sentiment, common themes, notable posts
-3. Synthesize findings
-4. Save to research/YYYY-MM-DD-skool-sentiment-x-social.md
+```python
+prompt = """Search X for recent posts about Skool communities.
+Analyze:
+1. Overall sentiment (positive/negative/mixed)
+2. Common themes in what people say
+3. Include actual quotes from posts
+4. Any common complaints or praises"""
+
+# Save to: research/YYYY-MM-DD-skool-sentiment-x-social.md
 ```
 
 ### Pattern 2: Competitive Intelligence
 
 User: "What do people say about [competitor] vs us?"
 
-```
-1. grok_analyze_topic with aspects: ["complaints", "what people love", "comparisons"]
-2. Run for competitor AND for your brand
-3. Compare findings
-4. Save to research/YYYY-MM-DD-competitive-x-social.md
-```
+```python
+prompt = """Research X posts comparing [our brand] vs [competitor].
+Look for:
+1. What people love about each
+2. Common complaints about each
+3. Feature comparisons people mention
+4. Price/value discussions"""
 
-### Pattern 3: Trend Discovery
-
-User: "What's trending in the coaching space?"
-
-```
-1. grok_get_trends with category "coaching" or "online business"
-2. Identify relevant trends
-3. For top 2-3 trends, run grok_search_posts for deeper analysis
-4. Save to research/YYYY-MM-DD-coaching-trends-x-social.md
+# Save to: research/YYYY-MM-DD-competitive-x-social.md
 ```
 
-### Pattern 4: Social Proof Mining
+### Pattern 3: Social Proof Mining
 
 User: "Find social proof about [topic] for my messaging"
 
+```python
+prompt = """Find posts where people describe their experience with [topic].
+I need:
+1. Actual quotes I can use (with attribution)
+2. The language/words real people use
+3. Before/after stories
+4. Common objections mentioned"""
+
+# Save quotes and patterns to research/
+# Consider codifying strong angles to reference/proof/angles/
 ```
-1. grok_search_posts with topic, timeWindow "7d", analysisType "themes"
-2. Extract actual quotes/opinions from citations
-3. Identify patterns in how people describe the problem/solution
-4. Save quotes and patterns to research/
-5. Consider codifying strong angles to reference/proof/angles/
+
+### Pattern 4: Fallback (WebSearch)
+
+When Python SDK unavailable:
+
+```
+1. WebSearch: "[topic] site:x.com"
+2. WebFetch on promising URLs
+3. Manual synthesis of findings
+4. Note: "Source: WebSearch (not real-time)"
+5. Save to: research/YYYY-MM-DD-topic-web.md
 ```
 
 ---
@@ -244,22 +305,27 @@ linked_decisions: []
 
 ## Cost & Token Management
 
-**Typical costs per operation (Grok 4.1 Fast):**
+**xAI API Pricing (as of 2026):**
+
+| Model | Input | Output |
+|-------|-------|--------|
+| grok-3 | ~$3/M tokens | ~$15/M tokens |
+| grok-3-fast | ~$1/M tokens | ~$5/M tokens |
+
+**Typical costs per X search query:**
 
 | Operation | Approx Tokens | Approx Cost |
 |-----------|---------------|-------------|
-| Simple sentiment search | ~7K total | ~$0.002 |
-| Deep topic analysis | ~15K total | ~$0.005 |
-| Trend discovery | ~10K total | ~$0.003 |
+| Simple sentiment search | ~5-10K total | ~$0.02-0.10 |
+| Deep topic analysis | ~15-20K total | ~$0.10-0.30 |
+| Multi-turn conversation | ~30K+ total | ~$0.30+ |
 
-**$5 gets you:** ~1,500-2,500 research queries
+**Cost management tips:**
 
-**Manage tokens by:**
-
-1. **Start narrow:** Use shorter timeWindow (4hr vs 7d)
-2. **Limit posts:** Start with 20-30, increase if needed
-3. **Specific queries:** "Skool pricing complaints" vs just "Skool"
-4. **Synthesize immediately:** Don't dump raw output into files
+1. **Be specific:** "Skool pricing complaints" vs just "Skool"
+2. **Limit scope:** "last 7 days" vs "all time"
+3. **Single turn:** Get what you need in one prompt
+4. **Use grok-3-fast** for routine searches
 
 ---
 
@@ -279,12 +345,60 @@ linked_decisions: []
 
 ---
 
-## Fallback (No Grok MCP)
+## Fallback Strategy
 
-If user doesn't have Grok set up and doesn't want to:
+**When Python SDK isn't available:**
 
-1. **Web search:** Use WebSearch for X/Twitter discussions (less structured)
-2. **Manual:** Ask user to share screenshots of relevant X posts
-3. **Skip:** Note that social research was skipped, proceed with other sources
+| Approach | Quality | Effort |
+|----------|---------|--------|
+| WebSearch `site:x.com` | Medium | Low |
+| Manual X search + paste | High | High |
+| Skip X research | N/A | None |
 
-Don't block research just because Grok isn't available — adapt and continue.
+**WebSearch fallback example:**
+```
+WebSearch: "Skool community reviews site:x.com"
+WebSearch: "Skool vs Circle site:x.com"
+```
+
+**Don't block research** just because live X search isn't available — adapt and continue.
+
+---
+
+## Technical Details
+
+### Why REST API Doesn't Work for X Search
+
+The xAI REST API at `api.x.ai/v1/chat/completions` accepts a `search` parameter, but testing shows:
+
+```json
+// Request
+{
+  "model": "grok-3",
+  "search": true,
+  "messages": [{"role": "user", "content": "What are people saying about X?"}]
+}
+
+// Response shows
+{
+  "num_sources_used": 0,  // <-- No X data fetched
+  ...
+}
+```
+
+The model responds with general knowledge, not live X data.
+
+### Why Python SDK Works
+
+The Python SDK (`xai_sdk`) uses:
+- **gRPC** (not REST) for communication
+- **Server-side tool execution** — model calls search tools that run on xAI's infrastructure
+- **Tool injection** — you pass `x_search()` and model autonomously decides when to search
+
+This is fundamentally different from REST API — the search executes server-side where xAI has X data access.
+
+### SDK Resources
+
+- **Docs:** https://docs.x.ai/docs/guides/tools/search-tools
+- **SDK Repo:** https://github.com/xai-org/xai-sdk-python
+- **Install:** `pip install xai-sdk`

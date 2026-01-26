@@ -10,11 +10,16 @@ Fast lookup table for routing research requests in /think skill.
 |-----------|----------|----------|----------|
 | YouTube URL, "transcribe video" | Apify YouTube | `mcp__apify__*` | Ask for manual transcript |
 | "what are people saying", "X sentiment" | Grok X search | `XAI_API_KEY` OR `mcp__xai__*` | WebSearch site:x.com |
-| "deep dive", "comprehensive research" | Gemini 2.5 | `GOOGLE_API_KEY` | WebSearch + synthesis |
+| Quick research, fact-checking | Gemini Flash (Tier 1) | `GOOGLE_API_KEY` | WebSearch + synthesis |
+| "deep dive", "comprehensive research" | Gemini Deep (Tier 2) | `GOOGLE_API_KEY` | Tier 1 or WebSearch |
 | Local file path, "transcribe recording" | whisper-mcp | `mcp__whisper__*` | CLI fallback |
 | Instagram handle, "mine competitors" | Apify Instagram | `mcp__apify__*` | Manual guidance |
 | "what do we know", "check existing" | Codebase grep | Always available | N/A |
 | General question | WebSearch | Always available | N/A |
+
+**Gemini Tier Status:**
+- Tier 1 (Flash): **TESTED** - works via REST API
+- Tier 2 (Deep Research): **NOT TESTED** - documented but needs verification
 
 ---
 
@@ -44,7 +49,8 @@ if mcp__whisper__* exists: WHISPER=true
 |--------|------|---------|
 | `-yt-mining.md` | Apify YouTube | `2026-01-26-hormozi-pricing-yt-mining.md` |
 | `-x-social.md` | Grok X/Twitter | `2026-01-26-skool-sentiment-x-social.md` |
-| `-gemini.md` | Gemini 2.5 | `2026-01-26-guarantee-psychology-gemini.md` |
+| `-flash.md` | Gemini Flash (Tier 1) | `2026-01-26-quick-research-flash.md` |
+| `-gemini-deep.md` | Gemini Deep (Tier 2) | `2026-01-26-guarantee-psychology-gemini-deep.md` |
 | `-ig-mining.md` | Apify Instagram | `2026-01-26-competitor-content-ig-mining.md` |
 | `-local-mining.md` | whisper-mcp | `2026-01-26-sales-call-local-mining.md` |
 | `-claude-code.md` | This session | `2026-01-26-pricing-strategy-claude-code.md` |
@@ -63,7 +69,10 @@ if mcp__whisper__* exists: WHISPER=true
 | Grok X search | 50 posts | ~10-15k | $0.005 |
 | Instagram quick | 5 posts | ~3-5k | $0.01 |
 | Instagram deep | 20 posts | ~10-15k | $0.04 |
-| Gemini deep | Complex query | ~5-10k | $0.01-0.05 |
+| Gemini Flash (Tier 1) | Quick query | ~5-10k | ~$0.01-0.05 |
+| Gemini Deep (Tier 2) | Complex research | ~60-80k output | ~$2-5/task |
+
+**Note:** Tier 1 is for 80% of research. Reserve Tier 2 for complex multi-source synthesis.
 
 **Rule:** Warn if single operation >15k tokens
 
@@ -93,10 +102,15 @@ if mcp__whisper__* exists: WHISPER=true
    └─> Instagram handle → route_instagram()
 
 3. Check complexity
-   └─> Complex multi-step → route_deep_research()
+   ├─> Simple question → route_gemini_tier1()
+   └─> Complex multi-step → route_gemini_tier2()
 
 4. Default
    └─> route_general_research()
+
+**Gemini Tier Decision:**
+- Tier 1: Quick questions, fact-checking (30-60s, ~$0.01-0.05)
+- Tier 2: Competitive analysis, industry research, multi-source synthesis (5-20min, ~$2-5)
 ```
 
 ---

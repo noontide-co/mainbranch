@@ -4,6 +4,29 @@ When and how to use Gemini for comprehensive research.
 
 ---
 
+## Verification Status
+
+| Tier | Feature | Status | Notes |
+|------|---------|--------|-------|
+| **Tier 1** | Flash API (`generate_content`) | **TESTED** | Works via REST endpoint |
+| **Tier 2** | Deep Research (Interactions API) | **NOT TESTED** | Documented from Google specs, needs verification |
+| **Tier 3** | Manual synthesis | **ALWAYS WORKS** | WebSearch + Apify + Claude |
+
+**Tested endpoint (Tier 1):**
+```
+POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$GOOGLE_API_KEY
+```
+
+**Response format:** `candidates[].content.parts[].text`
+
+**What needs testing:**
+- Interactions API endpoint (`/v1beta/interactions`)
+- Agent identifier: `deep-research-pro-preview-12-2025`
+- Python SDK: `google-genai>=1.55.0`
+- Streaming and polling behavior
+
+---
+
 ## Critical Distinction: UI vs Standard API vs Interactions API
 
 There are THREE different things, often confused:
@@ -26,9 +49,17 @@ There are THREE different things, often confused:
 ### Tier 1: Quick Research (30-60 seconds)
 **When:** Simple questions, fact-checking, quick lookups
 
-**Use:** Standard `generate_content` API with Flash or Pro models
-- `gemini-3-flash` — $0.50/$3.00 per 1M tokens (fastest, best value)
-- `gemini-2.5-flash` — $0.30/$2.50 per 1M tokens (cheaper, still fast)
+**Use:** Standard `generate_content` API with Flash models
+
+**Tested model:**
+- `gemini-2.0-flash` — CONFIRMED WORKING
+
+**Also available (check current pricing at [ai.google.dev/pricing](https://ai.google.dev/pricing)):**
+- `gemini-2.0-flash-exp` — Experimental, may have different behavior
+- `gemini-1.5-flash` — Older but stable
+- `gemini-1.5-pro` — More capable, higher cost
+
+**Options:**
 - Optional: Enable Google Search grounding for current info
 - Typical query cost: ~$0.005-0.02
 
@@ -37,16 +68,19 @@ There are THREE different things, often confused:
 ### Tier 2: Deep Research (5-20 minutes)
 **When:** Complex questions requiring multi-source synthesis
 
+**Status:** NOT YET TESTED - documentation based on Google's published API specs
+
 **Use:** Deep Research Agent via Interactions API
-- Agent: `deep-research-pro-preview-12-2025`
-- Powered by: Gemini 3 Pro (most capable model)
+- Agent: `deep-research-pro-preview-12-2025` (verify current agent identifier)
+- Powered by: Gemini Pro model (most capable)
 - Autonomous: plans, searches 80-160+ queries, reads, synthesizes, iterates
 - Produces detailed reports with citations
 
-**Cost breakdown:**
+**Cost breakdown (estimated, verify current pricing):**
 - Standard task: ~$2-3 (80 searches, 250K tokens)
 - Complex task: ~$3-5 (160 searches, 900K tokens)
-- Pricing based on Gemini 3 Pro rates: $2.00/$12.00 per 1M tokens
+
+**Before using Tier 2:** Test the Interactions API endpoint manually to verify it works with your API key and current agent identifier.
 
 ### Tier 3: Manual Deep Dive (Variable)
 **When:** Specific sources needed, API unavailable, or cost-sensitive

@@ -232,6 +232,22 @@ Every research output needs:
 - Implications for reference files
 - Open questions
 
+**For content mining specifically:** AI shows WHAT worked. You must judge WHY.
+
+Extract three dimensions from mined content:
+- **Visual** — Format, production style, patterns
+- **Audible** — Energy, pacing, delivery
+- **Emotional** — Primary emotion, identity play
+
+**Framework extraction is human judgment work.** AI surfaces the data; you interpret the frameworks. This methodology comes from Koston Williams (6M view video) — the skill isn't copying, it's framework transfer. A competitor's content worked for THEM. Your job is to:
+
+1. See the framework beneath the content
+2. Judge whether it transfers to YOUR context
+3. Adapt it to YOUR voice and audience
+4. Codify what you learned into reference files
+
+Don't skip to content generation. Mining → Human Synthesis → Reference Update → THEN Create.
+
 ### 4. Checkpoint
 
 > "Ready to make a decision, or need more research?"

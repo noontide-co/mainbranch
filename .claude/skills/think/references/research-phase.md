@@ -210,6 +210,30 @@ Every research output MUST have a synthesis section. This forces distillation.
 
 **The rule:** If you can't synthesize it, you don't understand it.
 
+---
+
+## Content Mining: Framework Extraction (Human Work)
+
+When mining competitor content, AI collects data. YOU extract the frameworks.
+
+> "AI can show WHAT worked. Human must judge WHY." — Koston Williams
+
+**Three dimensions to extract:**
+
+| Dimension | What AI Observes | What YOU Determine |
+|-----------|------------------|-------------------|
+| **Visual** | Format, production style, patterns | Does this fit MY setup/skills? |
+| **Audible** | Energy, pacing, delivery | Can I match this energy authentically? |
+| **Emotional** | Primary emotion triggered | Does this align with MY audience's identity? |
+
+**The skill is framework transfer.** A competitor's video worked for THEM — their audience, their personality, their offer. Your job is to see the framework beneath the content, judge whether it transfers to your context, and adapt it to your voice.
+
+**Don't skip to content.** Mining → Framework Extraction (human) → Reference Update → THEN Generate.
+
+This methodology comes from Koston Williams, who used it to create a 6M view video. The insight: copying content doesn't work. Extracting and transferring frameworks does.
+
+---
+
 ### One-Sentence Summary
 
 The hardest part. Forces clarity.

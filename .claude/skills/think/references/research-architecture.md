@@ -33,7 +33,8 @@
 | **YouTube transcripts** | Apify | Extract video transcripts | Mining expert content, competitors, frameworks |
 | **Instagram mining** | Apify | Scrape posts, stories, profiles | Competitor content, audience research |
 | **X/Twitter sentiment** | xAI Grok | Real-time social search | Sentiment, trends, social proof |
-| **Deep research** | Gemini 2.5 | Multi-step web synthesis | Complex research requiring reasoning |
+| **Deep research (Tier 1)** | Gemini Flash API | Quick queries, fact-checking | Standard research |
+| **Deep research (Tier 2)** | Gemini Interactions API | Multi-step agentic synthesis | Complex research requiring multi-source synthesis |
 | **Local transcription** | whisper-mcp | Transcribe audio/video files | User's own recordings, voice memos |
 
 ---
@@ -49,13 +50,15 @@ On first `/think` invocation or when routing to research:
 # Store results in session memory to avoid re-checking
 
 APIFY_AVAILABLE=false
-GROK_AVAILABLE=false
+GROK_AVAILABLE=false  # Note: Requires Python SDK, not just API key
 GEMINI_AVAILABLE=false
 WHISPER_AVAILABLE=false
 
 # Detection via tool presence
 if mcp__apify__* tools exist → APIFY_AVAILABLE=true
-if XAI_API_KEY env exists OR mcp__xai__* tools exist → GROK_AVAILABLE=true
+if xai_sdk Python package installed AND XAI_API_KEY exists → GROK_AVAILABLE=true
+  # Important: REST API alone is NOT sufficient for X search
+  # Must have xai_sdk package for gRPC-based X search tools
 if GOOGLE_API_KEY env exists → GEMINI_AVAILABLE=true
 if mcp__whisper__* tools exist → WHISPER_AVAILABLE=true
 ```
@@ -145,21 +148,22 @@ If !APIFY_AVAILABLE:
 - "social proof for..."
 - "trending in [niche]"
 
+**Critical:** The xAI REST API does NOT support X search (the `search` parameter is ignored, returns `num_sources_used: 0`). Live X search requires the Python SDK (`xai_sdk`) which uses gRPC and server-side tool execution. See `grok-social.md` for full details.
+
 **Routing:**
 ```
-If GROK_AVAILABLE:
-  → Use grok_search_posts with timeWindow
-  → For multi-angle, use grok_analyze_topic
-  → For trends, use grok_get_trends
+If GROK_AVAILABLE (Python SDK with xai_sdk):
+  → Use x_search() tool with grok-3 model
+  → Model autonomously calls x_keyword_search, x_semantic_search, etc.
   → Save to: research/YYYY-MM-DD-topic-x-social.md
 
 If !GROK_AVAILABLE:
   → Use WebSearch with "site:x.com [query]"
-  → Note: Less structured, no sentiment analysis
+  → Note: Less structured, no sentiment analysis, not real-time
   → Save to: research/YYYY-MM-DD-topic-web.md
 ```
 
-**Cost estimate:** ~$0.002-0.005 per query
+**Cost estimate:** ~$0.02-0.30 per search (varies by complexity)
 
 ### Deep Research
 
@@ -170,13 +174,25 @@ If !GROK_AVAILABLE:
 - Complex multi-faceted questions
 - Topic requiring synthesis across many sources
 
+**Two Tiers (see gemini-deep-research.md for full details):**
+
+| Tier | When | Tool | Time | Cost |
+|------|------|------|------|------|
+| **Tier 1** | Quick questions, fact-checking | Gemini Flash API | 30-60s | ~$0.01-0.05 |
+| **Tier 2** | Complex multi-source synthesis | Gemini Interactions API | 5-20min | ~$2-5 |
+
 **Routing:**
 ```
 If GEMINI_AVAILABLE:
-  → Build structured prompt for Gemini 2.5
-  → Include: question, context from reference files, desired depth
-  → Process response and synthesize
-  → Save to: research/YYYY-MM-DD-topic-gemini.md
+  If simple question:
+    → Tier 1: Gemini Flash via generate_content
+    → Save to: research/YYYY-MM-DD-topic-flash.md
+
+  If complex synthesis needed:
+    → Tier 2: Deep Research Agent via Interactions API
+    → Agent: deep-research-pro-preview-12-2025
+    → Note: Takes 5-20 minutes, runs asynchronously
+    → Save to: research/YYYY-MM-DD-topic-gemini-deep.md
 
 If !GEMINI_AVAILABLE:
   → Use WebSearch + manual synthesis
@@ -184,7 +200,9 @@ If !GEMINI_AVAILABLE:
   → Save to: research/YYYY-MM-DD-topic-claude-code.md
 ```
 
-**Note:** Gemini deep research best for when Claude Code needs external reasoning. Don't use for simple questions.
+**Important:** Tier 1 (Flash) handles 80% of research needs. Reserve Tier 2 for competitive analysis, industry research, and complex multi-source questions.
+
+**Status:** Tier 1 TESTED and working. Tier 2 documented but not yet tested via actual API call.
 
 ### Local Transcription
 
@@ -259,7 +277,8 @@ Format: `research/YYYY-MM-DD-topic-[source].md`
 |--------|--------|-----------|
 | `-yt-mining.md` | YouTube via Apify | Transcribed YouTube videos |
 | `-x-social.md` | X/Twitter via Grok | Social sentiment research |
-| `-gemini.md` | Gemini 2.5 deep research | Complex multi-step research |
+| `-flash.md` | Gemini Flash (Tier 1) | Quick research, fact-checking |
+| `-gemini-deep.md` | Gemini Deep Research (Tier 2) | Complex multi-step research |
 | `-ig-mining.md` | Instagram via Apify | Instagram content mining |
 | `-local-mining.md` | Local files via whisper | User's own video/audio |
 | `-voice-mining.md` | Voice memos via whisper | User's voice recordings |
@@ -410,7 +429,7 @@ Sources:
 Output:
 - research/2026-01-26-guarantee-x-social.md
 - research/2026-01-26-guarantee-competitors.md
-- research/2026-01-26-guarantee-psychology-gemini.md
+- research/2026-01-26-guarantee-psychology-gemini-deep.md
 - research/2026-01-26-guarantee-synthesis.md (combines all)
 ```
 
@@ -426,8 +445,9 @@ What each research type can do:
 | **Web search** | General queries | Nothing | N/A | Free |
 | **Web fetch** | Specific URLs | Nothing | N/A | Free |
 | **YouTube mining** | Video content | Apify MCP | Manual transcript | ~$0.005/video |
-| **X sentiment** | Real-time social | Grok MCP | Web search X posts | ~$0.002/query |
-| **Deep research** | Complex synthesis | Gemini API | Web + manual synthesis | ~$0.01-0.05/query |
+| **X sentiment** | Real-time social | xai_sdk Python package (gRPC) | Web search X posts | ~$0.02-0.30/query |
+| **Deep research (Tier 1)** | Quick queries | Gemini Flash API | Web + synthesis | ~$0.01-0.05/query |
+| **Deep research (Tier 2)** | Complex synthesis | Gemini Interactions API | Tier 1 or manual | ~$2-5/task |
 | **Instagram mining** | Visual platform research | Apify MCP | Manual screenshots | ~$0.40-0.50/1K results |
 | **Local transcription** | User's own files | whisper-mcp | CLI fallback | Free (local) |
 
@@ -518,6 +538,45 @@ Tool returns zero results → Inform user, ask to refine query
   ├─> Suggest more specific query
   └─> Offer alternative source
 ```
+
+---
+
+## Content Mining: What AI Can and Cannot Do
+
+> "AI can show WHAT worked. Human must judge WHY." — Koston Williams
+
+When mining competitor content (YouTube, Instagram, TikTok), understand the division of labor:
+
+### AI CAN:
+- **Collect** — Scrape posts, pull transcripts, gather metrics
+- **Identify** — Surface patterns, hooks, formats, engagement rates
+- **Display** — Show you the data in structured form
+
+### AI CANNOT:
+- **Explain** — Tell you WHY something actually worked
+- **Judge** — Know if a framework transfers to YOUR niche
+- **Feel** — Sense the emotional resonance that makes content connect
+- **Decide** — Choose which frameworks fit YOUR energy and personality
+
+### YOUR JOB (Framework Transfer):
+
+Extract three dimensions from mined content:
+
+| Dimension | What AI Shows You | What YOU Determine |
+|-----------|-------------------|-------------------|
+| **Visual** | Format, production style, patterns | Does this fit MY setup/skills? |
+| **Audible** | Energy, pacing, delivery | Can I match this energy authentically? |
+| **Emotional** | Primary emotion triggered | Does this align with MY audience's identity? |
+
+**The skill is framework transfer.** A competitor's content worked for THEM — their audience, their personality, their offer. Your job is to see the framework beneath the content, judge whether it transfers to your context, and adapt it to your voice.
+
+### The Path (Do Not Skip Steps)
+
+```
+Mining → Framework Extraction (human) → Reference Update → THEN Content Generation
+```
+
+Don't go straight from mining to scripts. Extract what you learned, codify it into reference files, then generate from enriched reference. This is why the goal of all research is reference files.
 
 ---
 
