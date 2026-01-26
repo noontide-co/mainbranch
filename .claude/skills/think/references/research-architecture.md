@@ -346,7 +346,7 @@ Tool missing + User wants that research type → Offer setup once per session
 
 | Tool | Guide Path |
 |------|------------|
-| Apify | `.claude/skills/content/references/apify-setup.md` |
+| Apify | `.claude/skills/organic/references/apify-setup.md` |
 | Grok | `.claude/skills/think/references/grok-setup.md` |
 | Gemini | `.claude/skills/think/references/gemini-setup.md` |
 | whisper-mcp | `.claude/skills/think/references/local-transcription.md` |

@@ -33,7 +33,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Which skill, when to use | [skills-guide.md](references/skills-guide.md) |
 | Create skill, Notion export, custom | [skills-guide.md](references/skills-guide.md) |
 | Migrate from GPT, ChatGPT | [gpt-migration.md](references/gpt-migration.md) |
-| Reels, TikTok, organic, /content | [content-help.md](references/content-help.md) |
+| Reels, TikTok, organic, /organic | [organic-help.md](references/organic-help.md) |
 | Skool, community | [skool-help.md](references/skool-help.md) |
 | Wiki, atomic notes, publish, WikiLinks | Route to `/wiki` |
 | Better outputs, quality, what next | [making-outputs-better.md](references/making-outputs-better.md) |

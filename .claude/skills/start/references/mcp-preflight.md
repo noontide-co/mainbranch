@@ -18,8 +18,8 @@ MCPs install to USER'S machine (`~/.claude.json`), not the repo. When someone cl
 # From .vip/config.yaml
 mcps:
   apify:
-    required_for: [content, think]  # Handles web scraping AND YouTube transcripts
-    setup_guide: ".claude/skills/content/references/apify-setup.md"
+    required_for: [organic, think]  # Handles web scraping AND YouTube transcripts
+    setup_guide: ".claude/skills/organic/references/apify-setup.md"
 ```
 
 ### 2. Check if MCP tools are available
@@ -32,7 +32,7 @@ Look for tool presence:
 
 If routing to skill that needs missing MCP:
 
-> "The content skill works best with Apify. Not set up on this machine.
+> "The organic skill works best with Apify. Not set up on this machine.
 >
 > 1. Set up now (5 min, one-time)
 > 2. Skip for now (some features limited)"

@@ -32,7 +32,7 @@ Before diving in, know which mode you're in:
 | **Enriching the core** | Pulling insights → reference files | Mining videos, making decisions, updating offer.md |
 | **Creating for the world** | Reference files → output | Ads, scripts, courses, code, posts |
 
-`/think` is for **enriching the core**. When you're ready to create, use `/ads`, `/content`, `/vsl`, or just ask.
+`/think` is for **enriching the core**. When you're ready to create, use `/ads`, `/organic`, `/vsl`, or just ask.
 
 Both are work. Enriching the core levels up everything downstream.
 
@@ -350,7 +350,7 @@ See [references/recovery.md](references/recovery.md) for details.
 
 - Quick factual questions (just ask)
 - Simple file edits (just edit)
-- Generating content (use `/ads`, `/vsl`, `/content`)
+- Generating content (use `/ads`, `/vsl`, `/organic`)
 
 Use `/think` when the answer requires investigation and the choice needs documentation.
 

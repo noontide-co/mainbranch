@@ -73,7 +73,7 @@ if mcp__whisper__* exists: WHISPER=true
 
 | Tool | Guide |
 |------|-------|
-| Apify | `.claude/skills/content/references/apify-setup.md` |
+| Apify | `.claude/skills/organic/references/apify-setup.md` |
 | Grok | `.claude/skills/think/references/grok-setup.md` |
 | Gemini | `.claude/skills/think/references/gemini-setup.md` |
 | whisper | `.claude/skills/think/references/local-transcription.md` |

@@ -117,7 +117,7 @@ Once set up, type these commands:
 - `/think` - Research, make decisions, add context
 - `/ads` - Generate image ads, video scripts, or review for compliance
 - `/vsl` - Write video sales letters (Skool or B2B)
-- `/content` - Mine competitors, create Reels/TikTok/carousels
+- `/organic` - Mine competitors, create Reels/TikTok/carousels
 - `/help` - Get answers to any question
 
 ---
