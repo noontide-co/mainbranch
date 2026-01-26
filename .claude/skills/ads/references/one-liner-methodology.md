@@ -255,19 +255,60 @@ See [one-liner-examples.md](one-liner-examples.md) for more patterns and real ex
 
 ### Step 6: Output
 
-Simple numbered list. One per line. Ready to copy.
+**Save to file, not chat.** Output goes to `outputs/YYYY-MM-DD-one-liners-{campaign-name}/batch.md`.
 
-```
+The file should include:
+
+1. **Full extraction context** (Steps 1-4) — for review, resume, and understanding
+2. **30 one-liners** (Step 5) — clearly separated for easy copying
+
+```markdown
+---
+type: output
+subtype: one-liners
+date: YYYY-MM-DD
+status: draft
+review_status: null
+---
+
+# One-Liners: {Campaign Name}
+
+## Core Outcome
+[Single sentence transformation]
+
+## Extracted Specifics
+| Category | Specifics |
+|----------|-----------|
+| **Roles/Outcomes** | [specifics] |
+| **Timelines** | [specifics] |
+| **Niche Pains** | [specifics] |
+| **Value Props** | [specifics] |
+| **Failed Alternatives** | [specifics] |
+| **Proof Points** | [specifics] |
+
+## Reasons to Buy
+[15-20 numbered reasons]
+
+## Hook Categories
+[Which category each one-liner uses]
+
+---
+
+## One-Liners
+
 1. [one-liner]
 2. [one-liner]
-3. [one-liner]
 ...
 30. [one-liner]
 ```
 
-No explanations. No categories. Just the list.
+**Why save the full context:**
+- Reviewers verify anchors match specifics
+- Resume without re-extraction
+- Understand why certain hooks were chosen
+- Check all reasons to buy are covered
 
-After the list, optionally note which reasons/hook types were used for the client's reference.
+Tell user: "Saved to `outputs/YYYY-MM-DD-one-liners-{name}/batch.md`. Want me to run `/ads review`?"
 
 ---
 

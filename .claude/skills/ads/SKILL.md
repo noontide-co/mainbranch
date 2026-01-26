@@ -136,7 +136,7 @@ Every one-liner **MUST** include at least one specific element:
 **Save to file, not chat.** This enables review to edit the file directly.
 
 1. Create folder: `outputs/YYYY-MM-DD-one-liners-{campaign-name}/`
-2. Save one-liners to: `batch.md`
+2. Save full generation context + one-liners to: `batch.md`
 3. Tell user: "Saved 30 one-liners to `outputs/2026-01-26-one-liners-{name}/batch.md`"
 4. Offer: "Want me to run `/ads review` to check for compliance issues?"
 
@@ -153,11 +153,44 @@ review_status: null
 
 # One-Liners: {Campaign Name}
 
+## Core Outcome
+
+[Single sentence: the transformation every buyer achieves]
+
+## Extracted Specifics
+
+| Category | Specifics |
+|----------|-----------|
+| **Roles/Outcomes** | [roles, job titles, results] |
+| **Timelines** | [how fast results happen] |
+| **Niche Pains** | [pains SPECIFIC to this audience] |
+| **Value Props** | [what makes THIS offer different] |
+| **Failed Alternatives** | [what they've tried] |
+| **Proof Points** | [numbers, stats, community size] |
+
+## Reasons to Buy
+
+[Numbered list of 15-20 fundamentally different reasons]
+
+## Hook Categories
+
+[Which categories each one-liner uses - for diversity check]
+
+---
+
+## One-Liners
+
 1. [one-liner]
 2. [one-liner]
 ...
 30. [one-liner]
 ```
+
+**Why save the full context:**
+- **Anchor verification:** Reviewers can check each one-liner has a specific from the extraction
+- **Resume capability:** Don't re-extract specifics if generating more
+- **Understanding:** Why certain hooks were chosen
+- **Quality control:** Can verify all reasons to buy are covered
 
 See [references/one-liner-methodology.md](references/one-liner-methodology.md) for the complete 6-step process, hook categories, and quality checklist.
 
