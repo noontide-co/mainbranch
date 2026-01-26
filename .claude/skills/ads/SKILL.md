@@ -69,11 +69,13 @@ Campaign Batch 001
 ### Workflow
 
 1. Read project context (offer, audience, proof, angles)
-2. Select 5-6 angles for the batch
-3. **Write ALL image prompts first** (Part 1)
-4. **Write ALL ad copy second** (Part 2)
-5. Compliance check
-6. Save to `outputs/{date}-{batch-name}/{batch#}_IMG_{campaign-name}.md`
+2. Ask for campaign name (required)
+3. Select 5-6 angles for the batch
+4. **Write ALL image prompts first** (Part 1)
+5. **Write ALL ad copy second** (Part 2)
+6. Compliance check
+7. Save to `outputs/YYYY-MM-DD-static-ads-{campaign}/static-ads-batch-001.md`
+8. Tell user: "Saved to `outputs/YYYY-MM-DD-static-ads-{campaign}/static-ads-batch-001.md`. Want me to commit this to git?"
 
 ### Ad Styles (5 per concept)
 
@@ -135,12 +137,13 @@ Every one-liner **MUST** include at least one specific element:
 
 **Save to file, not chat.** This enables review to edit the file directly.
 
-1. Create folder: `outputs/YYYY-MM-DD-one-liners-{campaign-name}/`
-2. Save full generation context + one-liners to: `batch.md`
-3. Tell user: "Saved 30 one-liners to `outputs/2026-01-26-one-liners-{name}/batch.md`"
-4. Offer: "Want me to run `/ads review` to check for compliance issues?"
+1. Ask for campaign name (required)
+2. Create folder: `outputs/YYYY-MM-DD-one-liners-{campaign}/`
+3. Save full generation context + one-liners to: `one-liners-batch-001.md`
+4. Tell user: "Saved 30 one-liners to `outputs/YYYY-MM-DD-one-liners-{campaign}/one-liners-batch-001.md`. Want me to commit this to git?"
+5. After git (if accepted), offer: "Want me to run `/ads review` to check for compliance issues?"
 
-**batch.md format:**
+**one-liners-batch-001.md format:**
 
 ```markdown
 ---
@@ -209,7 +212,9 @@ Create diverse spoken-word scripts for camera delivery.
 3. **Angles Per Avatar:** Map angles from project context
 4. **Generate Ads:** 15-30 scripts across all avatars
 5. **Optimize for Spoken:** ~5th grade reading level, contractions, fragments
-6. **Save Output:** `outputs/{date}-{batch-name}/{batch#}_VID_{angle}.md`
+6. Ask for campaign name (required)
+7. **Save Output:** `outputs/YYYY-MM-DD-video-ads-{campaign}/video-ads-batch-001.md`
+8. Tell user: "Saved to `outputs/YYYY-MM-DD-video-ads-{campaign}/video-ads-batch-001.md`. Want me to commit this to git?"
 
 ### Script Structure
 
@@ -249,10 +254,13 @@ Review ads through 6 compliance and quality lenses before shipping.
 ### Review Process
 
 1. Gather input (single ad, batch, or component)
-2. Run all 6 lenses in parallel
-3. Synthesize into P1/P2/P3 report
-4. Provide fix suggestions for each issue
-5. Save to `outputs/{batch-folder}/review-{date}.md`
+2. Git commit current state (preserves original): `[output] {type} batch pre-review`
+3. Run all 6 lenses in parallel
+4. Synthesize into P1/P2/P3 report
+5. Apply P2/P3 fixes directly to the batch file
+6. Create `review-log.md` documenting what changed
+7. Tell user: "Fixes applied. Want me to commit these changes to git?"
+8. If yes, commit: `[review] {type} batch - N fixes applied`
 
 ### Severity Levels
 

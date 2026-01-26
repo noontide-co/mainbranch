@@ -95,10 +95,24 @@ For high-ticket B2B services. Full reference: `references/frameworks/b2b-haynes.
 
 1. **Triage** — Determine framework from offer type
 2. **Gather context** — Verify you have required reference files
-3. **Load framework** — Read the appropriate reference file
-4. **Write script** — Follow framework structure
-5. **Verify facts** — Check every claim against source material
-6. **Optimize for spoken delivery** — Contractions, short sentences, natural flow
+3. **Get campaign name** — Ask: "What should we call this VSL? (e.g., 'skool-about', 'agency-pitch')"
+4. **Load framework** — Read the appropriate reference file
+5. **Write script** — Follow framework structure
+6. **Verify facts** — Check every claim against source material
+7. **Optimize for spoken delivery** — Contractions, short sentences, natural flow
+8. **Save and commit prompt** — Save to output path, ask: "Saved to [path]. Want me to commit this to git?"
+
+---
+
+## Output Path
+
+**Standard:** `outputs/YYYY-MM-DD-vsl-{campaign}/vsl-script.md`
+
+Campaign name is REQUIRED. Ask user if not provided. Examples: `skool-about`, `agency-pitch`, `membership-sales`.
+
+**Files:**
+- `vsl-script.md` — The full VSL script
+- `review-log.md` — Created if compliance reviewed
 
 ---
 
@@ -128,7 +142,7 @@ Just say `/vsl` again and describe where you were:
 1. **Check for in-progress scripts:**
 
 ```bash
-ls -lt outputs/*vsl*.md outputs/*script*.md 2>/dev/null | head -3
+ls -ltd outputs/*-vsl-*/ 2>/dev/null | head -3
 ```
 
 2. **Re-read key files:**

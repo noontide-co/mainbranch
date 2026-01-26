@@ -1,5 +1,16 @@
 # Ad Review Workflow
 
+## Phase 0: Pre-Review Git Commit
+
+Before reviewing, commit current state to preserve the original:
+
+```bash
+git add outputs/YYYY-MM-DD-{type}-{campaign}/
+git commit -m "[output] {type} batch pre-review"
+```
+
+This ensures the original version is preserved in git history.
+
 ## Phase 1: Gather Input
 
 Identify what's being reviewed:
@@ -92,12 +103,48 @@ Combine all lens findings into a single review report:
 [Positive findings from lenses]
 ```
 
-## Phase 4: Provide Fix Suggestions
+## Phase 4: Apply Fixes and Log Changes
 
-For each P1/P2 issue, provide:
-- The problematic text
-- Why it fails (cite lens rule)
-- The corrected version (using safe alternatives from lens)
+**Key insight: Reviews UPDATE the source file, not just report issues.**
+
+For each P2/P3 issue:
+1. Apply the fix directly to the batch file
+2. Log the change to `review-log.md`
+
+**review-log.md format:**
+
+```markdown
+## Review: YYYY-MM-DD
+
+**Status:** BLOCKED | REVIEW REQUIRED | CLEAR TO SHIP
+
+### Fixes Applied
+
+| Line | Original | Fixed | Reason |
+|------|----------|-------|--------|
+| #5 | "tired of juggling..." | "juggling..." | Meta Personal Attributes |
+| #22 | "drowning in..." | "overwhelmed by..." | Meta Personal Attributes |
+
+### P1 Issues (Manual Fix Required)
+
+[Any P1 issues that need human decision]
+```
+
+For P1 issues:
+- Do NOT auto-fix (requires human decision)
+- Document in review-log.md
+- Status: BLOCKED until P1s resolved
+
+## Phase 5: Post-Review Git Commit
+
+After fixes are applied:
+
+```bash
+git add outputs/YYYY-MM-DD-{type}-{campaign}/
+git commit -m "[review] {type} batch - N fixes applied"
+```
+
+**To see what review changed:** `git diff HEAD~1`
 
 ## Context Files
 

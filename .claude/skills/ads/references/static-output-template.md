@@ -173,13 +173,17 @@ Copy and paste into Ads Manager after images are ready.
 
 ## Naming Conventions
 
-**Batch files:** `{batch#}_IMG_{campaign-name}_{date}.md`
-- Batch number: 3 digits (`001`, `002`)
-- Format: `IMG`
-- Campaign name: lowercase with dashes
+**Folder:** `outputs/YYYY-MM-DD-static-ads-{campaign}/`
 - Date: `YYYY-MM-DD`
+- Type: `static-ads`
+- Campaign name: lowercase with dashes (required)
 
-**Example:** `001_IMG_launch-batch_2026-01-15.md`
+**Batch file:** `static-ads-batch-{###}.md`
+- Example: `static-ads-batch-001.md`
+
+**Full path example:** `outputs/2026-01-15-static-ads-january-launch/static-ads-batch-001.md`
+
+**Review log:** `review-log.md` (same folder)
 
 **Image naming:** `{batch}.{ad#}_IMG_{image#}`
 - `001.1_IMG_01` — first image for Ad 1

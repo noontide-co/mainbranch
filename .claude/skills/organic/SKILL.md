@@ -117,6 +117,8 @@ Mine -> Select -> Generate -> Output
 
 Research competitor content only. Saves to `research/YYYY-MM-DD-competitor-mine.md`. See [references/mining-template.md](references/mining-template.md).
 
+**Output path (mining):** `research/YYYY-MM-DD-competitor-mine.md`
+
 ### `/organic video "concept"`
 
 Generate Reels/TikTok script from a concept.
@@ -129,6 +131,10 @@ Generate multi-slide carousel copy from a concept.
 
 Generate single-post caption from a concept.
 
+**Output path (all script modes):** `outputs/YYYY-MM-DD-organic-{campaign}/organic-batch-001.md`
+
+Campaign name is REQUIRED. Ask user if not provided. Examples: `january-hooks`, `transformation-series`, `pain-point-reels`.
+
 ---
 
 ## Context Awareness (Check Before Recommending)
@@ -136,7 +142,7 @@ Generate single-post caption from a concept.
 **At session start, scan what's been done:**
 
 1. Check `research/*-competitor-mine.md` — Who was mined? When?
-2. Check `outputs/organic-scripts/` — What scripts exist?
+2. Check `outputs/*-organic-*/` — What scripts exist?
 3. Don't suggest re-mining same handles from today
 4. Recommend generating from existing mining if concepts unused
 
@@ -150,6 +156,8 @@ Options:
 1. Generate from remaining 8 concepts
 2. Mine new competitors
 3. Start fresh topic
+
+What should we call this batch? (e.g., "january-hooks", "transformation-reels")
 ```
 
 ---
@@ -168,7 +176,8 @@ Before saving: show file paths.
 3. **Extract concepts** — Hook, topic, structure, angle, format from top 20%
 4. **Adapt to brand** — Map concepts to user's offer, audience, voice
 5. **Generate scripts** — Use appropriate framework (video/carousel/static)
-6. **Save output** — Mining to `research/`, scripts to `outputs/organic-scripts/`
+6. **Save output** — Mining to `research/`, scripts to `outputs/YYYY-MM-DD-organic-{campaign}/`
+7. **Commit prompt** — "Saved to [path]. Want me to commit this to git?"
 
 See [references/mining-template.md](references/mining-template.md) for concept extraction template.
 
@@ -266,8 +275,15 @@ Claude: What framework fits this best?
 
 User: Story-based
 
+Claude: What should we call this batch? (e.g., "morning-routine", "productivity-series")
+
+User: morning-routine
+
 Claude: [Generates script using story framework]
-[Saves to outputs/organic-scripts/]
+[Saves to outputs/2026-01-26-organic-morning-routine/organic-batch-001.md]
+
+Saved to outputs/2026-01-26-organic-morning-routine/organic-batch-001.md
+Want me to commit this to git?
 ```
 
 ### Example 3: Mine Only
@@ -296,7 +312,7 @@ When conversations get long, Claude's memory compresses. If mid-/organic and thi
 
 **For Claude:** When resuming:
 1. Check `research/*-competitor-mine.md` for recent mining
-2. Check `outputs/organic-scripts/` for existing scripts
+2. Check `outputs/*-organic-*/` for existing scripts
 3. Confirm with user: "I see today's mining has X concepts. Want to continue generating from those?"
 
 ---
