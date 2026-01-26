@@ -345,3 +345,18 @@ Before outputting the 30 one-liners, verify:
 - [ ] Tone matches brand (direct? conversational? anti-hype?)
 - [ ] No forbidden words used
 - [ ] Preferred vocabulary applied where natural
+
+---
+
+## Step 7: Compliance Check (Recommended)
+
+One-liners are hooks. Aggressive claims sneak in here. Before finalizing:
+
+> "These one-liners are ready. Want me to run them through `/ads review` to check for FTC and Meta compliance issues?"
+
+Common one-liner compliance flags:
+- Income/outcome claims ("$10K months", "6-figure")
+- Implied guarantees ("never worry about X again")
+- Unsubstantiated comparisons ("better than", "fastest")
+
+A quick review catches issues before the copy goes to creative.
