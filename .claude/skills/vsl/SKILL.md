@@ -53,7 +53,7 @@ If unclear, ask: "Is this for a Skool/membership community ($47-$497/month) or a
 | `reference/core/audience.md` | Who buys, their pains, objections |
 | `reference/proof/testimonials.md` | Success stories with specifics |
 
-**Optional:** `reference/core/origin.md` — Founder backstory. Use heavily in Epiphany Bridge (Section 2), light elsewhere. See `vip/.claude/skills/origin/references/usage-guide.md` for when to use vs skip. If missing and using Epiphany Bridge, suggest `/origin`.
+**Optional:** `reference/core/origin.md` — If origin.md exists, read `vip/.claude/skills/origin/references/usage-guide.md` before generating. For each section, evaluate whether origin-inspired content is stronger than non-origin alternatives — only use origin when it genuinely produces a better script for that section. Epiphany Bridge (Section 2) is the natural fit; most other sections are stronger without it. If missing and using Epiphany Bridge, suggest `/origin`.
 
 **If required files missing:** Ask user to provide or run `/think` first.
 

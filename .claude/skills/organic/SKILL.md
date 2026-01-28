@@ -116,7 +116,7 @@ This is why mining lives in `/think` — it's research that feeds your evergreen
 
 Search all working directories for `reference/core/`. If not found, ask user or run `/setup`.
 
-**Optional:** `reference/core/origin.md` — for story-driven content. Not every script needs it. See `vip/.claude/skills/origin/references/usage-guide.md` for when to use vs skip.
+**Optional:** `reference/core/origin.md` — If origin.md exists, read `vip/.claude/skills/origin/references/usage-guide.md` before generating. For each script, evaluate whether origin-inspired content is stronger than non-origin alternatives — only use origin when it genuinely produces better content for that framework and topic.
 
 Missing files? See [references/first-time-setup.md](references/first-time-setup.md).
 

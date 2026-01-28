@@ -34,7 +34,7 @@ Before creating ads, the business repo must have:
 | `reference/proof/testimonials.md` | Testimonials with names and outcomes |
 | `reference/proof/angles/*.md` | Different messaging entry points |
 
-**Optional:** `reference/core/origin.md` — Founder backstory, credibility, unique angle. Not every ad needs it. See `vip/.claude/skills/origin/references/usage-guide.md` for when to use vs skip.
+**Optional:** `reference/core/origin.md` — If origin.md exists, read `vip/.claude/skills/origin/references/usage-guide.md` before generating. For each ad, evaluate whether origin-inspired copy is stronger than non-origin alternatives — only use origin when it genuinely produces a better ad for that angle and style.
 
 If required files are missing, ask user to create them first.
 
