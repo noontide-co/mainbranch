@@ -64,7 +64,7 @@ Take inventory. Notice what's missing. Proactively suggest skills they haven't i
 | Lost, confused, returning | `/start` |
 | Brand new, need repo setup | `/setup` |
 | Exploring, researching, deciding | `/think` |
-| Missing soul.md, need origin story | `/origin` |
+| Missing soul.md, need origin story, feeling disconnected | `/origin` |
 | Ready to create paid ads | `/ads` |
 | Need a sales video script | `/vsl` |
 | Want organic content (reels, tiktok) | `/organic` |
@@ -103,12 +103,13 @@ Skills read from `reference/`, output to `outputs/`. Same engine + different dat
 
 | File | Purpose |
 |------|---------|
-| `soul.md` | WHY you exist — reconnection fuel |
+| `origin.md` | Your backstory — Hero's Journey, how you got here |
+| `soul.md` | WHY you exist — condensed reconnection fuel (5-min read) |
 | `offer.md` | WHAT you sell — price, mechanism, benefits |
 | `audience.md` | WHO buys — real people, not avatars |
 | `voice.md` | HOW you sound — tone, phrases, personality |
 
-These live in `reference/core/` and are required for all businesses.
+These live in `reference/core/`. Run `/origin` first — it's foundational context that makes everything else personal vs generic.
 
 ---
 
@@ -221,7 +222,7 @@ Research files also add: `linked_decisions: []`
 | `/start` | Entry point — detects state, routes to right skill |
 | `/setup` | Bootstrap new repo with correct structure |
 | `/think` | Research → decide → codify into reference |
-| `/origin` | Extract origin story → create soul.md, generate bios |
+| `/origin` | Founder origin story — foundational context that enriches all outputs |
 | `/ads` | Static ads, video scripts, one-liners, or compliance review |
 | `/vsl` | VSL scripts (Skool 18-section or B2B Haynes 7-step) |
 | `/organic` | Mine competitors, generate organic scripts |
