@@ -114,17 +114,23 @@ This is why mining lives in `/think` — it's research that feeds your evergreen
 
 **Required:** `reference/core/voice.md`, `audience.md`, `offer.md`
 
-**Recommended:** `reference/core/origin.md` — makes content more authentic
+**Optional:** `reference/core/origin.md` — for story-driven content
 
 Search all working directories for `reference/core/`. If not found, ask user or run `/setup`.
 
-**If origin.md exists, use it for:**
-- "Why I do this" content hooks
-- Credibility markers in intros
-- Personal story angles
-- Values-based messaging
+**When to use origin.md:**
+- Story-based framework scripts (personal narrative, transformation)
+- "Why I do this" or "how I got here" content
+- Credibility intros ("After 17 years in X...")
+- Values-based messaging where authenticity is the hook
 
-Missing files? See [references/first-time-setup.md](references/first-time-setup.md). Missing origin.md? Suggest `/origin`.
+**When to skip origin.md:**
+- Educational/tips content (focus on the lesson, not the teacher)
+- Problem-solution scripts (focus on audience pain, not founder)
+- Listicles and how-tos (practical, not personal)
+- Most carousels (unless it's a story carousel)
+
+Missing files? See [references/first-time-setup.md](references/first-time-setup.md).
 
 ---
 
