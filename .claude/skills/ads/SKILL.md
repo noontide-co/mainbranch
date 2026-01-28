@@ -22,25 +22,19 @@ If unclear, ask: "Do you want static image ads, video scripts, one-liners, or a 
 
 ---
 
-## Reference Files
+## Reference Required (All Modes)
 
-**Required:**
+Before creating ads, the business repo must have:
 
 | File | What It Contains |
 |------|------------------|
 | `reference/core/offer.md` | What you sell, price, mechanism, benefits |
 | `reference/core/audience.md` | Who buys, their pains, desires |
+| `reference/core/voice.md` | Tone, phrases, personality |
 | `reference/proof/testimonials.md` | Testimonials with names and outcomes |
 | `reference/proof/angles/*.md` | Different messaging entry points |
 
-**Optional:**
-
-| File | What It Contains |
-|------|------------------|
-| `reference/core/voice.md` | Tone, phrases, personality |
-| `reference/core/origin.md` | Founder backstory, credibility, unique angle |
-
-**origin.md usage:** Not every ad needs founder story. See `vip/.claude/skills/origin/references/usage-guide.md` for when to use vs skip.
+**Optional:** `reference/core/origin.md` — Founder backstory, credibility, unique angle. Not every ad needs it. See `vip/.claude/skills/origin/references/usage-guide.md` for when to use vs skip.
 
 If required files are missing, ask user to create them first.
 
