@@ -111,7 +111,7 @@ Follow-ups:
 
 ### Output
 
-Generate `reference/core/origin.md` using template. See [templates/origin-template.md](templates/origin-template.md).
+Generate `reference/core/origin.md` using template. See [references/templates/origin-template.md](references/templates/origin-template.md).
 
 After saving, ask: "Want me to distill this into soul.md (5-min reconnection fuel)?"
 
@@ -196,7 +196,7 @@ soul.md should serve both reconnection AND positioning. The founder reconnects w
 
 ### Output
 
-Generate `reference/core/soul.md` using template. See [templates/soul-template.md](templates/soul-template.md).
+Generate `reference/core/soul.md` using template. See [references/templates/soul-template.md](references/templates/soul-template.md).
 
 ---
 
@@ -245,7 +245,7 @@ Full: [Origin hook] + [Journey summary] + [Current mission] + [What I bring]
 - The Leap → Current focus
 - The Vision → Why it matters
 
-See [templates/bio-template.md](templates/bio-template.md).
+See [references/templates/bio-template.md](references/templates/bio-template.md).
 
 ---
 
@@ -287,6 +287,6 @@ your-repo/
 
 ## Templates
 
-- [templates/origin-template.md](templates/origin-template.md)
-- [templates/soul-template.md](templates/soul-template.md)
-- [templates/bio-template.md](templates/bio-template.md)
+- [references/templates/origin-template.md](references/templates/origin-template.md)
+- [references/templates/soul-template.md](references/templates/soul-template.md)
+- [references/templates/bio-template.md](references/templates/bio-template.md)
