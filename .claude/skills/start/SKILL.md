@@ -254,10 +254,13 @@ Check `reference/core/*.md`. No folder → `/setup`. Exists → check completene
 
 | File | Complete If |
 |------|------------|
-| soul.md | >30 lines or "Beliefs" section |
+| origin.md | >50 lines or "The Spark" section |
+| soul.md | >30 lines or "Why I Do This" section |
 | offer.md | >50 lines or "Price" section |
 | audience.md | >30 lines or "Pains" section |
 | voice.md | >20 lines or "Tone" section |
+
+**Priority check:** If origin.md AND soul.md missing → suggest `/origin` first. It's foundational.
 
 2+ empty/missing → `/think codify`. Complete → route by intent.
 

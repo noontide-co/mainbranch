@@ -47,13 +47,21 @@ If unclear, ask: "Is this for a Skool/membership community ($47-$497/month) or a
 
 ## Reference Required (Both Frameworks)
 
-| File | Purpose |
-|------|---------|
-| `reference/core/offer.md` | What you sell, price, inclusions, guarantee |
-| `reference/core/audience.md` | Who buys, their pains, objections |
-| `reference/proof/testimonials.md` | Success stories with specifics |
+| File | Purpose | Required |
+|------|---------|----------|
+| `reference/core/offer.md` | What you sell, price, inclusions, guarantee | Yes |
+| `reference/core/audience.md` | Who buys, their pains, objections | Yes |
+| `reference/core/origin.md` | Founder backstory for intro/epiphany bridge | Recommended |
+| `reference/proof/testimonials.md` | Success stories with specifics | Yes |
 
-**If missing:** Ask user to provide or run `/think` first.
+**If origin.md exists, use it for:**
+- Section 2 (Epiphany Bridge) — founder's transformation story
+- Credibility markers throughout
+- "Why I created this" section
+- Values-based trust building
+
+**If required files missing:** Ask user to provide or run `/think` first.
+**If origin.md missing:** Suggest `/origin` — VSLs with real founder stories convert better.
 
 ---
 

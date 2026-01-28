@@ -112,11 +112,19 @@ This is why mining lives in `/think` — it's research that feeds your evergreen
 
 ## First-Time Setup
 
-Requires `reference/core/voice.md`, `audience.md`, `offer.md`.
+**Required:** `reference/core/voice.md`, `audience.md`, `offer.md`
+
+**Recommended:** `reference/core/origin.md` — makes content more authentic
 
 Search all working directories for `reference/core/`. If not found, ask user or run `/setup`.
 
-Missing files? See [references/first-time-setup.md](references/first-time-setup.md).
+**If origin.md exists, use it for:**
+- "Why I do this" content hooks
+- Credibility markers in intros
+- Personal story angles
+- Values-based messaging
+
+Missing files? See [references/first-time-setup.md](references/first-time-setup.md). Missing origin.md? Suggest `/origin`.
 
 ---
 

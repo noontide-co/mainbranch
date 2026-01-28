@@ -26,14 +26,22 @@ If unclear, ask: "Do you want static image ads, video scripts, one-liners, or a 
 
 Before creating ads, the business repo must have:
 
-| File | What It Contains |
-|------|------------------|
-| `reference/core/offer.md` | What you sell, price, mechanism, benefits |
-| `reference/core/audience.md` | Who buys, their pains, desires |
-| `reference/proof/testimonials.md` | Testimonials with names and outcomes |
-| `reference/proof/angles/*.md` | Different messaging entry points |
+| File | What It Contains | Required |
+|------|------------------|----------|
+| `reference/core/offer.md` | What you sell, price, mechanism, benefits | Yes |
+| `reference/core/audience.md` | Who buys, their pains, desires | Yes |
+| `reference/core/origin.md` | Founder backstory, credibility, unique angle | Recommended |
+| `reference/core/voice.md` | Tone, phrases, personality | Recommended |
+| `reference/proof/testimonials.md` | Testimonials with names and outcomes | Yes |
+| `reference/proof/angles/*.md` | Different messaging entry points | Yes |
 
-If reference files are missing, ask user to create them first.
+**If origin.md exists, use it for:**
+- Credibility markers (years of experience, background)
+- Unique angle (what makes this founder different)
+- Values (authenticity, what they stand for)
+- The "why" behind the offer
+
+If required files are missing, ask user to create them first. If origin.md is missing, suggest `/origin` — it makes ads more authentic.
 
 ---
 
