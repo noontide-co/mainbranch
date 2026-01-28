@@ -114,11 +114,9 @@ This is why mining lives in `/think` — it's research that feeds your evergreen
 
 **Required:** `reference/core/voice.md`, `audience.md`, `offer.md`
 
-**Optional:** `reference/core/origin.md` — for story-driven content
-
 Search all working directories for `reference/core/`. If not found, ask user or run `/setup`.
 
-**origin.md usage:** Not every script needs founder story. See `vip/.claude/skills/origin/references/usage-guide.md` for when to use vs skip.
+**Optional:** `reference/core/origin.md` — for story-driven content. Not every script needs it. See `vip/.claude/skills/origin/references/usage-guide.md` for when to use vs skip.
 
 Missing files? See [references/first-time-setup.md](references/first-time-setup.md).
 

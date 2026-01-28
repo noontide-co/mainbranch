@@ -47,17 +47,15 @@ If unclear, ask: "Is this for a Skool/membership community ($47-$497/month) or a
 
 ## Reference Required (Both Frameworks)
 
-| File | Purpose | Required |
-|------|---------|----------|
-| `reference/core/offer.md` | What you sell, price, inclusions, guarantee | Yes |
-| `reference/core/audience.md` | Who buys, their pains, objections | Yes |
-| `reference/core/origin.md` | Founder backstory for intro/epiphany bridge | Recommended |
-| `reference/proof/testimonials.md` | Success stories with specifics | Yes |
+| File | Purpose |
+|------|---------|
+| `reference/core/offer.md` | What you sell, price, inclusions, guarantee |
+| `reference/core/audience.md` | Who buys, their pains, objections |
+| `reference/proof/testimonials.md` | Success stories with specifics |
 
-**origin.md usage:** Use heavily in Epiphany Bridge (Section 2), light elsewhere. See `vip/.claude/skills/origin/references/usage-guide.md` for full guidance.
+**Optional:** `reference/core/origin.md` — Founder backstory. Use heavily in Epiphany Bridge (Section 2), light elsewhere. See `vip/.claude/skills/origin/references/usage-guide.md` for when to use vs skip. If missing and using Epiphany Bridge, suggest `/origin`.
 
 **If required files missing:** Ask user to provide or run `/think` first.
-**If origin.md missing and using Epiphany Bridge:** Suggest `/origin` — that section needs a real founder story to work.
 
 ---
 
