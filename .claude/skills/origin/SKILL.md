@@ -131,6 +131,7 @@ Add new chapters to existing origin.md.
 - "Any new trench stories? Moments that reminded you why you do this?"
 - "Has your vision evolved? What does success look like now?"
 - "Any new wisdom? Things you've learned recently?"
+- "How has your 'Why' changed from when you started until today? What do you care about now that you didn't even notice in the beginning?"
 
 ### Output
 
@@ -182,6 +183,16 @@ Pull from origin.md:
 - **The Test** (3 questions from philosophy)
 - **Values** condensed
 - **Vision** summary
+
+### Guide Pivot
+
+The founder is the hero in origin.md. But in marketing (ads, VSLs, organic), they become the **Guide** — their journey qualifies them to help the customer, who is now the hero.
+
+When distilling to soul.md, frame accordingly:
+- **Empathy:** Their struggles prove they understand the customer's pain (they lived it)
+- **Authority:** Their "elixir" proves they have the map (they found the way out)
+
+soul.md should serve both reconnection AND positioning. The founder reconnects with their Why, and that Why is inherently about helping others.
 
 ### Output
 
@@ -272,7 +283,7 @@ your-repo/
 
 - [references/hero-journey.md](references/hero-journey.md) — 6-stage framework details
 - [references/question-bank.md](references/question-bank.md) — All questions with follow-ups
-- [references/examples/origin-example.md](references/examples/origin-example.md) — Sample output
+- [references/usage-guide.md](references/usage-guide.md) — When other skills should use origin.md
 
 ## Templates
 

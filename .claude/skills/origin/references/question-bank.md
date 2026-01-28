@@ -15,8 +15,9 @@ All interview questions organized by stage, with follow-ups and what they surfac
 - "What were you good at?"
 - "What drained you?"
 - "What was life like in the 'before' times?"
+- "What was the persistent problem or broken system lurking in the background?" (the "Villain" — not a person, but a systemic failure)
 
-**What it surfaces:** Background, context, expertise, the "before" state
+**What it surfaces:** Background, context, expertise, the "before" state, the antagonist
 
 ---
 
@@ -30,13 +31,14 @@ All interview questions organized by stage, with follow-ups and what they surfac
 - "What were you running from?"
 - "What couldn't you stand anymore?"
 - "What was broken that no one was fixing?"
+- "Why did it feel like a personal injustice that this problem hadn't been solved?" (philosophical level — "things should not be this way")
 
 **Follow-ups (Desires - the pull):**
 - "What did you wish existed?"
 - "What were you running toward?"
 - "What would have made everything better?"
 
-**What it surfaces:** Motivation, the push/pull dynamic
+**What it surfaces:** Motivation, the push/pull dynamic, philosophical conviction
 
 ---
 
@@ -92,8 +94,9 @@ All interview questions organized by stage, with follow-ups and what they surfac
 - "What did you have to give up or risk?"
 - "Who or what gave you the push?"
 - "What made you finally say 'I'm doing this'?"
+- "In the middle of the uncertainty, what was the one belief that kept you from retreating?" (the "Moment of Certainty" — the North Star during the leap)
 
-**What it surfaces:** The decision point, the leap, commitment
+**What it surfaces:** The decision point, the leap, commitment, the anchoring belief
 
 ---
 
