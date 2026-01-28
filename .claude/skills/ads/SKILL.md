@@ -30,24 +30,14 @@ Before creating ads, the business repo must have:
 |------|------------------|----------|
 | `reference/core/offer.md` | What you sell, price, mechanism, benefits | Yes |
 | `reference/core/audience.md` | Who buys, their pains, desires | Yes |
-| `reference/core/origin.md` | Founder backstory, credibility, unique angle | Recommended |
+| `reference/core/origin.md` | Founder backstory, credibility, unique angle | Selective |
 | `reference/core/voice.md` | Tone, phrases, personality | Recommended |
 | `reference/proof/testimonials.md` | Testimonials with names and outcomes | Yes |
 | `reference/proof/angles/*.md` | Different messaging entry points | Yes |
 
-**When to use origin.md:**
-- Deep ads that need credibility (authority plays, "why I created this")
-- Testimonial-style ads where founder story adds trust
-- High-ticket offers where trust-building matters
-- Ads using the founder/creator angle explicitly
+**origin.md usage:** Not every ad needs founder story. See `vip/.claude/skills/origin/references/usage-guide.md` for when to use vs skip.
 
-**When to skip origin.md:**
-- Pattern interrupt ads (pure hook, no story needed)
-- UGC-style native ads (should feel like customer, not founder)
-- Direct response focused purely on mechanism/offer
-- Most one-liners (unless the hook IS the founder angle)
-
-If required files are missing, ask user to create them first. If origin.md is missing and they want founder-angle ads, suggest `/origin`.
+If required files are missing, ask user to create them first.
 
 ---
 

@@ -118,17 +118,7 @@ This is why mining lives in `/think` — it's research that feeds your evergreen
 
 Search all working directories for `reference/core/`. If not found, ask user or run `/setup`.
 
-**When to use origin.md:**
-- Story-based framework scripts (personal narrative, transformation)
-- "Why I do this" or "how I got here" content
-- Credibility intros ("After 17 years in X...")
-- Values-based messaging where authenticity is the hook
-
-**When to skip origin.md:**
-- Educational/tips content (focus on the lesson, not the teacher)
-- Problem-solution scripts (focus on audience pain, not founder)
-- Listicles and how-tos (practical, not personal)
-- Most carousels (unless it's a story carousel)
+**origin.md usage:** Not every script needs founder story. See `vip/.claude/skills/origin/references/usage-guide.md` for when to use vs skip.
 
 Missing files? See [references/first-time-setup.md](references/first-time-setup.md).
 

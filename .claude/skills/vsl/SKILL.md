@@ -54,16 +54,7 @@ If unclear, ask: "Is this for a Skool/membership community ($47-$497/month) or a
 | `reference/core/origin.md` | Founder backstory for intro/epiphany bridge | Recommended |
 | `reference/proof/testimonials.md` | Success stories with specifics | Yes |
 
-**Where to use origin.md in VSLs:**
-- **Section 2 (Epiphany Bridge)** — This IS the founder story section. Use heavily.
-- **Credibility mentions** — Brief markers ("After 17 years...") where trust matters
-- **"Why I created this"** — If the script has this beat
-
-**Where to keep origin.md light:**
-- **The Plan / Features sections** — Focus on what they get, not your story
-- **Proof sections** — Customer stories, not founder stories
-- **CTA sections** — Focus on their action, not your journey
-- **Price anchoring** — About value, not origin
+**origin.md usage:** Use heavily in Epiphany Bridge (Section 2), light elsewhere. See `vip/.claude/skills/origin/references/usage-guide.md` for full guidance.
 
 **If required files missing:** Ask user to provide or run `/think` first.
 **If origin.md missing and using Epiphany Bridge:** Suggest `/origin` — that section needs a real founder story to work.
