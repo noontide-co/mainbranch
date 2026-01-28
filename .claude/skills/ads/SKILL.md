@@ -22,6 +22,33 @@ If unclear, ask: "Do you want static image ads, video scripts, one-liners, or a 
 
 ---
 
+## Pre-Flight: Special Ad Categories
+
+**Before generating any ads, ask:**
+
+> "Will this campaign run as a Meta Special Ad Category? (Housing, Employment, Credit, or Social Issues/Politics)"
+
+If **Employment** (job training, career coaching, hiring, job boards):
+
+1. **Load additional rules:** See Meta Policy lens → Employment section
+2. **Warn user:** "Employment category has strict restrictions. I'll avoid salary assertions, 'if you've been...' patterns, and job-seeking status claims."
+3. **Tag the output:** Add `special_ad_category: employment` to frontmatter
+
+### Employment Category Quick Rules
+
+These patterns that work in standard ads will get rejected in Employment:
+
+| Pattern | Why It Fails | Alternative |
+|---------|--------------|-------------|
+| "If you've been stuck at £30k..." | Asserts current employment status | "DevOps engineers can reach £60k+" |
+| "Still getting rejected after interviews?" | Personal attribute (job-seeking status) | "Interview preparation that works" |
+| "Tired of your dead-end job?" | Asserts job dissatisfaction | "Career advancement strategies" |
+| Salary numbers as pain (£30k, $50k) | Implies current salary = personal attribute | Salary as aspiration only |
+
+**The rule:** In Employment, ANY assertion about current status (job, salary, employment state) = Personal Attributes violation. Aspirational framing only.
+
+---
+
 ## Reference Required (All Modes)
 
 Before creating ads, the business repo must have:
