@@ -87,35 +87,6 @@ Ex-corporate → solo founder. Building [product] for [audience]. The path exist
 
 ---
 
-### YouTube (About section - longer form)
-
-**Formula:** [Origin hook] + [Journey summary] + [Current mission] + [What I bring]
-
-**Example:**
-```
-I taught myself HTML at 12, took four years of CS in high school, and planned to become a developer. Then a friend got me a QA internship and I stayed for 17 years.
-
-After trying consulting (too stressful) and teaching QAs on Skool (wrong audience), I found Main Branch — and realized I'm not a solo founder looking for a product. I'm a builder looking for a mission.
-
-Now I contribute to building Main Branch, bringing 17 years of QA rigor, teaching experience, and the "technical-enough" bridge that helps non-devs level up.
-
-I light up when I build something that helps people. This is that.
-```
-
-**Structure:**
-1. **Hook** — Start with something specific and interesting from their past
-2. **Journey** — Brief summary of pivots/trials (2-3 sentences)
-3. **Current** — What they do now and why it's different
-4. **Unique value** — What they bring that others don't
-
-**Tips:**
-- 100-150 words
-- Can be conversational
-- Include the "aha" moment if they have one
-- End with conviction
-
----
-
 ## Output Format
 
 When generating bios, output all platforms:
@@ -135,9 +106,6 @@ When generating bios, output all platforms:
 ### LinkedIn (220 char)
 [bio]
 
-### YouTube (full)
-[bio]
-
 ---
 
 *Generated from origin.md. Edit to taste.*
@@ -153,7 +121,6 @@ When generating bios, output all platforms:
 | X/Twitter | 160 | Personality, punchy |
 | Reddit | 200 | Casual, quirky |
 | LinkedIn | 220 | Professional, transformational |
-| YouTube | No limit | Conversational, story-driven |
 
 ---
 
@@ -178,8 +145,3 @@ When generating bios, output all platforms:
 - Professional but human
 - Can include industry keywords
 - Transformation arc works well
-
-**YouTube:**
-- No strict limit, but respect attention
-- Story-driven, conversational
-- Can be longer, people will read if hooked
