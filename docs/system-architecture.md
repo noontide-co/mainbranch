@@ -10,10 +10,10 @@ Main Branch operates on a fundamental separation:
 
 ```
 ENGINE (vip)     +     DATA (your business repo)     =     OUTPUT
-├── Skills                             ├── Reference                       ├── Ads
-├── Lenses                             │   (incl. content-strategy.md)     ├── Scripts
-└── Frameworks                         ├── Research                        ├── Content
-                                       ├── Decisions                       └── Outputs
+├── Skills                             ├── Reference                       ├── Ads, Scripts, Content (outputs/)
+├── Lenses                             │   (incl. content-strategy.md)     ├── Wiki (separate repo)
+└── Frameworks                         ├── Research                        └── Site (separate repo)
+                                       ├── Decisions
                                        └── Compliance
 ```
 
@@ -221,6 +221,8 @@ vip/
 │   │   │   └── SKILL.md
 │   │   ├── think/
 │   │   │   └── SKILL.md
+│   │   ├── site/
+│   │   │   └── SKILL.md
 │   │   └── ...
 │   │
 │   ├── lenses/                      # Review criteria for /ads review
@@ -300,6 +302,7 @@ Skills expect business context in standardized locations:
 | Testimonials | `reference/proof/testimonials.md` | Recommended |
 | Typicality | `reference/proof/typicality.md` | For outcome claims |
 | Content Strategy | `reference/domain/content-strategy.md` | Recommended for /organic, /newsletter |
+| Site config | `~/.mainbranch/sites.json` | When building/publishing with /site |
 
 Skills should fail gracefully with clear errors if required context is missing.
 
@@ -361,26 +364,30 @@ The `/ads review` mode spawns parallel agents, one per lens:
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Spawning Subagents: Permissions
+### Spawning Subagents: Permissions and Durability
 
 **Critical:** When spawning subagents with the Task tool, they inherit limited permissions. If your agent needs to:
 
 - Create folders or move files → **Needs Bash access**
 - Write files outside working directories → **Needs explicit paths**
 - Run git commands → **Needs Bash access**
+- Use MCP tools (Apify, etc.) → **Must run in foreground** (background agents can't access MCP)
 
-**Pattern for agents that need Bash:**
+**Known bug — subagent writes may not persist:** Claude Code Task tool subagents sometimes report successful file writes via the Write tool, but the files don't appear on disk (GitHub [#4462](https://github.com/anthropics/claude-code/issues/4462), [#9458](https://github.com/anthropics/claude-code/issues/9458), [#13890](https://github.com/anthropics/claude-code/issues/13890)). This is intermittent — writes succeed most of the time, but fail silently when the bug triggers.
 
-```
-Spawn agent with prompt that includes:
-"You have Bash access. Create directories and move files as needed."
+**Recommended pattern — write with fallback:**
 
-Use allowedPrompts in ExitPlanMode:
-{ "tool": "Bash", "prompt": "create directories" }
-{ "tool": "Bash", "prompt": "move files" }
-```
+1. Use `subagent_type: "general-purpose"` (has Write, Edit, Bash, MCP)
+2. Agent writes the file
+3. Agent verifies the write (Read or ls the file)
+4. Agent returns: file path + write status + summary (always), full content (only if write failed)
+5. Main conversation checks the file exists; if not, writes from returned content
 
-**Avoid stuck loops:** If an agent keeps retrying the same denied permission, it will loop indefinitely. Always verify the agent has the permissions it needs before spawning, or instruct it to report back if permissions are missing rather than retry.
+**Read-only pattern (safest):** For agents that only analyze (like `/ads review` lenses or `/pr-review` checks), agents read + return findings. Main conversation acts on findings. Zero persistence risk.
+
+**Avoid stuck loops:** If an agent keeps retrying the same denied permission, it will loop indefinitely. Instruct agents to report back if permissions are missing rather than retry.
+
+**Do NOT run agents in background if they need MCP tools.** Background agents auto-deny permissions and cannot access MCP servers ([#13254](https://github.com/anthropics/claude-code/issues/13254)).
 
 ---
 
@@ -470,6 +477,8 @@ When you invoke `/ads`:
 3. Output goes to my-business/outputs/
 4. Review uses lenses from vip
 
+Users with a wiki or site have additional repos accessed via config files (`~/.mainbranch/wiki.json`, `~/.mainbranch/sites.json`), not as working directories.
+
 ---
 
 ## Content Pipeline Architecture
@@ -491,6 +500,15 @@ The content pipeline follows a **newsletter-first waterfall**: one keystone piec
     ▼
 /think → performance analysis, strategy updates → content-strategy.md
 ```
+
+### Infrastructure Layer
+
+Some skills produce infrastructure that sits outside the recurring content cycle — built once, updated when reference changes:
+
+- `/site` — Conversion endpoint (landing pages where pipeline traffic lands)
+- `/wiki` — Knowledge base (published notes)
+
+These are destinations the pipeline drives traffic to, not recurring content items.
 
 ### Energy-Protected Audience Feedback Loop
 
@@ -517,6 +535,7 @@ Skills write to `content/drafts/`. The move from drafts to scheduled to publishe
 | `/newsletter` | Generates keystone long-form (coming soon) |
 | `/organic` | Adapts keystone into platform-specific formats |
 | `/ads` | Amplifies top-performing organic content |
+| `/site` | Conversion endpoint — landing pages where pipeline traffic lands |
 
 ---
 

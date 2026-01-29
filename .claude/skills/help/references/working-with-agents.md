@@ -39,6 +39,16 @@ Think of it like delegating. Instead of Claude doing three research tasks sequen
 
 ---
 
+## When File Writes Fail
+
+Occasionally a subagent will report that it saved a file, but the file doesn't appear on disk. This is a known Claude Code bug — not a permissions issue. The agent's Write tool succeeds in its context but doesn't persist to the filesystem.
+
+**What happens:** Claude detects the missing file and writes it from the agent's returned content. You may see: "Agent reported writing [file] but it doesn't exist. Writing from returned content now."
+
+**This is automatic.** Skills instruct agents to verify their writes and return fallback content. You don't need to do anything.
+
+---
+
 ## What You See
 
 When Claude spawns subagents, you'll see something like:

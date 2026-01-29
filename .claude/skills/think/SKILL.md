@@ -222,13 +222,17 @@ Research -> Checkpoint -> Decide -> Checkpoint -> Codify
 
 Gather from codebase, web, user input, local recordings.
 
-**When research involves 2+ sources** (e.g., YouTube + web, X/Twitter + codebase, competitor mining + deep research), spawn parallel Task agents in a single message — one agent per source. Each agent:
+**When research involves 2+ sources** (e.g., YouTube + web, X/Twitter + codebase, competitor mining + deep research), spawn parallel Task agents in a single message — one agent per source. Use `subagent_type: "general-purpose"` (has Write, Edit, Bash, MCP access). Each agent:
 - Gets a focused prompt: one source, one research question
-- Saves its own dated file (e.g., `research/YYYY-MM-DD-topic-yt-mining.md`, `research/YYYY-MM-DD-topic-x-social.md`)
-- Returns a 5-bullet summary to the main conversation
+- Writes its own dated file (e.g., `research/YYYY-MM-DD-topic-yt-mining.md`)
+- **Verifies the write:** checks the file exists after writing (use Read or ls)
+- Returns: file path + write status + 5-bullet summary
+- If write failed: returns the **full research content** so main conversation can write it
 - Does NOT need the full business context — just the research question and source instructions
 
-After all agents return, synthesize across their summaries in the main conversation. This keeps heavy content (transcripts, mined posts, long articles) out of your main context window.
+**After all agents return:** Check that files landed on disk. If any agent reported a write failure or the file doesn't exist, write it from the returned content. Then synthesize across summaries. This keeps heavy content out of your main context window while recovering gracefully from the known Claude Code subagent write persistence bug.
+
+**Do NOT run research agents in background** (`run_in_background: true`) — background agents cannot access MCP tools (Apify, etc.) and cannot prompt for permissions.
 
 **Mining sources:**
 
