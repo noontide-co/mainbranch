@@ -31,10 +31,17 @@ Nano Banana generates images from text prompts using Google's Gemini models. In 
 
 ### 2. Add to Environment
 
-Add to `~/.config/vip/env.sh`:
+Add to `~/.config/vip/env.sh` (created during `/setup` — see Step 4a in `setup/SKILL.md` for full env setup):
 
 ```bash
 export GOOGLE_API_KEY="your-api-key-here"
+```
+
+If you don't have `env.sh` yet, run `/setup` first or create it manually:
+
+```bash
+mkdir -p ~/.config/vip
+echo 'export GOOGLE_API_KEY="your-key"' >> ~/.config/vip/env.sh
 ```
 
 ### 3. Add MCP Server
