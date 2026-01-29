@@ -125,7 +125,7 @@ Apify is a data extraction service that automatically pulls Instagram post data.
 - **Cost:** Free tier covers ~2000 posts/month
 - **Setup:** Requires Apify account and MCP configuration
 
-**Don't have Apify?** That's fine - use the manual method.
+**Don't have Apify?** That's fine - use the manual method. See [apify-setup.md](apify-setup.md) for setup instructions.
 
 ### Option 2: Manual method (no setup required)
 

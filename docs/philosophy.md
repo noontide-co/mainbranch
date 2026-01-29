@@ -73,9 +73,9 @@ But it's also about *staying on your main branch* — not getting lost in execut
 
 When you're drifting into pure execution, re-read `soul.md`.
 
-"Trench stories" aren't testimonials for social proof — they're fuel that makes you *feel* the impact.
+Testimonials aren't just social proof — they're reconnection fuel that makes you *feel* the impact.
 
-Your "parts" (executor vs connected self) need both — reference keeps them in dialogue.
+Your parts (The Builder and The Soul) need both — reference keeps them in dialogue.
 
 ---
 

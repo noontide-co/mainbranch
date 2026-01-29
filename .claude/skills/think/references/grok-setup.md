@@ -10,7 +10,9 @@ Tool detection is handled automatically by `/think` via `.vip/config.yaml` -- se
 
 ### Claude Code Env Var Caveat
 
-Claude Code sessions may not inherit env vars from your shell profile (`~/.zshrc`, `~/.bashrc`). If `XAI_API_KEY` isn't in the environment, the skill checks for and sources `~/.config/devon/env.sh` before giving up. If you store API keys in a different location, update the detection script in SKILL.md or export the key in `~/.config/devon/env.sh`.
+Claude Code sessions may not inherit env vars from your shell profile (`~/.zshrc`, `~/.bashrc`). If `XAI_API_KEY` isn't in the environment, the skill checks for and sources `~/.config/vip/env.sh` before giving up. If you store API keys in a different location, update the detection script in SKILL.md or export the key in `~/.config/vip/env.sh`.
+
+See `start/references/config-system.md` for the full config file layout (local.yaml, env.sh, config.yaml).
 
 ---
 

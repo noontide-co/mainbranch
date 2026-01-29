@@ -54,6 +54,8 @@ cat ~/.config/vip/env.sh 2>/dev/null
 - Optional — system works without it (Apify handles most research)
 - Progressive — add keys when you need them, not before
 
+**Created by:** `setup/SKILL.md` Step 4a. Tool-specific setup guides also reference this file: `think/references/gemini-setup.md`, `think/references/grok-setup.md`, `setup/references/nano-banana-setup.md`.
+
 **Shell integration:** `/setup` adds this line to `~/.zshrc` or `~/.bashrc`:
 ```bash
 [ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"

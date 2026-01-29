@@ -17,7 +17,7 @@ which whisper-cli ffmpeg
 ls ~/.whisper/ggml-base.en.bin
 ```
 
-If missing, see installation instructions below.
+If missing, see installation instructions below. (Also mentioned in `setup/SKILL.md` "After Setup" section.)
 
 ---
 

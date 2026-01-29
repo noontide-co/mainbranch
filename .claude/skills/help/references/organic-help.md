@@ -213,6 +213,8 @@ Check apify.com → Settings → API & Integrations.
 
 **Fallback:** Share screenshots manually if Apify won't cooperate.
 
+See `organic/references/apify-setup.md` for full Apify installation and configuration.
+
 ### "Mining used a lot of tokens"
 
 Expected. Each competitor uses ~3-5k tokens. The skill should show estimates before running. To reduce:
@@ -243,4 +245,4 @@ Or run `/think research "content ideas for [your niche]"` to brainstorm.
 | `/ads video` | Paid video ads |
 | `/ads static` | Paid image ads |
 | `/think` | Researching content strategy |
-| `/think codify` | Adding more voice/context |
+| `/think codify` | Adding more voice/context (see `think/references/codify-phase.md`) |

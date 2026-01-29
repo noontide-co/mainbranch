@@ -40,7 +40,7 @@ echo "Research tools:"
 [ "$GROK_STATUS" = "true" ] && echo "  ✓ Grok (X/Twitter sentiment via SDK)"
 [ "$GROK_STATUS" = "null" ] && {
   # Source env file if key not in environment but file exists
-  [ -z "$XAI_API_KEY" ] && [ -f "$HOME/.config/devon/env.sh" ] && source "$HOME/.config/devon/env.sh"
+  [ -z "$XAI_API_KEY" ] && [ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"
   ([ -n "$XAI_API_KEY" ] && python3 -c "import xai_sdk" 2>/dev/null) \
     && echo "  ✓ Grok (detected — updating config)" \
     || echo "  ✗ Grok (not found)"
@@ -56,7 +56,7 @@ echo "Research tools:"
 [ "$NANOBANANA_STATUS" = "true" ] && echo "  ✓ Nano Banana (image generation)"
 [ "$NANOBANANA_STATUS" = "null" ] && {
   # Check if GOOGLE_API_KEY exists (same key as Gemini research)
-  [ -z "$GOOGLE_API_KEY" ] && [ -f "$HOME/.config/devon/env.sh" ] && source "$HOME/.config/devon/env.sh"
+  [ -z "$GOOGLE_API_KEY" ] && [ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"
   [ -z "$GOOGLE_API_KEY" ] && [ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"
   # Check if nano-banana MCP is available
   ([ -n "$GOOGLE_API_KEY" ] && (npx nano-banana-mcp --help >/dev/null 2>&1 || type mcp__nano-banana__* >/dev/null 2>&1)) \

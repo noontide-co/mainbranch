@@ -194,6 +194,8 @@ If you have an old `~/.claude/settings.json` with `business_repo_path`, `/start`
 
 ## Config System Explained
 
+See `start/references/config-system.md` for the full canonical reference on the config system.
+
 **Two files, different purposes:**
 
 | File | Location | What's In It | Git-tracked? |

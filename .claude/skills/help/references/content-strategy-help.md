@@ -57,7 +57,7 @@ You build content-strategy.md through `/think` cycles, not all at once. The reco
 
 4. **Fill in over time.** The Hooks Library, Framework Library, and Metrics sections grow as you create content and learn what works. They are not filled upfront.
 
-Each step is a `/think` cycle: research, decide, codify into content-strategy.md.
+Each step is a `/think` cycle: research, decide, codify into content-strategy.md. See `think/references/codify-phase.md` for the full codify workflow, including the Content Strategy Updates section.
 
 ---
 
@@ -88,7 +88,7 @@ You do not need all 9 sections filled to start creating content. Pillars + Platf
 | `/newsletter` | Uses pillars for topic selection. Uses Repurposing Flow to map newsletter to derivative content. (Coming soon.) |
 | `/think` | Writes to content-strategy.md during the codify phase. This is the primary tool for building and updating the file. |
 
-If content-strategy.md does not exist, all skills work exactly as they did before. The integration is additive -- it improves output quality but is never required.
+If content-strategy.md does not exist, all skills work exactly as they did before. The integration is additive -- it improves output quality but is never required. See `organic/SKILL.md` for how `/organic` reads content-strategy.md during script generation.
 
 ---
 

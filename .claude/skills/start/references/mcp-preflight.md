@@ -108,4 +108,4 @@ which whisper-cli >/dev/null 2>&1 && echo "whisper-cli available"
 | "What this business needs" | `.vip/config.yaml` | Yes (git) |
 | "What this machine has" | `~/.claude.json` | No (local) |
 
-Config documents requirements. Installation state is Claude Code's domain.
+Config documents requirements. Installation state is Claude Code's domain. See [config-system.md](config-system.md) for the full config file layout.

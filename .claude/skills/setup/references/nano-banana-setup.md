@@ -123,6 +123,11 @@ Free tier includes limited image generation. Paid credits scale to hundreds of i
 
 ---
 
+## See Also
+
+- `think/references/gemini-setup.md` — Gemini research setup (same GOOGLE_API_KEY)
+- `start/references/config-system.md` — Full config file layout (local.yaml, env.sh, config.yaml)
+
 ## Resources
 
 - Google AI Studio: https://aistudio.google.com/apikey

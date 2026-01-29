@@ -170,3 +170,5 @@ Gemini Deep Research is now available in /think.
 
 - [gemini-deep-research.md](gemini-deep-research.md) — How to use Gemini for research
 - [research-architecture.md](research-architecture.md) — Full routing logic
+- `start/references/config-system.md` — Full config file layout (local.yaml, env.sh, config.yaml)
+- `setup/SKILL.md` Step 4a — How env.sh is created during initial setup

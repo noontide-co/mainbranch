@@ -174,7 +174,7 @@ Mining: Competitor content analysis
     → Codify: Add to Framework Library + Hooks Library in content-strategy.md
 ```
 
-If `content-strategy.md` does not exist and the user is codifying content-related decisions, suggest creating it: "This looks like content strategy work. Want to create `reference/domain/content-strategy.md` to store this?"
+If `content-strategy.md` does not exist and the user is codifying content-related decisions, suggest creating it: "This looks like content strategy work. Want to create `reference/domain/content-strategy.md` to store this?" See `setup/references/templates.md` for the template, and `help/references/content-strategy-help.md` for user-facing FAQ.
 
 ---
 

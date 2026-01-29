@@ -244,7 +244,7 @@ The path is: Mining → Human Synthesis → Reference Update → THEN Content Ge
 
 - [ ] **REQUIRED:** Update at least one reference file with insights from this mining
 - [ ] Review frameworks with human judgment (Visual/Audible/Emotional)
-- [ ] Codify winning patterns via `/think codify`
+- [ ] Codify winning patterns via `/think codify` (see `think/references/codify-phase.md`)
 - [ ] THEN generate scripts from concepts (not before)
 
 ---

@@ -64,7 +64,7 @@ When the user's research topic involves content pillars, platform selection, con
 4. Synthesize into a research file as usual
 5. In the **Implications for Reference Files** section, note which sections of `content-strategy.md` should be updated
 
-If `content-strategy.md` does not exist, the research output should recommend creating it as an action item.
+If `content-strategy.md` does not exist, the research output should recommend creating it as an action item. See `setup/references/templates.md` for the content-strategy.md template, and `help/references/content-strategy-help.md` for user-facing FAQ.
 
 ---
 
