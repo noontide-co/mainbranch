@@ -2,23 +2,26 @@
 
 Real-time social intelligence from X/Twitter using xAI's Grok API.
 
+## Contents
+
+- [CRITICAL: API Limitations](#critical-api-limitations)
+- [When to Use](#when-to-use)
+- [Quick Start](#quick-start)
+- [Option 1: Python SDK](#option-1-python-sdk-recommended-for-x-search)
+- [Option 2: Grok X Insights MCP](#option-2-grok-x-insights-mcp-community-wrapper)
+- [Option 3: WebSearch Fallback](#option-3-websearch-fallback)
+- [Workflow Patterns](#workflow-patterns)
+- [Output Format](#output-format)
+- [Cost & Token Management](#cost--token-management)
+- [Combining with Other Research](#combining-with-other-research)
+- [Fallback Strategy](#fallback-strategy)
+- [Technical Details](#technical-details)
+
 ---
 
 ## CRITICAL: API Limitations
 
-**The REST API does NOT support X search.** This is a key finding from testing:
-
-| API | Chat Works | X Search Works |
-|-----|------------|----------------|
-| REST API (`api.x.ai/v1/chat/completions`) | YES | NO (search param ignored) |
-| Python SDK with gRPC (`xai_sdk`) | YES | YES |
-
-When you use the REST API with `search: true`, you'll see:
-- `num_sources_used: 0` in the response
-- No actual X posts returned
-- Grok answers from training data, not live X
-
-**To get live X search, you must use the Python SDK.**
+**The REST API does not support X search. You must use the Python SDK with grok-4.** See [grok-setup.md](grok-setup.md) for the full REST vs SDK explanation and setup instructions.
 
 ---
 
@@ -72,26 +75,21 @@ export XAI_API_KEY="your-api-key"
 X search is **tool-based**. You don't call search directly — you give the model access to search tools and it decides when to use them:
 
 ```python
-import asyncio
 from xai_sdk import Client
 from xai_sdk.tools import x_search
+from xai_sdk.chat import user
 
-async def search_x():
-    client = Client()
+client = Client()
 
-    conversation = client.chat.create(
-        model="grok-3",
-        tools=[x_search()]  # Enable X search tools
-    )
+chat = client.chat.create(
+    model="grok-4",  # grok-4 required for server-side x_search tools
+    tools=[x_search()],
+)
 
-    async for token in conversation.add_user_turn(
-        "What are people saying about AI coding assistants on X?"
-    ):
-        print(token.token, end="", flush=True)
+chat.append(user("What are people saying about AI coding assistants on X?"))
 
-    print()
-
-asyncio.run(search_x())
+response = chat.sample()
+print(response.content)
 ```
 
 ### Available Sub-Tools
@@ -118,16 +116,16 @@ The model can use these internally when searching:
 ### Example with Streaming
 
 ```python
-import asyncio
 from xai_sdk import Client
 from xai_sdk.tools import x_search
+from xai_sdk.chat import user
 
-async def research_topic(topic: str):
+def research_topic(topic: str):
     client = Client()
 
-    conversation = client.chat.create(
-        model="grok-3",
-        tools=[x_search()]
+    chat = client.chat.create(
+        model="grok-4",
+        tools=[x_search()],
     )
 
     prompt = f"""Research what people on X are saying about: {topic}
@@ -138,14 +136,17 @@ async def research_topic(topic: str):
     3. Notable quotes from actual posts
     4. Any controversies or debates"""
 
+    chat.append(user(prompt))
+
     result = []
-    async for token in conversation.add_user_turn(prompt):
-        result.append(token.token)
-        print(token.token, end="", flush=True)
+    for response, chunk in chat.stream():
+        if chunk.token:
+            result.append(chunk.token)
+            print(chunk.token, end="", flush=True)
 
     return "".join(result)
 
-asyncio.run(research_topic("Skool communities"))
+research_topic("Skool communities")
 ```
 
 ---
@@ -307,10 +308,11 @@ linked_decisions: []
 
 **xAI API Pricing (as of 2026):**
 
-| Model | Input | Output |
-|-------|-------|--------|
-| grok-3 | ~$3/M tokens | ~$15/M tokens |
-| grok-3-fast | ~$1/M tokens | ~$5/M tokens |
+| Model | Input | Output | X Search |
+|-------|-------|--------|----------|
+| grok-4 | ~$3/M tokens | ~$15/M tokens | YES |
+| grok-3 | ~$3/M tokens | ~$15/M tokens | NO (server-side tools removed) |
+| grok-3-fast | ~$1/M tokens | ~$5/M tokens | NO |
 
 **Typical costs per X search query:**
 
@@ -325,7 +327,7 @@ linked_decisions: []
 1. **Be specific:** "Skool pricing complaints" vs just "Skool"
 2. **Limit scope:** "last 7 days" vs "all time"
 3. **Single turn:** Get what you need in one prompt
-4. **Use grok-3-fast** for routine searches
+4. **Use grok-4** — currently the only model supporting x_search server-side tools
 
 ---
 

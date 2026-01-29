@@ -46,43 +46,45 @@ cd ~/vip 2>/dev/null && git pull origin main 2>/dev/null && cd - >/dev/null || t
 
 ---
 
-## Tool Detection (First Invocation)
+## Tool Detection (YAML-Backed)
 
-On first `/think` in session, detect available research tools. **Cache results for session** - don't re-check every /think call.
+Tool status is persisted in `.vip/config.yaml` under the `tools:` key. This avoids re-checking env vars and installs every session.
 
-### Check Order
+### How It Works
 
-1. **Apify** - check `$APIFY_TOKEN` env var OR `mcp__apify__*` tools (YouTube transcripts, Instagram mining)
-2. **Gemini** - check `$GOOGLE_API_KEY` env var (deep research)
-3. **Grok** - check `$XAI_API_KEY` env var OR `mcp__xai__*` tools (X/Twitter sentiment)
-4. **whisper** - check `mcp__whisper__*` tools OR `which whisper-cli` (local transcription)
+```
+1. Read .vip/config.yaml → tools section
+2. For each tool:
+   - status: true  → Trust it, skip detection
+   - status: false → Skip it, don't nag
+   - status: null  → Run detection, update config
+   - missing entry → Run detection, add entry to config
+3. Report results once per session
+```
 
 ### Detection Script
 
+Run once per session to probe unknown tools:
+
 ```bash
-# Run once per session, store results
-echo "Checking research tools..."
-
-# Check env vars (quiet)
-[ -n "$APIFY_TOKEN" ] && echo "✓ Apify (YouTube, Instagram mining)"
-[ -n "$GOOGLE_API_KEY" ] && echo "✓ Gemini (deep research)"
-[ -n "$XAI_API_KEY" ] && echo "✓ Grok (X/Twitter sentiment)"
-
-# Check CLI tools
-which whisper-cli >/dev/null 2>&1 && echo "✓ whisper-cli (local transcription)"
+bash .claude/skills/think/scripts/detect-tools.sh
 ```
 
-MCP tools are checked by attempting to use them - if `mcp__apify__search-actors` exists, Apify is available (even without env var).
+See `scripts/detect-tools.sh` for the full implementation.
 
-### Report Availability
+### After Detection
 
-**If all tools available:**
-> "Research tools ready: Apify, Gemini, Grok, whisper"
+If any tool was probed and found, **update `.vip/config.yaml`** with the result so future sessions skip detection. Use Edit to set `status: true` or `status: false` as appropriate.
 
-**If missing optional tools (mention once, don't nag):**
-> "Research tools: Apify available. Gemini, Grok not configured (optional - web search fallback available)."
+### Report Format
 
-**If Apify missing (this is important):**
+**All tools known (fast path — no detection needed):**
+> "Research tools: Apify, Gemini, Grok, whisper — all verified in config."
+
+**Mix of known and missing:**
+> "Research tools: Apify, Gemini ready. Grok not configured (optional — web search fallback). whisper not installed."
+
+**If Apify missing (important — affects mining):**
 > "Apify MCP not detected. YouTube transcripts and Instagram mining won't work. Set up now? (5 min, one-time)"
 
 ### Why This Matters
@@ -91,6 +93,7 @@ MCP tools are checked by attempting to use them - if `mcp__apify__search-actors`
 - **Grok missing = web fallback for X research** (still works, less real-time)
 - **Gemini missing = Claude Code handles synthesis** (still works, more token use)
 - **whisper missing = can't transcribe local files** (offer CLI setup)
+- **YAML-backed = no wasted time** re-probing every session
 
 ---
 

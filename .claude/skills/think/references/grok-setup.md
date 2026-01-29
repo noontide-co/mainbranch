@@ -4,6 +4,16 @@ Setup guide for real-time X/Twitter data using xAI's Grok API.
 
 ---
 
+## Auto-Detection
+
+Tool detection is handled automatically by `/think` via `.vip/config.yaml` -- see SKILL.md for details.
+
+### Claude Code Env Var Caveat
+
+Claude Code sessions may not inherit env vars from your shell profile (`~/.zshrc`, `~/.bashrc`). If `XAI_API_KEY` isn't in the environment, the skill checks for and sources `~/.config/devon/env.sh` before giving up. If you store API keys in a different location, update the detection script in SKILL.md or export the key in `~/.config/devon/env.sh`.
+
+---
+
 ## CRITICAL: REST API vs Python SDK
 
 **The xAI REST API does NOT support live X search.**
@@ -16,6 +26,8 @@ Setup guide for real-time X/Twitter data using xAI's Grok API.
 When you use the REST API with `search: true`, you get `num_sources_used: 0` — no live X data.
 
 **To get live X search, you must use the Python SDK.** The SDK uses gRPC and server-side tool execution, which is how xAI grants access to X data.
+
+**Model requirement (as of Jan 2026):** Server-side tools like `x_search` require the **grok-4 family** of models. grok-3 no longer supports server-side tools and will return an `INVALID_ARGUMENT` error if you try.
 
 ---
 
@@ -40,7 +52,7 @@ When you use the REST API with `search: true`, you get `num_sources_used: 0` —
 | New user bonus | $25 free credits |
 | Data sharing bonus | +$150/mo free credits |
 
-**Grok-3 pricing (for X search):**
+**Grok-4 pricing (for X search):**
 - Input: ~$3 per million tokens
 - Output: ~$15 per million tokens
 
@@ -101,23 +113,21 @@ Then reload: `source ~/.zshrc`
 Create a test script `test_grok.py`:
 
 ```python
-import asyncio
 from xai_sdk import Client
 from xai_sdk.tools import x_search
+from xai_sdk.chat import user
 
-async def test():
-    client = Client()
-    conversation = client.chat.create(
-        model="grok-3",
-        tools=[x_search()]
-    )
-    async for token in conversation.add_user_turn(
-        "What are people saying about AI coding assistants on X today?"
-    ):
-        print(token.token, end="", flush=True)
-    print()
+client = Client()
 
-asyncio.run(test())
+chat = client.chat.create(
+    model="grok-4",  # grok-4 required for server-side x_search tools
+    tools=[x_search()],
+)
+
+chat.append(user("What are people saying about AI coding assistants on X today?"))
+
+response = chat.sample()
+print(response.content)
 ```
 
 Run it:
@@ -126,28 +136,13 @@ Run it:
 python test_grok.py
 ```
 
-If you see actual X posts in the response, X search is working.
+If you see actual X posts with handles and timestamps, X search is working.
 
-### Available X Search Sub-Tools
+**Note:** The SDK API changed in v1.6+. The old async `add_user_turn()` pattern no longer works. Use the sync `append(user(...))` + `sample()` pattern shown above.
 
-When you pass `x_search()`, the model gets access to:
+### Available Sub-Tools & Search Parameters
 
-| Sub-Tool | Purpose |
-|----------|---------|
-| `x_user_search` | Find X user accounts |
-| `x_keyword_search` | Keyword-based post search |
-| `x_semantic_search` | Semantic/contextual search |
-| `x_thread_fetch` | Fetch full thread from a post |
-
-The model autonomously decides which to use based on your prompt.
-
-### Search Parameters
-
-The model can use these internally:
-- **Date filtering:** `from_date`, `to_date` (ISO8601 format)
-- **Handle exclusion:** `excluded_handles` (list of handles to skip)
-
-Influence via prompt: "What have people said about X in the last week, excluding @spamaccount?"
+See [grok-social.md](grok-social.md) for the full list of sub-tools (`x_user_search`, `x_keyword_search`, etc.) and search parameter details.
 
 ---
 
@@ -230,6 +225,10 @@ Still useful for finding popular/viral posts that have been indexed.
 **SDK: "Invalid API key"** — Check `echo $XAI_API_KEY` and verify at [console.x.ai](https://console.x.ai)
 
 **SDK: "num_sources_used: 0"** — You're using REST API, not SDK. Make sure you're using `x_search()` tool.
+
+**SDK: "the model grok-3 is not supported when using server-side tools"** — As of Jan 2026, x_search requires grok-4 family models. Change `model="grok-3"` to `model="grok-4"`.
+
+**SDK: "AttributeError: 'Chat' object has no attribute 'add_user_turn'"** — Old SDK API. Update to v1.6+: use `chat.append(user(...))` then `chat.sample()` instead of async `add_user_turn()`.
 
 **MCP: "grok-x-insights not found"** — Run `npm run build` and check the path.
 
