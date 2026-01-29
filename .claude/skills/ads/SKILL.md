@@ -59,8 +59,11 @@ Before creating ads, the business repo must have:
 | `reference/core/audience.md` | Who buys, their pains, desires |
 | `reference/proof/testimonials.md` | Testimonials with names and outcomes |
 | `reference/proof/angles/*.md` | Different messaging entry points |
+| `reference/domain/content-strategy.md` | Content pillars, platform strategy (optional -- improves topic selection) |
 
 If reference files are missing, ask user to create them first.
+
+**Content funnel awareness:** Ads are the "immediate ROI" pillar of the two-pillar value prop (ads + content). In the content pipeline, ads drive newsletter signups, newsletter nurtures, Skool trial converts, revenue follows. If `content-strategy.md` exists, use content pillars to inform angle selection, metrics to understand what performs organically (ads amplify top-performing organic content), and funnel mapping to determine whether ads should target awareness, consideration, or conversion.
 
 ---
 

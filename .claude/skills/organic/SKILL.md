@@ -114,6 +114,8 @@ This is why mining lives in `/think` — it's research that feeds your evergreen
 
 Requires `reference/core/voice.md`, `audience.md`, `offer.md`.
 
+**Optional but recommended:** `reference/domain/content-strategy.md` — If present, /organic reads content pillars to align generated content and platform strategy for format selection. Works perfectly without it.
+
 Search all working directories for `reference/core/`. If not found, ask user or run `/setup`.
 
 Missing files? See [references/first-time-setup.md](references/first-time-setup.md).
@@ -158,8 +160,10 @@ Which works better for you?
 Check for existing mined concepts, pick one, generate scripts.
 
 ```
-Check research/ -> Select concept -> Generate -> Output
+Check research/ -> Check content-strategy.md (if exists, suggest pillar-aligned topic) -> Select concept -> Generate -> Output
 ```
+
+If content-strategy.md exists and has pillars defined, suggest topics aligned to those pillars when the user has no specific concept in mind.
 
 If no mining exists, prompt: "No mined concepts found. Want to mine competitors first? That's `/think` — should I switch you over?"
 
@@ -196,6 +200,7 @@ Campaign name is REQUIRED. Ask user if not provided. Examples: `january-hooks`, 
 2. Check `outputs/*-organic-*/` — What scripts exist?
 3. Don't suggest re-mining same handles from today
 4. Recommend generating from existing mining if concepts unused
+5. Check `reference/domain/content-strategy.md` — What pillars are defined? What platform is the target?
 
 **Example context-aware response:**
 ```
@@ -280,6 +285,19 @@ See [references/organic-frameworks.md](references/organic-frameworks.md) for sof
 ## Integration with /think
 
 To save winning angles: route to `/think codify` → `reference/proof/angles/`.
+
+---
+
+## Content Strategy Integration
+
+If `reference/domain/content-strategy.md` exists, /organic uses it to improve output:
+
+- **Pillar alignment:** Suggest topics from defined pillars when user has no specific concept
+- **Platform format:** Default to the format matching the target platform from platform strategy
+- **Content mix:** Track which pillar types have been generated recently to maintain ratio balance
+- **Hooks library:** Pull proven hooks from the hooks library section if populated
+
+If content-strategy.md does not exist, /organic works exactly as before -- from mined concepts or user-provided topics. No warnings, no degradation.
 
 ---
 

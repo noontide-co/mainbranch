@@ -51,6 +51,23 @@ Detailed workflow for research mode in `/think`.
 
 ---
 
+## Content Strategy Research Routing
+
+When the user's research topic involves content pillars, platform selection, content cadence, or content performance, check `reference/domain/content-strategy.md` first. If it exists, read it to understand current strategy before researching.
+
+**Trigger topics:** content pillars, which platforms, content plan, cadence, content mix, repurposing, hooks, content frameworks, content metrics, newsletter strategy
+
+**Research flow for content strategy topics:**
+1. Read existing `reference/domain/content-strategy.md` (if present) to understand current state
+2. Read `reference/core/soul.md` + `offer.md` + `audience.md` for pillar derivation context
+3. Conduct research (web, mining, competitor analysis)
+4. Synthesize into a research file as usual
+5. In the **Implications for Reference Files** section, note which sections of `content-strategy.md` should be updated
+
+If `content-strategy.md` does not exist, the research output should recommend creating it as an action item.
+
+---
+
 ## Sources to Check
 
 1. **Codebase** — Existing reference files, past decisions, research

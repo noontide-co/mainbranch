@@ -144,6 +144,40 @@ After codifying, show summary:
 
 ---
 
+## Content Strategy Updates
+
+When codifying decisions about content pillars, platform selection, cadence, or content performance, update `reference/domain/content-strategy.md`. Sections to update:
+
+| Decision About | Update Section |
+|----------------|----------------|
+| New pillar discovered | **Content Pillars** — add pillar with sub-topics and three tests (soul, offer, audience) |
+| Platform added or removed | **Platform Strategy** — update priority-ordered platform list |
+| Winning hook identified | **Hooks Library** — add hook with context and performance |
+| New framework extracted | **Framework Library** — add framework with source and transfer notes |
+| New benchmark established | **Metrics** — update PRP benchmarks or review cadence |
+| Content mix ratio adjusted | **Content Mix** — update ratios based on performance data |
+| Cadence changed | **Weekly Cadence** — update day-by-day plan |
+
+**How /think cycles update content-strategy.md:**
+
+```
+Research: "Which platforms does my audience use?"
+  → Decide: Platform strategy (Instagram Reels + newsletter)
+    → Codify: Update Platform Strategy section in content-strategy.md
+
+Research: "What content themes drive engagement?"
+  → Decide: Three pillars (transformation stories, tactical tips, community wins)
+    → Codify: Update Content Pillars section in content-strategy.md
+
+Mining: Competitor content analysis
+  → Extract: Framework (hook pattern, emotional arc)
+    → Codify: Add to Framework Library + Hooks Library in content-strategy.md
+```
+
+If `content-strategy.md` does not exist and the user is codifying content-related decisions, suggest creating it: "This looks like content strategy work. Want to create `reference/domain/content-strategy.md` to store this?"
+
+---
+
 ## Exit Criteria
 
 Codification is complete when:

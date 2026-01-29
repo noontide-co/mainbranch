@@ -29,7 +29,7 @@ Before diving in, know which mode you're in:
 
 | Mode | You're doing | Examples |
 |------|--------------|----------|
-| **Enriching the core** | Pulling insights → reference files | Mining videos, making decisions, updating offer.md |
+| **Enriching the core** | Pulling insights → reference files | Mining videos, making decisions, updating offer.md, **building content-strategy.md** |
 | **Creating for the world** | Reference files → output | Ads, scripts, courses, code, posts |
 
 `/think` is for **enriching the core**. When you're ready to create, use `/ads`, `/organic`, `/vsl`, or just ask.
@@ -124,6 +124,7 @@ Detect mode from user's natural language:
 | "decide", "we chose", "document decision" | Decide | [decide-phase.md](references/decide-phase.md) |
 | "codify", "apply", "update reference files" | Codify | [codify-phase.md](references/codify-phase.md) |
 | "add context", "enrich", "I have new info" | Codify | [codify-phase.md](references/codify-phase.md) |
+| "content strategy", "pillars", "what platforms", "content plan", "cadence" | Full Flow (codify to content-strategy.md) | [codify-phase.md](references/codify-phase.md) |
 | "where was I", "continue", "pick up" | Recovery | [recovery.md](references/recovery.md) |
 
 If unclear, ask: "Are you exploring a question, documenting a decision, or updating reference files?"
@@ -186,6 +187,8 @@ On every `/think` invocation, detect state and guide the next step:
 # Check for work in progress
 ls -lt research/*.md 2>/dev/null | head -3
 grep -l "status: proposed\|status: accepted" decisions/*.md 2>/dev/null
+# Also check content strategy state
+ls reference/domain/content-strategy.md 2>/dev/null
 ```
 
 | If you find... | Then... |
@@ -193,6 +196,8 @@ grep -l "status: proposed\|status: accepted" decisions/*.md 2>/dev/null
 | Recent research, no decision | "You have research on [topic]. Ready to make a decision?" |
 | Proposed decision | "Decision [topic] is proposed. Ready to accept it?" |
 | Accepted decision, unchecked items | "Decision [topic] has action items. Ready to codify?" |
+| content-strategy.md exists but empty/thin | "Your content strategy file is a skeleton. Want to fill it in? We can derive pillars from your soul.md + offer.md + audience.md." |
+| content-strategy.md missing (community biz) | "You don't have a content strategy yet. Want to build one? It'll define your pillars, platforms, and cadence." |
 | Nothing in progress | "What are you trying to figure out?" |
 
 **The goal is reference files.** Research and decisions are waypoints. Keep asking: "What needs to happen to get this into reference?"
@@ -278,6 +283,8 @@ Optionally create Claude tasks for execution tracking. See [decide-phase.md](ref
 ### 8. Codify
 
 Apply action items to reference files. Mark decision as codified.
+
+**Codify targets include:** `reference/core/*.md`, `reference/proof/angles/*.md`, `reference/proof/testimonials.md`, **`reference/domain/content-strategy.md`** (pillars, hooks library, framework library, metrics).
 
 ---
 

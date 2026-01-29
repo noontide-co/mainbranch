@@ -24,6 +24,8 @@
 - **Synthesize research** into evergreen reference
 - **Control** exactly what informs every output
 
+Two pillars power every business: **ads that convert** (immediate ROI) and **content that runs itself** (long game). Both are driven by the same reference files -- your offer, audience, voice, and proof inform everything from a static ad to a newsletter-first content pipeline.
+
 This engagement is the learning. Articulating your offer, audience, angles — you understand your business more deeply than passive memory allows.
 
 **Reference files as reconnection:** The act of writing and refining reference files isn't just documentation — it's identity work. It keeps you associated with WHY you do this, not dissociated into pure execution.
@@ -52,6 +54,10 @@ You're a thoughtful friend helping them build their business, not a task executo
 - If the think cycle feels like pushing, they might have the wrong offer
 - The goal is they stay *associated*, not dissociated into execution mode
 
+**Connect to content strategy:**
+- If they have reference files but no content strategy, suggest building one through /think
+- If they're creating content without a plan, route to /think to build content-strategy.md first
+
 ---
 
 ## When to Route
@@ -63,13 +69,15 @@ Take inventory. Notice what's missing. Proactively suggest skills they haven't i
 | Lost, confused, returning | `/start` |
 | Brand new, need repo setup | `/setup` |
 | Exploring, researching, deciding | `/think` |
+| Building content pillars, planning platforms | `/think` |
 | Ready to create paid ads | `/ads` |
 | Need a sales video script | `/vsl` |
 | Want organic content (reels, tiktok) | `/organic` |
+| Want to write a newsletter | `/newsletter` (coming soon -- use `/think` for now) |
 | Building a wiki or notes | `/wiki` |
 | Asking questions, troubleshooting | `/help` |
 
-**Quick triggers:** "research/decide" → `/think` · "ads/copy" → `/ads` · "organic/reels" → `/organic` · "help/stuck" → `/help`
+**Quick triggers:** "research/decide" → `/think` · "ads/copy" → `/ads` · "organic/reels" → `/organic` · "newsletter/email" → `/newsletter` · "content strategy/pillars" → `/think` · "help/stuck" → `/help`
 
 ---
 
@@ -88,6 +96,7 @@ vip (ENGINE)                          your-repo (DATA)
                                       │   ├── brand/
                                       │   ├── proof/
                                       │   └── domain/
+                                      │       └── content-strategy.md
                                       ├── research/
                                       ├── decisions/
                                       └── outputs/
@@ -105,8 +114,9 @@ Skills read from `reference/`, output to `outputs/`. Same engine + different dat
 | `offer.md` | WHAT you sell — price, mechanism, benefits |
 | `audience.md` | WHO buys — real people, not avatars |
 | `voice.md` | HOW you sound — tone, phrases, personality |
+| `content-strategy.md` | HOW you distribute — pillars, platforms, cadence, metrics (domain -- emerges through /think, not required at setup) |
 
-These live in `reference/core/` and are required for all businesses.
+These live in `reference/core/` and are required for all businesses. `content-strategy.md` lives in `reference/domain/` and is built over time.
 
 ---
 
@@ -130,7 +140,7 @@ Not everyone goes all the way. Most stay at Phase 2. The path exists for those w
 
 | Mode | Direction | Skills |
 |------|-----------|--------|
-| **Enriching the core** | Insights → reference files | `/think` |
+| **Enriching the core** | Insights → reference files (including content-strategy.md — your distribution backbone) | `/think` |
 | **Creating for the world** | Reference files → output | `/ads`, `/vsl`, `/organic` |
 
 ---
@@ -177,7 +187,7 @@ Skills load reference progressively to stay token-efficient:
 |------|------|-------------|
 | **Always** | CLAUDE.md | Every session |
 | **Core** | reference/core/*.md | When generating |
-| **On-demand** | research/, decisions/ | When reasoning about choices |
+| **On-demand** | research/, decisions/, content-strategy.md | When reasoning about choices or generating content |
 | **Deep reference** | reference/brand/, reference/proof/ | When writing copy |
 | **Domain** | reference/domain/ | When business-type matters |
 
@@ -224,6 +234,7 @@ Research files also add: `linked_decisions: []`
 | `/organic` | Mine competitors, generate organic scripts |
 | `/wiki` | Personal wiki with atomic notes |
 | `/help` | Answer questions, troubleshoot, explain |
+| `/newsletter` | Generate weekly newsletter from thinking work (coming soon) |
 | `/pull` | Quick update vip (auto in /start) |
 
 ---
