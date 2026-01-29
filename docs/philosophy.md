@@ -29,7 +29,7 @@ The core insight — from Tony Robbins' interview with Alex Hormozi — is that 
 | Magic passive memory | Active management |
 | Start fresh every chat | `/start` loads your context |
 | Generic outputs | Business-specific |
-| Content treadmill | Think cycle (research → decide → codify) |
+| Content treadmill | Newsletter-first, AI-adapted distribution |
 | Rent infrastructure | Own it (portable files) |
 
 ---
@@ -38,7 +38,7 @@ The core insight — from Tony Robbins' interview with Alex Hormozi — is that 
 
 | Mode | What Happens |
 |------|--------------|
-| **Enriching the core** | Research what interests you → extract → codify into reference |
+| **Enriching the core** | Research what interests you → extract → codify into reference → build content strategy |
 | **Creating for the world** | Generate content, ads, scripts — all informed by reference |
 
 **The test:** If the think cycle feels like pushing, you have the wrong offer. If it feels like pull, you're in the right place.

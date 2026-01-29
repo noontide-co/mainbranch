@@ -297,6 +297,174 @@ status: active
 
 ---
 
+## reference/domain/content-strategy.md
+
+```markdown
+---
+type: reference
+status: draft
+---
+
+# Content Strategy
+
+## Content Pillars
+<!-- 3-5 pillars derived from soul.md + offer.md + audience.md -->
+<!-- Each pillar must pass the triple test:
+     1. Soul test — Does this connect to why you exist?
+     2. Offer test — Does this lead toward your mechanism?
+     3. Audience test — Does your audience care about this?
+-->
+
+### Pillar 1: [Name]
+- **Theme:** [What this pillar covers]
+- **Sub-topics:** [Specific angles within this pillar]
+- **Connection:** [How it maps to offer/audience/soul]
+
+### Pillar 2: [Name]
+- **Theme:**
+- **Sub-topics:**
+- **Connection:**
+
+### Pillar 3: [Name]
+- **Theme:**
+- **Sub-topics:**
+- **Connection:**
+
+<!-- Add more pillars as needed — 3-5 is the sweet spot -->
+
+---
+
+## Platform Strategy
+<!-- Priority-ordered platforms with format, cadence, purpose, funnel role -->
+<!-- Start with 1-2 platforms. Add more only after consistency. -->
+
+| Platform | Format | Cadence | Purpose | Funnel Role |
+|----------|--------|---------|---------|-------------|
+| [e.g., Newsletter] | [Long-form] | [Weekly] | [Keystone content] | [Nurture] |
+| [e.g., Instagram] | [Reels, carousels] | [3x/week] | [Discovery] | [Awareness] |
+| [e.g., YouTube] | [Short-form] | [2x/week] | [Authority] | [Consideration] |
+
+---
+
+## Content Mix
+<!-- Ratios across content types -->
+<!-- Starting suggestion: 50 / 25 / 15 / 10 — adjust based on performance -->
+
+| Type | Target % | Description |
+|------|----------|-------------|
+| Educational | 50% | Teaches concepts, frameworks, how-tos |
+| Entertaining | 25% | Stories, personality, relatable moments |
+| Community | 15% | Engagement, questions, member spotlights |
+| Promotional | 10% | Direct offers, CTAs, launches |
+
+---
+
+## Weekly Cadence
+<!-- Day-by-day plan: what content type, which platform -->
+<!-- This is a starting template — iterate based on what works -->
+
+| Day | Content Type | Platform | Pillar | Notes |
+|-----|-------------|----------|--------|-------|
+| Mon | | | | |
+| Tue | | | | |
+| Wed | | | | |
+| Thu | | | | |
+| Fri | | | | |
+| Sat | | | | |
+| Sun | | | | |
+
+---
+
+## Repurposing Flow
+<!-- Keystone piece -> derivative flow -->
+<!-- The goal: create once, distribute everywhere -->
+
+```
+[Keystone piece, e.g., Newsletter]
+    |
+    ├── [Derivative 1, e.g., 3 social posts]
+    ├── [Derivative 2, e.g., 1 short-form video]
+    ├── [Derivative 3, e.g., Community discussion thread]
+    └── [Derivative 4, e.g., Email teaser]
+```
+
+---
+
+## Content Genotype Defaults
+<!-- Your preferred content DNA — the defaults AI uses when generating -->
+<!-- Variables to test next are tracked here so /think can run experiments -->
+
+| Variable | Current Default | Notes |
+|----------|----------------|-------|
+| Hook style | [e.g., question, bold claim, story] | |
+| Content format | [e.g., talking head, text overlay] | |
+| Duration | [e.g., 30-60 sec for reels] | |
+| CTA style | [e.g., soft, direct, community-invite] | |
+| Tone | [Reference voice.md] | |
+
+**Variables to test next:**
+<!-- Track what you want to experiment with -->
+- [ ] [e.g., Try controversial hooks vs educational hooks]
+- [ ] [e.g., Test 15-sec vs 60-sec format]
+
+---
+
+## Metrics
+<!-- PRP (per-piece performance) benchmarks per platform -->
+<!-- Updated through /think cycles analyzing performance data -->
+
+### Platform Benchmarks
+
+| Platform | Metric | Current Benchmark | Target | Last Updated |
+|----------|--------|-------------------|--------|--------------|
+| | Views | | | |
+| | Engagement rate | | | |
+| | Click-through | | | |
+
+### Review Cadence
+
+- **Weekly:** Check per-piece performance, update hooks library
+- **Monthly:** Review pillar performance, adjust content mix
+- **Quarterly:** Full strategy review — pillars still relevant? Platforms still right?
+
+---
+
+## Framework Library
+<!-- Proven content frameworks extracted via /think mining -->
+<!-- Each framework includes structure + when to use + example -->
+
+<!-- Example:
+### [Framework Name]
+- **Structure:** [Step-by-step pattern]
+- **When to use:** [What pillar/content type this fits]
+- **Example:** [Brief reference to a piece that used this]
+- **Source:** [Mined from competitor X / discovered through testing]
+-->
+
+---
+
+## Hooks Library
+<!-- Populated over time from what works -->
+<!-- Organized by hook type for quick reference during content creation -->
+
+### Question Hooks
+<!-- e.g., "What if everything you knew about X was wrong?" -->
+
+### Bold Claim Hooks
+<!-- e.g., "Most people fail at X because they skip this one step" -->
+
+### Story Hooks
+<!-- e.g., "Last Tuesday a member told me something that changed how I think about X" -->
+
+### Contrarian Hooks
+<!-- e.g., "Stop doing X. Here's what to do instead." -->
+
+### Data Hooks
+<!-- e.g., "97% of people who try X never see results. Here's why." -->
+```
+
+---
+
 ## decisions/YYYY-MM-DD-topic.md
 
 ```markdown

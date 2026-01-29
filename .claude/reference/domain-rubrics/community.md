@@ -16,6 +16,8 @@ Guide for structuring `reference/domain/` folder for community-based businesses 
 ```
 reference/
 └── domain/
+    ├── content-strategy.md   # Pillars, platforms, cadence, metrics
+    │
     ├── classroom/
     │   ├── modules.md        # Course modules and lessons
     │   └── resources.md      # Downloads, templates, tools
@@ -143,6 +145,35 @@ reference/
 
 ---
 
+### content-strategy.md
+
+**Purpose:** Strategic backbone for all content creation. Defines pillars, platforms, cadence, and metrics. Consumed by `/organic`, `/ads`, and `/newsletter` (coming soon).
+
+**Required sections:**
+- Content Pillars (3-5 themes with sub-topics)
+- Platform Strategy (priority-ordered platforms with format and cadence)
+- Content Mix (ratios: educational / entertaining / community / promotional)
+- Weekly Cadence (day-by-day template)
+- Metrics (PRP benchmarks, review cadence)
+
+**Optional sections (populate over time):**
+- Repurposing Flow
+- Content Genotype Defaults
+- Framework Library
+- Hooks Library
+
+**How it gets built:** Through `/think` cycles, not upfront. `/setup` scaffolds an empty template. Users fill sections through research, experimentation, and iteration.
+
+**How pillars are derived:**
+Each pillar must pass three tests:
+1. **Soul test** — Does this connect to why you exist?
+2. **Offer test** — Does this lead toward your mechanism?
+3. **Audience test** — Does your audience care?
+
+Pillars emerge from the intersection of soul.md + offer.md + audience.md. If a pillar fails any test, it is either the wrong pillar or the wrong business.
+
+---
+
 ## Optional Extensions
 
 | Folder | Use Case |
@@ -161,8 +192,9 @@ reference/
 | `core/audience.md` | `funnel/stages.md` |
 | `core/voice.md` | — |
 | `proof/testimonials.md` | — |
+| — | `content-strategy.md` |
 
-**The relationship:** `core/offer.md` summarizes the transformation. `domain/classroom/` is the delivery. `domain/membership/` is the access structure.
+**The relationship:** `core/offer.md` summarizes the transformation. `domain/classroom/` is the delivery. `domain/membership/` is the access structure. `domain/content-strategy.md` is the distribution backbone — it connects ALL core files (soul for pillar derivation, offer for promotional content, audience for topic relevance, voice for content tone).
 
 ---
 
@@ -216,9 +248,13 @@ When running `/think` to analyze Skool performance:
 
 | Skill | What It Reads |
 |-------|---------------|
+| `/think` | Writes to `content-strategy.md` during codify phase |
+| `/organic` | `content-strategy.md` for pillar alignment, platform format |
+| `/ads` | `content-strategy.md` for topic selection, funnel mapping |
+| `/newsletter` | `content-strategy.md` for pillar topics, repurposing flow (coming soon) |
 | `/vsl skool` | `funnel/stages.md`, `membership/benefits.md` |
 
 ---
 
-*Rubric version: 1.1*
-*Last updated: 2026-01-23*
+*Rubric version: 1.2*
+*Last updated: 2026-01-29*

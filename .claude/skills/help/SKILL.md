@@ -37,6 +37,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Skool, community | [skool-help.md](references/skool-help.md) |
 | Wiki, atomic notes, publish, WikiLinks | Route to `/wiki` |
 | Better outputs, quality, what next | [making-outputs-better.md](references/making-outputs-better.md) |
+| Content strategy, pillars, platforms, newsletter, content plan | [content-strategy-help.md](references/content-strategy-help.md) |
 | Contribute, contributor | [becoming-contributor.md](references/becoming-contributor.md) |
 
 ---
@@ -57,3 +58,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | When use slash commands? | For structured tasks: `/start`, `/think`, `/ads`, `/vsl` |
 | Drag files in? | Drag from Finder into Terminal, path appears |
 | Voice input? | [Wispr Flow](https://ref.wisprflow.ai/main) (affiliate link) |
+| What is content-strategy.md? | Your distribution backbone -- pillars, platforms, cadence. Built through `/think`, consumed by `/organic` and `/ads`. Lives in `reference/domain/`. |
+| How do I build a content strategy? | Run `/think`. Start by deriving 3-5 pillars from your soul.md + offer.md + audience.md. Then choose platforms, set cadence, and fill in over time. |
+| How do pillars work? | Each pillar is a content theme that passes three tests: Soul test (connects to why), Offer test (leads to mechanism), Audience test (they care). 3-5 pillars cover your content universe. |
+| What's the content pipeline? | Newsletter-first: write one keystone piece weekly, then `/organic` adapts it for social platforms, `/ads` amplifies top performers. One idea, many formats. |

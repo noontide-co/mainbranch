@@ -204,6 +204,7 @@ Full structure:
 │   │   ├── testimonials.md
 │   │   └── angles/        # Proven messaging entry points
 │   └── domain/            # Business-type specific
+│       └── content-strategy.md  # Content pillars, platforms, cadence
 │
 ├── research/              # Dated investigations
 │   └── YYYY-MM-DD-topic-[source].md
@@ -341,13 +342,16 @@ Use templates from `references/templates.md`.
 3. `reference/core/voice.md` — How you sound
 4. `reference/proof/testimonials.md` — Social proof
 5. `reference/proof/angles/` — Messaging entry points
+6. `reference/domain/content-strategy.md` — Content pillars, platforms, cadence (template for community businesses)
+
+> **Note:** content-strategy.md starts as an empty template and gets filled through `/think` cycles. Not required at setup — scaffolded with placeholder sections.
 
 ### 6. Apply Domain Rubric
 
 Based on business type, create domain-specific folders:
 
 **E-commerce:** `reference/domain/products/`, `reference/domain/fulfillment/`
-**Community:** `reference/domain/classroom/`, `reference/domain/membership/`, `reference/domain/funnel/`
+**Community:** `reference/domain/classroom/`, `reference/domain/membership/`, `reference/domain/funnel/`, `reference/domain/content-strategy.md`
 
 See `vip/.claude/reference/domain-rubrics/` for full specifications.
 
@@ -470,8 +474,10 @@ Once setup is complete, tell the user:
 >
 > **Key skills to try:**
 > - `/think` — Research topics, make decisions, update reference
+> - `/think` — Build your content strategy (pillars, platforms, cadence) — start here after core reference is solid
 > - `/ads` — Generate image ads, video scripts, or review for compliance
 > - `/vsl` — Write video sales letters (Skool or B2B)
+> - `/organic` — Create social content aligned to your content pillars
 > - `/help` — Get answers anytime you're stuck
 >
 > **The core loop:** Use `/think` regularly. Research → Decide → Codify. This is how your reference files get smarter over time.

@@ -11,8 +11,9 @@ Main Branch operates on a fundamental separation:
 ```
 ENGINE (vip)     +     DATA (your business repo)     =     OUTPUT
 ├── Skills                             ├── Reference                       ├── Ads
-├── Lenses                             ├── Research                        ├── Scripts
-└── Frameworks                         ├── Decisions                       └── Outputs
+├── Lenses                             │   (incl. content-strategy.md)     ├── Scripts
+└── Frameworks                         ├── Research                        ├── Content
+                                       ├── Decisions                       └── Outputs
                                        └── Compliance
 ```
 
@@ -156,6 +157,8 @@ outputs/
 
 Outputs inform new research. What worked? What didn't? This becomes new research, which informs new decisions, which updates context.
 
+In the Generate step, the **newsletter is the keystone piece** -- long-form thinking that gets adapted into platform-specific content by /organic and amplified by /ads. In the Learn step, performance data flows back into `content-strategy.md` -- updating the hooks library, metrics benchmarks, and pillar effectiveness.
+
 ---
 
 ## Folder Structure: Business Repos
@@ -176,12 +179,18 @@ your-business/
 │   │   └── angles/              # Messaging entry points
 │   │       └── [angle-name].md
 │   └── domain/                  # Business-type specific
+│       └── content-strategy.md  # Pillars, platforms, cadence, metrics
 │
 ├── research/                    # DATED — Point-in-time exploration
 │   └── YYYY-MM-DD-slug.md
 │
 ├── decisions/                   # DATED — Choices with rationale
 │   └── YYYY-MM-DD-slug.md
+│
+├── content/                     # CONTENT PIPELINE — Draft to published
+│   ├── drafts/                  # Work in progress
+│   ├── scheduled/               # Ready to publish
+│   └── published/               # Archive of published content
 │
 └── outputs/                     # OUTPUT — Generated content
     └── YYYY-MM-DD-batch-name/
@@ -290,6 +299,7 @@ Skills expect business context in standardized locations:
 | Angles | `reference/proof/angles/*.md` | At least one |
 | Testimonials | `reference/proof/testimonials.md` | Recommended |
 | Typicality | `reference/proof/typicality.md` | For outcome claims |
+| Content Strategy | `reference/domain/content-strategy.md` | Recommended for /organic, /newsletter |
 
 Skills should fail gracefully with clear errors if required context is missing.
 
@@ -423,7 +433,7 @@ Skills should load context progressively:
 |------|------|------|------------|
 | **Always** | CLAUDE.md | Every session | Low |
 | **Just-in-time** | reference/core/*.md | When generating | Medium |
-| **On-demand** | research/, decisions/ | When reasoning | Medium |
+| **On-demand** | research/, decisions/, content-strategy.md | When reasoning or generating content | Medium |
 | **Deep reference** | reference/proof/, lenses/ | When reviewing | High |
 
 **Why this matters:** Token efficiency. Don't load everything upfront. Load what's needed when it's needed.
@@ -459,6 +469,54 @@ When you invoke `/ads`:
 2. Skill reads context from my-business/reference/
 3. Output goes to my-business/outputs/
 4. Review uses lenses from vip
+
+---
+
+## Content Pipeline Architecture
+
+The content pipeline follows a **newsletter-first waterfall**: one keystone piece becomes many platform-adapted outputs.
+
+```
+/think → research, decisions, content-strategy.md
+    │
+    ▼
+/newsletter → keystone long-form (weekly email)
+    │
+    ▼
+/organic → platform-adapted social (reels, tiktok, carousels)
+    │
+    ▼
+/ads → paid amplification of top performers
+    │
+    ▼
+/think → performance analysis, strategy updates → content-strategy.md
+```
+
+### Energy-Protected Audience Feedback Loop
+
+The pipeline is designed so the creator **never opens a social app to post**. AI handles adaptation and distribution. The creator's energy stays in thinking and writing -- not scrolling. Audience feedback (metrics, comments, engagement) flows back through /think into content-strategy.md, closing the loop without requiring the creator to be on-platform.
+
+### Content Folder State Machine
+
+Content moves through three states:
+
+```
+content/
+├── drafts/       → Work in progress (skill output lands here)
+├── scheduled/    → Approved, ready to publish (manual or automated move)
+└── published/    → Archive of published content (moved after publish)
+```
+
+Skills write to `content/drafts/`. The move from drafts to scheduled to published can be manual or automated (via Postiz or similar infrastructure -- out of scope for engine, documented here as architectural pattern).
+
+### Skill Connections to Content Pipeline
+
+| Skill | Pipeline Role |
+|-------|---------------|
+| `/think` | Builds content-strategy.md, analyzes performance |
+| `/newsletter` | Generates keystone long-form (coming soon) |
+| `/organic` | Adapts keystone into platform-specific formats |
+| `/ads` | Amplifies top-performing organic content |
 
 ---
 
@@ -504,6 +562,18 @@ Decisions note what context they updated:
 
 This creates a traceable chain: Research → Decision → Context → Output
 
+### Decision → Content Strategy
+
+Decisions about content pillars, platforms, or cadence update content-strategy.md:
+
+```markdown
+## Action Items
+- [x] Add "transformation stories" pillar to reference/domain/content-strategy.md
+- [x] Update platform strategy with Instagram Reels cadence
+```
+
+Content strategy links back to the decisions that informed pillar choices, creating the same traceable chain.
+
 ---
 
 ## Naming Conventions
@@ -511,9 +581,11 @@ This creates a traceable chain: Research → Decision → Context → Output
 | Content Type | Format | Example |
 |--------------|--------|---------|
 | Core context | `slug.md` | `offer.md`, `audience.md`, `voice.md` |
+| Content strategy | `slug.md` | `content-strategy.md` |
 | Research | `YYYY-MM-DD-slug.md` | `2026-01-10-competitor-analysis.md` |
 | Decisions | `YYYY-MM-DD-slug.md` | `2026-01-11-pricing-strategy.md` |
 | Output batches | `YYYY-MM-DD-batch-name/` | `2026-01-15-january-launch/` |
+| Content drafts | `descriptive.md` | `newsletter-2026-02-03.md` |
 | Typicality data | `typicality.md` | `reference/proof/typicality.md` |
 
 ### Why Dates in Filenames
@@ -596,3 +668,4 @@ Client repos (BDC, autism-rewired) are separate — can be handed off independen
 6. **Progressive loading** — Context tiers for token efficiency
 7. **Compliance layers** — Planning, review, and data layers
 8. **Multi-repo workflow** — Engine as additional directory, business repo as primary
+9. **Content pipeline** — Newsletter-first waterfall: keystone → organic → ads → learn

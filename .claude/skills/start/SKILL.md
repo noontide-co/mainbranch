@@ -69,6 +69,8 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │   ├── "ads" / "copy" ───────────────→ /ads (triages to static/video/review)
 │   ├── "vsl" / "sales video" ────────→ /vsl (triages to skool/b2b)
 │   ├── "content" / "organic" ────────→ /organic
+│   ├── "newsletter" / "email" ───────→ /newsletter (coming soon — route to /think for now)
+│   ├── "content strategy" / "pillars"→ /think
 │   ├── "wiki" / "notes" ─────────────→ /wiki
 │   ├── "help" / questions ───────────→ /help
 │   └── unclear ──────────────────────→ Show options + mention /help
@@ -273,9 +275,10 @@ If user is ready to work, ask or infer intent. **Use numbered options:**
 > 2. Create ads (image or video) → `/ads`
 > 3. Write a VSL script → `/vsl`
 > 4. Create organic content → `/organic`
-> 5. Work on my wiki → `/wiki`
-> 6. Add more context → `/think codify`
-> 7. Get help → `/help`
+> 5. Write a newsletter → `/newsletter` (coming soon — use `/think` for now)
+> 6. Work on my wiki → `/wiki`
+> 7. Add more context → `/think codify`
+> 8. Get help → `/help`
 >
 > (hit a number to reply, or just tell me what you need)"
 
@@ -335,6 +338,7 @@ Read `user.experience` from `~/.config/vip/local.yaml` (defaults to `beginner` i
 | `/ads` | Generate image ads, video scripts, or review for compliance |
 | `/vsl` | Write video sales letters (Skool or B2B frameworks) |
 | `/organic` | Mine competitors, generate organic scripts |
+| `/newsletter` | Generate weekly newsletter from thinking work (coming soon) |
 | `/wiki` | Create atomic notes, publish wiki |
 
 ---
@@ -349,6 +353,8 @@ Use these to auto-detect what user wants:
 | "new", "first time", "get started", "set up" | `/setup` |
 | "add", "update", "more context", "new testimonials", "enrich" | `/think codify` |
 | "research", "decide", "figure out", "explore", "mine", "mining", "transcribe" | `/think` |
+| "content strategy", "pillars", "platforms", "cadence", "content plan" | `/think` |
+| "newsletter", "email", "beehiiv", "weekly email" | `/newsletter` (coming soon — route to `/think` for now) |
 | "ads", "copy", "static", "image ads", "video ads", "review", "compliance" | `/ads` |
 | "vsl", "sales video", "about page video", "b2b video" | `/vsl` |
 | "content", "reels", "tiktok", "organic", "mine", "competitors", "carousel" | `/organic` |
