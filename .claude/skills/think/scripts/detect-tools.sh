@@ -10,12 +10,14 @@ if [ -f "$CONFIG" ]; then
   GEMINI_STATUS=$(grep -A1 "^  gemini:" "$CONFIG" | grep "status:" | awk '{print $2}')
   GROK_STATUS=$(grep -A1 "^  grok:" "$CONFIG" | grep "status:" | awk '{print $2}')
   WHISPER_STATUS=$(grep -A1 "^  whisper:" "$CONFIG" | grep "status:" | awk '{print $2}')
+  NANOBANANA_STATUS=$(grep -A1 "^  nano-banana:" "$CONFIG" | grep "status:" | awk '{print $2}')
 else
   # No config — probe everything
   APIFY_STATUS="null"
   GEMINI_STATUS="null"
   GROK_STATUS="null"
   WHISPER_STATUS="null"
+  NANOBANANA_STATUS="null"
 fi
 
 echo "Research tools:"
@@ -49,4 +51,15 @@ echo "Research tools:"
   which whisper-cli >/dev/null 2>&1 \
     && echo "  ✓ whisper (detected — updating config)" \
     || echo "  ✗ whisper (not found)"
+}
+
+[ "$NANOBANANA_STATUS" = "true" ] && echo "  ✓ Nano Banana (image generation)"
+[ "$NANOBANANA_STATUS" = "null" ] && {
+  # Check if GOOGLE_API_KEY exists (same key as Gemini research)
+  [ -z "$GOOGLE_API_KEY" ] && [ -f "$HOME/.config/devon/env.sh" ] && source "$HOME/.config/devon/env.sh"
+  [ -z "$GOOGLE_API_KEY" ] && [ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"
+  # Check if nano-banana MCP is available
+  ([ -n "$GOOGLE_API_KEY" ] && (npx nano-banana-mcp --help >/dev/null 2>&1 || type mcp__nano-banana__* >/dev/null 2>&1)) \
+    && echo "  ✓ Nano Banana (detected — updating config)" \
+    || echo "  ✗ Nano Banana (not found — optional, for image generation)"
 }

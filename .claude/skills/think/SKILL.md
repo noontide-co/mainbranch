@@ -79,10 +79,10 @@ If any tool was probed and found, **update `.vip/config.yaml`** with the result 
 ### Report Format
 
 **All tools known (fast path — no detection needed):**
-> "Research tools: Apify, Gemini, Grok, whisper — all verified in config."
+> "Tools: Apify, Gemini, Grok, whisper, Nano Banana — all verified in config."
 
 **Mix of known and missing:**
-> "Research tools: Apify, Gemini ready. Grok not configured (optional — web search fallback). whisper not installed."
+> "Tools: Apify, Gemini ready. Grok not configured (optional). whisper not installed. Nano Banana not configured (optional — for image generation)."
 
 **If Apify missing (important — affects mining):**
 > "Apify MCP not detected. YouTube transcripts and Instagram mining won't work. Set up now? (5 min, one-time)"
@@ -93,6 +93,7 @@ If any tool was probed and found, **update `.vip/config.yaml`** with the result 
 - **Grok missing = web fallback for X research** (still works, less real-time)
 - **Gemini missing = Claude Code handles synthesis** (still works, more token use)
 - **whisper missing = can't transcribe local files** (offer CLI setup)
+- **Nano Banana missing = text prompts only** (no direct image generation, use external tools)
 - **YAML-backed = no wasted time** re-probing every session
 
 ---

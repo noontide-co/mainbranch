@@ -234,7 +234,7 @@ cat > ~/.config/vip/env.sh << 'EOF'
 # === OPTIONAL RESEARCH TOOLS ===
 # These unlock additional capabilities. Add as needed.
 
-# Gemini - Deep web research (free tier available)
+# Gemini - Deep web research + Nano Banana image generation (free tier available)
 # Get from: https://aistudio.google.com/apikey
 # export GOOGLE_API_KEY=""
 
@@ -494,3 +494,7 @@ Once setup is complete, tell the user:
 >   'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin'
 > ```
 > Then `/think` can mine your recordings directly."
+
+**If the user wants image generation:**
+
+> "Want to generate actual images for ads and content? See `references/nano-banana-setup.md` for Nano Banana setup (uses your existing Google API key)."
