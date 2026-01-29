@@ -75,9 +75,10 @@ Take inventory. Notice what's missing. Proactively suggest skills they haven't i
 | Want organic content (reels, tiktok) | `/organic` |
 | Want to write a newsletter | `/newsletter` (coming soon -- use `/think` for now) |
 | Building a wiki or notes | `/wiki` |
+| Need a landing page or website | `/site` |
 | Asking questions, troubleshooting | `/help` |
 
-**Quick triggers:** "research/decide" → `/think` · "ads/copy" → `/ads` · "organic/reels" → `/organic` · "newsletter/email" → `/newsletter` · "content strategy/pillars" → `/think` · "help/stuck" → `/help`
+**Quick triggers:** "research/decide" → `/think` · "ads/copy" → `/ads` · "organic/reels" → `/organic` · "newsletter/email" → `/newsletter` · "site/landing page/website" → `/site` · "content strategy/pillars" → `/think` · "help/stuck" → `/help`
 
 ---
 
@@ -102,7 +103,7 @@ vip (ENGINE)                          your-repo (DATA)
                                       └── outputs/
 ```
 
-Skills read from `reference/`, output to `outputs/`. Same engine + different data = different outputs per business.
+Skills read from `reference/`, output to `outputs/`. Some skills (`/wiki`, `/site`) produce separate repos instead of writing to `outputs/`. Same engine + different data = different outputs per business.
 
 ---
 
@@ -141,7 +142,7 @@ Not everyone goes all the way. Most stay at Phase 2. The path exists for those w
 | Mode | Direction | Skills |
 |------|-----------|--------|
 | **Enriching the core** | Insights → reference files (including content-strategy.md — your distribution backbone) | `/think` |
-| **Creating for the world** | Reference files → output | `/ads`, `/vsl`, `/organic` |
+| **Creating for the world** | Reference files → output | `/ads`, `/vsl`, `/organic`, `/site` |
 
 ---
 
@@ -233,6 +234,7 @@ Research files also add: `linked_decisions: []`
 | `/vsl` | VSL scripts (Skool 18-section or B2B Haynes 7-step) |
 | `/organic` | Mine competitors, generate organic scripts |
 | `/wiki` | Personal wiki with atomic notes |
+| `/site` | Generate and deploy landing pages from reference files |
 | `/help` | Answer questions, troubleshoot, explain |
 | `/newsletter` | Generate weekly newsletter from thinking work (coming soon) |
 | `/pull` | Quick update vip (auto in /start) |

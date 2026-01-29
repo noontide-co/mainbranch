@@ -339,6 +339,7 @@ Read `user.experience` from `~/.config/vip/local.yaml` (defaults to `beginner` i
 | `/vsl` | Write video sales letters (Skool or B2B frameworks) |
 | `/organic` | Mine competitors, generate organic scripts |
 | `/newsletter` | Generate weekly newsletter from thinking work (coming soon) |
+| `/site` | Generate and deploy landing pages from reference files |
 | `/wiki` | Create atomic notes, publish wiki |
 
 Skills like `/think` and `/ads review` automatically spawn parallel subagents when the task benefits (e.g., multi-source research, 6-lens compliance review). This makes complex work faster and keeps your main context window clean. No action needed on your part.
@@ -360,6 +361,7 @@ Use these to auto-detect what user wants:
 | "ads", "copy", "static", "image ads", "video ads", "review", "compliance" | `/ads` |
 | "vsl", "sales video", "about page video", "b2b video" | `/vsl` |
 | "content", "reels", "tiktok", "organic", "mine", "competitors", "carousel" | `/organic` |
+| "site", "landing page", "website", "deploy site", "put this online", "I need a site" | `/site` |
 | "wiki", "notes", "atomic", "wikilinks", "publish wiki" | `/wiki` |
 | "pull", "update vip", "get latest" | `/pull` |
 

@@ -75,7 +75,7 @@ When you're drifting into pure execution, re-read `soul.md`.
 
 Testimonials aren't just social proof — they're reconnection fuel that makes you *feel* the impact.
 
-Your parts (The Builder and The Soul) need both — reference keeps them in dialogue.
+Your parts (The Builder and The Soul) need both — reference keeps them in dialogue. When your reference files produce a live landing page through `/site`, the reconnection becomes public — your words on a real page, facing real people.
 
 ---
 
