@@ -285,8 +285,13 @@ Review ads through 6 compliance and quality lenses before shipping.
 
 1. Gather input (single ad, batch, or component)
 2. Git commit current state (preserves original): `[output] {type} batch pre-review`
-3. Run all 6 lenses in parallel
-4. Synthesize into P1/P2/P3 report
+3. Spawn 6 parallel Task agents — one per lens. Each agent:
+   - Reads the ad batch/copy being reviewed
+   - Reads its assigned lens file from `.claude/lenses/`
+   - Evaluates every ad against that lens's checklist
+   - Returns P1/P2/P3 findings with specific line references
+   - Does NOT fix anything — just reports findings
+4. When all 6 agents return, synthesize findings into a unified P1/P2/P3 report (deduplicate where lenses overlap)
 5. Apply P2/P3 fixes directly to the batch file
 6. Create `review-log.md` documenting what changed
 7. Tell user: "Fixes applied. Want me to commit these changes to git?"

@@ -341,6 +341,8 @@ Read `user.experience` from `~/.config/vip/local.yaml` (defaults to `beginner` i
 | `/newsletter` | Generate weekly newsletter from thinking work (coming soon) |
 | `/wiki` | Create atomic notes, publish wiki |
 
+Skills like `/think` and `/ads review` automatically spawn parallel subagents when the task benefits (e.g., multi-source research, 6-lens compliance review). This makes complex work faster and keeps your main context window clean. No action needed on your part.
+
 ---
 
 ## Intent Keywords

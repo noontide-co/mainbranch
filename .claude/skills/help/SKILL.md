@@ -38,6 +38,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Wiki, atomic notes, publish, WikiLinks | Route to `/wiki` |
 | Better outputs, quality, what next | [making-outputs-better.md](references/making-outputs-better.md) |
 | Content strategy, pillars, platforms, newsletter, content plan | [content-strategy-help.md](references/content-strategy-help.md) |
+| Subagents, parallel, agents, context window, tokens | [working-with-agents.md](references/working-with-agents.md) |
 | Contribute, contributor | [becoming-contributor.md](references/becoming-contributor.md) |
 
 ---
@@ -62,3 +63,5 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | How do I build a content strategy? | Run `/think`. Start by deriving 3-5 pillars from your soul.md + offer.md + audience.md. Then choose platforms, set cadence, and fill in over time. |
 | How do pillars work? | Each pillar is a content theme that passes three tests: Soul test (connects to why), Offer test (leads to mechanism), Audience test (they care). 3-5 pillars cover your content universe. |
 | What's the content pipeline? | Newsletter-first: write one keystone piece weekly, then `/organic` adapts it for social platforms, `/ads` amplifies top performers. One idea, many formats. |
+| What are subagents? | Claude can spawn parallel agents to research or review simultaneously. You'll see it happen automatically in `/think` (multi-source research) and `/ads review` (6 compliance lenses). Each agent gets its own context window so your main conversation stays clean. |
+| How do I manage context/tokens? | When context gets heavy, break work into parallel subagents. Heavy research (transcripts, mining) runs in subagents so raw content stays out of your main conversation. Synthesized summaries come back instead. Re-invoke `/think` after compaction to reload context. |

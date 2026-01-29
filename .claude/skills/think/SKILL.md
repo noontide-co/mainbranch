@@ -145,14 +145,17 @@ When routing to research mode, detect research TYPE from user intent:
 | Instagram mining | Instagram handle, "mine [handle]", "competitor posts" | Apify | Manual screenshots |
 | General research | Default, "research [topic]", "what do we know" | WebSearch + codebase | Always available |
 
+**Multiple types needed at once?** Spawn them as parallel Task agents in a single message. Example: user says "research what [creator] says on YouTube and what people think on X" — spawn one agent for YouTube transcript mining and another for X/Twitter sentiment simultaneously. Each saves its own research file; main conversation synthesizes when both return.
+
 ### Routing Logic
 
 ```
 1. Parse user message for intent triggers
 2. Check if preferred tool is available (from session cache)
-3. If available → use it
-4. If not available → offer setup ONCE, then use fallback
-5. Never block on missing optional tools
+3. If multiple sources needed → spawn parallel Task agents (one per source)
+4. If single source → use preferred tool directly
+5. If not available → offer setup ONCE, then use fallback
+6. Never block on missing optional tools
 ```
 
 ### Fallback Examples
@@ -217,7 +220,15 @@ Research -> Checkpoint -> Decide -> Checkpoint -> Codify
 
 ### 2. Research
 
-Gather from codebase, web, user input, local recordings. Spawn subagents for parallel research.
+Gather from codebase, web, user input, local recordings.
+
+**When research involves 2+ sources** (e.g., YouTube + web, X/Twitter + codebase, competitor mining + deep research), spawn parallel Task agents in a single message — one agent per source. Each agent:
+- Gets a focused prompt: one source, one research question
+- Saves its own dated file (e.g., `research/YYYY-MM-DD-topic-yt-mining.md`, `research/YYYY-MM-DD-topic-x-social.md`)
+- Returns a 5-bullet summary to the main conversation
+- Does NOT need the full business context — just the research question and source instructions
+
+After all agents return, synthesize across their summaries in the main conversation. This keeps heavy content (transcripts, mined posts, long articles) out of your main context window.
 
 **Mining sources:**
 
@@ -240,6 +251,8 @@ Every research output needs:
 - Key findings (5-10 bullets)
 - Implications for reference files
 - Open questions
+
+Synthesis works best when the main conversation is clean — which is exactly what subagents provide. Heavy raw content (transcripts, mined posts) lives in the subagent context windows, and only distilled summaries return to main.
 
 **For content mining specifically:** AI shows WHAT worked. You must judge WHY.
 
