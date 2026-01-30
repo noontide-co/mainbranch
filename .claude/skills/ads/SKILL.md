@@ -167,22 +167,9 @@ Campaign Batch 001
 4. **Write ALL image prompts first** (Part 1)
 5. **Write ALL ad copy second** (Part 2)
 6. **Cold traffic language check:** Every hook must pass the 3-second comprehension test — no insider jargon, no assumed context. Translate community language to customer language. See Joel's cold traffic guidance in [references/one-liner-methodology.md](references/one-liner-methodology.md).
-7. Compliance check
-8. Save to `outputs/YYYY-MM-DD-static-ads-{campaign}/static-ads-batch-001.md`
-9. Tell user: "Saved to `outputs/YYYY-MM-DD-static-ads-{campaign}/static-ads-batch-001.md`. Want me to commit this to git?"
-
-**Batch 4: Image Generation (if Nano Banana available)**
-
-After copy is saved, offer image generation:
-
-1. Check Nano Banana availability (detected at Step 0)
-2. If available: "Copy saved. Want me to generate actual images? Estimated cost: ~$X for N images."
-3. Read `reference/brand/visual-style.md` for brand context
-4. Determine smart mix (on-brand vs freestyle) — see [references/image-generation-workflow.md](references/image-generation-workflow.md)
-5. For each concept, generate 9:16 image using template from [references/image-prompt-templates.md](references/image-prompt-templates.md)
-6. Post-process: resize to 1920×1920 (1:1) and 1080×1920 (9:16), convert PNG→JPEG, compress under 300KB
-7. Save images + image-index.md to batch folder
-8. If unavailable: "Image prompts saved as text. Paste into Google AI Studio or configure Nano Banana."
+7. Save to `outputs/YYYY-MM-DD-static-ads-{campaign}/static-ads-batch-001.md`
+8. Tell user: "Copy saved. Running automatic post-generation pipeline..."
+9. Run the **Automatic Post-Generation Pipeline** (see below). This handles git commit, compliance review, and image generation automatically.
 
 ### Ad Styles (5 per concept)
 
@@ -252,8 +239,8 @@ Every one-liner **MUST** include at least one specific element:
 1. Ask for campaign name (required)
 2. Create folder: `outputs/YYYY-MM-DD-one-liners-{campaign}/`
 3. Save full generation context + one-liners to: `one-liners-batch-001.md`
-4. Tell user: "Saved 30 one-liners to `outputs/YYYY-MM-DD-one-liners-{campaign}/one-liners-batch-001.md`. Want me to commit this to git?"
-5. After git (if accepted), offer: "Want me to run `/ads review` to check for compliance issues?"
+4. Tell user: "Saved 30 one-liners. Running automatic post-generation pipeline..."
+5. Run the **Automatic Post-Generation Pipeline** (see below). This handles git commit, compliance review, and image generation offer automatically.
 
 **one-liners-batch-001.md format:**
 
@@ -326,7 +313,8 @@ Create diverse spoken-word scripts for camera delivery.
 5. **Optimize for Spoken:** ~5th grade reading level, contractions, fragments
 6. Ask for campaign name (required)
 7. **Save Output:** `outputs/YYYY-MM-DD-video-ads-{campaign}/video-ads-batch-001.md`
-8. Tell user: "Saved to `outputs/YYYY-MM-DD-video-ads-{campaign}/video-ads-batch-001.md`. Want me to commit this to git?"
+8. Tell user: "Video scripts saved. Running automatic post-generation pipeline..."
+9. Run the **Automatic Post-Generation Pipeline** (see below). This handles git commit and compliance review automatically. (No image generation for video scripts.)
 
 ### Script Structure
 
@@ -394,6 +382,170 @@ Review ads through 6 compliance and quality lenses before shipping.
 - **CLEAR:** No P1, minimal P2
 
 See [references/review-workflow.md](references/review-workflow.md) for full report format.
+
+---
+
+## Automatic Post-Generation Pipeline
+
+**Every generation mode (Static, One-Liner, Video) runs this pipeline automatically after saving output.** Do not ask the user whether to run compliance review — it is automatic.
+
+### Step 1: Git Commit Pre-Review
+
+```bash
+git add outputs/YYYY-MM-DD-*
+git commit -m "[output] {type} batch pre-review"
+```
+
+This preserves the original before any fixes. The user can always `git diff HEAD~1` to see what changed.
+
+### Step 2: Select Lens Tier
+
+| Output Type | Tier | Lenses |
+|-------------|------|--------|
+| One-liners (text only) | Copy Review | FTC, Meta Policy, Copy Quality, Voice Auth, Substantiation (5) |
+| Video scripts (spoken word) | Copy Review | FTC, Meta Policy, Copy Quality, Voice Auth, Substantiation (5) |
+| Static ads (copy + image prompts) | Full Review | All 5 above + Visual Standards (6) |
+
+Visual Standards evaluates image prompt composition and safe zones — skip it for text-only outputs.
+
+### Step 3: Check Nano Banana Availability
+
+If Nano Banana was detected at Step 0d AND the mode produces images (Static or One-Liner):
+
+1. Calculate cost estimate:
+   - **Static ads:** N angles × 3 styles × ~$0.05/image
+   - **One-liners:** 8 background clusters × ~$0.05/image = ~$0.40
+2. Ask ONE question: "Compliance review will run automatically. Also generate images? Est. cost: ~$X for N images. (y/n)"
+3. If yes → include image gen agent in the parallel spawn
+4. If no → skip image gen, run compliance only
+5. If Nano Banana unavailable → skip image gen silently, compliance runs alone
+
+**Video scripts:** No image generation. Skip this step.
+
+### Step 4: Spawn Parallel Agents (Single Message)
+
+Spawn ALL agents in a single message for parallel execution. Use `subagent_type: "general-purpose"` for all agents.
+
+**Compliance agents (read-only pattern — zero persistence risk):**
+
+Each compliance agent receives:
+- **Ad content inline** (pass the full batch file content in the prompt — do NOT just give a file path)
+- **Lens file path** (agent reads its assigned lens from `.claude/lenses/`)
+- **Business context** (only what that lens needs):
+  - FTC: offer.md, testimonials.md, typicality.md
+  - Meta Policy: offer.md
+  - Copy Quality: offer.md, audience.md
+  - Voice Auth: voice.md
+  - Substantiation: offer.md, testimonials.md, typicality.md
+  - Visual Standards: (no extra context needed — evaluates image prompts)
+
+Each agent prompt must include:
+```
+Evaluate every ad/one-liner/script against the lens checklist.
+For each issue, return:
+  - severity: P1 | P2 | P3
+  - item_ref: which ad/line
+  - issue: what's wrong
+  - evidence: exact text that violates
+  - rule: which check this violates
+  - fix: specific rewrite
+Return "NO ISSUES" explicitly if everything passes.
+Do NOT write any files. Do NOT fix anything. Report only.
+```
+
+**Image generation agent (write-with-fallback pattern — if user approved):**
+
+The image gen agent receives:
+- Image prompts or background cluster descriptions (inline)
+- visual-style.md content (for brand context)
+- Output directory path
+- Smart mix ratio
+- Cost ceiling
+
+The agent runs a Python batch script via Bash that:
+- Generates images sequentially (2s rate-limit spacing)
+- Post-processes in same script (resize, PNG→JPEG, compress <300KB)
+- Verifies each file exists on disk
+- Returns: file paths + generation summary + cost
+
+**IMPORTANT:** Main conversation writes `prompts.json` to disk BEFORE spawning the image gen agent. Python file I/O through Bash is not affected by the Claude Code Write tool durability bug.
+
+### Step 5: Synthesize Results
+
+When all agents return:
+
+1. **Compliance synthesis:**
+   - Collect all lens findings
+   - Deduplicate (FTC and Substantiation may flag same issue)
+   - Build unified P1/P2/P3 report
+   - **Auto-apply P2/P3 fixes** to the batch file using Edit tool
+   - **P1 issues:** Surface to user for decision. Do NOT auto-fix. Mark status as BLOCKED.
+
+2. **Image synthesis (if applicable):**
+   - Verify images exist on disk (`ls` the output directory)
+   - If any missing: write from returned content (fallback)
+   - Write `image-index.md` mapping images to concepts
+
+3. **Write `review-log.md`** documenting all compliance changes
+
+### Step 6: Present Unified Report
+
+```
+Pipeline complete:
+  Review: [STATUS] (P1: N, P2: N fixed, P3: N noted)
+  Images: [N generated / N/A]
+  Cost: [$X / N/A]
+
+  [If P1 exists: show blocking issues with suggested fixes]
+  [If P2 applied: show summary of auto-fixes]
+
+  Files:
+    outputs/YYYY-MM-DD-{type}-{campaign}/
+    ├── {batch-file}.md (copy, reviewed)
+    ├── review-log.md
+    [├── image-index.md]
+    [└── images/ (N files)]
+
+  Commit reviewed copy [+ images]? (y/n)
+```
+
+### Step 7: Git Commit Post-Review
+
+If user approves:
+
+```bash
+git add outputs/YYYY-MM-DD-*
+git commit -m "[review] {type} batch - N fixes applied"
+```
+
+### Pipeline Timing
+
+Compliance review (5-6 agents, read-only) typically completes in 30-60 seconds.
+Image generation (1 agent, sequential API calls) takes 2-5 minutes for 15 images.
+Both run in parallel, so total time = max(review, image gen).
+
+### One-Liner Image Generation Details
+
+One-liners use **Template 4 (background-only)** from [references/image-prompt-templates.md](references/image-prompt-templates.md).
+
+After 30 one-liners are generated, cluster them by hook category:
+
+| Cluster | Scene Type | Approx Lines |
+|---------|-----------|--------------|
+| Problem agitation | Dark, moody atmospheric | 4-6 |
+| Emotional state | Warm, intimate | 3-5 |
+| Transformation | Aspirational, bright lifestyle | 4-6 |
+| Contrarian | Bold, stark, max contrast | 3-5 |
+| Identity callout | Person-centered, relatable | 3-5 |
+| Social proof | Clean, authoritative abstract | 2-4 |
+| Curiosity/reframe | Two-tone, conceptual | 2-4 |
+| Overflow | Versatile, brand-forward | 2-3 |
+
+Generate 1 background per cluster (8 total). Map each one-liner to its cluster. Text overlay composited via Pillow post-processing (separate from Gemini generation).
+
+**Cost:** 8 images × ~$0.05 = ~$0.40 (recommended). User can choose 15 backgrounds ($0.75) or 30 unique ($1.50).
+
+See [references/image-generation-workflow.md](references/image-generation-workflow.md) for Nano Banana integration details.
 
 ---
 

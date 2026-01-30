@@ -194,22 +194,28 @@ No text on the image. Leave clean space in the center for text overlay.
 
 ## Batch Generation Flow
 
+**Order: Copy → Compliance Review + Image Generation (parallel)**
+
+Compliance review and image generation run in PARALLEL after copy is saved, not sequentially. The post-generation pipeline (see SKILL.md → Automatic Post-Generation Pipeline) orchestrates this.
+
 For a typical ad campaign with 5 angles:
 
 ```
-1. Copy agent writes 5 concepts (Batch 1)
-2. Compliance agent reviews (Batch 2, when implemented)
-3. Optimization agent refines (Batch 3, when implemented)
-4. Image agent generates (Batch 4):
-   a. Read visual-style.md for brand context
-   b. Determine smart mix (on-brand vs freestyle)
-   c. For each concept:
-      - Build JSON-structured prompt from template + brand data
-      - Generate 9:16 image via API
-      - Post-process: resize, JPEG compress, center-crop for 1:1
-      - Save to output folder
-   d. Show cost summary
-   e. Save image index to batch folder
+1. Copy saved to output file
+2. Git commit pre-review (preserves original)
+3. PARALLEL:
+   a. Compliance agents (5-6 lenses, read-only) → findings report
+   b. Image agent generates (if user approved):
+      - Read visual-style.md for brand context
+      - Determine smart mix (on-brand vs freestyle)
+      - For each concept:
+        - Build JSON-structured prompt from template + brand data
+        - Generate 9:16 image via API
+        - Post-process: resize, JPEG compress, center-crop for 1:1
+        - Save to output folder
+      - Return cost summary + file paths
+4. Synthesize: apply P2/P3 fixes, surface P1s, write review-log.md + image-index.md
+5. Git commit post-review (user confirms)
 ```
 
 ---

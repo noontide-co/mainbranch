@@ -308,7 +308,7 @@ review_status: null
 - Understand why certain hooks were chosen
 - Check all reasons to buy are covered
 
-Tell user: "Saved to `outputs/YYYY-MM-DD-one-liners-{name}/batch.md`. Want me to run `/ads review`?"
+Tell user: "Saved 30 one-liners. Running automatic post-generation pipeline..." Then run the pipeline (see SKILL.md → Automatic Post-Generation Pipeline).
 
 ---
 
@@ -431,15 +431,13 @@ Before outputting the 30 one-liners, verify:
 
 ---
 
-## Step 7: Compliance Check (Recommended)
+## Step 7: Compliance Check (Automatic)
 
-One-liners are hooks. Aggressive claims sneak in here. Before finalizing:
+Compliance review runs automatically as part of the post-generation pipeline. See SKILL.md → Automatic Post-Generation Pipeline.
 
-> "These one-liners are ready. Want me to run them through `/ads review` to check for FTC and Meta compliance issues?"
-
-Common one-liner compliance flags:
+Common one-liner compliance flags caught by the pipeline:
 - Income/outcome claims ("$10K months", "6-figure")
 - Implied guarantees ("never worry about X again")
 - Unsubstantiated comparisons ("better than", "fastest")
 
-A quick review catches issues before the copy goes to creative.
+P2/P3 issues are auto-fixed. P1 issues surface to the user for decision.
