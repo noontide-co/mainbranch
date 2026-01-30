@@ -38,7 +38,7 @@ reference/core/offer.md      → 0 (missing), 1 (<20 lines), 2 (20-80), 3 (80+)
 reference/core/audience.md   → same scoring
 reference/core/voice.md      → same scoring
 reference/proof/testimonials.md → same scoring
-reference/proof/angles/*.md  → count files: 0=0, 1=1, 2-3=2, 4+=3
+reference/proof/angles/*.md  → count .md files EXCLUDING README.md: 0=0, 1=1, 2-3=2, 4+=3
 reference/brand/visual-style.md → same scoring (optional)
 ```
 
