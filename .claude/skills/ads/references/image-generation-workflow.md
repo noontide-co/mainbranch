@@ -70,16 +70,17 @@ for part in response.candidates[0].content.parts:
 
 ---
 
-## Post-Processing Pipeline
+## Post-Processing Pipeline (MANDATORY — Never Skip)
 
-Raw Gemini output is PNG at 1024x1024. Ads need JPEG at specific sizes.
+**Raw Gemini output is PNG at arbitrary sizes (often 768x1376 or 1024x1024). This is NOT the final deliverable.** You MUST post-process every image immediately after generation. Never save raw PNGs as final output.
 
-### Steps
+### Steps (run on EVERY generated image)
 
 1. **Resize** to target dimensions (LANCZOS resampling)
 2. **Convert** PNG → JPEG
 3. **Compress** to under 300KB (quality stepping: 85 → 75 → 65 → 55 → 45)
-4. **Strip metadata** (no EXIF data in ad images)
+4. **Delete the raw PNG** after both formats are saved
+5. **Verify** final JPEG is under 300KB and at correct dimensions
 
 ### Target Dimensions
 
