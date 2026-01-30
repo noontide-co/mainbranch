@@ -92,14 +92,19 @@ You should see `nano-banana` listed with available tools.
 
 Uses Google AI Studio credits (same as Gemini research):
 
-**EXACT model names (copy-paste these — do NOT guess):**
+**The ONLY model to use (copy-paste exactly):**
 
-| Model | SDK String (exact) | Cost | Use For |
-|-------|-------------------|------|---------|
-| Nano Banana Pro | `gemini-3-pro-image-preview` | ~$0.13/image | **Default for ad creative.** Best quality, 4K, accurate text rendering |
-| Nano Banana Flash | `gemini-2.5-flash-image` | ~$0.04/image | Drafts, testing, quick iteration |
+```
+gemini-3-pro-image-preview
+```
 
-**NEVER use:** `gemini-2.0-flash-preview-image-generation` or other hallucinated names. They will 404.
+| Model | SDK String | Cost | Quality |
+|-------|-----------|------|---------|
+| Nano Banana Pro | `gemini-3-pro-image-preview` | ~$0.13/image | **Use this for everything.** 4K, accurate text rendering |
+
+**NEVER use Flash models for image generation.** Quality is not ad-grade. Not even for testing — a test with the wrong model tells you nothing useful.
+
+**NEVER use:** `gemini-2.0-flash-preview-image-generation`, `gemini-2.5-flash-image`, or any other model name. They will either 404 or produce unusable output.
 
 **Imagen 4** (standalone text-to-image, no conversational editing):
 
@@ -110,8 +115,6 @@ Uses Google AI Studio credits (same as Gemini research):
 | Imagen 4 Ultra | ~$0.06/image | Highest fidelity |
 
 Free tier includes limited image generation. Paid credits scale to hundreds of images.
-
-**Default:** Use `gemini-3-pro-image-preview` for all ad creative. Use `gemini-2.5-flash-image` for drafts/testing only.
 
 ---
 

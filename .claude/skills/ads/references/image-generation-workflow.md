@@ -4,22 +4,23 @@ Nano Banana (Google Gemini) integration for generating actual ad images from Cla
 
 ---
 
-## Model Selection — EXACT Names (DO NOT HALLUCINATE)
+## Model — EXACT Name (DO NOT HALLUCINATE)
 
-**VALID model names (copy-paste these EXACTLY):**
+**The ONLY model to use:**
 
-| Model | SDK String (exact) | Use For | Cost |
-|-------|-------------------|---------|------|
-| Nano Banana Pro | `gemini-3-pro-image-preview` | **Final ad creative** — use this by default | ~$0.13/image |
-| Nano Banana Flash | `gemini-2.5-flash-image` | Drafts, iteration, testing | ~$0.04/image |
+```
+gemini-3-pro-image-preview
+```
 
-**NEVER use these (they do NOT exist and will 404):**
-- ~~`gemini-2.0-flash-preview-image-generation`~~ — WRONG, does not exist
-- ~~`gemini-2.5-flash-preview-04-17`~~ — WRONG, does not exist
-- ~~`gemini-pro-image`~~ — WRONG, incomplete name
-- ~~`gemini-flash-image`~~ — WRONG, missing version
+Copy-paste that string exactly. No other model is acceptable — not for drafts, not for testing, not for anything.
 
-**Default:** `gemini-3-pro-image-preview` (Pro) for all ad creative. Use `gemini-2.5-flash-image` (Flash) only for quick drafts or testing when speed matters more than quality.
+**NEVER use these (they will 404 or produce garbage):**
+- ~~`gemini-2.0-flash-preview-image-generation`~~ — does not exist
+- ~~`gemini-2.5-flash-image`~~ — exists but quality is not ad-grade. NEVER use.
+- ~~`gemini-2.5-flash-preview-04-17`~~ — does not exist
+- ~~`gemini-pro-image`~~ — incomplete name
+- ~~`gemini-flash-image`~~ — incomplete name
+- Any model with "flash" in the name — NEVER for image generation
 
 ---
 
