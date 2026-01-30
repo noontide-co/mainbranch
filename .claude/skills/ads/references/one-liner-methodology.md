@@ -324,6 +324,42 @@ Tell user: "Saved to `outputs/YYYY-MM-DD-one-liners-{name}/batch.md`. Want me to
 | **Use buzzwords** | "Accountability" and "roadmap" are empty | BAD: "You're missing accountability - not motivation." |
 | **Write yes/no questions** | Binary "no" kills the hook | BAD: "Want to make more money?" |
 | **Skip the anchor check** | Generic one-liners waste ad spend | ALWAYS verify against Step 2 specifics |
+| **Use internal vocabulary** | Cold traffic doesn't know your jargon | BAD: "Same engine + different data = different outputs." GOOD: "AI that knows your business gives outputs that sound like you." |
+| **Explain the mechanism** | They care about outcomes, not how it works | BAD: "That's the architecture." GOOD: "That's how leverage works." |
+| **Parrot reference file language** | Docs are written for insiders, not buyers | Translate internal concepts into customer language |
+
+---
+
+## Write for Cold Traffic, Not Insiders (CRITICAL)
+
+**This is one of the most common mistakes.** When you have detailed reference files, you tend to use the language FROM the docs instead of translating it for the audience.
+
+**The problem:** Reference files describe the offer in insider language — how the founder thinks about it, technical terms, internal concepts. Cold traffic has never heard of your offer. They don't know your vocabulary.
+
+**Examples of insider language that fails:**
+
+| Insider Language | Why It Fails | Cold Traffic Translation |
+|------------------|--------------|--------------------------|
+| "Engine + data model" | Jargon, means nothing to them | "AI that knows your business" |
+| "Reference files" | Technical concept | "Your offer, audience, and voice — documented once" |
+| "Compound context" | Abstract | "Knowledge that builds instead of resets" |
+| "The architecture" | Developer word | "How it works" or just cut it |
+| "Active reference management" | Internal concept | "You control what the AI knows" |
+
+**The test for every one-liner:**
+
+> "Would someone who has NEVER heard of this offer understand why this matters to them — in the first 3 seconds?"
+
+If no, rewrite using simpler words.
+
+**Rules:**
+1. **Simple words anyone understands** — If you need to explain a word, don't use it
+2. **Speak to what matters to THEM** — Their pains, desires, fears, identity, transformation. NOT how your system works internally.
+3. **Written for cold traffic, not insiders** — Pretend they've never seen your website, docs, or community
+
+**Clarification:** "What matters to them" includes pain-focused hooks, fear-based angles, identity callouts, transformation stories — not just benefits. The distinction is: **their experience** (pain, desire, outcome) vs **your mechanism** (how the system works).
+
+**After generating all 30, re-read each one asking:** "Am I explaining how it works, or speaking to what they experience?" If it's the former, rewrite.
 
 ---
 
@@ -381,6 +417,12 @@ Before outputting the 30 one-liners, verify:
 - [ ] No client quotes used as one-liners
 - [ ] No feature lists
 - [ ] Short, punchy sentences
+
+**Cold Traffic Language:**
+- [ ] No internal vocabulary or jargon from reference files
+- [ ] No mechanism explanations (how it works internally)
+- [ ] Every one-liner speaks to what THEY experience (pain, desire, outcome, identity)
+- [ ] Would someone who's never heard of this offer understand it in 3 seconds?
 
 **Voice (if voice.md exists):**
 - [ ] Tone matches brand (direct? conversational? anti-hype?)
