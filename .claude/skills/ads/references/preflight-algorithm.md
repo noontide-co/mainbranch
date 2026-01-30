@@ -125,6 +125,40 @@ If visual-style.md is missing, offer inline creation during pre-flight (don't fo
 
 ---
 
+## Media Output Path Check
+
+**Not part of composite score.** This is an informational check that runs after scoring, before image generation begins.
+
+### Detection Flow
+
+```
+1. Read ~/.config/vip/local.yaml
+2. Resolve image path:
+   a. media.images → use directly
+   b. media.root → {root}/images/
+   c. neither → prompt user
+
+3. If path resolved and exists:
+   → Confirm: "Images will save to {path}/{campaign}/"
+
+4. If path resolved but doesn't exist:
+   → "Output folder doesn't exist: {path}. Create it? (y/n)"
+   → If yes: mkdir -p
+
+5. If no path configured:
+   → "Where should generated images be saved?"
+   → Examples: "~/Google Drive/My Drive/Main Branch/images"
+   → Save to ~/.config/vip/local.yaml under media.root
+   → mkdir -p {path}
+```
+
+**Ask once, save forever.** First `/ads` run with image gen prompts for path. Every subsequent run reads from config and confirms.
+
+**If path is inside git repo:**
+→ Warn: "This folder is inside your git repo. Binary images will bloat history. Want me to add a .gitignore entry? (y/n)"
+
+---
+
 ## Decisions-Without-Codification Detection
 
 Check for a common stuck state:

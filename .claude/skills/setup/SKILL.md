@@ -334,6 +334,8 @@ EOF
 
 ### 5. Sort Content into Files
 
+**The repo is a precision instrument, not a dumping ground.** Not everything the user provides makes it into reference files. Filter for what helps LLMs produce great outputs.
+
 Use templates from `references/templates.md`.
 
 **Priority order:**

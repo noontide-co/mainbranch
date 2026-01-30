@@ -6,6 +6,8 @@ How to draft an effective CLAUDE.md for a business repo.
 
 ## Purpose
 
+Your entire repo is a precision instrument for LLM context quality. Every file should earn its place. CLAUDE.md is the lightest layer — summaries and pointers, not full content.
+
 CLAUDE.md is the **always-loaded business brain**. Claude reads this file at the start of every session. It should contain:
 
 - Enough context to work effectively

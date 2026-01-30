@@ -127,6 +127,7 @@ Detect mode from user's natural language:
 | "add context", "enrich", "I have new info" | Codify | [codify-phase.md](references/codify-phase.md) |
 | "content strategy", "pillars", "what platforms", "content plan", "cadence" | Full Flow (codify to content-strategy.md) | [codify-phase.md](references/codify-phase.md) |
 | "where was I", "continue", "pick up" | Recovery | [recovery.md](references/recovery.md) |
+| "here's a PDF", "ingest this", "convert this document", file path (.pdf/.docx/.pptx) | Document Ingestion | [document-ingestion.md](references/document-ingestion.md) |
 
 If unclear, ask: "Are you exploring a question, documenting a decision, or updating reference files?"
 
@@ -247,6 +248,7 @@ Gather from codebase, web, user input, local recordings.
 | Your own emails/DMs | Paste into conversation | `-internal-mining.md` |
 | Deep research | Build prompt → Gemini/GPT | `-gemini.md` or `-gpt.md` |
 | Codebase exploration | Grep, read, subagents | `-claude-code.md` |
+| Documents (PDF, DOCX, PPTX) | markitdown / pandoc / marker ([document-ingestion.md](references/document-ingestion.md)) | `-doc-extraction.md` |
 
 ### 3. Synthesize (Required)
 
@@ -401,6 +403,8 @@ Use `/think` when the answer requires investigation and the choice needs documen
 ---
 
 ## Why This Matters
+
+The repo is a precision instrument. The think cycle exists to filter — not to cram everything in. Research gets synthesized, decisions get distilled, and only the sharpest insights survive into reference. Curation over collection.
 
 Reference files aren't just documentation. They're how you stay connected to why you do this.
 

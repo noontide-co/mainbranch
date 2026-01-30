@@ -237,6 +237,25 @@ If `GEMINI_OK` but not `NANO_BANANA_OK`:
 
 **Don't block or nag.** Apify handles most research needs. Additional tools are opt-in upgrades.
 
+### Media Output Detection
+
+After tool detection, check media configuration:
+
+```bash
+# Check media config in local.yaml
+grep -q "media:" ~/.config/vip/local.yaml 2>/dev/null && echo "MEDIA_OK=1" || echo "MEDIA_OK=0"
+```
+
+**Report based on context:**
+
+| Condition | Action |
+|-----------|--------|
+| Nano Banana available + no media config | "Image generation ready. No output folder configured yet — set up during `/ads`." |
+| Nano Banana available + media config exists | Silent (include in tool grid for advanced users) |
+| Nano Banana NOT available | Don't mention media config — irrelevant without image gen |
+
+**Don't block.** Media config is set during first `/ads` image generation run. /start only surfaces the gap informally.
+
 ---
 
 ## Step 1: Load Business Context

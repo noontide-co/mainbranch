@@ -34,6 +34,12 @@ The core insight — from Tony Robbins' interview with Alex Hormozi — is that 
 
 ---
 
+## The Curation Principle
+
+Your repo is not a dumping ground. It's a precision instrument — every file filtered to maximize the potential you have good outcomes with LLMs. Research gets synthesized. Decisions get distilled. Only the sharpest context makes it into reference. The better your reference files, the better every output downstream. Quantity of context hurts. Quality of context compounds.
+
+---
+
 ## The Two Modes
 
 | Mode | What Happens |

@@ -108,6 +108,8 @@ vip/                    your-business/
 
 Same engine + different data = outputs tailored to each business.
 
+**Important:** Your business repo is a precision instrument, not a dumping ground. Every file should earn its place by improving what AI can do for you. PDFs, images, and media stay outside the repo — only markdown reference files go in.
+
 ---
 
 ## What You Can Do

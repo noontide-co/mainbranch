@@ -82,7 +82,18 @@ recent_repos:
 user:
   name: "Devon"
   experience: advanced  # beginner | intermediate | advanced
+
+# Media output configuration
+# Where non-markdown outputs land (images, videos, exports)
+# Machine-specific paths — different per computer
+media:
+  root: ~/Google Drive/My Drive/Main Branch
+  # Per-type overrides (optional — defaults to {root}/{type}/)
+  # images: ~/Desktop/ad-images
+  # videos: ~/Desktop/ad-videos
 ```
+
+**Media paths** are machine-specific (contain usernames, sync folder locations). They belong in local.yaml, not repo config. Skills resolve media paths with a fallback chain: `media.{type}` → `media.root/{type}/` → ask user and save.
 
 ---
 
@@ -149,6 +160,7 @@ If yes → Create `.vip/config.yaml` with defaults from `/setup`.
 | `/start` | repo config | Check MCP requirements, session preferences |
 | `/help` | local.yaml | Adjust verbosity based on experience |
 | Any skill | repo config `skills.*` | Get skill-specific preferences |
+| `/ads`, `/think` | local.yaml `media.*` | Resolve where non-markdown outputs go |
 
 ---
 
@@ -161,6 +173,7 @@ If yes → Create `.vip/config.yaml` with defaults from `/setup`.
 | User says "I'm advanced" | `user.experience` | local.yaml |
 | User says "save as default" | Skill preference | repo config `skills.*` |
 | User connects infrastructure | `infrastructure.*` | repo config |
+| User configures media path | `media.root` or `media.{type}` | local.yaml |
 
 **Rule:** Never write silently. Confirm changes that affect future sessions.
 

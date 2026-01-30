@@ -31,6 +31,8 @@ See `docs/philosophy.md` for the deeper explanation. The short version:
 
 **Active reference is work, but that work IS the thinking.** Files you can read, edit, version control. The repo is truth. Articulating context = understanding your business.
 
+**Curation over collection.** The repo is a precision instrument. Every file earns its place by improving what LLMs can do for you. Research gets synthesized, decisions get distilled, and only the sharpest context survives into reference. Quantity of context hurts; quality compounds.
+
 ---
 
 ## The Compound Context Cycle

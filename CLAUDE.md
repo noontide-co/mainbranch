@@ -24,6 +24,8 @@
 - **Synthesize research** into evergreen reference
 - **Control** exactly what informs every output
 
+Your repo is a precision instrument, not a dumping ground. The purpose is not to cram everything in — it's to filter context so LLMs produce great outcomes. Every file should earn its place.
+
 Two pillars power every business: **ads that convert** (immediate ROI) and **content that runs itself** (long game). Both are driven by the same reference files -- your offer, audience, voice, and proof inform everything from a static ad to a newsletter-first content pipeline.
 
 This engagement is the learning. Articulating your offer, audience, angles — you understand your business more deeply than passive memory allows.
