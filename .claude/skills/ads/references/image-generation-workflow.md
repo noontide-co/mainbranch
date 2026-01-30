@@ -181,25 +181,42 @@ Actual cost depends on prompt complexity and retries.
 
 ---
 
-## Text-on-Image Guidance
+## Text-on-Image: Always Post-Process
 
-### Reliable Range
+**NEVER ask Gemini to render text on the image.** Gemini cannot reliably render text longer than ~5 words. All text goes on via Pillow post-processing.
 
-Gemini Pro handles short text (3-5 words) reasonably well in images. Beyond ~25 characters, text quality degrades.
+### Workflow
 
-### For One-Liners
+1. **Gemini generates background-only images** — no text in the prompt
+2. **Pillow composites text onto the background** — white bold text, drop shadow, centered
 
-One-liners often exceed 25 characters. Two approaches:
+### Text Positioning (Critical)
 
-1. **Test in-image rendering:** Include the one-liner text in the prompt. If Gemini renders it clearly, use it.
-2. **Post-processing overlay (recommended):** Generate the background/visual without text, then overlay text using Pillow or external tools. This is the community consensus from X/Twitter practitioners.
+On 9:16 vertical images, the bottom ~25-30% is covered by UI overlays (caption, CTA button, likes bar). Text must sit **above true center** to stay in the safe zone.
+
+```
+┌──────────────────┐
+│   TOP UI (10%)   │  ← progress bar, account icon
+│                  │
+│                  │
+│   ██ TEXT ██     │  ← Place text at 35-40% from top
+│                  │     (above geometric center)
+│                  │
+│                  │
+│  BOTTOM UI (25%) │  ← caption, CTA, likes — AVOID
+└──────────────────┘
+```
+
+**Pillow positioning:** Set text Y coordinate to `int(height * 0.38)` (38% from top), NOT `height // 2` (50%). This keeps text safely above the bottom UI zone while looking visually centered within the usable area.
 
 ### Prompt Pattern for Text-Free Backgrounds
 
 ```
 "Generate a [style] background image for a Facebook ad.
-No text on the image. Leave clean space in the center for text overlay.
-[brand/style directives]"
+9:16 aspect ratio (1080x1920px).
+NO TEXT on the image. This is a background for text overlay.
+Leave generous clean space in the center-upper area for white text.
+[scene/mood/brand directives]"
 ```
 
 ---
