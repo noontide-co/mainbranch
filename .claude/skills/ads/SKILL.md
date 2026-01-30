@@ -9,21 +9,59 @@ Create static ads, video scripts, one-liners, or review ads for compliance.
 
 ## Step 0: Pre-Flight Readiness
 
-**Before triage, score reference file depth.** This prevents generating generic ads from thin reference.
+**Before triage, find the business repo and score reference file depth.** This prevents generating generic ads from thin reference.
 
-Run the pre-flight algorithm (see [references/preflight-algorithm.md](references/preflight-algorithm.md)):
+### 0a. Find Business Repo (REQUIRED — do this first)
 
-1. Score each reference file 0-3 (missing/stub/adequate/rich)
-2. Calculate composite score (max 18)
-3. Route based on threshold:
-   - **GREEN (12+):** Proceed to triage
-   - **YELLOW (8-11):** Warn user, show gaps, allow override
-   - **RED (4-7):** Route to `/think` with enrichment targets
-   - **BLOCKED (0-3):** Route to `/setup`
+**NEVER search the filesystem. NEVER use Explore or Task agents to find repos. NEVER scan ~/Documents/GitHub/.**
 
-Display the readiness report and any gap guidance before proceeding.
+Do this instead — one step:
 
-Also check: If Nano Banana is available (`GOOGLE_API_KEY` set + `google-genai` installed), note it for Batch 4 image generation.
+```bash
+cat ~/.config/vip/local.yaml 2>/dev/null
+```
+
+- If `default_repo:` exists → **ask user to confirm:** "Found saved repo: [name]. Use this? (y/n)"
+- If no config or no default_repo → **ask the user:** "Which business repo should I use? Give me the path."
+- If `/ads` was invoked from `/start`, the repo is already identified — use it without asking.
+
+**Always confirm the repo before proceeding.** Never assume.
+
+### 0b. Score Reference Files (fast — direct Read only, NO agents)
+
+**NEVER spawn Explore or Task agents for pre-flight.** Read files directly at the known repo path. Pre-flight should complete in under 10 seconds.
+
+At the repo path, check these files and count lines:
+
+```
+reference/core/offer.md      → 0 (missing), 1 (<20 lines), 2 (20-80), 3 (80+)
+reference/core/audience.md   → same scoring
+reference/core/voice.md      → same scoring
+reference/proof/testimonials.md → same scoring
+reference/proof/angles/*.md  → count files: 0=0, 1=1, 2-3=2, 4+=3
+reference/brand/visual-style.md → same scoring (optional)
+```
+
+Composite = sum of all 6 scores (max 18).
+
+### 0c. Route on Score
+
+| Composite | Status | Action |
+|-----------|--------|--------|
+| **12-18** | GREEN | Proceed to triage |
+| **8-11** | YELLOW | Warn user, show gaps, allow override |
+| **4-7** | RED | Route to `/think` with enrichment targets |
+| **0-3** | BLOCKED | Route to `/setup` |
+
+Display the readiness report, then proceed. See [references/preflight-algorithm.md](references/preflight-algorithm.md) for gap guidance and smart mix recommendations.
+
+### 0d. Check Nano Banana
+
+```bash
+source ~/.config/vip/env.sh 2>/dev/null; echo "GOOGLE_API_KEY=${GOOGLE_API_KEY:+set}"
+```
+
+If set, note it for Batch 4 image generation after copy is saved.
 
 ---
 
