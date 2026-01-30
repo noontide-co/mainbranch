@@ -192,14 +192,49 @@ Copy and paste into Ads Manager after images are ready.
 
 ---
 
-## Two Sizes Per Image Prompt
+## Format Pair: 1:1 + 9:16
 
-Every prompt needs square + vertical:
+Facebook Ads Manager accepts exactly two image uploads per ad: **1:1 (square)** and **9:16 (vertical)**. There is no 4:5 option.
 
-1. **Full square prompt** (1920×1920) — complete with all details
-2. **Resize prompt** (1080×1920) — short follow-up
+### Design Strategy
 
-**Standard resize prompt:**
+Design the **9:16 vertical first** with critical content in the **center 1:1 safe zone**. Then center-crop for the square version. One design → two uploads.
+
+### Prompt Approach
+
+1. **9:16 prompt** (1080×1920) — Full creative with critical content centered
+2. **1:1 extraction** — Center-crop the 9:16 to 1920×1920
+
+**Standard 9:16 prompt directive:**
 ```text
-Now resize to 1080x1920 vertical for Reels/Stories. Do NOT change the image content, angle, or composition - only adjust the framing. Keep all text and important elements centered in the middle 45% of the frame vertically (between 25% and 70% from top) to stay within Facebook/Instagram safe zones.
+Aspect ratio 9:16, resolution 1080x1920. Place all critical content (headline, product, key visual) in the center 1:1 zone. Fill top and bottom margins with atmospheric/contextual elements. Keep text and important elements centered vertically between 25% and 70% from top to stay within safe zones.
+```
+
+### Post-Processing (When Using Nano Banana)
+
+If Nano Banana generated the image:
+- Raw output is PNG at 1024x1024
+- Resize to 1080×1920 (9:16) and 1920×1920 (1:1 center-crop)
+- Convert PNG → JPEG, compress under 300KB
+- See `image-generation-workflow.md` for full pipeline
+
+---
+
+## Image Index
+
+When Nano Banana generates actual images, create an `image-index.md` in the batch folder:
+
+```markdown
+# Image Index — {Campaign Name}
+
+| File | Angle | Style | Format | Prompt Summary |
+|------|-------|-------|--------|----------------|
+| 001_01_graphic_square.jpg | Authority | Graphic | 1:1 | Bold framework on dark gradient |
+| 001_01_graphic_vertical.jpg | Authority | Graphic | 9:16 | Same, full vertical |
+| 001_02_lofi_square.jpg | Social Proof | Lo-fi | 1:1 | Casual phone-style screenshot |
+| ... | ... | ... | ... | ... |
+
+Generated: {date}
+Model: gemini-3-pro-image-preview
+Cost: ~${total}
 ```

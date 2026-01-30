@@ -209,6 +209,7 @@ After loading config, check available research capabilities:
 APIFY_OK=$([ -n "$APIFY_TOKEN" ] && echo "1" || echo "0")
 GEMINI_OK=$([ -n "$GOOGLE_API_KEY" ] && echo "1" || echo "0")
 GROK_OK=$([ -n "$XAI_API_KEY" ] && echo "1" || echo "0")
+NANO_BANANA_OK=$(python3 -c "from google import genai; print('1')" 2>/dev/null || echo "0")
 ```
 
 **Report based on experience level:**
@@ -225,6 +226,14 @@ GROK_OK=$([ -n "$XAI_API_KEY" ] && echo "1" || echo "0")
 > 1. Get key: https://aistudio.google.com/apikey
 > 2. Add to `~/.config/vip/env.sh`
 > 3. Restart terminal"
+
+**Nano Banana (image generation):**
+
+If `NANO_BANANA_OK` and `GEMINI_OK`:
+> "Nano Banana ready — `/ads` can generate actual images with Gemini Pro."
+
+If `GEMINI_OK` but not `NANO_BANANA_OK`:
+> "Gemini API key found but `google-genai` package not installed. Run `pip install google-genai` for image generation."
 
 **Don't block or nag.** Apify handles most research needs. Additional tools are opt-in upgrades.
 

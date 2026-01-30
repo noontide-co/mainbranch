@@ -18,9 +18,10 @@ The 9:16 format (1080x1920) has UI elements that cover content.
 ┌─────────────────────┐
 │   TOP 14% DANGER    │  ← Progress bar, account icon
 │                     │
-│                     │
-│   CENTER 4:5 SAFE   │  ← All hooks and disclosures HERE
-│                     │
+│ ┌─────────────────┐ │
+│ │  CENTER 1:1     │ │  ← All hooks and disclosures HERE
+│ │  SAFE ZONE      │ │  ← This area extracts as the square version
+│ └─────────────────┘ │
 │                     │
 │  BOTTOM 35% DANGER  │  ← Caption, CTA button, likes
 └─────────────────────┘
@@ -28,11 +29,18 @@ The 9:16 format (1080x1920) has UI elements that cover content.
 
 **Compliance implication:** Disclosures at bottom are "avoidable" = non-compliant.
 
+### Format Pair: 1:1 + 9:16
+
+Facebook Ads Manager accepts exactly two image uploads per ad: **1:1 (square)** and **9:16 (vertical)**. There is no 4:5 upload option.
+
+**Design strategy:** Design 9:16 first, keep critical content in center 1:1 zone, center-crop for square version. One design → two uploads.
+
 ### Technical Specs
 
-- **Aspect ratio:** 1080x1920 (9:16)
-- **Safe margin:** 250px from top and bottom edges
-- **Critical text:** Must be in center 4:5 area
+- **Square:** 1920×1920 (1:1) — Facebook feed, Instagram feed
+- **Vertical:** 1080×1920 (9:16) — Stories, Reels, full-screen mobile
+- **Safe margin:** 250px from top and bottom edges on 9:16
+- **Critical text:** Must be in center 1:1 zone (visible in both formats)
 
 ---
 

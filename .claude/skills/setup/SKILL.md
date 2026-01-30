@@ -342,9 +342,17 @@ Use templates from `references/templates.md`.
 3. `reference/core/voice.md` — How you sound
 4. `reference/proof/testimonials.md` — Social proof
 5. `reference/proof/angles/` — Messaging entry points
-6. `reference/domain/content-strategy.md` — Content pillars, platforms, cadence (template for community businesses)
+6. `reference/brand/visual-style.md` — Visual brand identity (colors, typography, mood, image prompt fragments)
+7. `reference/domain/content-strategy.md` — Content pillars, platforms, cadence (template for community businesses)
 
-> **Note:** content-strategy.md starts as an empty template and gets filled through `/think` cycles. Not required at setup — scaffolded with placeholder sections.
+> **Note:** content-strategy.md and visual-style.md start as templates and get filled through `/think` cycles. Not required at setup — scaffolded with placeholder sections.
+
+**Visual style scaffolding:** After core reference is drafted, ask 3 quick questions to seed `visual-style.md`:
+1. "What's your brand's visual mood?" (minimal/bold/editorial/playful/dark)
+2. "What are your brand colors?" (hex codes or descriptions)
+3. "What photography style fits?" (lifestyle/product/abstract/editorial)
+
+Use answers + audience data to generate a starter `visual-style.md` from the template at `vip/templates/modules/brand-style-template.md`. This file is consumed by `/ads` (image prompts), `/site` (CSS/design tokens), and `/organic` (visual consistency).
 
 ### 6. Apply Domain Rubric
 

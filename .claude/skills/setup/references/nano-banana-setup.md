@@ -94,8 +94,7 @@ Uses Google AI Studio credits (same as Gemini research):
 
 | Model | Cost | Quality |
 |-------|------|---------|
-| `gemini-2.5-flash-image` (Nano Banana) | ~$0.02/image | Fast, good for drafts and iterations |
-| `gemini-3-pro-image-preview` (Nano Banana Pro) | ~$0.05/image | Best quality, 4K, accurate text rendering |
+| `gemini-3-pro-image-preview` (Nano Banana Pro) | ~$0.05/image | **Use this for all ad creative.** Best quality, accurate text rendering |
 
 **Imagen 4** (standalone text-to-image, no conversational editing):
 
@@ -107,7 +106,7 @@ Uses Google AI Studio credits (same as Gemini research):
 
 Free tier includes limited image generation. Paid credits scale to hundreds of images.
 
-**Default:** Use `gemini-2.5-flash-image` for drafts, `gemini-3-pro-image-preview` for final creatives.
+**Default:** Use `gemini-3-pro-image-preview` for all ad creative. Pro produces significantly better results than Flash — always use Pro.
 
 ---
 

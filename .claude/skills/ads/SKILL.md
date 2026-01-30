@@ -7,6 +7,26 @@ description: "Create and review Meta/Facebook/Instagram ads. Routes to: static i
 
 Create static ads, video scripts, one-liners, or review ads for compliance.
 
+## Step 0: Pre-Flight Readiness
+
+**Before triage, score reference file depth.** This prevents generating generic ads from thin reference.
+
+Run the pre-flight algorithm (see [references/preflight-algorithm.md](references/preflight-algorithm.md)):
+
+1. Score each reference file 0-3 (missing/stub/adequate/rich)
+2. Calculate composite score (max 18)
+3. Route based on threshold:
+   - **GREEN (12+):** Proceed to triage
+   - **YELLOW (8-11):** Warn user, show gaps, allow override
+   - **RED (4-7):** Route to `/think` with enrichment targets
+   - **BLOCKED (0-3):** Route to `/setup`
+
+Display the readiness report and any gap guidance before proceeding.
+
+Also check: If Nano Banana is available (`GOOGLE_API_KEY` set + `google-genai` installed), note it for Batch 4 image generation.
+
+---
+
 ## Triage
 
 Determine mode from user request:
@@ -53,15 +73,17 @@ These patterns that work in standard ads will get rejected in Employment:
 
 Before creating ads, the business repo must have:
 
-| File | What It Contains |
-|------|------------------|
-| `reference/core/offer.md` | What you sell, price, mechanism, benefits |
-| `reference/core/audience.md` | Who buys, their pains, desires |
-| `reference/proof/testimonials.md` | Testimonials with names and outcomes |
-| `reference/proof/angles/*.md` | Different messaging entry points |
-| `reference/domain/content-strategy.md` | Content pillars, platform strategy (optional -- improves topic selection) |
+| File | What It Contains | Required |
+|------|------------------|----------|
+| `reference/core/offer.md` | What you sell, price, mechanism, benefits | Yes |
+| `reference/core/audience.md` | Who buys, their pains, desires | Yes |
+| `reference/core/voice.md` | How you sound, tone, phrases, personality | Yes |
+| `reference/proof/testimonials.md` | Testimonials with names and outcomes | Yes |
+| `reference/proof/angles/*.md` | Different messaging entry points | Yes (at least 1) |
+| `reference/brand/visual-style.md` | Colors, typography, mood, prompt fragments | Optional (affects image gen) |
+| `reference/domain/content-strategy.md` | Content pillars, platform strategy | Optional (improves topic selection) |
 
-If reference files are missing, ask user to create them first.
+If required files are missing, Step 0 pre-flight catches this and routes appropriately.
 
 **Content funnel awareness:** Ads are the "immediate ROI" pillar of the two-pillar value prop (ads + content). In the content pipeline, ads drive newsletter signups, newsletter nurtures, Skool trial converts, revenue follows. If `content-strategy.md` exists, use content pillars to inform angle selection, metrics to understand what performs organically (ads amplify top-performing organic content), and funnel mapping to determine whether ads should target awareness, consideration, or conversion.
 
@@ -98,14 +120,30 @@ Campaign Batch 001
 
 ### Workflow
 
+**Batch 1: Copywriting**
+
 1. Read project context (offer, audience, proof, angles)
 2. Ask for campaign name (required)
-3. Select 5-6 angles for the batch
+3. Select 5-6 angles for the batch — **reference `.claude/reference/compliance/angle-playbook.md`** for angle types, compliance burden, and selection matrix
 4. **Write ALL image prompts first** (Part 1)
 5. **Write ALL ad copy second** (Part 2)
-6. Compliance check
-7. Save to `outputs/YYYY-MM-DD-static-ads-{campaign}/static-ads-batch-001.md`
-8. Tell user: "Saved to `outputs/YYYY-MM-DD-static-ads-{campaign}/static-ads-batch-001.md`. Want me to commit this to git?"
+6. **Cold traffic language check:** Every hook must pass the 3-second comprehension test — no insider jargon, no assumed context. Translate community language to customer language. See Joel's cold traffic guidance in [references/one-liner-methodology.md](references/one-liner-methodology.md).
+7. Compliance check
+8. Save to `outputs/YYYY-MM-DD-static-ads-{campaign}/static-ads-batch-001.md`
+9. Tell user: "Saved to `outputs/YYYY-MM-DD-static-ads-{campaign}/static-ads-batch-001.md`. Want me to commit this to git?"
+
+**Batch 4: Image Generation (if Nano Banana available)**
+
+After copy is saved, offer image generation:
+
+1. Check Nano Banana availability (detected at Step 0)
+2. If available: "Copy saved. Want me to generate actual images? Estimated cost: ~$X for N images."
+3. Read `reference/brand/visual-style.md` for brand context
+4. Determine smart mix (on-brand vs freestyle) — see [references/image-generation-workflow.md](references/image-generation-workflow.md)
+5. For each concept, generate 9:16 image using template from [references/image-prompt-templates.md](references/image-prompt-templates.md)
+6. Post-process: resize to 1920×1920 (1:1) and 1080×1920 (9:16), convert PNG→JPEG, compress under 300KB
+7. Save images + image-index.md to batch folder
+8. If unavailable: "Image prompts saved as text. Paste into Google AI Studio or configure Nano Banana."
 
 ### Ad Styles (5 per concept)
 
@@ -121,11 +159,16 @@ Campaign Batch 001
 
 | Type | Use Case |
 |------|----------|
-| Graphic | Typography-focused, frameworks |
-| Lo-fi | UGC style, authenticity |
-| Interrupt | Pattern interrupt, scroll-stopping |
+| Graphic | Typography-focused, frameworks, authority |
+| Lo-fi | UGC style, authenticity, social proof |
+| Interrupt | Pattern interrupt, scroll-stopping, contrarian |
+| One-liner | Background-only for text overlay (used with one-liner copy) |
+
+**Format pair: 1:1 + 9:16** — Facebook Ads Manager accepts exactly these two formats per ad. Design 9:16 first with critical content in center 1:1 safe zone. Center-crop for square. One design → two uploads.
 
 See [references/static-output-template.md](references/static-output-template.md) for full output format.
+See [references/image-prompt-templates.md](references/image-prompt-templates.md) for template library.
+See [references/image-generation-workflow.md](references/image-generation-workflow.md) for Nano Banana integration.
 
 ---
 
@@ -327,6 +370,23 @@ See [references/review-workflow.md](references/review-workflow.md) for full repo
 - Supports/complements existing approach
 - Framework for understanding
 - Education and guidance
+
+---
+
+## Quality Checklist (All Copy Modes)
+
+Before saving any batch, verify:
+
+| Check | Requirement |
+|-------|-------------|
+| **Anchor specificity** | Every hook/one-liner has at least one offer-specific anchor |
+| **Cold traffic language** | No insider jargon — would a stranger understand in 3 seconds? |
+| **Hook length** | 123-135 characters for static ad hooks |
+| **No questions** | Hooks don't start with yes/no questions |
+| **No you/your** | First 3 lines avoid direct address |
+| **Angle diversity** | Each concept uses a genuinely different psychological entry point |
+| **Voice match** | Copy matches `voice.md` tone (if available) |
+| **Compliance** | No banned claims, proper testimonial attribution |
 
 ---
 
