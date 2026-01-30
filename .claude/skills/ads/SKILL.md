@@ -23,6 +23,7 @@ cat ~/.config/vip/local.yaml 2>/dev/null
 
 - If `default_repo:` exists → **ask user to confirm:** "Found saved repo: [name]. Use this? (y/n)"
 - If no config or no default_repo → **ask the user:** "Which business repo should I use? Give me the path."
+- If the command returns nothing or errors → **that is fine. Just ask the user. Do NOT search for repos.**
 - If `/ads` was invoked from `/start`, the repo is already identified — use it without asking.
 
 **Always confirm the repo before proceeding.** Never assume.

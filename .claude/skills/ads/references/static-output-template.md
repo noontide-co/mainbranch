@@ -7,7 +7,7 @@ Use this structure for campaign batch outputs.
 - **Part 1: Image Prompts** - Generate all images first (line 25)
 - **Part 2: Ad Copy** - Copy for Ads Manager (line 70)
 - **Naming Conventions** - File and image naming (line 174)
-- **Two Sizes Per Image** - Square + vertical prompts (line 191)
+- **Format Pair: 1:1 + 9:16** - Vertical-first design strategy (line 191)
 
 ---
 
@@ -24,7 +24,7 @@ Destination: {CTA URL}
 
 # PART 1: IMAGE PROMPTS
 
-Generate all images first. Each prompt has square and vertical versions.
+Generate all images first. Design 9:16 vertical first, then center-crop for 1:1 square.
 
 ---
 
@@ -37,14 +37,14 @@ Generate all images first. Each prompt has square and vertical versions.
 
 ### {batch#}.1_IMG_01 — {Descriptive Name}
 
-**Square (1920×1920):**
+**Vertical (1080×1920) — design this first:**
 ```text
-{Full prompt for square}
+{Full prompt for 9:16 vertical. Place critical content (headline, product, key visual) in center 1:1 zone. Fill top/bottom margins with atmospheric/contextual elements.}
 ```
 
-**Vertical (1080×1920):**
+**Square (1920×1920) — center-crop from vertical:**
 ```text
-Now resize to 1080x1920 vertical. Keep all text/important content centered in the middle 50% of the frame.
+{Center-crop the vertical to extract the 1:1 safe zone at 1920×1920.}
 ```
 
 ---
