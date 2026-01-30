@@ -4,11 +4,22 @@ Nano Banana (Google Gemini) integration for generating actual ad images from Cla
 
 ---
 
-## Model Selection
+## Model Selection — EXACT Names (DO NOT HALLUCINATE)
 
-**Use `gemini-3-pro-image-preview` ONLY.**
+**VALID model names (copy-paste these EXACTLY):**
 
-Pro produces significantly better results for ad creative. Flash is not acceptable for ad-grade output. This applies to all image generation — drafts, finals, iterations.
+| Model | SDK String (exact) | Use For | Cost |
+|-------|-------------------|---------|------|
+| Nano Banana Pro | `gemini-3-pro-image-preview` | **Final ad creative** — use this by default | ~$0.13/image |
+| Nano Banana Flash | `gemini-2.5-flash-image` | Drafts, iteration, testing | ~$0.04/image |
+
+**NEVER use these (they do NOT exist and will 404):**
+- ~~`gemini-2.0-flash-preview-image-generation`~~ — WRONG, does not exist
+- ~~`gemini-2.5-flash-preview-04-17`~~ — WRONG, does not exist
+- ~~`gemini-pro-image`~~ — WRONG, incomplete name
+- ~~`gemini-flash-image`~~ — WRONG, missing version
+
+**Default:** `gemini-3-pro-image-preview` (Pro) for all ad creative. Use `gemini-2.5-flash-image` (Flash) only for quick drafts or testing when speed matters more than quality.
 
 ---
 
