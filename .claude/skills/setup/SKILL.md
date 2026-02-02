@@ -346,6 +346,7 @@ Use templates from `references/templates.md`.
 5. `reference/proof/angles/` — Messaging entry points
 6. `reference/brand/visual-style.md` — Visual brand identity (colors, typography, mood, image prompt fragments)
 7. `reference/domain/content-strategy.md` — Content pillars, platforms, cadence (template for community businesses)
+8. `reference/domain/funnel/skool-surfaces.md` — Live Skool about page + pricing card copy (community businesses with Skool)
 
 > **Note:** content-strategy.md and visual-style.md start as templates and get filled through `/think` cycles. Not required at setup — scaffolded with placeholder sections.
 
@@ -361,7 +362,7 @@ Use answers + audience data to generate a starter `visual-style.md` from the tem
 Based on business type, create domain-specific folders:
 
 **E-commerce:** `reference/domain/products/`, `reference/domain/fulfillment/`
-**Community:** `reference/domain/classroom/`, `reference/domain/membership/`, `reference/domain/funnel/`, `reference/domain/content-strategy.md`
+**Community:** `reference/domain/classroom/`, `reference/domain/membership/`, `reference/domain/funnel/`, `reference/domain/content-strategy.md`, `reference/domain/funnel/skool-surfaces.md`
 
 See `vip/.claude/reference/domain-rubrics/` for full specifications.
 

@@ -121,10 +121,13 @@ Before creating ads, the business repo must have:
 | `reference/proof/angles/*.md` | Different messaging entry points | Yes (at least 1) |
 | `reference/brand/visual-style.md` | Colors, typography, mood, prompt fragments | Optional (affects image gen) |
 | `reference/domain/content-strategy.md` | Content pillars, platform strategy | Optional (improves topic selection) |
+| `reference/domain/funnel/skool-surfaces.md` | Live Skool about page + pricing card copy | Optional (congruence check) |
 
 If required files are missing, Step 0 pre-flight catches this and routes appropriately.
 
 **Content funnel awareness:** Ads are the "immediate ROI" pillar of the two-pillar value prop (ads + content). In the content pipeline, ads drive newsletter signups, newsletter nurtures, Skool trial converts, revenue follows. If `content-strategy.md` exists, use content pillars to inform angle selection, metrics to understand what performs organically (ads amplify top-performing organic content), and funnel mapping to determine whether ads should target awareness, consideration, or conversion.
+
+**Skool surface congruence:** If `reference/domain/funnel/skool-surfaces.md` exists, check it before finalizing any batch. Ad copy must not promise anything not visible on the Skool about page or pricing cards. Pricing mentioned in ads must match current tier structure. Language and framing should echo (not contradict) the about page positioning. The about page is the FIXED surface — ads are the VARIABLE surface.
 
 ---
 
@@ -434,7 +437,7 @@ Each compliance agent receives:
 - **Business context** (only what that lens needs):
   - FTC: offer.md, testimonials.md, typicality.md
   - Meta Policy: offer.md
-  - Copy Quality: offer.md, audience.md
+  - Copy Quality: offer.md, audience.md, skool-surfaces.md (if exists)
   - Voice Auth: voice.md
   - Substantiation: offer.md, testimonials.md, typicality.md
   - Visual Standards: (no extra context needed — evaluates image prompts)
@@ -578,6 +581,7 @@ Before saving any batch, verify:
 | **Angle diversity** | Each concept uses a genuinely different psychological entry point |
 | **Voice match** | Copy matches `voice.md` tone (if available) |
 | **Compliance** | No banned claims, proper testimonial attribution |
+| **Skool congruence** | Claims match live about page + pricing cards (if `skool-surfaces.md` exists) |
 
 ---
 

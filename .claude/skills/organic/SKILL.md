@@ -116,6 +116,8 @@ Requires `reference/core/voice.md`, `audience.md`, `offer.md`.
 
 **Optional but recommended:** `reference/domain/content-strategy.md` — If present, /organic reads content pillars to align generated content and platform strategy for format selection. Works perfectly without it.
 
+**Congruence check:** If `reference/domain/funnel/skool-surfaces.md` exists, read it. Organic content should echo the same positioning and claims visible on the Skool about page and pricing cards. No contradictions between organic and the landing experience.
+
 Search all working directories for `reference/core/`. If not found, ask user or run `/setup`.
 
 Missing files? See [references/first-time-setup.md](references/first-time-setup.md).
@@ -308,6 +310,8 @@ If content-strategy.md does not exist, /organic works exactly as before -- from 
 **Voice:** Sounds like creator. Matches energy. Uses vocabulary. No AI tells.
 
 **Platform:** Appropriate length. Correct structure. Optimized for retention/saves.
+
+**Skool congruence:** If `skool-surfaces.md` exists, claims and positioning match live about page + pricing cards.
 
 ---
 

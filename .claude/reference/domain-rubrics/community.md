@@ -24,7 +24,8 @@ reference/
     │
     ├── funnel/
     │   ├── stages.md         # Awareness → Member journey
-    │   └── touchpoints.md    # Key conversion moments
+    │   ├── touchpoints.md    # Key conversion moments
+    │   └── skool-surfaces.md # Live about page + pricing card copy
     │
     └── membership/
         ├── pricing.md        # Pricing model (whatever structure you use)
@@ -103,6 +104,21 @@ reference/
 - Sales pages
 - Checkout flow
 - Onboarding sequence
+
+---
+
+### funnel/skool-surfaces.md
+
+**Purpose:** Live copy from Skool about page and pricing cards. Content-generating skills (`/ads`, `/organic`, `/vsl`, `/site`) check this for congruence — ensuring all customer-facing surfaces speak the same language.
+
+**Required sections:**
+- About page copy (verbatim, with character count)
+- Pricing card bullets (all tiers)
+- Key claims extracted for congruence checks
+- Congruence rules
+- Update trigger (when to refresh this file)
+
+**Update when:** About page copy changes, pricing tiers change, or new claims are added to any Skool surface.
 
 ---
 
@@ -253,6 +269,9 @@ When running `/think` to analyze Skool performance:
 | `/ads` | `content-strategy.md` for topic selection, funnel mapping |
 | `/newsletter` | `content-strategy.md` for pillar topics, repurposing flow (coming soon) |
 | `/vsl skool` | `funnel/stages.md`, `membership/benefits.md` |
+| `/ads` (congruence) | `funnel/skool-surfaces.md` for ad-to-landing alignment |
+| `/organic` (congruence) | `funnel/skool-surfaces.md` for content-to-landing alignment |
+| `/site` (congruence) | `funnel/skool-surfaces.md` for site-to-Skool alignment |
 
 ---
 

@@ -203,6 +203,7 @@ ls reference/domain/content-strategy.md 2>/dev/null
 | Accepted decision, unchecked items | "Decision [topic] has action items. Ready to codify?" |
 | content-strategy.md exists but empty/thin | "Your content strategy file is a skeleton. Want to fill it in? We can derive pillars from your soul.md + offer.md + audience.md." |
 | content-strategy.md missing (community biz) | "You don't have a content strategy yet. Want to build one? It'll define your pillars, platforms, and cadence." |
+| skool-surfaces.md missing (community biz with live Skool) | "Your Skool about page and pricing card copy aren't in reference yet. Want to add them? Skills check this for congruence." |
 | Nothing in progress | "What are you trying to figure out?" |
 
 **The goal is reference files.** Research and decisions are waypoints. Keep asking: "What needs to happen to get this into reference?"
@@ -304,7 +305,7 @@ Optionally create Claude tasks for execution tracking. See [decide-phase.md](ref
 
 Apply action items to reference files. Mark decision as codified.
 
-**Codify targets include:** `reference/core/*.md`, `reference/proof/angles/*.md`, `reference/proof/testimonials.md`, **`reference/domain/content-strategy.md`** (pillars, hooks library, framework library, metrics).
+**Codify targets include:** `reference/core/*.md`, `reference/proof/angles/*.md`, `reference/proof/testimonials.md`, **`reference/domain/content-strategy.md`** (pillars, hooks library, framework library, metrics), `reference/domain/funnel/skool-surfaces.md` (live Skool copy — update when about page or pricing changes).
 
 ---
 
