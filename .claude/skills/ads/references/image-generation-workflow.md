@@ -228,25 +228,87 @@ Leave generous clean space in the center-upper area for white text.
 
 Compliance review and image generation run in PARALLEL after copy is saved, not sequentially. The post-generation pipeline (see SKILL.md → Automatic Post-Generation Pipeline) orchestrates this.
 
-For a typical ad campaign with 5 angles:
+For a typical ad campaign with 5 angles (15 images):
 
 ```
 1. Copy saved to output file
 2. Git commit pre-review (preserves original)
-3. PARALLEL:
+3. Main conversation writes prompts.json to disk (keyed by target filename)
+4. PARALLEL (all agents spawned in a single message):
    a. Compliance agents (5-6 lenses, read-only) → findings report
-   b. Image agent generates (if user approved):
-      - Read visual-style.md for brand context
-      - Determine smart mix (on-brand vs freestyle)
-      - For each concept:
-        - Build JSON-structured prompt from template + brand data
-        - Generate 9:16 image via API
-        - Post-process: resize, JPEG compress, center-crop for 1:1
-        - Save to output folder
-      - Return cost summary + file paths
-4. Synthesize: apply P2/P3 fixes, surface P1s, write review-log.md + image-index.md
-5. Git commit post-review (user confirms)
+   b. Image agents (1 per image, if user approved):
+      - Each agent reads its prompt(s) from prompts.json
+      - Reads visual-style.md for brand context
+      - Generates 9:16 image via API
+      - Post-processes: resize, JPEG compress, center-crop for 1:1
+      - Verifies file(s) exist on disk
+      - Returns: file path(s) + status (success/fail) + cost
+5. Synthesize: collect all image agent results, retry any failures,
+   apply P2/P3 fixes, surface P1s, write review-log.md + image-index.md
+6. Git commit post-review (user confirms)
 ```
+
+---
+
+## Parallel Agent Spawning
+
+Image generation uses **one subagent per image** (or per 2-3 images for large batches). This is faster than sequential generation and aligns with how Claude Code handles independent tasks.
+
+### How It Works
+
+1. **Main conversation prepares `prompts.json`** before spawning any agents. Each key is the target filename, each value contains the prompt text, style (on-brand/freestyle), and brand context.
+
+2. **All agents spawn in a single message** — compliance agents AND image agents together. Use `subagent_type: "general-purpose"` for all.
+
+3. **Each image agent:**
+   - Reads its assigned prompt(s) from `prompts.json` (by filename key)
+   - Sources the API key: `source ~/.config/vip/env.sh`
+   - Calls Gemini via Python SDK (single image per API call)
+   - Post-processes immediately (resize, PNG to JPEG, compress under 300KB)
+   - Verifies the final JPEG exists on disk
+   - Returns: `{ path: "images/001_01_graphic_vertical.jpg", status: "success", cost: 0.05 }` (or `status: "fail"` with error message)
+
+4. **Main conversation collects results** from all image agents, retries any failures with fresh single-image agents.
+
+### Batching Strategy
+
+| Image Count | Strategy | Agents Spawned |
+|-------------|----------|----------------|
+| 1-8 | One agent per image | N agents |
+| 9-15 | One agent per image | N agents |
+| 16-30 | Batch 2-3 per agent | ~10-15 agents |
+
+### Rate Limiting
+
+Each agent adds a `time.sleep(2)` before its first API call. Natural stagger from agent startup timing provides additional spacing. If an agent receives a 429 (rate limit), it retries once after a 5-second sleep. If the retry also fails, it returns `status: "fail"` and main conversation handles the retry.
+
+### Agent Prompt Template
+
+```
+You are an image generation agent. Generate the assigned image(s) and return results.
+
+Environment setup:
+  source ~/.config/vip/env.sh
+
+Your assigned image(s) from prompts.json at {output_dir}/prompts.json:
+  Key(s): {filename_key(s)}
+
+For EACH assigned image:
+1. Read the prompt from prompts.json
+2. Run Python: generate via gemini-3-pro-image-preview, save raw PNG
+3. Run Python: post-process (resize to target dims, JPEG compress under 300KB, delete raw PNG)
+4. Verify final JPEG exists: ls {output_dir}/images/{filename}
+5. Return the file path and status
+
+If rate-limited (429): sleep 5 seconds, retry once.
+If retry fails: return status "fail" with error message. Do NOT keep retrying.
+```
+
+### Failure Handling
+
+- Agent returns `status: "fail"` with error details
+- Main conversation spawns a new single-image agent for just that prompt
+- One retry per image. If second attempt fails, log the failure in `image-index.md` and note which prompts need manual generation.
 
 ---
 

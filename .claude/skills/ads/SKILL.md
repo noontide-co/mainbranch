@@ -456,22 +456,28 @@ Return "NO ISSUES" explicitly if everything passes.
 Do NOT write any files. Do NOT fix anything. Report only.
 ```
 
-**Image generation agent (write-with-fallback pattern — if user approved):**
+**Image generation agents (write-with-fallback pattern — if user approved):**
 
-The image gen agent receives:
-- Image prompts or background cluster descriptions (inline)
+Spawn ONE subagent PER IMAGE (or per 2-3 images if generating 15+). All image agents launch in the SAME message as compliance agents.
+
+Each image agent receives:
+- Its assigned prompt(s) inline (1-3 images max per agent)
 - visual-style.md content (for brand context)
 - Output directory path
-- Smart mix ratio
-- Cost ceiling
+- Target filenames for its image(s)
+- Smart mix ratio (on-brand vs freestyle, so agent knows which style)
 
-The agent runs a Python batch script via Bash that:
-- Generates images sequentially (2s rate-limit spacing)
-- Post-processes in same script (resize, PNG→JPEG, compress <300KB)
-- Verifies each file exists on disk
-- Returns: file paths + generation summary + cost
+Each image agent:
+1. Generates its image(s) via Python SDK (Bash call)
+2. Post-processes in same script (resize, PNG→JPEG, compress <300KB)
+3. Verifies each file exists on disk (`ls` the output path)
+4. Returns: file path(s) + generation status (success/fail) + cost
 
-**IMPORTANT:** Main conversation writes `prompts.json` to disk BEFORE spawning the image gen agent. Python file I/O through Bash is not affected by the Claude Code Write tool durability bug.
+**Rate limiting:** Each agent adds a 2-second sleep before its first API call. Stagger is natural — agents start at slightly different times. If an agent gets rate-limited (429), it retries once after 5 seconds.
+
+**IMPORTANT:** Main conversation writes `prompts.json` to disk BEFORE spawning agents. Python file I/O through Bash is not affected by the Claude Code Write tool durability bug. Each agent reads only its assigned prompt(s) from the JSON (keyed by image filename).
+
+**Failure handling:** If an image agent fails, main conversation retries just that image with a new single-image agent. No need to regenerate the entire batch.
 
 ### Step 5: Synthesize Results
 
@@ -485,8 +491,9 @@ When all agents return:
    - **P1 issues:** Surface to user for decision. Do NOT auto-fix. Mark status as BLOCKED.
 
 2. **Image synthesis (if applicable):**
+   - Collect results from all image agents (each returns path + status)
    - Verify images exist on disk (`ls` the output directory)
-   - If any missing: write from returned content (fallback)
+   - If any agent failed or image missing: retry just that image with a new single-image agent
    - Write `image-index.md` mapping images to concepts
 
 3. **Write `review-log.md`** documenting all compliance changes
@@ -524,8 +531,8 @@ git commit -m "[review] {type} batch - N fixes applied"
 ### Pipeline Timing
 
 Compliance review (5-6 agents, read-only) typically completes in 30-60 seconds.
-Image generation (1 agent, sequential API calls) takes 2-5 minutes for 15 images.
-Both run in parallel, so total time = max(review, image gen).
+Image generation (parallel agents, one per image) typically completes in 30-90 seconds for 15 images.
+All agents — compliance + image — run in parallel, so total time = max(slowest compliance agent, slowest image agent).
 
 ### One-Liner Image Generation Details
 
@@ -544,9 +551,9 @@ After 30 one-liners are generated, cluster them by hook category:
 | Curiosity/reframe | Two-tone, conceptual | 2-4 |
 | Overflow | Versatile, brand-forward | 2-3 |
 
-Generate 1 background per cluster (8 total). Map each one-liner to its cluster. Text overlay composited via Pillow post-processing (separate from Gemini generation).
+Generate 1 background per cluster (8 total) using **parallel subagents — one agent per cluster**. Each agent generates its background, post-processes it, and returns the path + status. All 8 agents spawn in the same message as compliance agents. Map each one-liner to its cluster. Text overlay composited via Pillow post-processing (separate from Gemini generation).
 
-**Cost:** 8 images × ~$0.05 = ~$0.40 (recommended). User can choose 15 backgrounds ($0.75) or 30 unique ($1.50).
+**Cost:** 8 images × ~$0.05 = ~$0.40 (recommended). User can choose 15 backgrounds ($0.75) or 30 unique ($1.50). At 15+, batch agents into groups of 2-3 images each to limit agent count.
 
 See [references/image-generation-workflow.md](references/image-generation-workflow.md) for Nano Banana integration details.
 
