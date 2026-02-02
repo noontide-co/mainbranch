@@ -460,24 +460,11 @@ Do NOT write any files. Do NOT fix anything. Report only.
 
 Spawn ONE subagent PER IMAGE (or per 2-3 images if generating 15+). All image agents launch in the SAME message as compliance agents.
 
-Each image agent receives:
-- Its assigned prompt(s) inline (1-3 images max per agent)
-- visual-style.md content (for brand context)
-- Output directory path
-- Target filenames for its image(s)
-- Smart mix ratio (on-brand vs freestyle, so agent knows which style)
+Each agent receives its prompt(s), visual-style.md context, output path, and target filenames. Agents generate via Python SDK, post-process, verify on disk, and return path + status + cost.
 
-Each image agent:
-1. Generates its image(s) via Python SDK (Bash call)
-2. Post-processes in same script (resize, PNG→JPEG, compress <300KB)
-3. Verifies each file exists on disk (`ls` the output path)
-4. Returns: file path(s) + generation status (success/fail) + cost
+**IMPORTANT:** Main conversation writes `prompts.json` to disk BEFORE spawning agents (Python file I/O — not affected by Write tool durability bug). Failed images get retried with a fresh single-image agent.
 
-**Rate limiting:** Each agent adds a 2-second sleep before its first API call. Stagger is natural — agents start at slightly different times. If an agent gets rate-limited (429), it retries once after 5 seconds.
-
-**IMPORTANT:** Main conversation writes `prompts.json` to disk BEFORE spawning agents. Python file I/O through Bash is not affected by the Claude Code Write tool durability bug. Each agent reads only its assigned prompt(s) from the JSON (keyed by image filename).
-
-**Failure handling:** If an image agent fails, main conversation retries just that image with a new single-image agent. No need to regenerate the entire batch.
+See [references/image-generation-workflow.md](references/image-generation-workflow.md) → "Parallel Agent Spawning" for batching strategy, rate limiting, agent prompt template, and failure handling.
 
 ### Step 5: Synthesize Results
 
@@ -491,10 +478,7 @@ When all agents return:
    - **P1 issues:** Surface to user for decision. Do NOT auto-fix. Mark status as BLOCKED.
 
 2. **Image synthesis (if applicable):**
-   - Collect results from all image agents (each returns path + status)
-   - Verify images exist on disk (`ls` the output directory)
-   - If any agent failed or image missing: retry just that image with a new single-image agent
-   - Write `image-index.md` mapping images to concepts
+   - Collect results from all image agents, retry any failures, write `image-index.md`
 
 3. **Write `review-log.md`** documenting all compliance changes
 
