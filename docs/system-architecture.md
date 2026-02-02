@@ -304,6 +304,7 @@ Skills expect business context in standardized locations:
 | Testimonials | `reference/proof/testimonials.md` | Recommended |
 | Typicality | `reference/proof/typicality.md` | For outcome claims |
 | Content Strategy | `reference/domain/content-strategy.md` | Recommended for /organic, /newsletter |
+| Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | When generating ads, organic, VSLs, or site copy (congruence) |
 | Site config | `~/.mainbranch/sites.json` | When building/publishing with /site |
 
 Skills should fail gracefully with clear errors if required context is missing.
@@ -442,7 +443,7 @@ Skills should load context progressively:
 |------|------|------|------------|
 | **Always** | CLAUDE.md | Every session | Low |
 | **Just-in-time** | reference/core/*.md | When generating | Medium |
-| **On-demand** | research/, decisions/, content-strategy.md | When reasoning or generating content | Medium |
+| **On-demand** | research/, decisions/, content-strategy.md, skool-surfaces.md | When reasoning or generating content | Medium |
 | **Deep reference** | reference/proof/, lenses/ | When reviewing | High |
 
 **Why this matters:** Token efficiency. Don't load everything upfront. Load what's needed when it's needed.

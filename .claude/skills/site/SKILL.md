@@ -98,6 +98,7 @@ cat ~/.mainbranch/sites.json 2>/dev/null || echo "NO_CONFIG"
 | `reference/proof/testimonials.md` | Approved testimonials | Recommended |
 | `reference/proof/angles/*.md` | Messaging entry points | Optional |
 | `reference/domain/content-strategy.md` | Pillars, platforms, CTA destinations | Optional |
+| `reference/domain/funnel/skool-surfaces.md` | Live Skool about page + pricing copy | Optional (congruence) |
 
 If required files are missing, stop and route to `/think codify`:
 
@@ -353,6 +354,7 @@ See [references/section-patterns.md](references/section-patterns.md) for detaile
 - Pain points from `audience.md` — their words, not generic
 - Testimonials from `testimonials.md` only — never fabricate
 - CTAs from `offer.md` — specific action, not generic "Learn More"
+- If site drives traffic to Skool, cross-reference `skool-surfaces.md` for messaging consistency between the landing page and the Skool about page
 
 ### Design Guidelines
 

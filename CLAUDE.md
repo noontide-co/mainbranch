@@ -118,6 +118,7 @@ Skills read from `reference/`, output to `outputs/`. Some skills (`/wiki`, `/sit
 | `audience.md` | WHO buys — real people, not avatars |
 | `voice.md` | HOW you sound — tone, phrases, personality |
 | `content-strategy.md` | HOW you distribute — pillars, platforms, cadence, metrics (domain -- emerges through /think, not required at setup) |
+| `skool-surfaces.md` | WHAT cold traffic sees — live Skool about page + pricing card copy (domain/funnel -- congruence anchor for ads, organic, VSLs) |
 
 These live in `reference/core/` and are required for all businesses. `content-strategy.md` lives in `reference/domain/` and is built over time.
 
@@ -190,7 +191,7 @@ Skills load reference progressively to stay token-efficient:
 |------|------|-------------|
 | **Always** | CLAUDE.md | Every session |
 | **Core** | reference/core/*.md | When generating |
-| **On-demand** | research/, decisions/, content-strategy.md | When reasoning about choices or generating content |
+| **On-demand** | research/, decisions/, content-strategy.md, skool-surfaces.md | When reasoning about choices or generating content |
 | **Deep reference** | reference/brand/, reference/proof/ | When writing copy |
 | **Domain** | reference/domain/ | When business-type matters |
 

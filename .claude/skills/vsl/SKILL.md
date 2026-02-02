@@ -52,8 +52,11 @@ If unclear, ask: "Is this for a Skool/membership community ($47-$497/month) or a
 | `reference/core/offer.md` | What you sell, price, inclusions, guarantee |
 | `reference/core/audience.md` | Who buys, their pains, objections |
 | `reference/proof/testimonials.md` | Success stories with specifics |
+| `reference/domain/funnel/skool-surfaces.md` | Live Skool about page + pricing copy (congruence) |
 
 **If missing:** Ask user to provide or run `/think` first.
+
+**Skool VSL congruence:** When writing a Skool VSL, load `skool-surfaces.md` if it exists. The VSL script must not contradict or overpromise beyond what the about page and pricing cards state. Pricing, benefit claims, and positioning in the VSL should align with the live surfaces the viewer will see after clicking through.
 
 ---
 
