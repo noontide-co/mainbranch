@@ -45,7 +45,9 @@ This is not an audit. It is a thoughtful friend helping you close the session.
 6. Commit & close
 ```
 
-Progressive disclosure: steps 4 and 5 only deepen if the user engages. A quick `/end` can be steps 1-3 and 6 in under a minute.
+Step 4 is optional. **Step 5 is NOT optional** -- if meaningful activity happened (decisions, research, reference changes), you MUST spawn the crystallize agent. Do not try to do the crystallize analysis inline. Do not skip it. The subagent gets a fresh context window and spends real tokens reading the day's files. That depth is the whole point.
+
+A quick `/end` (user says "just commit and close") can be steps 1-3 and 6. But if there is meaningful activity and the user did not explicitly skip, always run Step 5.
 
 ---
 
@@ -128,11 +130,15 @@ Ask once:
 
 **If the user says no, nothing, or skips:** Move on. No friction.
 
+**After Step 4 -- whether the user engaged or not -- proceed to Step 5.** Do not stop here. Do not wait for permission. If meaningful activity happened today, the crystallize agent runs next.
+
 ---
 
 ## Step 5: Crystallize
 
-The most important step in `/end`. A dedicated subagent performs deep analysis of the session's work and generates one crystallize output -- context plus questions that make the user stop and think.
+**YOU MUST SPAWN A SUBAGENT FOR THIS STEP.** Do not attempt the crystallize analysis in the main conversation. The main conversation has been burning tokens all session. The crystallize agent gets a fresh context window and spends 50-100K tokens reading the actual files from today -- decisions, research, soul.md, reference diffs. That depth is what makes the question good. Without the subagent, you will default to generic questions like "What did you learn?" which is the exact failure this architecture was built to prevent.
+
+A dedicated subagent performs deep analysis of the session's work and generates one crystallize output -- context plus questions that make the user stop and think.
 
 **Core purpose:** Enrich data and help the user fill in the gaps and find the why.
 
