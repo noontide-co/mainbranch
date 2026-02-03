@@ -1,6 +1,6 @@
 ---
 name: end
-description: "Session-closing skill that helps users wrap up intentionally. Use when: user says done, wrapping up, end my day, closing out, call it a day, goodnight, that's it for today. Bookend to /start. Scans git activity, surfaces what happened, offers a crystallize moment for accumulated decisions, commits uncommitted work, and closes with a brief summary."
+description: "Session-closing skill that helps users wrap up intentionally. Use when: user says done, wrapping up, end my day, closing out, call it a day, goodnight, that's it for today, checkpoint, pause. Bookend to /start. Scans git activity, surfaces what happened, spawns a crystallize agent for deep analysis, commits uncommitted work, and closes with a brief summary. Works for end-of-day, end-of-research-batch, end-of-decision-sprint, or mid-work checkpoints."
 ---
 
 # End
@@ -13,9 +13,18 @@ Close your session intentionally. The bookend to `/start`.
 
 ## Philosophy
 
-The end of a session is the highest-leverage reconnection point. All day you were doing -- researching, deciding, generating. Now, for thirty seconds, you step back and see what actually happened. Accumulated doing becomes conscious understanding.
+The end of a session is the highest-leverage reconnection point. All session you were doing -- researching, deciding, generating. Now you step back and see what actually happened. Accumulated doing becomes conscious understanding.
 
-This is not an audit. It is a thoughtful friend helping you close the day.
+`/end` is not just end-of-day. It closes any significant session:
+
+- **End of day** -- wrapping up, done for today
+- **End of a research batch** -- crystallize before deciding
+- **End of a decision sprint** -- step back and see what decisions mean together
+- **Mid-work checkpoint** -- pause deep work, crystallize, then continue
+
+The crystallize moment does not assume the user is leaving. It assumes the user wants to step back from doing and see what happened.
+
+This is not an audit. It is a thoughtful friend helping you close the session.
 
 ---
 
@@ -26,11 +35,17 @@ This is not an audit. It is a thoughtful friend helping you close the day.
 2. Scan today's activity
 3. Session summary
 4. Final thought capture (optional)
-5. Crystallize prompt (if decisions were made)
+5. Crystallize (spawns dedicated agent if meaningful activity detected)
+   5a. Check for meaningful activity
+   5b. Gather file contents for the agent
+   5c. Spawn crystallize agent (Task tool)
+   5d. Present output to user as-is
+   5e. If user engages: stay with it (engagement protocol)
+   5f. Always save crystallize output as research file
 6. Commit & close
 ```
 
-Progressive disclosure: steps 4 and 5 only happen if the user engages. A quick `/end` can be steps 1-3 and 6 in under a minute.
+Progressive disclosure: steps 4 and 5 only deepen if the user engages. A quick `/end` can be steps 1-3 and 6 in under a minute.
 
 ---
 
@@ -115,48 +130,117 @@ Ask once:
 
 ---
 
-## Step 5: Crystallize Prompt (If Decisions Were Made)
+## Step 5: Crystallize
 
-**Only trigger this if decisions were created or accepted today.** Check:
+The most important step in `/end`. A dedicated subagent performs deep analysis of the session's work and generates one crystallize output -- context plus questions that make the user stop and think.
+
+**Core purpose:** Enrich data and help the user fill in the gaps and find the why.
+
+### 5a. Check for Meaningful Activity
+
+Check if decisions, research, or significant reference changes happened today:
 
 ```bash
 # Decisions created or modified today
 git log --since="6am" --name-only --diff-filter=AM -- decisions/ 2>/dev/null
+
+# Research created today
+git log --since="6am" --name-only --diff-filter=A -- research/ 2>/dev/null
+
+# Reference changes
+git diff --name-only HEAD@{6am}..HEAD -- reference/ 2>/dev/null
 ```
 
-If decisions or research exist, craft ONE genuinely provocative question.
+**When to skip crystallize entirely:**
+- No decisions, research, or reference changes (truly nothing happened)
+- Context window critically low (under 30K remaining)
+- User explicitly asked for a quick close ("just commit and close")
 
-**This is the most important step in /end.** Don't ask generic questions like "What did you learn?" or "What shifted?" Read the actual decisions and research from today. Find the thread that's still pulling -- the unanswered question, the tension between two choices, the implication nobody said out loud yet. Ask THAT.
+**Light days:** If only minor activity (one small edit, no decisions), the agent still runs but shifts focus to reference gaps. See [references/crystallize-agent.md](references/crystallize-agent.md) for light-day behavior.
 
-**How to craft the question:**
+### 5b. Gather File Contents
 
-1. Read today's decision files and research files (at least skim them)
-2. Look for: unresolved tensions, assumptions that weren't tested, implications that weren't followed, connections between separate decisions that nobody drew yet
-3. Ask one question that makes them stop and think -- the kind of question a great advisor would ask at the end of a strategy session
+Before spawning the agent, read and collect:
 
-**Examples of BAD crystallize questions:**
-- "What did you learn today?" (too generic)
-- "What shifted in your thinking?" (sounds like therapy homework)
-- "You made 3 decisions. Anything to add?" (not a real question)
+| Content | How | Always/Conditional |
+|---------|-----|-------------------|
+| Today's git summary | From Step 2 output | Always |
+| Today's decision files (full text) | Read each file detected in 5a | Always |
+| Today's research files (full text) | Read each file detected in 5a | Always |
+| Reference file diffs | `git diff HEAD@{6am}..HEAD -- reference/` | If reference changed |
+| `reference/core/soul.md` | Read full file | Always |
+| `reference/domain/content-strategy.md` | Read full file | If it exists |
+| Past crystallize outputs | Read `research/*-end-of-day-crystallize.md` | If any exist |
 
-**Examples of GOOD crystallize questions:**
-- "You positioned Main Branch as a thinking system, not a memory tool. But your pricing tiers are structured around feature access. Is the thing you're selling aligned with the thing you're saying?"
-- "You built 5 new angles today but your content strategy still has zero content derived from 53 decisions. What's actually blocking the pipeline?"
-- "You decided trial members get full access. What happens to the people who downgrade after 7 days but already built reference files with premium skills?"
+**Heavy-day adaptation:** If more than 5 research files exist for today, pass commit messages + file names for all research, but full text only for the 3-5 most recent or most connected to today's decisions.
 
-The question should feel like it came from someone who was paying attention all day. Because you were.
+### 5c. Spawn the Crystallize Agent
 
-**If the user engages:**
+Use the Task tool to spawn a dedicated subagent with a full context window:
 
-- Let them explore. This is their thinking time. Don't rush to close.
-- Listen. Reflect back what they said in one sentence.
-- If the insight is substantial, offer to save it -- append to a decision file, update a reference file, or create a quick research note.
-- If they surface a pattern across multiple decisions, offer to capture it where it belongs.
-- If the exploration goes deep, let it go deep. Don't deflect to "pick it up with /think next session." If someone is having an insight at the end of their day, that's the highest-value moment. Stay with it.
+```
+Task(
+  subagent_type: "general-purpose",
+  description: "Crystallize agent: analyze today's session work and generate
+    a crystallize output (context block + questions) that surfaces unnamed
+    tensions, connects tactical work to existential purpose, and identifies
+    reference gaps."
+)
+```
 
-**If the user deflects or says "nothing":** That is fine. Say something like "Fair enough" and move on. Never push.
+**Agent prompt construction:** Build a structured prompt containing all gathered content from 5b, plus the agent instructions. See [references/crystallize-agent.md](references/crystallize-agent.md) for the complete agent prompt template, analysis process, anti-patterns, and question design criteria.
 
-**If nothing meaningful happened today:** Skip this step. Don't force a crystallize moment on a light session.
+**The agent is read-only.** It reads files and returns findings. It does not write files. The main conversation handles all file writes.
+
+**The agent returns:** A crystallize output block -- 2-4 sentences of context followed by 1-3 questions. The main conversation presents this to the user exactly as returned, without editing or summarizing.
+
+### 5d. Present to User
+
+Show the crystallize output exactly as the agent returned it. Do not summarize, reword, or add commentary.
+
+### 5e. Engagement Protocol
+
+If the user engages with the crystallize question, the main conversation handles the dialogue (the agent's job is done).
+
+**Rules:**
+
+1. **Let them go deep.** Never redirect to "pick this up with /think." If someone is having an insight at session's end, that is the highest-value moment. Stay with it.
+2. **Listen and reflect.** Reflect back what they said in one sentence. Give them space to refine their thinking.
+3. **Name what they are doing.** If they articulate a new belief: "That sounds like a new entry for soul.md." If they resolve a tension: "That is a decision waiting to be written."
+4. **If insight updates reference, offer to do it.** Don't push -- just offer.
+5. **Never push.** If they say one sentence and stop, let them stop. The question was planted. The insight might arrive tomorrow.
+
+See [references/crystallize-agent.md](references/crystallize-agent.md) for the full engagement protocol with examples.
+
+### 5f. Always Save the Crystallize Output
+
+**This is not optional.** Every crystallize moment gets saved as a research file. Future crystallize agents read these for temporal pattern recognition.
+
+```markdown
+---
+type: research
+date: YYYY-MM-DD
+source: crystallize
+status: complete
+---
+# End-of-Day Crystallize
+
+## Question Asked
+[The crystallize question as presented]
+
+## User Response
+[What the user said, or "No engagement" if they skipped]
+
+## Insight Captured
+[Any insight that emerged, or empty if none]
+
+## Reference Updated
+[Which files were updated as a result, or "None"]
+```
+
+Save to: `research/YYYY-MM-DD-end-of-day-crystallize.md`
+
+If an insight was substantial enough to update reference directly (soul.md, offer.md, etc.), do so and note it in the crystallize file.
 
 ---
 
@@ -180,6 +264,7 @@ If yes:
 - Stage the changed files (prefer specific files over `git add -A`)
 - Write a descriptive commit message following the `[type] Brief description` convention
 - If the user shared final thoughts in Step 4, incorporate them into the commit message
+- Include the crystallize research file in the commit
 - Commit
 
 If no: Leave them. Some people prefer to commit at start of next session.
@@ -244,7 +329,7 @@ Only scan the primary business repo (from config). If the user worked across rep
 - **Not a task manager.** No to-do lists or assignments.
 - **Not a journal.** The final thought capture is optional and brief.
 - **Not an audit.** The summary is observational, not evaluative.
-- **Not /think** — but if someone is having an insight, stay with it. The crystallize moment can go deep. That's the point.
+- **Not /think** -- but if someone is having an insight, stay with it. The crystallize moment can go deep. That is the point.
 
 ---
 
@@ -253,3 +338,9 @@ Only scan the primary business repo (from config). If the user worked across rep
 Same as the rest of Main Branch: a thoughtful friend. Brief. Warm. Not performative.
 
 The close should feel like the end of a good conversation -- not a report card, not a ceremony. Just: "Here's what happened. Anything else? Good. See you."
+
+---
+
+## References
+
+- [references/crystallize-agent.md](references/crystallize-agent.md) -- Agent prompt template, analysis process, anti-patterns, question design, engagement protocol, examples
