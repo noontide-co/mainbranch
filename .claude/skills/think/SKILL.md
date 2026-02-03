@@ -46,55 +46,105 @@ cd ~/vip 2>/dev/null && git pull origin main 2>/dev/null && cd - >/dev/null || t
 
 ---
 
-## Tool Detection (YAML-Backed)
+## Tool Detection (Config-First)
 
-Tool status is persisted in `.vip/config.yaml` under the `tools:` key. This avoids re-checking env vars and installs every session.
+Tool status persists in `.vip/config.yaml` under `tools:`. Read config first, only probe unknowns, always write results back.
 
-### How It Works
+### Status Values
+
+| Value | Meaning | Action |
+|-------|---------|--------|
+| `true` | Verified working | Use tool, skip detection |
+| `false` | Known unavailable | Skip detection (unless stale) |
+| `null` | Unknown | Run detection |
+| (missing) | Never checked | Run detection |
+
+### Staleness Check
+
+If `status: false` and `last_checked` is >30 days ago, re-probe. User may have installed it since then.
+
+### Detection Flow
+
+On first /think invocation each session:
 
 ```
 1. Read .vip/config.yaml → tools section
-2. For each tool:
-   - status: true  → Trust it, skip detection
-   - status: false → Skip it, don't nag
-   - status: null  → Run detection, update config
-   - missing entry → Run detection, add entry to config
-3. Report results once per session
+2. Build list of tools needing detection:
+   - status: null or missing → detect
+   - status: false AND last_checked >= 30 days → re-detect
+   - status: true OR (false AND recent) → skip
+3. Run detection for unknowns (see methods below)
+4. WRITE config updates immediately (use Edit tool)
+5. Report once (experience-appropriate)
 ```
 
-### Detection Script
+### Detection Methods
 
-Run once per session to probe unknown tools:
+**Apify:** Check if `mcp__apify__search-actors` tool exists in session.
 
+**Gemini:**
 ```bash
-bash .claude/skills/think/scripts/detect-tools.sh
+[ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"
+[ -n "$GOOGLE_API_KEY" ] && echo "GEMINI=true"
 ```
 
-See `scripts/detect-tools.sh` for the full implementation.
+**Grok:** Requires BOTH env var AND Python SDK:
+```bash
+[ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"
+[ -n "$XAI_API_KEY" ] && python3 -c "import xai_sdk" 2>/dev/null && echo "GROK=true"
+```
 
-### After Detection
+**whisper:** Check MCP tools (`mcp__whisper__*`) OR CLI:
+```bash
+which whisper-cli >/dev/null 2>&1 && echo "WHISPER=true"
+```
 
-If any tool was probed and found, **update `.vip/config.yaml`** with the result so future sessions skip detection. Use Edit to set `status: true` or `status: false` as appropriate.
+**Document tools:**
+```bash
+which markitdown >/dev/null 2>&1 && echo "MARKITDOWN=true"
+which pandoc >/dev/null 2>&1 && echo "PANDOC=true"
+which marker_single >/dev/null 2>&1 && echo "MARKER=true"
+```
 
-### Report Format
+### Config Update (REQUIRED)
 
-**All tools known (fast path — no detection needed):**
-> "Tools: Apify, Gemini, Grok, whisper, Nano Banana — all verified in config."
+After detection, **immediately update config** using Edit tool:
 
-**Mix of known and missing:**
-> "Tools: Apify, Gemini ready. Grok not configured (optional). whisper not installed. Nano Banana not configured (optional — for image generation)."
+```yaml
+tools:
+  gemini:
+    status: true              # ← detection result
+    notes: "GOOGLE_API_KEY verified"
+    last_checked: 2026-02-03  # ← today's date
+```
 
-**If Apify missing (important — affects mining):**
-> "Apify MCP not detected. YouTube transcripts and Instagram mining won't work. Set up now? (5 min, one-time)"
+**Do not skip this step.** Config updates prevent re-probing next session.
 
-### Why This Matters
+### Reporting by Experience
 
-- **Apify missing = limited mining** (YouTube, Instagram)
-- **Grok missing = web fallback for X research** (still works, less real-time)
-- **Gemini missing = Claude Code handles synthesis** (still works, more token use)
-- **whisper missing = can't transcribe local files** (offer CLI setup)
-- **Nano Banana missing = text prompts only** (no direct image generation, use external tools)
-- **YAML-backed = no wasted time** re-probing every session
+| Experience | Format |
+|------------|--------|
+| `beginner` | "Research ready. I'll help with tool setup when you need it." |
+| `intermediate` | "Tools: Apify ✓, Gemini ✓, Grok ✗, whisper ✗" |
+| `advanced` | Silent unless changes from last session |
+
+### Intent-Based Tool Surfacing
+
+When user's intent matches an unavailable tool, **surface the option once per session**:
+
+| User Intent | If Tool Missing | Message |
+|-------------|-----------------|---------|
+| YouTube URL | Apify | "YouTube transcripts need Apify MCP (5 min setup). Set up? Paste transcript? Skip?" |
+| "X sentiment" | Grok | "X sentiment is best with Grok (real-time). Use web search? Set up Grok (5 min, $5 credit)?" |
+| "deep research" | Gemini | "Deep synthesis works best with Gemini (free tier). Web search fallback? Set up (3 min)?" |
+| Local file | whisper | "Local transcription needs whisper (10 min). Set up? External service? Skip?" |
+
+**Rules:**
+- Surface once per session per tool (track in session state)
+- Always offer working fallback
+- Never block research
+
+See [tool-surfacing.md](references/tool-surfacing.md) for full details on progressive disclosure.
 
 ---
 

@@ -87,7 +87,39 @@ Parse user's natural language to determine research type:
 | "mine competitors", "what's [handle] posting" | Social mining | Apify Instagram Actor | Manual scraping guidance |
 | "research [specific question]" | General research | Codebase → Web → Ask user | Always works |
 
-### 3. Fallback Patterns
+### 3. Progressive Disclosure
+
+Research tools are surfaced based on user need, not dumped upfront.
+
+**Disclosure Levels:**
+
+| Level | When | What |
+|-------|------|------|
+| 1. Session start | /start greeting | Brief status (experience-appropriate) |
+| 2. Intent match | User task benefits from tool | Surface specific tool + options |
+| 3. Post-research | After using fallback | Mention upgrade path briefly |
+| 4. Never | User never tried to use | Don't advertise unsolicited |
+
+**Example Progression:**
+
+```
+Session start: "Research ready. Tools: Apify ✓, Gemini ✓"
+
+User: "What are people saying on X about [topic]?"
+Surface: "X sentiment is best with Grok. Use web search? Or set up?"
+User: "Web search is fine"
+Proceed: [does web search]
+Post: "Done. FYI: Grok gives real-time sentiment if you want it later."
+
+User: "Now research [different topic] on X"
+Proceed: [uses web search without asking, already offered once]
+```
+
+**Session state:** Track `tools_offered_setup: [grok, whisper]` — don't re-offer tools already declined.
+
+See [tool-surfacing.md](tool-surfacing.md) for full details on surfacing messages and patterns.
+
+### 4. Fallback Patterns
 
 **Never block research.** If preferred tool unavailable:
 
@@ -630,6 +662,7 @@ Potential additions (not implemented yet):
 
 ## See Also
 
+- `tool-surfacing.md` — Progressive disclosure and surfacing patterns
 - `research-phase.md` — Detailed research workflow
 - `gemini-setup.md` — Gemini API setup guide
 - `gemini-deep-research.md` — Deep research workflow with Gemini

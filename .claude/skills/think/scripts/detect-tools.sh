@@ -1,65 +1,69 @@
 #!/usr/bin/env bash
-# detect-tools.sh — Probe research tools not yet tracked in .vip/config.yaml
-# Called once per /think session. Results should be written back to config.yaml.
+# detect-tools.sh — DEPRECATED: Detection now happens inline in /think SKILL.md
+#
+# This script is kept for reference but detection logic has moved to the main skill.
+# Why: Claude can detect tools AND update config in one step using Read/Edit tools.
+# The bash script could only report — it couldn't reliably write YAML.
+#
+# New flow (in SKILL.md):
+# 1. Read .vip/config.yaml
+# 2. Check status values (true/false/null)
+# 3. Probe unknowns using bash or tool presence checks
+# 4. Update config with Edit tool (status + last_checked timestamp)
+# 5. Report once based on user experience level
+#
+# See: .claude/skills/think/SKILL.md "Tool Detection (Config-First)" section
 
-CONFIG=".vip/config.yaml"
+echo "NOTE: detect-tools.sh is deprecated. Tool detection now happens inline in /think."
+echo "The skill reads config, probes unknowns, and updates config directly."
+echo ""
+echo "For manual checking, here's what tools exist on this machine:"
+echo ""
 
-if [ -f "$CONFIG" ]; then
-  # Parse known tool statuses (simple grep — not a full yaml parser)
-  APIFY_STATUS=$(grep -A1 "^  apify:" "$CONFIG" | grep "status:" | awk '{print $2}')
-  GEMINI_STATUS=$(grep -A1 "^  gemini:" "$CONFIG" | grep "status:" | awk '{print $2}')
-  GROK_STATUS=$(grep -A1 "^  grok:" "$CONFIG" | grep "status:" | awk '{print $2}')
-  WHISPER_STATUS=$(grep -A1 "^  whisper:" "$CONFIG" | grep "status:" | awk '{print $2}')
-  NANOBANANA_STATUS=$(grep -A1 "^  nano-banana:" "$CONFIG" | grep "status:" | awk '{print $2}')
-else
-  # No config — probe everything
-  APIFY_STATUS="null"
-  GEMINI_STATUS="null"
-  GROK_STATUS="null"
-  WHISPER_STATUS="null"
-  NANOBANANA_STATUS="null"
-fi
+# Source env file if it exists
+[ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"
 
 echo "Research tools:"
 
-# Only probe tools with unknown status
-[ "$APIFY_STATUS" = "true" ] && echo "  ✓ Apify (YouTube, Instagram mining)"
-[ "$APIFY_STATUS" = "null" ] && {
-  ([ -n "$APIFY_TOKEN" ] || type mcp__apify__search-actors >/dev/null 2>&1) \
-    && echo "  ✓ Apify (detected — updating config)" \
-    || echo "  ✗ Apify (not found)"
-}
+# Apify - MCP-based (can't reliably detect via bash, skill checks mcp__apify__* tools)
+echo "  ? Apify (check via MCP tool presence in Claude session)"
 
-[ "$GEMINI_STATUS" = "true" ] && echo "  ✓ Gemini (deep research)"
-[ "$GEMINI_STATUS" = "null" ] && {
-  [ -n "$GOOGLE_API_KEY" ] \
-    && echo "  ✓ Gemini (detected — updating config)" \
-    || echo "  ✗ Gemini (not found)"
-}
+# Gemini - env var
+[ -n "$GOOGLE_API_KEY" ] \
+  && echo "  ✓ Gemini (GOOGLE_API_KEY set)" \
+  || echo "  ✗ Gemini (GOOGLE_API_KEY not set)"
 
-[ "$GROK_STATUS" = "true" ] && echo "  ✓ Grok (X/Twitter sentiment via SDK)"
-[ "$GROK_STATUS" = "null" ] && {
-  # Source env file if key not in environment but file exists
-  [ -z "$XAI_API_KEY" ] && [ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"
-  ([ -n "$XAI_API_KEY" ] && python3 -c "import xai_sdk" 2>/dev/null) \
-    && echo "  ✓ Grok (detected — updating config)" \
-    || echo "  ✗ Grok (not found)"
-}
+# Grok - env var + SDK
+if [ -n "$XAI_API_KEY" ] && python3 -c "import xai_sdk" 2>/dev/null; then
+  echo "  ✓ Grok (XAI_API_KEY + xai_sdk)"
+elif [ -n "$XAI_API_KEY" ]; then
+  echo "  ~ Grok (XAI_API_KEY set but xai_sdk package missing)"
+else
+  echo "  ✗ Grok (XAI_API_KEY not set)"
+fi
 
-[ "$WHISPER_STATUS" = "true" ] && echo "  ✓ whisper (local transcription)"
-[ "$WHISPER_STATUS" = "null" ] && {
-  which whisper-cli >/dev/null 2>&1 \
-    && echo "  ✓ whisper (detected — updating config)" \
-    || echo "  ✗ whisper (not found)"
-}
+# whisper - CLI
+which whisper-cli >/dev/null 2>&1 \
+  && echo "  ✓ whisper (whisper-cli found)" \
+  || echo "  ✗ whisper (whisper-cli not found)"
 
-[ "$NANOBANANA_STATUS" = "true" ] && echo "  ✓ Nano Banana (image generation)"
-[ "$NANOBANANA_STATUS" = "null" ] && {
-  # Check if GOOGLE_API_KEY exists (same key as Gemini research)
-  [ -z "$GOOGLE_API_KEY" ] && [ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"
-  [ -z "$GOOGLE_API_KEY" ] && [ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"
-  # Check if nano-banana MCP is available
-  ([ -n "$GOOGLE_API_KEY" ] && (npx nano-banana-mcp --help >/dev/null 2>&1 || type mcp__nano-banana__* >/dev/null 2>&1)) \
-    && echo "  ✓ Nano Banana (detected — updating config)" \
-    || echo "  ✗ Nano Banana (not found — optional, for image generation)"
-}
+echo ""
+echo "Document tools:"
+
+# markitdown
+which markitdown >/dev/null 2>&1 \
+  && echo "  ✓ markitdown" \
+  || echo "  ✗ markitdown"
+
+# pandoc
+which pandoc >/dev/null 2>&1 \
+  && echo "  ✓ pandoc" \
+  || echo "  ✗ pandoc"
+
+# marker
+which marker_single >/dev/null 2>&1 \
+  && echo "  ✓ marker (marker_single)" \
+  || echo "  ✗ marker"
+
+echo ""
+echo "To update your config, edit .vip/config.yaml directly or let /think handle it."

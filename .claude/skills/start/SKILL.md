@@ -203,61 +203,23 @@ If you work across machines or collaborate, your business repo may have changes.
 
 ---
 
-## Step 0.75: Research Tool Detection
+## Step 0.75: MCP Pre-Flight (Not Research Tools)
 
-After loading config, check available research capabilities:
+Check for MCPs required by skills user might invoke. See [mcp-preflight.md](references/mcp-preflight.md).
 
-```bash
-# Check what's available (silent checks)
-APIFY_OK=$([ -n "$APIFY_TOKEN" ] && echo "1" || echo "0")
-GEMINI_OK=$([ -n "$GOOGLE_API_KEY" ] && echo "1" || echo "0")
-GROK_OK=$([ -n "$XAI_API_KEY" ] && echo "1" || echo "0")
-NANO_BANANA_OK=$(python3 -c "from google import genai; print('1')" 2>/dev/null || echo "0")
-```
+**Research tool detection happens in /think** — deferred to when user actually needs research. This keeps /start fast and avoids checking tools user might not use this session.
 
-**Report based on experience level:**
+**What /start DOES check:**
+- MCPs that skills depend on (Apify for /organic, etc.)
+- Critical blockers (missing config, broken paths)
 
-| Experience | What to Show |
-|------------|--------------|
-| `beginner` | "Research ready: Apify for web/YouTube/Instagram." Only mention missing if they ask about research. |
-| `intermediate` | Brief status: "Research: Apify ✓, Gemini ✗, Grok ✗" |
-| `advanced` | Full grid only if relevant to stated task |
+**What /start DOES NOT check:**
+- Research tools (Gemini, Grok, whisper, etc.) — /think handles these
+- Document tools (markitdown, pandoc, marker) — /think handles these
 
-**If key tools missing and user mentions research:**
+**Why defer:** Most sessions don't use all tools. Checking everything upfront wastes time and clutters the greeting. /think detects tools when user's intent requires them and surfaces setup options at the right moment.
 
-> "Want to add Gemini for deep research? Takes 3 minutes.
-> 1. Get key: https://aistudio.google.com/apikey
-> 2. Add to `~/.config/vip/env.sh`
-> 3. Restart terminal"
-
-**Nano Banana (image generation):**
-
-If `NANO_BANANA_OK` and `GEMINI_OK`:
-> "Nano Banana ready — `/ads` can generate actual images with Gemini Pro."
-
-If `GEMINI_OK` but not `NANO_BANANA_OK`:
-> "Gemini API key found but `google-genai` package not installed. Run `pip install google-genai` for image generation."
-
-**Don't block or nag.** Apify handles most research needs. Additional tools are opt-in upgrades.
-
-### Media Output Detection
-
-After tool detection, check media configuration:
-
-```bash
-# Check media config in local.yaml
-grep -q "media:" ~/.config/vip/local.yaml 2>/dev/null && echo "MEDIA_OK=1" || echo "MEDIA_OK=0"
-```
-
-**Report based on context:**
-
-| Condition | Action |
-|-----------|--------|
-| Nano Banana available + no media config | "Image generation ready. No output folder configured yet — set up during `/ads`." |
-| Nano Banana available + media config exists | Silent (include in tool grid for advanced users) |
-| Nano Banana NOT available | Don't mention media config — irrelevant without image gen |
-
-**Don't block.** Media config is set during first `/ads` image generation run. /start only surfaces the gap informally.
+If user's stated intent involves research, route to /think — it will handle tool detection with config-first logic (reads `.vip/config.yaml`, only probes unknowns, updates config with results).
 
 ---
 
