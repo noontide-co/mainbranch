@@ -44,16 +44,15 @@ status: proposed  # ← This is your progress indicator
 
 # Decision: New Pricing Strategy
 
-## Action Items
+## What Changes
 
-- [ ] Research competitor pricing
-- [ ] Update reference/core/offer.md
-- [ ] Create new angle in proof/angles/
+Reference files affected:
+- `reference/core/offer.md` — update pricing section with new tier structure
+- `reference/proof/angles/` — create new value-stack angle
 
-## Other actions
-
-- [ ] Set up Stripe tiers
-- [ ] Update sales page
+Outside reference:
+- Set up Stripe tiers
+- Update sales page
 ```
 
 **Status progression:**

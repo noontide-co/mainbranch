@@ -10,7 +10,7 @@ Detailed workflow for decision mode in `/think`.
 2. **Present options** — At least 2 options with pros/cons/effort.
 3. **Document choice** — Clear decision with rationale.
 4. **List consequences** — What becomes easier, harder, what we're accepting.
-5. **Generate action items** — Specific reference file updates.
+5. **Describe what changes** — Which reference files are affected and what the key changes are.
 6. **Save** — Write to `decisions/YYYY-MM-DD-topic.md`
 
 ---
@@ -89,37 +89,19 @@ Honest assessment of trade-offs:
 
 ---
 
-## Action Items
+## What Changes
 
-Every decision ends with explicit action items for reference files:
+Every decision ends with a narrative description of what reference files are affected and what the key changes are. This is what codify reads.
 
 ```markdown
-## Action Items
+## What Changes
 
-Reference files to update:
-- [ ] Update `reference/core/offer.md` — Add guarantee section
-- [ ] Create `reference/proof/angles/risk-reversal.md` — New angle file
-- [ ] Update `reference/core/voice.md` — Add "guarantee" to vocabulary
+offer.md gets a "30-day guarantee" section after pricing. voice.md adds "guarantee" and "risk-free" to approved vocabulary. A new angle file (risk-reversal.md) captures the guarantee-as-differentiator messaging.
 
-Other actions:
-- [ ] Set up Stripe subscription
-- [ ] Update sales page copy
+Outside reference: set up Stripe subscription, update sales page copy.
 ```
 
-**Be specific:** "Update offer.md" is bad. "Update offer.md — Add 30-day guarantee section after pricing" is good.
-
-### Claude Tasks for Execution (Optional)
-
-For complex action items, optionally create Claude tasks for execution tracking:
-
-```
-TaskCreate: "Update offer.md with guarantee section"
-TaskCreate: "Create risk-reversal.md angle file"
-```
-
-Tasks provide spinners, progress tracking via `TaskList`, and completion markers. Mark complete with `TaskUpdate: taskId=X, status=completed`.
-
-**Note:** Tasks are session-scoped and ephemeral. The decision file is the permanent anchor — tasks just help track execution within a session.
+**Be specific:** "Update offer" is bad. "offer.md gets a 30-day guarantee section after pricing" is good. Name the files and describe the changes — but as prose, not checkboxes.
 
 ---
 
@@ -132,16 +114,16 @@ For substantial work, **create a decision file early** — even before you've fu
 1. Start project -> Create `decisions/YYYY-MM-DD-topic.md` with `status: proposed`
 2. Research and iterate -> Update the file as you learn
 3. Make the call -> Change to `status: accepted`
-4. Execute -> Check off action items as you complete them
+4. Codify -> Apply changes described in `## What Changes` to reference files
 5. Finish -> Change to `status: codified`
 
 **Why this works:**
-- Progress is visible in the file
+- Progress is visible in the file (proposed -> accepted -> codified)
 - Rationale captured as you go
 - Next session: check `decisions/` to see where you left off
 - No separate task manager needed
 
-**The `## Other actions` section** captures non-reference tasks (set up Stripe, update sales page, etc.).
+**Non-reference tasks** (set up Stripe, update sales page, etc.) go in `## What Changes` under "Outside reference."
 
 **For smaller tasks:** Just do them. Decision files are for substantial work where the "why" matters.
 
@@ -153,9 +135,7 @@ For substantial work, **create a decision file early** — even before you've fu
 |--------|---------|
 | `proposed` | Decision drafted, not yet accepted |
 | `accepted` | Decision made and committed to |
-| `codified` | Action items applied to reference files |
-| `superseded` | Replaced by a newer decision |
-| `deprecated` | No longer relevant |
+| `codified` | Changes applied to reference files |
 
 ---
 
@@ -163,12 +143,12 @@ For substantial work, **create a decision file early** — even before you've fu
 
 Decision is complete when:
 
-- [ ] Context documented
-- [ ] Options listed with pros/cons
-- [ ] Decision stated with rationale
-- [ ] Consequences listed (what becomes easier/harder)
-- [ ] Action items specify which reference files to update
-- [ ] File saved to `decisions/`
+- Context documented
+- Options listed with pros/cons
+- Decision stated with rationale
+- Consequences listed (what becomes easier/harder)
+- What Changes describes affected reference files and key changes
+- File saved to `decisions/`
 
 ---
 

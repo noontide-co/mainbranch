@@ -138,17 +138,16 @@ For substantial work, **create a decision file early** — even before you've fu
 | `accepted` | Decision made, now executing |
 | `codified` | Done — reference files updated |
 
-**The decision file becomes your task tracker:**
-- `## Action Items` = Your task list (with checkboxes)
-- `## Other actions` = Non-reference tasks
-- `## Review Date` = When to revisit
+**The decision file tracks what changes:**
+- `## What Changes` = Which reference files are affected and how
+- `## Review Date` = When to revisit (optional)
 
 **Example workflow:**
 
 1. Start a big project → Create `decisions/2026-01-21-new-pricing-strategy.md` with `status: proposed`
 2. Research, think, iterate → Update the file as you learn
-3. Make the call → Change to `status: accepted`, finalize action items
-4. Execute → Check off action items as you complete them
+3. Make the call → Change to `status: accepted`, describe what changes
+4. Codify → Apply changes to reference files
 5. Finish → Change to `status: codified`
 
 **Why this works:**

@@ -116,9 +116,11 @@ See: `research/2026-01-10-competitor-pricing-analysis.md`
 ## Decision
 [The actual choice with rationale]
 
-## Action Items
-- [x] Update offer.md with new pricing
-- [ ] Create ads for new price point
+## What Changes
+
+Reference files affected:
+- `reference/core/offer.md` — update pricing section
+- New ads needed for updated price point
 ```
 
 ### 3. Codify (Evergreen)
@@ -577,9 +579,11 @@ See: `research/2026-01-10-pricing-analysis.md`
 Decisions note what context they updated:
 
 ```markdown
-## Action Items
-- [x] Update reference/core/offer.md with new pricing
-- [x] Add new angle to reference/proof/angles/value-stack.md
+## What Changes
+
+Reference files affected:
+- `reference/core/offer.md` — updated pricing section
+- `reference/proof/angles/value-stack.md` — new angle added
 ```
 
 This creates a traceable chain: Research → Decision → Context → Output
@@ -589,9 +593,10 @@ This creates a traceable chain: Research → Decision → Context → Output
 Decisions about content pillars, platforms, or cadence update content-strategy.md:
 
 ```markdown
-## Action Items
-- [x] Add "transformation stories" pillar to reference/domain/content-strategy.md
-- [x] Update platform strategy with Instagram Reels cadence
+## What Changes
+
+Reference files affected:
+- `reference/domain/content-strategy.md` — add "transformation stories" pillar, update platform strategy with Instagram Reels cadence
 ```
 
 Content strategy links back to the decisions that informed pillar choices, creating the same traceable chain.

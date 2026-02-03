@@ -37,19 +37,13 @@ supersedes: null
 
 [Why we needed to make this decision. What situation prompted it.]
 
-**Trigger:** [The specific event or question that started this]
-
----
-
 ## Research Summary
 
 [Key findings from linked research. Don't duplicate — synthesize.]
 
 See: [linked research files]
 
----
-
-## Considered Options
+## Options
 
 ### Option A: [Name]
 
@@ -63,10 +57,6 @@ See: [linked research files]
 - [Con 1]
 - [Con 2]
 
-**Effort:** [Low/Medium/High]
-
----
-
 ### Option B: [Name]
 
 [Brief description]
@@ -79,63 +69,34 @@ See: [linked research files]
 - [Con 1]
 - [Con 2]
 
-**Effort:** [Low/Medium/High]
-
----
-
-### Option C: [Name] (if applicable)
-
-[Same structure]
-
----
-
 ## Decision
 
 **We chose: Option [X]**
 
 [2-3 sentences explaining WHY this option. What made it the right choice given our situation, constraints, and goals.]
 
----
-
 ## Consequences
 
 ### What Becomes Easier
-
 - [Consequence 1]
 - [Consequence 2]
 
 ### What Becomes Harder
-
 - [Trade-off 1]
 - [Trade-off 2]
 
 ### What We're Accepting
-
 - [Risk or limitation we're knowingly accepting]
 
----
+## What Changes
 
-## Action Items
+[Describe which reference files are affected and what the key changes are. This is what codify reads to know what to update.]
 
-Reference files to update:
+[Example: offer.md gets a new pricing tier section. audience.md needs segments for each tier. A new angle file for upgrade messaging.]
 
-- [ ] Update `reference/core/offer.md` — [Specific change]
-- [ ] Update `reference/core/audience.md` — [Specific change]
-- [ ] Create `reference/proof/angles/[new-angle].md` — [Description]
-- [ ] Update `CLAUDE.md` — [Specific change]
+## Review Date (Optional)
 
-Other actions:
-
-- [ ] [Non-reference action]
-- [ ] [Non-reference action]
-
----
-
-## Review Date
-
-[When should we revisit this decision? Set a specific date or trigger.]
-
-Example: "Revisit after 100 new members" or "Review on 2026-04-01"
+[When to revisit — a date or trigger. Example: "Revisit after 100 new members"]
 ```
 
 ---
@@ -146,9 +107,7 @@ Example: "Revisit after 100 new members" or "Review on 2026-04-01"
 |--------|---------|
 | `proposed` | Decision drafted, not yet accepted |
 | `accepted` | Decision made and committed to |
-| `codified` | Action items applied to reference files |
-| `superseded` | Replaced by a newer decision |
-| `deprecated` | No longer relevant |
+| `codified` | Changes applied to reference files |
 
 ---
 
@@ -176,7 +135,7 @@ supersedes: decisions/2025-12-01-original-pricing.md
 ```
 
 **In the old decision:**
-Update status to `superseded` and add note:
+Add a note at the top (keep status as `accepted` or `codified`):
 ```markdown
 > **Superseded by:** decisions/2026-01-17-pricing-tier-strategy.md
 ```
@@ -192,25 +151,26 @@ Before marking decision as `accepted`:
 - [ ] Each option has clear pros/cons
 - [ ] Decision states the choice AND the reasoning
 - [ ] Consequences acknowledge trade-offs
-- [ ] Action items are specific (file + change)
-- [ ] Review date is set
+- [ ] What Changes describes affected files and key changes
 
 ---
 
-## Action Item Format
+## What Changes Format
 
-Be specific about what changes in which file:
+Be specific about which files are affected and what changes:
 
 **Good:**
 ```markdown
-- [ ] Update `reference/core/offer.md` — Add "30-day guarantee" section after pricing
-- [ ] Update `reference/core/voice.md` — Add "risk-free" to approved vocabulary
+## What Changes
+
+offer.md gets a "30-day guarantee" section after pricing. voice.md adds "risk-free" to approved vocabulary. A new angle file (risk-reversal.md) captures the guarantee-as-differentiator messaging.
 ```
 
 **Bad:**
 ```markdown
-- [ ] Update offer
-- [ ] Fix voice file
+## What Changes
+
+Update offer and voice files.
 ```
 
 ---
@@ -232,11 +192,7 @@ supersedes: decisions/2025-09-01-single-tier-pricing.md
 
 ## Context
 
-Currently offering one tier at $97/month. Growth has plateaued at 150 members. Need to decide whether to add tiers to capture more of the market.
-
-**Trigger:** Three members asked about "advanced" content in the same week.
-
----
+Currently offering one tier at $97/month. Growth has plateaued at 150 members. Need to decide whether to add tiers to capture more of the market. Three members asked about "advanced" content in the same week.
 
 ## Research Summary
 
@@ -247,9 +203,7 @@ Currently offering one tier at $97/month. Growth has plateaued at 150 members. N
 
 See: research/2026-01-15-pricing-tier-analysis-gemini.md
 
----
-
-## Considered Options
+## Options
 
 ### Option A: Keep Single Tier
 
@@ -263,10 +217,6 @@ Stay at $97/month, focus on value.
 - Missing free-tier lead generation
 - Leaving money on table from power users
 
-**Effort:** None
-
----
-
 ### Option B: Two-Tier (Free + Paid)
 
 Add free tier with limited content.
@@ -278,10 +228,6 @@ Add free tier with limited content.
 **Cons:**
 - Dilutes community quality
 - Support burden from free members
-
-**Effort:** Medium
-
----
 
 ### Option C: Three-Tier (Free + $97 + $297)
 
@@ -297,61 +243,36 @@ Full tier structure with free, standard, and premium.
 - Potential confusion
 - Must clearly differentiate tiers
 
-**Effort:** High
-
----
-
 ## Decision
 
 **We chose: Option C (Three-Tier)**
 
 The research shows three tiers maximizes both reach and revenue. Our audience values "investment" framing, so premium tier won't cannibalize base tier. The member requests for "advanced" content validate demand for premium.
 
----
-
 ## Consequences
 
 ### What Becomes Easier
-
 - Lead generation through free tier
 - Upselling committed members to premium
 - Revenue growth without member count growth
 
 ### What Becomes Harder
-
 - Content planning (must differentiate tiers)
 - Community management (three member segments)
 - Messaging (explaining tier differences)
 
 ### What We're Accepting
-
 - Free tier members may be lower quality
 - Premium tier needs exclusive content we haven't created yet
 - 30-60 days to see if this works
 
----
+## What Changes
 
-## Action Items
+offer.md gets a three-tier pricing structure with benefits per tier (Free, $97 Core, $297 Premium). audience.md adds three segments: Free Seeker, Core Member, Power User — each with distinct psychographics and buying triggers. A new angle file (tier-comparison.md) captures upgrade messaging. domain/membership/tiers.md gets the full tier specification.
 
-Reference files to update:
+Outside reference: create free tier content curriculum, define premium-only cadence, configure Skool tiers.
 
-- [ ] Update `reference/core/offer.md` — Add three-tier pricing structure with benefits per tier
-- [ ] Update `reference/core/audience.md` — Add segments for Free Seeker, Core Member, Power User
-- [ ] Create `reference/proof/angles/tier-comparison.md` — Angle for upgrade messaging
-- [ ] Update `reference/domain/membership/tiers.md` — Full tier specification
+## Review Date (Optional)
 
-Other actions:
-
-- [ ] Create free tier content curriculum
-- [ ] Define premium-only content cadence
-- [ ] Set up Skool tier configuration
-
----
-
-## Review Date
-
-Review on 2026-03-17 (60 days) with data on:
-- Free-to-paid conversion rate
-- Premium tier uptake
-- Churn by tier
+Review on 2026-03-17 (60 days) — free-to-paid conversion rate, premium tier uptake, churn by tier.
 ```

@@ -6,7 +6,7 @@ Apply decisions to reference files. Merges research findings and decisions into 
 
 ## When to Use
 
-- After a decision with `status: accepted` and action items
+- After a decision with `status: accepted`
 - When research findings should update reference files
 - When user has new context to add (testimonials, angles, proof)
 - When business has changed and reference files need updating
@@ -16,13 +16,11 @@ Apply decisions to reference files. Merges research findings and decisions into 
 ## Workflow
 
 1. **Read source** — Decision file or research file
-2. **Extract action items** — What reference files need updating
-3. **For each action item:**
-   - Read target reference file
-   - Apply the specified update
-   - Preserve existing content
-4. **Mark complete** — Update source status to "codified"
-5. **Report changes** — Summary of what was updated
+2. **Identify what changes** — Read the `## What Changes` section (or infer from `## Decision` and `## Consequences` if What Changes is missing). Identify which reference files are affected and what the key changes are.
+3. **Propose edits** — For each affected reference file, read it, then propose the specific update to the user.
+4. **Apply with confirmation** — After user confirms, apply each update. Preserve existing content.
+5. **Mark complete** — Update decision status from `accepted` to `codified`
+6. **Report changes** — Summary of what was updated
 
 ---
 
@@ -182,7 +180,6 @@ If `content-strategy.md` does not exist and the user is codifying content-relate
 
 Codification is complete when:
 
-- [ ] All action items from decision applied
-- [ ] Reference files updated
-- [ ] Source status changed to "codified"
-- [ ] User confirms changes are correct
+- All changes described in the decision have been applied to reference files
+- Source decision status changed from `accepted` to `codified`
+- User confirms the reference file updates capture the decision

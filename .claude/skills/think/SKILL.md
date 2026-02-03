@@ -200,7 +200,7 @@ ls reference/domain/content-strategy.md 2>/dev/null
 |----------------|---------|
 | Recent research, no decision | "You have research on [topic]. Ready to make a decision?" |
 | Proposed decision | "Decision [topic] is proposed. Ready to accept it?" |
-| Accepted decision, unchecked items | "Decision [topic] has action items. Ready to codify?" |
+| Accepted decision (not yet codified) | "Decision [topic] is accepted. Ready to codify the changes into reference files?" |
 | content-strategy.md exists but empty/thin | "Your content strategy file is a skeleton. Want to fill it in? We can derive pillars from your soul.md + offer.md + audience.md." |
 | content-strategy.md missing (community biz) | "You don't have a content strategy yet. Want to build one? It'll define your pillars, platforms, and cadence." |
 | skool-surfaces.md missing (community biz with live Skool) | "Your Skool about page and pricing card copy aren't in reference yet. Want to add them? Skills check this for congruence." |
@@ -285,17 +285,17 @@ Don't skip to content generation. Mining → Human Synthesis → Reference Updat
 
 Present options with pros/cons. Document choice and rationale.
 
-### 6. Action Items
+### 6. What Changes
 
-List action items in the decision file:
+Describe what reference files are affected in the decision file:
 
 ```markdown
-## Action Items
-- [ ] Update reference/core/offer.md - Add guarantee section
-- [ ] Create reference/proof/angles/risk-reversal.md
+## What Changes
+
+offer.md gets a guarantee section after pricing. A new angle file (risk-reversal.md) captures the guarantee messaging.
 ```
 
-Optionally create Claude tasks for execution tracking. See [decide-phase.md](references/decide-phase.md).
+See [decide-phase.md](references/decide-phase.md) for format details.
 
 ### 7. Checkpoint
 
@@ -303,7 +303,7 @@ Optionally create Claude tasks for execution tracking. See [decide-phase.md](ref
 
 ### 8. Codify
 
-Apply action items to reference files. Mark decision as codified.
+Apply changes described in `## What Changes` to reference files. Mark decision as codified.
 
 **Codify targets include:** `reference/core/*.md`, `reference/proof/angles/*.md`, `reference/proof/testimonials.md`, **`reference/domain/content-strategy.md`** (pillars, hooks library, framework library, metrics), `reference/domain/funnel/skool-surfaces.md` (live Skool copy — update when about page or pricing changes).
 

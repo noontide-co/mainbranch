@@ -471,21 +471,21 @@ status: draft
 ---
 type: decision
 date: YYYY-MM-DD
-status: active
+status: proposed
 ---
 
 # Decision: [Topic]
 
-## Situation
+## Context
 
 [What's happening, what prompted this decision]
 
-## Research
+## Research Summary
 
 [Summary of research that informed this]
 See: `research/YYYY-MM-DD-topic.md`
 
-## Options Considered
+## Options
 
 ### Option A: [Name] (selected)
 **Pros:**
@@ -499,10 +499,13 @@ See: `research/YYYY-MM-DD-topic.md`
 
 [The actual choice with rationale]
 
-## Action Items
+## Consequences
 
-- [ ] [Action 1]
-- [ ] [Action 2]
+[What becomes easier, harder, and what you're accepting]
+
+## What Changes
+
+[Which reference files are affected and what the key changes are]
 ```
 
 ---
