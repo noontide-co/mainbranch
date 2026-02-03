@@ -111,6 +111,20 @@ See [the-think-cycle.md](the-think-cycle.md) for deep dive.
 
 ---
 
+### /end - Close Session
+**Use when:** Done for the day, wrapping up, want to close intentionally.
+
+**What it does:**
+- Scans today's git activity (new files, changes)
+- Summarizes what happened this session
+- Offers a crystallize moment if decisions were made
+- Commits uncommitted work
+- Closes with a brief summary
+
+**Daily habit:** End sessions with `/end` to close intentionally.
+
+---
+
 ### /help - Get Answers
 **Use when:** Confused, stuck, have questions about Main Branch.
 
@@ -149,6 +163,9 @@ What do you need?
 │
 ├── Build a public wiki?
 │   └── /wiki
+│
+├── Done for the day?
+│   └── /end
 │
 └── Confused or stuck?
     └── /help

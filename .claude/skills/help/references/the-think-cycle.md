@@ -175,6 +175,12 @@ Pick one and commit. The system adapts.
 
 ---
 
+## Closing the Loop: /end
+
+At the end of a session, `/end` offers a natural crystallize moment. If you made decisions during the day, it asks: "What did you learn?" This is where accumulated doing becomes conscious understanding -- the highest-leverage point in the think cycle. You don't have to engage with it, but when you do, the insights often update reference files in ways that improve everything downstream.
+
+---
+
 ## Next Step
 
 Got a question you've been wrestling with? Run `/think`. The habit of documenting your thinking is what makes this powerful over time.

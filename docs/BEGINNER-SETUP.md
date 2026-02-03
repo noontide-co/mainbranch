@@ -60,7 +60,15 @@ claude
 /start
 ```
 
-That's it. `/start` loads your business repo and routes you to the right skill.
+`/start` loads your business repo and routes you to the right skill.
+
+When you're done for the day:
+
+```
+/end
+```
+
+`/end` summarizes what happened, commits your work, and closes the session intentionally.
 
 ---
 
@@ -121,6 +129,7 @@ Once set up, type these commands:
 - `/vsl` - Write video sales letters (Skool or B2B)
 - `/organic` - Mine competitors, create Reels/TikTok/carousels
 - `/site` - Build and deploy landing pages from your reference files
+- `/end` - Close your session intentionally
 - `/help` - Get answers to any question
 
 ---

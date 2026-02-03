@@ -36,6 +36,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Reels, TikTok, organic, /organic | [organic-help.md](references/organic-help.md) |
 | Skool, community | [skool-help.md](references/skool-help.md) |
 | Wiki, atomic notes, publish, WikiLinks | Route to `/wiki` |
+| Done, wrapping up, closing, end session, end of day | Route to `/end` |
 | Better outputs, quality, what next | [making-outputs-better.md](references/making-outputs-better.md) |
 | Content strategy, pillars, platforms, newsletter, content plan | [content-strategy-help.md](references/content-strategy-help.md) |
 | Subagents, parallel, agents, context window, tokens | [working-with-agents.md](references/working-with-agents.md) |
@@ -65,3 +66,4 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | What's the content pipeline? | Newsletter-first: write one keystone piece weekly, then `/organic` adapts it for social platforms, `/ads` amplifies top performers. One idea, many formats. |
 | What are subagents? | Claude can spawn parallel agents to research or review simultaneously. You'll see it happen automatically in `/think` (multi-source research) and `/ads review` (6 compliance lenses). Each agent gets its own context window so your main conversation stays clean. |
 | How do I manage context/tokens? | When context gets heavy, break work into parallel subagents. Heavy research (transcripts, mining) runs in subagents so raw content stays out of your main conversation. Synthesized summaries come back instead. Re-invoke `/think` after compaction to reload context. |
+| How do I close a session? | Run `/end`. It summarizes what happened, asks if you have final thoughts, offers a crystallize moment if you made decisions, commits uncommitted work, and says goodbye. Bookend to `/start`. |

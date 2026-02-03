@@ -227,6 +227,8 @@ vip/
 │   │   │   └── SKILL.md
 │   │   ├── site/
 │   │   │   └── SKILL.md
+│   │   ├── end/
+│   │   │   └── SKILL.md
 │   │   └── ...
 │   │
 │   ├── lenses/                      # Review criteria for /ads review
@@ -541,6 +543,7 @@ Skills write to `content/drafts/`. The move from drafts to scheduled to publishe
 | `/organic` | Adapts keystone into platform-specific formats |
 | `/ads` | Amplifies top-performing organic content |
 | `/site` | Conversion endpoint — landing pages where pipeline traffic lands |
+| `/end` | Session close — summarizes activity, surfaces crystallize moments, commits work |
 
 ---
 

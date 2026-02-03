@@ -79,8 +79,9 @@ Take inventory. Notice what's missing. Proactively suggest skills they haven't i
 | Building a wiki or notes | `/wiki` |
 | Need a landing page or website | `/site` |
 | Asking questions, troubleshooting | `/help` |
+| Wrapping up, done for today, closing out | `/end` |
 
-**Quick triggers:** "research/decide" → `/think` · "ads/copy" → `/ads` · "organic/reels" → `/organic` · "newsletter/email" → `/newsletter` · "site/landing page/website" → `/site` · "content strategy/pillars" → `/think` · "help/stuck" → `/help`
+**Quick triggers:** "research/decide" → `/think` · "ads/copy" → `/ads` · "organic/reels" → `/organic` · "newsletter/email" → `/newsletter` · "site/landing page/website" → `/site` · "content strategy/pillars" → `/think` · "help/stuck" → `/help` · "done/wrapping up/end my day" → `/end`
 
 ---
 
@@ -240,6 +241,7 @@ Research files also add: `linked_decisions: []`
 | `/site` | Generate and deploy landing pages from reference files |
 | `/help` | Answer questions, troubleshoot, explain |
 | `/newsletter` | Generate weekly newsletter from thinking work (coming soon) |
+| `/end` | Close session intentionally — summary, crystallize, commit |
 | `/pull` | Quick update vip (auto in /start) |
 
 ---
