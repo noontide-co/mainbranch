@@ -1,7 +1,6 @@
 ---
 name: end
 description: "Session-closing skill that helps users wrap up intentionally. Use when: user says done, wrapping up, end my day, closing out, call it a day, goodnight, that's it for today. Bookend to /start. Scans git activity, surfaces what happened, offers a crystallize moment for accumulated decisions, commits uncommitted work, and closes with a brief summary."
-disable-model-invocation: true
 ---
 
 # End

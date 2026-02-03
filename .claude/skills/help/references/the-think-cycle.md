@@ -58,6 +58,27 @@ Claude will:
 
 ---
 
+## Working After Compaction
+
+When Claude hits the context limit, it compacts — the conversational thread gets summarized and older details fade. This can feel disorienting, but the system is designed for exactly this scenario.
+
+**Your files survive no matter what.** Research files, decision files, reference files — they're on disk, version controlled in git. Compaction loses conversational context, not your repo. If an insight made it into a file, it's safe. If it only existed in conversation, it's gone after compaction. When in doubt, save a research file.
+
+**You can help Claude rebuild context fast.** After compaction (or in a new session), point Claude at recent work:
+- "Look at my last 3 decisions"
+- "Read the commits from today"
+- "Summarize what's in `research/` from this week"
+
+Claude picks up the thread from your files, not from memory.
+
+**`/start` does this automatically.** It scans your folders, checks recent activity, and routes you to the right place. You don't have to manually reconstruct anything — just `/start` and go.
+
+**You can always look yourself.** Open your repo in Cursor, Warp, VS Code, or any text editor. The files are plain markdown. Browse `decisions/` to see where you left off. Read `research/` to remember what you explored. Your repo is readable by humans, not just AI.
+
+**Context management is a skill.** It's nuanced at first — knowing when to save a file, how much to capture, when to update reference vs. leave as research. But it gets easier. After a few sessions, the rhythm becomes natural: think, capture, move on. The system handles the rest.
+
+---
+
 ## What Counts as Research?
 
 Research is broad:
@@ -92,9 +113,11 @@ Research = any investigation that informs a decision.
 
 | Mode | What It Does |
 |------|--------------|
-| `/think "topic"` | Full flow: research → decide → codify |
+| `/think "topic"` | Inline usage — give it a question directly and it runs the full flow: research → decide → codify. Works great for specific questions. |
 | `/think research "topic"` | Just investigate, save findings |
 | `/think decide "topic"` | Document decision (research already done) |
+
+**Note:** `/think` by itself (no argument) loads the full skill with routing and mode detection — it'll ask what you want to work on and guide you through the process. Both approaches are valid. Inline is faster when you know the question; bare `/think` is better when you want to explore or aren't sure where to start.
 
 ---
 
@@ -178,6 +201,8 @@ Pick one and commit. The system adapts.
 ## Closing the Loop: /end
 
 At the end of a session, `/end` offers a natural crystallize moment. If you made decisions during the day, it asks: "What did you learn?" This is where accumulated doing becomes conscious understanding -- the highest-leverage point in the think cycle. You don't have to engage with it, but when you do, the insights often update reference files in ways that improve everything downstream.
+
+If you're worried about losing work when a session ends, `/end` is your safety net — it reviews everything that happened and makes sure nothing falls through the cracks before you close.
 
 ---
 

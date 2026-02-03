@@ -49,6 +49,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 - **Explain "why"** — Not just steps
 - **End with action** — Suggest next skill (`/think`, `/setup`, `/ads`, `/vsl`)
 - **Beginner-friendly** — Many never used Terminal
+- **Honest about gaps** — The system is new and evolving. Acknowledge what's still being built rather than presenting everything as polished.
 
 ---
 
@@ -65,5 +66,9 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | How do pillars work? | Each pillar is a content theme that passes three tests: Soul test (connects to why), Offer test (leads to mechanism), Audience test (they care). 3-5 pillars cover your content universe. |
 | What's the content pipeline? | Newsletter-first: write one keystone piece weekly, then `/organic` adapts it for social platforms, `/ads` amplifies top performers. One idea, many formats. |
 | What are subagents? | Claude can spawn parallel agents to research or review simultaneously. You'll see it happen automatically in `/think` (multi-source research) and `/ads review` (6 compliance lenses). Each agent gets its own context window so your main conversation stays clean. |
-| How do I manage context/tokens? | When context gets heavy, break work into parallel subagents. Heavy research (transcripts, mining) runs in subagents so raw content stays out of your main conversation. Synthesized summaries come back instead. Re-invoke `/think` after compaction to reload context. |
+| How do I manage context/tokens? | Context management is a skill that develops over time. Your files (research/, decisions/, reference/) survive compaction — only conversation memory compresses. After compaction, help Claude rebuild by pointing it at recent files or running /start. Save insights to research files early — if it's in a file, it's safe. |
 | How do I close a session? | Run `/end`. It summarizes what happened, asks if you have final thoughts, offers a crystallize moment if you made decisions, commits uncommitted work, and says goodbye. Bookend to `/start`. |
+| Do my files disappear when context compacts? | No. Compaction compresses Claude's conversation memory, not your files. Everything in research/, decisions/, and reference/ is on your hard drive, version controlled with git. If it's in a file, it's permanent. |
+| How do I recover after compaction? | Point Claude at recent files: "look at my last 3 decisions" or "read the commits from today." Or just run /start — it scans your folders and rebuilds context automatically. You can also open files yourself in Cursor, Warp, VS Code, or any text editor. |
+| Is this system finished? | Still new and actively being tuned. We're building around Claude Code, minimizing commands you need to learn while giving you real power. There's progressive discovery in /think — the more you use it, the more it reveals. You might find workflows we haven't documented yet. Post them in Skool. |
+| Where can I see my files? | Open your business repo folder in Finder, Cursor, Warp, VS Code, or any text editor. They're regular .md files on your hard drive. GitHub Desktop also shows them with version history. |

@@ -35,6 +35,12 @@ Skills are specialized workflows. Each one does something specific. This guide h
 ### /think - Research, Decisions, and Context
 **Use when:** Exploring a question, making a strategic decision, need to document rationale, or adding new context to reference files.
 
+**Two ways to invoke:**
+- `/think` — Loads the full skill with routing and mode detection. Best when you're starting a focused thinking session.
+- `/think "my question"` — Jumps straight into exploring that question. Best when you already know what you're investigating.
+
+Both are valid. Use whichever fits the moment. Don't overthink which to use.
+
 **What it does:**
 - Researches topics (web, your files, your input)
 - Synthesizes findings
@@ -121,6 +127,8 @@ See [the-think-cycle.md](the-think-cycle.md) for deep dive.
 - Commits uncommitted work
 - Closes with a brief summary
 
+**Why it matters:** If you've ever closed a terminal and wondered "did that stick?", `/end` is the answer. It reviews your git activity, surfaces anything that might need crystallizing into reference, and commits uncommitted work. Nothing falls through the cracks.
+
 **Daily habit:** End sessions with `/end` to close intentionally.
 
 ---
@@ -201,6 +209,7 @@ If you don't know which skill to use:
 1. Run `/start` - It'll detect your state and suggest
 2. Ask `/help` - Describe what you want to accomplish
 3. Run `/think` - If it's a question worth exploring
+4. Still learning the system? That's expected — context management is a skill that develops over time. The more you use `/think` and `/end`, the more natural it gets.
 
 Most of the time, `/start` will point you in the right direction.
 
