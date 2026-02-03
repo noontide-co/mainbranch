@@ -124,25 +124,39 @@ Ask once:
 git log --since="6am" --name-only --diff-filter=AM -- decisions/ 2>/dev/null
 ```
 
-If decisions exist, offer ONE reflective question:
+If decisions or research exist, craft ONE genuinely provocative question.
 
-> "You made [N] decision(s) today. What did you learn?"
+**This is the most important step in /end.** Don't ask generic questions like "What did you learn?" or "What shifted?" Read the actual decisions and research from today. Find the thread that's still pulling -- the unanswered question, the tension between two choices, the implication nobody said out loud yet. Ask THAT.
 
-Or, if you can be specific:
+**How to craft the question:**
 
-> "You decided on [topic]. What shifted in your thinking?"
+1. Read today's decision files and research files (at least skim them)
+2. Look for: unresolved tensions, assumptions that weren't tested, implications that weren't followed, connections between separate decisions that nobody drew yet
+3. Ask one question that makes them stop and think -- the kind of question a great advisor would ask at the end of a strategy session
 
-**This is the crystallize moment.** The research says this is where tacit understanding becomes explicit. But it only works if it feels like a natural question, not homework.
+**Examples of BAD crystallize questions:**
+- "What did you learn today?" (too generic)
+- "What shifted in your thinking?" (sounds like therapy homework)
+- "You made 3 decisions. Anything to add?" (not a real question)
+
+**Examples of GOOD crystallize questions:**
+- "You positioned Main Branch as a thinking system, not a memory tool. But your pricing tiers are structured around feature access. Is the thing you're selling aligned with the thing you're saying?"
+- "You built 5 new angles today but your content strategy still has zero content derived from 53 decisions. What's actually blocking the pipeline?"
+- "You decided trial members get full access. What happens to the people who downgrade after 7 days but already built reference files with premium skills?"
+
+The question should feel like it came from someone who was paying attention all day. Because you were.
 
 **If the user engages:**
 
+- Let them explore. This is their thinking time. Don't rush to close.
 - Listen. Reflect back what they said in one sentence.
-- If the insight is substantial, offer to append it to the decision file or reference file it relates to.
-- If they surface a pattern across multiple decisions: "That sounds like something worth capturing in [relevant reference file]. Want to add it now or next session?"
+- If the insight is substantial, offer to save it -- append to a decision file, update a reference file, or create a quick research note.
+- If they surface a pattern across multiple decisions, offer to capture it where it belongs.
+- If the exploration goes deep, let it go deep. Don't deflect to "pick it up with /think next session." If someone is having an insight at the end of their day, that's the highest-value moment. Stay with it.
 
 **If the user deflects or says "nothing":** That is fine. Say something like "Fair enough" and move on. Never push.
 
-**If no decisions were made today:** Skip this step entirely. Do not ask reflective questions about research or outputs -- that is /think's job.
+**If nothing meaningful happened today:** Skip this step. Don't force a crystallize moment on a light session.
 
 ---
 
@@ -230,7 +244,7 @@ Only scan the primary business repo (from config). If the user worked across rep
 - **Not a task manager.** No to-do lists or assignments.
 - **Not a journal.** The final thought capture is optional and brief.
 - **Not an audit.** The summary is observational, not evaluative.
-- **Not /think.** If the crystallize moment turns into deep exploration, suggest: "Sounds like there's more to unpack here. Pick it up with `/think` next session?"
+- **Not /think** — but if someone is having an insight, stay with it. The crystallize moment can go deep. That's the point.
 
 ---
 
