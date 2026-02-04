@@ -149,7 +149,7 @@ cd ~/Documents/GitHub/vip 2>/dev/null && git pull origin main 2>/dev/null || tru
 
 3. **Ask the user** (if nothing found)
 
-**Verify with Read, not Glob:** Once you have a candidate path, use `Read` on `[path]/reference/core/offer.md` to confirm it exists.
+**Verify with Read, not Glob:** Once you have a candidate path, use `Read` on `[path]/reference/core/soul.md` to confirm it's a business repo. (Don't check `core/offer.md` — in multi-offer repos, the primary offer details live in `offers/[name]/offer.md` instead. `soul.md` is always in `core/`.)
 
 **Skip vip** — any path containing `.claude/skills/` is the engine, not a business repo.
 

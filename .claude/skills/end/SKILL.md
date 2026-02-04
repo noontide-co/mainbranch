@@ -86,7 +86,7 @@ git diff --name-only --diff-filter=AM HEAD@{6am}..HEAD 2>/dev/null
 | Outputs generated | New files in `outputs/` or `content/` |
 | Uncommitted changes | `git status --short` output |
 
-**Multi-offer detection:** If `reference/offers/` exists, note which offers had files changed:
+**Multi-offer detection (skip if no `offers/` folder — single-offer mode, everything reads from `core/`):** If `reference/offers/` exists, note which offers had files changed:
 ```bash
 git diff --name-only HEAD@{midnight}..HEAD -- reference/offers/ 2>/dev/null | head -20
 ```
