@@ -148,6 +148,21 @@ See [tool-surfacing.md](references/tool-surfacing.md) for full details on progre
 
 ---
 
+## Offer Context Resolution
+
+Before loading reference files, resolve the active offer:
+
+1. Check `.vip/local.yaml` for `current_offer`
+2. If set: load `reference/offers/[current_offer]/offer.md` as the active offer
+3. If not set AND `reference/offers/` exists: ask which offer
+4. If no `offers/` folder: use `reference/core/offer.md` (single-offer, backward compatible)
+
+**Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
+**Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
+**Accumulate files** (load both): `testimonials.md` (offer-specific + brand-level)
+
+---
+
 ## Where Files Go
 
 All files save to YOUR business repo, not the engine (vip).
@@ -157,6 +172,9 @@ your-business-repo/          <- Files saved here
 ├── research/                 <- Research output
 ├── decisions/                <- Decision output
 └── reference/                <- Codify updates this
+    ├── core/                 <- Brand-level
+    ├── offers/               <- Per-offer (if multi-offer)
+    └── domain/
 
 vip/ (engine)                 <- Never modified
 ```
@@ -254,6 +272,7 @@ ls reference/domain/content-strategy.md 2>/dev/null
 | content-strategy.md exists but empty/thin | "Your content strategy file is a skeleton. Want to fill it in? We can derive pillars from your soul.md + offer.md + audience.md." |
 | content-strategy.md missing (community biz) | "You don't have a content strategy yet. Want to build one? It'll define your pillars, platforms, and cadence." |
 | skool-surfaces.md missing (community biz with live Skool) | "Your Skool about page and pricing card copy aren't in reference yet. Want to add them? Skills check this for congruence." |
+| `reference/offers/` exists | Multi-offer repo. Check `.vip/local.yaml` for `current_offer`. If not set, ask which offer this research/decision is about. |
 | Nothing in progress | "What are you trying to figure out?" |
 
 **The goal is reference files.** Research and decisions are waypoints. Keep asking: "What needs to happen to get this into reference?"
@@ -355,7 +374,7 @@ See [decide-phase.md](references/decide-phase.md) for format details.
 
 Apply changes described in `## What Changes` to reference files. Mark decision as codified.
 
-**Codify targets include:** `reference/core/*.md`, `reference/proof/angles/*.md`, `reference/proof/testimonials.md`, **`reference/domain/content-strategy.md`** (pillars, hooks library, framework library, metrics), `reference/domain/funnel/skool-surfaces.md` (live Skool copy — update when about page or pricing changes).
+**Codify targets include:** `reference/core/*.md`, `reference/offers/[active]/offer.md`, `reference/offers/[active]/audience.md` (when multi-offer), `reference/proof/angles/*.md`, `reference/proof/testimonials.md`, **`reference/domain/content-strategy.md`** (pillars, hooks library, framework library, metrics), `reference/domain/funnel/skool-surfaces.md` (live Skool copy — update when about page or pricing changes), `reference/domain/product-ladder.md` (when multi-offer, cross-offer decisions).
 
 ---
 

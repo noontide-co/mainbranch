@@ -79,7 +79,21 @@ Or naturally: "/think apply the pricing decision to reference files"
 
 ## Audit Before Codify
 
-When user wants to enrich existing files, audit completeness first:
+When user wants to enrich existing files, audit completeness first.
+
+When `current_offer` is set (multi-offer mode), audit offer-specific files first, then core files:
+
+| File | Status | Gaps |
+|------|--------|------|
+| offers/[active]/offer.md | Good | - |
+| offers/[active]/audience.md | Thin | Missing objections |
+| core/offer.md (brand-level) | Good | - |
+| core/audience.md (brand-level) | Good | - |
+| core/voice.md | Empty | Needs everything |
+| proof/testimonials.md | Thin | Only 1 testimonial |
+| proof/angles/ | Empty | No angles documented |
+
+When in single-offer mode (no `offers/` folder), use the standard table:
 
 | File | Status | Gaps |
 |------|--------|------|
@@ -126,19 +140,22 @@ When user has new information to add:
 
 ## Change Report
 
-After codifying, show summary:
+After codifying, show summary. Use offer-qualified paths when in multi-offer mode:
 
 ```markdown
 ## Changes Made
 
 | File | Changes |
 |------|---------|
-| core/offer.md | Added three-tier pricing section |
+| offers/community/offer.md | Added three-tier pricing section |
+| core/offer.md | Updated brand thesis to reflect multi-tier positioning |
 | core/voice.md | Added 5 phrases, 3 personality markers |
 | proof/testimonials.md | Added 3 new testimonials |
 
 **Still missing:** [anything not addressed]
 ```
+
+**Target resolution:** When `current_offer` is set, offer-specific changes go to `offers/[active]/`. Brand-level changes go to `core/`. If unsure whether a change is offer-specific or brand-level, ask the user.
 
 ---
 

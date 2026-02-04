@@ -32,16 +32,18 @@ cat ~/.config/vip/local.yaml 2>/dev/null
 
 **NEVER spawn Explore or Task agents for pre-flight.** Read files directly at the known repo path. Pre-flight should complete in under 10 seconds.
 
-At the repo path, check these files and count lines:
+At the repo path, resolve offer context first (see Offer Context Resolution above), then check these files and count lines:
 
 ```
-reference/core/offer.md      → 0 (missing), 1 (<20 lines), 2 (20-80), 3 (80+)
-reference/core/audience.md   → same scoring
+[resolved offer.md]          → 0 (missing), 1 (<20 lines), 2 (20-80), 3 (80+)
+[resolved audience.md]       → same scoring
 reference/core/voice.md      → same scoring
 reference/proof/testimonials.md → same scoring
 reference/proof/angles/*.md  → count .md files EXCLUDING README.md: 0=0, 1=1, 2-3=2, 4+=3
 reference/brand/visual-style.md → same scoring (optional)
 ```
+
+In multi-offer mode, score the offer-specific `offer.md` and `audience.md` (resolved via path resolution), not the brand-level `core/offer.md`.
 
 Composite = sum of all 6 scores (max 18).
 
@@ -108,20 +110,38 @@ These patterns that work in standard ads will get rejected in Employment:
 
 ---
 
+## Offer Context Resolution
+
+Before loading reference files, resolve the active offer:
+
+1. Check `.vip/local.yaml` for `current_offer`
+2. If set: load `reference/offers/[current_offer]/offer.md` as the active offer
+3. If not set AND `reference/offers/` exists: ask which offer
+4. If no `offers/` folder: use `reference/core/offer.md` (single-offer, backward compatible)
+
+**Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
+**Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
+**Accumulate files** (load both): `testimonials.md` (offer-specific + brand-level)
+
+**Offer argument:** `/ads [mode] [offer] [campaign]` — e.g., `/ads static community january-launch`
+If offer specified, overrides session `current_offer` for this run.
+
+---
+
 ## Reference Required (All Modes)
 
 Before creating ads, the business repo must have:
 
-| File | What It Contains | Required |
-|------|------------------|----------|
-| `reference/core/offer.md` | What you sell, price, mechanism, benefits | Yes |
-| `reference/core/audience.md` | Who buys, their pains, desires | Yes |
-| `reference/core/voice.md` | How you sound, tone, phrases, personality | Yes |
-| `reference/proof/testimonials.md` | Testimonials with names and outcomes | Yes |
-| `reference/proof/angles/*.md` | Different messaging entry points | Yes (at least 1) |
-| `reference/brand/visual-style.md` | Colors, typography, mood, prompt fragments | Optional (affects image gen) |
-| `reference/domain/content-strategy.md` | Content pillars, platform strategy | Optional (improves topic selection) |
-| `reference/domain/funnel/skool-surfaces.md` | Live Skool about page + pricing card copy | Optional (congruence check) |
+| File | Path | Required |
+|------|------|----------|
+| Offer | `offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | Yes |
+| Audience | `offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Yes |
+| Voice | `reference/core/voice.md` (always core) | Yes |
+| Testimonials | `reference/proof/testimonials.md` + `offers/[active]/testimonials.md` (accumulate) | Yes |
+| Angles | `reference/proof/angles/*.md` | Yes (at least 1) |
+| Visual Style | `reference/brand/visual-style.md` | Optional (affects image gen) |
+| Content Strategy | `reference/domain/content-strategy.md` (always brand-level) | Optional (improves topic selection) |
+| Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | Optional (congruence check) |
 
 If required files are missing, Step 0 pre-flight catches this and routes appropriately.
 
@@ -170,7 +190,7 @@ Campaign Batch 001
 4. **Write ALL image prompts first** (Part 1)
 5. **Write ALL ad copy second** (Part 2)
 6. **Cold traffic language check:** Every hook must pass the 3-second comprehension test — no insider jargon, no assumed context. Translate community language to customer language. See Joel's cold traffic guidance in [references/one-liner-methodology.md](references/one-liner-methodology.md).
-7. Save to `outputs/YYYY-MM-DD-static-ads-{campaign}/static-ads-batch-001.md`
+7. Save to `outputs/YYYY-MM-DD-static-ads-[offer]-{campaign}/static-ads-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
 8. Tell user: "Copy saved. Running automatic post-generation pipeline..."
 9. Run the **Automatic Post-Generation Pipeline** (see below). This handles git commit, compliance review, and image generation automatically.
 
@@ -232,7 +252,7 @@ Every one-liner **MUST** include at least one specific element:
 
 | Mode | How to Detect | What to Pull |
 |------|---------------|--------------|
-| **Has business repo** | Reference files exist | `reference/core/offer.md`, `reference/core/audience.md`, `reference/core/voice.md`, testimonials |
+| **Has business repo** | Reference files exist | Resolved `offer.md`, resolved `audience.md`, `reference/core/voice.md`, testimonials |
 | **No repo** | Nothing found | Ask user for materials |
 
 ### Output Format
@@ -240,7 +260,7 @@ Every one-liner **MUST** include at least one specific element:
 **Save to file, not chat.** This enables review to edit the file directly.
 
 1. Ask for campaign name (required)
-2. Create folder: `outputs/YYYY-MM-DD-one-liners-{campaign}/`
+2. Create folder: `outputs/YYYY-MM-DD-one-liners-[offer]-{campaign}/` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
 3. Save full generation context + one-liners to: `one-liners-batch-001.md`
 4. Tell user: "Saved 30 one-liners. Running automatic post-generation pipeline..."
 5. Run the **Automatic Post-Generation Pipeline** (see below). This handles git commit, compliance review, and image generation offer automatically.
@@ -315,7 +335,7 @@ Create diverse spoken-word scripts for camera delivery.
 4. **Generate Ads:** 15-30 scripts across all avatars
 5. **Optimize for Spoken:** ~5th grade reading level, contractions, fragments
 6. Ask for campaign name (required)
-7. **Save Output:** `outputs/YYYY-MM-DD-video-ads-{campaign}/video-ads-batch-001.md`
+7. **Save Output:** `outputs/YYYY-MM-DD-video-ads-[offer]-{campaign}/video-ads-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
 8. Tell user: "Video scripts saved. Running automatic post-generation pipeline..."
 9. Run the **Automatic Post-Generation Pipeline** (see below). This handles git commit and compliance review automatically. (No image generation for video scripts.)
 
@@ -580,10 +600,11 @@ Before saving any batch, verify:
 
 If context was compacted mid-task, check:
 
-1. **What mode?** Static, Video, or Review
-2. **What stage?** Planning angles, writing hooks, generating prompts, reviewing
-3. **What's done?** Check outputs/ folder for partial work
-4. **Resume:** Continue from the last completed step
+1. **Which offer?** Read `.vip/local.yaml` for `current_offer` to restore offer context
+2. **What mode?** Static, Video, or Review
+3. **What stage?** Planning angles, writing hooks, generating prompts, reviewing
+4. **What's done?** Check outputs/ folder for partial work
+5. **Resume:** Continue from the last completed step
 
 For static: Did we finish image prompts (Part 1) before copy (Part 2)?
 For video: How many of 15-30 scripts are done?

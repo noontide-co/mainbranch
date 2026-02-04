@@ -170,12 +170,19 @@ In the Generate step, the **newsletter is the keystone piece** -- long-form thin
 ```
 your-business/
 ├── CLAUDE.md                    # Instructions + engine reference
+├── .vip/                        # SESSION STATE — git-ignored
+│   └── local.yaml               # Active offer, session config
 │
 ├── reference/                   # EVERGREEN — What skills consume
 │   ├── core/                    # REQUIRED — Fundamental context
-│   │   ├── offer.md             # What you sell
+│   │   ├── soul.md              # Why you exist
+│   │   ├── offer.md             # What you sell (or brand thesis if multi-offer)
 │   │   ├── audience.md          # Who you sell to
 │   │   └── voice.md             # How you sound
+│   ├── offers/                  # (MULTI-OFFER ONLY)
+│   │   └── [name]/
+│   │       ├── offer.md         # Offer-specific details
+│   │       └── audience.md      # Offer-specific audience (optional)
 │   ├── brand/                   # Deep brand systems
 │   ├── proof/
 │   │   ├── testimonials.md      # Approved testimonials
@@ -183,6 +190,7 @@ your-business/
 │   │   └── angles/              # Messaging entry points
 │   │       └── [angle-name].md
 │   └── domain/                  # Business-type specific
+│       ├── product-ladder.md    # How offers relate (multi-offer only)
 │       └── content-strategy.md  # Pillars, platforms, cadence, metrics
 │
 ├── research/                    # DATED — Point-in-time exploration
@@ -250,7 +258,8 @@ vip/
 │       │       └── README.md
 │       └── domain-rubrics/          # Domain-specific folder structures
 │           ├── ecommerce.md
-│           └── community.md
+│           ├── community.md
+│           └── multi-offer.md
 │
 └── templates/
     └── modules/
@@ -301,14 +310,17 @@ Skills expect business context in standardized locations:
 
 | Context Type | Where to Look | Required |
 |--------------|---------------|----------|
-| Offer | `reference/core/offer.md` | Yes |
-| Audience | `reference/core/audience.md` | Yes |
-| Voice | `reference/core/voice.md` | Recommended |
+| Offer | `offers/[active]/offer.md` then `reference/core/offer.md` | Yes |
+| Audience | `offers/[active]/audience.md` then `reference/core/audience.md` | Yes |
+| Soul | `reference/core/soul.md` (always core) | Yes |
+| Voice | `reference/core/voice.md` (always core) | Recommended |
 | Angles | `reference/proof/angles/*.md` | At least one |
-| Testimonials | `reference/proof/testimonials.md` | Recommended |
+| Testimonials | `reference/proof/testimonials.md` (+ offer-specific if exists) | Recommended |
 | Typicality | `reference/proof/typicality.md` | For outcome claims |
-| Content Strategy | `reference/domain/content-strategy.md` | Recommended for /organic, /newsletter |
+| Content Strategy | `reference/domain/content-strategy.md` (always brand-level) | Recommended for /organic, /newsletter |
+| Product Ladder | `reference/domain/product-ladder.md` | Multi-offer only |
 | Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | When generating ads, organic, VSLs, or site copy (congruence) |
+| Session State | `.vip/local.yaml` | Multi-offer only |
 | Site config | `~/.mainbranch/sites.json` | When building/publishing with /site |
 
 Skills should fail gracefully with clear errors if required context is missing.
@@ -547,6 +559,124 @@ Skills write to `content/drafts/`. The move from drafts to scheduled to publishe
 
 ---
 
+## Multi-Offer Architecture
+
+Some businesses sell multiple products or services under a single brand. Multi-offer architecture handles this without duplicating repos or breaking the single-offer workflow.
+
+### The Shared Soul Test
+
+If products share `soul.md` and `voice.md`, they belong in the same repo. Different souls or voices = different repos. This is the only test that matters.
+
+### Multi-Business Boundary
+
+Separate brands = separate repos. Always. The question during a session is: "Are any other business repos relevant right now?" NOT "Do you have multiple businesses?" Each session works with one business repo at a time.
+
+### Folder Structure (Multi-Offer)
+
+```
+reference/
+├── core/                        # Brand-level (always present)
+│   ├── soul.md                  # ALWAYS core, never per-offer
+│   ├── offer.md                 # Brand thesis (multi-offer) or full offer (single)
+│   ├── audience.md              # Base audience (shared across offers)
+│   └── voice.md                 # ALWAYS core, never per-offer
+├── offers/                      # (multi-offer only)
+│   └── [name]/
+│       ├── offer.md             # Offer-specific details (required)
+│       └── audience.md          # Offer-specific audience override (optional)
+└── domain/
+    ├── product-ladder.md        # How offers relate (multi-offer only)
+    └── content-strategy.md      # Pillars, platforms, cadence (brand-level)
+```
+
+### Session Offer Context
+
+The active offer is stored in `.vip/local.yaml` at the business repo root:
+
+```yaml
+current_offer: community    # Active offer for this session
+```
+
+- Git-ignored (session state, not shared)
+- Written by `/start`, read by all skills
+- If missing or null: single-offer mode (everything reads from `core/`)
+
+### Canonical Path Resolution
+
+Skills resolve context files using this algorithm:
+
+```
+resolve_context(file_type):
+  # Always core -- no offer override possible
+  if file_type in [soul, voice]:
+    return core/{file_type}.md
+
+  # Always domain -- brand-level
+  if file_type in [content-strategy]:
+    return domain/content-strategy.md
+
+  # Offer-aware -- check active offer first
+  current_offer = read .vip/local.yaml -> current_offer
+
+  if current_offer AND exists offers/{current_offer}/{file_type}.md:
+    return offers/{current_offer}/{file_type}.md
+
+  # Fallback to core
+  return core/{file_type}.md
+```
+
+### Resolution Flow Diagram
+
+```
+                    ┌──────────────┐
+                    │ Skill needs  │
+                    │ context file │
+                    └──────┬───────┘
+                           │
+                    ┌──────▼───────┐
+                    │ soul.md or   │──── YES ──── core/{type}.md
+                    │ voice.md?    │
+                    └──────┬───────┘
+                           │ NO
+                    ┌──────▼───────┐
+                    │ content-     │──── YES ──── domain/content-strategy.md
+                    │ strategy?    │
+                    └──────┬───────┘
+                           │ NO
+                    ┌──────▼───────┐
+                    │ .vip/local   │──── NO ───── core/{type}.md (single-offer)
+                    │ .yaml exists │
+                    │ w/ offer?    │
+                    └──────┬───────┘
+                           │ YES
+                    ┌──────▼───────┐
+                    │ offers/      │
+                    │ {offer}/     │──── YES ──── offers/{offer}/{type}.md
+                    │ {type}.md    │
+                    │ exists?      │
+                    └──────┬───────┘
+                           │ NO
+                           │
+                    core/{type}.md (fallback)
+```
+
+### Backward Compatibility
+
+No `offers/` folder = single-offer mode. Everything works exactly as before. The resolution algorithm falls through to `core/` at every step when there is no active offer or no `offers/` folder. Existing single-offer repos require zero changes.
+
+### What Never Goes Per-Offer
+
+| File | Rationale |
+|------|-----------|
+| `soul.md` | Soul is brand identity -- different souls need different repos |
+| `voice.md` | Voice is brand personality -- one brand, one voice |
+| `content-strategy.md` | Distribution is brand-level, not per-product |
+| `brand/*` | Brand systems are unified across all offers |
+
+See `.claude/reference/domain-rubrics/multi-offer.md` for the complete rubric including scaling guidelines, migration path, and skill integration details.
+
+---
+
 ## File Linking
 
 ### Research → Decision
@@ -699,3 +829,4 @@ Client repos (BDC, autism-rewired) are separate — can be handed off independen
 7. **Compliance layers** — Planning, review, and data layers
 8. **Multi-repo workflow** — Engine as additional directory, business repo as primary
 9. **Content pipeline** — Newsletter-first waterfall: keystone → organic → ads → learn
+10. **Multi-offer support** — Cascading path resolution for businesses with multiple products under one brand

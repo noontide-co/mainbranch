@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Bootstrap a new business repo with Main Branch structure. Use when: (1) New user needs Claude Code environment configured (2) User says "set up", "get started", "initialize", "bootstrap", "create my repo", "new business" (3) User is new to Main Branch and needs full onboarding (4) Migrating existing business context into the Main Branch structure. Creates Chrome extension setup, two-repo model, business repo with full structure. Gathers context aggressively until complete. Applies domain rubrics by business type.
+description: Bootstrap a new business repo with Main Branch structure, or migrate an existing single-offer repo to multi-offer. Use when: (1) New user needs Claude Code environment configured (2) User says "set up", "get started", "initialize", "bootstrap", "create my repo", "new business" (3) User is new to Main Branch and needs full onboarding (4) Migrating existing business context into the Main Branch structure (5) User wants to add a second offer to an existing repo. Creates Chrome extension setup, two-repo model, business repo with full structure. Gathers context aggressively until complete. Applies domain rubrics by business type. Teaches concepts during setup.
 ---
 
 # Repo Setup
@@ -149,6 +149,25 @@ Don't block setup on this. Continue and mention it at the end.
 
 Read the appropriate rubric from `vip/.claude/reference/domain-rubrics/`.
 
+### 2.5: Offer Structure
+
+After business type, determine offer structure:
+
+> "How many distinct products or services do you sell?"
+
+**If one:** "Single offer — clean and simple. All your details go in `reference/core/`. Most people start here."
+
+**If multiple:** "Multiple offers under one brand. You share the same soul and voice, but each offer has its own specifics."
+- Ask: "What should we call each offer? Short slugs work best (e.g., 'community', 'newsletter', 'done-for-you')"
+- Ask: "How do these relate? Is there a natural progression — like a free tier that feeds into a paid one?" (This builds `product-ladder.md`)
+- Store offer names for Step 4 folder creation
+- Note: The multi-offer rubric lives at `vip/.claude/reference/domain-rubrics/multi-offer.md` — read it if the user has multiple offers
+
+**Multi-business check (brief, not interrogating):**
+> "Are any other business repos relevant right now? If you run completely separate brands, they each get their own repo. We're setting up this one."
+
+This check is simple and non-intrusive. If they say yes, note it and move on — they can run `/setup` again in the other repo later.
+
 ### 3. Gather Context (Be a Ruthless Journalist)
 
 Your job: extract every fact possible. Don't settle for partial info. Users provide context in batches — keep asking until YOU say "we have enough."
@@ -178,12 +197,31 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 ### 4. Create Folder Structure
 
 ```bash
+# Always create:
 mkdir -p .vip
 mkdir -p reference/core reference/brand reference/proof/angles reference/domain
 mkdir -p research decisions outputs content/drafts content/scheduled content/published
 ```
 
-Full structure:
+**Multi-offer only (if user has multiple offers from Step 2.5):**
+
+```bash
+# Create offer folders for each offer
+for offer in [offer-names]; do
+  mkdir -p "reference/offers/$offer"
+done
+
+# Write initial current_offer
+echo "current_offer: [first-offer]" > .vip/local.yaml
+
+# Ensure .vip/local.yaml is git-ignored (session state, not shared)
+grep -q ".vip/local.yaml" .gitignore 2>/dev/null || echo ".vip/local.yaml" >> .gitignore
+
+# Create product-ladder.md placeholder
+mkdir -p reference/domain
+```
+
+Full structure (single-offer):
 ```
 {business-name}/
 ├── CLAUDE.md              # Always loaded - business brain
@@ -219,6 +257,29 @@ Full structure:
 │
 └── outputs/               # Generated assets
     └── YYYY-MM-DD-batch-name/
+```
+
+Full structure (multi-offer — adds `offers/` and `product-ladder.md`):
+```
+{business-name}/
+├── ...                    # Same as above, plus:
+├── reference/
+│   ├── core/              # Brand-level (shared)
+│   │   ├── soul.md        # ALWAYS core — brand identity
+│   │   ├── offer.md       # Brand thesis (high-level)
+│   │   ├── audience.md    # Shared audience
+│   │   └── voice.md       # ALWAYS core — brand voice
+│   ├── offers/            # Offer-specific overrides
+│   │   ├── community/
+│   │   │   └── offer.md   # Offer-specific details
+│   │   └── course/
+│   │       └── offer.md
+│   └── domain/
+│       ├── product-ladder.md      # How offers relate
+│       └── content-strategy.md
+└── .vip/
+    ├── config.yaml        # Git-tracked team settings
+    └── local.yaml         # Git-IGNORED session state (current_offer)
 ```
 
 ### 4a. API Key Environment (Progressive Setup)
@@ -323,6 +384,9 @@ cat > .gitignore << 'EOF'
 .env
 *.env.local
 
+# Session state (not shared between machines)
+.vip/local.yaml
+
 # OS
 .DS_Store
 
@@ -332,21 +396,53 @@ cat > .gitignore << 'EOF'
 EOF
 ```
 
+**Why `.vip/local.yaml` is git-ignored:** It stores session state like `current_offer` — which offer you're working on right now. This is per-machine, per-session. The git-tracked `.vip/config.yaml` holds team/business settings that should be shared.
+
 ### 5. Sort Content into Files
 
 **The repo is a precision instrument, not a dumping ground.** Not everything the user provides makes it into reference files. Filter for what helps LLMs produce great outputs.
 
 Use templates from `references/templates.md`.
 
+**Teach WHY each file matters as you create it.** Don't just scaffold — explain. This is the user's first encounter with the system. The act of writing these files IS the learning.
+
+**Educational context for each core file:**
+
+**soul.md** — Present before writing:
+> "soul.md is WHY you exist. Not the marketing answer — the real one. Three questions: What do you research when no one's watching? What intersections excite you? What decisions feel like discovery vs obligation? This file is your reconnection fuel — when you're grinding and feel nothing, re-read it."
+
+**offer.md** — Present before writing:
+> "offer.md is WHAT you sell. Price, mechanism, deliverables, guarantee. Every ad, script, and piece of content reads this file. The clearer it is, the better everything downstream works."
+
+**audience.md** — Present before writing:
+> "audience.md is WHO buys. Not demographics — real people with specific pains, desires, and objections. The words in this file become the words in your ads."
+
+**voice.md** — Present before writing:
+> "voice.md is HOW you sound. Tone, vocabulary, phrases you always use, phrases you never say. This is what keeps AI sounding like you instead of generic."
+
+**For multi-offer setups, also explain:**
+
+**offer.md (brand-level)** — When creating the brand thesis:
+> "This is your brand-level offer.md — the umbrella story. It covers what your brand stands for across all offers. Each specific offer gets its own file in `offers/[name]/offer.md` with pricing, mechanism, and details."
+
+**product-ladder.md** — When creating:
+> "product-ladder.md maps how your offers relate. Which one do people discover first? Where do they go next? This helps us create content and ads that guide people through your world."
+
 **Priority order:**
-1. `reference/core/offer.md` — What you sell
-2. `reference/core/audience.md` — Who buys
-3. `reference/core/voice.md` — How you sound
-4. `reference/proof/testimonials.md` — Social proof
-5. `reference/proof/angles/` — Messaging entry points
-6. `reference/brand/visual-style.md` — Visual brand identity (colors, typography, mood, image prompt fragments)
-7. `reference/domain/content-strategy.md` — Content pillars, platforms, cadence (template for community businesses)
-8. `reference/domain/funnel/skool-surfaces.md` — Live Skool about page + pricing card copy (community businesses with Skool)
+1. `reference/core/soul.md` — Why you exist (reconnection fuel)
+2. `reference/core/offer.md` — What you sell (or brand thesis if multi-offer)
+3. `reference/core/audience.md` — Who buys
+4. `reference/core/voice.md` — How you sound
+5. `reference/proof/testimonials.md` — Social proof
+6. `reference/proof/angles/` — Messaging entry points
+7. `reference/brand/visual-style.md` — Visual brand identity (colors, typography, mood, image prompt fragments)
+8. `reference/domain/content-strategy.md` — Content pillars, platforms, cadence (template for community businesses)
+9. `reference/domain/funnel/skool-surfaces.md` — Live Skool about page + pricing card copy (community businesses with Skool)
+
+**Multi-offer additional files (if applicable):**
+10. `reference/offers/[name]/offer.md` — Offer-specific details for each offer
+11. `reference/offers/[name]/audience.md` — Only if this offer targets a different segment
+12. `reference/domain/product-ladder.md` — How offers relate to each other
 
 > **Note:** content-strategy.md and visual-style.md start as templates and get filled through `/think` cycles. Not required at setup — scaffolded with placeholder sections.
 
@@ -407,12 +503,21 @@ EOF
 
 | File | Status |
 |------|--------|
+| core/soul.md | ✅ Complete / ⚠️ Missing [X] |
 | core/offer.md | ✅ Complete / ⚠️ Missing [X] |
 | core/audience.md | ✅ Complete / ⚠️ Missing [X] |
 | core/voice.md | ✅ Complete / ⚠️ Missing [X] |
 | proof/testimonials.md | ✅ Has content / ❌ Empty |
 | proof/angles/ | ✅ [N] angles / ⚠️ None yet |
 | domain/ | ✅ Populated / ⚠️ Needs [X] |
+
+**Multi-offer additional checks (if applicable):**
+
+| File | Status |
+|------|--------|
+| offers/[name]/offer.md | ✅ Complete / ⚠️ Thin (< 20 lines) / ❌ Missing |
+| domain/product-ladder.md | ✅ Complete / ⚠️ Placeholder |
+| .vip/local.yaml | ✅ Set to [offer] / ❌ Missing |
 
 Ask user for missing pieces or note for later.
 
@@ -467,6 +572,81 @@ If conversation compacts mid-setup:
 2. If exists, check which files are populated vs empty
 3. Resume from the appropriate step based on what's done
 4. Confirm with user: "I see [business-name] with [X] files. Looks like we're at step [N]. Continue?"
+
+---
+
+## Migration: Single-Offer to Multi-Offer
+
+When an existing user with `core/offer.md` wants to add another offer (detected when user says "I want to add another offer", "I have a second product", or similar):
+
+### Detection
+
+Check for existing single-offer structure:
+```bash
+ls reference/core/offer.md 2>/dev/null && ! ls reference/offers/*/offer.md 2>/dev/null
+```
+
+If `core/offer.md` exists and no `offers/` folder: this is a migration.
+
+### Steps
+
+1. **Confirm the restructure:**
+   > "Right now your offer details are in `core/offer.md`. To add another offer, we restructure: `core/offer.md` becomes your brand-level thesis, and each specific offer gets its own file."
+
+2. **Name the existing offer:**
+   > "What should we call the offer currently in `core/offer.md`?" (e.g., "community", "course", "coaching")
+
+3. **Name the new offer:**
+   > "And what's the new offer called?"
+
+4. **Execute atomically:**
+   ```bash
+   # Move existing offer to its own folder
+   mkdir -p "reference/offers/[existing-name]"
+   git mv reference/core/offer.md "reference/offers/[existing-name]/offer.md"
+
+   # Create new offer folder
+   mkdir -p "reference/offers/[new-name]"
+   # (new offer.md will be written in the guide-writing step below)
+
+   # Create product-ladder.md
+   mkdir -p reference/domain
+   # (product-ladder.md will be written below)
+
+   # Create session state
+   mkdir -p .vip
+   echo "current_offer: [existing-name]" > .vip/local.yaml
+
+   # Ensure .vip/local.yaml is git-ignored
+   grep -q ".vip/local.yaml" .gitignore 2>/dev/null || echo ".vip/local.yaml" >> .gitignore
+   ```
+
+5. **Write new brand-level `core/offer.md`:**
+   Guide the user to write a high-level brand thesis. This covers what the brand stands for across all offers — not the specifics of any single one.
+   > "Now we need a brand-level offer.md. This isn't about one product — it's the umbrella. What does your brand offer the world? What transformation do all your products share?"
+
+6. **Write the new offer's `offer.md`:**
+   Guide them through the standard offer template for the new offer.
+
+7. **Write `reference/domain/product-ladder.md`:**
+   > "How do these offers relate? Is there a natural progression?"
+
+8. **Commit atomically:**
+   ```bash
+   git add -A
+   git commit -m "[refactor] Migrate to multi-offer structure
+
+   - Moved existing offer to offers/[existing-name]/
+   - Created brand-level core/offer.md
+   - Added offers/[new-name]/
+   - Created product-ladder.md
+   - Added .vip/local.yaml for session offer tracking
+
+   Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+   ```
+
+9. **Confirm:**
+   > "Migration complete. You now have [N] offers. `/start` will ask which offer to work on each session. Run `/start [offer-name]` to jump straight to one."
 
 ---
 

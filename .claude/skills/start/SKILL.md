@@ -41,7 +41,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 ## Detection Flow
 
 ```
-/start
+/start [optional: repo-name] [optional: offer-name]
 │
 ├── Check context level ──────────────→ Fresh? Full load. Heavy? Warn user.
 │
@@ -59,6 +59,10 @@ Apply to: business repo selection, skill routing, any multiple choice.
 ├── No business repo configured? ─────→ /setup (creates repo, saves path)
 │
 ├── Pull business repo updates ───────→ (your repo, silently)
+│
+├── Offer detection ──────────────────→ (multi-offer only, see Step 1.5)
+│   ├── offers/ exists? ─────────────→ Prompt or restore from .vip/local.yaml
+│   └── no offers/ ──────────────────→ Single-offer mode, skip
 │
 ├── Has repo but thin? ───────────────→ /think codify
 │   (reference files exist but incomplete)
@@ -145,7 +149,7 @@ cd ~/Documents/GitHub/vip 2>/dev/null && git pull origin main 2>/dev/null || tru
 
 3. **Ask the user** (if nothing found)
 
-**Verify with Read, not Glob:** Once you have a candidate path, use `Read` on `[path]/reference/core/offer.md` to confirm it exists.
+**Verify with Read, not Glob:** Once you have a candidate path, use `Read` on `[path]/reference/core/soul.md` to confirm it's a business repo. (Don't check `core/offer.md` — in multi-offer repos, the primary offer details live in `offers/[name]/offer.md` instead. `soul.md` is always in `core/`.)
 
 **Skip vip** — any path containing `.claude/skills/` is the engine, not a business repo.
 
@@ -237,6 +241,33 @@ Read these files (in order) to prep Claude:
 
 **Missing files?** Skip silently. If 2+ core files missing → `/think codify`.
 
+**Multi-offer context:** If `current_offer` is set (see Step 1.5), also load `reference/offers/[current_offer]/offer.md`. This is the active offer — it takes precedence over `core/offer.md` for offer-specific details. `core/offer.md` becomes the brand-level thesis. If `offers/[current_offer]/audience.md` exists, load it too (offer-specific audience override).
+
+---
+
+## Step 1.5: Offer Detection (Multi-Offer Only)
+
+After loading core context, check for multi-offer:
+
+```bash
+ls reference/offers/*/offer.md 2>/dev/null
+```
+
+**If no offers/ folder:** Single-offer mode. Skip to Step 2. Everything reads from `core/`.
+
+**If offers/ found:** Multi-offer mode.
+1. Check `.vip/local.yaml` for `current_offer`
+2. If set: Confirm — "Working on **[offer]**. Continue? (y / type offer name to switch)"
+3. If not set: Present numbered list of offers + "all (brand-level work)"
+4. Write selection to `.vip/local.yaml`:
+   ```bash
+   mkdir -p .vip && echo "current_offer: [name]" > .vip/local.yaml
+   ```
+
+**Shortcut:** `/start [offer-name]` sets `current_offer` directly and skips the selection prompt. If the argument matches an offer folder name, write it to `.vip/local.yaml` and confirm: "Locked to **[offer-name]**."
+
+**"all" selection:** When user picks "all" or "brand-level work", set `current_offer: null` in `.vip/local.yaml`. Skills will read from `core/` only — appropriate for brand-level thinking, content strategy, and soul/voice work.
+
 ---
 
 ## Step 2: Detect State
@@ -256,9 +287,13 @@ Check `reference/core/*.md`. No folder → `/setup`. Exists → check completene
 
 2+ empty/missing → `/think codify`. Complete → route by intent.
 
+**Multi-offer completeness:** When `offers/` exists, also check the active offer's `offer.md` for substance. A thin offer file (< 20 lines) means `/think` should be recommended to flesh it out. Don't count brand-level `core/offer.md` as a substitute for a missing offer-specific file.
+
 ---
 
 ## Step 3: Route by Intent
+
+**Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[current_offer or 'single']**"
 
 If user is ready to work, ask or infer intent. **Use numbered options:**
 
@@ -359,6 +394,16 @@ Use these to auto-detect what user wants:
 | "wiki", "notes", "atomic", "wikilinks", "publish wiki" | `/wiki` |
 | "pull", "update vip", "get latest" | `/pull` |
 | "done", "wrapping up", "end my day", "closing out", "call it a day", "that's it" | `/end` |
+
+---
+
+## Recovering from Compaction
+
+If the conversation compacts and /start is re-invoked:
+
+1. Re-read `~/.config/vip/local.yaml` for `default_repo` and user identity
+2. Re-read the business repo's context files
+3. **Offer recovery:** Read `.vip/local.yaml` in the business repo for `current_offer` to restore offer context after compaction. Don't re-prompt for offer selection if the file exists — just confirm: "Restored offer context: **[offer-name]**."
 
 ---
 
