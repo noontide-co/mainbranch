@@ -30,6 +30,71 @@ After gathering context, re-read every factual claim and verify against source m
 
 ---
 
+## Human Voice Guidelines
+
+VSL scripts must sound like a real person talking, not AI-generated copy. These rules apply to both frameworks.
+
+### Formatting Rules
+
+**No em-dashes.** Em-dashes signal AI writing. Use commas or split into separate sentences.
+
+- Bad: "We've helped hundreds of people — some got there in weeks — land roles at top companies."
+- Good: "We've helped hundreds of people land roles at top companies. Some of them got there in weeks, some took months."
+
+**No parallelism overload.** Avoid repeating the same sentence structure multiple times in a row.
+
+- Bad: "If you had a clear roadmap... If you had live mentoring... If you had real projects... If you had interview prep..."
+- Good: "Think about what's actually been missing. A clear roadmap that tells you what to learn. Live mentoring where engineers answer your questions. A real project you can show employers."
+
+**Natural flow over punchy fragments.** Short choppy sentences sound like copywriting, not speech.
+
+- Bad: "Some in weeks. Some in months. Different timelines. Same system."
+- Good: "Some of them got there in weeks, some of them took months, but they all followed the same system and they all got there."
+
+### Language Patterns
+
+**Add verbal tics.** Real speech includes words like "Look," "Honestly," "Here's the thing," "And the thing is."
+
+**Use conversational connectors.** Start sentences with "So," "And," "But" when it sounds natural.
+
+**Avoid overused AI phrases:**
+- "No guesswork" (say "without wondering if you're on the right track")
+- "Let me ask you something" (just ask the question or make the point)
+- "This isn't X, it's Y" structure (rewrite as a direct statement)
+- "Keep watching" at the end of sections (unnecessary, remove it)
+
+**Sentence fragments are okay.** Not every sentence needs to be grammatically complete. "Also no." and "That's it." sound human.
+
+### Testimonials and Social Proof
+
+**Respectful introductions.** Don't reduce people to "this guy" before their name.
+
+- Bad: "So there's this guy Zakaria who was stuck in IT support."
+- Good: "So there's Zakaria, this guy was stuck in IT support for three years."
+
+**Vary the storytelling pattern.** Don't use the same "Name was X. They joined. They achieved Y." structure for every testimonial.
+
+**Use specific details.** "He studied biology, chemistry, and geography" is more believable than "retail, admin, support desk."
+
+### Objections
+
+**Add context before each objection.** Don't just state the objection in quotes.
+
+- Bad: "I don't have time." Most of our members work full-time jobs.
+- Good: "You might also be wondering, 'I don't have time.' Most of our members work full-time jobs."
+
+**Answer as affirmations, not Q&A.** In the "Answer Questions" section, write answers as statements, not responses to questions.
+
+### Energy and Rhythm
+
+**Vary sentence length.** Mix short punchy lines with longer flowing ones.
+
+**Vary energy across sections.** Some sections should be high energy, others more conversational or intimate. Don't maintain the same tone throughout.
+
+**Remove unnecessary repetition.** If you say "keep watching" once, don't say it three more times.
+
+---
+
 ## Triage: Which Framework?
 
 | Signal | Framework | Reference |
