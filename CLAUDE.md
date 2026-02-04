@@ -91,15 +91,21 @@ Take inventory. Notice what's missing. Proactively suggest skills they haven't i
 
 ```
 vip (ENGINE)                          your-repo (DATA)
-├── .claude/skills/                   ├── reference/
-├── .claude/lenses/                   │   ├── core/
-├── .claude/reference/compliance/     │   │   ├── soul.md
-└── .claude/reference/domain-rubrics/ │   │   ├── offer.md
+├── .claude/skills/                   ├── .vip/
+├── .claude/lenses/                   │   └── local.yaml            # Session state (git-ignored)
+├── .claude/reference/compliance/     ├── reference/
+└── .claude/reference/domain-rubrics/ │   ├── core/
+                                      │   │   ├── soul.md
+                                      │   │   ├── offer.md
                                       │   │   ├── audience.md
                                       │   │   └── voice.md
+                                      │   ├── offers/               # (multi-offer only)
+                                      │   │   └── [name]/
+                                      │   │       └── offer.md
                                       │   ├── brand/
                                       │   ├── proof/
                                       │   └── domain/
+                                      │       ├── product-ladder.md  # (multi-offer only)
                                       │       └── content-strategy.md
                                       ├── research/
                                       ├── decisions/
@@ -107,6 +113,18 @@ vip (ENGINE)                          your-repo (DATA)
 ```
 
 Skills read from `reference/`, output to `outputs/`. Some skills (`/wiki`, `/site`) produce separate repos instead of writing to `outputs/`. Same engine + different data = different outputs per business.
+
+---
+
+## Multi-Offer vs Multi-Business
+
+**Multi-offer** = multiple products under one brand, one repo. A coaching community and a digital course sold under the same brand share `soul.md` and `voice.md`, so they live together. Each offer gets its own `offers/[name]/offer.md` with offer-specific details.
+
+**Multi-business** = separate brands with separate souls, separate repos. A coaching practice and an unrelated e-commerce store have different identities, different audiences, different voices. They need separate repos.
+
+**The test:** If products share `soul.md` and `voice.md`, one repo. Otherwise separate repos.
+
+Single-offer repos work exactly as before -- no `offers/` folder, everything in `core/`. Multi-offer is additive, not breaking. See `.claude/reference/domain-rubrics/multi-offer.md` for the complete rubric.
 
 ---
 
@@ -119,6 +137,7 @@ Skills read from `reference/`, output to `outputs/`. Some skills (`/wiki`, `/sit
 | `audience.md` | WHO buys — real people, not avatars |
 | `voice.md` | HOW you sound — tone, phrases, personality |
 | `content-strategy.md` | HOW you distribute — pillars, platforms, cadence, metrics (domain -- emerges through /think, not required at setup) |
+| `product-ladder.md` | HOW offers relate — strategic relationship between products (domain -- multi-offer only) |
 | `skool-surfaces.md` | WHAT cold traffic sees — live Skool about page + pricing card copy (domain/funnel -- congruence anchor for ads, organic, VSLs) |
 
 These live in `reference/core/` and are required for all businesses. `content-strategy.md` lives in `reference/domain/` and is built over time.
@@ -155,11 +174,14 @@ Not everyone goes all the way. Most stay at Phase 2. The path exists for those w
 ```
 [business]/
 ├── CLAUDE.md
+├── .vip/
+│   └── local.yaml      # Session state (git-ignored)
 ├── reference/
 │   ├── core/           # soul.md, offer.md, audience.md, voice.md
+│   ├── offers/         # (multi-offer only) [name]/offer.md, [name]/audience.md
 │   ├── brand/          # voice-system.md, guardrails.md
 │   ├── proof/          # testimonials.md, angles/
-│   └── domain/         # business-type specific
+│   └── domain/         # business-type specific + product-ladder.md
 ├── research/           # YYYY-MM-DD-topic-[source].md
 ├── decisions/          # YYYY-MM-DD-topic.md
 └── outputs/            # generated batches
@@ -179,6 +201,7 @@ Every business has a `reference/domain/` folder. Contents depend on business typ
 | **Community** | `classroom/`, `funnel/`, `membership/` | `.claude/reference/domain-rubrics/community.md` |
 | **SaaS** | `features/`, `pricing/`, `integrations/` | `.claude/reference/domain-rubrics/saas.md` |
 | **Service** | `process/`, `deliverables/` | `.claude/reference/domain-rubrics/service.md` |
+| **Multi-Offer** | `offers/`, `product-ladder.md` | `.claude/reference/domain-rubrics/multi-offer.md` |
 
 Use `/setup` to scaffold the correct structure for your business type.
 
@@ -192,7 +215,7 @@ Skills load reference progressively to stay token-efficient:
 |------|------|-------------|
 | **Always** | CLAUDE.md | Every session |
 | **Core** | reference/core/*.md | When generating |
-| **On-demand** | research/, decisions/, content-strategy.md, skool-surfaces.md | When reasoning about choices or generating content |
+| **On-demand** | research/, decisions/, content-strategy.md, skool-surfaces.md, offers/[active]/ | When reasoning about choices or generating content |
 | **Deep reference** | reference/brand/, reference/proof/ | When writing copy |
 | **Domain** | reference/domain/ | When business-type matters |
 
