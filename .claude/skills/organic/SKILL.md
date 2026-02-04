@@ -110,11 +110,29 @@ This is why mining lives in `/think` — it's research that feeds your evergreen
 
 ---
 
+## Offer Context Resolution
+
+Before loading reference files, resolve the active offer:
+
+1. Check `.vip/local.yaml` for `current_offer`
+2. If set: load `reference/offers/[current_offer]/offer.md` as the active offer
+3. If not set AND `reference/offers/` exists: ask which offer
+4. If no `offers/` folder: use `reference/core/offer.md` (single-offer, backward compatible)
+
+**Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
+**Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
+**Accumulate files** (load both): `testimonials.md` (offer-specific + brand-level)
+
+**Offer argument:** `/organic video [offer] "concept"` — e.g., `/organic video community "morning routine"`
+If offer specified, overrides session `current_offer` for this run.
+
+---
+
 ## First-Time Setup
 
-Requires `reference/core/voice.md`, `audience.md`, `offer.md`.
+Requires `reference/core/voice.md` (always core), plus resolved `offer.md` and `audience.md` (offer-aware — checks `offers/[active]/` first, falls back to `core/`).
 
-**Optional but recommended:** `reference/domain/content-strategy.md` — If present, /organic reads content pillars to align generated content and platform strategy for format selection. Works perfectly without it.
+**Optional but recommended:** `reference/domain/content-strategy.md` — If present, /organic reads content pillars to align generated content and platform strategy for format selection. Note that `content-strategy.md` is brand-level, but content can be offer-specific. Works perfectly without it.
 
 **Congruence check:** If `reference/domain/funnel/skool-surfaces.md` exists, read it. Organic content should echo the same positioning and claims visible on the Skool about page and pricing cards. No contradictions between organic and the landing experience.
 
@@ -188,7 +206,7 @@ Generate multi-slide carousel copy from a concept.
 
 Generate single-post caption from a concept.
 
-**Output path (all script modes):** `outputs/YYYY-MM-DD-organic-{campaign}/organic-batch-001.md`
+**Output path (all script modes):** `outputs/YYYY-MM-DD-organic-[offer]-{campaign}/organic-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
 
 Campaign name is REQUIRED. Ask user if not provided. Examples: `january-hooks`, `transformation-series`, `pain-point-reels`.
 

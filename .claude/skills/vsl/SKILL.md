@@ -45,14 +45,32 @@ If unclear, ask: "Is this for a Skool/membership community ($47-$497/month) or a
 
 ---
 
+## Offer Context Resolution
+
+Before loading reference files, resolve the active offer:
+
+1. Check `.vip/local.yaml` for `current_offer`
+2. If set: load `reference/offers/[current_offer]/offer.md` as the active offer
+3. If not set AND `reference/offers/` exists: ask which offer
+4. If no `offers/` folder: use `reference/core/offer.md` (single-offer, backward compatible)
+
+**Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
+**Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
+**Accumulate files** (load both): `testimonials.md` (offer-specific + brand-level)
+
+**Offer argument:** `/vsl [framework] [offer]` — e.g., `/vsl skool community`
+If offer specified, overrides session `current_offer` for this run. If the active offer type is known (community/membership offer), default to Skool framework; if B2B/high-ticket, default to B2B Haynes.
+
+---
+
 ## Reference Required (Both Frameworks)
 
-| File | Purpose |
-|------|---------|
-| `reference/core/offer.md` | What you sell, price, inclusions, guarantee |
-| `reference/core/audience.md` | Who buys, their pains, objections |
-| `reference/proof/testimonials.md` | Success stories with specifics |
-| `reference/domain/funnel/skool-surfaces.md` | Live Skool about page + pricing copy (congruence) |
+| File | Path | Purpose |
+|------|------|---------|
+| Offer | `offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | What you sell, price, inclusions, guarantee |
+| Audience | `offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Who buys, their pains, objections |
+| Testimonials | `reference/proof/testimonials.md` + `offers/[active]/testimonials.md` (accumulate) | Success stories with specifics |
+| Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | Live Skool about page + pricing copy (congruence) |
 
 **If missing:** Ask user to provide or run `/think` first.
 
@@ -109,7 +127,7 @@ For high-ticket B2B services. Full reference: `references/frameworks/b2b-haynes.
 
 ## Output Path
 
-**Standard:** `outputs/YYYY-MM-DD-vsl-{campaign}/vsl-script.md`
+**Standard:** `outputs/YYYY-MM-DD-vsl-[offer]-{campaign}/vsl-script.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
 
 Campaign name is REQUIRED. Ask user if not provided. Examples: `skool-about`, `agency-pitch`, `membership-sales`.
 
@@ -142,20 +160,22 @@ Just say `/vsl` again and describe where you were:
 
 ### For Claude
 
-1. **Check for in-progress scripts:**
+1. **Restore offer context:** Read `.vip/local.yaml` for `current_offer`. Confirm with user if multi-offer repo.
+
+2. **Check for in-progress scripts:**
 
 ```bash
 ls -ltd outputs/*-vsl-*/ 2>/dev/null | head -3
 ```
 
-2. **Re-read key files:**
+3. **Re-read key files:**
 
 | File | What It Provides |
 |------|------------------|
 | This SKILL.md | Triage logic, critical rules |
 | `references/frameworks/skool-18-section.md` | Full 18-section template |
 | `references/frameworks/b2b-haynes.md` | Full 7-step B2B framework |
-| User's `reference/core/offer.md` | Offer details for script |
+| Resolved `offer.md` | Offer details for script (offer-specific or core) |
 | User's `reference/proof/testimonials.md` | Proof for script |
 
 3. **Confirm with user:**

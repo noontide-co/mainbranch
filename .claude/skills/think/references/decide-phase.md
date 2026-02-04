@@ -101,7 +101,27 @@ offer.md gets a "30-day guarantee" section after pricing. voice.md adds "guarant
 Outside reference: set up Stripe subscription, update sales page copy.
 ```
 
-**Be specific:** "Update offer" is bad. "offer.md gets a 30-day guarantee section after pricing" is good. Name the files and describe the changes — but as prose, not checkboxes.
+**In multi-offer mode, use offer-qualified paths:**
+
+```markdown
+## What Changes
+
+Reference files affected:
+- `offers/community/offer.md` — updated pricing section
+- `core/offer.md` — updated brand thesis
+- `reference/domain/product-ladder.md` — updated ascension logic
+
+Outside reference: update Skool pricing cards.
+```
+
+**Be specific:** "Update offer" is bad. "offers/community/offer.md gets a 30-day guarantee section after pricing" is good. Name the files and describe the changes — but as prose, not checkboxes.
+
+### Decision Scope
+
+When documenting a decision, note which offer it affects:
+- **Offer-specific:** affects one offer's files (e.g., `offers/community/offer.md`)
+- **Brand-level:** affects core/ files (e.g., `core/voice.md`, `core/offer.md` brand thesis)
+- **Cross-offer:** affects `domain/product-ladder.md` or multiple offers simultaneously
 
 ---
 

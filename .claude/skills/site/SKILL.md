@@ -87,18 +87,49 @@ cat ~/.mainbranch/sites.json 2>/dev/null || echo "NO_CONFIG"
 
 ---
 
+## Offer Context Resolution
+
+Before loading reference files, resolve the active offer:
+
+1. Check `.vip/local.yaml` for `current_offer`
+2. If set: load `reference/offers/[current_offer]/offer.md` as the active offer
+3. If not set AND `reference/offers/` exists: ask which offer this site is for
+4. If no `offers/` folder: use `reference/core/offer.md` (single-offer, backward compatible)
+
+**Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
+**Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
+**Accumulate files** (load both): `testimonials.md` (offer-specific + brand-level)
+
+**Site config extension:** `~/.mainbranch/sites.json` can include an `offer` field to link a site to a specific offer:
+
+```json
+{
+  "name": "community-landing",
+  "offer": "community",
+  "site_repo": "/absolute/path/to/site-repo",
+  "business_repo": "/absolute/path/to/business-repo",
+  "template": "high-ticket",
+  "hosting": "netlify",
+  "domain": "community.example.com"
+}
+```
+
+When a site has an `offer` field, use that as the active offer instead of reading `.vip/local.yaml`.
+
+---
+
 ## Reference Required
 
-| File | Contains | Required |
-|------|----------|----------|
-| `reference/core/offer.md` | What you sell, pricing, mechanism, benefits | **Yes** |
-| `reference/core/audience.md` | Who buys, psychographics, language | **Yes** |
-| `reference/core/voice.md` | Tone, personality, phrases | Recommended |
-| `reference/core/soul.md` | Why you exist, mission, founder story | Optional |
-| `reference/proof/testimonials.md` | Approved testimonials | Recommended |
-| `reference/proof/angles/*.md` | Messaging entry points | Optional |
-| `reference/domain/content-strategy.md` | Pillars, platforms, CTA destinations | Optional |
-| `reference/domain/funnel/skool-surfaces.md` | Live Skool about page + pricing copy | Optional (congruence) |
+| File | Path | Required |
+|------|------|----------|
+| Offer | `offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | **Yes** |
+| Audience | `offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | **Yes** |
+| Voice | `reference/core/voice.md` (always core) | Recommended |
+| Soul | `reference/core/soul.md` (always core) | Optional |
+| Testimonials | `reference/proof/testimonials.md` + `offers/[active]/testimonials.md` (accumulate) | Recommended |
+| Angles | `reference/proof/angles/*.md` | Optional |
+| Content Strategy | `reference/domain/content-strategy.md` (always brand-level) | Optional |
+| Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | Optional (congruence) |
 
 If required files are missing, stop and route to `/think codify`:
 
@@ -110,13 +141,13 @@ If required files are missing, stop and route to `/think codify`:
 
 | Reference File | Produces |
 |---------------|----------|
-| `offer.md` | Hero headline/subhead, value prop, pricing, CTA copy |
-| `audience.md` | Pain point sections, objection handling, copy language/tone |
-| `voice.md` | Color palette, font selection, aesthetic mood, copy tone |
-| `soul.md` | About/mission section, founder story, credibility badge |
-| `testimonials.md` | Social proof section, stat counters, trust badges |
+| Resolved `offer.md` | Hero headline/subhead, value prop, pricing, CTA copy |
+| Resolved `audience.md` | Pain point sections, objection handling, copy language/tone |
+| `voice.md` (always core) | Color palette, font selection, aesthetic mood, copy tone |
+| `soul.md` (always core) | About/mission section, founder story, credibility badge |
+| `testimonials.md` (accumulated) | Social proof section, stat counters, trust badges |
 | `angles/*.md` | Page structure — which angle drives section order |
-| `content-strategy.md` | CTA destinations, newsletter signup integration |
+| `content-strategy.md` (brand-level) | CTA destinations, newsletter signup integration |
 
 Detailed mapping rules: [references/section-patterns.md](references/section-patterns.md)
 
@@ -215,6 +246,8 @@ Key settings: Build command = `pnpm build`, Publish directory = `out`, NODE_VERS
 
 Ask: "Where is your business repo with reference files?" Confirm the path has `reference/core/` files.
 
+If the business repo has `reference/offers/`, ask which offer this site is for. Store the offer in the sites.json config (see `offer` field above).
+
 ### Step 11: Save Config
 
 Write `~/.mainbranch/sites.json`:
@@ -290,10 +323,11 @@ The core generation mode. Reads reference files and generates page sections.
 
 ### How It Works
 
-1. Read reference files from business repo
-2. Generate or update `site-config.ts` — the single source of all brand-specific content
-3. Generate or edit component files in `components/`
-4. Update page composition in `app/page.tsx`
+1. Resolve offer context (see Offer Context Resolution above) — use offer-specific `offer.md` and `audience.md` when available
+2. Read reference files from business repo (resolved paths)
+3. Generate or update `site-config.ts` — the single source of all brand-specific content
+4. Generate or edit component files in `components/`
+5. Update page composition in `app/page.tsx`
 
 ### The site-config.ts Pattern
 

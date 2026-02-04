@@ -6,6 +6,17 @@ Detailed workflow for research mode in `/think`.
 
 ---
 
+## Offer Context Resolution
+
+When researching an offer-specific topic, load:
+- `offers/[active]/offer.md` (if exists) for offer-specific context
+- `core/offer.md` for brand-level context
+- Both may be relevant — offer-specific for details, core for brand positioning
+
+Check `.vip/local.yaml` for `current_offer` before starting research. If `reference/offers/` exists but `current_offer` is not set, ask which offer this research relates to.
+
+---
+
 ## Workflow
 
 1. **Define the question** — What specifically are you trying to learn?
@@ -48,6 +59,18 @@ Detailed workflow for research mode in `/think`.
 | `-transcript.txt` | Raw transcript (use specific `-mining.md` for synthesized) |
 | `-audit.md` | Site or system audit |
 | (none) | General or mixed sources |
+
+### Multi-Offer Research Naming
+
+Multi-offer research can optionally include the offer name in the slug for clarity:
+
+```
+research/YYYY-MM-DD-[offer]-topic-[source].md
+```
+
+**Example:** `research/2026-02-04-community-pricing-analysis-gemini.md`
+
+This is optional — standard naming without the offer prefix works fine. Use the offer prefix when researching a topic specific to one offer to make it easy to find later.
 
 ---
 
@@ -288,13 +311,24 @@ Makes research actionable. Without it, research becomes orphaned knowledge.
 
 For each finding, ask: "Does this change anything in my reference files?"
 
+In multi-offer mode, use offer-qualified paths:
+
+| File | Potential Update |
+|------|------------------|
+| `offers/community/offer.md` | Add tier structure, update pricing |
+| `core/offer.md` | Update brand-level positioning |
+| `core/audience.md` | Segment by tier |
+| `domain/product-ladder.md` | Update ascension logic |
+
+In single-offer mode, paths stay standard:
+
 | File | Potential Update |
 |------|------------------|
 | `reference/core/offer.md` | Add tier structure, update pricing |
 | `reference/core/audience.md` | Segment by tier |
 
 **Bad:** "Update offer.md"
-**Good:** "Update offer.md — Add three-tier pricing with benefits per tier"
+**Good:** "Update offers/community/offer.md — Add three-tier pricing with benefits per tier"
 
 ### Open Questions
 
