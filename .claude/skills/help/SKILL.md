@@ -37,6 +37,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Skool, community | [skool-help.md](references/skool-help.md) |
 | Wiki, atomic notes, publish, WikiLinks | Route to `/wiki` |
 | Done, wrapping up, closing, end session, end of day | Route to `/end` |
+| multi-offer, product ladder, offers, switch offer | Multi-Offer FAQ (below) |
 | Better outputs, quality, what next | [making-outputs-better.md](references/making-outputs-better.md) |
 | Content strategy, pillars, platforms, newsletter, content plan | [content-strategy-help.md](references/content-strategy-help.md) |
 | Subagents, parallel, agents, context window, tokens | [working-with-agents.md](references/working-with-agents.md) |
@@ -68,6 +69,12 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | What are subagents? | Claude can spawn parallel agents to research or review simultaneously. You'll see it happen automatically in `/think` (multi-source research) and `/ads review` (6 compliance lenses). Each agent gets its own context window so your main conversation stays clean. |
 | How do I manage context/tokens? | Context management is a skill that develops over time. Your files (research/, decisions/, reference/) survive compaction — only conversation memory compresses. After compaction, help Claude rebuild by pointing it at recent files or running /start. Save insights to research files early — if it's in a file, it's safe. |
 | How do I close a session? | Run `/end`. It summarizes what happened, asks if you have final thoughts, offers a crystallize moment if you made decisions, commits uncommitted work, and says goodbye. Bookend to `/start`. |
+| What is multi-offer? | Multiple products under one brand, one repo. Each offer gets its own `reference/offers/[name]/offer.md`. Soul and voice stay in `core/` because they're brand-level. Use when you sell multiple things (community + newsletter + done-for-you). |
+| How do I switch offers? | Say `/start [offer-name]` or answer when /start prompts. The active offer is stored in `.vip/local.yaml`. |
+| Where do offer files go? | `reference/offers/[name]/offer.md` for offer-specific details. `reference/core/offer.md` stays as the brand-level thesis. |
+| What stays in core with multiple offers? | `soul.md` (always), `voice.md` (always), `audience.md` (base, with optional per-offer overrides), `content-strategy.md` (brand-level distribution). |
+| How do I add another offer? | Run `/setup` -- it detects your existing setup and offers a migration path. Or use `/think` to plan the new offer first. |
+| Do I need separate repos for separate businesses? | If they share `soul.md` and `voice.md`, same repo with `offers/`. If they have different identities, different repos. The test: shared soul = shared repo. |
 | Do my files disappear when context compacts? | No. Compaction compresses Claude's conversation memory, not your files. Everything in research/, decisions/, and reference/ is on your hard drive, version controlled with git. If it's in a file, it's permanent. |
 | How do I recover after compaction? | Point Claude at recent files: "look at my last 3 decisions" or "read the commits from today." Or just run /start — it scans your folders and rebuilds context automatically. You can also open files yourself in Cursor, Warp, VS Code, or any text editor. |
 | Is this system finished? | Still new and actively being tuned. We're building around Claude Code, minimizing commands you need to learn while giving you real power. There's progressive discovery in /think — the more you use it, the more it reveals. You might find workflows we haven't documented yet. Post them in Skool. |

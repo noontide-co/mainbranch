@@ -86,6 +86,12 @@ git diff --name-only --diff-filter=AM HEAD@{6am}..HEAD 2>/dev/null
 | Outputs generated | New files in `outputs/` or `content/` |
 | Uncommitted changes | `git status --short` output |
 
+**Multi-offer detection:** If `reference/offers/` exists, note which offers had files changed:
+```bash
+git diff --name-only HEAD@{midnight}..HEAD -- reference/offers/ 2>/dev/null | head -20
+```
+Report: "Offers affected: community, newsletter" (or "Brand-level changes only" if only core/ changed)
+
 **If git log fails** (no commits today, repo issues): Fall back to `git status` and `ls -lt` to find recently modified files. Don't block on this.
 
 **If nothing happened today:** Say so briefly. "Quiet day -- no changes detected. Want to close out?" Skip to Step 6.
@@ -95,6 +101,9 @@ git diff --name-only --diff-filter=AM HEAD@{6am}..HEAD 2>/dev/null
 ## Step 3: Session Summary
 
 Present a brief, warm summary. Not a report -- a reflection.
+
+**Offer context:** If `.vip/local.yaml` has `current_offer`, include in summary:
+"Worked on: **[offer]**"
 
 **Format (adapt to what actually happened):**
 
@@ -196,6 +205,8 @@ Task(
 
 **Agent prompt construction:** Build a structured prompt containing all gathered content from 5b, plus the agent instructions. See [references/crystallize-agent.md](references/crystallize-agent.md) for the complete agent prompt template, analysis process, anti-patterns, and question design criteria.
 
+**Pass to crystallize agent:** Include `current_offer` from `.vip/local.yaml` so the agent can analyze offer-specific reference changes and ask offer-relevant questions.
+
 **The agent is read-only.** It reads files and returns findings. It does not write files. The main conversation handles all file writes.
 
 **The agent returns:** A crystallize output block -- 2-4 sentences of context followed by 1-3 questions. The main conversation presents this to the user exactly as returned, without editing or summarizing.
@@ -269,6 +280,7 @@ git status --short 2>/dev/null
 If yes:
 - Stage the changed files (prefer specific files over `git add -A`)
 - Write a descriptive commit message following the `[type] Brief description` convention
+- If work was offer-specific, suggest commit message like: `[update] community offer: added pricing tiers and guarantee`
 - If the user shared final thoughts in Step 4, incorporate them into the commit message
 - Include the crystallize research file in the commit
 - Commit
