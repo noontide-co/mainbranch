@@ -92,9 +92,10 @@ Take inventory. Notice what's missing. Proactively suggest skills they haven't i
 ```
 vip (ENGINE)                          your-repo (DATA)
 ├── .claude/skills/                   ├── .vip/
-├── .claude/lenses/                   │   └── local.yaml            # Session state (git-ignored)
-├── .claude/reference/compliance/     ├── reference/
-└── .claude/reference/domain-rubrics/ │   ├── core/
+├── .claude/lenses/                   │   ├── config.yaml        # User preferences (git-tracked)
+├── .claude/reference/compliance/     │   └── local.yaml         # Session state (git-ignored)
+└── .claude/reference/domain-rubrics/ ├── reference/
+                                      │   ├── core/
                                       │   │   ├── soul.md
                                       │   │   ├── offer.md
                                       │   │   ├── audience.md
@@ -133,14 +134,14 @@ Single-offer repos work exactly as before -- no `offers/` folder, everything in 
 | File | Purpose |
 |------|---------|
 | `soul.md` | WHY you exist — reconnection fuel |
-| `offer.md` | WHAT you sell — price, mechanism, benefits |
+| `offer.md` | WHAT you sell — brand-level thesis (see `offers/` for per-offer details in multi-offer setups) |
 | `audience.md` | WHO buys — real people, not avatars |
 | `voice.md` | HOW you sound — tone, phrases, personality |
 | `content-strategy.md` | HOW you distribute — pillars, platforms, cadence, metrics (domain -- emerges through /think, not required at setup) |
 | `product-ladder.md` | HOW offers relate — strategic relationship between products (domain -- multi-offer only) |
 | `skool-surfaces.md` | WHAT cold traffic sees — live Skool about page + pricing card copy (domain/funnel -- congruence anchor for ads, organic, VSLs) |
 
-These live in `reference/core/` and are required for all businesses. `content-strategy.md` lives in `reference/domain/` and is built over time.
+First four live in `reference/core/` and are required for all businesses. `content-strategy.md`, `product-ladder.md`, and `skool-surfaces.md` live in `reference/domain/` and emerge over time.
 
 ---
 
@@ -199,8 +200,6 @@ Every business has a `reference/domain/` folder. Contents depend on business typ
 |---------------|-----------------|--------|
 | **E-commerce** | `products/`, `materials/`, `sizing/` | `.claude/reference/domain-rubrics/ecommerce.md` |
 | **Community** | `classroom/`, `funnel/`, `membership/` | `.claude/reference/domain-rubrics/community.md` |
-| **SaaS** | `features/`, `pricing/`, `integrations/` | `.claude/reference/domain-rubrics/saas.md` |
-| **Service** | `process/`, `deliverables/` | `.claude/reference/domain-rubrics/service.md` |
 | **Multi-Offer** | `offers/`, `product-ladder.md` | `.claude/reference/domain-rubrics/multi-offer.md` |
 
 Use `/setup` to scaffold the correct structure for your business type.

@@ -26,7 +26,8 @@ Once set up, you can:
 - Mine competitor content and create organic Reels/TikTok/carousels
 - Write VSL scripts for your community
 - Review ads for compliance before you run them
-- Manage Skool community engagement
+- Build and deploy landing pages from your reference files
+- Close sessions intentionally with crystallize moments
 
 All of this happens through simple commands. No prompting skills required.
 
@@ -162,12 +163,17 @@ No prompt engineering. No explaining what you want. Just type the command.
 | Command | What It Does |
 |---------|-------------|
 | `/start` | Main entry point — figures out what you need and routes you there |
-| `/pull` | Quick update — pulls latest skills from GitHub |
 | `/setup` | Set up your business repo (run this first if you're new) |
 | `/think` | Research, make decisions, add context, transcribe local recordings, update reference files |
 | `/ads` | Create ad copy (static or video) and review for compliance |
 | `/vsl` | Write video sales letter scripts (Skool or B2B) |
 | `/organic` | Mine competitors, create Reels/TikTok/carousel scripts |
+| `/site` | Generate and deploy landing pages from your reference files |
+| `/wiki` | Personal wiki with atomic notes |
+| `/end` | Close session — summary, crystallize, commit |
+| `/help` | Get answers, troubleshoot, learn the system |
+| `/pull` | Quick update — pulls latest skills from GitHub |
+| `/newsletter` | Generate weekly newsletter from thinking work (coming soon) |
 
 ---
 
@@ -193,21 +199,29 @@ After running `/start`, your business folder looks like this:
 
 ```
 your-business/
+├── CLAUDE.md              <- Always loaded by Claude Code
+├── .vip/                  <- Session config
+│   ├── config.yaml        <- User preferences (git-tracked)
+│   └── local.yaml         <- Session offer state (git-ignored)
 ├── reference/
 │   ├── core/
-│   │   ├── offer.md       <- What you sell
-│   │   ├── audience.md    <- Who buys
-│   │   └── voice.md       <- How you sound
-│   ├── brand/             <- Deep brand systems
-│   │   ├── voice-system.md
-│   │   └── guardrails.md
+│   │   ├── soul.md        <- WHY you exist
+│   │   ├── offer.md       <- Brand-level thesis (or single offer)
+│   │   ├── audience.md    <- WHO buys
+│   │   └── voice.md       <- HOW you sound
+│   ├── offers/            <- Per-offer context (multi-offer only)
+│   │   └── [offer-name]/
+│   │       └── offer.md   <- Offer-specific transformation
+│   ├── brand/             <- Visual identity, positioning
 │   ├── proof/
 │   │   ├── testimonials.md <- Social proof
 │   │   └── angles/        <- Proven messaging angles
-│   └── domain/            <- Business-type specific
-│       └── [see domain rubrics]
+│   └── domain/
+│       ├── product-ladder.md  <- How offers relate (multi-offer)
+│       └── content-strategy.md <- Pillars, platforms, cadence
 ├── research/              <- Your investigations
 ├── decisions/             <- Your choices
+├── content/               <- Content lifecycle
 └── outputs/               <- Generated content
 ```
 
@@ -245,9 +259,13 @@ Post in the Main Branch group. Tag @Devon for technical questions.
 
 No. You just type commands and answer questions.
 
-**What if I have multiple businesses?**
+**What if I have multiple products under one brand?**
 
-Create a separate repo for each one. The engine (this repo) stays the same.
+Use one repo with an `offers/` folder. Each offer gets its own `offer.md`. Soul and voice stay shared in `core/`. Run `/setup` or `/think` to add offers.
+
+**What if I have multiple separate businesses?**
+
+Create a separate repo for each brand. If they share the same soul and voice, they can share a repo. If not, separate repos.
 
 **How do I update when new skills come out?**
 
