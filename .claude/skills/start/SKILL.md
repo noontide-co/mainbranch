@@ -354,6 +354,18 @@ If user is ready to work, ask or infer intent. **Use numbered options:**
 
 **When user picks option 1:** Spawn triage agents. See [triage-agent.md](references/triage-agent.md) for gating, tiered spawning, agent prompts, and synthesis format.
 
+**While agents work (~1-2 min):** Tell the user it's worth the wait. Be warm and human about it:
+
+> "This takes a minute or two — I'm reading through your whole business state so I can give you something genuinely useful. Worth the wait ;)
+>
+> While we're here: [pick ONE at random per session]
+> - *The word 'decide' comes from Latin 'decidere' — literally 'to cut off.' Every decision is choosing what to let go of.*
+> - *Hemingway rewrote the ending of A Farewell to Arms 47 times. When asked why, he said: 'Getting the words right.'*
+> - *The best time to plant a tree was 20 years ago. The second best time is now.*
+> - *Your reference files are like compound interest — small deposits now, massive returns later.*
+> - *'If you can't explain it simply, you don't understand it well enough.' — Einstein. That's what codifying does.*
+> - *Fun fact: the average person mass-produces 50K+ words a day in their head. You're one of the few who actually filters those into something useful.*"
+
 **Auto-suggest option 1 when:**
 - Returning user (last commit >3 days ago) and no stated intent
 - Readiness is THIN (8-11) — "Option 1 can help you figure out the highest-leverage gap"
