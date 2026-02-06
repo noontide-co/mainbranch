@@ -321,6 +321,22 @@ Check `reference/core/*.md`. No folder → `/setup`. Exists → check completene
 
 If user is ready to work, ask or infer intent. **Use numbered options:**
 
+### Option 0 Gating (Triage)
+
+**Do NOT offer option 0 when ANY of these are true:**
+- Context window is >60% full (triage is token-expensive)
+- User stated clear intent (they already know what they want)
+- Readiness is EMPTY or MINIMAL (0-7) — the answer is obvious: route to `/setup` or `/think`
+
+**When option 0 is gated out**, show options 1-8 only (renumber starting at 1). When option 0 IS available, show the full list starting at 0.
+
+**Auto-suggest (but don't auto-run) option 0 when:**
+- User is returning after 3+ days (soul health check context)
+- Readiness is THIN-to-GOOD (8-14) — enough to analyze, enough gaps to fill
+- Soul health check indicated "push" (suggests drift)
+
+### Options List (with option 0)
+
 > "Your reference files look good. What would you like to do?
 >
 > 0. Help me figure out what to work on → deep analysis (see [triage-agent.md](references/triage-agent.md))
@@ -335,7 +351,22 @@ If user is ready to work, ask or infer intent. **Use numbered options:**
 >
 > (hit a number to reply, or just tell me what you need)"
 
-**Option 0 — Smart Triage:** When user selects 0 (or says "what should I work on?" / "help me prioritize" / "I don't know where to start"), spawn 3 parallel read-only analysis agents. See [triage-agent.md](references/triage-agent.md) for the complete spec. Auto-suggest option 0 when: user is returning after 3+ days, readiness is THIN-to-GOOD (8-14), or soul health check indicated "push." Skip when: user states clear intent, context window >60%, or readiness is EMPTY/MINIMAL (answer is obvious).
+### Options List (without option 0 — when gated out)
+
+> "What would you like to do?
+>
+> 1. Enrich the core (research, decide, codify) → `/think`
+> 2. Create ads (image or video) → `/ads`
+> 3. Write a VSL script → `/vsl`
+> 4. Create organic content → `/organic`
+> 5. Write a newsletter → `/newsletter` (coming soon — use `/think` for now)
+> 6. Work on my wiki → `/wiki`
+> 7. Add more context → `/think codify`
+> 8. Get help → `/help`
+>
+> (hit a number to reply, or just tell me what you need)"
+
+**Option 0 — Smart Triage:** When user selects 0 (or says "what should I work on?" / "help me prioritize" / "I don't know where to start"), spawn 3 parallel read-only analysis agents. See [triage-agent.md](references/triage-agent.md) for the complete spec.
 
 If user already stated intent, route directly without asking.
 

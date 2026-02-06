@@ -27,6 +27,23 @@ Modeled on `/end`'s crystallize agent pattern. Where crystallize asks "what did 
 
 Spawn three agents in a single message using the Task tool. Each gets a focused analysis domain. All three are **read-only** -- they return findings to the main conversation, which synthesizes and presents.
 
+### Reuse Readiness Data (Token Efficiency)
+
+The triage agents receive the readiness assessment results (scores, gaps, session state, recent commits) as input context. They do NOT re-scan these. The readiness assessment (Step 0.9) already ran git log, scored files, detected open decisions, and checked for uncodified research. Triage agents go DEEPER -- reading file contents, checking section quality, analyzing patterns across files, and connecting dots between soul alignment and tactical work.
+
+**What readiness already computed (pass as context, do not recompute):**
+- Per-file scores (soul, offer, audience, voice, testimonials, angles)
+- Composite score and status tier (EMPTY/MINIMAL/THIN/GOOD/FULL)
+- Recent commits summary
+- Open decision count and topics
+- Uncodified research count
+- Session gaps and last activity date
+
+**What triage agents add (their unique value):**
+- Agent 1: Section-level analysis of file contents, cross-file consistency, domain rubric compliance
+- Agent 2: Work pattern analysis, velocity assessment, pipeline bottlenecks
+- Agent 3: Soul-strategy alignment, unresolved threads, temporal patterns
+
 ### Pre-Gathering (Main Conversation)
 
 Before spawning agents, gather these in the main conversation and pass to each agent as needed:

@@ -19,11 +19,25 @@ Score each file by reading it directly (fast -- no subagent needed). Use line co
 | `testimonials.md` | File missing or empty | <5 testimonials | 5-10 testimonials | 10+ testimonials |
 | `angles/` | 0 files (or missing dir) | 1 file | 2-3 files | 4+ files |
 
+### Key Section Markers by File
+
+When checking section markers, search for these headings (case-insensitive). These are the quality signals that distinguish skeleton files from intentional work:
+
+| File | Key Sections to Detect |
+|------|----------------------|
+| `soul.md` | "Beliefs", "Anti-patterns", "Evolution Markers", "The Test", "The Parts" |
+| `offer.md` | "Price" / "Pricing", "Mechanism", "Guarantee", "Value Stack", "Objections", "Deliverables" |
+| `audience.md` | "Pains", "Desires", "Psychographics", "Language", "Objections", "Segments" |
+| `voice.md` | "Never Say", "Vocabulary", "Rhythm", "Examples", "Tone", "Phrases" |
+| `testimonials.md` | Count `###` or `**"` patterns (each indicates one testimonial) |
+
+**How to use:** When a file scores 1 or 2 by line count, check for these markers to identify WHICH sections are missing. This drives the specific gap language in Section 7 and prevents hand-wavy gap messages like "voice.md is thin" when the real issue is "voice.md has no Never Say section."
+
 ### How to Score
 
 1. **Read each file** with the Read tool. If the read fails or returns empty, score 0.
 2. **Count lines** for the primary threshold check.
-3. **Check for section markers** (case-insensitive grep for key headings) as a quality override -- a 25-line soul.md with a "Beliefs" section shows intentional work and scores 2, not 1.
+3. **Check for section markers** (case-insensitive grep for key headings from the table above) as a quality override -- a 25-line soul.md with a "Beliefs" section shows intentional work and scores 2, not 1. Use specific markers to identify exactly what's missing.
 4. **For testimonials:** Count occurrences of `###` or `**"` patterns that indicate individual testimonials.
 5. **For angles:** Count `.md` files in `reference/proof/angles/`, excluding `README.md`.
 
@@ -301,13 +315,19 @@ Show the score, then list gaps with brief actionable detail:
 
 ### Advanced (experience: advanced)
 
-Score with gap specifics, no explanation:
+Score with gap specifics, no explanation. **One line, always -- even at GOOD/FULL.** Advanced users don't need gap tables or explanation blocks.
 
 > "**9/18** -- voice (1, no Never Say), testimonials (1, only 2), angles (1, single angle)."
 
+**At GOOD/FULL, same one-line format:**
+
+> "**16/18** -- testimonials (2), angles (1). Have recent wins to add? Need 2 more angles for ad variety."
+
+> "**13/18** -- testimonials (2, 7 captured), angles (1, single angle). Gaps: recent wins? New angle through /think?"
+
 ### When Score Is GOOD (12-14)
 
-Still show gaps -- this is where the old format failed. Users at 13/18 need to know what the missing 5 points are:
+Still show gaps -- this is where the old format failed. Users at 13/18 need to know what the missing 5 points are. **Beginner/intermediate get the full gap display below. Advanced users get the one-line format above.**
 
 > "**Repo Health: GOOD** (13/18)
 >
@@ -317,7 +337,7 @@ Still show gaps -- this is where the old format failed. Users at 13/18 need to k
 
 ### When Score Is FULL (15-18) But Not Perfect
 
-Still show what would reach 18:
+Still show what would reach 18. **Beginner/intermediate get the gap display below. Advanced users get the one-line format above.**
 
 > "**Repo Health: FULL** (16/18)
 >
