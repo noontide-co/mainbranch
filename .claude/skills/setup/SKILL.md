@@ -281,121 +281,14 @@ Full structure (multi-offer — adds `offers/` and `product-ladder.md`):
     └── local.yaml         # Git-IGNORED session state (current_offer)
 ```
 
-### 4a. API Key Environment (Progressive Setup)
+### 4a. API Key Environment, Config, and .gitignore
 
-Create the env.sh template for optional research tools. This lives outside git repos for security.
+See **[references/repo-scaffolding.md](references/repo-scaffolding.md)** for:
+- API key environment setup (`~/.config/vip/env.sh`)
+- Initial `.vip/config.yaml` template (includes `mcps:` section for MCP server tracking)
+- `.gitignore` creation
 
-```bash
-mkdir -p ~/.config/vip
-cat > ~/.config/vip/env.sh << 'EOF'
-# Main Branch API Keys
-# This file is sourced by your shell. Keep it outside git repos.
-
-# === OPTIONAL RESEARCH TOOLS ===
-# These unlock additional capabilities. Add as needed.
-
-# Gemini - Deep web research + Nano Banana image generation (free tier available)
-# Get from: https://aistudio.google.com/apikey
-# export GOOGLE_API_KEY=""
-
-# xAI/Grok - X/Twitter sentiment analysis
-# Get from: https://console.x.ai
-# export XAI_API_KEY=""
-EOF
-```
-
-Add source line to shell config (detects zsh vs bash):
-
-```bash
-# Detect shell and add source line
-if [ -n "$ZSH_VERSION" ] || [ "$SHELL" = "/bin/zsh" ]; then
-  grep -q 'source.*vip/env.sh' ~/.zshrc 2>/dev/null || \
-    echo '[ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"' >> ~/.zshrc
-else
-  grep -q 'source.*vip/env.sh' ~/.bashrc 2>/dev/null || \
-    echo '[ -f "$HOME/.config/vip/env.sh" ] && source "$HOME/.config/vip/env.sh"' >> ~/.bashrc
-fi
-```
-
-**Explain to user:**
-> "Created `~/.config/vip/env.sh` for API keys. It's outside git repos (security) and sourced on shell startup.
->
-> You don't need keys now — Apify handles most research. Add Gemini/Grok later if you want deep research capabilities."
-
-**Progressive disclosure:** Don't overwhelm beginners with API setup. The env.sh exists but stays empty until they need it.
-
-### 4b. Create Initial Config
-
-Create `.vip/config.yaml` with team/business settings:
-
-```yaml
-# .vip/config.yaml
-# VIP configuration for this business
-# Git-tracked, shared by all collaborators
-# NOTE: User identity (name, experience) is in ~/.config/vip/local.yaml
-
-version: 1
-
-# === SESSION (Team Defaults) ===
-session:
-  auto_load_reference: true
-  show_context_tips: true  # Context management tips for beginners
-  warn_at_context_pct: 75
-
-# === INFRASTRUCTURE ===
-# Populated when services are connected
-infrastructure:
-  railway:
-    project_id: null
-  postiz:
-    api_url: null
-    api_key_ref: null  # keychain:vip/postiz or env:POSTIZ_API_KEY
-  r2:
-    bucket: null
-    public_url: null
-
-# === MCP SERVERS ===
-# Track which MCPs this business needs
-# /start verifies these are installed, prompts setup if missing
-mcps:
-  apify:
-    required_for: [organic, think]  # Handles web scraping AND YouTube transcripts
-    setup_guide: ".claude/skills/organic/references/apify-setup.md"
-
-# === CONTENT ===
-content:
-  default_channels: []
-  require_review: true
-
-# === SKILL PREFERENCES ===
-skills:
-  ads:
-    default_format: static
-  think:
-    auto_create_tasks: false
-```
-
-### 4c. Create .gitignore
-
-```bash
-cat > .gitignore << 'EOF'
-# Secrets
-.env
-*.env.local
-
-# Session state (not shared between machines)
-.vip/local.yaml
-
-# OS
-.DS_Store
-
-# Editor
-.vscode/
-.idea/
-EOF
-```
-
-**Why `.vip/local.yaml` is git-ignored:** It stores session state like `current_offer` — which offer you're working on right now. This is per-machine, per-session. The git-tracked `.vip/config.yaml` holds team/business settings that should be shared.
+Run these steps in order: create env.sh, add shell source line, create config.yaml, create .gitignore.
 
 ### 5. Sort Content into Files
 
@@ -524,27 +417,7 @@ Ask user for missing pieces or note for later.
 
 ## Git Workflow
 
-Always use GitHub CLI with descriptive commits:
-
-**Commit message format:**
-```
-[type] Brief description
-
-- Detail 1
-- Detail 2
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-```
-
-**Types:**
-- `[init]` — Initial setup
-- `[add]` — New files/features
-- `[update]` — Changes to existing
-- `[fix]` — Bug fixes
-- `[refactor]` — Structure changes
-- `[docs]` — Documentation only
-
-See `references/git-workflow.md` for full guide.
+Format: `[type] Brief description` with Co-Authored-By line. Types: `[init]`, `[add]`, `[update]`, `[fix]`, `[refactor]`, `[docs]`. See `references/git-workflow.md` for full guide.
 
 ---
 
@@ -554,6 +427,8 @@ See `references/git-workflow.md` for full guide.
 - **Templates:** `references/templates.md` — All file templates
 - **CLAUDE.md Guide:** `references/claude-md-guide.md` — How to draft a good CLAUDE.md
 - **Git Workflow:** `references/git-workflow.md` — Commit messages and CLI usage
+- **Repo Scaffolding:** `references/repo-scaffolding.md` — API keys, config.yaml, .gitignore
+- **Multi-Offer Migration:** `references/migration-multi-offer.md` — Single to multi-offer migration
 
 ---
 
@@ -576,76 +451,9 @@ If conversation compacts mid-setup:
 
 ## Migration: Single-Offer to Multi-Offer
 
-When an existing user with `core/offer.md` wants to add another offer (detected when user says "I want to add another offer", "I have a second product", or similar):
+When an existing user wants to add another offer (says "I want to add another offer", "I have a second product", or similar), follow the migration guide.
 
-### Detection
-
-Check for existing single-offer structure:
-```bash
-ls reference/core/offer.md 2>/dev/null && ! ls reference/offers/*/offer.md 2>/dev/null
-```
-
-If `core/offer.md` exists and no `offers/` folder: this is a migration.
-
-### Steps
-
-1. **Confirm the restructure:**
-   > "Right now your offer details are in `core/offer.md`. To add another offer, we restructure: `core/offer.md` becomes your brand-level thesis, and each specific offer gets its own file."
-
-2. **Name the existing offer:**
-   > "What should we call the offer currently in `core/offer.md`?" (e.g., "community", "course", "coaching")
-
-3. **Name the new offer:**
-   > "And what's the new offer called?"
-
-4. **Execute atomically:**
-   ```bash
-   # Move existing offer to its own folder
-   mkdir -p "reference/offers/[existing-name]"
-   git mv reference/core/offer.md "reference/offers/[existing-name]/offer.md"
-
-   # Create new offer folder
-   mkdir -p "reference/offers/[new-name]"
-   # (new offer.md will be written in the guide-writing step below)
-
-   # Create product-ladder.md
-   mkdir -p reference/domain
-   # (product-ladder.md will be written below)
-
-   # Create session state
-   mkdir -p .vip
-   echo "current_offer: [existing-name]" > .vip/local.yaml
-
-   # Ensure .vip/local.yaml is git-ignored
-   grep -q ".vip/local.yaml" .gitignore 2>/dev/null || echo ".vip/local.yaml" >> .gitignore
-   ```
-
-5. **Write new brand-level `core/offer.md`:**
-   Guide the user to write a high-level brand thesis. This covers what the brand stands for across all offers — not the specifics of any single one.
-   > "Now we need a brand-level offer.md. This isn't about one product — it's the umbrella. What does your brand offer the world? What transformation do all your products share?"
-
-6. **Write the new offer's `offer.md`:**
-   Guide them through the standard offer template for the new offer.
-
-7. **Write `reference/domain/product-ladder.md`:**
-   > "How do these offers relate? Is there a natural progression?"
-
-8. **Commit atomically:**
-   ```bash
-   git add -A
-   git commit -m "[refactor] Migrate to multi-offer structure
-
-   - Moved existing offer to offers/[existing-name]/
-   - Created brand-level core/offer.md
-   - Added offers/[new-name]/
-   - Created product-ladder.md
-   - Added .vip/local.yaml for session offer tracking
-
-   Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
-   ```
-
-9. **Confirm:**
-   > "Migration complete. You now have [N] offers. `/start` will ask which offer to work on each session. Run `/start [offer-name]` to jump straight to one."
+See **[references/migration-multi-offer.md](references/migration-multi-offer.md)** for the complete migration flow: detection, naming, atomic execution, brand-level offer.md creation, product-ladder.md, and commit.
 
 ---
 

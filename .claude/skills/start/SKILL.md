@@ -13,20 +13,30 @@ Single entry point for Main Branch. Detect user state, context level, experience
 
 ## CRITICAL: Always Ask Which Repo
 
-**Even if config exists with a saved default, ALWAYS ask the user which repo before proceeding:**
+**Even if config exists with a saved default, ALWAYS ask the user which repo before proceeding.** List ALL validated repos from `recent_repos`, not just the default:
 
-> "Found saved repo:
+> "Found your repos:
+>
+> 1. [default-repo-name] (saved default)
+> 2. [other-repo-name]
+> 3. Switch to different repo
+>
+> (hit a number)"
+
+**If only one repo in config:**
+
+> "Found your saved repo:
 >
 > 1. [saved-repo-name] (saved)
 > 2. Switch to different repo
 >
 > (hit a number)"
 
-Replace `[saved-repo-name]` with the actual folder name from config (e.g., "acme-coaching", "client-project").
-
 **DO NOT skip this question.** Users have multiple repos. The saved default is a suggestion, not automatic.
 
 **Only exception:** User explicitly ran `/start [repo-name]` with a specific path.
+
+**After user selects a repo:** If the selected repo is not the current `default_repo`, ask: "Want me to save [repo-name] as your default? (faster startup next time)" If yes, update `default_repo` in `~/.config/vip/local.yaml`.
 
 ---
 
@@ -67,6 +77,11 @@ Apply to: business repo selection, skill routing, any multiple choice.
 ├── Has repo but thin? ───────────────→ /think codify
 │   (reference files exist but incomplete)
 │
+├── Present menu ────────────────────→ Readiness gates which options show
+│   (option 1 = triage, recommended)
+│
+├── User picks option 1? ───────────→ Spawn triage agents (see triage-agent.md)
+│
 ├── Ready to work? ───────────────────→ Route by intent:
 │   │
 │   ├── "research" / "decide" ────────→ /think
@@ -104,10 +119,11 @@ for d in . ~/Documents/GitHub/vip ~/vip; do [ -d "$d/.claude/skills" ] && git -C
 
 ```
 1. Read ~/.config/vip/local.yaml
-   ├── Found? → Get default_repo + user identity
-   │            Validate path exists and has reference/core/
-   │            ├── Valid? → STILL ASK (see below)
-   │            └── Invalid? → Clear config, fall to discovery
+   ├── Found? → Get default_repo + recent_repos + user identity
+   │            Validate ALL paths (see Path Validation below)
+   │            ├── All valid? → Present valid options
+   │            ├── Some invalid? → Attempt recovery, prune dead paths
+   │            └── All invalid? → Clear config, fall to discovery
    └── Missing? → Fall to discovery
 
 2. If repo found, read [repo]/.vip/config.yaml
@@ -115,16 +131,13 @@ for d in . ~/Documents/GitHub/vip ~/vip; do [ -d "$d/.claude/skills" ] && git -C
    └── Missing? → Use defaults, offer to create later
 ```
 
+### Path Validation (Before Presenting Options)
+
+**Validate EVERY path in config before showing it to the user.** Never present a dead path as an option. For each path in `default_repo` and `recent_repos`, check `test -d "[path]/reference/core"`. If invalid, attempt recovery (check sibling folders for a renamed repo) and auto-prune dead entries. See [config-system.md](references/config-system.md) for the full recovery algorithm.
+
 ### CRITICAL: Always Offer Switch Option
 
-**Even with valid config, ALWAYS present numbered options:**
-
-> "Found saved repo:
->
-> 1. [saved-repo-name] (saved) ← use this
-> 2. Switch to different repo
->
-> (hit a number)"
+**Even with valid config, ALWAYS list ALL validated repos from `recent_repos` as numbered options** (see top-level "Always Ask Which Repo" section for templates). Never show just the default — users switch repos and shouldn't have to type paths.
 
 **Why:** Users may have multiple business repos. The saved default is a convenience, not a lock-in. Skipping this question traps users in one repo.
 
@@ -253,21 +266,17 @@ Adapt display to `user.experience` level (beginner = full breakdown, advanced = 
 
 ---
 
-## Step 1: Load Business Context
+## Step 1: Defer Full Context Loading
 
-Read these files (in order) to prep Claude:
+**Do NOT read full reference files into main.** Readiness (Step 0.9) already scored them — that's enough for routing. Full context loading happens in the selected skill or triage agents, not here.
 
-```
-[repo]/CLAUDE.md                    - Business brain
-[repo]/reference/core/soul.md       - WHY (philosophy, beliefs)
-[repo]/reference/core/offer.md      - WHAT (product, pricing)
-[repo]/reference/core/audience.md   - WHO (pains, desires)
-[repo]/reference/core/voice.md      - HOW (tone, vocabulary)
-```
+**Why:** Reading soul.md + offer.md + audience.md + voice.md into main burns 15-30K tokens that get duplicated when the skill re-reads them. The triage test showed /start hitting 61% context before any work began. Main stays lean; skills/agents load what they need.
 
-**Missing files?** Skip silently. If 2+ core files missing → `/think codify`.
+**What main knows after Step 0.9:** Readiness scores, which files exist, composite score, gaps. That's enough to present the menu and gate routing.
 
-**Multi-offer context:** If `current_offer` is set (see Step 1.5), also load `reference/offers/[current_offer]/offer.md`. This is the active offer — it takes precedence over `core/offer.md` for offer-specific details. `core/offer.md` becomes the brand-level thesis. If `offers/[current_offer]/audience.md` exists, load it too (offer-specific audience override).
+**Exception:** Read `[repo]/CLAUDE.md` (the business brain) — it's small and needed for personality/routing awareness. Skip the 4 core reference files.
+
+**Multi-offer context:** If `current_offer` is set (see Step 1.5), note the active offer for routing. Don't load the offer file — the selected skill will.
 
 ---
 
@@ -321,18 +330,52 @@ Check `reference/core/*.md`. No folder → `/setup`. Exists → check completene
 
 If user is ready to work, ask or infer intent. **Use numbered options:**
 
-> "Your reference files look good. What would you like to do?
+### Triage (Option 1 — User-Initiated)
+
+**Triage is option 1 on the menu.** It runs when the user selects it or when intent keywords match. It does NOT run automatically every session. This keeps /start fast and preserves context for actual work.
+
+**Why not always-on:** Three parallel agents burn 50-80K tokens. Running them every session means the user starts at 60%+ context before doing anything. /end gates crystallize behind meaningful activity — /start gates triage behind user choice.
+
+**Present the menu:**
+
+> "What would you like to do?
 >
-> 1. Enrich the core (research, decide, mine) → `/think`
-> 2. Create ads (image or video) → `/ads`
-> 3. Write a VSL script → `/vsl`
-> 4. Create organic content → `/organic`
-> 5. Write a newsletter → `/newsletter` (coming soon — use `/think` for now)
+> 1. **What should I focus on?** (triage — analyzes your full state) → see [triage-agent.md](references/triage-agent.md)
+> 2. Enrich the core (research, decide, codify) → `/think`
+> 3. Create ads (image or video) → `/ads`
+> 4. Write a VSL script → `/vsl`
+> 5. Create organic content → `/organic`
 > 6. Work on my wiki → `/wiki`
-> 7. Add more context → `/think codify`
-> 8. Get help → `/help`
+> 7. Build/update a site → `/site`
+> 8. Add more context → `/think codify`
+> 9. Get help → `/help`
 >
-> (hit a number to reply, or just tell me what you need)"
+> (hit a number, or just tell me what you need)"
+
+**When user picks option 1:** Spawn triage agents. See [triage-agent.md](references/triage-agent.md) for gating, tiered spawning, agent prompts, and synthesis format.
+
+**While agents work:** Set expectations, then give them something to chew on:
+
+> "Spinning up [1/2/3] analysis agents — this takes about **2-3 minutes**. They're reading your full reference, decisions, git history, and soul alignment so I can give you something actually useful.
+>
+> **Good news:** These run as sub-agents in their own context windows, so they won't eat into your session. You'll still have plenty of room for whatever comes next.
+>
+> While we wait: [pick ONE at random per session]
+> - *The word 'decide' comes from Latin 'decidere' — literally 'to cut off.' Every decision is choosing what to let go of.*
+> - *Hemingway rewrote the ending of A Farewell to Arms 47 times. When asked why, he said: 'Getting the words right.'*
+> - *The best time to plant a tree was 20 years ago. The second best time is now.*
+> - *Your reference files are like compound interest — small deposits now, massive returns later.*
+> - *'If you can't explain it simply, you don't understand it well enough.' — Einstein. That's what codifying does.*
+> - *Fun fact: the average person mass-produces 50K+ words a day in their head. You're one of the few who actually filters those into something useful.*"
+
+**Auto-suggest option 1 when:**
+- Returning user (last commit >3 days ago) and no stated intent
+- Readiness is THIN (8-11) — "Option 1 can help you figure out the highest-leverage gap"
+- User says "what should I work on", "help me prioritize", "what to do next"
+
+**Skip triage entirely when:**
+- Readiness is EMPTY or MINIMAL (0-7) — answer is obvious: `/setup` or `/think`
+- User stated clear intent with `/start ads` or similar
 
 If user already stated intent, route directly without asking.
 
@@ -405,6 +448,7 @@ Use these to auto-detect what user wants:
 
 | Keywords | Route To |
 |----------|----------|
+| "what should I work on", "help me prioritize", "what to do next", "figure out what to work on" | Option 1 → Triage (see [triage-agent.md](references/triage-agent.md)) |
 | "help", "confused", "stuck", "don't understand", "how do I" | `/help` |
 | "new", "first time", "get started", "set up" | `/setup` |
 | "add", "update", "more context", "new testimonials", "enrich" | `/think codify` |
@@ -437,7 +481,7 @@ If the conversation compacts and /start is re-invoked:
 Router, not worker. Detect state → route → let the target skill do the work. One clarifying question max.
 
 **Four jobs:**
-1. Orient Claude to the business (load reference)
+1. Find and validate the business repo (config, path validation)
 2. Assess readiness (score reference, check session state, soul health)
-3. Understand what user needs (ask if unclear)
-4. Route to the right skill (respecting readiness gates)
+3. Present options — triage (option 1, recommended) or direct skill routing
+4. Route to the right skill (respecting readiness gates) — skill loads its own context
