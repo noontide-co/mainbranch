@@ -323,7 +323,8 @@ If user is ready to work, ask or infer intent. **Use numbered options:**
 
 > "Your reference files look good. What would you like to do?
 >
-> 1. Enrich the core (research, decide, mine) → `/think`
+> 0. Help me figure out what to work on → deep analysis (see [triage-agent.md](references/triage-agent.md))
+> 1. Enrich the core (research, decide, codify) → `/think`
 > 2. Create ads (image or video) → `/ads`
 > 3. Write a VSL script → `/vsl`
 > 4. Create organic content → `/organic`
@@ -333,6 +334,8 @@ If user is ready to work, ask or infer intent. **Use numbered options:**
 > 8. Get help → `/help`
 >
 > (hit a number to reply, or just tell me what you need)"
+
+**Option 0 — Smart Triage:** When user selects 0 (or says "what should I work on?" / "help me prioritize" / "I don't know where to start"), spawn 3 parallel read-only analysis agents. See [triage-agent.md](references/triage-agent.md) for the complete spec. Auto-suggest option 0 when: user is returning after 3+ days, readiness is THIN-to-GOOD (8-14), or soul health check indicated "push." Skip when: user states clear intent, context window >60%, or readiness is EMPTY/MINIMAL (answer is obvious).
 
 If user already stated intent, route directly without asking.
 
@@ -405,6 +408,7 @@ Use these to auto-detect what user wants:
 
 | Keywords | Route To |
 |----------|----------|
+| "what should I work on", "help me prioritize", "what to do next", "figure out what to work on" | Option 0 → Triage (see [triage-agent.md](references/triage-agent.md)) |
 | "help", "confused", "stuck", "don't understand", "how do I" | `/help` |
 | "new", "first time", "get started", "set up" | `/setup` |
 | "add", "update", "more context", "new testimonials", "enrich" | `/think codify` |
