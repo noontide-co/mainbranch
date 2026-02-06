@@ -24,10 +24,19 @@ Score each file 0-3 based on line count + section presence.
 
 ### Files Scored
 
+Use canonical path resolution for offer and audience files (multi-offer aware):
+
+1. Check `.vip/local.yaml` for `current_offer`
+2. If `current_offer` is set and `offers/{current_offer}/offer.md` exists, score that file
+3. Otherwise fall back to `reference/core/offer.md`
+4. Same resolution for `audience.md`
+
+See `docs/system-architecture.md` (Canonical Path Resolution) for the full algorithm.
+
 | File | Key Sections | Weight |
 |------|-------------|--------|
-| `reference/core/offer.md` | Price, mechanism, benefits, guarantee | Required |
-| `reference/core/audience.md` | Pains, desires, demographics, psychographics | Required |
+| `offer.md` (resolved) | Price, mechanism, benefits, guarantee | Required |
+| `audience.md` (resolved) | Pains, desires, demographics, psychographics | Required |
 | `reference/core/voice.md` | Tone, phrases, personality, don'ts | Required |
 | `reference/proof/testimonials.md` | Named testimonials with outcomes | Required |
 | `reference/proof/angles/` | At least 1 angle file beyond README | Required |
@@ -36,6 +45,8 @@ Score each file 0-3 based on line count + section presence.
 ### Scoring Logic
 
 ```
+Resolve offer.md and audience.md paths first (see above).
+
 For each file:
   if not exists → 0
   if exists and lines < 20 → 1

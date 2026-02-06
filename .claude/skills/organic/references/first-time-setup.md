@@ -99,11 +99,13 @@ Tell Claude which platform you're creating for - it affects timing and structure
 
 ### Option A: Research competitors first (recommended)
 
+Use `/think` to mine competitors before generating:
+
 ```
-/organic mine
+/think
 ```
 
-This extracts winning concepts from competitors, saves to `research/`. Then generate from those concepts.
+Tell Claude you want to research competitor content. This extracts winning concepts and saves them to `research/`. Then run `/organic` to generate from those concepts.
 
 ### Option B: Generate immediately
 
@@ -144,8 +146,8 @@ The skill will extract concepts from whatever you provide.
 
 Once you have the three core files:
 
-1. Run `/organic` to start the full flow
-2. Or run `/organic mine` to just research competitors
-3. Or run `/organic video "topic"` to generate immediately
+1. Run `/organic` to start the full generation flow
+2. Or run `/organic video "topic"` to generate immediately
+3. Want to research competitors first? Run `/think` -- mining saves to `research/`, then `/organic` generates from it
 
 The skill will guide you from there.

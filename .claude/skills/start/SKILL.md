@@ -92,7 +92,8 @@ Apply to: business repo selection, skill routing, any multiple choice.
 Run `git pull origin main` on vip silently. Mention only if updates pulled. Don't block on network issues.
 
 ```bash
-cd ~/Documents/GitHub/vip 2>/dev/null && git pull origin main 2>/dev/null || true
+# Pull vip updates (checks common locations)
+for d in . ~/Documents/GitHub/vip ~/vip; do [ -d "$d/.claude/skills" ] && git -C "$d" pull origin main 2>/dev/null && break; done || true
 ```
 
 ---

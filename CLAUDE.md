@@ -141,7 +141,7 @@ Single-offer repos work exactly as before -- no `offers/` folder, everything in 
 | `product-ladder.md` | HOW offers relate — strategic relationship between products (domain -- multi-offer only) |
 | `skool-surfaces.md` | WHAT cold traffic sees — live Skool about page + pricing card copy (domain/funnel -- congruence anchor for ads, organic, VSLs) |
 
-First four live in `reference/core/` and are required for all businesses. `content-strategy.md`, `product-ladder.md`, and `skool-surfaces.md` live in `reference/domain/` and emerge over time.
+First four live in `reference/core/` and are required for all businesses. `content-strategy.md` and `product-ladder.md` live in `reference/domain/`. `skool-surfaces.md` lives in `reference/domain/funnel/` (Skool communities only). All emerge over time.
 
 ---
 

@@ -26,7 +26,8 @@ Say `/site` again after compaction, context loss, or switching focus. It reloads
 ## Pull Latest Updates
 
 ```bash
-cd ~/vip 2>/dev/null && git pull origin main 2>/dev/null && cd - >/dev/null || true
+# Pull vip updates (checks common locations)
+for d in . ~/Documents/GitHub/vip ~/vip; do [ -d "$d/.claude/skills" ] && git -C "$d" pull origin main 2>/dev/null && break; done || true
 ```
 
 ---
