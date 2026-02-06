@@ -354,11 +354,13 @@ If user is ready to work, ask or infer intent. **Use numbered options:**
 
 **When user picks option 1:** Spawn triage agents. See [triage-agent.md](references/triage-agent.md) for gating, tiered spawning, agent prompts, and synthesis format.
 
-**While agents work (~1-2 min):** Tell the user it's worth the wait. Be warm and human about it:
+**While agents work:** Set expectations, then give them something to chew on:
 
-> "This takes a minute or two — I'm reading through your whole business state so I can give you something genuinely useful. Worth the wait ;)
+> "Spinning up [1/2/3] analysis agents — this takes about **2-3 minutes**. They're reading your full reference, decisions, git history, and soul alignment so I can give you something actually useful.
 >
-> While we're here: [pick ONE at random per session]
+> **Good news:** These run as sub-agents in their own context windows, so they won't eat into your session. You'll still have plenty of room for whatever comes next.
+>
+> While we wait: [pick ONE at random per session]
 > - *The word 'decide' comes from Latin 'decidere' — literally 'to cut off.' Every decision is choosing what to let go of.*
 > - *Hemingway rewrote the ending of A Farewell to Arms 47 times. When asked why, he said: 'Getting the words right.'*
 > - *The best time to plant a tree was 20 years ago. The second best time is now.*
