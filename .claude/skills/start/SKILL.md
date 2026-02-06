@@ -13,20 +13,30 @@ Single entry point for Main Branch. Detect user state, context level, experience
 
 ## CRITICAL: Always Ask Which Repo
 
-**Even if config exists with a saved default, ALWAYS ask the user which repo before proceeding:**
+**Even if config exists with a saved default, ALWAYS ask the user which repo before proceeding.** List ALL validated repos from `recent_repos`, not just the default:
 
-> "Found saved repo:
+> "Found your repos:
+>
+> 1. [default-repo-name] (saved default)
+> 2. [other-repo-name]
+> 3. Switch to different repo
+>
+> (hit a number)"
+
+**If only one repo in config:**
+
+> "Found your saved repo:
 >
 > 1. [saved-repo-name] (saved)
 > 2. Switch to different repo
 >
 > (hit a number)"
 
-Replace `[saved-repo-name]` with the actual folder name from config (e.g., "acme-coaching", "client-project").
-
 **DO NOT skip this question.** Users have multiple repos. The saved default is a suggestion, not automatic.
 
 **Only exception:** User explicitly ran `/start [repo-name]` with a specific path.
+
+**After user selects a repo:** If the selected repo is not the current `default_repo`, ask: "Want me to save [repo-name] as your default? (faster startup next time)" If yes, update `default_repo` in `~/.config/vip/local.yaml`.
 
 ---
 
@@ -122,14 +132,7 @@ for d in . ~/Documents/GitHub/vip ~/vip; do [ -d "$d/.claude/skills" ] && git -C
 
 ### CRITICAL: Always Offer Switch Option
 
-**Even with valid config, ALWAYS present numbered options:**
-
-> "Found saved repo:
->
-> 1. [saved-repo-name] (saved) ← use this
-> 2. Switch to different repo
->
-> (hit a number)"
+**Even with valid config, ALWAYS list ALL validated repos from `recent_repos` as numbered options** (see top-level "Always Ask Which Repo" section for templates). Never show just the default — users switch repos and shouldn't have to type paths.
 
 **Why:** Users may have multiple business repos. The saved default is a convenience, not a lock-in. Skipping this question traps users in one repo.
 
