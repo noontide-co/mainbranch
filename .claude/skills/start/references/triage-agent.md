@@ -1,25 +1,48 @@
 # Triage Agent Reference
 
-Complete reference for the smart triage system spawned by `/start` when the user selects option 0 ("Help me figure out what to work on"). Contains agent prompts, anti-patterns, synthesis format, and save behavior.
+Complete reference for the smart triage system in `/start`. Runs when the user selects **option 1** ("What should I focus on?") from the /start menu. Contains agent prompts, pre-gathering, gating, synthesis format, anti-patterns, and save behavior.
 
 Modeled on `/end`'s crystallize agent pattern. Where crystallize asks "what did today mean?", triage asks "what should happen next?" Where crystallize is a mirror, triage is a compass.
 
 ---
 
-## When to Trigger
+## When to Run
 
-**User selects option 0** in the routing list, or says: "what should I work on?", "help me prioritize", "I don't know where to start", "help me figure out what to do."
+**Triage runs when the user chooses it.** It's option 1 on the /start menu — the recommended default most sessions. But the user can always skip it and pick a skill directly.
 
-**Auto-suggest (but don't auto-run) when:**
-- User is returning after 3+ days (soul health check context)
-- Readiness score is THIN-to-GOOD (8-14) -- enough to analyze, enough gaps to fill
-- Soul health check indicated "push" (suggests drift -- triage may reveal the cause)
+**Why not always-on:** Three parallel agents burn 50-80K tokens. Running them every session means the user hits 60%+ context before doing any actual work. /end gates crystallize behind meaningful activity — /start gates triage behind user choice. Agents eat the heavy context in their own windows, keeping main lean for whatever comes next.
 
-**Skip when:**
-- User states clear intent ("I want to write ads") -- route directly
-- Context window already heavy (>60%) -- triage is expensive
-- Readiness is EMPTY or MINIMAL (0-7) -- answer is obvious: /setup or /think
-- User explicitly asks for a specific skill
+**Auto-suggest option 1 when:**
+- Returning user (last commit >3 days ago) and no stated intent
+- Readiness is THIN (8-11) — "Option 1 can help you figure out the highest-leverage gap"
+- User says "what should I work on", "help me prioritize", "what to do next"
+
+**Skip triage entirely when:**
+- Readiness is EMPTY or MINIMAL (0-7) — answer is obvious: `/setup` or `/think`
+- User stated clear intent with `/start ads` or similar
+
+---
+
+## Gating (Like /end's Crystallize)
+
+Before spawning agents, check these gates (modeled on /end Step 5a):
+
+| Gate | Check | If fails |
+|------|-------|----------|
+| Context budget | Is main context < 50%? | Warn user: "Context is at X%. Triage uses significant tokens. Run it anyway?" |
+| Readiness tier | Is score ≥ 8 (THIN or above)? | Skip triage — not enough reference to analyze. Route to `/think` |
+| Meaningful state | Does repo have commits, decisions, or research? | If brand new repo with just setup scaffolding, skip deep triage — suggest `/think` instead |
+
+### Tiered Spawning
+
+Not every session needs 3 agents. Match agent count to context:
+
+| Condition | Agents | Why |
+|-----------|--------|-----|
+| THIN (8-11), few commits | **1 agent** (Reference Health only) | Not enough content for pipeline or soul analysis |
+| GOOD (12-14), active repo | **2 agents** (Reference Health + Pipeline) | Soul analysis adds value when there's meaningful work history |
+| FULL (15-18), active repo | **3 agents** (all three) | Full analysis justified |
+| User says "deep triage" | **3 agents** regardless | Explicit request overrides tiering |
 
 ---
 
@@ -44,24 +67,33 @@ The triage agents receive the readiness assessment results (scores, gaps, sessio
 - Agent 2: Work pattern analysis, velocity assessment, pipeline bottlenecks
 - Agent 3: Soul-strategy alignment, unresolved threads, temporal patterns
 
-### Pre-Gathering (Main Conversation)
+### Pre-Gathering (Main Conversation — Keep It Lean)
 
-Before spawning agents, gather these in the main conversation and pass to each agent as needed:
+**The goal is to pass COMPACT data to agents, not load everything into main.** Main gathers lightweight metadata (scores, file lists, git summaries). Agents do the heavy reading (full file contents, cross-file analysis) in their own context windows.
 
-| Content | How | Passed To |
-|---------|-----|-----------|
-| Readiness scores (from Step 0.9) | Already computed | All 3 agents |
-| Git log (30 days) | `git log --since="30 days ago" --oneline --no-merges` | Agent 2 |
-| Git log (reference file changes, 30 days) | `git log --since="30 days ago" --name-only -- reference/` | Agent 1, 3 |
-| Open decisions | `grep -rl "status: proposed\|status: accepted" decisions/` | Agent 2 |
-| Unlinked research | Research files with `linked_decisions: []` | Agent 2 |
-| soul.md (full) | Read tool | Agent 3 |
-| content-strategy.md (full) | Read tool (if exists) | Agent 2, 3 |
-| Past triage outputs | `research/*-start-triage.md` (if any) | Agent 3 |
-| Past crystallize outputs | `research/*-end-of-day-crystallize.md` (if any) | Agent 3 |
-| `.vip/local.yaml` | Read for current_offer | All 3 agents |
-| Content pipeline state | `ls content/drafts/ content/scheduled/ content/published/ 2>/dev/null` | Agent 2 |
-| Recent outputs | `ls -lt outputs/ 2>/dev/null \| head -5` | Agent 2 |
+Gather these in main and pass as structured text in each agent's prompt:
+
+| Content | How | Size | Passed To |
+|---------|-----|------|-----------|
+| Readiness scores (from Step 0.9) | Already computed | ~20 lines | All 3 agents |
+| Absolute repo path | From Step 0 | 1 line | All 3 agents (agents use this to Read files themselves) |
+| Git log (30 days) | `git log --since="30 days ago" --oneline --no-merges` | ~30 lines | Agent 2 |
+| Reference file change list (30 days) | `git log --since="30 days ago" --name-only -- reference/` | ~20 lines | Agent 1, 3 |
+| Open decision file names | `grep -rl "status: proposed\|status: accepted" decisions/` | ~10 lines | Agent 2 |
+| Unlinked research count | `grep -rl "linked_decisions: \[\]" research/ \| wc -l` | 1 line | Agent 2 |
+| Past triage file names | `ls research/*-start-triage.md 2>/dev/null` | ~5 lines | Agent 3 |
+| Past crystallize file names | `ls research/*-end-of-day-crystallize.md 2>/dev/null` | ~5 lines | Agent 3 |
+| `current_offer` | From `.vip/local.yaml` | 1 line | All 3 agents |
+| Content pipeline listing | `ls content/drafts/ content/scheduled/ 2>/dev/null` | ~10 lines | Agent 2 |
+
+**What agents read themselves (in their own context, NOT in main):**
+- soul.md, offer.md, audience.md, voice.md — Agent 1 reads all, Agent 3 reads soul
+- content-strategy.md — Agent 2, 3
+- Full decision files (agents pick which ones to read based on file names)
+- Full past triage/crystallize outputs (agents pick based on file names)
+- testimonials.md, angles/* — Agent 1
+
+**This keeps main at ~5K tokens of pre-gathering** while agents spend 20-50K each reading full files.
 
 ---
 
@@ -310,32 +342,45 @@ Return:
 
 ## Spawning Pattern
 
-Use the Task tool to spawn all three agents in a single message:
+**Spawn all three agents in a single message using the Task tool.** This sends them to parallel context windows. Each agent's prompt includes the pre-gathered metadata PLUS instructions to read specific files themselves using the absolute repo path.
 
 ```
 Task(
   subagent_type: "general-purpose",
-  description: "Reference Health Analyst: deep section-level analysis of all
-    reference files, cross-file consistency, domain rubric compliance,
-    staleness detection. Returns ranked gap list with effort estimates."
+  description: "Reference Health Analyst: read all reference files at [repo-path],
+    analyze section-level quality, cross-file consistency, domain rubric compliance,
+    staleness detection. Return ranked gap list with effort estimates.",
+  prompt: "[Pre-gathered metadata + Agent 1 prompt template + absolute repo path]"
 )
 
 Task(
   subagent_type: "general-purpose",
-  description: "Pipeline & Momentum Analyst: git history patterns, open
-    decisions, unlinked research, content pipeline state, velocity assessment.
-    Returns bottleneck ranking and momentum assessment."
+  description: "Pipeline & Momentum Analyst: analyze git patterns, open decisions,
+    unlinked research, content pipeline state, velocity. Return bottleneck ranking
+    and momentum assessment.",
+  prompt: "[Pre-gathered metadata + Agent 2 prompt template + absolute repo path]"
 )
 
 Task(
   subagent_type: "general-purpose",
-  description: "Soul & Strategy Connector: soul alignment check, unresolved
-    crystallize threads, strategic direction assessment. Returns soul-grounded
-    recommendations."
+  description: "Soul & Strategy Connector: read soul.md at [repo-path], check
+    alignment with recent work, review past crystallize/triage outputs. Return
+    soul-grounded recommendations.",
+  prompt: "[Pre-gathered metadata + Agent 3 prompt template + absolute repo path]"
 )
 ```
 
-Each agent is **read-only**. Each returns structured findings. The main conversation synthesizes.
+Each agent is **read-only**. Each reads files in its own context window. Main conversation stays lean.
+
+### After Spawning: Wait for Agents
+
+**The user already chose triage (option 1). They're waiting for results.** Show a brief message: "Analyzing your business state..." while agents work.
+
+### When Agents Return: Present the Synthesis
+
+When all agents complete, synthesize their findings (see Synthesis Format below) and present to the user. Then ask: "Want to go with [primary recommendation]? Or does something else feel right?"
+
+The user can pick the recommendation, ask follow-up questions, or choose a different path entirely. Triage is guidance, not enforcement.
 
 ---
 
@@ -450,6 +495,16 @@ status: complete
 
 ## Token Budget
 
+### By Tier
+
+| Tier | Agents | Main Cost | Agent Cost | Total |
+|------|--------|-----------|------------|-------|
+| Light (1 agent) | Reference Health only | 5-10K | 30-50K | 35-60K |
+| Standard (2 agents) | Health + Pipeline | 5-10K | 50-90K | 55-100K |
+| Full (3 agents) | All three | 5-10K | 70-120K | 75-130K |
+
+### Per Agent
+
 | Component | Estimated Tokens |
 |-----------|-----------------|
 | Pre-gathering (main conversation) | 5-10K |
@@ -457,9 +512,8 @@ status: complete
 | Agent 2: Pipeline & Momentum | 20-40K |
 | Agent 3: Soul & Strategy | 20-30K |
 | Synthesis (main conversation) | 5-10K |
-| **Total across all agents** | **75-130K** |
 
-On THIN repos (8-11), Agent 1 has less to read, so budget drops. On FULL repos (15-18), Agent 1 has more content but Agents 2 and 3 become the primary value drivers.
+**Main context impact:** Only pre-gathering (~5-10K) and synthesis (~5-10K) hit main. Agent tokens are in their own windows. This means triage costs main ~10-20K total, regardless of tier.
 
 ---
 
@@ -477,6 +531,6 @@ On THIN repos (8-11), Agent 1 has less to read, so budget drops. On FULL repos (
 
 ## See Also
 
-- [../SKILL.md](../SKILL.md) -- The /start flow that offers triage as option 0
-- [readiness-assessment.md](readiness-assessment.md) -- Scoring rubric and display format (runs before triage)
-- [../../end/references/crystallize-agent.md](../../end/references/crystallize-agent.md) -- The /end crystallize pattern this agent is modeled on
+- [../SKILL.md](../SKILL.md) -- The /start flow where triage is option 1 on the menu
+- [readiness-assessment.md](readiness-assessment.md) -- Scoring rubric and display format (runs before triage, provides scores to agents)
+- [../../end/references/crystallize-agent.md](../../end/references/crystallize-agent.md) -- The /end crystallize pattern this agent is modeled on (gating, tiering, token budget)
