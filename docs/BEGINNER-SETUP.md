@@ -127,7 +127,7 @@ Once set up, type these commands:
 - `/think` - Research, make decisions, add context
 - `/ads` - Generate image ads, video scripts, or review for compliance
 - `/vsl` - Write video sales letters (Skool or B2B)
-- `/organic` - Mine competitors, create Reels/TikTok/carousels
+- `/organic` - Generate organic content — Reels, TikTok, carousels
 - `/site` - Build and deploy landing pages from your reference files
 - `/end` - Close your session intentionally
 - `/help` - Get answers to any question

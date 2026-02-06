@@ -77,20 +77,20 @@ See [the-think-cycle.md](the-think-cycle.md) for deep dive.
 ---
 
 ### /organic - Organic Content
-**Use when:** Creating Reels, TikTok, or carousel content (not paid ads).
+**Use when:** Generating Reels, TikTok, or carousel content from your reference files and research (not paid ads).
 
 **What it does:**
-- Mines competitor content for winning concepts
-- Extracts hooks, structures, and angles that perform
-- Generates scripts in your voice
+- Generates scripts in your voice from reference + research
 - Supports video, carousel, and static formats
+- Uses mined research from `/think` (competitor analysis, framework extraction)
 
 **Modes:**
-- `/organic` - Full flow (mine -> select -> generate)
-- `/organic mine` - Research competitors only
+- `/organic` - Full flow (select concept -> generate)
 - `/organic video "topic"` - Generate Reels/TikTok script
 - `/organic carousel "topic"` - Generate carousel slides
 - `/organic static "topic"` - Generate post caption
+
+**Mining happens in /think:** If you need to mine competitors first, run `/think` to research and save findings, then come back to `/organic` to generate from that research.
 
 **Key difference from /ads video:** Organic uses soft CTAs (save, follow) while ads use hard CTAs (buy, sign up).
 

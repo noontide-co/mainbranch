@@ -167,7 +167,7 @@ No prompt engineering. No explaining what you want. Just type the command.
 | `/think` | Research, make decisions, add context, transcribe local recordings, update reference files |
 | `/ads` | Create ad copy (static or video) and review for compliance |
 | `/vsl` | Write video sales letter scripts (Skool or B2B) |
-| `/organic` | Mine competitors, create Reels/TikTok/carousel scripts |
+| `/organic` | Generate organic content — Reels, TikTok, carousels |
 | `/site` | Generate and deploy landing pages from your reference files |
 | `/wiki` | Personal wiki with atomic notes |
 | `/end` | Close session — summary, crystallize, commit |

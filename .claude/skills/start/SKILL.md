@@ -227,6 +227,31 @@ If user's stated intent involves research, route to /think — it will handle to
 
 ---
 
+## Step 0.9: Readiness Assessment
+
+**Run AFTER MCP pre-flight, BEFORE routing.** Scores reference files, checks session state, and gates routing so users don't jump into output skills with thin context.
+
+See [readiness-assessment.md](references/readiness-assessment.md) for complete scoring rubric, session state checks, soul health check, skill-specific requirements, and display format.
+
+### Quick summary:
+
+1. **Score reference files** (soul, offer, audience, voice, testimonials, angles) on 0-3 scale each. Composite max = 18. Multi-offer: score active offer's files, not just core.
+2. **Check session state** — recent commits, open decisions, uncodified research. Surface what's in progress.
+3. **Soul health check** — for returning users (last commit >3 days ago), read soul.md and ask: "Is your current work feeling like pull or push?" Skip for active or first-time users.
+4. **Gate routing** based on composite score:
+
+| Score | Status | Action |
+|-------|--------|--------|
+| 0-3 | EMPTY | Route to `/setup` |
+| 4-7 | MINIMAL | Block output skills, route to `/think` |
+| 8-11 | THIN | Warn before output skills, suggest `/think` first |
+| 12-14 | GOOD | All skills, note gaps |
+| 15-18 | FULL | All skills available |
+
+Adapt display to `user.experience` level (beginner = full breakdown, advanced = score only). See reference file for details.
+
+---
+
 ## Step 1: Load Business Context
 
 Read these files (in order) to prep Claude:
@@ -270,13 +295,9 @@ ls reference/offers/*/offer.md 2>/dev/null
 
 ---
 
-## Step 2: Detect State
+## Step 2: Detect State and Assess Completeness
 
-Check `reference/core/*.md`. No folder → `/setup`. Exists → check completeness.
-
----
-
-## Step 2: Assess Completeness
+Check `reference/core/*.md`. No folder → `/setup`. Exists → check completeness:
 
 | File | Complete If |
 |------|------------|
@@ -292,6 +313,8 @@ Check `reference/core/*.md`. No folder → `/setup`. Exists → check completene
 ---
 
 ## Step 3: Route by Intent
+
+**Respect readiness gates from Step 0.9.** If status is MINIMAL or EMPTY, do not offer output skills. If THIN, warn. See [readiness-assessment.md](references/readiness-assessment.md) for skill-specific requirements.
 
 **Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[current_offer or 'single']**"
 
@@ -365,7 +388,7 @@ Read `user.experience` from `~/.config/vip/local.yaml` (defaults to `beginner` i
 | `/think` | Enrich the core — research, decide, codify into reference |
 | `/ads` | Generate image ads, video scripts, or review for compliance |
 | `/vsl` | Write video sales letters (Skool or B2B frameworks) |
-| `/organic` | Mine competitors, generate organic scripts |
+| `/organic` | Generate organic content from reference + research |
 | `/newsletter` | Generate weekly newsletter from thinking work (coming soon) |
 | `/site` | Generate and deploy landing pages from reference files |
 | `/wiki` | Create atomic notes, publish wiki |
@@ -384,12 +407,13 @@ Use these to auto-detect what user wants:
 | "help", "confused", "stuck", "don't understand", "how do I" | `/help` |
 | "new", "first time", "get started", "set up" | `/setup` |
 | "add", "update", "more context", "new testimonials", "enrich" | `/think codify` |
-| "research", "decide", "figure out", "explore", "mine", "mining", "transcribe" | `/think` |
-| "content strategy", "pillars", "platforms", "cadence", "content plan" | `/think` |
+| "research", "decide", "figure out", "explore", "mine", "mining", "competitors", "transcribe" | `/think` |
+| "content strategy", "pillars", "platforms", "cadence", "content plan", "distribution" | `/think` |
+| "soul check", "is this still right", "feeling obligated", "pull or push" | `/think codify` (soul.md review) |
 | "newsletter", "email", "beehiiv", "weekly email" | `/newsletter` (coming soon — route to `/think` for now) |
 | "ads", "copy", "static", "image ads", "video ads", "review", "compliance" | `/ads` |
 | "vsl", "sales video", "about page video", "b2b video" | `/vsl` |
-| "content", "reels", "tiktok", "organic", "mine", "competitors", "carousel" | `/organic` |
+| "content", "reels", "tiktok", "organic", "carousel" | `/organic` |
 | "site", "landing page", "website", "deploy site", "put this online", "I need a site" | `/site` |
 | "wiki", "notes", "atomic", "wikilinks", "publish wiki" | `/wiki` |
 | "pull", "update vip", "get latest" | `/pull` |
@@ -411,7 +435,8 @@ If the conversation compacts and /start is re-invoked:
 
 Router, not worker. Detect state → route → let the target skill do the work. One clarifying question max.
 
-**Three jobs:**
+**Four jobs:**
 1. Orient Claude to the business (load reference)
-2. Understand what user needs (ask if unclear)
-3. Route to the right skill (fast)
+2. Assess readiness (score reference, check session state, soul health)
+3. Understand what user needs (ask if unclear)
+4. Route to the right skill (respecting readiness gates)

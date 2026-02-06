@@ -258,7 +258,7 @@ Research files also add: `linked_decisions: []`
 | `/think` | Research → decide → codify into reference |
 | `/ads` | Static ads, video scripts, one-liners, or compliance review |
 | `/vsl` | VSL scripts (Skool 18-section or B2B Haynes 7-step) |
-| `/organic` | Mine competitors, generate organic scripts |
+| `/organic` | Generate organic content from reference + research |
 | `/wiki` | Personal wiki with atomic notes |
 | `/site` | Generate and deploy landing pages from reference files |
 | `/help` | Answer questions, troubleshoot, explain |
