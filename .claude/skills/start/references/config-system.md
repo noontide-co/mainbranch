@@ -72,26 +72,30 @@ cat ~/.config/vip/local.yaml 2>/dev/null
 ```
 
 ```yaml
-default_repo: ~/Documents/GitHub/my-business
+# NOTE: All paths MUST be absolute. Never use ~ (tools don't expand it).
+# /start writes absolute paths automatically when saving config.
+default_repo: /absolute/path/to/my-business
 recent_repos:
-  - ~/Documents/GitHub/my-business
-  - ~/Documents/GitHub/client-project
+  - /absolute/path/to/my-business
+  - /absolute/path/to/client-project
 
 # User identity lives here, NOT in repo config
 # Allows multiple people to work on same business repo
 user:
-  name: "Devon"
+  name: "Your Name"
   experience: advanced  # beginner | intermediate | advanced
 
 # Media output configuration
 # Where non-markdown outputs land (images, videos, exports)
 # Machine-specific paths — different per computer
 media:
-  root: ~/Google Drive/My Drive/Main Branch
+  root: /absolute/path/to/Main Branch
   # Per-type overrides (optional — defaults to {root}/{type}/)
-  # images: ~/Desktop/ad-images
-  # videos: ~/Desktop/ad-videos
+  # images: /absolute/path/to/ad-images
+  # videos: /absolute/path/to/ad-videos
 ```
+
+**CRITICAL: Always use absolute paths, never `~`.** The Glob and Read tools do not expand `~`, causing silent failures (0 results when files exist). When writing to `local.yaml`, always expand `~` to the full absolute path first. If `local.yaml` already contains `~`, auto-upgrade it to absolute during path validation.
 
 **Media paths** are machine-specific (contain usernames, sync folder locations). They belong in local.yaml, not repo config. Skills resolve media paths with a fallback chain: `media.{type}` → `media.root/{type}/` → ask user and save.
 
@@ -234,20 +238,18 @@ After validation, if any paths were removed or updated, write the cleaned `local
 
 ## User Must Always Have Choice
 
-**Even with valid saved config, `/start` must ask:**
+**Even with valid saved config, `/start` must list ALL validated repos from `recent_repos`:**
 
-> "Found saved repo:
+> "Found your repos:
 >
-> 1. [saved-repo-name] (saved)
-> 2. Switch to different repo
+> 1. [default-repo-name] (saved default)
+> 2. [other-repo-name]
+> 3. Switch to different repo
 >
 > (hit a number)"
 
-Replace `[saved-repo-name]` with the actual folder name from config.
+If only one repo: show it plus "Switch to different repo."
 
-**Never auto-proceed without asking.** Users may have multiple repos:
-- Their own business
-- Client projects
-- Test repos
+**After switching:** Ask "Want me to save [repo-name] as your default?" If yes, update `default_repo`.
 
-The saved default is a **suggestion**, not a lock-in. One question takes 1 second; being stuck in the wrong repo wastes minutes.
+**Never auto-proceed without asking.** The saved default is a suggestion, not a lock-in.
