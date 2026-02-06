@@ -285,7 +285,7 @@ Full structure (multi-offer — adds `offers/` and `product-ladder.md`):
 
 See **[references/repo-scaffolding.md](references/repo-scaffolding.md)** for:
 - API key environment setup (`~/.config/vip/env.sh`)
-- Initial `.vip/config.yaml` template
+- Initial `.vip/config.yaml` template (includes `mcps:` section for MCP server tracking)
 - `.gitignore` creation
 
 Run these steps in order: create env.sh, add shell source line, create config.yaml, create .gitignore.

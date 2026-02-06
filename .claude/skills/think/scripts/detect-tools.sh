@@ -26,26 +26,47 @@ echo ""
 echo "Research tools:"
 
 # Apify - MCP-based (can't reliably detect via bash, skill checks mcp__apify__* tools)
-echo "  ? Apify (check via MCP tool presence in Claude session)"
+APIFY_STATUS="unknown (check MCP tool presence in Claude session)"
+echo "  ? Apify — $APIFY_STATUS"
 
 # Gemini - env var
-[ -n "$GOOGLE_API_KEY" ] \
-  && echo "  ✓ Gemini (GOOGLE_API_KEY set)" \
-  || echo "  ✗ Gemini (GOOGLE_API_KEY not set)"
+if [ -n "$GOOGLE_API_KEY" ]; then
+  GEMINI_STATUS="available"
+  echo "  ✓ Gemini (GOOGLE_API_KEY set)"
+else
+  GEMINI_STATUS="unavailable"
+  echo "  ✗ Gemini (GOOGLE_API_KEY not set)"
+fi
 
 # Grok - env var + SDK
 if [ -n "$XAI_API_KEY" ] && python3 -c "import xai_sdk" 2>/dev/null; then
+  GROK_STATUS="available"
   echo "  ✓ Grok (XAI_API_KEY + xai_sdk)"
 elif [ -n "$XAI_API_KEY" ]; then
+  GROK_STATUS="partial"
   echo "  ~ Grok (XAI_API_KEY set but xai_sdk package missing)"
 else
+  GROK_STATUS="unavailable"
   echo "  ✗ Grok (XAI_API_KEY not set)"
 fi
 
 # whisper - CLI
-which whisper-cli >/dev/null 2>&1 \
-  && echo "  ✓ whisper (whisper-cli found)" \
-  || echo "  ✗ whisper (whisper-cli not found)"
+if which whisper-cli >/dev/null 2>&1; then
+  WHISPER_STATUS="available"
+  echo "  ✓ whisper (whisper-cli found)"
+else
+  WHISPER_STATUS="unavailable"
+  echo "  ✗ whisper (whisper-cli not found)"
+fi
+
+# Nano Banana - image generation (requires Gemini/GOOGLE_API_KEY)
+if [ "$GEMINI_STATUS" = "available" ]; then
+  NANOBANANA_STATUS="available"
+  echo "  ✓ Nano Banana (GOOGLE_API_KEY set)"
+else
+  NANOBANANA_STATUS="unavailable"
+  echo "  ✗ Nano Banana (needs GOOGLE_API_KEY)"
+fi
 
 echo ""
 echo "Document tools:"
