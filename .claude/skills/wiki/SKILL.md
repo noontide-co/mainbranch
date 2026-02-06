@@ -3,14 +3,15 @@ name: wiki
 description: |
   Create and maintain personal wikis using Commune Wiki architecture. Use when:
   (1) Setting up a new wiki from the commune-wiki template
-  (2) Personalizing wiki (name, avatar, social links, domain)
-  (3) Adding atomic notes with proper frontmatter and WikiLinks
-  (4) Publishing changes (git commit + push for auto-deploy)
-  (5) Converting Gemini/GPT deep research into wiki format
-  (6) Pulling upstream template updates from Devon
-  (7) Generating "Recent Updates" notes from Git history
+  (2) Personalizing wiki via src/config.ts (name, avatar, social links, domain)
+  (3) Updating home note (Right Now, Looking For, Ask Me About)
+  (4) Adding atomic notes with proper frontmatter and WikiLinks
+  (5) Publishing changes (git commit + push for auto-deploy)
+  (6) Converting Gemini/GPT deep research into wiki format
+  (7) Pulling upstream template updates from Devon
+  (8) Generating "Recent Updates" notes from Git history
 
-  Triggered by: /wiki, "add a note", "publish wiki", "create wiki", "configure wiki", "personalize wiki"
+  Triggered by: /wiki, "add a note", "publish wiki", "create wiki", "configure wiki", "personalize wiki", "update home note"
 ---
 
 # Wiki Skill
@@ -66,8 +67,9 @@ cat ~/.mainbranch/wiki.json 2>/dev/null || echo "No wiki configured yet"
 
 | Mode | What It Does | When to Use |
 |------|--------------|-------------|
-| `setup` | Clone template, deploy to CF Pages | First time (quick) |
-| `configure` | Personalize wiki (name, social, domain, etc.) | After setup |
+| `setup` | Clone template, deploy to CF Pages, generate home note | First time (quick) |
+| `configure` | Edit `src/config.ts` (name, links, avatar, theme) | After setup or anytime |
+| `home` | Update home note (Right Now, Looking For, Ask Me About) | When priorities change |
 | `add` | Create atomic note with frontmatter | Daily note-taking |
 | `publish` | Git commit + push (auto-deploy) | After any changes |
 | `research` | Convert Gemini/GPT research to wiki | After deep research |
@@ -105,30 +107,13 @@ git fetch upstream
 git merge upstream/main --allow-unrelated-histories -m "Initial wiki from commune-wiki template"
 ```
 
-### 5. Apply Windows compatibility fixes (Windows only)
-On Windows, fix path handling in `astro.backlinks.ts`:
-
-```bash
-# Add fileURLToPath import
-sed -i "s/import path from 'node:path';/import path from 'node:path';\nimport { fileURLToPath } from 'node:url';/" astro.backlinks.ts
-
-# Fix the dist path line
-sed -i "s/path.join(dir.pathname,/path.join(fileURLToPath(dir),/" astro.backlinks.ts
-```
-
-Or manually edit `astro.backlinks.ts`:
-- Add import: `import { fileURLToPath } from 'node:url';`
-- Change: `path.join(dir.pathname, 'backlinks.json')` → `path.join(fileURLToPath(dir), 'backlinks.json')`
-
-### 6. Install dependencies and build
+### 5. Install dependencies and build
 ```bash
 pnpm install
 pnpm build
 ```
 
-**If build fails with sitemap error:** Temporarily comment out the sitemap integration in `astro.config.mjs`, rebuild, then uncomment after first deploy.
-
-### 7. Commit and push
+### 6. Commit and push
 ```bash
 git add -A
 git commit -m "Initial wiki setup"
@@ -149,13 +134,13 @@ Then push:
 git push -u origin main
 ```
 
-### 8. Ensure Cloudflare account exists
+### 7. Ensure Cloudflare account exists
 
 If user doesn't have a Cloudflare account, guide them to create one:
 1. Go to https://dash.cloudflare.com
 2. Click "Sign up" and create free account
 
-### 9. Create Pages project via dashboard (enables auto-deploy)
+### 8. Create Pages project via dashboard (enables auto-deploy)
 
 Guide user through Cloudflare dashboard — this creates a Git-connected project with auto-deploy:
 
@@ -174,26 +159,32 @@ Guide user through Cloudflare dashboard — this creates a Git-connected project
 
 First build takes ~1-2 minutes. Watch progress on screen.
 
-### 10. Note the deployed URL
+### 9. Note the deployed URL
 
 After deploy completes, Cloudflare shows the URL (e.g., `https://wiki-abc.pages.dev`).
 
 Ask user: "What URL did Cloudflare assign? (shown on success screen)"
 
-### 11. Update site URL and push
+### 10. Update config.ts with site URL and user info
 
-Edit `astro.config.mjs` with the actual URL:
-```javascript
-site: 'https://[actual-url].pages.dev',
+Edit `src/config.ts` with the actual URL and user's name:
+```typescript
+export const config: SiteConfig = {
+  displayName: "[User's Name]",
+  shortName: "[First Name]",
+  tagline: "[One-liner about them]",
+  siteUrl: "https://[actual-url].pages.dev",
+  // ... rest of config
+};
 ```
 
 Then commit and push — this triggers auto-deploy:
 ```bash
 pnpm build
-git add -A && git commit -m "[update] Set site URL" && git push
+git add -A && git commit -m "[update] Set site URL and identity" && git push
 ```
 
-### 12. Save config
+### 11. Save wiki.json config
 ```bash
 mkdir -p ~/.mainbranch
 cat > ~/.mainbranch/wiki.json << 'EOF'
@@ -206,7 +197,44 @@ cat > ~/.mainbranch/wiki.json << 'EOF'
 EOF
 ```
 
-**Exit:** "Wiki deployed at https://[url].pages.dev with auto-deploy enabled! Every `git push` will automatically deploy. Run `/wiki configure` to personalize (name, avatar, social links, etc.)"
+### 12. Generate home note (3-question flow)
+
+Ask user if they want to generate their home page now or later (`/wiki home`).
+
+If now, ask 3 questions:
+
+1. **"What are you working on right now?"** → populates `right_now` frontmatter + Right Now body section
+2. **"What are you looking for from this community?"** → populates `looking_for` frontmatter + Looking For body section
+3. **"What could people ask you about? (3-5 topics)"** → populates `ask_me_about` frontmatter + Ask Me About body section
+
+Generate a complete `src/content/notes/index.md` from the answers:
+
+```yaml
+---
+title: "[Display Name]'s Working Notes"
+created: [today's date]
+updated: [today's date]
+visibility: public
+status: live
+tags: [home, welcome]
+aliases: ["home", "welcome"]
+summary: "[Generated from answers]"
+right_now: "[Answer 1]"
+looking_for: "[Answer 2]"
+ask_me_about: ["topic-1", "topic-2", "topic-3"]
+---
+```
+
+Body sections: **Right Now**, **Looking For**, **Ask Me About** (with WikiLink suggestions where relevant), **About** (brief default text mentioning Commune and atomic notes).
+
+Show user the generated note for review. Let them edit before saving.
+
+Then commit and push:
+```bash
+pnpm build && git add -A && git commit -m "[add] Home note" && git push
+```
+
+**Exit:** "Wiki live at https://[url].pages.dev! Home page generated. Run `/wiki configure` to update avatar, links, and theme. Run `/wiki home` anytime to update what you're working on."
 
 ---
 
@@ -301,37 +329,50 @@ Generate "Recent Updates" note from Git history.
 
 ## Mode: configure
 
-Personalize your wiki after setup. All customization in one place.
+Personalize your wiki by editing `src/config.ts` — the single source of truth for all branding.
 
 **Usage:** `/wiki configure`
 
 **Prompts:**
 
-| Setting | Required | Default |
-|---------|----------|---------|
-| Display name | Yes | — |
-| Short name (mobile) | No | First word of display name |
-| Avatar image | No | drag & drop to replace |
-| Twitter/X handle | No | skip |
-| GitHub username | No | skip |
-| Website URLs | No | skip (comma-separated) |
-| Custom domain | No | keep current |
-| Delete sample notes | No | keep samples |
+| Setting | Config Key | Required | Default |
+|---------|-----------|----------|---------|
+| Display name | `displayName` | Yes | "Your Name" |
+| Short name (mobile) | `shortName` | No | First word of display name |
+| Tagline | `tagline` | No | "A public wiki of ideas in progress" |
+| Avatar image | `avatar` | No | `/avatar.jpg` |
+| Social links | `links` | No | `[]` (empty) |
+| Theme color | `themeColor` | No | `#3b82f6` |
+| Footer text/link | `footer` | No | "Powered by Commune" → `/` |
+| Plausible analytics | `plausible` | No | disabled |
+| Custom domain | `siteUrl` | No | keep current |
+| Delete sample notes | — | No | keep samples |
 
 **Steps:**
-1. Read config: `cat ~/.mainbranch/wiki.json`
-2. Show current settings, ask what to change
-3. Update files based on selections:
-   - `src/components/Header.astro` — display name, short name, avatar alt
-   - `src/components/Footer.astro` — update "Powered by Commune" link to `https://devonmeadows.com/` (external, target="_blank")
-   - `src/pages/index.astro` — meta author, structured data
-   - `src/pages/notes/[...slug].astro` — author meta
-   - `src/pages/research/[...slug].astro` — footer attribution
-   - `src/content/notes/my-working-notes.md` — social links
-   - `astro.config.mjs` — site URL (if domain changed)
-   - Replace any "Devon Meadows" references with user's name
+1. Read config: `cat ~/.mainbranch/wiki.json | jq -r '.wiki_repo'`
+2. Read current `src/config.ts`, show current settings
+3. Ask what to change
+4. Edit `src/config.ts` with new values — this is the **only file** that needs editing for branding. All components import from it.
 
-4. **If avatar image provided:**
+   ```typescript
+   // src/config.ts
+   export const config: SiteConfig = {
+     displayName: "Jane Smith",
+     shortName: "Jane",
+     tagline: "Building in public",
+     siteUrl: "https://jane-wiki.pages.dev",
+     avatar: "/avatar.jpg",
+     links: [
+       { label: "GitHub", url: "https://github.com/janesmith" },
+       { label: "Twitter", url: "https://x.com/janesmith" },
+     ],
+     themeColor: "#3b82f6",
+     footer: { text: "Powered by Commune", url: "/" },
+     // plausible: { domain: "jane-wiki.pages.dev" },
+   };
+   ```
+
+5. **If avatar image provided:**
    - Prompt: "Drag and drop your avatar image here (or paste path):"
    - User drags image into terminal → path is pasted
    - Copy to wiki: `cp "[path]" "$WIKI_REPO/public/avatar.jpg"`
@@ -348,23 +389,45 @@ Personalize your wiki after setup. All customization in one place.
    - Supported formats: .jpg, .png, .webp (rename to avatar.jpg)
    - Recommended: square image (will be cropped/resized)
 
-5. **If custom domain requested:**
+6. **If custom domain requested:**
+   - Update `siteUrl` in `config.ts`
    - Guide through Cloudflare custom domain setup
    - See [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md)
-   - Update config with new domain
 
-6. **If delete sample notes:**
+7. **If delete sample notes:**
    ```bash
    rm -f src/content/notes/*.md
    rm -f src/content/updates/*.md
    ```
-   Then create fresh `my-working-notes.md` with default welcome content and social links.
+   Then create fresh `src/content/notes/index.md` with default home note template (see setup step 12 for structure).
 
-7. Rebuild and push: `pnpm build && git add -A && git commit -m "[configure] Personalize wiki" && git push`
+8. Rebuild and push: `pnpm build && git add -A && git commit -m "[configure] Personalize wiki" && git push`
 
 **Exit:** "Wiki personalized! Changes will deploy in ~90 seconds."
 
 See [references/customization.md](references/customization.md) for manual edits.
+
+---
+
+## Mode: home
+
+Quick update to your home note's temporal fields — what you're working on, looking for, and can help with.
+
+**Usage:** `/wiki home`
+
+**Steps:**
+1. Read config: `cat ~/.mainbranch/wiki.json | jq -r '.wiki_repo'`
+2. Read current `src/content/notes/index.md`
+3. Show current values for `right_now`, `looking_for`, `ask_me_about`
+4. Ask what to update (can update one or all):
+   - "What are you working on right now?"
+   - "What are you looking for?"
+   - "What could people ask you about?"
+5. Update frontmatter fields AND corresponding body sections in `index.md`
+6. Update the `updated` date in frontmatter to today
+7. Rebuild and push: `pnpm build && git add -A && git commit -m "[update] Home note" && git push`
+
+**Exit:** "Home note updated. Live in ~90 seconds. Your `/api/profile.json` will reflect the changes too."
 
 ---
 
@@ -462,28 +525,10 @@ Live at: https://yourdomain.com
 Run `/wiki setup` first.
 
 **Build failing on Windows with path error (`C:\C:\Users\...`)**
-The `astro.backlinks.ts` file needs a Windows path fix. Add this import:
-```javascript
-import { fileURLToPath } from 'node:url';
-```
-And change:
-```javascript
-// Before
-const distPath = path.join(dir.pathname, 'backlinks.json');
-// After
-const distPath = path.join(fileURLToPath(dir), 'backlinks.json');
-```
+Fixed in the latest template. Run `/wiki update` to pull the fix. If on an older template version, add `import { fileURLToPath } from 'node:url';` to `astro.backlinks.ts` and change `dir.pathname` to `fileURLToPath(dir)`.
 
 **Build failing with sitemap "reduce" error**
-Temporarily disable sitemap in `astro.config.mjs`:
-```javascript
-integrations: [
-  tailwind({ applyBaseStyles: false }),
-  backlinks(),
-  // sitemap({ ... }),  // Comment out temporarily
-],
-```
-Re-enable after first successful deploy.
+Sitemap is temporarily disabled in the latest template due to an upstream `@astrojs/sitemap` bug. Run `/wiki update` to pull the fix. If on an older template version, comment out the sitemap integration in `astro.config.mjs`.
 
 **"Not logged in" with wrangler**
 Run `npx wrangler login` — opens browser for Cloudflare OAuth. You can create a free account during this flow.
