@@ -104,16 +104,21 @@ for d in . ~/Documents/GitHub/vip ~/vip; do [ -d "$d/.claude/skills" ] && git -C
 
 ```
 1. Read ~/.config/vip/local.yaml
-   ├── Found? → Get default_repo + user identity
-   │            Validate path exists and has reference/core/
-   │            ├── Valid? → STILL ASK (see below)
-   │            └── Invalid? → Clear config, fall to discovery
+   ├── Found? → Get default_repo + recent_repos + user identity
+   │            Validate ALL paths (see Path Validation below)
+   │            ├── All valid? → Present valid options
+   │            ├── Some invalid? → Attempt recovery, prune dead paths
+   │            └── All invalid? → Clear config, fall to discovery
    └── Missing? → Fall to discovery
 
 2. If repo found, read [repo]/.vip/config.yaml
    ├── Found? → Get team settings, MCP requirements
    └── Missing? → Use defaults, offer to create later
 ```
+
+### Path Validation (Before Presenting Options)
+
+**Validate EVERY path in config before showing it to the user.** Never present a dead path as an option. For each path in `default_repo` and `recent_repos`, check `test -d "[path]/reference/core"`. If invalid, attempt recovery (check sibling folders for a renamed repo) and auto-prune dead entries. See [config-system.md](references/config-system.md) for the full recovery algorithm.
 
 ### CRITICAL: Always Offer Switch Option
 

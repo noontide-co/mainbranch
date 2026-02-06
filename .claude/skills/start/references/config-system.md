@@ -186,11 +186,49 @@ Config is always optional. Skills work without it.
 ```
 1. Try local.yaml → missing? → discovery
 2. Try repo config → missing? → use defaults
-3. Path invalid? → clear config, rediscover
+3. Path invalid? → attempt recovery, then clear and rediscover
 4. Parse error? → warn, clear, rediscover
 ```
 
 **Principle:** Config is a speed optimization, not a requirement.
+
+---
+
+## Config Hygiene (Stale Path Handling)
+
+Users rename folders, move repos, or clone to new locations. Config paths go stale. `/start` must handle this gracefully — a normie user won't know to say "fix my config."
+
+### Validation Rule
+
+**Before presenting ANY repo as a numbered option, verify the path exists:**
+
+```bash
+test -d "[path]/reference/core" && echo "valid" || echo "invalid"
+```
+
+Never show a dead path. Never load a dead path and show "0/18 EMPTY" for a repo that simply moved.
+
+### Recovery Algorithm
+
+When a config path is invalid:
+
+1. **Check parent directory** — if the parent exists, the folder was likely renamed
+2. **Scan siblings** — look for `reference/core/` in adjacent folders
+3. **If match found** — tell the user: "Looks like **[old-name]** moved to **[new-name]**. Updating your config."
+4. **If no match** — silently drop the stale entry from the list
+
+### Auto-Prune
+
+After validation, if any paths were removed or updated, write the cleaned `local.yaml` immediately. Removing dead paths is housekeeping — no confirmation needed. Adding or changing the default repo still requires user confirmation.
+
+### Common Scenarios
+
+| What Happened | What User Sees | What /start Does |
+|---------------|---------------|-------------------|
+| Folder renamed | Nothing broken | Detects new name, updates config, presents correct option |
+| Folder deleted | Fewer options | Prunes dead entry, shows only valid repos |
+| Folder moved to new parent | "Switch to different repo" | Can't auto-detect across parents — user provides new path, config updates |
+| Clone to new machine | Empty config | Normal discovery flow — no stale paths to worry about |
 
 ---
 
