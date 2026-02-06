@@ -100,12 +100,16 @@ On first /think invocation each session:
 which whisper-cli >/dev/null 2>&1 && echo "WHISPER=true"
 ```
 
+**Nano Banana** (image generation): Available when Gemini is configured (uses GOOGLE_API_KEY). Detect alongside Gemini.
+
 **Document tools:**
 ```bash
 which markitdown >/dev/null 2>&1 && echo "MARKITDOWN=true"
 which pandoc >/dev/null 2>&1 && echo "PANDOC=true"
 which marker_single >/dev/null 2>&1 && echo "MARKER=true"
 ```
+
+**Manual probe script:** `scripts/detect-tools.sh` provides a standalone CLI check for all tools. Useful for debugging outside a Claude session.
 
 ### Config Update (REQUIRED)
 

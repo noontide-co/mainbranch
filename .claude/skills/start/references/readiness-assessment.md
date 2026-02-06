@@ -19,11 +19,25 @@ Score each file by reading it directly (fast -- no subagent needed). Use line co
 | `testimonials.md` | File missing or empty | <5 testimonials | 5-10 testimonials | 10+ testimonials |
 | `angles/` | 0 files (or missing dir) | 1 file | 2-3 files | 4+ files |
 
+### Key Section Markers by File
+
+When checking section markers, search for these headings (case-insensitive). These are the quality signals that distinguish skeleton files from intentional work:
+
+| File | Key Sections to Detect |
+|------|----------------------|
+| `soul.md` | "Beliefs", "Anti-patterns", "Evolution Markers", "The Test", "The Parts" |
+| `offer.md` | "Price" / "Pricing", "Mechanism", "Guarantee", "Value Stack", "Objections", "Deliverables" |
+| `audience.md` | "Pains", "Desires", "Psychographics", "Language", "Objections", "Segments" |
+| `voice.md` | "Never Say", "Vocabulary", "Rhythm", "Examples", "Tone", "Phrases" |
+| `testimonials.md` | Count `###` or `**"` patterns (each indicates one testimonial) |
+
+**How to use:** When a file scores 1 or 2 by line count, check for these markers to identify WHICH sections are missing. This drives the specific gap language in Section 7 and prevents hand-wavy gap messages like "voice.md is thin" when the real issue is "voice.md has no Never Say section."
+
 ### How to Score
 
 1. **Read each file** with the Read tool. If the read fails or returns empty, score 0.
 2. **Count lines** for the primary threshold check.
-3. **Check for section markers** (case-insensitive grep for key headings) as a quality override -- a 25-line soul.md with a "Beliefs" section shows intentional work and scores 2, not 1.
+3. **Check for section markers** (case-insensitive grep for key headings from the table above) as a quality override -- a 25-line soul.md with a "Beliefs" section shows intentional work and scores 2, not 1. Use specific markers to identify exactly what's missing.
 4. **For testimonials:** Count occurrences of `###` or `**"` patterns that indicate individual testimonials.
 5. **For angles:** Count `.md` files in `reference/proof/angles/`, excluding `README.md`.
 
@@ -261,43 +275,81 @@ Beyond the composite score, some skills have specific requirements. Check these 
 
 How to present the readiness assessment to the user. Adapt by experience level.
 
+**Core principle: Every gap must be actionable.** The formula for any file scoring below 3:
+
+```
+[Specific missing section/file] + [What it unlocks downstream] + [Concrete offer to fix it now]
+```
+
+### Gap Display Rules
+
+1. **For ANY score below 18:** Identify exactly which files scored below 3.
+2. **For each gap:** Say what specific section or content is missing, what filling it would unlock for downstream skills, and offer to fix it right there.
+3. **Use the per-file gap tables from Section 7** to determine the specific gap language for each file at each score level.
+4. **Group gaps under a "Gaps:" heading** after the score line.
+
 ### Beginner (experience: beginner)
 
-Show the full breakdown with explanation:
+Show the score, then list each gap with full actionable detail:
 
 > "**Repo Health: THIN** (score: 9/18)
 >
-> Here's where your reference files stand:
-> - Soul: 2/3 (good start, could go deeper)
-> - Offer: 2/3 (has basics, needs pricing detail)
-> - Audience: 2/3 (developing)
-> - Voice: 1/3 (skeleton -- needs tone and vocabulary)
-> - Testimonials: 1/3 (a few captured)
-> - Angles: 1/3 (one angle defined)
+> Your reference files tell the AI about your business. Richer files = better output. Output skills like /ads work best at score 12+.
 >
-> Your reference files tell the AI about your business. Richer files = better output. Right now, you can use /think to enrich them. Output skills like /ads work best at score 12+."
+> **Gaps:**
+> - **voice.md** (1/3): Missing "Never Say" section -- this is the #1 guard rail for authentic output. Want me to ask you 3 questions to build it? (~5 min)
+> - **testimonials.md** (1/3): Only 2 testimonials. More proof = better ads. Have screenshots or messages to add?
+> - **angles/** (1/3): 1 angle file. Angles frame every ad and organic piece -- 3+ gives /ads real variety. Want to explore a new angle through /think?
+> - **audience.md** (2/3): Missing "Objections" section -- /ads hooks work best when they preempt resistance. What do people say right before they decide NOT to buy?"
 
 ### Intermediate (experience: intermediate)
 
-Show the score with gaps highlighted:
+Show the score, then list gaps with brief actionable detail:
 
-> "**Repo Health: THIN** (9/18) -- voice and angles need work.
+> "**Repo Health: THIN** (9/18)
 >
-> [routing options]"
+> **Gaps:**
+> - **voice.md** (1/3): No "Never Say" section -- guard rail for authentic output. 3 questions to build it? (~5 min)
+> - **testimonials.md** (1/3): 2 testimonials. 10+ unlocks stronger ad proof. Have recent wins?
+> - **angles/** (1/3): 1 angle. 3+ prevents ad fatigue. Build one through /think?"
 
 ### Advanced (experience: advanced)
 
-Score only, no explanation:
+Score with gap specifics, no explanation. **One line, always -- even at GOOD/FULL.** Advanced users don't need gap tables or explanation blocks.
 
-> "**9/18** -- voice (1), angles (1). Generating will be rough."
+> "**9/18** -- voice (1, no Never Say), testimonials (1, only 2), angles (1, single angle)."
 
-### When Score Is Good or Full
+**At GOOD/FULL, same one-line format:**
 
-Keep it brief regardless of experience level:
+> "**16/18** -- testimonials (2), angles (1). Have recent wins to add? Need 2 more angles for ad variety."
 
-> "**Repo Health: GOOD** (13/18). Ready to work."
+> "**13/18** -- testimonials (2, 7 captured), angles (1, single angle). Gaps: recent wins? New angle through /think?"
 
-Nobody needs a detailed breakdown when things are fine.
+### When Score Is GOOD (12-14)
+
+Still show gaps -- this is where the old format failed. Users at 13/18 need to know what the missing 5 points are. **Beginner/intermediate get the full gap display below. Advanced users get the one-line format above.**
+
+> "**Repo Health: GOOD** (13/18)
+>
+> **Gaps:**
+> - **testimonials.md** (2/3): 7 testimonials captured. 10+ unlocks stronger ad proof. Have any recent wins to add?
+> - **angles/** (1/3): 1 angle file. 4+ gives /ads real variety. Want to explore a new angle through /think?"
+
+### When Score Is FULL (15-18) But Not Perfect
+
+Still show what would reach 18. **Beginner/intermediate get the gap display below. Advanced users get the one-line format above.**
+
+> "**Repo Health: FULL** (16/18)
+>
+> **Gaps:**
+> - **testimonials.md** (2/3): 7 testimonials. 10+ gives /ads and /vsl more proof options. Have any recent wins?
+> - **angles/** (1/3): 1 angle file. 4+ lets you test different emotional entry points in ads. Want to build another?"
+
+### When Score Is 18/18
+
+The only case where no gaps are shown:
+
+> "**Repo Health: FULL** (18/18). All reference files are strong."
 
 ### Session State Display
 
@@ -309,6 +361,75 @@ If session state items were found, append after the health display:
 > - [N] research files without decisions"
 
 Only show items that exist. Skip this section entirely if nothing to report.
+
+---
+
+## 7. Per-File Gap Tables
+
+Use these tables to determine the specific gap language for each file at each score level. The formula is always: **[Specific missing section/file] + [What it unlocks downstream] + [Concrete question or offer to fix it now]**.
+
+### soul.md
+
+| Score | What's Missing | Actionable Gap | Question to Ask |
+|-------|---------------|----------------|-----------------|
+| 0 | File doesn't exist | "No soul.md yet. This is the foundation -- your WHY. Let me ask you 3 questions to draft it." | "What do you research when no one's watching? What intersections excite you? What work feels like discovery vs obligation?" |
+| 1 | <30 lines, skeleton | "soul.md exists but is thin. Missing: Beliefs section, Anti-patterns, Evolution Markers." | "What do you believe about [domain] that most people get wrong? What patterns make you lose energy?" |
+| 2 | 30-80 lines, developing | "soul.md has substance but is missing [specific section: Evolution Markers or Anti-patterns or The Parts]." | Depends on missing section: "When did your thinking about this shift? What was the before/after?" (Evolution Markers) |
+| 3 | Strong | At 3, only surface if qualitative issues exist: "soul.md is strong. Last updated [date] -- still resonates?" | No question unless returning after long absence (soul health check handles this) |
+
+### offer.md
+
+| Score | What's Missing | Actionable Gap | Question to Ask |
+|-------|---------------|----------------|-----------------|
+| 0 | File doesn't exist | "No offer.md. /ads, /vsl, and /site can't generate without knowing what you sell." | "What do you sell? What transformation does the buyer get? What does it cost?" |
+| 1 | <20 lines | "offer.md exists but is missing: [check for Pricing, Mechanism, Guarantee, Value Stack sections]." | "Your offer mentions [what exists] but I don't see [missing section]. What's your guarantee? What makes your mechanism unique?" |
+| 2 | 20-80 lines, developing | "offer.md is developing. [Specific weak area: e.g., 'Mechanism section is one sentence -- this is what makes /vsl scripts compelling.']" | "Walk me through HOW your product/service actually works. What's the step-by-step transformation?" |
+| 3 | Strong | "offer.md is strong. Ready for /ads and /vsl." | No question. Note if Price section hasn't been updated in 60+ days. |
+
+### audience.md
+
+| Score | What's Missing | Actionable Gap | Question to Ask |
+|-------|---------------|----------------|-----------------|
+| 0 | File doesn't exist | "No audience.md. Hooks and ad copy will be generic without knowing who you're talking to." | "Who are the 2-3 people you've helped most? What was their life like before?" |
+| 1 | <30 lines | "audience.md is a skeleton. Missing: [Pains section, Desires section, Psychographics]." | "What keeps your audience up at 2am? Not their stated problem -- their actual fear." |
+| 2 | 30-60 lines, developing | "audience.md has [what exists] but is missing [specific section: e.g., 'No Objections section -- /ads hooks work best when they preempt resistance.']" | "What do people say right before they decide NOT to buy? What's their go-to excuse?" |
+| 3 | Strong | "audience.md is strong." | No question. Note if segments could be refined for multi-offer routing. |
+
+### voice.md
+
+| Score | What's Missing | Actionable Gap | Question to Ask |
+|-------|---------------|----------------|-----------------|
+| 0 | File doesn't exist | "No voice.md. Generated content will sound like generic AI until voice is defined." | "Send me 3 pieces of content you've written that sound most like you. I'll extract the patterns." |
+| 1 | <20 lines | "voice.md exists but is missing: [check for Never Say, Vocabulary, Rhythm sections]." | "What phrases do you NEVER want to see in your content? What words feel wrong for your brand?" |
+| 2 | 20-50 lines, developing | "voice.md has tone direction but is missing [specific: e.g., 'No Never Say section -- this is the most important guard rail for authentic-sounding output.']" | "Read this draft [show example output] -- what sounds wrong? What would you change?" |
+| 3 | Strong | "voice.md is strong." | No question. Could note: "Last voice calibration was [date]. Want to run a quick test with a sample output?" |
+
+### testimonials.md
+
+| Score | What's Missing | Actionable Gap | Question to Ask |
+|-------|---------------|----------------|-----------------|
+| 0 | File doesn't exist | "No testimonials. /ads and /vsl are dramatically weaker without proof." | "Do you have any testimonials, screenshots, DMs, or reviews? Even 2-3 is a strong start." |
+| 1 | <5 testimonials | "[N] testimonials. More variety = more angles for ads." | "Any testimonials that specifically mention [the transformation from offer.md]? Those are highest value." |
+| 2 | 5-10 testimonials | "Good proof base. Consider: are there testimonials that support each angle in proof/angles/?" | "Which of your testimonials surprises you most? Which one do people respond to when you share it?" |
+| 3 | Strong (10+) | "Strong proof base." | No question unless typicality.md is missing: "You have strong testimonials but no typicality data. For FTC-safe outcome claims, we'd need average results." |
+
+### angles/ (proof/angles/)
+
+| Score | What's Missing | Actionable Gap | Question to Ask |
+|-------|---------------|----------------|-----------------|
+| 0 | No angle files | "No angles defined. Angles are messaging entry points -- each one frames your offer differently for different motivations." | "Why do your best customers buy? Not the feature -- the emotional trigger. Is it fear? Status? Relief? Curiosity?" |
+| 1 | 1 angle | "One angle defined ([name]). Ads and organic content need variety -- 3+ angles prevent fatigue." | "You have [existing angle]. What's the SECOND most common reason people buy? Different motivation = different angle." |
+| 2 | 2-3 angles | "Decent angle variety. Review: do angles cover different emotional territories? (e.g., if all three are fear-based, missing opportunity-based.)" | "Look at your angles: [list names]. Are there buyer motivations not covered? What about [suggest missing emotional territory]?" |
+| 3 | 4+ angles | "Strong angle library." | No question. Could note: "Which angles have been tested in ads? Performance data would inform prioritization." |
+
+### content-strategy.md (domain, not in composite but checked)
+
+| State | Actionable Gap | Question to Ask |
+|-------|----------------|-----------------|
+| Missing | "No content strategy yet. Content generated by /organic and /ads works better with pillars, platform strategy, and cadence defined." | "Want to build content-strategy.md through /think? It derives pillars from your soul + offer + audience." |
+| Exists but thin (<20 lines) | "content-strategy.md is a skeleton. Missing: [check for Pillars, Platform Strategy, Content Mix, Cadence sections]." | "Your content strategy needs [specific section]. Start with pillars -- what 3-5 themes connect your soul to your audience?" |
+| Exists but incomplete | "content-strategy.md has [what exists] but is missing [Hooks Library / Framework Library / Metrics]." | "Your pillars and platform are set. Want to populate the hooks library? Every hook pattern you capture makes /organic output better." |
+| Complete | "Content strategy is solid." | Note last updated date. If >30 days, suggest review. |
 
 ---
 
