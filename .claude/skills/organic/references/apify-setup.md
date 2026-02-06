@@ -1,6 +1,8 @@
 # Apify Setup Guide
 
-One-time 5-minute setup. After this, Apify works automatically every time you use Main Branch.
+> **Note:** Mining (competitor analysis, content extraction) is done through `/think`, not `/organic`. This Apify setup is used when `/think` spawns mining agents for Instagram data extraction. `/organic` is generation-only.
+
+One-time 5-minute setup. After this, Apify works automatically every time you mine through `/think`.
 
 ---
 
@@ -88,7 +90,7 @@ claude mcp add apify -e APIFY_TOKEN=apify_api_xxxxx --scope user -- npx -y @apif
 
 Apify is now saved to your global Claude Code settings (`~/.claude/settings.json`).
 
-Every time you run `/organic mine` on Instagram, it will use Apify automatically. No re-setup needed.
+Every time you mine Instagram content through `/think`, Apify will be used automatically. No re-setup needed.
 
 ---
 

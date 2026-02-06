@@ -1,6 +1,6 @@
 # Organic Skill Help
 
-Help for the `/organic` skill - mining competitors and generating organic content scripts.
+Help for the `/organic` skill -- generating organic content scripts from your reference files and research.
 
 ---
 
@@ -16,21 +16,21 @@ Before using `/organic`, you need three files in your business repo:
 
 **Don't have these?** Run `/setup` first.
 
-**Data extraction:** For Instagram, Apify MCP is essential (95%+ reliable, 100x faster than browser automation). One-time 5-minute setup. Manual mode (screenshots) works but is slow and unreliable.
-
-**Token awareness:** Mining uses significant context (~3-5k tokens per competitor). The skill shows estimates before running.
+**Want to mine competitors first?** Use `/think` to research competitor content. Mining saves to `research/`, then `/organic` generates from that research.
 
 ---
 
 ## What is /organic?
 
-The `/organic` skill helps you:
+The `/organic` skill generates organic content scripts from your reference files and any research you've already saved:
 
-1. **Mine competitor content** - Find what's working for others in your niche
-2. **Extract winning concepts** - Identify hooks, structures, and angles that perform
-3. **Generate scripts** - Create Reels, TikTok, and carousel content in your voice
+1. **Generate scripts** -- Create Reels, TikTok, and carousel content in your voice
+2. **Apply winning concepts** -- Use hooks, structures, and angles from research you've done via `/think`
+3. **Stay on-brand** -- Every script draws from your voice.md, audience.md, and offer.md
 
 It's for **organic content** (free reach), not **paid ads** (use `/ads` for ads).
+
+**Note:** Mining (competitor analysis, content extraction) happens in `/think`, not `/organic`. Run `/think` first to research competitors, then `/organic` to generate from that research.
 
 ---
 
@@ -38,11 +38,10 @@ It's for **organic content** (free reach), not **paid ads** (use `/ads` for ads)
 
 Use `/organic` when you want to:
 
-- Research what's working for competitors
-- Get ideas for Reels or TikTok videos
+- Generate Reels or TikTok video scripts
 - Create carousel content
 - Write captions for static posts
-- Find proven angles to adapt
+- Turn research (from `/think`) into ready-to-shoot scripts
 
 ---
 
@@ -50,24 +49,15 @@ Use `/organic` when you want to:
 
 ### Full Flow: `/organic`
 
-The complete workflow:
-1. Identify competitors
-2. Mine their top content
-3. Extract winning concepts
-4. Generate scripts in your voice
-
-### Mine Only: `/organic mine`
-
-Just research, no script generation:
-- Extracts competitor content data
-- Identifies top performers
-- Saves research to `research/` folder
-- Use when you want ideas but will generate later
+The complete generation workflow:
+1. Review your reference files and any saved research
+2. Identify winning concepts and angles
+3. Generate scripts in your voice
 
 ### Video: `/organic video "topic"`
 
 Generate a Reels/TikTok script:
-- From a mined concept
+- From a concept in your saved research
 - From a topic you provide
 - Applies your voice from `reference/core/voice.md`
 
@@ -112,7 +102,7 @@ The skill needs these files in your business repo:
 | `reference/core/offer.md` | Yes | Context for CTAs |
 | `reference/core/audience.md` | Yes | Who you're creating for |
 | `reference/core/voice.md` | Yes | How you sound on camera |
-| `reference/competitors/handles.md` | No | List of competitors to mine |
+| `research/*.md` | No | Saved research from `/think` (competitor mining, content ideas) |
 
 If missing core files, run `/setup` first.
 
@@ -120,19 +110,15 @@ If missing core files, run `/setup` first.
 
 ## Common Questions
 
-### "How do I know which competitors to mine?"
+### "How do I research competitors first?"
 
-Look for:
-- **Direct competitors** - Same offer, same audience
-- **Adjacent creators** - Similar audience, different offer
-- **Aspirational accounts** - Bigger creators you admire
+Use `/think` to mine competitor content before generating. The research flow:
 
-You want 3-5 accounts minimum. Save them in `reference/competitors/handles.md`.
+1. `/think` -- research competitor accounts, extract winning concepts
+2. Research saves to `research/` folder
+3. `/organic` -- generates scripts informed by that research
 
-**Don't know any competitors?** The skill can help discover them via:
-- Hashtag search (find accounts in your niche)
-- Keyword search (find accounts by description)
-- Similar accounts (find accounts like one you know)
+Look for 3-5 accounts: direct competitors (same offer, same audience), adjacent creators (similar audience, different offer), and aspirational accounts (bigger creators you admire).
 
 ### "What makes content 'top performing'?"
 
@@ -178,21 +164,18 @@ This makes them available for future generations across all skills.
 ## Workflow Example
 
 ```
-1. /organic mine
+1. /think (mine competitors)
    → Competitor data extracted
    → Top 15 concepts identified
    → Saved to research/
 
-2. Review concepts with Claude
-   → Select 5 to adapt
-
-3. /organic video "concept 1"
+2. /organic video "concept from research"
    → Script generated in your voice
    → Saved to outputs/
 
-4. Repeat for carousel, static as needed
+3. Repeat for carousel, static as needed
 
-5. (Optional) /think codify
+4. (Optional) /think codify
    → Save best angles to reference
 ```
 
@@ -217,7 +200,7 @@ See `organic/references/apify-setup.md` for full Apify installation and configur
 
 ### "Mining used a lot of tokens"
 
-Expected. Each competitor uses ~3-5k tokens. The skill should show estimates before running. To reduce:
+Mining happens through `/think`, not `/organic`. Each competitor uses ~3-5k tokens. To reduce:
 - Mine fewer competitors (2-3 instead of 5)
 - Use "quick scan" (fewer posts per competitor)
 
@@ -232,7 +215,7 @@ Run `/think codify` to add more voice context.
 
 ### "I don't know what to create about"
 
-Run `/organic mine` first. Let competitor research inspire topics.
+Run `/think` first to mine competitors or brainstorm content ideas. Research saves to `research/`, then `/organic` generates from that research.
 
 Or run `/think research "content ideas for [your niche]"` to brainstorm.
 

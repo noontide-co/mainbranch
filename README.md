@@ -23,7 +23,7 @@ Once set up, you can:
 - Research topics and document decisions
 - Generate batches of ad copy in your voice
 - Create video scripts for Meta ads
-- Mine competitor content and create organic Reels/TikTok/carousels
+- Generate organic content — Reels, TikTok, carousels — from your reference files and research
 - Write VSL scripts for your community
 - Review ads for compliance before you run them
 - Build and deploy landing pages from your reference files
@@ -211,7 +211,8 @@ your-business/
 │   │   └── voice.md       <- HOW you sound
 │   ├── offers/            <- Per-offer context (multi-offer only)
 │   │   └── [offer-name]/
-│   │       └── offer.md   <- Offer-specific transformation
+│   │       ├── offer.md   <- Offer-specific transformation
+│   │       └── audience.md <- Offer-specific audience (optional)
 │   ├── brand/             <- Visual identity, positioning
 │   ├── proof/
 │   │   ├── testimonials.md <- Social proof
@@ -233,7 +234,7 @@ You fill in the reference files. Claude reads them when generating.
 
 Devon updates the vip repository with new skills and improvements.
 
-**Updates happen automatically.** Every skill pulls the latest changes before running. You don't need to do anything.
+**Updates happen automatically when you run `/start`.** You can also run `/pull` anytime to get the latest.
 
 **GitHub Desktop (optional):** If you want to see what changed or pull updates manually, open GitHub Desktop, select vip, and click Pull origin. The History tab shows exactly what changed in each update.
 

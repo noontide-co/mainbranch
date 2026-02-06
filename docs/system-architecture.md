@@ -535,16 +535,16 @@ The pipeline is designed so the creator **never opens a social app to post**. AI
 
 ### Content Folder State Machine
 
-Content moves through three states:
+The `content/` folder is the designed lifecycle pipeline for distribution automation. It is scaffolded by `/setup` but not yet written to by skills. Currently, skills write generated assets to `outputs/`. The `content/` pipeline is where content will move through states once distribution automation (e.g., Postiz integration, `/newsletter`) is built.
 
 ```
 content/
-├── drafts/       → Work in progress (skill output lands here)
+├── drafts/       → Work in progress
 ├── scheduled/    → Approved, ready to publish (manual or automated move)
 └── published/    → Archive of published content (moved after publish)
 ```
 
-Skills write to `content/drafts/`. The move from drafts to scheduled to published can be manual or automated (via Postiz or similar infrastructure -- out of scope for engine, documented here as architectural pattern).
+Today: skills write to `outputs/`. The move from drafts to scheduled to published can be manual or automated (via Postiz or similar infrastructure -- out of scope for engine, documented here as architectural pattern).
 
 ### Skill Connections to Content Pipeline
 
@@ -763,7 +763,7 @@ Content strategy links back to the decisions that informed pillar choices, creat
 
 ```yaml
 ---
-type: research | decision | context | campaign
+type: research | decision | reference | output
 status: draft | active | complete | archived
 ---
 ```
@@ -778,7 +778,7 @@ source: gemini | claude | web | expert | internal
 topics: [topic1, topic2]
 linked_decisions:
   - decision-id
-status: complete
+status: draft | complete | codified | superseded
 ---
 ```
 
@@ -788,16 +788,16 @@ status: complete
 ---
 type: decision
 date: 2026-01-11
-status: active | closed
+status: proposed | accepted | codified
 urgency: low | normal | high | critical
 ---
 ```
 
-### Context Files
+### Reference Files
 
 ```yaml
 ---
-type: context
+type: reference
 status: active
 updated: 2026-01-13
 ---

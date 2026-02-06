@@ -22,8 +22,8 @@ Get a new user fully configured with Claude Code and their business repo.
 **Before anything else, ensure vip is up to date:**
 
 ```bash
-# If vip is an added directory or we can find it
-cd ~/vip 2>/dev/null && git pull origin main 2>/dev/null && cd - >/dev/null || true
+# Pull vip updates (checks common locations)
+for d in . ~/Documents/GitHub/vip ~/vip; do [ -d "$d/.claude/skills" ] && git -C "$d" pull origin main 2>/dev/null && break; done || true
 ```
 
 If updates pulled: briefly note "Pulled latest vip updates." then continue.
@@ -98,16 +98,15 @@ ls .claude/skills/setup/SKILL.md 2>/dev/null
 
 ---
 
-### 0. Verify Chrome Extension (REQUIRED for Skool)
+### 0. Check Chrome Extension (Optional, Helpful for Skool)
 
-**Before gathering ANY context, check Chrome extension status:**
+**Before gathering context, mention the Chrome extension:**
 
-> Type `/chrome` to verify you have the Claude in Chrome extension installed.
+> "The Claude in Chrome extension lets me read your sales pages, Skool community, and web content directly. It's optional but helpful.
+>
+> To check if it's installed: open Chrome, go to `chrome://extensions`, and look for 'Claude'. If you don't have it: https://claude.ai/chrome"
 
-If not installed:
-> "The Chrome extension is fundamental for Main Branch — it lets me read your sales pages, Skool community, and web content directly. Install it now: https://claude.ai/chrome (requires Google Chrome)"
-
-**If user declines:** Proceed with Playwright or manual screenshots, but note this limits what can be gathered automatically.
+**If not installed or user declines:** Proceed with URL fetching, Playwright, or manual screenshots. The extension is convenient but not required.
 
 ### 1. Confirm Git + Working Directory
 
