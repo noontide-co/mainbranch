@@ -421,6 +421,59 @@ If user picks the primary recommendation, route to the appropriate skill. If the
 
 ---
 
+## Thin Repo Mode (THIN 8-11 or GOOD 12-14 with gaps)
+
+**When reference is still building, triage becomes the most valuable thing in the system.** This is where users most need direction. The synthesis should inspire, not audit.
+
+### Shift the Energy
+
+- **Don't say:** "You're missing voice.md, testimonials, and 3 angles."
+- **Do say:** "Your offer and audience are solid. Adding a Never Say section to voice.md would immediately sharpen every ad hook. I can ask you 3 questions right now and we'll have it in 5 minutes."
+
+### Show What Unlocks
+
+Every gap recommendation must connect to a specific downstream outcome the user cares about:
+
+| Gap | What Unlocks | How to Say It |
+|-----|-------------|---------------|
+| No voice.md | Ads sound generic | "Once voice.md has a Never Say section, /ads stops using phrases that don't sound like you" |
+| Thin audience.md | Hooks don't land | "Adding 3-5 pain points to audience.md means /ads writes hooks your audience actually recognizes" |
+| No angles | Ad fatigue | "One angle = one ad direction. Three angles = three completely different emotional entry points. More angles = more creative variety before fatigue" |
+| No testimonials | Can't use social proof | "Even 2-3 testimonials unlock proof-based ads. Got any screenshots of wins, DMs, or reviews?" |
+| No content-strategy | No distribution plan | "Your reference is ready to generate content, but without content-strategy.md there's no plan for where it goes. 15 min with /think can build the skeleton" |
+
+### Make It Easy
+
+**Always offer to do it right now.** The #1 reason thin repos stay thin is the user doesn't know it's a 5-minute fix:
+
+> "Want me to ask you the 3 questions that would build your voice.md right now? Takes about 5 minutes and immediately improves every output."
+
+### Synthesis Format for Thin Repos
+
+```
+=== TRIAGE ANALYSIS ===
+
+[Acknowledge what they HAVE built — celebrate progress, not just gaps]
+
+## Your Biggest Unlock Right Now
+
+**[One thing]:** [What adding it unlocks, in terms the user cares about]
+[Offer to do it right now with specific questions — make it feel like 5 minutes, not a project]
+
+## What's Already Working
+
+- [File] is [specific strength] — this means [downstream benefit]
+- [File] has [good section] — [what it enables]
+
+## After That
+
+[1-2 next-level items for when they're ready — don't overwhelm, just show the path]
+```
+
+**Key difference from full synthesis:** Lead with the unlock, not the gaps. Show what's working first. Make the recommendation feel like leveling up, not fixing problems.
+
+---
+
 ## Anti-Patterns
 
 Include these in each agent's prompt (adapted from /end's crystallize anti-patterns).
@@ -449,7 +502,11 @@ Three parallel agents produce a LOT of findings. Synthesis must ruthlessly prior
 
 If the soul health check revealed "this feels like push," the triage recommendation must honor that. If the user mentioned a specific concern during /start, incorporate it.
 
-### 7. Don't Repeat Past Triage
+### 7. Don't Make Thin Repos Feel Broken
+
+"You're missing 5 files" makes the user feel behind. "Your offer is clear and your audience is developing -- adding a Never Say section to voice.md would immediately sharpen your ads. Want me to ask you 3 questions?" makes them feel like they're building something. Thin repos are not broken. They're early. The triage should feel like unlocking the next level, not auditing what's missing.
+
+### 8. Don't Repeat Past Triage
 
 If a previous triage recommended voice.md work and it still hasn't happened, don't just repeat the recommendation. Ask whether the gap is actually blocking anything, or whether the user has implicitly decided it's low priority.
 

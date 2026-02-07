@@ -349,9 +349,11 @@ Still show what would reach 18. **Beginner/intermediate get the gap display belo
 
 ### When Score Is 18/18
 
-The only case where no gaps are shown:
+No structural gaps to show, but don't claim perfection — triage finds deeper issues:
 
-> "**Repo Health: FULL** (18/18). All reference files are strong."
+> "**Repo Health: FULL** (18/18). All reference files present and substantive. For deeper analysis (staleness, cross-file consistency, pipeline health), pick option 1."
+
+**Do NOT say:** "locked", "mature", "production-ready", or "all set." 18/18 means structure is complete, not that content is perfect. Triage handles quality.
 
 ### Session State Display
 
