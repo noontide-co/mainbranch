@@ -42,6 +42,7 @@ Or naturally: "/think apply the pricing decision to reference files"
 4. **Mark additions** — Use date comments for traceability: `<!-- Added 2026-01-17 -->`
 5. **Confirm before large changes** — If changing >30% of a file, ask first
 6. **Atomic updates** — Complete all or none
+7. **Write in enduring language** — Reference files should read like they've always been true, not like reactions to specific events. Core beliefs are timeless truths. If a line references a specific tool, session, bug, or conversation — it belongs in an evolution marker or decision file, not in the reference itself. Test: would someone reading this in 6 months with no context understand it? If not, rewrite until they would.
 
 ---
 

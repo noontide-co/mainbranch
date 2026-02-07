@@ -104,12 +104,34 @@ Apply to: business repo selection, skill routing, any multiple choice.
 
 ## Step -1: Pull Updates
 
-Run `git pull origin main` on vip silently. Mention only if updates pulled. Don't block on network issues.
+Pull vip updates. **Do NOT silently swallow failures.** Users on stale code get broken features.
 
 ```bash
-# Pull vip updates (checks common locations)
-for d in . ~/Documents/GitHub/vip ~/vip; do [ -d "$d/.claude/skills" ] && git -C "$d" pull origin main 2>/dev/null && break; done || true
+# Pull vip updates — capture result
+git pull origin main 2>&1
 ```
+
+**Handle the result:**
+
+| Result | What to say |
+|--------|-------------|
+| "Already up to date." | Say nothing |
+| "Updating..." / files changed | "Pulled latest updates." |
+| Any error (auth, network, not a repo) | Show the warning below |
+
+**If pull fails, show this warning immediately:**
+
+> "I wasn't able to pull the latest Main Branch updates. This means you may be running on an old version and missing new features.
+>
+> Common fixes:
+> 1. **GitHub Desktop not running?** Open it and make sure you're signed in
+> 2. **Subscription inactive?** Check your Main Branch access in Skool
+> 3. **Network issue?** Check your internet connection
+> 4. **Try manually:** Open GitHub Desktop → select vip → click 'Fetch origin'
+>
+> You can continue, but some features may not work as expected."
+
+**Do not skip this warning.** A user running stale vip is the #1 cause of "why doesn't X work" support questions.
 
 ---
 
@@ -208,16 +230,27 @@ user:
 Once business repo is confirmed, pull its latest updates:
 
 ```bash
-cd [repo-path] && git pull origin main 2>/dev/null || true
+cd [repo-path] && git pull origin main 2>&1
 ```
+
+**Handle the result:**
+
+| Result | What to say |
+|--------|-------------|
+| "Already up to date." | Say nothing |
+| "Updating..." / files changed | "Pulled latest updates for [repo-name]." |
+| "fatal: 'origin' does not appear to be a git repo" | Say nothing — local-only repo, no remote configured |
+| Any other error | Show the warning below |
+
+**If pull fails (and repo has a remote):**
+
+> "Couldn't pull updates for [repo-name]. You may be working on older reference files.
+>
+> Try: Open GitHub Desktop → select [repo-name] → click 'Fetch origin'"
 
 **Why both repos:**
 - Engine (vip) → new skills, playbooks, compliance frameworks
 - Business repo → your reference files, decisions, research
-
-If you work across machines or collaborate, your business repo may have changes. Pull them.
-
-**Mention only if updates:** "Pulled latest updates for [repo-name]" — otherwise stay silent.
 
 ---
 
@@ -422,33 +455,13 @@ Read `user.experience` from `~/.config/vip/local.yaml` (defaults to `beginner` i
 
 ---
 
-## Skill Quick Reference
-
-| Skill | What It Does |
-|-------|--------------|
-| `/pull` | Pull latest vip updates |
-| `/help` | Get answers, troubleshoot, learn |
-| `/setup` | Create business repo from scratch |
-| `/think` | Enrich the core — research, decide, codify into reference |
-| `/ads` | Generate image ads, video scripts, or review for compliance |
-| `/vsl` | Write video sales letters (Skool or B2B frameworks) |
-| `/organic` | Generate organic content from reference + research |
-| `/newsletter` | Generate weekly newsletter from thinking work (coming soon) |
-| `/site` | Generate and deploy landing pages from reference files |
-| `/wiki` | Create atomic notes, publish wiki |
-| `/end` | Close session — summary, crystallize, commit |
-
-Skills like `/think` and `/ads review` automatically spawn parallel subagents when the task benefits (e.g., multi-source research, 6-lens compliance review). This makes complex work faster and keeps your main context window clean. No action needed on your part.
-
----
-
 ## Intent Keywords
 
-Use these to auto-detect what user wants:
+Auto-detect user intent and route. Skills: `/pull`, `/help`, `/setup`, `/think`, `/ads`, `/vsl`, `/organic`, `/newsletter`, `/site`, `/wiki`, `/end`. Some skills spawn parallel subagents automatically.
 
 | Keywords | Route To |
 |----------|----------|
-| "what should I work on", "help me prioritize", "what to do next", "figure out what to work on" | Option 1 → Triage (see [triage-agent.md](references/triage-agent.md)) |
+| "what should I work on", "help me prioritize", "what to do next", "figure out what to work on", "deep triage" | Option 1 → Triage (see [triage-agent.md](references/triage-agent.md)) |
 | "help", "confused", "stuck", "don't understand", "how do I" | `/help` |
 | "new", "first time", "get started", "set up" | `/setup` |
 | "add", "update", "more context", "new testimonials", "enrich" | `/think codify` |
@@ -468,20 +481,10 @@ Use these to auto-detect what user wants:
 
 ## Recovering from Compaction
 
-If the conversation compacts and /start is re-invoked:
-
-1. Re-read `~/.config/vip/local.yaml` for `default_repo` and user identity
-2. Re-read the business repo's context files
-3. **Offer recovery:** Read `.vip/local.yaml` in the business repo for `current_offer` to restore offer context after compaction. Don't re-prompt for offer selection if the file exists — just confirm: "Restored offer context: **[offer-name]**."
+If re-invoked after compaction: re-read `~/.config/vip/local.yaml` for repo + identity, and `.vip/local.yaml` in the business repo for `current_offer`. Don't re-prompt — confirm: "Restored offer context: **[offer-name]**."
 
 ---
 
 ## Remember
 
-Router, not worker. Detect state → route → let the target skill do the work. One clarifying question max.
-
-**Four jobs:**
-1. Find and validate the business repo (config, path validation)
-2. Assess readiness (score reference, check session state, soul health)
-3. Present options — triage (option 1, recommended) or direct skill routing
-4. Route to the right skill (respecting readiness gates) — skill loads its own context
+Router, not worker. Detect → route → let the skill do the work. One clarifying question max. Skill loads its own context — main stays lean.
