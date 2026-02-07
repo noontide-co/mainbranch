@@ -230,16 +230,27 @@ user:
 Once business repo is confirmed, pull its latest updates:
 
 ```bash
-cd [repo-path] && git pull origin main 2>/dev/null || true
+cd [repo-path] && git pull origin main 2>&1
 ```
+
+**Handle the result:**
+
+| Result | What to say |
+|--------|-------------|
+| "Already up to date." | Say nothing |
+| "Updating..." / files changed | "Pulled latest updates for [repo-name]." |
+| "fatal: 'origin' does not appear to be a git repo" | Say nothing — local-only repo, no remote configured |
+| Any other error | Show the warning below |
+
+**If pull fails (and repo has a remote):**
+
+> "Couldn't pull updates for [repo-name]. You may be working on older reference files.
+>
+> Try: Open GitHub Desktop → select [repo-name] → click 'Fetch origin'"
 
 **Why both repos:**
 - Engine (vip) → new skills, playbooks, compliance frameworks
 - Business repo → your reference files, decisions, research
-
-If you work across machines or collaborate, your business repo may have changes. Pull them.
-
-**Mention only if updates:** "Pulled latest updates for [repo-name]" — otherwise stay silent.
 
 ---
 
@@ -444,33 +455,13 @@ Read `user.experience` from `~/.config/vip/local.yaml` (defaults to `beginner` i
 
 ---
 
-## Skill Quick Reference
-
-| Skill | What It Does |
-|-------|--------------|
-| `/pull` | Pull latest vip updates |
-| `/help` | Get answers, troubleshoot, learn |
-| `/setup` | Create business repo from scratch |
-| `/think` | Enrich the core — research, decide, codify into reference |
-| `/ads` | Generate image ads, video scripts, or review for compliance |
-| `/vsl` | Write video sales letters (Skool or B2B frameworks) |
-| `/organic` | Generate organic content from reference + research |
-| `/newsletter` | Generate weekly newsletter from thinking work (coming soon) |
-| `/site` | Generate and deploy landing pages from reference files |
-| `/wiki` | Create atomic notes, publish wiki |
-| `/end` | Close session — summary, crystallize, commit |
-
-Skills like `/think` and `/ads review` automatically spawn parallel subagents when the task benefits (e.g., multi-source research, 6-lens compliance review). This makes complex work faster and keeps your main context window clean. No action needed on your part.
-
----
-
 ## Intent Keywords
 
-Use these to auto-detect what user wants:
+Auto-detect user intent and route. Skills: `/pull`, `/help`, `/setup`, `/think`, `/ads`, `/vsl`, `/organic`, `/newsletter`, `/site`, `/wiki`, `/end`. Some skills spawn parallel subagents automatically.
 
 | Keywords | Route To |
 |----------|----------|
-| "what should I work on", "help me prioritize", "what to do next", "figure out what to work on" | Option 1 → Triage (see [triage-agent.md](references/triage-agent.md)) |
+| "what should I work on", "help me prioritize", "what to do next", "figure out what to work on", "deep triage" | Option 1 → Triage (see [triage-agent.md](references/triage-agent.md)) |
 | "help", "confused", "stuck", "don't understand", "how do I" | `/help` |
 | "new", "first time", "get started", "set up" | `/setup` |
 | "add", "update", "more context", "new testimonials", "enrich" | `/think codify` |

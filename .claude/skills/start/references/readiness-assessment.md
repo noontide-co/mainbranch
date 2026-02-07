@@ -120,7 +120,74 @@ If missing or <10 lines, note it -- but only for businesses that would benefit (
 
 ---
 
-## 3. Soul Health Check
+## 3. Health Flags
+
+Lightweight metadata checks that catch common decay without reading full file contents. Run AFTER structural scoring (Section 1) and session state (Section 2). Adds 4-5 tool calls.
+
+**Principle:** If you can detect it from metadata, frontmatter, or file stats — it belongs here. If you need to read and compare file *contents* — it belongs in triage.
+
+### Check A: Frontmatter Status Scan (1 call)
+
+```bash
+grep -l "status: draft" [repo-path]/reference/core/*.md 2>/dev/null
+```
+
+Flag any file that scored 3/3 structurally but has `status: draft` in frontmatter. Highest-signal check — the user explicitly declared this file unfinished.
+
+**Flag:** `! status: draft` (inline next to file)
+
+### Check B: Staleness Detection (1 call)
+
+```bash
+git log --format="%ai" -1 -- [repo-path]/reference/core/soul.md [repo-path]/reference/core/offer.md [repo-path]/reference/core/audience.md [repo-path]/reference/core/voice.md
+```
+
+Flag any core file not modified in 30+ days. Not a score penalty — an observation.
+
+**Flag:** `! stale (Xd)` (inline next to file)
+
+### Check C: Angle Count Mismatch (1 call)
+
+```bash
+ls [repo-path]/reference/proof/angles/*.md 2>/dev/null
+```
+
+Compare actual .md file count (excluding README.md) against angles README if it exists. Flag if counts differ.
+
+**Flag:** `! 3 files vs 5 in README` (inline next to angles row)
+
+### Check D: Decision Codification Rate (1 call)
+
+```bash
+grep -rl "What Changes" [repo-path]/decisions/ 2>/dev/null | wc -l
+```
+
+Count decisions with "What Changes" section vs total. Pipeline health signal.
+
+**Flag:** `Decisions: X/Y codified` (below file scores)
+
+### Check E: Naming Convention Spot-Check (1 call)
+
+```bash
+ls [repo-path]/research/ [repo-path]/decisions/ 2>/dev/null
+```
+
+Pattern-match filenames against `YYYY-MM-DD-slug.md`. Only flag if >20% violations.
+
+**Flag:** `Naming: X% violations in research/` (below file scores)
+
+### Display Rules
+
+- Maximum 5 flags total
+- File-level flags (A, B, C) appear inline next to the relevant file score
+- Pipeline flags (D, E) appear as a separate line below file scores
+- No "WARNING" or "ISSUE" language — factual observations only
+- If any flags exist, append: "Pick option 1 for deeper analysis"
+- Flags inform; they do NOT gate routing or change the structural score
+
+---
+
+## 4. Soul Health Check
 
 Modeled on /end's crystallize pattern. For returning users, reconnection at session open is as important as reflection at session close.
 
@@ -178,7 +245,7 @@ No ceremony. Get out of the way.
 
 ---
 
-## 4. Smart Routing Gates
+## 5. Smart Routing Gates
 
 The readiness score determines which skills are available. This prevents users from jumping into output skills with thin reference -- the #1 source of bad outputs.
 
@@ -220,7 +287,7 @@ One-time mention per session. Do not repeat.
 
 ---
 
-## 5. Skill-Specific Readiness
+## 6. Skill-Specific Readiness
 
 Beyond the composite score, some skills have specific requirements. Check these when routing to a specific skill.
 
@@ -273,7 +340,7 @@ Beyond the composite score, some skills have specific requirements. Check these 
 
 ---
 
-## 6. Display Format
+## 7. Display Format
 
 How to present the readiness assessment to the user. Adapt by experience level.
 
@@ -287,7 +354,7 @@ How to present the readiness assessment to the user. Adapt by experience level.
 
 1. **For ANY score below 18:** Identify exactly which files scored below 3.
 2. **For each gap:** Say what specific section or content is missing, what filling it would unlock for downstream skills, and offer to fix it right there.
-3. **Use the per-file gap tables from Section 7** to determine the specific gap language for each file at each score level.
+3. **Use the per-file gap tables from Section 8** to determine the specific gap language for each file at each score level.
 4. **Group gaps under a "Gaps:" heading** after the score line.
 
 ### Beginner (experience: beginner)
@@ -355,6 +422,40 @@ No structural gaps to show, but don't claim perfection — triage finds deeper i
 
 **Do NOT say:** "locked", "mature", "production-ready", or "all set." 18/18 means structure is complete, not that content is perfect. Triage handles quality.
 
+### Flag Display
+
+Health flags from Section 3 appear alongside structural scores. File-level flags (status, staleness, count mismatch) go inline. Pipeline flags (codification rate, naming) go below.
+
+**Beginner/Intermediate — flags after gaps:**
+
+> "**Repo Health: FULL** (18/18)
+>
+> **Flags:**
+> - soul.md — status: draft (you marked this unfinished)
+> - audience.md — stale (41d since last update)
+> - Decisions: 8/63 codified
+>
+> Pick option 1 for deeper analysis."
+
+**Advanced — flags on one line:**
+
+> "**18/18** — flags: soul.md draft, audience.md stale (41d), 8/63 decisions codified. Option 1 for details."
+
+**When GOOD/FULL with both gaps AND flags:**
+
+> "**Repo Health: GOOD** (13/18)
+>
+> **Gaps:**
+> - **testimonials.md** (2/3): 7 testimonials. 10+ unlocks stronger proof. Have recent wins?
+>
+> **Flags:**
+> - offer.md — stale (35d)
+> - Decisions: 3/12 codified
+>
+> Pick option 1 for deeper analysis."
+
+**When no flags fire:** Don't show the Flags section at all. No "Flags: none" or "0 flags" — just omit it.
+
 ### Session State Display
 
 If session state items were found, append after the health display:
@@ -368,7 +469,7 @@ Only show items that exist. Skip this section entirely if nothing to report.
 
 ---
 
-## 7. Per-File Gap Tables
+## 8. Per-File Gap Tables
 
 Use these tables to determine the specific gap language for each file at each score level. The formula is always: **[Specific missing section/file] + [What it unlocks downstream] + [Concrete question or offer to fix it now]**.
 

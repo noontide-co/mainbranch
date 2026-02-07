@@ -79,8 +79,8 @@ Gather these in main and pass as structured text in each agent's prompt:
 | Absolute repo path | From Step 0 | 1 line | All 3 agents (agents use this to Read files themselves) |
 | Git log (30 days) | `git log --since="30 days ago" --oneline --no-merges` | ~30 lines | Agent 2 |
 | Reference file change list (30 days) | `git log --since="30 days ago" --name-only -- reference/` | ~20 lines | Agent 1, 3 |
-| Open decision file names | `grep -rl "status: proposed\|status: accepted" decisions/` | ~10 lines | Agent 2 |
-| Unlinked research count | `grep -rl "linked_decisions: \[\]" research/ \| wc -l` | 1 line | Agent 2 |
+| Open decision file names | `grep -rl "status: proposed\|status: accepted" decisions/ 2>/dev/null` | ~10 lines | Agent 2 |
+| Unlinked research count | `grep -rl "linked_decisions: \[\]" research/ 2>/dev/null \| wc -l` | 1 line | Agent 2 |
 | Past triage file names | `ls research/*-start-triage.md 2>/dev/null` | ~5 lines | Agent 3 |
 | Past crystallize file names | `ls research/*-end-of-day-crystallize.md 2>/dev/null` | ~5 lines | Agent 3 |
 | `current_offer` | From `.vip/local.yaml` | 1 line | All 3 agents |
@@ -371,6 +371,8 @@ Task(
 ```
 
 Each agent is **read-only**. Each reads files in its own context window. Main conversation stays lean.
+
+**Set `max_turns: 20` on each Task call** to prevent runaway agents. 20 turns is enough for full file reads + analysis but caps cost if something loops.
 
 ### After Spawning: Wait for Agents
 
