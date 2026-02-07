@@ -104,12 +104,34 @@ Apply to: business repo selection, skill routing, any multiple choice.
 
 ## Step -1: Pull Updates
 
-Run `git pull origin main` on vip silently. Mention only if updates pulled. Don't block on network issues.
+Pull vip updates. **Do NOT silently swallow failures.** Users on stale code get broken features.
 
 ```bash
-# Pull vip updates (checks common locations)
-for d in . ~/Documents/GitHub/vip ~/vip; do [ -d "$d/.claude/skills" ] && git -C "$d" pull origin main 2>/dev/null && break; done || true
+# Pull vip updates — capture result
+git pull origin main 2>&1
 ```
+
+**Handle the result:**
+
+| Result | What to say |
+|--------|-------------|
+| "Already up to date." | Say nothing |
+| "Updating..." / files changed | "Pulled latest updates." |
+| Any error (auth, network, not a repo) | Show the warning below |
+
+**If pull fails, show this warning immediately:**
+
+> "I wasn't able to pull the latest Main Branch updates. This means you may be running on an old version and missing new features.
+>
+> Common fixes:
+> 1. **GitHub Desktop not running?** Open it and make sure you're signed in
+> 2. **Subscription inactive?** Check your Main Branch access in Skool
+> 3. **Network issue?** Check your internet connection
+> 4. **Try manually:** Open GitHub Desktop → select vip → click 'Fetch origin'
+>
+> You can continue, but some features may not work as expected."
+
+**Do not skip this warning.** A user running stale vip is the #1 cause of "why doesn't X work" support questions.
 
 ---
 
@@ -468,20 +490,10 @@ Use these to auto-detect what user wants:
 
 ## Recovering from Compaction
 
-If the conversation compacts and /start is re-invoked:
-
-1. Re-read `~/.config/vip/local.yaml` for `default_repo` and user identity
-2. Re-read the business repo's context files
-3. **Offer recovery:** Read `.vip/local.yaml` in the business repo for `current_offer` to restore offer context after compaction. Don't re-prompt for offer selection if the file exists — just confirm: "Restored offer context: **[offer-name]**."
+If re-invoked after compaction: re-read `~/.config/vip/local.yaml` for repo + identity, and `.vip/local.yaml` in the business repo for `current_offer`. Don't re-prompt — confirm: "Restored offer context: **[offer-name]**."
 
 ---
 
 ## Remember
 
-Router, not worker. Detect state → route → let the target skill do the work. One clarifying question max.
-
-**Four jobs:**
-1. Find and validate the business repo (config, path validation)
-2. Assess readiness (score reference, check session state, soul health)
-3. Present options — triage (option 1, recommended) or direct skill routing
-4. Route to the right skill (respecting readiness gates) — skill loads its own context
+Router, not worker. Detect → route → let the skill do the work. One clarifying question max. Skill loads its own context — main stays lean.
