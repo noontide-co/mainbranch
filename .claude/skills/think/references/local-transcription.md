@@ -6,18 +6,21 @@ When user has local media files to mine, use whisper.
 
 ## Prerequisites Check
 
-User needs:
-- whisper-cpp (via Homebrew)
-- ffmpeg (via Homebrew)
-- Base model downloaded (~142MB)
+User needs ONE of these whisper implementations + ffmpeg:
 
-**Quick check:**
+| Variant | Binary | Best For | Check |
+|---------|--------|----------|-------|
+| **mlx-whisper** | `mlx_whisper` | Apple Silicon (fastest, uses MLX) | `which mlx_whisper` |
+| **whisper-cpp** | `whisper-cli` | Cross-platform, Homebrew | `which whisper-cli` |
+| **whisper-mcp** | MCP tool | Direct Claude integration | `grep whisper ~/.mcp.json` |
+
+**Quick check (tries all variants):**
 ```bash
-which whisper-cli ffmpeg
-ls ~/.whisper/ggml-base.en.bin
+which mlx_whisper 2>/dev/null || which whisper-cli 2>/dev/null || echo "No whisper found"
+which ffmpeg 2>/dev/null || echo "No ffmpeg found"
 ```
 
-If missing, see installation instructions below. (Also mentioned in `setup/SKILL.md` "After Setup" section.)
+**IMPORTANT:** Check config first. If `tools.whisper.status: true` exists in `.vip/config.yaml`, read `tools.whisper.notes` to see which variant is installed. Skip detection.
 
 ---
 
@@ -35,7 +38,27 @@ grep -q "whisper-mcp" ~/.mcp.json 2>/dev/null && echo "whisper-mcp configured"
 
 ---
 
-## Without MCP (CLI Fallback)
+## With mlx-whisper (Apple Silicon)
+
+Fastest option on M1/M2/M3/M4 Macs. Handles video files directly (no ffmpeg conversion needed).
+
+```bash
+mlx_whisper --model mlx-community/whisper-large-v3-turbo --language en \
+  --output-format txt --output-dir /tmp/whisper-out "path/to/file.mp4"
+```
+
+Output lands in `/tmp/whisper-out/` as a `.txt` file. Read it and synthesize.
+
+**Install:**
+```bash
+pip3 install mlx-whisper
+```
+
+No model download needed — mlx_whisper pulls models automatically on first use.
+
+---
+
+## With whisper-cpp (CLI Fallback)
 
 1. Convert to 16kHz WAV:
    ```bash

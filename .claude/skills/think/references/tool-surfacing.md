@@ -20,7 +20,7 @@ How to help users discover research tools without blocking them.
 | **Apify** | YouTube transcripts, Instagram mining, web scraping | Critical | `mcp__apify__*` tools exist | 5 min | ~$0.005/video |
 | **Gemini** | Deep research (Flash + Deep Research Agent) | Important | `$GOOGLE_API_KEY` exists | 3 min | Free tier / $2-5 |
 | **Grok** | X/Twitter real-time sentiment | Enhancing | `$XAI_API_KEY` + `xai_sdk` package | 5 min | ~$0.02-0.30/query |
-| **whisper** | Local video/audio transcription | Enabling | `mcp__whisper__*` OR `which whisper-cli` | 10 min | Free (local) |
+| **whisper** | Local video/audio transcription | Enabling | `mcp__whisper__*` OR `which mlx_whisper` OR `which whisper-cli` | 2 min | Free (local) |
 | **markitdown** | PDF/DOCX/PPTX conversion | Convenience | `which markitdown` | 1 min | Free |
 | **pandoc** | High-quality DOCX conversion | Convenience | `which pandoc` | 1 min | Free |
 | **marker** | Complex/scanned PDF OCR | Convenience | `which marker_single` | 5 min | Free |

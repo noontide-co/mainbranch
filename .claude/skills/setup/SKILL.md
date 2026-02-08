@@ -124,11 +124,11 @@ git init
 
 **Local transcription (for mining your own recordings):**
 ```bash
-which whisper-cli ffmpeg
+which mlx_whisper 2>/dev/null || which whisper-cli 2>/dev/null; which ffmpeg
 ```
 
 If missing, note for later:
-> "Optional: For transcribing your own videos/voice memos, you'll want whisper-cpp. We can set that up later with `/think`."
+> "Optional: For transcribing your own videos/voice memos, you'll want a whisper variant. `pip3 install mlx-whisper` is fastest on Apple Silicon. We can set that up later with `/think`."
 
 Don't block setup on this. Continue and mention it at the end.
 

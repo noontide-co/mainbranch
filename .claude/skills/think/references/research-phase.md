@@ -225,13 +225,14 @@ When user wants to mine their OWN recordings (not YouTube), use local transcript
 
 See [local-transcription.md](local-transcription.md) for full workflow.
 
-**Quick version (CLI):**
+**Quick version (CLI — check config `tools.whisper.notes` for which variant):**
 ```bash
-# Convert to 16kHz WAV
-ffmpeg -i "video.mp4" -ar 16000 -ac 1 /tmp/audio.wav -y
+# mlx_whisper (Apple Silicon, preferred — handles video directly):
+mlx_whisper --model mlx-community/whisper-large-v3-turbo --language en --output-format txt --output-dir /tmp/whisper-out "video.mp4"
 
-# Transcribe
-whisper-cli --model ~/.whisper/ggml-base.en.bin --file /tmp/audio.wav --output-txt
+# whisper-cli (Homebrew fallback — needs ffmpeg conversion first):
+# ffmpeg -i "video.mp4" -ar 16000 -ac 1 /tmp/audio.wav -y
+# whisper-cli --model ~/.whisper/ggml-base.en.bin --file /tmp/audio.wav --output-txt
 ```
 
 **With whisper-mcp:** Use `transcribe_audio` tool directly.

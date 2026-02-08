@@ -58,7 +58,7 @@ These tools enhance `/think` but are optional (except Apify which is important):
 | **Apify** | `mcp__apify__search-actors` tool exists | Offer setup (important - enables YouTube + Instagram mining) |
 | **Grok** | `$XAI_API_KEY` set OR `mcp__xai__*` exists | Note, don't block (fallback: WebSearch site:x.com) |
 | **Gemini** | `$GOOGLE_API_KEY` set | Note, don't block (fallback: multi-source WebSearch) |
-| **whisper** | `mcp__whisper__*` OR `which whisper-cli` | Offer CLI fallback or manual transcription |
+| **whisper** | `mcp__whisper__*` OR `which mlx_whisper` OR `which whisper-cli` | Offer CLI fallback or manual transcription |
 
 ### Detection Order
 
@@ -75,7 +75,8 @@ Run on first `/think` invocation:
 [ -n "$XAI_API_KEY" ] && echo "Grok available"
 # OR check for mcp__xai__* tools
 
-# 4. whisper - MCP or CLI
+# 4. whisper - MCP or CLI (check mlx_whisper first, then whisper-cli)
+which mlx_whisper >/dev/null 2>&1 && echo "mlx_whisper available"
 which whisper-cli >/dev/null 2>&1 && echo "whisper-cli available"
 # OR check for mcp__whisper__* tools
 ```

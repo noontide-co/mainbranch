@@ -95,10 +95,14 @@ On first /think invocation each session:
 [ -n "$XAI_API_KEY" ] && python3 -c "import xai_sdk" 2>/dev/null && echo "GROK=true"
 ```
 
-**whisper:** Check MCP tools (`mcp__whisper__*`) OR CLI:
+**whisper:** Check MCP tools (`mcp__whisper__*`) OR CLI (multiple implementations exist):
 ```bash
-which whisper-cli >/dev/null 2>&1 && echo "WHISPER=true"
+which mlx_whisper >/dev/null 2>&1 && echo "WHISPER=mlx_whisper"
+which whisper-cli >/dev/null 2>&1 && echo "WHISPER=whisper-cli"
+pip3 list 2>/dev/null | grep -i "mlx-whisper" && echo "WHISPER=mlx_whisper"
 ```
+
+**Save which binary was found** in config `tools.whisper.notes` (e.g., `"mlx_whisper verified"`). Different variants use different command syntax — the notes field tells future sessions which command to use. See [local-transcription.md](references/local-transcription.md) for variant-specific commands.
 
 **Nano Banana** (image generation): Available when Gemini is configured (uses GOOGLE_API_KEY). Detect alongside Gemini.
 
@@ -215,7 +219,7 @@ When routing to research mode, detect research TYPE from user intent:
 | YouTube research | YouTube URL, "transcribe video", "what does [creator] say" | Apify | Ask for manual transcript |
 | X/Twitter sentiment | "what are people saying", "sentiment on X", "Twitter discourse" | Grok | WebSearch site:x.com |
 | Deep web research | "deep research", "comprehensive analysis", "research everything" | Gemini | Multi-source WebSearch |
-| Local transcription | Local file path (.mp4, .m4a), "transcribe my recording" | whisper | CLI whisper-cli |
+| Local transcription | Local file path (.mp4, .m4a), "transcribe my recording" | whisper | CLI mlx_whisper or whisper-cli |
 | Instagram mining | Instagram handle, "mine [handle]", "competitor posts" | Apify | Manual screenshots |
 | General research | Default, "research [topic]", "what do we know" | WebSearch + codebase | Always available |
 
@@ -247,7 +251,7 @@ When routing to research mode, detect research TYPE from user intent:
 > "Running comprehensive research using Claude Code web search. This may take longer than Gemini deep research."
 
 **Local file without whisper:**
-> "Local transcription needs whisper-mcp or CLI tools. Check: `which whisper-cli`. Or upload to a transcription service and paste the result."
+> "Local transcription needs a whisper variant. Check: `which mlx_whisper` or `which whisper-cli`. Or upload to a transcription service and paste the result."
 
 ### Key Principle
 

@@ -50,13 +50,16 @@ else
   echo "  ✗ Grok (XAI_API_KEY not set)"
 fi
 
-# whisper - CLI
-if which whisper-cli >/dev/null 2>&1; then
+# whisper - CLI (check mlx_whisper first, then whisper-cli)
+if which mlx_whisper >/dev/null 2>&1; then
+  WHISPER_STATUS="available"
+  echo "  ✓ whisper (mlx_whisper found)"
+elif which whisper-cli >/dev/null 2>&1; then
   WHISPER_STATUS="available"
   echo "  ✓ whisper (whisper-cli found)"
 else
   WHISPER_STATUS="unavailable"
-  echo "  ✗ whisper (whisper-cli not found)"
+  echo "  ✗ whisper (no variant found — try: pip3 install mlx-whisper)"
 fi
 
 # Nano Banana - image generation (requires Gemini/GOOGLE_API_KEY)
