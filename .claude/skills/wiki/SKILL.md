@@ -145,7 +145,7 @@ If user doesn't have a Cloudflare account, guide them to create one:
 Guide user through Cloudflare dashboard — this creates a Git-connected project with auto-deploy:
 
 1. Go to https://dash.cloudflare.com
-2. Left sidebar: **Workers & Pages**
+2. Left sidebar: under **Compute (AI)** section, click **Workers & Pages**
 3. Click **"Create application"** (blue button, top right)
 4. **IMPORTANT:** Click the small link at the bottom: **"Pages: Get started"** (NOT the Worker option)
 5. Select **"Connect to Git"**
@@ -177,6 +177,26 @@ export const config: SiteConfig = {
   // ... rest of config
 };
 ```
+
+### 10b. Ask for avatar image
+
+Ask: "Do you have a profile picture to use? Drag and drop the image here, or paste the file path. (Press Enter to skip and use the default)"
+
+If user provides an image:
+- Copy to wiki: `cp "[path]" "$WIKI_REPO/public/avatar.jpg"`
+- Generate favicon (uses sharp, already a dependency):
+  ```bash
+  cd "$WIKI_REPO" && node -e "
+    const sharp = require('sharp');
+    sharp('public/avatar.jpg')
+      .resize(32, 32)
+      .png()
+      .toFile('public/favicon-32x32.png');
+  "
+  ```
+- Supported formats: .jpg, .png, .webp (rename to avatar.jpg)
+
+If skipped, mention they can update later with `/wiki configure`.
 
 Then commit and push — this triggers auto-deploy:
 ```bash
@@ -240,7 +260,7 @@ pnpm build && git add -A && git commit -m "[add] Home note" && git push
 
 ## Mode: add
 
-Create a new atomic note following evergreen note principles.
+Create a new atomic note following evergreen note principles, and link it from the home page.
 
 **Usage:** `/wiki add "Note Title"`
 
@@ -251,12 +271,34 @@ Create a new atomic note following evergreen note principles.
 4. Create note with frontmatter — see [references/note-template.md](references/note-template.md)
 5. Apply evergreen principles: atomic, concept-oriented, densely linked
 6. Suggest WikiLinks: `grep -r "concept" "$WIKI_REPO/src/content/notes/" --include="*.md" -l`
+7. **Update home page Recent Updates** — see below
 
 **Frontmatter validation:**
 - Valid `status` values: `draft`, `live`, `updated`
 - Valid `visibility` values: `public`, `private`, `draft`
 
-**Exit:** "Note created. Run `/wiki publish` to deploy, or continue editing."
+**Update home page Recent Updates (step 7):**
+
+After creating the note, update `src/content/notes/index.md` to link the new note under a `## Recent Updates` section:
+
+1. Read `src/content/notes/index.md`
+2. Look for `## Recent Updates` section. If missing, add it **before** the `## About` section (or at the end if no About section)
+3. Prepend a new entry at the top of the section: `- [[Note Title]] — summary *(YYYY-MM-DD)*`
+4. Keep only the **10 most recent** entries. Remove older ones to prevent bloat.
+5. Update the `updated` date in frontmatter to today
+
+**Example Recent Updates section:**
+```markdown
+## Recent Updates
+
+- [[Compounding Knowledge]] — how reference files build on each other *(2026-02-07)*
+- [[Active vs Passive Memory]] — why files beat chat history *(2026-02-05)*
+- [[WikiLinks Create Serendipity]] — emergent connections from linking *(2026-02-03)*
+```
+
+This ensures every note is immediately discoverable from the home page without requiring a separate `/wiki recent` invocation.
+
+**Exit:** "Note created and linked from home page. Run `/wiki publish` to deploy, or continue editing."
 
 ---
 

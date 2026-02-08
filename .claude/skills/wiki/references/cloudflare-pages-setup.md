@@ -16,7 +16,7 @@ Go to https://dash.cloudflare.com (create free account if needed)
 
 ### 2. Navigate to Workers & Pages
 
-Left sidebar: **Workers & Pages**
+Left sidebar: under **Compute (AI)** section, click **Workers & Pages**
 
 ### 3. Create Application
 
