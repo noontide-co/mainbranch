@@ -277,28 +277,32 @@ Create a new atomic note following evergreen note principles, and link it from t
 - Valid `status` values: `draft`, `live`, `updated`
 - Valid `visibility` values: `public`, `private`, `draft`
 
-**Update home page Recent Updates (step 7):**
+**Update the updates collection (step 7):**
 
-After creating the note, update `src/content/notes/index.md` to link the new note under a `## Recent Updates` section:
+After creating the note, add it to the updates collection so the "Recent updates" card on the home page picks it up:
 
-1. Read `src/content/notes/index.md`
-2. Look for `## Recent Updates` section. If missing, add it **before** the `## About` section (or at the end if no About section)
-3. Prepend a new entry at the top of the section: `- [[Note Title]] — summary *(YYYY-MM-DD)*`
-4. Keep only the **10 most recent** entries. Remove older ones to prevent bloat.
-5. Update the `updated` date in frontmatter to today
+1. Check if `src/content/updates/YYYY-MM-DD.md` exists for today's date
+2. **If it exists:** Append the new note as a bullet under the existing content:
+   ```markdown
+   - [[Note Title]] — summary
+   ```
+3. **If it doesn't exist:** Create a new update file:
+   ```yaml
+   ---
+   title: "Added: Note Title"
+   date: YYYY-MM-DD
+   summary: "New note on [topic]."
+   aiGenerated: true
+   author: "[user's displayName from config.ts]"
+   ---
 
-**Example Recent Updates section:**
-```markdown
-## Recent Updates
+   - [[Note Title]] — summary
+   ```
+4. If multiple notes are added on the same day, the file accumulates them. Update the title to reflect the count (e.g., "Added 3 notes").
 
-- [[Compounding Knowledge]] — how reference files build on each other *(2026-02-07)*
-- [[Active vs Passive Memory]] — why files beat chat history *(2026-02-05)*
-- [[WikiLinks Create Serendipity]] — emergent connections from linking *(2026-02-03)*
-```
+The home page's built-in "Recent updates" card automatically queries this collection and shows the 5 most recent entries.
 
-This ensures every note is immediately discoverable from the home page without requiring a separate `/wiki recent` invocation.
-
-**Exit:** "Note created and linked from home page. Run `/wiki publish` to deploy, or continue editing."
+**Exit:** "Note created. Run `/wiki publish` to deploy, or continue editing."
 
 ---
 
