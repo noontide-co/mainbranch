@@ -102,9 +102,10 @@ If repo exists but not cloned: `git clone https://github.com/[user]/[wiki].git`
 
 ### 4. Add upstream and merge template
 ```bash
-git remote add upstream https://github.com/noontide-co/commune-wiki.git
+# TODO: Revert to noontide-co/commune-wiki once PR #1 is merged
+git remote add upstream https://github.com/joedef/commune-wiki.git
 git fetch upstream
-git merge upstream/main --allow-unrelated-histories -m "Initial wiki from commune-wiki template"
+git merge upstream/wiki-mvp-phase1 --allow-unrelated-histories -m "Initial wiki from commune-wiki template"
 ```
 
 ### 5. Install dependencies and build
@@ -348,9 +349,10 @@ Pull upstream template improvements from commune-wiki.
 **Steps:**
 1. Read config, cd to wiki repo
 2. Fetch upstream: `git fetch upstream`
-3. Show changes: `git log HEAD..upstream/main --oneline`
+3. Show changes: `git log HEAD..upstream/wiki-mvp-phase1 --oneline`
+   (TODO: Revert to `upstream/main` once noontide-co PR #1 is merged)
 4. Confirm merge with user
-5. Merge: `git merge upstream/main --no-edit`
+5. Merge: `git merge upstream/wiki-mvp-phase1 --no-edit`
 6. Rebuild: `pnpm install && pnpm build`
 
 **Exit:** "Updated to latest template. Run `/wiki publish` to deploy."
