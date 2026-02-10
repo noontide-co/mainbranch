@@ -106,6 +106,14 @@ pip3 list 2>/dev/null | grep -i "mlx-whisper" && echo "WHISPER=mlx_whisper"
 
 **Nano Banana** (image generation): Available when Gemini is configured (uses GOOGLE_API_KEY). Detect alongside Gemini.
 
+**Pipeboard** (Meta ad account access): Check for MCP tools, then probe:
+```bash
+# Detection: check if mcp__pipeboard__* tools exist in session
+# If found, probe with get_ad_accounts (lightweight call)
+# If probe succeeds, cache status: true
+```
+Pipeboard is a remote MCP at `mcp.pipeboard.co/meta-ads-mcp` (OAuth, no local install). Free tier: 30 calls/week. Pro: $29.90/mo, 100 calls/week. **Lazy detection only** -- triggered when topic is ads-related, not on every /think invocation. See `/ads` SKILL.md for full Pipeboard integration details.
+
 **Document tools:**
 ```bash
 which markitdown >/dev/null 2>&1 && echo "MARKITDOWN=true"
@@ -125,6 +133,12 @@ tools:
     status: true              # ← detection result
     notes: "GOOGLE_API_KEY verified"
     last_checked: 2026-02-03  # ← today's date
+  pipeboard:
+    status: true              # true | false | null
+    method: mcp               # always mcp for Pipeboard
+    tier: free                # free | pro (self-reported)
+    notes: "meta-ads MCP configured via remote URL"
+    last_checked: 2026-02-10
 ```
 
 **Do not skip this step.** Config updates prevent re-probing next session.
@@ -147,6 +161,7 @@ When user's intent matches an unavailable tool, **surface the option once per se
 | "X sentiment" | Grok | "X sentiment is best with Grok (real-time). Use web search? Set up Grok (5 min, $5 credit)?" |
 | "deep research" | Gemini | "Deep synthesis works best with Gemini (free tier). Web search fallback? Set up (3 min)?" |
 | Local file | whisper | "Local transcription needs whisper (10 min). Set up? External service? Skip?" |
+| "ad performance", "what's working", "check my CPA" | Pipeboard | "Ad account data needs Pipeboard MCP (5 min, OAuth). Set up? Research from reference only? Skip?" |
 
 **Rules:**
 - Surface once per session per tool (track in session state)
@@ -221,6 +236,7 @@ When routing to research mode, detect research TYPE from user intent:
 | Deep web research | "deep research", "comprehensive analysis", "research everything" | Gemini | Multi-source WebSearch |
 | Local transcription | Local file path (.mp4, .m4a), "transcribe my recording" | whisper | CLI mlx_whisper or whisper-cli |
 | Instagram mining | Instagram handle, "mine [handle]", "competitor posts" | Apify | Manual screenshots |
+| Ad account research | "ad performance", "what's working", "check CPA", "audit my ads" | Pipeboard | Manual Ads Manager check |
 | General research | Default, "research [topic]", "what do we know" | WebSearch + codebase | Always available |
 
 **Multiple types needed at once?** Spawn them as parallel Task agents in a single message. Example: user says "research what [creator] says on YouTube and what people think on X" — spawn one agent for YouTube transcript mining and another for X/Twitter sentiment simultaneously. Each saves its own research file; main conversation synthesizes when both return.
@@ -252,6 +268,12 @@ When routing to research mode, detect research TYPE from user intent:
 
 **Local file without whisper:**
 > "Local transcription needs a whisper variant. Check: `which mlx_whisper` or `which whisper-cli`. Or upload to a transcription service and paste the result."
+
+**Ad account data without Pipeboard:**
+> "Ad account research works best with Pipeboard MCP (OAuth, no developer account needed). Options:
+> 1. Set up Pipeboard now (5 min, free tier: 30 calls/week)
+> 2. Check Ads Manager manually and paste what you find
+> 3. Skip account data, research from reference files only"
 
 ### Key Principle
 
@@ -323,6 +345,7 @@ Gather from codebase, web, user input, local recordings.
 | Local video/audio | whisper-cpp ([local-transcription.md](references/local-transcription.md)) | `-local-mining.md` |
 | Voice memos | whisper-cpp | `-voice-mining.md` |
 | Instagram mining | Apify or manual | `-ig-mining.md` |
+| Ad account data | Pipeboard MCP (Meta Ads) | `-ad-account.md` |
 | Competitor sites | Browser MCP or web fetch | `-competitor-mining.md` |
 | Your own emails/DMs | Paste into conversation | `-internal-mining.md` |
 | Deep research | Build prompt → Gemini/GPT | `-gemini.md` or `-gpt.md` |

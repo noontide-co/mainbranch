@@ -1,11 +1,11 @@
 ---
 name: ads
-description: "Create and review Meta/Facebook/Instagram ads. Routes to: static image ads (copy + AI image prompts), video scripts (15-30 spoken-word scripts), one-liners (30 diversified copy lines for static images), or multi-lens compliance review. Use when asked to create ads, ad copy, image prompts, video scripts, or review ads. Say /ads or ask for static ads, video scripts, one-liners, or ad review."
+description: "Create and review Meta/Facebook/Instagram ads. Flexible entry points: full pipeline (copy + images), copy only, images only, creative variations (hook library), video scripts, video repurpose, compliance review, or ad account check (Pipeboard). Use when asked to create ads, ad copy, image prompts, video scripts, creative variations, or review ads. Say /ads or describe what you need."
 ---
 
 # Ads Skill
 
-Create static ads, video scripts, one-liners, or review ads for compliance.
+Create ads, generate creative variations, review for compliance, and check ad account performance.
 
 ## Step 0: Pre-Flight Readiness
 
@@ -68,18 +68,81 @@ If set, note it for Batch 4 image generation after copy is saved.
 
 ---
 
-## Triage
+## Pipeboard Detection (Lazy)
 
-Determine mode from user request:
+Check for Meta ad account access on first /ads invocation when topic is ads-related. Same pattern as Gemini/Grok/whisper detection -- config-first, probe unknowns, cache results.
 
-| Mode | Triggers | Output |
-|------|----------|--------|
-| **Static** | "static ads", "image ads", "primaries", "headlines", "image prompts" | 5-6 concepts, each with 5 primaries + 5 headlines + 3 image prompts |
-| **Video** | "video scripts", "ad scripts", "spoken word", "camera scripts" | 15-30 diverse scripts for spoken delivery |
-| **One-Liner** | "one-liners", "30 one-liners", "Andromeda", "diversified static copy" | 30 diversified copy lines for static image ads (Andromeda-optimized) |
-| **Review** | "review", "check", "audit", "compliance", "before launch" | P1/P2/P3 report across 6 lenses |
+### Detection Flow
 
-If unclear, ask: "Do you want static image ads, video scripts, one-liners, or a compliance review?"
+```
+1. Read .vip/config.yaml → tools.pipeboard
+2. If status: true → note available, skip detection
+3. If status: false AND last_checked < 30 days → skip
+4. If status: null OR missing OR stale false:
+   a. Check for mcp__pipeboard__* tools in session
+   b. If found: probe with get_ad_accounts (lightweight)
+   c. If probe succeeds: write status: true to config
+   d. If not found or probe fails: write status: false to config
+5. Never block on detection failure
+```
+
+### Config Update (REQUIRED after detection)
+
+```yaml
+tools:
+  pipeboard:
+    status: true              # detection result
+    method: mcp
+    tier: free                # free | pro (self-reported)
+    notes: "meta-ads MCP configured via remote URL"
+    last_checked: 2026-02-10
+```
+
+**Graceful degradation:** If Pipeboard is not configured, skip all account-related features. The skill works exactly as before without it. Pipeboard is additive, not required.
+
+---
+
+## Triage (Flexible Intent Detection)
+
+Detect what the user wants from natural language. Route internally to the right component pipeline. See [references/entry-points.md](references/entry-points.md) for the complete entry point detection table and component composition.
+
+### Intent Detection
+
+| User Says | Entry Point | What Happens |
+|-----------|-------------|-------------|
+| "static ads", "full from scratch", "image ads" | Full Pipeline | Copy + compliance + images (classic flow) |
+| "I already have images, just need copy" | Copy Only | Skip image gen, primaries + headlines |
+| "Just need images for existing copy" | Image Only | Nano Banana image gen only |
+| "creative variations", "hook library", "one-liners", "50 hooks" | Hook Library | Bulk creative variations (flexible quantity) |
+| "video scripts", "ad scripts", "spoken word" | Video Scripts | Spoken-word script pipeline |
+| "I'm repurposing a video", "I shot a video" | Video Repurpose | Transcribe + extract hooks + copy variants |
+| "I want ideas for an ad", "brainstorm" | Ideation | Account check (if available) + concept generation |
+| "Check my ad performance", "what's working" | Account Check | Pipeboard read-only (requires Pipeboard) |
+| "review", "audit", "compliance check" | Review | 6-lens compliance review |
+
+**Backward compatible:** Old mode names ("static", "video scripts", "one-liners", "review") still work and route to the same pipelines.
+
+**If unclear,** ask: "What do you have and what do you need? (e.g., 'I have images, just need copy' or 'full from scratch')"
+
+### Proactive Account Awareness
+
+If Pipeboard is configured (tools.pipeboard.status: true in config):
+
+**Before generating:** Suggest checking the account first:
+> "Want me to check what's working in your ad account before we create?"
+
+If user says yes, run Account Check component (see [references/pipeboard-integration.md](references/pipeboard-integration.md)):
+- Pull active campaigns and top performers
+- Surface winning patterns (angles, hooks, images with low CPA)
+- Extract naming conventions so new ads match
+- Show where new creative fits in existing structure
+
+If user says no, proceed to generation with reference files only.
+
+**After generating:** If Pipeboard is available, show account context:
+> "Here's what's currently live. Your new creative could fit as [suggested placement]."
+
+This is Phase 1 (read-only). Phase 1.5 adds "Want to push this to your ad account?" with duplicate + swap flow.
 
 ---
 
@@ -142,6 +205,7 @@ Before creating ads, the business repo must have:
 | Visual Style | `reference/brand/visual-style.md` | Optional (affects image gen) |
 | Content Strategy | `reference/domain/content-strategy.md` (always brand-level) | Optional (improves topic selection) |
 | Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | Optional (congruence check) |
+| Pipeboard (MCP) | `.vip/config.yaml` → `tools.pipeboard.status` | Optional (enables account awareness) |
 
 If required files are missing, Step 0 pre-flight catches this and routes appropriately.
 
@@ -221,13 +285,15 @@ See [references/image-generation-workflow.md](references/image-generation-workfl
 
 ---
 
-## Mode: One-Liner
+## Mode: Hook Library (Creative Variations)
 
-Generate 30 punchy, truly diversified one-liners for static image ads that feed Meta's Andromeda algorithm.
+Generate punchy, truly diversified creative variations for static image ads that feed Meta's Andromeda algorithm. Users can request any quantity -- "give me 5" or "give me 50" -- not fixed batches.
+
+**Previously called "one-liners."** Same methodology (Joel's cold-traffic work, Andromeda diversification), better name. Old triggers ("one-liners", "30 one-liners") still route here.
 
 ### Why This Mode Exists
 
-Meta's Andromeda algorithm (July 2025) rewards TRUE creative diversification - not surface variations. 30 one-liners = 30 different psychological conversations, each anchored in offer-specific details.
+Meta's Andromeda algorithm (July 2025) rewards TRUE creative diversification - not surface variations. Each creative variation is a different psychological conversation, anchored in offer-specific details.
 
 ### 6-Step Process
 
@@ -235,18 +301,18 @@ Meta's Andromeda algorithm (July 2025) rewards TRUE creative diversification - n
 2. **Extract Specifics:** Roles, timelines, niche pains, value props, failed alternatives, proof points
 3. **Reasons to Buy:** 15-20 fundamentally different reasons (the protein supplement exercise)
 4. **Hook Categories:** Ensure variety across problem agitation, emotional state, transformation, contrarian, identity callout, etc.
-5. **Generate:** 30 one-liners, each with at least one specific anchor
+5. **Generate:** 30 creative variations, each with at least one specific anchor
 6. **Output:** Simple numbered list, ready to copy
 
 ### The Anchor Rule (Non-Negotiable)
 
-Every one-liner **MUST** include at least one specific element:
+Every variation **MUST** include at least one specific element:
 - A specific role, outcome, or company (DevOps Engineer, AWS, 60k)
 - A specific niche pain (service desk 2+ years, no CS degree)
 - A specific value prop (mock interviews with Principal Engineers)
 - A specific timeline or proof point (8 weeks, 500+ community)
 
-**The Specificity Test:** If this one-liner could sell a gym membership, a life coaching program, or a generic course - it fails. Rewrite it.
+**The Specificity Test:** If this variation could sell a gym membership, a life coaching program, or a generic course - it fails. Rewrite it.
 
 ### Input Modes
 
@@ -260,23 +326,24 @@ Every one-liner **MUST** include at least one specific element:
 **Save to file, not chat.** This enables review to edit the file directly.
 
 1. Ask for campaign name (required)
-2. Create folder: `outputs/YYYY-MM-DD-one-liners-[offer]-{campaign}/` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
-3. Save full generation context + one-liners to: `one-liners-batch-001.md`
-4. Tell user: "Saved 30 one-liners. Running automatic post-generation pipeline..."
-5. Run the **Automatic Post-Generation Pipeline** (see below). This handles git commit, compliance review, and image generation offer automatically.
+2. Confirm quantity: "How many? A few to test (5-10) or a full batch (30+)?" -- or use the number they already specified
+3. Create folder: `outputs/YYYY-MM-DD-creative-variations-[offer]-{campaign}/` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
+4. Save full generation context + creative variations to: `creative-variations-batch-001.md`
+5. Tell user: "Saved {N} creative variations. Running automatic post-generation pipeline..."
+6. Run the **Automatic Post-Generation Pipeline** (see below). This handles git commit, compliance review, and image generation automatically.
 
-**one-liners-batch-001.md format:**
+**creative-variations-batch-001.md format:**
 
 ```markdown
 ---
 type: output
-subtype: one-liners
+subtype: creative-variations
 date: YYYY-MM-DD
 status: draft
 review_status: null
 ---
 
-# One-Liners: {Campaign Name}
+# Creative Variations: {Campaign Name}
 
 ## Core Outcome
 
@@ -299,25 +366,25 @@ review_status: null
 
 ## Hook Categories
 
-[Which categories each one-liner uses - for diversity check]
+[Which categories each variation uses - for diversity check]
 
 ---
 
-## One-Liners
+## Creative Variations
 
-1. [one-liner]
-2. [one-liner]
+1. [variation]
+2. [variation]
 ...
-30. [one-liner]
+{N}. [variation]
 ```
 
 **Why save the full context:**
-- **Anchor verification:** Reviewers can check each one-liner has a specific from the extraction
+- **Anchor verification:** Reviewers can check each variation has a specific from the extraction
 - **Resume capability:** Don't re-extract specifics if generating more
 - **Understanding:** Why certain hooks were chosen
 - **Quality control:** Can verify all reasons to buy are covered
 
-See [references/one-liner-methodology.md](references/one-liner-methodology.md) for the complete 6-step process, hook categories, and quality checklist.
+See [references/one-liner-methodology.md](references/one-liner-methodology.md) for the complete 6-step process, hook categories, and quality checklist (methodology preserved, naming updated).
 
 See [references/one-liner-examples.md](references/one-liner-examples.md) for real examples by offer type.
 
@@ -410,11 +477,14 @@ See [references/review-workflow.md](references/review-workflow.md) for full repo
 
 ## Automatic Post-Generation Pipeline
 
-**Every generation mode (Static, One-Liner, Video) runs this pipeline automatically after saving output.** Do not ask the user whether to run compliance review -- it is automatic.
+**Every generation entry point (Full Pipeline, Copy Only, Hook Library, Video Scripts) runs this pipeline automatically after saving output.** Do not ask the user whether to run compliance review -- it is automatic.
 
 See **[references/post-generation-pipeline.md](references/post-generation-pipeline.md)** for the complete pipeline: git commit pre-review, lens tier selection, Nano Banana check, parallel agent spawning (compliance + image), synthesis, unified report, and post-review commit.
 
 **Quick summary:** Commit pre-review state, spawn 5-6 compliance agents + optional image agents in parallel, synthesize P1/P2/P3 findings, auto-apply P2/P3 fixes, surface P1 to user, present unified report, commit post-review.
+
+**"While You Wait" pattern:** When spawning parallel agents that take >30 seconds, show a brief note so the user knows what's happening:
+> "Running compliance review across 6 lenses + generating images in parallel. This takes about 2-3 minutes. These run as sub-agents so they won't eat into your session context."
 
 ---
 
@@ -439,7 +509,7 @@ Before saving any batch, verify:
 
 | Check | Requirement |
 |-------|-------------|
-| **Anchor specificity** | Every hook/one-liner has at least one offer-specific anchor |
+| **Anchor specificity** | Every hook/variation has at least one offer-specific anchor |
 | **Cold traffic language** | No insider jargon — would a stranger understand in 3 seconds? |
 | **Hook length** | 123-135 characters for static ad hooks |
 | **No questions** | Hooks don't start with yes/no questions |
@@ -456,12 +526,14 @@ Before saving any batch, verify:
 If context was compacted mid-task, check:
 
 1. **Which offer?** Read `.vip/local.yaml` for `current_offer` to restore offer context
-2. **What mode?** Static, Video, or Review
-3. **What stage?** Planning angles, writing hooks, generating prompts, reviewing
+2. **What entry point?** Full pipeline, copy only, hook library, video scripts, review, account check
+3. **What stage?** Planning angles, writing hooks, generating prompts, reviewing, pulling account data
 4. **What's done?** Check outputs/ folder for partial work
-5. **Resume:** Continue from the last completed step
+5. **Pipeboard status?** Read `.vip/config.yaml` for `tools.pipeboard.status`
+6. **Resume:** Continue from the last completed step
 
-For static: Did we finish image prompts (Part 1) before copy (Part 2)?
+For full pipeline: Did we finish image prompts (Part 1) before copy (Part 2)?
+For hook library: How many variations generated out of requested quantity?
 For video: How many of 15-30 scripts are done?
 For review: Which lenses completed?
 
@@ -469,6 +541,8 @@ For review: Which lenses completed?
 
 ## Quick Reference
 
-**Static ads:** 5-6 concepts x 5 primaries x 5 headlines x 3 image prompts
+**Full pipeline (static ads):** 5-6 concepts x 5 primaries x 5 headlines x 3 image prompts
+**Hook library (creative variations):** Flexible quantity (default 30), Andromeda-optimized
 **Video scripts:** 15-30 diverse scripts, spoken-word optimized
 **Review:** 6 lenses, P1/P2/P3 report, fix suggestions
+**Account check:** Pipeboard read-only -- campaigns, performance, creative audit (requires Pipeboard)

@@ -1,5 +1,7 @@
 # One-Liner Methodology
 
+> **Terminology note:** This file preserves the original "one-liner" terminology from Joel's cold-traffic methodology. The user-facing name is "creative variations" or "hook library." When generating output, use the user-facing terms in headers and file names. The methodology itself is unchanged.
+
 Reference for generating 30 diversified one-liners for static image ads that feed Meta's Andromeda algorithm.
 
 ---
@@ -255,7 +257,7 @@ See [one-liner-examples.md](one-liner-examples.md) for more patterns and real ex
 
 ### Step 6: Output
 
-**Save to file, not chat.** Output goes to `outputs/YYYY-MM-DD-one-liners-{campaign-name}/batch.md`.
+**Save to file, not chat.** Output goes to `outputs/YYYY-MM-DD-creative-variations-{campaign-name}/batch.md`.
 
 The file should include:
 
@@ -265,7 +267,7 @@ The file should include:
 ```markdown
 ---
 type: output
-subtype: one-liners
+subtype: creative-variations
 date: YYYY-MM-DD
 status: draft
 review_status: null
@@ -308,7 +310,7 @@ review_status: null
 - Understand why certain hooks were chosen
 - Check all reasons to buy are covered
 
-Tell user: "Saved 30 one-liners. Running automatic post-generation pipeline..." Then run the pipeline (see SKILL.md → Automatic Post-Generation Pipeline).
+Tell user: "Saved creative variations. Running automatic post-generation pipeline..." Then run the pipeline (see SKILL.md → Automatic Post-Generation Pipeline).
 
 ---
 

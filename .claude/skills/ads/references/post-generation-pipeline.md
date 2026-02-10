@@ -54,7 +54,7 @@ Each compliance agent receives:
 
 Each agent prompt must include:
 ```
-Evaluate every ad/one-liner/script against the lens checklist.
+Evaluate every ad/variation/script against the lens checklist.
 For each issue, return:
   - severity: P1 | P2 | P3
   - item_ref: which ad/line
@@ -132,7 +132,7 @@ All agents -- compliance + image -- run in parallel, so total time = max(slowest
 
 One-liners use **Template 4 (background-only)** from [image-prompt-templates.md](image-prompt-templates.md).
 
-After 30 one-liners are generated, cluster them by hook category:
+After creative variations are generated, cluster them by hook category:
 
 | Cluster | Scene Type | Approx Lines |
 |---------|-----------|--------------|
@@ -145,7 +145,7 @@ After 30 one-liners are generated, cluster them by hook category:
 | Curiosity/reframe | Two-tone, conceptual | 2-4 |
 | Overflow | Versatile, brand-forward | 2-3 |
 
-Generate 1 background per cluster (8 total) using **parallel subagents -- one agent per cluster**. Each agent generates its background, post-processes it, and returns the path + status. All 8 agents spawn in the same message as compliance agents. Map each one-liner to its cluster. Text overlay composited via Pillow post-processing (separate from Gemini generation).
+Generate 1 background per cluster (8 total) using **parallel subagents -- one agent per cluster**. Each agent generates its background, post-processes it, and returns the path + status. All 8 agents spawn in the same message as compliance agents. Map each variation to its cluster. Text overlay composited via Pillow post-processing (separate from Gemini generation).
 
 **Cost:** 8 images x ~$0.05 = ~$0.40 (recommended). User can choose 15 backgrounds ($0.75) or 30 unique ($1.50). At 15+, batch agents into groups of 2-3 images each to limit agent count.
 

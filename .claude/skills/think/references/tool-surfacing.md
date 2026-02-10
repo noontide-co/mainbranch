@@ -21,6 +21,7 @@ How to help users discover research tools without blocking them.
 | **Gemini** | Deep research (Flash + Deep Research Agent) | Important | `$GOOGLE_API_KEY` exists | 3 min | Free tier / $2-5 |
 | **Grok** | X/Twitter real-time sentiment | Enhancing | `$XAI_API_KEY` + `xai_sdk` package | 5 min | ~$0.02-0.30/query |
 | **whisper** | Local video/audio transcription | Enabling | `mcp__whisper__*` OR `which mlx_whisper` OR `which whisper-cli` | 2 min | Free (local) |
+| **Pipeboard** | Meta ad account access (read + write) | Enhancing | `mcp__pipeboard__*` tools exist | 5 min | Free: 30 calls/wk, Pro: $29.90/mo |
 | **markitdown** | PDF/DOCX/PPTX conversion | Convenience | `which markitdown` | 1 min | Free |
 | **pandoc** | High-quality DOCX conversion | Convenience | `which pandoc` | 1 min | Free |
 | **marker** | Complex/scanned PDF OCR | Convenience | `which marker_single` | 5 min | Free |
@@ -37,6 +38,7 @@ How to help users discover research tools without blocking them.
 | Deep web research | "deep research", "comprehensive analysis", "research everything" | Gemini | Multi-source WebSearch |
 | Local transcription | Local file path (.mp4, .m4a), "transcribe my recording" | whisper | External service + paste |
 | Instagram mining | Instagram handle, "mine [handle]", "competitor posts" | Apify | Manual screenshots |
+| Ad account research | "ad performance", "what's working", "CPA", "ROAS", "check my ads" | Pipeboard | Manual Ads Manager + paste |
 | Document conversion | PDF/DOCX path, "ingest this document", "convert this" | markitdown | Read tool (limited) |
 | General research | Default, "research [topic]", "what do we know" | WebSearch + codebase | Always available |
 
@@ -83,6 +85,14 @@ How to help users discover research tools without blocking them.
 > 1. Set up whisper (10 min via Homebrew)
 > 2. Upload to a transcription service, paste the result
 > 3. Skip this recording"
+
+### Pipeboard Missing (Ad Account)
+
+> "Ad account research needs Pipeboard MCP (remote, OAuth-based).
+>
+> 1. Set up now (5 min, free tier: 30 calls/week)
+> 2. Check Ads Manager manually and paste metrics
+> 3. Skip account data, work from reference files only"
 
 ### markitdown Missing (Documents)
 
@@ -133,6 +143,7 @@ After completing research with a fallback, optionally mention the upgrade:
 | Gemini Deep | Multi-query WebSearch | Slower, less comprehensive |
 | Gemini Flash | WebSearch | Good enough for quick queries |
 | whisper | External transcription | Same quality, extra step |
+| Pipeboard | Manual Ads Manager + paste | Same data, much more user effort, no automation |
 | markitdown | Read tool | Size limits, token cost |
 
 ---
@@ -145,6 +156,7 @@ After completing research with a fallback, optionally mention the upgrade:
 | Grok | `.claude/skills/think/references/grok-setup.md` |
 | Gemini | `.claude/skills/think/references/gemini-setup.md` |
 | whisper | `.claude/skills/think/references/local-transcription.md` |
+| Pipeboard | Remote MCP: `mcp.pipeboard.co/meta-ads-mcp` (OAuth, no local install). See `.claude/skills/ads/references/pipeboard-integration.md` |
 | markitdown | `pip install 'markitdown[all]'` (no guide needed) |
 | pandoc | `brew install pandoc` or OS package manager |
 | marker | `pip install marker-pdf` (may need system deps) |
