@@ -86,9 +86,9 @@ How to help users discover research tools without blocking them.
 > 2. Upload to a transcription service, paste the result
 > 3. Skip this recording"
 
-### Pipeboard Missing (Ad Account)
+### Ad Account Missing (Pipeboard)
 
-> "Ad account research needs Pipeboard MCP (remote, OAuth-based).
+> "Pulling ad account data needs a Meta Ads connection (remote, OAuth-based, uses Pipeboard).
 >
 > 1. Set up now (5 min, free tier: 30 calls/week)
 > 2. Check Ads Manager manually and paste metrics

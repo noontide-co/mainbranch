@@ -101,6 +101,23 @@ tools:
 
 **Graceful degradation:** If Pipeboard is not configured, skip all account-related features. The skill works fully without it. Pipeboard is additive, not required.
 
+### User-Facing Display
+
+**Never assume the user knows what Pipeboard is.** In all user-facing messages, describe the CAPABILITY (connecting your Meta ad account), not the tool name. Use "Pipeboard" only in parentheses as a reference, never as the lead.
+
+**Pre-flight status line (add after Nano Banana check):**
+
+If configured:
+> `Ad account:   ✓ connected (I can check what's performing before we create)`
+
+If not configured:
+> `Ad account:   — not connected (optional — lets me see your live Meta ad performance to inform new ads)`
+
+**Never say:** "Pipeboard: not configured (no account check — that's fine)" — this means nothing to a new user.
+
+**If user asks what this means:**
+> "You can optionally connect your Meta/Facebook ad account so I can pull live performance data — what's spending, what's winning, CPAs, creative that's working. This helps me create ads that fit your account structure and build on what's already performing. It uses a tool called Pipeboard (free tier: 30 calls/week). Want to set it up, or skip and work from your reference files?"
+
 ---
 
 ## Triage (Flexible Intent Detection)
@@ -131,8 +148,8 @@ Detect what the user wants from natural language. Route internally to the right 
 
 If Pipeboard is configured (tools.pipeboard.status: true in config):
 
-**Before generating:** Suggest checking the account first:
-> "Want me to check what's working in your ad account before we create?"
+**Before generating:** Suggest checking the account first. Explain the value briefly — don't assume the user knows what this does:
+> "Your Meta ad account is connected. Want me to pull your live performance data first? I can see what's spending, which creative has the best CPA, and use that to inform what we create. (Takes ~30 seconds.)"
 
 If user says yes, run Account Check component (see [references/pipeboard-integration.md](references/pipeboard-integration.md)):
 - Pull active campaigns and top performers
@@ -208,7 +225,7 @@ Before creating ads, the business repo must have:
 | Visual Style | `reference/brand/visual-style.md` | Optional (affects image gen) |
 | Content Strategy | `reference/domain/content-strategy.md` (always brand-level) | Optional (improves topic selection) |
 | Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | Optional (congruence check) |
-| Pipeboard (MCP) | `.vip/config.yaml` → `tools.pipeboard.status` | Optional (enables account awareness) |
+| Ad Account Access | `.vip/config.yaml` → `tools.pipeboard.status` | Optional (enables live performance data) |
 
 If required files are missing, Step 0 pre-flight catches this and routes appropriately.
 

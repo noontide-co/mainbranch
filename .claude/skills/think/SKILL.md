@@ -162,7 +162,7 @@ When user's intent matches an unavailable tool, **surface the option once per se
 | "X sentiment" | Grok | "X sentiment is best with Grok (real-time). Use web search? Set up Grok (5 min, $5 credit)?" |
 | "deep research" | Gemini | "Deep synthesis works best with Gemini (free tier). Web search fallback? Set up (3 min)?" |
 | Local file | whisper | "Local transcription needs whisper (10 min). Set up? External service? Skip?" |
-| "ad performance", "what's working", "check my CPA" | Pipeboard | "Ad account data needs Pipeboard MCP (5 min, OAuth). Set up? Research from reference only? Skip?" |
+| "ad performance", "what's working", "check my CPA" | Pipeboard | "Pulling ad account data needs a Meta Ads connection (5 min setup, uses Pipeboard). Set up? Research from reference only? Skip?" |
 
 **Rules:**
 - Surface once per session per tool (track in session state)
@@ -270,9 +270,9 @@ When routing to research mode, detect research TYPE from user intent:
 **Local file without whisper:**
 > "Local transcription needs a whisper variant. Check: `which mlx_whisper` or `which whisper-cli`. Or upload to a transcription service and paste the result."
 
-**Ad account data without Pipeboard:**
-> "Ad account research works best with Pipeboard MCP (OAuth, no developer account needed). Options:
-> 1. Set up Pipeboard now (5 min, free tier: 30 calls/week)
+**Ad account data without connection:**
+> "Ad account research works best with a direct Meta Ads connection (OAuth, no developer account needed, uses Pipeboard). Options:
+> 1. Set up now (5 min, free tier: 30 calls/week)
 > 2. Check Ads Manager manually and paste what you find
 > 3. Skip account data, research from reference files only"
 

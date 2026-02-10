@@ -150,15 +150,15 @@ Pro tier supports daily checks and multiple creative iterations per week with he
 
 Pipeboard is **additive, not required.** The entire /ads skill works without it.
 
-| With Pipeboard | Without Pipeboard |
-|----------------|-------------------|
-| "Want me to check what's working first?" | Skip to generation |
+| With Ad Account Connected | Without Ad Account |
+|---------------------------|-------------------|
+| "Want me to pull your live performance data first?" | Skip to generation |
 | Pull winning patterns before generating | Generate from reference only |
 | Show naming conventions from account | User provides naming conventions |
 | Suggest where new creative fits | User decides placement |
 | Duplicate + swap (Phase 1.5) | Manual upload in Ads Manager |
 
-**Never block on missing Pipeboard.** If detection fails or tool is missing, proceed with standard generation flow. Mention the option once per session, then move on.
+**Never block on missing ad account connection.** If detection fails or tool is missing, proceed with standard generation flow. Mention the option once per session, then move on.
 
 ---
 
@@ -198,19 +198,20 @@ Triggered lazily at /think or /ads when topic is ads-related:
 
 ## Proactive Suggestions
 
-When Pipeboard is configured, skills suggest account access at natural moments:
+When Pipeboard is configured, skills suggest account access at natural moments. **Always describe the capability, not the tool name.** Users may not know what "Pipeboard" is -- lead with what it DOES.
 
 | Context | Suggestion |
 |---------|-----------|
-| Before generating new creative | "Want me to check what's working before we create?" |
-| After generating a batch | "Here's what's live. Want to see where this fits?" |
-| In /think with ad-related topic | "Should we pull ad account data for this research?" |
-| Monday review cadence | "Want me to check this week's performance?" |
+| Before generating new creative | "Your Meta ad account is connected. Want me to pull your live performance data first? I can see what's spending, which creative has the best CPA, and use that to inform what we create." |
+| After generating a batch | "Here's what's currently live in your account. Want to see where this new creative fits?" |
+| In /think with ad-related topic | "Should we pull your ad account data for this research?" |
+| Monday review cadence | "Want me to check this week's ad performance?" |
 
 **Rules:**
 - Suggest once per context, not repeatedly
 - User can decline -- proceed without account data
 - Frame as value ("see what's working") not obligation ("you should check")
+- Describe the capability first, tool name second (or not at all)
 
 ---
 

@@ -159,7 +159,7 @@ Where `{type}` maps from the entry point:
 | Situation | What Happens |
 |-----------|-------------|
 | Intent unclear | Ask: "What do you have and what do you need?" |
-| Pipeboard required but missing | "This needs ad account access. Set up Pipeboard? Or skip and work from reference only." |
+| Ad account required but missing | "This needs your Meta ad account connected (5 min setup, uses a tool called Pipeboard). Set up? Or skip and work from reference only." |
 | Pre-flight fails (thin reference) | Route to /think (same as current behavior) |
 | User changes mind mid-pipeline | "No problem. What would you like instead?" Re-detect intent. |
 

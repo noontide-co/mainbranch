@@ -91,7 +91,12 @@ Pre-Flight Check:
 
   Composite: 13/18 — GREEN
   Gaps: angles thin, no visual style
+
+  Image gen:    ✓ Nano Banana available
+  Ad account:   — not connected (optional — lets me see your live Meta ad performance to inform new ads)
 ```
+
+**Ad account status line:** Always display after the composite score. Describes the capability, not the tool name. See SKILL.md "User-Facing Display" for the exact wording for connected vs not connected states.
 
 ---
 
