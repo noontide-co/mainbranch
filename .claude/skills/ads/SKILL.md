@@ -98,7 +98,7 @@ tools:
     last_checked: 2026-02-10
 ```
 
-**Graceful degradation:** If Pipeboard is not configured, skip all account-related features. The skill works exactly as before without it. Pipeboard is additive, not required.
+**Graceful degradation:** If Pipeboard is not configured, skip all account-related features. The skill works fully without it. Pipeboard is additive, not required.
 
 ---
 
@@ -120,7 +120,7 @@ Detect what the user wants from natural language. Route internally to the right 
 | "Check my ad performance", "what's working" | Account Check | Pipeboard read-only (requires Pipeboard) |
 | "review", "audit", "compliance check" | Review | 6-lens compliance review |
 
-**Backward compatible:** Old mode names ("static", "video scripts", "one-liners", "review") still work and route to the same pipelines.
+**Also accepts:** "static", "video scripts", "one-liners", "review" -- these route to the same pipelines.
 
 **If unclear,** ask: "What do you have and what do you need? (e.g., 'I have images, just need copy' or 'full from scratch')"
 
@@ -142,7 +142,7 @@ If user says no, proceed to generation with reference files only.
 **After generating:** If Pipeboard is available, show account context:
 > "Here's what's currently live. Your new creative could fit as [suggested placement]."
 
-This is Phase 1 (read-only). Phase 1.5 adds "Want to push this to your ad account?" with duplicate + swap flow.
+Account awareness is currently read-only. Write operations (duplicate + swap) are on the roadmap -- see [references/pipeboard-integration.md](references/pipeboard-integration.md).
 
 ---
 
@@ -289,7 +289,7 @@ See [references/image-generation-workflow.md](references/image-generation-workfl
 
 Generate punchy, truly diversified creative variations for static image ads that feed Meta's Andromeda algorithm. Users can request any quantity -- "give me 5" or "give me 50" -- not fixed batches.
 
-**Previously called "one-liners."** Same methodology (Joel's cold-traffic work, Andromeda diversification), better name. Old triggers ("one-liners", "30 one-liners") still route here.
+Also called "one-liners" -- same methodology, same pipeline. Both trigger words route here.
 
 ### Why This Mode Exists
 
@@ -384,7 +384,7 @@ review_status: null
 - **Understanding:** Why certain hooks were chosen
 - **Quality control:** Can verify all reasons to buy are covered
 
-See [references/one-liner-methodology.md](references/one-liner-methodology.md) for the complete 6-step process, hook categories, and quality checklist (methodology preserved, naming updated).
+See [references/one-liner-methodology.md](references/one-liner-methodology.md) for the complete 6-step process, hook categories, and quality checklist.
 
 See [references/one-liner-examples.md](references/one-liner-examples.md) for real examples by offer type.
 

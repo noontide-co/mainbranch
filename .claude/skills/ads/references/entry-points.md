@@ -1,19 +1,12 @@
 # Flexible Entry Points
 
-Replace rigid 4-mode triage with intent detection. Users say what they want in natural language, the skill detects intent and routes internally.
+The skill detects intent from natural language and routes to the right pipeline. Users describe what they need, and the skill assembles modular components accordingly.
 
 ---
 
 ## Why Flexible Entry Points
 
-The old 4-mode triage (static / video / one-liners / review) forced users into boxes that didn't match how they actually work. Real workflows are messier:
-
-- "I have images, just need copy" -- not a mode
-- "Give me 5 variations of this" -- not a mode
-- "What's working in my account?" -- not a mode
-- "I shot a video, help me turn it into ads" -- spans multiple modes
-
-The skill now detects INTENT and assembles the right pipeline from modular components.
+Real ad workflows don't fit neat categories. Someone might have images but need copy, want 5 variations instead of 50, need to check account performance before creating, or want to turn a video into multiple ad formats. Intent detection handles all of these by assembling the right pipeline from modular components.
 
 ---
 
@@ -30,8 +23,8 @@ The skill now detects INTENT and assembles the right pipeline from modular compo
 | "Full from scratch" | Full Pipeline | Copy + compliance + images (classic static flow) | Optional |
 | "Check my ad performance" | Account Check | Pipeboard read-only -- insights, winners/losers | Required |
 | "Give me 50 creative variations" | Hook Library | Bulk generation (flexible quantity) | No |
-| "Give me 5 variations of this winning ad" | Performance Iteration | Pull winner + generate variants **(Phase 2 -- coming)** | Read-only |
-| "Duplicate this ad set with new creative" | Duplicate + Swap | Clone + swap flow **(Phase 1.5 -- coming)** | Required |
+| "Give me 5 variations of this winning ad" | Performance Iteration | Pull winner + generate variants | Read-only |
+| "Duplicate this ad set with new creative" | Duplicate + Swap | Clone + swap flow | Required |
 | "Make me video scripts" | Video Scripts | Full video script pipeline | No |
 | "Review my ads" / "compliance check" | Review | 6-lens compliance review | No |
 | "What's working before we create?" | Pre-Gen Account Check | Account overview + creative audit | Required |
@@ -51,18 +44,18 @@ The skill now detects INTENT and assembles the right pipeline from modular compo
    - "variations" / "hook library" / "one-liners" / "creative variations" → Hook Library
 4. Check for account-related language:
    - "performance" / "what's working" / "check account" / "CPA" / "ROAS" → Account Check
-   - "duplicate" / "swap" / "push to account" → Duplicate + Swap (Phase 1.5)
+   - "duplicate" / "swap" / "push to account" → Duplicate + Swap
 5. Check for ideation language:
    - "ideas" / "brainstorm" / "concepts" / "what should I run" → Ideation
 6. If unclear → ask: "What do you have and what do you need?"
 ```
 
-### Backward Compatibility
+### Alternate Triggers
 
-Old mode names still work as explicit triggers:
+These shorthand names also route correctly:
 
-| Old Trigger | Maps To |
-|-------------|---------|
+| Trigger | Routes To |
+|---------|-----------|
 | "static ads" | Full Pipeline |
 | "video scripts" | Video Scripts |
 | "one-liners" | Hook Library (creative variations) |
@@ -81,7 +74,7 @@ Each entry point assembles different components. Components are modular -- they 
 | **Pre-flight** | Score reference files, check readiness | [preflight-algorithm.md](preflight-algorithm.md) |
 | **Account Check** | Pull live account data via Pipeboard | [pipeboard-integration.md](pipeboard-integration.md) |
 | **Copy Engine** | Generate primaries, headlines, hooks | SKILL.md (Static Ads section) |
-| **Hook Library** | Generate N creative variations (was "one-liners") | [one-liner-methodology.md](one-liner-methodology.md) |
+| **Hook Library** | Generate N creative variations (also called "one-liners") | [one-liner-methodology.md](one-liner-methodology.md) |
 | **Video Scripts** | Generate spoken-word scripts | [video-templates-hooks.md](video-templates-hooks.md) |
 | **Image Gen** | Nano Banana image prompts + generation | [image-generation-workflow.md](image-generation-workflow.md) |
 | **Compliance Review** | 6-lens review pipeline | [review-workflow.md](review-workflow.md) |
@@ -109,7 +102,7 @@ Each entry point assembles different components. Components are modular -- they 
 
 ## Quantity Flexibility
 
-The old system locked users into fixed batch sizes (30 one-liners, 5-6 concepts). The new system respects user intent:
+Quantity is flexible -- the user says how many, the skill delivers:
 
 | User Says | Quantity |
 |-----------|---------|
@@ -142,7 +135,7 @@ User message arrives
 │   ├─ Save output to outputs/
 │   └─ Post-Gen Pipeline (auto: commit + compliance + images)
 │
-└─ If Pipeboard available AND write-capable (Phase 1.5):
+└─ If Pipeboard available AND write-capable:
     └─ "Want to push this to your ad account?"
         ├─ Yes → Duplicate + Swap flow
         └─ No → Done
@@ -160,7 +153,7 @@ outputs/YYYY-MM-DD-{type}-[offer]-{campaign}/
 
 Where `{type}` maps from the entry point:
 - Full Pipeline / Copy Only → `static-ads`
-- Hook Library → `creative-variations` (was `one-liners`)
+- Hook Library → `creative-variations`
 - Video Scripts → `video-ads`
 - Video Repurpose → `video-repurpose`
 
