@@ -262,7 +262,7 @@ Research files also add: `linked_decisions: []`
 | `/start` | Entry point — detects state, routes to right skill |
 | `/setup` | Bootstrap new repo with correct structure |
 | `/think` | Research → decide → codify into reference |
-| `/ads` | Create and review ads with flexible entry points: static, video, creative variations, copy-only, images-only, account check, or compliance review |
+| `/ads` | Create and review ads with flexible entry points: static, video, video repurpose, creative variations, copy-only, images-only, account check, or compliance review |
 | `/vsl` | VSL scripts (Skool 18-section or B2B Haynes 7-step) |
 | `/organic` | Generate organic content from reference + research |
 | `/wiki` | Personal wiki with atomic notes |

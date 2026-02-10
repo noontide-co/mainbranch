@@ -46,7 +46,7 @@ All templates follow the same JSON structure. Placeholders are filled at generat
 | `{{brand_name}}` | `reference/core/offer.md` → business name |
 | `{{campaign_name}}` | User input at triage |
 | `{{angle_name}}` | Selected angle from Batch 1 |
-| `{{template_type}}` | graphic, lofi, interrupt, or oneliner |
+| `{{template_type}}` | graphic, lofi, interrupt, or textoverlay |
 | `{{mood}}` | `reference/brand/visual-style.md` → mood descriptors |
 | `{{primary_hex}}` | `reference/brand/visual-style.md` → primary color |
 | `{{secondary_hex}}` | `reference/brand/visual-style.md` → secondary/accent color |
@@ -124,11 +124,11 @@ Mood: Provocative, surprising, impossible to ignore.
 
 ---
 
-## Template 4: One-Liner
+## Template 4: Text Overlay
 
-Background-only image designed for text overlay. The one-liner text is added in post-processing.
+Background-only image designed for text overlay. The copy text is added in post-processing.
 
-**Use for:** One-liner copy lines (from `/ads one-liner` output).
+**Use for:** Creative variation copy lines (from `/ads` hook library output).
 
 ```
 Scene: {{scene_type}} background image for a Facebook ad.
@@ -138,11 +138,11 @@ Style: {{background_style}} — supports readability of overlaid white or light 
 Color grading: {{mood}}, darker tones preferred for text contrast.
 Primary background color: {{primary_color}} or complementary dark tone.
 Composition: Simple, uncluttered. The background supports the text, not competes.
-Center 1:1 zone should be especially clean — this is where the one-liner will go.
+Center 1:1 zone should be especially clean — this is where the text overlay will go.
 Subtle visual interest in margins (texture, gradient, atmospheric elements).
 ```
 
-### Scene Types for One-Liners
+### Scene Types for Text Overlays
 
 | Scene Type | Description | Best For |
 |------------|-------------|----------|
@@ -174,7 +174,7 @@ For each concept in the batch, assign brand or freestyle based on the smart mix:
   Concept 2 (social proof) → freestyle lo-fi
   Concept 3 (mechanism)    → on-brand graphic
   Concept 4 (curiosity)    → freestyle interrupt
-  Concept 5 (pain agitate) → on-brand one-liner
+  Concept 5 (pain agitate) → on-brand text overlay
 ```
 
 **On-brand:** Fill all color_grading and style_directives from visual-style.md.

@@ -173,7 +173,7 @@ tools:
     tier: free                # free | pro (self-reported or detected)
     notes: "meta-ads MCP configured via remote URL"
     last_checked: 2026-02-10  # date of last detection
-    weekly_calls_used: 0  # Optional, lightweight tracking (Phase 1.5)
+    weekly_calls_used: 0      # lightweight tracking (Phase 1.5)
 ```
 
 ---

@@ -24,7 +24,6 @@ Real ad workflows don't fit neat categories. Someone might have images but need 
 | "Check my ad performance" | Account Check | Pipeboard read-only -- insights, winners/losers | Required |
 | "Give me 50 creative variations" | Hook Library | Bulk generation (flexible quantity) | No |
 | "Give me 5 variations of this winning ad" | Performance Iteration | Pull winner + generate variants | Read-only |
-| "Duplicate this ad set with new creative" | Duplicate + Swap | Clone + swap flow | Required |
 | "Make me video scripts" | Video Scripts | Full video script pipeline | No |
 | "Review my ads" / "compliance check" | Review | 6-lens compliance review | No |
 | "What's working before we create?" | Pre-Gen Account Check | Account overview + creative audit | Required |
@@ -44,7 +43,6 @@ Real ad workflows don't fit neat categories. Someone might have images but need 
    - "variations" / "hook library" / "one-liners" / "creative variations" → Hook Library
 4. Check for account-related language:
    - "performance" / "what's working" / "check account" / "CPA" / "ROAS" → Account Check
-   - "duplicate" / "swap" / "push to account" → Duplicate + Swap
 5. Check for ideation language:
    - "ideas" / "brainstorm" / "concepts" / "what should I run" → Ideation
 6. If unclear → ask: "What do you have and what do you need?"
@@ -57,7 +55,9 @@ These shorthand names also route correctly:
 | Trigger | Routes To |
 |---------|-----------|
 | "static ads" | Full Pipeline |
+| "static" | Full Pipeline |
 | "video scripts" | Video Scripts |
+| "video" | Video Scripts |
 | "one-liners" | Hook Library (creative variations) |
 | "review" | Review |
 
@@ -94,8 +94,6 @@ Each entry point assembles different components. Components are modular -- they 
 | Ideation | Lite | Optional | Concepts | -- | -- | -- | -- | -- |
 | Account Check | -- | Yes | -- | -- | -- | -- | -- | -- |
 | Review | -- | -- | -- | -- | -- | -- | Yes | -- |
-| Duplicate + Swap | -- | Yes | Optional | -- | -- | Optional | -- | -- |
-
 **Legend:** Yes = always included, Optional = if available/requested, Auto = runs automatically, Lite = abbreviated check, -- = not included
 
 ---
@@ -135,10 +133,7 @@ User message arrives
 │   ├─ Save output to outputs/
 │   └─ Post-Gen Pipeline (auto: commit + compliance + images)
 │
-└─ If Pipeboard available AND write-capable:
-    └─ "Want to push this to your ad account?"
-        ├─ Yes → Duplicate + Swap flow
-        └─ No → Done
+└─ Done (write operations like Duplicate + Swap are on the roadmap)
 ```
 
 ---
@@ -167,6 +162,18 @@ Where `{type}` maps from the entry point:
 | Pipeboard required but missing | "This needs ad account access. Set up Pipeboard? Or skip and work from reference only." |
 | Pre-flight fails (thin reference) | Route to /think (same as current behavior) |
 | User changes mind mid-pipeline | "No problem. What would you like instead?" Re-detect intent. |
+
+---
+
+## Roadmap Entry Points
+
+These entry points require Pipeboard write operations and are not yet active. They are documented here for future implementation.
+
+| User Says | Intent | Components | Pipeboard |
+|-----------|--------|-----------|-----------|
+| "Duplicate this ad set with new creative" | Duplicate + Swap | Clone ad set + swap creative | Write (required) |
+
+**Duplicate + Swap** automates Devon's manual workflow: duplicate a winning ad set (PAUSED), upload new image, create new creative, swap it in. Requires Phase 1.5 write tools (`duplicate_adset`, `upload_ad_image`, `create_ad_creative`, `update_ad`). See [pipeboard-integration.md](pipeboard-integration.md) for the full workflow.
 
 ---
 

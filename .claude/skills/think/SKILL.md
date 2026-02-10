@@ -139,6 +139,7 @@ tools:
     tier: free                # free | pro (self-reported)
     notes: "meta-ads MCP configured via remote URL"
     last_checked: 2026-02-10
+    weekly_calls_used: 0      # lightweight tracking (Phase 1.5)
 ```
 
 **Do not skip this step.** Config updates prevent re-probing next session.

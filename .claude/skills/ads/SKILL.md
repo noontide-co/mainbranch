@@ -96,6 +96,7 @@ tools:
     tier: free                # free | pro (self-reported)
     notes: "meta-ads MCP configured via remote URL"
     last_checked: 2026-02-10
+    weekly_calls_used: 0      # lightweight tracking (Phase 1.5)
 ```
 
 **Graceful degradation:** If Pipeboard is not configured, skip all account-related features. The skill works fully without it. Pipeboard is additive, not required.
@@ -118,9 +119,11 @@ Detect what the user wants from natural language. Route internally to the right 
 | "I'm repurposing a video", "I shot a video" | Video Repurpose | Transcribe + extract hooks + copy variants |
 | "I want ideas for an ad", "brainstorm" | Ideation | Account check (if available) + concept generation |
 | "Check my ad performance", "what's working" | Account Check | Pipeboard read-only (requires Pipeboard) |
+| "Give me 5 variations of this winning ad" | Performance Iteration | Pull winner + generate variants (requires Pipeboard) |
+| "What's working before we create?" | Pre-Gen Account Check | Account overview + creative audit (requires Pipeboard) |
 | "review", "audit", "compliance check" | Review | 6-lens compliance review |
 
-**Also accepts:** "static", "video scripts", "one-liners", "review" -- these route to the same pipelines.
+**Also accepts:** "static", "static ads", "video", "video scripts", "one-liners", "review" -- these route to the same pipelines.
 
 **If unclear,** ask: "What do you have and what do you need? (e.g., 'I have images, just need copy' or 'full from scratch')"
 
@@ -275,7 +278,7 @@ Campaign Batch 001
 | Graphic | Typography-focused, frameworks, authority |
 | Lo-fi | UGC style, authenticity, social proof |
 | Interrupt | Pattern interrupt, scroll-stopping, contrarian |
-| One-liner | Background-only for text overlay (used with one-liner copy) |
+| Text Overlay | Background-only for text overlay (used with creative variation copy) |
 
 **Format pair: 1:1 + 9:16** — Facebook Ads Manager accepts exactly these two formats per ad. Design 9:16 first with critical content in center 1:1 safe zone. Center-crop for square. One design → two uploads.
 
