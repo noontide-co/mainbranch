@@ -53,7 +53,7 @@ A quick `/end` (user says "just commit and close") can be steps 1-3 and 6. But i
 
 ## Step 1: Find the Business Repo
 
-Read `~/.config/vip/local.yaml` for `default_repo`. If not found, check additional working directories for a folder containing `reference/core/`.
+Read `~/.config/vip/local.yaml` for `default_repo` (primary). If not found, optionally check additional working directories as a fallback for a folder containing `reference/core/`.
 
 **If no repo found:** Skip to a simple close. No business repo means no git activity to scan.
 

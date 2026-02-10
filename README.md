@@ -247,7 +247,7 @@ Post in the Main Branch group. Tag @Devon for technical questions.
 
 **Common issues:**
 - "404 error" or "Repository not found" — You need access first. Share your GitHub username with Devon.
-- "Claude does not see my files" — Make sure you added vip as an additional working directory using `/add-dir`
+- "Claude does not see my files" — Make sure you started Claude in the vip folder and ran `/start`
 - "Skills are not working" — Make sure you ran `claude` from inside the vip folder, then run `/start`
 - "Output sounds generic" — Add more detail to your reference files, especially voice.md
 - "I edited vip but can't push" — That's expected. vip is read-only. Your business data goes in YOUR repo.

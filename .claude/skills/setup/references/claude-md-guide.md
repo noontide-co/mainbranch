@@ -33,8 +33,8 @@ This repo contains your **business data**. It's powered by **vip** (the engine).
 
 **Setup:**
 1. Clone vip: `git clone https://github.com/mainbranch-ai/vip.git`
-2. In Claude Code, add vip as an "additional working directory"
-3. Work in THIS repo as your primary directory
+2. Start Claude in the vip folder and run `/start`
+3. Work in THIS repo as your primary data directory
 
 **How it works:**
 - Engine (vip): Contains skills, lenses, frameworks. You pull updates but never edit.

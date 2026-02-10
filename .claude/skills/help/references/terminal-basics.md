@@ -98,14 +98,14 @@ You can drag things from Finder (Mac) or Explorer (Windows) directly into Termin
 
 **Drag a file:** Its full path appears. Useful for telling Claude about a specific file.
 
-**Drag a folder:** Its path appears. You can type `/add-dir ` then drag a folder to add it.
+**Drag a folder:** Its path appears. Useful for sharing paths.
 
-**Example:**
+**Power user tip:** You can add extra directories with `/add-dir`, but the standard workflow is to start in vip and run `/start`.
+
+**Optional /add-dir example (power users):**
 1. Type `/add-dir ` (with the space)
-2. Drag your business folder from Finder
+2. Drag a folder from Finder
 3. Press Enter
-
-Claude can now see both vip AND your business folder.
 
 ---
 

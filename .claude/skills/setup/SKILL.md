@@ -79,7 +79,7 @@ ls .claude/skills/setup/SKILL.md 2>/dev/null
 
    Use the actual expanded path (not ~). Ask user for their name and experience level.
 
-4. **Add it as a working directory:**
+4. **Optional (power users): add as a working directory** if you want manual browsing. Not required for `/start`.
    ```
    /add-dir ~/Documents/GitHub/[business-name]
    ```

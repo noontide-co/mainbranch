@@ -472,21 +472,21 @@ Skills should load context progressively:
 
 1. Clone vip locally
 2. Create or clone your business repo
-3. In Claude Code, add vip as additional working directory
-4. Work in your business repo as primary directory
+3. Start Claude in the vip folder and run `/start`
+4. `/start` resolves your business repo from `~/.config/vip/local.yaml` and skills use absolute paths
 
 ### In Practice
 
 ```
 Claude Code Session:
-├── Primary: ~/projects/my-business/
-│   ├── reference/
-│   ├── outputs/
+├── Primary: ~/vip/
+│   ├── .claude/skills/
+│   ├── .claude/lenses/
 │   └── ...
 │
-└── Additional: ~/vip/
-    ├── .claude/skills/
-    ├── .claude/lenses/
+└── Business repo (resolved by /start via ~/.config/vip/local.yaml): ~/projects/my-business/
+    ├── reference/
+    ├── outputs/
     └── ...
 ```
 

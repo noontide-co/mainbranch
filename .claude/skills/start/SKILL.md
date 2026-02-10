@@ -169,11 +169,11 @@ git pull origin main 2>&1
 
 **Config path (fast):** Check `~/.config/vip/local.yaml` for `default_repo` and `user.*`. See [config-system.md](references/config-system.md).
 
-**Why Glob fails:** User may have added subdirectories (like `decisions/` or `research/`) as additional working directories, not the parent repo. Glob from vip can't traverse up to find `reference/core/`.
+**Why fallback glob can fail:** If additional working directories are present, they may point at subdirectories (like `decisions/` or `research/`), not the parent repo. When using this fallback, walk up to find `reference/core/`.
 
-**Discovery algorithm (when no config):**
+**Discovery algorithm (when no config):** Use fallbacks in order. Additional working directories are optional.
 
-1. **Extract parent paths from additional working directories**
+1. **If additional working directories exist, extract parent paths**
    - Look at env info for "Additional working directories"
    - For each path, walk up to find a folder containing `reference/core/`
    - Example: if `main-branch/decisions` is listed, check `main-branch/reference/core/`

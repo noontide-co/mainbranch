@@ -85,14 +85,11 @@ ls .claude/skills
 
 If not in vip, skills won't be available.
 
-**Check 2: Did you add vip?**
+**Check 2: Did you start in vip?**
 
-If you started in your business repo, add vip:
-```
-/add-dir ~/Documents/GitHub/vip
-```
+If you started in your business repo, close and re-run Claude from the vip folder, then run `/start`.
 
-**Best practice:** Always start in vip, run `/start`. It handles everything.
+**Best practice:** Always start in vip, run `/start`. It resolves your business repo via `~/.config/vip/local.yaml`.
 
 ---
 
