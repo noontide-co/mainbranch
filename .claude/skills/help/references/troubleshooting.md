@@ -132,6 +132,24 @@ claude
 
 ---
 
+## Conductor: Skills Not Showing
+
+Conductor workspaces are isolated — Claude doesn't know where vip is unless you tell it.
+
+**The fix:** Add a Pre-Agent (PA) config script to your workspace. This runs before Claude starts and creates the bridge links + `settings.local.json` that skills need.
+
+See [conductor-setup.md](conductor-setup.md) for the full script and setup walkthrough.
+
+**Quick version:**
+1. Find your vip path (e.g., `~/Documents/GitHub/mb-vip`)
+2. Add the PA config script to your Conductor workspace
+3. The script creates symlinks + settings, then exits
+4. Start the agent again — skills appear
+
+**After fixing:** Skills only load at startup. If you added bridge links mid-session, you need to restart Claude.
+
+---
+
 ## "Cannot edit files outside allowed directories"
 
 This is common in sandboxed tools (like Conductor workspaces). It means Claude can only edit files inside the current workspace folder.
