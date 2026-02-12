@@ -19,23 +19,23 @@ Get a new user fully configured with Claude Code and their business repo.
 
 ### CRITICAL: Write Boundaries in Sandboxed Environments
 
-Some tools (like Conductor and sandboxed IDEs) may only allow direct file writes inside the current workspace folder. If you see:
+Some tools (especially workspace-isolated apps, like Conductor workspaces) may only allow direct file writes inside the current workspace folder. If you see:
 
 > "Cannot edit files outside allowed directories"
 
-In a regular terminal Claude session, this is less common because Claude can often request permission and continue. In sandboxed tools, these limits are stricter.
+In a regular terminal `claude` session, this is less common because Claude can often request permission and continue. In restricted workspace tools, limits are usually stricter.
 
 Do **not** silently switch strategies. Ask the user first, in beginner language:
 
-> "This app is only letting me edit files in this one folder right now.
+> "This app is only letting me edit files in this one workspace folder.
 >
-> I can do one of two things:
-> 1. Switch to the target repo workspace (cleanest)
-> 2. Stay here and use terminal commands to write files there
+> Since this is first-time setup, switching workspaces mid-chat can be confusing. The easiest options are:
+> 1. Continue here and I use terminal commands to create/update files in your target repo path
+> 2. Stop here, open Terminal in the target repo folder, run `claude`, then run `/setup` again
 >
-> Option 1 is easier to review. Which do you want?"
+> If you already have a workspace open for that repo, we can use that too. Which option do you want?"
 
-If they choose option 2, proceed. If not, stop and wait.
+For first-time setup, do not default to "switch workspace now." Prefer option 1 or 2 unless the user already has the target repo workspace ready.
 
 ### Pull Latest Engine Updates (Always)
 
@@ -188,6 +188,7 @@ User started Claude in the engine folder. Guide them to the new workflow:
       - Ask before changing `default_repo` if one already exists
    e. **Set the business repo as the target for all file writes:**
       From this point forward, write all files to `~/Documents/GitHub/[business-name]/` NOT to the current directory.
+      If direct writes are blocked by workspace limits, use explicit terminal commands with full paths (after user approval via the decision flow above).
    f. Confirm:
       > "Created [business-name] and configured vip. Next time:
       > ```
