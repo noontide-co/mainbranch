@@ -154,6 +154,8 @@ User started Claude in their business repo. Confirm and configure vip:
 
    **Never use:** `cat > ~/.config/vip/local.yaml`
 
+   Then update `.gitignore` to exclude bridge links (see `auto-heal.md` Step 2.5 for the canonical script — marker-based, per-skill entries, idempotent).
+
    > "Configured. vip is now linked for file access, and compatibility bridge links are in place for skill discovery."
 
 3. **If vip loaded:** Check compatibility symlinks exist (without clobbering local files):
@@ -203,6 +205,8 @@ User started Claude in the engine folder. Guide them to the new workflow:
      [ -e "$REPO_PATH/.claude/$parent/$base" ] || ln -s "$p" "$REPO_PATH/.claude/$parent/$base"
    done
    ```
+   Then update `.gitignore` in the business repo to exclude bridge links (see `auto-heal.md` Step 2.5 for the canonical script).
+
    If direct write is blocked by sandbox boundaries, use the write-boundary decision flow above (ask first, then use terminal commands only if user agrees).
 
 3. **If NO repo exists:** Create one:
@@ -244,17 +248,18 @@ User started Claude in the engine folder. Guide them to the new workflow:
         [ -e "$REPO_PATH/.claude/$parent/$base" ] || ln -s "$p" "$REPO_PATH/.claude/$parent/$base"
       done
       ```
-   d. Update `~/.config/vip/local.yaml` with a **merge** (never overwrite):
+   d. Update `.gitignore` in the new repo to exclude bridge links (see `auto-heal.md` Step 2.5 for the canonical script).
+   e. Update `~/.config/vip/local.yaml` with a **merge** (never overwrite):
       - Read existing file first
       - Preserve existing/unknown keys
       - Set/update `vip_path`
       - Add new repo to `recent_repos` (prepend + dedupe)
       - Keep `user.*` if present; ask only when missing
       - Ask before changing `default_repo` if one already exists
-   e. **Set the business repo as the target for all file writes:**
+   f. **Set the business repo as the target for all file writes:**
       From this point forward, write all files to `~/Documents/GitHub/[business-name]/` NOT to the current directory.
       If direct writes are blocked by workspace limits, use explicit terminal commands with full paths (after user approval via the decision flow above).
-   f. Confirm:
+   g. Confirm:
       > "Created [business-name] and configured vip. Next time:
       > ```
       > cd ~/Documents/GitHub/[business-name]

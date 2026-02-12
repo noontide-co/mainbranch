@@ -134,8 +134,30 @@ cat > .gitignore << 'EOF'
 EOF
 ```
 
+**Then add VIP bridge link entries** (dynamic, based on which vip skills exist):
+
+```bash
+GITIGNORE="$REPO_PATH/.gitignore"
+
+if ! grep -q "VIP BRIDGE LINKS" "$GITIGNORE" 2>/dev/null; then
+  cat >> "$GITIGNORE" << 'GITIGNORE_BLOCK'
+
+# === VIP BRIDGE LINKS (machine-local, do not commit) ===
+.claude/lenses/
+.claude/reference/
+GITIGNORE_BLOCK
+
+  # Add each vip skill symlink individually (preserves custom skill tracking)
+  for d in "$VIP_PATH"/.claude/skills/*/; do
+    [ -d "$d" ] || continue
+    n=$(basename "$d")
+    echo ".claude/skills/$n" >> "$GITIGNORE"
+  done
+fi
+```
+
 **Why `.claude/settings.local.json` is git-ignored:** Claude Code auto-ignores this file, but we add it explicitly for safety. It contains machine-specific absolute paths to vip (`additionalDirectories`) that differ per computer.
 
-**Do not ignore `.claude/skills/` globally:** This folder is where repo-specific local skills live. Ignoring it would block project-level custom skills. If you create compatibility links to vip skill folders, keep those links uncommitted via local Git excludes (`.git/info/exclude`) rather than broad `.gitignore` rules.
+**Why per-skill entries (not `.claude/skills/`):** Users have custom skills (deck, pr-review, etc.) that ARE tracked in git. Ignoring the whole folder would hide those. We only ignore the vip-linked symlinks. `.claude/lenses/` and `.claude/reference/` are blanket-ignored because they're 100% vip content — no user files live there.
 
 **Why `.vip/local.yaml` is git-ignored:** It stores session state like `current_offer` -- which offer you're working on right now. This is per-machine, per-session. The git-tracked `.vip/config.yaml` holds team/business settings that should be shared.
