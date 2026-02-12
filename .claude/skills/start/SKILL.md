@@ -7,7 +7,7 @@ description: "Main entry point for Main Branch. Detects state and routes to the 
 
 Single entry point for Main Branch. Detect user state, context level, experience — route to the right skill.
 
-**Recommended workflow:** Start Claude in your business repo, run `/start`. It handles everything. Skills load automatically from vip via `additionalDirectories`.
+**Recommended workflow:** Start Claude in your business repo, run `/start`. It handles everything. vip is loaded through `additionalDirectories`, with bridge links as a compatibility fallback for skill discovery.
 
 ---
 
@@ -258,6 +258,16 @@ No repo selection needed. Confirm briefly and move on:
 
 > "Working in **[repo-name]**."
 
+### Canonical Repo Variable (Required)
+
+After repo detection/selection, set one canonical variable and use it everywhere:
+
+```bash
+REPO_PATH="[absolute-path-to-selected-business-repo]"
+```
+
+**Rule:** All business-repo operations must target `REPO_PATH` (not implicit CWD). This is critical when `/start` is invoked from vip and the selected repo is elsewhere.
+
 If `~/.config/vip/local.yaml` doesn't have this repo saved, offer to save:
 
 > "Want me to save [repo-name] as your default? (faster startup next time)"
@@ -278,43 +288,30 @@ user:
 
 ### Verify vip Is Loaded (Config + Compatibility Links)
 
-After detecting the business repo, confirm vip is accessible and `/start` bridge exists:
+After detecting the business repo, confirm vip is accessible and `/start` bridge exists in the selected repo (`REPO_PATH`):
 
 ```bash
-# 1. Check additionalDirectories config
-VIP_PATH=$(test -f ".claude/settings.local.json" && python3 -c "
+# 1. Resolve vip path from selected repo's settings.local.json
+VIP_PATH=$(test -f "$REPO_PATH/.claude/settings.local.json" && REPO_PATH="$REPO_PATH" python3 -c "
 import json, os
-with open('.claude/settings.local.json') as f:
+with open(os.path.join(os.environ['REPO_PATH'], '.claude/settings.local.json')) as f:
     dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
 for d in dirs:
     if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
         print(d); break
 " 2>/dev/null)
 
-# 2. Check /start bridge exists in local .claude/skills
-test -e ".claude/skills/start" && echo "START_BRIDGE_OK"
+# 2. Check /start bridge exists in selected repo
+test -e "$REPO_PATH/.claude/skills/start" && echo "START_BRIDGE_OK"
 ```
 
 **If `additionalDirectories` missing:** Run `/setup` to configure.
 
-**If bridge links missing** (but `additionalDirectories` exists): Repair without replacing local folders:
-```bash
-mkdir -p .claude/skills .claude/lenses .claude/reference
+**If bridge links missing** (but `additionalDirectories` exists): run the canonical repair from [auto-heal.md](references/auto-heal.md), targeting `REPO_PATH`.
 
-for d in "$VIP_PATH"/.claude/skills/*; do
-  [ -d "$d" ] || continue
-  n=$(basename "$d")
-  [ -e ".claude/skills/$n" ] || ln -s "$d" ".claude/skills/$n"
-done
+Tell the user: "Repaired missing vip bridge links in **[repo-name]**. Local custom skills are preserved."
 
-for p in "$VIP_PATH"/.claude/lenses/* "$VIP_PATH"/.claude/reference/*; do
-  [ -e "$p" ] || continue
-  base=$(basename "$p")
-  parent=$(basename "$(dirname "$p")")
-  [ -e ".claude/$parent/$base" ] || ln -s "$p" ".claude/$parent/$base"
-done
-```
-Tell the user: "Repaired missing vip bridge links. Local custom skills are preserved."
+**If `/start` was invoked from vip:** always run this verification block for the selected `REPO_PATH` before routing. This is the migration safety net for existing users.
 
 **Why both are needed:**
 - `additionalDirectories` = file access (read reference files, compliance docs)
@@ -324,10 +321,14 @@ Tell the user: "Repaired missing vip bridge links. Local custom skills are prese
 
 ## Step 0.5: Pull Business Repo Updates
 
-Once business repo is confirmed, pull its latest updates. Since CWD IS the business repo, just pull directly:
+Once business repo is confirmed, pull its latest updates from `REPO_PATH`:
 
 ```bash
-git pull origin main 2>&1
+if git -C "$REPO_PATH" remote get-url origin >/dev/null 2>&1; then
+  git -C "$REPO_PATH" pull origin main 2>&1
+else
+  echo "NO_REMOTE"
+fi
 ```
 
 **Handle the result:**
@@ -336,7 +337,7 @@ git pull origin main 2>&1
 |--------|-------------|
 | "Already up to date." | Say nothing |
 | "Updating..." / files changed | "Pulled latest updates for [repo-name]." |
-| "fatal: 'origin' does not appear to be a git repo" | Say nothing — local-only repo, no remote configured |
+| "NO_REMOTE" | Say nothing — local-only repo, no remote configured |
 | Any other error | Show the warning below |
 
 **If pull fails (and repo has a remote):**
@@ -415,7 +416,7 @@ Adapt display to `user.experience` level (beginner = full breakdown, advanced = 
 After loading core context, check for multi-offer:
 
 ```bash
-ls reference/offers/*/offer.md 2>/dev/null
+find "$REPO_PATH/reference/offers" -mindepth 2 -maxdepth 2 -name "offer.md" 2>/dev/null
 ```
 
 **If no offers/ folder:** Single-offer mode. Skip to Step 2. Everything reads from `core/`.

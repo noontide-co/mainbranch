@@ -41,6 +41,8 @@ This repo contains your **business data**. It's powered by **vip** (the engine).
 - Data (this repo): Contains your business context. You own and edit this.
 - Skills read from your `reference/` and output to your `outputs/`
 
+**If `/start` isn't available:** Skills may need bridge links. Find the vip path from `.claude/settings.local.json` (the `additionalDirectories` array), then read `[vip-path]/.claude/skills/start/references/auto-heal.md` and follow the repair steps. After repair, tell the user to restart Claude.
+
 ---
 
 ## Folder Structure
