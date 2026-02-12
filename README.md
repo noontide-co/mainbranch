@@ -145,7 +145,7 @@ That is it. You are ready to generate.
 
 ## What Are Skills?
 
-Skills are pre-built commands that do specific jobs.
+Skills are pre-built workflows you invoke with slash prompts (for example, `/start`, `/ads`, `/think`).
 
 Instead of figuring out how to prompt Claude, you just type a command like `/ads` and Claude knows exactly what to do.
 

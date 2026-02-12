@@ -154,7 +154,7 @@ User started Claude in their business repo. Confirm and configure vip:
 
    **Never use:** `cat > ~/.config/vip/local.yaml`
 
-   > "Configured. vip skills will load automatically in future sessions."
+   > "Configured. vip is now linked for file access, and compatibility bridge links are in place for skill discovery."
 
 3. **If vip loaded:** Check compatibility symlinks exist (without clobbering local files):
    ```bash
