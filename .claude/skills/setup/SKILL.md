@@ -649,7 +649,7 @@ Once setup is complete, tell the user:
 > claude
 > /start
 > ```
-> Skills load automatically from vip via `additionalDirectories` — no need to touch the vip folder.
+> vip linkage is managed by setup (`settings.local.json` + compatibility bridge links) — no need to touch the vip folder.
 >
 > **Key skills to try:**
 > - `/think` — Research topics, make decisions, update reference

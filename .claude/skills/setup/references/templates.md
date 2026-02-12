@@ -582,7 +582,7 @@ It uses [vip](https://github.com/mainbranch-ai/vip) as the **engine** — skills
 
 2. **Start Claude in this folder** (your business repo) and run `/start`
 
-3. **vip loads automatically** via `.claude/settings.local.json` additionalDirectories
+3. **vip is linked** via `.claude/settings.local.json` (bridge links handle skill discovery fallback)
 
 ### How It Works
 

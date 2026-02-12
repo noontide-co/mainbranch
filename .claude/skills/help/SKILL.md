@@ -59,7 +59,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Question | Answer |
 |----------|--------|
 | Start Claude in a folder? | `cd ~/Documents/GitHub/[your-business] && claude` — Claude sees files in that folder. vip is linked via `settings.local.json`, with bridge links as a compatibility fallback for skill discovery. |
-| When use slash commands? | For structured tasks: `/start`, `/think`, `/ads`, `/vsl` |
+| When use skill prompts? | For structured tasks: `/start`, `/think`, `/ads`, `/vsl` |
 | Drag files in? | Drag from Finder into Terminal, path appears |
 | Voice input? | [Wispr Flow](https://ref.wisprflow.ai/main) (affiliate link) |
 | What is content-strategy.md? | Your distribution backbone -- pillars, platforms, cadence. Built through `/think`, consumed by `/organic` and `/ads`. Lives in `reference/domain/`. |

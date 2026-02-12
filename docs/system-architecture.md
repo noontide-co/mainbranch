@@ -472,7 +472,7 @@ Skills should load context progressively:
 
 1. Clone vip locally
 2. Create or clone your business repo
-3. Run `/setup` to configure vip as an additional directory (writes `.claude/settings.local.json`)
+3. Run `/setup` to configure vip linkage (writes `.claude/settings.local.json` and compatibility links when needed)
 4. Start Claude in your business repo and run `/start`
 
 ### In Practice
@@ -481,12 +481,13 @@ Skills should load context progressively:
 Claude Code Session:
 ├── Primary (CWD): ~/projects/my-business/
 │   ├── .claude/settings.local.json  ← additionalDirectories points to vip
+│   ├── .claude/skills/*             ← bridge links for skill discovery fallback
 │   ├── reference/
 │   ├── outputs/
 │   └── ...
 │
 └── Additional directory (read-only): ~/Documents/GitHub/vip/
-    ├── .claude/skills/              ← skills discovered automatically
+    ├── .claude/skills/              ← canonical skill source
     ├── .claude/lenses/
     └── ...
 ```
@@ -828,6 +829,6 @@ Client repos (BDC, autism-rewired) are separate — can be handed off independen
 5. **File linking** — Research links to decisions, decisions link to context
 6. **Progressive loading** — Context tiers for token efficiency
 7. **Compliance layers** — Planning, review, and data layers
-8. **Multi-repo workflow** — Engine as additional directory, business repo as primary
+8. **Multi-repo workflow** — Engine linked via additional directory + bridge fallback, business repo as primary
 9. **Content pipeline** — Newsletter-first waterfall: keystone → organic → ads → learn
 10. **Multi-offer support** — Cascading path resolution for businesses with multiple products under one brand

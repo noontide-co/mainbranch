@@ -36,15 +36,16 @@ This is what makes your outputs sound like YOU.
 ## How They Work Together
 
 ```
-your-business/                    vip/ (loaded via settings.local.json)
+your-business/                    vip/ (linked from business repo)
 ├── Your offer                    ├── Skills
 ├── Your audience                 ├── Templates
 ├── Your voice                    ├── Frameworks
 ├── .claude/settings.local.json   └── (shared, read-only)
+├── .claude/skills/* (bridge links)
 └── (yours, you own it)
 ```
 
-You start Claude in your business repo. The vip engine is loaded automatically as a read-only additional directory via `.claude/settings.local.json`. The engine reads your business data and generates content that sounds like you.
+You start Claude in your business repo. `/setup` connects vip through `.claude/settings.local.json` for file access, and adds bridge links when needed for skill discovery. The engine then reads your business data and generates content that sounds like you.
 
 **Same engine + different data = different outputs for each business.**
 

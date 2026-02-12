@@ -147,7 +147,7 @@ That is it. You are ready to generate.
 
 Skills are pre-built workflows you invoke with slash prompts (for example, `/start`, `/ads`, `/think`).
 
-Instead of figuring out how to prompt Claude, you just type a command like `/ads` and Claude knows exactly what to do.
+Instead of figuring out how to prompt Claude, you invoke a skill with a slash prompt like `/ads` and Claude knows exactly what to do.
 
 **Example:**
 
@@ -158,13 +158,13 @@ You type:
 
 Claude reads your business files, then generates 5-6 complete ad concepts. Each concept includes headlines, primary text, and image prompts. All in your voice.
 
-No prompt engineering. No explaining what you want. Just type the command.
+No prompt engineering. No explaining what you want. Just run the skill.
 
 ---
 
 ## Available Skills
 
-| Command | What It Does |
+| Skill | What It Does |
 |---------|-------------|
 | `/start` | Main entry point — figures out what you need and routes you there |
 | `/setup` | Set up your business repo (run this first if you're new) |
@@ -252,7 +252,7 @@ Post in the Main Branch group. Tag @Devon for technical questions.
 **Common issues:**
 - "404 error" or "Repository not found" — You need access first. Share your GitHub username with Devon.
 - "Claude does not see my files" — Make sure you started Claude in your business repo folder and ran `/start`
-- "Skills are not working" — Check that `.claude/settings.local.json` exists in your business repo with vip in `additionalDirectories`. Run `/setup` to fix.
+- "Skills are not working" — Check that `.claude/settings.local.json` exists and run `/start` once to auto-repair missing bridge links. If still broken, run `/setup`.
 - "Output sounds generic" — Add more detail to your reference files, especially voice.md
 - "I edited vip but can't push" — That's expected. vip is read-only. Your business data goes in YOUR repo.
 
@@ -262,7 +262,7 @@ Post in the Main Branch group. Tag @Devon for technical questions.
 
 **Do I need to know how to code?**
 
-No. You just type commands and answer questions.
+No. You invoke skills with slash prompts and answer questions.
 
 **What if I have multiple products under one brand?**
 

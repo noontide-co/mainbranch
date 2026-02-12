@@ -57,7 +57,7 @@ This tells Terminal: "Go to the my-business folder inside GitHub inside Document
 
 **The `~` symbol means "my home folder."**
 
-After running this, you're now "in" your business repo folder. If you type `claude`, Claude starts with access to everything in that folder. The vip engine is loaded automatically as a read-only additional directory via `.claude/settings.local.json`.
+After running this, you're now "in" your business repo folder. If you type `claude`, Claude starts with access to everything in that folder. vip is linked through `.claude/settings.local.json`, with bridge links as a compatibility fallback for skill discovery.
 
 ---
 
@@ -69,9 +69,9 @@ When someone says "start Claude in your business repo," they mean:
 2. Type `cd ~/Documents/GitHub/[your-business]` and press Enter
 3. Type `claude` and press Enter
 
-Now Claude is running AND it can see all the files in your business repo. The vip engine is loaded automatically as an additional directory via `.claude/settings.local.json`.
+Now Claude is running AND it can see all the files in your business repo. vip is linked via `.claude/settings.local.json` (and bridge links when needed).
 
-**Why this matters:** Claude Code can only see files in folders you give it access to. Starting in your business repo means Claude sees your reference files directly. vip (the engine with skills) is added automatically so you don't need to worry about it.
+**Why this matters:** Claude Code can only see files in folders you give it access to. Starting in your business repo means Claude sees your reference files directly. vip (the engine with skills) is linked by setup so you don't have to wire this manually.
 
 ---
 
@@ -87,7 +87,7 @@ claude
 That's it. Three lines. Copy and paste them if needed.
 
 1. `cd ~/Documents/GitHub/[your-business]` - Go to your business repo folder
-2. `claude` - Start Claude Code (vip engine loads automatically via `settings.local.json`)
+2. `claude` - Start Claude Code (vip linkage comes from `.claude/settings.local.json`)
 3. `/start` - Tell Claude to check your setup and get ready
 
 ---
@@ -100,7 +100,7 @@ You can drag things from Finder (Mac) or Explorer (Windows) directly into Termin
 
 **Drag a folder:** Its path appears. Useful for sharing paths.
 
-**Power user tip:** You can add extra directories with `/add-dir`. The standard workflow is to start in your business repo and run `/start`. The vip engine is loaded automatically.
+**Power user tip:** You can add extra directories with `/add-dir`. The standard workflow is still: start in your business repo and run `/start`.
 
 **Optional /add-dir example (power users):**
 1. Type `/add-dir ` (with the space)

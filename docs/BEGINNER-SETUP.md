@@ -61,7 +61,7 @@ claude
 /start
 ```
 
-`/start` detects your business repo and routes you to the right skill. vip is linked automatically via `settings.local.json` plus compatibility bridge links when needed.
+`/start` detects your business repo and routes you to the right skill. vip linkage is configured by setup via `settings.local.json`, plus compatibility bridge links when needed.
 
 When you're done for the day:
 
