@@ -79,6 +79,37 @@ done
 
 ---
 
+## Step 2.5: Update .gitignore
+
+Bridge links are machine-local symlinks — they must not be committed. After creating links, ensure `.gitignore` covers them.
+
+```bash
+GITIGNORE="$REPO_PATH/.gitignore"
+
+# Add marker + entries if not already present
+if ! grep -q "VIP BRIDGE LINKS" "$GITIGNORE" 2>/dev/null; then
+  cat >> "$GITIGNORE" << 'GITIGNORE_BLOCK'
+
+# === VIP BRIDGE LINKS (machine-local, do not commit) ===
+.claude/lenses/
+.claude/reference/
+GITIGNORE_BLOCK
+
+  # Add each vip skill symlink individually (preserves custom skill tracking)
+  for d in "$VIP_PATH"/.claude/skills/*/; do
+    [ -d "$d" ] || continue
+    n=$(basename "$d")
+    echo ".claude/skills/$n" >> "$GITIGNORE"
+  done
+fi
+```
+
+**Why per-skill entries (not `.claude/skills/`):** Users have custom skills (deck, pr-review, etc.) that ARE tracked. Ignoring the whole folder would hide those. We only ignore the vip-linked ones.
+
+**Idempotent:** The marker check (`VIP BRIDGE LINKS`) prevents duplicate entries on repeated heals.
+
+---
+
 ## Step 3: Verify
 
 ```bash
