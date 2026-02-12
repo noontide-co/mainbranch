@@ -41,6 +41,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Better outputs, quality, what next | [making-outputs-better.md](references/making-outputs-better.md) |
 | Content strategy, pillars, platforms, newsletter, content plan | [content-strategy-help.md](references/content-strategy-help.md) |
 | Subagents, parallel, agents, context window, tokens | [working-with-agents.md](references/working-with-agents.md) |
+| Conductor, workspace, PA config, pre-agent, skills not showing (Conductor) | [conductor-setup.md](references/conductor-setup.md) |
 | Contribute, contributor | [becoming-contributor.md](references/becoming-contributor.md) |
 
 ---
@@ -79,3 +80,5 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | How do I recover after compaction? | Point Claude at recent files: "look at my last 3 decisions" or "read the commits from today." Or just run /start — it scans your folders and rebuilds context automatically. You can also open files yourself in Cursor, Warp, VS Code, or any text editor. |
 | Is this system finished? | Still new and actively being tuned. We're building around Claude Code, minimizing commands you need to learn while giving you real power. There's progressive discovery in /think — the more you use it, the more it reveals. You might find workflows we haven't documented yet. Post them in Skool. |
 | Where can I see my files? | Open your business repo folder in Finder, Cursor, Warp, VS Code, or any text editor. They're regular .md files on your hard drive. GitHub Desktop also shows them with version history. |
+| Skills not showing in Conductor? | Conductor workspaces are isolated — they don't know where vip is. You need a Pre-Agent (PA) config script that creates bridge symlinks and `settings.local.json` before Claude starts. See [conductor-setup.md](references/conductor-setup.md) for the script and setup steps. |
+| What's a PA config? | Pre-Agent config — a script Conductor runs before Claude starts in a workspace. Used to set up vip bridge links so skills appear. One-time setup per workspace. |
