@@ -50,28 +50,28 @@ You can change which folder you're "in" by typing commands.
 `cd` stands for "change directory" (directory = folder).
 
 ```bash
-cd ~/Documents/GitHub/vip
+cd ~/Documents/GitHub/my-business
 ```
 
-This tells Terminal: "Go to the vip folder inside GitHub inside Documents inside my home folder."
+This tells Terminal: "Go to the my-business folder inside GitHub inside Documents inside my home folder."
 
 **The `~` symbol means "my home folder."**
 
-After running this, you're now "in" the vip folder. If you type `claude`, Claude starts with access to everything in that folder.
+After running this, you're now "in" your business repo folder. If you type `claude`, Claude starts with access to everything in that folder. The vip engine is loaded automatically as a read-only additional directory via `.claude/settings.local.json`.
 
 ---
 
 ## What "Start Claude in a Folder" Means
 
-When someone says "start Claude in vip," they mean:
+When someone says "start Claude in your business repo," they mean:
 
 1. Open Terminal
-2. Type `cd ~/Documents/GitHub/vip` and press Enter
+2. Type `cd ~/Documents/GitHub/[your-business]` and press Enter
 3. Type `claude` and press Enter
 
-Now Claude is running AND it can see all the files in vip.
+Now Claude is running AND it can see all the files in your business repo. The vip engine is loaded automatically as an additional directory via `.claude/settings.local.json`.
 
-**Why this matters:** Claude Code can only see files in folders you give it access to. If you start Claude in vip, it sees vip. If you start elsewhere, it doesn't.
+**Why this matters:** Claude Code can only see files in folders you give it access to. Starting in your business repo means Claude sees your reference files directly. vip (the engine with skills) is added automatically so you don't need to worry about it.
 
 ---
 
@@ -79,16 +79,16 @@ Now Claude is running AND it can see all the files in vip.
 
 Every session:
 ```bash
-cd ~/Documents/GitHub/vip
+cd ~/Documents/GitHub/[your-business]
 claude
 /start
 ```
 
 That's it. Three lines. Copy and paste them if needed.
 
-1. `cd ~/Documents/GitHub/vip` - Go to the vip folder
-2. `claude` - Start Claude Code
-3. `/start` - Tell Claude to load your business repo and get ready
+1. `cd ~/Documents/GitHub/[your-business]` - Go to your business repo folder
+2. `claude` - Start Claude Code (vip engine loads automatically via `settings.local.json`)
+3. `/start` - Tell Claude to check your setup and get ready
 
 ---
 
@@ -100,7 +100,7 @@ You can drag things from Finder (Mac) or Explorer (Windows) directly into Termin
 
 **Drag a folder:** Its path appears. Useful for sharing paths.
 
-**Power user tip:** You can add extra directories with `/add-dir`, but the standard workflow is to start in vip and run `/start`.
+**Power user tip:** You can add extra directories with `/add-dir`. The standard workflow is to start in your business repo and run `/start`. The vip engine is loaded automatically.
 
 **Optional /add-dir example (power users):**
 1. Type `/add-dir ` (with the space)
@@ -157,7 +157,7 @@ Press Ctrl + C to cancel the current operation.
 
 Most of the time, you'll just use:
 ```bash
-cd ~/Documents/GitHub/vip
+cd ~/Documents/GitHub/[your-business]
 claude
 /start
 ```

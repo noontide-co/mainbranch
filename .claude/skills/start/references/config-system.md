@@ -1,6 +1,6 @@
 # Config System
 
-Three-file system: personal settings, team settings, and API keys — each in the right place.
+Four-file system: vip linkage, personal settings, team settings, and API keys — each in the right place.
 
 ---
 
@@ -8,14 +8,30 @@ Three-file system: personal settings, team settings, and API keys — each in th
 
 | File | Location | Purpose | Git-tracked? |
 |------|----------|---------|--------------|
-| `local.yaml` | `~/.config/vip/` | User identity + which repo is default | No |
+| `settings.local.json` | `[repo]/.claude/` | Links vip as additionalDirectory | No (auto git-ignored by Claude Code) |
+| `local.yaml` | `~/.config/vip/` | User identity + vip_path + default repo | No |
 | `env.sh` | `~/.config/vip/` | API keys for optional research tools | No |
 | `config.yaml` | `[repo]/.vip/` | Team/business settings, MCP requirements | Yes |
 
 **Key split:**
+- **Settings** = "Where is vip?" (per-repo, per-machine — `.claude/settings.local.json`)
 - **Local** = "Who am I? What repo do I want?" (per-person, per-machine)
 - **Env** = "What API keys do I have?" (per-person, sourced by shell)
 - **Repo** = "How does this business/team operate?" (shared)
+
+### .claude/settings.local.json (vip linkage)
+
+Created by `/setup`. Tells Claude Code to load vip as a read-only additional directory:
+
+```json
+{
+  "permissions": {
+    "additionalDirectories": ["/absolute/path/to/vip"]
+  }
+}
+```
+
+**Auto git-ignored** by Claude Code (like `.claude/settings.local.json` is always local). Contains machine-specific absolute paths — never commit this.
 
 ---
 
@@ -74,6 +90,7 @@ cat ~/.config/vip/local.yaml 2>/dev/null
 ```yaml
 # NOTE: All paths MUST be absolute. Never use ~ (tools don't expand it).
 # /start writes absolute paths automatically when saving config.
+vip_path: /absolute/path/to/vip
 default_repo: /absolute/path/to/my-business
 recent_repos:
   - /absolute/path/to/my-business

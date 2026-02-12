@@ -7,13 +7,15 @@ description: "Main entry point for Main Branch. Detects state and routes to the 
 
 Single entry point for Main Branch. Detect user state, context level, experience — route to the right skill.
 
-**Recommended workflow:** Always start Claude in vip, run `/start`. It handles everything.
+**Recommended workflow:** Start Claude in your business repo, run `/start`. It handles everything. Skills load automatically from vip via `additionalDirectories`.
 
 ---
 
-## CRITICAL: Always Ask Which Repo
+## CRITICAL: Repo Selection Rules
 
-**Even if config exists with a saved default, ALWAYS ask the user which repo before proceeding.** List ALL validated repos from `recent_repos`, not just the default:
+**CWD-first wins.** If `reference/core/` exists in CWD, the user is already in their business repo — no selection needed. Just confirm: "Working in **[repo-name]**."
+
+**Only ask which repo when CWD is NOT a business repo** (fallback to config). In that case, list ALL validated repos from `recent_repos`:
 
 > "Found your repos:
 >
@@ -32,9 +34,11 @@ Single entry point for Main Branch. Detect user state, context level, experience
 >
 > (hit a number)"
 
-**DO NOT skip this question.** Users have multiple repos. The saved default is a suggestion, not automatic.
+**DO NOT skip this question when in fallback mode.** Users have multiple repos. The saved default is a suggestion, not automatic.
 
-**Only exception:** User explicitly ran `/start [repo-name]` with a specific path.
+**Exceptions (skip selection entirely):**
+- CWD has `reference/core/` — user chose their repo by cd'ing into it
+- User explicitly ran `/start [repo-name]` with a specific path
 
 **After user selects a repo:** If the selected repo is not the current `default_repo`, ask: "Want me to save [repo-name] as your default? (faster startup next time)" If yes, update `default_repo` in `~/.config/vip/local.yaml`.
 
@@ -55,18 +59,24 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │
 ├── Check context level ──────────────→ Fresh? Full load. Heavy? Warn user.
 │
-├── Pull engine updates ──────────────→ (vip, always, silently)
+├── Detect business repo ─────────────→ CWD-first detection (see Step 0)
+│   ├── CWD has reference/core/? ─────→ This IS the repo. Proceed.
+│   ├── CWD has .claude/skills/? ─────→ User is in vip (old workflow). Trigger migration.
+│   └── Neither? ────────────────────→ Check config, then ask user.
+│
+├── Pull engine updates ──────────────→ Resolve vip path, pull THAT dir (not CWD)
 │
 ├── Load config ──────────────────────→ See [config-system.md](references/config-system.md)
-│   ├── ~/.config/vip/local.yaml ─────→ Default repo + user identity (name, experience)
+│   ├── ~/.config/vip/local.yaml ─────→ vip_path + default_repo + user identity
 │   └── [repo]/.vip/config.yaml ──────→ Team settings, MCP requirements
+│
+├── Verify vip loaded ────────────────→ Check additionalDirectories has vip
+│   └── Missing? ────────────────────→ Offer to run /setup to configure
 │
 ├── MCP pre-flight ───────────────────→ See [mcp-preflight.md](references/mcp-preflight.md)
 │   └── Missing required MCP? ────────→ Offer setup or skip
 │
-├── Find business repo ───────────────→ (from config OR discovery)
-│
-├── No business repo configured? ─────→ /setup (creates repo, saves path)
+├── No business repo found? ──────────→ /setup (creates repo, saves path)
 │
 ├── Pull business repo updates ───────→ (your repo, silently)
 │
@@ -102,13 +112,38 @@ Apply to: business repo selection, skill routing, any multiple choice.
 
 ---
 
-## Step -1: Pull Updates
+## Step -1: Pull Engine Updates
 
-Pull vip updates. **Do NOT silently swallow failures.** Users on stale code get broken features.
+Pull vip updates. CWD is the business repo — resolve vip path first. **Do NOT silently swallow failures.** Users on stale code get broken features.
 
 ```bash
-# Pull vip updates — capture result
-git pull origin main 2>&1
+# Canonical vip resolution (settings.local.json first — no extra deps)
+VIP_PATH=$(python3 -c "
+import json, os
+try:
+    with open('.claude/settings.local.json') as f:
+        dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
+    for d in dirs:
+        if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
+            print(d); break
+except: print('')
+" 2>/dev/null)
+
+# Fallback: check ~/.config/vip/local.yaml (needs PyYAML)
+if [ -z "$VIP_PATH" ] || [ ! -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
+  VIP_PATH=$(python3 -c "
+import os
+try:
+    import yaml
+    with open(os.path.expanduser('~/.config/vip/local.yaml')) as f:
+        print(yaml.safe_load(f).get('vip_path', ''))
+except: print('')
+" 2>/dev/null)
+fi
+
+# Pull if found and valid
+[ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/start/SKILL.md" ] && \
+  git -C "$VIP_PATH" pull origin main 2>&1
 ```
 
 **Handle the result:**
@@ -116,8 +151,9 @@ git pull origin main 2>&1
 | Result | What to say |
 |--------|-------------|
 | "Already up to date." | Say nothing |
-| "Updating..." / files changed | "Pulled latest updates." |
-| Any error (auth, network, not a repo) | Show the warning below |
+| "Updating..." / files changed | "Pulled latest engine updates." |
+| VIP_PATH empty (not found) | "Couldn't find vip. Run `/setup` to configure, or check `~/.config/vip/local.yaml`." |
+| Any error (auth, network) | Show the warning below |
 
 **If pull fails, show this warning immediately:**
 
@@ -135,59 +171,58 @@ git pull origin main 2>&1
 
 ---
 
-## Step 0: Load Config and Find Business Repo
+## Step 0: Detect Business Repo (CWD-First)
 
-### Config Reading Flow
+The user starts Claude in their business repo. Check CWD first before falling back to config.
+
+### CWD Detection (Primary — Fast Path)
+
+```
+1. Check CWD for business repo fingerprint:
+   test -d "reference/core"
+   ├── YES → This IS the business repo. Use CWD. Skip to config loading.
+   └── NO → Continue to step 2.
+
+2. Check CWD for vip fingerprint (old workflow):
+   test -f ".claude/skills/start/SKILL.md"
+   ├── YES → User is in vip (old workflow). Trigger migration guidance.
+   └── NO → Continue to step 3.
+
+3. Fall back to config:
+   Read ~/.config/vip/local.yaml → default_repo + recent_repos
+   ├── Found valid repo(s)? → Present options (see below)
+   └── Nothing valid? → Discovery or /setup
+```
+
+**Migration guidance (step 2 — user is in vip):**
+
+> "It looks like you're running Claude inside the vip engine folder. The recommended workflow is now to run Claude from your business repo instead.
+>
+> 1. **Quick switch:** Close this session, `cd [their-repo-path]` then `claude` then `/start`
+> 2. **Need setup help?** `/setup` will configure everything
+> 3. **Continue here anyway** (some features may need manual paths)"
+>
+> If `~/.config/vip/local.yaml` has `default_repo`, show that path in option 1.
+
+### Config Loading
+
+Once business repo is identified (from CWD or config), load settings:
 
 ```
 1. Read ~/.config/vip/local.yaml
-   ├── Found? → Get default_repo + recent_repos + user identity
-   │            Validate ALL paths (see Path Validation below)
-   │            ├── All valid? → Present valid options
-   │            ├── Some invalid? → Attempt recovery, prune dead paths
-   │            └── All invalid? → Clear config, fall to discovery
-   └── Missing? → Fall to discovery
+   ├── Found? → Get vip_path + default_repo + recent_repos + user identity
+   └── Missing? → Acceptable if CWD is the repo; config gets created by /setup
 
-2. If repo found, read [repo]/.vip/config.yaml
+2. Read [repo]/.vip/config.yaml
    ├── Found? → Get team settings, MCP requirements
    └── Missing? → Use defaults, offer to create later
 ```
 
-### Path Validation (Before Presenting Options)
+### Multi-Repo Selection (When CWD Is NOT a Business Repo)
+
+If CWD detection fails (step 3 above), present options from config:
 
 **Validate EVERY path in config before showing it to the user.** Never present a dead path as an option. For each path in `default_repo` and `recent_repos`, check `test -d "[path]/reference/core"`. If invalid, attempt recovery (check sibling folders for a renamed repo) and auto-prune dead entries. See [config-system.md](references/config-system.md) for the full recovery algorithm.
-
-### CRITICAL: Always Offer Switch Option
-
-**Even with valid config, ALWAYS list ALL validated repos from `recent_repos` as numbered options** (see top-level "Always Ask Which Repo" section for templates). Never show just the default — users switch repos and shouldn't have to type paths.
-
-**Why:** Users may have multiple business repos. The saved default is a convenience, not a lock-in. Skipping this question traps users in one repo.
-
-**Only skip the question if:** User explicitly said `/start [repo-name]` with a specific repo.
-
-**Shortcut:** If user says `/start [repo-name]` or mentions a specific repo, validate that path directly with Read. If valid, confirm with user and proceed.
-
-**Config path (fast):** Check `~/.config/vip/local.yaml` for `default_repo` and `user.*`. See [config-system.md](references/config-system.md).
-
-**Why fallback glob can fail:** If additional working directories are present, they may point at subdirectories (like `decisions/` or `research/`), not the parent repo. When using this fallback, walk up to find `reference/core/`.
-
-**Discovery algorithm (when no config):** Use fallbacks in order. Additional working directories are optional.
-
-1. **If additional working directories exist, extract parent paths**
-   - Look at env info for "Additional working directories"
-   - For each path, walk up to find a folder containing `reference/core/`
-   - Example: if `main-branch/decisions` is listed, check `main-branch/reference/core/`
-
-2. **Use bash to find repos** (if step 1 fails)
-   ```bash
-   find ~/Documents/GitHub -maxdepth 3 -type d -name "reference" -exec test -d "{}/core" \; -print 2>/dev/null
-   ```
-
-3. **Ask the user** (if nothing found)
-
-**Verify with Read, not Glob:** Once you have a candidate path, use `Read` on `[path]/reference/core/soul.md` to confirm it's a business repo. (Don't check `core/offer.md` — in multi-offer repos, the primary offer details live in `offers/[name]/offer.md` instead. `soul.md` is always in `core/`.)
-
-**Skip vip** — any path containing `.claude/skills/` is the engine, not a business repo.
 
 **ALWAYS present numbered options** — even with ONE repo found:
 
@@ -204,15 +239,33 @@ git pull origin main 2>&1
 
 **NONE found:** Ask user for path, or route to `/setup`.
 
-### After User Selects Repo
+**Discovery algorithm (when no config):** Use fallbacks in order:
 
-**Offer to save to config:**
+1. **Scan additionalDirectories** for paths containing `reference/core/`
+2. **Use bash to find repos** (if step 1 fails)
+   ```bash
+   find ~/Documents/GitHub -maxdepth 3 -type d -name "reference" -exec test -d "{}/core" \; -print 2>/dev/null
+   ```
+3. **Ask the user** (if nothing found)
+
+**Verify with Read, not Glob:** Use `Read` on `[path]/reference/core/soul.md` to confirm it's a business repo. `soul.md` is always in `core/` (even multi-offer repos).
+
+**Skip vip** — any path containing `.claude/skills/start/SKILL.md` is the engine, not a business repo.
+
+### When CWD IS the Business Repo (Happy Path)
+
+No repo selection needed. Confirm briefly and move on:
+
+> "Working in **[repo-name]**."
+
+If `~/.config/vip/local.yaml` doesn't have this repo saved, offer to save:
 
 > "Want me to save [repo-name] as your default? (faster startup next time)"
 
 If yes, update `~/.config/vip/local.yaml`:
 
 ```yaml
+vip_path: /path/to/vip
 default_repo: /full/path/to/repo
 recent_repos:
   - /full/path/to/repo
@@ -223,14 +276,32 @@ user:
 
 **If user.name or user.experience missing:** Ask once, save for future sessions.
 
+### Verify vip Is Loaded
+
+After detecting the business repo, confirm vip is accessible as an additional directory:
+
+```bash
+# Check if vip skills are discoverable
+test -f ".claude/settings.local.json" && python3 -c "
+import json, os
+with open('.claude/settings.local.json') as f:
+    dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
+for d in dirs:
+    if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
+        print('VIP_LOADED'); break
+" 2>/dev/null
+```
+
+**If vip not loaded:** Skills won't be available. Offer to run `/setup` to configure `additionalDirectories`.
+
 ---
 
 ## Step 0.5: Pull Business Repo Updates
 
-Once business repo is confirmed, pull its latest updates:
+Once business repo is confirmed, pull its latest updates. Since CWD IS the business repo, just pull directly:
 
 ```bash
-cd [repo-path] && git pull origin main 2>&1
+git pull origin main 2>&1
 ```
 
 **Handle the result:**
@@ -418,8 +489,8 @@ If user already stated intent, route directly without asking.
 
 "Help" or confused → route to `/help`. Give quick overview first:
 
-> "1. **vip** = engine (skills). 2. **Your repo** = data (offer, audience, voice).
-> Daily: `cd vip && claude` then `/start`.
+> "1. **vip** = engine (skills, loaded automatically). 2. **Your repo** = data (offer, audience, voice).
+> Daily: `cd your-business-repo && claude` then `/start`.
 > For detailed help: `/help` + your question."
 
 ---

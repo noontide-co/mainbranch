@@ -95,45 +95,49 @@ https://github.com/mainbranch-ai/vip
 
 Choose where to save it (remember the location!). Click **Clone**.
 
-### Step 2: Open Terminal in the vip Folder
+### Step 2: First Session (Run From vip)
+
+Open a terminal in the **vip** folder you just cloned:
 
 **Mac:**
 ```bash
-cd ~/path/to/vip
+cd ~/Documents/GitHub/vip
 ```
 
 **Windows (Git Bash):**
 ```bash
-cd /c/Users/YourName/path/to/vip
+cd /c/Users/YourName/Documents/GitHub/vip
 ```
 
-### Step 3: Run Claude Code
-
-In your terminal, type:
+Run Claude and type `/setup`:
 ```bash
 claude
 ```
 
-The first time, you will authenticate with your Anthropic account.
+`/setup` creates your business repo and configures everything. The first time, you will also authenticate with your Anthropic account.
 
-### Step 4: Start Setup
+### Step 3: Complete /setup (Share Business Context)
 
-Once Claude is running, type:
-```
-/start
-```
-
-This walks you through everything. Just answer the questions.
-
-### Step 5: Tell Claude About Your Business
-
-Claude will ask you to share:
+During `/setup`, Claude will ask you to share:
 - Your offer (what you sell)
 - Your audience (who buys)
 - Your voice (how you sound)
 - Testimonials (proof it works)
 
 You can paste text, share URLs, or upload files. Claude organizes it all for you.
+
+### Step 4: Daily Workflow (After Setup)
+
+After setup, work from your **business repo** (not vip):
+```bash
+cd ~/Documents/GitHub/[your-business]
+claude
+/start
+```
+
+### Step 5: Start Generating
+
+Use `/start` to route to the right workflow (`/think`, `/ads`, `/organic`, etc.).
 
 That is it. You are ready to generate.
 
@@ -247,8 +251,8 @@ Post in the Main Branch group. Tag @Devon for technical questions.
 
 **Common issues:**
 - "404 error" or "Repository not found" — You need access first. Share your GitHub username with Devon.
-- "Claude does not see my files" — Make sure you started Claude in the vip folder and ran `/start`
-- "Skills are not working" — Make sure you ran `claude` from inside the vip folder, then run `/start`
+- "Claude does not see my files" — Make sure you started Claude in your business repo folder and ran `/start`
+- "Skills are not working" — Check that `.claude/settings.local.json` exists in your business repo with vip in `additionalDirectories`. Run `/setup` to fix.
 - "Output sounds generic" — Add more detail to your reference files, especially voice.md
 - "I edited vip but can't push" — That's expected. vip is read-only. Your business data goes in YOUR repo.
 

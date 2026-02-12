@@ -34,33 +34,34 @@ irm https://claude.ai/install.ps1 | iex
 
 In GitHub Desktop: **File → Clone Repository → GitHub.com tab → select `mainbranch-ai/vip`**
 
-### 4. Open Terminal in vip Folder
+### 4. First Session (One-Time Setup)
+
+Open Terminal in the **vip** folder and run Claude:
 
 **Mac:** Open Terminal, type `cd `, drag the vip folder from Finder into Terminal, press Enter.
 
 **Windows:** Right-click inside the vip folder → "Open in Terminal"
 
-### 5. Start Claude
-
 ```bash
 claude
 ```
 
-Then type `/start` and follow the prompts.
+Then type `/setup`. It will:
+- Create your business repo
+- Configure vip as the skill source
+- Walk you through adding your business context
 
----
+### 5. Daily Workflow (After Setup)
 
-## Daily Workflow (After Setup)
-
-Every time you use Main Branch:
+After the first session, you work from your **business repo** (not vip):
 
 ```bash
-cd ~/Documents/GitHub/vip
+cd ~/Documents/GitHub/[your-business]
 claude
 /start
 ```
 
-`/start` loads your business repo and routes you to the right skill.
+`/start` detects your business repo and routes you to the right skill. vip skills load automatically.
 
 When you're done for the day:
 

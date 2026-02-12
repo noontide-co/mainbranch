@@ -15,7 +15,9 @@ Create ads, generate creative variations, review for compliance, and check ad ac
 
 **NEVER search the filesystem. NEVER use Explore or Task agents to find repos. NEVER scan ~/Documents/GitHub/.**
 
-Do this instead — one step:
+**CWD-first:** If `reference/core/` exists in CWD, you're already in the business repo — use it.
+
+If CWD is NOT a business repo:
 
 ```bash
 cat ~/.config/vip/local.yaml 2>/dev/null

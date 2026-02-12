@@ -104,6 +104,9 @@ cat > .gitignore << 'EOF'
 .env
 *.env.local
 
+# Machine-local settings (absolute paths, not shared)
+.claude/settings.local.json
+
 # Session state (not shared between machines)
 .vip/local.yaml
 
@@ -115,5 +118,7 @@ cat > .gitignore << 'EOF'
 .idea/
 EOF
 ```
+
+**Why `.claude/settings.local.json` is git-ignored:** Claude Code auto-ignores this file, but we add it explicitly for safety. It contains machine-specific absolute paths to vip (`additionalDirectories`) that differ per computer.
 
 **Why `.vip/local.yaml` is git-ignored:** It stores session state like `current_offer` -- which offer you're working on right now. This is per-machine, per-session. The git-tracked `.vip/config.yaml` holds team/business settings that should be shared.
