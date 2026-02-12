@@ -17,6 +17,26 @@ Get a new user fully configured with Claude Code and their business repo.
 
 ## Workflow
 
+### CRITICAL: Write Boundaries in Sandboxed Environments
+
+Some tools (like Conductor and sandboxed IDEs) may only allow direct file writes inside the current workspace folder. If you see:
+
+> "Cannot edit files outside allowed directories"
+
+In a regular terminal Claude session, this is less common because Claude can often request permission and continue. In sandboxed tools, these limits are stricter.
+
+Do **not** silently switch strategies. Ask the user first, in beginner language:
+
+> "This app is only letting me edit files in this one folder right now.
+>
+> I can do one of two things:
+> 1. Switch to the target repo workspace (cleanest)
+> 2. Stay here and use terminal commands to write files there
+>
+> Option 1 is easier to review. Which do you want?"
+
+If they choose option 2, proceed. If not, stop and wait.
+
 ### Pull Latest Engine Updates (Always)
 
 **Before anything else, ensure vip is up to date:**
@@ -103,19 +123,15 @@ User started Claude in their business repo. Confirm and configure vip:
    }
    ```
 
-   Save to `~/.config/vip/local.yaml`:
-   ```bash
-   mkdir -p ~/.config/vip
-   ```
-   ```yaml
-   vip_path: /absolute/path/to/vip
-   default_repo: /absolute/path/to/this-repo
-   recent_repos:
-     - /absolute/path/to/this-repo
-   user:
-     name: "[User's name]"
-     experience: beginner
-   ```
+   Update `~/.config/vip/local.yaml` with a **merge** (never overwrite):
+   - Read existing file first (if present)
+   - Preserve unknown keys
+   - Set/update `vip_path`
+   - Add this repo to `recent_repos` (prepend + dedupe)
+   - Keep `user.*` if present; ask only when missing
+   - If `default_repo` is already set to a different repo, ask before changing it
+
+   **Never use:** `cat > ~/.config/vip/local.yaml`
 
    > "Configured. vip skills will load automatically in future sessions."
 
@@ -143,7 +159,8 @@ User started Claude in the engine folder. Guide them to the new workflow:
    > ```
    > Want me to configure vip as an additional directory there first?"
 
-   If yes, write `.claude/settings.local.json` in the business repo (using Bash since it's outside CWD).
+   If yes, write `.claude/settings.local.json` in the business repo.
+   If direct write is blocked by sandbox boundaries, use the write-boundary decision flow above (ask first, then use terminal commands only if user agrees).
 
 3. **If NO repo exists:** Create one:
    > "Let me create your business repo first."
@@ -162,16 +179,13 @@ User started Claude in the engine folder. Guide them to the new workflow:
         }
       }
       ```
-   d. Save to `~/.config/vip/local.yaml`:
-      ```yaml
-      vip_path: /absolute/path/to/vip
-      default_repo: /absolute/path/to/new-repo
-      recent_repos:
-        - /absolute/path/to/new-repo
-      user:
-        name: "[User's name]"
-        experience: beginner
-      ```
+   d. Update `~/.config/vip/local.yaml` with a **merge** (never overwrite):
+      - Read existing file first
+      - Preserve existing/unknown keys
+      - Set/update `vip_path`
+      - Add new repo to `recent_repos` (prepend + dedupe)
+      - Keep `user.*` if present; ask only when missing
+      - Ask before changing `default_repo` if one already exists
    e. **Set the business repo as the target for all file writes:**
       From this point forward, write all files to `~/Documents/GitHub/[business-name]/` NOT to the current directory.
    f. Confirm:

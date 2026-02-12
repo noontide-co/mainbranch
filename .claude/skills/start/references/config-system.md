@@ -198,6 +198,23 @@ If yes → Create `.vip/config.yaml` with defaults from `/setup`.
 
 **Rule:** Never write silently. Confirm changes that affect future sessions.
 
+### Safe Write Pattern (CRITICAL)
+
+When updating `~/.config/vip/local.yaml`:
+
+1. Read the existing file first
+2. Merge changes into existing keys (do not replace whole file)
+3. Preserve unknown keys for forward compatibility
+4. Ask before changing `default_repo` if one already exists
+5. Write the merged result
+
+**Never use full-file overwrite commands like:**
+```bash
+cat > ~/.config/vip/local.yaml
+```
+
+That pattern can silently delete fields (like `user.*`, `vip_path`, or future keys).
+
 ---
 
 ## Fallback Chain

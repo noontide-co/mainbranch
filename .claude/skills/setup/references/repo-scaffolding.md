@@ -2,6 +2,21 @@
 
 Detailed instructions for creating the business repo's configuration files, environment setup, and gitignore.
 
+## Machine-Local Config Safety (`~/.config/vip/local.yaml`)
+
+When updating `local.yaml`, always use **read → merge → write**:
+- Read existing file first
+- Preserve unknown keys
+- Add/refresh only the keys needed (`vip_path`, `recent_repos`, optional `default_repo`, `user.*`)
+- Ask before changing `default_repo` if one already exists
+
+**Never overwrite the whole file with:**
+```bash
+cat > ~/.config/vip/local.yaml
+```
+
+That can silently delete user settings.
+
 ## API Key Environment (Progressive Setup)
 
 Create the env.sh template for optional research tools. This lives outside git repos for security.

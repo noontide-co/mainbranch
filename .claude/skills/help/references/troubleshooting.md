@@ -102,6 +102,24 @@ If you don't have a `.claude/settings.local.json` in your business repo, run `/s
 
 ---
 
+## "Cannot edit files outside allowed directories"
+
+This is common in sandboxed tools (like Conductor workspaces). It means Claude can only edit files inside the current workspace folder.
+
+**What this means in plain English:** Claude is working in one folder "bubble" and can't directly write to files outside that bubble with the normal write tool.
+
+**Important context:** In a regular terminal Claude session (not sandboxed by an IDE/workspace tool), Claude will often prompt for permission and continue. This error is most common in stricter sandboxed environments.
+
+**Fix options:**
+1. **Best:** Start Claude in the repo you want to edit (or switch workspace to that repo)
+2. **Fallback:** Use terminal commands to write files in the target path
+
+**Recommended for beginners:** Use option 1 whenever possible. It's easier to review and less error-prone.
+
+**If you're in Conductor:** open a workspace rooted at the target repo, then re-run `/setup` or `/start`.
+
+---
+
 ## Context Feels "Off" or Claude Forgot Things
 
 Claude's context decays as conversations get longer. The CLAUDE.md instructions fade.
