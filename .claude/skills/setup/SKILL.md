@@ -123,6 +123,27 @@ User started Claude in their business repo. Confirm and configure vip:
    }
    ```
 
+   **Create compatibility symlinks for skill discovery** (without replacing local folders):
+   ```bash
+   VIP_PATH="/absolute/path/to/vip"
+   mkdir -p .claude/skills .claude/lenses .claude/reference
+
+   # Link each vip skill folder only if missing (preserves local custom skills)
+   for d in "$VIP_PATH"/.claude/skills/*; do
+     [ -d "$d" ] || continue
+     n=$(basename "$d")
+     [ -e ".claude/skills/$n" ] || ln -s "$d" ".claude/skills/$n"
+   done
+
+   # Bridge lenses/reference similarly without overwriting local files
+   for p in "$VIP_PATH"/.claude/lenses/* "$VIP_PATH"/.claude/reference/*; do
+     [ -e "$p" ] || continue
+     base=$(basename "$p")
+     parent=$(basename "$(dirname "$p")")
+     [ -e ".claude/$parent/$base" ] || ln -s "$p" ".claude/$parent/$base"
+   done
+   ```
+
    Update `~/.config/vip/local.yaml` with a **merge** (never overwrite):
    - Read existing file first (if present)
    - Preserve unknown keys
@@ -135,7 +156,12 @@ User started Claude in their business repo. Confirm and configure vip:
 
    > "Configured. vip skills will load automatically in future sessions."
 
-3. **If vip loaded:** Confirm and continue.
+3. **If vip loaded:** Check compatibility symlinks exist (without clobbering local files):
+   ```bash
+   # At minimum, /start must be discoverable
+   test -e ".claude/skills/start" && echo "START_BRIDGE_OK"
+   ```
+   If missing, recreate missing links using the loop above. Never replace the entire `.claude/skills` directory.
 
 ---
 
@@ -159,7 +185,24 @@ User started Claude in the engine folder. Guide them to the new workflow:
    > ```
    > Want me to configure vip as an additional directory there first?"
 
-   If yes, write `.claude/settings.local.json` in the business repo.
+   If yes, write `.claude/settings.local.json` in the business repo AND create compatibility links:
+   ```bash
+   VIP_PATH="/absolute/path/to/vip"
+   REPO_PATH="[repo-path]"
+   mkdir -p "$REPO_PATH"/.claude/skills "$REPO_PATH"/.claude/lenses "$REPO_PATH"/.claude/reference
+   # settings.local.json (write via tool or bash)
+   for d in "$VIP_PATH"/.claude/skills/*; do
+     [ -d "$d" ] || continue
+     n=$(basename "$d")
+     [ -e "$REPO_PATH/.claude/skills/$n" ] || ln -s "$d" "$REPO_PATH/.claude/skills/$n"
+   done
+   for p in "$VIP_PATH"/.claude/lenses/* "$VIP_PATH"/.claude/reference/*; do
+     [ -e "$p" ] || continue
+     base=$(basename "$p")
+     parent=$(basename "$(dirname "$p")")
+     [ -e "$REPO_PATH/.claude/$parent/$base" ] || ln -s "$p" "$REPO_PATH/.claude/$parent/$base"
+   done
+   ```
    If direct write is blocked by sandbox boundaries, use the write-boundary decision flow above (ask first, then use terminal commands only if user agrees).
 
 3. **If NO repo exists:** Create one:
@@ -171,13 +214,35 @@ User started Claude in the engine folder. Guide them to the new workflow:
       mkdir -p ~/Documents/GitHub/[business-name]
       cd ~/Documents/GitHub/[business-name] && git init
       ```
-   c. Create `.claude/settings.local.json` in the NEW repo:
+   c. Create `.claude/settings.local.json` AND compatibility links in the NEW repo:
+      ```bash
+      VIP_PATH="/absolute/path/to/vip"
+      mkdir -p ~/Documents/GitHub/[business-name]/.claude/skills \
+               ~/Documents/GitHub/[business-name]/.claude/lenses \
+               ~/Documents/GitHub/[business-name]/.claude/reference
+      ```
+      Write `settings.local.json`:
       ```json
       {
         "permissions": {
           "additionalDirectories": ["/absolute/path/to/vip"]
         }
       }
+      ```
+      Create compatibility links without replacing local directories:
+      ```bash
+      REPO_PATH=~/Documents/GitHub/[business-name]
+      for d in "$VIP_PATH"/.claude/skills/*; do
+        [ -d "$d" ] || continue
+        n=$(basename "$d")
+        [ -e "$REPO_PATH/.claude/skills/$n" ] || ln -s "$d" "$REPO_PATH/.claude/skills/$n"
+      done
+      for p in "$VIP_PATH"/.claude/lenses/* "$VIP_PATH"/.claude/reference/*; do
+        [ -e "$p" ] || continue
+        base=$(basename "$p")
+        parent=$(basename "$(dirname "$p")")
+        [ -e "$REPO_PATH/.claude/$parent/$base" ] || ln -s "$p" "$REPO_PATH/.claude/$parent/$base"
+      done
       ```
    d. Update `~/.config/vip/local.yaml` with a **merge** (never overwrite):
       - Read existing file first

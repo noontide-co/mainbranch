@@ -276,23 +276,49 @@ user:
 
 **If user.name or user.experience missing:** Ask once, save for future sessions.
 
-### Verify vip Is Loaded
+### Verify vip Is Loaded (Config + Compatibility Links)
 
-After detecting the business repo, confirm vip is accessible as an additional directory:
+After detecting the business repo, confirm vip is accessible and `/start` bridge exists:
 
 ```bash
-# Check if vip skills are discoverable
-test -f ".claude/settings.local.json" && python3 -c "
+# 1. Check additionalDirectories config
+VIP_PATH=$(test -f ".claude/settings.local.json" && python3 -c "
 import json, os
 with open('.claude/settings.local.json') as f:
     dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
 for d in dirs:
     if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
-        print('VIP_LOADED'); break
-" 2>/dev/null
+        print(d); break
+" 2>/dev/null)
+
+# 2. Check /start bridge exists in local .claude/skills
+test -e ".claude/skills/start" && echo "START_BRIDGE_OK"
 ```
 
-**If vip not loaded:** Skills won't be available. Offer to run `/setup` to configure `additionalDirectories`.
+**If `additionalDirectories` missing:** Run `/setup` to configure.
+
+**If bridge links missing** (but `additionalDirectories` exists): Repair without replacing local folders:
+```bash
+mkdir -p .claude/skills .claude/lenses .claude/reference
+
+for d in "$VIP_PATH"/.claude/skills/*; do
+  [ -d "$d" ] || continue
+  n=$(basename "$d")
+  [ -e ".claude/skills/$n" ] || ln -s "$d" ".claude/skills/$n"
+done
+
+for p in "$VIP_PATH"/.claude/lenses/* "$VIP_PATH"/.claude/reference/*; do
+  [ -e "$p" ] || continue
+  base=$(basename "$p")
+  parent=$(basename "$(dirname "$p")")
+  [ -e ".claude/$parent/$base" ] || ln -s "$p" ".claude/$parent/$base"
+done
+```
+Tell the user: "Repaired missing vip bridge links. Local custom skills are preserved."
+
+**Why both are needed:**
+- `additionalDirectories` = file access (read reference files, compliance docs)
+- Bridge links = compatibility fallback for skill discovery in environments where settings-based discovery is inconsistent
 
 ---
 

@@ -75,18 +75,50 @@ Same as the 404 error above. You need access first.
 
 ## Skills Not Working
 
-If slash commands like `/start` or `/ads` aren't recognized:
+If slash commands like `/start` or `/ads` aren't showing in the dropdown:
 
-**Check 1: Is vip loaded as an additional directory?**
+**Check 1: Does the local bridge exist?**
+```bash
+test -e .claude/skills/start && echo "START_BRIDGE_OK"
+```
+
+If missing, add compatibility links (without replacing local folders):
+```bash
+# Get vip path from settings
+VIP_PATH=$(python3 -c "
+import json, os
+with open('.claude/settings.local.json') as f:
+    dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
+for d in dirs:
+    if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
+        print(d); break
+")
+
+# Create bridge links only for missing entries
+mkdir -p .claude/skills .claude/lenses .claude/reference
+for d in "$VIP_PATH"/.claude/skills/*; do
+  [ -d "$d" ] || continue
+  n=$(basename "$d")
+  [ -e ".claude/skills/$n" ] || ln -s "$d" ".claude/skills/$n"
+done
+for p in "$VIP_PATH"/.claude/lenses/* "$VIP_PATH"/.claude/reference/*; do
+  [ -e "$p" ] || continue
+  base=$(basename "$p")
+  parent=$(basename "$(dirname "$p")")
+  [ -e ".claude/$parent/$base" ] || ln -s "$p" ".claude/$parent/$base"
+done
+```
+
+**Why this bridge?** It preserves project-local custom skills in `.claude/skills/` while adding missing vip entries when discovery is inconsistent.
+
+**Check 2: Is vip loaded as an additional directory?**
 ```bash
 cat .claude/settings.local.json
 ```
 
-You should see vip listed under `permissions.additionalDirectories`. If not, vip skills won't be available.
+You should see vip listed under `permissions.additionalDirectories`. If not, run `/setup`.
 
-**Check 2: Did you start in your business repo?**
-
-You should start Claude in your business repo folder. The vip engine is loaded automatically via `.claude/settings.local.json` additionalDirectories.
+**Check 3: Did you start in your business repo?**
 
 ```bash
 cd ~/Documents/GitHub/[your-business]
@@ -94,11 +126,9 @@ claude
 /start
 ```
 
-**Check 3: Does `settings.local.json` exist?**
+**Check 4: None of the above?** Run `/setup` — it creates `settings.local.json` and missing bridge links.
 
-If you don't have a `.claude/settings.local.json` in your business repo, run `/setup` to create one, or manually create it with the path to vip.
-
-**Best practice:** Always start in your business repo, run `/start`. vip is loaded automatically via `settings.local.json`.
+**After fixing:** Close and reopen Claude (`Ctrl+C`, then `claude`) for skill changes to take effect.
 
 ---
 

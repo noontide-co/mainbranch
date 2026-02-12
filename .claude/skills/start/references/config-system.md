@@ -33,6 +33,27 @@ Created by `/setup`. Tells Claude Code to load vip as a read-only additional dir
 
 **Auto git-ignored** by Claude Code (like `.claude/settings.local.json` is always local). Contains machine-specific absolute paths — never commit this.
 
+### .claude/ bridge links (compatibility fallback)
+
+`additionalDirectories` is the canonical config for loading vip. In some environments/versions, skill discovery can still be inconsistent. Compatibility links in local `.claude/` provide a fallback without changing user workflow.
+
+```
+business-repo/.claude/
+├── settings.local.json       # real file (auto git-ignored)
+├── skills/                   # real local folder (for project custom skills)
+│   ├── start -> /path/to/vip/.claude/skills/start
+│   ├── ads   -> /path/to/vip/.claude/skills/ads
+│   └── ... (only missing entries linked)
+├── lenses/                   # real local folder; missing vip entries linked
+└── reference/                # real local folder; missing vip entries linked
+```
+
+Created by `/setup` as a compatibility layer. `/start` can auto-repair missing links.
+
+**Both are needed:**
+- `additionalDirectories` = file access (reading reference files across repos)
+- Bridge links = compatibility fallback for skill discovery in affected environments
+
 ---
 
 ## Environment Variables (~/.config/vip/env.sh)
