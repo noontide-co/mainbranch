@@ -75,7 +75,7 @@ Same as the 404 error above. You need access first.
 
 ## Skills Not Working
 
-If slash commands like `/start` or `/ads` aren't showing in the dropdown:
+If skill prompts like `/start` or `/ads` aren't showing in the dropdown:
 
 **Check 1: Does the local bridge exist?**
 ```bash

@@ -516,7 +516,7 @@ If user already stated intent, route directly without asking.
 
 "Help" or confused → route to `/help`. Give quick overview first:
 
-> "1. **vip** = engine (skills, loaded automatically). 2. **Your repo** = data (offer, audience, voice).
+> "1. **vip** = engine (skills + frameworks, linked via setup). 2. **Your repo** = data (offer, audience, voice).
 > Daily: `cd your-business-repo && claude` then `/start`.
 > For detailed help: `/help` + your question."
 
