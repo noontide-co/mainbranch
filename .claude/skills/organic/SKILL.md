@@ -32,8 +32,33 @@ Detect if user is in the right place:
 ## Pull Latest Updates (Always)
 
 ```bash
-# Pull vip updates (checks common locations)
-for d in . ~/Documents/GitHub/vip ~/vip; do [ -d "$d/.claude/skills" ] && git -C "$d" pull origin main 2>/dev/null && break; done || true
+# Canonical vip resolution (settings.local.json first — no extra deps)
+VIP_PATH=$(python3 -c "
+import json, os
+try:
+    with open('.claude/settings.local.json') as f:
+        dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
+    for d in dirs:
+        if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
+            print(d); break
+except: print('')
+" 2>/dev/null)
+
+# Fallback: check ~/.config/vip/local.yaml (needs PyYAML)
+if [ -z "$VIP_PATH" ] || [ ! -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
+  VIP_PATH=$(python3 -c "
+import os
+try:
+    import yaml
+    with open(os.path.expanduser('~/.config/vip/local.yaml')) as f:
+        print(yaml.safe_load(f).get('vip_path', ''))
+except: print('')
+" 2>/dev/null)
+fi
+
+# Pull if found and valid
+[ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/start/SKILL.md" ] && \
+  git -C "$VIP_PATH" pull origin main 2>&1
 ```
 
 If updates pulled: briefly note "Pulled latest vip updates." then continue silently.
@@ -137,7 +162,7 @@ Requires `reference/core/voice.md` (always core), plus resolved `offer.md` and `
 
 **Congruence check:** If `reference/domain/funnel/skool-surfaces.md` exists, read it. Organic content should echo the same positioning and claims visible on the Skool about page and pricing cards. No contradictions between organic and the landing experience.
 
-Resolve the business repo via `~/.config/vip/local.yaml` (default_repo). If missing, check additional working directories as a fallback, then ask the user or run `/setup`.
+**CWD-first:** If `reference/core/` exists in CWD, you're already in the business repo. Otherwise, resolve via `~/.config/vip/local.yaml` (`default_repo`). If missing, ask the user or run `/setup`.
 
 Missing files? See [references/first-time-setup.md](references/first-time-setup.md).
 

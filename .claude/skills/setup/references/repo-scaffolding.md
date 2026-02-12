@@ -2,6 +2,21 @@
 
 Detailed instructions for creating the business repo's configuration files, environment setup, and gitignore.
 
+## Machine-Local Config Safety (`~/.config/vip/local.yaml`)
+
+When updating `local.yaml`, always use **read → merge → write**:
+- Read existing file first
+- Preserve unknown keys
+- Add/refresh only the keys needed (`vip_path`, `recent_repos`, optional `default_repo`, `user.*`)
+- Ask before changing `default_repo` if one already exists
+
+**Never overwrite the whole file with:**
+```bash
+cat > ~/.config/vip/local.yaml
+```
+
+That can silently delete user settings.
+
 ## API Key Environment (Progressive Setup)
 
 Create the env.sh template for optional research tools. This lives outside git repos for security.
@@ -104,6 +119,9 @@ cat > .gitignore << 'EOF'
 .env
 *.env.local
 
+# Machine-local settings (absolute paths, not shared)
+.claude/settings.local.json
+
 # Session state (not shared between machines)
 .vip/local.yaml
 
@@ -115,5 +133,7 @@ cat > .gitignore << 'EOF'
 .idea/
 EOF
 ```
+
+**Why `.claude/settings.local.json` is git-ignored:** Claude Code auto-ignores this file, but we add it explicitly for safety. It contains machine-specific absolute paths to vip (`additionalDirectories`) that differ per computer.
 
 **Why `.vip/local.yaml` is git-ignored:** It stores session state like `current_offer` -- which offer you're working on right now. This is per-machine, per-session. The git-tracked `.vip/config.yaml` holds team/business settings that should be shared.

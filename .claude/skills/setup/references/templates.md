@@ -580,9 +580,9 @@ It uses [vip](https://github.com/mainbranch-ai/vip) as the **engine** — skills
    git clone https://github.com/mainbranch-ai/vip.git
    ```
 
-2. **Start Claude in the vip folder** and run `/start`
+2. **Start Claude in this folder** (your business repo) and run `/start`
 
-3. **Work in this repo** as your primary data directory
+3. **vip loads automatically** via `.claude/settings.local.json` additionalDirectories
 
 ### How It Works
 

@@ -53,11 +53,11 @@ A quick `/end` (user says "just commit and close") can be steps 1-3 and 6. But i
 
 ## Step 1: Find the Business Repo
 
-Read `~/.config/vip/local.yaml` for `default_repo` (primary). If not found, optionally check additional working directories as a fallback for a folder containing `reference/core/`.
+**CWD-first:** If `reference/core/` exists in CWD, you're already in the business repo — use it. Otherwise, read `~/.config/vip/local.yaml` for `default_repo` as fallback.
 
 **If no repo found:** Skip to a simple close. No business repo means no git activity to scan.
 
-**Do not ask the user to pick a repo.** /end is a quick close, not a triage. Use the default. If the user worked in a different repo today, they can say so.
+**Do not ask the user to pick a repo.** /end is a quick close, not a triage. Use CWD or the default. If the user worked in a different repo today, they can say so.
 
 ---
 

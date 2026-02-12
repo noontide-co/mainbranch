@@ -58,7 +58,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 
 | Question | Answer |
 |----------|--------|
-| Start Claude in a folder? | `cd ~/vip && claude` — Claude sees files in that folder |
+| Start Claude in a folder? | `cd ~/Documents/GitHub/[your-business] && claude` — Claude sees files in that folder. vip is loaded automatically via `settings.local.json` additionalDirectories. |
 | When use slash commands? | For structured tasks: `/start`, `/think`, `/ads`, `/vsl` |
 | Drag files in? | Drag from Finder into Terminal, path appears |
 | Voice input? | [Wispr Flow](https://ref.wisprflow.ai/main) (affiliate link) |

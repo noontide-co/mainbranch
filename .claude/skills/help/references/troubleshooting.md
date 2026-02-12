@@ -77,19 +77,46 @@ Same as the 404 error above. You need access first.
 
 If slash commands like `/start` or `/ads` aren't recognized:
 
-**Check 1: Are you in vip?**
+**Check 1: Is vip loaded as an additional directory?**
 ```bash
-pwd
-ls .claude/skills
+cat .claude/settings.local.json
 ```
 
-If not in vip, skills won't be available.
+You should see vip listed under `permissions.additionalDirectories`. If not, vip skills won't be available.
 
-**Check 2: Did you start in vip?**
+**Check 2: Did you start in your business repo?**
 
-If you started in your business repo, close and re-run Claude from the vip folder, then run `/start`.
+You should start Claude in your business repo folder. The vip engine is loaded automatically via `.claude/settings.local.json` additionalDirectories.
 
-**Best practice:** Always start in vip, run `/start`. It resolves your business repo via `~/.config/vip/local.yaml`.
+```bash
+cd ~/Documents/GitHub/[your-business]
+claude
+/start
+```
+
+**Check 3: Does `settings.local.json` exist?**
+
+If you don't have a `.claude/settings.local.json` in your business repo, run `/setup` to create one, or manually create it with the path to vip.
+
+**Best practice:** Always start in your business repo, run `/start`. vip is loaded automatically via `settings.local.json`.
+
+---
+
+## "Cannot edit files outside allowed directories"
+
+This is common in sandboxed tools (like Conductor workspaces). It means Claude can only edit files inside the current workspace folder.
+
+**What this means in plain English:** Claude is working in one folder "bubble" and can't directly write to files outside that bubble with the normal write tool.
+
+**Important context:** In a regular terminal Claude session (not sandboxed by an IDE/workspace tool), Claude will often prompt for permission and continue. This error is most common in stricter sandboxed environments.
+
+**Fix options:**
+1. **Best:** Start Claude in the repo you want to edit (or switch workspace to that repo)
+2. **Fallback:** Use terminal commands to write files in the target path
+
+**Recommended for beginners:** Use option 1 whenever possible. It's easier to review and less error-prone.
+
+**If you're in Conductor:** open a workspace rooted at the target repo, then re-run `/setup` or `/start`.
 
 ---
 
@@ -162,6 +189,7 @@ cat ~/.config/vip/local.yaml
 
 Should show:
 ```yaml
+vip_path: /Users/yourname/Documents/GitHub/vip
 default_repo: /Users/yourname/Documents/GitHub/your-business
 recent_repos:
   - /Users/yourname/Documents/GitHub/your-business
@@ -185,7 +213,7 @@ cat /path/to/your/repo/.vip/config.yaml
 | No `.vip/config.yaml` in repo | Run `/start` — it will offer to create config for faster startups |
 
 **Migration from old system:**
-If you have an old `~/.claude/settings.json` with `business_repo_path`, `/start` will detect it and offer to migrate to the new config system.
+If you have an old `~/.claude/settings.json` with `business_repo_path`, `/start` will detect it and offer to migrate to the new config system. The new architecture uses `.claude/settings.local.json` (in your business repo) to load vip as an additional directory.
 
 ---
 
@@ -218,12 +246,37 @@ rm ~/.config/vip/local.yaml
 
 You shouldn't have any uncommitted changes in vip.
 
-If you do:
+If you do, resolve them using the canonical VIP resolution to find your vip path:
 ```bash
-cd ~/Documents/GitHub/vip
-git status
-git checkout .  # Discards local changes
-git pull origin main
+# Canonical vip resolution (settings.local.json first — no extra deps)
+VIP_PATH=$(python3 -c "
+import json, os
+try:
+    with open('.claude/settings.local.json') as f:
+        dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
+    for d in dirs:
+        if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
+            print(d); break
+except: print('')
+" 2>/dev/null)
+
+# Fallback: check ~/.config/vip/local.yaml (needs PyYAML)
+if [ -z "$VIP_PATH" ] || [ ! -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
+  VIP_PATH=$(python3 -c "
+import os
+try:
+    import yaml
+    with open(os.path.expanduser('~/.config/vip/local.yaml')) as f:
+        print(yaml.safe_load(f).get('vip_path', ''))
+except: print('')
+" 2>/dev/null)
+fi
+
+# Then clean and pull (WARNING: discards any local changes in vip)
+if [ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
+  git -C "$VIP_PATH" checkout .
+  git -C "$VIP_PATH" pull origin main
+fi
 ```
 
-**Note:** vip is read-only. Any changes you made there should move to your business repo.
+**Warning:** `git checkout .` discards all uncommitted changes in vip. This is safe because vip is read-only — you shouldn't have local changes there. If you do, move them to your business repo first.

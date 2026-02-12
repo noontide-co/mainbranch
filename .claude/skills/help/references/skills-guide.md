@@ -10,12 +10,12 @@ Skills are specialized workflows. Each one does something specific. This guide h
 **Use when:** Beginning a session, unsure what to do next, want Claude to figure out your state.
 
 **What it does:**
-- Pulls latest vip updates
-- Loads your business repo automatically
+- Pulls latest vip updates (via canonical VIP resolution)
+- Verifies your business repo and vip are connected
 - Checks your setup completeness
 - Routes you to the right skill
 
-**Daily habit:** Always start sessions with `/start`.
+**Daily habit:** Always start sessions with `/start`. You should already be in your business repo folder (`cd ~/Documents/GitHub/[your-business] && claude`).
 
 ---
 

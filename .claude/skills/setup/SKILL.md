@@ -17,84 +17,199 @@ Get a new user fully configured with Claude Code and their business repo.
 
 ## Workflow
 
-### Pull Latest Updates (Always)
+### CRITICAL: Write Boundaries in Sandboxed Environments
+
+Some tools (especially workspace-isolated apps, like Conductor workspaces) may only allow direct file writes inside the current workspace folder. If you see:
+
+> "Cannot edit files outside allowed directories"
+
+In a regular terminal `claude` session, this is less common because Claude can often request permission and continue. In restricted workspace tools, limits are usually stricter.
+
+Do **not** silently switch strategies. Ask the user first, in beginner language:
+
+> "This app is only letting me edit files in this one workspace folder.
+>
+> Since this is first-time setup, switching workspaces mid-chat can be confusing. The easiest options are:
+> 1. Continue here and I use terminal commands to create/update files in your target repo path
+> 2. Stop here, open Terminal in the target repo folder, run `claude`, then run `/setup` again
+>
+> If you already have a workspace open for that repo, we can use that too. Which option do you want?"
+
+For first-time setup, do not default to "switch workspace now." Prefer option 1 or 2 unless the user already has the target repo workspace ready.
+
+### Pull Latest Engine Updates (Always)
 
 **Before anything else, ensure vip is up to date:**
 
 ```bash
-# Pull vip updates (checks common locations)
-for d in . ~/Documents/GitHub/vip ~/vip; do [ -d "$d/.claude/skills" ] && git -C "$d" pull origin main 2>/dev/null && break; done || true
+# Canonical vip resolution (settings.local.json first — no extra deps)
+VIP_PATH=$(python3 -c "
+import json, os
+try:
+    with open('.claude/settings.local.json') as f:
+        dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
+    for d in dirs:
+        if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
+            print(d); break
+except: print('')
+" 2>/dev/null)
+
+# Fallback: check ~/.config/vip/local.yaml (needs PyYAML)
+if [ -z "$VIP_PATH" ] || [ ! -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
+  VIP_PATH=$(python3 -c "
+import os
+try:
+    import yaml
+    with open(os.path.expanduser('~/.config/vip/local.yaml')) as f:
+        print(yaml.safe_load(f).get('vip_path', ''))
+except: print('')
+" 2>/dev/null)
+fi
+
+# Pull if found and valid
+[ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/start/SKILL.md" ] && \
+  git -C "$VIP_PATH" pull origin main 2>&1
 ```
 
-If updates pulled: briefly note "Pulled latest vip updates." then continue.
+If updates pulled: briefly note "Pulled latest engine updates." then continue.
+If vip not found: note it — will be configured during setup.
 If offline or already current: continue silently.
 
 ---
 
-### Check Location — Create Business Repo if Needed (CRITICAL: DO THIS FIRST)
+### Check Location and Configure vip (CRITICAL: DO THIS FIRST)
 
 **This must happen BEFORE context gathering.** If the conversation compacts later, the essential config is already saved.
 
-**Check if we're in the vip (engine) repository:**
+**Detect where we are:**
 
 ```bash
-# If this succeeds, we're in vip
-ls .claude/skills/setup/SKILL.md 2>/dev/null
+# Check CWD for business repo fingerprint
+test -d "reference/core" && echo "IS_BUSINESS_REPO"
+
+# Check CWD for vip fingerprint
+test -f ".claude/skills/setup/SKILL.md" && echo "IS_VIP"
 ```
 
-**If we're in vip, CREATE the business repo for them:**
+---
 
-> "You're in vip — that's the engine. Let me create your business repo."
+#### Case 1: CWD IS the Business Repo (Happy Path)
 
-1. **Ask for business name:**
-   > "What do you want to call your business folder? (e.g., 'my-agency', 'acme-coaching')"
+User started Claude in their business repo. Confirm and configure vip:
 
-2. **Create the folder and init git:**
+> "You're in your business repo — perfect."
+
+1. **Check if vip is already configured:**
    ```bash
-   mkdir -p ~/Documents/GitHub/[business-name]
-   cd ~/Documents/GitHub/[business-name] && git init
+   test -f ".claude/settings.local.json" && python3 -c "
+   import json, os
+   with open('.claude/settings.local.json') as f:
+       dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
+   for d in dirs:
+       if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
+           print('VIP_LOADED'); break
+   " 2>/dev/null
    ```
 
-3. **IMMEDIATELY save to machine-local settings:**
+2. **If vip NOT loaded:** Ask for vip path and configure:
+   > "Where is your vip folder? (usually `~/Documents/GitHub/vip`)"
 
-   This ensures `/start` can find the business repo in future sessions.
+   Create `.claude/settings.local.json` (auto git-ignored by Claude Code):
+   ```json
+   {
+     "permissions": {
+       "additionalDirectories": ["/absolute/path/to/vip"]
+     }
+   }
+   ```
 
-   Create/update `~/.config/vip/local.yaml`:
+   Update `~/.config/vip/local.yaml` with a **merge** (never overwrite):
+   - Read existing file first (if present)
+   - Preserve unknown keys
+   - Set/update `vip_path`
+   - Add this repo to `recent_repos` (prepend + dedupe)
+   - Keep `user.*` if present; ask only when missing
+   - If `default_repo` is already set to a different repo, ask before changing it
+
+   **Never use:** `cat > ~/.config/vip/local.yaml`
+
+   > "Configured. vip skills will load automatically in future sessions."
+
+3. **If vip loaded:** Confirm and continue.
+
+---
+
+#### Case 2: CWD IS vip (Old Workflow — Migration)
+
+User started Claude in the engine folder. Guide them to the new workflow:
+
+> "You're in vip — that's the engine. The recommended workflow is now to run Claude from your business repo instead. Let me set that up."
+
+1. **Check if business repo exists:**
    ```bash
-   mkdir -p ~/.config/vip
+   cat ~/.config/vip/local.yaml 2>/dev/null
    ```
 
-   ```yaml
-   # ~/.config/vip/local.yaml
-   # Machine AND user specific — NOT git-tracked
-   default_repo: /Users/[username]/Documents/GitHub/[business-name]
-   recent_repos:
-     - /Users/[username]/Documents/GitHub/[business-name]
+2. **If repo exists:** Guide user to switch:
+   > "Found your repo at [path]. Close this session, then:
+   > ```
+   > cd [path]
+   > claude
+   > /start
+   > ```
+   > Want me to configure vip as an additional directory there first?"
 
-   # User identity lives here (allows multi-user on same repo)
-   user:
-     name: "[User's name]"
-     experience: beginner  # beginner | intermediate | advanced
-   ```
+   If yes, write `.claude/settings.local.json` in the business repo.
+   If direct write is blocked by sandbox boundaries, use the write-boundary decision flow above (ask first, then use terminal commands only if user agrees).
 
-   Use the actual expanded path (not ~). Ask user for their name and experience level.
+3. **If NO repo exists:** Create one:
+   > "Let me create your business repo first."
 
-4. **Optional (power users): add as a working directory** if you want manual browsing. Not required for `/start`.
-   ```
-   /add-dir ~/Documents/GitHub/[business-name]
-   ```
+   a. Ask for business name
+   b. Create the folder and init git:
+      ```bash
+      mkdir -p ~/Documents/GitHub/[business-name]
+      cd ~/Documents/GitHub/[business-name] && git init
+      ```
+   c. Create `.claude/settings.local.json` in the NEW repo:
+      ```json
+      {
+        "permissions": {
+          "additionalDirectories": ["/absolute/path/to/vip"]
+        }
+      }
+      ```
+   d. Update `~/.config/vip/local.yaml` with a **merge** (never overwrite):
+      - Read existing file first
+      - Preserve existing/unknown keys
+      - Set/update `vip_path`
+      - Add new repo to `recent_repos` (prepend + dedupe)
+      - Keep `user.*` if present; ask only when missing
+      - Ask before changing `default_repo` if one already exists
+   e. **Set the business repo as the target for all file writes:**
+      From this point forward, write all files to `~/Documents/GitHub/[business-name]/` NOT to the current directory.
+      If direct writes are blocked by workspace limits, use explicit terminal commands with full paths (after user approval via the decision flow above).
+   f. Confirm:
+      > "Created [business-name] and configured vip. Next time:
+      > ```
+      > cd ~/Documents/GitHub/[business-name]
+      > claude
+      > /start
+      > ```"
 
-5. **Set the business repo as the target for all file writes:**
-   From this point forward, write all files to `~/Documents/GitHub/[business-name]/` NOT to the current directory.
+4. **Continue with setup** — proceed to Step 0 (Chrome extension) and beyond.
 
-6. **Confirm the setup is saved:**
-   > "Created [business-name] and saved the path. From now on, just run `/start` in vip and it'll load your business repo automatically.
-   >
-   > **Reminder:** If you ever get confused or the conversation compacts, type `/help` + your question. It has comprehensive answers about how everything works."
+---
 
-7. **Continue with setup** — proceed to Step 0 (Chrome extension) and beyond.
+#### Case 3: CWD is Neither
 
-**If NOT in vip:** You're already in the user's business repo. Check if vip path is configured, continue normally.
+User is in some other directory. Ask what they want:
+
+> "This doesn't look like a business repo or vip. Options:
+>
+> 1. Create a new business repo here
+> 2. Tell me where your existing repo is
+> 3. Start fresh (`/setup` will create everything)"
 
 ---
 
@@ -146,7 +261,7 @@ Don't block setup on this. Continue and mention it at the end.
 
 **IMPORTANT:** If user has a Skool community, choose **Community/Skool** even if they also do coaching, courses, or services outside Skool. The community is the hub — other offerings feed into it.
 
-Read the appropriate rubric from `vip/.claude/reference/domain-rubrics/`.
+Read the appropriate rubric from `.claude/reference/domain-rubrics/ (in vip)`.
 
 ### 2.5: Offer Structure
 
@@ -160,7 +275,7 @@ After business type, determine offer structure:
 - Ask: "What should we call each offer? Short slugs work best (e.g., 'community', 'newsletter', 'done-for-you')"
 - Ask: "How do these relate? Is there a natural progression — like a free tier that feeds into a paid one?" (This builds `product-ladder.md`)
 - Store offer names for Step 4 folder creation
-- Note: The multi-offer rubric lives at `vip/.claude/reference/domain-rubrics/multi-offer.md` — read it if the user has multiple offers
+- Note: The multi-offer rubric lives at `.claude/reference/domain-rubrics/multi-offer.md` (in vip) — read it if the user has multiple offers
 
 **Multi-business check (brief, not interrogating):**
 > "Are any other business repos relevant right now? If you run completely separate brands, they each get their own repo. We're setting up this one."
@@ -343,7 +458,7 @@ Use templates from `references/templates.md`.
 2. "What are your brand colors?" (hex codes or descriptions)
 3. "What photography style fits?" (lifestyle/product/abstract/editorial)
 
-Use answers + audience data to generate a starter `visual-style.md` from the template at `vip/templates/modules/brand-style-template.md`. This file is consumed by `/ads` (image prompts), `/site` (CSS/design tokens), and `/organic` (visual consistency).
+Use answers + audience data to generate a starter `visual-style.md` from the template at `templates/modules/brand-style-template.md` (in vip). This file is consumed by `/ads` (image prompts), `/site` (CSS/design tokens), and `/organic` (visual consistency).
 
 ### 6. Apply Domain Rubric
 
@@ -352,7 +467,7 @@ Based on business type, create domain-specific folders:
 **E-commerce:** `reference/domain/products/`, `reference/domain/fulfillment/`
 **Community:** `reference/domain/classroom/`, `reference/domain/membership/`, `reference/domain/funnel/`, `reference/domain/content-strategy.md`, `reference/domain/funnel/skool-surfaces.md`
 
-See `vip/.claude/reference/domain-rubrics/` for full specifications.
+See `.claude/reference/domain-rubrics/ (in vip)` for full specifications.
 
 ### 7. Draft CLAUDE.md
 
@@ -465,10 +580,11 @@ Once setup is complete, tell the user:
 >
 > **Daily workflow:**
 > ```
-> cd ~/Documents/GitHub/vip
+> cd ~/Documents/GitHub/[business-name]
 > claude
 > /start
 > ```
+> Skills load automatically from vip via `additionalDirectories` — no need to touch the vip folder.
 >
 > **Key skills to try:**
 > - `/think` — Research topics, make decisions, update reference
