@@ -107,6 +107,18 @@ Look at the current state of reference files. What is thin? What section is a pl
 
 **On light days, this becomes the primary source of the crystallize question.** Not the day's activity, but the standing gaps that a good question could fill.
 
+### 7b. Check for Angle and Enemy Emergence
+
+Look at today's research and decisions. Did a new emotional territory, buyer motivation, named enemy, or lifestyle angle emerge that was not codified into `reference/proof/angles/`?
+
+Signs of uncaptured angles:
+- Research file describes a new audience motivation
+- Decision references a positioning territory not in the angle library
+- Voice.md was updated with a new named enemy but no corresponding angle file exists
+- User discussed content that opposes a concept (complexity, screen addiction, etc.) but didn't formalize it
+
+If an angle emerged but wasn't codified, flag it: "You discovered [territory] today but didn't add it to your angle library. Is this a new angle worth claiming?"
+
 ### 8. Draft the Output
 
 One crystallize block:

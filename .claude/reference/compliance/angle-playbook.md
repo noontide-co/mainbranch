@@ -10,6 +10,14 @@ Not every ad needs outcome testimonials. This playbook covers all major persuasi
 
 ---
 
+## Angle Library Philosophy
+
+**Angles are an evolving library, not a locked set.** New angles emerge from research, mining, and think cycles. The library is additive — every session may surface a new angle or refine an existing one. Positioning should evolve as understanding deepens.
+
+When a new emotional territory, audience insight, or competitive position is discovered through /think, it becomes a candidate for a new angle file in `reference/proof/angles/`.
+
+---
+
 ## Angle Categories
 
 ### 1. OUTCOME TESTIMONIALS
@@ -310,11 +318,46 @@ Not every ad needs outcome testimonials. This playbook covers all major persuasi
 
 ---
 
+### 11. ENEMY/CONTRAST
+
+**What it is:** Positioning against a named concept (never a person/company) that the audience already fights
+
+**Compliance burden:** LOW
+- Must target concepts, not competitors by name
+- Cannot make comparative claims without substantiation
+
+**Examples:**
+- "Complexity is killing your business. Here's the antidote."
+- "Stop renting your infrastructure. Own it."
+- "If your content sounds like AI wrote it, it might as well not exist."
+- "Screen addiction is the real productivity killer."
+
+**When to use:**
+- Identity-driven offers (community, lifestyle, sovereignty)
+- When audience already feels the enemy but hasn't named it
+- As primary hook for content pillars (each pillar fights one enemy)
+- Pairs naturally with Mechanism or Community angles
+
+**When to avoid:**
+- Naming the enemy could be misread as attacking a specific competitor
+- Highly regulated categories where contrast could imply superiority claims
+
+**Rules:**
+- Enemy is ALWAYS a concept, never a person or company
+- Name it explicitly — vague enemies ("the system") don't land
+- Enemy must be something the audience already feels, not something you invented
+- The solution is your mechanism, not just "not that"
+- Each content pillar should map to one primary enemy
+
+**Copywriting note:** The most powerful enemies are ones the audience already fights but hasn't articulated. When you name their enemy, you become their ally. This is identity creation through contrast.
+
+---
+
 ## Angle Selection by Offer Type
 
 | Offer Type | Primary Angles | Avoid |
 |------------|----------------|-------|
-| Low-ticket community ($5-50/mo) | Mechanism, Community, Risk Reversal, Social Proof | Outcome testimonials (not worth compliance burden) |
+| Low-ticket community ($5-50/mo) | Mechanism, Community, Risk Reversal, Social Proof, Enemy/Contrast | Outcome testimonials (not worth compliance burden) |
 | Mid-ticket course ($200-1000) | Process testimonials, Mechanism, Authority, Curiosity | Fake scarcity |
 | High-ticket coaching ($2K+) | Outcome testimonials (with data), Authority, Risk Reversal | Vague mechanism |
 | DFY service | Outcome testimonials, Case studies, Authority | Process-only testimonials |
@@ -336,6 +379,7 @@ Not every ad needs outcome testimonials. This playbook covers all major persuasi
 | Curiosity | Low | Low (if delivered) |
 | Pain agitation | HIGH (Personal Attributes) | Low |
 | Urgency/scarcity | Low | HIGH (if fake) |
+| Enemy/contrast | Low | Low (if concept-only) |
 
 ---
 

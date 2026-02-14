@@ -432,7 +432,7 @@ See [decide-phase.md](references/decide-phase.md) for format details.
 
 Apply changes described in `## What Changes` to reference files. Mark decision as codified.
 
-**Codify targets include:** `reference/core/*.md`, `reference/offers/[active]/offer.md`, `reference/offers/[active]/audience.md` (when multi-offer), `reference/proof/angles/*.md`, `reference/proof/testimonials.md`, **`reference/domain/content-strategy.md`** (pillars, hooks library, framework library, metrics), `reference/domain/funnel/skool-surfaces.md` (live Skool copy — update when about page or pricing changes), `reference/domain/product-ladder.md` (when multi-offer, cross-offer decisions).
+**Codify targets include:** `reference/core/*.md`, `reference/core/voice.md` (named enemies section — each content pillar fights a named concept enemy), `reference/offers/[active]/offer.md`, `reference/offers/[active]/audience.md` (when multi-offer), `reference/proof/angles/*.md` (evolving library — new angles add, never replace), `reference/proof/testimonials.md`, **`reference/domain/content-strategy.md`** (pillars, hooks library, framework library, metrics — saves are #1 purchase intent signal), `reference/domain/funnel/skool-surfaces.md` (live Skool copy — update when about page or pricing changes), `reference/domain/product-ladder.md` (when multi-offer, cross-offer decisions).
 
 ---
 
@@ -535,6 +535,10 @@ Use `/think` when the answer requires investigation and the choice needs documen
 The repo is a precision instrument. The think cycle exists to filter — not to cram everything in. Research gets synthesized, decisions get distilled, and only the sharpest insights survive into reference. Curation over collection.
 
 Reference files aren't just documentation. They're how you stay connected to why you do this.
+
+Angles evolve. Each research session may surface a new emotional entry point, a new enemy to name, a new lifestyle aspiration. The angle library in `reference/proof/angles/` is additive — it grows as understanding deepens. Treating angles as locked is an anti-pattern.
+
+When AI makes information infinite, curation is the moat. The think cycle is curation in action — filtering signal from noise, codifying what matters, discarding what doesn't. Every reference file update is a curation decision.
 
 The act of researching, deciding, and codifying forces you to articulate:
 - **Why you do this** — Not the marketing reason. The real reason.

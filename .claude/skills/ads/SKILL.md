@@ -235,6 +235,8 @@ If required files are missing, Step 0 pre-flight catches this and routes appropr
 
 **Skool surface congruence:** If `reference/domain/funnel/skool-surfaces.md` exists, check it before finalizing any batch. Ad copy must not promise anything not visible on the Skool about page or pricing cards. Pricing mentioned in ads must match current tier structure. Language and framing should echo (not contradict) the about page positioning. The about page is the FIXED surface — ads are the VARIABLE surface.
 
+**Angle library note:** Angles are NOT locked. They evolve as understanding deepens. Every `/think` session may surface new angles. The angle library is additive — new angles supplement, never replace. When selecting angles for a batch, mix established angles with any newly codified ones.
+
 ---
 
 ## Mode: Static Ads
@@ -540,6 +542,8 @@ Before saving any batch, verify:
 | **Voice match** | Copy matches `voice.md` tone (if available) |
 | **Compliance** | No banned claims, proper testimonial attribution |
 | **Skool congruence** | Claims match live about page + pricing cards (if `skool-surfaces.md` exists) |
+| **Save-ability** | Would someone save this ad to reference later? Educational, actionable hooks drive purchase intent |
+| **Enemy framing** | Does at least one concept use a named enemy from voice.md? Enemy-driven contrast creates identity alignment |
 
 ---
 

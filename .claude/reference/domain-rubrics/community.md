@@ -275,5 +275,57 @@ When running `/think` to analyze Skool performance:
 
 ---
 
-*Rubric version: 1.2*
-*Last updated: 2026-01-29*
+## Retention Framework: Personality > Features
+
+**Core insight (Hormozi Skool Games Q4 2025):** People stay for personality, not features. Feature-based retention (adding more courses, more calls, more resources) has diminishing returns. Personality-driven retention is unmeasurable but real — communities survive complete offer pivots when the founder shows up authentically.
+
+### The Cult-Building Framework
+
+Four levers for personality-driven retention:
+
+| Lever | What It Means | How to Build |
+|-------|---------------|--------------|
+| **Demonstrate visible control** | Show mastery publicly — live calls, Q&A, real-time problem solving | Classroom recordings, live wins, building in public |
+| **Behavioral instructions that yield outcomes** | Give specific, do-this-then-that instructions | Module deliverables, weekly actions, skills that produce results |
+| **Third-party credibility** | Let others validate you | testimonials.md, authority angles, member wins |
+| **Be like your audience** | Share your own journey, struggles, evolution | soul.md content, story-based organic, building in public |
+
+### Practical Implications for Skills
+
+- `/organic` should create content that demonstrates personality, not just teaches
+- `/ads` should feature the founder's voice and perspective, not generic benefit claims
+- `/vsl` Skool scripts should lead with epiphany bridge (personality) not feature stack
+- `soul.md` is not just internal context — it's the retention engine. Rich soul = strong retention.
+- `voice.md` personality markers directly drive content authenticity, which drives retention
+
+### Measuring Personality-Driven Retention
+
+- **MRR retention** (Skool Dashboard) is the outcome metric
+- **Personality engagement** (comments on founder posts, live call attendance) is the leading indicator
+- **Feature usage** (classroom completion, resource downloads) is a lagging indicator
+
+---
+
+## Curation as Moat
+
+**Core insight:** When AI makes information infinite, curation becomes the value. A community of real people is MORE valuable as everything else becomes AI-generated.
+
+### What this means for community businesses:
+
+1. **The library is not the value.** Anyone can generate a course with AI. The curated selection, the sequence, the "what NOT to learn" is the value.
+2. **Human connection is the moat.** Real conversations, real accountability, real relationships cannot be generated. Community is inherently anti-AI.
+3. **Curation > creation.** The founder's job is not to create more content but to curate the right content, in the right order, for the right people.
+
+### How this maps to reference files:
+
+| Reference File | Curation Implication |
+|---------------|---------------------|
+| `content-strategy.md` | Pillars are curation decisions — what NOT to cover is as important as what to cover |
+| `classroom/modules.md` | Module sequence is curation — the order teaches as much as the content |
+| `offer.md` | Value proposition should emphasize curation, not volume |
+| `funnel/stages.md` | Onboarding should orient members to the curation, not overwhelm with volume |
+
+---
+
+*Rubric version: 1.3*
+*Last updated: 2026-02-14*

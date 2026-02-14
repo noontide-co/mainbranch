@@ -125,3 +125,18 @@ Value = (Dream Outcome × Likelihood of Achievement) / (Time Delay × Effort & S
 ---
 
 *Source: Eugene Schwartz "Breakthrough Advertising," Alex Hormozi "$100M Offers," Sabri Suby "Sell Like Crazy"*
+
+---
+
+## Enemy-Driven Positioning
+
+When the business has declared named enemies (check `reference/core/voice.md` for a Named Enemies section), verify:
+
+| Check | Pass | Fail |
+|-------|------|------|
+| **Enemy is a concept** | "Complexity is the enemy" | "Company X is the enemy" |
+| **Enemy is named explicitly** | "Screen addiction is stealing your life" | "Things are getting out of hand" |
+| **Enemy connects to pillar** | Copy's enemy matches the content pillar's declared enemy | Random enemy unrelated to the topic |
+| **Solution is mechanism** | "Here's how we fight complexity: [specific approach]" | "Just stop being complex" |
+
+**Severity:** P3 when enemies exist but aren't used. P2 when enemies are used but vaguely. Not flagged when no enemies are declared.

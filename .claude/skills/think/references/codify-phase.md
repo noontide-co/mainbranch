@@ -173,6 +173,9 @@ When codifying decisions about content pillars, platform selection, cadence, or 
 | New benchmark established | **Metrics** — update PRP benchmarks or review cadence |
 | Content mix ratio adjusted | **Content Mix** — update ratios based on performance data |
 | Cadence changed | **Weekly Cadence** — update day-by-day plan |
+| Named enemy articulated | **Voice.md (Named Enemies section)** — add enemy concept with pillar mapping |
+| Saves insight discovered | **Metrics** — weight saves as #1 purchase intent signal above shares/comments |
+| New angle or emotional territory found | **proof/angles/** — create new angle file. Angles are additive. Check README.md for consistency |
 
 **How /think cycles update content-strategy.md:**
 
@@ -191,6 +194,35 @@ Mining: Competitor content analysis
 ```
 
 If `content-strategy.md` does not exist and the user is codifying content-related decisions, suggest creating it: "This looks like content strategy work. Want to create `reference/domain/content-strategy.md` to store this?" See `setup/references/templates.md` for the template, and `help/references/content-strategy-help.md` for user-facing FAQ.
+
+---
+
+## Angle Library Updates
+
+When research surfaces a new emotional territory, buyer motivation, or competitive position:
+
+1. Check `reference/proof/angles/` for existing angles
+2. If the new territory is genuinely distinct from existing angles, create a new angle file
+3. Update `reference/proof/angles/README.md` to include the new angle in the library index
+4. Note: angles are ADDITIVE. New angles supplement existing ones. Never delete or replace angles unless a decision explicitly retires one.
+
+**Common angle emergence patterns:**
+- Mining reveals a competitor using an emotional territory you haven't claimed
+- Research discovers a named enemy your audience fights but hasn't articulated
+- Testimonials reveal a motivation you didn't know existed
+- A lifestyle aspiration emerges that doesn't fit existing categories
+
+---
+
+## Named Enemies Updates
+
+When research or decisions identify a named enemy:
+
+1. Check `reference/core/voice.md` for existing Named Enemies section
+2. Add the new enemy with its pillar mapping
+3. Enemies are ALWAYS concepts, never people or companies
+4. Each content pillar should fight one primary enemy
+5. Update `reference/domain/content-strategy.md` pillar descriptions to reference their enemy
 
 ---
 

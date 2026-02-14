@@ -342,6 +342,8 @@ If `reference/domain/content-strategy.md` exists, /organic uses it to improve ou
 - **Platform format:** Default to the format matching the target platform from platform strategy
 - **Content mix:** Track which pillar types have been generated recently to maintain ratio balance
 - **Hooks library:** Pull proven hooks from the hooks library section if populated
+- **Enemy-pillar mapping:** Each pillar fights a named enemy. Content should position against the enemy. Check voice.md for declared enemies.
+- **Saves-first metrics:** Weight save-ability highest when evaluating content concepts. Saveable = educational, actionable, reference-worthy.
 
 If content-strategy.md does not exist, /organic works exactly as before -- from mined concepts or user-provided topics. No warnings, no degradation.
 
@@ -350,6 +352,10 @@ If content-strategy.md does not exist, /organic works exactly as before -- from 
 ## Quality Checklist
 
 **Content:** Hook stops scroll. One idea. Value before ask. Soft CTA.
+
+**Saves optimization:** Is this content saveable? Educational, actionable, reference-worthy content drives saves. Saves are the #1 purchase intent signal — weight them above shares and likes.
+
+**Enemy clarity:** Does this content fight a named enemy? Check voice.md for Named Enemies section. Enemy-driven content creates identity contrast.
 
 **Voice:** Sounds like creator. Matches energy. Uses vocabulary. No AI tells.
 

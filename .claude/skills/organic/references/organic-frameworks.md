@@ -23,6 +23,32 @@ Payoff the hook. Soft CTA.
 
 ---
 
+## Saves-First Content Design
+
+**Why saves matter most:** TikTok Shop meta-analysis (Q4 2025) shows saves are the #1 purchase intent signal — ahead of shares, comments, and likes. People save content they plan to act on. Saveable content = educational, actionable, reference-worthy.
+
+### The Save-Ability Test
+
+Before finalizing any script, ask:
+
+| Question | If yes | If no |
+|----------|--------|-------|
+| Would someone come back to this? | Save-worthy — keep | Rethink the value density |
+| Does this teach a framework or give a step-by-step? | High save signal | Consider adding structure |
+| Could someone screenshot this for later? | Save-worthy | Increase actionable specificity |
+| Is this entertaining but not actionable? | Share-worthy (good for reach, not intent) | Fine for awareness, won't drive saves |
+
+### Metric Hierarchy for Purchase Intent
+
+1. **Saves** — Strongest intent signal. They want to use this.
+2. **Shares** — Social signal. They want others to see this.
+3. **Comments** — Engagement signal. They want to discuss this.
+4. **Likes** — Weakest signal. They acknowledged this.
+
+Design for saves first. Shares follow naturally from strong content.
+
+---
+
 ## Framework 1: Educational
 
 **Structure:** Hook -> Tips/Steps -> Takeaway
@@ -351,6 +377,24 @@ Strong hooks create curiosity or recognition. Use these patterns:
 - "I almost [gave up/quit/failed], then this happened"
 - "Nobody knew this about me until now"
 - "This is the story I never told"
+
+### Enemy-Driven Hooks
+
+Named enemies create identity contrast. Each content pillar should fight a concept (never a person or company). Use the enemy as the hook, then pivot to your position.
+
+**Pattern:** "[Enemy] is [destroying/costing/stealing] [specific thing]. Here's what to do instead."
+
+**Examples by enemy:**
+- **Complexity:** "You don't need 47 tools to run a business. You need 3."
+- **Screen addiction:** "The best business decision I made this year was closing my laptop at 3pm."
+- **Sounding like AI:** "If your content could have been written by ChatGPT, nobody will save it."
+- **Rented infrastructure:** "Your business lives on someone else's server. What happens when they change the rules?"
+
+**Rules:**
+- Enemy is always a concept, never a person or company
+- Name it explicitly — vague enemies ("the system") don't land
+- Each pillar fights one primary enemy
+- Enemy hooks work best with Contrarian and Problem-Solution frameworks
 
 ---
 
