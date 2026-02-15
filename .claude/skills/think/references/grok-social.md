@@ -23,6 +23,8 @@ Real-time social intelligence from X/Twitter using xAI's Grok API.
 
 **The REST API does not support X search. You must use the Python SDK with grok-4.** See [grok-setup.md](grok-setup.md) for the full REST vs SDK explanation and setup instructions.
 
+**DEPRECATED (Feb 2026):** The `SearchParameters` / `x_source()` API (aka "Live Search") has been removed server-side. Using `search_parameters=SearchParameters(sources=[x_source()])` returns `UNIMPLEMENTED: "Live search is deprecated"`. Use the Agent Tools API (`tools=[x_search()]`) instead — see code below.
+
 ---
 
 ## When to Use
@@ -103,15 +105,25 @@ When you pass `x_search()`, the model gets access to:
 | `x_semantic_search` | Semantic/contextual search |
 | `x_thread_fetch` | Fetch full thread from a post |
 
-### Search Parameters
+### x_search() Parameters
 
-The model can use these internally when searching:
+You CAN control these directly when creating the tool:
 
-- **Date filtering:** `from_date`, `to_date` (ISO8601 format: "2026-01-01")
-- **Handle exclusion:** `excluded_handles` (list of handles to skip)
-- **Result limits:** Typically returns 10-20 relevant posts
+```python
+import datetime
+from xai_sdk.tools import x_search
 
-**Note:** You don't control these directly — the model decides based on your prompt. You can influence by being specific: "What have people said about X in the last week, excluding @spamaccount?"
+tool = x_search(
+    from_date=datetime.datetime(2026, 2, 1),      # Optional: start date
+    to_date=datetime.datetime(2026, 2, 15),        # Optional: end date
+    allowed_x_handles=["xai", "elonmusk"],         # Optional: limit to these handles
+    excluded_x_handles=["spambot"],                # Optional: exclude these handles
+    enable_image_understanding=True,                # Optional: analyze images in posts
+    enable_video_understanding=True,                # Optional: analyze videos in posts
+)
+```
+
+**Note:** `allowed_x_handles` and `excluded_x_handles` are mutually exclusive. The model still autonomously decides WHEN to search — you control the scope/filters.
 
 ### Example with Streaming
 
@@ -140,14 +152,39 @@ def research_topic(topic: str):
 
     result = []
     for response, chunk in chat.stream():
-        if chunk.token:
-            result.append(chunk.token)
-            print(chunk.token, end="", flush=True)
+        if chunk.content:
+            result.append(chunk.content)
+            print(chunk.content, end="", flush=True)
 
     return "".join(result)
 
 research_topic("Skool communities")
 ```
+
+### Subagent Prompt Recipe
+
+When spawning a Claude Code subagent for Grok X research, include this exact recipe in the prompt. Subagents cannot reverse-engineer the SDK — they need the code:
+
+```
+GROK X SEARCH RECIPE — use this exact pattern, do not try alternatives:
+
+from xai_sdk import Client
+from xai_sdk.tools import x_search
+from xai_sdk.chat import user
+
+client = Client()
+chat = client.chat.create(model="grok-4", tools=[x_search()])
+chat.append(user("YOUR QUERY HERE"))
+response = chat.sample()
+
+response.content has the full X search results with citations
+
+DO NOT use SearchParameters, x_source(), or the xai_sdk.search module — deprecated.
+DO NOT try the REST API — it does not support X search.
+DO NOT try to reverse-engineer the SDK — use exactly this pattern.
+```
+
+**Why this matters:** The SDK contains two search APIs. The deprecated one (`SearchParameters`/`x_source()`) is more discoverable via introspection. Without this recipe, agents burn all turns trying the wrong API.
 
 ---
 

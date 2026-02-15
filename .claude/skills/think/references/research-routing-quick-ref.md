@@ -9,7 +9,7 @@ Fast lookup table for routing research requests in /think skill.
 | User Says | Route To | Requires | Fallback |
 |-----------|----------|----------|----------|
 | YouTube URL, "transcribe video" | Apify YouTube | `mcp__apify__*` | Ask for manual transcript |
-| "what are people saying", "X sentiment" | Grok X search | `XAI_API_KEY` OR `mcp__xai__*` | WebSearch site:x.com |
+| "what are people saying", "X sentiment" | Grok X search | `XAI_API_KEY` + `xai_sdk` package | WebSearch site:x.com |
 | Quick research, fact-checking | Gemini Flash (Tier 1) | `GOOGLE_API_KEY` | WebSearch + synthesis |
 | "deep dive", "comprehensive research" | Gemini Deep (Tier 2) | `GOOGLE_API_KEY` | Tier 1 or WebSearch |
 | Local file path, "transcribe recording" | whisper-mcp | `mcp__whisper__*` | CLI fallback |
@@ -31,8 +31,8 @@ Fast lookup table for routing research requests in /think skill.
 # Check for Apify (YouTube, Instagram)
 if mcp__apify__* exists: APIFY=true
 
-# Check for Grok (X/Twitter)
-if $XAI_API_KEY set OR mcp__xai__* exists: GROK=true
+# Check for Grok (X/Twitter) — requires Python SDK, not just API key
+if $XAI_API_KEY set AND xai_sdk package installed: GROK=true
 
 # Check for Gemini (deep research)
 if $GOOGLE_API_KEY set: GEMINI=true

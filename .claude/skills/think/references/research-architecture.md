@@ -182,10 +182,12 @@ If !APIFY_AVAILABLE:
 
 **Critical:** The xAI REST API does NOT support X search (the `search` parameter is ignored, returns `num_sources_used: 0`). Live X search requires the Python SDK (`xai_sdk`) which uses gRPC and server-side tool execution. See `grok-social.md` for full details.
 
+**Also deprecated (Feb 2026):** The SDK's `SearchParameters`/`x_source()` approach returns `UNIMPLEMENTED`. Only `tools=[x_search()]` works. When spawning subagents for X research, include the exact code recipe — see [grok-social.md](grok-social.md) subagent recipe section.
+
 **Routing:**
 ```
 If GROK_AVAILABLE (Python SDK with xai_sdk):
-  → Use x_search() tool with grok-3 model
+  → Use x_search() tool with grok-4 model
   → Model autonomously calls x_keyword_search, x_semantic_search, etc.
   → Save to: research/YYYY-MM-DD-topic-x-social.md
 
