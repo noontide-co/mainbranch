@@ -16,7 +16,7 @@ Example: `outputs/organic-scripts/2026-01-19-morning-routine-story.md`
 
 ```markdown
 ---
-type: content-script
+type: output
 format: video
 date: YYYY-MM-DD
 framework: [educational | story | transformation | problem-solution | contrarian]
@@ -91,7 +91,7 @@ Concept: [Brief description of the core idea]
 
 ```markdown
 ---
-type: content-script
+type: output
 format: video
 date: 2026-01-19
 framework: educational
@@ -150,7 +150,7 @@ Save this for your next content day.
 
 ```markdown
 ---
-type: content-script
+type: output
 format: video
 date: 2026-01-19
 framework: story
@@ -224,7 +224,7 @@ What changed for you?
 
 ```markdown
 ---
-type: content-script
+type: output
 format: video
 date: 2026-01-19
 framework: transformation

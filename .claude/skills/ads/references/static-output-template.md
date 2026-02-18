@@ -12,6 +12,14 @@ Use this structure for campaign batch outputs.
 ---
 
 ```markdown
+---
+type: output
+format: static-ad
+date: YYYY-MM-DD
+status: draft
+platform: meta
+---
+
 # Campaign Batch {number} — {Campaign Name}
 
 Generated: {date}

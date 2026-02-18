@@ -278,6 +278,18 @@ Campaign Batch 001
 4. **Write ALL image prompts first** (Part 1)
 5. **Write ALL ad copy second** (Part 2)
 6. **Cold traffic language check:** Every hook must pass the 3-second comprehension test — no insider jargon, no assumed context. Translate community language to customer language. See Joel's cold traffic guidance in [references/one-liner-methodology.md](references/one-liner-methodology.md).
+
+Each batch file should start with:
+```yaml
+---
+type: output
+format: static-ad
+date: YYYY-MM-DD
+status: draft
+platform: meta
+---
+```
+
 7. Save to `outputs/YYYY-MM-DD-static-ads-[offer]-{campaign}/static-ads-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
 8. Tell user: "Copy saved. Running automatic post-generation pipeline..."
 9. Run the **Automatic Post-Generation Pipeline** (see below). This handles git commit, compliance review, and image generation automatically.
@@ -361,10 +373,10 @@ Every variation **MUST** include at least one specific element:
 ```markdown
 ---
 type: output
-subtype: creative-variations
+format: creative-variations
 date: YYYY-MM-DD
 status: draft
-review_status: null
+platform: meta
 ---
 
 # Creative Variations: {Campaign Name}
@@ -426,6 +438,18 @@ Create diverse spoken-word scripts for camera delivery.
 4. **Generate Ads:** 15-30 scripts across all avatars
 5. **Optimize for Spoken:** ~5th grade reading level, contractions, fragments
 6. Ask for campaign name (required)
+
+Each batch file should start with:
+```yaml
+---
+type: output
+format: video-ad-script
+date: YYYY-MM-DD
+status: draft
+platform: meta
+---
+```
+
 7. **Save Output:** `outputs/YYYY-MM-DD-video-ads-[offer]-{campaign}/video-ads-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
 8. Tell user: "Video scripts saved. Running automatic post-generation pipeline..."
 9. Run the **Automatic Post-Generation Pipeline** (see below). This handles git commit and compliance review automatically. (No image generation for video scripts.)

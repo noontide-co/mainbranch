@@ -267,10 +267,10 @@ The file should include:
 ```markdown
 ---
 type: output
-subtype: creative-variations
+format: creative-variations
 date: YYYY-MM-DD
 status: draft
-review_status: null
+platform: meta
 ---
 
 # One-Liners: {Campaign Name}

@@ -226,8 +226,7 @@ your-business/
 │       └── content-strategy.md <- Pillars, platforms, cadence
 ├── research/              <- Your investigations
 ├── decisions/             <- Your choices
-├── content/               <- Content lifecycle
-└── outputs/               <- Generated content
+└── outputs/               <- All generated content (lifecycle via frontmatter status)
 ```
 
 You fill in the reference files. Claude reads them when generating.

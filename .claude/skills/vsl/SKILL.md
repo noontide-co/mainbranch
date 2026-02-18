@@ -165,6 +165,17 @@ Campaign name is REQUIRED. Ask user if not provided. Examples: `skool-about`, `a
 
 ## Output Format
 
+**Output frontmatter:**
+```yaml
+---
+type: output
+format: vsl
+date: YYYY-MM-DD
+status: final
+platform: skool | website
+---
+```
+
 Both frameworks produce scripts with:
 - Header: Target audience, transformation, runtime estimate
 - Sections with timestamps/chapter markers

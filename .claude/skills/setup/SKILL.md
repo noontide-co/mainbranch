@@ -384,7 +384,7 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 # Always create:
 mkdir -p .vip
 mkdir -p reference/core reference/brand reference/proof/angles reference/domain
-mkdir -p research decisions outputs content/drafts content/scheduled content/published
+mkdir -p research decisions outputs
 ```
 
 **Multi-offer only (if user has multiple offers from Step 2.5):**
@@ -434,12 +434,7 @@ Full structure (single-offer):
 ├── decisions/             # Dated choices with rationale
 │   └── YYYY-MM-DD-topic.md
 │
-├── content/               # Content lifecycle
-│   ├── drafts/            # WIP content
-│   ├── scheduled/         # Queued for posting
-│   └── published/         # Archive
-│
-└── outputs/               # Generated assets
+└── outputs/               # All generated content (lifecycle via frontmatter status)
     └── YYYY-MM-DD-batch-name/
 ```
 

@@ -16,7 +16,7 @@ Example: `outputs/organic-scripts/2026-01-19-content-tip-static.md`
 
 ```markdown
 ---
-type: content-script
+type: output
 format: static
 date: YYYY-MM-DD
 length: [short | medium | long]
@@ -100,7 +100,7 @@ End with a soft engagement ask:
 
 ```markdown
 ---
-type: content-script
+type: output
 format: static
 date: 2026-01-19
 length: short
@@ -151,7 +151,7 @@ Minimalist graphic with text reading "Your content isn't boring. Your hooks are.
 
 ```markdown
 ---
-type: content-script
+type: output
 format: static
 date: 2026-01-19
 length: medium
@@ -220,7 +220,7 @@ Creator sitting at a minimal desk workspace, looking relaxed while working on co
 
 ```markdown
 ---
-type: content-script
+type: output
 format: static
 date: 2026-01-19
 length: long
