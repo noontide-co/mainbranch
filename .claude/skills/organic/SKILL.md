@@ -234,6 +234,17 @@ Generate single-post caption from a concept.
 
 **Output path (all script modes):** `outputs/YYYY-MM-DD-organic-[offer]-{campaign}/organic-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
 
+**Output frontmatter:**
+```yaml
+---
+type: output
+format: video | carousel | static
+date: YYYY-MM-DD
+status: draft
+platform: instagram | tiktok
+---
+```
+
 Campaign name is REQUIRED. Ask user if not provided. Examples: `january-hooks`, `transformation-series`, `pain-point-reels`.
 
 ---

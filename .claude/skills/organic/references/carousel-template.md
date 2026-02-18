@@ -16,7 +16,7 @@ Example: `outputs/organic-scripts/2026-01-19-content-mistakes-carousel.md`
 
 ```markdown
 ---
-type: content-script
+type: output
 format: carousel
 date: YYYY-MM-DD
 slides: [number]
@@ -121,7 +121,7 @@ Standard 7-10 slide format:
 
 ```markdown
 ---
-type: content-script
+type: output
 format: carousel
 date: 2026-01-19
 slides: 10
@@ -310,7 +310,7 @@ Save this for your next content audit.
 
 ```markdown
 ---
-type: content-script
+type: output
 format: carousel
 date: 2026-01-19
 slides: 8

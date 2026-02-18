@@ -199,12 +199,7 @@ your-business/
 ├── decisions/                   # DATED — Choices with rationale
 │   └── YYYY-MM-DD-slug.md
 │
-├── content/                     # CONTENT PIPELINE — Draft to published
-│   ├── drafts/                  # Work in progress
-│   ├── scheduled/               # Ready to publish
-│   └── published/               # Archive of published content
-│
-└── outputs/                     # OUTPUT — Generated content
+└── outputs/                     # All generated content — lifecycle via frontmatter status
     └── YYYY-MM-DD-batch-name/
 ```
 
@@ -535,18 +530,19 @@ These are destinations the pipeline drives traffic to, not recurring content ite
 
 The pipeline is designed so the creator **never opens a social app to post**. AI handles adaptation and distribution. The creator's energy stays in thinking and writing -- not scrolling. Audience feedback (metrics, comments, engagement) flows back through /think into content-strategy.md, closing the loop without requiring the creator to be on-platform.
 
-### Content Folder State Machine
+### Output Lifecycle (Frontmatter-Based)
 
-The `content/` folder is the designed lifecycle pipeline for distribution automation. It is scaffolded by `/setup` but not yet written to by skills. Currently, skills write generated assets to `outputs/`. The `content/` pipeline is where content will move through states once distribution automation (e.g., Postiz integration, `/newsletter`) is built.
+All generated content lives in `outputs/`. Lifecycle is tracked via the `status` field in YAML frontmatter, not folder moves:
 
-```
-content/
-├── drafts/       → Work in progress
-├── scheduled/    → Approved, ready to publish (manual or automated move)
-└── published/    → Archive of published content (moved after publish)
-```
+- `status: draft` — Work in progress
+- `status: scheduled` — Approved, ready to publish
+- `status: published` — Live on platform
+- `status: final` — Complete, no publishing lifecycle (VSL scripts, reviewed ad batches)
 
-Today: skills write to `outputs/`. The move from drafts to scheduled to published can be manual or automated (via Postiz or similar infrastructure -- out of scope for engine, documented here as architectural pattern).
+To find all drafts: `grep -rl "^status: draft" outputs/ --include="*.md"`
+To find scheduled content: `grep -rl "^status: scheduled" outputs/ --include="*.md"`
+
+This replaces the previous folder-move lifecycle pattern where files moved between subdirectories.
 
 ### Skill Connections to Content Pipeline
 
@@ -747,7 +743,7 @@ Content strategy links back to the decisions that informed pillar choices, creat
 | Research | `YYYY-MM-DD-slug.md` | `2026-01-10-competitor-analysis.md` |
 | Decisions | `YYYY-MM-DD-slug.md` | `2026-01-11-pricing-strategy.md` |
 | Output batches | `YYYY-MM-DD-batch-name/` | `2026-01-15-january-launch/` |
-| Content drafts | `descriptive.md` | `newsletter-2026-02-03.md` |
+| Output drafts | `YYYY-MM-DD-descriptive.md` | `2026-02-03-newsletter-issue.md` |
 | Typicality data | `typicality.md` | `reference/proof/typicality.md` |
 
 ### Why Dates in Filenames

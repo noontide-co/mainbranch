@@ -84,7 +84,7 @@ Gather these in main and pass as structured text in each agent's prompt:
 | Past triage file names | `ls research/*-start-triage.md 2>/dev/null` | ~5 lines | Agent 3 |
 | Past crystallize file names | `ls research/*-end-of-day-crystallize.md 2>/dev/null` | ~5 lines | Agent 3 |
 | `current_offer` | From `.vip/local.yaml` | 1 line | All 3 agents |
-| Content pipeline listing | `ls content/drafts/ content/scheduled/ 2>/dev/null` | ~10 lines | Agent 2 |
+| Output lifecycle listing | `grep -rl "status: draft\|status: scheduled" outputs/ 2>/dev/null` | ~10 lines | Agent 2 |
 
 **What agents read themselves (in their own context, NOT in main):**
 - soul.md, offer.md, audience.md, voice.md — Agent 1 reads all, Agent 3 reads soul
@@ -203,14 +203,12 @@ and first 10 lines of each.]
 
 [Research files with linked_decisions: []. Include filename and date.]
 
-=== CONTENT PIPELINE STATE ===
+=== OUTPUT LIFECYCLE STATE ===
 
-[Contents of content/drafts/, content/scheduled/, content/published/
-or "No content/ folder" if missing]
-
-=== RECENT OUTPUTS ===
-
-[Most recent 5 items in outputs/]
+[Files in outputs/ grouped by frontmatter status: draft, scheduled, published, final.
+Use: grep -rl "status: draft" outputs/ 2>/dev/null
+or "No outputs with lifecycle status" if none have status field.
+Also list most recent 5 items in outputs/.]
 
 === CONTENT STRATEGY ===
 
@@ -232,15 +230,15 @@ Analyze these dimensions:
    some research is exploratory. But research older than 14 days without a
    decision may be going stale.
 
-3. **Content pipeline state:** Anything in drafts? Scheduled? When was last
-   content published? Is there a gap between reference readiness and content
-   output?
+3. **Output lifecycle state:** Any outputs with status: draft? Scheduled?
+   When was the last output published? Is there a gap between reference
+   readiness and output generation?
 
 4. **Output recency:** When was the last batch generated? What type?
    Long gap between reference updates and output generation = missed opportunity.
 
 5. **Velocity pattern:** What's the ratio of enrichment work (research/,
-   reference/ changes) to output work (outputs/, content/)? All enrichment
+   reference/ changes) to output work (outputs/)? All enrichment
    with no output = stuck in thinking. All output with no enrichment =
    running on stale context.
 
