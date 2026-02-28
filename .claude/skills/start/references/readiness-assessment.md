@@ -82,8 +82,14 @@ If no commits in 7+ days, note the gap -- this feeds into the soul health check 
 ### Open Decisions
 
 ```bash
-# Decisions with status: proposed or accepted (not yet codified)
-grep -rl "status: proposed\|status: accepted" decisions/ 2>/dev/null
+# Decisions with frontmatter status: proposed or accepted (anchored parse)
+for f in [repo-path]/decisions/*.md; do
+  [ -f "$f" ] || continue
+  status=$(awk 'NR==1&&$0=="---"{fm=1;next} fm&&$0=="---"{exit} fm&&/^status:[[:space:]]*/{val=$0; sub(/^status:[[:space:]]*/, "", val); gsub(/[[:space:]]+$/, "", val); print val; exit}' "$f")
+  case "$status" in
+    proposed|accepted) echo "$f" ;;
+  esac
+done 2>/dev/null
 ```
 
 For each found, read the frontmatter to extract the topic. Present as:
@@ -159,12 +165,68 @@ Compare actual .md file count (excluding README.md) against angles README if it 
 ### Check D: Decision Codification Rate (1 call)
 
 ```bash
-grep -rl "What Changes" [repo-path]/decisions/ 2>/dev/null | wc -l
+# Decision truth metrics from anchored frontmatter (strict status enum)
+cutoff=$(date -u -v-14d +%Y-%m-%d 2>/dev/null || date -u -d '14 days ago' +%Y-%m-%d)
+
+codified=0
+accepted=0
+accepted_stale=0
+invalid_or_missing=0
+
+for f in [repo-path]/decisions/*.md; do
+  [ -f "$f" ] || continue
+
+  parsed=$(awk '
+    NR==1 && $0=="---" { fm=1; next }
+    fm && $0=="---" { exit }
+    fm && /^status:[[:space:]]*/ {
+      status=$0
+      sub(/^status:[[:space:]]*/, "", status)
+      gsub(/[[:space:]]+$/, "", status)
+    }
+    fm && /^date:[[:space:]]*/ {
+      dt=$0
+      sub(/^date:[[:space:]]*/, "", dt)
+      gsub(/[[:space:]]+$/, "", dt)
+    }
+    END { print status "\t" dt }
+  ' "$f")
+
+  status=${parsed%%$'\t'*}
+  dt=${parsed#*$'\t'}
+
+  case "$status" in
+    codified)
+      codified=$((codified + 1))
+      ;;
+    accepted)
+      accepted=$((accepted + 1))
+      case "$dt" in
+        ????-??-??)
+          if [ "$dt" \< "$cutoff" ]; then
+            accepted_stale=$((accepted_stale + 1))
+          fi
+          ;;
+      esac
+      ;;
+    proposed)
+      ;;
+    *)
+      invalid_or_missing=$((invalid_or_missing + 1))
+      ;;
+  esac
+done
+
+printf "Decisions: %s codified, %s accepted\n" "$codified" "$accepted"
+[ "$accepted_stale" -gt 0 ] && printf "Accepted stale >14d: %s\n" "$accepted_stale"
+[ "$invalid_or_missing" -gt 0 ] && printf "Decisions with invalid/missing status: %s\n" "$invalid_or_missing"
 ```
 
-Count decisions with "What Changes" section vs total. Pipeline health signal.
+Count decisions from frontmatter `status:` truth, not body-text proxies. Accept only `proposed|accepted|codified` as valid status values.
+Parser behavior should follow `2026-02-28-frontmatter-status-detection-fallback-policy.md`.
 
-**Flag:** `Decisions: X/Y codified` (below file scores)
+**Flag:** `Decisions: X codified, Y accepted` (below file scores)
+**Staleness flag:** `Accepted stale >14d: Z` (below file scores, only when `Z > 0`)
 
 ### Check E: Naming Convention Spot-Check (1 call)
 
@@ -433,13 +495,14 @@ Health flags from Section 3 appear alongside structural scores. File-level flags
 > **Flags:**
 > - soul.md — status: draft (you marked this unfinished)
 > - audience.md — stale (41d since last update)
-> - Decisions: 8/63 codified
+> - Decisions: 8 codified, 55 accepted
+> - Accepted stale >14d: 22
 >
 > Pick option 1 for deeper analysis."
 
 **Advanced — flags on one line:**
 
-> "**18/18** — flags: soul.md draft, audience.md stale (41d), 8/63 decisions codified. Option 1 for details."
+> "**18/18** — flags: soul.md draft, audience.md stale (41d), 8 codified + 55 accepted, 22 accepted stale >14d. Option 1 for details."
 
 **When GOOD/FULL with both gaps AND flags:**
 
@@ -450,7 +513,8 @@ Health flags from Section 3 appear alongside structural scores. File-level flags
 >
 > **Flags:**
 > - offer.md — stale (35d)
-> - Decisions: 3/12 codified
+> - Decisions: 3 codified, 9 accepted
+> - Accepted stale >14d: 4
 >
 > Pick option 1 for deeper analysis."
 
