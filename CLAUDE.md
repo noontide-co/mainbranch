@@ -253,6 +253,8 @@ model: opus-4.5 | sonnet-4  # when relevant
 
 Research files also add: `linked_decisions: []`
 
+Decision lifecycle metrics must use `.claude/scripts/decision_lifecycle_audit.sh` (shared by `/start` and `/end`), not ad-hoc `grep`/`awk` rewrites in skill prose.
+
 ---
 
 ## Skills

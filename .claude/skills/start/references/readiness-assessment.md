@@ -162,71 +162,65 @@ Compare actual .md file count (excluding README.md) against angles README if it 
 
 **Flag:** `! 3 files vs 5 in README` (inline next to angles row)
 
-### Check D: Decision Codification Rate (scripted pass)
+### Check D: Decision Lifecycle Audit (shared script)
 
 ```bash
-# Decision truth metrics from anchored frontmatter (strict status enum)
-cutoff=$(date -u -v-14d +%Y-%m-%d 2>/dev/null || date -u -d '14 days ago' +%Y-%m-%d)
+# Resolve vip script path (settings.local.json first, then ~/.config/vip/local.yaml)
+AUDIT_SCRIPT=$(python3 -c "
+import json, os
+path = '.claude/settings.local.json'
+target = ''
+try:
+    with open(path) as f:
+        dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
+    for d in dirs:
+        candidate = os.path.join(d, '.claude/scripts/decision_lifecycle_audit.sh')
+        if os.path.isfile(candidate):
+            target = candidate
+            break
+except Exception:
+    pass
+print(target)
+" 2>/dev/null)
 
-codified=0
-accepted=0
-accepted_stale=0
-invalid_or_missing=0
+if [ -z "$AUDIT_SCRIPT" ] && [ -f "$HOME/.config/vip/local.yaml" ]; then
+  vip_path=$(awk -F': *' '/^vip_path:/ {print $2; exit}' "$HOME/.config/vip/local.yaml" | tr -d '"')
+  [ -n "$vip_path" ] && AUDIT_SCRIPT="$vip_path/.claude/scripts/decision_lifecycle_audit.sh"
+fi
 
-for f in [repo-path]/decisions/*.md; do
-  [ -f "$f" ] || continue
+if [ -n "$AUDIT_SCRIPT" ] && [ -f "$AUDIT_SCRIPT" ] && bash "$AUDIT_SCRIPT" --repo "[repo-path]" --format text; then
+  : # Shared script output includes machine-friendly summary + human bucket lines
+else
+  echo "Decision lifecycle audit unavailable; falling back to strict frontmatter counts."
+  codified=0
+  accepted=0
+  invalid_or_missing=0
 
-  parsed=$(awk '
-    NR==1 && $0=="---" { fm=1; next }
-    fm && $0=="---" { exit }
-    fm && /^status:[[:space:]]*/ {
-      status=$0
-      sub(/^status:[[:space:]]*/, "", status)
-      gsub(/[[:space:]]+$/, "", status)
-    }
-    fm && /^date:[[:space:]]*/ {
-      dt=$0
-      sub(/^date:[[:space:]]*/, "", dt)
-      gsub(/[[:space:]]+$/, "", dt)
-    }
-    END { print status "\t" dt }
-  ' "$f")
+  for f in [repo-path]/decisions/*.md; do
+    [ -f "$f" ] || continue
+    status=$(awk 'NR==1&&$0=="---"{fm=1;next} fm&&$0=="---"{exit} fm&&/^status:[[:space:]]*/{val=$0; sub(/^status:[[:space:]]*/, "", val); gsub(/[[:space:]]+$/, "", val); print val; exit}' "$f")
+    case "$status" in
+      codified) codified=$((codified + 1)) ;;
+      accepted) accepted=$((accepted + 1)) ;;
+      proposed) ;;
+      *) invalid_or_missing=$((invalid_or_missing + 1)) ;;
+    esac
+  done
 
-  status=${parsed%%$'\t'*}
-  dt=${parsed#*$'\t'}
-
-  case "$status" in
-    codified)
-      codified=$((codified + 1))
-      ;;
-    accepted)
-      accepted=$((accepted + 1))
-      case "$dt" in
-        ????-??-??)
-          if [ "$dt" \< "$cutoff" ]; then
-            accepted_stale=$((accepted_stale + 1))
-          fi
-          ;;
-      esac
-      ;;
-    proposed)
-      ;;
-    *)
-      invalid_or_missing=$((invalid_or_missing + 1))
-      ;;
-  esac
-done
-
-printf "Decisions: %s codified, %s accepted\n" "$codified" "$accepted"
-[ "$accepted_stale" -gt 0 ] && printf "Accepted stale >14d: %s\n" "$accepted_stale"
-[ "$invalid_or_missing" -gt 0 ] && printf "Decisions with invalid/missing status: %s\n" "$invalid_or_missing"
+  printf "Decisions: %s codified, %s accepted\n" "$codified" "$accepted"
+  [ "$invalid_or_missing" -gt 0 ] && printf "Decisions with invalid/missing status: %s\n" "$invalid_or_missing"
+fi
 ```
 
-Count decisions from frontmatter `status:` truth, not body-text proxies. Accept only `proposed|accepted|codified` as valid status values.
-Parser rules: only read between the opening and closing `---` frontmatter delimiters, ignore body `status:` text, and count missing/invalid status values in `invalid_or_missing` instead of guessing.
+Use `.claude/scripts/decision_lifecycle_audit.sh` as the single source of truth for lifecycle classification in both `/start` and `/end`.
+The script parses frontmatter only (between `---` delimiters), ignores body `status:` text, classifies accepted decisions into `needs_review|action_needed|stale_orphaned`, and reports invalid/missing status explicitly.
+Never auto-flip statuses from evidence alone. Status changes remain manual-confirmed.
 
 **Flag:** `Decisions: X codified, Y accepted` (below file scores)
-**Staleness flag:** `Accepted stale >14d: Z` (below file scores, only when `Z > 0`)
+**Flag:** `Needs review: N` (accepted with implementation evidence)
+**Flag:** `Action needed: A` (accepted with no evidence and not stale)
+**Flag:** `Stale/orphaned: S` (accepted, stale threshold crossed, weak/no evidence)
+**Flag:** `Decisions with invalid/missing status: I` (only when `I > 0`)
 
 ### Check E: Naming Convention Spot-Check (1 call)
 
@@ -496,13 +490,15 @@ Health flags from Section 3 appear alongside structural scores. File-level flags
 > - soul.md — status: draft (you marked this unfinished)
 > - audience.md — stale (41d since last update)
 > - Decisions: 8 codified, 55 accepted
-> - Accepted stale >14d: 22
+> - Needs review: 4
+> - Action needed: 2
+> - Stale/orphaned: 1
 >
 > Pick option 1 for deeper analysis."
 
 **Advanced — flags on one line:**
 
-> "**18/18** — flags: soul.md draft, audience.md stale (41d), 8 codified + 55 accepted, 22 accepted stale >14d. Option 1 for details."
+> "**18/18** — flags: soul.md draft, audience.md stale (41d), 8 codified + 55 accepted, 4 need review, 2 action needed, 1 stale/orphaned. Option 1 for details."
 
 **When GOOD/FULL with both gaps AND flags:**
 
@@ -514,7 +510,9 @@ Health flags from Section 3 appear alongside structural scores. File-level flags
 > **Flags:**
 > - offer.md — stale (35d)
 > - Decisions: 3 codified, 9 accepted
-> - Accepted stale >14d: 4
+> - Needs review: 2
+> - Action needed: 1
+> - Stale/orphaned: 1
 >
 > Pick option 1 for deeper analysis."
 
