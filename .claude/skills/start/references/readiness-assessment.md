@@ -162,7 +162,7 @@ Compare actual .md file count (excluding README.md) against angles README if it 
 
 **Flag:** `! 3 files vs 5 in README` (inline next to angles row)
 
-### Check D: Decision Codification Rate (1 call)
+### Check D: Decision Codification Rate (scripted pass)
 
 ```bash
 # Decision truth metrics from anchored frontmatter (strict status enum)
@@ -223,7 +223,7 @@ printf "Decisions: %s codified, %s accepted\n" "$codified" "$accepted"
 ```
 
 Count decisions from frontmatter `status:` truth, not body-text proxies. Accept only `proposed|accepted|codified` as valid status values.
-Parser behavior should follow `2026-02-28-frontmatter-status-detection-fallback-policy.md`.
+Parser rules: only read between the opening and closing `---` frontmatter delimiters, ignore body `status:` text, and count missing/invalid status values in `invalid_or_missing` instead of guessing.
 
 **Flag:** `Decisions: X codified, Y accepted` (below file scores)
 **Staleness flag:** `Accepted stale >14d: Z` (below file scores, only when `Z > 0`)
