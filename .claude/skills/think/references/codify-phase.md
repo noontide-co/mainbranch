@@ -19,8 +19,9 @@ Apply decisions to reference files. Merges research findings and decisions into 
 2. **Identify what changes** — Read the `## What Changes` section (or infer from `## Decision` and `## Consequences` if What Changes is missing). Identify which reference files are affected and what the key changes are.
 3. **Propose edits** — For each affected reference file, read it, then propose the specific update to the user.
 4. **Apply with confirmation** — After user confirms, apply each update. Preserve existing content.
-5. **Mark complete** — Update decision status from `accepted` to `codified`
-6. **Report changes** — Summary of what was updated
+5. **Atomic finalize pass** — In the SAME edit pass as the final reference file update, flip the source decision from `status: accepted` to `status: codified`. This is the most likely dropped step; treat it as part of the final edit unit, never a follow-up.
+6. **Verify read-back** — Re-open the source decision file and confirm frontmatter contains exactly one `status:` field and that it is `codified`.
+7. **Report changes** — Summary of what was updated
 
 ---
 
@@ -41,8 +42,9 @@ Or naturally: "/think apply the pricing decision to reference files"
 3. **Add, don't replace** — New content supplements, doesn't overwrite
 4. **Mark additions** — Use date comments for traceability: `<!-- Added 2026-01-17 -->`
 5. **Confirm before large changes** — If changing >30% of a file, ask first
-6. **Atomic updates** — Complete all or none
+6. **Atomic updates** — Complete all or none. The decision status flip (`accepted` -> `codified`) is part of the same atomic unit as the final reference-file edit.
 7. **Write in enduring language** — Reference files should read like they've always been true, not like reactions to specific events. Core beliefs are timeless truths. If a line references a specific tool, session, bug, or conversation — it belongs in an evolution marker or decision file, not in the reference itself. Test: would someone reading this in 6 months with no context understand it? If not, rewrite until they would.
+8. **One status field only** — Never add `codified: true` or any parallel lifecycle field. Decision lifecycle state must live only in `status:` using `proposed|accepted|codified`.
 
 ---
 
@@ -232,4 +234,5 @@ Codification is complete when:
 
 - All changes described in the decision have been applied to reference files
 - Source decision status changed from `accepted` to `codified`
+- Verification read-back confirms frontmatter has exactly one `status:` field and it is `codified`
 - User confirms the reference file updates capture the decision
