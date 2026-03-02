@@ -149,6 +149,7 @@ Key fields:
 - `session.auto_load_reference` → Load core/ automatically
 - `session.show_context_tips` → Team default for tips
 - `mcps` → Required MCP servers for this business
+- `tools` → Cached tool status (`status`, `notes`, `last_checked`) for self-healing detection in `/start` and `/think`
 - `infrastructure` → Shared team resources (Railway, Postiz, etc.)
 - `skills` → Team defaults for skill behavior
 

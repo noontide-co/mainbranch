@@ -87,7 +87,7 @@ Tool status persists in `.vip/config.yaml` under `tools:`. Read config first, on
 
 ### Staleness Check
 
-If `status: false` and `last_checked` is >30 days ago, re-probe. User may have installed it since then.
+Treat `status: false` as stale when `last_checked` is missing, invalid, or older than 30 days. Re-probe stale false entries.
 
 ### Detection Flow
 
@@ -95,14 +95,13 @@ On first /think invocation each session:
 
 ```
 1. Read .vip/config.yaml → tools section
-2. Build list of tools needing detection:
-   - status: null or missing → detect
-   - status: false AND last_checked >= 30 days → re-detect
-   - status: true OR (false AND recent) → skip
-3. Run detection for unknowns (see methods below)
-4. WRITE config updates immediately (use Edit tool)
+2. Detect unknown tools and re-detect stale false entries
+3. Normalize metadata (`last_checked`) on existing tool entries missing it
+4. WRITE config updates immediately (status + notes + last_checked for touched entries)
 5. Report once (experience-appropriate)
 ```
+
+For full self-healing contract (stale semantics, status-change messaging, and true-tool degradation handling), see [tool-status-self-healing.md](references/tool-status-self-healing.md).
 
 ### Detection Methods
 
@@ -157,17 +156,14 @@ tools:
   gemini:
     status: true              # ← detection result
     notes: "GOOGLE_API_KEY verified"
-    last_checked: 2026-02-03  # ← today's date
-  pipeboard:
-    status: true              # true | false | null
-    method: mcp               # always mcp for Pipeboard
-    tier: free                # free | pro (self-reported)
-    notes: "meta-ads MCP configured via remote URL"
-    last_checked: 2026-02-10
-    weekly_calls_used: 0      # lightweight tracking (Phase 1.5)
+    last_checked: 2026-03-02  # ← today's date
+  whisper:
+    status: true
+    notes: "mlx_whisper verified"
+    last_checked: 2026-03-02
 ```
 
-**Do not skip this step.** Config updates prevent re-probing next session.
+**Do not skip this step.** Config updates prevent re-probing next session. Use the self-healing contract in [tool-status-self-healing.md](references/tool-status-self-healing.md).
 
 ### Reporting by Experience
 

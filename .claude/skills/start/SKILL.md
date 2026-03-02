@@ -352,19 +352,19 @@ fi
 
 ---
 
-## Step 0.75: MCP Pre-Flight (Not Research Tools)
+## Step 0.75: MCP Pre-Flight (Not Full Research Detection)
 
 Check for MCPs required by skills user might invoke. See [mcp-preflight.md](references/mcp-preflight.md).
 
-**Research tool detection happens in /think** — deferred to when user actually needs research. This keeps /start fast and avoids checking tools user might not use this session.
+**Full research tool detection still happens in /think** — deferred to when user actually needs research. This keeps /start fast and avoids checking tools user might not use this session.
 
 **What /start DOES check:**
 - MCPs that skills depend on (Apify for /organic, etc.)
 - Critical blockers (missing config, broken paths)
 
-**What /start DOES NOT check:**
-- Research tools (Gemini, Grok, whisper, etc.) — /think handles these
-- Document tools (markitdown, pandoc, marker) — /think handles these
+**What /start DOES NOT do here:**
+- Full research tool scan (Gemini, Grok, whisper, etc.) — /think handles this
+- Full document tool scan (markitdown, pandoc, marker) — /think handles this
 
 **Why defer:** Most sessions don't use all tools. Checking everything upfront wastes time and clutters the greeting. /think detects tools when user's intent requires them and surfaces setup options at the right moment.
 
@@ -372,9 +372,21 @@ If user's stated intent involves research, route to /think — it will handle to
 
 ---
 
+## Step 0.8: Tool Status Audit (Lightweight Self-Heal)
+
+Run a lightweight `.vip/config.yaml` audit before readiness to repair stale `status: false` entries and normalize missing `last_checked` values.
+
+- Re-probe only stale false entries (missing/invalid/old `last_checked`)
+- Write updates immediately when status or metadata is repaired
+- Notify only when status changes (`false → true` or `true → false`)
+
+See [tool-status-audit.md](references/tool-status-audit.md) for the full procedure and messaging rules.
+
+---
+
 ## Step 0.9: Readiness Assessment
 
-**Run AFTER MCP pre-flight, BEFORE routing.** Scores reference files, checks session state, and gates routing so users don't jump into output skills with thin context.
+**Run AFTER MCP pre-flight and tool-status audit, BEFORE routing.** Scores reference files, checks session state, and gates routing so users don't jump into output skills with thin context.
 
 See [readiness-assessment.md](references/readiness-assessment.md) for complete scoring rubric, session state checks, soul health check, skill-specific requirements, and display format.
 
