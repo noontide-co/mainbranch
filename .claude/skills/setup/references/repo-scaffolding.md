@@ -98,6 +98,50 @@ mcps:
     required_for: [organic, think]  # Handles web scraping AND YouTube transcripts
     setup_guide: ".claude/skills/organic/references/apify-setup.md"
 
+# === TOOL STATUS CACHE (self-healing) ===
+# /start and /think update these over time.
+# Rule: every tool entry keeps status + notes + last_checked.
+tools:
+  apify:
+    status: null
+    notes: "unknown"
+    last_checked: null
+  gemini:
+    status: null
+    notes: "unknown"
+    last_checked: null
+  grok:
+    status: null
+    notes: "unknown"
+    last_checked: null
+  whisper:
+    status: null
+    notes: "unknown"
+    last_checked: null
+  nanobanana:
+    status: null
+    notes: "unknown"
+    last_checked: null
+  markitdown:
+    status: null
+    notes: "unknown"
+    last_checked: null
+  pandoc:
+    status: null
+    notes: "unknown"
+    last_checked: null
+  marker:
+    status: null
+    notes: "unknown"
+    last_checked: null
+  pipeboard:
+    status: null
+    method: mcp
+    tier: null
+    notes: "unknown"
+    last_checked: null
+    weekly_calls_used: 0
+
 # === CONTENT ===
 content:
   default_channels: []

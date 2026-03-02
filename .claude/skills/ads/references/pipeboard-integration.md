@@ -185,7 +185,7 @@ Triggered lazily at /think or /ads when topic is ads-related:
 ```
 1. Read .vip/config.yaml → tools.pipeboard
 2. If status: true → use it, skip detection
-3. If status: false AND last_checked < 30 days → skip
+3. If status: false AND last_checked is valid and <30 days old → skip
 4. If status: null OR missing OR stale false:
    a. Check for mcp__pipeboard__* tools in session
    b. If found: probe with get_ad_accounts (lightweight)
@@ -193,6 +193,8 @@ Triggered lazily at /think or /ads when topic is ads-related:
    d. If not found or probe fails: write status: false to config
 5. Never block on detection failure
 ```
+
+`stale false` means: `status: false` and `last_checked` is missing, invalid, or >=30 days old.
 
 ---
 
