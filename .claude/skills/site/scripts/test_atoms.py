@@ -20,13 +20,18 @@ from pydantic import ValidationError
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _envelope import SCHEMA_VERSION, ProviderRunMetadata, validate_status_consistency
+from unittest.mock import patch
+
+import dns as dns_module
 from dns import (
     CfResult,
     DnsEnsureData,
     DnsEnsureEnvelope,
     DnsEnsureError,
+    PORKBUN_API_BASE,
     _cf_classify_error,
     _detect_registrar,
+    _porkbun_update_ns,
 )
 from domain import (
     DomainBuyData,
@@ -318,6 +323,97 @@ def test_cf_classify_generic_failure() -> None:
     code, suggestion = _cf_classify_error(result)
     assert code == "cf_request_failed"
     assert "9999" in suggestion or "500" in suggestion
+
+
+# CF auth-error code coverage — all five flavors map to cf_unauthenticated.
+# (Verified against Cloudflare's published error codes: 9106/9107 legacy,
+# 9109 invalid/revoked, 6003/6111 malformed Authorization header.)
+@pytest.mark.parametrize(
+    "http_status,cf_code",
+    [
+        (403, 9109),  # token format OK but invalid/revoked
+        (403, 9106),  # missing X-Auth-Email (legacy auth)
+        (403, 9107),  # missing X-Auth-Key (legacy auth)
+        (400, 6003),  # malformed Authorization header
+        (400, 6111),  # malformed Authorization header variant
+    ],
+)
+def test_cf_classify_auth_error_codes(http_status: int, cf_code: int) -> None:
+    """All five auth-error code paths map to cf_unauthenticated."""
+    result = CfResult(
+        ok=False,
+        latency_ms=80,
+        status_code=http_status,
+        error_code=cf_code,
+        error_message="auth_problem",
+    )
+    code, suggestion = _cf_classify_error(result)
+    assert code == "cf_unauthenticated", f"http {http_status} + code {cf_code} → {code}"
+    assert "CLOUDFLARE_API_TOKEN" in suggestion
+    assert "scopes" in suggestion.lower() or "scope" in suggestion.lower()
+
+
+# ---------------------------------------------------------------------------
+# Porkbun host pinned (regression test for the audit-caught bug)
+# ---------------------------------------------------------------------------
+
+
+def test_porkbun_api_base_pinned_to_correct_host() -> None:
+    """Regression: Porkbun's documented API host is api.porkbun.com (not porkbun.com).
+
+    porkbun.com/api/json/v3/* returns HTTP 403; api.porkbun.com/api/json/v3/* works.
+    Audited live before this test was written.
+    """
+    assert PORKBUN_API_BASE == "https://api.porkbun.com/api/json/v3"
+
+
+def test_porkbun_update_ns_url_construction() -> None:
+    """The actual HTTP call hits api.porkbun.com, not porkbun.com.
+
+    Mocks `requests.post` at the dns module level and asserts the URL passed.
+    Catches a future regression where someone shortens the base back to porkbun.com.
+    """
+    fake_response = type(
+        "FakeResp",
+        (),
+        {
+            "status_code": 200,
+            "json": lambda self: {"status": "SUCCESS"},
+        },
+    )()
+
+    with patch.object(dns_module.requests, "post", return_value=fake_response) as mock_post:
+        ok, _, err = _porkbun_update_ns(
+            "example.com",
+            ["walt.ns.cloudflare.com", "sara.ns.cloudflare.com"],
+            "fake_key",
+            "fake_secret",
+        )
+        assert ok is True
+        assert err is None
+        called_url = mock_post.call_args.args[0] if mock_post.call_args.args else mock_post.call_args.kwargs["url"]
+        assert called_url.startswith("https://api.porkbun.com/api/json/v3/"), (
+            f"Porkbun URL must start with api.porkbun.com — got {called_url}"
+        )
+        assert "example.com" in called_url
+        assert "domain/updateNs" in called_url
+
+
+def test_porkbun_update_ns_failure_returns_message() -> None:
+    """Porkbun status != SUCCESS surfaces the message verbatim for diagnosis."""
+    fake_response = type(
+        "FakeResp",
+        (),
+        {
+            "status_code": 200,
+            "json": lambda self: {"status": "ERROR", "message": "invalid api key"},
+        },
+    )()
+
+    with patch.object(dns_module.requests, "post", return_value=fake_response):
+        ok, _, err = _porkbun_update_ns("example.com", ["a", "b"], "k", "s")
+        assert ok is False
+        assert err == "invalid api key"
 
 
 def test_detect_registrar_explicit_wins() -> None:

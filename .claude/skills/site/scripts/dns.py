@@ -40,7 +40,7 @@ from _envelope import (  # noqa: E402
 )
 
 CF_API_BASE = "https://api.cloudflare.com/client/v4"
-PORKBUN_API_BASE = "https://porkbun.com/api/json/v3"
+PORKBUN_API_BASE = "https://api.porkbun.com/api/json/v3"
 CF_NS_SUFFIX = ".ns.cloudflare.com"
 
 # Loose domain validator. Real validation happens upstream on first API call.
@@ -162,14 +162,27 @@ def _cf_call(method: str, path: str, token: str, json_body: dict | None = None) 
     )
 
 
+# CF error codes that indicate auth problems regardless of HTTP status.
+# 10000 / 10001 — generic auth token error in body
+# 6003 / 6111 — malformed Authorization header (HTTP 400 path)
+# 9106 / 9107 — missing X-Auth-Email / X-Auth-Key (legacy auth path)
+# 9109 — token format OK but invalid/revoked (HTTP 403 path)
+_CF_AUTH_ERROR_CODES = frozenset({10000, 10001, 6003, 6111, 9106, 9107, 9109})
+
+
 def _cf_classify_error(result: CfResult) -> tuple[DnsEnsureErrorCode, str]:
     """Map a failed CF response to a closed-enum error code + suggestion."""
     if result.error_message == "timeout":
         return "network_timeout", "Cloudflare API timed out. Retry; check connectivity."
-    if result.status_code == 401 or result.error_code in (10000, 10001):
+    if (
+        result.status_code == 401
+        or (result.error_code is not None and result.error_code in _CF_AUTH_ERROR_CODES)
+    ):
         return (
             "cf_unauthenticated",
-            "Verify CLOUDFLARE_API_TOKEN has Zone:Edit + DNS:Edit + Pages:Edit.",
+            "Verify CLOUDFLARE_API_TOKEN exists, isn't revoked, and has "
+            "Zone:Edit + DNS:Edit + Pages:Edit scopes. Create at "
+            "https://dash.cloudflare.com/profile/api-tokens.",
         )
     if result.status_code == 429:
         return "cf_rate_limited", "Cloudflare rate-limited the request. Back off and retry."
