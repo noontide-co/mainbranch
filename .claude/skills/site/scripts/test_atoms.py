@@ -669,5 +669,180 @@ def test_pages_wait_for_domain_active_error_status(monkeypatch: pytest.MonkeyPat
     assert "CNAME missing" in err.message
 
 
+# ---------------------------------------------------------------------------
+# OgRenderEnvelope (atom 5)
+# ---------------------------------------------------------------------------
+
+import og_render as og_render_module
+from og_render import (
+    OG_HEIGHT,
+    OG_MAX_BYTES,
+    OG_WIDTH,
+    OgRenderData,
+    OgRenderEnvelope,
+    OgRenderError,
+    _png_dimensions,
+)
+
+
+# A 23-byte minimal SVG that rsvg-convert can rasterize without external assets.
+_TINY_SVG = (
+    b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">'
+    b'<rect width="1200" height="630" fill="#0a0a0a"/>'
+    b'<text x="600" y="320" font-family="sans-serif" font-size="96" '
+    b'font-weight="700" text-anchor="middle" fill="#fafafa">test</text>'
+    b"</svg>"
+)
+
+
+def test_og_render_ok_round_trip() -> None:
+    env = OgRenderEnvelope(
+        status="ok",
+        data=OgRenderData(
+            input_svg="/tmp/og.svg",
+            output_png="/tmp/og.png",
+            renderer="rsvg-convert",
+            width=OG_WIDTH,
+            height=OG_HEIGHT,
+            output_bytes=540_000,
+        ),
+        provenance={
+            "rsvg_convert": ProviderRunMetadata(
+                status="ok", latency_ms=512, provider_version="rsvg-convert"
+            )
+        },
+    )
+    parsed = OgRenderEnvelope.model_validate_json(env.model_dump_json())
+    assert parsed.data.renderer == "rsvg-convert"
+    assert parsed.data.width == OG_WIDTH and parsed.data.height == OG_HEIGHT
+
+
+def test_og_render_degraded_requires_error() -> None:
+    with pytest.raises(ValidationError, match="status!=.ok. requires a structured error"):
+        OgRenderEnvelope(
+            status="degraded",
+            data=OgRenderData(input_svg="/x.svg", output_png="/x.png"),
+        )
+
+
+def test_og_render_error_codes_closed() -> None:
+    with pytest.raises(ValidationError):
+        OgRenderError(code="not_a_real_render_error", message="x")  # type: ignore[arg-type]
+
+
+def test_og_render_renderer_field_closed() -> None:
+    with pytest.raises(ValidationError):
+        OgRenderData(input_svg="/x.svg", output_png="/x.png", renderer="imagemagick")  # type: ignore[arg-type]
+
+
+def test_png_dimensions_reads_real_png(tmp_path: Path) -> None:
+    """Sanity check the dependency-free PNG header parser used for validation."""
+    import zlib
+
+    png_path = tmp_path / "1x1.png"
+    width, height = 1, 1
+    ihdr_data = struct_pack_uint32(width) + struct_pack_uint32(height) + bytes([8, 2, 0, 0, 0])
+    ihdr_chunk = _png_chunk(b"IHDR", ihdr_data)
+    raw = b"\x00" + bytes([0, 0, 0])
+    idat = zlib.compress(raw)
+    idat_chunk = _png_chunk(b"IDAT", idat)
+    iend_chunk = _png_chunk(b"IEND", b"")
+    png_path.write_bytes(b"\x89PNG\r\n\x1a\n" + ihdr_chunk + idat_chunk + iend_chunk)
+
+    assert _png_dimensions(png_path) == (1, 1)
+
+
+def test_png_dimensions_returns_none_on_non_png(tmp_path: Path) -> None:
+    not_png = tmp_path / "not.png"
+    not_png.write_bytes(b"<svg></svg>")
+    assert _png_dimensions(not_png) is None
+
+
+def test_og_render_live_against_tiny_svg(tmp_path: Path) -> None:
+    """End-to-end: the atom renders a hand-written SVG via the real rsvg-convert binary.
+
+    This is the live integration test for #100. Howdy's og.svg works too, but
+    using a tiny inline SVG keeps the test self-contained and fast.
+    """
+    if shutil.which("rsvg-convert") is None:
+        pytest.skip("rsvg-convert not installed locally")
+
+    svg_path = tmp_path / "og.svg"
+    png_path = tmp_path / "og.png"
+    svg_path.write_bytes(_TINY_SVG)
+
+    from click.testing import CliRunner
+
+    runner = CliRunner()
+    result = runner.invoke(
+        og_render_module.cli, ["render", str(svg_path), str(png_path)]
+    )
+    assert result.exit_code == 0, f"stdout: {result.stdout}\nstderr: {result.stderr}"
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "ok"
+    assert payload["data"]["renderer"] == "rsvg-convert"
+    assert payload["data"]["width"] == OG_WIDTH
+    assert payload["data"]["height"] == OG_HEIGHT
+    assert png_path.exists() and png_path.stat().st_size > 0
+
+
+def test_og_render_missing_input_envelope(tmp_path: Path) -> None:
+    """Read-only error path: nonexistent SVG returns a structured envelope."""
+    from click.testing import CliRunner
+
+    runner = CliRunner()
+    result = runner.invoke(
+        og_render_module.cli,
+        ["render", str(tmp_path / "does-not-exist.svg"), str(tmp_path / "out.png")],
+    )
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "degraded"
+    assert payload["error"]["code"] == "svg_input_missing"
+
+
+def test_og_render_no_renderer_available(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """When neither renderer is installed, atom fails loud with no_renderer_available."""
+    svg_path = tmp_path / "og.svg"
+    svg_path.write_bytes(_TINY_SVG)
+
+    monkeypatch.setattr(og_render_module.shutil, "which", lambda _name: None)
+
+    def _raise_import(*_a: object, **_k: object) -> tuple[bool, int, str | None]:
+        return False, 0, "module_missing"
+
+    monkeypatch.setattr(og_render_module, "_render_cairosvg", _raise_import)
+
+    from click.testing import CliRunner
+
+    runner = CliRunner()
+    result = runner.invoke(
+        og_render_module.cli, ["render", str(svg_path), str(tmp_path / "out.png")]
+    )
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["error"]["code"] == "no_renderer_available"
+    assert "librsvg" in payload["error"]["suggestion"]
+
+
+# Tiny PNG-construction helpers used by test_png_dimensions_reads_real_png.
+
+def struct_pack_uint32(n: int) -> bytes:
+    import struct as _struct
+    return _struct.pack(">I", n)
+
+
+def _png_chunk(chunk_type: bytes, data: bytes) -> bytes:
+    import struct as _struct
+    import zlib as _zlib
+    crc = _zlib.crc32(chunk_type + data) & 0xFFFFFFFF
+    return _struct.pack(">I", len(data)) + chunk_type + data + _struct.pack(">I", crc)
+
+
+# ---------------------------------------------------------------------------
+
+import shutil  # placed at the bottom so prior tests don't shadow it
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
