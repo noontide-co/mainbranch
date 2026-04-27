@@ -3,7 +3,7 @@
 Use this when the Pages project does not exist yet. This is the one V1 dashboard step that creates a Git-connected Pages project with auto-deploy.
 
 1. Go to https://dash.cloudflare.com
-2. Left sidebar: **Workers & Pages**
+2. Left sidebar: under the **Build** group, click **Compute** → **Workers & Pages**. (Cloudflare moved this entry under Compute; if you remember it as a top-level link, look one level deeper.)
 3. Click **Create application**
 4. Click the small link at the bottom: **Pages: Get started**. Do not choose the Worker option.
 5. Select **Connect to Git**
