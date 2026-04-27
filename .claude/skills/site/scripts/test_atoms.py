@@ -23,6 +23,7 @@ from _envelope import SCHEMA_VERSION, ProviderRunMetadata, validate_status_consi
 from unittest.mock import patch
 
 import dns as dns_module
+import pages as pages_module
 from dns import (
     CfResult,
     DnsEnsureData,
@@ -41,6 +42,14 @@ from domain import (
     DomainCheckEnvelope,
     DomainCheckError,
     DomainCheckResult,
+)
+from pages import (
+    PagesSetDomainData,
+    PagesSetDomainEnvelope,
+    PagesSetDomainError,
+    _domain_payload_to_data,
+    _map_cf_error,
+    _wait_for_domain_active,
 )
 
 
@@ -448,6 +457,216 @@ def test_detect_registrar_neither_set(monkeypatch: pytest.MonkeyPatch) -> None:
     assert reg is None
     assert err is not None
     assert err.code == "registrar_required"
+
+
+# ---------------------------------------------------------------------------
+# PagesSetDomainEnvelope
+# ---------------------------------------------------------------------------
+
+
+def test_pages_set_domain_ok_round_trip() -> None:
+    env = PagesSetDomainEnvelope(
+        status="ok",
+        data=PagesSetDomainData(
+            project_name="thelastbill",
+            domain="thelastbill.com",
+            domain_id="dom_123",
+            status="active",
+            certificate_authority="google",
+            already_attached=False,
+            attached_now=True,
+            ssl_active=True,
+            poll_seconds=42,
+            validation_status="active",
+            verification_status="active",
+            zone_tag="zone_123",
+        ),
+        provenance={
+            "cf_pages_domain_add": ProviderRunMetadata(
+                status="ok", latency_ms=321, provider_version="cloudflare-api-v4"
+            ),
+            "cf_pages_domain_poll": ProviderRunMetadata(
+                status="ok", latency_ms=42000, provider_version="cloudflare-api-v4"
+            ),
+        },
+    )
+    parsed = PagesSetDomainEnvelope.model_validate_json(env.model_dump_json())
+    assert parsed.status == "ok"
+    assert parsed.error is None
+    assert parsed.data.attached_now is True
+    assert parsed.data.ssl_active is True
+    assert parsed.schema_version == SCHEMA_VERSION
+
+
+def test_pages_set_domain_already_attached_is_ok() -> None:
+    env = PagesSetDomainEnvelope(
+        status="ok",
+        data=PagesSetDomainData(
+            project_name="thelastbill",
+            domain="thelastbill.com",
+            status="active",
+            already_attached=True,
+            attached_now=False,
+            ssl_active=True,
+        ),
+    )
+    assert env.error is None
+    assert env.data.already_attached is True
+    assert env.data.attached_now is False
+
+
+def test_pages_set_domain_error_codes_closed() -> None:
+    with pytest.raises(ValidationError):
+        PagesSetDomainError(code="not_a_real_pages_code", message="x")  # type: ignore[arg-type]
+
+
+def test_pages_set_domain_degraded_requires_error() -> None:
+    with pytest.raises(ValidationError, match="status!=.ok. requires a structured error"):
+        PagesSetDomainEnvelope(
+            status="degraded",
+            data=PagesSetDomainData(project_name="x", domain="example.com"),
+        )
+
+
+def test_pages_set_domain_payload_to_data_extracts_statuses() -> None:
+    data = _domain_payload_to_data(
+        "thelastbill",
+        "thelastbill.com",
+        {
+            "id": "dom_123",
+            "name": "thelastbill.com",
+            "status": "active",
+            "certificate_authority": "lets_encrypt",
+            "validation_data": {"status": "active"},
+            "verification_data": {"status": "active"},
+            "zone_tag": "zone_123",
+        },
+        already_attached=True,
+        attached_now=False,
+        poll_seconds=0,
+    )
+    assert data.domain_id == "dom_123"
+    assert data.certificate_authority == "lets_encrypt"
+    assert data.ssl_active is True
+    assert data.validation_status == "active"
+    assert data.verification_status == "active"
+
+
+def test_pages_map_cf_error_project_not_found() -> None:
+    err = _map_cf_error(
+        CfResult(ok=False, latency_ms=10, status_code=404, error_message="not found"),
+        project_checked=False,
+    )
+    assert err.code == "project_not_found"
+
+
+def test_pages_map_cf_error_auth_reuses_cf_classifier() -> None:
+    err = _map_cf_error(
+        CfResult(ok=False, latency_ms=10, status_code=403, error_code=9109, error_message="invalid token"),
+        project_checked=True,
+    )
+    assert err.code == "cf_unauthenticated"
+    assert "CLOUDFLARE_API_TOKEN" in (err.suggestion or "")
+
+
+def test_pages_map_cf_error_rate_limit_reuses_cf_classifier() -> None:
+    err = _map_cf_error(
+        CfResult(ok=False, latency_ms=10, status_code=429, error_message="too many"),
+        project_checked=True,
+    )
+    assert err.code == "cf_rate_limited"
+
+
+def test_pages_map_cf_error_dns_hint() -> None:
+    err = _map_cf_error(
+        CfResult(ok=False, latency_ms=10, status_code=400, error_message="DNS validation failed"),
+        project_checked=True,
+    )
+    assert err.code == "dns_misconfigured"
+
+
+def test_pages_wait_for_domain_active_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = [
+        CfResult(
+            ok=True,
+            latency_ms=10,
+            status_code=200,
+            payload={
+                "id": "dom_123",
+                "status": "pending",
+                "validation_data": {"status": "pending"},
+                "verification_data": {"status": "pending"},
+            },
+        ),
+        CfResult(
+            ok=True,
+            latency_ms=10,
+            status_code=200,
+            payload={
+                "id": "dom_123",
+                "status": "active",
+                "validation_data": {"status": "active"},
+                "verification_data": {"status": "active"},
+            },
+        ),
+    ]
+
+    def fake_cf_call(*args: object, **kwargs: object) -> CfResult:
+        return calls.pop(0)
+
+    monkeypatch.setattr(pages_module, "_cf_call", fake_cf_call)
+    monkeypatch.setattr(pages_module.time, "sleep", lambda _seconds: None)
+    provenance: dict[str, ProviderRunMetadata] = {}
+    payload, elapsed, err = _wait_for_domain_active("acct", "proj", "example.com", "tok", 10, provenance)
+    assert err is None
+    assert payload is not None
+    assert payload["status"] == "active"
+    assert elapsed >= 0
+    assert "cf_pages_domain_poll" in provenance
+
+
+def test_pages_wait_for_domain_active_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    result = CfResult(
+        ok=True,
+        latency_ms=10,
+        status_code=200,
+        payload={
+            "id": "dom_123",
+            "status": "pending",
+            "validation_data": {"status": "pending"},
+            "verification_data": {"status": "pending"},
+        },
+    )
+    monkeypatch.setattr(pages_module, "_cf_call", lambda *args, **kwargs: result)
+    monkeypatch.setattr(pages_module.time, "sleep", lambda _seconds: None)
+
+    ticks = iter([0, 2, 5])
+    monkeypatch.setattr(pages_module.time, "monotonic", lambda: next(ticks))
+    payload, elapsed, err = _wait_for_domain_active("acct", "proj", "example.com", "tok", 3, {})
+    assert payload is not None
+    assert elapsed == 5
+    assert err is not None
+    assert err.code == "ssl_provisioning_timeout"
+
+
+def test_pages_wait_for_domain_active_error_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    result = CfResult(
+        ok=True,
+        latency_ms=10,
+        status_code=200,
+        payload={
+            "id": "dom_123",
+            "status": "error",
+            "validation_data": {"status": "error", "error_message": "CNAME missing"},
+            "verification_data": {"status": "pending"},
+        },
+    )
+    monkeypatch.setattr(pages_module, "_cf_call", lambda *args, **kwargs: result)
+    payload, _elapsed, err = _wait_for_domain_active("acct", "proj", "example.com", "tok", 10, {})
+    assert payload is None
+    assert err is not None
+    assert err.code == "dns_misconfigured"
+    assert "CNAME missing" in err.message
 
 
 if __name__ == "__main__":
