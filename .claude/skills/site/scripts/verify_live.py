@@ -18,7 +18,7 @@ Required env (load with `source ~/.config/vip/env.sh` first):
   PORKBUN_SECRET_KEY
 
 Optional env:
-  VERIFY_LIVE_CF_ZONE   — domain to lookup at Cloudflare (default: howdy.md)
+  VERIFY_LIVE_CF_ZONE   — domain to lookup at Cloudflare (default: thelastbill.com)
 
 Exit code: 0 if all checks pass, 1 if any fail.
 """
@@ -41,7 +41,7 @@ from _envelope import log  # noqa: E402
 
 CF_API_BASE = "https://api.cloudflare.com/client/v4"
 PORKBUN_API_BASE = "https://api.porkbun.com/api/json/v3"
-DEFAULT_CF_ZONE = os.environ.get("VERIFY_LIVE_CF_ZONE", "howdy.md")
+DEFAULT_CF_ZONE = os.environ.get("VERIFY_LIVE_CF_ZONE", "thelastbill.com")
 
 GREEN = "\033[32m"
 RED = "\033[31m"
@@ -126,7 +126,7 @@ def _surface_cf_errors(body: dict | None) -> None:
 
 
 def check_cf_auth() -> bool:
-    """Verify token has the three account-level scopes paidup.us needs.
+    """Verify the token has the three scopes the CF-registered chassis path needs.
 
     Note: we don't use /user/tokens/verify — that endpoint is for User-scoped
     tokens only and returns code 1000 ('Invalid API Token') for Account-scoped
@@ -247,15 +247,15 @@ def check_cf_zone_lookup() -> bool:
 
 
 def check_porkbun_ping() -> bool | None:
-    """Returns None when Porkbun keys absent (skip, not fail) — paidup.us is CF-only."""
+    """Returns None when Porkbun keys absent (skip, not fail) — CF-registered path doesn't touch Porkbun."""
     print(f"\n{YELLOW}[4/4] Porkbun API auth (POST /ping){RESET}")
     api_key = os.environ.get("PORKBUN_API_KEY")
     secret_key = os.environ.get("PORKBUN_SECRET_KEY")
 
     if not api_key or not secret_key:
         print(f"{DIM}  Skipped — PORKBUN_API_KEY / PORKBUN_SECRET_KEY not set.{RESET}")
-        print(f"{DIM}  Not needed for the paidup.us CF-only test path. Add only if{RESET}")
-        print(f"{DIM}  you want to exercise dns.py's Porkbun NS-swap branch.{RESET}")
+        print(f"{DIM}  Not needed for the CF-registered path. Add only if you want to{RESET}")
+        print(f"{DIM}  exercise dns.py's Porkbun NS-swap branch.{RESET}")
         return None
 
     start = time.monotonic()
@@ -304,7 +304,7 @@ def main() -> int:
     skipped = 0
     for name, ok in results:
         if ok is None:
-            print(f"  {DIM}—{RESET} {name} {DIM}(skipped — not needed for paidup.us){RESET}")
+            print(f"  {DIM}—{RESET} {name} {DIM}(skipped — not needed for CF-registered path){RESET}")
             skipped += 1
         elif ok:
             print(f"  {GREEN}✓{RESET} {name}")
@@ -319,7 +319,7 @@ def main() -> int:
         msg = f"{passed}/{total} passed"
         if skipped:
             msg += f" ({skipped} skipped)"
-        print(f"{GREEN}{msg} — atoms are live-ready for the paidup.us CF-only flow.{RESET}")
+        print(f"{GREEN}{msg} — atoms are live-ready for the CF-registered flow.{RESET}")
         return 0
     print(f"{RED}{failed}/{total} checks failed.{RESET} See messages above.")
     return 1
