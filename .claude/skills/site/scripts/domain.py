@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -35,7 +36,7 @@ from _envelope import (  # noqa: E402
     validate_status_consistency,
 )
 
-DOMAIN_CHECK_BIN = "/opt/homebrew/bin/domain-check"
+DOMAIN_CHECK_BIN = shutil.which("domain-check") or "/opt/homebrew/bin/domain-check"
 
 # ---------------------------------------------------------------------------
 # domain check

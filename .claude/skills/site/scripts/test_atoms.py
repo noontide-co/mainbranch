@@ -20,6 +20,19 @@ from pydantic import ValidationError
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _envelope import SCHEMA_VERSION, ProviderRunMetadata, validate_status_consistency
+from unittest.mock import patch
+
+import dns as dns_module
+from dns import (
+    CfResult,
+    DnsEnsureData,
+    DnsEnsureEnvelope,
+    DnsEnsureError,
+    PORKBUN_API_BASE,
+    _cf_classify_error,
+    _detect_registrar,
+    _porkbun_update_ns,
+)
 from domain import (
     DomainBuyData,
     DomainBuyEnvelope,
@@ -192,6 +205,249 @@ def test_provider_run_metadata_is_frozen() -> None:
     pr = ProviderRunMetadata(status="ok", latency_ms=100, provider_version="v1")
     with pytest.raises(ValidationError):
         pr.latency_ms = 200  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# DnsEnsureEnvelope
+# ---------------------------------------------------------------------------
+
+
+def test_dns_ensure_ok_round_trip() -> None:
+    env = DnsEnsureEnvelope(
+        status="ok",
+        data=DnsEnsureData(
+            domain="example.com",
+            zone_id="abc123",
+            ns_pair=["walt.ns.cloudflare.com", "sara.ns.cloudflare.com"],
+            zone_created_now=True,
+            registrar="porkbun",
+            ns_swap_performed=True,
+            propagated=True,
+            propagation_seconds=143,
+        ),
+        provenance={
+            "cf_zone_create": ProviderRunMetadata(
+                status="ok", latency_ms=512, provider_version="cloudflare-api-v4"
+            ),
+            "porkbun_update_ns": ProviderRunMetadata(
+                status="ok", latency_ms=812, provider_version="porkbun-api-v3"
+            ),
+            "dns_propagation_poll": ProviderRunMetadata(
+                status="ok", latency_ms=143000, provider_version="dig+1.1.1.1"
+            ),
+        },
+    )
+    parsed = DnsEnsureEnvelope.model_validate_json(env.model_dump_json())
+    assert parsed.data.zone_created_now is True
+    assert parsed.data.ns_swap_performed is True
+    assert len(parsed.data.ns_pair) == 2
+    assert parsed.data.propagation_seconds == 143
+
+
+def test_dns_ensure_idempotent_no_swap() -> None:
+    """Idempotent path: zone already existed, NS already correct, no work performed."""
+    env = DnsEnsureEnvelope(
+        status="ok",
+        data=DnsEnsureData(
+            domain="example.com",
+            zone_id="abc123",
+            ns_pair=["walt.ns.cloudflare.com", "sara.ns.cloudflare.com"],
+            zone_created_now=False,
+            registrar="cloudflare",
+            ns_swap_performed=False,
+            propagated=True,
+            propagation_seconds=2,
+        ),
+    )
+    assert env.data.zone_created_now is False
+    assert env.data.ns_swap_performed is False
+
+
+def test_dns_ensure_error_codes_closed() -> None:
+    with pytest.raises(ValidationError):
+        DnsEnsureError(code="not_a_real_dns_code", message="x")  # type: ignore[arg-type]
+
+
+def test_dns_ensure_invalid_domain_envelope() -> None:
+    env = DnsEnsureEnvelope(
+        status="degraded",
+        data=DnsEnsureData(domain="not a valid domain"),
+        error=DnsEnsureError(
+            code="invalid_domain",
+            message="Domain doesn't look valid.",
+            suggestion="Pass a registrable apex.",
+        ),
+    )
+    assert env.error is not None
+    assert env.error.code == "invalid_domain"
+
+
+def test_cf_classify_zone_already_exists() -> None:
+    """Code 1097 → zone_already_exists with manual-cleanup suggestion."""
+    result = CfResult(ok=False, latency_ms=100, status_code=400, error_code=1097, error_message="zone exists")
+    code, suggestion = _cf_classify_error(result)
+    assert code == "zone_already_exists"
+    assert "another Cloudflare account" in suggestion
+
+
+def test_cf_classify_unauthenticated_401() -> None:
+    result = CfResult(ok=False, latency_ms=50, status_code=401, error_message="bad auth")
+    code, suggestion = _cf_classify_error(result)
+    assert code == "cf_unauthenticated"
+    assert "CLOUDFLARE_API_TOKEN" in suggestion
+
+
+def test_cf_classify_unauthenticated_by_code() -> None:
+    """Code 10000 (auth) → cf_unauthenticated even on http 200."""
+    result = CfResult(ok=False, latency_ms=50, status_code=200, error_code=10000, error_message="invalid")
+    code, _ = _cf_classify_error(result)
+    assert code == "cf_unauthenticated"
+
+
+def test_cf_classify_rate_limited_429() -> None:
+    result = CfResult(ok=False, latency_ms=50, status_code=429, error_message="too many")
+    code, suggestion = _cf_classify_error(result)
+    assert code == "cf_rate_limited"
+    assert "back off" in suggestion.lower()
+
+
+def test_cf_classify_timeout() -> None:
+    result = CfResult(ok=False, latency_ms=30000, status_code=0, error_message="timeout")
+    code, _ = _cf_classify_error(result)
+    assert code == "network_timeout"
+
+
+def test_cf_classify_generic_failure() -> None:
+    """Unrecognized failure shape → cf_request_failed (not silent ok)."""
+    result = CfResult(ok=False, latency_ms=50, status_code=500, error_code=9999, error_message="boom")
+    code, suggestion = _cf_classify_error(result)
+    assert code == "cf_request_failed"
+    assert "9999" in suggestion or "500" in suggestion
+
+
+# CF auth-error code coverage — all five flavors map to cf_unauthenticated.
+# (Verified against Cloudflare's published error codes: 9106/9107 legacy,
+# 9109 invalid/revoked, 6003/6111 malformed Authorization header.)
+@pytest.mark.parametrize(
+    "http_status,cf_code",
+    [
+        (403, 9109),  # token format OK but invalid/revoked
+        (403, 9106),  # missing X-Auth-Email (legacy auth)
+        (403, 9107),  # missing X-Auth-Key (legacy auth)
+        (400, 6003),  # malformed Authorization header
+        (400, 6111),  # malformed Authorization header variant
+    ],
+)
+def test_cf_classify_auth_error_codes(http_status: int, cf_code: int) -> None:
+    """All five auth-error code paths map to cf_unauthenticated."""
+    result = CfResult(
+        ok=False,
+        latency_ms=80,
+        status_code=http_status,
+        error_code=cf_code,
+        error_message="auth_problem",
+    )
+    code, suggestion = _cf_classify_error(result)
+    assert code == "cf_unauthenticated", f"http {http_status} + code {cf_code} → {code}"
+    assert "CLOUDFLARE_API_TOKEN" in suggestion
+    assert "scopes" in suggestion.lower() or "scope" in suggestion.lower()
+
+
+# ---------------------------------------------------------------------------
+# Porkbun host pinned (regression test for the audit-caught bug)
+# ---------------------------------------------------------------------------
+
+
+def test_porkbun_api_base_pinned_to_correct_host() -> None:
+    """Regression: Porkbun's documented API host is api.porkbun.com (not porkbun.com).
+
+    porkbun.com/api/json/v3/* returns HTTP 403; api.porkbun.com/api/json/v3/* works.
+    Audited live before this test was written.
+    """
+    assert PORKBUN_API_BASE == "https://api.porkbun.com/api/json/v3"
+
+
+def test_porkbun_update_ns_url_construction() -> None:
+    """The actual HTTP call hits api.porkbun.com, not porkbun.com.
+
+    Mocks `requests.post` at the dns module level and asserts the URL passed.
+    Catches a future regression where someone shortens the base back to porkbun.com.
+    """
+    fake_response = type(
+        "FakeResp",
+        (),
+        {
+            "status_code": 200,
+            "json": lambda self: {"status": "SUCCESS"},
+        },
+    )()
+
+    with patch.object(dns_module.requests, "post", return_value=fake_response) as mock_post:
+        ok, _, err = _porkbun_update_ns(
+            "example.com",
+            ["walt.ns.cloudflare.com", "sara.ns.cloudflare.com"],
+            "fake_key",
+            "fake_secret",
+        )
+        assert ok is True
+        assert err is None
+        called_url = mock_post.call_args.args[0] if mock_post.call_args.args else mock_post.call_args.kwargs["url"]
+        assert called_url.startswith("https://api.porkbun.com/api/json/v3/"), (
+            f"Porkbun URL must start with api.porkbun.com — got {called_url}"
+        )
+        assert "example.com" in called_url
+        assert "domain/updateNs" in called_url
+
+
+def test_porkbun_update_ns_failure_returns_message() -> None:
+    """Porkbun status != SUCCESS surfaces the message verbatim for diagnosis."""
+    fake_response = type(
+        "FakeResp",
+        (),
+        {
+            "status_code": 200,
+            "json": lambda self: {"status": "ERROR", "message": "invalid api key"},
+        },
+    )()
+
+    with patch.object(dns_module.requests, "post", return_value=fake_response):
+        ok, _, err = _porkbun_update_ns("example.com", ["a", "b"], "k", "s")
+        assert ok is False
+        assert err == "invalid api key"
+
+
+def test_detect_registrar_explicit_wins() -> None:
+    reg, err = _detect_registrar("porkbun")
+    assert reg == "porkbun"
+    assert err is None
+
+
+def test_detect_registrar_cf_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CLOUDFLARE_API_TOKEN_REGISTRAR", "fake")
+    monkeypatch.delenv("PORKBUN_API_KEY", raising=False)
+    monkeypatch.delenv("PORKBUN_SECRET_KEY", raising=False)
+    reg, err = _detect_registrar(None)
+    assert reg == "cloudflare"
+    assert err is None
+
+
+def test_detect_registrar_porkbun_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("CLOUDFLARE_API_TOKEN_REGISTRAR", raising=False)
+    monkeypatch.setenv("PORKBUN_API_KEY", "k")
+    monkeypatch.setenv("PORKBUN_SECRET_KEY", "s")
+    reg, err = _detect_registrar(None)
+    assert reg == "porkbun"
+    assert err is None
+
+
+def test_detect_registrar_neither_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("CLOUDFLARE_API_TOKEN_REGISTRAR", raising=False)
+    monkeypatch.delenv("PORKBUN_API_KEY", raising=False)
+    monkeypatch.delenv("PORKBUN_SECRET_KEY", raising=False)
+    reg, err = _detect_registrar(None)
+    assert reg is None
+    assert err is not None
+    assert err.code == "registrar_required"
 
 
 if __name__ == "__main__":
