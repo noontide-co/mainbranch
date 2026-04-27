@@ -102,15 +102,43 @@ def check_domain_check_cli() -> bool:
     return True
 
 
+def _cf_get(path: str) -> tuple[int, dict | None, int]:
+    """GET against Cloudflare's API. Returns (status_code, body, latency_ms)."""
+    token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    start = time.monotonic()
+    try:
+        resp = requests.get(f"{CF_API_BASE}{path}", headers=headers, timeout=15)
+    except requests.RequestException as exc:
+        return 0, {"_network_error": str(exc)}, int((time.monotonic() - start) * 1000)
+    latency_ms = int((time.monotonic() - start) * 1000)
+    try:
+        return resp.status_code, resp.json(), latency_ms
+    except ValueError:
+        return resp.status_code, None, latency_ms
+
+
+def _surface_cf_errors(body: dict | None) -> None:
+    if not body:
+        return
+    for err in (body.get("errors") or []):
+        _info(f"  cf code {err.get('code')}: {err.get('message')}")
+
+
 def check_cf_auth() -> bool:
-    print(f"\n{YELLOW}[2/4] Cloudflare API auth (token + account){RESET}")
+    """Verify token has the three account-level scopes paidup.us needs.
+
+    Note: we don't use /user/tokens/verify — that endpoint is for User-scoped
+    tokens only and returns code 1000 ('Invalid API Token') for Account-scoped
+    tokens. Instead, we hit the actual scope endpoints and check the responses.
+    """
+    print(f"\n{YELLOW}[2/4] Cloudflare API scopes (Registrar + Pages + Zone){RESET}")
     token = os.environ.get("CLOUDFLARE_API_TOKEN")
     account_id = os.environ.get("CF_ACCOUNT_ID")
 
     if not token:
         _fail("CLOUDFLARE_API_TOKEN not set")
         _info("Fix: create token at https://dash.cloudflare.com/profile/api-tokens")
-        _info("     Permissions: Zone:Read (minimum), Zone:Edit + DNS:Edit (preferred)")
         _info("     Add to ~/.config/vip/env.sh: export CLOUDFLARE_API_TOKEN=...")
         return False
 
@@ -120,43 +148,44 @@ def check_cf_auth() -> bool:
         _info("     Add to ~/.config/vip/env.sh: export CF_ACCOUNT_ID=...")
         return False
 
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    start = time.monotonic()
-    try:
-        resp = requests.get(
-            f"{CF_API_BASE}/user/tokens/verify", headers=headers, timeout=15
-        )
-    except requests.RequestException as exc:
-        _fail(f"network error contacting Cloudflare: {exc}")
-        return False
+    all_pass = True
 
-    latency_ms = int((time.monotonic() - start) * 1000)
+    # --- Registrar Domains (Admin) ---
+    status, body, lat = _cf_get(f"/accounts/{account_id}/registrar/domains")
+    if status == 200 and body and body.get("success"):
+        count = len(body.get("result") or [])
+        _ok(f"Registrar Domains:Admin works ({lat}ms, {count} domains in account)")
+    else:
+        _fail(f"Registrar Domains:Admin probe returned HTTP {status}")
+        _surface_cf_errors(body)
+        _info("Fix: token policy 1 must include Cloudflare Registrar:Admin (Entire Account scope)")
+        all_pass = False
 
-    if resp.status_code != 200:
-        _fail(f"token verify returned HTTP {resp.status_code}")
-        try:
-            errors = resp.json().get("errors", [])
-            for err in errors:
-                _info(f"  cf code {err.get('code')}: {err.get('message')}")
-        except ValueError:
-            pass
-        _info("Fix: regenerate token with correct scopes")
-        return False
+    # --- Pages Projects (Edit) ---
+    status, body, lat = _cf_get(f"/accounts/{account_id}/pages/projects")
+    if status == 200 and body and body.get("success"):
+        count = len(body.get("result") or [])
+        _ok(f"Cloudflare Pages:Edit works ({lat}ms, {count} projects in account)")
+    else:
+        _fail(f"Cloudflare Pages:Edit probe returned HTTP {status}")
+        _surface_cf_errors(body)
+        _info("Fix: token policy 1 must include Cloudflare Pages:Edit (Entire Account scope)")
+        all_pass = False
 
-    try:
-        body = resp.json()
-    except ValueError:
-        _fail("CF returned non-JSON for token verify")
-        return False
+    # --- Zone:Read (verifies the second policy is wired) ---
+    status, body, lat = _cf_get(f"/zones?account.id={account_id}&per_page=1")
+    if status == 200 and body and body.get("success"):
+        count = body.get("result_info", {}).get("total_count", 0)
+        _ok(f"Zone:Read works ({lat}ms, {count} zones in account)")
+    else:
+        _fail(f"Zone:Read probe returned HTTP {status}")
+        _surface_cf_errors(body)
+        _info("Fix: token policy 2 must include Zone:Read+Edit (All Domains scope)")
+        all_pass = False
 
-    status = body.get("result", {}).get("status")
-    if status != "active":
-        _fail(f"token verify status: {status} (expected 'active')")
-        return False
-
-    _ok(f"CF token verified ({latency_ms}ms): status=active")
-    _ok(f"CF_ACCOUNT_ID set: {account_id[:8]}…")
-    return True
+    if all_pass:
+        _ok(f"CF_ACCOUNT_ID confirmed: {account_id[:8]}…")
+    return all_pass
 
 
 def check_cf_zone_lookup() -> bool:
@@ -217,18 +246,17 @@ def check_cf_zone_lookup() -> bool:
     return True
 
 
-def check_porkbun_ping() -> bool:
+def check_porkbun_ping() -> bool | None:
+    """Returns None when Porkbun keys absent (skip, not fail) — paidup.us is CF-only."""
     print(f"\n{YELLOW}[4/4] Porkbun API auth (POST /ping){RESET}")
     api_key = os.environ.get("PORKBUN_API_KEY")
     secret_key = os.environ.get("PORKBUN_SECRET_KEY")
 
     if not api_key or not secret_key:
-        _fail("PORKBUN_API_KEY and/or PORKBUN_SECRET_KEY not set")
-        _info("Fix: create keys at https://porkbun.com/account/api")
-        _info("     Add both to ~/.config/vip/env.sh:")
-        _info("       export PORKBUN_API_KEY=pk1_...")
-        _info("       export PORKBUN_SECRET_KEY=sk1_...")
-        return False
+        print(f"{DIM}  Skipped — PORKBUN_API_KEY / PORKBUN_SECRET_KEY not set.{RESET}")
+        print(f"{DIM}  Not needed for the paidup.us CF-only test path. Add only if{RESET}")
+        print(f"{DIM}  you want to exercise dns.py's Porkbun NS-swap branch.{RESET}")
+        return None
 
     start = time.monotonic()
     try:
@@ -266,24 +294,34 @@ def main() -> int:
 
     results = [
         ("domain-check CLI", check_domain_check_cli()),
-        ("Cloudflare auth", check_cf_auth()),
+        ("Cloudflare scopes", check_cf_auth()),
         ("Cloudflare zone lookup", check_cf_zone_lookup()),
         ("Porkbun ping", check_porkbun_ping()),
     ]
 
     print(f"\n{YELLOW}=== Summary ==={RESET}")
     failed = 0
+    skipped = 0
     for name, ok in results:
-        marker = f"{GREEN}✓{RESET}" if ok else f"{RED}✗{RESET}"
-        print(f"  {marker} {name}")
-        if not ok:
+        if ok is None:
+            print(f"  {DIM}—{RESET} {name} {DIM}(skipped — not needed for paidup.us){RESET}")
+            skipped += 1
+        elif ok:
+            print(f"  {GREEN}✓{RESET} {name}")
+        else:
+            print(f"  {RED}✗{RESET} {name}")
             failed += 1
 
+    total = len(results)
+    passed = total - failed - skipped
     print()
     if failed == 0:
-        print(f"{GREEN}All 4 checks passed. Atoms are live-ready.{RESET}")
+        msg = f"{passed}/{total} passed"
+        if skipped:
+            msg += f" ({skipped} skipped)"
+        print(f"{GREEN}{msg} — atoms are live-ready for the paidup.us CF-only flow.{RESET}")
         return 0
-    print(f"{RED}{failed}/4 checks failed.{RESET} See messages above.")
+    print(f"{RED}{failed}/{total} checks failed.{RESET} See messages above.")
     return 1
 
 
