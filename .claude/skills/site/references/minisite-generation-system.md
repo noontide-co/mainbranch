@@ -48,7 +48,7 @@ The home hero CTA, secondary CTA, and any pricing CTA all use the same `url` fro
 
 ### Page structure rules
 
-- 4 main pages max (privacy + terms + start/thanks don't count toward the visible navigation)
+- 6 main pages max (privacy + terms + start/thanks don't count toward the visible navigation). Mandatory: home + how-it-works. LLM-picked: 2–4 more from `proof/`, `pricing/`, `faq/` (or others when warranted, e.g. `about/`, `contact/`). Don't pad to hit a number.
 - URL-readable paths (`how-it-works/`, not `page-2/`)
 - Every page has a `<title>` (under 60 chars), `<meta name="description">` (under 160 chars), canonical link, OG + Twitter Card meta, viewport, charset
 - Every page ends with the **Noontide footer** (see below) as the last visible element

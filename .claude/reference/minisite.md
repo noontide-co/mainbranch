@@ -161,28 +161,6 @@ Visitor → / (CTA click) → conversion endpoint → /start/thanks/
 
 Operator picks one. The minisite generates with whichever is selected. Two minisites for two different offers can ship with two different kinds.
 
-### Per-kind detail
-
-#### Stripe payment page
-
-The default for offers that charge money. `stripe.py create-payment-link` runs against the offer; the returned URL is the conversion endpoint.
-
-The "kind of payment" is operator-declared in `offer.md` — `deposit`, `full`, `subscription` (V2), or `custom`. The atom doesn't decide; it just creates the payment link with the amount the operator specified.
-
-| Field | Default | Source |
-|---|---|---|
-| `amount` | offer.md `payment_amount_usd` × 100 (cents) | offer.md frontmatter |
-| `currency` | `usd` | hardcoded V1; multi-currency is V2 |
-| `description` | offer.md `payment_description` or generated | offer.md or LLM |
-| `statement_descriptor` | offer.md `statement_descriptor` or `NOONTIDE` | offer.md or fallback (max 22 chars) |
-| `metadata.mb_offer` | `<offer-slug>` | derived from offer's directory name |
-| `metadata.mb_kind` | offer.md `payment_kind` (default: `payment`) | offer.md or fallback |
-| `success_url` | `https://<domain>/start/thanks/` | derived from `sites.json` `domain` |
-
-The atom emits `payment_link.url` in its envelope. The orchestration writes that URL into the project repo (e.g., `<repo>/.mainbranch/conversion.json`) so the generation subagent reads it during the build phase and substitutes it into every CTA href on the site.
-
-> Note: `metadata.mb_kind` is operator-controlled. The atom ships with `payment` as the safe default, but the operator's `offer.md` can declare anything semantically meaningful (e.g., `deposit`, `full`, `consult-fee`). Tests that assume `mb_kind=deposit` are checking the legacy V1 behavior; the spec treats `payment` as the generic.
-
 ### Render mode per kind
 
 How the home CTA actually renders depends on the kind:
@@ -206,6 +184,28 @@ The skill captures the render choice during walkthrough and stores it alongside 
 ```
 
 The generation subagent reads `kind` + `render` + `url` and renders the home CTA accordingly.
+
+### Per-kind detail
+
+#### Stripe payment page
+
+The default for offers that charge money. `stripe.py create-payment-link` runs against the offer; the returned URL is the conversion endpoint.
+
+The "kind of payment" is operator-declared in `offer.md` — `deposit`, `full`, `subscription` (V2), or `custom`. The atom doesn't decide; it just creates the payment link with the amount the operator specified.
+
+| Field | Default | Source |
+|---|---|---|
+| `amount` | offer.md `payment_amount_usd` × 100 (cents) | offer.md frontmatter |
+| `currency` | `usd` | hardcoded V1; multi-currency is V2 |
+| `description` | offer.md `payment_description` or generated | offer.md or LLM |
+| `statement_descriptor` | offer.md `statement_descriptor` or `NOONTIDE` | offer.md or fallback (max 22 chars) |
+| `metadata.mb_offer` | `<offer-slug>` | derived from offer's directory name |
+| `metadata.mb_kind` | `"deposit"` (V1 hardcoded) | atom constant |
+| `success_url` | `https://<domain>/start/thanks/` | derived from `sites.json` `domain` |
+
+The atom emits `payment_link.url` in its envelope. The orchestration writes that URL into the project repo (e.g., `<repo>/.mainbranch/conversion.json`) so the generation subagent reads it during the build phase and substitutes it into every CTA href on the site.
+
+> **V1 vs. planned.** `stripe.py` currently hardcodes `metadata.mb_kind = "deposit"` and does not read `payment_kind` from `offer.md`. The next iteration accepts a `--kind` flag (default: `payment`) and falls back to `offer.md`'s `payment_kind` field, so an operator charging full price (or running a consult-fee, etc.) gets honest metadata. Until that ships, every Stripe-backed minisite labels its payment as a "deposit" in Stripe's metadata — accurate when it is one, awkward when it isn't.
 
 #### Lead form
 
