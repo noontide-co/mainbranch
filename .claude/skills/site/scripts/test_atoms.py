@@ -44,10 +44,15 @@ from domain import (
     DomainCheckResult,
 )
 from pages import (
+    PagesCreateProjectData,
+    PagesCreateProjectEnvelope,
+    PagesCreateProjectError,
     PagesSetDomainData,
     PagesSetDomainEnvelope,
     PagesSetDomainError,
     _domain_payload_to_data,
+    _existing_project_source_matches,
+    _map_cf_create_error,
     _map_cf_error,
     _wait_for_domain_active,
 )
@@ -667,6 +672,168 @@ def test_pages_wait_for_domain_active_error_status(monkeypatch: pytest.MonkeyPat
     assert err is not None
     assert err.code == "dns_misconfigured"
     assert "CNAME missing" in err.message
+
+
+# ---------------------------------------------------------------------------
+# PagesCreateProjectEnvelope (#98 — git-source-by-default)
+# ---------------------------------------------------------------------------
+
+
+def test_pages_create_project_ok_round_trip() -> None:
+    env = PagesCreateProjectEnvelope(
+        status="ok",
+        data=PagesCreateProjectData(
+            project_name="chassis-git-test",
+            source_type="github",
+            repo_owner="noontide-co",
+            repo_name="thelastbill-test",
+            production_branch="main",
+            project_id="b6dacee6-fa1e-497f-b81b-369927a475a7",
+            pages_subdomain="chassis-git-test.pages.dev",
+            already_existed=False,
+            created_now=True,
+        ),
+        provenance={
+            "cf_pages_project_create": ProviderRunMetadata(
+                status="ok", latency_ms=3992, provider_version="cloudflare-api-v4"
+            )
+        },
+    )
+    parsed = PagesCreateProjectEnvelope.model_validate_json(env.model_dump_json())
+    assert parsed.data.created_now is True
+    assert parsed.data.source_type == "github"
+    assert parsed.data.repo_owner == "noontide-co"
+
+
+def test_pages_create_project_idempotent_already_existed() -> None:
+    """Idempotent path: project already exists with matching source."""
+    env = PagesCreateProjectEnvelope(
+        status="ok",
+        data=PagesCreateProjectData(
+            project_name="chassis-git-test",
+            source_type="github",
+            repo_owner="noontide-co",
+            repo_name="thelastbill-test",
+            production_branch="main",
+            project_id="b6dacee6-fa1e-497f-b81b-369927a475a7",
+            pages_subdomain="chassis-git-test.pages.dev",
+            already_existed=True,
+            created_now=False,
+        ),
+    )
+    assert env.error is None
+    assert env.data.already_existed is True
+    assert env.data.created_now is False
+
+
+def test_pages_create_project_error_codes_closed() -> None:
+    with pytest.raises(ValidationError):
+        PagesCreateProjectError(code="not_a_real_create_code", message="x")  # type: ignore[arg-type]
+
+
+def test_pages_create_project_source_type_closed() -> None:
+    with pytest.raises(ValidationError):
+        PagesCreateProjectData(project_name="x", source_type="bitbucket")  # type: ignore[arg-type]
+
+
+def test_existing_project_source_matches_github_match() -> None:
+    payload = {
+        "source": {
+            "type": "github",
+            "config": {
+                "owner": "noontide-co",
+                "repo_name": "thelastbill-test",
+                "production_branch": "main",
+            },
+        }
+    }
+    assert _existing_project_source_matches(
+        payload, "github", "noontide-co", "thelastbill-test", "main"
+    ) is True
+
+
+def test_existing_project_source_matches_owner_mismatch() -> None:
+    payload = {
+        "source": {
+            "type": "github",
+            "config": {
+                "owner": "dmthepm",
+                "repo_name": "thelastbill-test",
+                "production_branch": "main",
+            },
+        }
+    }
+    assert _existing_project_source_matches(
+        payload, "github", "noontide-co", "thelastbill-test", "main"
+    ) is False
+
+
+def test_existing_project_source_matches_type_mismatch() -> None:
+    """direct-upload project (source: null) should not match github request."""
+    assert _existing_project_source_matches(
+        {"source": None}, "github", "noontide-co", "thelastbill-test", "main"
+    ) is False
+
+
+def test_map_cf_create_error_8000011_github_app() -> None:
+    """Code 8000011 → github_app_not_installed with install URL in suggestion."""
+    result = CfResult(
+        ok=False,
+        latency_ms=300,
+        status_code=400,
+        error_code=8000011,
+        error_message="There is an internal issue with your Cloudflare Pages Git installation.",
+    )
+    err = _map_cf_create_error(result)
+    assert err.code == "github_app_not_installed"
+    assert "github.com/apps/cloudflare-workers-and-pages" in (err.suggestion or "")
+
+
+def test_map_cf_create_error_409_already_exists() -> None:
+    result = CfResult(
+        ok=False,
+        latency_ms=80,
+        status_code=409,
+        error_message="A project with this name already exists.",
+    )
+    err = _map_cf_create_error(result)
+    assert err.code == "project_already_exists"
+
+
+def test_map_cf_create_error_repo_not_found() -> None:
+    result = CfResult(
+        ok=False,
+        latency_ms=120,
+        status_code=400,
+        error_message="The repository was not found.",
+    )
+    err = _map_cf_create_error(result)
+    assert err.code == "repo_not_found"
+
+
+def test_map_cf_create_error_passes_through_auth() -> None:
+    """Generic auth failure (no specific create-project code) routes to cf_unauthenticated."""
+    result = CfResult(
+        ok=False,
+        latency_ms=50,
+        status_code=401,
+        error_message="invalid token",
+    )
+    err = _map_cf_create_error(result)
+    assert err.code == "cf_unauthenticated"
+
+
+def test_map_cf_create_error_generic_fallback() -> None:
+    """Unrecognized failure → cf_request_failed (closed-enum, no silent ok)."""
+    result = CfResult(
+        ok=False,
+        latency_ms=50,
+        status_code=500,
+        error_code=9999,
+        error_message="boom",
+    )
+    err = _map_cf_create_error(result)
+    assert err.code == "cf_request_failed"
 
 
 # ---------------------------------------------------------------------------

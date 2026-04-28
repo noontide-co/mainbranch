@@ -1,13 +1,25 @@
 #!/usr/bin/env python3
 """pages.py — Cloudflare Pages operations atom.
 
-Subcommand:
-    set-domain  Idempotent: attach a custom domain to an existing Cloudflare
-                Pages project, then poll until the custom-domain status is active.
+Subcommands:
+    create-project  Create a Pages project, default source.type=github so
+                    `git push` auto-deploys. Idempotent on re-run with
+                    matching source config; returns dns_misconfigured
+                    behavior if config drifts.
 
-Invocation: `python3 pages.py set-domain <project_name> <domain>`
+    set-domain      Idempotent: attach a custom domain to an existing
+                    Cloudflare Pages project, ensure the verification
+                    DNS record exists, then poll until the custom-domain
+                    status is active.
+
+Invocation: `python3 pages.py <subcommand> <args>`
 Output: companyctx-shape envelope JSON on stdout, logs on stderr.
 Exit code: 0 on ok|partial, 1 on degraded.
+
+Per `decisions/2026-04-27-git-auto-deploy-non-negotiable.md`: every
+Pages project the chassis creates must default to git source. The
+`--source=direct-upload` flag exists as opt-out for CI environments
+that can't install the Cloudflare GitHub App.
 """
 
 from __future__ import annotations
@@ -36,6 +48,14 @@ from dns import CfResult, _cf_call, _cf_classify_error  # noqa: E402
 
 _PROJECT_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,57}[a-z0-9]$")
 _DOMAIN_RE = re.compile(r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$")
+# GitHub owner / repo names: alphanumerics + dash + underscore + dot.
+# Length capped to 100 (org max is 39, repo max is 100).
+_GH_OWNER_RE = re.compile(r"^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38})$")
+_GH_REPO_RE = re.compile(r"^[a-zA-Z0-9._-]{1,100}$")
+
+# CF Pages GitHub App install URL — surfaced in suggestions when CF reports
+# code 8000011 (Pages Git installation broken). Verified live 2026-04-27.
+_CF_GITHUB_APP_INSTALL_URL = "https://github.com/apps/cloudflare-workers-and-pages"
 
 
 PagesSetDomainErrorCode = Literal[
@@ -343,9 +363,381 @@ def _wait_for_domain_active(
         time.sleep(min(10, max(2, timeout_seconds // 30)))
 
 
+# ---------------------------------------------------------------------------
+# create-project — atom subcommand for git-connected Pages project creation
+# ---------------------------------------------------------------------------
+
+PagesCreateProjectErrorCode = Literal[
+    "invalid_project_name",
+    "invalid_repo_owner",
+    "invalid_repo_name",
+    "cf_account_id_missing",
+    "cf_unauthenticated",
+    "cf_rate_limited",
+    "github_app_not_installed",
+    "repo_not_found",
+    "project_already_exists",
+    "project_source_mismatch",
+    "cf_request_failed",
+    "network_timeout",
+]
+
+
+class PagesCreateProjectError(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    code: PagesCreateProjectErrorCode
+    message: str
+    suggestion: str | None = None
+
+
+class PagesCreateProjectData(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    project_name: str
+    source_type: Literal["github", "direct-upload"]
+    repo_owner: str | None = None
+    repo_name: str | None = None
+    production_branch: str = "main"
+    project_id: str | None = None
+    pages_subdomain: str | None = None
+    already_existed: bool = False
+    created_now: bool = False
+
+
+class PagesCreateProjectEnvelope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    schema_version: Literal["0.1.0"] = SCHEMA_VERSION
+    status: EnvelopeStatus
+    data: PagesCreateProjectData
+    provenance: dict[str, ProviderRunMetadata] = Field(default_factory=dict)
+    error: PagesCreateProjectError | None = None
+
+    @model_validator(mode="after")
+    def _v(self) -> PagesCreateProjectEnvelope:
+        return validate_status_consistency(self)  # type: ignore[return-value]
+
+
+def _map_cf_create_error(result: CfResult) -> PagesCreateProjectError:
+    """Map CF-side failures during create-project to closed-enum codes.
+
+    Three codes worth surfacing distinctly from the generic _cf_classify_error
+    pipeline because they have specific operator-actionable suggestions:
+      8000011  CF Pages Git installation broken — surface install URL
+      8000007  Project not found (used as a not-yet-created signal elsewhere,
+                 but here means CF couldn't find the GitHub repo)
+      409 / "already exists" → project_already_exists
+    """
+    if result.error_code == 8000011:
+        return PagesCreateProjectError(
+            code="github_app_not_installed",
+            message=result.error_message or "Cloudflare Pages Git installation has an internal issue.",
+            suggestion=(
+                f"Install (or re-install) the Cloudflare Pages GitHub App at {_CF_GITHUB_APP_INSTALL_URL} "
+                "on the GitHub account/org that owns the repo. After install, complete the OAuth handshake "
+                "in the Cloudflare dashboard if prompted, then retry."
+            ),
+        )
+
+    err_msg = (result.error_message or "").lower()
+    if result.status_code == 409 or "already exists" in err_msg:
+        return PagesCreateProjectError(
+            code="project_already_exists",
+            message=result.error_message or "A Pages project with this name already exists in the account.",
+            suggestion="Pick a different project name, or query the existing project with GET /pages/projects/{name}.",
+        )
+
+    if "not found" in err_msg and ("repo" in err_msg or "repository" in err_msg):
+        return PagesCreateProjectError(
+            code="repo_not_found",
+            message=result.error_message or "Cloudflare could not access the named GitHub repo.",
+            suggestion=(
+                "Verify the owner and repo_name; confirm the Cloudflare Pages GitHub App has access to "
+                "this repo (it may be installed on the account but with 'Only select repositories' "
+                "configured to exclude it)."
+            ),
+        )
+
+    code, suggestion = _cf_classify_error(result)
+    if code in ("cf_unauthenticated", "cf_rate_limited", "network_timeout"):
+        return PagesCreateProjectError(
+            code=code,  # type: ignore[arg-type]
+            message=result.error_message or code,
+            suggestion=suggestion,
+        )
+    return PagesCreateProjectError(
+        code="cf_request_failed",
+        message=result.error_message or "Cloudflare Pages create-project request failed.",
+        suggestion=suggestion,
+    )
+
+
+def _existing_project_source_matches(
+    payload: dict, source_type: str, repo_owner: str | None, repo_name: str | None, branch: str
+) -> bool:
+    """Return True if an existing project's source config matches what we'd create."""
+    src = payload.get("source") or {}
+    if not isinstance(src, dict):
+        return source_type == "direct-upload" and src is None
+    if src.get("type") != source_type:
+        return False
+    if source_type == "direct-upload":
+        return True
+    cfg = src.get("config") or {}
+    return (
+        cfg.get("owner") == repo_owner
+        and cfg.get("repo_name") == repo_name
+        and cfg.get("production_branch") == branch
+    )
+
+
 @click.group()
 def cli() -> None:
     """pages.py — Cloudflare Pages operations atom."""
+
+
+@cli.command("create-project")
+@click.argument("project_name")
+@click.option(
+    "--repo-owner",
+    default=None,
+    help="GitHub owner (user or org) for source.type=github. Required unless --source=direct-upload.",
+)
+@click.option(
+    "--repo-name",
+    default=None,
+    help="GitHub repo name for source.type=github. Required unless --source=direct-upload.",
+)
+@click.option(
+    "--branch",
+    default="main",
+    show_default=True,
+    help="Production branch.",
+)
+@click.option(
+    "--source",
+    "source_type",
+    type=click.Choice(["github", "direct-upload"]),
+    default="github",
+    show_default=True,
+    help="Source binding. Default github = git auto-deploy. Use direct-upload only for CI/restricted environments.",
+)
+@click.option(
+    "--account-id",
+    default=None,
+    help="Cloudflare account ID. Defaults to CF_ACCOUNT_ID from the environment.",
+)
+def create_project(
+    project_name: str,
+    repo_owner: str | None,
+    repo_name: str | None,
+    branch: str,
+    source_type: str,
+    account_id: str | None,
+) -> None:
+    """Create a Cloudflare Pages project. Default source.type=github so git push auto-deploys.
+
+    Idempotent: if a project with this name already exists with matching source config,
+    returns ok with `already_existed: true`. Mismatched source returns project_source_mismatch.
+    """
+    project_name = project_name.strip().lower()
+    branch = branch.strip()
+    repo_owner = (repo_owner or "").strip() or None
+    repo_name = (repo_name or "").strip() or None
+    provenance: dict[str, ProviderRunMetadata] = {}
+
+    if not _PROJECT_RE.match(project_name):
+        env = PagesCreateProjectEnvelope(
+            status="degraded",
+            data=PagesCreateProjectData(project_name=project_name, source_type=source_type),  # type: ignore[arg-type]
+            error=PagesCreateProjectError(
+                code="invalid_project_name",
+                message=f"Project name {project_name!r} is not a valid Cloudflare Pages project name.",
+                suggestion="Use 2–58 chars: lowercase letters, digits, dashes; no leading/trailing dash.",
+            ),
+        )
+        sys.exit(emit(env))
+
+    if source_type == "github":
+        if not repo_owner or not _GH_OWNER_RE.match(repo_owner):
+            env = PagesCreateProjectEnvelope(
+                status="degraded",
+                data=PagesCreateProjectData(
+                    project_name=project_name, source_type=source_type, repo_owner=repo_owner  # type: ignore[arg-type]
+                ),
+                error=PagesCreateProjectError(
+                    code="invalid_repo_owner",
+                    message=f"--repo-owner {repo_owner!r} is missing or not a valid GitHub login.",
+                    suggestion="Pass --repo-owner with the GitHub user or org login that owns the repo.",
+                ),
+            )
+            sys.exit(emit(env))
+        if not repo_name or not _GH_REPO_RE.match(repo_name):
+            env = PagesCreateProjectEnvelope(
+                status="degraded",
+                data=PagesCreateProjectData(
+                    project_name=project_name, source_type=source_type, repo_owner=repo_owner, repo_name=repo_name  # type: ignore[arg-type]
+                ),
+                error=PagesCreateProjectError(
+                    code="invalid_repo_name",
+                    message=f"--repo-name {repo_name!r} is missing or not a valid GitHub repo name.",
+                    suggestion="Pass --repo-name with the bare repo name (no owner prefix, no .git suffix).",
+                ),
+            )
+            sys.exit(emit(env))
+
+    token = os.environ.get("CLOUDFLARE_API_TOKEN")
+    if not token:
+        env = PagesCreateProjectEnvelope(
+            status="degraded",
+            data=PagesCreateProjectData(project_name=project_name, source_type=source_type),  # type: ignore[arg-type]
+            error=PagesCreateProjectError(
+                code="cf_unauthenticated",
+                message="CLOUDFLARE_API_TOKEN not set.",
+                suggestion="Add CLOUDFLARE_API_TOKEN with Cloudflare Pages:Edit to ~/.config/vip/env.sh.",
+            ),
+        )
+        sys.exit(emit(env))
+
+    account_id = (account_id or os.environ.get("CF_ACCOUNT_ID") or "").strip()
+    if not account_id:
+        env = PagesCreateProjectEnvelope(
+            status="degraded",
+            data=PagesCreateProjectData(project_name=project_name, source_type=source_type),  # type: ignore[arg-type]
+            error=PagesCreateProjectError(
+                code="cf_account_id_missing",
+                message="No Cloudflare account ID supplied.",
+                suggestion="Pass --account-id or set CF_ACCOUNT_ID in ~/.config/vip/env.sh.",
+            ),
+        )
+        sys.exit(emit(env))
+
+    # Idempotency check: GET the project first. 404 → fall through to create.
+    log(f"Checking whether Pages project {project_name} already exists...")
+    lookup = _cf_call("GET", f"/accounts/{account_id}/pages/projects/{project_name}", token)
+    provenance["cf_pages_project_lookup"] = ProviderRunMetadata(
+        status="ok" if lookup.ok else ("not_configured" if lookup.status_code == 404 else "failed"),
+        latency_ms=lookup.latency_ms,
+        error=None if lookup.ok else (lookup.error_message or "unknown"),
+        provider_version="cloudflare-api-v4",
+    )
+
+    if lookup.ok:
+        existing = lookup.payload if isinstance(lookup.payload, dict) else {}
+        if _existing_project_source_matches(existing, source_type, repo_owner, repo_name, branch):
+            log(f"Project exists with matching source config — idempotent ok.")
+            env = PagesCreateProjectEnvelope(
+                status="ok",
+                data=PagesCreateProjectData(
+                    project_name=project_name,
+                    source_type=source_type,  # type: ignore[arg-type]
+                    repo_owner=repo_owner,
+                    repo_name=repo_name,
+                    production_branch=branch,
+                    project_id=existing.get("id"),
+                    pages_subdomain=existing.get("subdomain"),
+                    already_existed=True,
+                    created_now=False,
+                ),
+                provenance=provenance,
+            )
+            sys.exit(emit(env))
+
+        # Source mismatch: don't silently change. Surface for the operator.
+        existing_source = (existing.get("source") or {}).get("type") or "direct-upload"
+        env = PagesCreateProjectEnvelope(
+            status="degraded",
+            data=PagesCreateProjectData(
+                project_name=project_name,
+                source_type=source_type,  # type: ignore[arg-type]
+                repo_owner=repo_owner,
+                repo_name=repo_name,
+                production_branch=branch,
+                project_id=existing.get("id"),
+                pages_subdomain=existing.get("subdomain"),
+                already_existed=True,
+                created_now=False,
+            ),
+            provenance=provenance,
+            error=PagesCreateProjectError(
+                code="project_source_mismatch",
+                message=(
+                    f"Project {project_name!r} exists with source.type={existing_source!r}, "
+                    f"but caller requested {source_type!r} with owner={repo_owner}/{repo_name} "
+                    f"branch={branch}."
+                ),
+                suggestion=(
+                    "Direct-upload projects cannot be migrated via PATCH (CF code 8000069). "
+                    "To switch source, delete the project and re-create with the desired source. "
+                    "Note: deleting unbinds any custom domain, which would need re-attachment via set-domain."
+                ),
+            ),
+        )
+        sys.exit(emit(env))
+
+    if lookup.status_code != 404:
+        # Lookup failed for a reason other than 404. Surface that error.
+        env = PagesCreateProjectEnvelope(
+            status="degraded",
+            data=PagesCreateProjectData(project_name=project_name, source_type=source_type),  # type: ignore[arg-type]
+            provenance=provenance,
+            error=_map_cf_create_error(lookup),
+        )
+        sys.exit(emit(env))
+
+    # 404 → project does not exist. Create it.
+    body: dict = {"name": project_name, "production_branch": branch}
+    if source_type == "github":
+        body["source"] = {
+            "type": "github",
+            "config": {
+                "owner": repo_owner,
+                "repo_name": repo_name,
+                "production_branch": branch,
+            },
+        }
+    else:
+        # direct-upload: omit source field entirely (CF defaults to direct-upload)
+        pass
+
+    log(f"Creating Pages project {project_name} (source={source_type})...")
+    create = _cf_call("POST", f"/accounts/{account_id}/pages/projects", token, json_body=body)
+    provenance["cf_pages_project_create"] = ProviderRunMetadata(
+        status="ok" if create.ok else "failed",
+        latency_ms=create.latency_ms,
+        error=None if create.ok else (create.error_message or "unknown"),
+        provider_version="cloudflare-api-v4",
+    )
+    if not create.ok:
+        env = PagesCreateProjectEnvelope(
+            status="degraded",
+            data=PagesCreateProjectData(
+                project_name=project_name,
+                source_type=source_type,  # type: ignore[arg-type]
+                repo_owner=repo_owner,
+                repo_name=repo_name,
+                production_branch=branch,
+            ),
+            provenance=provenance,
+            error=_map_cf_create_error(create),
+        )
+        sys.exit(emit(env))
+
+    payload = create.payload if isinstance(create.payload, dict) else {}
+    env = PagesCreateProjectEnvelope(
+        status="ok",
+        data=PagesCreateProjectData(
+            project_name=project_name,
+            source_type=source_type,  # type: ignore[arg-type]
+            repo_owner=repo_owner,
+            repo_name=repo_name,
+            production_branch=branch,
+            project_id=payload.get("id"),
+            pages_subdomain=payload.get("subdomain"),
+            already_existed=False,
+            created_now=True,
+        ),
+        provenance=provenance,
+    )
+    sys.exit(emit(env))
 
 
 @cli.command("set-domain")
