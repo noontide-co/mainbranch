@@ -55,6 +55,22 @@ fi
 
 ---
 
+## Operating principles
+
+Four behaviors `/site` uses on every run, not optional:
+
+**1. One flow: brief → site.** The brief and the site live in the same skill. Don't tell the operator "build the brief in X, then come back for the site." `/site` walks: research → brief draft → review → lock → concept variations → publish → iterate. Continuous.
+
+**2. Foreground subagents, always.** When spawning subagents (research, concept generation, review passes), keep them in the foreground. Background subagents have a known file-write bug — files appear written but don't persist. Foreground only. See [`references/concept-variations.md`](references/concept-variations.md) for the spawn pattern.
+
+**3. Parallel by default.** Multiple research questions? Spawn agents in parallel. Multiple concept variations? Spawn in parallel. Multiple review passes? Spawn in parallel. Sequential is the exception, not the rule.
+
+**4. Publish-first, then iterate.** Push the rawest working version of the brief, then the rawest working concept, to GitHub immediately. Git history is the durable memory across context clears. Chat compaction can't be trusted. Iterate on top of committed work, not in-memory state.
+
+When research subagents record findings, they follow the [`/think` research patterns](../think/SKILL.md) — dated `research/YYYY-MM-DD-slug-claude-code.md` files with frontmatter (`linked_decisions: []`), so the research → decision → reference chain stays intact across the brief and the site.
+
+---
+
 ## Where Files Go
 
 ```
@@ -171,7 +187,7 @@ Ask the operator. Route based on the answer; don't assume.
 >   *V1: per-offer lander generation not yet wired. Use **Minisite** for single-page-feel use cases — its home page covers the focused conversion target.* Future spec: [`references/lander-build.md`](references/lander-build.md).
 >
 > - 🟩 **Minisite** (~4–6 pages, static HTML) — home + how-it-works + 2–4 LLM-picked + privacy/terms/start-thanks. Designed fresh per offer by a generation subagent. **V1 target.**
->   Best for: paid-ad lander tests, single-offer first deploys, deposit-gateway flows.
+>   Best for: paid-ad lander tests, single-offer first deploys, payment / lead-form / booking funnels.
 >   Flow: [`references/minisite-build.md`](references/minisite-build.md). Engine spec: `mb-vip/.claude/reference/minisite.md`.
 >
 > - 🟨 **Website** (full, multi-section, build step likely) — depth, blog, multiple offers, knowledge base, course area.
@@ -285,6 +301,8 @@ Site shapes `/site` covers: **lander** (1 page), **minisite** (~4–6 pages), **
 **Generation + design (used by per-shape flows):**
 
 - [references/minisite-generation-system.md](references/minisite-generation-system.md) — load-bearing system prompt for minisite generation subagent
+- [references/concept-variations.md](references/concept-variations.md) — parallel-on-localhost concept generation pattern (default 2)
+- [references/review.md](references/review.md) — quality-gate steps the skill runs through before lock and before publish
 - [references/anti-patterns.md](references/anti-patterns.md) — what NOT to bake into prompts
 - [references/naming-heuristic.md](references/naming-heuristic.md) — 8-step domain naming playbook
 - [references/cloudflare-pages-link.md](references/cloudflare-pages-link.md) — CF Pages GitHub App handshake walkthrough

@@ -1,40 +1,139 @@
 # Minisite — Build Flow
 
-The minisite shape: ~4 pages of static HTML, no build step, deployed to Cloudflare Pages with git auto-deploy. Designed fresh per offer by a generation subagent — no template inheritance.
+The minisite shape: ~4–6 pages of static HTML, no build step, deployed to Cloudflare Pages with git auto-deploy. Designed fresh per offer by a generation subagent — no template inheritance.
 
-V1 target. The default for paid-ad lander tests, single-offer first deploys, and deposit-gateway flows.
+V1 target. The default for paid-ad lander tests, single-offer first deploys, lead-form funnels, and conversion-gateway flows.
 
-The canonical contract for what a minisite *is* (page list, per-page content, post-payment flow, tracking, walkthrough UX) lives at `mb-vip/.claude/reference/minisite.md` (engine-side spec). This file is the **/site skill's implementation flow** — how the skill walks the operator through producing one.
+The canonical contract for what a minisite *is* (page list, per-page content, conversion endpoint, tracking, walkthrough UX) lives at `mb-vip/.claude/reference/minisite.md` (engine-side spec). This file is the **/site skill's implementation flow** — how the skill walks the operator through producing one.
 
 ---
 
-## setup (minisite)
+## Flow at a glance
 
-**1. Name + project repo.** Ask the operator:
+The minisite is built in one continuous flow. Brief and site are not separate skills — `/site` walks all of it:
+
+```
+1. Research      — parallel subagents in foreground, recording to /think research files
+2. Brief draft   — composed from research + reference files
+3. Review        — quality gates run in parallel; operator addresses or proceeds
+4. Brief lock    — committed to git as the first durable artifact
+5. Setup         — domain, DNS, repo, Pages (atom chain)
+6. Conversion    — operator picks endpoint kind, URL captured to .mainbranch/conversion.json
+7. Concepts      — N home-page variations on localhost (default 2), operator picks
+8. Publish raw   — picked concept committed and pushed; Cloudflare auto-deploys
+9. Build out     — rest of pages generated with picked concept as seed
+10. Pre-publish review
+11. Publish updates — git push, iterate
+```
+
+Every step that produces durable work commits to git before moving on. Git history is the durable memory; chat compaction can't be trusted.
+
+---
+
+## 1. Research
+
+Spawn parallel research subagents (foreground only — see [`SKILL.md` Operating principles](../SKILL.md#operating-principles)) for the questions the brief needs answered.
+
+Typical research questions:
+- What do this offer's customers actually say? (audience-language mining from interviews, reviews, Skool posts)
+- What's the best-performing competitor framing for this offer category?
+- What proof is available — testimonials with permission, outcome data, founder credentials?
+- What conversion-endpoint kind fits this offer (payment / lead / appointment)?
+
+Each subagent records its findings to a dated `research/YYYY-MM-DD-<slug>-claude-code.md` file in the business repo, with frontmatter following the [`/think` research pattern](../../think/SKILL.md):
+
+```yaml
+---
+type: research
+date: YYYY-MM-DD
+source: claude-code
+topics: [audience-mining, competitor-framing, proof-inventory]
+linked_decisions: []
+status: complete
+---
+```
+
+**Why this matters:** when the conversation compacts later, the operator (and the next session) can re-load the research from disk. Without persisted research, brief drafting is amnesia.
+
+---
+
+## 2. Brief draft
+
+The brief is the locked source of truth for the site. It's composed from:
+- Resolved `offer.md` (the framing, value prop, pricing, transformation)
+- Resolved `audience.md` (pain frame, language, objections)
+- `voice.md` (tone, register, named enemies, "never say")
+- The research files just produced
+- The conversion endpoint kind (operator's pick)
+
+The skill drafts the brief into a single markdown artifact in the business repo: `decisions/YYYY-MM-DD-minisite-brief-<offer-slug>.md` (per the [`/think` decision pattern](../../think/SKILL.md)).
+
+The brief includes:
+- **Headline + subhead** (≤2 lines, transformation-anchored)
+- **Value prop** (3 short reasons OR one extended argument)
+- **Mechanism summary** (for the how-it-works page)
+- **Picked supporting pages** (which 2–4 from `proof / pricing / faq` or operator-added)
+- **Conversion endpoint** (kind + URL or "to be wired in step 6")
+- **Voice anchor lines** (3–5 sentences from voice.md the subagent should pattern-match)
+- **Framework tag** (if any — PAS / AIDA / StoryBrand / founder-letter / none)
+
+---
+
+## 3. Review (pre-lock)
+
+Run [`review.md`](review.md) gates in parallel against the brief draft:
+- **research-grounded** — does the language match what real customers said?
+- **in-voice** — does the brief match `voice.md`?
+- **de-AI'd** — any AI tells (em-dash overuse, "in today's fast-paced world," empty intensifiers)?
+- **framework-true** — if a framework was declared, does the brief follow it?
+
+Synthesize findings; surface to operator. They address or proceed.
+
+---
+
+## 4. Brief lock
+
+Once review is addressed (or skipped with operator awareness), commit the brief to the business repo:
+
+```bash
+cd <business_repo>
+git add decisions/YYYY-MM-DD-minisite-brief-<slug>.md
+git commit -m "[lock] minisite brief — <slug>"
+git push
+```
+
+The brief is now durable. Move to setup.
+
+---
+
+## 5. Setup (atom chain)
+
+Same as before — infrastructure provisioning. This step doesn't touch the brief; it's purely about getting the empty deploy target ready.
+
+**5a. Name + project repo.** Ask the operator:
 - Site name (e.g., `thelastbill`). Becomes the Pages project name.
 - Project repo location (default: sibling of vip — `~/Documents/GitHub/<name>` for solo work, `~/Documents/GitHub/noontide-sites/<name>` for Noontide work). Empty repo, no template merge.
-- Apex domain. If they don't have one, route to [`naming-heuristic.md`](naming-heuristic.md) — an 8-step playbook for generating + validating brand-tier names.
+- Apex domain. If they don't have one, route to [`naming-heuristic.md`](naming-heuristic.md).
 
-**2. Atom-chain prerequisites.** Confirm the credentials are in place:
+**5b. Atom-chain prerequisites.** Confirm credentials are in place:
 ```bash
 source ~/.config/vip/env.sh
 python3 .claude/skills/site/scripts/verify_live.py
 ```
-Expect 3/3 passed (Cloudflare scopes + zone lookup + domain-check CLI). Porkbun skipped is fine for the CF-registered path.
+Expect 3/3 passed (Cloudflare scopes + zone lookup + domain-check CLI).
 
-If anything's red, route the operator to `bash .claude/skills/site/scripts/setup_creds.sh` to provision Cloudflare credentials, then re-run.
+If anything's red, route to `bash .claude/skills/site/scripts/setup_creds.sh`, then re-run.
 
-**3. Domain — buy-new vs. existing.** Ask:
-- "Already own the domain?" → skip to step 4 with the domain name.
-- "Need to buy?" → run `python3 .claude/skills/site/scripts/domain.py check <name> --tlds .com,.co,.io` first to confirm availability + TLD support. If `extension_not_supported_via_api`, fall back to the Cloudflare dashboard at https://dash.cloudflare.com/registrar (confirm the right account before purchase). For API-supported TLDs and after explicit operator Y on price, proceed with `domain.py buy <name>` once that subcommand wires the live API call.
+**5c. Domain — buy-new vs. existing.** Ask:
+- "Already own the domain?" → skip to 5d with the domain name.
+- "Need to buy?" → run `python3 .claude/skills/site/scripts/domain.py check <name> --tlds .com,.co,.io` first to confirm availability + TLD support. For API-supported TLDs and after explicit operator Y on price, proceed with `domain.py buy <name>`. For dashboard-only TLDs, fall back to https://dash.cloudflare.com/registrar.
 
-**4. DNS ensure.** Once the domain is owned (CF Registrar or Porkbun), run:
+**5d. DNS ensure.** Once the domain is owned:
 ```bash
 python3 .claude/skills/site/scripts/dns.py ensure <domain> --registrar cloudflare --skip-propagation-poll
 ```
-For CF-registered domains the zone is auto-created with NS already at CF — this is an idempotent verification, not a state change. For Porkbun-registered domains, the atom swaps NS to CF nameservers and polls propagation.
 
-**5. GitHub repo + initial scaffold push.** Create the project repo and push a placeholder `index.html` so the Pages project has something to deploy:
+**5e. GitHub repo + initial scaffold push.**
 ```bash
 gh repo create <owner>/<name> --public --add-readme
 git clone https://github.com/<owner>/<name>.git ~/Documents/GitHub/<name>
@@ -43,19 +142,19 @@ echo '<!doctype html><title><name></title><h1>soon</h1>' > index.html
 git add -A && git commit -m "[add] placeholder" && git push
 ```
 
-**6. Cloudflare Pages project (git-connected).** The atom creates the project with `source.type=github` so every push auto-deploys:
+**5f. Cloudflare Pages project (git-connected).**
 ```bash
 python3 .claude/skills/site/scripts/pages.py create-project <name> --repo-owner <owner> --repo-name <repo> --branch main
 ```
-Live-tested in PR #102. If you hit `github_app_not_installed`, the envelope's `suggestion` field walks through the dashboard handshake step (Compute → Workers & Pages → Create application → Continue with GitHub → connect any repo → close the tab); see [`cloudflare-pages-link.md`](cloudflare-pages-link.md) for the full path.
+If you hit `github_app_not_installed`, the envelope's `suggestion` field walks through the dashboard handshake step; see [`cloudflare-pages-link.md`](cloudflare-pages-link.md).
 
-**7. Custom domain attach + DNS verification.** Run:
+**5g. Custom domain attach + DNS verification.**
 ```bash
 python3 .claude/skills/site/scripts/pages.py set-domain <name> <domain> --timeout-seconds 300
 ```
-The atom attaches the domain, creates the CNAME record in the zone (the step the dashboard hides), and polls until SSL is active. Expect ~3-4 min total. Live-tested end-to-end in PR #97.
+~3-4 min total. Live-tested end-to-end in PR #97.
 
-**8. Save config.** Write or extend `~/.mainbranch/sites.json`:
+**5h. Save config.** Write or extend `~/.mainbranch/sites.json`:
 ```json
 {
   "name": "<name>",
@@ -67,48 +166,146 @@ The atom attaches the domain, creates the CNAME record in the zone (the step the
 }
 ```
 
-**Exit:**
-> "Minisite ready at https://<domain>. Placeholder deployed; run `/site build --one-shot` to generate the actual minisite from your offer + audience specs."
+---
+
+## 6. Conversion endpoint
+
+Operator picks the kind (per the [Conversion endpoint](../../../reference/minisite.md#conversion-endpoint) section of the engine spec):
+
+- **Stripe payment page** → run `stripe.py create-payment-link <offer-slug> --amount <cents> --success-url https://<domain>/start/thanks/`. Capture `payment_link.url` from the envelope.
+- **Lead form** → ask: "Where does form data go?" — capture provider + URL (Tally / Typeform / Google Form / native + Formspree / custom backend).
+- **Appointment booking** → ask for the booking-link URL (Cal.com / Calendly / SavvyCal).
+- **Custom webhook** → ask for the URL.
+
+Write the picked endpoint to `<site_repo>/.mainbranch/conversion.json`. The shape is the same for all kinds; the `metadata` block varies. Examples:
+
+```json
+// Stripe payment page
+{
+  "kind": "stripe_payment_page",
+  "url": "https://buy.stripe.com/abc123",
+  "render": "link_out",
+  "metadata": {
+    "amount_usd": 100,
+    "currency": "usd",
+    "stripe_product_id": "prod_xyz",
+    "stripe_payment_link_id": "plink_abc",
+    "payment_kind": "deposit"
+  }
+}
+
+// Lead form
+{
+  "kind": "lead_form",
+  "url": "https://tally.so/r/abc123",
+  "render": "link_out",
+  "metadata": { "provider": "tally" }
+}
+
+// Appointment booking
+{
+  "kind": "appointment_booking",
+  "url": "https://cal.com/devon/intro",
+  "render": "link_out",
+  "metadata": { "provider": "cal.com" }
+}
+
+// Custom webhook
+{
+  "kind": "custom_webhook",
+  "url": "https://operator-domain.com/leads",
+  "render": "form_post",
+  "metadata": {}
+}
+```
+
+The generation subagent in step 9 reads `kind` + `render` + `url` and renders the home CTA accordingly (link-out button, embedded form, embedded booking iframe, or form-POST handler).
 
 ---
 
-## build --one-shot (minisite)
+## 7. Concept variations (home page only)
 
-The load-bearing mode — where Claude (the operator's running session) spawns a subagent that generates fresh HTML/CSS/SVG for this offer. No template inheritance. No placeholder tokens. No Anthropic SDK call. The subagent is a Claude Code subagent, spawned via the `Agent` tool.
+Per [`concept-variations.md`](concept-variations.md): spawn N home-page concepts in parallel (default 2, operator-configurable in `~/.config/vip/local.yaml`).
 
-**1. Resolve offer context.** Use the offer-context resolution from `SKILL.md`. At minimum: `offer.md` + `audience.md` paths + the active offer slug.
+Each concept gets:
+- Locked brief from step 4
+- `offer.md`, `audience.md`, `voice.md`, `soul.md`
+- Conversion endpoint URL from step 6
+- A short "lean" instruction differentiating this concept from the others
 
-**2. Load the system prompt.** Read [`minisite-generation-system.md`](minisite-generation-system.md) verbatim. This is the load-bearing artifact — the full hard-constraints + soft-brief framing for the generation subagent. Pass it as the subagent's system prompt unmodified.
+Each writes to `<site_repo>/.mainbranch/concepts/concept-<n>/`. The skill starts a localhost preview for each, surfaces URLs to operator, waits for pick.
 
-**3. Build the user message.** Compose:
-- Resolved `offer.md` content
-- Resolved `audience.md` content
-- Optional `voice.md` snippets (anchor phrases, named enemies, "never say" list)
-- Reference URLs — defaults: `https://howdy.md`, `https://thelastbill.com`. Operator can pass `--reference URL` to add or replace.
-- Project repo absolute path (where the subagent writes via `Write`)
-- Soft directive: *"Generate fresh HTML/CSS/SVG for this offer. The reference URLs are taste anchors, not templates — read them for polish level, then design something that fits **this** offer. Surprise me."*
+Operator picks → picked files move to project root, others discarded (optionally archived to `.mainbranch/concepts/discarded/`).
 
-Anti-patterns to avoid in your own framing of the user message: see [`anti-patterns.md`](anti-patterns.md). The big ones: don't lock typography or colors, don't enumerate available sections, don't ask the subagent to "make it look like the references," don't suppress variance.
+---
 
-**4. Spawn the subagent.** Invoke the `Agent` tool with `subagent_type=general-purpose`, the system prompt from step 2, and the user message from step 3. The subagent has `Write` access; it will write files directly to the project repo path.
+## 8. Publish raw
 
-**5. Validate the output.** After the subagent returns, run these checks against the project repo:
+The picked home page is the rawest working version. Commit + push immediately:
 
-- **Required files present:** `index.html`, `how-it-works/index.html`, two more page directories with `index.html`, `privacy/index.html`, `terms/index.html`, `_headers`, `_redirects`, `robots.txt`, `sitemap.xml`, `og.svg`, `favicon.svg`. Each missing file = a fix request to the subagent.
-- **Footer presence:** `grep -L "Noontide Collective LLC" *.html **/*.html` should return nothing (or only files where `offer.md` declared a different parent entity — check the override).
-- **OG render:** `python3 .claude/skills/site/scripts/og_render.py render <repo>/og.svg <repo>/og.png`. Envelope must return `status: ok` with `width: 1200, height: 630`. Failure → fix request to subagent (likely `og.svg` viewBox is wrong).
-- **Lighthouse smoke (optional, V1.1):** `npx lighthouse http://localhost:8000 --only-categories=performance --form-factor=mobile` against a local `python3 -m http.server` running in the project repo. Score ≥ 90 = pass.
+```bash
+cd <site_repo>
+git add -A
+git commit -m "[add] picked home concept — <slug>"
+git push
+```
 
-**6. Commit + push (operator's call).** Once validation is green, summarize for the operator:
-- Files written
-- Hero artifact picked
-- Color palette
-- Two page choices
-- Suggested commit message: `"[add] one-shot minisite generation for <offer>"`
+Cloudflare auto-deploys (per the git-connected Pages project from step 5f). The site is now live with one page. The rest will follow.
 
-Operator runs `git add -A && git commit && git push`. Cloudflare auto-deploys (per the git-connected Pages project from step 6 of setup).
+---
 
-**Variance test (acceptance criterion):** Running `/site build --one-shot` twice on the same offer must produce visually different output. If it doesn't, the soft brief was too prescriptive — re-read [`anti-patterns.md`](anti-patterns.md).
+## 9. Build out remaining pages
+
+Spawn the minisite generation subagent (foreground) with the picked concept as the design seed. The subagent generates the rest of the pages (`how-it-works/`, picked supporting pages, `privacy/`, `terms/`, `start/thanks/`) consistent with the picked concept's design language.
+
+Inputs to the build subagent:
+- Picked `index.html` + `styles.css` from step 8 (the design seed)
+- Locked brief from step 4
+- Conversion endpoint URL from step 6
+- `offer.md`, `audience.md`, `voice.md`, optional `soul.md`
+- The system prompt from [`minisite-generation-system.md`](minisite-generation-system.md)
+
+Anti-patterns to avoid in the user message: see [`anti-patterns.md`](anti-patterns.md).
+
+**Validation after build-out:**
+
+- **Required files present:** `index.html`, `how-it-works/index.html`, two more page directories with `index.html`, `privacy/index.html`, `terms/index.html`, `start/thanks/index.html`, `_headers`, `_redirects`, `robots.txt`, `sitemap.xml`, `og.svg`, `favicon.svg`. Each missing file = a fix request to the subagent.
+- **Footer presence:** `grep -L "Noontide Collective LLC" *.html **/*.html` should return nothing (or only files where `offer.md` declared a different parent entity).
+- **OG render:** `python3 .claude/skills/site/scripts/og_render.py render <repo>/og.svg <repo>/og.png`. Envelope must return `status: ok` with `width: 1200, height: 630`.
+- **Conversion URL substitution:** every CTA href on every page should match the URL in `<repo>/.mainbranch/conversion.json` (no `https://CONVERSION-PLACEHOLDER` left).
+
+---
+
+## 10. Pre-publish review
+
+Run [`review.md`](review.md) gates in parallel against the full site copy:
+- **in-voice**, **de-AI'd**, **framework-true** (research-grounded only re-runs if reference files changed since brief lock).
+- Plus operator-defined gates from `<business_repo>/reference/review/*.md` if any.
+
+Synthesize findings; surface to operator. They address or proceed.
+
+---
+
+## 11. Publish updates + iterate
+
+```bash
+cd <site_repo>
+git add -A
+git commit -m "[add] minisite build-out — <slug>"
+git push
+```
+
+Cloudflare auto-deploys. Verify `https://<domain>/` returns 200 and shows the new pages.
+
+For targeted edits going forward, edit files in the project repo directly and `git push` — Cloudflare auto-deploys.
+
+---
+
+## Variance test (acceptance criterion)
+
+Running the full flow twice on the same offer must produce visually distinct sites — different palettes, hero artifacts, page choices, microcopy. Concept variations enforce this at the home-page level; build-out inherits the picked concept's seed but still has aesthetic latitude in the supporting pages.
+
+If two full runs produce identical output, the brief was over-specified or the concept-variations soft-brief was too prescriptive — re-read [`anti-patterns.md`](anti-patterns.md).
 
 ---
 
@@ -117,13 +314,30 @@ Operator runs `git add -A && git commit && git push`. Cloudflare auto-deploys (p
 - No `pnpm install`, no `pnpm build`. Static HTML only.
 - No `site-config.ts` pattern. Each minisite generates its own one-off structure.
 - No section-types menu (the Next.js section catalog from `website-build.md` doesn't apply).
-- No `configure` mode separate from `build --one-shot` — the generation subagent reads voice.md / offer.md directly and bakes the brand decisions into the output.
-- No Anthropic API key. No `pages_gen.py` Python wrapper. The generation runs inside the operator's Claude Code session via the `Agent` tool.
+- No Anthropic API key. The generation runs inside the operator's Claude Code session via the `Agent` tool.
+- No multi-endpoint conversion (one minisite, one conversion endpoint — graduate to website shape if you need both).
 
 ---
 
 ## Iterating after first build
 
-Re-running `/site build --one-shot` produces a fresh design (variance is the feature). For targeted edits, edit the file in the project repo directly and `git push` — Cloudflare auto-deploys.
+For targeted edits, edit the file in the project repo directly and `git push`. Cloudflare auto-deploys.
+
+For broader regeneration (new brief, new concept), re-run `/site` — it walks the same flow and detects existing state in the project repo.
 
 When the offer pulls more traffic and the minisite needs more pages or content depth, that's the **graduation signal**. See [`graduation.md`](graduation.md) for paths from minisite → website (per-offer full site) or minisite → Website + CMS (Sanity, Contentful, etc.).
+
+---
+
+## Cross-references
+
+- [`SKILL.md`](../SKILL.md) — Operating principles (foreground-only, publish-first, parallel-by-default)
+- [`review.md`](review.md) — quality gates run in steps 3 and 10
+- [`concept-variations.md`](concept-variations.md) — parallel concept generation in step 7
+- [`minisite-generation-system.md`](minisite-generation-system.md) — system prompt for the build-out subagent in step 9
+- [`anti-patterns.md`](anti-patterns.md) — what NOT to bake into prompts
+- [`naming-heuristic.md`](naming-heuristic.md) — domain naming playbook (used in step 5a if needed)
+- [`cloudflare-pages-link.md`](cloudflare-pages-link.md) — CF Pages GitHub App handshake (used in step 5f if needed)
+- [`graduation.md`](graduation.md) — when to move beyond minisite shape
+- Engine spec: `mb-vip/.claude/reference/minisite.md` — the contract this flow implements
+- [`/think`](../../think/SKILL.md) — research and decision recording patterns this flow follows

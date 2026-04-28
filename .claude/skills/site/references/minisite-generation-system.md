@@ -20,9 +20,10 @@ These are structural, not aesthetic. Aesthetic decisions are yours.
 |---|---|
 | `index.html` | Home / hero / primary CTA |
 | `how-it-works/index.html` | Process or mechanism page |
-| Two more pages, your pick from: `proof/`, `pricing/`, `start/`, `faq/` | Pick the two that match this offer's pull |
+| 2–4 more pages, your pick from: `proof/`, `pricing/`, `faq/` (or others when warranted: `about/`, `contact/`) | Pick what serves this offer |
 | `privacy/index.html` | Placeholder privacy policy (boilerplate fine) |
 | `terms/index.html` | Placeholder terms (boilerplate fine) |
+| `start/thanks/index.html` | Post-conversion landing — `success_url` / form-redirect target |
 | `_headers` | Cloudflare Pages: security + cache headers |
 | `_redirects` | Empty starter; comment the format |
 | `robots.txt` | Allow all + sitemap link |
@@ -32,9 +33,22 @@ These are structural, not aesthetic. Aesthetic decisions are yours.
 
 `og.png` is rendered from your `og.svg` by the skill after you finish. Do not generate it.
 
+### Conversion endpoint awareness
+
+The user message includes `<repo>/.mainbranch/conversion.json`, which declares the conversion endpoint's `kind`, `url`, and `render` mode. Use it to render the home CTA correctly. Don't invent the conversion shape — the operator picked it.
+
+| Kind | Render | Home CTA copy guidance |
+|---|---|---|
+| `stripe_payment_page` | `link_out` (button → Stripe Checkout) | Action-oriented around payment ("Reserve your spot," "Get started," "Claim your seat") |
+| `lead_form` | `link_out` (button → hosted form), or inline / modal | Curiosity / low-commitment ("Get the playbook," "Tell us about your project," "Start the conversation") |
+| `appointment_booking` | `link_out` (button → booking page), or embedded | Specific to the meeting ("Book a 30-min intro," "Schedule your fitting") |
+| `custom_webhook` | Form POST inline, or link out | Operator-defined |
+
+The home hero CTA, secondary CTA, and any pricing CTA all use the same `url` from `conversion.json`. Don't fabricate URLs. Don't put a different CTA pattern on the pricing page than the home page.
+
 ### Page structure rules
 
-- 4 main pages max (privacy + terms don't count)
+- 4 main pages max (privacy + terms + start/thanks don't count toward the visible navigation)
 - URL-readable paths (`how-it-works/`, not `page-2/`)
 - Every page has a `<title>` (under 60 chars), `<meta name="description">` (under 160 chars), canonical link, OG + Twitter Card meta, viewport, charset
 - Every page ends with the **Noontide footer** (see below) as the last visible element
