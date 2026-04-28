@@ -200,11 +200,11 @@ Ask the operator. Route based on the answer; don't assume.
 >
 > **C. Graduating to a different shape.** Existing site has earned more.
 > - Lander → Minisite (single-pager pulls more content)
-> - Minisite → Website (4 pages becoming 10+, blog, multi-offer)
+> - Minisite → Website (~4–6 pages becoming 10+, blog, multi-offer)
 > - Website → Website + CMS (Sanity / Contentful / etc. for non-dev editing)
 > - Read [`references/graduation.md`](references/graduation.md) — when to graduate, what changes, manual vs scripted.
 
-If the operator can't articulate which they're doing, ask the predecessor question: *"What goal are you trying to hit? Drive paid traffic to a deposit? Sell a course? Replace your current Squarespace?"* Their answer maps cleanly to a shape.
+If the operator can't articulate which they're doing, ask the predecessor question: *"What goal are you trying to hit? Drive paid traffic to a sale, lead, or booking? Sell a course? Replace your current Squarespace?"* Their answer maps cleanly to a shape.
 
 ---
 

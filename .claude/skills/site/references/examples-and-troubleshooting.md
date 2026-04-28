@@ -6,53 +6,66 @@ Usage examples and common issue fixes for `/site`.
 
 ## Examples
 
-### Example 1: New Site Setup
+### Example 1: New minisite for a coaching offer
 
-**User:** "I need a landing page for my coaching business"
+**User:** "I need a landing page for my coaching business."
 
-**Claude:** "Let me set up a site for you. Which template fits better?
+**Claude:** "/site walks brief → site as one flow. Pick a shape:
+1. **Lander** (1 page, all-in-one) — V1 stub; use minisite for now.
+2. **Minisite** (~4–6 pages, static HTML) — V1 default. Best for paid-ad funnels and single-offer first deploys.
+3. **Website** (full multi-section, build step) — bigger surface, blog/courses/etc.
 
-1. **SaaS / Product** — product-focused, demo-driven
-2. **High-Ticket Services** — qualification-focused, trust-driven
+Coaching usually fits #2."
 
-Since you said coaching, I'd recommend #2."
+**User:** "Yeah, minisite."
 
-**User:** "Yeah, high-ticket"
+**Claude:** [Walks the 11-step flow:]
+1. Spawns parallel research subagents (foreground) for audience-language mining + competitor framing + proof inventory. Records findings to `research/YYYY-MM-DD-*-claude-code.md` files.
+2. Drafts the brief into `decisions/YYYY-MM-DD-minisite-brief-coaching.md`.
+3. Runs review gates in parallel (research-grounded, in-voice, de-AI'd, framework-true). Surfaces findings.
+4. Operator addresses or proceeds → `git commit` locks the brief.
+5. Atom-chain setup: `domain.py check / buy`, `dns.py ensure`, `gh repo create`, `pages.py create-project --source github`, `pages.py set-domain`.
+6. **Conversion endpoint pick.** "What's the conversion goal? Stripe payment, lead form, appointment booking, or custom webhook?" — operator picks; URL captured to `<repo>/.mainbranch/conversion.json`.
+7. Spawns 2 home-page concept subagents in parallel on localhost (default `default_concepts: 2` from `~/.config/vip/local.yaml`). Surfaces URLs.
+8. Operator picks one; picked concept committed and pushed → Cloudflare auto-deploys.
+9. Build out the rest of the pages with the picked concept as design seed.
+10. Pre-publish review.
+11. Final push.
 
-**Claude:** [Runs setup flow — scaffold, install, deploy, save config]
+"Live at https://your-domain.com. The home CTA links to your conversion endpoint. Reference files are in `<business_repo>/`. Edit pages directly and `git push` to iterate — Cloudflare auto-deploys."
 
-"Site deployed at https://your-site.netlify.app. It's the default template right now. Run `/site configure` to apply your brand, then `/site build` to generate sections from your reference files."
+### Example 2: Iterating on hero copy
 
-### Example 2: Build Hero From Reference
+**User:** "/site — update the hero on my existing minisite"
 
-**User:** "/site build — update the hero"
+**Claude:** [Reads sites.json + the picked offer's reference files]
 
-**Claude:** [Reads offer.md, audience.md, voice.md]
+"Your minisite is at /Users/.../thelastbill. Reading offer.md, audience.md, voice.md...
 
-"Based on your reference files:
-- **Headline:** 'Stop losing clients to scope creep.' (from audience pain point)
-- **Subhead:** 'The project management system that keeps creative agencies profitable.' (from offer mechanism)
-- **CTA:** 'Start Free Trial' (from offer CTA)
-- **Badge:** '200+ agencies, 98% retention' (from testimonials stats)
+Current hero copy:
+- Headline: 'Stop losing clients to scope creep.'
+- Subhead: 'The project management system that keeps creative agencies profitable.'
 
-I'll generate the hero component with these. Want to adjust anything before I build?"
+Want me to regenerate from updated reference files, or hand-edit a specific line?"
 
-### Example 3: Publish Changes
+### Example 3: Publish changes
 
 **User:** "/site publish"
 
-**Claude:** [Runs build, checks git status]
+**Claude:** [Runs pre-publish review gates, checks git status]
 
-"Build passed. Changes:
-- Updated hero headline and subhead
-- Added credibility section with 3 testimonials
-- New color palette (deep navy + coral accent)
+"Pre-publish review surfaced:
+- ✓ in-voice: copy matches voice.md
+- ✓ de-AI'd: no AI tells flagged
+- ⚠ research-grounded: hero subhead doesn't match audience.md language verbatim — minor
 
-Committing as: `[update] Hero copy and credibility section from reference files`"
+Address the warning, or proceed?"
 
-[Commits and pushes]
+**User:** "Proceed."
 
-"Pushed. Netlify will deploy in ~1-2 minutes."
+**Claude:** [Commits + pushes]
+
+"Pushed to GitHub. Cloudflare Pages will auto-deploy in ~1-2 minutes. Live at https://thelastbill.com."
 
 ---
 
@@ -60,47 +73,62 @@ Committing as: `[update] Hero copy and credibility section from reference files`
 
 ### "No site configured"
 
-Run `/site setup` first. The skill needs `~/.mainbranch/sites.json` to know where your site repo is.
+Run `/site` and pick "new site from scratch." The skill walks setup, then writes `~/.mainbranch/sites.json` so future invocations know where your site repo is.
 
-### Build failing
+### Cloudflare Pages: `github_app_not_installed` error
+
+The Cloudflare Pages GitHub App OAuth handshake hasn't been completed for your account. Walk through it once at https://dash.cloudflare.com → Workers & Pages → Create application → Continue with GitHub → connect any repo → close the tab. After that, `pages.py create-project --source github` works.
+
+See [`cloudflare-pages-link.md`](cloudflare-pages-link.md) for the full walkthrough.
+
+### `verify_live.py` fails
+
+```bash
+source ~/.config/vip/env.sh
+python3 .claude/skills/site/scripts/verify_live.py
+```
+
+Expect 3/3 passed (Cloudflare scopes + zone lookup + domain-check CLI). If anything's red, route to `bash .claude/skills/site/scripts/setup_creds.sh`. Porkbun skipped is fine for the CF-registered path.
+
+### Build failing (Website shape with build step)
 
 ```bash
 cd [site_repo] && node --version && pnpm install && pnpm build
 ```
 
-Common causes: wrong Node version (need 18+), missing dependencies, TypeScript errors.
-
-### Netlify deploy failing
-
-Check Netlify dashboard → Deploys → click failed deploy → read build log. Common causes:
-- Build command wrong (should be `pnpm build`)
-- Publish directory wrong (should be `out` for static export)
-- Node version mismatch (set `NODE_VERSION=20` in Netlify env vars)
+Common causes: wrong Node version (need 18+), missing dependencies, TypeScript errors. The minisite shape is static HTML and doesn't have a build step — if you're getting build errors on a minisite, something is wrong with the project repo configuration.
 
 ### Styles not applying
 
-Check `globals.css` for correct CSS variable names. Check `layout.tsx` for font imports. Run `pnpm dev` locally to debug.
+Minisite: each generation produces self-contained HTML/CSS, so the issue is usually a stale browser cache or a missing file (e.g., `og.svg` typo'd as `og.svg.png`). Hard-refresh the browser; check `_headers` if cache-control is being aggressive.
 
-### Static export errors
-
-Verify `next.config.ts` has `output: "export"`. Remove any server-side features (API routes, dynamic server rendering).
+Website (Next.js): check `globals.css` for correct CSS variable names. Check `layout.tsx` for font imports. Run `pnpm dev` locally to debug.
 
 ### "Reference files not found"
 
-Check `~/.mainbranch/sites.json` — the `business_repo` path must point to your business repo with `reference/core/` files.
-
-### Template merge conflicts
-
-During setup, if `git merge upstream/main` has conflicts, resolve them manually. The template should merge cleanly on first setup.
+Check `~/.mainbranch/sites.json` — the `business_repo` path must point to your business repo with `reference/core/` files (or `reference/offers/<active>/` for multi-offer setups).
 
 ### Site looks generic / like AI
 
-Read [frontend-design.md](frontend-design.md). Run `/site configure` to apply brand from voice.md. The anti-AI-slop standards exist specifically to prevent this.
+Run `/site` again and trigger the review gates. The "de-AI'd" gate flags AI tells. The "in-voice" gate checks against `voice.md`. If voice.md is thin, that's the upstream fix — strengthen via `/think codify`.
+
+For the Website (Next.js) shape: read [frontend-design.md](frontend-design.md) — the anti-AI-slop standards exist specifically to prevent generic output.
+
+### Conversion endpoint URL not wired
+
+Check `<site_repo>/.mainbranch/conversion.json`. The generation subagent reads `kind` + `url` + `render` and substitutes the URL into every CTA href. If the file is missing or has `https://CONVERSION-PLACEHOLDER`, run `/site` again and re-run the conversion-endpoint phase.
+
+### Netlify (legacy)
+
+If you're on a pre-V1 Next.js template still deploying to Netlify, see [`deployment.md`](deployment.md) for legacy fallback troubleshooting.
 
 ---
 
 ## See Also
 
-- [frontend-design.md](frontend-design.md) — Typography, color, motion, anti-AI-slop standards
-- [section-patterns.md](section-patterns.md) — How reference files map to page sections
-- [deployment.md](deployment.md) — Netlify setup and troubleshooting
+- [SKILL.md](../SKILL.md) — operating principles, triage, modes
+- [minisite-build.md](minisite-build.md) — full 11-step minisite flow
+- [review.md](review.md) — quality-gate steps
+- [concept-variations.md](concept-variations.md) — parallel-on-localhost concept pattern
+- [cloudflare-pages-link.md](cloudflare-pages-link.md) — CF Pages GitHub App OAuth handshake
+- [deployment.md](deployment.md) — Netlify deploy walkthrough (legacy fallback)

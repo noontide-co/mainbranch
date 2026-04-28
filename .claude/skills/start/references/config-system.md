@@ -137,6 +137,14 @@ media:
 # get generated in parallel. Default 2; raise to 3 or 5 if you're
 # OK spending more tokens for more variation.
 default_concepts: 2
+
+# Announcement tracking (managed by /start and /pull)
+# Slugs of vip announcements (from .claude/announcements.md) the user
+# has already seen. /start appends the slug here when the user routes
+# to the announced skill or types "dismiss". Expired announcements
+# auto-stop surfacing without needing to be removed from this list.
+seen_announcements:
+  - site-oneflow
 ```
 
 **CRITICAL: Always use absolute paths, never `~`.** The Glob and Read tools do not expand `~`, causing silent failures (0 results when files exist). When writing to `local.yaml`, always expand `~` to the full absolute path first. If `local.yaml` already contains `~`, auto-upgrade it to absolute during path validation.

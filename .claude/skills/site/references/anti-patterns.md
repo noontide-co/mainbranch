@@ -8,7 +8,7 @@ Lessons from prior failed prompt attempts. Each pattern below was tried, produce
 
 **Result:** Every output looks like every other output. The LLM has nothing to decide; it slot-fills. The minisite becomes indistinguishable from a generic SaaS template, regardless of offer.
 
-**Fix in `minisite-generation-system.md`:** Specify structural constraints (4 pages, SEO, footer, mobile-first, perf budget). Leave aesthetic decisions — palette, typography, section order, hero artifact — to the LLM with reference URLs as taste signal.
+**Fix in `minisite-generation-system.md`:** Specify structural constraints (~4–6 pages, SEO, footer, mobile-first, perf budget). Leave aesthetic decisions — palette, typography, section order, hero artifact — to the LLM with reference URLs as taste signal.
 
 ## 2. Hex-locked color critique
 
@@ -40,7 +40,7 @@ Lessons from prior failed prompt attempts. Each pattern below was tried, produce
 
 **Result:** The LLM picks from a menu instead of inventing. The minisite reads as assembled rather than designed. Same problem as #1 (over-prescription) but applied at the section level.
 
-**Fix:** The system prompt names the four pages and a few decision points (which two extra pages this offer needs, what the hero artifact should be). It does not enumerate component types. The LLM decides what each page contains.
+**Fix:** The system prompt names the mandatory pages (home + how-it-works) and a few decision points (which 2–4 supporting pages this offer needs, what the hero artifact should be). It does not enumerate component types. The LLM decides what each page contains.
 
 ## 6. Building in fallbacks for "if the LLM gets confused"
 

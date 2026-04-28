@@ -471,6 +471,25 @@ Check `reference/core/*.md`. No folder → `/setup`. Exists → check completene
 
 **Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[current_offer or 'single']**"
 
+**Surface unseen announcements (before the menu).** Read `<vip_path>/.claude/announcements.md` and `~/.config/vip/local.yaml:seen_announcements` (a list of slug strings). For each `## <slug>` entry whose:
+- `expires` date is today or later, AND
+- `<slug>` is NOT in `seen_announcements`
+
+…render a one-line "What's new" banner above the menu. Format:
+
+```
+─── What's new ───
+[NEW] <title>
+<2-line body>
+─────────────────
+```
+
+If there are 2+ unseen entries, list them stacked (newest first). If there are 0, skip the banner entirely.
+
+**Mark seen** when the user routes to the announced skill, or types "dismiss" / "seen" / "got it". Append the slug to `seen_announcements` in `~/.config/vip/local.yaml` via the safe-write pattern in [config-system.md](references/config-system.md). The list grows over time; expired entries auto-stop surfacing without needing to be removed.
+
+**Add `[NEW]` badge to menu options.** If an unseen announcement targets a specific skill (`skill: /<skill-name>` in announcements.md), append `  [NEW]` to that menu line below.
+
 If user is ready to work, ask or infer intent. **Use numbered options:**
 
 ### Triage (Option 1 — User-Initiated)
@@ -582,7 +601,7 @@ Auto-detect user intent and route. Skills: `/pull`, `/help`, `/setup`, `/think`,
 | "ads", "copy", "static", "image ads", "video ads", "review", "compliance" | `/ads` |
 | "vsl", "sales video", "about page video", "b2b video" | `/vsl` |
 | "content", "reels", "tiktok", "organic", "carousel" | `/organic` |
-| "site", "landing page", "website", "deploy site", "put this online", "I need a site" | `/site` |
+| "site", "landing page", "lander", "minisite", "website", "one-pager", "spin up a site", "deploy site", "put this online", "I need a site", "publish site", "graduate my site", "add a CMS to my site", "/start launch" | `/site` (or `/start launch <offer>` for the speedrun orchestration) |
 | "wiki", "notes", "atomic", "wikilinks", "publish wiki" | `/wiki` |
 | "pull", "update vip", "get latest" | `/pull` |
 | "done", "wrapping up", "end my day", "closing out", "call it a day", "that's it" | `/end` |

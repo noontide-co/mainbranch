@@ -385,7 +385,7 @@ Beyond the composite score, some skills have specific requirements. Check these 
 | offer.md | Score 2+ | Landing pages need clear value prop |
 | voice.md | Score 2+ | Site copy must sound right |
 
-**If voice thin:** "Landing page copy needs strong voice direction. Your voice.md could use expansion. /think can help."
+**If voice thin:** "Landing page copy needs strong voice direction. `/site` walks brief→site as one flow and will pull from your `voice.md` — but if it's thin, the output will be too. You can keep going (`/site` has its own brief phase) or strengthen voice first via `/think`."
 
 ### /newsletter
 

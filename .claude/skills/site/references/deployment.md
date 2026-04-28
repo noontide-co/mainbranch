@@ -1,6 +1,10 @@
-# Deployment
+# Deployment — Netlify (Legacy Fallback)
 
-Netlify setup and deployment reference for `/site`. Sites use static export (`next build` → `out/` directory) deployed to Netlify.
+> **Legacy reference.** Cloudflare Pages with git auto-deploy is the V1 default for `/site` (better CLI, better domain integration, deploys triggered by `git push`). This file documents the **legacy Netlify path** for pre-V1 Next.js templates that haven't migrated. Pick Netlify only if you have a specific reason to.
+>
+> For the current Cloudflare Pages flow, see [`cloudflare-pages-link.md`](cloudflare-pages-link.md) (the GitHub App OAuth handshake) and the per-shape build refs ([`minisite-build.md`](minisite-build.md), [`website-build.md`](website-build.md)).
+
+Netlify setup and deployment reference for `/site` legacy paths. Sites use static export (`next build` → `out/` directory) deployed to Netlify.
 
 ---
 
