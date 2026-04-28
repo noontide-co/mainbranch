@@ -8,7 +8,7 @@ When `/site`, `/start launch`, `stripe.py`, or any future skill ships behavior t
 
 ## What a minisite is
 
-A **minisite** is a four-page static-HTML site, generated fresh per offer, deployed to Cloudflare Pages with git auto-deploy. It's the V1 chassis target — the speedrun shape that takes an offer from offer-locked to live-on-a-custom-apex with a working Stripe deposit gateway in under an hour.
+A **minisite** is a small (~4–6 page) static-HTML site, generated fresh per offer, deployed to Cloudflare Pages with git auto-deploy. It's the V1 chassis target — the speedrun shape that takes an offer from offer-locked to live-on-a-custom-apex with a working Stripe deposit gateway in under an hour.
 
 Not a template. Not inheritance. Each minisite is generated from scratch by a Claude Code subagent reading `offer.md` + `audience.md` + reference URLs. Two runs on the same offer produce visually distinct sites (variance is the feature).
 
@@ -18,7 +18,7 @@ The minisite is one of three site shapes the chassis supports — see [`graduati
 
 ## Page contract
 
-Every minisite ships these pages. The home and `how-it-works/` pages are mandatory; the next two are LLM-picked from a fixed menu based on which support the offer best.
+A minisite lands at roughly 4–6 pages. Two are mandatory; the rest are LLM-picked based on what the offer actually needs. The shape isn't perfect — the subagent uses judgment, not a checklist.
 
 ### Mandatory pages
 
@@ -27,15 +27,17 @@ Every minisite ships these pages. The home and `how-it-works/` pages are mandato
 | `/` (`index.html`) | Hero + value prop + primary CTA + brief proof + footer. Maximum focus. | `offer.md` (transformation, value), `audience.md` (pain frame), `voice.md` |
 | `/how-it-works/` | Process or mechanism. How the offer delivers. Often diagrammatic or stepper-shaped. | `offer.md` (mechanism section) |
 
-### LLM-picked pages (exactly two from this menu)
+### LLM-picked pages (typically 2–4)
 
-The generation subagent picks the two that best support **this** offer. A coaching offer often picks `proof` + `faq`; a software offer often picks `pricing` + `faq`; a billing tool often picks `pricing` + `proof`. The subagent decides, the operator overrides if needed.
+The generation subagent picks the supporting pages that best serve **this** offer. The menu below is the common starting set; the subagent can add others when the offer warrants (e.g., `/about/` for founder-led services, `/contact/` for high-touch offers). Don't pad to hit a number — every page should earn its slot.
 
 | Path | Purpose | Source material |
 |---|---|---|
 | `/proof/` | Testimonials, case studies, outcome data, trust badges | `proof/testimonials.md`, `proof/angles/*.md` |
 | `/pricing/` | Pricing card, what's included, payment CTA | `offer.md` (pricing), Stripe payment-link URL |
 | `/faq/` | Top objections answered, ordered by likelihood-of-asking | `audience.md` (objections), `offer.md` |
+
+A coaching offer often lands on home + how-it-works + proof + faq. A software offer often lands on home + how-it-works + pricing + faq. A billing tool with strong proof might land on home + how-it-works + proof + pricing + faq. All valid.
 
 ### Required infrastructure pages
 
