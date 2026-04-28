@@ -1,6 +1,6 @@
-# Minisite — V1 Chassis Spec
+# Minisite — V1 Spec
 
-The canonical contract for what a minisite **is** in Main Branch. Implementation flows live elsewhere; this file is the source of truth for page list, content contracts, post-payment flow, tracking, and walkthrough UX.
+The canonical contract for what a minisite **is** in Main Branch. Implementation flows live elsewhere; this file is the source of truth for page list, content contracts, conversion endpoint, tracking, and walkthrough UX.
 
 When `/site`, `/start launch`, `stripe.py`, or any future skill ships behavior that touches a minisite, that behavior conforms to this spec. If the spec changes, update this file first; downstream code follows.
 
@@ -8,7 +8,7 @@ When `/site`, `/start launch`, `stripe.py`, or any future skill ships behavior t
 
 ## What a minisite is
 
-A **minisite** is a small (~4–6 page) static-HTML site, generated fresh per offer, deployed to Cloudflare Pages with git auto-deploy. It's the V1 speedrun target — taking an offer from offer-locked to live-on-a-custom-apex with a working Stripe deposit gateway in under an hour.
+A **minisite** is a small (~4–6 page) static-HTML site, generated fresh per offer, deployed to Cloudflare Pages with git auto-deploy. It's the V1 speedrun target — taking an offer from offer-locked to live-on-a-custom-apex with a working conversion endpoint in under an hour.
 
 Not a template. Not inheritance. Each minisite is generated from scratch by a Claude Code subagent reading `offer.md` + `audience.md` + reference URLs. Two runs on the same offer produce visually distinct sites (variance is the feature).
 
@@ -34,10 +34,10 @@ The generation subagent picks the supporting pages that best serve **this** offe
 | Path | Purpose | Source material |
 |---|---|---|
 | `/proof/` | Testimonials, case studies, outcome data, trust badges | `proof/testimonials.md`, `proof/angles/*.md` |
-| `/pricing/` | Pricing card, what's included, payment CTA | `offer.md` (pricing), Stripe payment-link URL |
+| `/pricing/` | Pricing card, what's included, conversion CTA | `offer.md` (pricing), conversion endpoint URL |
 | `/faq/` | Top objections answered, ordered by likelihood-of-asking | `audience.md` (objections), `offer.md` |
 
-A coaching offer often lands on home + how-it-works + proof + faq. A software offer often lands on home + how-it-works + pricing + faq. A billing tool with strong proof might land on home + how-it-works + proof + pricing + faq. All valid.
+A coaching offer often lands on home + how-it-works + proof + faq. A software offer often lands on home + how-it-works + pricing + faq. A services offer with strong proof might land on home + how-it-works + proof + pricing + faq. All valid.
 
 ### Required infrastructure pages
 
@@ -45,9 +45,9 @@ A coaching offer often lands on home + how-it-works + proof + faq. A software of
 |---|---|
 | `/privacy/` | Privacy policy. Boilerplate fine for V1. |
 | `/terms/` | Terms of service. Boilerplate fine for V1. |
-| `/start/thanks/` | Post-payment landing. **Required.** This is Stripe's `success_url` default. |
+| `/start/thanks/` | Post-conversion landing. **Required.** This is the default destination after a successful conversion (Stripe `success_url`, lead-form submit redirect, etc.). |
 
-The home page is the conversion target — its primary CTA links directly to the Stripe payment-link URL. There is no separate `/start/` page; that ceremony adds a click without adding signal.
+The home page is the conversion target — its primary CTA links directly to the conversion endpoint URL (Stripe payment page, lead-form, booking link, etc. — see "Conversion endpoint" below). There is no separate `/start/` page; that ceremony adds a click without adding signal.
 
 ### Required infrastructure files (repo root)
 
@@ -69,14 +69,14 @@ What goes on each page by default. The generation subagent has aesthetic freedom
 
 ### Home (`/`)
 
-- **Hero:** transformation phrase (≤2 lines), signature visual, primary CTA linking directly to the Stripe payment-link URL
+- **Hero:** transformation phrase (≤2 lines), signature visual, primary CTA linking directly to the conversion endpoint URL
 - **Value prop:** 3 short reasons or one extended argument; pulled from `offer.md`
 - **Brief proof:** 1–3 testimonials or stat callouts (full proof lives at `/proof/` if picked)
 - **Founder/brand glimpse:** 1–2 sentences from `soul.md` or `offer.md` if relevant
-- **Secondary CTA:** repeat of primary, often with different copy ("ready when you are"), same Stripe URL
+- **Secondary CTA:** repeat of primary, often with different copy ("ready when you are"), same conversion URL
 - **Footer:** Noontide footer (see below)
 
-The Stripe URL is the same one used everywhere on the site. Until the link is wired, placeholder `https://buy.stripe.com/PLACEHOLDER` ships and the `/start launch` orchestration substitutes the real URL during the build phase.
+The conversion URL is the same one used everywhere on the site. Until the URL is wired, placeholder `https://CONVERSION-PLACEHOLDER` ships and the `/start launch` orchestration substitutes the real URL during the build phase.
 
 ### How It Works (`/how-it-works/`)
 
@@ -96,7 +96,7 @@ The Stripe URL is the same one used everywhere on the site. Until the link is wi
 
 - **Pricing card(s):** offer.md determines tier structure; one or three tiers, never two
 - **What's included:** bullet list of concrete deliverables per tier
-- **Payment CTA:** primary CTA links directly to the Stripe payment-link URL (same URL the home hero uses)
+- **Conversion CTA:** primary CTA links directly to the conversion endpoint URL (same URL the home hero uses)
 - **Trust signal:** brief mention of guarantee/refund/etc. if offer.md declares one
 
 ### FAQ (`/faq/`, when picked)
@@ -107,17 +107,17 @@ The Stripe URL is the same one used everywhere on the site. Until the link is wi
 
 ### Privacy / Terms
 
-Boilerplate language is fine for V1. Main Branch assumes the operator's lawyer reviews before scale. Boilerplate must include: data collected (email, payment info via Stripe), how it's used, retention policy, contact for requests. Generate from a template or LLM but mark as boilerplate in a comment.
+Boilerplate language is fine for V1. Main Branch assumes the operator's lawyer reviews before scale. Boilerplate must include: data collected (email, payment info if applicable, form data), how it's used, retention policy, contact for requests. Generate from a template or LLM but mark as boilerplate in a comment.
 
 ### Start / Thanks (`/start/thanks/`)
 
-The post-payment landing page. Stripe's `success_url` redirects here after a successful deposit.
+The post-conversion landing page. Wherever the conversion endpoint allows a redirect target (Stripe `success_url`, lead-form thank-you page, etc.), it points here.
 
-- **Confirmation:** "Thanks. Your deposit is confirmed."
+- **Confirmation:** matches the conversion kind. "Thanks. Your payment is confirmed." for Stripe; "Thanks. We'll be in touch." for lead forms; "Thanks. Your booking is confirmed." for appointments.
 - **What happens next:** explicit timeline — "you'll get an email within X minutes," "I'll personally reach out within Y hours," etc. Pulled from `offer.md` fulfillment notes.
-- **Calendar link / next-step CTA:** if offer.md declares a booking step, link it here
+- **Calendar link / next-step CTA:** if `offer.md` declares a booking step (and it isn't already the conversion endpoint), link it here
 - **Optional:** social proof reinforcement (you joined N others)
-- **No upsell.** First page after payment is gratitude + next-step clarity, never another sale.
+- **No upsell.** First page after conversion is gratitude + next-step clarity, never another sale.
 
 ---
 
@@ -142,33 +142,109 @@ The skill's validation step greps every page for "Noontide Collective LLC" or th
 
 ---
 
-## Post-payment flow
+## Conversion endpoint
+
+Every minisite has **one** conversion endpoint — the URL the home hero CTA points to. The operator picks the kind during `/site` walkthrough; the spec stays open. Stripe is one of several options; the choice depends on the offer's actual conversion goal.
 
 ```
-Visitor → / (CTA click) → Stripe checkout (payment-link URL) → Stripe success → /start/thanks/
+Visitor → / (CTA click) → conversion endpoint → /start/thanks/
 ```
 
-### Stripe payment-link defaults
+### Supported kinds (V1)
 
-When `stripe.py create-payment-link <offer-slug>` runs against the offer:
+| Kind | What the URL is | When to pick | Tracking event |
+|---|---|---|---|
+| **Stripe payment page** | A Stripe-hosted Checkout / Payment Link URL (`https://buy.stripe.com/...`) | Charging money — full price, deposit, custom amount, etc. | `Purchase` |
+| **Lead form** | A hosted form URL (Tally, Typeform, Google Form, native HTML form) | Capturing leads / interest before sales conversation | `Lead` |
+| **Appointment booking** | A booking-link URL (Cal.com, Calendly, SavvyCal, etc.) | Sales-call funnels, consultations, fitting appointments | `Schedule` |
+| **Custom webhook** | An operator-supplied URL (their own form endpoint) | Advanced — own backend, custom flow | Operator-defined |
+
+Operator picks one. The minisite generates with whichever is selected. Two minisites for two different offers can ship with two different kinds.
+
+### Render mode per kind
+
+How the home CTA actually renders depends on the kind:
+
+| Kind | Render | Default |
+|---|---|---|
+| Stripe payment page | Link out (button → URL) | Link out |
+| Lead form | Inline form on home, modal on home, or link-out to hosted form | Operator picks; V1 default is hosted form link-out (lowest friction) |
+| Appointment booking | Link out to provider OR embed via provider SDK | V1 default link-out (simpler, fewer cross-origin concerns) |
+| Custom webhook | Form POST inline OR link out | Operator decides |
+
+The skill captures the render choice during walkthrough and stores it alongside the URL in `<repo>/.mainbranch/conversion.json`:
+
+```json
+{
+  "kind": "lead_form",
+  "url": "https://tally.so/r/abc123",
+  "render": "link_out",
+  "metadata": { "provider": "tally" }
+}
+```
+
+The generation subagent reads `kind` + `render` + `url` and renders the home CTA accordingly.
+
+### Per-kind detail
+
+#### Stripe payment page
+
+The default for offers that charge money. `stripe.py create-payment-link` runs against the offer; the returned URL is the conversion endpoint.
+
+The "kind of payment" is operator-declared in `offer.md` — `deposit`, `full`, `subscription` (V2), or `custom`. The atom doesn't decide; it just creates the payment link with the amount the operator specified.
 
 | Field | Default | Source |
 |---|---|---|
-| `amount` | offer.md `deposit_amount_usd` × 100 (cents) | offer.md frontmatter |
+| `amount` | offer.md `payment_amount_usd` × 100 (cents) | offer.md frontmatter |
 | `currency` | `usd` | hardcoded V1; multi-currency is V2 |
-| `description` | offer.md `deposit_description` or generated | offer.md or LLM |
+| `description` | offer.md `payment_description` or generated | offer.md or LLM |
 | `statement_descriptor` | offer.md `statement_descriptor` or `NOONTIDE` | offer.md or fallback (max 22 chars) |
 | `metadata.mb_offer` | `<offer-slug>` | derived from offer's directory name |
-| `metadata.mb_kind` | `deposit` | hardcoded for V1 |
+| `metadata.mb_kind` | `"deposit"` (V1 hardcoded) | atom constant |
 | `success_url` | `https://<domain>/start/thanks/` | derived from `sites.json` `domain` |
 
-The atom emits the `payment_link.url` in its envelope. The orchestration writes that URL into the project repo (e.g., `<repo>/.mainbranch/stripe-deposit.json`) so the generation subagent reads it during the build phase and substitutes it into every CTA href on the site (home hero, secondary CTA, pricing CTA if shipped).
+The atom emits `payment_link.url` in its envelope. The orchestration writes that URL into the project repo (e.g., `<repo>/.mainbranch/conversion.json`) so the generation subagent reads it during the build phase and substitutes it into every CTA href on the site.
 
-### What's NOT in the post-payment flow (V1)
+> **V1 vs. planned.** `stripe.py` currently hardcodes `metadata.mb_kind = "deposit"` and does not read `payment_kind` from `offer.md`. The next iteration accepts a `--kind` flag (default: `payment`) and falls back to `offer.md`'s `payment_kind` field, so an operator charging full price (or running a consult-fee, etc.) gets honest metadata. Until that ships, every Stripe-backed minisite labels its payment as a "deposit" in Stripe's metadata — accurate when it is one, awkward when it isn't.
 
-- **No webhook handling.** Stripe emails the operator on payment success; that's the V1 notification. Webhooks for analytics, CRM sync, fulfillment automation are V2.
-- **No upsell on `/start/thanks/`.** First page after payment is gratitude.
-- **No subscription billing.** V1 deposits are one-off charges. Subscriptions are V2 when an offer needs ongoing payment.
+#### Lead form
+
+For offers that capture interest before a sales conversation.
+
+Form provider options the operator can pick:
+
+| Provider | URL kind | Routing |
+|---|---|---|
+| **Tally** | `https://tally.so/r/<form-id>` | Tally captures; operator configures destination (email, Sheets, webhook) in Tally dashboard |
+| **Typeform** | `https://<workspace>.typeform.com/to/<form-id>` | Typeform captures; operator configures destination |
+| **Google Form** | `https://docs.google.com/forms/d/e/<form-id>/viewform` | Google captures to Sheets by default |
+| **Native HTML form + Formspree** | `https://formspree.io/f/<form-id>` | Operator's email; can webhook |
+| **Native HTML form + custom backend** | Operator's URL | Operator's responsibility |
+
+The skill's setup walkthrough asks: *"Where does the form data go?"* — captures the operator's pick, stores the form URL + render choice in `<repo>/.mainbranch/conversion.json`.
+
+#### Appointment booking
+
+For sales-call funnels, consultations, fitting appointments. The conversion endpoint is the booking-link URL.
+
+| Provider | URL kind |
+|---|---|
+| **Cal.com** | `https://cal.com/<username>/<event-type>` |
+| **Calendly** | `https://calendly.com/<username>/<event-type>` |
+| **SavvyCal** | `https://savvycal.com/<username>/<event-type>` |
+
+The home CTA can link out to the booking page directly OR embed it inline (provider's SDK). V1 default is link-out (simpler, fewer cross-origin concerns). The render choice is stored in `<repo>/.mainbranch/conversion.json`.
+
+#### Custom webhook
+
+For operators with their own form endpoint or advanced flow. The operator supplies a URL; the home CTA points there. The skill doesn't validate the destination — it's the operator's responsibility.
+
+### What's NOT in the conversion endpoint (V1)
+
+- **No multi-endpoint sites.** One minisite, one conversion endpoint. If an offer has multiple conversion paths (lead form *and* deposit), graduate to `/site → website` shape.
+- **No webhook handling for Stripe (V1).** Stripe emails the operator on payment success; that's the V1 notification. Webhooks for analytics, CRM sync, fulfillment automation are V2.
+- **No upsell on `/start/thanks/`.** First page after conversion is gratitude.
+- **No subscription billing (V1).** V1 Stripe payment pages are one-off charges. Subscriptions are V2.
 
 ---
 
@@ -188,15 +264,20 @@ If multiple are declared, all install. If GTM is declared, GA4 and Meta Pixel ty
 
 ### Conversion events
 
-The generation subagent fires standard conversion events when the corresponding tracking is installed:
+The generation subagent fires standard conversion events when the corresponding tracking is installed. The conversion event name matches the conversion endpoint's kind:
 
-| Event | When | Pixels |
-|---|---|---|
-| `PageView` | Every page load | All declared |
-| `InitiateCheckout` | Click on any Stripe CTA (home hero, secondary, pricing) | All declared |
-| `Purchase` | Page load on `/start/thanks/` | All declared |
+| Event | When | Pixels | Conversion kind |
+|---|---|---|---|
+| `PageView` | Every page load | All declared | (always) |
+| `InitiateCheckout` | Click on a Stripe CTA (home hero, secondary, pricing) | All declared | Stripe payment page |
+| `Purchase` | Page load on `/start/thanks/` (after Stripe success) | All declared | Stripe payment page |
+| `Lead` | Form submit success / page load on `/start/thanks/` | All declared | Lead form |
+| `Schedule` | Page load on `/start/thanks/` (after appointment booked, if redirect supported by provider) | All declared | Appointment booking |
+| (operator-defined) | Operator's webhook flow decides; default fires `Lead` on home-CTA click | All declared | Custom webhook |
 
-**`Purchase` event payload includes** `value: <amount_usd>`, `currency: usd`. Stripe doesn't pass the actual amount through the redirect; the subagent reads it from `offer.md` at build time.
+For Stripe: `Purchase` payload includes `value: <amount_usd>`, `currency: usd`. The subagent reads the amount from `offer.md` at build time (Stripe doesn't pass it through the redirect).
+
+For lead/appointment: standard pixel taxonomy events. The subagent uses the conversion-endpoint kind to pick which event(s) to fire.
 
 ### What's NOT in the tracking architecture (V1)
 
@@ -208,17 +289,27 @@ The generation subagent fires standard conversion events when the corresponding 
 
 ## Pre-flight gates (before `/start launch` runs)
 
-`/start launch <offer>` must verify these before money or state changes:
+`/start launch <offer>` must verify these before money or state changes. Some gates branch on the chosen conversion-endpoint kind.
+
+### Always-required gates
 
 | Gate | Required for | How verified |
 |---|---|---|
 | `offer.md` exists and has minimum fields | Generation | File presence + frontmatter parse |
 | `audience.md` exists | Generation | File presence |
-| `deposit_amount_usd` declared in offer.md | Stripe atom | Frontmatter field |
-| Stripe API key in env | Stripe atom | `STRIPE_API_KEY` env var |
 | Cloudflare creds + GitHub App | All atom calls | `verify_live.py` returns 3/3 (Cloudflare scopes + zone lookup + domain-check) |
-| Domain decision | Setup | Operator confirms own-or-buy via `/site setup` triage |
+| Domain decision | Setup | Operator confirms own-or-buy |
 | Tracking IDs (if declared) | Generation | offer.md frontmatter parse — if any tracking field present, validate format |
+
+### Conversion-endpoint gates (only the chosen kind's gates apply)
+
+| Conversion kind | Gate | How verified |
+|---|---|---|
+| Stripe payment page | `payment_amount_usd` declared in offer.md | Frontmatter field |
+| Stripe payment page | `STRIPE_API_KEY` env var | Shell env check |
+| Lead form | Form URL provided (or form-provider destination) | Operator input captured |
+| Appointment booking | Booking URL provided | Operator input captured |
+| Custom webhook | Endpoint URL provided | Operator input captured |
 
 Failed gate = halt with a specific message and routing suggestion. No silent skips, no partial runs.
 
@@ -231,7 +322,7 @@ The orchestration mode (lives in `/start`, ships in #92) walks the operator thro
 ### Phase 1 — Pre-flight
 
 - Verify offer locked (offer.md + audience.md present)
-- Verify creds (CF + Stripe + gh)
+- Verify creds (CF + gh; conversion-endpoint creds checked in phase 4 only if needed)
 - Surface what's missing with specific next-step commands
 
 ### Phase 2 — Domain
@@ -248,15 +339,21 @@ The orchestration mode (lives in `/start`, ships in #92) walks the operator thro
 - `pages.py create-project <name> --repo-owner <owner> --repo-name <repo> --source github`
 - `pages.py set-domain <name> <domain>` (attach + CNAME + SSL active)
 
-### Phase 4 — Stripe
+### Phase 4 — Conversion endpoint
 
-- `stripe.py create-payment-link <offer-slug> --amount <cents>` 
-- Write returned URL to `<repo>/.mainbranch/stripe-deposit.json`
+Operator picks the kind (Stripe / lead form / appointment / custom). Then per-kind:
+
+- **Stripe payment page:** `stripe.py create-payment-link <offer-slug> --amount <cents>` → write returned URL to `<repo>/.mainbranch/conversion.json`
+- **Lead form:** ask for the form URL (or pick a provider, get walked through setup), write to `<repo>/.mainbranch/conversion.json`
+- **Appointment booking:** ask for the booking URL, write to `<repo>/.mainbranch/conversion.json`
+- **Custom webhook:** ask for the URL, write to `<repo>/.mainbranch/conversion.json`
+
+The conversion.json file is the single source the generation subagent reads to wire CTAs.
 
 ### Phase 5 — Generation
 
 - Resolve offer context
-- Spawn generation subagent with `minisite-generation-system.md` + offer/audience/reference URLs + Stripe link from phase 4
+- Spawn generation subagent with `minisite-generation-system.md` + offer/audience/reference URLs + conversion-endpoint info from phase 4
 - Validate output (file presence, footer, og_render, optional Lighthouse)
 
 ### Phase 6 — Ship
@@ -284,6 +381,8 @@ This is the quality bar: an LLM that produces the same minisite twice on the sam
 - [`/site` SKILL.md](../skills/site/SKILL.md) — the skill that triages site shapes and routes to minisite-build.md
 - [`minisite-build.md`](../skills/site/references/minisite-build.md) — the operator-walkthrough flow
 - [`minisite-generation-system.md`](../skills/site/references/minisite-generation-system.md) — the load-bearing system prompt for the generation subagent
+- [`review.md`](../skills/site/references/review.md) — quality-gate steps the skill runs through before lock and before publish
+- [`concept-variations.md`](../skills/site/references/concept-variations.md) — parallel-on-localhost concept generation pattern
 - [`anti-patterns.md`](../skills/site/references/anti-patterns.md) — what NOT to bake into the system prompt
 - [`graduation.md`](../skills/site/references/graduation.md) — minisite → website paths + CMS bolt-on
 
@@ -292,7 +391,7 @@ This is the quality bar: an LLM that produces the same minisite twice on the sam
 - [`dns.py`](../skills/site/scripts/dns.py) — CF zone + NS swap
 - [`pages.py`](../skills/site/scripts/pages.py) — CF Pages project + custom domain
 - [`og_render.py`](../skills/site/scripts/og_render.py) — SVG → PNG (1200x630)
-- `stripe.py` — payment link creation (#99, V1 — landing soon)
+- [`stripe.py`](../skills/site/scripts/stripe.py) — Stripe payment link creation (one of several conversion-endpoint backends)
 
 **Decisions (durable architecture):**
 - `noontide-co/noontide-ops` `decisions/2026-04-27-lander-launch-skills.md`
@@ -307,12 +406,13 @@ This is the quality bar: an LLM that produces the same minisite twice on the sam
 
 ## Future direction (not V1, but planned)
 
-- **Chassis-as-CMS:** ongoing minisite editing via talk-and-update, not just one-time generation
-- **Webhook handling:** Stripe deposit-success → CRM sync, email triggers, fulfillment automation
+- **Edit-via-talk:** ongoing minisite editing via talk-and-update, not just one-time generation
+- **Stripe webhook handling:** payment-success → CRM sync, email triggers, fulfillment automation
 - **Subscription billing:** for offers that recur monthly/annually
 - **Server-side tracking:** for attribution accuracy when browser-side gaps surface
 - **Multi-currency:** non-USD pricing
 - **A/B testing:** same offer, two minisite variants, route paid traffic to compare
+- **Multi-endpoint sites:** lead-form + deposit on the same site (currently a graduation signal to website shape)
 - **Graduation tooling:** `/site graduate <new-shape>` automates minisite → website transitions
 
 These exist as known-future work. They influence design decisions today (don't paint into corners) but aren't load-bearing for the V1 ship.

@@ -131,6 +131,12 @@ media:
   # Per-type overrides (optional — defaults to {root}/{type}/)
   # images: /absolute/path/to/ad-images
   # videos: /absolute/path/to/ad-videos
+
+# Per-skill defaults (optional)
+# /site uses default_concepts to set how many home-page concepts
+# get generated in parallel. Default 2; raise to 3 or 5 if you're
+# OK spending more tokens for more variation.
+default_concepts: 2
 ```
 
 **CRITICAL: Always use absolute paths, never `~`.** The Glob and Read tools do not expand `~`, causing silent failures (0 results when files exist). When writing to `local.yaml`, always expand `~` to the full absolute path first. If `local.yaml` already contains `~`, auto-upgrade it to absolute during path validation.
