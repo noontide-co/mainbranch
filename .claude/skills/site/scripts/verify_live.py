@@ -126,7 +126,7 @@ def _surface_cf_errors(body: dict | None) -> None:
 
 
 def check_cf_auth() -> bool:
-    """Verify the token has the three scopes the CF-registered chassis path needs.
+    """Verify the token has the three scopes the CF-registered path needs.
 
     Note: we don't use /user/tokens/verify — that endpoint is for User-scoped
     tokens only and returns code 1000 ('Invalid API Token') for Account-scoped

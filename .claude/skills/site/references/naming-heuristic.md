@@ -43,7 +43,7 @@ End of step 4: ~30 candidate names.
 
 ## Step 5 — Run `domain.py check` across multi-TLD
 
-For each candidate, check availability across the relevant TLDs. The default chassis priority:
+For each candidate, check availability across the relevant TLDs. The default TLD priority:
 
 ```bash
 python3 .claude/skills/site/scripts/domain.py check <candidate> \

@@ -97,7 +97,7 @@ The user message includes 1–N reference URLs (default list: `https://howdy.md`
 - Notice what they DON'T do (no stock photo, no generic SaaS hero, no testimonial logo bar)
 - Now design something that **fits this offer**, at that polish level
 
-If two runs on the same offer produce visually identical output, you've been too conservative. The chassis is supposed to surprise.
+If two runs on the same offer produce visually identical output, you've been too conservative. Generation is supposed to surprise.
 
 ## OG image rules
 

@@ -1,6 +1,6 @@
 # Minisite — V1 Chassis Spec
 
-The canonical contract for what a minisite **is** in the Main Branch chassis. Implementation flows live elsewhere; this file is the source of truth for page list, content contracts, post-payment flow, tracking, and walkthrough UX.
+The canonical contract for what a minisite **is** in Main Branch. Implementation flows live elsewhere; this file is the source of truth for page list, content contracts, post-payment flow, tracking, and walkthrough UX.
 
 When `/site`, `/start launch`, `stripe.py`, or any future skill ships behavior that touches a minisite, that behavior conforms to this spec. If the spec changes, update this file first; downstream code follows.
 
@@ -8,11 +8,11 @@ When `/site`, `/start launch`, `stripe.py`, or any future skill ships behavior t
 
 ## What a minisite is
 
-A **minisite** is a small (~4–6 page) static-HTML site, generated fresh per offer, deployed to Cloudflare Pages with git auto-deploy. It's the V1 chassis target — the speedrun shape that takes an offer from offer-locked to live-on-a-custom-apex with a working Stripe deposit gateway in under an hour.
+A **minisite** is a small (~4–6 page) static-HTML site, generated fresh per offer, deployed to Cloudflare Pages with git auto-deploy. It's the V1 speedrun target — taking an offer from offer-locked to live-on-a-custom-apex with a working Stripe deposit gateway in under an hour.
 
 Not a template. Not inheritance. Each minisite is generated from scratch by a Claude Code subagent reading `offer.md` + `audience.md` + reference URLs. Two runs on the same offer produce visually distinct sites (variance is the feature).
 
-The minisite is one of three site shapes the chassis supports — see [`graduation.md`](../skills/site/references/graduation.md) for the full ladder (lander → minisite → website → website + CMS).
+The minisite is one of three site shapes `/site` supports — see [`graduation.md`](../skills/site/references/graduation.md) for the full ladder (lander → minisite → website → website + CMS).
 
 ---
 
@@ -45,11 +45,11 @@ A coaching offer often lands on home + how-it-works + proof + faq. A software of
 |---|---|
 | `/privacy/` | Privacy policy. Boilerplate fine for V1. |
 | `/terms/` | Terms of service. Boilerplate fine for V1. |
-| `/start/thanks/` | Post-payment landing. **Required.** This is Stripe's `success_url` default for the chassis. |
+| `/start/thanks/` | Post-payment landing. **Required.** This is Stripe's `success_url` default. |
 
 The home page is the conversion target — its primary CTA links directly to the Stripe payment-link URL. There is no separate `/start/` page; that ceremony adds a click without adding signal.
 
-### Required chassis files (repo root)
+### Required infrastructure files (repo root)
 
 | Path | Purpose |
 |---|---|
@@ -107,7 +107,7 @@ The Stripe URL is the same one used everywhere on the site. Until the link is wi
 
 ### Privacy / Terms
 
-Boilerplate language is fine for V1. The chassis assumes the operator's lawyer reviews before scale. Boilerplate must include: data collected (email, payment info via Stripe), how it's used, retention policy, contact for requests. Generate from a template or LLM but mark as boilerplate in a comment.
+Boilerplate language is fine for V1. Main Branch assumes the operator's lawyer reviews before scale. Boilerplate must include: data collected (email, payment info via Stripe), how it's used, retention policy, contact for requests. Generate from a template or LLM but mark as boilerplate in a comment.
 
 ### Start / Thanks (`/start/thanks/`)
 
@@ -206,7 +206,7 @@ The generation subagent fires standard conversion events when the corresponding 
 
 ---
 
-## Pre-flight gates (before chassis runs)
+## Pre-flight gates (before `/start launch` runs)
 
 `/start launch <offer>` must verify these before money or state changes:
 
@@ -220,7 +220,7 @@ The generation subagent fires standard conversion events when the corresponding 
 | Domain decision | Setup | Operator confirms own-or-buy via `/site setup` triage |
 | Tracking IDs (if declared) | Generation | offer.md frontmatter parse — if any tracking field present, validate format |
 
-Failed gate = halt with a specific message and routing suggestion. No silent skips, no partial chassis runs.
+Failed gate = halt with a specific message and routing suggestion. No silent skips, no partial runs.
 
 ---
 
@@ -261,7 +261,7 @@ The orchestration mode (lives in `/start`, ships in #92) walks the operator thro
 
 ### Phase 6 — Ship
 
-- Operator commits + pushes (or chassis does on their Y)
+- Operator commits + pushes (or `/start launch` does on their Y)
 - Cloudflare auto-deploys
 - Verify `https://<domain>/` returns 200
 - Print summary: live URL, repo URL, total spend, time-to-ship
@@ -272,9 +272,9 @@ The orchestration mode (lives in `/start`, ships in #92) walks the operator thro
 
 Two runs of the generation subagent on the same `offer.md` + `audience.md` must produce visually distinct sites — different palettes, hero artifacts, page choices, microcopy.
 
-If two runs produce identical output, the soft brief was too prescriptive. The chassis is supposed to surprise. See [`anti-patterns.md`](../skills/site/references/anti-patterns.md) — over-prescription is the anti-pattern that kills variance.
+If two runs produce identical output, the soft brief was too prescriptive. Generation is supposed to surprise. See [`anti-patterns.md`](../skills/site/references/anti-patterns.md) — over-prescription is the anti-pattern that kills variance.
 
-This is the chassis's quality bar: an LLM that produces the same minisite twice on the same offer is the LLM not making aesthetic decisions, and that's broken.
+This is the quality bar: an LLM that produces the same minisite twice on the same offer is the LLM not making aesthetic decisions, and that's broken.
 
 ---
 

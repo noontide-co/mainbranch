@@ -2,15 +2,15 @@
 
 The website shape: full multi-section site, often with a build step (Next.js, Astro, etc.), possibly with a blog, multi-offer support, knowledge base, course area. Larger surface area than a minisite; warrants component reuse and a structured site-config.
 
-V1 status: chassis-shape Website generation is not yet wired (a future companion to `minisite-generation-system.md`). For now, this flow uses the legacy Next.js templates (`saas` and `high-ticket` — Devon-specific examples) as starting points. They work via Netlify deploy or Cloudflare Pages with a build step.
+V1 status: per-offer Website generation is not yet wired (a future companion to `minisite-generation-system.md`). For now, this flow uses the legacy Next.js templates (`saas` and `high-ticket` — Devon-specific examples) as starting points. They work via Netlify deploy or Cloudflare Pages with a build step.
 
-When chassis-shape Website ships, this file gets a sibling section for the static-or-Next.js LLM-generated path.
+When per-offer Website generation ships, this file gets a sibling section for the static-or-Next.js LLM-generated path.
 
 ---
 
 ## Hosting decision (default: Cloudflare Pages)
 
-For new Website builds, Cloudflare Pages is the chassis default — better CLI, better domain integration, git auto-deploy, supports Next.js/Astro/React with build steps via build presets. Netlify works too and is documented in [`deployment.md`](deployment.md) as the legacy path; pick it only if you have specific Netlify-only needs.
+For new Website builds, Cloudflare Pages is the default — better CLI, better domain integration, git auto-deploy, supports Next.js/Astro/React with build steps via build presets. Netlify works too and is documented in [`deployment.md`](deployment.md) as the legacy path; pick it only if you have specific Netlify-only needs.
 
 For Cloudflare Pages with a build step:
 ```bash
@@ -25,11 +25,11 @@ For Netlify legacy path: see [`deployment.md`](deployment.md).
 
 ## setup (Next.js website)
 
-**1. Choose template.** Two pre-chassis examples:
+**1. Choose template.** Two pre-V1 examples:
 - **SaaS / Product** — Hero → Demo → Value Prop → Workflow → Examples → Integrations → CTA. Best for software, e-commerce, product companies.
 - **High-Ticket Services** — Hero → Solution → Pain → Process → Competitive → Objections → Proof → Qualification → FAQ → CTA. Best for coaching, consulting, agencies, $3k+ services.
 
-These are Devon-specific examples, not the broader Website tier. Future chassis-shape Website generation will produce fresh per-offer like the minisite shape.
+These are Devon-specific examples, not the broader Website tier. Future per-offer Website generation will produce fresh output per offer like the minisite shape.
 
 **2. Name + location.**
 - Site name (e.g., "my-landing-page")
@@ -262,4 +262,4 @@ Cloudflare Pages auto-deploys on push (per the git-connected project from setup 
 
 ## Graduating to a website with CMS
 
-When the website grows past ~10 pages or content needs to be edited by non-developers, the chassis supports bolting on a CMS. See [`graduation.md`](graduation.md) for the Sanity / Contentful / Notion-as-CMS / etc. paths.
+When the website grows past ~10 pages or content needs to be edited by non-developers, `/site` supports bolting on a CMS. See [`graduation.md`](graduation.md) for the Sanity / Contentful / Notion-as-CMS / etc. paths.

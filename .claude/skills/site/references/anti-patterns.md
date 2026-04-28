@@ -32,7 +32,7 @@ Lessons from prior failed prompt attempts. Each pattern below was tried, produce
 
 **Result:** The LLM operates as a mail-merge engine. Output structure is locked to whatever the template authors imagined. Aesthetic invention is impossible — the template predetermined every section, every copy slot, every interactive element.
 
-**Fix:** No template repo. The chassis ships zero source files for the LLM to inherit from. The LLM generates fresh HTML/CSS/SVG per offer, with reference URLs as taste anchors only. If two runs on the same offer produce identical output, the chassis is broken.
+**Fix:** No template repo. `/site` ships zero source files for the LLM to inherit from. The LLM generates fresh HTML/CSS/SVG per offer, with reference URLs as taste anchors only. If two runs on the same offer produce identical output, generation is broken.
 
 ## 5. Over-enumerating "available sections"
 
@@ -54,13 +54,13 @@ Lessons from prior failed prompt attempts. Each pattern below was tried, produce
 
 **Pattern:** "Make sure that if I run this twice, I get similar output."
 
-**Result:** The LLM clamps to the safe default. Variance is the feature — different runs produce visually distinct output that all fit the offer. The chassis is supposed to surprise.
+**Result:** The LLM clamps to the safe default. Variance is the feature — different runs produce visually distinct output that all fit the offer. Generation is supposed to surprise.
 
 **Fix:** The system prompt explicitly tests for variance: *"If two runs on the same offer produce visually identical output, you've been too conservative."* The skill's acceptance criteria include "running --one-shot twice on the same spec produces visually different output."
 
 ---
 
-## How to write a critique that doesn't break the chassis
+## How to write a critique that doesn't break generation
 
 When you don't like a generated minisite:
 
@@ -69,4 +69,4 @@ When you don't like a generated minisite:
 - **Ask for a different decision, not a different parameter.** "Pick a different hero artifact — a receipt, not a stamp" → not → "change `<svg viewBox='0 0 100 100'>` to `<svg viewBox='0 0 200 200'>`."
 - **Re-run before iterating.** Sometimes the first generation is conservative. A re-run often produces a sharper take. Iterate by re-running, not by directing.
 
-The chassis only works when the LLM is making aesthetic decisions. Every constraint we add is a decision we're taking away. Add only the structural ones (file presence, footer, perf, SEO, OG dimensions) — leave the rest open.
+Generation only works when the LLM is making aesthetic decisions. Every constraint we add is a decision we're taking away. Add only the structural ones (file presence, footer, perf, SEO, OG dimensions) — leave the rest open.

@@ -683,13 +683,13 @@ def test_pages_create_project_ok_round_trip() -> None:
     env = PagesCreateProjectEnvelope(
         status="ok",
         data=PagesCreateProjectData(
-            project_name="chassis-git-test",
+            project_name="mb-git-test",
             source_type="github",
             repo_owner="noontide-co",
             repo_name="thelastbill-test",
             production_branch="main",
             project_id="b6dacee6-fa1e-497f-b81b-369927a475a7",
-            pages_subdomain="chassis-git-test.pages.dev",
+            pages_subdomain="mb-git-test.pages.dev",
             already_existed=False,
             created_now=True,
         ),
@@ -710,13 +710,13 @@ def test_pages_create_project_idempotent_already_existed() -> None:
     env = PagesCreateProjectEnvelope(
         status="ok",
         data=PagesCreateProjectData(
-            project_name="chassis-git-test",
+            project_name="mb-git-test",
             source_type="github",
             repo_owner="noontide-co",
             repo_name="thelastbill-test",
             production_branch="main",
             project_id="b6dacee6-fa1e-497f-b81b-369927a475a7",
-            pages_subdomain="chassis-git-test.pages.dev",
+            pages_subdomain="mb-git-test.pages.dev",
             already_existed=True,
             created_now=False,
         ),
@@ -1010,7 +1010,7 @@ def _png_chunk(chunk_type: bytes, data: bytes) -> bytes:
 # StripeEnvelope (atom 6)
 # ---------------------------------------------------------------------------
 
-# The atom file is named `stripe.py` to match the chassis convention. The
+# The atom file is named `stripe.py` to match the /site atom convention. The
 # `sys.path.insert` at the top of this test file puts the scripts directory
 # first, so `import stripe` resolves to the local atom rather than the
 # (unrelated, not installed) Stripe Python SDK.
