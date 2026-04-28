@@ -1,6 +1,47 @@
 # Cloudflare Pages Git Link
 
-Use this when the Pages project does not exist yet. This is the one V1 dashboard step that creates a Git-connected Pages project with auto-deploy.
+Two scenarios live in this doc, in order of how often you'll hit them:
+
+1. **First time on this Cloudflare account: bind the GitHub App** (the OAuth handshake step that gets you out of CF code `8000011`)
+2. **Manual Pages project creation via dashboard** (rare — `pages.py create-project` is the default; this is the dashboard fallback)
+
+---
+
+## 1. Bind the Cloudflare Pages GitHub App to your account (first-time-per-account)
+
+You only need this once per Cloudflare account. Skip if `pages.py create-project` is already working without `github_app_not_installed` errors.
+
+**Background.** CF Pages needs two things:
+
+- The **GitHub App** installed on the GitHub account/org that owns your lander repo (so CF can read commits)
+- An **OAuth handshake** between that install and your CF account (so CF knows which install to use for *your* projects)
+
+Just installing the App on GitHub isn't enough. The OAuth handshake fires from the CF dashboard, not from GitHub. The non-obvious part: the dashboard never has a stand-alone "set up Git integration" button. The handshake gets triggered only as a side-effect of starting the Workers/Pages **Create application** flow. You don't have to actually create anything — connecting the repo in the flow is enough; the OAuth side-effect is what we want.
+
+**The path that works (Devon's verified discovery):**
+
+1. Go to https://dash.cloudflare.com — confirm the right account is selected (top-left switcher)
+2. Left sidebar: **Build** group → **Compute** → **Workers & Pages**
+3. Click **Create application** (blue button, top-right)
+4. Click **Continue with GitHub** (or "Continue with GitHub" — wording varies by recent UI updates)
+5. Authorize the **Cloudflare Workers and Pages** GitHub App when GitHub asks. Choose the GitHub account or org that owns your lander repo.
+   - If GitHub asks "All repositories" vs "Only select repositories" — pick "All repositories" for least friction across future landers, or pick the specific repo if you want to scope tightly.
+6. After GitHub redirects you back to Cloudflare, you'll see a list of your repos. **Connect a repo** — any repo is fine; the connection itself is what completes the OAuth handshake.
+7. **Don't finish creating the application.** Close the tab or click cancel. The handshake already fired the moment GitHub redirected back to CF.
+
+Once that's done, `pages.py create-project` (or any API call to `POST /pages/projects` with `source.type=github`) will work for repos owned by the account you authorized.
+
+**If you have multiple GitHub accounts/orgs**: install on each one that owns repos you'll deploy from. Each install fires its own OAuth handshake, so repeat the steps above per account.
+
+**Direct install URL** (only useful if you've already done the dashboard handshake at least once): https://github.com/apps/cloudflare-workers-and-pages — visit this to add the App to additional GitHub accounts/orgs after the initial bind.
+
+**Symptom you should never see again:** `pages.py create-project` returning `error.code: github_app_not_installed` with CF error code `8000011`. If you do, the OAuth handshake hasn't fired for the GitHub account that owns the target repo — repeat the steps above.
+
+---
+
+## 2. Manual Pages project creation via dashboard (fallback)
+
+Only use this if `pages.py create-project` can't be used for some reason (CI environment, no API access). The atom is the default path.
 
 1. Go to https://dash.cloudflare.com
 2. Left sidebar: under the **Build** group, click **Compute** → **Workers & Pages**. (Cloudflare moved this entry under Compute; if you remember it as a top-level link, look one level deeper.)
