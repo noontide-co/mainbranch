@@ -158,11 +158,11 @@ When `stripe.py create-payment-link <offer-slug>` runs against the offer:
 | `currency` | `usd` | hardcoded V1; multi-currency is V2 |
 | `description` | offer.md `deposit_description` or generated | offer.md or LLM |
 | `statement_descriptor` | offer.md `statement_descriptor` or `NOONTIDE` | offer.md or fallback (max 22 chars) |
-| `metadata.chassis_offer` | `<offer-slug>` | derived from offer's directory name |
-| `metadata.chassis_kind` | `deposit` | hardcoded for V1 |
+| `metadata.mb_offer` | `<offer-slug>` | derived from offer's directory name |
+| `metadata.mb_kind` | `deposit` | hardcoded for V1 |
 | `success_url` | `https://<domain>/start/thanks/` | derived from `sites.json` `domain` |
 
-The atom emits the `payment_link.url` in its envelope. The orchestration writes that URL into the project repo (e.g., `<repo>/.chassis/stripe-deposit.json`) so the generation subagent reads it during the build phase and substitutes it into every CTA href on the site (home hero, secondary CTA, pricing CTA if shipped).
+The atom emits the `payment_link.url` in its envelope. The orchestration writes that URL into the project repo (e.g., `<repo>/.mainbranch/stripe-deposit.json`) so the generation subagent reads it during the build phase and substitutes it into every CTA href on the site (home hero, secondary CTA, pricing CTA if shipped).
 
 ### What's NOT in the post-payment flow (V1)
 
@@ -251,7 +251,7 @@ The orchestration mode (lives in `/start`, ships in #92) walks the operator thro
 ### Phase 4 — Stripe
 
 - `stripe.py create-payment-link <offer-slug> --amount <cents>` 
-- Write returned URL to `<repo>/.chassis/stripe-deposit.json`
+- Write returned URL to `<repo>/.mainbranch/stripe-deposit.json`
 
 ### Phase 5 — Generation
 

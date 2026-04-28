@@ -3,12 +3,12 @@
 
 Subcommands:
     create-payment-link <offer-slug>
-        Idempotent: ensures a Stripe product + price + payment link exist for
-        the given chassis offer slug. Returns the payment-link URL the
+        Idempotent: ensures a Stripe product + price + payment link exist
+        for the given offer slug. Returns the payment-link URL the
         minisite hero CTA links to.
 
     list-products
-        Lists active products with chassis_offer metadata. Debug helper.
+        Lists active products with `mb_offer` metadata. Debug helper.
 
     archive-product <product-id>
         Marks a product inactive (Stripe doesn't support hard delete).
@@ -20,9 +20,9 @@ Exit code: 0 on ok|partial, 1 on degraded.
 Idempotency model (per `noontide-co/noontide-ops`
 decisions/2026-04-27-credential-provisioning.md):
 
-  1. Search products by metadata `chassis_offer:<slug>` AND
-     `chassis_kind:deposit`. If found AND product has stashed
-     `chassis_payment_link_url` in metadata → return that URL.
+  1. Search products by metadata `mb_offer:<slug>` AND `mb_kind:deposit`.
+     If found AND product has stashed `mb_payment_link_url` in metadata
+     → return that URL.
   2. If not found, create product (with `default_price_data`) and payment
      link. Stash the payment-link URL in product metadata for future
      idempotency lookups. Use Stripe Idempotency-Key headers on every
@@ -34,7 +34,7 @@ defaults" table) for the canonical defaults this atom encodes.
 
 Test mode vs live mode: the atom is mode-agnostic — it uses whatever key
 is in `STRIPE_API_KEY`. Test keys start `sk_test_`, live keys `sk_live_`.
-Use test mode for chassis development; live mode for real offers.
+Use test mode while iterating; live mode for real offers.
 """
 
 from __future__ import annotations
@@ -70,12 +70,13 @@ MIN_AMOUNT_CENTS = 50
 
 DEFAULT_STATEMENT_DESCRIPTOR = "NOONTIDE"
 
-# Chassis-fixed metadata keys per minisite spec.
-META_OFFER = "chassis_offer"
-META_KIND = "chassis_kind"
+# Main Branch metadata keys per minisite spec. The `mb_` prefix namespaces
+# our products from anything else in the operator's Stripe account.
+META_OFFER = "mb_offer"
+META_KIND = "mb_kind"
 META_KIND_VALUE = "deposit"
-META_PAYMENT_LINK_URL = "chassis_payment_link_url"
-META_CREATED_AT = "chassis_created_at"
+META_PAYMENT_LINK_URL = "mb_payment_link_url"
+META_CREATED_AT = "mb_created_at"
 
 # ---------------------------------------------------------------------------
 # Envelope shape
@@ -194,8 +195,8 @@ def _form_encode(data: dict, prefix: str = "") -> list[tuple[str, str]]:
     Examples:
       {"line_items": [{"price": "p_1"}]}
         → [("line_items[0][price]", "p_1")]
-      {"metadata": {"chassis_offer": "x"}}
-        → [("metadata[chassis_offer]", "x")]
+      {"metadata": {"mb_offer": "x"}}
+        → [("metadata[mb_offer]", "x")]
       {"default_price_data": {"unit_amount": 10000, "currency": "usd"}}
         → [("default_price_data[unit_amount]", "10000"),
            ("default_price_data[currency]", "usd")]
@@ -545,7 +546,7 @@ def create_payment_link(
         sys.exit(emit(env))
 
     # --- Idempotency check via product search ---
-    log(f"Checking for existing chassis_offer={offer_slug} product...")
+    log(f"Checking for existing mb_offer={offer_slug} product...")
     existing, search_result = _search_existing_product(api_key, offer_slug, provenance)
     if search_result is not None and not search_result.ok:
         code, suggestion = _classify_error(search_result)
@@ -607,7 +608,7 @@ def create_payment_link(
             "/products",
             api_key,
             body=product_body,
-            idempotency_key=f"chassis-{offer_slug}-product",
+            idempotency_key=f"mb-{offer_slug}-product",
         )
         provenance["stripe_product_create"] = ProviderRunMetadata(
             status="ok" if product_result.ok else "failed",
@@ -666,7 +667,7 @@ def create_payment_link(
         "/payment_links",
         api_key,
         body=link_body,
-        idempotency_key=f"chassis-{offer_slug}-link",
+        idempotency_key=f"mb-{offer_slug}-link",
     )
     provenance["stripe_payment_link_create"] = ProviderRunMetadata(
         status="ok" if link_result.ok else "failed",
@@ -723,10 +724,10 @@ def create_payment_link(
 
 
 @cli.command("list-products")
-@click.option("--offer-slug", default=None, help="Filter by chassis_offer metadata.")
+@click.option("--offer-slug", default=None, help="Filter by mb_offer metadata.")
 @click.option("--limit", default=20, show_default=True, type=int, help="Max products to return (1-100).")
 def list_products(offer_slug: str | None, limit: int) -> None:
-    """List active chassis products. Debug helper."""
+    """List active products. Filter to Main Branch products via --offer-slug."""
     provenance: dict[str, ProviderRunMetadata] = {}
     api_key = os.environ.get("STRIPE_API_KEY", "").strip()
     if not api_key:

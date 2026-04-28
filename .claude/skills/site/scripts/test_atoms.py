@@ -1096,10 +1096,10 @@ def test_stripe_form_encode_list_of_dicts() -> None:
 
 def test_stripe_form_encode_metadata() -> None:
     encoded = dict(stripe_module._form_encode({
-        "metadata": {"chassis_offer": "thelastbill", "chassis_kind": "deposit"},
+        "metadata": {"mb_offer": "thelastbill", "mb_kind": "deposit"},
     }))
-    assert encoded["metadata[chassis_offer]"] == "thelastbill"
-    assert encoded["metadata[chassis_kind]"] == "deposit"
+    assert encoded["metadata[mb_offer]"] == "thelastbill"
+    assert encoded["metadata[mb_kind]"] == "deposit"
 
 
 def test_stripe_form_encode_booleans() -> None:
@@ -1268,9 +1268,9 @@ def test_stripe_cli_idempotent_returns_existing(monkeypatch: pytest.MonkeyPatch)
         "id": "prod_existing",
         "default_price": "price_existing",
         "metadata": {
-            "chassis_offer": "thelastbill",
-            "chassis_kind": "deposit",
-            "chassis_payment_link_url": "https://buy.stripe.com/EXISTING",
+            "mb_offer": "thelastbill",
+            "mb_kind": "deposit",
+            "mb_payment_link_url": "https://buy.stripe.com/EXISTING",
         },
     }
 
@@ -1309,7 +1309,7 @@ def test_stripe_cli_creates_when_no_existing(monkeypatch: pytest.MonkeyPatch) ->
                 payload={
                     "id": "prod_new",
                     "default_price": "price_new",
-                    "metadata": {"chassis_offer": "thelastbill"},
+                    "metadata": {"mb_offer": "thelastbill"},
                 },
             )
         if path == "/payment_links" and method == "POST":
