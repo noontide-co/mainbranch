@@ -431,9 +431,12 @@ def _map_cf_create_error(result: CfResult) -> PagesCreateProjectError:
             code="github_app_not_installed",
             message=result.error_message or "Cloudflare Pages Git installation has an internal issue.",
             suggestion=(
-                f"Install (or re-install) the Cloudflare Pages GitHub App at {_CF_GITHUB_APP_INSTALL_URL} "
-                "on the GitHub account/org that owns the repo. After install, complete the OAuth handshake "
-                "in the Cloudflare dashboard if prompted, then retry."
+                "The Cloudflare Pages GitHub App needs to be installed AND OAuth-bound to your CF account. "
+                "Install alone is not enough — the dashboard OAuth handshake is the load-bearing step. "
+                "Quickest path (verified): dash.cloudflare.com → Compute → Workers & Pages → Create application "
+                "→ Continue with GitHub → connect any repo, then close the tab without finishing the create. "
+                "Full walkthrough in .claude/skills/site/references/cloudflare-pages-link.md. "
+                f"Direct App install URL (use after the first handshake): {_CF_GITHUB_APP_INSTALL_URL}."
             ),
         )
 
