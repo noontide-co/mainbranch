@@ -29,13 +29,12 @@ Every minisite ships these pages. The home and `how-it-works/` pages are mandato
 
 ### LLM-picked pages (exactly two from this menu)
 
-The generation subagent picks the two that best support **this** offer. A coaching offer often picks `proof` + `faq`; a software offer often picks `pricing` + `start`; a billing tool often picks `start` + `proof`. The subagent decides, the operator overrides if needed.
+The generation subagent picks the two that best support **this** offer. A coaching offer often picks `proof` + `faq`; a software offer often picks `pricing` + `faq`; a billing tool often picks `pricing` + `proof`. The subagent decides, the operator overrides if needed.
 
 | Path | Purpose | Source material |
 |---|---|---|
 | `/proof/` | Testimonials, case studies, outcome data, trust badges | `proof/testimonials.md`, `proof/angles/*.md` |
-| `/pricing/` | Pricing card, what's included, payment flow link | `offer.md` (pricing), `start/` page (deposit link) |
-| `/start/` | The focused conversion target — primary deposit/payment CTA | `offer.md` (pricing), Stripe deposit link |
+| `/pricing/` | Pricing card, what's included, payment CTA | `offer.md` (pricing), Stripe payment-link URL |
 | `/faq/` | Top objections answered, ordered by likelihood-of-asking | `audience.md` (objections), `offer.md` |
 
 ### Required infrastructure pages
@@ -46,7 +45,7 @@ The generation subagent picks the two that best support **this** offer. A coachi
 | `/terms/` | Terms of service. Boilerplate fine for V1. |
 | `/start/thanks/` | Post-payment landing. **Required.** This is Stripe's `success_url` default for the chassis. |
 
-If `/start/` isn't in the LLM-picked two, it ships anyway (because the deposit flow needs it). The two LLM-picked slots fill the *other* informational pages around it.
+The home page is the conversion target — its primary CTA links directly to the Stripe payment-link URL. There is no separate `/start/` page; that ceremony adds a click without adding signal.
 
 ### Required chassis files (repo root)
 
@@ -68,12 +67,14 @@ What goes on each page by default. The generation subagent has aesthetic freedom
 
 ### Home (`/`)
 
-- **Hero:** transformation phrase (≤2 lines), signature visual, primary CTA pointing at `/start/`
+- **Hero:** transformation phrase (≤2 lines), signature visual, primary CTA linking directly to the Stripe payment-link URL
 - **Value prop:** 3 short reasons or one extended argument; pulled from `offer.md`
 - **Brief proof:** 1–3 testimonials or stat callouts (full proof lives at `/proof/` if picked)
 - **Founder/brand glimpse:** 1–2 sentences from `soul.md` or `offer.md` if relevant
-- **Secondary CTA:** repeat of primary, often with different copy ("ready when you are")
+- **Secondary CTA:** repeat of primary, often with different copy ("ready when you are"), same Stripe URL
 - **Footer:** Noontide footer (see below)
+
+The Stripe URL is the same one used everywhere on the site. Until the link is wired, placeholder `https://buy.stripe.com/PLACEHOLDER` ships and the `/start launch` orchestration substitutes the real URL during the build phase.
 
 ### How It Works (`/how-it-works/`)
 
@@ -93,15 +94,8 @@ What goes on each page by default. The generation subagent has aesthetic freedom
 
 - **Pricing card(s):** offer.md determines tier structure; one or three tiers, never two
 - **What's included:** bullet list of concrete deliverables per tier
-- **Deposit link:** primary CTA points at `/start/` (which has the Stripe payment link)
+- **Payment CTA:** primary CTA links directly to the Stripe payment-link URL (same URL the home hero uses)
 - **Trust signal:** brief mention of guarantee/refund/etc. if offer.md declares one
-
-### Start (`/start/`)
-
-- **Focused conversion:** minimal nav, single primary action — the Stripe deposit button
-- **Reassurance copy:** what they'll get after paying, when, by whom
-- **Stripe payment link:** href set by `/start launch` orchestration via `stripe.py create-payment-link`'s output; before the link is wired, placeholder is `https://buy.stripe.com/PLACEHOLDER`
-- **Footer:** Noontide footer
 
 ### FAQ (`/faq/`, when picked)
 
@@ -149,7 +143,7 @@ The skill's validation step greps every page for "Noontide Collective LLC" or th
 ## Post-payment flow
 
 ```
-Visitor → /start/ → Stripe checkout (payment-link URL) → Stripe success → /start/thanks/
+Visitor → / (CTA click) → Stripe checkout (payment-link URL) → Stripe success → /start/thanks/
 ```
 
 ### Stripe payment-link defaults
@@ -166,7 +160,7 @@ When `stripe.py create-payment-link <offer-slug>` runs against the offer:
 | `metadata.chassis_kind` | `deposit` | hardcoded for V1 |
 | `success_url` | `https://<domain>/start/thanks/` | derived from `sites.json` `domain` |
 
-The atom emits the `payment_link.url` in its envelope. The orchestration writes that URL into the project repo (e.g., `<repo>/.chassis/stripe-deposit.json`) so the generation subagent reads it during the build phase and substitutes it into `/start/index.html`.
+The atom emits the `payment_link.url` in its envelope. The orchestration writes that URL into the project repo (e.g., `<repo>/.chassis/stripe-deposit.json`) so the generation subagent reads it during the build phase and substitutes it into every CTA href on the site (home hero, secondary CTA, pricing CTA if shipped).
 
 ### What's NOT in the post-payment flow (V1)
 
@@ -197,7 +191,7 @@ The generation subagent fires standard conversion events when the corresponding 
 | Event | When | Pixels |
 |---|---|---|
 | `PageView` | Every page load | All declared |
-| `InitiateCheckout` | Click on Stripe deposit button on `/start/` | All declared |
+| `InitiateCheckout` | Click on any Stripe CTA (home hero, secondary, pricing) | All declared |
 | `Purchase` | Page load on `/start/thanks/` | All declared |
 
 **`Purchase` event payload includes** `value: <amount_usd>`, `currency: usd`. Stripe doesn't pass the actual amount through the redirect; the subagent reads it from `offer.md` at build time.
