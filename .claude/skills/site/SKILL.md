@@ -201,11 +201,16 @@ Present options:
 
 > **Which template fits your business?**
 >
-> 1. **SaaS / Product** — Hero → Demo → Value Prop → Workflow → Examples → Integrations → CTA
->    Best for: software, e-commerce, product companies
+> 1. **SaaS / Product** (Next.js) — Hero → Demo → Value Prop → Workflow → Examples → Integrations → CTA
+>    Best for: software, e-commerce, product companies. Has a build step.
 >
-> 2. **High-Ticket Services** — Hero → Solution → Pain → Process → Competitive → Objections → Proof → Qualification → FAQ → CTA
->    Best for: coaching, consulting, agencies, $3k+ services
+> 2. **High-Ticket Services** (Next.js) — Hero → Solution → Pain → Process → Competitive → Objections → Proof → Qualification → FAQ → CTA
+>    Best for: coaching, consulting, agencies, $3k+ services. Has a build step.
+>
+> 3. **Lander** (static HTML) — 4 pages designed fresh per offer by an LLM-generation subagent. No build step. No template inheritance.
+>    Best for: speedrun lander tests, paid-ad landing pages, single-offer first deploys. **Picks Cloudflare Pages + atom-driven domain setup.** See "Lander Template Branch" below.
+
+If `lander` is chosen, **skip Steps 2–11 below and go to "Lander Template Branch"** — that flow uses Cloudflare Pages + atoms, not Netlify + Next.js. The existing Steps 2–11 apply only to `saas` / `high-ticket`.
 
 ### Step 2: Name and Location
 
@@ -296,6 +301,121 @@ Create `~/.mainbranch/` directory if it doesn't exist.
 **Exit:**
 
 > "Site deployed at https://[url]. Run `/site configure` to apply your brand, or `/site build` to start customizing sections from your reference files."
+
+---
+
+## Lander Template Branch
+
+When the operator picked the `lander` template in Step 1, the setup and build flows are different from the Next.js templates above. Static HTML, no build step, Cloudflare Pages, atom-driven domain + DNS + custom-domain attachment.
+
+### setup (lander)
+
+**1. Name + project repo.** Ask the operator:
+- Site name (e.g., `thelastbill`). Becomes the Pages project name.
+- Project repo location (default: sibling of vip — `~/Documents/GitHub/<name>` for solo, `~/Documents/GitHub/noontide-sites/<name>` for Noontide work). Empty repo, no template merge.
+- Apex domain. If they don't have one, route to [`references/naming-heuristic.md`](references/naming-heuristic.md) — an 8-step playbook for generating + validating brand-tier names.
+
+**2. Atom-chain prerequisites.** Confirm the credentials are in place via:
+```bash
+source ~/.config/vip/env.sh
+python3 .claude/skills/site/scripts/verify_live.py
+```
+Expect 3/3 passed (Cloudflare scopes + zone lookup + domain-check CLI). Porkbun skipped is fine for the CF-registered path.
+
+If anything's red, route the operator to `bash .claude/skills/site/scripts/setup_creds.sh` to provision Cloudflare credentials, then re-run.
+
+**3. Domain — buy-new vs. existing.** Ask:
+- "Already own the domain?" → skip to step 4 with the domain name
+- "Need to buy?" → run `python3 .claude/skills/site/scripts/domain.py check <name> --tlds .com,.co,.io` first to confirm availability + TLD support. If `extension_not_supported_via_api`, fall back to the Cloudflare dashboard (https://dash.cloudflare.com/registrar — confirm the right account before purchase). For API-supported TLDs and after explicit operator Y on price, proceed with `domain.py buy <name>` — *will be wired in a follow-up PR; today the buy is dashboard for the first lander, then API once `domain.py buy --registrar=cloudflare` lands*.
+
+**4. DNS ensure.** Once the domain is owned (CF Registrar or Porkbun), run:
+```bash
+python3 .claude/skills/site/scripts/dns.py ensure <domain> --registrar cloudflare --skip-propagation-poll
+```
+For CF-registered domains the zone is auto-created with NS already at CF — this is an idempotent verification, not a state change. For Porkbun-registered domains, the atom swaps NS to CF nameservers and polls propagation.
+
+**5. GitHub repo + initial scaffold push.** Create the project repo and push a placeholder `index.html` so the Pages project has something to deploy:
+```bash
+gh repo create <owner>/<name> --public --add-readme
+git clone https://github.com/<owner>/<name>.git ~/Documents/GitHub/<name>
+cd ~/Documents/GitHub/<name>
+echo '<!doctype html><title><name></title><h1>soon</h1>' > index.html
+git add -A && git commit -m "[add] placeholder" && git push
+```
+
+**6. Cloudflare Pages project.** Create via wrangler (no dashboard click needed):
+```bash
+wrangler pages project create <name> --production-branch main
+wrangler pages deploy . --project-name <name> --branch main
+```
+This deploys the placeholder to `https://<hash>.<name>.pages.dev`. The git-source connection (auto-deploy on push) is added by `pages.py create-project` once **#98** ships; until then, manual `wrangler pages deploy` after each push, or one-time UI walkthrough at [`references/cloudflare-pages-link.md`](references/cloudflare-pages-link.md).
+
+**7. Custom domain attach + DNS verification.** Run:
+```bash
+python3 .claude/skills/site/scripts/pages.py set-domain <name> <domain> --timeout-seconds 300
+```
+The atom attaches the domain, creates the CNAME record in the zone (the step the dashboard hides), and polls until SSL is active. Expect ~3-4 min total. Live-tested end-to-end in PR #97.
+
+**8. Save config.** Same `~/.mainbranch/sites.json` structure as the Next.js path:
+```json
+{
+  "name": "<name>",
+  "site_repo": "/absolute/path/to/repo",
+  "business_repo": "/absolute/path/to/business-repo",
+  "template": "lander",
+  "hosting": "cloudflare",
+  "domain": "<full apex>"
+}
+```
+
+**Exit:**
+> "Lander chassis ready at https://<domain>. Placeholder deployed; run `/site build --one-shot` to generate the actual lander from your offer + audience specs."
+
+### build --one-shot (lander)
+
+This is the load-bearing mode — where Claude (the operator's running session) spawns a subagent that generates fresh HTML/CSS/SVG for this offer. No template inheritance. No placeholder tokens. No Anthropic SDK call. The subagent is a Claude Code subagent, spawned via the `Agent` tool.
+
+**1. Resolve offer context.** Use the existing offer-context resolution above (lines 116–145). At minimum: `offer.md` + `audience.md` paths + the active offer slug.
+
+**2. Load the system prompt.** Read [`references/lander-generation-system.md`](references/lander-generation-system.md) verbatim. This is the load-bearing artifact — the full hard-constraints + soft-brief framing for the generation subagent. Pass it as the subagent's system prompt unmodified.
+
+**3. Build the user message.** Compose:
+- Resolved `offer.md` content
+- Resolved `audience.md` content
+- Optional `voice.md` snippets (anchor phrases, named enemies, "never say" list)
+- Reference URLs — defaults: `https://howdy.md`, `https://thelastbill.com`. Operator can pass `--reference URL` to add or replace
+- Project repo absolute path (where the subagent writes via `Write`)
+- Soft directive: *"Generate fresh HTML/CSS/SVG for this offer. The reference URLs are taste anchors, not templates — read them for polish level, then design something that fits **this** offer. Surprise me."*
+
+Anti-patterns to avoid in your own framing of the user message: see [`references/anti-patterns.md`](references/anti-patterns.md). The big ones: don't lock typography or colors, don't enumerate available sections, don't ask the subagent to "make it look like Howdy," don't suppress variance.
+
+**4. Spawn the subagent.** Invoke the `Agent` tool with `subagent_type=general-purpose`, the system prompt from step 2, and the user message from step 3. The subagent has `Write` access; it will write files directly to the project repo path.
+
+**5. Validate the output.** After the subagent returns, run these checks against the project repo:
+
+- **Required files present:** `index.html`, `how-it-works/index.html`, two more page directories with `index.html`, `privacy/index.html`, `terms/index.html`, `_headers`, `_redirects`, `robots.txt`, `sitemap.xml`, `og.svg`, `favicon.svg`. Each missing file = a fix request to the subagent.
+- **Footer presence:** `grep -L "Noontide Collective LLC" *.html **/*.html` should return nothing (or only files where `offer.md` declared a different parent entity — check the override).
+- **OG render:** `python3 .claude/skills/site/scripts/og_render.py render <repo>/og.svg <repo>/og.png`. Envelope must return `status: ok` with `width: 1200, height: 630`. Failure → fix request to subagent (likely `og.svg` viewBox is wrong).
+- **Lighthouse smoke (optional, V1.1):** `npx lighthouse http://localhost:8000 --only-categories=performance --form-factor=mobile` against a local `python3 -m http.server` running in the project repo. Score ≥ 90 = pass.
+
+**6. Commit + push (operator's call).** Once validation is green, summarize for the operator:
+- Files written
+- Hero artifact picked
+- Color palette
+- Two page choices
+- Suggested commit message: `"[add] one-shot lander generation for <offer>"`
+
+Operator runs `git add -A && git commit && git push`. Cloudflare auto-deploys (after #98) or operator runs `wrangler pages deploy` manually.
+
+**Variance test (acceptance criterion):** Running `/site build --one-shot` twice on the same offer must produce visually different output. If it doesn't, the soft brief was too prescriptive — re-read [`references/anti-patterns.md`](references/anti-patterns.md).
+
+### What's NOT in the lander branch
+
+- No `pnpm install`, no `pnpm build`. Static HTML only.
+- No `site-config.ts` pattern. Each lander generates its own one-off structure.
+- No section-types menu (the Next.js section catalog at lines 381–399 doesn't apply).
+- No `configure` mode separate from `build --one-shot` — the generation subagent reads voice.md / offer.md directly and bakes the brand decisions into the output.
+- No Anthropic API key. No `pages_gen.py` Python wrapper. The generation runs inside the operator's Claude Code session via the `Agent` tool.
 
 ---
 
@@ -544,6 +664,15 @@ cd [site_repo] && git status && git log --oneline -5
 ---
 
 ## References
+
+**Lander branch (static HTML, Cloudflare Pages, atom-driven):**
+
+- [references/lander-generation-system.md](references/lander-generation-system.md) — Load-bearing system prompt for the `--one-shot` generation subagent. Hard constraints + soft brief + reference handling rules.
+- [references/anti-patterns.md](references/anti-patterns.md) — What NOT to bake into prompts (over-prescription, hex-locked critique, "make it look like X", template tokens). Read before extending the system prompt.
+- [references/naming-heuristic.md](references/naming-heuristic.md) — 8-step playbook for picking a brand-tier domain when the operator hits "I need a domain."
+- [references/cloudflare-pages-link.md](references/cloudflare-pages-link.md) — Dashboard walkthrough for the one-time CF Pages Git connect (fallback path; default uses `wrangler pages project create`).
+
+**Next.js branch (saas / high-ticket templates):**
 
 - [references/frontend-design.md](references/frontend-design.md) — Typography, color, motion, anti-AI-slop standards
 - [references/section-patterns.md](references/section-patterns.md) — How reference files map to page sections
