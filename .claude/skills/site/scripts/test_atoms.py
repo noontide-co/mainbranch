@@ -1007,6 +1007,361 @@ def _png_chunk(chunk_type: bytes, data: bytes) -> bytes:
 
 
 # ---------------------------------------------------------------------------
+# StripeEnvelope (atom 6)
+# ---------------------------------------------------------------------------
+
+# The atom file is named `stripe.py` to match the chassis convention. The
+# `sys.path.insert` at the top of this test file puts the scripts directory
+# first, so `import stripe` resolves to the local atom rather than the
+# (unrelated, not installed) Stripe Python SDK.
+import stripe as stripe_module
+from stripe import (
+    CreatePaymentLinkData,
+    CreatePaymentLinkEnvelope,
+    ListProductsData,
+    ListProductsEnvelope,
+    StripeError,
+    StripeResult,
+)
+
+
+def test_stripe_create_payment_link_ok_round_trip() -> None:
+    env = CreatePaymentLinkEnvelope(
+        status="ok",
+        data=CreatePaymentLinkData(
+            offer_slug="thelastbill",
+            payment_link_url="https://buy.stripe.com/abc123",
+            payment_link_id="plink_123",
+            product_id="prod_123",
+            price_id="price_123",
+            amount_cents=10000,
+            currency="usd",
+            statement_descriptor="NOONTIDE LASTBILL",
+            success_url="https://thelastbill.com/start/thanks/",
+            created_now=True,
+        ),
+        provenance={
+            "stripe_product_create": ProviderRunMetadata(
+                status="ok",
+                latency_ms=420,
+                provider_version="stripe-2024-06-20",
+            ),
+        },
+    )
+    blob = env.model_dump_json()
+    rehydrated = CreatePaymentLinkEnvelope.model_validate_json(blob)
+    assert rehydrated.status == "ok"
+    assert rehydrated.data.payment_link_url == "https://buy.stripe.com/abc123"
+    assert rehydrated.error is None
+
+
+def test_stripe_envelope_degraded_requires_error() -> None:
+    with pytest.raises(ValidationError):
+        CreatePaymentLinkEnvelope(
+            status="degraded",
+            data=CreatePaymentLinkData(offer_slug="x"),
+            error=None,
+        )
+
+
+def test_stripe_envelope_ok_forbids_error() -> None:
+    with pytest.raises(ValidationError):
+        CreatePaymentLinkEnvelope(
+            status="ok",
+            data=CreatePaymentLinkData(offer_slug="x"),
+            error=StripeError(code="stripe_request_failed", message="x"),
+        )
+
+
+def test_stripe_error_codes_closed() -> None:
+    with pytest.raises(ValidationError):
+        StripeError(code="not_a_real_code", message="x")  # type: ignore[arg-type]
+
+
+def test_stripe_form_encode_nested_dict() -> None:
+    encoded = dict(stripe_module._form_encode({
+        "default_price_data": {"currency": "usd", "unit_amount": 10000},
+    }))
+    assert encoded["default_price_data[currency]"] == "usd"
+    assert encoded["default_price_data[unit_amount]"] == "10000"
+
+
+def test_stripe_form_encode_list_of_dicts() -> None:
+    encoded = dict(stripe_module._form_encode({
+        "line_items": [{"price": "price_1", "quantity": 1}],
+    }))
+    assert encoded["line_items[0][price]"] == "price_1"
+    assert encoded["line_items[0][quantity]"] == "1"
+
+
+def test_stripe_form_encode_metadata() -> None:
+    encoded = dict(stripe_module._form_encode({
+        "metadata": {"chassis_offer": "thelastbill", "chassis_kind": "deposit"},
+    }))
+    assert encoded["metadata[chassis_offer]"] == "thelastbill"
+    assert encoded["metadata[chassis_kind]"] == "deposit"
+
+
+def test_stripe_form_encode_booleans() -> None:
+    encoded = dict(stripe_module._form_encode({"active": True}))
+    assert encoded["active"] == "true"
+
+
+def test_stripe_truncate_descriptor() -> None:
+    assert stripe_module._truncate_descriptor("  NOONTIDE  ") == "NOONTIDE"
+    assert stripe_module._truncate_descriptor("NOONTIDE THE LAST BILL EXTRA") == "NOONTIDE THE LAST BILL"
+    assert len(stripe_module._truncate_descriptor("NOONTIDE THE LAST BILL EXTRA")) == 22
+
+
+def test_stripe_validate_offer_slug_ok() -> None:
+    assert stripe_module._validate_offer_slug("thelastbill") is None
+    assert stripe_module._validate_offer_slug("the-last-bill") is None
+    assert stripe_module._validate_offer_slug("offer_1") is None
+
+
+def test_stripe_validate_offer_slug_rejects_uppercase() -> None:
+    err = stripe_module._validate_offer_slug("TheLastBill")
+    assert err is not None and "invalid" in err.lower()
+
+
+def test_stripe_validate_offer_slug_rejects_leading_hyphen() -> None:
+    err = stripe_module._validate_offer_slug("-thelastbill")
+    assert err is not None
+
+
+def test_stripe_validate_statement_descriptor_ok() -> None:
+    assert stripe_module._validate_statement_descriptor("NOONTIDE") is None
+    assert stripe_module._validate_statement_descriptor("NOONTIDE LAST BILL") is None
+
+
+def test_stripe_validate_statement_descriptor_rejects_special_chars() -> None:
+    assert stripe_module._validate_statement_descriptor("NOON<>TIDE") is not None
+
+
+def test_stripe_classify_error_unauthenticated() -> None:
+    code, suggestion = stripe_module._classify_error(StripeResult(
+        ok=False,
+        latency_ms=100,
+        status_code=401,
+        error_message="Invalid API Key",
+    ))
+    assert code == "stripe_unauthenticated"
+    assert "STRIPE_API_KEY" in suggestion
+
+
+def test_stripe_classify_error_rate_limited() -> None:
+    code, _ = stripe_module._classify_error(StripeResult(
+        ok=False,
+        latency_ms=100,
+        status_code=429,
+        error_message="rate limit",
+    ))
+    assert code == "stripe_rate_limited"
+
+
+def test_stripe_classify_error_timeout() -> None:
+    code, _ = stripe_module._classify_error(StripeResult(
+        ok=False,
+        latency_ms=30000,
+        status_code=0,
+        error_message="timeout",
+    ))
+    assert code == "network_timeout"
+
+
+def test_stripe_classify_error_generic_fallback() -> None:
+    code, _ = stripe_module._classify_error(StripeResult(
+        ok=False,
+        latency_ms=100,
+        status_code=500,
+        error_message="server error",
+    ))
+    assert code == "stripe_request_failed"
+
+
+# ---------------------------------------------------------------------------
+# stripe.py CLI: validation paths (no network)
+# ---------------------------------------------------------------------------
+
+from click.testing import CliRunner as _StripeCliRunner
+
+
+def _run_stripe(args: list[str], env: dict[str, str] | None = None) -> dict:
+    runner = _StripeCliRunner()
+    result = runner.invoke(stripe_module.cli, args, env=env or {})
+    return json.loads(result.stdout)
+
+
+def test_stripe_cli_missing_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("STRIPE_API_KEY", raising=False)
+    payload = _run_stripe([
+        "create-payment-link", "thelastbill",
+        "--amount", "10000",
+        "--success-url", "https://thelastbill.com/start/thanks/",
+    ])
+    assert payload["status"] == "degraded"
+    assert payload["error"]["code"] == "missing_api_key"
+
+
+def test_stripe_cli_invalid_amount(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("STRIPE_API_KEY", "sk_test_dummy")
+    payload = _run_stripe([
+        "create-payment-link", "thelastbill",
+        "--amount", "10",
+        "--success-url", "https://thelastbill.com/start/thanks/",
+    ])
+    assert payload["status"] == "degraded"
+    assert payload["error"]["code"] == "invalid_amount"
+
+
+def test_stripe_cli_invalid_currency(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("STRIPE_API_KEY", "sk_test_dummy")
+    payload = _run_stripe([
+        "create-payment-link", "thelastbill",
+        "--amount", "10000",
+        "--currency", "US",
+        "--success-url", "https://thelastbill.com/start/thanks/",
+    ])
+    assert payload["status"] == "degraded"
+    assert payload["error"]["code"] == "invalid_currency"
+
+
+def test_stripe_cli_invalid_success_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("STRIPE_API_KEY", "sk_test_dummy")
+    payload = _run_stripe([
+        "create-payment-link", "thelastbill",
+        "--amount", "10000",
+        "--success-url", "http://thelastbill.com/start/thanks/",
+    ])
+    assert payload["status"] == "degraded"
+    assert payload["error"]["code"] == "invalid_success_url"
+
+
+def test_stripe_cli_invalid_statement_descriptor(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("STRIPE_API_KEY", "sk_test_dummy")
+    payload = _run_stripe([
+        "create-payment-link", "thelastbill",
+        "--amount", "10000",
+        "--success-url", "https://thelastbill.com/start/thanks/",
+        "--statement-descriptor", "NO<>NE",
+    ])
+    assert payload["status"] == "degraded"
+    assert payload["error"]["code"] == "invalid_statement_descriptor"
+
+
+def test_stripe_cli_invalid_offer_slug(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("STRIPE_API_KEY", "sk_test_dummy")
+    payload = _run_stripe([
+        "create-payment-link", "TheLastBill",
+        "--amount", "10000",
+        "--success-url", "https://thelastbill.com/start/thanks/",
+    ])
+    assert payload["status"] == "degraded"
+    assert payload["error"]["code"] == "invalid_offer_slug"
+
+
+def test_stripe_cli_idempotent_returns_existing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Search returns an existing product with stashed payment-link URL → idempotent ok."""
+    monkeypatch.setenv("STRIPE_API_KEY", "sk_test_dummy")
+
+    existing_product = {
+        "id": "prod_existing",
+        "default_price": "price_existing",
+        "metadata": {
+            "chassis_offer": "thelastbill",
+            "chassis_kind": "deposit",
+            "chassis_payment_link_url": "https://buy.stripe.com/EXISTING",
+        },
+    }
+
+    def fake_search(api_key, slug, prov):  # type: ignore[no-untyped-def]
+        prov["stripe_products_search"] = ProviderRunMetadata(
+            status="ok", latency_ms=50, provider_version="stripe-2024-06-20"
+        )
+        return existing_product, StripeResult(ok=True, latency_ms=50, status_code=200)
+
+    monkeypatch.setattr(stripe_module, "_search_existing_product", fake_search)
+
+    payload = _run_stripe([
+        "create-payment-link", "thelastbill",
+        "--amount", "10000",
+        "--success-url", "https://thelastbill.com/start/thanks/",
+    ])
+    assert payload["status"] == "ok"
+    assert payload["data"]["payment_link_url"] == "https://buy.stripe.com/EXISTING"
+    assert payload["data"]["created_now"] is False
+    assert payload["data"]["product_id"] == "prod_existing"
+
+
+def test_stripe_cli_creates_when_no_existing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Search returns nothing; product + payment link get created in sequence."""
+    monkeypatch.setenv("STRIPE_API_KEY", "sk_test_dummy")
+
+    calls: list[tuple[str, str]] = []
+
+    def fake_call(method, path, api_key, body=None, idempotency_key=None, query=None):  # type: ignore[no-untyped-def]
+        calls.append((method, path))
+        if path == "/products/search":
+            return StripeResult(ok=True, latency_ms=10, status_code=200, payload={"data": []})
+        if path == "/products" and method == "POST":
+            return StripeResult(
+                ok=True, latency_ms=20, status_code=200,
+                payload={
+                    "id": "prod_new",
+                    "default_price": "price_new",
+                    "metadata": {"chassis_offer": "thelastbill"},
+                },
+            )
+        if path == "/payment_links" and method == "POST":
+            return StripeResult(
+                ok=True, latency_ms=15, status_code=200,
+                payload={"id": "plink_new", "url": "https://buy.stripe.com/NEW"},
+            )
+        if path.startswith("/products/prod_new") and method == "POST":
+            return StripeResult(ok=True, latency_ms=10, status_code=200, payload={"id": "prod_new"})
+        raise AssertionError(f"unexpected call: {method} {path}")
+
+    monkeypatch.setattr(stripe_module, "_stripe_call", fake_call)
+
+    payload = _run_stripe([
+        "create-payment-link", "thelastbill",
+        "--amount", "10000",
+        "--success-url", "https://thelastbill.com/start/thanks/",
+    ])
+    assert payload["status"] == "ok"
+    assert payload["data"]["payment_link_url"] == "https://buy.stripe.com/NEW"
+    assert payload["data"]["created_now"] is True
+    assert payload["data"]["product_id"] == "prod_new"
+    assert payload["data"]["price_id"] == "price_new"
+    # Confirm the call sequence: search → create product → create link → update metadata
+    assert ("GET", "/products/search") in calls
+    assert ("POST", "/products") in calls
+    assert ("POST", "/payment_links") in calls
+
+
+def test_stripe_cli_unauthenticated_passthrough(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A 401 from Stripe surfaces as `stripe_unauthenticated`."""
+    monkeypatch.setenv("STRIPE_API_KEY", "sk_test_bad")
+
+    def fake_call(method, path, api_key, body=None, idempotency_key=None, query=None):  # type: ignore[no-untyped-def]
+        return StripeResult(
+            ok=False, latency_ms=20, status_code=401,
+            error_message="Invalid API Key provided",
+            error_type="invalid_request_error",
+        )
+
+    monkeypatch.setattr(stripe_module, "_stripe_call", fake_call)
+
+    payload = _run_stripe([
+        "create-payment-link", "thelastbill",
+        "--amount", "10000",
+        "--success-url", "https://thelastbill.com/start/thanks/",
+    ])
+    assert payload["status"] == "degraded"
+    assert payload["error"]["code"] == "stripe_unauthenticated"
+
+
+# ---------------------------------------------------------------------------
 
 import shutil  # placed at the bottom so prior tests don't shadow it
 
