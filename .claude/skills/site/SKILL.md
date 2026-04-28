@@ -78,11 +78,11 @@ The skill reads from the business repo and writes to the site repo. These are se
 
 ## Prerequisites
 
-Default chassis path uses **Cloudflare Pages** (better CLI, better domain integration, git auto-deploy, supports static and build-step sites alike).
+Default deploy target is **Cloudflare Pages** (better CLI, better domain integration, git auto-deploy, supports static and build-step sites alike).
 
 | Tool | Required for | Install |
 |---|---|---|
-| Cloudflare account | All site shapes (chassis default) | https://dash.cloudflare.com (free) |
+| Cloudflare account | All site shapes (default) | https://dash.cloudflare.com (free) |
 | `gh` CLI authenticated | Repo creation | `brew install gh` + `gh auth login` |
 | Cloudflare API token + account ID + GitHub App install | Atom-driven domain/DNS/Pages flow | One-time: `bash .claude/skills/site/scripts/setup_creds.sh` then [`references/cloudflare-pages-link.md`](references/cloudflare-pages-link.md) for the GitHub App OAuth handshake |
 | `offer.md` + `audience.md` | Site generation | Build via `/think` first if missing |
@@ -95,7 +95,7 @@ python3 .claude/skills/site/scripts/verify_live.py
 ```
 Expect 3/3 passed (Cloudflare scopes + zone lookup + domain-check CLI). Porkbun skipped is fine for the CF-registered path.
 
-Netlify is supported as a legacy fallback for pre-chassis Next.js templates only — see [`references/deployment.md`](references/deployment.md). Not the chassis target.
+Netlify is supported as a legacy fallback for pre-V1 Next.js templates only — see [`references/deployment.md`](references/deployment.md). Not the default target.
 
 ---
 
@@ -168,14 +168,14 @@ Ask the operator. Route based on the answer; don't assume.
 >
 > **A. New site from scratch.** Pick a shape:
 > - 🟦 **Lander** (1 page, all-in-one) — hero + offer + proof + CTA + footer. Maximum focus, minimum nav.
->   *V1: chassis-shape lander generation not yet wired. Use **Minisite** for single-page-feel use cases — its `/start/` page covers the focused conversion target.* Future spec: [`references/lander-build.md`](references/lander-build.md).
+>   *V1: per-offer lander generation not yet wired. Use **Minisite** for single-page-feel use cases — its home page covers the focused conversion target.* Future spec: [`references/lander-build.md`](references/lander-build.md).
 >
-> - 🟩 **Minisite** (~4 pages, static HTML) — home + how-it-works + 2 LLM-picked + privacy/terms/start/start-thanks. Designed fresh per offer by a generation subagent. **V1 chassis target.**
+> - 🟩 **Minisite** (~4–6 pages, static HTML) — home + how-it-works + 2–4 LLM-picked + privacy/terms/start-thanks. Designed fresh per offer by a generation subagent. **V1 target.**
 >   Best for: paid-ad lander tests, single-offer first deploys, deposit-gateway flows.
 >   Flow: [`references/minisite-build.md`](references/minisite-build.md). Engine spec: `mb-vip/.claude/reference/minisite.md`.
 >
 > - 🟨 **Website** (full, multi-section, build step likely) — depth, blog, multiple offers, knowledge base, course area.
->   *V1 status:* chassis-shape Website generation pending. Legacy Next.js templates (`saas`, `high-ticket`) work today as starting points.
+>   *V1 status:* per-offer Website generation pending. Legacy Next.js templates (`saas`, `high-ticket`) work today as starting points.
 >   Flow: [`references/website-build.md`](references/website-build.md).
 >
 > **B. Iterating on an existing site.** Same shape, more content / edits.
@@ -263,7 +263,7 @@ If conversation compacted or context was lost:
 
 ## Scope
 
-Site shapes the chassis covers: **lander** (1 page), **minisite** (~4 pages), **website** (full). Plus graduation paths up the ladder, including bolt-on CMS for the website tier.
+Site shapes `/site` covers: **lander** (1 page), **minisite** (~4–6 pages), **website** (full). Plus graduation paths up the ladder, including bolt-on CMS for the website tier.
 
 **Not for:**
 - Wikis (`/wiki`)
@@ -278,8 +278,8 @@ Site shapes the chassis covers: **lander** (1 page), **minisite** (~4 pages), **
 **Triage + per-shape build flows:**
 
 - [references/lander-build.md](references/lander-build.md) — 1-page shape (V1 stub)
-- [references/minisite-build.md](references/minisite-build.md) — ~4-page shape (V1 chassis target)
-- [references/website-build.md](references/website-build.md) — full-site shape (Next.js + future chassis-shape)
+- [references/minisite-build.md](references/minisite-build.md) — ~4–6 page shape (V1 target)
+- [references/website-build.md](references/website-build.md) — full-site shape (Next.js + future per-offer generation)
 - [references/graduation.md](references/graduation.md) — paths between shapes + CMS bolt-on (Sanity, Contentful, Notion, etc.)
 
 **Generation + design (used by per-shape flows):**
@@ -293,5 +293,5 @@ Site shapes the chassis covers: **lander** (1 page), **minisite** (~4 pages), **
 
 **Legacy:**
 
-- [references/deployment.md](references/deployment.md) — Netlify deploy walkthrough (pre-chassis fallback)
+- [references/deployment.md](references/deployment.md) — Netlify deploy walkthrough (legacy fallback)
 - [references/examples-and-troubleshooting.md](references/examples-and-troubleshooting.md) — usage examples, common fixes

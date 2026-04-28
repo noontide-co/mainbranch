@@ -1,6 +1,6 @@
 # Graduation — Site Shape Transitions
 
-When an offer pulls more traffic, the site that supports it often needs more. The chassis ships three site shapes (lander, minisite, website) and a fourth posture (website with a CMS bolted on for non-developer content editing). Sites can graduate up the ladder; this file documents the paths and when to take each.
+When an offer pulls more traffic, the site that supports it often needs more. `/site` ships three site shapes (lander, minisite, website) and a fourth posture (website with a CMS bolted on for non-developer content editing). Sites can graduate up the ladder; this file documents the paths and when to take each.
 
 V1 doesn't ship an automated graduation tool — these are operator-decision moments triggered by real signal. The skill recognizes the signal, surfaces the option, walks through the change. Future versions may script more of it.
 
@@ -99,7 +99,7 @@ Past ~10–15 pages, component reuse + a build step pays off. Two sub-options:
 4. Configure rebuild webhooks: Sanity content publish → triggers Cloudflare Pages rebuild (CF Pages supports deploy hooks).
 5. Editor team uses Sanity Studio (sanity.studio/{project}) to add/edit content; on publish, the website rebuilds and deploys automatically.
 
-**The chassis stays the same.** The Cloudflare Pages project doesn't care about the CMS; it just sees a git push or a deploy hook fire and rebuilds.
+**The deploy target stays the same.** The Cloudflare Pages project doesn't care about the CMS; it just sees a git push or a deploy hook fire and rebuilds.
 
 **Gotchas:**
 - Build time grows as content grows. For a static site with hundreds of CMS items, build can take 5+ minutes. Consider on-demand revalidation (Next.js ISR) or chunked builds at that point.
@@ -119,6 +119,6 @@ Past ~10–15 pages, component reuse + a build step pays off. Two sub-options:
 
 ## What V1 ships vs. what's automated later
 
-V1 ships these graduation paths as **documented manual flows** — the chassis recognizes the signal, surfaces the option, but the operator does the work (with Claude Code's help via `/site` modes).
+V1 ships these graduation paths as **documented manual flows** — `/site` recognizes the signal, surfaces the option, but the operator does the work (with Claude Code's help via `/site` modes).
 
 Future versions might add `/site graduate <new-shape>` as a skill mode that automates the bulk of the transition (creates the new repo, ports content, swaps the apex domain). That ships only after the manual flow has been run on real graduations and the patterns are stable enough to script.

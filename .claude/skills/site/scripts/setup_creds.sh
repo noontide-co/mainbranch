@@ -6,7 +6,7 @@
 # ~/.config/vip/env.sh with chmod 600. Idempotent — re-running replaces
 # existing values for these three vars without duplicating lines.
 #
-# Token must have these scopes on the account that owns the chassis assets
+# Token must have these scopes on the account that owns the /site assets
 # (registrar domains + Pages projects + DNS zones):
 #   Cloudflare Registrar:Edit
 #   Zone:Read, Zone:Edit

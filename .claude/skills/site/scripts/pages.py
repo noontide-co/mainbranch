@@ -17,7 +17,7 @@ Output: companyctx-shape envelope JSON on stdout, logs on stderr.
 Exit code: 0 on ok|partial, 1 on degraded.
 
 Per `decisions/2026-04-27-git-auto-deploy-non-negotiable.md`: every
-Pages project the chassis creates must default to git source. The
+Pages project this atom creates must default to git source. The
 `--source=direct-upload` flag exists as opt-out for CI environments
 that can't install the Cloudflare GitHub App.
 """

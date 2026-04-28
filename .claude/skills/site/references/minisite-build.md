@@ -2,7 +2,7 @@
 
 The minisite shape: ~4 pages of static HTML, no build step, deployed to Cloudflare Pages with git auto-deploy. Designed fresh per offer by a generation subagent — no template inheritance.
 
-V1 chassis target. The default for paid-ad lander tests, single-offer first deploys, and deposit-gateway flows.
+V1 target. The default for paid-ad lander tests, single-offer first deploys, and deposit-gateway flows.
 
 The canonical contract for what a minisite *is* (page list, per-page content, post-payment flow, tracking, walkthrough UX) lives at `mb-vip/.claude/reference/minisite.md` (engine-side spec). This file is the **/site skill's implementation flow** — how the skill walks the operator through producing one.
 
@@ -126,4 +126,4 @@ Operator runs `git add -A && git commit && git push`. Cloudflare auto-deploys (p
 
 Re-running `/site build --one-shot` produces a fresh design (variance is the feature). For targeted edits, edit the file in the project repo directly and `git push` — Cloudflare auto-deploys.
 
-When the offer pulls more traffic and the minisite needs more pages or content depth, that's the **graduation signal**. See [`graduation.md`](graduation.md) for paths from minisite → website (chassis-shape full site) or minisite → Website + CMS (Sanity, Contentful, etc.).
+When the offer pulls more traffic and the minisite needs more pages or content depth, that's the **graduation signal**. See [`graduation.md`](graduation.md) for paths from minisite → website (per-offer full site) or minisite → Website + CMS (Sanity, Contentful, etc.).
