@@ -195,22 +195,27 @@ Detailed mapping rules: [references/section-patterns.md](references/section-patt
 
 First-time setup. Creates a new site repo from a starter template.
 
-### Step 1: Choose Template
+### Step 1: Choose Site Shape
 
-Present options:
+Present options. Site shape, not business vertical — vertical is in `offer.md`.
 
-> **Which template fits your business?**
+> **What kind of site are you building?**
 >
-> 1. **SaaS / Product** (Next.js) — Hero → Demo → Value Prop → Workflow → Examples → Integrations → CTA
->    Best for: software, e-commerce, product companies. Has a build step.
+> 1. **Lander** (1 page, all-in-one) — single page: hero + offer + proof + CTA + footer.
+>    *V1 status:* pattern defined, generation system prompt not yet written. Use **Minisite** for now if you need single-page-feel — option 2 already covers that case via its `/start/` page.
 >
-> 2. **High-Ticket Services** (Next.js) — Hero → Solution → Pain → Process → Competitive → Objections → Proof → Qualification → FAQ → CTA
->    Best for: coaching, consulting, agencies, $3k+ services. Has a build step.
+> 2. **Minisite** (~4 pages, static HTML) — home + `how-it-works/` + 2 LLM-picked from `{proof, pricing, start, faq}` + required `privacy/`, `terms/`, `start/thanks/`. Designed fresh per offer by a generation subagent. **Cloudflare Pages by default. V1 chassis target.**
+>    Best for: paid-ad minisite tests, single-offer first deploys, deposit-gateway flows.
+>    Spec: [`mb-vip/.claude/reference/minisite.md`](../../reference/minisite.md). Skill flow below: see "Minisite Template Branch."
 >
-> 3. **Lander** (static HTML) — 4 pages designed fresh per offer by an LLM-generation subagent. No build step. No template inheritance.
->    Best for: speedrun lander tests, paid-ad landing pages, single-offer first deploys. **Picks Cloudflare Pages + atom-driven domain setup.** See "Lander Template Branch" below.
+> 3. **Website** (full, multi-section, build step likely) — for businesses with content depth (blog, multiple offers, knowledge base, course area).
+>    *V1 status:* pattern defined, chassis-shape Website generation not yet wired. Legacy Next.js templates (`saas`, `high-ticket`) work via Steps 2–11 below as starting points; those are pre-chassis examples that fit a few specific verticals. The full Website tier evolves in V2.
 
-If `lander` is chosen, **skip Steps 2–11 below and go to "Lander Template Branch"** — that flow uses Cloudflare Pages + atoms, not Netlify + Next.js. The existing Steps 2–11 apply only to `saas` / `high-ticket`.
+**Hosting default:** Cloudflare Pages for all three shapes. Better CLI, better domain integration, git auto-deploy out of the box. Netlify path stays for the legacy `saas` / `high-ticket` templates only — not the chassis target.
+
+**Graduation:** sites can graduate up the shape ladder when an offer earns it. Lander → Minisite (the single-pager pulls traffic that wants more proof, more pages emerge). Minisite → Website (a winning minisite gets deeper content, a blog, multi-offer support, course area). The graduation isn't automatic; it's an operator decision triggered by the offer pulling traffic that wants more content. V1 doesn't ship a graduation tool — manual repo work for now; future skill mode if it becomes recurring.
+
+If `minisite` is chosen, **skip Steps 2–11 below and go to "Minisite Template Branch"** — that flow uses Cloudflare Pages + atoms. Steps 2–11 apply to the legacy `saas` / `high-ticket` Next.js templates only.
 
 ### Step 2: Name and Location
 
@@ -304,11 +309,11 @@ Create `~/.mainbranch/` directory if it doesn't exist.
 
 ---
 
-## Lander Template Branch
+## Minisite Template Branch
 
-When the operator picked the `lander` template in Step 1, the setup and build flows are different from the Next.js templates above. Static HTML, no build step, Cloudflare Pages, atom-driven domain + DNS + custom-domain attachment.
+When the operator picked the `minisite` template in Step 1, the setup and build flows are different from the Next.js templates above. Static HTML, no build step, Cloudflare Pages, atom-driven domain + DNS + custom-domain attachment.
 
-### setup (lander)
+### setup (minisite)
 
 **1. Name + project repo.** Ask the operator:
 - Site name (e.g., `thelastbill`). Becomes the Pages project name.
@@ -326,7 +331,7 @@ If anything's red, route the operator to `bash .claude/skills/site/scripts/setup
 
 **3. Domain — buy-new vs. existing.** Ask:
 - "Already own the domain?" → skip to step 4 with the domain name
-- "Need to buy?" → run `python3 .claude/skills/site/scripts/domain.py check <name> --tlds .com,.co,.io` first to confirm availability + TLD support. If `extension_not_supported_via_api`, fall back to the Cloudflare dashboard (https://dash.cloudflare.com/registrar — confirm the right account before purchase). For API-supported TLDs and after explicit operator Y on price, proceed with `domain.py buy <name>` — *will be wired in a follow-up PR; today the buy is dashboard for the first lander, then API once `domain.py buy --registrar=cloudflare` lands*.
+- "Need to buy?" → run `python3 .claude/skills/site/scripts/domain.py check <name> --tlds .com,.co,.io` first to confirm availability + TLD support. If `extension_not_supported_via_api`, fall back to the Cloudflare dashboard (https://dash.cloudflare.com/registrar — confirm the right account before purchase). For API-supported TLDs and after explicit operator Y on price, proceed with `domain.py buy <name>` — *will be wired in a follow-up PR; today the buy is dashboard for the first minisite, then API once `domain.py buy --registrar=cloudflare` lands*.
 
 **4. DNS ensure.** Once the domain is owned (CF Registrar or Porkbun), run:
 ```bash
@@ -362,22 +367,22 @@ The atom attaches the domain, creates the CNAME record in the zone (the step the
   "name": "<name>",
   "site_repo": "/absolute/path/to/repo",
   "business_repo": "/absolute/path/to/business-repo",
-  "template": "lander",
+  "template": "minisite",
   "hosting": "cloudflare",
   "domain": "<full apex>"
 }
 ```
 
 **Exit:**
-> "Lander chassis ready at https://<domain>. Placeholder deployed; run `/site build --one-shot` to generate the actual lander from your offer + audience specs."
+> "Minisite ready at https://<domain>. Placeholder deployed; run `/site build --one-shot` to generate the actual minisite from your offer + audience specs."
 
-### build --one-shot (lander)
+### build --one-shot (minisite)
 
 This is the load-bearing mode — where Claude (the operator's running session) spawns a subagent that generates fresh HTML/CSS/SVG for this offer. No template inheritance. No placeholder tokens. No Anthropic SDK call. The subagent is a Claude Code subagent, spawned via the `Agent` tool.
 
 **1. Resolve offer context.** Use the existing offer-context resolution above (lines 116–145). At minimum: `offer.md` + `audience.md` paths + the active offer slug.
 
-**2. Load the system prompt.** Read [`references/lander-generation-system.md`](references/lander-generation-system.md) verbatim. This is the load-bearing artifact — the full hard-constraints + soft-brief framing for the generation subagent. Pass it as the subagent's system prompt unmodified.
+**2. Load the system prompt.** Read [`references/minisite-generation-system.md`](references/minisite-generation-system.md) verbatim. This is the load-bearing artifact — the full hard-constraints + soft-brief framing for the generation subagent. Pass it as the subagent's system prompt unmodified.
 
 **3. Build the user message.** Compose:
 - Resolved `offer.md` content
@@ -387,7 +392,7 @@ This is the load-bearing mode — where Claude (the operator's running session) 
 - Project repo absolute path (where the subagent writes via `Write`)
 - Soft directive: *"Generate fresh HTML/CSS/SVG for this offer. The reference URLs are taste anchors, not templates — read them for polish level, then design something that fits **this** offer. Surprise me."*
 
-Anti-patterns to avoid in your own framing of the user message: see [`references/anti-patterns.md`](references/anti-patterns.md). The big ones: don't lock typography or colors, don't enumerate available sections, don't ask the subagent to "make it look like Howdy," don't suppress variance.
+Anti-patterns to avoid in your own framing of the user message: see [`references/anti-patterns.md`](references/anti-patterns.md). The big ones: don't lock typography or colors, don't enumerate available sections, don't ask the subagent to "make it look like the references," don't suppress variance.
 
 **4. Spawn the subagent.** Invoke the `Agent` tool with `subagent_type=general-purpose`, the system prompt from step 2, and the user message from step 3. The subagent has `Write` access; it will write files directly to the project repo path.
 
@@ -403,16 +408,16 @@ Anti-patterns to avoid in your own framing of the user message: see [`references
 - Hero artifact picked
 - Color palette
 - Two page choices
-- Suggested commit message: `"[add] one-shot lander generation for <offer>"`
+- Suggested commit message: `"[add] one-shot minisite generation for <offer>"`
 
 Operator runs `git add -A && git commit && git push`. Cloudflare auto-deploys (after #98) or operator runs `wrangler pages deploy` manually.
 
 **Variance test (acceptance criterion):** Running `/site build --one-shot` twice on the same offer must produce visually different output. If it doesn't, the soft brief was too prescriptive — re-read [`references/anti-patterns.md`](references/anti-patterns.md).
 
-### What's NOT in the lander branch
+### What's NOT in the minisite branch
 
 - No `pnpm install`, no `pnpm build`. Static HTML only.
-- No `site-config.ts` pattern. Each lander generates its own one-off structure.
+- No `site-config.ts` pattern. Each minisite generates its own one-off structure.
 - No section-types menu (the Next.js section catalog at lines 381–399 doesn't apply).
 - No `configure` mode separate from `build --one-shot` — the generation subagent reads voice.md / offer.md directly and bakes the brand decisions into the output.
 - No Anthropic API key. No `pages_gen.py` Python wrapper. The generation runs inside the operator's Claude Code session via the `Agent` tool.
@@ -665,9 +670,9 @@ cd [site_repo] && git status && git log --oneline -5
 
 ## References
 
-**Lander branch (static HTML, Cloudflare Pages, atom-driven):**
+**Minisite branch (static HTML, Cloudflare Pages, atom-driven):**
 
-- [references/lander-generation-system.md](references/lander-generation-system.md) — Load-bearing system prompt for the `--one-shot` generation subagent. Hard constraints + soft brief + reference handling rules.
+- [references/minisite-generation-system.md](references/minisite-generation-system.md) — Load-bearing system prompt for the `--one-shot` generation subagent. Hard constraints + soft brief + reference handling rules.
 - [references/anti-patterns.md](references/anti-patterns.md) — What NOT to bake into prompts (over-prescription, hex-locked critique, "make it look like X", template tokens). Read before extending the system prompt.
 - [references/naming-heuristic.md](references/naming-heuristic.md) — 8-step playbook for picking a brand-tier domain when the operator hits "I need a domain."
 - [references/cloudflare-pages-link.md](references/cloudflare-pages-link.md) — Dashboard walkthrough for the one-time CF Pages Git connect (fallback path; default uses `wrangler pages project create`).

@@ -2,7 +2,7 @@
 
 A repeatable playbook for picking a brand-tier domain when the operator hits "I need a domain." Use this when the offer doesn't already have a name. Run via `domain.py check` and validate the top picks with `domain-check --info` before purchase.
 
-The goal is a `.com` (or `.co`, `.app`, `.io`) that reads as a confident standalone brand — not a generic descriptor or a clever-but-forgettable pun. Spend 15 minutes here; the name will outlive the lander by years.
+The goal is a `.com` (or `.co`, `.app`, `.io`) that reads as a confident standalone brand — not a generic descriptor or a clever-but-forgettable pun. Spend 15 minutes here; the name will outlive the site by years.
 
 ---
 
