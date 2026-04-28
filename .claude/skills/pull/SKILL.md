@@ -57,9 +57,24 @@ git pull origin main 2>&1
 
 ### Handling Results
 
-**VIP updated:** "Pulled latest engine updates. Changes: [list]"
+**VIP updated:** "Pulled latest engine updates." — then read `<vip_path>/.claude/announcements.md` and surface unseen, non-expired entries (per the format defined in announcements.md). Diff against `~/.config/vip/local.yaml:seen_announcements` so the user only sees what's actually new.
 
-**VIP current:** "Engine already up to date."
+Render format when there are unseen announcements:
+
+```
+Pulled latest engine updates.
+
+─── What's new ───
+[NEW] <title>
+<2-line body>
+─────────────────
+
+(Run /start to begin, or run the named skill directly.)
+```
+
+If no unseen announcements: just "Pulled latest engine updates." with nothing after.
+
+**VIP current:** "Engine already up to date." — still surface unseen announcements (the user might not have run /start since vip last had a feature land).
 
 **VIP path not found:** "Couldn't find vip. Run `/setup` to configure your vip path, or check `~/.config/vip/local.yaml`."
 

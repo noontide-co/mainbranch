@@ -23,13 +23,13 @@ Don't graduate prematurely. Each tier costs operational complexity. Graduate whe
 ## Lander → Minisite
 
 **What changes:**
-- 1 page → 4 pages (home + how-it-works + 2 LLM-picked + privacy/terms/start/start-thanks)
+- 1 page → ~4–6 pages (home + how-it-works + 2–4 LLM-picked + privacy/terms/start-thanks)
 - Single hero focus → distributed proof + how-it-works + faq across pages
 - Same domain, same Cloudflare Pages project (no infra change)
 
 **Mechanics:**
-1. Run `/site build --one-shot` against the existing project. The minisite generation subagent reads the same offer.md / audience.md and produces a 4-page version. The home page stays focused; supporting pages get the proof, mechanism, and faq content.
-2. Confirm `/start/` (the focused conversion CTA) and `/start/thanks/` are present (minisite shape requires them).
+1. Run `/site` against the existing project. The minisite generation subagent reads the same offer.md / audience.md and produces a ~4–6 page version. The home page stays focused (linking directly to the conversion endpoint); supporting pages get the proof, mechanism, and faq content.
+2. Confirm `/start/thanks/` is present (minisite shape requires it as the post-conversion landing).
 3. Update `~/.mainbranch/sites.json` `shape` field: `lander` → `minisite`.
 4. `git push` — Cloudflare auto-deploys.
 5. (Optional) Re-run `og_render.py` if the og.svg changed.
@@ -41,7 +41,7 @@ Don't graduate prematurely. Each tier costs operational complexity. Graduate whe
 ## Minisite → Website
 
 **What changes:**
-- 4 pages → 10+ pages (blog, multiple offers, knowledge base, course area, etc.)
+- ~4–6 pages → 10+ pages (blog, multiple offers, knowledge base, course area, etc.)
 - Static HTML → likely Next.js / Astro with build step (component reuse pays off past ~6 pages)
 - Possibly: deeper navigation (header nav, footer site map), search, taxonomy
 

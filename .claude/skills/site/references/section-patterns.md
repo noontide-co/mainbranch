@@ -1,6 +1,8 @@
 # Section Patterns
 
-How reference files map to page sections. This is the translation layer Claude uses during `/site build` mode.
+> **Applies to: Website (Next.js) shape only.** The minisite shape uses LLM-decided sections per [`minisite-generation-system.md`](minisite-generation-system.md) — no fixed section catalog. Use this file when working in the legacy Next.js Website templates (`saas`, `high-ticket`).
+
+How reference files map to page sections. This is the translation layer Claude uses during `/site build` mode for the Website shape.
 
 ---
 
@@ -337,6 +339,9 @@ Components import from this file. During `/site build`, Claude generates this fi
 
 ## See Also
 
-- [frontend-design.md](frontend-design.md) — Typography, color, motion, anti-AI-slop standards
-- [deployment.md](deployment.md) — Netlify setup, build settings, troubleshooting
+- [SKILL.md](../SKILL.md) — `/site` operating principles + triage
+- [website-build.md](website-build.md) — full Website (Next.js) build flow this catalog supports
+- [frontend-design.md](frontend-design.md) — Typography, color, motion, anti-AI-slop standards (Next.js)
+- [cloudflare-pages-link.md](cloudflare-pages-link.md) — CF Pages GitHub App OAuth handshake (current default deploy)
+- [deployment.md](deployment.md) — Netlify deploy walkthrough (legacy fallback)
 - [examples-and-troubleshooting.md](examples-and-troubleshooting.md) — Usage examples and common fixes

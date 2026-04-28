@@ -268,7 +268,7 @@ Decision lifecycle metrics must use `.claude/scripts/decision_lifecycle_audit.sh
 | `/vsl` | VSL scripts (Skool 18-section or B2B Haynes 7-step) |
 | `/organic` | Generate organic content from reference + research |
 | `/wiki` | Personal wiki with atomic notes |
-| `/site` | Generate and deploy landing pages from reference files |
+| `/site` | Build and deploy landing pages, minisites, and websites from reference files. One-flow brief→site: research → brief → review → lock → setup → conversion endpoint (Stripe / lead form / appointment / webhook) → concept variations on localhost → publish raw → build out → publish |
 | `/help` | Answer questions, troubleshoot, explain |
 | `/newsletter` | Generate weekly newsletter from thinking work (coming soon) |
 | `/end` | Close session intentionally — summary, crystallize, commit |

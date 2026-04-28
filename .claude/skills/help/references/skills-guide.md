@@ -117,6 +117,26 @@ See [the-think-cycle.md](the-think-cycle.md) for deep dive.
 
 ---
 
+### /site - Landing Pages and Sites
+**Use when:** Building or updating a landing page, minisite, or full website from your reference files.
+
+**What it does:**
+- Walks brief → site in **one continuous flow** (research → brief → review → lock → setup → conversion endpoint → concept variations → publish raw → build out → publish)
+- Reads from `offer.md`, `audience.md`, `voice.md` (and any research/) to produce site copy and design
+- Spins up multiple home-page concepts in parallel on localhost so you pick the design before publishing
+- Wires the conversion endpoint you choose: Stripe payment, lead form, appointment booking, or custom webhook
+- Deploys to Cloudflare Pages with git auto-deploy
+
+**Site shapes:**
+- `/site` lander — 1 page (V1 stub; use minisite for now)
+- `/site` minisite — ~4–6 pages (V1 default; static HTML, no build step)
+- `/site` website — full multi-section (Next.js / Astro)
+- Plus graduation paths up the ladder, including bolt-on CMS
+
+**Key difference from /think:** /think builds reference files. /site uses them to produce a live site. The brief and the site happen inside /site as one flow — no need to run /think first to "build the brief," though you should have offer.md and audience.md filled in.
+
+---
+
 ### /end - Close Session
 **Use when:** Done for the day, wrapping up, want to close intentionally.
 
@@ -171,6 +191,9 @@ What do you need?
 │
 ├── Build a public wiki?
 │   └── /wiki
+│
+├── Build a landing page or site?
+│   └── /site (lander, minisite, or website)
 │
 ├── Done for the day?
 │   └── /end

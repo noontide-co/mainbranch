@@ -36,6 +36,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Reels, TikTok, organic, /organic | [organic-help.md](references/organic-help.md) |
 | Skool, community | [skool-help.md](references/skool-help.md) |
 | Wiki, atomic notes, publish, WikiLinks | Route to `/wiki` |
+| Site, landing page, lander, minisite, website, deploy site, publish site, conversion endpoint, concept variations | Route to `/site` (see [skills-guide.md](references/skills-guide.md) for the full one-flow walkthrough) |
 | Done, wrapping up, closing, end session, end of day | Route to `/end` |
 | multi-offer, product ladder, offers, switch offer | Multi-Offer FAQ (below) |
 | Better outputs, quality, what next | [making-outputs-better.md](references/making-outputs-better.md) |

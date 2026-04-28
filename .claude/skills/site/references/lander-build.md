@@ -17,7 +17,7 @@ When per-offer lander generation lands, this file gets the same shape as `minisi
 
 Three reasons:
 
-1. **The minisite covers the use case.** A 4-page minisite where 3 of the pages are linked from the home hero gives the same psychological "single focused funnel" feel as a 1-page lander, without losing the room for proof + how-it-works + faq.
+1. **The minisite covers the use case.** A ~4–6 page minisite where supporting pages link from the home hero gives the same psychological "single focused funnel" feel as a 1-page lander, without losing the room for proof + how-it-works + faq.
 2. **Vagueness at single-page is harder.** Less surface area for variance — the system prompt risks producing visually identical output across runs unless we're disciplined. Minisite has more room to surprise.
 3. **Conversion data lives at the minisite tier.** Devon's first V1 run is paid Google Ads → minisite → Stripe deposit. The lander shape becomes load-bearing only when there's a real reason to compress to one page (very specific offers, retargeting flows, etc.) — that signal hasn't surfaced yet.
 

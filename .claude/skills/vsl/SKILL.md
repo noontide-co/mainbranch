@@ -225,7 +225,7 @@ ls -ltd outputs/*-vsl-*/ 2>/dev/null | head -3
 
 - Static image ads (use `/ads`)
 - Short-form video scripts under 60 seconds (use `/ads` video scripts)
-- General copywriting or landing pages
+- General copywriting or landing pages (use `/site`)
 - Content without sales intent
 
 Use `/vsl` when creating structured 5-20 minute sales video scripts.
