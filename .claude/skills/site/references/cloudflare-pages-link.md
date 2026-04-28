@@ -13,7 +13,7 @@ You only need this once per Cloudflare account. Skip if `pages.py create-project
 
 **Background.** CF Pages needs two things:
 
-- The **GitHub App** installed on the GitHub account/org that owns your lander repo (so CF can read commits)
+- The **GitHub App** installed on the GitHub account/org that owns your site repo (so CF can read commits)
 - An **OAuth handshake** between that install and your CF account (so CF knows which install to use for *your* projects)
 
 Just installing the App on GitHub isn't enough. The OAuth handshake fires from the CF dashboard, not from GitHub. The non-obvious part: the dashboard never has a stand-alone "set up Git integration" button. The handshake gets triggered only as a side-effect of starting the Workers/Pages **Create application** flow. You don't have to actually create anything — connecting the repo in the flow is enough; the OAuth side-effect is what we want.
@@ -24,8 +24,8 @@ Just installing the App on GitHub isn't enough. The OAuth handshake fires from t
 2. Left sidebar: **Build** group → **Compute** → **Workers & Pages**
 3. Click **Create application** (blue button, top-right)
 4. Click **Continue with GitHub** (or "Continue with GitHub" — wording varies by recent UI updates)
-5. Authorize the **Cloudflare Workers and Pages** GitHub App when GitHub asks. Choose the GitHub account or org that owns your lander repo.
-   - If GitHub asks "All repositories" vs "Only select repositories" — pick "All repositories" for least friction across future landers, or pick the specific repo if you want to scope tightly.
+5. Authorize the **Cloudflare Workers and Pages** GitHub App when GitHub asks. Choose the GitHub account or org that owns your site repo.
+   - If GitHub asks "All repositories" vs "Only select repositories" — pick "All repositories" for least friction across future sites, or pick the specific repo if you want to scope tightly.
 6. After GitHub redirects you back to Cloudflare, you'll see a list of your repos. **Connect a repo** — any repo is fine; the connection itself is what completes the OAuth handshake.
 7. **Don't finish creating the application.** Close the tab or click cancel. The handshake already fired the moment GitHub redirected back to CF.
 

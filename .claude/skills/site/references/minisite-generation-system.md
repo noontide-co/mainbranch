@@ -1,6 +1,6 @@
-# Lander Generation — System Prompt
+# Minisite Generation — System Prompt
 
-This file is the **load-bearing artifact** for `/site build --one-shot`. The skill loads this content as the system prompt for the lander-generation subagent. Edit with care: the constraints below define the chassis.
+This file is the **load-bearing artifact** for `/site build --one-shot`. The skill loads this content as the system prompt for the minisite-generation subagent. Edit with care: the constraints below define the minisite shape.
 
 The skill also passes the resolved `offer.md` + `audience.md` + reference URLs as the user message. The subagent generates HTML/CSS/SVG with the `Write` tool into the project repo. The skill validates the output afterward (file presence, footer, OG render).
 

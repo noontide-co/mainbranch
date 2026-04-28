@@ -13,7 +13,7 @@ Output: companyctx-shape envelope JSON on stdout, logs on stderr.
 Exit code: 0 on ok|partial, 1 on degraded.
 
 Why this is its own atom (per stacked-skill decision 2026-04-27):
-- Lander HTML/CSS/SVG generation happens via subagents inside the
+- Site HTML/CSS/SVG generation happens via subagents inside the
   /site build --one-shot skill. That's not API work — Claude Code is
   the LLM.
 - But the SVG → PNG render IS deterministic external work: shell out

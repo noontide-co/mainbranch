@@ -1,18 +1,18 @@
-# Anti-Patterns — What NOT to Bake Into Lander Generation
+# Anti-Patterns — What NOT to Bake Into Minisite Generation
 
-Lessons from prior failed prompt attempts. Each pattern below was tried, produced bad output, and is now explicitly avoided. The lander generation system prompt (`lander-generation-system.md`) is shaped around these.
+Lessons from prior failed prompt attempts. Each pattern below was tried, produced bad output, and is now explicitly avoided. The minisite generation system prompt (`minisite-generation-system.md`) is shaped around these.
 
 ## 1. Over-prescription
 
 **Pattern:** The prompt specifies typography (`font-family: Inter, sans-serif`), exact hex colors (`#0a0a0a` background, `#fafafa` text, `#3b82f6` CTA), section structure (`hero → 3-up features → testimonial carousel → pricing table → CTA`), spacing scale, even shadow values.
 
-**Result:** Every output looks like every other output. The LLM has nothing to decide; it slot-fills. The lander becomes indistinguishable from a generic SaaS template, regardless of offer.
+**Result:** Every output looks like every other output. The LLM has nothing to decide; it slot-fills. The minisite becomes indistinguishable from a generic SaaS template, regardless of offer.
 
-**Fix in `lander-generation-system.md`:** Specify structural constraints (4 pages, SEO, footer, mobile-first, perf budget). Leave aesthetic decisions — palette, typography, section order, hero artifact — to the LLM with reference URLs as taste signal.
+**Fix in `minisite-generation-system.md`:** Specify structural constraints (4 pages, SEO, footer, mobile-first, perf budget). Leave aesthetic decisions — palette, typography, section order, hero artifact — to the LLM with reference URLs as taste signal.
 
 ## 2. Hex-locked color critique
 
-**Pattern:** Reviewing a generated lander, telling the LLM "the CTA needs to be `#10b981` and the heading should be `#0f172a` not `#1e293b`."
+**Pattern:** Reviewing a generated minisite, telling the LLM "the CTA needs to be `#10b981` and the heading should be `#0f172a` not `#1e293b`."
 
 **Result:** The LLM stops making aesthetic judgments. Future runs default to "ask the operator for hex codes." The agent loses the ability to pick a palette that fits the offer's voice.
 
@@ -20,9 +20,9 @@ Lessons from prior failed prompt attempts. Each pattern below was tried, produce
 
 ## 3. "Make it look like Howdy"
 
-**Pattern:** Pointing at a successful lander and saying "make this offer's lander look like that."
+**Pattern:** Pointing at a successful minisite and saying "make this offer's minisite look like that."
 
-**Result:** Surface-copying. The LLM lifts colors, layouts, fonts. The new lander reads as derivative — and worse, it doesn't fit the new offer's tone (a billing tool's lander shouldn't feel like a spiritual coach's).
+**Result:** Surface-copying. The LLM lifts colors, layouts, fonts. The new minisite reads as derivative — and worse, it doesn't fit the new offer's tone (a billing tool's minisite shouldn't feel like a spiritual coach's).
 
 **Fix:** Reference URLs are **polish anchors**, not templates. The system prompt explicitly says: "read them for polish level, not structure to copy." The user message frames them as "here's the level of intentionality we want; now design something fresh that fits **this** offer."
 
@@ -38,7 +38,7 @@ Lessons from prior failed prompt attempts. Each pattern below was tried, produce
 
 **Pattern:** "Choose from these section types: hero-left-image, hero-right-image, three-up-grid, four-up-grid, testimonial-quote-block, testimonial-carousel, pricing-table-3-tier, faq-accordion, cta-banner..."
 
-**Result:** The LLM picks from a menu instead of inventing. The lander reads as assembled rather than designed. Same problem as #1 (over-prescription) but applied at the section level.
+**Result:** The LLM picks from a menu instead of inventing. The minisite reads as assembled rather than designed. Same problem as #1 (over-prescription) but applied at the section level.
 
 **Fix:** The system prompt names the four pages and a few decision points (which two extra pages this offer needs, what the hero artifact should be). It does not enumerate component types. The LLM decides what each page contains.
 
@@ -62,7 +62,7 @@ Lessons from prior failed prompt attempts. Each pattern below was tried, produce
 
 ## How to write a critique that doesn't break the chassis
 
-When you don't like a generated lander:
+When you don't like a generated minisite:
 
 - **Describe the quality, not the value.** "The hero feels too cold for an emotional offer" → not → "change `#0a0a0a` to `#1c1917`."
 - **Name the missing thing, not the present thing.** "There's no signature visual; the hero is just text" → not → "remove the gradient."
