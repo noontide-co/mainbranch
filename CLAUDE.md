@@ -221,7 +221,7 @@ Skills load reference progressively to stay token-efficient:
 | **Always** | CLAUDE.md | Every session |
 | **Core** | reference/core/*.md | When generating |
 | **On-demand** | research/, decisions/, content-strategy.md, skool-surfaces.md, offers/[active]/ | When reasoning about choices or generating content |
-| **Deep reference** | reference/brand/, reference/proof/ | When writing copy |
+| **Deep reference** | reference/visual-identity/, reference/proof/ | When writing copy |
 | **Domain** | reference/domain/ | When business-type matters |
 
 ---

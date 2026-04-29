@@ -1,6 +1,6 @@
 # Visual Style Guide Template
 
-**Usage**: Copy this file to your business repo at `reference/brand/visual-style.md` and customize for your brand.
+**Usage**: Copy this file to your business repo at `reference/visual-identity/visual-style.md` and customize for your brand.
 
 This template is populated with Main Branch's style as an example. Replace all sections with your own brand details.
 
