@@ -130,7 +130,7 @@ mb-vip/
 │   ├── tool-dns/                  # Go
 │   ├── tool-pages/                # Go
 │   ├── tool-stripe/               # Go
-│   └── tool-og-render/            # Node (Puppeteer / Playwright; image rendering is JS-native)
+│   └── tool-og-render/            # Python wrapper around rsvg-convert + cairosvg (PR #100, live-tested)
 ├── mb/                            # NEW top-level — Python umbrella dispatcher
 │   ├── mb/                        # Python package (the `mb` entry point)
 │   │   ├── __init__.py
@@ -286,7 +286,7 @@ The noontide-projects master locked the 8-item conceptual ship list. This sectio
 | Install path | `pipx install mainbranch` |
 | Entry point | `mb` (defined via `[project.scripts]` in `pyproject.toml`) |
 | Skills shipped | All 13 skills (10 existing + 3 new composables) packaged as data files inside the Python wheel |
-| Tools shipped | NOT in the Python wheel. `tool-*` binaries (Go) ship via Homebrew tap (`noontide-co/tap`) and Node-based `tool-og-render` ships via npm. `mb doctor` checks for them and prints install commands when missing. |
+| Tools shipped | `tool-*` Go binaries (`tool-domain`, `tool-dns`, `tool-pages`, `tool-stripe`) ship via Homebrew tap (`noontide-co/tap`). `tool-og-render` is bundled with `mainbranch` itself (Python wrapper around `rsvg-convert` + `cairosvg` fallback from PR #100). System dep `librsvg` checked by `mb doctor`. |
 | Trusted publisher | GitHub Actions → PyPI per `companyctx` template (`.github/workflows/publish-pypi.yml`) |
 | Versioning | Semver. v0.1.0 at launch. Schema-breaking changes bump major. |
 
@@ -386,9 +386,11 @@ Per `cli-agent-infra-repos-mining.md`, the discrawl pattern (Homebrew tap + go i
 | `tool-dns` | Go | `brew install noontide-co/tap/tool-dns` |
 | `tool-pages` | Go | `brew install noontide-co/tap/tool-pages` |
 | `tool-stripe` | Go | `brew install noontide-co/tap/tool-stripe` |
-| `tool-og-render` | Node (Puppeteer) | `npm install -g @noontide/tool-og-render` |
+| `tool-og-render` | Python (wrapper around `rsvg-convert` + `cairosvg`) | Bundled with `mainbranch`. System dep: `brew install librsvg` (macOS) or `apt install librsvg2-bin` (Linux). |
 
-Rationale: all four DNS/domain/pages/stripe tools are HTTP/networking workhorses. Go gives single-binary distribution, fast cold-start, no runtime dependency. `tool-og-render` renders OG images via headless browser → Node is the natural fit (Puppeteer is the de-facto standard).
+Rationale: all four DNS/domain/pages/stripe tools are HTTP/networking workhorses. Go gives single-binary distribution, fast cold-start, no runtime dependency.
+
+`tool-og-render` is the only **non-network** tool — it converts inline SVG to PNG at 1200x630 for OG meta tags. The static SVG (hero text + signature visual + wordmark; no JS, no network, no web fonts) is purpose-built for SVG rasterizers, NOT headless browsers. PR #100 already ships `rsvg-convert` (primary) + `cairosvg` (fallback) — live-tested at `thelastbill.com`. **v0.1.0 keeps that engine.** A code-review agent originally recommended Node/Puppeteer; pressure-tested via Grok 2026-04-29 and confirmed wrong (200MB Chromium dep is overkill for static SVG → PNG; rsvg+cairosvg matches every constraint and is already production-proven). **v0.2+ upgrade path: switch primary to `resvg` (Rust, <3MB binary, sub-10ms render, identical macOS/Linux output)** — Grok's recommended evolution, low-risk drop-in via `brew install resvg`. See "Open Threads" #3 for the upgrade gate.
 
 The `mb` umbrella does NOT bundle these. `mb doctor` reports which are missing and prints the install command. Users install only what they need.
 
@@ -836,13 +838,13 @@ Eight bullets. Read out loud before merging.
 
 4. **Brief schema migration policy is "don't auto-migrate."** Existing minisite briefs in noontide-projects will lack `dial`, `archetype`, `do_not_state`, etc. /site will work on them (old schema is tolerated for files dated before 2026-04-29) but will not gate them on the new fields. This is intentional but creates drift: Devon's old briefs and his new briefs are not directly comparable. Mitigation: `mb validate --upgrade-brief <file>` in v0.2 walks an interactive upgrade.
 
-5. **Paired-imagery rule depends on `tool-og-render` being installed.** OG image generation is the load-bearing part of the rule. If `tool-og-render` (Node + Puppeteer) is missing, /site falls back to single-image OG with a warning. Most users won't install Node-based tools by hand. Mitigation: `mb doctor` calls it out clearly; `npm install -g @noontide/tool-og-render` instruction is one-line.
+5. **Paired-imagery rule depends on `librsvg` being installed.** OG image generation is the load-bearing part of the rule. `tool-og-render` ships bundled with `mainbranch` but shells out to `rsvg-convert` (system dep) with `cairosvg` Python fallback. If neither is present, /site falls back to single-image OG with a warning. Mitigation: `mb doctor` calls it out clearly; `brew install librsvg` is one-line.
 
 6. **Conductor preferences file is brand-new at the engine repo and untested in workflow.** companyctx-derived preferences are mature in companyctx; pasting them onto a multi-language repo (Python umbrella + Go tools + Node og-render + Markdown skills) may surface gate-suite mismatches we haven't seen. Mitigation: pre-push gate suite ships per-language (Python ruff/mypy/pytest + Go fmt/vet/test + Node lint/test); first PR run will surface anything that's wrong.
 
 7. **No `mb` integration test in v0.1.0 ships against a real consumer repo.** Hello-world flow (`mb init` → `mb think audience`) is verified manually. CI runs `mb test --skill site` against a fixture, but no end-to-end "fresh machine, install pipx, run flow" automation exists. Failure mode: a regression in `mb init` ships and is found by user #1. Mitigation: weekly manual smoke test post-launch; v0.2 work to harness this in CI.
 
-8. **The `tool-og-render` Node binary is the only non-Go tool.** Splits the maintenance surface across two ecosystems on day one. Justification: headless-browser image rendering is JS-native (Puppeteer / Playwright are best-in-class). Risk: dependency churn in Node ecosystem creates support burden disproportionate to its usage. Mitigation: pin Puppeteer version aggressively; revisit at v0.3 if support burden materializes (alternative: render-via-API like Bannerbear, but that's a paid dependency we'd be subletting).
+8. **`tool-og-render` shells out to a system dep (`librsvg`).** We can't ship a fully-self-contained binary in v0.1; users need `brew install librsvg` (macOS) or `apt install librsvg2-bin` (Linux). Mitigation: `mb doctor` checks for it and prints the install command. v0.2+ upgrade to `resvg` (single static <3MB Rust binary, no system deps) removes this risk entirely; Grok's pressure-test 2026-04-29 confirmed the upgrade path is low-risk and well-supported.
 
 ---
 
@@ -959,7 +961,7 @@ Priority-ordered. Devon picks these up after v0.1.0 ships, or punts them with in
 
 2. **Linear sync for mb-vip.** Branch convention rolls over to `<linear-username>/<linear-id-lowercase>-<descriptor>` once Linear sync is on. Cheap to flip; not blocking v0.1.0. (Priority: medium; v0.2 candidate.)
 
-3. **`tool-og-render` ecosystem split.** Only non-Go tool in v0.1.0. If support burden materializes, evaluate Bannerbear-style API or a Go-native renderer (chromedp). (Priority: low; revisit at v0.3.)
+3. **`tool-og-render` engine upgrade to resvg (v0.2+).** v0.1.0 ships `rsvg-convert` + `cairosvg` fallback (PR #100, live-tested). Grok pressure-test 2026-04-29 recommended `resvg` (Rust) as the upgrade path — single static binary <3MB, sub-10ms render, identical macOS/Linux output, no system deps. Drop-in replacement via `brew install resvg`. Gate the swap on: (a) one real failure mode emerging in `rsvg-convert` that resvg fixes, OR (b) v0.2 release window opening. Priority: low; the existing engine works.
 
 4. **Composable skills (`skill-brief-draft`, `skill-concept`, `skill-review`) ownership.** They're new in v0.1.0 and called by /site. If /vsl, /ads, /organic want to call them too, that's a refactor at v0.2. Pre-emptively design for it now, or punt? Punt unless concrete reuse is asked for. (Priority: low.)
 
