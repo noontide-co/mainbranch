@@ -507,7 +507,7 @@ Use templates from `references/templates.md`.
 4. `reference/core/voice.md` — How you sound
 5. `reference/proof/testimonials.md` — Social proof
 6. `reference/proof/angles/` — Messaging entry points
-7. `reference/brand/visual-style.md` — Visual brand identity (colors, typography, mood, image prompt fragments)
+7. `reference/visual-identity/visual-style.md` — Visual brand identity (colors, typography, mood, image prompt fragments)
 8. `reference/domain/content-strategy.md` — Content pillars, platforms, cadence (template for community businesses)
 9. `reference/domain/funnel/skool-surfaces.md` — Live Skool about page + pricing card copy (community businesses with Skool)
 

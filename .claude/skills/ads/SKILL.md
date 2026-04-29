@@ -42,7 +42,7 @@ At the repo path, resolve offer context first (see Offer Context Resolution abov
 reference/core/voice.md      → same scoring
 reference/proof/testimonials.md → same scoring
 reference/proof/angles/*.md  → count .md files EXCLUDING README.md: 0=0, 1=1, 2-3=2, 4+=3
-reference/brand/visual-style.md → same scoring (optional)
+reference/visual-identity/visual-style.md → same scoring (optional)
 ```
 
 In multi-offer mode, score the offer-specific `offer.md` and `audience.md` (resolved via path resolution), not the brand-level `core/offer.md`.
@@ -226,7 +226,7 @@ Before creating ads, the business repo must have:
 | Voice | `reference/core/voice.md` (always core) | Yes |
 | Testimonials | `reference/proof/testimonials.md` + `offers/[active]/testimonials.md` (accumulate) | Yes |
 | Angles | `reference/proof/angles/*.md` | Yes (at least 1) |
-| Visual Style | `reference/brand/visual-style.md` | Optional (affects image gen) |
+| Visual Style | `reference/visual-identity/visual-style.md` | Optional (affects image gen) |
 | Content Strategy | `reference/domain/content-strategy.md` (always brand-level) | Optional (improves topic selection) |
 | Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | Optional (congruence check) |
 | Ad Account Access | `.vip/config.yaml` → `tools.pipeboard.status` | Optional (enables live performance data) |

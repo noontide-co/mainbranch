@@ -47,10 +47,10 @@ All templates follow the same JSON structure. Placeholders are filled at generat
 | `{{campaign_name}}` | User input at triage |
 | `{{angle_name}}` | Selected angle from Batch 1 |
 | `{{template_type}}` | graphic, lofi, interrupt, or textoverlay |
-| `{{mood}}` | `reference/brand/visual-style.md` → mood descriptors |
-| `{{primary_hex}}` | `reference/brand/visual-style.md` → primary color |
-| `{{secondary_hex}}` | `reference/brand/visual-style.md` → secondary/accent color |
-| `{{prompt_fragments}}` | `reference/brand/visual-style.md` → AI image prompt fragments |
+| `{{mood}}` | `reference/visual-identity/visual-style.md` → mood descriptors |
+| `{{primary_hex}}` | `reference/visual-identity/visual-style.md` → primary color |
+| `{{secondary_hex}}` | `reference/visual-identity/visual-style.md` → secondary/accent color |
+| `{{prompt_fragments}}` | `reference/visual-identity/visual-style.md` → AI image prompt fragments |
 | `{{scene_description}}` | Generated from concept + audience context |
 
 **If visual-style.md is missing:** Omit color_grading and style_directives sections. Use freestyle defaults.

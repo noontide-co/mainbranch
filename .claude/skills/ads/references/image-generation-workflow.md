@@ -150,7 +150,7 @@ Then center-crop to 1:1 in post-processing.
 
 ## Smart Mix Recommendation
 
-Based on `reference/brand/visual-style.md` depth:
+Based on `reference/visual-identity/visual-style.md` depth:
 
 | visual-style.md State | Mix |
 |----------------------|-----|
