@@ -1,72 +1,161 @@
-# Anti-Patterns — What NOT to Bake Into Minisite Generation
+# Anti-Patterns — What NOT to Bake Into Site Copy or Generation
 
-Lessons from prior failed prompt attempts. Each pattern below was tried, produced bad output, and is now explicitly avoided. The minisite generation system prompt (`minisite-generation-system.md`) is shaped around these.
+Two categories: (1) the **AI-tell list** (verbatim from Haines's seo-audit / ai-writing-detection — gates copy at review time), and (2) the **generation anti-patterns** (lessons from prior failed prompt attempts — shape the generation system prompt).
 
-## 1. Over-prescription
-
-**Pattern:** The prompt specifies typography (`font-family: Inter, sans-serif`), exact hex colors (`#0a0a0a` background, `#fafafa` text, `#3b82f6` CTA), section structure (`hero → 3-up features → testimonial carousel → pricing table → CTA`), spacing scale, even shadow values.
-
-**Result:** Every output looks like every other output. The LLM has nothing to decide; it slot-fills. The minisite becomes indistinguishable from a generic SaaS template, regardless of offer.
-
-**Fix in `minisite-generation-system.md`:** Specify structural constraints (~4–6 pages, SEO, footer, mobile-first, perf budget). Leave aesthetic decisions — palette, typography, section order, hero artifact — to the LLM with reference URLs as taste signal.
-
-## 2. Hex-locked color critique
-
-**Pattern:** Reviewing a generated minisite, telling the LLM "the CTA needs to be `#10b981` and the heading should be `#0f172a` not `#1e293b`."
-
-**Result:** The LLM stops making aesthetic judgments. Future runs default to "ask the operator for hex codes." The agent loses the ability to pick a palette that fits the offer's voice.
-
-**Fix:** Critique by describing the *quality* you want ("the CTA needs more grounded weight; right now it floats"), not the value. Let the LLM translate quality → hex.
-
-## 3. "Make it look like Howdy"
-
-**Pattern:** Pointing at a successful minisite and saying "make this offer's minisite look like that."
-
-**Result:** Surface-copying. The LLM lifts colors, layouts, fonts. The new minisite reads as derivative — and worse, it doesn't fit the new offer's tone (a billing tool's minisite shouldn't feel like a spiritual coach's).
-
-**Fix:** Reference URLs are **polish anchors**, not templates. The system prompt explicitly says: "read them for polish level, not structure to copy." The user message frames them as "here's the level of intentionality we want; now design something fresh that fits **this** offer."
-
-## 4. Templated placeholder tokens (`{BRAND_NAME}`, `{HERO_HEADLINE}`)
-
-**Pattern:** Defining a template repo with placeholder tokens and instructing the LLM to fill them in.
-
-**Result:** The LLM operates as a mail-merge engine. Output structure is locked to whatever the template authors imagined. Aesthetic invention is impossible — the template predetermined every section, every copy slot, every interactive element.
-
-**Fix:** No template repo. `/site` ships zero source files for the LLM to inherit from. The LLM generates fresh HTML/CSS/SVG per offer, with reference URLs as taste anchors only. If two runs on the same offer produce identical output, generation is broken.
-
-## 5. Over-enumerating "available sections"
-
-**Pattern:** "Choose from these section types: hero-left-image, hero-right-image, three-up-grid, four-up-grid, testimonial-quote-block, testimonial-carousel, pricing-table-3-tier, faq-accordion, cta-banner..."
-
-**Result:** The LLM picks from a menu instead of inventing. The minisite reads as assembled rather than designed. Same problem as #1 (over-prescription) but applied at the section level.
-
-**Fix:** The system prompt names the mandatory pages (home + how-it-works) and a few decision points (which 2–4 supporting pages this offer needs, what the hero artifact should be). It does not enumerate component types. The LLM decides what each page contains.
-
-## 6. Building in fallbacks for "if the LLM gets confused"
-
-**Pattern:** "If you're not sure what to do for the hero, default to a centered headline with a CTA button below."
-
-**Result:** The LLM uses the fallback every time, because it's the safe option. The "default" becomes the actual.
-
-**Fix:** No fallbacks. If the LLM doesn't have enough to make a confident aesthetic choice, the prompt sends it to look at reference URLs and the offer's voice. The output should be a confident decision, not a hedged middle.
-
-## 7. Suppressing variance ("be consistent across runs")
-
-**Pattern:** "Make sure that if I run this twice, I get similar output."
-
-**Result:** The LLM clamps to the safe default. Variance is the feature — different runs produce visually distinct output that all fit the offer. Generation is supposed to surprise.
-
-**Fix:** The system prompt explicitly tests for variance: *"If two runs on the same offer produce visually identical output, you've been too conservative."* The skill's acceptance criteria include "running --one-shot twice on the same spec produces visually different output."
+The De-AI'd review gate hard-fails any draft that violates the AI-tell list.
 
 ---
 
-## How to write a critique that doesn't break generation
+## Part 1 — AI-tell list (gates copy at review)
 
-When you don't like a generated minisite:
+### Em-dash rule (primary AI tell)
+
+Em-dash is the primary AI tell. Replace with commas, colons, or parentheses. **More than 1 em-dash per page = revise.**
+
+### Overused verbs (cut or replace)
+
+delve, leverage, optimize, utilize, facilitate, foster, bolster, underscore, unveil, navigate, streamline, enhance.
+
+### Overused adjectives (cut or replace)
+
+robust, comprehensive, pivotal, crucial, vital, transformative, cutting-edge, groundbreaking, innovative, seamless, intricate, nuanced, multifaceted, holistic.
+
+### AI-flag opening phrases (banned)
+
+- "In today's fast-paced world,"
+- "In the realm of,"
+- "It's important to note,"
+- "Let's delve into,"
+- "Imagine a world where."
+
+### AI-flag transitional phrases (banned)
+
+- "That being said,"
+- "With that in mind,"
+- "It's worth mentioning,"
+- "At its core,"
+- "To put it simply,"
+- "In essence,"
+- "This begs the question."
+
+### AI-flag concluding phrases (banned)
+
+- "In conclusion,"
+- "To sum up,"
+- "By [doing X], you can [achieve Y],"
+- "At the end of the day."
+
+### AI-flag structural patterns (banned)
+
+- "Whether you're a [X], [Y], or [Z]…"
+- "It's not just [X], it's also [Y]…"
+- Sentences starting with "By [gerund]…"
+
+### Plain English alternatives
+
+| Cut | Use |
+|---|---|
+| Utilize | Use |
+| Implement | Set up |
+| Leverage | Use |
+| Facilitate | Help |
+| Innovative | New |
+| Robust | Strong |
+| Seamless | Smooth |
+| Cutting-edge | New / Modern |
+
+### Cut these words (almost always)
+
+very, really, extremely, incredibly, just, actually, basically, in order to, that, things, stuff.
+
+### Hard-fail rules for the De-AI'd gate
+
+The gate fails if ANY of:
+
+- More than 1 em-dash on the page
+- Any banned opening / transitional / concluding / structural phrase
+- 3+ overused verbs OR 3+ overused adjectives in a single page
+- Any "Plain English alternatives" word in headline / hero copy
+
+Operator may proceed past failure with `--ignore-ai-tells`; the override is logged in the brief frontmatter.
+
+---
+
+## Part 2 — Generation anti-patterns (shape the system prompt)
+
+### 1. Over-prescription
+
+**Pattern:** Specifying typography, exact hex, section structure, spacing, even shadow values.
+
+**Result:** Every output looks like every other output. The LLM has nothing to decide; it slot-fills.
+
+**Fix:** Specify structural constraints (~4-6 pages, SEO, footer, mobile-first, perf budget). Leave aesthetic decisions to the LLM with reference URLs as taste signal.
+
+### 2. Hex-locked color critique
+
+**Pattern:** Telling the LLM "the CTA needs to be `#10b981`."
+
+**Result:** The LLM stops making aesthetic judgments.
+
+**Fix:** Critique by describing the *quality* you want ("the CTA needs more grounded weight"), not the value.
+
+### 3. "Make it look like Howdy"
+
+**Pattern:** Pointing at a successful site and saying "make this look like that."
+
+**Result:** Surface-copying. Derivative output.
+
+**Fix:** Reference URLs are **polish anchors**, not templates.
+
+### 4. Templated placeholder tokens (`{BRAND_NAME}`)
+
+**Pattern:** Defining a template repo with placeholders.
+
+**Result:** Mail-merge engine. Aesthetic invention impossible.
+
+**Fix:** No template repo. Generate fresh HTML/CSS/SVG per offer.
+
+### 5. Over-enumerating "available sections"
+
+**Pattern:** "Choose from these section types: hero-left-image, hero-right-image, ..."
+
+**Result:** Picks from a menu instead of inventing.
+
+**Fix:** Name the mandatory pages and a few decision points. Don't enumerate component types.
+
+### 6. Building in fallbacks for "if the LLM gets confused"
+
+**Pattern:** "If you're not sure, default to a centered headline with a CTA below."
+
+**Result:** The LLM uses the fallback every time.
+
+**Fix:** No fallbacks. Send the LLM to the reference URLs and the offer's voice.
+
+### 7. Suppressing variance
+
+**Pattern:** "Make sure two runs produce similar output."
+
+**Result:** Clamps to the safe default. Variance is the feature.
+
+**Fix:** Test for variance. Two runs on the same offer should produce visually distinct output that both fit the offer.
+
+### 8. AI for product UI screenshots
+
+**Pattern:** Asking the LLM to generate UI screenshots of the product.
+
+**Result:** Hallucinated UI. AI cannot draw the product correctly. Trust dies.
+
+**Fix:** Always capture real screenshots. Frame in browser/device mockups. Annotate with code overlays.
+
+---
+
+## Critique that doesn't break generation
+
+When you don't like a generated site:
 
 - **Describe the quality, not the value.** "The hero feels too cold for an emotional offer" → not → "change `#0a0a0a` to `#1c1917`."
-- **Name the missing thing, not the present thing.** "There's no signature visual; the hero is just text" → not → "remove the gradient."
-- **Ask for a different decision, not a different parameter.** "Pick a different hero artifact — a receipt, not a stamp" → not → "change `<svg viewBox='0 0 100 100'>` to `<svg viewBox='0 0 200 200'>`."
-- **Re-run before iterating.** Sometimes the first generation is conservative. A re-run often produces a sharper take. Iterate by re-running, not by directing.
+- **Name the missing thing, not the present thing.** "There's no signature visual" → not → "remove the gradient."
+- **Ask for a different decision, not a different parameter.** "Pick a different hero artifact — a receipt, not a stamp."
+- **Re-run before iterating.** First generation is often conservative; re-run before directing.
 
-Generation only works when the LLM is making aesthetic decisions. Every constraint we add is a decision we're taking away. Add only the structural ones (file presence, footer, perf, SEO, OG dimensions) — leave the rest open.
+Generation only works when the LLM is making aesthetic decisions. Every constraint we add is a decision we're taking away.

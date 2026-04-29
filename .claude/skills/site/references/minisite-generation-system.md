@@ -113,6 +113,36 @@ The user message includes 1–N reference URLs (default list: `https://howdy.md`
 
 If two runs on the same offer produce visually identical output, you've been too conservative. Generation is supposed to surprise.
 
+## Paired-imagery rule (Hughes)
+
+Every visual block is a **pair**, not a single image. The reader's eye does the snapping between the two states — *do not glue them with a caption*.
+
+| Block | Pair |
+|---|---|
+| Hero | Artifact (the offer made tangible) + status-quo / anomaly pair (the world it disrupts). Same camera angle, two states. |
+| Features | Old-way scene + new-way scene. No caption. |
+| Mechanism | Tool of the practice + person at the practice. |
+| Testimonial section | Before-state quote + after-state quote, no narrator gluing them. |
+| OG image | Paired scene rendered into the 1200x630 OG meta-tag block. |
+
+The image-prompt template is dial-aware:
+
+| Dial | Style |
+|---|---|
+| `convert` | High-clarity, photorealistic, "shot on Canon EOS R5," shallow DoF |
+| `story` | Cinematic, golden hour, archetype-faithful (David imagery vs. Goliath imagery, etc.) |
+| `brand` | Minimal, geometric, brand-color-locked, "flowing gradient" / "particle effects" |
+
+## AI never draws product UI
+
+Hard rule: **AI hallucinates UI.** Never use AI-generated imagery for product UI screenshots. Always:
+
+1. Capture real screenshots of the product.
+2. Frame in browser/device mockups (use `<img>` with the captured PNG).
+3. Annotate with code overlays or callouts in HTML/SVG, not in the image itself.
+
+If the offer hasn't shipped yet and there is no UI to screenshot, that's a sign the product needs to ship before the marketing site does.
+
 ## OG image rules
 
 The OG image (`og.svg`, rendered to `og.png` post-step) is the page-as-thumbnail. It will be seen at 200px wide in iMessage previews, social cards, and Slack unfurls. Constraints:
