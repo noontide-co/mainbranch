@@ -143,7 +143,7 @@ mb-vip/
 │   │   ├── educational.py         # "tell me more" loader for opinionated defaults
 │   │   └── resolve.py             # paid-reference path resolution + missing-ref stub
 │   ├── tests/
-│   ├── pyproject.toml             # PyPI: noontide-mb-vip
+│   ├── pyproject.toml             # PyPI: mainbranch
 │   └── README.md
 ├── .claude/
 │   ├── announcements.md
@@ -185,7 +185,7 @@ mb-vip/
 
 | What | From | To | Action |
 |---|---|---|---|
-| Engine README honesty pass | `README.md` | `README.md` | Edit: add "Built for Claude Code; cross-platform v0.2+; PyPI as `pipx install noontide-mb-vip`" |
+| Engine README honesty pass | `README.md` | `README.md` | Edit: add "Built for Claude Code; cross-platform v0.2+; PyPI as `pipx install mainbranch`" |
 | Skill files (10 existing) | `.claude/skills/<name>/` | `.claude/skills/<name>/` | Stay flat. Lock: no nested `molecules/` or `compounds/` subdirs ever introduced. |
 | Composable skills (3 new) | — | `.claude/skills/skill-{brief-draft,concept,review}/` | Create. /site calls these via depth-3 chain. |
 | Playbooks dir (new) | — | `.claude/playbooks/` | Create with two skeletons (`ship-bet/`, `weekly-review/`). Real impl deferred. |
@@ -268,7 +268,7 @@ The noontide-projects master locked the 8-item conceptual ship list. This sectio
 | Spec | Value |
 |---|---|
 | File | `mb-vip/README.md` |
-| Required content | "Built for Claude Code. Cross-platform skill support is v0.2+." / "Schema is v1; will evolve." / "Install: `pipx install noontide-mb-vip` (recommended) or `git clone github.com/mainbranch-ai/mb-vip` (developer mode)." / Link to compatibility matrix (TBD in v0.2 release notes). |
+| Required content | "Built for Claude Code. Cross-platform skill support is v0.2+." / "Schema is v1; will evolve." / "Install: `pipx install mainbranch` (recommended) or `git clone github.com/mainbranch-ai/mb-vip` (developer mode)." / Link to compatibility matrix (TBD in v0.2 release notes). |
 
 ### 7. End-to-end working flow (Stripe-style hello-world)
 
@@ -282,8 +282,8 @@ The noontide-projects master locked the 8-item conceptual ship list. This sectio
 
 | Spec | Value |
 |---|---|
-| Package name | `noontide-mb-vip` (see "PyPI Package Shape" section below for full rationale) |
-| Install path | `pipx install noontide-mb-vip` |
+| Package name | `mainbranch` (see "PyPI Package Shape" section below for full rationale) |
+| Install path | `pipx install mainbranch` |
 | Entry point | `mb` (defined via `[project.scripts]` in `pyproject.toml`) |
 | Skills shipped | All 13 skills (10 existing + 3 new composables) packaged as data files inside the Python wheel |
 | Tools shipped | NOT in the Python wheel. `tool-*` binaries (Go) ship via Homebrew tap (`noontide-co/tap`) and Node-based `tool-og-render` ships via npm. `mb doctor` checks for them and prints install commands when missing. |
@@ -323,30 +323,30 @@ This section is the source of truth for the PyPI package. The noontide-projects 
 
 ### Package name
 
-**`noontide-mb-vip`.**
+**`mainbranch`.**
 
 | Candidate | Pros | Cons | Verdict |
 |---|---|---|---|
 | `mainbranch-vip` | Brand-aligned w/ "Main Branch" product name | Conflicts with `mainbranch.io` lander; brand-vs-engine collision | Reject |
 | `mb-vip` | Matches repo name; short | Too generic for PyPI; `mb` already ambiguous on PyPI | Reject |
 | `mainbranch` | Cleanest brand | "Main Branch" is the *product*, not the *engine*; engine is a Noontide artifact | Reject |
-| `noontide-mb-vip` | Owned by Noontide org (parent), names the engine clearly, hyphenation parses well | Slightly long | **Accept** |
+| `mainbranch` | Owned by Noontide org (parent), names the engine clearly, hyphenation parses well | Slightly long | **Accept** |
 
-`noontide-mb-vip` makes parent-org ownership obvious, leaves room for sibling packages (`noontide-companyctx`, `noontide-morning-paper`), and doesn't conflict with the `mainbranch.io` consumer lander.
+`mainbranch` makes parent-org ownership obvious, leaves room for sibling packages (`noontide-companyctx`, `noontide-morning-paper`), and doesn't conflict with the `mainbranch.io` consumer lander.
 
 ### Entry points
 
 ```toml
 # mb/pyproject.toml
 [project]
-name = "noontide-mb-vip"
+name = "mainbranch"
 version = "0.1.0"
 
 [project.scripts]
 mb = "mb.cli:main"
 ```
 
-`pipx install noontide-mb-vip` puts `mb` on PATH. That is the only Python-installed binary.
+`pipx install mainbranch` puts `mb` on PATH. That is the only Python-installed binary.
 
 ### What `pipx install` gives the user
 
@@ -414,7 +414,7 @@ Nothing else. No `requests`, no `httpx` in v0.1 (the umbrella does not make netw
 
 Users on the current `git clone mb-vip` setup can transition by:
 
-1. `pipx install noontide-mb-vip`
+1. `pipx install mainbranch`
 2. `mb init --link-skills` (creates symlinks; safe to run on existing setup)
 3. Optionally: `git clone mb-vip` is no longer needed for skills, but stays useful for engine contributors.
 
@@ -735,7 +735,7 @@ The stub files in `<site-packages>/mb/_data/stubs/` are short markdown files tha
 3. Tell the user where to get the real one (`Subscribe at mainbranch.io/run for the curated reference.`).
 4. Include 2–3 generic example anchor lines that won't conflict with any real brand (fake-business "Acme Brewing" voice, etc.).
 
-This means: an OSS user (free, no subscription) can `pipx install noontide-mb-vip`, run `/site` in Claude Code, and get a fully-functional walkthrough that produces a generic-looking site. It works. It just doesn't sound like Devon (or like the user's own brand) until reference is filled in.
+This means: an OSS user (free, no subscription) can `pipx install mainbranch`, run `/site` in Claude Code, and get a fully-functional walkthrough that produces a generic-looking site. It works. It just doesn't sound like Devon (or like the user's own brand) until reference is filled in.
 
 ### Test mode for OSS users without paid reference
 
@@ -928,9 +928,9 @@ No tweet. No Skool announcement. No PyPI publish. Devon migrates his own consume
 Adds:
 
 - All tool binaries actually compile and pass tests.
-- `mb` umbrella publishes to PyPI (`noontide-mb-vip` v0.1.0). Trusted-publisher workflow.
+- `mb` umbrella publishes to PyPI (`mainbranch` v0.1.0). Trusted-publisher workflow.
 - Tools publish to Homebrew tap (`noontide-co/tap`) and `tool-og-render` to npm.
-- README.md updates with `pipx install noontide-mb-vip` as the recommended path; `git clone` as developer path.
+- README.md updates with `pipx install mainbranch` as the recommended path; `git clone` as developer path.
 - Compatibility matrix doc lands at `docs/compatibility.md`.
 - `mb test --skill site --fixture acme-brewing` ships green.
 - /site skill upgrade *full*: remaining 6 archetype detail files ship.
@@ -955,7 +955,7 @@ Tag `oe-v0.1.0`. Public.
 
 Priority-ordered. Devon picks these up after v0.1.0 ships, or punts them with intent.
 
-1. **PyPI package name confirmation.** This file proposes `noontide-mb-vip`. If Devon prefers `mainbranch-vip` or `mainbranch` for marketing reasons, the package name changes. Engine-internal is name-agnostic; only the README install line and the `pyproject.toml` name field move. (Priority: high; resolve before Phase 2 PyPI publish.)
+1. **PyPI package name confirmation.** This file proposes `mainbranch`. If Devon prefers `mainbranch-vip` or `mainbranch` for marketing reasons, the package name changes. Engine-internal is name-agnostic; only the README install line and the `pyproject.toml` name field move. (Priority: high; resolve before Phase 2 PyPI publish.)
 
 2. **Linear sync for mb-vip.** Branch convention rolls over to `<linear-username>/<linear-id-lowercase>-<descriptor>` once Linear sync is on. Cheap to flip; not blocking v0.1.0. (Priority: medium; v0.2 candidate.)
 
