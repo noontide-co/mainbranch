@@ -125,7 +125,7 @@ This repo contains your **business data**. It's powered by **vip** (the engine).
 | **Always** | This CLAUDE.md | Every session |
 | **Core** | reference/core/*.md | When generating content |
 | **On-demand** | research/, decisions/ | When reasoning about choices |
-| **Deep reference** | reference/brand/, reference/proof/ | When writing copy |
+| **Deep reference** | reference/visual-identity/, reference/proof/ | When writing copy |
 | **Domain** | reference/domain/ | When business-type matters |
 
 ---
