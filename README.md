@@ -2,6 +2,16 @@
 
 Turn Claude into your personal marketing team. Create ads, scripts, and community content that sounds like YOU.
 
+
+## Honest current state (v0.1)
+
+- **Built for Claude Code.** Cross-platform skill support is a v0.2+ commitment.
+- **Schema is v1; will evolve.** Frontmatter shapes covered by `mb validate` are stable for v0.1.x; breaking changes bump the major.
+- **Install: `pipx install mainbranch`** (recommended, once published) or `git clone https://github.com/mainbranch-ai/mb-vip` (developer mode).
+- **Cross-agent compatibility matrix lands at v0.2.** Codex, Cursor, Hermes, local LLMs are not first-class targets in v0.1.
+
+The v0.1.0 master decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.md`](decisions/2026-04-29-mb-vip-v0-1-0-master.md).
+
 ---
 
 ## First Time? Start Here

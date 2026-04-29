@@ -8,3 +8,12 @@
 .env
 .env.local
 WARP.md
+.venv/
+*.egg-info/
+build/
+dist/
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
