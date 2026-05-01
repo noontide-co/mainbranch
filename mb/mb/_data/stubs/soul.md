@@ -7,11 +7,12 @@ status: stub
 
 Public stub. Replace at `core/soul.md` or subscribe at mainbranch.io/run.
 
-## Why this exists
+## Why this work matters
 
-The reconnection sentence. Why does this work matter to the person doing it?
+Why does this work matter to you? One or two real sentences. The kind of
+thing you'd say to a friend, not on a sales page.
 
 ## What pulls
 
-The interest engine. What does the operator want to learn more about
-that turns into the work? Without this, the work feels like push.
+What do you want to learn more about? When the work feels like pull (not
+push), it's usually because it overlaps with this.

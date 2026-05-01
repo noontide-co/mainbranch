@@ -24,8 +24,8 @@ from mb import validate as validate_mod
 app = typer.Typer(
     name="mb",
     help=(
-        "Main Branch engine umbrella. Scaffolds, validates, and graphs "
-        "business-as-files repos. Built for Claude Code."
+        "Run your business as files in git. Main Branch scaffolds your repo, "
+        "checks it, graphs it, and wires it into Claude Code."
     ),
     no_args_is_help=True,
     add_completion=False,
@@ -33,7 +33,7 @@ app = typer.Typer(
 
 skill_app = typer.Typer(
     name="skill",
-    help="Inspect bundled skills.",
+    help="Look at the bundled skills.",
     no_args_is_help=True,
 )
 app.add_typer(skill_app, name="skill")
@@ -64,19 +64,25 @@ def init_cmd(
     name: str = typer.Option("", "--name", help="Business name (skips prompt if given)."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
-    """Scaffold a fresh business repo with the six-folder taxonomy."""
+    """Set up a fresh business repo (six folders, CLAUDE.md, git init)."""
     result = init_mod.run(path=path, name=name)
     if json_out:
         typer.echo(json.dumps(result, indent=2))
     else:
         if result["status"] == "already-initialized":
-            typer.echo(f"already initialized at {result['path']}")
+            typer.echo(f"already set up at {result['path']} — nothing to do.")
         elif result["status"] == "ok":
-            typer.echo(f"initialized at {result['path']}")
+            typer.echo(f"set up {result['business_name']}.")
+            typer.echo("")
             for line in result["created"]:
                 typer.echo(f"  + {line}")
+            typer.echo("")
+            typer.echo("next:")
+            typer.echo(f"  cd {result['path']}")
+            typer.echo("  claude")
+            typer.echo("  /start")
         else:
-            typer.echo(f"init failed: {result.get('error')}", err=True)
+            typer.echo(f"could not set up: {result.get('error')}", err=True)
             raise typer.Exit(1)
 
 
@@ -85,7 +91,7 @@ def doctor_cmd(
     path: str = typer.Argument(".", help="Repo to diagnose."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
-    """Diagnose a Main Branch consumer repo. Exits 1 on red checks."""
+    """Check the health of a Main Branch repo. Exits 1 on red checks."""
     report = doctor_mod.run(path=path)
     if json_out:
         typer.echo(json.dumps(report, indent=2))
@@ -100,7 +106,7 @@ def validate_cmd(
     verbose: bool = typer.Option(False, "-v", "--verbose"),
     json_out: bool = typer.Option(False, "--json"),
 ) -> None:
-    """Validate frontmatter shape across the standard data folders."""
+    """Check the metadata at the top of your files (frontmatter shape)."""
     report = validate_mod.run(path=path, verbose=verbose)
     if json_out:
         typer.echo(json.dumps(report, indent=2))
@@ -197,18 +203,20 @@ def skill_link_cmd(
         typer.echo(json.dumps(result, indent=2))
     else:
         if result["ok"]:
-            typer.echo(f"linked Main Branch engine: {result['engine_root']}")
+            typer.echo(f"linked Main Branch: {result['engine_root']}")
             typer.echo(f"repo: {result['repo']}")
             if result["linked"]:
-                typer.echo(f"skills linked: {len(result['linked'])}")
+                typer.echo(f"  + linked {len(result['linked'])} skill(s)")
             if result["copied"]:
-                typer.echo(f"skills copied: {len(result['copied'])}")
+                typer.echo(f"  + copied {len(result['copied'])} skill(s)")
             if result["skipped"]:
-                typer.echo(f"skills skipped: {len(result['skipped'])}")
+                typer.echo(f"  · {len(result['skipped'])} already wired")
+            typer.echo("")
+            typer.echo("you're set — run `claude` and then /start.")
         else:
-            typer.echo("could not link Main Branch skills", err=True)
+            typer.echo("could not link Main Branch skills:", err=True)
             for error in result["errors"]:
-                typer.echo(f"- {error}", err=True)
+                typer.echo(f"  - {error}", err=True)
             raise typer.Exit(1)
 
 

@@ -45,7 +45,7 @@ fi
 
 ---
 
-## Step 0.5: Pull Business Repo Updates (start skill only)
+## Pull Business Repo Updates (start skill only)
 
 Once business repo is confirmed, pull its latest updates from `REPO_PATH`:
 

@@ -30,7 +30,7 @@ Own the work. Rent only the rails.
 
 ## What it is
 
-Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running business-as-files systems. Today the workflows ship for Claude Code; Codex, Cursor, OpenClaw, Hermes, and local runtimes are next. Your offer, audience, voice, research, decisions, and campaigns live in a six-folder taxonomy in your own git repo — versioned, portable, agent-readable.
+Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running business-as-files systems. Today the workflows ship for Claude Code; Codex, Cursor, OpenClaw, Hermes, and local runtimes are next. Your offer, audience, voice, research, decisions, and campaigns live in six folders inside your own git repo — versioned, portable, agent-readable.
 
 ---
 
@@ -44,7 +44,7 @@ claude
 /start
 ```
 
-That's it. `mb init` scaffolds the six-folder taxonomy, wires Claude Code to the bundled skills, and gives you a fresh git repo. `/start` walks you through the rest — gathers your business context (offer, audience, voice), drafts the reference files, and routes you to the right workflow.
+That's it. `mb init` sets up the six folders, wires Claude Code to the bundled skills, and gives you a fresh git repo. `/start` walks you through the rest — gathers your business context (offer, audience, voice), drafts the reference files, and routes you to the right workflow.
 
 After the first session, the daily flow is three lines:
 
@@ -126,7 +126,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 
 | Command | What it does |
 |---|---|
-| `mb init` | Scaffold a fresh business repo (six-folder taxonomy, CLAUDE.md, git init). |
+| `mb init` | Set up a fresh business repo (six folders, CLAUDE.md, git init). |
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
 | `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
 | `mb graph` | Walk the link graph (`linked_research` / `linked_decisions` / `supersedes`) and emit Graphviz DOT. `--open` renders to PNG and opens it. |

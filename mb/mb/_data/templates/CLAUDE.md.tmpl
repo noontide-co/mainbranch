@@ -1,37 +1,37 @@
 # {{BUSINESS_NAME}}
 
-This is a Main Branch consumer repo. Your business is a tree of files. The
-files are the memory; agents read what's here and write back.
+Your business as files. Claude reads these; you edit them; git remembers them.
 
-## Folder taxonomy
+## Folders
 
-- `core/` — long-lived truth (offer, audience, voice, soul, finance)
+- `core/` — the things that don't change often (offer, audience, voice, soul, finance)
 - `core/offers/` — per-offer specifics
-- `core/finance/` — ledger and tax artifacts (see `mb educational anti-cloud-backup`)
-- `research/` — dated investigations
-- `decisions/` — dated choices, frontmatter status enum
+- `core/finance/` — ledger and tax artifacts
+  (run `mb educational anti-cloud-backup` for why this should not live in iCloud or Drive)
+- `research/` — dated notes from when you went looking
+- `decisions/` — dated choices, with rationale
 - `log/` — running activity log
-- `campaigns/` — paid + organic campaign artifacts
+- `campaigns/` — paid + organic campaign work
 - `documents/` — anything that doesn't belong above
-- `reference/` — compatibility paths for Claude Code skills
+- `reference/` — compatibility paths Claude Code skills read from
   (`reference/core` points at `core/`)
 
 ## Conventions
 
-- Decisions, research, offers, campaigns carry frontmatter. Run
-  `mb validate` to check shape.
-- Status enum: `proposed | running | scaling | killed | graduated | died`
-  (with `accepted | rejected | superseded` for decisions).
-- Single owner per file via `.github/CODEOWNERS`.
+- Decisions, research, offers, and campaigns carry a small block of metadata
+  at the top (frontmatter). Run `mb validate` to check it.
+- Status field: `proposed | running | scaling | killed | graduated | died`
+  (decisions also use `accepted | rejected | superseded`).
+- One owner per file via `.github/CODEOWNERS`.
 - Pull request titles use Conventional Commits.
 
 ## Helpful commands
 
 ```
-mb doctor                # diagnose this repo
-mb validate              # check frontmatter shape
-mb graph --open          # see the link graph
-mb educational <topic>   # read the long-form rationale for an opinionated default
+mb doctor                # see if anything is off in this repo
+mb validate              # check the metadata on your files
+mb graph --open          # see what links to what
+mb educational <topic>   # read why we picked the defaults we did
 ```
 
 ## Repo owner

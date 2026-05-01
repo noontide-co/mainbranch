@@ -1,4 +1,4 @@
-# Repo Detection (Step 0)
+# Repo Detection (Step 2)
 
 CWD-first detection of the business repo, with config fallback. The user starts Claude in their business repo — check CWD first before falling back to config.
 
