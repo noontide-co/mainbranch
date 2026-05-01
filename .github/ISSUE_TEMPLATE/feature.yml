@@ -1,0 +1,56 @@
+name: Feature request
+description: Propose a change to the `mb` CLI, a bundled skill, or the engine surface.
+title: "feat: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Frame the problem before the solution — the surface
+        area for v0.1.x is intentionally narrow, and well-scoped problems are
+        easier to evaluate than abstract requests.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What is the user-visible pain or gap? Who hits it and when?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Proposed surface
+      options:
+        - CLI subcommand
+        - Skill
+        - Both (CLI + skill)
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Sketch the shape — flags, behavior, edge cases. Pseudocode is fine.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds, prior attempts, or designs you rejected and why.
+    validations:
+      required: true
+
+  - type: input
+    id: related
+    attributes:
+      label: Related issues or PRs
+      description: "Link any prior conversation. Use `#N` or full URLs."
+      placeholder: "#42, #168"
+    validations:
+      required: false
