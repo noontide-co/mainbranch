@@ -168,6 +168,26 @@ That is it. You are ready to generate.
 
 ---
 
+## The `mb` CLI
+
+The CLI surface for the engine. Built for Claude Code first; cross-agent at v0.2+. Most workflows still happen via slash-prompt skills inside Claude Code — the `mb` CLI is the scaffolder, validator, and grapher around them.
+
+| Command | What it does |
+|---|---|
+| `mb init` | Scaffold a fresh business repo (six-folder taxonomy, CLAUDE.md, git init). |
+| `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
+| `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
+| `mb graph` | Walk the link graph (`linked_research` / `linked_decisions` / `supersedes`) and emit Graphviz DOT. `--open` renders to PNG and opens it. |
+| `mb think <topic>` | Print the `/think` invocation hint. Run inside Claude Code for the full flow. |
+| `mb resolve <key>` | Resolve a reference path through OSS / paid layered lookup. |
+| `mb educational <topic>` | Print an educational triage file (powers `mb doctor`'s "tell me more" prompts). |
+| `mb skill list` | List the skills bundled with this engine. |
+| `mb skill path <name>` | Print the on-disk path to a bundled skill. |
+
+For the full list: `mb --help`.
+
+---
+
 ## What Are Skills?
 
 Skills are pre-built workflows you invoke with slash prompts (for example, `/start`, `/ads`, `/think`).
