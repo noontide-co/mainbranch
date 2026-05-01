@@ -145,8 +145,8 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 ```bash
 # Always create:
 mkdir -p .vip
-mkdir -p reference/core reference/brand reference/proof/angles reference/domain
-mkdir -p research decisions outputs
+mkdir -p reference/core reference/visual-identity reference/proof/angles reference/domain
+mkdir -p research decisions campaigns documents
 ```
 
 **Multi-offer only (if user has multiple offers from Step 2.5):**

@@ -8,7 +8,7 @@ CWD-first detection of the business repo, with config fallback. The user starts 
 
 ```
 1. Check CWD for business repo fingerprint:
-   test -d "reference/core"
+   test -d "reference/core" || test -d "core"
    ├── YES → This IS the business repo. Use CWD. Skip to config loading.
    └── NO → Continue to step 2.
 
@@ -55,7 +55,7 @@ Once business repo is identified (from CWD or config), load settings:
 
 If CWD detection fails (step 3 above), present options from config:
 
-**Validate EVERY path in config before showing it to the user.** Never present a dead path as an option. For each path in `default_repo` and `recent_repos`, check `test -d "[path]/reference/core"`. If invalid, attempt recovery (check sibling folders for a renamed repo) and auto-prune dead entries. See [config-system.md](config-system.md) for the full recovery algorithm.
+**Validate EVERY path in config before showing it to the user.** Never present a dead path as an option. For each path in `default_repo` and `recent_repos`, check `test -d "[path]/reference/core" || test -d "[path]/core"`. If invalid, attempt recovery (check sibling folders for a renamed repo) and auto-prune dead entries. See [config-system.md](config-system.md) for the full recovery algorithm.
 
 **ALWAYS present numbered options** — even with ONE repo found:
 
@@ -76,14 +76,14 @@ If CWD detection fails (step 3 above), present options from config:
 
 Use fallbacks in order:
 
-1. **Scan additionalDirectories** for paths containing `reference/core/`
+1. **Scan additionalDirectories** for paths containing `reference/core/` or `core/`
 2. **Use bash to find repos** (if step 1 fails)
    ```bash
-   find ~/Documents/GitHub -maxdepth 3 -type d -name "reference" -exec test -d "{}/core" \; -print 2>/dev/null
+   find ~/Documents/GitHub -maxdepth 3 -type d \( -name "reference" -o -name "core" \) -print 2>/dev/null
    ```
 3. **Ask the user** (if nothing found)
 
-**Verify with Read, not Glob:** Use `Read` on `[path]/reference/core/soul.md` to confirm it's a business repo. `soul.md` is always in `core/` (even multi-offer repos).
+**Verify with Read, not Glob:** Use `Read` on `[path]/reference/core/soul.md` or `[path]/core/soul.md` to confirm it's a business repo. `soul.md` is always in `core/` (even multi-offer repos).
 
 **Skip vip** — any path containing `.claude/skills/start/SKILL.md` is the engine, not a business repo.
 

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mb.resolve import run
+from mb.engine import engine_root
+from mb.resolve import bundled_skills, run, skill_path
 
 
 def test_resolve_local_override(tmp_path: Path) -> None:
@@ -23,3 +24,12 @@ def test_resolve_unknown_key_returns_unresolved_or_stub(tmp_path: Path) -> None:
     out = run(key="nonexistent-9f3a", repo=str(repo))
     # Either unresolved or a stub. Both are valid; nothing crashes.
     assert "resolved" in out
+
+
+def test_skill_path_uses_engine_root() -> None:
+    root = engine_root()
+    assert root is not None
+    path = skill_path("start")
+    assert path is not None
+    assert path == root / ".claude" / "skills" / "start"
+    assert "think" in bundled_skills()

@@ -13,8 +13,14 @@ import os
 import shutil
 import socket
 import subprocess
+import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
+
+from mb import __version__
+from mb.engine import install_mode, link_status
 
 CLOUD_PREFIXES = (
     "Library/Mobile Documents",  # iCloud Drive
@@ -62,6 +68,66 @@ def _rsvg() -> tuple[bool, str]:
     if _which("rsvg-convert"):
         return True, "rsvg-convert on PATH"
     return False, "rsvg-convert missing (brew install librsvg)"
+
+
+def _version_key(version: str) -> tuple[int, ...]:
+    parts: list[int] = []
+    for piece in version.split("."):
+        digits = ""
+        for char in piece:
+            if not char.isdigit():
+                break
+            digits += char
+        parts.append(int(digits or "0"))
+    return tuple(parts)
+
+
+def _latest_pypi_version(timeout: float = 3.0) -> str:
+    with urllib.request.urlopen("https://pypi.org/pypi/mainbranch/json", timeout=timeout) as resp:
+        data = resp.read().decode("utf-8")
+    import json
+
+    parsed = json.loads(data)
+    version = parsed.get("info", {}).get("version", "")
+    return version if isinstance(version, str) else ""
+
+
+def _mainbranch_version_check() -> dict[str, Any]:
+    mode = install_mode()
+    if mode in {"clone", "source"}:
+        return {
+            "name": "mainbranch-version",
+            "ok": True,
+            "detail": f"{__version__} ({mode} mode)",
+            "severity": "info",
+        }
+
+    try:
+        latest = _latest_pypi_version()
+    except (OSError, TimeoutError, urllib.error.URLError):
+        return {
+            "name": "mainbranch-version",
+            "ok": True,
+            "detail": f"{__version__}; could not check PyPI for latest",
+            "severity": "info",
+        }
+
+    if latest and _version_key(latest) > _version_key(__version__):
+        return {
+            "name": "mainbranch-version",
+            "ok": False,
+            "detail": (
+                f"installed {__version__}, latest is {latest}. "
+                "Run `pipx upgrade mainbranch`; for context run "
+                "`mb educational upgrading-mainbranch`."
+            ),
+            "severity": "warn",
+        }
+    return {
+        "name": "mainbranch-version",
+        "ok": True,
+        "detail": f"{__version__} is current" if latest else __version__,
+    }
 
 
 def _detect_cloud_paths(repo: Path) -> list[str]:
@@ -121,6 +187,25 @@ def run(path: str) -> dict[str, Any]:
         }
     )
 
+    wiring = link_status(repo)
+    wiring_ok = bool(wiring["ok"])
+    checks.append(
+        {
+            "name": "skill-wiring",
+            "ok": wiring_ok,
+            "detail": (
+                f"start skill linked via {wiring['engine_root']}"
+                if wiring_ok
+                else "Claude Code skill links missing. Run `mb skill link --repo .`."
+            ),
+            "severity": "ok"
+            if wiring_ok
+            else ("warn" if not (repo / "CLAUDE.md").exists() else "error"),
+        }
+    )
+
+    checks.append(_mainbranch_version_check())
+
     cloud_hits = _detect_cloud_paths(repo)
     cloud_ok = not cloud_hits
     checks.append(
@@ -156,6 +241,7 @@ def run(path: str) -> dict[str, Any]:
         "ok": overall and not hard_fail,
         "checks": checks,
         "repo": str(repo),
+        "python": sys.version.split()[0],
     }
 
 

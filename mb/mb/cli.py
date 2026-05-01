@@ -184,6 +184,34 @@ def skill_list_cmd() -> None:
         typer.echo(s)
 
 
+@skill_app.command("link")
+def skill_link_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo to wire for Claude Code."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Wire bundled skills into a business repo for Claude Code discovery."""
+    from mb.engine import link_skills
+
+    result = link_skills(repo)
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        if result["ok"]:
+            typer.echo(f"linked Main Branch engine: {result['engine_root']}")
+            typer.echo(f"repo: {result['repo']}")
+            if result["linked"]:
+                typer.echo(f"skills linked: {len(result['linked'])}")
+            if result["copied"]:
+                typer.echo(f"skills copied: {len(result['copied'])}")
+            if result["skipped"]:
+                typer.echo(f"skills skipped: {len(result['skipped'])}")
+        else:
+            typer.echo("could not link Main Branch skills", err=True)
+            for error in result["errors"]:
+                typer.echo(f"- {error}", err=True)
+            raise typer.Exit(1)
+
+
 def _entry() -> None:
     """Defensive entrypoint used by ``python -m mb`` and tests."""
     try:

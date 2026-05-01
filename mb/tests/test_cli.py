@@ -26,3 +26,12 @@ def test_skill_list_runs() -> None:
     result = runner.invoke(app, ["skill", "list"])
     assert result.exit_code == 0
     assert "start" in result.stdout.splitlines()
+
+
+def test_skill_link_wires_repo(tmp_path) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    result = runner.invoke(app, ["skill", "link", "--repo", str(repo), "--json"])
+    assert result.exit_code == 0
+    assert (repo / ".claude" / "settings.local.json").exists()
+    assert (repo / ".claude" / "skills" / "start" / "SKILL.md").exists()
