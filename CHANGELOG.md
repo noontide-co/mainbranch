@@ -11,6 +11,23 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### What this means for you (plain English)
+
+Since v0.1.0, here's what's changed in your day-to-day if you're a member:
+
+- **Better "what's new" notices.** Instead of a separate announcements
+  file that nobody updated, the engine now uses this CHANGELOG. You'll
+  see banners in `/start` and `/pull` when there's a real release.
+- **More archetype detail in `/site`.** The 5 archetype templates that
+  shipped as stubs in v0.1.0 are now full reference files — you'll get
+  richer brand-voice guidance when you build a site for a contrarian
+  brand, a redemption-arc brand, etc.
+- **Quality gates got tighter.** New CI jobs catch packaging mistakes
+  before they hit you. You won't notice them unless something breaks
+  upstream and we catch it before merge.
+
+OSS / contributor detail below.
+
 ### Added
 
 - **CHANGELOG.md** itself (Keep a Changelog format). Replaces the
@@ -20,10 +37,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   entries as a "What's new" banner.
 - **`wheel-install-smoke` CI job** (`.github/workflows/ci.yml`). Builds the
   `mainbranch` wheel + sdist, installs into a clean venv, and verifies
-  `mb --version`, `mb skill list`, `mb skill path think`, and
-  `python -c "import mb; mb.__version__"` all work end-to-end. Catches
-  packaging drift (missing `py.typed`, stale `package-data`, entry-point
-  registration gaps) that the editable-install matrix can't see. Pattern
+  the CLI surfaces `mb --version`, `mb --help`, `mb skill list`, and
+  `mb doctor` all run to clean exit, plus `python -c "import mb"` works.
+  Catches packaging drift (missing `py.typed`, stale `package-data`,
+  entry-point registration gaps) that the editable-install matrix can't
+  see. **Note:** the wheel does NOT yet ship populated `mb/_data/skills/`
+  in v0.1.0 — `mb skill list` runs cleanly but returns an empty bundle.
+  Skill bundling at build time is deferred to a v0.1.x follow-up. Pattern
   borrowed from `companyctx`.
 - **70% coverage threshold** in CI (`mb/pyproject.toml` +
   `.github/workflows/ci.yml`). Test-suite blocks merge if `--cov-fail-under=70`
@@ -77,13 +97,43 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 First Phase 2 release candidate. The engine is now a real Python package
 (`mainbranch` on PyPI, `mb` CLI) with a six-folder business-as-files
-taxonomy, a skill bundle that ships inside the wheel, and a /site shape
-upgrade that adopts Chase Hughes' 9-archetype narrative framework as the
-brief layer.
+taxonomy and a /site shape upgrade that adopts Chase Hughes' 9-archetype
+narrative framework as the brief layer. **The CLI surface is smoke-tested
+end-to-end; the skill bundle itself does NOT yet ship in the wheel — skills
+live in the `mb-vip` engine repo's `.claude/skills/` for v0.1.0 and are
+loaded via `additionalDirectories` from the consumer business repo. Wheel-time
+skill bundling is a v0.1.x follow-up.**
 
 Locked under `decisions/2026-04-29-mb-vip-v0-1-0-master.md` (the engine
 master) and the matching noontide-projects business master at
 `decisions/2026-04-29-main-branch-v0-1-0-master.md`.
+
+### What this means for you (plain English)
+
+If you're a Main Branch member, here's what changes in your day-to-day:
+
+- **Nothing breaks.** Your existing setup keeps working. The skills you
+  already use (`/start`, `/think`, `/site`, `/ads`, etc.) are in the same
+  place and still get pulled into your business repo.
+- **You'll see a one-time "what's new" banner** the next time you run
+  `/start` or `/pull`. After that, things go quiet again until v0.2.
+- **`/site` got smarter about brand voice and storytelling.** When you
+  build a marketing site, it now asks you to pick a story archetype
+  (like "wounded healer" or "David vs Goliath") and writes copy that
+  fits that frame instead of generic SaaS-speak. There's a new review
+  pass that catches the most common AI-writing tells (em-dashes,
+  "in today's fast-paced world," that kind of thing).
+- **A new `mb` command-line tool exists** but you don't need to install
+  it to use Main Branch. It's the start of an installable engine
+  (`pipx install mainbranch`) for people who want to run mb without
+  cloning the repo manually. Optional today; canonical later.
+- **The repo is now versioned like a product.** This release is `0.1.0`.
+  Future releases get visible version numbers, a CHANGELOG (this file),
+  and a "what's new" banner so you don't have to read commit logs to
+  know what changed.
+
+If you're an OSS contributor or you want the technical detail, the
+sections below cover what shipped in PRs #114 / #115 / #116 / #117.
 
 ### Added — V1 translation (PR #116)
 
