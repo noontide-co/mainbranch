@@ -1,6 +1,6 @@
-# Contributing to mb-vip
+# Contributing to Main Branch
 
-mb-vip is a public repo. Anyone can read it; not everyone is wired in to the engine cadence. The contributor flow below documents how the work happens, what gates run, and what discipline rules apply.
+Main Branch is a public repo. Anyone can read it; not everyone is wired in to the engine cadence. The contributor flow below documents how the work happens, what gates run, and what discipline rules apply.
 
 These rules are **tool-agnostic.** Conductor users, Codex users, Cursor users, and direct CLI contributors all follow the same shape — the rules describe the work, not the editor.
 
@@ -70,14 +70,14 @@ Never rewrite. Follow-up fixes after review = NEW commits on top. **Never force-
 
 ## Public/private smell test
 
-mb-vip is a **public repo**. Apply the test on every commit:
+Main Branch is a **public repo**. Apply the test on every commit:
 
 > "Would the reader (anyone with internet) be embarrassed or uncomfortable reading this?"
 
 | Answer | Where it goes |
 |---|---|
-| Yes | Stays in your private repo. mb-vip does not see it. |
-| Meh, fine | mb-vip is fine. |
+| Yes | Stays in your private repo. Main Branch does not see it. |
+| Meh, fine | Main Branch is fine. |
 | Not sure | Default private. Sanitize and re-evaluate. |
 
 Specifically:
@@ -119,6 +119,8 @@ PR reviews use this shape:
 
 ## How to find the work
 
-The v0.1.0 master decision is `decisions/2026-04-29-mb-vip-v0-1-0-master.md`. It locks vocabulary, repo shape, ship list, /site upgrade scope, and the conductor preferences encoded above.
+The engine v0.1.0 decision is `decisions/2026-04-29-mb-vip-v0-1-0-master.md`. It locks vocabulary, repo shape, ship list, /site upgrade scope, and the conductor preferences encoded above.
+
+The companion business-side master plan is tracked in `noontide-co/projects#119`. Read it when a contribution touches product positioning, public launch sequencing, pricing, the agency arm, or the four CLI pillars.
 
 If you're considering a contribution, read it first.

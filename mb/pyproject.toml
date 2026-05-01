@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mainbranch"
 version = "0.1.0.dev0"
-description = "Main Branch engine umbrella — scaffolds, validates, and graphs business-as-files repos. Built for Claude Code."
+description = "Main Branch engine umbrella - scaffolds, validates, and graphs business-as-files repos. Built for Claude Code."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -54,9 +54,9 @@ dev = [
 mb = "mb.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/mainbranch-ai/vip"
-Repository = "https://github.com/mainbranch-ai/vip"
-Issues = "https://github.com/mainbranch-ai/vip/issues"
+Homepage = "https://github.com/noontide-co/mainbranch"
+Repository = "https://github.com/noontide-co/mainbranch"
+Issues = "https://github.com/noontide-co/mainbranch/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]

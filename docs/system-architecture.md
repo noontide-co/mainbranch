@@ -9,7 +9,7 @@ Complete technical reference for how Main Branch works as an AI-native business 
 Main Branch operates on a fundamental separation:
 
 ```
-ENGINE (vip)     +     DATA (your business repo)     =     OUTPUT
+ENGINE (mainbranch)     +     DATA (your business repo)     =     OUTPUT
 ├── Skills                             ├── Reference                       ├── Ads, Scripts, Content (outputs/)
 ├── Lenses                             │   (incl. content-strategy.md)     ├── Wiki (separate repo)
 └── Frameworks                         ├── Research                        └── Site (separate repo)
@@ -215,7 +215,7 @@ your-business/
 ## Folder Structure: Engine Repo
 
 ```
-vip/
+mainbranch/
 ├── CLAUDE.md                        # Philosophy + reference
 ├── docs/
 │   └── system-architecture.md       # This file
@@ -465,9 +465,9 @@ Skills should load context progressively:
 
 ### Setup
 
-1. Clone vip locally
+1. Clone Main Branch locally
 2. Create or clone your business repo
-3. Run `/setup` to configure vip linkage (writes `.claude/settings.local.json` and compatibility links when needed)
+3. Run `/setup` to configure Main Branch linkage (writes `.claude/settings.local.json` and compatibility links when needed)
 4. Start Claude in your business repo and run `/start`
 
 ### In Practice
@@ -475,23 +475,23 @@ Skills should load context progressively:
 ```
 Claude Code Session:
 ├── Primary (CWD): ~/projects/my-business/
-│   ├── .claude/settings.local.json  ← additionalDirectories points to vip
+│   ├── .claude/settings.local.json  ← additionalDirectories points to mainbranch
 │   ├── .claude/skills/*             ← bridge links for skill discovery fallback
 │   ├── reference/
 │   ├── outputs/
 │   └── ...
 │
-└── Additional directory (read-only): ~/Documents/GitHub/vip/
+└── Additional directory (read-only): ~/Documents/GitHub/mainbranch/
     ├── .claude/skills/              ← canonical skill source
     ├── .claude/lenses/
     └── ...
 ```
 
 When you invoke `/ads`:
-1. Claude loads skill from vip
+1. Claude loads skill from Main Branch
 2. Skill reads context from my-business/reference/
 3. Output goes to my-business/outputs/
-4. Review uses lenses from vip
+4. Review uses lenses from Main Branch
 
 Users with a wiki or site have additional repos accessed via config files (`~/.mainbranch/wiki.json`, `~/.mainbranch/sites.json`), not as working directories.
 

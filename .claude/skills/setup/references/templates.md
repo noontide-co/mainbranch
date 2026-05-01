@@ -571,23 +571,23 @@ status: complete
 
 This is the **data repo** (knowledge base) for [Business Name].
 
-It uses [vip](https://github.com/mainbranch-ai/vip) as the **engine** — skills, lenses, and frameworks that generate content from your data.
+It uses [Main Branch](https://github.com/noontide-co/mainbranch) as the **engine** — skills, lenses, and frameworks that generate content from your data.
 
 ### Setup
 
 1. **Clone the engine** (if you haven't):
    ```bash
-   git clone https://github.com/mainbranch-ai/vip.git
+   git clone https://github.com/noontide-co/mainbranch.git
    ```
 
 2. **Start Claude in this folder** (your business repo) and run `/start`
 
-3. **vip is linked** via `.claude/settings.local.json` (bridge links handle skill discovery fallback)
+3. **Main Branch is linked** via `.claude/settings.local.json` (bridge links handle skill discovery fallback)
 
 ### How It Works
 
 ```
-ENGINE (vip)     +     DATA (this repo)     =     OUTPUT
+ENGINE (mainbranch)     +     DATA (this repo)     =     OUTPUT
 ├── Skills                             ├── reference/            ├── Ads
 ├── Lenses                             ├── research/             ├── Emails
 └── Pull updates, don't edit           └── You own this          └── Content

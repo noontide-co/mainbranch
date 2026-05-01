@@ -29,19 +29,19 @@ CLAUDE.md is the **always-loaded business brain**. Claude reads this file at the
 
 ## Engine
 
-This repo contains your **business data**. It's powered by **vip** (the engine).
+This repo contains your **business data**. It's powered by **Main Branch** (the engine).
 
 **Setup:**
-1. Clone vip: `git clone https://github.com/mainbranch-ai/vip.git`
+1. Clone Main Branch: `git clone https://github.com/noontide-co/mainbranch.git`
 2. Start Claude in THIS folder (your business repo) and run `/start`
-3. vip is linked via `.claude/settings.local.json` (with bridge links as compatibility fallback)
+3. Main Branch is linked via `.claude/settings.local.json` (with bridge links as compatibility fallback)
 
 **How it works:**
-- Engine (vip): Contains skills, lenses, frameworks. You pull updates but never edit.
+- Engine (Main Branch): Contains skills, lenses, frameworks. You pull updates but never edit.
 - Data (this repo): Contains your business context. You own and edit this.
 - Skills read from your `reference/` and output to your `outputs/`
 
-**If `/start` isn't available:** Skills may need bridge links. Find the vip path from `.claude/settings.local.json` (the `additionalDirectories` array), then read `[vip-path]/.claude/skills/start/references/auto-heal.md` and follow the repair steps. After repair, tell the user to restart Claude.
+**If `/start` isn't available:** Skills may need bridge links. Find the Main Branch path from `.claude/settings.local.json` (the `additionalDirectories` array), then read `[engine-path]/.claude/skills/start/references/auto-heal.md` and follow the repair steps. After repair, tell the user to restart Claude.
 
 ---
 

@@ -27,22 +27,22 @@ claude --version
 
 ## "Repository not found" / 404 Error
 
-You don't have access to the vip repository yet.
+Use the public Main Branch engine repo:
 
 **Fix:**
-1. Share your GitHub username with Devon in Skool
-2. Wait for confirmation that access was granted
+1. Open `https://github.com/noontide-co/mainbranch` in your browser
+2. Confirm the URL is typed exactly in GitHub Desktop or terminal
 3. Try cloning again
 
-**Note:** Access is granted manually. Give it time.
+**Note:** The engine repo is public. A 404 usually means the old URL is being used or the URL was mistyped.
 
 ---
 
-## "Can't push to vip" / Permission Denied
+## "Can't push to Main Branch" / Permission Denied
 
 This is expected behavior, not an error.
 
-**vip is read-only.** You can pull updates but cannot push changes.
+**Main Branch is read-only for most users.** You can pull updates but cannot push changes.
 
 Your business data goes in YOUR OWN repo (created via `/setup`). That repo you can push to.
 
@@ -65,11 +65,11 @@ xcode-select --install
 
 ## GitHub Desktop: "Repository not found"
 
-Same as the 404 error above. You need access first.
+Same as the 404 error above. Use the public repo URL:
 
-1. Share your GitHub username with Devon
-2. Wait for confirmation
-3. Try again in GitHub Desktop
+```text
+https://github.com/noontide-co/mainbranch
+```
 
 ---
 
