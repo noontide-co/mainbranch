@@ -14,6 +14,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
+from mb.engine import link_skills
+
 # The canonical six. v0.1 lock; v0.2 unlocks via .vip/config.yaml paths block.
 DATA_FOLDERS = [
     "core",
@@ -39,6 +41,13 @@ __pycache__/
 node_modules/
 .venv/
 """
+
+
+REFERENCE_DIRS = [
+    "reference/proof/angles",
+    "reference/domain",
+    "reference/visual-identity",
+]
 
 
 def _gh_username() -> str:
@@ -77,6 +86,19 @@ def _render(text: str, mapping: dict[str, str]) -> str:
     return out
 
 
+def _link_or_mkdir(source: Path, dest: Path) -> str:
+    if dest.exists() or dest.is_symlink():
+        return "exists"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        rel_source = os.path.relpath(source, start=dest.parent)
+        dest.symlink_to(rel_source, target_is_directory=True)
+        return "symlink"
+    except OSError:
+        dest.mkdir(parents=True, exist_ok=True)
+        return "directory"
+
+
 def run(path: str, name: str) -> dict[str, Any]:
     """Scaffold ``path`` as a Main Branch consumer repo.
 
@@ -87,10 +109,12 @@ def run(path: str, name: str) -> dict[str, Any]:
     target.mkdir(parents=True, exist_ok=True)
 
     if (target / "CLAUDE.md").exists():
+        link_result = link_skills(target)
         return {
             "status": "already-initialized",
             "path": str(target),
-            "created": [],
+            "created": link_result["created"],
+            "skill_link": link_result,
         }
 
     business_name = name.strip() or os.environ.get("MB_BUSINESS_NAME", "").strip()
@@ -111,8 +135,23 @@ def run(path: str, name: str) -> dict[str, Any]:
         # .gitkeep so empty folders survive git
         keep = d / ".gitkeep"
         if not keep.exists():
-            keep.write_text("")
+            keep.write_text("", encoding="utf-8")
             created.append(f"{sub}/.gitkeep")
+
+    for sub in REFERENCE_DIRS:
+        d = target / sub
+        d.mkdir(parents=True, exist_ok=True)
+        keep = d / ".gitkeep"
+        if not keep.exists():
+            keep.write_text("", encoding="utf-8")
+            created.append(f"{sub}/.gitkeep")
+
+    # Current Claude Code skills read reference/core and reference/offers.
+    # Keep those paths as compatibility bridges to the CLI's root core tree.
+    for source_name, dest_name in (("core", "reference/core"), ("core/offers", "reference/offers")):
+        mode = _link_or_mkdir(target / source_name, target / dest_name)
+        if mode != "exists":
+            created.append(dest_name + ("/" if mode == "directory" else ""))
 
     mapping = {
         "BUSINESS_NAME": business_name,
@@ -120,18 +159,21 @@ def run(path: str, name: str) -> dict[str, Any]:
     }
 
     claude_tmpl = _read_template("CLAUDE.md.tmpl") or _DEFAULT_CLAUDE
-    (target / "CLAUDE.md").write_text(_render(claude_tmpl, mapping))
+    (target / "CLAUDE.md").write_text(_render(claude_tmpl, mapping), encoding="utf-8")
     created.append("CLAUDE.md")
 
     codeowners_tmpl = _read_template("CODEOWNERS.tmpl") or f"* @{gh_user}\n"
     github_dir = target / ".github"
     github_dir.mkdir(exist_ok=True)
-    (github_dir / "CODEOWNERS").write_text(_render(codeowners_tmpl, mapping))
+    (github_dir / "CODEOWNERS").write_text(_render(codeowners_tmpl, mapping), encoding="utf-8")
     created.append(".github/CODEOWNERS")
 
     gitignore_tmpl = _read_template(".gitignore.tmpl") or DEFAULT_GITIGNORE
-    (target / ".gitignore").write_text(_render(gitignore_tmpl, mapping))
+    (target / ".gitignore").write_text(_render(gitignore_tmpl, mapping), encoding="utf-8")
     created.append(".gitignore")
+
+    link_result = link_skills(target)
+    created.extend(path for path in link_result["created"] if path not in created)
 
     if shutil.which("git") and not (target / ".git").exists():
         try:
@@ -151,6 +193,7 @@ def run(path: str, name: str) -> dict[str, Any]:
         "path": str(target),
         "created": created,
         "business_name": business_name,
+        "skill_link": link_result,
     }
 
 
@@ -171,6 +214,8 @@ This is a Main Branch consumer repo. Your business is a tree of files.
 - `log/` — running activity log
 - `campaigns/` — paid + organic campaign artifacts
 - `documents/` — anything that doesn't belong above
+- `reference/` — compatibility paths for Claude Code skills
+  (`reference/core` points at `core/`)
 
 ## Conventions
 

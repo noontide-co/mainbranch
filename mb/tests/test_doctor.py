@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from mb.doctor import _detect_cloud_paths, run
+from mb.init import run as init_run
 
 
 def test_doctor_runs_on_empty_dir(tmp_path: Path) -> None:
@@ -12,6 +13,8 @@ def test_doctor_runs_on_empty_dir(tmp_path: Path) -> None:
     assert "checks" in report
     names = {c["name"] for c in report["checks"]}
     assert {"claude-code", "gh-auth", "network", "anti-cloud-backup"}.issubset(names)
+    assert "skill-wiring" in names
+    assert "mainbranch-version" in names
 
 
 def test_cloud_path_detection_via_symlink(tmp_path: Path, monkeypatch) -> None:
@@ -35,3 +38,11 @@ def test_doctor_clean_finance_passes(tmp_path: Path) -> None:
     report = run(path=str(repo))
     cloud = next(c for c in report["checks"] if c["name"] == "anti-cloud-backup")
     assert cloud["ok"] is True
+
+
+def test_doctor_skill_wiring_passes_after_init(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    report = run(path=str(repo))
+    wiring = next(c for c in report["checks"] if c["name"] == "skill-wiring")
+    assert wiring["ok"] is True

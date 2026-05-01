@@ -22,6 +22,9 @@ from typing import Any
 
 import yaml
 
+from mb.engine import bundled_skills as _bundled_skills
+from mb.engine import skill_path as _skill_path
+
 CANONICAL_PATHS = {
     "core": "core",
     "research": "research",
@@ -94,38 +97,9 @@ def run(key: str, repo: str = ".") -> dict[str, Any]:
 
 def skill_path(name: str) -> Path | None:
     """Return on-disk path to a bundled skill's directory."""
-    try:
-        ref = resources.files("mb").joinpath("_data").joinpath("skills").joinpath(name)
-        if ref.is_dir():
-            return Path(str(ref))
-    except (FileNotFoundError, ModuleNotFoundError, AttributeError):
-        pass
-    # Source-checkout fallback to the engine repo's .claude/skills/<name>/.
-    here = Path(__file__).resolve()
-    for parent in (here.parent.parent.parent.parent, here.parent.parent.parent):
-        cand = parent / ".claude" / "skills" / name
-        if cand.exists():
-            return cand
-    return None
+    return _skill_path(name)
 
 
 def bundled_skills() -> list[str]:
     """Names of bundled skills (alphabetical)."""
-    out: list[str] = []
-    try:
-        ref = resources.files("mb").joinpath("_data").joinpath("skills")
-        if ref.is_dir():
-            for child in ref.iterdir():
-                if child.is_dir():
-                    out.append(child.name)
-    except (FileNotFoundError, ModuleNotFoundError, AttributeError):
-        pass
-    if not out:
-        # Source-checkout fallback
-        here = Path(__file__).resolve()
-        for parent in (here.parent.parent.parent.parent, here.parent.parent.parent):
-            cand = parent / ".claude" / "skills"
-            if cand.exists():
-                out = [d.name for d in cand.iterdir() if d.is_dir()]
-                break
-    return sorted(out)
+    return _bundled_skills()

@@ -13,6 +13,56 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 No unreleased changes yet.
 
+## [0.1.1] - 2026-05-01
+
+v0.1.1 makes the public `pipx install mainbranch` path work end-to-end
+for Claude Code users. v0.1.0 published the package and bundled skills;
+this patch wires those bundled skills into new business repos so `/start`,
+`/think`, `/ads`, and the rest are discoverable without cloning the
+engine repo.
+
+### What this means for you (plain English)
+
+- **New members can use the simple install path.** Run
+  `pipx install mainbranch`, then `mb init`, then start Claude in the new
+  business repo and run `/start`.
+- **Existing clone-based members are not broken.** If your business repos
+  already link to a local Main Branch checkout, that flow still works.
+- **Updates now match your install type.** pipx users upgrade with
+  `pipx upgrade mainbranch`; clone users still pull the engine repo.
+  `/pull` now explains and runs the right path.
+- **`mb doctor` catches broken skill wiring.** If `/start` is not
+  discoverable, it tells you to run `mb skill link --repo .`.
+
+### Fixed
+
+- **`mb init` now writes Claude Code wiring.** It creates
+  `.claude/settings.local.json`, points `additionalDirectories` at the
+  active Main Branch engine root, and creates per-skill bridge links under
+  `.claude/skills/`.
+- **Wheel layout now preserves the full engine shape.** Build artifacts
+  copy repo-root `.claude/` into `mb/_engine/.claude/`, including
+  `skills/`, `playbooks/`, `reference/`, `lenses/`, `educational/`, and
+  `scripts/`. Relative skill links such as `../../reference/...` now work
+  from an installed wheel.
+- **`mb skill list` and `mb skill path` use the active engine root.** They
+  work against the packaged wheel layout and the source checkout layout.
+- **`/pull` is install-mode aware.** Clone-based installs still run
+  `git pull`; pipx installs run `pipx upgrade mainbranch` and refresh
+  skill links with `mb skill link --repo .`.
+- **Bridge links are gitignored.** `mb init` and `mb skill link` add
+  machine-local `.claude/settings.local.json` plus per-skill bridge links
+  to `.gitignore`.
+
+### Added
+
+- **`mb skill link --repo <path>`** to repair or refresh Claude Code skill
+  discovery for an existing business repo.
+- **`mb educational upgrading-mainbranch`** with the short explanation for
+  pipx upgrades and clone-based updates.
+- **Release-path wheel smoke coverage** for the installed engine root,
+  reference files, `mb init` settings, and bridge-link discovery.
+
 ## [0.1.0] - 2026-05-01
 
 First public engine release. The engine is now a real Python package

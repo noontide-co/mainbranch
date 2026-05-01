@@ -1,28 +1,37 @@
 ---
 name: pull
-description: Quick pull latest vip updates from GitHub. Use when user wants to update vip without running /start, says "pull", "update", or "get latest", wants to see what changed, or after Devon announces features in Skool. Note that /start pulls automatically, so skip /pull if running /start next.
+description: Quick update Main Branch. Use when user wants to update the engine without running /start, says "pull", "update", or "get latest", wants to see what changed, or after Devon announces features in Skool. Note that /start updates automatically, so skip /pull if running /start next.
 ---
 
 # Pull
 
-Pull latest vip engine updates from GitHub.
+Update the Main Branch engine.
 
 ---
 
 ## What It Does
 
-Resolves the vip path and pulls updates there — NOT from the current working directory (which is your business repo).
+Resolves the Main Branch engine path and updates that install — NOT from the current working directory (which is your business repo). pipx installs upgrade the `mainbranch` package; clone-based installs run `git pull`.
 
 ### Step 1: Resolve VIP Path
 
 For the canonical bash + python3 resolver (settings.local.json first, ~/.config/vip/local.yaml fallback), see **[../../reference/vip-path-resolution.md](../../reference/vip-path-resolution.md)**.
 
-### Step 2: Pull VIP
+### Step 2: Update Main Branch
 
 ```bash
-# Pull if found and valid
-[ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/start/SKILL.md" ] && \
-  git -C "$VIP_PATH" pull origin main 2>&1
+if [ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
+  if git -C "$VIP_PATH" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git -C "$VIP_PATH" pull origin main 2>&1
+  elif command -v pipx >/dev/null 2>&1 && pipx list --short 2>/dev/null | grep -q '^mainbranch '; then
+    pipx upgrade mainbranch 2>&1
+    mb skill link --repo "${REPO_PATH:-.}" 2>&1
+  else
+    echo "NO_UPDATE_MODE"
+  fi
+else
+  echo "NO_ENGINE_PATH"
+fi
 ```
 
 ### Step 3: Pull Business Repo (if it has a remote)
@@ -33,17 +42,17 @@ git pull origin main 2>&1
 
 ### Handling Results
 
-**VIP updated:** "Pulled latest engine updates." — then read the CHANGELOG and surface unread entries (see "What's New from CHANGELOG" below).
+**Main Branch updated:** "Updated Main Branch and refreshed skill links." — then read the CHANGELOG and surface unread entries (see "What's New from CHANGELOG" below).
 
-**VIP current:** "Engine already up to date." — still surface unread CHANGELOG entries (the user might not have run /start since vip last had a release land).
+**Main Branch current:** "Engine already up to date." — still surface unread CHANGELOG entries (the user might not have run /start since the last release landed).
 
-**VIP path not found:** "Couldn't find vip. Run `/setup` to configure your vip path, or check `~/.config/vip/local.yaml`."
+**Main Branch path not found:** "Couldn't find Main Branch. Run `mb skill link --repo .`, then restart Claude."
 
 **Business repo updated:** "Also pulled updates for [repo-name]."
 
 **Business repo current or local-only:** Say nothing.
 
-**Error:** "Couldn't pull: [error]. Try: Open GitHub Desktop → select vip → click 'Fetch origin'."
+**Error:** "Couldn't update: [error]. If you installed with pipx, try `pipx upgrade mainbranch`. If you cloned the engine repo, open GitHub Desktop → select mainbranch → click 'Fetch origin'."
 
 ---
 

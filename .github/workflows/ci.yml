@@ -80,9 +80,9 @@ jobs:
     # vary across 3.10/3.11/3.12 enough to justify matrixing. We pick 3.12
     # (latest supported target). Pattern borrowed from companyctx.
     #
-    # Release wheels must carry the bundled skills/playbooks as package
-    # data. The source tree keeps a single authoritative copy under
-    # .claude/; setup.py copies that data into mb/_data/ at build time.
+    # Release wheels must carry the bundled engine root as package data.
+    # The source tree keeps a single authoritative copy under .claude/;
+    # setup.py copies that data into mb/_engine/.claude/ at build time.
     name: wheel-install-smoke
     runs-on: ubuntu-latest
     defaults:
@@ -115,10 +115,12 @@ jobs:
           python -m zipfile -l "$wheel"
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/py\.typed([[:space:]]|$)' \
             || { echo "::error::py.typed missing from wheel"; exit 1; }
-          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_data/skills/start/SKILL\.md([[:space:]]|$)' \
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/skills/start/SKILL\.md([[:space:]]|$)' \
             || { echo "::error::bundled skills missing from wheel"; exit 1; }
-          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_data/playbooks/ship-bet/SKILL\.md([[:space:]]|$)' \
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/playbooks/ship-bet/SKILL\.md([[:space:]]|$)' \
             || { echo "::error::bundled playbooks missing from wheel"; exit 1; }
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/reference/vip-path-resolution\.md([[:space:]]|$)' \
+            || { echo "::error::bundled reference files missing from wheel"; exit 1; }
 
       - name: Create fresh venv and install the wheel
         # Fresh venv means no repo sources on sys.path — a genuine
@@ -174,6 +176,25 @@ jobs:
             || { echo "::error::mb skill list missing bundled start skill"; exit 1; }
           grep -qx "think" skills.txt \
             || { echo "::error::mb skill list missing bundled think skill"; exit 1; }
+
+      - name: Smoke — mb init wires Claude Code skills
+        run: |
+          repo=$(mktemp -d)
+          .venv-smoke/bin/mb init "$repo" --name "Acme Brewing"
+          test -f "$repo/.claude/settings.local.json" \
+            || { echo "::error::settings.local.json missing"; exit 1; }
+          test -f "$repo/.claude/skills/start/SKILL.md" \
+            || { echo "::error::start skill bridge missing"; exit 1; }
+          .venv-smoke/bin/python - "$repo" <<'PY'
+          import json, pathlib, sys
+          repo = pathlib.Path(sys.argv[1])
+          settings = json.loads((repo / ".claude/settings.local.json").read_text())
+          dirs = settings["permissions"]["additionalDirectories"]
+          assert dirs, "additionalDirectories empty"
+          root = pathlib.Path(dirs[0])
+          assert (root / ".claude/skills/start/SKILL.md").is_file(), root
+          assert (root / ".claude/reference/vip-path-resolution.md").is_file(), root
+          PY
 
       - name: Smoke — mb doctor (runs against empty cwd)
         # A second user-facing CLI surface that doesn't depend on bundled
