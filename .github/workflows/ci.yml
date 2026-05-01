@@ -46,7 +46,7 @@ jobs:
         run: mypy mb
 
       - name: Pytest with coverage
-        run: pytest tests/ -v --cov=mb --cov-report=term-missing
+        run: pytest tests/ -v --cov=mb --cov-report=term-missing --cov-fail-under=70
 
   markdown-line-count:
     name: SKILL.md line-count gate
