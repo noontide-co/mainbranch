@@ -1,6 +1,8 @@
 # Main Branch
 
-Open-source Claude Code skills and a small `mb` CLI for running business-as-files workflows.
+**Run your business as files in git. Stop renting it from someone else's dashboard.**
+
+Main Branch is the `mb` CLI plus a set of MIT-licensed Claude Code skills for running business-as-files workflows. Your offer, audience, voice, research, decisions, and campaigns live in a six-folder taxonomy in your own git repo — versioned, portable, agent-readable. Built for Claude Code first; cross-agent at v0.2+.
 
 
 ## Honest current state (v0.1)
