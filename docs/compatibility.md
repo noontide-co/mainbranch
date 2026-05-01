@@ -1,6 +1,6 @@
 # Compatibility
 
-Main Branch v0.1.x is intentionally narrow: `mb` plus bundled Claude Code skills.
+Main Branch v0.1.x is intentionally narrow: `mb` plus bundled Claude Code skills as the first adapter for portable agent workflows.
 This page is the public compatibility contract for that surface.
 
 ## Supported matrix
@@ -14,7 +14,7 @@ This page is the public compatibility contract for that surface.
 | Install mode | `pipx install mainbranch` | Canonical public install path. |
 | Developer mode | Git clone | For contributors who want to edit the engine or skills. |
 | Agent runtime | Claude Code | First-class in v0.1.x. |
-| Codex, Cursor, Hermes, local LLMs | Roadmap | Cross-agent support is v0.2+. |
+| Codex, Cursor, OpenClaw, Hermes, local LLMs | Roadmap | Runtime support is v0.2+. `mb` is runtime-agnostic by design. |
 
 **Windows tip — try WSL2.** If you're on Windows and want a working setup today, use [Windows Subsystem for Linux 2 (WSL2)](https://learn.microsoft.com/en-us/windows/wsl/install). Inside WSL2, follow the supported Linux flow. The pipx install path works there.
 
@@ -73,9 +73,10 @@ update path.
 
 ## Known v0.1.x limits
 
-- Claude Code is the only first-class agent runtime.
+- Claude Code is the only first-class agent runtime in v0.1.x.
 - Windows is experimental.
 - Skills are bundled into the installed Python package, so public users update
   skills by upgrading `mainbranch`.
-- The CLI scaffolds, validates, graphs, resolves, and links skills. Most
-  business workflows still happen through Claude Code slash commands.
+- The CLI scaffolds, validates, graphs, resolves, and links the current Claude
+  Code skill adapter. Most business workflows still happen through Claude Code
+  slash commands in v0.1.x.

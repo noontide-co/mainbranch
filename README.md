@@ -6,7 +6,7 @@
 
 **Run your business as files in git. Stop renting it from someone else's dashboard.**
 
-Main Branch is the `mb` CLI plus a set of MIT-licensed Claude Code skills for running business-as-files workflows. Your offer, audience, voice, research, decisions, and campaigns live in a six-folder taxonomy in your own git repo — versioned, portable, agent-readable. Built for Claude Code first; cross-agent at v0.2+.
+Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running business-as-files systems. Those workflows are packaged for Claude Code today, with Codex, Cursor, OpenClaw, Hermes, and local runtimes targeted next. Your offer, audience, voice, research, decisions, and campaigns live in a six-folder taxonomy in your own git repo -- versioned, portable, agent-readable.
 
 
 ## Install
@@ -38,7 +38,7 @@ See [CHANGELOG.md](CHANGELOG.md) for what's in this release.
 What's actually in the wheel today:
 
 - **`mb` CLI**: `init`, `doctor`, `validate`, `graph`, `skill list`, `skill path`, `skill link`, `educational`, `resolve`, `think`
-- **Bundled Claude Code skills**: `/ads`, `/end`, `/help`, `/organic`, `/pull`, `/setup`, `/site`, `/start`, `/think`, `/vsl`, `/wiki` plus composable skills (`skill-brief-draft`, `skill-concept`, `skill-review`)
+- **Bundled Claude Code skill adapter**: `/ads`, `/end`, `/help`, `/organic`, `/pull`, `/setup`, `/site`, `/start`, `/think`, `/vsl`, `/wiki` plus composable skills (`skill-brief-draft`, `skill-concept`, `skill-review`)
 - **Public engine** under MIT license
 - **PyPI distribution** via `pipx install mainbranch`
 
@@ -46,11 +46,11 @@ What's actually in the wheel today:
 
 ## Roadmap
 
-Where this is going. v0.1 is the CLI + skills foundation; v0.2+ broadens compatibility and deepens the workflow surfaces. The list below is direction, not promises.
+Where this is going. v0.1 is the CLI + Claude Code adapter foundation; v0.2+ broadens runtime compatibility and deepens the workflow surfaces. The list below is direction, not promises.
 
 - `mb books` — BeanCount integration for ledger workflows ([#128](https://github.com/noontide-co/mainbranch/issues/128))
 - `mb fulfillment` — agency-arm tooling for delivery ops
-- Cross-agent compatibility — Codex, Cursor, Hermes, local LLMs (v0.2+)
+- Runtime compatibility — Codex, Cursor, OpenClaw, Hermes, local LLMs (v0.2+)
 - Deeper `/site` workflows — lander → minisite → website graduation
 - Dashboard — web UI for the bets-in-public feed (v0.2–v0.3)
 - Skool → GitHub webhook automation (v0.2)
@@ -76,9 +76,9 @@ See [CHANGELOG.md](CHANGELOG.md). Each release ships a "What this means for you"
 
 ## Honest current state (v0.1)
 
-- **Built for Claude Code.** Cross-platform skill support is a v0.2+ commitment.
+- **Built for Claude Code today.** Portable runtime support is a v0.2+ commitment.
 - **Schema is v1; will evolve.** Frontmatter shapes covered by `mb validate` are stable for v0.1.x; breaking changes bump the major.
-- **Cross-agent compatibility matrix lands at v0.2.** Codex, Cursor, Hermes, local LLMs are not first-class targets in v0.1.
+- **Runtime compatibility matrix lands at v0.2.** Codex, Cursor, OpenClaw, Hermes, and local LLMs are not first-class targets in v0.1.
 
 The engine v0.1.0 decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.md`](decisions/2026-04-29-mb-vip-v0-1-0-master.md).
 
@@ -145,7 +145,7 @@ You'll also need a Claude Pro ($20/mo) or Max subscription. Install Claude Code 
 
 ## The `mb` CLI
 
-The CLI surface for the engine. Built for Claude Code first; cross-agent at v0.2+. Most workflows still happen via slash-prompt skills inside Claude Code — the `mb` CLI is the scaffolder, validator, and grapher around them.
+The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by design. Most workflows still happen via slash-prompt skills inside Claude Code today -- the `mb` CLI is the scaffolder, validator, grapher, updater, and future adapter layer around them.
 
 | Command | What it does |
 |---|---|
