@@ -24,5 +24,5 @@ def test_help_runs() -> None:
 
 def test_skill_list_runs() -> None:
     result = runner.invoke(app, ["skill", "list"])
-    # May be empty in a clean test sandbox; what matters is non-crash exit.
     assert result.exit_code == 0
+    assert "start" in result.stdout.splitlines()

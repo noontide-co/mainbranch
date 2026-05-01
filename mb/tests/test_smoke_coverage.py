@@ -157,9 +157,10 @@ def test_validate_command_exit_codes(tmp_path: Path) -> None:
 
 
 def test_skill_list_command_runs() -> None:
-    """`mb skill list` doesn't crash even with an empty bundled skill set."""
+    """`mb skill list` finds bundled skills in source checkouts."""
     result = runner.invoke(app, ["skill", "list"])
     assert result.exit_code == 0
+    assert "start" in result.stdout.splitlines()
 
 
 def test_main_help_describes_engine() -> None:

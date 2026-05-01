@@ -80,13 +80,9 @@ jobs:
     # vary across 3.10/3.11/3.12 enough to justify matrixing. We pick 3.12
     # (latest supported target). Pattern borrowed from companyctx.
     #
-    # Note (v0.1.0): mb/_data/skills/ ships empty in the source tree
-    # — `mb skill list` resolves via source-checkout fallback in dev,
-    # which the wheel by definition can't see. The smoke job validates
-    # the wheel-shipped surface (entry point, importable package,
-    # py.typed) and tolerates an empty `mb skill list` until the v0.1.x
-    # follow-up wires _data/skills/ population at build time. See
-    # CHANGELOG / decisions/2026-04-29-mb-vip-v0-1-0-master.md.
+    # Release wheels must carry the bundled skills/playbooks as package
+    # data. The source tree keeps a single authoritative copy under
+    # .claude/; setup.py copies that data into mb/_data/ at build time.
     name: wheel-install-smoke
     runs-on: ubuntu-latest
     defaults:
@@ -109,7 +105,7 @@ jobs:
       - name: Build sdist + wheel
         run: python -m build
 
-      - name: Verify py.typed shipped in wheel
+      - name: Verify package data shipped in wheel
         # The editable install test suite can't catch a missing py.typed —
         # it reads straight from the source tree. A wheel without py.typed
         # silently degrades downstream mypy to Any. Fail loudly here.
@@ -119,6 +115,10 @@ jobs:
           python -m zipfile -l "$wheel"
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/py\.typed([[:space:]]|$)' \
             || { echo "::error::py.typed missing from wheel"; exit 1; }
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_data/skills/start/SKILL\.md([[:space:]]|$)' \
+            || { echo "::error::bundled skills missing from wheel"; exit 1; }
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_data/playbooks/ship-bet/SKILL\.md([[:space:]]|$)' \
+            || { echo "::error::bundled playbooks missing from wheel"; exit 1; }
 
       - name: Create fresh venv and install the wheel
         # Fresh venv means no repo sources on sys.path — a genuine
@@ -166,15 +166,14 @@ jobs:
           grep -qi "main branch\|scaffolds" help.txt \
             || { echo "::error::root --help output missing expected description"; exit 1; }
 
-      - name: Smoke — mb skill list (does not crash)
-        # v0.1.0: wheel ships with mb/_data/skills/ empty (skills live in
-        # the engine repo's .claude/skills/ and aren't yet copied into
-        # _data/skills/ at build time). The smoke job asserts the command
-        # runs to clean exit; population of _data/skills/ is tracked as
-        # a v0.1.x follow-up.
+      - name: Smoke — mb skill list is populated
         run: |
-          .venv-smoke/bin/mb skill list
-          echo "exit=$?"
+          .venv-smoke/bin/mb skill list > skills.txt
+          cat skills.txt
+          grep -qx "start" skills.txt \
+            || { echo "::error::mb skill list missing bundled start skill"; exit 1; }
+          grep -qx "think" skills.txt \
+            || { echo "::error::mb skill list missing bundled think skill"; exit 1; }
 
       - name: Smoke — mb doctor (runs against empty cwd)
         # A second user-facing CLI surface that doesn't depend on bundled
