@@ -77,7 +77,7 @@ Default deploy target is **Cloudflare Pages** (better CLI, better domain integra
 | `offer.md` + `audience.md` | Site generation | Build via `/think` first if missing |
 | Node 18+ + pnpm | **Only for Website shape** with Next.js / Astro build step | `brew install node && npm install -g pnpm` |
 
-Verify atom credentials with:
+Verify tool credentials with:
 ```bash
 source ~/.config/vip/env.sh
 python3 .claude/skills/site/scripts/verify_live.py

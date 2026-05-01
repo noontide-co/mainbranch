@@ -66,7 +66,7 @@ Past ~10–15 pages, component reuse + a build step pays off. Two sub-options:
 1. Create a parallel Next.js repo. The minisite repo's content gets copied/adapted into Next.js components.
 2. Configure CF Pages project's build settings (in dashboard): build command `pnpm build`, output `out`. Or create a fresh Pages project pointed at the new repo.
 3. Test on a `*.pages.dev` URL before flipping the apex domain.
-4. When ready, detach the apex domain from the old project and re-attach to the new one (use the `pages.py set-domain` atom).
+4. When ready, detach the apex domain from the old project and re-attach to the new one (use the `pages.py set-domain` tool).
 5. Update `~/.mainbranch/sites.json` — `shape: website`, `template: <next-template>`, optionally archive the old minisite repo.
 
 **Gotcha:** SEO continuity. The minisite's URLs (`/how-it-works/`, `/proof/`, etc.) should map cleanly to the new site's URLs. Use `_redirects` for any path changes.

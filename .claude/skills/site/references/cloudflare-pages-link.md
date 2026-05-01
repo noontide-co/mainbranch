@@ -41,7 +41,7 @@ Once that's done, `pages.py create-project` (or any API call to `POST /pages/pro
 
 ## 2. Manual Pages project creation via dashboard (fallback)
 
-Only use this if `pages.py create-project` can't be used for some reason (CI environment, no API access). The atom is the default path.
+Only use this if `pages.py create-project` can't be used for some reason (CI environment, no API access). The tool is the default path.
 
 1. Go to https://dash.cloudflare.com
 2. Left sidebar: under the **Build** group, click **Compute** → **Workers & Pages**. (Cloudflare moved this entry under Compute; if you remember it as a top-level link, look one level deeper.)
