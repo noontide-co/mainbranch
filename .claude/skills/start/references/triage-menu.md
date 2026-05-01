@@ -1,29 +1,30 @@
 # Triage Menu and Routing (Step 3)
 
-Detail for Step 3 of /start: presenting the menu, surfacing announcements, spawning triage agents, and the "while you wait" pattern.
+Detail for Step 3 of /start: presenting the menu, surfacing unread CHANGELOG entries, spawning triage agents, and the "while you wait" pattern.
 
 ---
 
-## Surfacing Announcements (Before the Menu)
+## Surfacing CHANGELOG Entries (Before the Menu)
 
-Read `<vip_path>/.claude/announcements.md` and `~/.config/vip/local.yaml:seen_announcements` (a list of slug strings). For each `## <slug>` entry whose:
-- `expires` date is today or later, AND
-- `<slug>` is NOT in `seen_announcements`
-
-…render a one-line "What's new" banner above the menu. Format:
+Read `<vip_path>/CHANGELOG.md` and `~/.config/vip/local.yaml:last_seen_version` (a single version string). If the most-recent versioned heading in CHANGELOG (the first `## [X.Y.Z]` after `[Unreleased]`) differs from `last_seen_version`, render a one-line "What's new" banner above the menu. Format:
 
 ```
-─── What's new ───
-[NEW] <title>
-<2-line body>
-─────────────────
+─── What's new in <version> ───
+<one-line headline derived from the section's most prominent Added bullet>
+<one-line tail derived from the next bullet, trimmed>
+────────────────────────────────
 ```
 
-If there are 2+ unseen entries, list them stacked (newest first). If there are 0, skip the banner entirely.
+If `last_seen_version` matches the current version, skip the banner entirely. If `last_seen_version` is empty (new user), surface the banner once and bump it on engagement.
 
-**Mark seen** when the user routes to the announced skill, or types "dismiss" / "seen" / "got it". Append the slug to `seen_announcements` in `~/.config/vip/local.yaml` via the safe-write pattern in [config-system.md](config-system.md). The list grows over time; expired entries auto-stop surfacing without needing to be removed.
+**Mark seen** when:
+- The user routes into a skill (any skill — version surface is per-engine, not per-skill)
+- The user types "dismiss" / "seen" / "got it"
+- The banner has been surfaced this session and the user moves on
 
-**Add `[NEW]` badge to menu options.** If an unseen announcement targets a specific skill (`skill: /<skill-name>` in announcements.md), append `  [NEW]` to that menu line.
+Update `last_seen_version` in `~/.config/vip/local.yaml` via the safe-write pattern in [config-system.md](config-system.md) to the current engine version.
+
+**Why version-based, not slug-based:** the prior `seen_announcements` list grew without bound and required per-feature housekeeping. A single `last_seen_version` field auto-clears on every release and never drifts.
 
 ---
 

@@ -138,13 +138,12 @@ media:
 # OK spending more tokens for more variation.
 default_concepts: 2
 
-# Announcement tracking (managed by /start and /pull)
-# Slugs of vip announcements (from .claude/announcements.md) the user
-# has already seen. /start appends the slug here when the user routes
-# to the announced skill or types "dismiss". Expired announcements
-# auto-stop surfacing without needing to be removed from this list.
-seen_announcements:
-  - site-oneflow
+# CHANGELOG version tracking (managed by /start and /pull)
+# Last engine version the user has seen the "what's new" banner for.
+# Diff'd against the most recent versioned heading in
+# `<vip_path>/CHANGELOG.md` to decide whether to surface unread entries.
+# Bumped when the user routes to any skill or types "dismiss".
+last_seen_version: "0.1.0"
 ```
 
 **CRITICAL: Always use absolute paths, never `~`.** The Glob and Read tools do not expand `~`, causing silent failures (0 results when files exist). When writing to `local.yaml`, always expand `~` to the full absolute path first. If `local.yaml` already contains `~`, auto-upgrade it to absolute during path validation.
