@@ -13,6 +13,33 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 No unreleased changes yet.
 
+## [0.1.2] - 2026-05-01
+
+v0.1.2 is a public framing and package-metadata release. It does not change
+installed behavior; it makes the repo, PyPI metadata, and decision history
+match the accepted runtime-agnostic product boundary.
+
+### What this means for you (plain English)
+
+- **Claude Code is still the supported v0.1 runtime.** Nothing changes for
+  existing members or new `pipx install mainbranch` users.
+- **Main Branch is not Claude-Code-only forever.** The public engine now
+  states the intended runtime posture clearly: Claude Code first, with Codex,
+  Cursor, OpenClaw, Hermes, and local runtimes targeted later.
+- **`mb` stays the stable substrate.** It owns repo shape, validation, status,
+  migration, updates, graphing, and runtime wiring. Agent runtimes own
+  judgment-heavy workflows.
+
+### Changed
+
+- Added the accepted decision
+  `decisions/2026-05-01-mb-cli-vs-agent-workflows-boundary.md`.
+- Updated README, compatibility docs, package description, and PyPI long
+  description language around runtime-agnostic positioning.
+- Amended the v0.1 master decision so its historical runtime list points to the
+  accepted runtime-agnostic boundary and includes OpenClaw as a first-tier
+  public compatibility target.
+
 ## [0.1.1] - 2026-05-01
 
 v0.1.1 makes the public `pipx install mainbranch` path work end-to-end
