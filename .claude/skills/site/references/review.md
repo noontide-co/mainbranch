@@ -1,108 +1,74 @@
-# Review — Quality Gates for Brief and Site Copy
+# Review — Seven Sweeps (dial-gated)
 
-The skill runs through review steps at two moments: **before locking the brief** and **before publishing the site**. Each gate spawns a parallel review subagent (foreground) that returns findings; the operator decides what to act on. Gates are not blocking — they're guidance, like the lenses `/ads review` runs.
+The skill runs review at two moments: **before locking the brief** and **before publishing the site**. Each sweep spawns a parallel review subagent (foreground) that returns findings; the operator decides what to act on.
 
-Review is plural. Multiple gates run in parallel and report back. The skill synthesizes the findings into one read-out for the operator.
+The review gate ladder replaced the prior `research-grounded / in-voice / de-AI'd / framework-true` set with the **Seven Sweeps** from Corey Haines's copy-editing skill. Sweeps are dial-gated; not every site needs every sweep.
 
----
+## The Seven Sweeps
 
-## When review runs
-
-| Moment | What's being reviewed | Gates that apply |
+| # | Sweep | What it checks |
 |---|---|---|
-| **Before brief lock** | The draft brief (offer framing, headline, value prop, audience-language match) | research-grounded, in-voice, de-AI'd, framework-true |
-| **Before publish** | The site copy as it exists in the project repo (home, how-it-works, picked pages) | in-voice, de-AI'd, framework-true (research-grounded re-runs only if reference files changed) |
+| 1 | Clarity | Confusing structures, unclear pronouns, jargon, sentence-length cliffs |
+| 2 | Voice & Tone | Read aloud — consistent register, matches `voice.md` |
+| 3 | So What | Every claim answers "why should I care?" — no orphan features |
+| 4 | Prove It | Every claim has evidence (testimonial, metric, demo, screenshot) |
+| 5 | Specificity | Vague turned concrete (numbers, names, artifacts, scenes) |
+| 6 | Heightened Emotion | Does it move you? — pain named honestly, outcome named concretely |
+| 7 | Zero Risk | Every barrier near the CTA addressed (price, refund, terms, time) |
 
-The `/site` flow stops at each moment, runs review in parallel, surfaces findings, asks the operator: *"Address these, or proceed?"* It's a checkpoint, not a wall.
+## Dial-gated application
 
----
+| Dial | Sweeps that run | Why |
+|---|---|---|
+| `convert` | 1, 2, 3, 4, 5, 6, 7 (all) | A sales-conversion page must clear every gate. |
+| `story` | 1, 2, 3, 5, 6 | Resonance and archetype fidelity matter more than evidence; Prove-It and Zero-Risk drop. |
+| `brand` | 1, 2, 6 | Clarity, voice, emotion. Drop everything that pressures the copy toward conversion. |
 
-## The default gates
+The operator can override; the skill defaults to the dial.
 
-Each gate is a small subagent prompt (a "lens" in the same shape as `.claude/lenses/*.md`). Spawn in parallel; collect findings; render to operator.
+## Auxiliary gates that always run
 
-### research-grounded
+- **De-AI'd** — runs against [anti-patterns.md](anti-patterns.md) AI-tell list. Hard fail on any banned phrase, em-dash overuse, or overused-verb cluster.
+- **Framework-true** — if `copy_framework_tag` is set in the brief, check the structure honors it.
+- **Archetype-fidelity** — if `archetype` is set, check no `do_not_state` line was written as a headline.
 
-**Question:** Is the brief / copy backed by what real customers say?
+## How review runs
 
-**Inputs:** the brief draft (or site copy), `audience.md`, any `research/*.md` files in the business repo.
+1. **Identify the moment** (pre-lock, pre-publish).
+2. **Read the brief** to learn the dial. Pick the sweeps for that dial.
+3. **Spawn one foreground subagent per active sweep, in parallel.** Each returns short structured findings (P1/P2/P3 with line refs).
+4. **Run the auxiliary gates** in parallel.
+5. **Synthesize** into one combined report.
+6. **Surface to operator.** "Here's what review found. Address now or proceed?"
+7. **Operator picks.** If addressing: re-run affected sweeps after edits. If proceeding: log skipped findings to `.mainbranch/review-skipped.md`.
 
-**Findings:** points where the language sounds invented vs. grounded. Specific lines to swap with audience-quoted phrasing. Or "looks grounded — no action needed."
+## Expert Panel Scoring (convert dial only)
 
-**Why it matters:** ungrounded copy reads as AI marketing-speak and converts poorly. The fix is usually pulling specific phrases from interviews, reviews, or transcripts the operator has on file.
+After Seven Sweeps clear, run an Expert Panel scoring pass for `convert`:
 
-### in-voice
+- Pick 3-5 personas representative of the audience.
+- Score each persona's reaction on a 1-10 scale across: clarity, relevance, persuasion, trust.
+- Gate: every persona ≥ 7; panel average ≥ 8.
+- If gate fails, name the lowest-scoring dimension and re-write that section.
 
-**Question:** Does the copy match `voice.md`?
-
-**Inputs:** the brief draft (or site copy), `voice.md`.
-
-**Findings:** sentences that violate declared voice traits (e.g., "warm and personal" voice but the copy is corporate-clinical). Suggested rewrites in the right register.
-
-**Why it matters:** off-voice copy breaks brand cohesion and signals the system isn't actually using the operator's reference files.
-
-### de-AI'd
-
-**Question:** Does the copy have AI tells — generic hedging, em-dash overuse, "in today's fast-paced world," empty intensifiers, unnecessary numbered lists?
-
-**Inputs:** the brief draft (or site copy).
-
-**Findings:** specific sentences flagged with the AI-tell pattern (e.g., "this sentence has the 'unleash potential' pattern"). Suggested human rewrites.
-
-**Why it matters:** AI-sounding copy is the #1 signal that nothing custom happened. Even if the system *did* use the reference files, AI cadence destroys trust.
-
-### framework-true
-
-**Question:** If the offer / brief declares a framework (e.g., PAS, AIDA, StoryBrand, founder-letter), does the copy follow it?
-
-**Inputs:** the brief draft (or site copy), `offer.md` (which may declare a framework), the brief's structural plan.
-
-**Findings:** sections that don't fit the declared framework's beats, or are out of order. Suggested restructuring.
-
-**Why it matters:** an operator who picked a framework expects the output to follow it. Drift here is a quiet failure.
-
----
+This pass adds 2-4 minutes per draft. Bypass with `--skip-panel`; logged in brief frontmatter.
 
 ## Operator-defined gates
 
-Operators can extend with their own gates by dropping `.md` files in their business repo:
+Operators extend with their own sweeps by dropping `.md` files in their business repo:
 
 ```
 your-business-repo/
-└── reference/
-    └── review/                    <- operator's custom gates
-        ├── compliance-tier-1.md   <- e.g., FTC outcome-claim check
-        └── on-brand-tone.md       <- e.g., specific tone rules
+└── reference/review/
+    ├── compliance-tier-1.md
+    └── on-brand-tone.md
 ```
 
-Each file is a prompt for one review subagent. The skill picks them up automatically and runs them alongside the defaults.
-
-This is the same shape as `.claude/lenses/` for `/ads review`. Custom gates compose with the defaults — they don't replace them.
-
----
-
-## How the skill runs review
-
-1. **Identify the moment** (pre-lock, pre-publish).
-2. **Collect inputs** the gates will need (brief draft, site copy, reference files).
-3. **Spawn one foreground subagent per gate, in parallel.** Each subagent reads its inputs and returns findings as a short markdown report.
-4. **Synthesize findings** into one combined report — group by gate, P1 / P2 / P3 priority, with specific line references.
-5. **Surface to operator.** "Here's what review surfaced. Address now, or proceed?"
-6. **Operator picks.** If they address: re-run the affected gates after edits. If they proceed: log the skipped findings to `.mainbranch/review-skipped.md` (visible in git history) and move on.
-
----
-
-## Why "review" not "checks"
-
-"Checks" carries GitHub-PR-checks baggage and confuses operators who don't think in those terms. "Review" matches `/ads review` and reads naturally to anyone editing copy.
-
-The plural noun "review" works the same way `/ads review` does — one mode that runs multiple lenses in parallel and combines the output.
-
----
+Each is a prompt for one review subagent. Picked up automatically alongside the defaults.
 
 ## Cross-references
 
+- [anti-patterns.md](anti-patterns.md) — the AI-tell list run by the De-AI'd auxiliary gate
+- [archetypes.md](archetypes.md) — fidelity checks against `do_not_state`
+- [headline-formulas.md](headline-formulas.md) — Specificity sweep gates headlines
 - [`/ads review`](../../ads/SKILL.md) — same multi-lens shape, same synthesis pattern
-- [`anti-patterns.md`](anti-patterns.md) — the anti-patterns that bypass review (over-prescription, padding, fabrication)
-- [`minisite-build.md`](minisite-build.md) — where review fits in the operator walkthrough
-- [`/think`](../../think/SKILL.md) — research patterns review depends on (research files, decisions linked to reference)

@@ -37,249 +37,11 @@ Do **not** silently switch strategies. Ask the user first, in beginner language:
 
 For first-time setup, do not default to "switch workspace now." Prefer option 1 or 2 unless the user already has the target repo workspace ready.
 
-### Pull Latest Engine Updates (Always)
+### Pull Latest Engine Updates and Detect CWD (FIRST)
 
-**Before anything else, ensure vip is up to date:**
+**Pull vip + detect CWD before context gathering.** Three cases: CWD is the business repo (happy path), CWD is vip (migration), or CWD is neither (ask user).
 
-```bash
-# Canonical vip resolution (settings.local.json first — no extra deps)
-VIP_PATH=$(python3 -c "
-import json, os
-try:
-    with open('.claude/settings.local.json') as f:
-        dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
-    for d in dirs:
-        if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
-            print(d); break
-except: print('')
-" 2>/dev/null)
-
-# Fallback: check ~/.config/vip/local.yaml (needs PyYAML)
-if [ -z "$VIP_PATH" ] || [ ! -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
-  VIP_PATH=$(python3 -c "
-import os
-try:
-    import yaml
-    with open(os.path.expanduser('~/.config/vip/local.yaml')) as f:
-        print(yaml.safe_load(f).get('vip_path', ''))
-except: print('')
-" 2>/dev/null)
-fi
-
-# Pull if found and valid
-[ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/start/SKILL.md" ] && \
-  git -C "$VIP_PATH" pull origin main 2>&1
-```
-
-If updates pulled: briefly note "Pulled latest engine updates." then continue.
-If vip not found: note it — will be configured during setup.
-If offline or already current: continue silently.
-
----
-
-### Check Location and Configure vip (CRITICAL: DO THIS FIRST)
-
-**This must happen BEFORE context gathering.** If the conversation compacts later, the essential config is already saved.
-
-**Detect where we are:**
-
-```bash
-# Check CWD for business repo fingerprint
-test -d "reference/core" && echo "IS_BUSINESS_REPO"
-
-# Check CWD for vip fingerprint
-test -f ".claude/skills/setup/SKILL.md" && echo "IS_VIP"
-```
-
----
-
-#### Case 1: CWD IS the Business Repo (Happy Path)
-
-User started Claude in their business repo. Confirm and configure vip:
-
-> "You're in your business repo — perfect."
-
-1. **Check if vip is already configured:**
-   ```bash
-   test -f ".claude/settings.local.json" && python3 -c "
-   import json, os
-   with open('.claude/settings.local.json') as f:
-       dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
-   for d in dirs:
-       if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
-           print('VIP_LOADED'); break
-   " 2>/dev/null
-   ```
-
-2. **If vip NOT loaded:** Ask for vip path and configure:
-   > "Where is your vip folder? (usually `~/Documents/GitHub/vip`)"
-
-   Create `.claude/settings.local.json` (auto git-ignored by Claude Code):
-   ```json
-   {
-     "permissions": {
-       "additionalDirectories": ["/absolute/path/to/vip"]
-     }
-   }
-   ```
-
-   **Create compatibility symlinks for skill discovery** (without replacing local folders):
-   ```bash
-   VIP_PATH="/absolute/path/to/vip"
-   mkdir -p .claude/skills .claude/lenses .claude/reference
-
-   # Link each vip skill folder only if missing (preserves local custom skills)
-   for d in "$VIP_PATH"/.claude/skills/*; do
-     [ -d "$d" ] || continue
-     n=$(basename "$d")
-     [ -e ".claude/skills/$n" ] || ln -s "$d" ".claude/skills/$n"
-   done
-
-   # Bridge lenses/reference similarly without overwriting local files
-   for p in "$VIP_PATH"/.claude/lenses/* "$VIP_PATH"/.claude/reference/*; do
-     [ -e "$p" ] || continue
-     base=$(basename "$p")
-     parent=$(basename "$(dirname "$p")")
-     [ -e ".claude/$parent/$base" ] || ln -s "$p" ".claude/$parent/$base"
-   done
-   ```
-
-   Update `~/.config/vip/local.yaml` with a **merge** (never overwrite):
-   - Read existing file first (if present)
-   - Preserve unknown keys
-   - Set/update `vip_path`
-   - Add this repo to `recent_repos` (prepend + dedupe)
-   - Keep `user.*` if present; ask only when missing
-   - If `default_repo` is already set to a different repo, ask before changing it
-
-   **Never use:** `cat > ~/.config/vip/local.yaml`
-
-   Then update `.gitignore` to exclude bridge links (see `auto-heal.md` Step 2.5 for the canonical script — marker-based, per-skill entries, idempotent).
-
-   > "Configured. vip is now linked for file access, and compatibility bridge links are in place for skill discovery."
-
-3. **If vip loaded:** Check compatibility symlinks exist (without clobbering local files):
-   ```bash
-   # At minimum, /start must be discoverable
-   test -e ".claude/skills/start" && echo "START_BRIDGE_OK"
-   ```
-   If missing, recreate missing links using the loop above. Never replace the entire `.claude/skills` directory.
-
----
-
-#### Case 2: CWD IS vip (Old Workflow — Migration)
-
-User started Claude in the engine folder. Guide them to the new workflow:
-
-> "You're in vip — that's the engine. The recommended workflow is now to run Claude from your business repo instead. Let me set that up."
-
-1. **Check if business repo exists:**
-   ```bash
-   cat ~/.config/vip/local.yaml 2>/dev/null
-   ```
-
-2. **If repo exists:** Guide user to switch:
-   > "Found your repo at [path]. Close this session, then:
-   > ```
-   > cd [path]
-   > claude
-   > /start
-   > ```
-   > Want me to configure vip as an additional directory there first?"
-
-   If yes, write `.claude/settings.local.json` in the business repo AND create compatibility links:
-   ```bash
-   VIP_PATH="/absolute/path/to/vip"
-   REPO_PATH="[repo-path]"
-   mkdir -p "$REPO_PATH"/.claude/skills "$REPO_PATH"/.claude/lenses "$REPO_PATH"/.claude/reference
-   # settings.local.json (write via tool or bash)
-   for d in "$VIP_PATH"/.claude/skills/*; do
-     [ -d "$d" ] || continue
-     n=$(basename "$d")
-     [ -e "$REPO_PATH/.claude/skills/$n" ] || ln -s "$d" "$REPO_PATH/.claude/skills/$n"
-   done
-   for p in "$VIP_PATH"/.claude/lenses/* "$VIP_PATH"/.claude/reference/*; do
-     [ -e "$p" ] || continue
-     base=$(basename "$p")
-     parent=$(basename "$(dirname "$p")")
-     [ -e "$REPO_PATH/.claude/$parent/$base" ] || ln -s "$p" "$REPO_PATH/.claude/$parent/$base"
-   done
-   ```
-   Then update `.gitignore` in the business repo to exclude bridge links (see `auto-heal.md` Step 2.5 for the canonical script).
-
-   If direct write is blocked by sandbox boundaries, use the write-boundary decision flow above (ask first, then use terminal commands only if user agrees).
-
-3. **If NO repo exists:** Create one:
-   > "Let me create your business repo first."
-
-   a. Ask for business name
-   b. Create the folder and init git:
-      ```bash
-      mkdir -p ~/Documents/GitHub/[business-name]
-      cd ~/Documents/GitHub/[business-name] && git init
-      ```
-   c. Create `.claude/settings.local.json` AND compatibility links in the NEW repo:
-      ```bash
-      VIP_PATH="/absolute/path/to/vip"
-      mkdir -p ~/Documents/GitHub/[business-name]/.claude/skills \
-               ~/Documents/GitHub/[business-name]/.claude/lenses \
-               ~/Documents/GitHub/[business-name]/.claude/reference
-      ```
-      Write `settings.local.json`:
-      ```json
-      {
-        "permissions": {
-          "additionalDirectories": ["/absolute/path/to/vip"]
-        }
-      }
-      ```
-      Create compatibility links without replacing local directories:
-      ```bash
-      REPO_PATH=~/Documents/GitHub/[business-name]
-      for d in "$VIP_PATH"/.claude/skills/*; do
-        [ -d "$d" ] || continue
-        n=$(basename "$d")
-        [ -e "$REPO_PATH/.claude/skills/$n" ] || ln -s "$d" "$REPO_PATH/.claude/skills/$n"
-      done
-      for p in "$VIP_PATH"/.claude/lenses/* "$VIP_PATH"/.claude/reference/*; do
-        [ -e "$p" ] || continue
-        base=$(basename "$p")
-        parent=$(basename "$(dirname "$p")")
-        [ -e "$REPO_PATH/.claude/$parent/$base" ] || ln -s "$p" "$REPO_PATH/.claude/$parent/$base"
-      done
-      ```
-   d. Update `.gitignore` in the new repo to exclude bridge links (see `auto-heal.md` Step 2.5 for the canonical script).
-   e. Update `~/.config/vip/local.yaml` with a **merge** (never overwrite):
-      - Read existing file first
-      - Preserve existing/unknown keys
-      - Set/update `vip_path`
-      - Add new repo to `recent_repos` (prepend + dedupe)
-      - Keep `user.*` if present; ask only when missing
-      - Ask before changing `default_repo` if one already exists
-   f. **Set the business repo as the target for all file writes:**
-      From this point forward, write all files to `~/Documents/GitHub/[business-name]/` NOT to the current directory.
-      If direct writes are blocked by workspace limits, use explicit terminal commands with full paths (after user approval via the decision flow above).
-   g. Confirm:
-      > "Created [business-name] and configured vip. Next time:
-      > ```
-      > cd ~/Documents/GitHub/[business-name]
-      > claude
-      > /start
-      > ```"
-
-4. **Continue with setup** — proceed to Step 0 (Chrome extension) and beyond.
-
----
-
-#### Case 3: CWD is Neither
-
-User is in some other directory. Ask what they want:
-
-> "This doesn't look like a business repo or vip. Options:
->
-> 1. Create a new business repo here
-> 2. Tell me where your existing repo is
-> 3. Start fresh (`/setup` will create everything)"
+See **[references/cwd-detection.md](references/cwd-detection.md)** for the full pull script and all three cases (Case 1 happy path, Case 2 vip migration, Case 3 ask). This must happen BEFORE any context gathering — if conversation compacts later, the essential config is already saved.
 
 ---
 
@@ -478,52 +240,7 @@ Use templates from `references/templates.md`.
 
 **Teach WHY each file matters as you create it.** Don't just scaffold — explain. This is the user's first encounter with the system. The act of writing these files IS the learning.
 
-**Educational context for each core file:**
-
-**soul.md** — Present before writing:
-> "soul.md is WHY you exist. Not the marketing answer — the real one. Three questions: What do you research when no one's watching? What intersections excite you? What decisions feel like discovery vs obligation? This file is your reconnection fuel — when you're grinding and feel nothing, re-read it."
-
-**offer.md** — Present before writing:
-> "offer.md is WHAT you sell. Price, mechanism, deliverables, guarantee. Every ad, script, and piece of content reads this file. The clearer it is, the better everything downstream works."
-
-**audience.md** — Present before writing:
-> "audience.md is WHO buys. Not demographics — real people with specific pains, desires, and objections. The words in this file become the words in your ads."
-
-**voice.md** — Present before writing:
-> "voice.md is HOW you sound. Tone, vocabulary, phrases you always use, phrases you never say. This is what keeps AI sounding like you instead of generic."
-
-**For multi-offer setups, also explain:**
-
-**offer.md (brand-level)** — When creating the brand thesis:
-> "This is your brand-level offer.md — the umbrella story. It covers what your brand stands for across all offers. Each specific offer gets its own file in `offers/[name]/offer.md` with pricing, mechanism, and details."
-
-**product-ladder.md** — When creating:
-> "product-ladder.md maps how your offers relate. Which one do people discover first? Where do they go next? This helps us create content and ads that guide people through your world."
-
-**Priority order:**
-1. `reference/core/soul.md` — Why you exist (reconnection fuel)
-2. `reference/core/offer.md` — What you sell (or brand thesis if multi-offer)
-3. `reference/core/audience.md` — Who buys
-4. `reference/core/voice.md` — How you sound
-5. `reference/proof/testimonials.md` — Social proof
-6. `reference/proof/angles/` — Messaging entry points
-7. `reference/visual-identity/visual-style.md` — Visual brand identity (colors, typography, mood, image prompt fragments)
-8. `reference/domain/content-strategy.md` — Content pillars, platforms, cadence (template for community businesses)
-9. `reference/domain/funnel/skool-surfaces.md` — Live Skool about page + pricing card copy (community businesses with Skool)
-
-**Multi-offer additional files (if applicable):**
-10. `reference/offers/[name]/offer.md` — Offer-specific details for each offer
-11. `reference/offers/[name]/audience.md` — Only if this offer targets a different segment
-12. `reference/domain/product-ladder.md` — How offers relate to each other
-
-> **Note:** content-strategy.md and visual-style.md start as templates and get filled through `/think` cycles. Not required at setup — scaffolded with placeholder sections.
-
-**Visual style scaffolding:** After core reference is drafted, ask 3 quick questions to seed `visual-style.md`:
-1. "What's your brand's visual mood?" (minimal/bold/editorial/playful/dark)
-2. "What are your brand colors?" (hex codes or descriptions)
-3. "What photography style fits?" (lifestyle/product/abstract/editorial)
-
-Use answers + audience data to generate a starter `visual-style.md` from the template at `templates/modules/brand-style-template.md` (in vip). This file is consumed by `/ads` (image prompts), `/site` (CSS/design tokens), and `/organic` (visual consistency).
+See **[references/file-education.md](references/file-education.md)** for the educational blurbs to present before writing each core file (soul, offer, audience, voice, multi-offer additions), the priority order, and the visual style scaffolding questions.
 
 ### 6. Apply Domain Rubric
 
@@ -575,21 +292,21 @@ EOF
 
 | File | Status |
 |------|--------|
-| core/soul.md | ✅ Complete / ⚠️ Missing [X] |
-| core/offer.md | ✅ Complete / ⚠️ Missing [X] |
-| core/audience.md | ✅ Complete / ⚠️ Missing [X] |
-| core/voice.md | ✅ Complete / ⚠️ Missing [X] |
-| proof/testimonials.md | ✅ Has content / ❌ Empty |
-| proof/angles/ | ✅ [N] angles / ⚠️ None yet |
-| domain/ | ✅ Populated / ⚠️ Needs [X] |
+| core/soul.md | [OK] Complete / [WARN] Missing [X] |
+| core/offer.md | [OK] Complete / [WARN] Missing [X] |
+| core/audience.md | [OK] Complete / [WARN] Missing [X] |
+| core/voice.md | [OK] Complete / [WARN] Missing [X] |
+| proof/testimonials.md | [OK] Has content / [FAIL] Empty |
+| proof/angles/ | [OK] [N] angles / [WARN] None yet |
+| domain/ | [OK] Populated / [WARN] Needs [X] |
 
 **Multi-offer additional checks (if applicable):**
 
 | File | Status |
 |------|--------|
-| offers/[name]/offer.md | ✅ Complete / ⚠️ Thin (< 20 lines) / ❌ Missing |
-| domain/product-ladder.md | ✅ Complete / ⚠️ Placeholder |
-| .vip/local.yaml | ✅ Set to [offer] / ❌ Missing |
+| offers/[name]/offer.md | [OK] Complete / [WARN] Thin (< 20 lines) / [FAIL] Missing |
+| domain/product-ladder.md | [OK] Complete / [WARN] Placeholder |
+| .vip/local.yaml | [OK] Set to [offer] / [FAIL] Missing |
 
 Ask user for missing pieces or note for later.
 
@@ -603,6 +320,8 @@ Format: `[type] Brief description` with Co-Authored-By line. Types: `[init]`, `[
 
 ## References
 
+- **CWD Detection:** `references/cwd-detection.md` — Pull engine updates + Case 1/2/3 flows for detecting where the user is
+- **File Education:** `references/file-education.md` — What to teach the user about each core file, priority order, visual style scaffolding
 - **Context Gathering:** `references/context-gathering.md` — Checklists by business type, completeness criteria
 - **Templates:** `references/templates.md` — All file templates
 - **CLAUDE.md Guide:** `references/claude-md-guide.md` — How to draft a good CLAUDE.md

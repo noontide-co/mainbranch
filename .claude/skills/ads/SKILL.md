@@ -243,285 +243,35 @@ If required files are missing, Step 0 pre-flight catches this and routes appropr
 
 ## Mode: Static Ads
 
-Create campaign batches with image prompts + ad copy.
+Create campaign batches with image prompts + ad copy. Each batch = 5-6 angles, each angle = 3 image creatives (graphic, lo-fi, interrupt). Hook = 123-135 chars, no questions, no "you/your" in first 3 lines, no emojis. 5 ad styles (Deep, UGC, DR, Pattern Interrupt, Testimonial). Format pair: 1:1 + 9:16.
 
-### Campaign Structure
-
-Each batch = 5-6 angles. Each angle = 3 image creatives (graphic, lo-fi, interrupt).
-
-```
-Campaign Batch 001
-├── Angle 1: 001_01 (graphic), 001_02 (lo-fi), 001_03 (interrupt)
-├── Angle 2: 001_04, 001_05, 001_06
-└── [etc.]
-```
-
-### Hook Rules (Non-Negotiable)
-
-**Hook = 123-135 characters** (visible before "See more" on Facebook).
-
-- No questions (binary "no" response)
-- No "you/your" in first 3 lines
-- No emojis
-- Pack customer language into the hook
-
-**Hook Formulas:**
-1. **Transformation:** "How [Resonance] go from [Pain] to [Benefit] using [Approach]"
-2. **Even Without:** "Here's how even [Resonance] (without [Challenge]) are [Benefit]"
-3. **Eliminates:** "This [Approach] eliminates [Pain 1], [Pain 2], without [Challenge]"
-
-### Workflow
-
-**Batch 1: Copywriting**
-
-1. Read project context (offer, audience, proof, angles)
-2. Ask for campaign name (required)
-3. Select 5-6 angles for the batch — **reference `.claude/reference/compliance/angle-playbook.md`** for angle types, compliance burden, and selection matrix
-4. **Write ALL image prompts first** (Part 1)
-5. **Write ALL ad copy second** (Part 2)
-6. **Cold traffic language check:** Every hook must pass the 3-second comprehension test — no insider jargon, no assumed context. Translate community language to customer language. See Joel's cold traffic guidance in [references/one-liner-methodology.md](references/one-liner-methodology.md).
-
-Each batch file should start with:
-```yaml
----
-type: output
-format: static-ad
-date: YYYY-MM-DD
-status: draft
-platform: meta
----
-```
-
-7. Save to `outputs/YYYY-MM-DD-static-ads-[offer]-{campaign}/static-ads-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
-8. Tell user: "Copy saved. Running automatic post-generation pipeline..."
-9. Run the **Automatic Post-Generation Pipeline** (see below). This handles git commit, compliance review, and image generation automatically.
-
-### Ad Styles (5 per concept)
-
-| Style | Length |
-|-------|--------|
-| Deep Ad | 500-800 words |
-| UGC/Native | 100-300 words |
-| Direct Response | 100-400 words |
-| Pattern Interrupt | Under 100 words |
-| Testimonial | 200-400 words |
-
-### Image Prompt Types
-
-| Type | Use Case |
-|------|----------|
-| Graphic | Typography-focused, frameworks, authority |
-| Lo-fi | UGC style, authenticity, social proof |
-| Interrupt | Pattern interrupt, scroll-stopping, contrarian |
-| Text Overlay | Background-only for text overlay (used with creative variation copy) |
-
-**Format pair: 1:1 + 9:16** — Facebook Ads Manager accepts exactly these two formats per ad. Design 9:16 first with critical content in center 1:1 safe zone. Center-crop for square. One design → two uploads.
-
-See [references/static-output-template.md](references/static-output-template.md) for full output format.
-See [references/image-prompt-templates.md](references/image-prompt-templates.md) for template library.
-See [references/image-generation-workflow.md](references/image-generation-workflow.md) for Nano Banana integration.
+See **[references/mode-static-ads.md](references/mode-static-ads.md)** for the full workflow: campaign structure, hook formulas, copywriting batch sequence, ad styles by length, image prompt types, and the file save convention.
 
 ---
 
 ## Mode: Hook Library (Creative Variations)
 
-Generate punchy, truly diversified creative variations for static image ads that feed Meta's Andromeda algorithm. Users can request any quantity -- "give me 5" or "give me 50" -- not fixed batches.
+Generate punchy, truly diversified creative variations for static image ads (Andromeda-optimized). Users can request any quantity. Also called "one-liners" — same methodology, same pipeline.
 
-Also called "one-liners" -- same methodology, same pipeline. Both trigger words route here.
+**The core rule:** Every variation must include at least one specific anchor (role, niche pain, value prop, or proof point). The Specificity Test: if it could sell a gym membership, it fails.
 
-### Why This Mode Exists
-
-Meta's Andromeda algorithm (July 2025) rewards TRUE creative diversification - not surface variations. Each creative variation is a different psychological conversation, anchored in offer-specific details.
-
-### 6-Step Process
-
-1. **Core Outcome:** Single transformation every buyer achieves
-2. **Extract Specifics:** Roles, timelines, niche pains, value props, failed alternatives, proof points
-3. **Reasons to Buy:** 15-20 fundamentally different reasons (the protein supplement exercise)
-4. **Hook Categories:** Ensure variety across problem agitation, emotional state, transformation, contrarian, identity callout, etc.
-5. **Generate:** 30 creative variations, each with at least one specific anchor
-6. **Output:** Simple numbered list, ready to copy
-
-### The Anchor Rule (Non-Negotiable)
-
-Every variation **MUST** include at least one specific element:
-- A specific role, outcome, or company (DevOps Engineer, AWS, 60k)
-- A specific niche pain (service desk 2+ years, no CS degree)
-- A specific value prop (mock interviews with Principal Engineers)
-- A specific timeline or proof point (8 weeks, 500+ community)
-
-**The Specificity Test:** If this variation could sell a gym membership, a life coaching program, or a generic course - it fails. Rewrite it.
-
-### Input Modes
-
-| Mode | How to Detect | What to Pull |
-|------|---------------|--------------|
-| **Has business repo** | Reference files exist | Resolved `offer.md`, resolved `audience.md`, `reference/core/voice.md`, testimonials |
-| **No repo** | Nothing found | Ask user for materials |
-
-### Output Format
-
-**Save to file, not chat.** This enables review to edit the file directly.
-
-1. Ask for campaign name (required)
-2. Confirm quantity: "How many? A few to test (5-10) or a full batch (30+)?" -- or use the number they already specified
-3. Create folder: `outputs/YYYY-MM-DD-creative-variations-[offer]-{campaign}/` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
-4. Save full generation context + creative variations to: `creative-variations-batch-001.md`
-5. Tell user: "Saved {N} creative variations. Running automatic post-generation pipeline..."
-6. Run the **Automatic Post-Generation Pipeline** (see below). This handles git commit, compliance review, and image generation automatically.
-
-**creative-variations-batch-001.md format:**
-
-```markdown
----
-type: output
-format: creative-variations
-date: YYYY-MM-DD
-status: draft
-platform: meta
----
-
-# Creative Variations: {Campaign Name}
-
-## Core Outcome
-
-[Single sentence: the transformation every buyer achieves]
-
-## Extracted Specifics
-
-| Category | Specifics |
-|----------|-----------|
-| **Roles/Outcomes** | [roles, job titles, results] |
-| **Timelines** | [how fast results happen] |
-| **Niche Pains** | [pains SPECIFIC to this audience] |
-| **Value Props** | [what makes THIS offer different] |
-| **Failed Alternatives** | [what they've tried] |
-| **Proof Points** | [numbers, stats, community size] |
-
-## Reasons to Buy
-
-[Numbered list of 15-20 fundamentally different reasons]
-
-## Hook Categories
-
-[Which categories each variation uses - for diversity check]
-
----
-
-## Creative Variations
-
-1. [variation]
-2. [variation]
-...
-{N}. [variation]
-```
-
-**Why save the full context:**
-- **Anchor verification:** Reviewers can check each variation has a specific from the extraction
-- **Resume capability:** Don't re-extract specifics if generating more
-- **Understanding:** Why certain hooks were chosen
-- **Quality control:** Can verify all reasons to buy are covered
-
-See [references/one-liner-methodology.md](references/one-liner-methodology.md) for the complete 6-step process, hook categories, and quality checklist.
-
-See [references/one-liner-examples.md](references/one-liner-examples.md) for real examples by offer type.
+See **[references/mode-hook-library.md](references/mode-hook-library.md)** for the full 6-step process, anchor rule, input modes, output file format with full generation context, and links to one-liner-methodology.md / one-liner-examples.md.
 
 ---
 
 ## Mode: Video Scripts
 
-Create diverse spoken-word scripts for camera delivery.
+Create diverse spoken-word scripts for camera delivery. 15-30 scripts across 3-4 buyer avatars, ~5th grade reading level, contractions, fragments. Each ad = a fundamentally different reason to buy.
 
-### 6-Step Process
-
-1. **Core Outcome:** Single result every buyer achieves
-2. **Avatars:** 3-4 buyer personas with situation, frustration, desires
-3. **Angles Per Avatar:** Map angles from project context
-4. **Generate Ads:** 15-30 scripts across all avatars
-5. **Optimize for Spoken:** ~5th grade reading level, contractions, fragments
-6. Ask for campaign name (required)
-
-Each batch file should start with:
-```yaml
----
-type: output
-format: video-ad-script
-date: YYYY-MM-DD
-status: draft
-platform: meta
----
-```
-
-7. **Save Output:** `outputs/YYYY-MM-DD-video-ads-[offer]-{campaign}/video-ads-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
-8. Tell user: "Video scripts saved. Running automatic post-generation pipeline..."
-9. Run the **Automatic Post-Generation Pipeline** (see below). This handles git commit and compliance review automatically. (No image generation for video scripts.)
-
-### Script Structure
-
-**Hook** (1-2 sentences): Lead with pain, desire, or belief. Create curiosity.
-
-**Body** (4-8 sentences): Why problem exists. Position offer. Include proof.
-
-**CTA** (2-3 sentences): Clear instruction. What happens after click.
-
-**CRITICAL**: Each ad = fundamentally different reason to buy.
-
-### Spoken Delivery Optimization
-
-- Contractions: you're, don't, can't, won't
-- Fragments: "Not theory. Patterns."
-- Simple words: "use" not "utilize"
-
-See [references/video-templates-hooks.md](references/video-templates-hooks.md) for templates and hook bank.
+See **[references/mode-video-scripts.md](references/mode-video-scripts.md)** for the 6-step process, script structure (Hook / Body / CTA), spoken delivery optimization, and save convention.
 
 ---
 
 ## Mode: Review
 
-Review ads through 6 compliance and quality lenses before shipping.
+Review ads through 6 compliance and quality lenses before shipping (FTC, Meta Policy, Copy Quality, Visual Standards, Voice Authenticity, Substantiation). Spawns 6 parallel Task agents (read-only), synthesizes a unified P1/P2/P3 report, applies P2/P3 fixes, asks before committing.
 
-### The 6 Lenses
-
-| Lens | Location | What It Checks |
-|------|----------|----------------|
-| FTC Compliance | `.claude/lenses/ftc-compliance.md` | Federal regulations, earnings claims |
-| Meta Policy | `.claude/lenses/meta-policy.md` | Platform triggers, Personal Attributes |
-| Copy Quality | `.claude/lenses/copy-quality.md` | Schwartz, Hormozi, Suby frameworks |
-| Visual Standards | `.claude/lenses/visual-standards.md` | Safe zones, OCR, prohibited visuals |
-| Voice Authenticity | `.claude/lenses/voice-authenticity.md` | AI tells, brand voice |
-| Substantiation | `.claude/lenses/substantiation.md` | Claims inventory, proof matching |
-
-### Review Process
-
-1. Gather input (single ad, batch, or component)
-2. Git commit current state (preserves original): `[output] {type} batch pre-review`
-3. Spawn 6 parallel Task agents — one per lens. Use `subagent_type: "general-purpose"`. Each agent:
-   - Reads the ad batch/copy being reviewed
-   - Reads its assigned lens file from `.claude/lenses/`
-   - Evaluates every ad against that lens's checklist
-   - Returns P1/P2/P3 findings with specific line references
-   - Does NOT fix anything — just reports findings (read-only pattern, no write risk)
-4. When all 6 agents return, synthesize findings into a unified P1/P2/P3 report (deduplicate where lenses overlap)
-5. Apply P2/P3 fixes directly to the batch file
-6. Create `review-log.md` documenting what changed
-7. Tell user: "Fixes applied. Want me to commit these changes to git?"
-8. If yes, commit: `[review] {type} batch - N fixes applied`
-
-### Severity Levels
-
-| Level | Meaning |
-|-------|---------|
-| **P1** | Blocks launch (legal/platform risk) |
-| **P2** | Fix before launch (reduces performance or risk) |
-| **P3** | Nice to have (optimization) |
-
-### Status Determination
-
-- **BLOCKED:** Any P1 issues
-- **REVIEW REQUIRED:** Multiple P2 or borderline P1
-- **CLEAR:** No P1, minimal P2
-
-See [references/review-workflow.md](references/review-workflow.md) for full report format.
+See **[references/mode-review.md](references/mode-review.md)** for the full lens table, review process, severity levels, and status determination.
 
 ---
 

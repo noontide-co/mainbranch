@@ -68,24 +68,86 @@ The brief is the locked source of truth for the site. It's composed from:
 
 The skill drafts the brief into a single markdown artifact in the business repo: `decisions/YYYY-MM-DD-minisite-brief-<offer-slug>.md` (per the [`/think` decision pattern](../../think/SKILL.md)).
 
-The brief includes:
-- **Headline + subhead** (≤2 lines, transformation-anchored)
+### Step 2a — pick the dial
+
+Three values: `convert`, `story`, `brand`.
+
+- `convert` — sales-conversion priority. Full Seven Sweeps + Expert Panel scoring at review.
+- `story` — archetype-faithful storytelling. Drops Prove-It and Zero-Risk sweeps.
+- `brand` — voice and brand presence. Only Clarity / Voice / Heightened Emotion sweeps.
+
+The dial decides review depth and influences the paired-imagery style. See [`review.md`](review.md) for the dial-gated sweeps.
+
+### Step 2b — pick the archetype (optional but recommended)
+
+Load [`archetypes.md`](archetypes.md) (the index, not all 9 detail files). Operator picks one archetype for the offer; optionally names a second for `audience_current_archetype` (what the audience is trapped in). The skill loads the picked detail file lazily.
+
+The archetype unlocks: paired-imagery template, headline-formula matches, and the `do_not_state` list (conclusions the audience must reach themselves).
+
+### Step 2c — pick headline formulas
+
+Load [`headline-formulas.md`](headline-formulas.md). Pick 2–3 formulas that match the dial and archetype. The brief draft uses these as scaffolding, not final copy.
+
+### Brief schema (v0.1)
+
+```yaml
+---
+type: brief
+date: YYYY-MM-DD
+slug: <offer-slug>
+status: proposed
+dial: convert | story | brand          # required
+archetype: wounded-healer              # optional but recommended
+audience_current_archetype: victim     # optional
+copy_framework_tag: Compact-Landing    # optional, see section-patterns.md
+headline_formulas_picked:              # optional, suggested 2-3
+  - "outcome-without-pain"
+  - "for-audience-who-tried-X"
+do_not_state:                          # required when archetype set
+  - "Don't give up!"
+  - "It's never too late."
+four_forces:                           # optional (JTBD)
+  push: ""
+  pull: ""
+  habit: ""
+  anxiety: ""
+voice_anchor_lines:
+  use:
+    - ""
+    - ""
+  avoid:
+    - ""
+---
+```
+
+The brief body still includes:
+
+- **Headline + subhead** (≤2 lines, transformation-anchored, picks one of the chosen formulas)
 - **Value prop** (3 short reasons OR one extended argument)
 - **Mechanism summary** (for the how-it-works page)
 - **Picked supporting pages** (which 2–4 from `proof / pricing / faq` or operator-added)
 - **Conversion endpoint** (kind + URL or "to be wired in step 6")
-- **Voice anchor lines** (3–5 sentences from voice.md the subagent should pattern-match)
-- **Framework tag** (if any — PAS / AIDA / StoryBrand / founder-letter / none)
+- **Adjacency map** (per Hughes paired-imagery rule — each section's two images named, with a one-line do-not-state for the caption)
+
+### Brief schema migration
+
+Existing minisite briefs created before 2026-04-29 use the older schema (no `dial`, `archetype`, `do_not_state`). The skill tolerates them. New briefs created on or after 2026-04-29 must include the new fields. `mb validate` enforces the date-based check.
 
 ---
 
-## 3. Review (pre-lock)
+## 3. Review (pre-lock) — Seven Sweeps
 
-Run [`review.md`](review.md) gates in parallel against the brief draft:
-- **research-grounded** — does the language match what real customers said?
-- **in-voice** — does the brief match `voice.md`?
-- **de-AI'd** — any AI tells (em-dash overuse, "in today's fast-paced world," empty intensifiers)?
-- **framework-true** — if a framework was declared, does the brief follow it?
+Run [`review.md`](review.md) sweeps in parallel against the brief draft. Sweeps are **dial-gated**:
+
+- `convert` dial — all 7 sweeps + Expert Panel scoring (every persona ≥ 7, panel avg ≥ 8)
+- `story` dial — sweeps 1, 2, 3, 5, 6 (drops Prove-It and Zero-Risk)
+- `brand` dial — sweeps 1, 2, 6 only (Clarity / Voice / Heightened Emotion)
+
+Auxiliary gates always run:
+
+- **De-AI'd** (against [`anti-patterns.md`](anti-patterns.md) — em-dash rule, banned phrases, overused-verb cluster)
+- **Framework-true** (if `copy_framework_tag` set, structure honors it)
+- **Archetype-fidelity** (no `do_not_state` line written as a headline)
 
 Synthesize findings; surface to operator. They address or proceed.
 

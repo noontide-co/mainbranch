@@ -1,0 +1,66 @@
+name: publish-pypi
+
+# Publishes the mainbranch package to PyPI via trusted-publisher OIDC.
+#
+# Triggered by a GitHub Release (not raw tag-push). Requires the `pypi`
+# GitHub Environment with at least one required reviewer.
+#
+# OIDC claim must match the pending publisher:
+#   owner=mainbranch-ai, repo=mb-vip, workflow=publish-pypi.yml, env=pypi.
+#
+# First test release: tag `oe-v0.1.0.dev0` and use the Releases UI.
+# Promote to `oe-v0.1.0` once dev0 has been smoke-tested on a clean machine.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build sdist + wheel
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mb
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade pip build
+
+      - name: Build distributions
+        run: python -m build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: mb/dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mainbranch
+    permissions:
+      id-token: write
+    steps:
+      - name: Download dist artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish via trusted publisher
+        uses: pypa/gh-action-pypi-publish@release/v1

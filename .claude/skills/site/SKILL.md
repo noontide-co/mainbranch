@@ -24,34 +24,7 @@ Say `/site` again after compaction, context loss, or switching focus. It reloads
 
 ## Pull Latest Updates
 
-```bash
-# Canonical vip resolution (settings.local.json first — no extra deps)
-VIP_PATH=$(python3 -c "
-import json, os
-try:
-    with open('.claude/settings.local.json') as f:
-        dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
-    for d in dirs:
-        if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
-            print(d); break
-except: print('')
-" 2>/dev/null)
-
-# Fallback: ~/.config/vip/local.yaml
-if [ -z "$VIP_PATH" ] || [ ! -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
-  VIP_PATH=$(python3 -c "
-import os
-try:
-    import yaml
-    with open(os.path.expanduser('~/.config/vip/local.yaml')) as f:
-        print(yaml.safe_load(f).get('vip_path', ''))
-except: print('')
-" 2>/dev/null)
-fi
-
-[ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/start/SKILL.md" ] && \
-  git -C "$VIP_PATH" pull origin main 2>&1
-```
+For the canonical vip-resolution + pull bash block (and the failure warning), see [`.claude/reference/pull-engine-updates.md`](../../reference/pull-engine-updates.md). Run it at the start of every invocation.
 
 ---
 
@@ -277,6 +250,25 @@ If conversation compacted or context was lost:
 
 ---
 
+## Brief schema (v0.1)
+
+The brief is the locked source of truth for any /site flow. v0.1 adds these fields on top of the legacy schema:
+
+| Field | Type | Required? | Purpose |
+|---|---|---|---|
+| `dial` | enum: `convert / story / brand` | required | Routes Seven Sweeps depth at review |
+| `archetype` | enum: 9 archetypes | optional but recommended | Drives paired-imagery + headline-formula picks |
+| `audience_current_archetype` | string | optional | What the audience is *trapped in*. Reframe target. |
+| `do_not_state` | list[string] | required when archetype set | Conclusions the audience must reach themselves |
+| `four_forces` | object: `{push, pull, habit, anxiety}` | optional | JTBD frame |
+| `voice_anchor_lines` | object: `{use: [], avoid: []}` | required | Per-site voice slice |
+| `headline_formulas_picked` | list[string] | optional, suggested 2-3 | Picked from `headline-formulas.md` |
+| `copy_framework_tag` | enum (PAS / AIDA / StoryBrand / Compact-Landing / Varied / Enterprise-B2B / Product-Launch / null) | optional | Extends `framework_tag` with Haines page templates |
+
+**Migration:** existing briefs dated before 2026-04-29 use the older schema (no `dial`, `archetype`, `do_not_state`). The skill tolerates them. New briefs created on or after 2026-04-29 must include the new required fields. `mb validate` enforces the date-based check.
+
+---
+
 ## Scope
 
 Site shapes `/site` covers: **lander** (1 page), **minisite** (~4–6 pages), **website** (full). Plus graduation paths up the ladder, including bolt-on CMS for the website tier.
@@ -303,7 +295,10 @@ Site shapes `/site` covers: **lander** (1 page), **minisite** (~4–6 pages), **
 - [references/minisite-generation-system.md](references/minisite-generation-system.md) — load-bearing system prompt for minisite generation subagent
 - [references/concept-variations.md](references/concept-variations.md) — parallel-on-localhost concept generation pattern (default 2)
 - [references/review.md](references/review.md) — quality-gate steps the skill runs through before lock and before publish
-- [references/anti-patterns.md](references/anti-patterns.md) — what NOT to bake into prompts
+- [references/anti-patterns.md](references/anti-patterns.md) — what NOT to bake into prompts (AI-tells + generation anti-patterns)
+- [references/archetypes.md](references/archetypes.md) — Hughes 9-archetype catalog (picker for the brief)
+- [references/archetypes/<slug>.md](references/archetypes/) — per-archetype detail (lazy-loaded)
+- [references/headline-formulas.md](references/headline-formulas.md) — 20+ formulas grouped by frame, picked per dial + archetype
 - [references/naming-heuristic.md](references/naming-heuristic.md) — 8-step domain naming playbook
 - [references/cloudflare-pages-link.md](references/cloudflare-pages-link.md) — CF Pages GitHub App handshake walkthrough
 - [references/frontend-design.md](references/frontend-design.md) — typography, color, motion (Next.js-relevant)

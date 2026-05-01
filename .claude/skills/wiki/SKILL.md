@@ -21,35 +21,7 @@ Create and maintain personal wikis with atomic notes, WikiLinks, and auto-deploy
 
 ## Pull Latest Updates (Always)
 
-```bash
-# Canonical vip resolution (settings.local.json first — no extra deps)
-VIP_PATH=$(python3 -c "
-import json, os
-try:
-    with open('.claude/settings.local.json') as f:
-        dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
-    for d in dirs:
-        if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
-            print(d); break
-except: print('')
-" 2>/dev/null)
-
-# Fallback: check ~/.config/vip/local.yaml (needs PyYAML)
-if [ -z "$VIP_PATH" ] || [ ! -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
-  VIP_PATH=$(python3 -c "
-import os
-try:
-    import yaml
-    with open(os.path.expanduser('~/.config/vip/local.yaml')) as f:
-        print(yaml.safe_load(f).get('vip_path', ''))
-except: print('')
-" 2>/dev/null)
-fi
-
-# Pull if found and valid
-[ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/start/SKILL.md" ] && \
-  git -C "$VIP_PATH" pull origin main 2>&1
-```
+See **[../../reference/pull-engine-updates.md](../../reference/pull-engine-updates.md)** for the canonical vip-resolution + pull bash block. Run it at the start of every /wiki invocation.
 
 ---
 
@@ -105,133 +77,9 @@ cat ~/.mainbranch/wiki.json 2>/dev/null || echo "No wiki configured yet"
 
 Quick first-time wiki setup. Installs default template and deploys via wrangler CLI. Run `/wiki configure` after to personalize.
 
-**Steps:**
+**Quick gist:** Ask repo name, check `gh auth`, create+clone repo, merge `commune-wiki` template upstream, apply Windows path fixes if needed, `pnpm install && pnpm build`, push to `main`, ensure Cloudflare account, create Pages project via dashboard with Git connect, capture the deployed URL, write site URL into `astro.config.mjs`, push to trigger deploy, save `~/.mainbranch/wiki.json`.
 
-### 1. Ask: Repo name? Location?
-Default: `wiki` in home directory (`~/wiki`)
-
-### 2. Check GitHub CLI
-```bash
-gh auth status
-```
-If not authenticated, guide user to run `gh auth login`.
-
-### 3. Create GitHub repo and clone
-```bash
-gh repo create [user]/[wiki] --private --clone
-cd [wiki]
-```
-If repo exists but not cloned: `git clone https://github.com/[user]/[wiki].git`
-
-### 4. Add upstream and merge template
-```bash
-git remote add upstream https://github.com/noontide-co/commune-wiki.git
-git fetch upstream
-git merge upstream/main --allow-unrelated-histories -m "Initial wiki from commune-wiki template"
-```
-
-### 5. Apply Windows compatibility fixes (Windows only)
-On Windows, fix path handling in `astro.backlinks.ts`:
-
-```bash
-# Add fileURLToPath import
-sed -i "s/import path from 'node:path';/import path from 'node:path';\nimport { fileURLToPath } from 'node:url';/" astro.backlinks.ts
-
-# Fix the dist path line
-sed -i "s/path.join(dir.pathname,/path.join(fileURLToPath(dir),/" astro.backlinks.ts
-```
-
-Or manually edit `astro.backlinks.ts`:
-- Add import: `import { fileURLToPath } from 'node:url';`
-- Change: `path.join(dir.pathname, 'backlinks.json')` → `path.join(fileURLToPath(dir), 'backlinks.json')`
-
-### 6. Install dependencies and build
-```bash
-pnpm install
-pnpm build
-```
-
-**If build fails with sitemap error:** Temporarily comment out the sitemap integration in `astro.config.mjs`, rebuild, then uncomment after first deploy.
-
-### 7. Commit and push
-```bash
-git add -A
-git commit -m "Initial wiki setup"
-```
-
-**Check branch name** (Git may default to `master`):
-```bash
-git branch --show-current
-```
-
-If branch is `master`, rename to `main`:
-```bash
-git branch -m master main
-```
-
-Then push:
-```bash
-git push -u origin main
-```
-
-### 8. Ensure Cloudflare account exists
-
-If user doesn't have a Cloudflare account, guide them to create one:
-1. Go to https://dash.cloudflare.com
-2. Click "Sign up" and create free account
-
-### 9. Create Pages project via dashboard (enables auto-deploy)
-
-Guide user through Cloudflare dashboard — this creates a Git-connected project with auto-deploy:
-
-1. Go to https://dash.cloudflare.com
-2. Left sidebar: **Workers & Pages**
-3. Click **"Create application"** (blue button, top right)
-4. **IMPORTANT:** Click the small link at the bottom: **"Pages: Get started"** (NOT the Worker option)
-5. Select **"Connect to Git"**
-6. Authorize GitHub if prompted, select the wiki repository
-7. Configure build settings:
-   - Project name: `wiki` (or preferred name)
-   - Production branch: `main`
-   - Build command: `pnpm build`
-   - Build output directory: `dist`
-8. Click **"Save and Deploy"**
-
-First build takes ~1-2 minutes. Watch progress on screen.
-
-### 10. Note the deployed URL
-
-After deploy completes, Cloudflare shows the URL (e.g., `https://wiki-abc.pages.dev`).
-
-Ask user: "What URL did Cloudflare assign? (shown on success screen)"
-
-### 11. Update site URL and push
-
-Edit `astro.config.mjs` with the actual URL:
-```javascript
-site: 'https://[actual-url].pages.dev',
-```
-
-Then commit and push — this triggers auto-deploy:
-```bash
-pnpm build
-git add -A && git commit -m "[update] Set site URL" && git push
-```
-
-### 12. Save config
-```bash
-mkdir -p ~/.mainbranch
-cat > ~/.mainbranch/wiki.json << 'EOF'
-{
-  "wiki_repo": "/absolute/path/to/wiki",
-  "hosting": "cloudflare",
-  "domain": "your-url.pages.dev",
-  "cf_project": "wiki"
-}
-EOF
-```
-
-**Exit:** "Wiki deployed at https://[url].pages.dev with auto-deploy enabled! Every `git push` will automatically deploy. Run `/wiki configure` to personalize (name, avatar, social links, etc.)"
+See **[references/setup-mode.md](references/setup-mode.md)** for the full 12-step procedure: every command, the Windows compat fixes, the Cloudflare dashboard click-path, and the exit message.
 
 ---
 
@@ -472,6 +320,8 @@ Live at: https://yourdomain.com
 
 ## References
 
+- [../../reference/pull-engine-updates.md](../../reference/pull-engine-updates.md) — Canonical vip-resolution + pull bash block
+- [references/setup-mode.md](references/setup-mode.md) — Full 12-step setup mode procedure (commands, Windows fixes, CF dashboard walkthrough, config save)
 - [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md) — Dashboard walkthrough
 - [references/customization.md](references/customization.md) — Update avatar, name, social links after setup
 - [references/hosting-recommendation.md](references/hosting-recommendation.md) — Why Cloudflare
