@@ -163,7 +163,7 @@ jobs:
         run: |
           .venv-smoke/bin/mb --help > help.txt
           cat help.txt
-          grep -q "main branch\|scaffolds" help.txt \
+          grep -qi "main branch\|scaffolds" help.txt \
             || { echo "::error::root --help output missing expected description"; exit 1; }
 
       - name: Smoke — mb skill list (does not crash)
