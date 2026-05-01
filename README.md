@@ -23,6 +23,12 @@ See [CHANGELOG.md](CHANGELOG.md) for what's in this release.
 
 ---
 
+## What's new
+
+See [CHANGELOG.md](CHANGELOG.md). Each release ships a "What this means for you" plain-English section above the technical detail — the relevant bits in 30 seconds.
+
+---
+
 ## Honest current state (v0.1)
 
 - **Built for Claude Code.** Cross-platform skill support is a v0.2+ commitment.
