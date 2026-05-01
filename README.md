@@ -29,6 +29,41 @@ See [CHANGELOG.md](CHANGELOG.md) for what's in this release.
 
 ---
 
+## What ships now
+
+What's actually in the wheel today:
+
+- **`mb` CLI**: `init`, `doctor`, `validate`, `graph`, `skill list`, `skill path`, `skill link`, `educational`, `resolve`, `think`
+- **Bundled Claude Code skills**: `/ads`, `/end`, `/help`, `/organic`, `/pull`, `/setup`, `/site`, `/start`, `/think`, `/vsl`, `/wiki` plus composable skills (`skill-brief-draft`, `skill-concept`, `skill-review`)
+- **Public engine** under MIT license
+- **PyPI distribution** via `pipx install mainbranch`
+
+---
+
+## Roadmap
+
+Where this is going. v0.1 is the CLI + skills foundation; v0.2+ broadens compatibility and deepens the workflow surfaces. The list below is direction, not promises.
+
+- `mb books` — BeanCount integration for ledger workflows ([#128](https://github.com/noontide-co/mainbranch/issues/128))
+- `mb fulfillment` — agency-arm tooling for delivery ops
+- Cross-agent compatibility — Codex, Cursor, Hermes, local LLMs (v0.2+)
+- Deeper `/site` workflows — lander → minisite → website graduation
+- Dashboard — web UI for the bets-in-public feed (v0.2–v0.3)
+- Skool → GitHub webhook automation (v0.2)
+
+---
+
+## Public OSS vs paid community
+
+Plain English boundary so nobody is surprised:
+
+- **Open-source (free, MIT)**: the `mb` CLI, all bundled skills, the schema, the framework. Anyone can install and run — no account, no gating, no upsell wall.
+- **Paid community (Skool)**: curated reference (Devon's voice corpus, compliance log, angles library), the live bets-in-public feed, group calls, classroom curriculum, and direct Devon access at higher tiers.
+
+The OSS engine is fully usable on its own. The paid wrapper layers in operator-specific reference and live operator presence on top of the same files.
+
+---
+
 ## What's new
 
 See [CHANGELOG.md](CHANGELOG.md). Each release ships a "What this means for you" plain-English section above the technical detail — the relevant bits in 30 seconds.
