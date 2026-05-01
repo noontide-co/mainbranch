@@ -5,11 +5,28 @@
 Main Branch is the `mb` CLI plus a set of MIT-licensed Claude Code skills for running business-as-files workflows. Your offer, audience, voice, research, decisions, and campaigns live in a six-folder taxonomy in your own git repo — versioned, portable, agent-readable. Built for Claude Code first; cross-agent at v0.2+.
 
 
+## Install
+
+```bash
+pipx install mainbranch
+```
+
+That puts the `mb` CLI on your PATH. Run `mb --help` to see subcommands. (PyPI publish is the next launch step — until then, install in developer mode below.)
+
+For developer mode (cloning the engine repo to hack on skills):
+
+```bash
+git clone https://github.com/noontide-co/mainbranch.git
+```
+
+See [CHANGELOG.md](CHANGELOG.md) for what's in this release.
+
+---
+
 ## Honest current state (v0.1)
 
 - **Built for Claude Code.** Cross-platform skill support is a v0.2+ commitment.
 - **Schema is v1; will evolve.** Frontmatter shapes covered by `mb validate` are stable for v0.1.x; breaking changes bump the major.
-- **Install: `pipx install mainbranch`** (recommended, once published) or `git clone https://github.com/noontide-co/mainbranch` (developer mode).
 - **Cross-agent compatibility matrix lands at v0.2.** Codex, Cursor, Hermes, local LLMs are not first-class targets in v0.1.
 
 The engine v0.1.0 decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.md`](decisions/2026-04-29-mb-vip-v0-1-0-master.md).
