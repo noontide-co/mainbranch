@@ -820,7 +820,14 @@ This pattern is reusable beyond `mb doctor`. It's the standard shape for any opi
 
 The schema (`core/`, frontmatter conventions, `mb validate`) and the CLIs (`tool-domain`, `tool-dns`, etc.) run anywhere a shell runs. Engine-side pitch: **"Schema and CLIs portable everywhere; skills work in Claude Code."**
 
-README sentence (verbatim, locked): *"Main Branch v0.1.0 is built for Claude Code. Other agents (Codex, Cursor, Hermes, local LLMs) may run individual skills with manual setup, but full-flow compatibility is a v0.2+ goal. We will publish a compatibility matrix when v0.2 ships."*
+Superseded README sentence (v0.1.0 launch wording): *"Main Branch v0.1.0 is built for Claude Code. Other runtimes (Codex, Cursor, OpenClaw, Hermes, local LLMs) may run individual skills with manual setup, but full-flow compatibility is a v0.2+ goal. We will publish a compatibility matrix when v0.2 ships."*
+
+> **2026-05-01 amendment:** see
+> `decisions/2026-05-01-mb-cli-vs-agent-workflows-boundary.md`. The public
+> compatibility target list now explicitly includes OpenClaw alongside Codex,
+> Cursor, Hermes, and local runtimes. Internal Noontide runtime preference
+> (Hermes + Paperclip) does not constrain the public engine: `mb` stays
+> runtime-agnostic.
 
 Operators who try Cursor and discover skills don't run will churn quietly. We accept this for v0.1.0 and fix in v0.2+.
 
