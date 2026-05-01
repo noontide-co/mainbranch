@@ -4,6 +4,8 @@ Engine umbrella for [Main Branch](https://github.com/noontide-co/mainbranch) —
 
 This package is the Python entry point. Skills, playbooks, educational content, and consumer-repo templates ship as bundled package data. The actual day-to-day "do work" surfaces are Claude Code skills (markdown), invoked from inside Claude Code.
 
+The source tree keeps skills and playbooks in one place: repo-root `.claude/skills/` and `.claude/playbooks/`. During sdist/wheel builds, `setup.py` copies those directories into `mb/_data/skills/` and `mb/_data/playbooks/` inside the build artifact so installed wheels can resolve `mb skill list` without a source checkout.
+
 ## Install
 
 ```bash
