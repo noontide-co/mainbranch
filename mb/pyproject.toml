@@ -57,6 +57,9 @@ mb = "mb.cli:app"
 Homepage = "https://github.com/noontide-co/mainbranch"
 Repository = "https://github.com/noontide-co/mainbranch"
 Issues = "https://github.com/noontide-co/mainbranch/issues"
+Documentation = "https://github.com/noontide-co/mainbranch/blob/main/docs/BEGINNER-SETUP.md"
+Changelog = "https://github.com/noontide-co/mainbranch/blob/main/CHANGELOG.md"
+Support = "https://github.com/noontide-co/mainbranch/blob/main/SUPPORT.md"
 
 [tool.setuptools.packages.find]
 where = ["."]
