@@ -54,9 +54,9 @@ dev = [
 mb = "mb.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/mainbranch-ai/mb-vip"
-Repository = "https://github.com/mainbranch-ai/mb-vip"
-Issues = "https://github.com/mainbranch-ai/mb-vip/issues"
+Homepage = "https://github.com/mainbranch-ai/vip"
+Repository = "https://github.com/mainbranch-ai/vip"
+Issues = "https://github.com/mainbranch-ai/vip/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
