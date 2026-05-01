@@ -7,7 +7,7 @@ Turn Claude into your personal marketing team. Create ads, scripts, and communit
 
 - **Built for Claude Code.** Cross-platform skill support is a v0.2+ commitment.
 - **Schema is v1; will evolve.** Frontmatter shapes covered by `mb validate` are stable for v0.1.x; breaking changes bump the major.
-- **Install: `pipx install mainbranch`** (recommended, once published) or `git clone https://github.com/mainbranch-ai/mb-vip` (developer mode).
+- **Install: `pipx install mainbranch`** (recommended, once published) or `git clone https://github.com/mainbranch-ai/vip` (developer mode).
 - **Cross-agent compatibility matrix lands at v0.2.** Codex, Cursor, Hermes, local LLMs are not first-class targets in v0.1.
 
 The v0.1.0 master decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.md`](decisions/2026-04-29-mb-vip-v0-1-0-master.md).
@@ -45,13 +45,7 @@ All of this happens through simple commands. No prompting skills required.
 
 ## Before You Start
 
-### 1. Get Repository Access (Required First)
-
-This is a private repository. You need access before you can clone it.
-
-**Share your GitHub username with Devon in the Skool community.** Wait for confirmation before proceeding.
-
-### 2. Install These Tools
+### 1. Install These Tools
 
 #### GitHub Desktop (Strongly Recommended)
 
@@ -259,7 +253,7 @@ Devon updates the vip repository with new skills and improvements.
 Post in the Main Branch group. Tag @Devon for technical questions.
 
 **Common issues:**
-- "404 error" or "Repository not found" — You need access first. Share your GitHub username with Devon.
+- "404 error" or "Repository not found" — Verify the URL and your network. The repo is public; no access request needed.
 - "Claude does not see my files" — Make sure you started Claude in your business repo folder and ran `/start`
 - "Skills are not working" — Check that `.claude/settings.local.json` exists and run `/start` once to auto-repair missing bridge links. If still broken, run `/setup`.
 - "Output sounds generic" — Add more detail to your reference files, especially voice.md
