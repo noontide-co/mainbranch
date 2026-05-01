@@ -15,31 +15,7 @@ Resolves the vip path and pulls updates there — NOT from the current working d
 
 ### Step 1: Resolve VIP Path
 
-```bash
-# Canonical vip resolution (settings.local.json first — no extra deps)
-VIP_PATH=$(python3 -c "
-import json, os
-try:
-    with open('.claude/settings.local.json') as f:
-        dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
-    for d in dirs:
-        if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
-            print(d); break
-except: print('')
-" 2>/dev/null)
-
-# Fallback: check ~/.config/vip/local.yaml (needs PyYAML)
-if [ -z "$VIP_PATH" ] || [ ! -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
-  VIP_PATH=$(python3 -c "
-import os
-try:
-    import yaml
-    with open(os.path.expanduser('~/.config/vip/local.yaml')) as f:
-        print(yaml.safe_load(f).get('vip_path', ''))
-except: print('')
-" 2>/dev/null)
-fi
-```
+For the canonical bash + python3 resolver (settings.local.json first, ~/.config/vip/local.yaml fallback), see **[../../reference/vip-path-resolution.md](../../reference/vip-path-resolution.md)**.
 
 ### Step 2: Pull VIP
 
@@ -57,24 +33,9 @@ git pull origin main 2>&1
 
 ### Handling Results
 
-**VIP updated:** "Pulled latest engine updates." — then read `<vip_path>/.claude/announcements.md` and surface unseen, non-expired entries (per the format defined in announcements.md). Diff against `~/.config/vip/local.yaml:seen_announcements` so the user only sees what's actually new.
+**VIP updated:** "Pulled latest engine updates." — then read the CHANGELOG and surface unread entries (see "What's New from CHANGELOG" below).
 
-Render format when there are unseen announcements:
-
-```
-Pulled latest engine updates.
-
-─── What's new ───
-[NEW] <title>
-<2-line body>
-─────────────────
-
-(Run /start to begin, or run the named skill directly.)
-```
-
-If no unseen announcements: just "Pulled latest engine updates." with nothing after.
-
-**VIP current:** "Engine already up to date." — still surface unseen announcements (the user might not have run /start since vip last had a feature land).
+**VIP current:** "Engine already up to date." — still surface unread CHANGELOG entries (the user might not have run /start since vip last had a release land).
 
 **VIP path not found:** "Couldn't find vip. Run `/setup` to configure your vip path, or check `~/.config/vip/local.yaml`."
 
@@ -83,3 +44,89 @@ If no unseen announcements: just "Pulled latest engine updates." with nothing af
 **Business repo current or local-only:** Say nothing.
 
 **Error:** "Couldn't pull: [error]. Try: Open GitHub Desktop → select vip → click 'Fetch origin'."
+
+---
+
+## What's New from CHANGELOG
+
+After a successful pull, surface unread CHANGELOG entries so the user knows what landed.
+
+### Read the current engine version
+
+```bash
+ENGINE_VERSION=$(python3 -c "
+import re, sys
+try:
+    body = open('$VIP_PATH/CHANGELOG.md').read()
+    # First versioned heading after the [Unreleased] block
+    m = re.search(r'^## \[(\d+\.\d+\.\d+[^\]]*)\]', body, re.M)
+    print(m.group(1) if m else '')
+except Exception:
+    print('')
+" 2>/dev/null)
+```
+
+### Read the user's last seen version
+
+```bash
+LAST_SEEN=$(python3 -c "
+import os
+try:
+    import yaml
+    with open(os.path.expanduser('~/.config/vip/local.yaml')) as f:
+        cfg = yaml.safe_load(f) or {}
+    print(cfg.get('last_seen_version', '') or '')
+except Exception:
+    print('')
+" 2>/dev/null)
+```
+
+### Compare and surface unread entries
+
+If `ENGINE_VERSION` is set and `LAST_SEEN != ENGINE_VERSION`, extract the matching CHANGELOG section (and any newer ones between `LAST_SEEN` and `ENGINE_VERSION`) and render as a banner:
+
+```
+Pulled latest engine updates.
+
+─── What's new in <ENGINE_VERSION> ───
+<First 4-6 lines of the matching section's most prominent bullets,
+trimmed for screen. Skip "Notes / follow-ups" sub-sections.>
+──────────────────────────────────────
+
+(Run /start to begin, or run a named skill directly.)
+```
+
+If no unread entries (`LAST_SEEN == ENGINE_VERSION` or both empty): just print "Pulled latest engine updates." with nothing after.
+
+### Mark as seen
+
+After display, update `~/.config/vip/local.yaml`:
+
+```bash
+python3 -c "
+import os, yaml
+path = os.path.expanduser('~/.config/vip/local.yaml')
+os.makedirs(os.path.dirname(path), exist_ok=True)
+try:
+    with open(path) as f:
+        cfg = yaml.safe_load(f) or {}
+except FileNotFoundError:
+    cfg = {}
+cfg['last_seen_version'] = '$ENGINE_VERSION'
+with open(path, 'w') as f:
+    yaml.safe_dump(cfg, f)
+"
+```
+
+The user's `last_seen_version` is also bumped automatically when `/start` surfaces the same banner — only one of the two needs to fire per pull.
+
+### Honour user dismiss
+
+If the user types "dismiss" / "seen" / "got it" after the banner appears, also bump `last_seen_version` to the current engine version. The banner stops surfacing on subsequent runs until a new release lands.
+
+---
+
+## References
+
+- [../../reference/vip-path-resolution.md](../../reference/vip-path-resolution.md) — canonical vip-path resolver
+- [../../../CHANGELOG.md](../../../CHANGELOG.md) — release notes (the source surfaced as "what's new")

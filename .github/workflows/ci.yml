@@ -46,7 +46,7 @@ jobs:
         run: mypy mb
 
       - name: Pytest with coverage
-        run: pytest tests/ -v --cov=mb --cov-report=term-missing
+        run: pytest tests/ -v --cov=mb --cov-report=term-missing --cov-fail-under=70
 
   markdown-line-count:
     name: SKILL.md line-count gate
@@ -65,3 +65,135 @@ jobs:
             fi
           done < <(find .claude/skills .claude/playbooks -name SKILL.md 2>/dev/null)
           exit $fail
+
+  wheel-install-smoke:
+    # Release-path smoke test. The python matrix runs against an editable
+    # install (``pip install -e .``), which can't catch packaging drift —
+    # a missing ``py.typed`` in the built wheel, a stale
+    # ``[tool.setuptools.package-data]`` entry, or an entry-point group
+    # that only registers under editable mode. This job builds the wheel +
+    # sdist the way PyPI will consume them, installs the wheel into a
+    # clean venv (no repo sources on ``sys.path``), and runs the user-
+    # facing smoke commands end-to-end.
+    #
+    # Single Python version — wheel packaging is pure-Python and doesn't
+    # vary across 3.10/3.11/3.12 enough to justify matrixing. We pick 3.12
+    # (latest supported target). Pattern borrowed from companyctx.
+    #
+    # Note (v0.1.0): mb/_data/skills/ ships empty in the source tree
+    # — `mb skill list` resolves via source-checkout fallback in dev,
+    # which the wheel by definition can't see. The smoke job validates
+    # the wheel-shipped surface (entry point, importable package,
+    # py.typed) and tolerates an empty `mb skill list` until the v0.1.x
+    # follow-up wires _data/skills/ population at build time. See
+    # CHANGELOG / decisions/2026-04-29-mb-vip-v0-1-0-master.md.
+    name: wheel-install-smoke
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mb
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build sdist + wheel
+        run: python -m build
+
+      - name: Verify py.typed shipped in wheel
+        # The editable install test suite can't catch a missing py.typed —
+        # it reads straight from the source tree. A wheel without py.typed
+        # silently degrades downstream mypy to Any. Fail loudly here.
+        run: |
+          wheel=$(ls dist/mainbranch-*.whl | head -n1)
+          echo "inspecting $wheel"
+          python -m zipfile -l "$wheel"
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/py\.typed([[:space:]]|$)' \
+            || { echo "::error::py.typed missing from wheel"; exit 1; }
+
+      - name: Create fresh venv and install the wheel
+        # Fresh venv means no repo sources on sys.path — a genuine
+        # release-path install. ``pip install <wheel>`` (not ``-e``) is
+        # the point of this job; an editable install can't catch
+        # package-data drift.
+        run: |
+          python -m venv .venv-smoke
+          .venv-smoke/bin/pip install --upgrade pip
+          .venv-smoke/bin/pip install ./dist/mainbranch-*.whl
+
+      - name: Smoke — mb --version
+        # Exit 0 and emits ``mb <version>`` where <version> matches
+        # the installed distribution metadata. Catches entry-point
+        # registration drift (``[project.scripts]`` stale) and version
+        # skew between ``mb.__version__`` and the wheel metadata.
+        run: |
+          expected="mb $(.venv-smoke/bin/python -c \
+            'from importlib.metadata import version; print(version("mainbranch"))')"
+          out=$(.venv-smoke/bin/mb --version)
+          echo "expected=$expected"
+          echo "actual=  $out"
+          if [ "$out" != "$expected" ]; then
+            echo "::error::--version output ($out) does not match installed dist metadata ($expected)"
+            exit 1
+          fi
+
+      - name: Smoke — python -c "import mb; mb.__version__"
+        # Catches missing __version__ attribute or import-time errors that
+        # the CLI smoke might mask via Typer's exception handling.
+        run: |
+          .venv-smoke/bin/python -c '
+          import mb
+          assert hasattr(mb, "__version__"), "mb.__version__ missing"
+          assert mb.__version__, "mb.__version__ empty"
+          print("import ok:", mb.__version__)
+          '
+
+      - name: Smoke — mb --help (root help renders)
+        # Catches Typer registration drift across subcommands. A broken
+        # subcommand declaration crashes --help on import.
+        run: |
+          .venv-smoke/bin/mb --help > help.txt
+          cat help.txt
+          grep -qi "main branch\|scaffolds" help.txt \
+            || { echo "::error::root --help output missing expected description"; exit 1; }
+
+      - name: Smoke — mb skill list (does not crash)
+        # v0.1.0: wheel ships with mb/_data/skills/ empty (skills live in
+        # the engine repo's .claude/skills/ and aren't yet copied into
+        # _data/skills/ at build time). The smoke job asserts the command
+        # runs to clean exit; population of _data/skills/ is tracked as
+        # a v0.1.x follow-up.
+        run: |
+          .venv-smoke/bin/mb skill list
+          echo "exit=$?"
+
+      - name: Smoke — mb doctor (runs against empty cwd)
+        # A second user-facing CLI surface that doesn't depend on bundled
+        # skills. Runs in a temp dir so doctor lands a real diagnosis
+        # against an empty repo (it should exit non-zero with a report,
+        # which is fine — the check is "does it crash?").
+        run: |
+          mkdir -p /tmp/doctor-smoke && cd /tmp/doctor-smoke
+          set +e
+          $GITHUB_WORKSPACE/mb/.venv-smoke/bin/mb doctor . --json > out.json
+          rc=$?
+          set -e
+          echo "doctor exit=$rc"
+          # Exit 0 (clean) or 1 (red checks) are both acceptable. Anything
+          # else (2+, segfault) means the command itself broke.
+          if [ "$rc" -gt 1 ]; then
+            cat out.json
+            echo "::error::mb doctor crashed (exit $rc)"
+            exit 1
+          fi
+          # Verify it emitted valid JSON.
+          python3 -c 'import json; json.load(open("out.json"))'

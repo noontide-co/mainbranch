@@ -261,7 +261,7 @@ Check `reference/core/*.md`. No folder → `/setup`. Exists → check completene
 
 **Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[current_offer or 'single']**"
 
-**Surface unseen announcements before the menu**, present option 1 (triage), and use the "while you wait" pattern when spawning agents. See **[references/triage-menu.md](references/triage-menu.md)** for the full menu, announcement-banner format, the random "while you wait" filler lines, and rules for when to auto-suggest or skip triage.
+**Surface unread CHANGELOG entries before the menu**, present option 1 (triage), and use the "while you wait" pattern when spawning agents. See **[references/triage-menu.md](references/triage-menu.md)** for the full menu, the CHANGELOG "what's new" banner format (diff'd against `last_seen_version`), the random "while you wait" filler lines, and rules for when to auto-suggest or skip triage.
 
 ---
 
@@ -340,7 +340,7 @@ If re-invoked after compaction: re-read `~/.config/vip/local.yaml` for repo + id
 
 - [../../reference/pull-engine-updates.md](../../reference/pull-engine-updates.md) — Step -1 + Step 0.5 pull scripts and failure warnings
 - [references/repo-detection.md](references/repo-detection.md) — Step 0 full CWD detection, migration, multi-repo selection, REPO_PATH, vip-loaded verification
-- [references/triage-menu.md](references/triage-menu.md) — Step 3 announcement banner, menu, "while you wait" pattern, auto-suggest/skip rules
+- [references/triage-menu.md](references/triage-menu.md) — Step 3 CHANGELOG banner, menu, "while you wait" pattern, auto-suggest/skip rules
 - [references/auto-heal.md](references/auto-heal.md) — Bridge link recovery
 - [references/config-system.md](references/config-system.md) — Config loading and recovery
 - [references/mcp-preflight.md](references/mcp-preflight.md) — MCP pre-flight checks

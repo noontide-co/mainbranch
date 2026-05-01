@@ -10,6 +10,10 @@ name: publish-pypi
 #
 # First test release: tag `oe-v0.1.0.dev0` and use the Releases UI.
 # Promote to `oe-v0.1.0` once dev0 has been smoke-tested on a clean machine.
+#
+# Release notes: the `extract-changelog` job parses CHANGELOG.md for the
+# section matching the release tag and updates the GitHub Release body
+# with that section. Pattern borrowed from `companyctx`'s publish-pypi.yml.
 
 on:
   release:
@@ -46,9 +50,59 @@ jobs:
           path: mb/dist/
           if-no-files-found: error
 
+  release-notes:
+    name: Sync release notes from CHANGELOG
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Extract CHANGELOG section for this release
+        id: extract
+        run: |
+          # Tag scheme: oe-vMAJOR.MINOR.PATCH (e.g. oe-v0.1.0).
+          # CHANGELOG heading: ## [MAJOR.MINOR.PATCH] - YYYY-MM-DD ...
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#oe-v}"
+          echo "tag=$tag version=$version"
+          python3 - <<PY > release-notes.md
+          import re, sys, pathlib
+          version = "$version"
+          body = pathlib.Path("CHANGELOG.md").read_text(encoding="utf-8")
+          # Match "## [<version>]" through the next "## [" or EOF.
+          pattern = re.compile(
+              r"^## \[" + re.escape(version) + r"\][^\n]*\n(.*?)(?=^## \[|\Z)",
+              re.M | re.S,
+          )
+          m = pattern.search(body)
+          if not m:
+              # No matching section — fall back to the whole [Unreleased] block
+              # so the release body isn't empty. Surface the gap visibly.
+              fallback = re.search(
+                  r"^## \[Unreleased\][^\n]*\n(.*?)(?=^## \[|\Z)",
+                  body, re.M | re.S,
+              )
+              if fallback:
+                  print(f"_(no CHANGELOG section for {version} — showing [Unreleased])_\n")
+                  print(fallback.group(1).rstrip())
+              else:
+                  print(f"_(no CHANGELOG section for {version} found)_")
+              sys.exit(0)
+          print(m.group(1).rstrip())
+          PY
+          echo "---"
+          cat release-notes.md
+
+      - name: Update GitHub Release body
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "${GITHUB_REF_NAME}" --notes-file release-notes.md
+
   publish:
     name: Publish to PyPI
-    needs: build
+    needs: [build, release-notes]
     runs-on: ubuntu-latest
     environment:
       name: pypi

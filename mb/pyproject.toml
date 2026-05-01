@@ -92,3 +92,8 @@ ignore_missing_imports = true
 minversion = "7.0"
 addopts = "-ra --strict-markers"
 testpaths = ["tests"]
+
+[tool.coverage.report]
+# Block merge if total coverage drops below 70%. Tests don't have to cover
+# every branch — they have to cover the ones the user actually hits.
+fail_under = 70
