@@ -299,6 +299,9 @@ Devon updates the Main Branch repository with new skills and improvements.
 **In the Skool community:**
 Post in the Main Branch group. Tag @Devon for technical questions.
 
+**Not in the Skool community?**
+Open an issue at [github.com/noontide-co/mainbranch/issues](https://github.com/noontide-co/mainbranch/issues).
+
 **Common issues:**
 - "404 error" or "Repository not found" — Verify the URL and your network. The repo is public; no access request needed.
 - "Claude does not see my files" — Make sure you started Claude in your business repo folder and ran `/start`
@@ -332,7 +335,7 @@ You can, but you do not need to. The skills are designed to work out of the box.
 
 **What makes this different from ChatGPT?**
 
-ChatGPT forgets everything between sessions. Main Branch remembers because your business info lives in files that Claude reads every time.
+ChatGPT lives in Sam Altman's box. Main Branch lives in your filesystem. Your offer, audience, voice, research, and decisions are markdown in your own git repo — versioned, portable, not subject to a SaaS provider's TOS, retention policy, or downtime. The agent reads your files; the data sits with you.
 
 **I am stuck. What do I do?**
 
@@ -352,6 +355,8 @@ That file has:
 - Git commit conventions
 
 You do not need to read it to get started. But it is there when you want to go deeper.
+
+**Decision history:** the engine v0.1.0 master decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.md`](decisions/2026-04-29-mb-vip-v0-1-0-master.md). All shipping decisions are dated, versioned, and committed alongside the code that implements them.
 
 ---
 
