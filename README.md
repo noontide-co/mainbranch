@@ -19,7 +19,7 @@ That puts the `mb` CLI on your PATH. Run `mb --help` to see subcommands.
 
 Tested on macOS and Linux. Windows is experimental in v0.1; see
 [docs/compatibility.md](docs/compatibility.md) and track
-[#151](https://github.com/noontide-co/mainbranch/issues/151) for status.
+[#137](https://github.com/noontide-co/mainbranch/issues/137) for Windows CI/support work.
 
 For developer / advanced / legacy mode (cloning the engine repo to hack on skills):
 

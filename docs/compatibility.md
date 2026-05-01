@@ -9,7 +9,7 @@ This page is the public compatibility contract for that surface.
 |---|---|---|
 | macOS | Supported | Primary development path. Recommended for beginners. |
 | Linux | Supported for `mb`; supported when Claude Code is installed | CI runs the Python package on Linux. Claude Code must be installed separately. |
-| Windows | Experimental | Not tested in CI for v0.1.x. Track [#151](https://github.com/noontide-co/mainbranch/issues/151). |
+| Windows | Experimental | Not tested in CI for v0.1.x. Track [#137](https://github.com/noontide-co/mainbranch/issues/137). |
 | Python | 3.10, 3.11, 3.12 | CI gates all three versions. |
 | Install mode | `pipx install mainbranch` | Canonical public install path. |
 | Developer mode | Git clone | For contributors who want to edit the engine or skills. |
