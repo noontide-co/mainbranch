@@ -191,7 +191,7 @@ The generation subagent reads `kind` + `render` + `url` and renders the home CTA
 
 The default for offers that charge money. `stripe.py create-payment-link` runs against the offer; the returned URL is the conversion endpoint.
 
-The "kind of payment" is operator-declared in `offer.md` — `deposit`, `full`, `subscription` (V2), or `custom`. The atom doesn't decide; it just creates the payment link with the amount the operator specified.
+The "kind of payment" is operator-declared in `offer.md` — `deposit`, `full`, `subscription` (V2), or `custom`. The tool doesn't decide; it just creates the payment link with the amount the operator specified.
 
 | Field | Default | Source |
 |---|---|---|
@@ -200,10 +200,10 @@ The "kind of payment" is operator-declared in `offer.md` — `deposit`, `full`, 
 | `description` | offer.md `payment_description` or generated | offer.md or LLM |
 | `statement_descriptor` | offer.md `statement_descriptor` or `NOONTIDE` | offer.md or fallback (max 22 chars) |
 | `metadata.mb_offer` | `<offer-slug>` | derived from offer's directory name |
-| `metadata.mb_kind` | `"deposit"` (V1 hardcoded) | atom constant |
+| `metadata.mb_kind` | `"deposit"` (V1 hardcoded) | tool constant |
 | `success_url` | `https://<domain>/start/thanks/` | derived from `sites.json` `domain` |
 
-The atom emits `payment_link.url` in its envelope. The orchestration writes that URL into the project repo (e.g., `<repo>/.mainbranch/conversion.json`) so the generation subagent reads it during the build phase and substitutes it into every CTA href on the site.
+The tool emits `payment_link.url` in its envelope. The orchestration writes that URL into the project repo (e.g., `<repo>/.mainbranch/conversion.json`) so the generation subagent reads it during the build phase and substitutes it into every CTA href on the site.
 
 > **V1 vs. planned.** `stripe.py` currently hardcodes `metadata.mb_kind = "deposit"` and does not read `payment_kind` from `offer.md`. The next iteration accepts a `--kind` flag (default: `payment`) and falls back to `offer.md`'s `payment_kind` field, so an operator charging full price (or running a consult-fee, etc.) gets honest metadata. Until that ships, every Stripe-backed minisite labels its payment as a "deposit" in Stripe's metadata — accurate when it is one, awkward when it isn't.
 
@@ -297,7 +297,7 @@ For lead/appointment: standard pixel taxonomy events. The subagent uses the conv
 |---|---|---|
 | `offer.md` exists and has minimum fields | Generation | File presence + frontmatter parse |
 | `audience.md` exists | Generation | File presence |
-| Cloudflare creds + GitHub App | All atom calls | `verify_live.py` returns 3/3 (Cloudflare scopes + zone lookup + domain-check) |
+| Cloudflare creds + GitHub App | All tool calls | `verify_live.py` returns 3/3 (Cloudflare scopes + zone lookup + domain-check) |
 | Domain decision | Setup | Operator confirms own-or-buy |
 | Tracking IDs (if declared) | Generation | offer.md frontmatter parse — if any tracking field present, validate format |
 
@@ -332,7 +332,7 @@ The orchestration mode (lives in `/start`, ships in #92) walks the operator thro
 - For API-supported TLDs: `domain.py buy <name>` after explicit Y on price
 - For dashboard-only TLDs: route to https://dash.cloudflare.com/registrar with confirmation
 
-### Phase 3 — Infrastructure (atom chain)
+### Phase 3 — Infrastructure (tool chain)
 
 - `dns.py ensure <domain>` (idempotent)
 - Create project repo (`gh repo create`)

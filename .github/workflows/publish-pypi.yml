@@ -6,7 +6,9 @@ name: publish-pypi
 # GitHub Environment with at least one required reviewer.
 #
 # OIDC claim must match the pending publisher:
-#   owner=mainbranch-ai, repo=mb-vip, workflow=publish-pypi.yml, env=pypi.
+#   owner=mainbranch-ai, repo=vip, workflow=publish-pypi.yml, env=pypi.
+#   (After transfer to noontide-co/mainbranch, update this comment +
+#    register a new pending publisher on PyPI.)
 #
 # First test release: tag `oe-v0.1.0.dev0` and use the Releases UI.
 # Promote to `oe-v0.1.0` once dev0 has been smoke-tested on a clean machine.

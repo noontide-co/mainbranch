@@ -6,7 +6,7 @@ The lander shape: 1 page, all-in-one. Hero + offer + proof + CTA + footer, all o
 
 When per-offer lander generation lands, this file gets the same shape as `minisite-build.md`:
 
-- `setup (lander)` — atom chain (domain, dns, pages, custom-domain), single-file project repo, Cloudflare Pages git-connected
+- `setup (lander)` — tool chain (domain, dns, pages, custom-domain), single-file project repo, Cloudflare Pages git-connected
 - `build --one-shot (lander)` — generation subagent invoked with `lander-generation-system.md` (also future) + offer/audience/reference URLs; produces `index.html` + `_headers` + `og.svg` + `favicon.svg` (no per-section subdirectories)
 - Validation: footer presence, OG render, single-page Lighthouse score
 - What's NOT (no nav, no multi-page structure, no `/start/thanks/` separate page — thanks state shown inline or via Stripe's default thanks page)

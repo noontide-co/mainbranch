@@ -803,19 +803,6 @@ updated: 2026-01-13
 
 ---
 
-## Access Tiers (Noontide Internal)
-
-| Tier | Repo | Who | Contains |
-|------|------|-----|----------|
-| **Public** | main-branch | Everyone | Free Claude plugin |
-| **Members** | vip | Paying members | Engine (skills, lenses, frameworks) |
-| **Team** | noontide-projects | Employees, contractors | Internal project work |
-| **Owners** | noontide-ops | Founders | Legal, accounting, sensitive |
-
-Client repos (BDC, autism-rewired) are separate — can be handed off independently.
-
----
-
 ## Summary
 
 1. **Engine + Data separation** — Skills in engine, context in business repos

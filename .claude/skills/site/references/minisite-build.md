@@ -17,7 +17,7 @@ The minisite is built in one continuous flow. Brief and site are not separate sk
 2. Brief draft   — composed from research + reference files
 3. Review        — quality gates run in parallel; operator addresses or proceeds
 4. Brief lock    — committed to git as the first durable artifact
-5. Setup         — domain, DNS, repo, Pages (atom chain)
+5. Setup         — domain, DNS, repo, Pages (tool chain)
 6. Conversion    — operator picks endpoint kind, URL captured to .mainbranch/conversion.json
 7. Concepts      — N home-page variations on localhost (default 2), operator picks
 8. Publish raw   — picked concept committed and pushed; Cloudflare auto-deploys
@@ -168,7 +168,7 @@ The brief is now durable. Move to setup.
 
 ---
 
-## 5. Setup (atom chain)
+## 5. Setup (tool chain)
 
 Same as before — infrastructure provisioning. This step doesn't touch the brief; it's purely about getting the empty deploy target ready.
 
