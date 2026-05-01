@@ -16,6 +16,8 @@ This page is the public compatibility contract for that surface.
 | Agent runtime | Claude Code | First-class in v0.1.x. |
 | Codex, Cursor, Hermes, local LLMs | Roadmap | Cross-agent support is v0.2+. |
 
+**Windows tip — try WSL2.** If you're on Windows and want a working setup today, use [Windows Subsystem for Linux 2 (WSL2)](https://learn.microsoft.com/en-us/windows/wsl/install). Inside WSL2, follow the supported Linux flow. The pipx install path works there.
+
 ## What "supported" means
 
 Supported means:
