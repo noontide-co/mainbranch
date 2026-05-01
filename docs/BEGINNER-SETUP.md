@@ -1,141 +1,186 @@
 # Beginner Setup Guide
 
-Quick setup for Claude Code + Main Branch. For the full curriculum with videos and detailed walkthroughs, see the Skool classroom.
+Setup guide for people new to Claude Code, Git, or terminal. Plan on under 30 minutes.
 
 ---
 
-## Prerequisites
+## Read This First
 
-1. **GitHub account** - [github.com/signup](https://github.com/signup)
-2. **Main Branch engine repo** - Public at [github.com/noontide-co/mainbranch](https://github.com/noontide-co/mainbranch)
-3. **Claude subscription** - Pro ($20/mo) or Max ($100-200/mo) at [claude.ai](https://claude.ai)
+If this feels over your head, that's okay. Most of this is one-time setup. After that, you're mostly chatting with Claude in your business repo and getting outputs back.
+
+You need a terminal because Main Branch creates real files on your machine. That's the magic — your business context lives in files Claude reads every session, instead of resetting to zero. Don't let the unfamiliarity stop you. One step at a time.
 
 ---
 
-## Quick Setup (5 Steps)
+## Required Accounts
 
-### 1. Install GitHub Desktop
+- **GitHub** — where the code lives. Free signup at [github.com/signup](https://github.com/signup).
+- **Anthropic Pro or Max** — your Claude subscription. Required for Claude Code. Sign up at [claude.ai](https://claude.ai). Pro is $20/month.
 
-Download from [desktop.github.com](https://desktop.github.com). Sign in with your GitHub account.
+---
 
-### 2. Install Claude Code
+## Step 1: Install the Tools
 
-**Mac:**
+### Mac
+
 ```bash
+# 1. Install Claude Code
 curl -fsSL https://claude.ai/install.sh | bash
+
+# 2. Install pipx (Python package installer for CLIs)
+brew install pipx
+pipx ensurepath
+
+# 3. Install Main Branch
+pipx install mainbranch
 ```
 
-**Windows (PowerShell):**
+### Windows
+
 ```powershell
+# 1. Install Claude Code
 irm https://claude.ai/install.ps1 | iex
+
+# 2. Install Git for Windows
+# Download from: https://git-scm.com/download/win
+
+# 3. Install pipx
+python -m pip install --user pipx
+python -m pipx ensurepath
+
+# 4. Install Main Branch
+pipx install mainbranch
 ```
 
-### 3. Clone Main Branch
+After install, verify:
 
-In GitHub Desktop: **File → Clone Repository → URL tab → paste `https://github.com/noontide-co/mainbranch`**
+```bash
+mb --version    # should print "mb 0.1.1" or higher
+claude doctor   # should report Claude Code is healthy
+```
 
-### 4. First Session (One-Time Setup)
+---
 
-Open Terminal in the **mainbranch** folder and run Claude:
+## Step 2: Create Your Business Repo
 
-**Mac:** Open Terminal, type `cd `, drag the mainbranch folder from Finder into Terminal, press Enter.
+Pick a name and a folder. Then:
 
-**Windows:** Right-click inside the mainbranch folder -> "Open in Terminal"
+```bash
+cd ~/Documents/GitHub          # or wherever you keep code
+mb init my-business --name "My Business"
+cd my-business
+```
+
+`mb init` scaffolds the six-folder taxonomy (`core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`) plus a `CLAUDE.md`, `.gitignore`, and the bridge files Claude Code needs to find Main Branch's skills.
+
+---
+
+## Step 3: First Session
 
 ```bash
 claude
 ```
 
-Then type `/setup`. It will:
-- Create your business repo
-- Configure Main Branch as the skill source
-- Walk you through adding your business context
+Then in Claude Code:
 
-### 5. Daily Workflow (After Setup)
+```
+/start
+```
 
-After the first session, you work from your **business repo** (not the Main Branch engine repo):
+`/start` walks you through the rest — gathers your business context (offer, audience, voice), drafts the reference files, routes you to the right skill for what you want to do.
+
+That's it. From this point on:
 
 ```bash
-cd ~/Documents/GitHub/[your-business]
+cd ~/Documents/GitHub/my-business
 claude
 /start
 ```
 
-`/start` detects your business repo and routes you to the right skill. Main Branch linkage is configured by setup via `settings.local.json`, plus compatibility bridge links when needed.
+Three lines. That's the daily flow.
 
-When you're done for the day:
+---
 
+## Updating Main Branch
+
+When new versions drop:
+
+```bash
+pipx upgrade mainbranch
 ```
-/end
-```
 
-`/end` summarizes what happened, commits your work, and closes the session intentionally.
+Or just run `/pull` inside Claude Code — it figures out which install you have and runs the right thing. The CHANGELOG entry for the new version surfaces as a banner the next time you run `/start`.
+
+---
+
+## Available Skills
+
+| Skill | What it does |
+|---|---|
+| `/start` | Main entry point — figures out what you need and routes you. |
+| `/think` | Research, decide, codify — turns thinking into reference files. |
+| `/ads` | Generate ad copy and review for compliance. |
+| `/vsl` | Write video sales letter scripts. |
+| `/organic` | Generate organic content (Reels, TikTok, carousels). |
+| `/site` | Generate and deploy landing pages. |
+| `/wiki` | Personal wiki with atomic notes. |
+| `/end` | Close session intentionally — summary, crystallize, commit. |
+| `/help` | Get answers, troubleshoot. |
+| `/pull` | Update Main Branch (figures out pipx vs clone). |
+
+---
+
+## The mb CLI
+
+| Command | What it does |
+|---|---|
+| `mb init` | Scaffold a fresh business repo. |
+| `mb doctor` | Check that everything is set up correctly. Walks you through fixes. |
+| `mb skill link --repo .` | Repair Claude Code skill discovery if `/start` doesn't show up. |
+| `mb validate` | Check your reference files have correct frontmatter. |
+| `mb graph` | Visualize the link graph between research and decisions. |
+| `mb skill list` | Show which skills your installed Main Branch ships. |
+
+For the full list: `mb --help`.
 
 ---
 
 ## Common Issues
 
-### "command not found: claude"
+**`/start` not recognized in Claude Code:**
 
-Your terminal doesn't know where Claude is installed. Run:
-
-**Mac:**
 ```bash
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+mb skill link --repo .
 ```
 
-**Linux/older Mac:**
+Then restart Claude. This re-wires skill discovery in your business repo.
+
+**`mb` not found after install:** run `pipx ensurepath`, close your terminal completely, reopen it.
+
+**Output sounds generic:** add more detail to your reference files, especially `core/voice.md`. The richer those files, the more specific your outputs.
+
+**You hit a 404:** the repo is public; no access request needed. Double-check the URL spelling.
+
+---
+
+## Help
+
+- **In Claude Code:** type `/help` or describe the issue in plain English.
+- **In Skool:** post in the Main Branch group with a screenshot of the exact error. Tag Devon for setup issues.
+- **For OSS contributors:** open an issue at [https://github.com/noontide-co/mainbranch/issues](https://github.com/noontide-co/mainbranch/issues).
+
+---
+
+## You've Got This
+
+After the install, you're mostly just talking to Claude in your business repo and watching it produce outputs that sound like you. The terminal becomes background.
+
+You don't need to memorize anything. The daily flow is three lines:
+
 ```bash
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
+cd ~/Documents/GitHub/my-business
+claude
+/start
 ```
 
-### "Repository not found" / 404
-
-The public engine repo is `https://github.com/noontide-co/mainbranch`. If GitHub Desktop shows a 404, check that the URL is typed exactly or open the repo in your browser first.
-
-### Xcode Command Line Tools (Mac)
-
-If you see a popup about developer tools, click Install. You'll need it for Git operations. The time estimate is usually wrong (says hours, takes minutes).
-
-To reinstall if you canceled: `xcode-select --install`
-
-### Can't push to Main Branch
-
-Expected for most users. Main Branch is the shared engine. Your business data goes in your own repo (created via `/setup`).
-
----
-
-## The Two Repos
-
-```
-mainbranch/             your-business/
-├── Skills              ├── Your offer
-├── Templates           ├── Your audience
-├── Frameworks          ├── Your voice
-└── (engine, shared)    └── (your data)
-```
-
-Same engine + different data = outputs tailored to each business.
-
-**Important:** Your business repo is a precision instrument, not a dumping ground. Every file should earn its place by improving what AI can do for you. PDFs, images, and media stay outside the repo — only markdown reference files go in.
-
----
-
-## What You Can Do
-
-Once set up, type these commands:
-
-- `/think` - Research, make decisions, add context
-- `/ads` - Generate image ads, video scripts, or review for compliance
-- `/vsl` - Write video sales letters (Skool or B2B)
-- `/organic` - Generate organic content — Reels, TikTok, carousels
-- `/site` - Build and deploy landing pages from your reference files
-- `/end` - Close your session intentionally
-- `/help` - Get answers to any question
-
----
-
-## Getting Help
-
-- **Stuck?** Post in Skool with a screenshot. Tag @Devon.
-- **Full curriculum** with videos: See the classroom in Skool.
+Keep going.
