@@ -68,7 +68,7 @@ body:
     id: doctor
     attributes:
       label: "`mb doctor` output"
-      description: Paste the full output. Wrap in a collapsible block if long.
+      description: "Paste the output. If `mb doctor` could not run (e.g., `mb` not on PATH), write `mb doctor could not run` and explain why."
       value: |
         <details>
         <summary>mb doctor</summary>
