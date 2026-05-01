@@ -32,6 +32,18 @@ REPO_PATH="$PWD"
 
 ## Step 1: Find vip path
 
+If the `mb` CLI exists, prefer the packaged repair path. It handles pipx
+installs and clone-based installs, writes `settings.local.json`, creates
+bridge links, and updates `.gitignore`:
+
+```bash
+if command -v mb >/dev/null 2>&1; then
+  mb skill link --repo "$REPO_PATH"
+fi
+```
+
+Then verify Step 3. If it passes, skip the manual symlink loop below.
+
 ```bash
 VIP_PATH=$(REPO_PATH="$REPO_PATH" python3 -c "
 import json, os
@@ -44,12 +56,12 @@ for d in dirs:
 echo "VIP_PATH=$VIP_PATH"
 ```
 
-If empty: `settings.local.json` is missing or doesn't point to vip. Tell the user to run `/setup` from vip, or manually create `REPO_PATH/.claude/settings.local.json`:
+If empty: `settings.local.json` is missing or doesn't point to Main Branch. Tell the user to run `mb skill link --repo "$REPO_PATH"` if the CLI is installed, or manually create `REPO_PATH/.claude/settings.local.json`:
 
 ```json
 {
   "permissions": {
-    "additionalDirectories": ["/absolute/path/to/vip"]
+    "additionalDirectories": ["/absolute/path/to/mainbranch"]
   }
 }
 ```
@@ -124,7 +136,7 @@ If HEAL_OK:
 > "I've set up the skill bridge links. **Please restart Claude** (Ctrl+C, then `claude`) — skills like `/start` will appear in the dropdown on next launch."
 
 If HEAL_FAILED:
-> "Auto-repair failed. Check that vip is cloned locally and the path in `.claude/settings.local.json` is correct."
+> "Auto-repair failed. If you installed with pipx, run `pipx upgrade mainbranch` and `mb skill link --repo .`. If you cloned the engine, check that the path in `.claude/settings.local.json` is correct."
 
 ---
 

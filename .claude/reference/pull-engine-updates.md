@@ -1,13 +1,22 @@
 # Pull Engine Updates
 
-Canonical bash for pulling latest vip updates at the start of any skill invocation. CWD is the business repo — resolve vip path first. **Do NOT silently swallow failures.** Users on stale code get broken features.
+Canonical bash for pulling latest Main Branch updates at the start of any skill invocation. CWD is the business repo — resolve the engine path first. **Do NOT silently swallow failures.** Users on stale code get broken features.
 
 For the canonical resolver (bash + python3, settings.local.json first, ~/.config/vip/local.yaml fallback) see **[vip-path-resolution.md](vip-path-resolution.md)**. Run that snippet, then:
 
 ```bash
-# Pull if found and valid
-[ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/start/SKILL.md" ] && \
-  git -C "$VIP_PATH" pull origin main 2>&1
+if [ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
+  if git -C "$VIP_PATH" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git -C "$VIP_PATH" pull origin main 2>&1
+  elif command -v pipx >/dev/null 2>&1 && pipx list --short 2>/dev/null | grep -q '^mainbranch '; then
+    pipx upgrade mainbranch 2>&1
+    mb skill link --repo "${REPO_PATH:-.}" 2>&1
+  else
+    echo "NO_UPDATE_MODE"
+  fi
+else
+  echo "NO_ENGINE_PATH"
+fi
 ```
 
 ## Handle the Result
@@ -15,8 +24,10 @@ For the canonical resolver (bash + python3, settings.local.json first, ~/.config
 | Result | What to say |
 |--------|-------------|
 | "Already up to date." | Say nothing |
+| "upgraded package mainbranch" / "upgraded shared libraries" | "Updated Main Branch and refreshed skill links." |
 | "Updating..." / files changed | "Pulled latest engine updates." |
-| VIP_PATH empty (not found) | "Couldn't find vip. Run `/setup` to configure, or check `~/.config/vip/local.yaml`." |
+| `NO_UPDATE_MODE` | "Main Branch is linked, but I couldn't tell how to update it. Try `pipx upgrade mainbranch` if you installed with pipx, or pull the engine repo in GitHub Desktop if you cloned it." |
+| `NO_ENGINE_PATH` / VIP_PATH empty | "Couldn't find Main Branch. Run `mb skill link --repo .`, then restart Claude." |
 | Any error (auth, network) | Show the warning below |
 
 ## If Pull Fails — Show This Warning
@@ -24,10 +35,9 @@ For the canonical resolver (bash + python3, settings.local.json first, ~/.config
 > "I wasn't able to pull the latest Main Branch updates. This means you may be running on an old version and missing new features.
 >
 > Common fixes:
-> 1. **GitHub Desktop not running?** Open it and make sure you're signed in
-> 2. **Subscription inactive?** Check your Main Branch access in Skool
+> 1. **Installed with pipx?** Run `pipx upgrade mainbranch`, then `mb skill link --repo .`
+> 2. **Using a cloned engine repo?** Open GitHub Desktop → select mainbranch → click 'Fetch origin'
 > 3. **Network issue?** Check your internet connection
-> 4. **Try manually:** Open GitHub Desktop → select vip → click 'Fetch origin'
 >
 > You can continue, but some features may not work as expected."
 
@@ -64,5 +74,5 @@ fi
 
 ### Why Both Repos
 
-- Engine (vip) → new skills, playbooks, compliance frameworks
+- Main Branch engine → new skills, playbooks, compliance frameworks
 - Business repo → your reference files, decisions, research
