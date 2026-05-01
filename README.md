@@ -242,7 +242,7 @@ your-business/
 │   │   └── [offer-name]/
 │   │       ├── offer.md   <- Offer-specific transformation
 │   │       └── audience.md <- Offer-specific audience (optional)
-│   ├── brand/             <- Visual identity, positioning
+│   ├── visual-identity/   <- Image gen prompts, palette, type, paired imagery
 │   ├── proof/
 │   │   ├── testimonials.md <- Social proof
 │   │   └── angles/        <- Proven messaging angles
@@ -251,7 +251,7 @@ your-business/
 │       └── content-strategy.md <- Pillars, platforms, cadence
 ├── research/              <- Your investigations
 ├── decisions/             <- Your choices
-└── outputs/               <- All generated content (lifecycle via frontmatter status)
+└── campaigns/             <- All generated content (lifecycle via frontmatter status)
 ```
 
 You fill in the reference files. Claude reads them when generating.
