@@ -292,21 +292,21 @@ EOF
 
 | File | Status |
 |------|--------|
-| core/soul.md | ✅ Complete / ⚠️ Missing [X] |
-| core/offer.md | ✅ Complete / ⚠️ Missing [X] |
-| core/audience.md | ✅ Complete / ⚠️ Missing [X] |
-| core/voice.md | ✅ Complete / ⚠️ Missing [X] |
-| proof/testimonials.md | ✅ Has content / ❌ Empty |
-| proof/angles/ | ✅ [N] angles / ⚠️ None yet |
-| domain/ | ✅ Populated / ⚠️ Needs [X] |
+| core/soul.md | [OK] Complete / [WARN] Missing [X] |
+| core/offer.md | [OK] Complete / [WARN] Missing [X] |
+| core/audience.md | [OK] Complete / [WARN] Missing [X] |
+| core/voice.md | [OK] Complete / [WARN] Missing [X] |
+| proof/testimonials.md | [OK] Has content / [FAIL] Empty |
+| proof/angles/ | [OK] [N] angles / [WARN] None yet |
+| domain/ | [OK] Populated / [WARN] Needs [X] |
 
 **Multi-offer additional checks (if applicable):**
 
 | File | Status |
 |------|--------|
-| offers/[name]/offer.md | ✅ Complete / ⚠️ Thin (< 20 lines) / ❌ Missing |
-| domain/product-ladder.md | ✅ Complete / ⚠️ Placeholder |
-| .vip/local.yaml | ✅ Set to [offer] / ❌ Missing |
+| offers/[name]/offer.md | [OK] Complete / [WARN] Thin (< 20 lines) / [FAIL] Missing |
+| domain/product-ladder.md | [OK] Complete / [WARN] Placeholder |
+| .vip/local.yaml | [OK] Set to [offer] / [FAIL] Missing |
 
 Ask user for missing pieces or note for later.
 
