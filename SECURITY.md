@@ -23,6 +23,8 @@ Report privately by one of these paths:
   repository.
 - Email `devon@noontide.co` with the subject `Main Branch security`.
 
+We aim to acknowledge reports within 7 days and ship a fix within 30 days when practical.
+
 Include:
 
 - The affected version (`mb --version`)
@@ -53,8 +55,9 @@ Out of scope:
 
 ## Response expectations
 
-We aim to acknowledge valid private reports within 7 days. If the issue is real,
-we will coordinate a fix, publish a patch release when needed, and credit the
-reporter unless they prefer to remain anonymous.
+Per the commitment near the top of this file: acknowledge within 7 days, fix
+within 30 days when practical. For valid reports we coordinate a fix, publish
+a patch release when needed, and credit the reporter unless they prefer to
+remain anonymous.
 
 There is no paid bug bounty program.

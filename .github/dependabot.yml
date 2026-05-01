@@ -1,0 +1,15 @@
+# Dependabot config — weekly sweep for Python deps and GitHub Actions.
+# pyproject.toml lives at /mb, so the pip ecosystem is rooted there.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/mb"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

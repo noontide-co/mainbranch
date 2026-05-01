@@ -1,0 +1,37 @@
+name: Question
+description: A question about Main Branch that benefits future readers.
+title: "question: "
+labels: ["question", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Before filing — try the right channel first:**
+
+        - **Setup help?** Read [SUPPORT.md](https://github.com/noontide-co/mainbranch/blob/main/SUPPORT.md) and [docs/BEGINNER-SETUP.md](https://github.com/noontide-co/mainbranch/blob/main/docs/BEGINNER-SETUP.md).
+        - **Main Branch member?** Post in the Skool community — that is where operator-specific help lives.
+        - **Still here?** File only if the answer would benefit future readers searching the issue tracker.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: One or two sentences. Be specific.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What are you trying to do? Why does the answer matter?
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you've tried
+      description: Docs you read, commands you ran, things you ruled out.
+    validations:
+      required: true

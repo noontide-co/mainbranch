@@ -1,0 +1,90 @@
+name: Bug report
+description: Something in `mb` or a bundled skill is broken or behaves unexpectedly.
+title: "bug: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please include enough detail that a maintainer can
+        reproduce it without follow-up. Do not include private business data,
+        member info, or API keys.
+
+  - type: input
+    id: mb-version
+    attributes:
+      label: "`mb --version` output"
+      description: Paste the exact version string. If `mb` is not on PATH, say so.
+      placeholder: "mb 0.1.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows (experimental)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-mode
+    attributes:
+      label: Install mode
+      options:
+        - pipx
+        - clone (developer mode)
+    validations:
+      required: true
+
+  - type: input
+    id: command
+    attributes:
+      label: Command or skill that failed
+      description: e.g. `mb init`, `mb skill link --repo .`, `/start`, `/think`
+      placeholder: "mb skill link --repo ."
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: A clear description of the actual behavior, including any error output.
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: "`mb doctor` output"
+      description: "Paste the output. If `mb doctor` could not run (e.g., `mb` not on PATH), write `mb doctor could not run` and explain why."
+      value: |
+        <details>
+        <summary>mb doctor</summary>
+
+        ```text
+        # paste output here
+        ```
+
+        </details>
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Stack traces, screenshots, or context that does not fit above.
+    validations:
+      required: false
