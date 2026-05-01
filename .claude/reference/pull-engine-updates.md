@@ -1,6 +1,6 @@
-# Pull Engine Updates (Step -1)
+# Pull Engine Updates
 
-Pull vip updates. CWD is the business repo — resolve vip path first. **Do NOT silently swallow failures.** Users on stale code get broken features.
+Canonical bash for pulling latest vip updates at the start of any skill invocation. CWD is the business repo — resolve vip path first. **Do NOT silently swallow failures.** Users on stale code get broken features.
 
 ```bash
 # Canonical vip resolution (settings.local.json first — no extra deps)
@@ -57,7 +57,7 @@ fi
 
 ---
 
-## Step 0.5: Pull Business Repo Updates
+## Step 0.5: Pull Business Repo Updates (start skill only)
 
 Once business repo is confirmed, pull its latest updates from `REPO_PATH`:
 
