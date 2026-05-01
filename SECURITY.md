@@ -23,6 +23,8 @@ Report privately by one of these paths:
   repository.
 - Email `devon@noontide.co` with the subject `Main Branch security`.
 
+We aim to acknowledge reports within 7 days and ship a fix within 30 days when practical.
+
 Include:
 
 - The affected version (`mb --version`)
