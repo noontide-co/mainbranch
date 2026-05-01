@@ -17,13 +17,52 @@ pipx install mainbranch
 
 That puts the `mb` CLI on your PATH. Run `mb --help` to see subcommands.
 
-For developer mode (cloning the engine repo to hack on skills):
+Tested on macOS and Linux. Windows is experimental in v0.1; track [issue #151](https://github.com/noontide-co/mainbranch/issues/151) for status.
+
+For developer / advanced / legacy mode (cloning the engine repo to hack on skills):
 
 ```bash
 git clone https://github.com/noontide-co/mainbranch.git
 ```
 
+OSS contributors who want to modify or contribute skills should clone the engine repo directly. Everyone else should stick with `pipx install mainbranch`.
+
 See [CHANGELOG.md](CHANGELOG.md) for what's in this release.
+
+---
+
+## What ships now
+
+What's actually in the wheel today:
+
+- **`mb` CLI**: `init`, `doctor`, `validate`, `graph`, `skill list`, `skill path`, `skill link`, `educational`, `resolve`, `think`
+- **Bundled Claude Code skills**: `/ads`, `/end`, `/help`, `/organic`, `/pull`, `/setup`, `/site`, `/start`, `/think`, `/vsl`, `/wiki` plus composable skills (`skill-brief-draft`, `skill-concept`, `skill-review`)
+- **Public engine** under MIT license
+- **PyPI distribution** via `pipx install mainbranch`
+
+---
+
+## Roadmap
+
+Where this is going. v0.1 is the CLI + skills foundation; v0.2+ broadens compatibility and deepens the workflow surfaces. The list below is direction, not promises.
+
+- `mb books` — BeanCount integration for ledger workflows ([#128](https://github.com/noontide-co/mainbranch/issues/128))
+- `mb fulfillment` — agency-arm tooling for delivery ops
+- Cross-agent compatibility — Codex, Cursor, Hermes, local LLMs (v0.2+)
+- Deeper `/site` workflows — lander → minisite → website graduation
+- Dashboard — web UI for the bets-in-public feed (v0.2–v0.3)
+- Skool → GitHub webhook automation (v0.2)
+
+---
+
+## Public OSS vs paid community
+
+Plain English boundary so nobody is surprised:
+
+- **Open-source (free, MIT)**: the `mb` CLI, all bundled skills, the schema, the framework. Anyone can install and run — no account, no gating, no upsell wall.
+- **Paid community (Skool)**: curated reference (Devon's voice corpus, compliance log, angles library), the live bets-in-public feed, group calls, classroom curriculum, and direct Devon access at higher tiers.
+
+The OSS engine is fully usable on its own. The paid wrapper layers in operator-specific reference and live operator presence on top of the same files.
 
 ---
 
@@ -74,107 +113,31 @@ All of this happens through simple commands. No prompting skills required.
 
 ---
 
-## Before You Start
-
-### 1. Install These Tools
-
-#### GitHub Desktop (Strongly Recommended)
-
-GitHub Desktop is a visual app that makes Git easy. No commands to remember — just buttons to click.
-
-- Download from [desktop.github.com](https://desktop.github.com)
-- Sign in with your GitHub account
-
-**Why you'll love it:**
-- Shows you when updates are available (little badge appears)
-- Lets you see exactly what changed
-- No need to remember Git commands
-
-*Already comfortable with Git? You can skip this and use terminal commands instead.*
-
-#### Claude Code (Required)
-
-Claude Code is a terminal app that runs skills.
-
-| Requirement | What It Is | How to Get It |
-|-------------|-----------|---------------|
-| Claude Code | Terminal app that runs skills | See install commands below |
-| Chrome Extension | Lets Claude see your web pages (optional) | [claude.ai/chrome](https://claude.ai/chrome) |
-
-**Install Claude Code:**
-
-Mac:
-```bash
-curl -fsSL https://claude.ai/install.sh | bash
-```
-
-Windows (PowerShell):
-```powershell
-irm https://claude.ai/install.ps1 | iex
-```
-
-You need a Claude Pro ($20/mo) or Max subscription to use Claude Code.
-
----
-
 ## Quick Start
 
-### Step 1: Clone This Repo
-
-Open GitHub Desktop. Click **File > Clone Repository**.
-
-Paste this URL:
-```
-https://github.com/noontide-co/mainbranch
-```
-
-Choose where to save it (remember the location!). Click **Clone**.
-
-### Step 2: First Session (Run From mainbranch)
-
-Open a terminal in the **mainbranch** folder you just cloned:
-
-**Mac:**
 ```bash
-cd ~/Documents/GitHub/mainbranch
-```
-
-**Windows (Git Bash):**
-```bash
-cd /c/Users/YourName/Documents/GitHub/mainbranch
-```
-
-Run Claude and type `/setup`:
-```bash
-claude
-```
-
-`/setup` creates your business repo and configures everything. The first time, you will also authenticate with your Anthropic account.
-
-### Step 3: Complete /setup (Share Business Context)
-
-During `/setup`, Claude will ask you to share:
-- Your offer (what you sell)
-- Your audience (who buys)
-- Your voice (how you sound)
-- Testimonials (proof it works)
-
-You can paste text, share URLs, or upload files. Claude organizes it all for you.
-
-### Step 4: Daily Workflow (After Setup)
-
-After setup, work from your **business repo** (not the Main Branch engine repo):
-```bash
-cd ~/Documents/GitHub/[your-business]
+pipx install mainbranch
+mb init my-business --name "My Business"
+cd my-business
 claude
 /start
 ```
 
-### Step 5: Start Generating
+That's it. `mb init` scaffolds the six-folder taxonomy, wires Claude Code to the bundled skills, and gives you a fresh git repo. `/start` walks you through the rest — gathers your business context (offer, audience, voice), drafts the reference files, and routes you to the right workflow.
 
-Use `/start` to route to the right workflow (`/think`, `/ads`, `/organic`, etc.).
+After the first session, the daily flow is three lines:
 
-That is it. You are ready to generate.
+```bash
+cd ~/Documents/GitHub/my-business
+claude
+/start
+```
+
+### Developer / advanced / legacy mode
+
+OSS contributors who want to hack on skills can clone the engine repo and run `/setup` from there — that path still works and is how the engine itself is developed. For everyone else, `pipx` is the canonical path.
+
+You'll also need a Claude Pro ($20/mo) or Max subscription. Install Claude Code itself from [claude.ai](https://claude.ai) — see [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md) if you need a step-by-step.
 
 ---
 
@@ -193,6 +156,7 @@ The CLI surface for the engine. Built for Claude Code first; cross-agent at v0.2
 | `mb educational <topic>` | Print an educational triage file (powers `mb doctor`'s "tell me more" prompts). |
 | `mb skill list` | List the skills bundled with this engine. |
 | `mb skill path <name>` | Print the on-disk path to a bundled skill. |
+| `mb skill link --repo .` | Repair Claude Code skill discovery in a business repo. |
 
 For the full list: `mb --help`.
 
@@ -232,7 +196,6 @@ No prompt engineering. No explaining what you want. Just run the skill.
 | `/end` | Close session — summary, crystallize, commit |
 | `/help` | Get answers, troubleshoot, learn the system |
 | `/pull` | Quick update — pulls latest skills from GitHub |
-| `/newsletter` | Generate weekly newsletter from thinking work (coming soon) |
 
 ---
 
@@ -241,7 +204,7 @@ No prompt engineering. No explaining what you want. Just run the skill.
 Main Branch is the engine. Your business info is the fuel.
 
 ```
-THIS REPO (engine)          YOUR REPO (fuel)
+ENGINE (mb CLI + skills)    YOUR REPO (fuel)
 Has all the skills    +     Has your business info
                       =     Outputs that sound like you
 ```
@@ -254,47 +217,37 @@ The engine reads your files. Then it generates content specific to you.
 
 ## Your Business Repo Structure
 
-After running `/start`, your business folder looks like this:
+After running `mb init`, your business repo looks like this:
 
 ```
-your-business/
-├── CLAUDE.md              <- Always loaded by Claude Code
-├── .vip/                  <- Session config
-│   ├── config.yaml        <- User preferences (git-tracked)
-│   └── local.yaml         <- Session offer state (git-ignored)
-├── reference/
-│   ├── core/
-│   │   ├── soul.md        <- WHY you exist
-│   │   ├── offer.md       <- Brand-level thesis (or single offer)
-│   │   ├── audience.md    <- WHO buys
-│   │   └── voice.md       <- HOW you sound
-│   ├── offers/            <- Per-offer context (multi-offer only)
-│   │   └── [offer-name]/
-│   │       ├── offer.md   <- Offer-specific transformation
-│   │       └── audience.md <- Offer-specific audience (optional)
-│   ├── visual-identity/   <- Image gen prompts, palette, type, paired imagery
-│   ├── proof/
-│   │   ├── testimonials.md <- Social proof
-│   │   └── angles/        <- Proven messaging angles
-│   └── domain/
-│       ├── product-ladder.md  <- How offers relate (multi-offer)
-│       └── content-strategy.md <- Pillars, platforms, cadence
-├── research/              <- Your investigations
-├── decisions/             <- Your choices
-└── campaigns/             <- All generated content (lifecycle via frontmatter status)
+my-business/
+├── CLAUDE.md
+├── .gitignore
+├── .claude/
+│   ├── settings.local.json    (gitignored — wires Claude Code to bundled skills)
+│   └── skills/                (gitignored — bridge symlinks)
+├── core/
+│   ├── offers/
+│   └── finance/
+├── research/
+├── decisions/
+├── log/
+├── campaigns/
+└── documents/
 ```
 
-You fill in the reference files. Claude reads them when generating.
+You fill in the reference files inside `core/`. Claude reads them when generating.
 
 ---
 
-## Keeping Main Branch Updated
+## Updating Main Branch
 
-Devon updates the Main Branch repository with new skills and improvements.
+How you update depends on how you installed:
 
-**Updates happen automatically when you run `/start`.** You can also run `/pull` anytime to get the latest.
+- **pipx users (most people)**: `pipx upgrade mainbranch`. Or just run `/pull` inside Claude Code — it figures out which install you have and runs the right thing.
+- **Clone (developer mode)**: `git pull origin main` from the engine repo.
 
-**GitHub Desktop (optional):** If you want to see what changed or pull updates manually, open GitHub Desktop, select `mainbranch`, and click Pull origin. The History tab shows exactly what changed in each update.
+The CHANGELOG entry for the new version surfaces as a banner the next time you run `/start`.
 
 ---
 
@@ -309,8 +262,8 @@ Open an issue at [github.com/noontide-co/mainbranch/issues](https://github.com/n
 **Common issues:**
 - "404 error" or "Repository not found" — Verify the URL and your network. The repo is public; no access request needed.
 - "Claude does not see my files" — Make sure you started Claude in your business repo folder and ran `/start`
-- "Skills are not working" — Check that `.claude/settings.local.json` exists and run `/start` once to auto-repair missing bridge links. If still broken, run `/setup`.
-- "Output sounds generic" — Add more detail to your reference files, especially voice.md
+- "Skills are not working" — Run `mb skill link --repo .` from your business repo to repair bridge symlinks, then restart Claude. If still broken, run `/setup`.
+- "Output sounds generic" — Add more detail to your reference files, especially `core/voice.md`
 - "I edited Main Branch but can't push" — That's expected for most users. Main Branch is the shared engine. Your business data goes in YOUR repo.
 
 ---
@@ -331,7 +284,7 @@ Create a separate repo for each brand. If they share the same soul and voice, th
 
 **How do I update when new skills come out?**
 
-Open GitHub Desktop. Click **Fetch origin**, then **Pull**. Done.
+`pipx upgrade mainbranch`, or run `/pull` inside Claude Code.
 
 **Can I edit the skills?**
 
@@ -339,7 +292,7 @@ You can, but you do not need to. The skills are designed to work out of the box.
 
 **What makes this different from ChatGPT?**
 
-ChatGPT lives in Sam Altman's box. Main Branch lives in your filesystem. Your offer, audience, voice, research, and decisions are markdown in your own git repo — versioned, portable, not subject to a SaaS provider's TOS, retention policy, or downtime. The agent reads your files; the data sits with you.
+ChatGPT is a chat surface that resets between sessions. Main Branch is a CLI plus a skill set that reads files Claude can re-read every session — your offer, audience, voice, decisions, research — so outputs stay consistent with your business instead of restarting from zero.
 
 **I am stuck. What do I do?**
 

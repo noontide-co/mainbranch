@@ -35,7 +35,13 @@ pipx ensurepath
 pipx install mainbranch
 ```
 
+### Linux
+
+Same flow as macOS — use `apt install pipx` (Debian/Ubuntu) or `dnf install pipx` (Fedora) instead of `brew install pipx`. Then `pipx ensurepath && pipx install mainbranch`.
+
 ### Windows
+
+> **Windows is experimental in v0.1.** It may work but isn't tested in CI; expect rough edges. Track [issue #151](https://github.com/noontide-co/mainbranch/issues/151) for status. Power users are welcome to try the steps below.
 
 ```powershell
 # 1. Install Claude Code
