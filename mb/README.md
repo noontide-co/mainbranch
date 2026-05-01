@@ -1,6 +1,6 @@
 # mainbranch (`mb`)
 
-Engine umbrella for [Main Branch](https://mainbranch.io) — scaffolds, validates, and graphs business-as-files repos.
+Engine umbrella for [Main Branch](https://github.com/noontide-co/mainbranch) — scaffolds, validates, and graphs business-as-files repos.
 
 This package is the Python entry point. Skills, playbooks, educational content, and consumer-repo templates ship as bundled package data. The actual day-to-day "do work" surfaces are Claude Code skills (markdown), invoked from inside Claude Code.
 
@@ -31,7 +31,7 @@ mb --version
 
 ## Status
 
-v0.1 is **Built for Claude Code only**. Cross-agent compatibility is a v0.2+ commitment. The schema is v1 and will evolve. The full master decision lives at `decisions/2026-04-29-mb-vip-v0-1-0-master.md` in the engine repo.
+v0.1 is **Built for Claude Code only**. Cross-agent compatibility is a v0.2+ commitment. The schema is v1 and will evolve. The engine decision lives at `decisions/2026-04-29-mb-vip-v0-1-0-master.md`; the business-side master plan is tracked in `noontide-co/projects#119`.
 
 ## License
 

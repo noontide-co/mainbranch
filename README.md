@@ -1,16 +1,18 @@
-# Main Branch VIP
+# Main Branch
 
-Turn Claude into your personal marketing team. Create ads, scripts, and community content that sounds like YOU.
+Open-source Claude Code skills and a small `mb` CLI for running business-as-files workflows.
 
 
 ## Honest current state (v0.1)
 
 - **Built for Claude Code.** Cross-platform skill support is a v0.2+ commitment.
 - **Schema is v1; will evolve.** Frontmatter shapes covered by `mb validate` are stable for v0.1.x; breaking changes bump the major.
-- **Install: `pipx install mainbranch`** (recommended, once published) or `git clone https://github.com/mainbranch-ai/vip` (developer mode).
+- **Install: `pipx install mainbranch`** (recommended, once published) or `git clone https://github.com/noontide-co/mainbranch` (developer mode).
 - **Cross-agent compatibility matrix lands at v0.2.** Codex, Cursor, Hermes, local LLMs are not first-class targets in v0.1.
 
-The v0.1.0 master decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.md`](decisions/2026-04-29-mb-vip-v0-1-0-master.md).
+The engine v0.1.0 decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.md`](decisions/2026-04-29-mb-vip-v0-1-0-master.md).
+
+The business-side master plan is tracked in [`noontide-co/projects#119`](https://github.com/noontide-co/projects/pull/119), which amends the launch direction around a CLI-first public product, Skool as the paid wrapper, and the four v0.1 pillars: ads, books, pages, and fulfillment.
 
 ---
 
@@ -94,23 +96,23 @@ Open GitHub Desktop. Click **File > Clone Repository**.
 
 Paste this URL:
 ```
-https://github.com/mainbranch-ai/vip
+https://github.com/noontide-co/mainbranch
 ```
 
 Choose where to save it (remember the location!). Click **Clone**.
 
-### Step 2: First Session (Run From vip)
+### Step 2: First Session (Run From mainbranch)
 
-Open a terminal in the **vip** folder you just cloned:
+Open a terminal in the **mainbranch** folder you just cloned:
 
 **Mac:**
 ```bash
-cd ~/Documents/GitHub/vip
+cd ~/Documents/GitHub/mainbranch
 ```
 
 **Windows (Git Bash):**
 ```bash
-cd /c/Users/YourName/Documents/GitHub/vip
+cd /c/Users/YourName/Documents/GitHub/mainbranch
 ```
 
 Run Claude and type `/setup`:
@@ -132,7 +134,7 @@ You can paste text, share URLs, or upload files. Claude organizes it all for you
 
 ### Step 4: Daily Workflow (After Setup)
 
-After setup, work from your **business repo** (not vip):
+After setup, work from your **business repo** (not the Main Branch engine repo):
 ```bash
 cd ~/Documents/GitHub/[your-business]
 claude
@@ -237,13 +239,13 @@ You fill in the reference files. Claude reads them when generating.
 
 ---
 
-## Keeping vip Updated
+## Keeping Main Branch Updated
 
-Devon updates the vip repository with new skills and improvements.
+Devon updates the Main Branch repository with new skills and improvements.
 
 **Updates happen automatically when you run `/start`.** You can also run `/pull` anytime to get the latest.
 
-**GitHub Desktop (optional):** If you want to see what changed or pull updates manually, open GitHub Desktop, select vip, and click Pull origin. The History tab shows exactly what changed in each update.
+**GitHub Desktop (optional):** If you want to see what changed or pull updates manually, open GitHub Desktop, select `mainbranch`, and click Pull origin. The History tab shows exactly what changed in each update.
 
 ---
 
@@ -257,7 +259,7 @@ Post in the Main Branch group. Tag @Devon for technical questions.
 - "Claude does not see my files" — Make sure you started Claude in your business repo folder and ran `/start`
 - "Skills are not working" — Check that `.claude/settings.local.json` exists and run `/start` once to auto-repair missing bridge links. If still broken, run `/setup`.
 - "Output sounds generic" — Add more detail to your reference files, especially voice.md
-- "I edited vip but can't push" — That's expected. vip is read-only. Your business data goes in YOUR repo.
+- "I edited Main Branch but can't push" — That's expected for most users. Main Branch is the shared engine. Your business data goes in YOUR repo.
 
 ---
 

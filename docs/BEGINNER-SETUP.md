@@ -7,7 +7,7 @@ Quick setup for Claude Code + Main Branch. For the full curriculum with videos a
 ## Prerequisites
 
 1. **GitHub account** - [github.com/signup](https://github.com/signup)
-2. **Repository access** - Share your GitHub username with Devon in Skool, wait for confirmation
+2. **Main Branch engine repo** - Public at [github.com/noontide-co/mainbranch](https://github.com/noontide-co/mainbranch)
 3. **Claude subscription** - Pro ($20/mo) or Max ($100-200/mo) at [claude.ai](https://claude.ai)
 
 ---
@@ -30,17 +30,17 @@ curl -fsSL https://claude.ai/install.sh | bash
 irm https://claude.ai/install.ps1 | iex
 ```
 
-### 3. Clone vip
+### 3. Clone Main Branch
 
-In GitHub Desktop: **File → Clone Repository → GitHub.com tab → select `mainbranch-ai/vip`**
+In GitHub Desktop: **File → Clone Repository → URL tab → paste `https://github.com/noontide-co/mainbranch`**
 
 ### 4. First Session (One-Time Setup)
 
-Open Terminal in the **vip** folder and run Claude:
+Open Terminal in the **mainbranch** folder and run Claude:
 
-**Mac:** Open Terminal, type `cd `, drag the vip folder from Finder into Terminal, press Enter.
+**Mac:** Open Terminal, type `cd `, drag the mainbranch folder from Finder into Terminal, press Enter.
 
-**Windows:** Right-click inside the vip folder → "Open in Terminal"
+**Windows:** Right-click inside the mainbranch folder -> "Open in Terminal"
 
 ```bash
 claude
@@ -48,12 +48,12 @@ claude
 
 Then type `/setup`. It will:
 - Create your business repo
-- Configure vip as the skill source
+- Configure Main Branch as the skill source
 - Walk you through adding your business context
 
 ### 5. Daily Workflow (After Setup)
 
-After the first session, you work from your **business repo** (not vip):
+After the first session, you work from your **business repo** (not the Main Branch engine repo):
 
 ```bash
 cd ~/Documents/GitHub/[your-business]
@@ -61,7 +61,7 @@ claude
 /start
 ```
 
-`/start` detects your business repo and routes you to the right skill. vip linkage is configured by setup via `settings.local.json`, plus compatibility bridge links when needed.
+`/start` detects your business repo and routes you to the right skill. Main Branch linkage is configured by setup via `settings.local.json`, plus compatibility bridge links when needed.
 
 When you're done for the day:
 
@@ -91,7 +91,7 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 
 ### "Repository not found" / 404
 
-You don't have access yet. Share your GitHub username with Devon and wait for confirmation.
+The public engine repo is `https://github.com/noontide-co/mainbranch`. If GitHub Desktop shows a 404, check that the URL is typed exactly or open the repo in your browser first.
 
 ### Xcode Command Line Tools (Mac)
 
@@ -99,16 +99,16 @@ If you see a popup about developer tools, click Install. You'll need it for Git 
 
 To reinstall if you canceled: `xcode-select --install`
 
-### Can't push to vip
+### Can't push to Main Branch
 
-Expected. vip is read-only. Your business data goes in your own repo (created via `/setup`).
+Expected for most users. Main Branch is the shared engine. Your business data goes in your own repo (created via `/setup`).
 
 ---
 
 ## The Two Repos
 
 ```
-vip/                    your-business/
+mainbranch/             your-business/
 ├── Skills              ├── Your offer
 ├── Templates           ├── Your audience
 ├── Frameworks          ├── Your voice

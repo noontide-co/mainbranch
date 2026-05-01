@@ -4,7 +4,7 @@ This is the key concept. Once you get this, everything else makes sense.
 
 ---
 
-## vip (The Engine)
+## Main Branch (The Engine)
 
 The shared system everyone uses. Contains:
 - Skills (`/ads`, `/think`, `/setup`, `/vsl`, etc.)
@@ -36,7 +36,7 @@ This is what makes your outputs sound like YOU.
 ## How They Work Together
 
 ```
-your-business/                    vip/ (linked from business repo)
+your-business/                    mainbranch/ (linked from business repo)
 ├── Your offer                    ├── Skills
 ├── Your audience                 ├── Templates
 ├── Your voice                    ├── Frameworks
@@ -45,7 +45,7 @@ your-business/                    vip/ (linked from business repo)
 └── (yours, you own it)
 ```
 
-You start Claude in your business repo. `/setup` connects vip through `.claude/settings.local.json` for file access, and adds bridge links when needed for skill discovery. The engine then reads your business data and generates content that sounds like you.
+You start Claude in your business repo. `/setup` connects Main Branch through `.claude/settings.local.json` for file access, and adds bridge links when needed for skill discovery. The engine then reads your business data and generates content that sounds like you.
 
 **Same engine + different data = different outputs for each business.**
 
@@ -57,7 +57,7 @@ Unity (the game engine) provides physics, rendering, audio systems. But Unity al
 
 The engine + your assets = your game.
 
-- **vip** = Unity (the engine)
+- **Main Branch** = Unity (the engine)
 - **Your business repo** = Your game assets
 - **Skills** = Engine features you can use
 - **Reference files** = The assets that make it yours
@@ -83,7 +83,7 @@ The engine + your assets = your game.
 
 | Content | Location | Why |
 |---------|----------|-----|
-| Skills, templates | vip | Shared with all members |
+| Skills, templates | Main Branch | Shared with all members |
 | Your offer, audience, voice | Your repo | Business-specific |
 | Your testimonials and proof | Your repo | Business-specific |
 | Your research and decisions | Your repo | Business-specific |
