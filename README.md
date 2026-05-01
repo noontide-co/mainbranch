@@ -324,4 +324,4 @@ You do not need to read it to get started. But it is there when you want to go d
 
 ## Community
 
-[skool.com/main-branch](https://skool.com/main-branch)
+[skool.com/main](https://skool.com/main)
