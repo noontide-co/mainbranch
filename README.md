@@ -11,7 +11,7 @@ Main Branch is the `mb` CLI plus a set of MIT-licensed Claude Code skills for ru
 pipx install mainbranch
 ```
 
-That puts the `mb` CLI on your PATH. Run `mb --help` to see subcommands. (PyPI publish is the next launch step — until then, install in developer mode below.)
+That puts the `mb` CLI on your PATH. Run `mb --help` to see subcommands.
 
 For developer mode (cloning the engine repo to hack on skills):
 
