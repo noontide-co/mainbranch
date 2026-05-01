@@ -30,7 +30,7 @@ For platform support, read [docs/compatibility.md](docs/compatibility.md).
 | Need | Best place |
 |---|---|
 | Bug in `mb` or bundled skills | [GitHub Issues](https://github.com/noontide-co/mainbranch/issues) |
-| Setup help as a Main Branch member | Skool community |
+| Setup help as a Main Branch member | [Skool community](https://skool.com/main-branch) |
 | Feature request or roadmap discussion | GitHub Issues |
 | Security concern | Private report; see [SECURITY.md](SECURITY.md) |
 | General Claude Code account problem | Anthropic support |
@@ -39,6 +39,7 @@ For platform support, read [docs/compatibility.md](docs/compatibility.md).
 
 Please include:
 
+- Check [CHANGELOG.md](CHANGELOG.md) to see if your issue is fixed in a newer version.
 - `mb --version`
 - Operating system
 - Install mode (`pipx` or clone)
