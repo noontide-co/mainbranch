@@ -42,7 +42,7 @@ Do you ever feel like [specific pain point]? You're watching others [achieve des
 
 **Example**:
 ```
-Do you ever feel like your Skool group isn't growing fast enough? Or maybe it's barely growing at all? You're watching other groups add thousands of dollars in MRR, winning the Skool Games, and you wonder, 'What am I doing wrong?' You might think your offer isn't strong enough, or that you don't have enough traffic, or even that your About page is not converting anyone. If all of this is familiar, you're not alone.
+Do you ever feel like your Skool group isn't growing fast enough? Or maybe it's barely growing at all? You're watching other groups gain traction and build momentum, and you wonder, 'What am I doing wrong?' You might think your offer isn't strong enough, or that you don't have enough traffic, or even that your About page is not converting anyone. If all of this is familiar, you're not alone.
 ```
 
 ---
@@ -55,39 +55,39 @@ Do you ever feel like your Skool group isn't growing fast enough? Or maybe it's 
 - Relate to their situation — show you were once in their shoes
 - Bridge the gap with a genuine story
 - Introduce a mentor, catalyst, or turning point
-- Highlight specific transformation results for credibility
+- Highlight credible transformation patterns without inventing unverifiable numbers
 
 **Template**:
 ```
-When we started [situation], we had [problem]. But when [catalyst/event], we saw our opportunity. We went all-in on [solution], and the results were [positive outcome].
+When we started [situation], we had [problem]. But when [catalyst/event], we saw our opportunity. We went all-in on [solution], and it changed [what shifted].
 ```
 
 **Example**:
 ```
-When we started our Skool group, nobody knew us; we had no audience. But we wanted reliable, recurring revenue with a high profit margin. So when Skool launched their Meta integration, we saw our opportunity. We went all-in on Facebook ads to promote our Skool group, and the results were crazy. In the first two months, we hit $10K MRR, and in September, we won the Skool Games adding $37K in MRR in a single month—all profitable, all thanks to ads.
+When we started our Skool group, nobody knew us; we had no audience. But we wanted a more reliable way to reach the right people. So when we saw a path to use Facebook ads intentionally, we took it seriously. We went all-in on learning how to promote the group, and it changed how we thought about growth. Instead of waiting for referrals or content to compound, we had a repeatable way to put the offer in front of the right people.
 ```
 
 ---
 
 ## 3. Peek the Plan
 
-**Objective**: Position yourself as the guide ready to help them achieve similar results.
+**Objective**: Position yourself as the guide ready to help them pursue a similar path.
 
 **Guidance**:
 - Reverse roles: you're now the mentor
 - Give sneak peek of what's coming
-- Establish authority with proof
+- Establish authority with experience and a clear point of view
 - Add open hook to create curiosity
-- Suggest plan is risk-free or low-risk
+- Keep risk language accurate to the offer's actual terms
 
 **Template**:
 ```
-Now, I want to share [what you've learned], so you can [achieve similar results]. And the best part is, you can start today, totally risk-free.
+Now, I want to share [what you've learned], so you can [achieve desired path]. And the best part is, you can start in a way that matches [actual risk terms].
 ```
 
 **Example**:
 ```
-Now, I want to share everything we've learned from building the largest Skool ads group, so you can learn how to start and scale your own community with ads. And the best part is that you can start today, totally risk-free.
+Now, I want to share everything we've learned from helping community owners use ads more intentionally, so you can learn how to start and scale your own community with ads. And the best part is that you can start with clear expectations and a simple first step.
 ```
 
 ---
@@ -147,12 +147,12 @@ And I know that you might be wondering, 'Do I need to be ready to run ads to joi
 
 **Template**:
 ```
-You don't need to [overcome obstacle], because we'll [provide solution]. Plus, you can [additional benefit]. When you know how to [key action], you'll see results.
+You don't need to [overcome obstacle], because we'll [provide solution]. Plus, you can [additional benefit]. When you know how to [key action], you'll know what to do next.
 ```
 
 **Example**:
 ```
-You don't need to be fully prepared right now, because we'll guide you on how to get your account set up and your group ready, because ads give you the ability to bring visitors to your About page every day on autopilot. Plus, you can adjust your budget based on your situation—there's no need to spend hundreds or thousands of dollars a day. We've got people in the Ads Lab spending just $10 a day and getting new members. When you know how to create the right ads, which buttons to push, and how to structure your Skool group, you'll see results.
+You don't need to be fully prepared right now, because we'll guide you on how to get your account set up and your group ready, because ads give you the ability to bring visitors to your About page every day on autopilot. Plus, you can adjust your budget based on your situation; there's no need to start with an aggressive spend. When you know how to create the right ads, which buttons to push, and how to structure your Skool group, you'll have a clearer path to consistent growth.
 ```
 
 ---
@@ -164,7 +164,7 @@ You don't need to be fully prepared right now, because we'll guide you on how to
 **Guidance**:
 - Use variety of examples (different backgrounds, situations)
 - Follow framework: "Like [Name], who [achieved result]. Then there's [Name], who [another success]."
-- Include specific numbers and timeframes
+- Use real testimonials only when approved for public use; otherwise use clearly fictionalized composite examples
 - Appeal broadly to different audience segments
 
 **Template**:
@@ -174,13 +174,13 @@ Like [Name], who [achieved result]. Then there's [Name], who [another success].
 
 **Example**:
 ```
-Like Sarah, who helps consignment store owners increase their sales. She went from 40 to 110 members in her $97 community in just 3 months. She's now doing over $10k a month thanks to ads.
+Note: The names below are fictionalized composites. Replace them with approved real testimonials before publishing a client VSL.
 
-And Haley, a former Skool Games winner, called herself an ads newbie when she joined, but she knew ads were key to growing her group. Just two weeks later, in her first test, she spent $282 and made $1,800 in MRR. Now, she and her husband are doing over $40K a month.
+Like Maya, who helps local service owners improve their sales process. She came in with a solid offer but inconsistent traffic. After tightening her positioning and testing a simple ad angle, she finally had a predictable way to start conversations with better-fit prospects.
 
-Peyton, with no following and 3 members in his free fitness group, started running ads and grew to 65 potential high-ticket clients in just one week. And now he has over 300.
+Then there's Jordan, who had almost no audience and was relying on manual outreach. Ads helped him learn which promise people actually cared about, and that clarity improved his group, his sales calls, and his content.
 
-Also Mazen, who helps people stay fit with fun bodyweight skills, joined the group less than a month ago making around $1,200. In under a month, he's already crossed the $3K/month mark, giving undeniable credit to our group.
+And there's Lena, who teaches a niche skill in a small market. She didn't need a massive audience; she needed a sharper message and a way to consistently reach the right people. That shift made growth feel practical instead of random.
 ```
 
 ---
@@ -192,7 +192,7 @@ Also Mazen, who helps people stay fit with fun bodyweight skills, joined the gro
 **Guidance**:
 - Slow down speaking pace
 - Create more intimate atmosphere
-- Use statistical proof
+- Use approved proof only; otherwise explain the pattern without numbers
 - Help them visualize success
 
 **Template**:
@@ -202,7 +202,7 @@ Your [goal] will benefit from [solution]. How am I so sure? Because we are consi
 
 **Example**:
 ```
-Your group will benefit from running ads. How am I so sure? Because we are consistently seeing Skool group owners inside the Ads Lab—some who aren't even English speakers—following our plan, running ads, and getting new members. Now, imagine if that was you. Qualified members joining your group every single day—it's possible.
+Your group can benefit from running ads. How am I so sure? Because the pattern is consistent: when community owners clarify their offer, tighten the page cold traffic sees, and test ads with discipline, they stop guessing and start learning from the market. Now, imagine if that was you. Qualified members discovering your group every day; it's possible.
 ```
 
 ---
@@ -237,19 +237,19 @@ Instead of spending time searching for the right members, the ads do the work fo
 **Guidance**:
 - Compare with high-priced alternatives
 - Stack benefits to emphasize value
-- Mention fast, easy, guaranteed attributes
+- Mention ease and risk only when the offer actually supports those claims
 - Elicit another soft yes
 
 **Template**:
 ```
-Right now, businesses are spending [high price] trying to [achieve goal] because [reason]. But what if you didn't have to spend [high price] to get that knowledge? What if you could [achieve goal] from the start, without [obstacle]? Would you at least consider trying it out, knowing you don't need to [big investment]—and can start risk-free?
+Right now, businesses are spending [resource] trying to [achieve goal] because [reason]. But what if you didn't have to waste [resource] to get that knowledge? What if you could [pursue goal] from the start, without [obstacle]? Would you at least consider trying it out, knowing you can start with [actual risk terms]?
 ```
 
 **Example**:
 ```
-Right now, businesses are spending thousands of dollars trying to learn the best strategies to run ads because, again, ads can be your magnet, always pulling in the right audience. But what if you didn't have to spend thousands to get that knowledge?
+Right now, businesses often waste time and budget trying to learn the best strategies to run ads because, again, ads can be your magnet, always pulling in the right audience. But what if you didn't have to figure it out alone?
 
-What if you could learn to run ads the right way from the start, without wasting money? Would you at least consider trying it out, knowing you don't need to spend a fortune—and can start risk-free?
+What if you could learn to run ads the right way from the start, without avoidable trial and error? Would you at least consider trying it out, knowing you can start carefully and keep the risk controlled?
 ```
 
 ---
@@ -265,16 +265,16 @@ What if you could learn to run ads the right way from the start, without wasting
 
 **Template**:
 ```
-If you really want to [achieve goal], [solution] is the key. You can start seeing results in [short time frame]. It doesn't take much skill—if you can [simple tasks], you can [use solution].
+If you really want to [achieve goal], [solution] can help. You can start learning in [realistic time frame]. It doesn't take much skill to begin; if you can [simple tasks], you can [use solution].
 ```
 
 **Example**:
 ```
-If you really want to get more out of your Skool group, running ads is the key. You can start seeing results in just a few hours.
+If you really want to get more out of your Skool group, running ads can become a useful growth channel. You can start learning from the market quickly.
 
 It doesn't take much skill—if you can watch a video, type on a keyboard, and come up with a picture or video idea, you can run ads. You don't need to be an expert; you just need to know how to create a good ad and press the right buttons, and the ads will do the rest.
 
-Think of running ads like using a vending machine. You enter a dollar, press the right buttons, and get exactly what you want. You don't need to understand how the machine works inside—just which buttons to press. Ads work the same way. Learn a few key things (that we will teach you), and they'll deliver the results.
+Think of running ads like using a dashboard. You do not need to understand every technical detail before you begin, but you do need to know which signals matter and which actions to take next. Learn a few key things (that we will teach you), and the process gets much less intimidating.
 ```
 
 ---
@@ -297,7 +297,7 @@ Sounds interesting? Great. [Solution] removes the biggest obstacles that stop mo
 ```
 Sounds interesting? Great. Running ads removes the biggest obstacles that stop most people from growing their Skool group. You don't need a huge audience, technical skills, or lots of free time.
 
-In fact, many of our most successful members started with no followers and no ad experience. Everything you need is built into our process, and we'll guide you through every step.
+In fact, this process is designed for people who are not ad experts yet. Everything you need is built into the process, and we'll guide you through every step.
 ```
 
 ---
@@ -308,7 +308,7 @@ In fact, many of our most successful members started with no followers and no ad
 
 **Guidance**:
 - Anticipate further doubts
-- Provide proof with examples
+- Use approved proof only; otherwise use examples as teaching scenarios
 - Emphasize ease of starting
 
 **Template**:
@@ -318,11 +318,11 @@ You might be asking, '[Question]?' Don't worry—you'll [reassurance].
 
 **Example**:
 ```
-You might be asking, 'What kind of ads work best for Skool groups?' Don't worry—you'll see real-time examples from other members and their results, so you can learn from what's already working.
+You might be asking, 'What kind of ads work best for Skool groups?' Don't worry; you'll see examples, breakdowns, and the reasoning behind them, so you can learn what to look for.
 
-If you're wondering, 'How fast can I see results?' It depends on how quickly you use what we teach and adjust based on feedback from the community or our live calls. The faster you act, the faster you'll see results.
+If you're wondering, 'How fast can I learn what works?' It depends on how quickly you use what we teach and adjust based on feedback from the community or our live calls. The faster you act, the faster you'll gather useful signal.
 
-And if you're asking, 'Is it really worth it?' Look, when you run ads the right way, the money you save can cover the cost of the group in just a day or two.
+And if you're asking, 'Is it really worth it?' Look, when you run ads the right way, you make better decisions with your budget and stop guessing about what your audience responds to.
 ```
 
 ---
@@ -365,11 +365,11 @@ Worst case? You [minimal loss]. Best case? You [significant gain]. And maybe you
 
 **Example**:
 ```
-Worst case? You join, do nothing, and still walk away with your money back and knowledge that took us thousands of hours and millions of dollars to learn—knowledge you can use in your next project.
+Worst case? You join, do nothing, and still walk away with a clearer understanding of how ads work for communities; knowledge you can use in your next project.
 
-Best case? You make a no-risk move and completely change how fast your Skool group grows, just like these members have.
+Best case? You make a careful move and completely change how you approach growth for your Skool group.
 
-And maybe you're not looking to grow super aggressively, but how would an extra $1,000, $2,000, or even $10,000 a month impact your group?
+And maybe you're not looking to grow super aggressively, but how would a more predictable path to better-fit members change the way you run your group?
 ```
 
 ---
@@ -391,9 +391,9 @@ The only thing that's certain is that if you don't [take action], nothing will c
 
 **Example**:
 ```
-The only thing that's certain is that if you don't take action, nothing will change. But if you do, you could be the next one growing your Skool group and seeing steady monthly income.
+The only thing that's certain is that if you don't take action, nothing will change. But if you do, you could be the next one growing your Skool group with a clearer, more repeatable process.
 
-The Ads Lab is here to make sure that happens. We're committed to helping you succeed, and we stand behind that 100%.
+This program is here to make sure that happens. We're committed to helping you succeed, and we stand behind that 100%.
 
 So, are you ready to take that step?
 ```
@@ -405,18 +405,18 @@ So, are you ready to take that step?
 **Objective**: Remove remaining barriers by minimizing perceived risk.
 
 **Guidance**:
-- Offer guarantees (money-back, trials)
+- Only mention guarantees, refunds, or trials when the offer actually supports them
 - Show goodwill — emphasize you want them to succeed
 - Build trust and reinforce credibility
 
 **Template**:
 ```
-And if you're worried about [risk], we offer [guarantee]. Try [solution], and if you're not [satisfied], we'll [refund/resolve]. We're here to help you succeed, and we just want you to [achieve goal].
+And if you're worried about [risk], here is the actual policy: [terms]. Try [solution], and if it is not the right fit, follow [refund/cancellation/support path]. We're here to help you succeed, and we just want you to [achieve goal].
 ```
 
 **Example**:
 ```
-And if you're worried about taking the leap, we offer a 14-day money-back guarantee. Try The Ads Lab, and if you're not seeing the results you want or decide it's not for you, just let us know, and we'll give you a full refund—no questions asked.
+And if you're worried about taking the leap, use whatever guarantee or trial policy your offer actually supports. Try the program, and if it is not the right fit, follow the stated policy for refunds or cancellation.
 
 We're here to help you succeed, and we just want you to grow your group.
 ```
