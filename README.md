@@ -1,13 +1,38 @@
 # Main Branch
 
-Open-source Claude Code skills and a small `mb` CLI for running business-as-files workflows.
+**Run your business as files in git. Stop renting it from someone else's dashboard.**
 
+Main Branch is the `mb` CLI plus a set of MIT-licensed Claude Code skills for running business-as-files workflows. Your offer, audience, voice, research, decisions, and campaigns live in a six-folder taxonomy in your own git repo — versioned, portable, agent-readable. Built for Claude Code first; cross-agent at v0.2+.
+
+
+## Install
+
+```bash
+pipx install mainbranch
+```
+
+That puts the `mb` CLI on your PATH. Run `mb --help` to see subcommands. (PyPI publish is the next launch step — until then, install in developer mode below.)
+
+For developer mode (cloning the engine repo to hack on skills):
+
+```bash
+git clone https://github.com/noontide-co/mainbranch.git
+```
+
+See [CHANGELOG.md](CHANGELOG.md) for what's in this release.
+
+---
+
+## What's new
+
+See [CHANGELOG.md](CHANGELOG.md). Each release ships a "What this means for you" plain-English section above the technical detail — the relevant bits in 30 seconds.
+
+---
 
 ## Honest current state (v0.1)
 
 - **Built for Claude Code.** Cross-platform skill support is a v0.2+ commitment.
 - **Schema is v1; will evolve.** Frontmatter shapes covered by `mb validate` are stable for v0.1.x; breaking changes bump the major.
-- **Install: `pipx install mainbranch`** (recommended, once published) or `git clone https://github.com/noontide-co/mainbranch` (developer mode).
 - **Cross-agent compatibility matrix lands at v0.2.** Codex, Cursor, Hermes, local LLMs are not first-class targets in v0.1.
 
 The engine v0.1.0 decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.md`](decisions/2026-04-29-mb-vip-v0-1-0-master.md).
@@ -149,6 +174,26 @@ That is it. You are ready to generate.
 
 ---
 
+## The `mb` CLI
+
+The CLI surface for the engine. Built for Claude Code first; cross-agent at v0.2+. Most workflows still happen via slash-prompt skills inside Claude Code — the `mb` CLI is the scaffolder, validator, and grapher around them.
+
+| Command | What it does |
+|---|---|
+| `mb init` | Scaffold a fresh business repo (six-folder taxonomy, CLAUDE.md, git init). |
+| `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
+| `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
+| `mb graph` | Walk the link graph (`linked_research` / `linked_decisions` / `supersedes`) and emit Graphviz DOT. `--open` renders to PNG and opens it. |
+| `mb think <topic>` | Print the `/think` invocation hint. Run inside Claude Code for the full flow. |
+| `mb resolve <key>` | Resolve a reference path through OSS / paid layered lookup. |
+| `mb educational <topic>` | Print an educational triage file (powers `mb doctor`'s "tell me more" prompts). |
+| `mb skill list` | List the skills bundled with this engine. |
+| `mb skill path <name>` | Print the on-disk path to a bundled skill. |
+
+For the full list: `mb --help`.
+
+---
+
 ## What Are Skills?
 
 Skills are pre-built workflows you invoke with slash prompts (for example, `/start`, `/ads`, `/think`).
@@ -223,7 +268,7 @@ your-business/
 │   │   └── [offer-name]/
 │   │       ├── offer.md   <- Offer-specific transformation
 │   │       └── audience.md <- Offer-specific audience (optional)
-│   ├── brand/             <- Visual identity, positioning
+│   ├── visual-identity/   <- Image gen prompts, palette, type, paired imagery
 │   ├── proof/
 │   │   ├── testimonials.md <- Social proof
 │   │   └── angles/        <- Proven messaging angles
@@ -232,7 +277,7 @@ your-business/
 │       └── content-strategy.md <- Pillars, platforms, cadence
 ├── research/              <- Your investigations
 ├── decisions/             <- Your choices
-└── outputs/               <- All generated content (lifecycle via frontmatter status)
+└── campaigns/             <- All generated content (lifecycle via frontmatter status)
 ```
 
 You fill in the reference files. Claude reads them when generating.
@@ -253,6 +298,9 @@ Devon updates the Main Branch repository with new skills and improvements.
 
 **In the Skool community:**
 Post in the Main Branch group. Tag @Devon for technical questions.
+
+**Not in the Skool community?**
+Open an issue at [github.com/noontide-co/mainbranch/issues](https://github.com/noontide-co/mainbranch/issues).
 
 **Common issues:**
 - "404 error" or "Repository not found" — Verify the URL and your network. The repo is public; no access request needed.
@@ -287,7 +335,7 @@ You can, but you do not need to. The skills are designed to work out of the box.
 
 **What makes this different from ChatGPT?**
 
-ChatGPT forgets everything between sessions. Main Branch remembers because your business info lives in files that Claude reads every time.
+ChatGPT lives in Sam Altman's box. Main Branch lives in your filesystem. Your offer, audience, voice, research, and decisions are markdown in your own git repo — versioned, portable, not subject to a SaaS provider's TOS, retention policy, or downtime. The agent reads your files; the data sits with you.
 
 **I am stuck. What do I do?**
 
@@ -307,6 +355,8 @@ That file has:
 - Git commit conventions
 
 You do not need to read it to get started. But it is there when you want to go deeper.
+
+**Decision history:** the engine v0.1.0 master decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.md`](decisions/2026-04-29-mb-vip-v0-1-0-master.md). All shipping decisions are dated, versioned, and committed alongside the code that implements them.
 
 ---
 
