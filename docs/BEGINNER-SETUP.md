@@ -41,7 +41,7 @@ Same flow as macOS — use `apt install pipx` (Debian/Ubuntu) or `dnf install pi
 
 ### Windows
 
-> **Windows is experimental in v0.1.** It may work but isn't tested in CI; expect rough edges. Track [issue #151](https://github.com/noontide-co/mainbranch/issues/151) for status. Power users are welcome to try the steps below.
+> **Windows is experimental in v0.1.** It may work but isn't tested in CI; expect rough edges. See [compatibility](compatibility.md) and track [issue #151](https://github.com/noontide-co/mainbranch/issues/151) for status. Power users are welcome to try the steps below.
 
 ```powershell
 # 1. Install Claude Code
@@ -174,6 +174,7 @@ Then restart Claude. This re-wires skill discovery in your business repo.
 - **In Claude Code:** type `/help` or describe the issue in plain English.
 - **In Skool:** post in the Main Branch group with a screenshot of the exact error. Tag Devon for setup issues.
 - **For OSS contributors:** open an issue at [https://github.com/noontide-co/mainbranch/issues](https://github.com/noontide-co/mainbranch/issues).
+- **Platform support:** see [compatibility](compatibility.md).
 
 ---
 
