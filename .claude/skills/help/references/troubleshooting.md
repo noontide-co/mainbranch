@@ -82,18 +82,9 @@ If skill prompts like `/start` or `/ads` aren't showing in the dropdown:
 test -e .claude/skills/start && echo "START_BRIDGE_OK"
 ```
 
-If missing, add compatibility links (without replacing local folders):
-```bash
-# Get vip path from settings
-VIP_PATH=$(python3 -c "
-import json, os
-with open('.claude/settings.local.json') as f:
-    dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
-for d in dirs:
-    if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
-        print(d); break
-")
+If missing, add compatibility links (without replacing local folders). First resolve `$VIP_PATH` per **[../../../reference/vip-path-resolution.md](../../../reference/vip-path-resolution.md)**, then:
 
+```bash
 # Create bridge links only for missing entries
 mkdir -p .claude/skills .claude/lenses .claude/reference
 for d in "$VIP_PATH"/.claude/skills/*; do
@@ -294,33 +285,10 @@ rm ~/.config/vip/local.yaml
 
 You shouldn't have any uncommitted changes in vip.
 
-If you do, resolve them using the canonical VIP resolution to find your vip path:
+If you do, resolve them by first running the canonical resolver per **[../../../reference/vip-path-resolution.md](../../../reference/vip-path-resolution.md)** to populate `$VIP_PATH`, then:
+
 ```bash
-# Canonical vip resolution (settings.local.json first — no extra deps)
-VIP_PATH=$(python3 -c "
-import json, os
-try:
-    with open('.claude/settings.local.json') as f:
-        dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
-    for d in dirs:
-        if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
-            print(d); break
-except: print('')
-" 2>/dev/null)
-
-# Fallback: check ~/.config/vip/local.yaml (needs PyYAML)
-if [ -z "$VIP_PATH" ] || [ ! -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
-  VIP_PATH=$(python3 -c "
-import os
-try:
-    import yaml
-    with open(os.path.expanduser('~/.config/vip/local.yaml')) as f:
-        print(yaml.safe_load(f).get('vip_path', ''))
-except: print('')
-" 2>/dev/null)
-fi
-
-# Then clean and pull (WARNING: discards any local changes in vip)
+# Clean and pull (WARNING: discards any local changes in vip)
 if [ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
   git -C "$VIP_PATH" checkout .
   git -C "$VIP_PATH" pull origin main
