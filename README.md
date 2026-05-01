@@ -1,5 +1,9 @@
 # Main Branch
 
+[![Star on GitHub](https://img.shields.io/github/stars/noontide-co/mainbranch?style=social&label=Star)](https://github.com/noontide-co/mainbranch)
+[![PyPI version](https://img.shields.io/pypi/v/mainbranch?style=flat&label=PyPI)](https://pypi.org/project/mainbranch/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **Run your business as files in git. Stop renting it from someone else's dashboard.**
 
 Main Branch is the `mb` CLI plus a set of MIT-licensed Claude Code skills for running business-as-files workflows. Your offer, audience, voice, research, decisions, and campaigns live in a six-folder taxonomy in your own git repo — versioned, portable, agent-readable. Built for Claude Code first; cross-agent at v0.2+.
