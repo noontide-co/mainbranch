@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from mb import engine as engine_mod
 from mb.engine import engine_root
 from mb.resolve import bundled_skills, run, skill_path
 
@@ -33,3 +34,12 @@ def test_skill_path_uses_engine_root() -> None:
     assert path is not None
     assert path == root / ".claude" / "skills" / "start"
     assert "think" in bundled_skills()
+
+
+def test_install_mode_does_not_treat_empty_pipx_home_as_prefix(tmp_path: Path, monkeypatch) -> None:
+    root = tmp_path / "tmp.with.dot" / "site-packages" / "mb" / "_engine"
+    monkeypatch.delenv("PIPX_HOME", raising=False)
+    monkeypatch.setattr(engine_mod, "packaged_engine_root", lambda: root)
+    monkeypatch.setattr(engine_mod, "source_engine_root", lambda: None)
+
+    assert engine_mod.install_mode() == "wheel"
