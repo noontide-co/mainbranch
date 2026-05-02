@@ -1,4 +1,4 @@
-"""``mb doctor`` — diagnose a Main Branch consumer repo.
+"""``mb doctor`` — check the health of a Main Branch repo.
 
 Checks Claude Code on PATH, gh auth status, network reachability,
 ``librsvg`` for ``tool-og-render``, and walks ``core/finance/`` looking
@@ -264,6 +264,6 @@ def render_human(report: dict[str, Any]) -> None:
         console.print(f"  {mark}  {c['name']:<22} {c['detail']}")
     console.print()
     if report["ok"]:
-        console.print("[green]all green[/green]")
+        console.print("[green]all good — you're set to run `claude`.[/green]")
     else:
-        console.print("[red]issues above; see remediation lines.[/red]")
+        console.print("[red]a few things to fix above — most are quick.[/red]")

@@ -119,7 +119,7 @@ def render_human(report: dict[str, Any], verbose: bool = False) -> None:
 
     console = Console()
     if not report["files"]:
-        console.print("[yellow]no files matched any schema[/yellow]")
+        console.print("[yellow]nothing to check yet.[/yellow]")
         return
     by_schema: dict[str, list[dict[str, Any]]] = {}
     for f in report["files"]:
@@ -134,7 +134,7 @@ def render_human(report: dict[str, Any], verbose: bool = False) -> None:
                     console.print(f"        - {e}")
     console.print()
     if report["ok"]:
-        console.print("[green]all schemas valid[/green]")
+        console.print("[green]all metadata looks right.[/green]")
     else:
         bad = sum(1 for f in report["files"] if not f["ok"])
-        console.print(f"[red]{bad} file(s) failed[/red]")
+        console.print(f"[red]{bad} file(s) need fixing — see above.[/red]")

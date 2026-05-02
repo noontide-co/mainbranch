@@ -1,4 +1,4 @@
-"""``mb init`` — non-interactive scaffold for a Main Branch consumer repo.
+"""``mb init`` — non-interactive scaffold for a Main Branch business repo.
 
 Per master decision, v0.1 asks ONE question (business name). Path-config
 flexibility is locked; folder names are the canonical six. Re-running on
@@ -100,7 +100,7 @@ def _link_or_mkdir(source: Path, dest: Path) -> str:
 
 
 def run(path: str, name: str) -> dict[str, Any]:
-    """Scaffold ``path`` as a Main Branch consumer repo.
+    """Scaffold ``path`` as a Main Branch business repo.
 
     Returns a dict with ``status`` ∈ {ok, already-initialized, error},
     ``path`` (absolute), and ``created`` (list of relative paths created).
@@ -202,34 +202,34 @@ def run(path: str, name: str) -> dict[str, Any]:
 _DEFAULT_CLAUDE = """\
 # {{BUSINESS_NAME}}
 
-This is a Main Branch consumer repo. Your business is a tree of files.
+Your business as files. Claude reads these; you edit them; git remembers them.
 
-## Folder taxonomy
+## Folders
 
-- `core/` — long-lived truth (offer, audience, voice, soul)
+- `core/` — the things that don't change often (offer, audience, voice, soul)
 - `core/offers/` — per-offer specifics
 - `core/finance/` — ledger and tax artifacts
-- `research/` — dated investigations
-- `decisions/` — dated choices, frontmatter status enum
+- `research/` — dated notes from when you went looking
+- `decisions/` — dated choices, with rationale
 - `log/` — running activity log
-- `campaigns/` — paid + organic campaign artifacts
+- `campaigns/` — paid + organic campaign work
 - `documents/` — anything that doesn't belong above
-- `reference/` — compatibility paths for Claude Code skills
+- `reference/` — compatibility paths Claude Code skills read from
   (`reference/core` points at `core/`)
 
 ## Conventions
 
-- Decisions, research, and offers carry frontmatter. Run `mb validate` to
-  check shape.
-- Status enum: proposed | running | scaling | killed | graduated | died.
+- Decisions, research, and offers carry a small block of metadata at the top
+  (frontmatter). Run `mb validate` to check it.
+- Status field: proposed | running | scaling | killed | graduated | died.
 - One owner per file (CODEOWNERS pattern).
 
 ## Helpful commands
 
 ```
-mb doctor                  # diagnose this repo
-mb validate                # check frontmatter shape
-mb graph --open            # see the link graph
+mb doctor                  # see if anything is off in this repo
+mb validate                # check the metadata on your files
+mb graph --open            # see what links to what
 ```
 
 Visit https://mainbranch.io for the full system docs.

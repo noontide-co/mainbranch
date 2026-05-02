@@ -59,7 +59,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │
 ├── Check context level ──────────────→ Fresh? Full load. Heavy? Warn user.
 │
-├── Detect business repo ─────────────→ CWD-first detection (see Step 0)
+├── Detect business repo ─────────────→ CWD-first detection (see Step 2)
 │   ├── CWD has reference/core/ or core/? → This IS the repo. Proceed.
 │   ├── CWD has .claude/skills/? ─────→ User is in vip (old workflow). Trigger migration.
 │   └── Neither? ────────────────────→ Check config, then ask user.
@@ -80,7 +80,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │
 ├── Pull business repo updates ───────→ (your repo, silently)
 │
-├── Offer detection ──────────────────→ (multi-offer only, see Step 1.5)
+├── Offer detection ──────────────────→ (multi-offer only, see Step 8)
 │   ├── offers/ exists? ─────────────→ Prompt or restore from .vip/local.yaml
 │   └── no offers/ ──────────────────→ Single-offer mode, skip
 │
@@ -112,15 +112,15 @@ Apply to: business repo selection, skill routing, any multiple choice.
 
 ---
 
-## Step -1: Pull Engine Updates
+## Step 1: Pull Engine Updates
 
 Pull vip updates. CWD is the business repo — resolve vip path first. **Do NOT silently swallow failures.** Users on stale code get broken features.
 
-See **[../../reference/pull-engine-updates.md](../../reference/pull-engine-updates.md)** for the canonical pull script, result handling table, the failure warning to surface, and the matching Step 0.5 business-repo pull logic.
+See **[../../reference/pull-engine-updates.md](../../reference/pull-engine-updates.md)** for the canonical pull script, result handling table, the failure warning to surface, and the matching Step 3 business-repo pull logic.
 
 ---
 
-## Step 0: Detect Business Repo (CWD-First)
+## Step 2: Detect Business Repo (CWD-First)
 
 The user starts Claude in their business repo. Check CWD first before falling back to config.
 
@@ -136,13 +136,13 @@ See **[references/repo-detection.md](references/repo-detection.md)** for the ful
 
 ---
 
-## Step 0.5: Pull Business Repo Updates
+## Step 3: Pull Business Repo Updates
 
-Once business repo is confirmed, pull its latest updates from `REPO_PATH`. See **[../../reference/pull-engine-updates.md](../../reference/pull-engine-updates.md)** "Step 0.5" section for the pull command and the result-handling table.
+Once business repo is confirmed, pull its latest updates from `REPO_PATH`. See **[../../reference/pull-engine-updates.md](../../reference/pull-engine-updates.md)** "Pull Business Repo Updates" section for the pull command and the result-handling table.
 
 ---
 
-## Step 0.75: MCP Pre-Flight (Not Full Research Detection)
+## Step 4: MCP Pre-Flight (Not Full Research Detection)
 
 Check for MCPs required by skills user might invoke. See [mcp-preflight.md](references/mcp-preflight.md).
 
@@ -162,7 +162,7 @@ If user's stated intent involves research, route to /think — it will handle to
 
 ---
 
-## Step 0.8: Tool Status Audit (Lightweight Self-Heal)
+## Step 5: Tool Status Audit (Lightweight Self-Heal)
 
 Run a lightweight `.vip/config.yaml` audit before readiness to repair stale `status: false` entries and normalize missing `last_checked` values.
 
@@ -174,7 +174,7 @@ See [tool-status-audit.md](references/tool-status-audit.md) for the full procedu
 
 ---
 
-## Step 0.9: Readiness Assessment
+## Step 6: Readiness Assessment
 
 **Run AFTER MCP pre-flight and tool-status audit, BEFORE routing.** Scores reference files, checks session state, and gates routing so users don't jump into output skills with thin context.
 
@@ -199,21 +199,21 @@ Adapt display to `user.experience` level (beginner = full breakdown, advanced = 
 
 ---
 
-## Step 1: Defer Full Context Loading
+## Step 7: Defer Full Context Loading
 
-**Do NOT read full reference files into main.** Readiness (Step 0.9) already scored them — that's enough for routing. Full context loading happens in the selected skill or triage agents, not here.
+**Do NOT read full reference files into main.** Readiness (Step 6) already scored them — that's enough for routing. Full context loading happens in the selected skill or triage agents, not here.
 
 **Why:** Reading soul.md + offer.md + audience.md + voice.md into main burns 15-30K tokens that get duplicated when the skill re-reads them. The triage test showed /start hitting 61% context before any work began. Main stays lean; skills/agents load what they need.
 
-**What main knows after Step 0.9:** Readiness scores, which files exist, composite score, gaps. That's enough to present the menu and gate routing.
+**What main knows after Step 6:** Readiness scores, which files exist, composite score, gaps. That's enough to present the menu and gate routing.
 
 **Exception:** Read `[repo]/CLAUDE.md` (the business brain) — it's small and needed for personality/routing awareness. Skip the 4 core reference files.
 
-**Multi-offer context:** If `current_offer` is set (see Step 1.5), note the active offer for routing. Don't load the offer file — the selected skill will.
+**Multi-offer context:** If `current_offer` is set (see Step 8), note the active offer for routing. Don't load the offer file — the selected skill will.
 
 ---
 
-## Step 1.5: Offer Detection (Multi-Offer Only)
+## Step 8: Offer Detection (Multi-Offer Only)
 
 After loading core context, check for multi-offer:
 
@@ -238,7 +238,7 @@ find "$REPO_PATH/reference/offers" -mindepth 2 -maxdepth 2 -name "offer.md" 2>/d
 
 ---
 
-## Step 2: Detect State and Assess Completeness
+## Step 9: Detect State and Assess Completeness
 
 Check `reference/core/*.md`. No folder → `/setup`. Exists → check completeness:
 
@@ -255,9 +255,9 @@ Check `reference/core/*.md`. No folder → `/setup`. Exists → check completene
 
 ---
 
-## Step 3: Route by Intent
+## Step 10: Route by Intent
 
-**Respect readiness gates from Step 0.9.** If status is MINIMAL or EMPTY, do not offer output skills. If THIN, warn. See [readiness-assessment.md](references/readiness-assessment.md) for skill-specific requirements.
+**Respect readiness gates from Step 6.** If status is MINIMAL or EMPTY, do not offer output skills. If THIN, warn. See [readiness-assessment.md](references/readiness-assessment.md) for skill-specific requirements.
 
 **Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[current_offer or 'single']**"
 
@@ -265,7 +265,7 @@ Check `reference/core/*.md`. No folder → `/setup`. Exists → check completene
 
 ---
 
-## Step 4: Help Mode
+## Step 11: Help Mode
 
 "Help" or confused → route to `/help`. Give quick overview first:
 
@@ -338,14 +338,14 @@ If re-invoked after compaction: re-read `~/.config/vip/local.yaml` for repo + id
 
 ## References
 
-- [../../reference/pull-engine-updates.md](../../reference/pull-engine-updates.md) — Step -1 + Step 0.5 pull scripts and failure warnings
-- [references/repo-detection.md](references/repo-detection.md) — Step 0 full CWD detection, migration, multi-repo selection, REPO_PATH, vip-loaded verification
-- [references/triage-menu.md](references/triage-menu.md) — Step 3 CHANGELOG banner, menu, "while you wait" pattern, auto-suggest/skip rules
+- [../../reference/pull-engine-updates.md](../../reference/pull-engine-updates.md) — Step 1 + Step 3 pull scripts and failure warnings
+- [references/repo-detection.md](references/repo-detection.md) — Step 2 full CWD detection, migration, multi-repo selection, REPO_PATH, vip-loaded verification
+- [references/triage-menu.md](references/triage-menu.md) — Step 10 CHANGELOG banner, menu, "while you wait" pattern, auto-suggest/skip rules
 - [references/auto-heal.md](references/auto-heal.md) — Bridge link recovery
 - [references/config-system.md](references/config-system.md) — Config loading and recovery
 - [references/mcp-preflight.md](references/mcp-preflight.md) — MCP pre-flight checks
-- [references/readiness-assessment.md](references/readiness-assessment.md) — Step 0.9 readiness scoring
-- [references/tool-status-audit.md](references/tool-status-audit.md) — Step 0.8 self-heal
+- [references/readiness-assessment.md](references/readiness-assessment.md) — Step 6 readiness scoring
+- [references/tool-status-audit.md](references/tool-status-audit.md) — Step 5 self-heal
 - [references/triage-agent.md](references/triage-agent.md) — Triage agent prompts and synthesis
 
 ---
