@@ -76,7 +76,7 @@ Each agent receives its prompt(s), visual-style.md context, output path, and tar
 
 See [image-generation-workflow.md](image-generation-workflow.md) -> "Parallel Agent Spawning" for batching strategy, rate limiting, agent prompt template, and failure handling.
 
-## Step 5: Synthesize Results
+## Step 5: Synthesize Results and Gate Copy Changes
 
 When all agents return:
 
@@ -84,13 +84,28 @@ When all agents return:
    - Collect all lens findings
    - Deduplicate (FTC and Substantiation may flag same issue)
    - Build unified P1/P2/P3 report
-   - **Auto-apply P2/P3 fixes** to the batch file using Edit tool
    - **P1 issues:** Surface to user for decision. Do NOT auto-fix. Mark status as BLOCKED.
+   - **P2/P3 issues:** Convert findings to a proposed-change JSON file with `severity`, `item_ref`, `issue`, `evidence`, `rule`, and `fix` fields.
+   - Run the compliance gate in dry-run mode before any source copy edit:
+
+     ```bash
+     python -m mb.ads_compliance_gate outputs/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md outputs/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json
+     ```
+
+   - Show the full proposed diff to the user and ask: "Apply these compliance copy changes? (y/n)"
+   - If the user says no, leave the batch file unchanged and keep `proposed-compliance-fixes.json` for review.
+   - If the user says yes, apply through the same gate with explicit approval:
+
+     ```bash
+     python -m mb.ads_compliance_gate outputs/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md outputs/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json --approve --review-log outputs/YYYY-MM-DD-{type}-{campaign}/review-log.md
+     ```
 
 2. **Image synthesis (if applicable):**
    - Collect results from all image agents, retry any failures, write `image-index.md`
 
-3. **Write `review-log.md`** documenting all compliance changes
+3. **Review log:**
+   - `review-log.md` is written only when the user approves source copy changes.
+   - If the user declines, do not rewrite the source copy; summarize the declined proposed changes in chat.
 
 ## Step 6: Present Unified Report
 
@@ -101,12 +116,15 @@ Pipeline complete:
   Cost: [$X / N/A]
 
   [If P1 exists: show blocking issues with suggested fixes]
-  [If P2 applied: show summary of auto-fixes]
+  [If P2/P3 exists: show proposed diff before applying]
+  [If P2/P3 approved: show summary of applied fixes]
+  [If P2/P3 declined: say source copy was left unchanged]
 
   Files:
     outputs/YYYY-MM-DD-{type}-{campaign}/
-    |- {batch-file}.md (copy, reviewed)
-    |- review-log.md
+    |- {batch-file}.md (copy, unchanged unless approved)
+    |- proposed-compliance-fixes.json
+    [|- review-log.md]
     [|- image-index.md]
     [|- images/ (N files)]
 
