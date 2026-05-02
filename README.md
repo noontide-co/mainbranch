@@ -191,7 +191,7 @@ See [CHANGELOG.md](CHANGELOG.md) for what's in this release. Each release ships 
 Plain English boundary so nobody is surprised:
 
 - **Open-source (free, MIT)**: the `mb` CLI, all bundled skills, the schema, the framework, and the dashboard when it ships. Anyone can install and run — no account, no gating, no upsell wall.
-- **Paid community (Skool)**: $19/mo to watch us build offers in public — the team running real offers through `mb` on real ad accounts, in real time. $99/mo adds group calls.
+- **Paid community (Skool)**: Want to watch us build companies live with Main Branch? Free for 7 days, $19/mo after. $99/mo adds group calls.
 
 The OSS engine is fully usable on its own. The paid community is the live narration on top.
 
