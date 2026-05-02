@@ -22,6 +22,7 @@ mb --version
 
 | Command | What it does |
 |---|---|
+| `mb onboard` | Human setup flow. Creates or connects a business repo, explains the local files/git/GitHub substrate, wires Claude Code skills, verifies discovery, and prints the next `/start` step. Supports `--yes` and `--json` for smoke tests. |
 | `mb init` | Scaffold a new business repo (six folders, CLAUDE.md, CODEOWNERS, `git init`) and wire the bundled Claude Code skill adapter. One question only: business name. |
 | `mb doctor` | Diagnostic. Checks Claude Code, gh auth, network, librsvg, runtime wiring, and package freshness. Warns on cloud-backed finance paths and offers educational triage. |
 | `mb status` | Daily briefing. Summarizes repo shape, install/runtime readiness, recent brain files, recent git activity, and GitHub tasks when `gh` is authenticated. Supports `--json`. |

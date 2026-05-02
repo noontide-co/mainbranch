@@ -73,11 +73,14 @@ Pick a name and a folder. Then:
 
 ```bash
 cd ~/Documents/GitHub          # or wherever you keep code
-mb init my-business --name "My Business"
+mb onboard --name "My Business" --path my-business
 cd my-business
 ```
 
-`mb init` scaffolds the six-folder taxonomy (`core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`) plus a `CLAUDE.md`, `.gitignore`, and the bridge files Claude Code needs to find Main Branch's skills.
+`mb onboard` walks you through the setup, explains why Main Branch uses local
+files, git, and GitHub, scaffolds the six-folder taxonomy (`core/`,
+`research/`, `decisions/`, `log/`, `campaigns/`, `documents/`), and wires the
+bridge files Claude Code needs to find Main Branch's skills.
 
 ---
 
@@ -140,6 +143,7 @@ Or just run `/pull` inside Claude Code — it figures out which install you have
 
 | Command | What it does |
 |---|---|
+| `mb onboard` | Guided setup for humans. Creates or connects a business repo and shows the next `/start` step. |
 | `mb init` | Scaffold a fresh business repo. |
 | `mb doctor` | Check that everything is set up correctly. Walks you through fixes. |
 | `mb skill link --repo .` | Repair Claude Code skill discovery if `/start` doesn't show up. |

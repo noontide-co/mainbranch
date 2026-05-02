@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import sys
+from typing import Any
 
 import typer
 
@@ -17,6 +18,7 @@ from mb import doctor as doctor_mod
 from mb import educational as educational_mod
 from mb import graph as graph_mod
 from mb import init as init_mod
+from mb import onboard as onboard_mod
 from mb import resolve as resolve_mod
 from mb import start as start_mod
 from mb import status as status_mod
@@ -62,7 +64,7 @@ def _render_launch_screen() -> None:
                 "Stay connected to the business while agents handle execution.",
                 "",
                 "Choose a trail:",
-                "  New here      mb onboard       guided setup (coming in v0.2)",
+                "  New here      mb onboard       guided setup",
                 "  Daily work    mb status        business/repo briefing",
                 "                mb start         open the agent runtime",
                 "  Broken setup  mb doctor        check git, GitHub, Claude Code, and skills",
@@ -126,6 +128,141 @@ def init_cmd(
         else:
             typer.echo(f"could not set up: {result.get('error')}", err=True)
             raise typer.Exit(1)
+
+
+def _onboard_target_path(path_arg: str, path_opt: str, name: str) -> str:
+    explicit = path_opt.strip() or path_arg.strip()
+    if explicit:
+        return explicit
+    return onboard_mod._slug(name) if name.strip() else "."
+
+
+def _render_onboard_intro(level: str) -> None:
+    if level == "power":
+        typer.echo("Main Branch keeps the business in local files, git history, and GitHub work.")
+        return
+    typer.echo("")
+    typer.echo("Main Branch works because the business lives somewhere durable:")
+    typer.echo("  local files  - readable, portable business memory")
+    typer.echo("  git          - the evolution story and rollback layer")
+    typer.echo("  GitHub       - tasks, proposals, reviews, and shipped history")
+    typer.echo("  Claude Code  - the first execution runtime for judgment-heavy work")
+
+
+def _render_onboard_human(result: dict[str, Any]) -> None:
+    from rich.console import Console
+
+    console = Console()
+    mark = "[green]ready[/green]" if result["ok"] else "[red]needs repair[/red]"
+    console.print(f"\n[bold]mb onboard[/bold]  {mark}")
+    console.print(f"repo: {result['path']}")
+    console.print(f"level / action: {result['level']} / {result['action']}\n")
+
+    if result["level"] != "power":
+        console.print("[bold]Why this stack[/bold]")
+        console.print("  Local files are the business brain.")
+        console.print("  Git remembers how the business changed.")
+        console.print("  GitHub turns tasks and proposals into a team surface.")
+        console.print("  Claude Code is the first runtime that can act on the repo.\n")
+
+    tools = result["tools"]
+    skill_wiring = result["skill_wiring"]
+    git = tools["git"]
+    github = tools["github_cli"]
+    claude = tools["claude_code"]
+    console.print("[bold]Checks[/bold]")
+    console.print(f"  {'ok' if git['found'] else 'warn'}  git")
+    github_state = "ok" if github["found"] and github["authenticated"] else "warn"
+    console.print(f"  {github_state}  GitHub CLI")
+    console.print(f"  {'ok' if claude['found'] else 'warn'}  Claude Code")
+    console.print(f"  {'ok' if skill_wiring['ok'] else 'fail'}  Claude Code skill discovery")
+
+    warnings = result["warnings"]
+    errors = result["errors"]
+    if warnings:
+        console.print("\n[yellow]Repair notes[/yellow]")
+        for warning in warnings:
+            console.print(f"  - {warning}")
+    if errors:
+        console.print("\n[red]Could not finish setup[/red]")
+        for error in errors:
+            console.print(f"  - {error}")
+        console.print(f"\nRun `{result['doctor_command']}` for repair steps.")
+        return
+
+    console.print("\n[bold]Next[/bold]")
+    for step in result["next_steps"]:
+        console.print(f"  {step}")
+    if warnings:
+        console.print(f"\nFor a full setup check, run `{result['doctor_command']}`.")
+    console.print()
+
+
+@app.command("onboard")
+def onboard_cmd(
+    path_arg: str = typer.Argument("", help="Repo path to create or connect."),
+    path_opt: str = typer.Option("", "--path", help="Repo path to create or connect."),
+    name: str = typer.Option("", "--name", help="Business name."),
+    mode: str = typer.Option(
+        "auto",
+        "--mode",
+        help="Setup mode: auto, new, or connect.",
+    ),
+    level: str = typer.Option(
+        "auto",
+        "--level",
+        help="Experience level: auto, beginner, intermediate, or power.",
+    ),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Use defaults and never prompt."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Guide a human through first setup or reconnect an existing repo."""
+    interactive = onboard_mod.is_interactive()
+    if not yes and not interactive:
+        typer.echo(
+            "mb onboard needs a terminal prompt. Use `mb onboard --yes` for scripts.", err=True
+        )
+        raise typer.Exit(2)
+
+    selected_level = level
+    selected_mode = mode
+    target = _onboard_target_path(path_arg, path_opt, name)
+    business_name = name
+
+    if not yes:
+        typer.echo("Main Branch setup")
+        selected_level = typer.prompt(
+            "Comfort level (beginner/intermediate/power)",
+            default="beginner" if level == "auto" else level,
+        )
+        if selected_level != "power":
+            _render_onboard_intro(selected_level)
+        selected_mode = typer.prompt(
+            "Create a new repo, connect an existing one, or auto-detect? (new/connect/auto)",
+            default="auto" if mode == "auto" else mode,
+        )
+        if not business_name and selected_mode != "connect":
+            business_name = typer.prompt("Business name")
+        default_path = target
+        if target == "." and business_name:
+            default_path = onboard_mod._slug(business_name)
+        target = typer.prompt("Repo path", default=default_path)
+
+    try:
+        result = onboard_mod.run(
+            path=target,
+            name=business_name,
+            mode=selected_mode,
+            level=selected_level,
+        )
+    except ValueError as exc:
+        typer.echo(f"mb onboard: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        _render_onboard_human(result)
+    raise typer.Exit(0 if result["ok"] else 1)
 
 
 @app.command("doctor")
