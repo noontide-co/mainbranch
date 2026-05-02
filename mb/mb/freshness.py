@@ -12,6 +12,7 @@ from mb import __version__
 from mb.engine import install_mode
 
 MINIMUM_SUPPORTED_VERSION = "0.2.0"
+# `mb update` first shipped in the same release as the current support floor.
 MB_UPDATE_AVAILABLE_VERSION = "0.2.0"
 PYPI_PACKAGE_URL = "https://pypi.org/pypi/mainbranch/json"
 _LATEST_AUTO = object()
@@ -50,8 +51,7 @@ def looks_like_business_repo(repo: Path) -> bool:
 
 
 def _post_update_commands(repo: str | Path | None) -> list[str]:
-    if repo is None:
-        return []
+    _ = repo
     return ["mb skill link --repo .", "mb doctor"]
 
 

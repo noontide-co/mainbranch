@@ -62,7 +62,7 @@ def test_bare_mb_tty_shows_required_update_alert(monkeypatch: pytest.MonkeyPatch
             "minimum_supported": "0.2.0",
             "severity": "required",
             "command": "pipx upgrade mainbranch",
-            "post_update_commands": [],
+            "post_update_commands": ["mb skill link --repo .", "mb doctor"],
             "reason": (
                 "Installed version predates mb update and the current skill-link repair flow."
             ),
@@ -76,6 +76,8 @@ def test_bare_mb_tty_shows_required_update_alert(monkeypatch: pytest.MonkeyPatch
     assert "Your Main Branch install is old enough" in result.stdout
     assert "pipx upgrade mainbranch" in result.stdout
     assert "mb update is not available in 0.1.0" in result.stdout
+    assert "mb skill link --repo ." in result.stdout
+    assert "mb doctor" in result.stdout
     assert "Usage:" not in result.stdout
 
 

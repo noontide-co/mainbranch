@@ -34,6 +34,21 @@ def test_required_update_status_for_version_below_minimum(tmp_path: Path) -> Non
     assert "mb doctor" in alert
 
 
+def test_required_update_without_repo_still_has_generic_repair_commands() -> None:
+    update = package_update_status(
+        None,
+        installed_version="0.1.2",
+        latest_version="0.2.1",
+        mode="pipx",
+    )
+
+    assert update["post_update_commands"] == ["mb skill link --repo .", "mb doctor"]
+    alert = format_update_alert(update)
+    assert "Then, from your business repo:" in alert
+    assert "mb skill link --repo ." in alert
+    assert "mb doctor" in alert
+
+
 def test_recommended_update_status_for_supported_stale_version(tmp_path: Path) -> None:
     update = package_update_status(
         tmp_path,

@@ -11,7 +11,7 @@ from typing import Any
 
 from mb import __version__
 from mb.engine import bundled_skills, engine_root, install_mode
-from mb.freshness import latest_pypi_version
+from mb.freshness import latest_pypi_version as _latest_pypi_version
 
 VERSION_RE = re.compile(r'__version__\s*=\s*["\']([^"\']+)["\']')
 CLONE_UPDATE_COMMAND = ["git", "pull", "--ff-only", "origin", "main"]
@@ -43,10 +43,6 @@ def _engine_version(root: Path | None = None) -> str:
         if match:
             return match.group(1)
     return __version__
-
-
-def _latest_pypi_version(timeout: float = 3.0) -> str | None:
-    return latest_pypi_version(timeout=timeout)
 
 
 def _version_from_git_ref(root: Path, ref: str) -> str | None:
