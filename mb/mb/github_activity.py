@@ -247,6 +247,7 @@ def collect(
     report["degraded"] = bool(errors)
     report["sections"] = sections
     report["summary"] = _summary(sections)
+    report["summary"]["shipped_this_week"] = len(merged)
     report["assigned_issues"] = assigned
     report["review_requests"] = review_requests
     report["recent_merged_prs"] = shipped_this_week

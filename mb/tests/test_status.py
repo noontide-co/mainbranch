@@ -305,7 +305,19 @@ def test_status_github_activity_business_sections(tmp_path: Path, monkeypatch) -
             if "--author" in args:
                 return True, [{"number": 8, "title": "Open proposal"}], ""
             if state == "merged":
-                return True, [{"number": 9, "title": "Merged", "body": "- Launched"}], ""
+                return (
+                    True,
+                    [
+                        {
+                            "number": index,
+                            "title": f"Merged {index}",
+                            "body": f"- Launched {index}",
+                            "mergedAt": f"2026-05-0{index}T00:00:00Z",
+                        }
+                        for index in range(1, 8)
+                    ],
+                    "",
+                )
         return True, [], ""
 
     monkeypatch.setattr(status_mod, "_gh_json", fake_gh_json)
@@ -319,14 +331,16 @@ def test_status_github_activity_business_sections(tmp_path: Path, monkeypatch) -
         "assigned_tasks": 1,
         "attention_requests": 3,
         "open_proposals": 1,
-        "shipped_this_week": 1,
+        "shipped_this_week": 7,
         "recently_closed_tasks": 1,
         "blocked_or_stale_tasks": 2,
     }
     assert sections["assigned_tasks"][0]["business_status"] == "assigned"
     assert sections["attention_requests"][0]["type"] == "proposal"
     assert sections["open_proposals"][0]["business_status"] == "open_proposal"
-    assert sections["shipped_this_week"][0]["what_shipped"] == "Launched"
+    assert len(sections["shipped_this_week"]) == 5
+    assert sections["shipped_this_week"][0]["number"] == 7
+    assert sections["shipped_this_week"][0]["what_shipped"] == "Launched 7"
     assert sections["recently_closed_tasks"][0]["business_status"] == "closed"
     assert sections["blocked_or_stale_tasks"][0]["labels"] == ["blocked"]
 
@@ -388,5 +402,7 @@ def test_status_renderer_prints_optional_sections(capsys) -> None:
     assert "Stale proposed/running decisions" in output
     assert "Recent research" in output
     assert "Recent git activity" in output
+    assert "tasks assigned: 1" in output
+    assert "shipped this week: 1" in output
     assert "task #173" in output
     assert "shipped #192" in output
