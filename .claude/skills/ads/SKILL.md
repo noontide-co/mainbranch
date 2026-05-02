@@ -269,7 +269,7 @@ See **[references/mode-video-scripts.md](references/mode-video-scripts.md)** for
 
 ## Mode: Review
 
-Review ads through 6 compliance and quality lenses before shipping (FTC, Meta Policy, Copy Quality, Visual Standards, Voice Authenticity, Substantiation). Spawns 6 parallel Task agents (read-only), synthesizes a unified P1/P2/P3 report, applies P2/P3 fixes, asks before committing.
+Review ads through 6 compliance and quality lenses before shipping (FTC, Meta Policy, Copy Quality, Visual Standards, Voice Authenticity, Substantiation). Spawns 6 parallel Task agents (read-only), synthesizes a unified P1/P2/P3 report, presents proposed P2/P3 copy changes as a diff, and applies them only after explicit approval.
 
 See **[references/mode-review.md](references/mode-review.md)** for the full lens table, review process, severity levels, and status determination.
 
@@ -279,9 +279,9 @@ See **[references/mode-review.md](references/mode-review.md)** for the full lens
 
 **Every generation entry point (Full Pipeline, Copy Only, Hook Library, Video Scripts) runs this pipeline automatically after saving output.** Do not ask the user whether to run compliance review -- it is automatic.
 
-See **[references/post-generation-pipeline.md](references/post-generation-pipeline.md)** for the complete pipeline: git commit pre-review, lens tier selection, Nano Banana check, parallel agent spawning (compliance + image), synthesis, unified report, and post-review commit.
+See **[references/post-generation-pipeline.md](references/post-generation-pipeline.md)** for the complete pipeline: git commit pre-review, lens tier selection, Nano Banana check, parallel agent spawning (compliance + image), synthesis, proposed-change approval gate, unified report, and post-review commit.
 
-**Quick summary:** Commit pre-review state, spawn 5-6 compliance agents + optional image agents in parallel, synthesize P1/P2/P3 findings, auto-apply P2/P3 fixes, surface P1 to user, present unified report, commit post-review.
+**Quick summary:** Commit pre-review state, spawn 5-6 compliance agents + optional image agents in parallel, synthesize P1/P2/P3 findings, surface P1 to user, show proposed P2/P3 copy edits as a dry-run diff, apply copy edits only after explicit approval, present unified report, commit post-review.
 
 **"While You Wait" pattern:** When spawning parallel agents that take >30 seconds, show a brief note so the user knows what's happening:
 > "Running compliance review across 6 lenses + generating images in parallel. This takes about 2-3 minutes. These run as sub-agents so they won't eat into your session context."
