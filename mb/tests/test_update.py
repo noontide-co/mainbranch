@@ -169,3 +169,128 @@ def test_update_json_cli_envelope(monkeypatch: Any, tmp_path: Path) -> None:
     assert payload["new_version"] == "0.2.0"
     assert payload["skills_relinked_count"] == 1
     assert payload["errors"] == []
+
+
+def test_update_rejects_unknown_install_mode(monkeypatch: Any, tmp_path: Path) -> None:
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "wheel")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+
+    result = update_mod.run(repo=tmp_path / "biz")
+
+    assert result["ok"] is False
+    assert result["mode"] == "wheel"
+    assert result["new_version"] == result["old_version"]
+    assert "unsupported install mode" in result["errors"][0]
+
+
+def test_update_pipx_missing_binary_returns_error(monkeypatch: Any, tmp_path: Path) -> None:
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod.shutil, "which", lambda name: None)
+
+    result = update_mod.run(repo=tmp_path / "biz")
+
+    assert result["ok"] is False
+    assert result["new_version"] == result["old_version"]
+    assert result["errors"] == ["pipx install mode detected, but `pipx` is not on PATH"]
+
+
+def test_update_pipx_upgrade_failure_skips_relink(monkeypatch: Any, tmp_path: Path) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        return _completed(args, returncode=2, stderr="network down")
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod.shutil, "which", lambda name: "/opt/homebrew/bin/pipx")
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(repo=tmp_path / "biz")
+
+    assert result["ok"] is False
+    assert result["skills_relinked_count"] == 0
+    assert calls == [["pipx", "upgrade", "mainbranch"]]
+    assert "network down" in result["errors"][0]
+
+
+def test_update_relink_invalid_json_is_reported(monkeypatch: Any, tmp_path: Path) -> None:
+    root = tmp_path / "engine"
+    (root / "mb" / "mb").mkdir(parents=True)
+    (root / "mb" / "mb" / "__init__.py").write_text('__version__ = "0.1.2"\n')
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        if args == ["git", "pull"]:
+            return _completed(args)
+        return _completed(args, stdout="not-json")
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "clone")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: root)
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(repo=tmp_path / "biz")
+
+    assert result["ok"] is False
+    assert result["skills_relinked_count"] == 0
+    assert result["errors"] == ["mb skill link returned invalid JSON"]
+
+
+def test_update_relink_payload_errors_are_reported(monkeypatch: Any, tmp_path: Path) -> None:
+    payload = {
+        "ok": False,
+        "linked": [],
+        "copied": [".claude/skills/start"],
+        "skipped": [".claude/skills/pull"],
+        "errors": ["could not locate bundled Main Branch engine root"],
+    }
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        return _completed(args, stdout=json.dumps(payload))
+
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    count, errors, parsed = update_mod._link_skills(tmp_path / "biz")
+
+    assert count == 2
+    assert errors == ["could not locate bundled Main Branch engine root"]
+    assert parsed == payload
+
+
+def test_update_render_human_check_and_error(capsys: Any) -> None:
+    update_mod.render_human(
+        {
+            "check": True,
+            "mode": "clone",
+            "old_version": "0.1.2",
+            "new_version": "0.2.0",
+            "skills_relinked_count": 3,
+            "actions": ["would run `git pull`"],
+            "errors": ["boom"],
+        }
+    )
+
+    output = capsys.readouterr().out
+
+    assert "install mode: clone" in output
+    assert "version: 0.1.2 -> 0.2.0" in output
+    assert "would refresh 3 skill link(s)" in output
+    assert "error: boom" in output
+
+
+def test_update_render_human_success(capsys: Any) -> None:
+    update_mod.render_human(
+        {
+            "ok": True,
+            "check": False,
+            "old_version": "0.1.2",
+            "new_version": "0.2.0",
+            "skills_relinked_count": 4,
+            "errors": [],
+        }
+    )
+
+    output = capsys.readouterr().out
+
+    assert "updated Main Branch (0.1.2 -> 0.2.0)" in output
+    assert "refreshed 4 skill link(s)" in output
