@@ -6,13 +6,12 @@ import json
 import re
 import shutil
 import subprocess
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Any
 
 from mb import __version__
 from mb.engine import bundled_skills, engine_root, install_mode
+from mb.freshness import latest_pypi_version as _latest_pypi_version
 
 VERSION_RE = re.compile(r'__version__\s*=\s*["\']([^"\']+)["\']')
 CLONE_UPDATE_COMMAND = ["git", "pull", "--ff-only", "origin", "main"]
@@ -44,18 +43,6 @@ def _engine_version(root: Path | None = None) -> str:
         if match:
             return match.group(1)
     return __version__
-
-
-def _latest_pypi_version(timeout: float = 3.0) -> str | None:
-    url = "https://pypi.org/pypi/mainbranch/json"
-    try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
-            data = json.loads(response.read().decode("utf-8"))
-    except (OSError, TimeoutError, urllib.error.URLError, json.JSONDecodeError):
-        return None
-    info = data.get("info", {})
-    version = info.get("version") if isinstance(info, dict) else None
-    return version if isinstance(version, str) and version else None
 
 
 def _version_from_git_ref(root: Path, ref: str) -> str | None:

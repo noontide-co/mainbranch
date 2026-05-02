@@ -14,13 +14,11 @@ import shutil
 import socket
 import subprocess
 import sys
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Any
 
-from mb import __version__
 from mb.engine import install_mode, link_status
+from mb.freshness import format_update_alert, package_update_status, version_key
 
 CLOUD_PREFIXES = (
     "Library/Mobile Documents",  # iCloud Drive
@@ -70,63 +68,53 @@ def _rsvg() -> tuple[bool, str]:
     return False, "rsvg-convert missing (brew install librsvg)"
 
 
-def _version_key(version: str) -> tuple[int, ...]:
-    parts: list[int] = []
-    for piece in version.split("."):
-        digits = ""
-        for char in piece:
-            if not char.isdigit():
-                break
-            digits += char
-        parts.append(int(digits or "0"))
-    return tuple(parts)
-
-
-def _latest_pypi_version(timeout: float = 3.0) -> str:
-    with urllib.request.urlopen("https://pypi.org/pypi/mainbranch/json", timeout=timeout) as resp:
-        data = resp.read().decode("utf-8")
-    import json
-
-    parsed = json.loads(data)
-    version = parsed.get("info", {}).get("version", "")
-    return version if isinstance(version, str) else ""
-
-
-def _mainbranch_version_check() -> dict[str, Any]:
+def _mainbranch_version_check(update: dict[str, Any]) -> dict[str, Any]:
     mode = install_mode()
-    if mode in {"clone", "source"}:
+    severity = str(update["severity"])
+    latest = str(update["latest"])
+    installed = str(update["installed"])
+
+    if mode in {"clone", "source"} and severity not in {"required", "recommended"}:
         return {
             "name": "mainbranch-version",
             "ok": True,
-            "detail": f"{__version__} ({mode} mode)",
+            "detail": f"{update['installed']} ({mode} mode)",
             "severity": "info",
         }
 
-    try:
-        latest = _latest_pypi_version()
-    except (OSError, TimeoutError, urllib.error.URLError):
+    if severity == "unknown":
         return {
             "name": "mainbranch-version",
             "ok": True,
-            "detail": f"{__version__}; could not check PyPI for latest",
+            "detail": f"{installed}; could not check PyPI for latest",
             "severity": "info",
         }
 
-    if latest and _version_key(latest) > _version_key(__version__):
+    if severity == "required":
         return {
             "name": "mainbranch-version",
             "ok": False,
             "detail": (
-                f"installed {__version__}, latest is {latest}. "
-                "Run `pipx upgrade mainbranch`; for context run "
-                "`mb educational upgrading-mainbranch`."
+                f"installed {installed}; minimum supported is {update['minimum_supported']}. "
+                f"Run `{update['command']}`."
+            ),
+            "severity": "error",
+        }
+
+    if severity == "recommended" or (latest and version_key(latest) > version_key(installed)):
+        return {
+            "name": "mainbranch-version",
+            "ok": False,
+            "detail": (
+                f"installed {installed}, latest is {latest}. "
+                f"Run `{update['command']}` when you can."
             ),
             "severity": "warn",
         }
     return {
         "name": "mainbranch-version",
         "ok": True,
-        "detail": f"{__version__} is current" if latest else __version__,
+        "detail": f"{installed} is current" if latest else installed,
     }
 
 
@@ -196,6 +184,7 @@ def run(path: str) -> dict[str, Any]:
     """Run all checks, return a structured report dict."""
     repo = Path(path).resolve()
     checks: list[dict[str, Any]] = []
+    update = package_update_status(repo)
 
     cc_path = _which("claude")
     checks.append(
@@ -248,7 +237,7 @@ def run(path: str) -> dict[str, Any]:
         }
     )
 
-    checks.append(_mainbranch_version_check())
+    checks.append(_mainbranch_version_check(update))
     checks.append(_repo_layout_check(repo))
 
     cloud_hits = _detect_cloud_paths(repo)
@@ -286,6 +275,7 @@ def run(path: str) -> dict[str, Any]:
         "ok": overall and not hard_fail,
         "checks": checks,
         "repo": str(repo),
+        "update": update,
         "python": sys.version.split()[0],
     }
 
@@ -296,6 +286,10 @@ def render_human(report: dict[str, Any]) -> None:
 
     console = Console()
     console.print(f"\n[bold]mb doctor[/bold]  {report['repo']}\n")
+    alert = format_update_alert(report.get("update", {}))
+    if alert:
+        console.print(alert)
+        console.print()
     for c in report["checks"]:
         sev = c.get("severity", "ok")
         if c["ok"]:

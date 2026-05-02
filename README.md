@@ -231,8 +231,10 @@ Create a separate repo for each brand. If they share the same soul and voice, th
 `pipx upgrade mainbranch`, or run `/pull` inside Claude Code.
 
 If `mb --version` still says `0.1.x`, run `pipx upgrade mainbranch` once before
-using `mb update`. Existing business repos should then run
-`mb skill link --repo .` from the repo root. See
+using `mb update`; old installs now surface this as an in-product
+"Update required" alert on the main launch, doctor, status, and start
+surfaces. Existing business repos should then run `mb skill link --repo .` and
+`mb doctor` from the repo root. See
 [docs/MIGRATING.md](docs/MIGRATING.md) for the old-repo path.
 
 **Can I edit the skills?**

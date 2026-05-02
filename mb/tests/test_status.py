@@ -49,6 +49,7 @@ def test_status_json_degrades_without_github(tmp_path: Path, monkeypatch) -> Non
     assert report["brain"]["counts"]["decisions"] == 1
     assert report["brain"]["recent_research"][0]["title"] == "Market"
     assert "readiness" in report
+    assert "update" in report
 
 
 def test_status_human_output_mentions_core_sections(tmp_path: Path, monkeypatch) -> None:
@@ -64,6 +65,44 @@ def test_status_human_output_mentions_core_sections(tmp_path: Path, monkeypatch)
     assert "Runtime" in result.stdout
     assert "GitHub" in result.stdout
     assert "Next" in result.stdout
+
+
+def test_status_required_update_json_and_human_copy(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setattr(
+        status_mod,
+        "package_update_status",
+        lambda repo: {
+            "installed": "0.1.0",
+            "latest": "0.2.1",
+            "minimum_supported": "0.2.0",
+            "severity": "required",
+            "command": "pipx upgrade mainbranch",
+            "post_update_commands": ["mb skill link --repo .", "mb doctor"],
+            "reason": (
+                "Installed version predates mb update and the current skill-link repair flow."
+            ),
+        },
+    )
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    json_result = runner.invoke(app, ["status", str(repo), "--json"])
+
+    assert json_result.exit_code == 0
+    payload = json.loads(json_result.stdout)
+    assert payload["update"]["severity"] == "required"
+    assert payload["update"]["command"] == "pipx upgrade mainbranch"
+    assert any(
+        "pipx upgrade mainbranch" in action for action in payload["readiness"]["next_actions"]
+    )
+
+    human_result = runner.invoke(app, ["status", str(repo)])
+
+    assert human_result.exit_code == 0
+    assert "Update required." in human_result.stdout
+    assert "pipx upgrade mainbranch" in human_result.stdout
+    assert "mb skill link --repo ." in human_result.stdout
 
 
 def test_status_detects_non_business_repo(tmp_path: Path, monkeypatch) -> None:

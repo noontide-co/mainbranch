@@ -14,6 +14,7 @@ import yaml
 
 from mb import __version__, github_activity
 from mb.engine import install_mode, link_status
+from mb.freshness import format_update_alert, package_update_status
 
 IMPORTANT_DIRS = (
     "core",
@@ -340,9 +341,11 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
         },
         {
             "name": "install",
-            "ok": bool(report["install"]["ok"]),
+            "ok": bool(report["install"]["ok"]) and report["update"]["severity"] != "required",
             "weight": 15,
-            "repair": "Reinstall Main Branch with `pipx install mainbranch`.",
+            "repair": report["update"]["command"]
+            if report["update"]["severity"] == "required"
+            else "Reinstall Main Branch with `pipx install mainbranch`.",
         },
         {
             "name": "skill_wiring",
@@ -392,10 +395,12 @@ def run(path: str = ".") -> dict[str, Any]:
     repo_path = Path(path).resolve()
     repo_shape = _looks_like_mainbranch_repo(repo_path)
     git = _git_info(repo_path)
+    update = package_update_status(repo_path)
     report: dict[str, Any] = {
         "ok": True,
         "repo": {"path": str(repo_path), **repo_shape},
         "install": _install(),
+        "update": update,
         "runtime": _runtime(repo_path),
         "git": git,
         "git_activity": _git_recent_activity(repo_path, git),
@@ -420,6 +425,10 @@ def render_human(report: dict[str, Any]) -> None:
     readiness = report["readiness"]
 
     console.print(f"\n[bold]mb status[/bold]  {repo['path']}")
+    alert = format_update_alert(report.get("update", {}))
+    if alert:
+        console.print(alert)
+        console.print()
     console.print(
         f"[bold]{readiness['level'].replace('_', ' ')}[/bold]  {readiness['score']}/100\n"
     )
