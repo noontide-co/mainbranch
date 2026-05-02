@@ -312,6 +312,9 @@ real external users, clear commands, and enough depth that keeping it inside
 
 The detailed v0.2.0 product slice is in
 [`docs/prd/v0-2-first-run-daily-briefing.md`](../docs/prd/v0-2-first-run-daily-briefing.md).
+The agent workflow, PR review, and runtime eval contract for building that
+slice is in
+[`docs/prd/v0-2-agent-workflow-and-evals.md`](../docs/prd/v0-2-agent-workflow-and-evals.md).
 
 1. Add `mb onboard` as the human setup flow; leave `mb init` scriptable.
 2. Add a TTY-aware bare `mb` launch screen that routes to onboard, status,

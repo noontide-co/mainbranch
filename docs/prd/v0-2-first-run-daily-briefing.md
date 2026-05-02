@@ -10,6 +10,8 @@ linked_issues:
   - https://github.com/noontide-co/mainbranch/issues/185
   - https://github.com/noontide-co/mainbranch/issues/186
   - https://github.com/noontide-co/mainbranch/issues/174
+related_prds:
+  - docs/prd/v0-2-agent-workflow-and-evals.md
 ---
 
 # PRD: v0.2 First-Run + Daily Briefing
@@ -413,3 +415,9 @@ v0.2.0 is done when a fresh user can:
 7. update Main Branch through `mb update`;
 8. recover from common missing-tool states through clear repair guidance.
 
+Development work for this release should follow the agent workflow and runtime
+eval ladder in
+[`docs/prd/v0-2-agent-workflow-and-evals.md`](v0-2-agent-workflow-and-evals.md).
+In particular, CLI tests are not enough for first-run work: changes that affect
+skill discovery, runtime handoff, or `/start` need a Claude Code smoke or an
+explicit note explaining why it could not be run.
