@@ -11,7 +11,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
-No unreleased changes yet.
+### Added
+
+- Added `mb update` for install-mode-aware engine refreshes. It detects pipx vs
+  clone installs, supports `--check` dry-runs, emits `--json` result envelopes,
+  and refreshes skill links after updates.
+
+### Changed
+
+- Updated `/pull` so the skill delegates mechanical update work to `mb update`
+  and keeps ownership of the human-readable changelog summary.
 
 ## [0.1.2] - 2026-05-01
 
