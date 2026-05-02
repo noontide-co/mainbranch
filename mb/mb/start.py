@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shlex
 import shutil
 import subprocess
@@ -92,6 +93,8 @@ def _git_status(repo: Path) -> dict[str, Any]:
 
 
 def _display_command(repo: Path) -> str:
+    if os.name == "nt":
+        return f"cd /d {subprocess.list2cmdline([str(repo)])} && claude"
     return f"cd {shlex.quote(str(repo))} && claude"
 
 

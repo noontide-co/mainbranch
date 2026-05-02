@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import shutil
 from pathlib import Path
 from typing import Any
@@ -107,3 +108,14 @@ def test_start_launches_when_explicit_and_interactive(tmp_path: Path, monkeypatc
     assert launched["path"] == str(repo.resolve())
     assert report["launch"]["attempted"] is True
     assert report["launch"]["returncode"] == 0
+
+
+def test_start_display_command_is_os_aware(tmp_path: Path, monkeypatch) -> None:
+    repo = tmp_path / "path with spaces"
+
+    monkeypatch.setattr(start_mod.os, "name", "posix")
+    assert start_mod._display_command(repo) == f"cd {shlex.quote(str(repo))} && claude"
+
+    monkeypatch.setattr(start_mod.os, "name", "nt")
+    assert start_mod._display_command(repo).startswith("cd /d ")
+    assert start_mod._display_command(repo).endswith(" && claude")
