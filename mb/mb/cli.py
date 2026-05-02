@@ -165,11 +165,23 @@ def start_cmd(
     launch: bool = typer.Option(
         False,
         "--launch",
-        help="Launch Claude Code after readiness checks pass in an interactive terminal.",
+        help="Launch Claude Code after readiness checks pass. Cannot be combined with --json.",
     ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Check runtime handoff readiness and print or launch the Claude Code command."""
+    if json_out and launch:
+        report = start_mod.run(repo=repo, launch=False)
+        message = "`--json` cannot be combined with `--launch`; run without `--json` to launch."
+        report["ok"] = False
+        report["errors"] = [message]
+        report["launch"]["requested"] = True
+        report["launch"]["safe"] = False
+        report["launch"]["attempted"] = False
+        report["launch"]["blocked_reason"] = message
+        typer.echo(json.dumps(report, indent=2))
+        raise typer.Exit(2)
+
     report = start_mod.run(repo=repo, launch=launch)
     if json_out:
         typer.echo(json.dumps(report, indent=2))

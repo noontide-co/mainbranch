@@ -72,20 +72,39 @@ def test_start_asks_for_repo_when_path_is_not_business_repo(tmp_path: Path, monk
     assert "--repo /path/to/business-repo" in result.stdout
 
 
+def test_start_json_launch_is_rejected_without_launching(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(start_mod, "_which", _with_claude)
+    monkeypatch.setattr(start_mod, "_is_interactive_terminal", lambda: True)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    def fail_launch(path: Path) -> int:
+        raise AssertionError(f"should not launch in JSON mode: {path}")
+
+    monkeypatch.setattr(start_mod, "_launch_claude", fail_launch)
+
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--launch", "--json"])
+
+    assert result.exit_code == 2
+    report = json.loads(result.stdout)
+    assert report["handoff_ready"] is True
+    assert report["launch"]["requested"] is True
+    assert report["launch"]["attempted"] is False
+    assert "--json" in report["launch"]["blocked_reason"]
+    assert "--launch" in report["errors"][0]
+
+
 def test_start_launch_is_blocked_outside_interactive_terminal(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(start_mod, "_which", _with_claude)
     monkeypatch.setattr(start_mod, "_is_interactive_terminal", lambda: False)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
 
-    result = runner.invoke(app, ["start", "--repo", str(repo), "--launch", "--json"])
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--launch"])
 
     assert result.exit_code == 1
-    report = json.loads(result.stdout)
-    assert report["handoff_ready"] is True
-    assert report["launch"]["requested"] is True
-    assert report["launch"]["attempted"] is False
-    assert "interactive terminal" in report["launch"]["blocked_reason"]
+    assert "Launch skipped" in result.stdout
+    assert "interactive terminal" in result.stdout
 
 
 def test_start_launches_when_explicit_and_interactive(tmp_path: Path, monkeypatch) -> None:
@@ -101,13 +120,12 @@ def test_start_launches_when_explicit_and_interactive(tmp_path: Path, monkeypatc
 
     monkeypatch.setattr(start_mod, "_launch_claude", fake_launch)
 
-    result = runner.invoke(app, ["start", "--repo", str(repo), "--launch", "--json"])
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--launch"])
 
     assert result.exit_code == 0
-    report = json.loads(result.stdout)
     assert launched["path"] == str(repo.resolve())
-    assert report["launch"]["attempted"] is True
-    assert report["launch"]["returncode"] == 0
+    assert "Launch" in result.stdout
+    assert "claude exited 0" in result.stdout
 
 
 def test_start_display_command_is_os_aware(tmp_path: Path, monkeypatch) -> None:
