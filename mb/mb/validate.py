@@ -38,6 +38,18 @@ LINK_FIELDS = (
     "supersedes",
 )
 
+LOCAL_REF_ROOTS = {
+    "campaigns",
+    "core",
+    "decisions",
+    "docs",
+    "documents",
+    "log",
+    "outputs",
+    "reference",
+    "research",
+}
+
 DECISION_STATUS_ORDER = {
     "proposed": 0,
     "running": 1,
@@ -129,9 +141,13 @@ def _check_one(path: Path, schema: dict[str, Any]) -> dict[str, Any]:
 
 def _is_hidden_or_generated(path: Path, repo: Path) -> bool:
     rel_parts = path.relative_to(repo).parts
-    return any(
-        part.startswith(".") or part in {"__pycache__", "node_modules", ".venv", "venv"}
-        for part in rel_parts
+    is_bundled_data = rel_parts[:2] == ("mb", "_data") or rel_parts[:1] == ("_data",)
+    return (
+        any(
+            part.startswith(".") or part in {"__pycache__", "node_modules", ".venv", "venv"}
+            for part in rel_parts
+        )
+        or is_bundled_data
     )
 
 
@@ -157,7 +173,15 @@ def _coerce_refs(value: Any) -> tuple[list[str], bool]:
 
 def _is_external_ref(ref: str) -> bool:
     parsed = urlparse(ref)
-    return bool(parsed.scheme) or ref.startswith("#")
+    if bool(parsed.scheme) or ref.startswith("#"):
+        return True
+    parts = Path(_clean_ref(ref)).parts
+    return (
+        len(parts) > 1
+        and parts[0] not in {".", ".."}
+        and parts[0] not in LOCAL_REF_ROOTS
+        and parts[1] in LOCAL_REF_ROOTS
+    )
 
 
 def _clean_ref(ref: str) -> str:
@@ -392,6 +416,10 @@ def run(
     warning_count = sum(len(f.get("warnings", [])) for f in files)
     error_count = sum(len(f.get("errors", [])) for f in files)
     ok = error_count == 0 and (warning_count == 0 or not strict)
+    if strict:
+        for file_result in files:
+            if file_result.get("warnings"):
+                file_result["ok"] = False
     return {
         "ok": ok,
         "files": files,

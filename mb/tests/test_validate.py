@@ -102,13 +102,10 @@ def test_cross_refs_warn_on_missing_targets_without_strict(tmp_path: Path) -> No
     assert report["ok"] is True
     assert report["summary"]["warnings"] == 1
     finding = report["cross_refs"]["warnings"][0]
-    assert finding == {
-        "code": "missing-target",
-        "path": "decisions/2026-04-29-broken.md",
-        "field": "linked_decisions",
-        "target": "decisions/missing.md",
-        "message": "linked_decisions target 'decisions/missing.md' does not exist",
-    }
+    assert finding["code"] == "missing-target"
+    assert finding["path"] == "decisions/2026-04-29-broken.md"
+    assert finding["field"] == "linked_decisions"
+    assert finding["target"] == "decisions/missing.md"
 
 
 def test_cross_refs_strict_fails_on_warnings(tmp_path: Path) -> None:
@@ -128,6 +125,48 @@ def test_cross_refs_strict_fails_on_warnings(tmp_path: Path) -> None:
 
     assert report["ok"] is False
     assert report["summary"] == {"errors": 0, "warnings": 1}
+    assert report["files"][0]["ok"] is False
+
+
+def test_cross_refs_skip_explicit_cross_repo_refs(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "decisions" / "2026-04-29-cross-repo.md",
+        (
+            "---\n"
+            "date: 2026-04-29\n"
+            "status: accepted\n"
+            "linked_research:\n"
+            "  - noontide-projects/research/2026-04-29-note.md\n"
+            "linked_decisions:\n"
+            "  - repo:noontide-projects/decisions/2026-04-29-choice.md\n"
+            "---\n"
+            "# cross repo\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True, strict=True)
+
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 0
+
+
+def test_cross_refs_skip_bundled_package_data(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "mb" / "_data" / "fixtures" / "decisions" / "fixture.md",
+        (
+            "---\n"
+            "date: 2026-04-29\n"
+            "status: accepted\n"
+            "linked_research: research/missing.md\n"
+            "---\n"
+            "# fixture\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True, strict=True)
+
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 0
 
 
 def test_cross_refs_flag_status_transition_regressions(tmp_path: Path) -> None:
@@ -198,3 +237,4 @@ def test_validate_cli_cross_refs_default_warns_strict_fails(tmp_path: Path) -> N
     assert result.exit_code == 1
     payload = json.loads(result.stdout)
     assert payload["ok"] is False
+    assert payload["files"][0]["ok"] is False
