@@ -40,6 +40,15 @@ def test_educational_load_known_topic_returns_text(tmp_path: Path) -> None:
     assert result is None or isinstance(result, str)
 
 
+def test_educational_upgrading_mainbranch_exists() -> None:
+    from mb.educational import load
+
+    result = load("upgrading-mainbranch")
+
+    assert result is not None
+    assert "pipx upgrade mainbranch" in result
+
+
 # ------------------------------------------------------------------------ think
 
 

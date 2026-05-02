@@ -148,6 +148,50 @@ def _detect_cloud_paths(repo: Path) -> list[str]:
     return hits
 
 
+def _repo_layout_check(repo: Path) -> dict[str, Any]:
+    has_core = (repo / "core").is_dir()
+    has_reference_core = (repo / "reference" / "core").exists()
+    has_reference = (repo / "reference").is_dir()
+
+    if has_core:
+        return {
+            "name": "repo-layout",
+            "ok": True,
+            "detail": "current core/ layout present",
+        }
+
+    if has_reference_core:
+        return {
+            "name": "repo-layout",
+            "ok": False,
+            "detail": (
+                "legacy reference/core layout detected. This still works, but "
+                "run `mb skill link --repo .` after upgrading and read "
+                "`docs/MIGRATING.md` before moving files."
+            ),
+            "severity": "warn",
+        }
+
+    if has_reference:
+        return {
+            "name": "repo-layout",
+            "ok": False,
+            "detail": (
+                "legacy reference/ layout detected without core/. Main Branch can "
+                "brief this repo, but current six-folder features may be limited. "
+                "Read `docs/MIGRATING.md` before moving files."
+            ),
+            "severity": "warn",
+        }
+
+    return {
+        "name": "repo-layout",
+        "ok": False,
+        "detail": "no core/ or reference/ layout found",
+        "severity": "warn",
+    }
+
+
 def run(path: str) -> dict[str, Any]:
     """Run all checks, return a structured report dict."""
     repo = Path(path).resolve()
@@ -205,6 +249,7 @@ def run(path: str) -> dict[str, Any]:
     )
 
     checks.append(_mainbranch_version_check())
+    checks.append(_repo_layout_check(repo))
 
     cloud_hits = _detect_cloud_paths(repo)
     cloud_ok = not cloud_hits

@@ -36,6 +36,10 @@ mb --version
 | `mb skill link --repo <path>` | Wire or repair Claude Code skill discovery for a business repo. Future runtime adapters should get equivalent wiring commands. |
 | `mb educational <topic>` | Print an educational triage file. Powers `mb doctor`'s "tell me more" prompts. |
 
+Users on early `0.1.x` installs must bootstrap once with
+`pipx upgrade mainbranch` before `mb update` exists locally. Existing business
+repos should run `mb skill link --repo .` after upgrading.
+
 ## Status
 
 Main Branch is **Claude Code first** with a strong CLI front door: `mb onboard`, `mb status`, `mb start`, and `mb update` are public package surfaces. Runtime compatibility for Codex, Cursor, OpenClaw, Hermes, and local runtimes remains roadmap work. The schema is v1 and will evolve. The runtime boundary decision lives at `decisions/2026-05-01-mb-cli-vs-agent-workflows-boundary.md`; the engine master decision lives at `decisions/2026-04-29-mb-vip-v0-1-0-master.md`.

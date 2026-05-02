@@ -120,6 +120,18 @@ pipx upgrade mainbranch
 
 Or just run `/pull` inside Claude Code — it figures out which install you have and runs the right thing. The CHANGELOG entry for the new version surfaces as a banner the next time you run `/start`.
 
+If you installed an early `0.1.x` version, upgrade once with
+`pipx upgrade mainbranch` before trying `mb update`. If you already had a
+business repo from the old setup, run this from that repo afterward:
+
+```bash
+mb skill link --repo .
+mb doctor
+```
+
+For old `reference/core/` repos, read [MIGRATING.md](MIGRATING.md). You usually
+do not need to move files immediately.
+
 ---
 
 ## Available Skills
