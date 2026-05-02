@@ -191,9 +191,9 @@ See [CHANGELOG.md](CHANGELOG.md) for what's in this release. Each release ships 
 Plain English boundary so nobody is surprised:
 
 - **Open-source (free, MIT)**: the `mb` CLI, all bundled skills, the schema, the framework, and the dashboard when it ships. Anyone can install and run — no account, no gating, no upsell wall.
-- **Paid community (Skool)**: curated reference (Devon's voice corpus, compliance log, angles library), the live bets-in-public feed, group calls, classroom curriculum, and direct Devon access at higher tiers. You watch us run real offers through `mb` on real ad accounts.
+- **Paid community (Skool)**: $19/mo to watch us build offers in public — the team running real offers through `mb` on real ad accounts, in real time. $99/mo adds group calls.
 
-The OSS engine is fully usable on its own. The paid wrapper layers in operator-specific reference and live operator presence on top of the same files.
+The OSS engine is fully usable on its own. The paid community is the live narration on top.
 
 ---
 
