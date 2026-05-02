@@ -11,6 +11,67 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-05-02
+
+v0.2.1 is the first post-0.2 durability release. It makes the new CLI front
+door safer for existing users, gives `mb` better GitHub-native briefing data,
+adds schema migration machinery for old business repos, and gates `/ads`
+compliance rewrites behind explicit approval.
+
+### What this means for you (plain English)
+
+- **Old installs now get a clear update warning.** If your Main Branch install
+  is too old for the current setup and skill-link flow, `mb`, `mb doctor`,
+  `mb status`, and `mb start` tell you to run `pipx upgrade mainbranch`, then
+  `mb skill link --repo .` and `mb doctor`.
+- **Existing repos have a migration path.** `mb migrate status`,
+  `mb migrate --check`, and `mb migrate --apply` can move legacy
+  `reference/core` and `reference/offers` layouts into the current `core`
+  layout with a repo-local backup and compatibility links.
+- **`mb status` knows more about GitHub work.** When `gh` is available and
+  authenticated, the briefing now separates assigned tasks, attention requests,
+  open proposals, shipped proposals this week, recently closed tasks, and
+  blocked/stale tasks.
+- **`mb validate` can catch stale links before they spread.** Use
+  `mb validate --cross-refs` to warn on missing local frontmatter references
+  and orphan offer directories; add `--strict` when CI should fail on those
+  warnings.
+- **`/ads` review no longer silently rewrites copy.** Compliance findings are
+  rendered as proposed diffs first and only applied after explicit approval.
+
+### Added
+
+- Added shared package freshness metadata and beginner-safe update alerts for
+  stale installs.
+- Added `mb migrate` with `status`, `--check`, `--apply`, JSON envelopes,
+  unified diffs, backups under `.mb/backups/`, schema markers, and v0.1-to-v0.2
+  path migration support.
+- Added schema-drift detection to `mb doctor`.
+- Added GitHub activity collection primitives backed by `gh` for richer
+  `mb status` output and downstream dashboard/runtime consumers.
+- Added `mb validate --cross-refs` and `--strict` for known local
+  frontmatter references and offer-directory checks.
+- Added an internal `/ads` compliance gate helper that dry-runs proposed copy
+  fixes, skips ambiguous replacements, and writes changes only after approval.
+
+### Changed
+
+- `mb status` now reports business-language GitHub sections instead of only raw
+  assigned issues, review requests, and merged PRs.
+- `mb doctor`, `mb status`, and `mb start` now expose stable update metadata in
+  JSON for agent and future dashboard consumers.
+- New `mb init` repos now include `.mb/schema_version` and ignore
+  `.mb/backups/`.
+- `docs/MIGRATING.md` now points existing users at the automated migration
+  command before the manual fallback.
+
+### Fixed
+
+- `/ads` compliance review now proposes P2/P3 copy edits as a diff and keeps
+  source copy unchanged unless the user approves.
+- Compliance copy replacement refuses repeated ambiguous evidence and avoids
+  compounding replacements against already-proposed text.
+
 ## [0.2.0] - 2026-05-02
 
 v0.2.0 makes `mb` feel like the front door to Main Branch. The release stays
