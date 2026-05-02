@@ -11,7 +11,7 @@ Update the Main Branch engine.
 
 ## What It Does
 
-Resolves the Main Branch engine path and updates that install — NOT from the current working directory (which is your business repo). pipx installs upgrade the `mainbranch` package; clone-based installs run `git pull`.
+Runs `mb update` for the mechanical engine refresh. The CLI detects whether Main Branch was installed with pipx or from a clone, updates that install, and refreshes skill links for the current business repo. This skill keeps ownership of the "what's new" narrative after the CLI step completes.
 
 ### Step 1: Resolve VIP Path
 
@@ -20,18 +20,7 @@ For the canonical bash + python3 resolver (settings.local.json first, ~/.config/
 ### Step 2: Update Main Branch
 
 ```bash
-if [ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
-  if git -C "$VIP_PATH" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    git -C "$VIP_PATH" pull origin main 2>&1
-  elif command -v pipx >/dev/null 2>&1 && pipx list --short 2>/dev/null | grep -q '^mainbranch '; then
-    pipx upgrade mainbranch 2>&1
-    mb skill link --repo "${REPO_PATH:-.}" 2>&1
-  else
-    echo "NO_UPDATE_MODE"
-  fi
-else
-  echo "NO_ENGINE_PATH"
-fi
+mb update --repo "${REPO_PATH:-.}" --json 2>&1
 ```
 
 ### Step 3: Pull Business Repo (if it has a remote)
@@ -42,17 +31,17 @@ git pull origin main 2>&1
 
 ### Handling Results
 
-**Main Branch updated:** "Updated Main Branch and refreshed skill links." — then read the CHANGELOG and surface unread entries (see "What's New from CHANGELOG" below).
+**Main Branch updated:** If the JSON result has `"ok": true`, say "Updated Main Branch and refreshed skill links." — then read the CHANGELOG and surface unread entries (see "What's New from CHANGELOG" below).
 
-**Main Branch current:** "Engine already up to date." — still surface unread CHANGELOG entries (the user might not have run /start since the last release landed).
+**Main Branch current:** If old_version and new_version match, "Engine already up to date." — still surface unread CHANGELOG entries (the user might not have run /start since the last release landed).
 
-**Main Branch path not found:** "Couldn't find Main Branch. Run `mb skill link --repo .`, then restart Claude."
+**Main Branch path not found:** If the JSON result is not valid or reports an engine-root error, say "Couldn't find Main Branch. Run `mb skill link --repo .`, then restart Claude."
 
 **Business repo updated:** "Also pulled updates for [repo-name]."
 
 **Business repo current or local-only:** Say nothing.
 
-**Error:** "Couldn't update: [error]. If you installed with pipx, try `pipx upgrade mainbranch`. If you cloned the engine repo, open GitHub Desktop → select mainbranch → click 'Fetch origin'."
+**Error:** "Couldn't update: [error]. Try `mb update --check --repo .` to see which install path Main Branch detects."
 
 ---
 

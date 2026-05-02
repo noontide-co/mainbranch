@@ -27,6 +27,7 @@ mb --version
 | `mb status` | Daily briefing. Summarizes repo shape, install/runtime readiness, recent brain files, recent git activity, and GitHub tasks when `gh` is authenticated. Supports `--json`. |
 | `mb validate` | Frontmatter shape check across `decisions/`, `core/offers/`, `research/`, `log/`, `campaigns/`, `documents/`. Exit 1 on any fail. |
 | `mb graph` | Walk linked_research / linked_decisions / supersedes; emit Graphviz DOT to stdout. `--open` shells to `dot` + `open`. |
+| `mb update` | Refresh the Main Branch engine according to install mode (`pipx` upgrade or clone `git pull`) and repair skill links. `--check` dry-runs; `--json` emits an envelope. |
 | `mb think <topic>` | Print the /think workflow invocation hint for the currently supported runtime. |
 | `mb resolve <key>` | Resolve a reference path (checks free first, then paid). |
 | `mb skill path <name>` | Print the on-disk path to a bundled skill. |
