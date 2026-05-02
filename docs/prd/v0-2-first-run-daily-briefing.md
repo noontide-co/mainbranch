@@ -345,6 +345,11 @@ Avoid overclaiming. v0.2.0 is still terminal-first and Claude-Code-first.
 
 ## Release Plan
 
+Each release should be a meaningful product slice. Avoid splitting work so
+finely that cold start, PR creation, review, CI, and merge overhead cost more
+than the feature. Prefer one branch per coherent user loop, with multiple
+concern-based commits inside the branch.
+
 ### v0.2.0
 
 - #184 bare `mb` launch screen
@@ -353,12 +358,36 @@ Avoid overclaiming. v0.2.0 is still terminal-first and Claude-Code-first.
 - #186 `mb start`
 - #174 `mb update`
 
+Success criteria:
+
+- a fresh user can install Main Branch and run bare `mb`;
+- the launch screen makes the next step obvious without breaking `mb --help` or
+  non-interactive scripts;
+- onboarding can create or connect a business repo and explain GitHub in
+  business language;
+- `mb status` gives a useful daily briefing without invoking a model;
+- `mb start` gets the user to Claude Code with skill discovery verified or a
+  clear repair path;
+- `mb update` handles pipx and clone/source installs accurately;
+- the full first-run loop is proven with CLI tests, fixture repo smoke, and a
+  Claude Code `/start` smoke or an explicit blocker note.
+
 ### v0.2.1
 
 - #188 GitHub activity briefing primitives
 - #121 graph index + interactive view
 - #122 cross-reference validation
 - #187 `mb connect` foundation
+
+Success criteria:
+
+- `mb status` can include cheap GitHub activity when `gh` is authenticated;
+- graph/index output can answer basic entity, tag, and relationship questions;
+- cross-reference validation catches stale links and broken references;
+- `mb connect` establishes the credential/config pattern without putting
+  secrets in the repo;
+- at least one real business repo can use the briefing and graph data without
+  manual file spelunking.
 
 ### v0.2.2
 
@@ -368,12 +397,31 @@ Avoid overclaiming. v0.2.0 is still terminal-first and Claude-Code-first.
 - #130 tool tethering
 - #143 similar-bets graph query
 
+Success criteria:
+
+- the runtime adapter contract is documented and tested against Claude Code plus
+  at least one other runtime target;
+- invocation hints do not hardcode Claude Code as the only path;
+- tool tethering produces clear setup/repair guidance;
+- similar-bets queries demonstrate that graph context improves real workflow
+  selection;
+- compatibility claims stay narrower than what has been tested.
+
 ### v0.3.0+
 
 - #189 dashboard spike
 - #128 `mb books`
 - site/ads/think deeper workflow surfaces
 - first structured data sync
+
+Success criteria:
+
+- dashboard/server mode is explicit, local-first, and optional;
+- local operational state has a documented home and repair story;
+- one structured data sync proves the database/index pattern before
+  generalizing;
+- domain-specific workflow surfaces earn their scope through real usage rather
+  than splitting into premature separate CLIs.
 
 ## Linear Mapping
 

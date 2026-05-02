@@ -20,9 +20,9 @@ development process should match the product thesis:
 - checks prove the deterministic layer;
 - runtime evals prove the human/agent loop.
 
-This PRD defines the cold-start template, PR review template, and evaluation
-ladder for v0.2 work. It is written for Devon's Conductor setup, but the
-contract is runtime-agnostic. Any agent runtime should be able to follow it.
+This PRD defines the agent startup template, PR review template, and evaluation
+ladder for v0.2 work. The contract is runtime-agnostic. Any agent runtime or
+human contributor should be able to follow it.
 
 ## Problem
 
@@ -45,7 +45,7 @@ issues and PRs with evidence.
 
 ## Goals
 
-- Give every Conductor-spawned agent the same starting shape.
+- Give every agent or contributor the same starting shape.
 - Preserve one issue per branch and one PR per concern.
 - Make PR review check product direction, not only syntax.
 - Add runtime evals that exercise Claude Code and skills, not only `mb`.
@@ -63,18 +63,16 @@ issues and PRs with evidence.
 - No issue epics. Work is sorted by priority, status, and release.
 - No model invocation from `mb` itself.
 
-## Conductor Cold Start Template
+## Agent Startup Template
 
-Use this as the default pre-PR template for Main Branch workspaces.
+Use this as the default pre-PR template for Main Branch work.
 
 ```md
-You are working inside Conductor on Devon's Mac.
-
 ## Workspace
 
 Workspace: {workspace_dir}
 Target branch: main
-Branch naming: dmthepm/<short-specific-name>
+Branch naming: follow the repository's branch convention.
 
 One branch owns one issue or one tightly scoped PR. Do not broaden scope
 silently. If you find adjacent work, open or comment on a follow-up issue.
@@ -130,11 +128,11 @@ Preferred evidence order:
 6. screenshots only when a visual or runtime UI matters.
 ```
 
-## Per-Branch Cold Start File
+## Per-Branch Startup File
 
 Every substantial branch should create a gitignored note at
-`.context/cold-start.md`. This is not the final artifact, but it keeps agents
-honest during the run.
+`.context/cold-start.md` or an equivalent local scratch file. This is not the
+final artifact, but it keeps agents honest during the run.
 
 Suggested shape:
 
@@ -406,7 +404,7 @@ When a branch reveals a repeated failure, choose one durable fix:
 - clarify an error message;
 - update a PRD or decision;
 - open a follow-up issue with priority, status, and release;
-- update Conductor preferences if the workflow rule belongs at agent startup.
+- update private maintainer workflow docs if the rule belongs at agent startup.
 
 Do not keep operational truth only in chat. Chat can decide; the repo must
 remember.
