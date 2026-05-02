@@ -6,8 +6,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for the idea. Frame the problem before the solution — the surface
-        area for v0.1.x is intentionally narrow, and well-scoped problems are
+        Thanks for the idea. Frame the problem before the solution — the public
+        surface is intentionally narrow, and well-scoped problems are
         easier to evaluate than abstract requests.
 
   - type: textarea

@@ -1,20 +1,20 @@
 # Compatibility
 
-Main Branch v0.1.x is intentionally narrow: `mb` plus bundled Claude Code skills as the first adapter for portable agent workflows.
+Main Branch is intentionally narrow today: `mb` plus bundled Claude Code skills as the first adapter for portable agent workflows.
 This page is the public compatibility contract for that surface.
 
 ## Supported matrix
 
-| Surface | v0.1.x status | Notes |
+| Surface | Current status | Notes |
 |---|---|---|
 | macOS | Supported | Primary development path. Recommended for beginners. |
 | Linux | Supported for `mb`; supported when Claude Code is installed | CI runs the Python package on Linux. Claude Code must be installed separately. |
-| Windows | Experimental | Not tested in CI for v0.1.x. Track [#137](https://github.com/noontide-co/mainbranch/issues/137). |
+| Windows | Experimental | Not tested in CI. Track [#137](https://github.com/noontide-co/mainbranch/issues/137). |
 | Python | 3.10, 3.11, 3.12 | CI gates all three versions. |
 | Install mode | `pipx install mainbranch` | Canonical public install path. |
 | Developer mode | Git clone | For contributors who want to edit the engine or skills. |
-| Agent runtime | Claude Code | First-class in v0.1.x. |
-| Codex, Cursor, OpenClaw, Hermes, local LLMs | Roadmap | Runtime support is v0.2+. `mb` is runtime-agnostic by design. |
+| Agent runtime | Claude Code | First-class today. |
+| Codex, Cursor, OpenClaw, Hermes, local LLMs | Roadmap | `mb` is runtime-agnostic by design, but these adapters are not supported yet. |
 
 **Windows tip — try WSL2.** If you're on Windows and want a working setup today, use [Windows Subsystem for Linux 2 (WSL2)](https://learn.microsoft.com/en-us/windows/wsl/install). Inside WSL2, follow the supported Linux flow. The pipx install path works there.
 
@@ -30,7 +30,7 @@ Supported means:
 Experimental means:
 
 - The path may work for power users.
-- It is not part of the v0.1.x release gate.
+- It is not part of the release gate.
 - Workarounds are welcome, but breakage is not treated as a launch blocker.
 
 ## Recommended setup
@@ -70,12 +70,12 @@ runs the appropriate update path, and refreshes skill links. Use
 Inside Claude Code, `/pull` calls `mb update` for this mechanical step and keeps
 ownership of the human-readable "what's new" summary.
 
-## Known v0.1.x limits
+## Known Limits
 
-- Claude Code is the only first-class agent runtime in v0.1.x.
+- Claude Code is the only first-class agent runtime today.
 - Windows is experimental.
 - Skills are bundled into the installed Python package, so public users update
   skills by upgrading `mainbranch`.
 - The CLI scaffolds, validates, graphs, resolves, and links the current Claude
   Code skill adapter. Most business workflows still happen through Claude Code
-  slash commands in v0.1.x.
+  slash commands.

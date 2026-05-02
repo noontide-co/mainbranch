@@ -15,7 +15,7 @@ body:
     attributes:
       label: "`mb --version` output"
       description: Paste the exact version string. If `mb` is not on PATH, say so.
-      placeholder: "mb 0.1.1"
+      placeholder: "mb X.Y.Z"
     validations:
       required: true
 

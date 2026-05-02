@@ -2,7 +2,7 @@
 
 Engine umbrella for [Main Branch](https://github.com/noontide-co/mainbranch) — scaffolds, validates, and graphs business-as-files repos.
 
-This package is the Python entry point. Workflows, playbooks, educational content, and consumer-repo templates ship as bundled package data. In v0.1.x, the day-to-day "do work" surfaces are packaged as Claude Code skills (markdown), invoked from inside Claude Code. The `mb` CLI is runtime-agnostic by design: future adapters should let Codex, Cursor, OpenClaw, Hermes, and local runtimes operate against the same business-as-files repo.
+This package is the Python entry point. Workflows, playbooks, educational content, and consumer-repo templates ship as bundled package data. Today, the day-to-day "do work" surfaces are packaged as Claude Code skills (markdown), invoked from inside Claude Code. The `mb` CLI is runtime-agnostic by design: future adapters should let Codex, Cursor, OpenClaw, Hermes, and local runtimes operate against the same business-as-files repo.
 
 The source tree keeps the engine payload in one place: repo-root `.claude/`. During sdist/wheel builds, `setup.py` copies that tree into `mb/_engine/.claude/` inside the build artifact so installed wheels can resolve skills, playbooks, reference files, lenses, and educational prompts without a source checkout.
 
@@ -38,7 +38,7 @@ mb --version
 
 ## Status
 
-v0.1 is **Claude Code first**. Runtime compatibility for Codex, Cursor, OpenClaw, Hermes, and local runtimes is a v0.2+ commitment. The schema is v1 and will evolve. The runtime boundary decision lives at `decisions/2026-05-01-mb-cli-vs-agent-workflows-boundary.md`; the engine master decision lives at `decisions/2026-04-29-mb-vip-v0-1-0-master.md`.
+Main Branch is **Claude Code first** with a strong CLI front door: `mb onboard`, `mb status`, `mb start`, and `mb update` are public package surfaces. Runtime compatibility for Codex, Cursor, OpenClaw, Hermes, and local runtimes remains roadmap work. The schema is v1 and will evolve. The runtime boundary decision lives at `decisions/2026-05-01-mb-cli-vs-agent-workflows-boundary.md`; the engine master decision lives at `decisions/2026-04-29-mb-vip-v0-1-0-master.md`.
 
 ## License
 

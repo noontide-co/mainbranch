@@ -1,5 +1,12 @@
 # System Architecture
 
+> **Status:** Legacy architecture reference. This file still contains
+> pre-package-era paths such as `reference/core/` and `.vip/local.yaml`.
+> For the current public repo shape, use `mb onboard`, `mb status`, and
+> the tree in `README.md`. Treat this document as historical design context
+> until it is rewritten around the shipped `core/`, `research/`,
+> `decisions/`, `log/`, `campaigns/`, and `documents/` taxonomy.
+
 Complete technical reference for how Main Branch works as an AI-native business operating system.
 
 ---

@@ -1,6 +1,6 @@
 ---
 title: "PRD: v0.2 First-Run + Daily Briefing"
-status: draft
+status: shipped
 date: 2026-05-02
 release: v0.2.0
 linked_decision: decisions/2026-05-02-github-native-business-os.md
@@ -18,11 +18,11 @@ related_prds:
 
 ## Summary
 
-Main Branch v0.2.0 should prove the new product shape without building a
-dashboard first.
+Main Branch v0.2.0 proved the new product shape without building a dashboard
+first.
 
-The release should make `mb` feel like the front door to a GitHub-native
-business operating system:
+The release made `mb` feel like the front door to a GitHub-native business
+operating system:
 
 1. bare `mb` gives a polished interactive launch screen;
 2. `mb onboard` guides humans through setup or repo connection;
@@ -30,22 +30,23 @@ business operating system:
 4. `mb start` makes the handoff to Claude Code explicit and repairable;
 5. `mb update` keeps the install and bundled workflows current.
 
-This release does not need full integrations, a live dashboard, autonomous
-agents, or multi-runtime execution. It needs to turn the first-run and daily-run
-loops into a coherent product.
+This release did not add full integrations, a live dashboard, autonomous agents,
+or multi-runtime execution. It turned the first-run and daily-run loops into a
+coherent terminal product.
 
 ## Problem
 
-The v0.1 CLI works, but it assumes the user already understands the system.
+Before this release, the CLI worked, but it assumed the user already understood
+the system.
 
 Current behavior:
 
-- `mb init` scaffolds a repo but does not teach or adapt.
-- Bare `mb` behaves like a traditional command reference.
-- The handoff to Claude Code is mostly copy/paste guidance.
-- `/start` carries the daily entry surface, but `mb` does not yet give a
+- `mb init` scaffolded a repo but did not teach or adapt.
+- Bare `mb` behaved like a traditional command reference.
+- The handoff to Claude Code was mostly copy/paste guidance.
+- `/start` carried the daily entry surface, but `mb` did not give a
   pre-runtime status view.
-- GitHub is present, but not yet reframed as the business team layer.
+- GitHub was present, but not yet reframed as the business team layer.
 
 This is enough for technical early adopters. It is not enough for the operator
 who needs to be taught why git, GitHub, Claude Code, and local files matter.
@@ -302,7 +303,7 @@ Acceptance:
 
 ## Data and State
 
-v0.2.0 should use only:
+The shipped v0.2.0 scope used only:
 
 - repo files;
 - git metadata;
@@ -451,7 +452,7 @@ Everything not listed above stays backlog unless explicitly pulled forward.
 
 ## Definition of Done
 
-v0.2.0 is done when a fresh user can:
+v0.2.0 was done when a fresh user could:
 
 1. install Main Branch;
 2. run `mb`;
