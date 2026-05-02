@@ -38,13 +38,13 @@ Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running busine
 
 ```bash
 pipx install mainbranch
-mb init my-business --name "My Business"
+mb onboard --name "My Business" --path my-business
 cd my-business
 claude
 /start
 ```
 
-That's it. `mb init` sets up the six folders, wires Claude Code to the bundled skills, and gives you a fresh git repo. `/start` walks you through the rest — gathers your business context (offer, audience, voice), drafts the reference files, and routes you to the right workflow.
+That's it. `mb onboard` guides the human setup, creates or connects your business repo, wires Claude Code to the bundled skills, and shows the exact next commands. `mb init` still exists as the quiet scriptable primitive underneath it. `/start` walks you through the rest — gathers your business context (offer, audience, voice), drafts the reference files, and routes you to the right workflow.
 
 After the first session, the daily flow is:
 
@@ -127,6 +127,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 
 | Command | What it does |
 |---|---|
+| `mb onboard` | Human setup flow: create or connect a business repo, explain the substrate, wire Claude Code skills, and show the next `/start` step. |
 | `mb init` | Set up a fresh business repo (six folders, CLAUDE.md, git init). |
 | `mb status` | Show a local-first daily briefing: repo health, runtime wiring, recent decisions/research/git activity, and GitHub tasks when `gh` is authenticated. |
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |

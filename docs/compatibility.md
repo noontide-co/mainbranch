@@ -39,11 +39,14 @@ For most users:
 
 ```bash
 pipx install mainbranch
-mb init my-business --name "My Business"
+mb onboard --name "My Business" --path my-business
 cd my-business
 claude
 /start
 ```
+
+Use `mb init my-business --name "My Business"` when you need the quiet,
+scriptable scaffold primitive without the human setup flow.
 
 For contributors:
 
