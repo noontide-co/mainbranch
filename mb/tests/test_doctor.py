@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mb.doctor import _detect_cloud_paths, run
+from mb.doctor import _detect_cloud_paths, _repo_layout_check, run
 from mb.init import run as init_run
 
 
@@ -15,6 +15,7 @@ def test_doctor_runs_on_empty_dir(tmp_path: Path) -> None:
     assert {"claude-code", "gh-auth", "network", "anti-cloud-backup"}.issubset(names)
     assert "skill-wiring" in names
     assert "mainbranch-version" in names
+    assert "repo-layout" in names
 
 
 def test_cloud_path_detection_via_symlink(tmp_path: Path, monkeypatch) -> None:
@@ -46,3 +47,24 @@ def test_doctor_skill_wiring_passes_after_init(tmp_path: Path) -> None:
     report = run(path=str(repo))
     wiring = next(c for c in report["checks"] if c["name"] == "skill-wiring")
     assert wiring["ok"] is True
+
+
+def test_repo_layout_warns_on_legacy_reference_core(tmp_path: Path) -> None:
+    repo = tmp_path / "legacy"
+    (repo / "reference" / "core").mkdir(parents=True)
+
+    check = _repo_layout_check(repo)
+
+    assert check["ok"] is False
+    assert check["severity"] == "warn"
+    assert "legacy reference/core" in check["detail"]
+
+
+def test_repo_layout_accepts_current_core(tmp_path: Path) -> None:
+    repo = tmp_path / "current"
+    (repo / "core").mkdir(parents=True)
+
+    check = _repo_layout_check(repo)
+
+    assert check["ok"] is True
+    assert "current core/" in check["detail"]

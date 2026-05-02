@@ -230,6 +230,11 @@ Create a separate repo for each brand. If they share the same soul and voice, th
 **How do I update when new skills come out?**
 `pipx upgrade mainbranch`, or run `/pull` inside Claude Code.
 
+If `mb --version` still says `0.1.x`, run `pipx upgrade mainbranch` once before
+using `mb update`. Existing business repos should then run
+`mb skill link --repo .` from the repo root. See
+[docs/MIGRATING.md](docs/MIGRATING.md) for the old-repo path.
+
 **Can I edit the skills?**
 You can, but you don't need to. They're designed to work out of the box.
 
