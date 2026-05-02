@@ -44,6 +44,8 @@ def test_status_json_degrades_without_github(tmp_path: Path, monkeypatch) -> Non
     assert report["repo"]["looks_like_mainbranch_repo"] is True
     assert report["runtime"]["skill_wiring"]["ok"] is True
     assert report["github"]["authenticated"] is False
+    assert report["github"]["source"] == "gh"
+    assert "assigned_tasks" in report["github"]["sections"]
     assert report["brain"]["counts"]["decisions"] == 1
     assert report["brain"]["recent_research"][0]["title"] == "Market"
     assert "readiness" in report
@@ -200,10 +202,14 @@ def test_status_github_authenticated_branches(tmp_path: Path, monkeypatch) -> No
     )
 
     def fake_gh_json(args: list[str], repo: Path) -> tuple[bool, Any, str]:
-        if args[1:3] == ["issue", "list"]:
+        if args[1:3] == ["issue", "list"] and "--assignee" in args:
             return True, [{"number": 173, "title": "Status", "url": "u"}], ""
-        if args[1:3] == ["pr", "list"] and "--search" in args:
+        if args[1:3] == ["pr", "list"] and "review-requested:@me" in args:
             return False, None, "search failed"
+        if args[1:3] == ["issue", "list"]:
+            return True, [], ""
+        if args[1:3] == ["pr", "list"] and "--state" in args and "open" in args:
+            return True, [], ""
         return (
             True,
             [
@@ -232,6 +238,8 @@ def test_status_github_authenticated_branches(tmp_path: Path, monkeypatch) -> No
     assert github["authenticated"] is True
     assert github["repo"] == "noontide-co/mainbranch"
     assert github["assigned_issues"][0]["number"] == 173
+    assert github["sections"]["assigned_tasks"][0]["type"] == "task"
+    assert github["summary"]["assigned_tasks"] == 1
     assert github["recent_merged_prs"][0]["number"] == 192
     assert github["recent_merged_prs"][0]["what_shipped"] == "Shipped status"
     assert github["errors"] == ["review requests: search failed"]
@@ -256,6 +264,71 @@ def test_status_github_authenticated_branches(tmp_path: Path, monkeypatch) -> No
         lambda args, cwd=None, timeout=3.0: {"ok": False, "stdout": "", "stderr": "no auth"},
     )
     assert status_mod._github(tmp_path, {"remote": ""})["authenticated"] is False
+
+
+def test_status_github_activity_business_sections(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", lambda name: "/usr/bin/gh" if name == "gh" else "")
+    monkeypatch.setattr(
+        status_mod,
+        "_run_command",
+        lambda args, cwd=None, timeout=3.0: {"ok": True, "stdout": "", "stderr": ""},
+    )
+
+    def value_after(args: list[str], flag: str) -> str:
+        if flag not in args:
+            return ""
+        return args[args.index(flag) + 1]
+
+    def fake_gh_json(args: list[str], repo: Path) -> tuple[bool, Any, str]:
+        state = value_after(args, "--state")
+        search = value_after(args, "--search")
+        if args[1:3] == ["issue", "list"]:
+            if "--assignee" in args:
+                return True, [{"number": 1, "title": "Assigned", "labels": []}], ""
+            if state == "closed":
+                return True, [{"number": 2, "title": "Closed", "closedAt": "2026-05-02"}], ""
+            if search == "mentions:@me":
+                return True, [{"number": 3, "title": "Mentioned task"}], ""
+            if search == "label:blocked":
+                return (
+                    True,
+                    [{"number": 4, "title": "Blocked", "labels": [{"name": "blocked"}]}],
+                    "",
+                )
+            if search == "label:stale":
+                return True, [{"number": 5, "title": "Stale", "labels": [{"name": "stale"}]}], ""
+        if args[1:3] == ["pr", "list"]:
+            if search == "review-requested:@me":
+                return True, [{"number": 6, "title": "Review me", "author": {"login": "devon"}}], ""
+            if search == "mentions:@me":
+                return True, [{"number": 7, "title": "Mentioned proposal"}], ""
+            if "--author" in args:
+                return True, [{"number": 8, "title": "Open proposal"}], ""
+            if state == "merged":
+                return True, [{"number": 9, "title": "Merged", "body": "- Launched"}], ""
+        return True, [], ""
+
+    monkeypatch.setattr(status_mod, "_gh_json", fake_gh_json)
+    github = status_mod._github(
+        tmp_path,
+        {"remote": "https://github.com/noontide-co/mainbranch.git"},
+    )
+
+    sections = github["sections"]
+    assert github["summary"] == {
+        "assigned_tasks": 1,
+        "attention_requests": 3,
+        "open_proposals": 1,
+        "shipped_this_week": 1,
+        "recently_closed_tasks": 1,
+        "blocked_or_stale_tasks": 2,
+    }
+    assert sections["assigned_tasks"][0]["business_status"] == "assigned"
+    assert sections["attention_requests"][0]["type"] == "proposal"
+    assert sections["open_proposals"][0]["business_status"] == "open_proposal"
+    assert sections["shipped_this_week"][0]["what_shipped"] == "Launched"
+    assert sections["recently_closed_tasks"][0]["business_status"] == "closed"
+    assert sections["blocked_or_stale_tasks"][0]["labels"] == ["blocked"]
 
 
 def test_status_renderer_prints_optional_sections(capsys) -> None:
@@ -315,5 +388,5 @@ def test_status_renderer_prints_optional_sections(capsys) -> None:
     assert "Stale proposed/running decisions" in output
     assert "Recent research" in output
     assert "Recent git activity" in output
-    assert "issue #173" in output
+    assert "task #173" in output
     assert "shipped #192" in output
