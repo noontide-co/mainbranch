@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from mb import doctor as doctor_mod
 from mb.doctor import _detect_cloud_paths, _repo_layout_check, run
 from mb.init import run as init_run
 
@@ -16,6 +17,7 @@ def test_doctor_runs_on_empty_dir(tmp_path: Path) -> None:
     assert "skill-wiring" in names
     assert "mainbranch-version" in names
     assert "repo-layout" in names
+    assert "update" in report
 
 
 def test_cloud_path_detection_via_symlink(tmp_path: Path, monkeypatch) -> None:
@@ -68,3 +70,38 @@ def test_repo_layout_accepts_current_core(tmp_path: Path) -> None:
 
     assert check["ok"] is True
     assert "current core/" in check["detail"]
+
+
+def test_doctor_json_and_human_output_include_required_update(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    monkeypatch.setattr(
+        doctor_mod,
+        "package_update_status",
+        lambda repo: {
+            "installed": "0.1.0",
+            "latest": "0.2.1",
+            "minimum_supported": "0.2.0",
+            "severity": "required",
+            "command": "pipx upgrade mainbranch",
+            "post_update_commands": ["mb skill link --repo .", "mb doctor"],
+            "reason": (
+                "Installed version predates mb update and the current skill-link repair flow."
+            ),
+        },
+    )
+
+    report = doctor_mod.run(path=str(tmp_path))
+
+    assert report["ok"] is False
+    assert report["update"]["severity"] == "required"
+    version_check = next(
+        check for check in report["checks"] if check["name"] == "mainbranch-version"
+    )
+    assert version_check["severity"] == "error"
+    assert "minimum supported" in version_check["detail"]
+
+    doctor_mod.render_human(report)
+    output = capsys.readouterr().out
+    assert "Update required." in output
+    assert "pipx upgrade mainbranch" in output

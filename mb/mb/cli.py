@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 from typing import Any
 
 import typer
@@ -25,6 +26,7 @@ from mb import status as status_mod
 from mb import think as think_mod
 from mb import update as update_mod
 from mb import validate as validate_mod
+from mb.freshness import format_update_alert, looks_like_business_repo, package_update_status
 
 app = typer.Typer(
     name="mb",
@@ -56,25 +58,29 @@ def _is_interactive_terminal() -> bool:
 
 
 def _render_launch_screen() -> None:
-    typer.echo(
-        "\n".join(
-            [
-                "",
-                "Main Branch",
-                "Stay connected to the business while agents handle execution.",
-                "",
-                "Choose a trail:",
-                "  New here      mb onboard       guided setup",
-                "  Daily work    mb status        business/repo briefing",
-                "                mb start         open the agent runtime",
-                "  Broken setup  mb doctor        check git, GitHub, Claude Code, and skills",
-                "  Power user    mb --help        full command list",
-                "",
-                "Plain command reference: mb --plain",
-                "",
-            ]
-        )
+    cwd = Path.cwd().resolve()
+    repo = cwd if looks_like_business_repo(cwd) else None
+    alert = format_update_alert(package_update_status(repo))
+    lines = [""]
+    if alert:
+        lines.extend([alert, ""])
+    lines.extend(
+        [
+            "Main Branch",
+            "Stay connected to the business while agents handle execution.",
+            "",
+            "Choose a trail:",
+            "  New here      mb onboard       guided setup",
+            "  Daily work    mb status        business/repo briefing",
+            "                mb start         open the agent runtime",
+            "  Broken setup  mb doctor        check git, GitHub, Claude Code, and skills",
+            "  Power user    mb --help        full command list",
+            "",
+            "Plain command reference: mb --plain",
+            "",
+        ]
     )
+    typer.echo("\n".join(lines))
 
 
 @app.callback()
