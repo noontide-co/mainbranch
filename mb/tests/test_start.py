@@ -45,6 +45,7 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     assert report["command"]["display"].endswith(" && claude")
     assert report["command"]["follow_up"] == "/start"
     assert report["launch"]["requested"] is False
+    assert "update" in report
 
 
 def test_start_degrades_when_claude_is_missing(tmp_path: Path, monkeypatch) -> None:
@@ -60,6 +61,72 @@ def test_start_degrades_when_claude_is_missing(tmp_path: Path, monkeypatch) -> N
     claude_check = next(check for check in report["checks"] if check["name"] == "claude_code")
     assert claude_check["ok"] is False
     assert "Install Claude Code" in claude_check["repair"]
+
+
+def test_start_required_update_blocks_handoff_and_surfaces_json(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(start_mod, "_which", _with_claude)
+    monkeypatch.setattr(
+        start_mod,
+        "package_update_status",
+        lambda repo: {
+            "installed": "0.1.0",
+            "latest": "0.2.1",
+            "minimum_supported": "0.2.0",
+            "severity": "required",
+            "command": "pipx upgrade mainbranch",
+            "post_update_commands": ["mb skill link --repo .", "mb doctor"],
+            "reason": (
+                "Installed version predates mb update and the current skill-link repair flow."
+            ),
+        },
+    )
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 1
+    report = json.loads(result.stdout)
+    assert report["handoff_ready"] is False
+    assert report["update"]["severity"] == "required"
+    update_check = next(check for check in report["checks"] if check["name"] == "mainbranch_update")
+    assert update_check["severity"] == "error"
+    assert update_check["repair"] == "pipx upgrade mainbranch"
+
+    human_result = runner.invoke(app, ["start", "--repo", str(repo)])
+    assert human_result.exit_code == 1
+    assert "Update required." in human_result.stdout
+    assert "pipx upgrade mainbranch" in human_result.stdout
+
+
+def test_start_recommended_update_keeps_handoff_ready(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(start_mod, "_which", _with_claude)
+    monkeypatch.setattr(
+        start_mod,
+        "package_update_status",
+        lambda repo: {
+            "installed": "0.2.0",
+            "latest": "0.2.1",
+            "minimum_supported": "0.2.0",
+            "severity": "recommended",
+            "command": "mb update",
+            "post_update_commands": ["mb skill link --repo .", "mb doctor"],
+            "reason": "A newer compatible Main Branch package is available.",
+        },
+    )
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    report = json.loads(result.stdout)
+    assert report["handoff_ready"] is True
+    assert report["update"]["severity"] == "recommended"
+    update_check = next(check for check in report["checks"] if check["name"] == "mainbranch_update")
+    assert update_check["severity"] == "warn"
 
 
 def test_start_asks_for_repo_when_path_is_not_business_repo(tmp_path: Path, monkeypatch) -> None:

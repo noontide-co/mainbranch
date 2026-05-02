@@ -44,9 +44,12 @@ def test_status_json_degrades_without_github(tmp_path: Path, monkeypatch) -> Non
     assert report["repo"]["looks_like_mainbranch_repo"] is True
     assert report["runtime"]["skill_wiring"]["ok"] is True
     assert report["github"]["authenticated"] is False
+    assert report["github"]["source"] == "gh"
+    assert "assigned_tasks" in report["github"]["sections"]
     assert report["brain"]["counts"]["decisions"] == 1
     assert report["brain"]["recent_research"][0]["title"] == "Market"
     assert "readiness" in report
+    assert "update" in report
 
 
 def test_status_human_output_mentions_core_sections(tmp_path: Path, monkeypatch) -> None:
@@ -62,6 +65,44 @@ def test_status_human_output_mentions_core_sections(tmp_path: Path, monkeypatch)
     assert "Runtime" in result.stdout
     assert "GitHub" in result.stdout
     assert "Next" in result.stdout
+
+
+def test_status_required_update_json_and_human_copy(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setattr(
+        status_mod,
+        "package_update_status",
+        lambda repo: {
+            "installed": "0.1.0",
+            "latest": "0.2.1",
+            "minimum_supported": "0.2.0",
+            "severity": "required",
+            "command": "pipx upgrade mainbranch",
+            "post_update_commands": ["mb skill link --repo .", "mb doctor"],
+            "reason": (
+                "Installed version predates mb update and the current skill-link repair flow."
+            ),
+        },
+    )
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    json_result = runner.invoke(app, ["status", str(repo), "--json"])
+
+    assert json_result.exit_code == 0
+    payload = json.loads(json_result.stdout)
+    assert payload["update"]["severity"] == "required"
+    assert payload["update"]["command"] == "pipx upgrade mainbranch"
+    assert any(
+        "pipx upgrade mainbranch" in action for action in payload["readiness"]["next_actions"]
+    )
+
+    human_result = runner.invoke(app, ["status", str(repo)])
+
+    assert human_result.exit_code == 0
+    assert "Update required." in human_result.stdout
+    assert "pipx upgrade mainbranch" in human_result.stdout
+    assert "mb skill link --repo ." in human_result.stdout
 
 
 def test_status_detects_non_business_repo(tmp_path: Path, monkeypatch) -> None:
@@ -200,10 +241,14 @@ def test_status_github_authenticated_branches(tmp_path: Path, monkeypatch) -> No
     )
 
     def fake_gh_json(args: list[str], repo: Path) -> tuple[bool, Any, str]:
-        if args[1:3] == ["issue", "list"]:
+        if args[1:3] == ["issue", "list"] and "--assignee" in args:
             return True, [{"number": 173, "title": "Status", "url": "u"}], ""
-        if args[1:3] == ["pr", "list"] and "--search" in args:
+        if args[1:3] == ["pr", "list"] and "review-requested:@me" in args:
             return False, None, "search failed"
+        if args[1:3] == ["issue", "list"]:
+            return True, [], ""
+        if args[1:3] == ["pr", "list"] and "--state" in args and "open" in args:
+            return True, [], ""
         return (
             True,
             [
@@ -232,6 +277,8 @@ def test_status_github_authenticated_branches(tmp_path: Path, monkeypatch) -> No
     assert github["authenticated"] is True
     assert github["repo"] == "noontide-co/mainbranch"
     assert github["assigned_issues"][0]["number"] == 173
+    assert github["sections"]["assigned_tasks"][0]["type"] == "task"
+    assert github["summary"]["assigned_tasks"] == 1
     assert github["recent_merged_prs"][0]["number"] == 192
     assert github["recent_merged_prs"][0]["what_shipped"] == "Shipped status"
     assert github["errors"] == ["review requests: search failed"]
@@ -256,6 +303,85 @@ def test_status_github_authenticated_branches(tmp_path: Path, monkeypatch) -> No
         lambda args, cwd=None, timeout=3.0: {"ok": False, "stdout": "", "stderr": "no auth"},
     )
     assert status_mod._github(tmp_path, {"remote": ""})["authenticated"] is False
+
+
+def test_status_github_activity_business_sections(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", lambda name: "/usr/bin/gh" if name == "gh" else "")
+    monkeypatch.setattr(
+        status_mod,
+        "_run_command",
+        lambda args, cwd=None, timeout=3.0: {"ok": True, "stdout": "", "stderr": ""},
+    )
+
+    def value_after(args: list[str], flag: str) -> str:
+        if flag not in args:
+            return ""
+        return args[args.index(flag) + 1]
+
+    def fake_gh_json(args: list[str], repo: Path) -> tuple[bool, Any, str]:
+        state = value_after(args, "--state")
+        search = value_after(args, "--search")
+        if args[1:3] == ["issue", "list"]:
+            if "--assignee" in args:
+                return True, [{"number": 1, "title": "Assigned", "labels": []}], ""
+            if state == "closed":
+                return True, [{"number": 2, "title": "Closed", "closedAt": "2026-05-02"}], ""
+            if search == "mentions:@me":
+                return True, [{"number": 3, "title": "Mentioned task"}], ""
+            if search == "label:blocked":
+                return (
+                    True,
+                    [{"number": 4, "title": "Blocked", "labels": [{"name": "blocked"}]}],
+                    "",
+                )
+            if search == "label:stale":
+                return True, [{"number": 5, "title": "Stale", "labels": [{"name": "stale"}]}], ""
+        if args[1:3] == ["pr", "list"]:
+            if search == "review-requested:@me":
+                return True, [{"number": 6, "title": "Review me", "author": {"login": "devon"}}], ""
+            if search == "mentions:@me":
+                return True, [{"number": 7, "title": "Mentioned proposal"}], ""
+            if "--author" in args:
+                return True, [{"number": 8, "title": "Open proposal"}], ""
+            if state == "merged":
+                return (
+                    True,
+                    [
+                        {
+                            "number": index,
+                            "title": f"Merged {index}",
+                            "body": f"- Launched {index}",
+                            "mergedAt": f"2026-05-0{index}T00:00:00Z",
+                        }
+                        for index in range(1, 8)
+                    ],
+                    "",
+                )
+        return True, [], ""
+
+    monkeypatch.setattr(status_mod, "_gh_json", fake_gh_json)
+    github = status_mod._github(
+        tmp_path,
+        {"remote": "https://github.com/noontide-co/mainbranch.git"},
+    )
+
+    sections = github["sections"]
+    assert github["summary"] == {
+        "assigned_tasks": 1,
+        "attention_requests": 3,
+        "open_proposals": 1,
+        "shipped_this_week": 7,
+        "recently_closed_tasks": 1,
+        "blocked_or_stale_tasks": 2,
+    }
+    assert sections["assigned_tasks"][0]["business_status"] == "assigned"
+    assert sections["attention_requests"][0]["type"] == "proposal"
+    assert sections["open_proposals"][0]["business_status"] == "open_proposal"
+    assert len(sections["shipped_this_week"]) == 5
+    assert sections["shipped_this_week"][0]["number"] == 7
+    assert sections["shipped_this_week"][0]["what_shipped"] == "Launched 7"
+    assert sections["recently_closed_tasks"][0]["business_status"] == "closed"
+    assert sections["blocked_or_stale_tasks"][0]["labels"] == ["blocked"]
 
 
 def test_status_renderer_prints_optional_sections(capsys) -> None:
@@ -315,5 +441,7 @@ def test_status_renderer_prints_optional_sections(capsys) -> None:
     assert "Stale proposed/running decisions" in output
     assert "Recent research" in output
     assert "Recent git activity" in output
-    assert "issue #173" in output
+    assert "tasks assigned: 1" in output
+    assert "shipped this week: 1" in output
+    assert "task #173" in output
     assert "shipped #192" in output

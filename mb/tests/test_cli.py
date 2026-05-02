@@ -51,6 +51,36 @@ def test_bare_mb_tty_shows_launch_screen(monkeypatch: pytest.MonkeyPatch) -> Non
     assert "Usage:" not in result.stdout
 
 
+def test_bare_mb_tty_shows_required_update_alert(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli_mod, "_is_interactive_terminal", lambda: True)
+    monkeypatch.setattr(
+        cli_mod,
+        "package_update_status",
+        lambda repo=None: {
+            "installed": "0.1.0",
+            "latest": "0.2.1",
+            "minimum_supported": "0.2.0",
+            "severity": "required",
+            "command": "pipx upgrade mainbranch",
+            "post_update_commands": ["mb skill link --repo .", "mb doctor"],
+            "reason": (
+                "Installed version predates mb update and the current skill-link repair flow."
+            ),
+        },
+    )
+
+    result = runner.invoke(app, [])
+
+    assert result.exit_code == 0
+    assert result.stdout.index("Update required.") < result.stdout.index("Choose a trail")
+    assert "Your Main Branch install is old enough" in result.stdout
+    assert "pipx upgrade mainbranch" in result.stdout
+    assert "mb update is not available in 0.1.0" in result.stdout
+    assert "mb skill link --repo ." in result.stdout
+    assert "mb doctor" in result.stdout
+    assert "Usage:" not in result.stdout
+
+
 def test_plain_escape_hatch_keeps_help_in_tty(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli_mod, "_is_interactive_terminal", lambda: True)
 

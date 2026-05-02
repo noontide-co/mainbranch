@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from mb.engine import install_mode, link_status
+from mb.freshness import format_update_alert, package_update_status
 from mb.status import _looks_like_mainbranch_repo
 
 
@@ -112,10 +113,17 @@ def _build_checks(
     git: dict[str, Any],
     claude_path: str,
     wiring: dict[str, Any],
+    update: dict[str, Any],
 ) -> list[dict[str, Any]]:
     dirty_detail = (
         f"{git['dirty_count']} changed file(s)" if git.get("dirty") else "clean working tree"
     )
+    update_severity = str(update["severity"])
+    update_check_severity = {
+        "required": "error",
+        "recommended": "warn",
+        "unknown": "info",
+    }.get(update_severity, "info")
     return [
         {
             "name": "mainbranch_repo",
@@ -142,6 +150,13 @@ def _build_checks(
                 "Review, commit, or stash local changes before handing substantive work "
                 "to an agent."
             ),
+        },
+        {
+            "name": "mainbranch_update",
+            "ok": update_severity not in {"required", "recommended"},
+            "severity": update_check_severity,
+            "detail": update["reason"],
+            "repair": update["command"],
         },
         {
             "name": "claude_code",
@@ -195,7 +210,8 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
     git = _git_status(repo_path)
     claude_path = _which("claude")
     wiring = link_status(repo_path)
-    checks = _build_checks(repo_shape, git, claude_path, wiring)
+    update = package_update_status(repo_path)
+    checks = _build_checks(repo_shape, git, claude_path, wiring, update)
     hard_failures = _hard_failures(checks)
     handoff_ready = not hard_failures
 
@@ -224,6 +240,7 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
         "ok": ok,
         "handoff_ready": handoff_ready,
         "repo": {"path": str(repo_path), **repo_shape},
+        "update": update,
         "git": git,
         "runtime": {
             "name": "claude-code",
@@ -257,6 +274,10 @@ def render_human(report: dict[str, Any]) -> None:
     launch = report["launch"]
 
     console.print(f"\n[bold]mb start[/bold]  {repo['path']}\n")
+    alert = format_update_alert(report.get("update", {}))
+    if alert:
+        console.print(alert)
+        console.print()
     console.print(
         "[bold]Repo[/bold] "
         + ("[green]ok[/green]" if repo["looks_like_mainbranch_repo"] else "[red]missing[/red]")

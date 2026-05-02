@@ -70,6 +70,20 @@ runs the appropriate update path, and refreshes skill links. Use
 Inside Claude Code, `/pull` calls `mb update` for this mechanical step and keeps
 ownership of the human-readable "what's new" summary.
 
+Early `0.1.x` installs do not have `mb update` yet. If `mb`, `mb doctor`,
+`mb status`, or `mb start` says "Update required", run this once first:
+
+```bash
+pipx upgrade mainbranch
+```
+
+Then run these from your business repo:
+
+```bash
+mb skill link --repo .
+mb doctor
+```
+
 ## Known Limits
 
 - Claude Code is the only first-class agent runtime today.
