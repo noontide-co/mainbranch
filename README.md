@@ -175,6 +175,12 @@ The engine v0.1.0 decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.
 
 v0.1 is the CLI + Claude Code adapter foundation; v0.2+ broadens runtime compatibility and deepens the workflow surfaces. Direction, not promises.
 
+The proposed long-range product direction is captured in
+[`decisions/2026-05-02-github-native-business-os.md`](decisions/2026-05-02-github-native-business-os.md):
+Main Branch as a GitHub-native business operating system, with `mb` as the
+control plane, GitHub as the team layer, graph/structured data as the
+intelligence layer, and agent runtimes as execution.
+
 - `mb books` — BeanCount integration for ledger workflows ([#128](https://github.com/noontide-co/mainbranch/issues/128))
 - `mb fulfillment` — agency-arm tooling for delivery ops
 - Runtime compatibility — Codex, Cursor, OpenClaw, Hermes, local LLMs (v0.2+)
