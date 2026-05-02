@@ -310,6 +310,9 @@ real external users, clear commands, and enough depth that keeping it inside
 
 ## Near-Term Build Order
 
+The detailed v0.2.0 product slice is in
+[`docs/prd/v0-2-first-run-daily-briefing.md`](../docs/prd/v0-2-first-run-daily-briefing.md).
+
 1. Add `mb onboard` as the human setup flow; leave `mb init` scriptable.
 2. Add a TTY-aware bare `mb` launch screen that routes to onboard, status,
    start, doctor, and help without breaking scripts.

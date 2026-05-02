@@ -1,0 +1,415 @@
+---
+title: "PRD: v0.2 First-Run + Daily Briefing"
+status: draft
+date: 2026-05-02
+release: v0.2.0
+linked_decision: decisions/2026-05-02-github-native-business-os.md
+linked_issues:
+  - https://github.com/noontide-co/mainbranch/issues/173
+  - https://github.com/noontide-co/mainbranch/issues/184
+  - https://github.com/noontide-co/mainbranch/issues/185
+  - https://github.com/noontide-co/mainbranch/issues/186
+  - https://github.com/noontide-co/mainbranch/issues/174
+---
+
+# PRD: v0.2 First-Run + Daily Briefing
+
+## Summary
+
+Main Branch v0.2.0 should prove the new product shape without building a
+dashboard first.
+
+The release should make `mb` feel like the front door to a GitHub-native
+business operating system:
+
+1. bare `mb` gives a polished interactive launch screen;
+2. `mb onboard` guides humans through setup or repo connection;
+3. `mb status` gives a cheap daily business/repo briefing;
+4. `mb start` makes the handoff to Claude Code explicit and repairable;
+5. `mb update` keeps the install and bundled workflows current.
+
+This release does not need full integrations, a live dashboard, autonomous
+agents, or multi-runtime execution. It needs to turn the first-run and daily-run
+loops into a coherent product.
+
+## Problem
+
+The v0.1 CLI works, but it assumes the user already understands the system.
+
+Current behavior:
+
+- `mb init` scaffolds a repo but does not teach or adapt.
+- Bare `mb` behaves like a traditional command reference.
+- The handoff to Claude Code is mostly copy/paste guidance.
+- `/start` carries the daily entry surface, but `mb` does not yet give a
+  pre-runtime status view.
+- GitHub is present, but not yet reframed as the business team layer.
+
+This is enough for technical early adopters. It is not enough for the operator
+who needs to be taught why git, GitHub, Claude Code, and local files matter.
+
+## Goals
+
+- Make first-run feel intentional, educational, and safe.
+- Respect both beginners and power users.
+- Preserve scriptability and boring CLI behavior where required.
+- Establish `mb status` as the reusable daily briefing primitive.
+- Make the Claude Code handoff explicit, diagnosable, and repairable.
+- Create terminal output that feels like a product, not a scaffolding script.
+- Keep all canonical business state in the repo.
+
+## Non-Goals
+
+- No dashboard/server process in v0.2.0.
+- No background daemon.
+- No model invocation inside `mb`.
+- No full multi-runtime adapter execution.
+- No Google/Meta/Postiz/Cloudflare analytics sync yet.
+- No secrets/credentials system beyond what is already required for current
+  doctor checks.
+- No database/index beyond cheap reads from git, filesystem, and GitHub CLI.
+
+## Target Users
+
+### Beginner
+
+They have little or no terminal/GitHub experience. They need confidence, plain
+language, and the "why" behind the stack.
+
+Success for this user: they can install, create a repo, understand that GitHub
+is where the business work lives, and start Claude Code without feeling lost.
+
+### Intermediate
+
+They have GitHub or terminal exposure but do not yet think of GitHub as a
+business operating layer.
+
+Success for this user: they can connect or create a repo, understand the file
+taxonomy, and know when to use `mb` vs Claude Code.
+
+### Power User
+
+They already live in git, GitHub, and terminal tools.
+
+Success for this user: they can skip education, inspect raw commands, connect an
+existing repo, and see useful status/JSON surfaces quickly.
+
+## User Experience Principles
+
+- Teach the model, not only the mechanics.
+- Let users skip explanations.
+- Use business language by default, raw GitHub language when useful.
+- Make the terminal warmer without turning it into a toy.
+- Keep failure messages repair-oriented.
+- Never hide where data lives.
+- Never put secrets in repo files.
+
+## Product Scope
+
+### 1. Bare `mb` Launch Screen
+
+Linked issue: #184
+
+When a user runs `mb` with no arguments in an interactive terminal, show a
+polished launch screen.
+
+Required routes:
+
+- "New here?" -> `mb onboard`
+- "Daily work" -> `mb status`
+- "Open agent runtime" -> `mb start`
+- "Fix/check setup" -> `mb doctor`
+- "Power user commands" -> normal command reference
+
+TTY rules:
+
+- Interactive TTY: show launch screen.
+- Non-TTY: keep deterministic help/exit behavior.
+- `mb --help`: always show plain command reference.
+- Tests must cover TTY vs non-TTY behavior.
+
+Tone:
+
+- Light trail/retro flavor is allowed.
+- No giant ASCII wall by default.
+- Must be fast to render.
+- Must not require reading a long story before using the tool.
+
+Acceptance:
+
+- Bare `mb` in a normal terminal shows the launch screen.
+- `mb --help` stays plain.
+- Piped/non-interactive invocation does not hang or prompt.
+- Launch screen links to real commands that exist or clearly say "coming next"
+  only inside this release branch before implementation lands.
+
+### 2. `mb onboard`
+
+Linked issue: #185
+
+`mb onboard` is the human setup flow. `mb init` remains the quiet, scriptable
+primitive.
+
+Required capabilities:
+
+- Detect or ask experience level:
+  - terminal familiarity;
+  - GitHub familiarity;
+  - Claude Code installed/known;
+  - existing repo vs new repo.
+- Offer three paths:
+  - beginner guided setup;
+  - intermediate setup with shorter explanations;
+  - power-user setup with advanced options and minimal copy.
+- Create a new repo through `mb init` or connect an existing repo.
+- Explain why GitHub is used as the team/business layer.
+- Explain where canonical business state lives.
+- Wire Claude Code skills through existing skill-link code.
+- Verify skill discovery and runtime readiness through doctor/status checks.
+- End with exact next commands.
+
+Suggested beginner flow:
+
+1. Welcome/launch screen.
+2. "Have you used GitHub before?"
+3. "Create new business repo or connect existing?"
+4. Business name and repo path.
+5. Short explanation: GitHub = tasks/conversations/history, repo = business
+   brain, Claude Code = first execution runtime.
+6. Scaffold/connect.
+7. Verify `gh`, `git`, `claude`, skill wiring.
+8. Show daily ritual.
+
+Power-user requirements:
+
+- `--yes` or equivalent fast path for smoke tests.
+- `--path`, `--name`, and existing repo options.
+- No forced educational copy.
+
+Acceptance:
+
+- Re-running is idempotent.
+- Existing initialized repo is detected and repaired, not overwritten.
+- Missing `gh` or Claude Code results in clear repair instructions.
+- Does not require a GitHub API write for local-only setup.
+- Produces `--json` output or a clear future path for automation.
+
+### 3. `mb status`
+
+Linked issue: #173
+
+`mb status` is the first daily briefing primitive. It should be cheap, local
+first, and useful before any dashboard exists.
+
+Required sections:
+
+- Repo:
+  - path;
+  - whether it looks like a Main Branch repo;
+  - git branch and dirty/clean state;
+  - install mode and Main Branch version.
+- Runtime:
+  - Claude Code found/missing;
+  - skill wiring found/missing;
+  - suggested repair command.
+- Brain:
+  - counts for core, research, decisions, campaigns/log/documents;
+  - recent research;
+  - recent decisions;
+  - stale proposed/running decisions if detectable.
+- GitHub, when `gh` is authenticated:
+  - assigned open issues;
+  - review requests or mentions if available cheaply;
+  - recent merged PRs;
+  - blocked/stale labels where present.
+- Next actions:
+  - one to five deterministic suggestions based on checks.
+
+Output modes:
+
+- human terminal summary by default;
+- `--json` with stable top-level sections;
+- degraded mode when `gh`, network, or git data is unavailable.
+
+Acceptance:
+
+- Runs in under a few seconds on a normal repo.
+- Does not invoke a model.
+- Does not modify repo files.
+- Does not require GitHub auth to be useful.
+- `/start` can later call or mimic its data model.
+
+### 4. `mb start`
+
+Linked issue: #186
+
+`mb start` is the runtime handoff helper.
+
+Required behavior:
+
+- Resolve target repo:
+  - current directory if it is a Main Branch repo;
+  - `--repo <path>` override;
+  - future recent-repos support can come later.
+- Run the handoff-relevant subset of `mb status` or `mb doctor`.
+- Verify Claude Code is installed.
+- Verify skill wiring.
+- Print the exact command:
+
+```bash
+cd <repo>
+claude
+# then run /start
+```
+
+Optional behavior:
+
+- `--launch` may run `claude` directly if safe.
+- `--json` emits command, repo path, runtime, and readiness.
+
+Acceptance:
+
+- Does not invoke a model itself.
+- Handles missing Claude Code with install guidance.
+- Handles missing skill wiring with `mb skill link --repo <path>`.
+- Safe to run repeatedly.
+
+### 5. `mb update`
+
+Linked issue: #174
+
+`mb update` should own the install-mode-aware refresh mechanism that `/pull`
+can later call or explain.
+
+Required behavior:
+
+- Detect install mode:
+  - pipx/PyPI;
+  - editable/source clone;
+  - unknown.
+- For pipx installs, recommend or run `pipx upgrade mainbranch`.
+- For clone/source mode, recommend or run `git pull --ff-only`.
+- Repair skill links after update when needed.
+- Print what changed or where to read changelog when available.
+
+Acceptance:
+
+- Safe dry-run mode.
+- Clear output for pipx vs clone mode.
+- Does not corrupt editable installs.
+
+## Data and State
+
+v0.2.0 should use only:
+
+- repo files;
+- git metadata;
+- existing `.claude/` skill wiring;
+- existing local config if present;
+- GitHub CLI reads where authenticated.
+
+Do not add a database in v0.2.0. Do not add background sync. Do not add a
+dashboard server.
+
+## CLI/API Requirements
+
+Every new command should support:
+
+- human terminal output;
+- clear exit codes;
+- no hangs in non-interactive mode;
+- testable functions below the Typer command layer;
+- JSON output where another skill/runtime/dashboard will likely consume it.
+
+Suggested exit code conventions:
+
+- `0`: usable / success;
+- `1`: expected user-fixable issue;
+- `2`: command/runtime error;
+- `130`: user canceled.
+
+## Copy and Language
+
+Use business-first language, with raw terms in parentheses when helpful.
+
+Examples:
+
+- "tasks (GitHub issues)"
+- "proposals/conversations (pull requests)"
+- "what shipped (merged PRs)"
+- "business brain (your repo)"
+
+Avoid overclaiming. v0.2.0 is still terminal-first and Claude-Code-first.
+
+## Release Plan
+
+### v0.2.0
+
+- #184 bare `mb` launch screen
+- #185 `mb onboard`
+- #173 `mb status`
+- #186 `mb start`
+- #174 `mb update`
+
+### v0.2.1
+
+- #188 GitHub activity briefing primitives
+- #121 graph index + interactive view
+- #122 cross-reference validation
+- #187 `mb connect` foundation
+
+### v0.2.2
+
+- #177 runtime adapter contract
+- #124 cross-runtime compatibility
+- #131 runtime-aware invocation hints
+- #130 tool tethering
+- #143 similar-bets graph query
+
+### v0.3.0+
+
+- #189 dashboard spike
+- #128 `mb books`
+- site/ads/think deeper workflow surfaces
+- first structured data sync
+
+## Linear Mapping
+
+| Issue | Priority | Status | Release |
+|---|---|---|---|
+| #112 Accept GitHub-native business OS direction | Urgent | In Progress | v0.2 Direction |
+| #183 PR: GitHub-native business OS decision | Urgent | In Progress | v0.2 Direction |
+| #184 TTY-aware bare `mb` launch screen | Urgent | To Do | v0.2.0 |
+| #185 `mb onboard` adaptive setup flow | Urgent | To Do | v0.2.0 |
+| #173 `mb status` daily briefing v0 | Urgent | To Do | v0.2.0 |
+| #186 `mb start` runtime handoff helper | High | To Do | v0.2.0 |
+| #174 `mb update` install-mode-aware refresh | High | To Do | v0.2.0 |
+| #80 `/ads` compliance gate | Urgent | To Do | v0.1.3 |
+| #188 GitHub activity briefing primitives | High | To Do | v0.2.1 |
+| #187 `mb connect` foundation | High | To Do | v0.2.1 |
+| #121 graph index + interactive view | High | To Do | v0.2.1 |
+
+Everything not listed above stays backlog unless explicitly pulled forward.
+
+## Open Questions
+
+- Should bare `mb` route to `mb status` by default after onboarding has run?
+- Should `mb onboard` create GitHub repos through `gh` or only local repos in
+  v0.2.0?
+- Should `mb start --launch` exist in v0.2.0 or should it only print commands?
+- What is the minimum useful GitHub read for `mb status` without slowing it down?
+- Where should recent repo selection live: local config now or wait for v0.2.1?
+
+## Definition of Done
+
+v0.2.0 is done when a fresh user can:
+
+1. install Main Branch;
+2. run `mb`;
+3. choose onboarding;
+4. create or connect a business repo;
+5. run `mb status` and understand the repo state;
+6. run `mb start` and reach Claude Code with clear `/start` instructions;
+7. update Main Branch through `mb update`;
+8. recover from common missing-tool states through clear repair guidance.
+
