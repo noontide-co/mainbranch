@@ -244,7 +244,8 @@ For a typical ad campaign with 5 angles (15 images):
       - Verifies file(s) exist on disk
       - Returns: file path(s) + status (success/fail) + cost
 5. Synthesize: collect all image agent results, retry any failures,
-   apply P2/P3 fixes, surface P1s, write review-log.md + image-index.md
+   surface P1s, show the P2/P3 proposed diff, apply copy fixes only after
+   explicit approval, write review-log.md if approved, and write image-index.md
 6. Git commit post-review (user confirms)
 ```
 
@@ -317,7 +318,8 @@ If retry fails: return status "fail" with error message. Do NOT keep retrying.
 ```
 outputs/YYYY-MM-DD-static-ads-{campaign}/
 ├── static-ads-batch-001.md        ← Copy (Batch 1)
-├── review-log.md                  ← Compliance (Batch 2)
+├── proposed-compliance-fixes.json ← Compliance proposals
+├── review-log.md                  ← Compliance changes after approval
 ├── images/
 │   ├── 001_01_graphic_square.jpg
 │   ├── 001_01_graphic_vertical.jpg
