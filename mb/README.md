@@ -18,12 +18,13 @@ That puts `mb` on your PATH. Verify:
 mb --version
 ```
 
-## Subcommands (v0.1)
+## Subcommands
 
 | Command | What it does |
 |---|---|
 | `mb init` | Scaffold a new business repo (six folders, CLAUDE.md, CODEOWNERS, `git init`) and wire the bundled Claude Code skill adapter. One question only: business name. |
 | `mb doctor` | Diagnostic. Checks Claude Code, gh auth, network, librsvg, runtime wiring, and package freshness. Warns on cloud-backed finance paths and offers educational triage. |
+| `mb status` | Daily briefing. Summarizes repo shape, install/runtime readiness, recent brain files, recent git activity, and GitHub tasks when `gh` is authenticated. Supports `--json`. |
 | `mb validate` | Frontmatter shape check across `decisions/`, `core/offers/`, `research/`, `log/`, `campaigns/`, `documents/`. Exit 1 on any fail. |
 | `mb graph` | Walk linked_research / linked_decisions / supersedes; emit Graphviz DOT to stdout. `--open` shells to `dot` + `open`. |
 | `mb think <topic>` | Print the /think workflow invocation hint for the currently supported runtime. |
