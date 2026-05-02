@@ -62,7 +62,7 @@ def _render_launch_screen() -> None:
                 "",
                 "Choose a trail:",
                 "  New here      mb onboard       guided setup (coming in v0.2)",
-                "  Daily work    mb status        business/repo briefing (coming in v0.2)",
+                "  Daily work    mb status        business/repo briefing",
                 "                mb start         open the agent runtime (coming in v0.2)",
                 "  Broken setup  mb doctor        check git, GitHub, Claude Code, and skills",
                 "  Power user    mb --help        full command list",

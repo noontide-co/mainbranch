@@ -44,6 +44,7 @@ def test_bare_mb_tty_shows_launch_screen(monkeypatch: pytest.MonkeyPatch) -> Non
     assert "Choose a trail" in result.stdout
     assert "mb onboard" in result.stdout
     assert "mb status" in result.stdout
+    assert "mb status        business/repo briefing (coming in v0.2)" not in result.stdout
     assert "mb start" in result.stdout
     assert "mb doctor" in result.stdout
     assert "mb --help" in result.stdout
