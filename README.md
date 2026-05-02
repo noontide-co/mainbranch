@@ -191,7 +191,7 @@ See [CHANGELOG.md](CHANGELOG.md) for what's in this release. Each release ships 
 Plain English boundary so nobody is surprised:
 
 - **Open-source (free, MIT)**: the `mb` CLI, all bundled skills, the schema, the framework, and the dashboard when it ships. Anyone can install and run — no account, no gating, no upsell wall.
-- **Paid community (Skool)**: Want to watch us build companies live with Main Branch? Free for 7 days, $19/mo after.
+- **Paid community (Skool)**: Watch us build companies live with Main Branch — and get help with git ops and the behind-the-scenes stuff for your own business. Free for 7 days, $19/mo after.
 
 Main Branch is fully usable on its own. The paid community is the live narration on top.
 
