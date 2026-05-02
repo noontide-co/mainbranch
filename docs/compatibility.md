@@ -41,8 +41,7 @@ For most users:
 pipx install mainbranch
 mb onboard --name "My Business" --path my-business
 cd my-business
-claude
-/start
+mb start --launch
 ```
 
 Use `mb init my-business --name "My Business"` when you need the quiet,
