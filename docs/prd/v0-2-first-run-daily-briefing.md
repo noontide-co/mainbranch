@@ -427,13 +427,13 @@ Success criteria:
 
 | Issue | Priority | Status | Release |
 |---|---|---|---|
-| #112 Accept GitHub-native business OS direction | Urgent | In Progress | v0.2 Direction |
-| #183 PR: GitHub-native business OS decision | Urgent | In Progress | v0.2 Direction |
-| #184 TTY-aware bare `mb` launch screen | Urgent | To Do | v0.2.0 |
-| #185 `mb onboard` adaptive setup flow | Urgent | To Do | v0.2.0 |
-| #173 `mb status` daily briefing v0 | Urgent | To Do | v0.2.0 |
-| #186 `mb start` runtime handoff helper | High | To Do | v0.2.0 |
-| #174 `mb update` install-mode-aware refresh | High | To Do | v0.2.0 |
+| #112 Accept GitHub-native business OS direction | Urgent | Closed | v0.2 Direction |
+| #183 PR: GitHub-native business OS decision | Urgent | Merged | v0.2 Direction |
+| #184 TTY-aware bare `mb` launch screen | Urgent | Closed | v0.2.0 |
+| #185 `mb onboard` adaptive setup flow | Urgent | Closed | v0.2.0 |
+| #173 `mb status` daily briefing v0 | Urgent | Closed | v0.2.0 |
+| #186 `mb start` runtime handoff helper | High | Closed | v0.2.0 |
+| #174 `mb update` install-mode-aware refresh | High | Closed | v0.2.0 |
 | #80 `/ads` compliance gate | Urgent | To Do | v0.1.3 |
 | #188 GitHub activity briefing primitives | High | To Do | v0.2.1 |
 | #187 `mb connect` foundation | High | To Do | v0.2.1 |
@@ -445,8 +445,7 @@ Everything not listed above stays backlog unless explicitly pulled forward.
 
 - Should bare `mb` route to `mb status` by default after onboarding has run?
 - Should `mb onboard` create GitHub repos through `gh` or only local repos in
-  v0.2.0?
-- Should `mb start --launch` exist in v0.2.0 or should it only print commands?
+  v0.2.1+?
 - What is the minimum useful GitHub read for `mb status` without slowing it down?
 - Where should recent repo selection live: local config now or wait for v0.2.1?
 
