@@ -18,6 +18,7 @@ from mb import educational as educational_mod
 from mb import graph as graph_mod
 from mb import init as init_mod
 from mb import resolve as resolve_mod
+from mb import start as start_mod
 from mb import status as status_mod
 from mb import think as think_mod
 from mb import update as update_mod
@@ -63,7 +64,7 @@ def _render_launch_screen() -> None:
                 "Choose a trail:",
                 "  New here      mb onboard       guided setup (coming in v0.2)",
                 "  Daily work    mb status        business/repo briefing",
-                "                mb start         open the agent runtime (coming in v0.2)",
+                "                mb start         open the agent runtime",
                 "  Broken setup  mb doctor        check git, GitHub, Claude Code, and skills",
                 "  Power user    mb --help        full command list",
                 "",
@@ -152,6 +153,29 @@ def status_cmd(
         typer.echo(json.dumps(report, indent=2))
     else:
         status_mod.render_human(report)
+
+
+@app.command("start")
+def start_cmd(
+    repo: str = typer.Option(
+        ".",
+        "--repo",
+        help="Business repo to hand off to the configured runtime.",
+    ),
+    launch: bool = typer.Option(
+        False,
+        "--launch",
+        help="Launch Claude Code after readiness checks pass in an interactive terminal.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Check runtime handoff readiness and print or launch the Claude Code command."""
+    report = start_mod.run(repo=repo, launch=launch)
+    if json_out:
+        typer.echo(json.dumps(report, indent=2))
+    else:
+        start_mod.render_human(report)
+    raise typer.Exit(0 if report["ok"] else 1)
 
 
 @app.command("validate")
