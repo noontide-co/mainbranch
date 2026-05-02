@@ -168,6 +168,60 @@ jobs:
           grep -qi "main branch\|scaffolds" help.txt \
             || { echo "::error::root --help output missing expected description"; exit 1; }
 
+      - name: Smoke — bare mb launch screen renders in a TTY
+        # The default no-args command is intentionally TTY-sensitive:
+        # non-interactive callers get command help, humans get the launch
+        # screen. Unit tests monkeypatch this, but the wheel smoke proves the
+        # installed console script renders the real TTY path.
+        run: |
+          .venv-smoke/bin/python - <<'PY'
+          import os
+          import pty
+          import subprocess
+
+          master, slave = pty.openpty()
+          try:
+              proc = subprocess.Popen(
+                  [".venv-smoke/bin/mb"],
+                  stdin=slave,
+                  stdout=slave,
+                  stderr=slave,
+                  text=False,
+              )
+              os.close(slave)
+              chunks = []
+              while True:
+                  try:
+                      chunk = os.read(master, 4096)
+                  except OSError:
+                      break
+                  if not chunk:
+                      break
+                  chunks.append(chunk)
+              rc = proc.wait(timeout=5)
+          finally:
+              os.close(master)
+
+          out = b"".join(chunks).decode("utf-8", errors="replace")
+          print(out)
+          if rc != 0:
+              raise SystemExit(f"mb exited {rc}")
+          for expected in ("Choose a trail", "mb status", "mb doctor", "mb --help"):
+              if expected not in out:
+                  raise SystemExit(f"launch screen missing {expected!r}")
+          if "Usage:" in out:
+              raise SystemExit("TTY launch screen fell back to command help")
+          PY
+
+      - name: Smoke — mb --plain keeps non-interactive command help
+        run: |
+          .venv-smoke/bin/mb --plain > plain.txt
+          cat plain.txt
+          grep -q "Usage:" plain.txt \
+            || { echo "::error::mb --plain did not render command help"; exit 1; }
+          ! grep -q "Choose a trail" plain.txt \
+            || { echo "::error::mb --plain rendered launch screen"; exit 1; }
+
       - name: Smoke — mb skill list is populated
         run: |
           .venv-smoke/bin/mb skill list > skills.txt
@@ -194,6 +248,47 @@ jobs:
           root = pathlib.Path(dirs[0])
           assert (root / ".claude/skills/start/SKILL.md").is_file(), root
           assert (root / ".claude/reference/vip-path-resolution.md").is_file(), root
+          PY
+
+      - name: Smoke — mb status on initialized repo emits JSON
+        run: |
+          repo=$(mktemp -d)
+          .venv-smoke/bin/mb init "$repo" --name "Acme Brewing"
+          .venv-smoke/bin/mb status "$repo" --json > status.json
+          cat status.json
+          .venv-smoke/bin/python - <<'PY'
+          import json
+
+          report = json.load(open("status.json"))
+          assert report["repo"]["looks_like_mainbranch_repo"] is True
+          assert report["runtime"]["skill_wiring"]["ok"] is True
+          assert "readiness" in report
+          assert "next_actions" in report["readiness"]
+          PY
+
+      - name: Smoke — mb update check emits JSON envelope
+        # A plain venv wheel is neither the recommended pipx install nor a
+        # source clone, so the command may exit 1. That is acceptable here:
+        # this smoke asserts the installed command degrades with structured
+        # JSON instead of crashing or printing prose-only diagnostics.
+        run: |
+          set +e
+          .venv-smoke/bin/mb update --check --json > update.json
+          rc=$?
+          set -e
+          cat update.json
+          if [ "$rc" -gt 1 ]; then
+            echo "::error::mb update --check crashed (exit $rc)"
+            exit 1
+          fi
+          .venv-smoke/bin/python - <<'PY'
+          import json
+
+          report = json.load(open("update.json"))
+          assert "ok" in report
+          assert "mode" in report
+          assert "errors" in report
+          assert "actions" in report
           PY
 
       - name: Smoke — mb doctor (runs against empty cwd)
