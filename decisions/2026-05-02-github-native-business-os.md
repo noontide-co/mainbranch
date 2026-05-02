@@ -219,6 +219,19 @@ The biggest immediate product gap is onboarding.
 `mb init` should stay as the quiet, scriptable primitive. Add a higher-level
 `mb onboard` flow for humans.
 
+Running bare `mb` in an interactive terminal should not feel like a dead help
+dump forever. It should become a beautiful launch screen that orients the user:
+
+- "new here?" -> `mb onboard`;
+- "already have a repo?" -> connect or open recent repos;
+- "daily work?" -> `mb status` / `mb start`;
+- "something broken?" -> `mb doctor`;
+- "power user?" -> show raw command list.
+
+This launch screen must be TTY-aware. In non-interactive contexts, scripts,
+tests, and CI should still get deterministic help/exit behavior. `mb --help`
+must always remain the full plain command reference.
+
 The onboarding flow should:
 
 - detect user sophistication with GitHub, terminal, and Claude Code;
@@ -298,15 +311,17 @@ real external users, clear commands, and enough depth that keeping it inside
 ## Near-Term Build Order
 
 1. Add `mb onboard` as the human setup flow; leave `mb init` scriptable.
-2. Add `mb start` as a clean handoff helper that verifies repo wiring and prints
+2. Add a TTY-aware bare `mb` launch screen that routes to onboard, status,
+   start, doctor, and help without breaking scripts.
+3. Add `mb start` as a clean handoff helper that verifies repo wiring and prints
    or launches the configured runtime command.
-3. Add `mb status` as the cheap repo health summary for humans and agents.
-4. Upgrade `mb graph` toward an interactive graph and entity/tag model.
-5. Add `mb connect` foundation with keychain-backed credential storage.
-6. Add GitHub briefing primitives: assigned issues, mentions, PRs merged this
+4. Add `mb status` as the cheap repo health summary for humans and agents.
+5. Upgrade `mb graph` toward an interactive graph and entity/tag model.
+6. Add `mb connect` foundation with keychain-backed credential storage.
+7. Add GitHub briefing primitives: assigned issues, mentions, PRs merged this
    week, blocked work, and business-language reframing.
-7. Add structured sync/indexing for one real data source before generalizing.
-8. Add an explicit dashboard spike only after `mb status`, graph/indexing, and
+8. Add structured sync/indexing for one real data source before generalizing.
+9. Add an explicit dashboard spike only after `mb status`, graph/indexing, and
    one integration sync have real data to show.
 
 ## Success Criteria
