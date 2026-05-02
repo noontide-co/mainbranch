@@ -87,7 +87,10 @@ def test_update_pipx_runs_upgrade_then_relinks(monkeypatch: Any, tmp_path: Path)
 
     assert result["ok"] is True
     assert result["new_version"] == "0.2.0"
-    assert result["skills_relinked_count"] == 2
+    assert result["skills_relinked_count"] == 1
+    assert result["warnings"] == [
+        "could not refresh existing non-link skill path(s): .claude/skills/pull"
+    ]
     assert calls == [
         ["pipx", "upgrade", "mainbranch"],
         ["mb", "--version"],
@@ -95,13 +98,19 @@ def test_update_pipx_runs_upgrade_then_relinks(monkeypatch: Any, tmp_path: Path)
     ]
 
 
-def test_update_check_clone_reads_origin_without_pull(monkeypatch: Any, tmp_path: Path) -> None:
+def test_update_check_clone_fetches_before_reading_origin(monkeypatch: Any, tmp_path: Path) -> None:
     root = tmp_path / "engine"
     (root / "mb" / "mb").mkdir(parents=True)
     (root / "mb" / "mb" / "__init__.py").write_text('__version__ = "0.1.2"\n')
+    calls: list[tuple[list[str], Path | None]] = []
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        calls.append((args, cwd))
+        return _completed(args)
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "clone")
     monkeypatch.setattr(update_mod, "engine_root", lambda: root)
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
     monkeypatch.setattr(update_mod, "_version_from_git_ref", lambda _root, _ref: "0.2.0")
     monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["pull", "start", "think"])
 
@@ -111,7 +120,31 @@ def test_update_check_clone_reads_origin_without_pull(monkeypatch: Any, tmp_path
     assert result["old_version"] == "0.1.2"
     assert result["new_version"] == "0.2.0"
     assert result["skills_relinked_count"] == 3
-    assert "would run `git pull`" in result["actions"][0]
+    assert calls == [
+        (["git", "fetch", "origin", "main:refs/remotes/origin/main", "--quiet"], root)
+    ]
+    assert "ran `git fetch origin main --quiet`" in result["actions"][0]
+    assert "would run `git pull`" in result["actions"][1]
+    assert result["actions"][2].endswith(" --json`")
+
+
+def test_update_check_clone_reports_fetch_failure(monkeypatch: Any, tmp_path: Path) -> None:
+    root = tmp_path / "engine"
+    (root / "mb" / "mb").mkdir(parents=True)
+    (root / "mb" / "mb" / "__init__.py").write_text('__version__ = "0.1.2"\n')
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        return _completed(args, returncode=128, stderr="no network")
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "clone")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: root)
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    assert result["ok"] is False
+    assert result["new_version"] == "0.1.2"
+    assert "no network" in result["errors"][0]
 
 
 def test_update_clone_pulls_engine_root_then_relinks(monkeypatch: Any, tmp_path: Path) -> None:
@@ -150,7 +183,10 @@ def test_update_clone_pulls_engine_root_then_relinks(monkeypatch: Any, tmp_path:
     assert result["ok"] is True
     assert result["old_version"] == "0.1.2"
     assert result["new_version"] == "0.2.0"
-    assert result["skills_relinked_count"] == 1
+    assert result["skills_relinked_count"] == 0
+    assert result["warnings"] == [
+        "could not refresh existing non-link skill path(s): .claude/skills/start"
+    ]
     assert calls[0] == (["git", "pull"], root)
 
 
@@ -250,10 +286,13 @@ def test_update_relink_payload_errors_are_reported(monkeypatch: Any, tmp_path: P
 
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
 
-    count, errors, parsed = update_mod._link_skills(tmp_path / "biz")
+    count, errors, warnings, parsed = update_mod._link_skills(tmp_path / "biz")
 
-    assert count == 2
+    assert count == 1
     assert errors == ["could not locate bundled Main Branch engine root"]
+    assert warnings == [
+        "could not refresh existing non-link skill path(s): .claude/skills/pull"
+    ]
     assert parsed == payload
 
 
@@ -267,6 +306,7 @@ def test_update_render_human_check_and_error(capsys: Any) -> None:
             "skills_relinked_count": 3,
             "actions": ["would run `git pull`"],
             "errors": ["boom"],
+            "warnings": ["careful"],
         }
     )
 
@@ -276,6 +316,7 @@ def test_update_render_human_check_and_error(capsys: Any) -> None:
     assert "version: 0.1.2 -> 0.2.0" in output
     assert "would refresh 3 skill link(s)" in output
     assert "error: boom" in output
+    assert "warning: careful" in output
 
 
 def test_update_render_human_success(capsys: Any) -> None:

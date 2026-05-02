@@ -65,6 +65,16 @@ def _version_from_git_ref(root: Path, ref: str) -> str | None:
     return match.group(1) if match else None
 
 
+def _fetch_origin_main(root: Path) -> tuple[bool, str | None]:
+    result = _run_command(
+        ["git", "fetch", "origin", "main:refs/remotes/origin/main", "--quiet"],
+        cwd=root,
+    )
+    if result.returncode == 0:
+        return True, None
+    return False, _command_error("git fetch origin main", result)
+
+
 def _version_from_mb_command() -> str | None:
     result = _run_command(["mb", "--version"])
     if result.returncode != 0:
@@ -78,34 +88,48 @@ def _command_error(label: str, result: subprocess.CompletedProcess[str]) -> str:
     return f"{label} failed with exit code {result.returncode}: {details or 'no output'}"
 
 
+def _list_field(result: dict[str, Any], key: str) -> list[str]:
+    value = result.get(key, [])
+    return [str(item) for item in value] if isinstance(value, list) else []
+
+
 def _skill_count_from_link_result(result: dict[str, Any]) -> int:
     total = 0
-    for key in ("linked", "copied", "skipped"):
-        value = result.get(key, [])
-        if isinstance(value, list):
-            total += len(value)
+    for key in ("linked", "copied"):
+        total += len(_list_field(result, key))
     return total
 
 
-def _link_skills(repo: Path) -> tuple[int, list[str], dict[str, Any] | None]:
+def _link_warnings(payload: dict[str, Any]) -> list[str]:
+    skipped = _list_field(payload, "skipped")
+    if not skipped:
+        return []
+    return [
+        "could not refresh existing non-link skill path(s): " + ", ".join(skipped),
+    ]
+
+
+def _link_skills(repo: Path) -> tuple[int, list[str], list[str], dict[str, Any] | None]:
     result = _run_command(["mb", "skill", "link", "--repo", str(repo), "--json"])
     if result.returncode != 0:
-        return 0, [_command_error("mb skill link", result)], None
+        return 0, [_command_error("mb skill link", result)], [], None
     try:
         payload = json.loads(result.stdout)
     except json.JSONDecodeError:
-        return 0, ["mb skill link returned invalid JSON"], None
+        return 0, ["mb skill link returned invalid JSON"], [], None
     if not isinstance(payload, dict):
-        return 0, ["mb skill link returned an unexpected JSON payload"], None
+        return 0, ["mb skill link returned an unexpected JSON payload"], [], None
     errors = payload.get("errors", [])
     parsed_errors = [str(error) for error in errors] if isinstance(errors, list) else []
+    warnings = _link_warnings(payload)
     if payload.get("ok") is not True:
         return (
             _skill_count_from_link_result(payload),
             parsed_errors or ["mb skill link failed"],
+            warnings,
             payload,
         )
-    return _skill_count_from_link_result(payload), [], payload
+    return _skill_count_from_link_result(payload), [], warnings, payload
 
 
 def _base_result(repo: Path, *, check: bool, mode: str, root: Path | None) -> dict[str, Any]:
@@ -119,6 +143,7 @@ def _base_result(repo: Path, *, check: bool, mode: str, root: Path | None) -> di
         "new_version": None,
         "skills_relinked_count": 0,
         "actions": [],
+        "warnings": [],
         "errors": [],
     }
 
@@ -143,7 +168,7 @@ def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
             result["new_version"] = _latest_pypi_version() or result["old_version"]
             result["actions"] = [
                 "would run `pipx upgrade mainbranch`",
-                f"would run `mb skill link --repo {target_repo}`",
+                f"would run `mb skill link --repo {target_repo} --json`",
             ]
         else:
             if root is None:
@@ -151,13 +176,22 @@ def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
                 result["errors"].append("could not locate Main Branch engine root")
                 result["new_version"] = result["old_version"]
                 return result
+            fetched, fetch_error = _fetch_origin_main(root)
+            result["actions"].append(f"ran `git fetch origin main --quiet` in {root}")
+            if not fetched:
+                result["ok"] = False
+                result["errors"].append(fetch_error or "git fetch origin main failed")
+                result["new_version"] = result["old_version"]
+                return result
             result["new_version"] = (
                 _version_from_git_ref(root, "origin/main") or result["old_version"]
             )
-            result["actions"] = [
-                f"would run `git pull` in {root}",
-                f"would run `mb skill link --repo {target_repo}`",
-            ]
+            result["actions"].extend(
+                [
+                    f"would run `git pull` in {root}",
+                    f"would run `mb skill link --repo {target_repo} --json`",
+                ]
+            )
         result["skills_relinked_count"] = len(bundled_skills())
         return result
 
@@ -190,9 +224,10 @@ def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
             return result
         result["new_version"] = _engine_version(root)
 
-    linked_count, link_errors, _link_payload = _link_skills(target_repo)
-    result["actions"].append(f"ran `mb skill link --repo {target_repo}`")
+    linked_count, link_errors, link_warnings, _link_payload = _link_skills(target_repo)
+    result["actions"].append(f"ran `mb skill link --repo {target_repo} --json`")
     result["skills_relinked_count"] = linked_count
+    result["warnings"].extend(link_warnings)
     if link_errors:
         result["ok"] = False
         result["errors"].extend(link_errors)
@@ -220,3 +255,6 @@ def render_human(result: dict[str, Any]) -> None:
     if result.get("errors"):
         for error in result["errors"]:
             print(f"error: {error}")
+    if result.get("warnings"):
+        for warning in result["warnings"]:
+            print(f"warning: {warning}")
