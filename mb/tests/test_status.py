@@ -206,7 +206,20 @@ def test_status_github_authenticated_branches(tmp_path: Path, monkeypatch) -> No
             return False, None, "search failed"
         return (
             True,
-            [{"number": 192, "title": "Briefing", "body": "## Scope\n- Shipped status"}],
+            [
+                {
+                    "number": 190,
+                    "title": "Older",
+                    "body": "older",
+                    "mergedAt": "2026-05-01T10:00:00Z",
+                },
+                {
+                    "number": 192,
+                    "title": "Briefing",
+                    "body": "## Scope\n- Shipped status",
+                    "mergedAt": "2026-05-02T10:00:00Z",
+                },
+            ],
             "",
         )
 
@@ -219,6 +232,7 @@ def test_status_github_authenticated_branches(tmp_path: Path, monkeypatch) -> No
     assert github["authenticated"] is True
     assert github["repo"] == "noontide-co/mainbranch"
     assert github["assigned_issues"][0]["number"] == 173
+    assert github["recent_merged_prs"][0]["number"] == 192
     assert github["recent_merged_prs"][0]["what_shipped"] == "Shipped status"
     assert github["errors"] == ["review requests: search failed"]
 
@@ -226,6 +240,15 @@ def test_status_github_authenticated_branches(tmp_path: Path, monkeypatch) -> No
         status_mod._summarize_pr({"title": "Fallback title", "body": "# Heading"})["what_shipped"]
         == "Fallback title"
     )
+    assert [
+        pr["number"]
+        for pr in status_mod._recent_merged_prs(
+            [
+                {"number": index, "title": str(index), "mergedAt": f"2026-05-{index:02d}T00:00:00Z"}
+                for index in range(1, 8)
+            ]
+        )
+    ] == [7, 6, 5, 4, 3]
 
     monkeypatch.setattr(
         status_mod,

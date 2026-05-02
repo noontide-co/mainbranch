@@ -355,7 +355,7 @@ def _github(repo: Path, git: dict[str, Any]) -> dict[str, Any]:
             "--state",
             "merged",
             "--limit",
-            "5",
+            "20",
             "--json",
             "number,title,url,mergedAt,body",
         ],
@@ -364,7 +364,7 @@ def _github(repo: Path, git: dict[str, Any]) -> dict[str, Any]:
     if not merged_ok:
         errors.append(f"merged PRs: {merged_error}")
 
-    merged_prs = [_summarize_pr(pr) for pr in merged] if isinstance(merged, list) else []
+    merged_prs = _recent_merged_prs(merged) if isinstance(merged, list) else []
     return {
         "available": True,
         "authenticated": True,
@@ -374,6 +374,11 @@ def _github(repo: Path, git: dict[str, Any]) -> dict[str, Any]:
         "recent_merged_prs": merged_prs,
         "errors": errors,
     }
+
+
+def _recent_merged_prs(prs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    sorted_prs = sorted(prs, key=lambda pr: str(pr.get("mergedAt", "") or ""), reverse=True)
+    return [_summarize_pr(pr) for pr in sorted_prs[:5]]
 
 
 def _summarize_pr(pr: dict[str, Any]) -> dict[str, Any]:
