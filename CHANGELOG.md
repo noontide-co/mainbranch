@@ -11,16 +11,68 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-02
+
+v0.2.0 makes `mb` feel like the front door to Main Branch. The release stays
+terminal-first and Claude-Code-first, but the CLI now owns first-run setup,
+daily repo briefing, runtime handoff, and install-mode-aware updates.
+
+### What this means for you (plain English)
+
+- **Running `mb` now gives you a starting point.** In an interactive terminal,
+  bare `mb` shows a short launch screen with the main trails: onboard, status,
+  start, doctor, and full help.
+- **New users get a guided setup path.** `mb onboard` creates or connects a
+  business repo, explains the local files / git / GitHub substrate, wires the
+  bundled Claude Code skills, and prints the next `/start` step.
+- **Daily work has a model-free briefing.** `mb status` summarizes repo shape,
+  git state, runtime wiring, recent decisions/research, and GitHub task context
+  when `gh` is available.
+- **Runtime handoff is explicit and repairable.** `mb start` checks whether the
+  business repo, git work tree, Claude Code executable, and `/start` skill wiring
+  are ready, then prints the exact command to run or launches Claude Code with
+  `--launch`.
+- **Updates are install-mode aware.** `mb update` handles pipx installs and
+  clone/source installs without pretending every user has a git checkout.
+
 ### Added
 
+- Added a TTY-aware bare `mb` launch screen. Non-interactive callers and
+  `mb --plain` still receive normal Typer command help.
+- Added `mb onboard` for human first-run setup. It supports interactive use,
+  `--yes` for scripted setup, `--json` for smoke tests, and guarded connect mode
+  for existing Main Branch repos.
+- Added `mb status` as the first daily briefing primitive. It reports repo
+  readiness, runtime/skill wiring, git activity, local brain files, validation
+  stats, and GitHub issue/PR context when authenticated.
+- Added `mb start` as the runtime handoff helper. It emits structured JSON,
+  blocks unsafe `--json --launch` combinations, and keeps Claude Code launch
+  opt-in.
 - Added `mb update` for install-mode-aware engine refreshes. It detects pipx vs
   clone installs, supports `--check` dry-runs, emits `--json` result envelopes,
   and refreshes skill links after updates.
+- Added Linear release sync after successful PyPI publish so Linear release
+  completion tracks package availability rather than merge state.
+- Added release-path wheel smokes for bare `mb`, `mb --plain`, `mb onboard`,
+  `mb status`, `mb start`, `mb update --check --json`, and Claude Code skill
+  wiring from the built wheel.
 
 ### Changed
 
+- Reframed the README around the operating thesis before the command list:
+  Main Branch is a GitHub-native business operating system, with `mb` as the
+  deterministic CLI substrate and agent skills as the judgment layer.
 - Updated `/pull` so the skill delegates mechanical update work to `mb update`
   and keeps ownership of the human-readable changelog summary.
+- Updated the v0.2 first-run PRD so the merged launch-loop issues are marked
+  closed/merged and remaining dashboard/connect/graph work stays deferred.
+
+### Fixed
+
+- `mb onboard --mode connect` no longer mutates arbitrary uninitialized
+  directories before rejecting them.
+- `mb start --json --launch` now exits with a structured error instead of
+  launching Claude Code and contaminating JSON output.
 
 ## [0.1.2] - 2026-05-01
 
@@ -220,7 +272,7 @@ sections below cover what shipped in PRs #114 / #115 / #116 / #117 /
 
 - The 5 archetype stubs (victim, tragedy-mindset, dark-hero, redemption,
   tragic-comedy) ship as `status: stub` and are promoted to full detail
-  files in the next release (see Unreleased above).
+  files in a future release.
 - `tools/` contains stubs for future OSS carve-outs (research-pack pivot
   per `project_d100_research_pack_pivot_20260420.md`).
 - `playbooks/` ships skeletons; full playbook content lands incrementally.
