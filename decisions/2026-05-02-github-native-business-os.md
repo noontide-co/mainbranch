@@ -44,6 +44,8 @@ But the product experience is still narrow:
   first-class system.
 - GitHub activity is still presented as developer activity instead of business
   meaning.
+- There is no dashboard/server mode. All state is currently repo state plus
+  small local config, and every `mb` invocation starts, acts, and exits.
 
 This is acceptable for v0.1. It should not be the v0.2 shape.
 
@@ -127,6 +129,89 @@ The execution layer should:
 `mb` should not become a chat client or model host. It should wire runtimes,
 check health, sync integrations, expose JSON, and make the repo legible.
 
+## State Model
+
+The earlier "stateless CLI" framing is correct only for the base command
+surface. It should not become a religion.
+
+Main Branch needs three kinds of state:
+
+### Canonical State
+
+Canonical state is the business itself and must live in git:
+
+- reference files;
+- research;
+- decisions;
+- plans;
+- campaign artifacts;
+- durable summaries;
+- files changed through PRs.
+
+This state is portable, reviewable, branchable, and mergeable. It is the reason
+the system works.
+
+### Local Operational State
+
+Local operational state can live outside git:
+
+- credentials;
+- integration connection metadata;
+- last sync timestamps;
+- local indexes;
+- database cache;
+- runtime preferences;
+- dashboard/server config;
+- logs and temporary run records.
+
+This state belongs under a Main Branch home directory such as `~/.mainbranch/`
+or a per-instance path. It should be repairable by `mb doctor`, inspectable by
+`mb status`, and rebuildable when possible.
+
+### Live Process State
+
+Live process state exists only when the user intentionally starts a running
+surface:
+
+- local dashboard;
+- background sync;
+- local API server;
+- watch mode;
+- scheduled jobs;
+- runtime bridge.
+
+This state is allowed, but it must be explicit. A user should know when they
+are running Main Branch as a local service. The default CLI should remain safe,
+boring, and scriptable.
+
+## Dashboard Direction
+
+A dashboard is likely necessary if Main Branch becomes the operating surface for
+goals, GitHub activity, graph views, metrics, and integrations.
+
+The dashboard should not replace the repo. It should be a local or self-hosted
+view over the repo, GitHub, graph index, structured database, and connected
+tools.
+
+The likely shape:
+
+- `mb dashboard` or `mb serve` starts a local web UI;
+- first run creates a local instance directory;
+- the server reads business repos and GitHub activity;
+- structured metrics live in the local database/index;
+- credentials are read through the credential layer, never from the repo;
+- the UI shows business-language views over issues, PRs, goals, spend, graph,
+  and recent decisions;
+- production/team mode can later point at hosted Postgres or another durable
+  backend, but local-first should be the default.
+
+This follows the right lesson from dashboard-first systems like Paperclip: a
+dashboard implies a running server and persistent database. Main Branch should
+adopt that when the surface earns it, but it should not force a server into the
+install path before the repo/CLI/skill loop is solid.
+
+The dashboard's job is observability and control, not canonical memory.
+
 ## Onboarding Direction
 
 The biggest immediate product gap is onboarding.
@@ -201,6 +286,8 @@ real external users, clear commands, and enough depth that keeping it inside
 ## What Not To Do
 
 - Do not make `mb` a daemon by default.
+- Do not pretend a dashboard can exist without explicit local process state,
+  server config, and a database/index.
 - Do not make `mb` a chat interface.
 - Do not hide GitHub so deeply that power users lose the real primitive.
 - Do not put secrets in repo files, `CLAUDE.md`, or frontmatter.
@@ -219,6 +306,8 @@ real external users, clear commands, and enough depth that keeping it inside
 6. Add GitHub briefing primitives: assigned issues, mentions, PRs merged this
    week, blocked work, and business-language reframing.
 7. Add structured sync/indexing for one real data source before generalizing.
+8. Add an explicit dashboard spike only after `mb status`, graph/indexing, and
+   one integration sync have real data to show.
 
 ## Success Criteria
 
@@ -235,4 +324,3 @@ The v0.2 product direction is working when a non-technical operator can:
 The system should feel continuous, but the continuity should come from the repo,
 GitHub activity, graph, database index, and `/start`/`/end` ritual, not from a
 fragile long-running CLI process.
-
