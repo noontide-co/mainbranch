@@ -16,13 +16,13 @@ You already feel it. Your offer lives in Notion. Your voice lives in a thousand 
 
 You're renting your business. Not just the dashboards — the operational memory itself.
 
-The OSS gap closed in 2025. The tools to own your stack exist now. Almost nobody has carved time to migrate, because there's no coherent environment that ties it together.
+The open-source gap closed in 2025. The tools to own your stack exist now. Almost nobody has carved time to migrate, because there's no coherent environment that ties it together.
 
 Main Branch is that environment. Your offer, audience, voice, decisions, research, and campaigns live as markdown files in a git repo you own. The `mb` CLI scaffolds it. The bundled skills read those files and produce work that sounds like you — without re-prompting.
 
 The end state isn't sitting at a terminal all day. It's the opposite — eventually you dump thoughts from your phone, drafts get made, you approve, it executes. We're not all the way there. The work is still real. But the substrate is the right one to build on.
 
-We run businesses on this ourselves. The Skool community wraps the OSS — you watch us ship offers through `mb` live, on real ad accounts, including the AI-native agency arm we're building on top of it.
+We run businesses on this ourselves. The Skool community wraps Main Branch — you watch us ship offers through `mb` live, on real ad accounts, including the AI-native agency arm we're building on top of it.
 
 Own the work. Rent only the rails.
 
@@ -60,7 +60,7 @@ Tested on macOS and Linux. Windows is experimental in v0.1; see [docs/compatibil
 
 **New to Claude Code, git, or terminal?** Read [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md) — it covers everything step-by-step, including common errors.
 
-**OSS contributors** who want to hack on skills can clone the engine repo directly:
+**Contributors** who want to hack on skills can clone the engine repo directly:
 
 ```bash
 git clone https://github.com/noontide-co/mainbranch.git
@@ -131,7 +131,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
 | `mb graph` | Walk the link graph (`linked_research` / `linked_decisions` / `supersedes`) and emit Graphviz DOT. `--open` renders to PNG and opens it. |
 | `mb think <topic>` | Print the `/think` invocation hint. Run inside Claude Code for the full flow. |
-| `mb resolve <key>` | Resolve a reference path through OSS / paid layered lookup. |
+| `mb resolve <key>` | Resolve a reference path (checks free first, then paid). |
 | `mb educational <topic>` | Print an educational triage file (powers `mb doctor`'s "tell me more" prompts). |
 | `mb skill list` | List the skills bundled with this engine. |
 | `mb skill path <name>` | Print the on-disk path to a bundled skill. |
@@ -191,9 +191,9 @@ See [CHANGELOG.md](CHANGELOG.md) for what's in this release. Each release ships 
 Plain English boundary so nobody is surprised:
 
 - **Open-source (free, MIT)**: the `mb` CLI, all bundled skills, the schema, the framework, and the dashboard when it ships. Anyone can install and run — no account, no gating, no upsell wall.
-- **Paid community (Skool)**: Want to watch us build companies live with Main Branch? Free for 7 days, $19/mo after. $99/mo adds group calls.
+- **Paid community (Skool)**: Want to watch us build companies live with Main Branch? Free for 7 days, $19/mo after.
 
-The OSS engine is fully usable on its own. The paid community is the live narration on top.
+Main Branch is fully usable on its own. The paid community is the live narration on top.
 
 ---
 

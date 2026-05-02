@@ -142,7 +142,7 @@ def resolve_cmd(
     repo: str = typer.Option(".", "--repo"),
     json_out: bool = typer.Option(False, "--json"),
 ) -> None:
-    """Resolve a reference path through OSS / paid layered lookup."""
+    """Resolve a reference path (checks free first, then paid)."""
     result = resolve_mod.run(key=key, repo=repo)
     if json_out:
         typer.echo(json.dumps(result, indent=2))

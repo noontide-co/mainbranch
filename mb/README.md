@@ -27,7 +27,7 @@ mb --version
 | `mb validate` | Frontmatter shape check across `decisions/`, `core/offers/`, `research/`, `log/`, `campaigns/`, `documents/`. Exit 1 on any fail. |
 | `mb graph` | Walk linked_research / linked_decisions / supersedes; emit Graphviz DOT to stdout. `--open` shells to `dot` + `open`. |
 | `mb think <topic>` | Print the /think workflow invocation hint for the currently supported runtime. |
-| `mb resolve <key>` | Resolve a reference path through the OSS / paid layered lookup. |
+| `mb resolve <key>` | Resolve a reference path (checks free first, then paid). |
 | `mb skill path <name>` | Print the on-disk path to a bundled skill. |
 | `mb skill link --repo <path>` | Wire or repair Claude Code skill discovery for a business repo. Future runtime adapters should get equivalent wiring commands. |
 | `mb educational <topic>` | Print an educational triage file. Powers `mb doctor`'s "tell me more" prompts. |

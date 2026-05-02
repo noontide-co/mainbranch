@@ -173,7 +173,7 @@ Then restart Claude. This re-wires skill discovery in your business repo.
 
 - **In Claude Code:** type `/help` or describe the issue in plain English.
 - **In Skool:** post in the Main Branch group with a screenshot of the exact error. Tag Devon for setup issues.
-- **For OSS contributors:** open an issue at [https://github.com/noontide-co/mainbranch/issues](https://github.com/noontide-co/mainbranch/issues).
+- **For contributors:** open an issue at [https://github.com/noontide-co/mainbranch/issues](https://github.com/noontide-co/mainbranch/issues).
 - **Platform support:** see [compatibility](compatibility.md).
 
 ---
