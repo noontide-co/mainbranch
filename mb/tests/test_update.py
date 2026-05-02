@@ -122,7 +122,7 @@ def test_update_check_clone_fetches_before_reading_origin(monkeypatch: Any, tmp_
     assert result["skills_relinked_count"] == 3
     assert calls == [(["git", "fetch", "origin", "main:refs/remotes/origin/main", "--quiet"], root)]
     assert "ran `git fetch origin main --quiet`" in result["actions"][0]
-    assert "would run `git pull`" in result["actions"][1]
+    assert "would run `git pull --ff-only origin main`" in result["actions"][1]
     assert result["actions"][2].endswith(" --json`")
 
 
@@ -154,7 +154,7 @@ def test_update_clone_pulls_engine_root_then_relinks(monkeypatch: Any, tmp_path:
 
     def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
         calls.append((args, cwd))
-        if args == ["git", "pull"]:
+        if args == ["git", "pull", "--ff-only", "origin", "main"]:
             init_file.write_text('__version__ = "0.2.0"\n')
             return _completed(args, stdout="Already up to date.")
         if args[:3] == ["mb", "skill", "link"]:
@@ -185,7 +185,7 @@ def test_update_clone_pulls_engine_root_then_relinks(monkeypatch: Any, tmp_path:
     assert result["warnings"] == [
         "could not refresh existing non-link skill path(s): .claude/skills/start"
     ]
-    assert calls[0] == (["git", "pull"], root)
+    assert calls[0] == (["git", "pull", "--ff-only", "origin", "main"], root)
 
 
 def test_update_json_cli_envelope(monkeypatch: Any, tmp_path: Path) -> None:

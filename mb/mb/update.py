@@ -15,6 +15,7 @@ from mb import __version__
 from mb.engine import bundled_skills, engine_root, install_mode
 
 VERSION_RE = re.compile(r'__version__\s*=\s*["\']([^"\']+)["\']')
+CLONE_UPDATE_COMMAND = ["git", "pull", "--ff-only", "origin", "main"]
 
 
 def _run_command(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -188,7 +189,7 @@ def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
             )
             result["actions"].extend(
                 [
-                    f"would run `git pull` in {root}",
+                    f"would run `git pull --ff-only origin main` in {root}",
                     f"would run `mb skill link --repo {target_repo} --json`",
                 ]
             )
@@ -215,8 +216,8 @@ def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
             result["new_version"] = result["old_version"]
             result["errors"].append("could not locate Main Branch engine root")
             return result
-        pull = _run_command(["git", "pull"], cwd=root)
-        result["actions"].append(f"ran `git pull` in {root}")
+        pull = _run_command(CLONE_UPDATE_COMMAND, cwd=root)
+        result["actions"].append(f"ran `git pull --ff-only origin main` in {root}")
         if pull.returncode != 0:
             result["ok"] = False
             result["new_version"] = result["old_version"]
