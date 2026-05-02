@@ -331,10 +331,21 @@ def start_cmd(
 def validate_cmd(
     path: str = typer.Argument(".", help="Repo to validate."),
     verbose: bool = typer.Option(False, "-v", "--verbose"),
+    cross_refs: bool = typer.Option(
+        False,
+        "--cross-refs",
+        help="Check known frontmatter links and offer directory references.",
+    ),
+    strict: bool = typer.Option(False, "--strict", help="Fail on warnings."),
     json_out: bool = typer.Option(False, "--json"),
 ) -> None:
-    """Check the metadata at the top of your files (frontmatter shape)."""
-    report = validate_mod.run(path=path, verbose=verbose)
+    """Check frontmatter shape and optional cross-references."""
+    report = validate_mod.run(
+        path=path,
+        verbose=verbose,
+        cross_refs=cross_refs,
+        strict=strict,
+    )
     if json_out:
         typer.echo(json.dumps(report, indent=2))
     else:
