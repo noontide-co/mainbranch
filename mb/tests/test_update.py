@@ -120,9 +120,7 @@ def test_update_check_clone_fetches_before_reading_origin(monkeypatch: Any, tmp_
     assert result["old_version"] == "0.1.2"
     assert result["new_version"] == "0.2.0"
     assert result["skills_relinked_count"] == 3
-    assert calls == [
-        (["git", "fetch", "origin", "main:refs/remotes/origin/main", "--quiet"], root)
-    ]
+    assert calls == [(["git", "fetch", "origin", "main:refs/remotes/origin/main", "--quiet"], root)]
     assert "ran `git fetch origin main --quiet`" in result["actions"][0]
     assert "would run `git pull`" in result["actions"][1]
     assert result["actions"][2].endswith(" --json`")
@@ -290,9 +288,7 @@ def test_update_relink_payload_errors_are_reported(monkeypatch: Any, tmp_path: P
 
     assert count == 1
     assert errors == ["could not locate bundled Main Branch engine root"]
-    assert warnings == [
-        "could not refresh existing non-link skill path(s): .claude/skills/pull"
-    ]
+    assert warnings == ["could not refresh existing non-link skill path(s): .claude/skills/pull"]
     assert parsed == payload
 
 
