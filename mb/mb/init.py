@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from mb.engine import link_skills
+from mb.migrate import LATEST_SCHEMA_VERSION, SCHEMA_MARKER
 
 # The canonical six. v0.1 lock; v0.2 unlocks via .vip/config.yaml paths block.
 DATA_FOLDERS = [
@@ -40,6 +41,7 @@ __pycache__/
 .pytest_cache/
 node_modules/
 .venv/
+.mb/backups/
 """
 
 
@@ -152,6 +154,11 @@ def run(path: str, name: str) -> dict[str, Any]:
         mode = _link_or_mkdir(target / source_name, target / dest_name)
         if mode != "exists":
             created.append(dest_name + ("/" if mode == "directory" else ""))
+
+    marker = target / SCHEMA_MARKER
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text(LATEST_SCHEMA_VERSION + "\n", encoding="utf-8")
+    created.append(SCHEMA_MARKER)
 
     mapping = {
         "BUSINESS_NAME": business_name,

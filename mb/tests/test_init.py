@@ -22,6 +22,7 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert (target / "CLAUDE.md").exists()
     assert (target / ".github" / "CODEOWNERS").exists()
     assert (target / ".gitignore").exists()
+    assert (target / ".mb" / "schema_version").read_text(encoding="utf-8") == "0.2\n"
     assert (target / ".claude" / "settings.local.json").exists()
     assert (target / ".claude" / "skills" / "start" / "SKILL.md").exists()
 
@@ -33,6 +34,7 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     gitignore = (target / ".gitignore").read_text()
     assert ".claude/settings.local.json" in gitignore
     assert ".claude/skills/start" in gitignore
+    assert ".mb/backups/" in gitignore
     assert "Acme Brewing" in (target / "CLAUDE.md").read_text()
 
 

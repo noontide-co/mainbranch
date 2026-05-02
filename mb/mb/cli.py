@@ -19,6 +19,7 @@ from mb import doctor as doctor_mod
 from mb import educational as educational_mod
 from mb import graph as graph_mod
 from mb import init as init_mod
+from mb import migrate as migrate_mod
 from mb import onboard as onboard_mod
 from mb import resolve as resolve_mod
 from mb import start as start_mod
@@ -45,6 +46,14 @@ skill_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(skill_app, name="skill")
+
+migrate_app = typer.Typer(
+    name="migrate",
+    help="Inspect and apply repo schema migrations.",
+    no_args_is_help=False,
+    invoke_without_command=True,
+)
+app.add_typer(migrate_app, name="migrate")
 
 
 def _version_callback(value: bool) -> None:
@@ -424,6 +433,56 @@ def update_cmd(
     else:
         update_mod.render_human(result)
     raise typer.Exit(0 if result["ok"] else 1)
+
+
+@migrate_app.callback()
+def migrate_cmd(
+    ctx: typer.Context,
+    repo: str = typer.Option(".", "--repo", help="Business repo to migrate."),
+    check: bool = typer.Option(False, "--check", help="Dry-run pending migrations."),
+    apply_changes: bool = typer.Option(False, "--apply", help="Apply pending migrations."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Run `mb migrate --check` or `mb migrate --apply`; defaults to status."""
+    if ctx.invoked_subcommand is not None:
+        return
+    if check and apply_changes:
+        typer.echo("mb migrate: choose only one of --check or --apply", err=True)
+        raise typer.Exit(2)
+    if apply_changes:
+        result = migrate_mod.apply(repo)
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            migrate_mod.render_apply(result)
+        raise typer.Exit(0 if result["ok"] else 1)
+    if check:
+        result = migrate_mod.check(repo)
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            migrate_mod.render_check(result)
+        pending = bool(result.get("pending"))
+        raise typer.Exit(1 if pending or not result["ok"] else 0)
+
+    result = migrate_mod.status(repo)
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        migrate_mod.render_status(result)
+
+
+@migrate_app.command("status")
+def migrate_status_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo to inspect."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Show current schema version and pending migrations."""
+    result = migrate_mod.status(repo)
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        migrate_mod.render_status(result)
 
 
 @skill_app.command("path")

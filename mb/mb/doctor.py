@@ -19,6 +19,7 @@ from typing import Any
 
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status, version_key
+from mb.migrate import LATEST_SCHEMA_VERSION, pending_migrations, read_schema_version
 
 CLOUD_PREFIXES = (
     "Library/Mobile Documents",  # iCloud Drive
@@ -180,6 +181,34 @@ def _repo_layout_check(repo: Path) -> dict[str, Any]:
     }
 
 
+def _schema_version_check(repo: Path) -> dict[str, Any]:
+    current = read_schema_version(repo)
+    pending = pending_migrations(repo)
+    if pending:
+        names = ", ".join(info.name for info, _module in pending)
+        return {
+            "name": "schema-version",
+            "ok": False,
+            "detail": (
+                f"schema {current}; pending migration(s): {names}. "
+                "Run `mb migrate --check` before `mb migrate --apply`."
+            ),
+            "severity": "warn",
+        }
+    if current == "unknown":
+        return {
+            "name": "schema-version",
+            "ok": False,
+            "detail": "schema version unknown; run `mb migrate status` from the repo root.",
+            "severity": "warn",
+        }
+    return {
+        "name": "schema-version",
+        "ok": True,
+        "detail": f"schema {current} (latest {LATEST_SCHEMA_VERSION})",
+    }
+
+
 def run(path: str) -> dict[str, Any]:
     """Run all checks, return a structured report dict."""
     repo = Path(path).resolve()
@@ -239,6 +268,7 @@ def run(path: str) -> dict[str, Any]:
 
     checks.append(_mainbranch_version_check(update))
     checks.append(_repo_layout_check(repo))
+    checks.append(_schema_version_check(repo))
 
     cloud_hits = _detect_cloud_paths(repo)
     cloud_ok = not cloud_hits

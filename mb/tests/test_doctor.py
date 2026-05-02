@@ -17,6 +17,7 @@ def test_doctor_runs_on_empty_dir(tmp_path: Path) -> None:
     assert "skill-wiring" in names
     assert "mainbranch-version" in names
     assert "repo-layout" in names
+    assert "schema-version" in names
     assert "update" in report
 
 
@@ -70,6 +71,18 @@ def test_repo_layout_accepts_current_core(tmp_path: Path) -> None:
 
     assert check["ok"] is True
     assert "current core/" in check["detail"]
+
+
+def test_doctor_warns_on_schema_drift(tmp_path: Path) -> None:
+    repo = tmp_path / "legacy"
+    (repo / "reference" / "core").mkdir(parents=True)
+
+    report = run(path=str(repo))
+
+    check = next(c for c in report["checks"] if c["name"] == "schema-version")
+    assert check["ok"] is False
+    assert check["severity"] == "warn"
+    assert "mb migrate --check" in check["detail"]
 
 
 def test_doctor_json_and_human_output_include_required_update(
