@@ -161,6 +161,7 @@ def run(
     warnings: list[str] = []
     created: list[str] = []
     action = normalized_mode
+    result_business_name = name.strip() if normalized_mode == "connect" else ""
     init_result: dict[str, Any] | None = None
     link_result: dict[str, Any] | None = None
 
@@ -174,6 +175,7 @@ def run(
         action = "repaired" if before["claude_md"] else "connected"
     else:
         business_name = name.strip() or target.name.replace("-", " ").title()
+        result_business_name = business_name
         init_result = init_mod.run(path=str(target), name=business_name)
         created.extend(str(item) for item in init_result.get("created", []))
         if init_result["status"] == "error":
@@ -212,7 +214,7 @@ def run(
         "path": str(target),
         "mode": normalized_mode,
         "level": selected_level,
-        "business_name": name.strip() or target.name.replace("-", " ").title(),
+        "business_name": result_business_name,
         "created": created,
         "repo": {
             "before": before,

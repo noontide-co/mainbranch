@@ -69,6 +69,7 @@ def test_onboard_connect_repairs_existing_initialized_repo(tmp_path: Path, monke
 
     assert result["ok"] is True
     assert result["action"] == "repaired"
+    assert result["business_name"] == ""
     assert settings.exists()
     assert result["skill_wiring"]["ok"] is True
 
@@ -128,3 +129,24 @@ def test_onboard_cli_yes_json_smoke(tmp_path: Path, monkeypatch) -> None:
     assert payload["ok"] is True
     assert payload["path"] == str(repo.resolve())
     assert payload["next_steps"][-1] == "/start"
+
+
+def test_onboard_cli_interactive_path_renders_clear_labels(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    monkeypatch.setattr(onboard_mod, "is_interactive", lambda: True)
+    repo = tmp_path / "interactive"
+
+    result = runner.invoke(
+        app,
+        ["onboard"],
+        input=f"beginner\nnew\nInteractive Business\n{repo}\n",
+    )
+
+    assert result.exit_code == 0
+    assert "Main Branch works because the business lives somewhere durable" in result.stdout
+    assert "new/connect/auto" in result.stdout
+    assert "repo:" in result.stdout
+    assert "interactive" in result.stdout
+    assert "level / action: beginner / created" in result.stdout
+    assert "path: beginner / created" not in result.stdout
+    assert "Show the short why" not in result.stdout

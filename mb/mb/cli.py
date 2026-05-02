@@ -155,7 +155,7 @@ def _render_onboard_human(result: dict[str, Any]) -> None:
     mark = "[green]ready[/green]" if result["ok"] else "[red]needs repair[/red]"
     console.print(f"\n[bold]mb onboard[/bold]  {mark}")
     console.print(f"repo: {result['path']}")
-    console.print(f"path: {result['level']} / {result['action']}\n")
+    console.print(f"level / action: {result['level']} / {result['action']}\n")
 
     if result["level"] != "power":
         console.print("[bold]Why this stack[/bold]")
@@ -234,8 +234,10 @@ def onboard_cmd(
             "Comfort level (beginner/intermediate/power)",
             default="beginner" if level == "auto" else level,
         )
+        if selected_level != "power":
+            _render_onboard_intro(selected_level)
         selected_mode = typer.prompt(
-            "Create a new repo or connect an existing one? (new/connect)",
+            "Create a new repo, connect an existing one, or auto-detect? (new/connect/auto)",
             default="auto" if mode == "auto" else mode,
         )
         if not business_name and selected_mode != "connect":
@@ -244,8 +246,6 @@ def onboard_cmd(
         if target == "." and business_name:
             default_path = onboard_mod._slug(business_name)
         target = typer.prompt("Repo path", default=default_path)
-        if typer.confirm("Show the short why behind the setup?", default=selected_level != "power"):
-            _render_onboard_intro(selected_level)
 
     try:
         result = onboard_mod.run(
