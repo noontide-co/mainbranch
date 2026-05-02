@@ -1,4 +1,4 @@
-# Engine repo CODEOWNERS — v0.1 single-owner default.
+# Engine repo CODEOWNERS — single-owner default.
 # Multi-owner pattern: add per-path rules ABOVE this line, more specific first.
 # Example:
 #   /tools/tool-domain/   @dmthepm @co-owner-handle

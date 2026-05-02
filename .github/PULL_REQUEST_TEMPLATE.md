@@ -30,20 +30,13 @@ Closes #
 
 ## Test plan
 
-Pre-push gates from `mb/`:
+Pre-push gate from repo root:
 
 ```bash
-cd mb
-ruff format --check .
-ruff check .
-mypy mb
-pytest -q --cov=mb --cov-fail-under=70
+scripts/check.sh
 ```
 
-- [ ] `ruff format --check` passes
-- [ ] `ruff check` passes
-- [ ] `mypy mb` passes
-- [ ] `pytest -q --cov=mb --cov-fail-under=70` passes
+- [ ] `scripts/check.sh` passes
 - [ ] Wheel install smoke (if packaging touched)
 - [ ] SKILL.md ≤500 lines (if any skill touched)
 

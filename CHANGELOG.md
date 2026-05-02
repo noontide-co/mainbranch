@@ -226,7 +226,7 @@ sections below cover what shipped in PRs #114 / #115 / #116 / #117 /
   archetype + audience-current-archetype selection (Hughes 9-archetype
   framework). Paired-imagery rule replaces "what does this section say"
   with "what two things does this section put next to each other."
-  Stubs land for 5 of the 9 archetypes (filled out in the next release).
+  Stubs land for 5 of the 9 archetypes (to be filled out in a future release).
 - **Seven Sweeps review pass** (`.claude/skills/site/references/review.md`).
   Anti-pattern catalogue for AI-generated marketing copy with the
   "AI tells" reference (`ai-tells.md`).

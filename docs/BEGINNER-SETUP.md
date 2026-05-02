@@ -41,7 +41,7 @@ Same flow as macOS — use `apt install pipx` (Debian/Ubuntu) or `dnf install pi
 
 ### Windows
 
-> **Windows is experimental in v0.1.** It may work but isn't tested in CI; expect rough edges. See [compatibility](compatibility.md) and track [issue #151](https://github.com/noontide-co/mainbranch/issues/151) for status. Power users are welcome to try the steps below.
+> **Windows is experimental.** It may work but isn't tested in CI; expect rough edges. See [compatibility](compatibility.md) and track [issue #137](https://github.com/noontide-co/mainbranch/issues/137) for status. Power users are welcome to try the steps below.
 
 ```powershell
 # 1. Install Claude Code
@@ -61,7 +61,7 @@ pipx install mainbranch
 After install, verify:
 
 ```bash
-mb --version    # should print "mb 0.1.1" or higher
+mb --version    # should print something like "mb X.Y.Z"
 claude doctor   # should report Claude Code is healthy
 ```
 
@@ -145,6 +145,9 @@ Or just run `/pull` inside Claude Code — it figures out which install you have
 |---|---|
 | `mb onboard` | Guided setup for humans. Creates or connects a business repo and shows the next `/start` step. |
 | `mb init` | Scaffold a fresh business repo. |
+| `mb status` | Show a daily repo/runtime/GitHub briefing. |
+| `mb start` | Check runtime handoff readiness and print or launch Claude Code. |
+| `mb update` | Update Main Branch based on pipx vs clone install mode. |
 | `mb doctor` | Check that everything is set up correctly. Walks you through fixes. |
 | `mb skill link --repo .` | Repair Claude Code skill discovery if `/start` doesn't show up. |
 | `mb validate` | Check your reference files have correct frontmatter. |

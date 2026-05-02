@@ -57,7 +57,7 @@ claude
 
 You'll need a Claude Pro ($20/mo) or Max subscription. Install Claude Code itself from [claude.ai](https://claude.ai) — see [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md) for a step-by-step.
 
-Tested on macOS and Linux. Windows is experimental in v0.1; see [docs/compatibility.md](docs/compatibility.md) and track [#137](https://github.com/noontide-co/mainbranch/issues/137).
+Tested on macOS and Linux. Windows is experimental; see [docs/compatibility.md](docs/compatibility.md) and track [#137](https://github.com/noontide-co/mainbranch/issues/137).
 
 **New to Claude Code, git, or terminal?** Read [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md) — it covers everything step-by-step, including common errors.
 
@@ -160,15 +160,16 @@ Skills are pre-built workflows you invoke with slash prompts. Instead of figurin
 | `/wiki` | Personal wiki with atomic notes |
 | `/end` | Close session — summary, crystallize, commit |
 | `/help` | Get answers, troubleshoot, learn the system |
-| `/pull` | Quick update — pulls latest skills from GitHub |
+| `/pull` | Quick update — delegates install-mode refresh to `mb update` and summarizes what's new |
 
 ---
 
-## Honest current state (v0.1)
+## Honest Current State
 
-- **Built for Claude Code today.** Portable runtime support is a v0.2+ commitment.
-- **Schema is v1; will evolve.** Frontmatter shapes covered by `mb validate` are stable for v0.1.x; breaking changes bump the major.
-- **Runtime compatibility matrix lands at v0.2.** Codex, Cursor, OpenClaw, Hermes, and local LLMs are not first-class targets in v0.1.
+- **Built for Claude Code today.** `mb` is runtime-agnostic by design, but Claude Code is the only first-class runtime currently supported end to end.
+- **The terminal front door is live.** Bare `mb`, `mb onboard`, `mb status`, `mb start`, and `mb update` are in the public package.
+- **Schema is v1; will evolve.** Frontmatter shapes covered by `mb validate` are stable for the current major; breaking changes bump the major.
+- **Runtime compatibility is still ahead.** Codex, Cursor, OpenClaw, Hermes, and local LLMs are roadmap targets, not supported adapters yet.
 
 The engine v0.1.0 decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.md`](decisions/2026-04-29-mb-vip-v0-1-0-master.md). The business-side master plan is tracked in [`noontide-co/projects#119`](https://github.com/noontide-co/projects/pull/119).
 
@@ -176,7 +177,7 @@ The engine v0.1.0 decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.
 
 ## Roadmap
 
-v0.1 is the CLI + Claude Code adapter foundation; v0.2+ broadens runtime compatibility and deepens the workflow surfaces. Direction, not promises.
+The current package is the CLI + Claude Code first-run foundation. Next work deepens GitHub activity, credential/config foundations, graph/indexing, and runtime compatibility. Direction, not promises.
 
 The proposed long-range product direction is captured in
 [`decisions/2026-05-02-github-native-business-os.md`](decisions/2026-05-02-github-native-business-os.md):
@@ -186,10 +187,10 @@ intelligence layer, and agent runtimes as execution.
 
 - `mb books` — BeanCount integration for ledger workflows ([#128](https://github.com/noontide-co/mainbranch/issues/128))
 - `mb fulfillment` — agency-arm tooling for delivery ops
-- Runtime compatibility — Codex, Cursor, OpenClaw, Hermes, local LLMs (v0.2+)
+- Runtime compatibility — Codex, Cursor, OpenClaw, Hermes, local LLMs
 - Deeper `/site` workflows — lander → minisite → website graduation
-- Dashboard — visual operating loop for your bets and decisions, ships **free as part of `mb`** (v0.2–v0.3)
-- Skool → GitHub webhook automation (v0.2)
+- Dashboard — visual operating loop for your bets and decisions, ships **free as part of `mb`** when the graph/sync substrate is ready
+- Skool → GitHub webhook automation
 
 See [CHANGELOG.md](CHANGELOG.md) for what's in this release. Each release ships a "What this means for you" plain-English section above the technical detail.
 
