@@ -103,13 +103,33 @@ Combine all lens findings into a single review report:
 [Positive findings from lenses]
 ```
 
-## Phase 4: Apply Fixes and Log Changes
+## Phase 4: Propose Fixes and Gate Writes
 
-**Key insight: Reviews UPDATE the source file, not just report issues.**
+**Compliance gate: Reviews never rewrite user-provided copy until the proposed changes are shown and explicitly approved.**
 
 For each P2/P3 issue:
-1. Apply the fix directly to the batch file
-2. Log the change to `review-log.md`
+1. Add the finding to `proposed-compliance-fixes.json` with:
+   - `severity`
+   - `item_ref`
+   - `issue`
+   - `evidence`
+   - `rule`
+   - `fix`
+2. Run the gate in dry-run mode:
+
+   ```bash
+   python -m mb.ads_compliance_gate outputs/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md outputs/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json
+   ```
+
+3. Show the resulting diff to the user.
+4. Ask: "Apply these compliance copy changes? (y/n)"
+5. Only if the user says yes, run:
+
+   ```bash
+   python -m mb.ads_compliance_gate outputs/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md outputs/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json --approve --review-log outputs/YYYY-MM-DD-{type}-{campaign}/review-log.md
+   ```
+
+If the user says no, stop with the source file unchanged. Do not apply partial edits unless the user gives a narrower approval.
 
 **review-log.md format:**
 
@@ -130,14 +150,16 @@ For each P2/P3 issue:
 [Any P1 issues that need human decision]
 ```
 
+`review-log.md` is written only after approval. The proposed JSON file is safe to write before approval because it is a separate review artifact, not a rewrite of the user's copy.
+
 For P1 issues:
 - Do NOT auto-fix (requires human decision)
-- Document in review-log.md
+- Document in the unified report and keep source copy unchanged until the user gives a specific fix approval
 - Status: BLOCKED until P1s resolved
 
 ## Phase 5: Post-Review Git Commit
 
-After fixes are applied:
+After fixes are approved and applied:
 
 ```bash
 git add outputs/YYYY-MM-DD-{type}-{campaign}/

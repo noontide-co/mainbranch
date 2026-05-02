@@ -28,10 +28,12 @@ Review ads through 6 compliance and quality lenses before shipping.
    - Returns P1/P2/P3 findings with specific line references
    - Does NOT fix anything — just reports findings (read-only pattern, no write risk)
 4. When all 6 agents return, synthesize findings into a unified P1/P2/P3 report (deduplicate where lenses overlap)
-5. Apply P2/P3 fixes directly to the batch file
-6. Create `review-log.md` documenting what changed
-7. Tell user: "Fixes applied. Want me to commit these changes to git?"
-8. If yes, commit: `[review] {type} batch - N fixes applied`
+5. Write P2/P3 findings to `proposed-compliance-fixes.json`
+6. Run `python -m mb.ads_compliance_gate ...` in dry-run mode and show the proposed diff
+7. Ask: "Apply these compliance copy changes? (y/n)"
+8. Only if approved, rerun the gate with `--approve --review-log ...`
+9. Tell user whether the source copy changed or was left unchanged
+10. If approved, ask whether to commit: `[review] {type} batch - N fixes applied`
 
 ---
 
