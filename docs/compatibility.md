@@ -56,20 +56,17 @@ Use clone mode only if you are editing the engine, docs, or bundled skills.
 
 ## Updating
 
-For `pipx` installs:
+Use the CLI update contract from inside your business repo:
 
 ```bash
-pipx upgrade mainbranch
+mb update
 ```
 
-For clone installs:
-
-```bash
-git pull origin main
-```
-
-Inside Claude Code, `/pull` detects the install mode and runs the appropriate
-update path.
+`mb update` detects whether the engine is a `pipx` install or clone checkout,
+runs the appropriate update path, and refreshes skill links. Use
+`mb update --check` for a dry-run and `mb update --json` for automation.
+Inside Claude Code, `/pull` calls `mb update` for this mechanical step and keeps
+ownership of the human-readable "what's new" summary.
 
 ## Known v0.1.x limits
 

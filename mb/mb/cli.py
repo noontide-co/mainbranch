@@ -18,7 +18,9 @@ from mb import educational as educational_mod
 from mb import graph as graph_mod
 from mb import init as init_mod
 from mb import resolve as resolve_mod
+from mb import status as status_mod
 from mb import think as think_mod
+from mb import update as update_mod
 from mb import validate as validate_mod
 
 app = typer.Typer(
@@ -139,6 +141,19 @@ def doctor_cmd(
     raise typer.Exit(0 if report["ok"] else 1)
 
 
+@app.command("status")
+def status_cmd(
+    path: str = typer.Argument(".", help="Business repo to brief."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Show a cheap daily briefing for a Main Branch repo."""
+    report = status_mod.run(path=path)
+    if json_out:
+        typer.echo(json.dumps(report, indent=2))
+    else:
+        status_mod.render_human(report)
+
+
 @app.command("validate")
 def validate_cmd(
     path: str = typer.Argument(".", help="Repo to validate."),
@@ -204,6 +219,21 @@ def educational_cmd(
 ) -> None:
     """Print an educational triage file. Powers doctor's 'tell me more' prompts."""
     educational_mod.run(topic=topic)
+
+
+@app.command("update")
+def update_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo whose skill links refresh."),
+    check: bool = typer.Option(False, "--check", help="Dry-run only; do not upgrade or relink."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Refresh Main Branch according to its install mode."""
+    result = update_mod.run(repo=repo, check=check)
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        update_mod.render_human(result)
+    raise typer.Exit(0 if result["ok"] else 1)
 
 
 @skill_app.command("path")

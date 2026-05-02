@@ -256,9 +256,10 @@ def install_mode() -> str:
     if root is None:
         return "unknown"
     if packaged_engine_root() is not None:
-        prefix = Path(os.environ.get("PIPX_HOME", "")).expanduser()
         root_text = str(root)
-        if "pipx" in root_text or (str(prefix) and str(prefix) in root_text):
+        pipx_home = os.environ.get("PIPX_HOME", "").strip()
+        prefix = Path(pipx_home).expanduser() if pipx_home else None
+        if "pipx" in root_text or (prefix is not None and str(prefix) in root_text):
             return "pipx"
         return "wheel"
     if (root / ".git").exists():
