@@ -12,7 +12,7 @@ from typing import Any
 
 import yaml
 
-from mb import __version__
+from mb import __version__, github_activity
 from mb.engine import install_mode, link_status
 
 IMPORTANT_DIRS = (
@@ -265,12 +265,7 @@ def _brain(repo: Path) -> dict[str, Any]:
 
 
 def _repo_full_name(remote: str) -> str:
-    if not remote:
-        return ""
-    match = re.search(r"github\.com[:/](?P<owner>[^/]+)/(?P<repo>[^/]+?)(?:\.git)?/?$", remote)
-    if not match:
-        return ""
-    return f"{match.group('owner')}/{match.group('repo')}"
+    return github_activity.repo_full_name(remote)
 
 
 def _gh_json(args: list[str], repo: Path) -> tuple[bool, Any, str]:
@@ -284,121 +279,21 @@ def _gh_json(args: list[str], repo: Path) -> tuple[bool, Any, str]:
 
 
 def _github(repo: Path, git: dict[str, Any]) -> dict[str, Any]:
-    if not _which("gh"):
-        return {
-            "available": False,
-            "authenticated": False,
-            "repo": _repo_full_name(str(git.get("remote", ""))),
-            "assigned_issues": [],
-            "review_requests": [],
-            "recent_merged_prs": [],
-            "errors": ["gh not on PATH"],
-        }
-
-    auth = _run_command(["gh", "auth", "status"], cwd=repo, timeout=5.0)
-    if not auth["ok"]:
-        return {
-            "available": True,
-            "authenticated": False,
-            "repo": _repo_full_name(str(git.get("remote", ""))),
-            "assigned_issues": [],
-            "review_requests": [],
-            "recent_merged_prs": [],
-            "errors": ["gh not authenticated"],
-        }
-
-    errors: list[str] = []
-    repo_name = _repo_full_name(str(git.get("remote", "")))
-    assigned_ok, assigned, assigned_error = _gh_json(
-        [
-            "gh",
-            "issue",
-            "list",
-            "--state",
-            "open",
-            "--assignee",
-            "@me",
-            "--limit",
-            "5",
-            "--json",
-            "number,title,url,updatedAt,labels",
-        ],
+    return github_activity.collect(
         repo,
+        remote=str(git.get("remote", "")),
+        which_func=_which,
+        command_runner=_run_command,
+        json_runner=_gh_json,
     )
-    if not assigned_ok:
-        errors.append(f"issues: {assigned_error}")
-
-    reviews_ok, reviews, reviews_error = _gh_json(
-        [
-            "gh",
-            "pr",
-            "list",
-            "--state",
-            "open",
-            "--search",
-            "review-requested:@me",
-            "--limit",
-            "5",
-            "--json",
-            "number,title,url,updatedAt,author",
-        ],
-        repo,
-    )
-    if not reviews_ok:
-        errors.append(f"review requests: {reviews_error}")
-
-    merged_ok, merged, merged_error = _gh_json(
-        [
-            "gh",
-            "pr",
-            "list",
-            "--state",
-            "merged",
-            "--limit",
-            "20",
-            "--json",
-            "number,title,url,mergedAt,body",
-        ],
-        repo,
-    )
-    if not merged_ok:
-        errors.append(f"merged PRs: {merged_error}")
-
-    merged_prs = _recent_merged_prs(merged) if isinstance(merged, list) else []
-    return {
-        "available": True,
-        "authenticated": True,
-        "repo": repo_name,
-        "assigned_issues": assigned if isinstance(assigned, list) else [],
-        "review_requests": reviews if isinstance(reviews, list) else [],
-        "recent_merged_prs": merged_prs,
-        "errors": errors,
-    }
 
 
 def _recent_merged_prs(prs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    sorted_prs = sorted(prs, key=lambda pr: str(pr.get("mergedAt", "") or ""), reverse=True)
-    return [_summarize_pr(pr) for pr in sorted_prs[:5]]
+    return github_activity.recent_merged_prs(prs)
 
 
 def _summarize_pr(pr: dict[str, Any]) -> dict[str, Any]:
-    title = str(pr.get("title", "") or "")
-    body = str(pr.get("body", "") or "")
-    summary = ""
-    for line in body.splitlines():
-        stripped = line.strip().strip("-* ")
-        if stripped and not stripped.startswith("#"):
-            summary = stripped
-            break
-    if not summary:
-        summary = title
-    return {
-        "number": pr.get("number"),
-        "title": title,
-        "url": pr.get("url", ""),
-        "mergedAt": pr.get("mergedAt", ""),
-        "what_shipped": summary[:220],
-    }
+    return github_activity.summarize_pr(pr)
 
 
 def _runtime(repo: Path) -> dict[str, Any]:
@@ -584,15 +479,31 @@ def render_human(report: dict[str, Any]) -> None:
     elif not github["authenticated"]:
         console.print("  gh not authenticated; run `gh auth login` to include business tasks.")
     else:
+        summary = github.get("summary") or {}
+        sections = github.get("sections") or {}
         console.print(
-            f"  assigned issues: {len(github['assigned_issues'])}  "
-            f"review requests: {len(github['review_requests'])}  "
-            f"recent merged PRs: {len(github['recent_merged_prs'])}"
+            f"  tasks assigned: {summary.get('assigned_tasks', len(github['assigned_issues']))}  "
+            f"attention: {summary.get('attention_requests', len(github['review_requests']))}  "
+            f"open proposals: {summary.get('open_proposals', 0)}  "
+            "shipped this week: "
+            f"{summary.get('shipped_this_week', len(github['recent_merged_prs']))}"
         )
-        for issue in github["assigned_issues"][:3]:
-            console.print(f"  - issue #{issue['number']}: {issue['title']}")
-        for pr in github["recent_merged_prs"][:3]:
+        assigned_tasks = sections.get("assigned_tasks") or github["assigned_issues"]
+        attention_requests = sections.get("attention_requests") or github["review_requests"]
+        open_proposals = sections.get("open_proposals") or []
+        shipped = sections.get("shipped_this_week") or github["recent_merged_prs"]
+        blocked_or_stale = sections.get("blocked_or_stale_tasks") or []
+        for issue in assigned_tasks[:3]:
+            console.print(f"  - task #{issue['number']}: {issue['title']}")
+        for item in attention_requests[:3]:
+            reason = item.get("reason", "Needs attention")
+            console.print(f"  - attention #{item['number']}: {item['title']} ({reason})")
+        for pr in open_proposals[:3]:
+            console.print(f"  - proposal #{pr['number']}: {pr['title']}")
+        for pr in shipped[:3]:
             console.print(f"  - shipped #{pr['number']}: {pr['what_shipped']}")
+        for issue in blocked_or_stale[:3]:
+            console.print(f"  - blocked/stale #{issue['number']}: {issue['title']}")
         for error in github["errors"][:2]:
             console.print(f"  [yellow]degraded:[/yellow] {error}")
 
