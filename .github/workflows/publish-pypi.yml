@@ -117,3 +117,39 @@ jobs:
 
       - name: Publish via trusted publisher
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  linear-release:
+    name: Sync Linear release
+    needs: [publish]
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.release.tag_name, 'oe-v')
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Derive Linear release metadata
+        id: meta
+        run: |
+          tag="${{ github.event.release.tag_name }}"
+          version="${tag#oe-v}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "name=Main Branch $version" >> "$GITHUB_OUTPUT"
+
+      - name: Sync issues into Linear release
+        uses: linear/linear-release-action@v0
+        with:
+          access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
+          command: sync
+          name: ${{ steps.meta.outputs.name }}
+          version: ${{ steps.meta.outputs.tag }}
+
+      - name: Mark Linear release as released
+        uses: linear/linear-release-action@v0
+        with:
+          access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
+          command: complete
+          version: ${{ steps.meta.outputs.tag }}
