@@ -9,13 +9,17 @@ from types import ModuleType
 from mb.migrations.base import MigrationInfo, MigrationPlan
 
 MIGRATION_MODULES = ("mb.migrations.001_v01_to_v02_path_config",)
-VERSION_MAP = {"0.1": "mb.migrations.001_v01_to_v02_path_config"}
 
 
 def registered() -> list[tuple[MigrationInfo, ModuleType]]:
     """Return migrations in apply order."""
     modules = [import_module(name) for name in MIGRATION_MODULES]
     return [(module.INFO, module) for module in modules]
+
+
+def version_map() -> dict[str, str]:
+    """Return the registered from-version -> module map."""
+    return {info.from_version: module.__name__ for info, module in registered()}
 
 
 def plan_for(info: MigrationInfo, module: ModuleType, repo: Path) -> MigrationPlan:

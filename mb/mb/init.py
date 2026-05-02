@@ -41,6 +41,7 @@ __pycache__/
 .pytest_cache/
 node_modules/
 .venv/
+.mb/backups/
 """
 
 

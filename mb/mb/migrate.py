@@ -16,6 +16,11 @@ ENVELOPE_SCHEMA = "mb.migrate"
 ENVELOPE_SCHEMA_VERSION = 1
 LATEST_SCHEMA_VERSION = "0.2"
 SCHEMA_MARKER = ".mb/schema_version"
+BACKUPS_GITIGNORE_ENTRY = ".mb/backups/"
+
+
+class MigrationApplyError(RuntimeError):
+    """Raised when the filesystem changes after a successful dry-run plan."""
 
 
 def _marker_path(repo: Path) -> Path:
@@ -56,8 +61,9 @@ def pending_migrations(repo: str | Path) -> list[tuple[MigrationInfo, Any]]:
     """Return registered migrations pending for ``repo``."""
     version = read_schema_version(repo)
     pending: list[tuple[MigrationInfo, Any]] = []
+    version_map = migrations.version_map()
     for info, module in migrations.registered():
-        registered_module = migrations.VERSION_MAP.get(version)
+        registered_module = version_map.get(version)
         if version == info.from_version and registered_module == module.__name__:
             pending.append((info, module))
             version = info.to_version
@@ -193,6 +199,7 @@ def check(repo: str | Path = ".") -> dict[str, Any]:
     result = _base_envelope(target, "check")
     pending = pending_migrations(target)
     plans = [migrations.plan_for(info, module, target) for info, module in pending]
+    _ensure_gitignore_plan(target, plans)
     errors = [error for plan in plans for error in plan.errors]
     result["ok"] = not errors
     result["plan"] = {
@@ -209,6 +216,25 @@ def _backup_path(repo: Path, migration_ids: list[str]) -> Path:
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     suffix = "-".join(migration_ids) if migration_ids else "noop"
     return repo / ".mb" / "backups" / f"{stamp}-{suffix}"
+
+
+def _gitignore_content_with_backups(text: str) -> str:
+    lines = text.splitlines()
+    if BACKUPS_GITIGNORE_ENTRY in {line.strip() for line in lines}:
+        return text
+    prefix = text if text.endswith("\n") or not text else text + "\n"
+    return prefix + BACKUPS_GITIGNORE_ENTRY + "\n"
+
+
+def _ensure_gitignore_plan(repo: Path, plans: list[MigrationPlan]) -> None:
+    if not plans:
+        return
+    gitignore = repo / ".gitignore"
+    text = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
+    updated = _gitignore_content_with_backups(text)
+    if updated == text:
+        return
+    plans[0].changes.append(PlannedChange(kind="write_file", path=".gitignore", content=updated))
 
 
 def _backup_existing_paths(repo: Path, backup_dir: Path, plans: list[MigrationPlan]) -> list[str]:
@@ -262,10 +288,14 @@ def _apply_change(repo: Path, change: PlannedChange) -> None:
     if change.kind == "remove_empty_dir":
         if path.is_dir() and not any(path.iterdir()):
             path.rmdir()
+        elif path.exists():
+            raise MigrationApplyError(f"{change.path} is not empty; aborting before replacement")
         return
     if change.kind == "symlink":
         if path.is_symlink() and path.readlink().as_posix() == change.target:
             return
+        if path.exists() or path.is_symlink():
+            raise MigrationApplyError(f"{change.path} already exists; cannot create symlink")
         path.symlink_to(change.target, target_is_directory=True)
 
 
@@ -277,6 +307,7 @@ def apply(repo: str | Path = ".") -> dict[str, Any]:
     plans = [
         migrations.plan_for(info, module, target) for info, module in pending_migrations(target)
     ]
+    _ensure_gitignore_plan(target, plans)
     if result["errors"]:
         result["ok"] = False
         return result
@@ -294,7 +325,13 @@ def apply(repo: str | Path = ".") -> dict[str, Any]:
 
     for plan in plans:
         for change in plan.changes:
-            _apply_change(target, change)
+            try:
+                _apply_change(target, change)
+            except (OSError, MigrationApplyError) as exc:
+                result["ok"] = False
+                result["errors"].append(str(exc))
+                result["backup"] = {"path": str(backup_dir), "copied": copied}
+                return result
 
     marker = _marker_path(target)
     marker.parent.mkdir(parents=True, exist_ok=True)

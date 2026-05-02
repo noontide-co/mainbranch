@@ -8,6 +8,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from mb import migrate as migrate_mod
+from mb import migrations
 from mb.cli import app
 
 runner = CliRunner()
@@ -29,6 +30,7 @@ def _legacy_repo(tmp_path: Path) -> Path:
         "Read `reference/core/*.md` and `reference/offers/flagship/offer.md`.\n",
         encoding="utf-8",
     )
+    (repo / ".gitignore").write_text(".env\n", encoding="utf-8")
     return repo
 
 
@@ -55,6 +57,8 @@ def test_migrate_check_prints_diff_and_exits_nonzero_when_pending(tmp_path: Path
     assert "--- a/reference/core/offer.md" in result.stdout
     assert "+++ b/core/offer.md" in result.stdout
     assert "+++ b/core/offers/flagship/offer.md" in result.stdout
+    assert "+++ b/.gitignore" in result.stdout
+    assert "+.mb/backups/" in result.stdout
     assert "+++ b/.mb/schema_version" in result.stdout
     assert "+++ b/decisions/2026-05-02-mainbranch-v02-path-migration.md" in result.stdout
 
@@ -85,7 +89,9 @@ def test_migrate_apply_moves_files_backs_up_and_is_idempotent(tmp_path: Path) ->
     backup = Path(payload["backup"]["path"])
     assert backup.is_dir()
     assert (backup / "reference" / "core" / "offer.md").exists()
+    assert (backup / ".gitignore").exists()
     assert (repo / ".mb" / "schema_version").read_text(encoding="utf-8") == "0.2\n"
+    assert ".mb/backups/" in (repo / ".gitignore").read_text(encoding="utf-8")
     assert (repo / "core" / "offer.md").read_text(encoding="utf-8") == "# Offer\n"
     assert (repo / "core" / "offers" / "flagship" / "offer.md").exists()
     assert (repo / "reference" / "core").is_symlink()
@@ -115,6 +121,21 @@ def test_migrate_apply_aborts_before_writes_on_conflict(tmp_path: Path) -> None:
     assert (repo / "reference" / "core" / "offer.md").exists()
 
 
+def test_migrate_apply_reports_structured_error_when_legacy_dir_is_not_empty(
+    tmp_path: Path,
+) -> None:
+    repo = _legacy_repo(tmp_path)
+    (repo / "reference" / "core" / "linked").symlink_to(repo / "outside")
+
+    result = runner.invoke(app, ["migrate", "--repo", str(repo), "--apply", "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert "reference/core is not empty" in payload["errors"][0]
+    assert payload["backup"]["path"]
+
+
 def test_migrate_status_clean_current_repo(tmp_path: Path) -> None:
     repo = tmp_path / "current"
     (repo / "core").mkdir(parents=True)
@@ -125,3 +146,7 @@ def test_migrate_status_clean_current_repo(tmp_path: Path) -> None:
 
     assert result["current_version"] == "0.2"
     assert result["pending"] == []
+
+
+def test_migration_version_map_is_derived_from_registered_metadata() -> None:
+    assert migrations.version_map()["0.1"] == "mb.migrations.001_v01_to_v02_path_config"

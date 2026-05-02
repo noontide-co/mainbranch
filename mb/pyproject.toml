@@ -67,7 +67,13 @@ include = ["mb*"]
 exclude = ["tests*"]
 
 [tool.setuptools.package-data]
-mb = ["_data/**/*", "_engine/**/*", "_engine/.claude/**/*", "py.typed"]
+mb = [
+  "_data/**/*",
+  "_data/templates/.gitignore.tmpl",
+  "_engine/**/*",
+  "_engine/.claude/**/*",
+  "py.typed",
+]
 
 [tool.ruff]
 line-length = 100
