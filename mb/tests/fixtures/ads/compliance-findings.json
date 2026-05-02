@@ -1,0 +1,28 @@
+{
+  "findings": [
+    {
+      "severity": "P2",
+      "item_ref": "Ad 1 primary text",
+      "issue": "Directly asserts the reader's dissatisfaction.",
+      "evidence": "If you're tired of dead-end marketing",
+      "rule": "Meta personal attributes",
+      "fix": "For coaches rebuilding a marketing system"
+    },
+    {
+      "severity": "P2",
+      "item_ref": "Ad 1 headline",
+      "issue": "Guarantees a business outcome.",
+      "evidence": "Guaranteed growth for coaches",
+      "rule": "FTC outcome claim",
+      "fix": "A clearer growth system for coaches"
+    },
+    {
+      "severity": "P1",
+      "item_ref": "Ad 1 primary text",
+      "issue": "Needs human decision.",
+      "evidence": "this fixes your funnel in 30 days",
+      "rule": "Substantiation",
+      "fix": "this helps clarify your funnel plan"
+    }
+  ]
+}
