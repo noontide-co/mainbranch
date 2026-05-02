@@ -48,3 +48,77 @@ def test_ads_compliance_gate_requires_approval_before_writing_source(tmp_path: P
     assert "this fixes your funnel in 30 days" in updated
     assert review_log.exists()
     assert "Ads Compliance Proposed Changes" in review_log.read_text(encoding="utf-8")
+
+
+def test_ads_compliance_gate_skips_ambiguous_repeated_evidence(tmp_path: Path, capsys) -> None:
+    source = tmp_path / "repeated-batch.md"
+    source.write_text(
+        "## Ad 1\nRepeated claim.\n\n## Ad 2\nRepeated claim.\n",
+        encoding="utf-8",
+    )
+    findings = tmp_path / "findings.json"
+    findings.write_text(
+        """
+{
+  "findings": [
+    {
+      "severity": "P2",
+      "item_ref": "Ad 1",
+      "issue": "Ambiguous repeated evidence.",
+      "evidence": "Repeated claim.",
+      "rule": "Copy quality",
+      "fix": "Specific replacement."
+    }
+  ]
+}
+""".strip(),
+        encoding="utf-8",
+    )
+    original = source.read_text(encoding="utf-8")
+
+    result = main([str(source), str(findings), "--approve"])
+
+    output = capsys.readouterr().out
+    assert result == 0
+    assert "Skipped findings: 1" in output
+    assert "refusing ambiguous rewrite" in output
+    assert "No source copy changes are proposed." in output
+    assert source.read_text(encoding="utf-8") == original
+
+
+def test_ads_compliance_gate_matches_against_original_text_to_avoid_compounding(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "compound-batch.md"
+    source.write_text("Risky phrase.\n", encoding="utf-8")
+    findings = tmp_path / "findings.json"
+    findings.write_text(
+        """
+{
+  "findings": [
+    {
+      "severity": "P2",
+      "item_ref": "Ad 1",
+      "issue": "First fix.",
+      "evidence": "Risky phrase.",
+      "rule": "Meta personal attributes",
+      "fix": "Safer phrase."
+    },
+    {
+      "severity": "P2",
+      "item_ref": "Ad 1",
+      "issue": "Would compound if matched sequentially.",
+      "evidence": "Safer phrase.",
+      "rule": "Copy quality",
+      "fix": "Final phrase."
+    }
+  ]
+}
+""".strip(),
+        encoding="utf-8",
+    )
+
+    result = main([str(source), str(findings), "--approve"])
+
+    assert result == 0
+    assert source.read_text(encoding="utf-8") == "Safer phrase.\n"

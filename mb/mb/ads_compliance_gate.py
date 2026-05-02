@@ -28,6 +28,20 @@ class AppliedChange:
     count: int
 
 
+@dataclass(frozen=True)
+class SkippedChange:
+    change: ProposedChange
+    reason: str
+    count: int
+
+
+@dataclass(frozen=True)
+class PlannedReplacement:
+    change: ProposedChange
+    start: int
+    end: int
+
+
 def _as_text(value: object) -> str:
     if value is None:
         return ""
@@ -75,22 +89,96 @@ def load_proposed_changes(
     return changes
 
 
-def propose_text(
-    source_text: str, changes: list[ProposedChange]
-) -> tuple[str, list[AppliedChange]]:
-    """Return proposed text without mutating the source file."""
+def _find_offsets(source_text: str, evidence: str) -> list[int]:
+    offsets: list[int] = []
+    start = 0
+    while True:
+        offset = source_text.find(evidence, start)
+        if offset == -1:
+            return offsets
+        offsets.append(offset)
+        start = offset + len(evidence)
 
-    proposed = source_text
-    applied: list[AppliedChange] = []
+
+def _plan_replacements(
+    source_text: str, changes: list[ProposedChange]
+) -> tuple[list[PlannedReplacement], list[SkippedChange]]:
+    replacements: list[PlannedReplacement] = []
+    skipped: list[SkippedChange] = []
 
     for change in changes:
-        count = proposed.count(change.evidence)
-        if count == 0:
+        offsets = _find_offsets(source_text, change.evidence)
+        if not offsets:
+            skipped.append(
+                SkippedChange(
+                    change=change,
+                    reason="evidence not found in original source",
+                    count=0,
+                )
+            )
             continue
-        proposed = proposed.replace(change.evidence, change.fix)
-        applied.append(AppliedChange(change=change, count=count))
+        if len(offsets) > 1:
+            skipped.append(
+                SkippedChange(
+                    change=change,
+                    reason="evidence matched multiple locations; refusing ambiguous rewrite",
+                    count=len(offsets),
+                )
+            )
+            continue
 
-    return proposed, applied
+        start = offsets[0]
+        replacements.append(
+            PlannedReplacement(
+                change=change,
+                start=start,
+                end=start + len(change.evidence),
+            )
+        )
+
+    return _without_overlaps(replacements, skipped)
+
+
+def _without_overlaps(
+    replacements: list[PlannedReplacement], skipped: list[SkippedChange]
+) -> tuple[list[PlannedReplacement], list[SkippedChange]]:
+    safe: list[PlannedReplacement] = []
+    last_end = -1
+
+    for replacement in sorted(replacements, key=lambda item: item.start):
+        if replacement.start < last_end:
+            skipped.append(
+                SkippedChange(
+                    change=replacement.change,
+                    reason="evidence overlaps another proposed rewrite",
+                    count=1,
+                )
+            )
+            continue
+        safe.append(replacement)
+        last_end = replacement.end
+
+    return safe, skipped
+
+
+def propose_text(
+    source_text: str, changes: list[ProposedChange]
+) -> tuple[str, list[AppliedChange], list[SkippedChange]]:
+    """Return proposed text without mutating the source file."""
+
+    replacements, skipped = _plan_replacements(source_text, changes)
+    chunks: list[str] = []
+    applied: list[AppliedChange] = []
+    cursor = 0
+
+    for replacement in replacements:
+        chunks.append(source_text[cursor : replacement.start])
+        chunks.append(replacement.change.fix)
+        cursor = replacement.end
+        applied.append(AppliedChange(change=replacement.change, count=1))
+
+    chunks.append(source_text[cursor:])
+    return "".join(chunks), applied, skipped
 
 
 def unified_diff(source_path: Path, original: str, proposed: str) -> str:
@@ -134,6 +222,14 @@ def _escape_table(value: str) -> str:
     return value.replace("|", "\\|").replace("\n", "<br>")
 
 
+def _render_skipped(skipped: list[SkippedChange]) -> str:
+    lines = ["Skipped findings:"]
+    for item in skipped:
+        ref = item.change.item_ref or item.change.evidence
+        lines.append(f"- {item.change.severity} {ref}: {item.reason} ({item.count})")
+    return "\n".join(lines)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Show `/ads` compliance copy changes before rewriting the source file."
@@ -167,14 +263,19 @@ def main(argv: list[str] | None = None) -> int:
 
     original = source_path.read_text(encoding="utf-8")
     changes = load_proposed_changes(findings_path, severities=severities)
-    proposed, applied = propose_text(original, changes)
+    proposed, applied, skipped = propose_text(original, changes)
 
     print("ADS COMPLIANCE PROPOSED CHANGES")
     print(f"Mode: {'approve' if args.approve else 'dry-run'}")
     print(f"Source: {source_path}")
     print(f"Eligible findings: {len(changes)}")
     print(f"Matched replacements: {sum(item.count for item in applied)}")
+    print(f"Skipped findings: {len(skipped)}")
     print()
+
+    if skipped:
+        print(_render_skipped(skipped))
+        print()
 
     if proposed == original:
         print("No source copy changes are proposed.")
