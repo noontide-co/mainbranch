@@ -46,10 +46,11 @@ claude
 
 That's it. `mb init` sets up the six folders, wires Claude Code to the bundled skills, and gives you a fresh git repo. `/start` walks you through the rest — gathers your business context (offer, audience, voice), drafts the reference files, and routes you to the right workflow.
 
-After the first session, the daily flow is three lines:
+After the first session, the daily flow is:
 
 ```bash
 cd ~/Documents/GitHub/my-business
+mb status
 claude
 /start
 ```
@@ -127,6 +128,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | Command | What it does |
 |---|---|
 | `mb init` | Set up a fresh business repo (six folders, CLAUDE.md, git init). |
+| `mb status` | Show a local-first daily briefing: repo health, runtime wiring, recent decisions/research/git activity, and GitHub tasks when `gh` is authenticated. |
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
 | `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
 | `mb graph` | Walk the link graph (`linked_research` / `linked_decisions` / `supersedes`) and emit Graphviz DOT. `--open` renders to PNG and opens it. |
