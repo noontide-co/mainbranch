@@ -267,15 +267,10 @@ def _brain(repo: Path) -> dict[str, Any]:
 def _repo_full_name(remote: str) -> str:
     if not remote:
         return ""
-    patterns = [
-        r"github\.com[:/](?P<owner>[^/]+)/(?P<repo>[^/.]+)(?:\.git)?$",
-        r"https://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/.]+)(?:\.git)?$",
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, remote)
-        if match:
-            return f"{match.group('owner')}/{match.group('repo')}"
-    return ""
+    match = re.search(r"github\.com[:/](?P<owner>[^/]+)/(?P<repo>[^/]+?)(?:\.git)?/?$", remote)
+    if not match:
+        return ""
+    return f"{match.group('owner')}/{match.group('repo')}"
 
 
 def _gh_json(args: list[str], repo: Path) -> tuple[bool, Any, str]:

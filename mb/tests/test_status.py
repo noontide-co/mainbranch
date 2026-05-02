@@ -80,6 +80,9 @@ def test_status_low_level_helpers_handle_edge_cases(tmp_path: Path, monkeypatch)
     assert status_mod._repo_full_name("https://github.com/noontide-co/mainbranch.git") == (
         "noontide-co/mainbranch"
     )
+    assert status_mod._repo_full_name("https://github.com/noontide-co/some.io.git") == (
+        "noontide-co/some.io"
+    )
     assert status_mod._repo_full_name("") == ""
 
     missing = tmp_path / "missing.md"
