@@ -66,7 +66,43 @@ pipx upgrade mainbranch
 mb skill link --repo /path/to/your-business
 ```
 
-## Optional Manual Layout Migration
+## Automated Layout Migration
+
+Use `mb migrate` on a clean branch when you are ready to move a legacy v0.1 repo
+from `reference/core/` and `reference/offers/` into the current v0.2 paths.
+
+Inspect the current schema state:
+
+```bash
+mb migrate status
+```
+
+Preview the exact filesystem changes as a unified diff:
+
+```bash
+mb migrate --check
+mb migrate --check --json
+```
+
+`--check` exits non-zero when migrations are pending so scripts and agents can
+detect drift without writing files.
+
+Apply only after reading the diff:
+
+```bash
+mb migrate --apply
+```
+
+`--apply` creates a repo-local backup under `.mb/backups/` before changing files,
+moves legacy core files into `core/`, moves legacy offer files into
+`core/offers/`, leaves compatibility links under `reference/`, updates stale
+`CLAUDE.md` path references, writes a migration decision artifact, and stamps
+`.mb/schema_version`.
+
+## Manual Layout Migration
+
+The automated command above is preferred. Keep this manual process only as a
+fallback when you need to inspect or repair a repo by hand.
 
 Only do this on a clean branch with everything committed:
 
@@ -112,8 +148,7 @@ mb start --json
 git diff --stat
 ```
 
-If anything looks wrong, stop and keep the legacy layout. Legacy layout support
-is intentional while `mb migrate` is still manual.
+If anything looks wrong, stop and keep the legacy layout.
 
 ## What About `.vip/config.yaml` and `~/.config/vip/local.yaml`?
 
@@ -130,13 +165,13 @@ the old config files yet.
 
 ## Current Recommendation
 
-For old repos such as `noontide-projects`:
+For old business repos:
 
 1. Upgrade Main Branch with `pipx upgrade mainbranch`.
 2. Run `mb skill link --repo /path/to/repo`.
 3. Run `mb doctor` and `mb status`.
-4. Keep `reference/core/` until an automated `mb migrate --check` exists or
-   you intentionally run the manual branch process above.
+4. Run `mb migrate --check`, read the diff, then run `mb migrate --apply` on a
+   clean branch when you are ready.
 
 For personal knowledge repos that do not have `reference/core/`, treat them as
 GitHub-native repos that Main Branch can brief, not as fully migrated business

@@ -30,6 +30,7 @@ mb --version
 | `mb validate` | Frontmatter shape check across `decisions/`, `core/offers/`, `research/`, `log/`, `campaigns/`, `documents/`. Exit 1 on any fail. |
 | `mb graph` | Walk linked_research / linked_decisions / supersedes; emit Graphviz DOT to stdout. `--open` shells to `dot` + `open`. |
 | `mb update` | Refresh the Main Branch engine according to install mode (`pipx` upgrade or clone `git pull`) and repair skill links. `--check` dry-runs; `--json` emits an envelope. |
+| `mb migrate` | Inspect and apply numbered repo schema migrations. `status`, `--check`, and `--apply` support `--json`; `--check` prints a unified diff before writes. |
 | `mb think <topic>` | Print the /think workflow invocation hint for the currently supported runtime. |
 | `mb resolve <key>` | Resolve a reference path (checks free first, then paid). |
 | `mb skill path <name>` | Print the on-disk path to a bundled skill. |
