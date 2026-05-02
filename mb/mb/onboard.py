@@ -167,6 +167,11 @@ def run(
 
     if normalized_mode == "connect" and not target.exists():
         errors.append(f"cannot connect missing repo: {target}")
+    elif normalized_mode == "connect" and not _looks_initialized(before):
+        errors.append(
+            "Existing repo does not look like a Main Branch repo. "
+            "Run `mb onboard --mode new --path <repo> --name <business>` to scaffold it."
+        )
     elif normalized_mode == "connect":
         link_result = link_skills(target)
         created.extend(str(item) for item in link_result.get("created", []))
@@ -194,11 +199,6 @@ def run(
 
     if not after["git"]:
         warnings.append("Repo is not a git work tree. Run `git init` or `mb doctor` for repair.")
-    if normalized_mode == "connect" and not _looks_initialized(after):
-        errors.append(
-            "Existing repo does not look like a Main Branch repo. "
-            "Run `mb onboard --mode new --path <repo> --name <business>` to scaffold it."
-        )
     if not tools["github_cli"]["found"] or not tools["github_cli"]["authenticated"]:
         warnings.append(str(tools["github_cli"]["repair"]))
     if not tools["claude_code"]["found"]:

@@ -95,6 +95,9 @@ def test_onboard_connect_uninitialized_repo_explains_repair(tmp_path: Path, monk
     assert result["ok"] is False
     assert any("does not look like a Main Branch repo" in error for error in result["errors"])
     assert result["doctor_command"].startswith("mb doctor ")
+    assert result["created"] == []
+    assert not (repo / ".claude").exists()
+    assert not (repo / ".gitignore").exists()
 
 
 def test_onboard_cli_noninteractive_requires_yes(monkeypatch) -> None:
