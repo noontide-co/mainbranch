@@ -41,8 +41,7 @@ For most users:
 pipx install mainbranch
 mb init my-business --name "My Business"
 cd my-business
-claude
-/start
+mb start --launch
 ```
 
 For contributors:
