@@ -26,6 +26,7 @@ mb --version
 | `mb doctor` | Diagnostic. Checks Claude Code, gh auth, network, librsvg, runtime wiring, and package freshness. Warns on cloud-backed finance paths and offers educational triage. |
 | `mb validate` | Frontmatter shape check across `decisions/`, `core/offers/`, `research/`, `log/`, `campaigns/`, `documents/`. Exit 1 on any fail. |
 | `mb graph` | Walk linked_research / linked_decisions / supersedes; emit Graphviz DOT to stdout. `--open` shells to `dot` + `open`. |
+| `mb update` | Refresh the Main Branch engine according to install mode (`pipx` upgrade or clone `git pull`) and repair skill links. `--check` dry-runs; `--json` emits an envelope. |
 | `mb think <topic>` | Print the /think workflow invocation hint for the currently supported runtime. |
 | `mb resolve <key>` | Resolve a reference path (checks free first, then paid). |
 | `mb skill path <name>` | Print the on-disk path to a bundled skill. |

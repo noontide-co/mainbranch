@@ -19,6 +19,7 @@ from mb import graph as graph_mod
 from mb import init as init_mod
 from mb import resolve as resolve_mod
 from mb import think as think_mod
+from mb import update as update_mod
 from mb import validate as validate_mod
 
 app = typer.Typer(
@@ -165,6 +166,21 @@ def educational_cmd(
 ) -> None:
     """Print an educational triage file. Powers doctor's 'tell me more' prompts."""
     educational_mod.run(topic=topic)
+
+
+@app.command("update")
+def update_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo whose skill links refresh."),
+    check: bool = typer.Option(False, "--check", help="Dry-run only; do not upgrade or relink."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Refresh Main Branch according to its install mode."""
+    result = update_mod.run(repo=repo, check=check)
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        update_mod.render_human(result)
+    raise typer.Exit(0 if result["ok"] else 1)
 
 
 @skill_app.command("path")
