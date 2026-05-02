@@ -250,6 +250,74 @@ jobs:
           assert (root / ".claude/reference/vip-path-resolution.md").is_file(), root
           PY
 
+      - name: Smoke — mb onboard creates a business repo
+        run: |
+          repo="$(mktemp -d)/acme-brewing"
+          .venv-smoke/bin/mb onboard --yes --name "Acme Brewing" --path "$repo" --json > onboard.json
+          cat onboard.json
+          test -f "$repo/CLAUDE.md" \
+            || { echo "::error::CLAUDE.md missing after onboard"; exit 1; }
+          test -f "$repo/.claude/skills/start/SKILL.md" \
+            || { echo "::error::start skill bridge missing after onboard"; exit 1; }
+          .venv-smoke/bin/python - "$repo" <<'PY'
+          import json, pathlib, sys
+
+          repo = pathlib.Path(sys.argv[1])
+          report = json.load(open("onboard.json"))
+          assert report["ok"] is True
+          assert report["repo"]["looks_initialized"] is True
+          assert report["skill_wiring"]["ok"] is True
+          assert report["path"] == str(repo.resolve())
+          PY
+
+      - name: Smoke — mb start emits handoff JSON
+        run: |
+          repo="$(mktemp -d)/acme-brewing"
+          .venv-smoke/bin/mb onboard --yes --name "Acme Brewing" --path "$repo" --json >/dev/null
+          set +e
+          .venv-smoke/bin/mb start --repo "$repo" --json > start.json
+          rc=$?
+          set -e
+          cat start.json
+          if [ "$rc" -gt 1 ]; then
+            echo "::error::mb start --json crashed (exit $rc)"
+            exit 1
+          fi
+          .venv-smoke/bin/python - "$repo" <<'PY'
+          import json, pathlib, sys
+
+          repo = pathlib.Path(sys.argv[1])
+          report = json.load(open("start.json"))
+          assert report["repo"]["looks_like_mainbranch_repo"] is True
+          assert report["runtime"]["skill_wiring"]["ok"] is True
+          assert report["command"]["cwd"] == str(repo.resolve())
+          assert report["command"]["follow_up"] == "/start"
+          assert report["launch"]["attempted"] is False
+          PY
+
+      - name: Smoke — mb start rejects JSON launch mode
+        run: |
+          repo="$(mktemp -d)/acme-brewing"
+          .venv-smoke/bin/mb onboard --yes --name "Acme Brewing" --path "$repo" --json >/dev/null
+          set +e
+          .venv-smoke/bin/mb start --repo "$repo" --json --launch > start-launch.json
+          rc=$?
+          set -e
+          cat start-launch.json
+          if [ "$rc" -ne 2 ]; then
+            echo "::error::mb start --json --launch should exit 2, got $rc"
+            exit 1
+          fi
+          .venv-smoke/bin/python - <<'PY'
+          import json
+
+          report = json.load(open("start-launch.json"))
+          assert report["ok"] is False
+          assert report["launch"]["requested"] is True
+          assert report["launch"]["attempted"] is False
+          assert "--json" in report["launch"]["blocked_reason"]
+          PY
+
       - name: Smoke — mb status on initialized repo emits JSON
         run: |
           repo=$(mktemp -d)
