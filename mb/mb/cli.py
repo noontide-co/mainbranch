@@ -29,7 +29,8 @@ app = typer.Typer(
         "Run your business as files in git. Main Branch scaffolds your repo, "
         "checks it, graphs it, and wires it into Claude Code."
     ),
-    no_args_is_help=True,
+    no_args_is_help=False,
+    invoke_without_command=True,
     add_completion=False,
 )
 
@@ -47,8 +48,35 @@ def _version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
+def _is_interactive_terminal() -> bool:
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def _render_launch_screen() -> None:
+    typer.echo(
+        "\n".join(
+            [
+                "",
+                "Main Branch",
+                "Stay connected to the business while agents handle execution.",
+                "",
+                "Choose a trail:",
+                "  New here      mb onboard       guided setup (coming in v0.2)",
+                "  Daily work    mb status        business/repo briefing",
+                "                mb start         open the agent runtime (coming in v0.2)",
+                "  Broken setup  mb doctor        check git, GitHub, Claude Code, and skills",
+                "  Power user    mb --help        full command list",
+                "",
+                "Plain command reference: mb --plain",
+                "",
+            ]
+        )
+    )
+
+
 @app.callback()
 def main_callback(
+    ctx: typer.Context,
     version: bool = typer.Option(
         False,
         "--version",
@@ -56,8 +84,19 @@ def main_callback(
         is_eager=True,
         help="Show version and exit.",
     ),
+    plain: bool = typer.Option(
+        False,
+        "--plain",
+        help="Show the plain command reference instead of the launch screen.",
+    ),
 ) -> None:
-    """Root callback — version flag only."""
+    """Root callback — version flag and bare launch routing."""
+    if ctx.invoked_subcommand is not None:
+        return
+    if plain or not _is_interactive_terminal():
+        typer.echo(ctx.get_help())
+        return
+    _render_launch_screen()
 
 
 @app.command("init")
