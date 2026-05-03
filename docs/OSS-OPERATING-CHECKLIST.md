@@ -53,7 +53,10 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
 - [ ] `.mb/` is used only for explicit Main Branch operational state such as
   schema markers, repo-safe connection metadata, backups, indexes, or caches.
 - [ ] Each `.mb/` addition has a clear tracked-vs-gitignored rule and a repair
-  path through `mb doctor`, `mb status`, migration, or documented commands.
+  path through `mb doctor`, `mb status`, `mb migrate`, or documented commands.
+- [ ] `.mb/` schema changes round-trip through `mb migrate` and `mb doctor`
+  without losing existing user state, and ship a documented manual fallback for
+  users who cannot run the migration.
 - [ ] Secrets stay outside git in the OS keychain, runtime-specific local
   config, environment variables, 1Password, or another documented secret store.
 - [ ] Rebuildable indexes and local caches do not become the source of truth.
@@ -97,8 +100,18 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
   or validation changes include fixture business-repo smoke evidence.
 - [ ] Runtime discovery, invocation, or skill behavior changes include runtime
   smoke evidence, or the PR states exactly why it could not be run.
+- [ ] Bundled `templates/` and the fixture business-repo flow stay in sync with
+  `.mb/` schema, skill-discovery, and onboarding changes.
 - [ ] `CHANGELOG.md` is updated for user-visible CLI, skill, packaging,
-  compatibility, workflow, or release-process changes.
+  compatibility, workflow, or release-process changes, using the Keep a
+  Changelog categories already in that file (Added, Changed, Deprecated,
+  Removed, Fixed, Security).
+- [ ] Schema, config-file, or CLI-output breaking changes follow Semantic
+  Versioning, bump the appropriate version, and ship with a `mb migrate` path
+  or an explicit manual migration step in the changelog.
+- [ ] Deprecated CLI surfaces, schemas, JSON contracts, or runtime adapters are
+  marked with the deprecation date, the release that will remove them, and a
+  migration command or fallback so users are not stranded.
 
 ## 8. Issue / PR Discipline
 
@@ -107,10 +120,17 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
 - [ ] Git history tells the evolution story with concern-organized commits.
 - [ ] Linear is a visual, planning, release, or private/internal layer; it does
   not replace GitHub as the public coordination primitive.
-- [ ] Use `Closes #N` only when the PR fully satisfies the GitHub issue.
+- [ ] Use `Closes #N` only when the PR fully satisfies the GitHub issue, and
+  keep `Closes #N` / `Refs #N` in the PR body rather than commit subjects so
+  the close action stays scoped to the merge.
 - [ ] Use `Refs #N` for partial slices, setup work, or related context.
 - [ ] Public blockers, scope changes, readiness notes, and validation gaps are
   recorded on GitHub where future contributors can find them.
+- [ ] Branch history is not rewritten or force-pushed after the first push;
+  follow-up fixes land as new commits unless the maintainer explicitly asks
+  for a rebase.
+- [ ] Suspected security issues follow `SECURITY.md` private channels rather
+  than public issues, PR comments, or release notes.
 - [ ] Private/local workflow details stay out of GitHub and public docs.
 
 ## Review Verdict
