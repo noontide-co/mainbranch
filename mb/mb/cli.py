@@ -321,6 +321,11 @@ def connect_cmd(
         "--token-stdin",
         help="Read the secret token or key from stdin.",
     ),
+    from_env: bool = typer.Option(
+        False,
+        "--from-env",
+        help="Read the provider credential from a known environment variable.",
+    ),
     metadata: list[str] = CONNECT_METADATA_OPTION,
     all_providers: bool = typer.Option(
         False,
@@ -361,12 +366,22 @@ def connect_cmd(
     secret_value = token
     if token_stdin:
         secret_value = connect_mod.read_stdin_token()
-    if not secret_value and provider_info.required_secrets:
+    credential_source = "prompt" if not secret_value else "token"
+    consumed_env_var = ""
+    if token_stdin:
+        credential_source = "stdin"
+    if from_env and not secret_value and provider_info.required_secrets:
         for env_var in provider_info.env_vars:
             value = os.environ.get(env_var, "").strip()
             if value:
                 secret_value = value
+                credential_source = "env"
+                consumed_env_var = env_var
                 break
+        if not secret_value:
+            names = ", ".join(provider_info.env_vars) or "(none registered)"
+            typer.echo(f"mb connect: no credential found in env vars: {names}", err=True)
+            raise typer.Exit(1)
     if not secret_value and provider_info.required_secrets and sys.stdin.isatty():
         secret_value = typer.prompt(
             f"{provider_info.name} {provider_info.required_secrets[0]}",
@@ -383,6 +398,10 @@ def connect_cmd(
             account_label=account_label,
             metadata_pairs=metadata,
         )
+        result["credential_source"] = {
+            "type": credential_source if secret_value else "missing",
+            "env_var": consumed_env_var,
+        }
     except ValueError as exc:
         typer.echo(f"mb connect: {exc}", err=True)
         raise typer.Exit(2) from exc

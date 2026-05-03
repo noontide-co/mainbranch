@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import stat
 from pathlib import Path
+from typing import Any
 
 import yaml
 from typer.testing import CliRunner
@@ -17,6 +19,9 @@ runner = CliRunner()
 def _local_secret_env(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
     monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    for provider in connect_mod.PROVIDERS:
+        for env_var in provider.env_vars:
+            monkeypatch.delenv(env_var, raising=False)
 
 
 def test_provider_registry_includes_initial_foundation() -> None:
@@ -84,6 +89,34 @@ def test_connect_provider_stores_secret_outside_repo(tmp_path: Path, monkeypatch
 
     secret_file = tmp_path / "home" / "secrets" / "connect.json"
     assert "cf-test-token" in secret_file.read_text(encoding="utf-8")
+    assert stat.S_IMODE(secret_file.parent.stat().st_mode) == 0o700
+    assert stat.S_IMODE(secret_file.stat().st_mode) == 0o600
+
+
+def test_connect_provider_only_reads_env_when_explicit(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    monkeypatch.setenv("META_ACCESS_TOKEN", "meta-test-token")
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    implicit = runner.invoke(app, ["connect", "meta", "--repo", str(repo), "--json"])
+
+    assert implicit.exit_code == 1
+    implicit_payload = json.loads(implicit.stdout)
+    assert implicit_payload["status"]["state"] == "missing_secret"
+
+    explicit = runner.invoke(
+        app,
+        ["connect", "meta", "--repo", str(repo), "--from-env", "--json"],
+    )
+
+    assert explicit.exit_code == 0
+    explicit_payload = json.loads(explicit.stdout)
+    assert explicit_payload["credential_source"] == {
+        "type": "env",
+        "env_var": "META_ACCESS_TOKEN",
+    }
+    assert "meta-test-token" not in (repo / ".mb" / "connect.yaml").read_text(encoding="utf-8")
 
 
 def test_connect_status_reports_missing_secret_as_repair_not_hard_crash(
@@ -115,7 +148,6 @@ def test_doctor_and_status_include_integration_state(tmp_path: Path, monkeypatch
     )
 
     doctor_report = runner.invoke(app, ["doctor", str(repo), "--json"])
-    assert doctor_report.exit_code in {0, 1}
     doctor_payload = json.loads(doctor_report.stdout)
     assert doctor_payload["integrations"]["summary"]["configured"] == 1
     assert "integration-credentials" in {check["name"] for check in doctor_payload["checks"]}
@@ -124,3 +156,25 @@ def test_doctor_and_status_include_integration_state(tmp_path: Path, monkeypatch
     assert status_report.exit_code == 0
     status_payload = json.loads(status_report.stdout)
     assert status_payload["integrations"]["summary"]["healthy"] == 1
+
+
+def test_macos_keychain_backend_uses_security(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], **kwargs: Any) -> Any:
+        calls.append(args)
+
+        class Result:
+            returncode = 0
+            stdout = ""
+
+        return Result()
+
+    monkeypatch.setattr(connect_mod.subprocess, "run", fake_run)
+
+    store = connect_mod.SecretStore("macos-keychain")
+    store.set("mainbranch://test/cloudflare/api_token", "cf-token")
+
+    assert calls
+    assert calls[0][:3] == ["security", "add-generic-password", "-a"]
+    assert "cf-token" in calls[0]

@@ -151,6 +151,7 @@ Meta, Cloudflare, Postiz, Apify, Beancount, and transcription providers.
 ```bash
 mb connect list
 printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata account_id=...
+mb connect meta --from-env
 mb connect status --json
 ```
 
@@ -160,6 +161,8 @@ The business repo only receives non-sensitive metadata in `.mb/connect.yaml`,
 such as the provider id, account label, credential backend, and last check time.
 Skills and future dashboards should read `mb connect status --json` or
 `.mb/connect.yaml`; they should never ask users to commit tokens.
+`--from-env` is explicit: `mb connect` does not silently import general-purpose
+environment variables.
 
 ---
 

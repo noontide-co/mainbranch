@@ -325,6 +325,8 @@ def _read_local_secrets() -> dict[str, str]:
 def _write_local_secrets(data: dict[str, str]) -> None:
     path = _local_secret_path()
     path.parent.mkdir(parents=True, exist_ok=True)
+    with suppress(OSError):
+        path.parent.chmod(0o700)
     path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     with suppress(OSError):
         path.chmod(0o600)
@@ -553,6 +555,9 @@ def render_connect_result(result: dict[str, Any]) -> None:
         print(f"connected {result['provider']} metadata; credential still needs repair")
     print(f"metadata: {result['config_path']}")
     print(f"secrets: {result['credential_boundary']}")
+    source = result.get("credential_source") or {}
+    if source.get("type") == "env" and source.get("env_var"):
+        print(f"credential source: env {source['env_var']}")
     if status["state"] != "connected":
         print("next: rerun with --token-stdin or --token to store the required credential")
 
