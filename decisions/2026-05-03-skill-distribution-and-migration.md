@@ -149,13 +149,16 @@ discipline" co-existing in production.
 **Matt Pocock's `mattpocock-skills`** is the counter-example. Skills are
 named `triage`, `tdd`, `diagnose`, `setup-pre-commit`, `caveman`,
 `grill-me`, `zoom-out`, `to-issues`, `to-prd`, `improve-codebase-architecture`,
-`write-a-skill`. There is no prefix, no namespace, and the README
-documents installation through Vercel's `npx skills@latest` CLI rather than
-the Claude Code plugin marketplace, which means **even the plugin
-namespace escape does not apply if the user installs through that
-distribution channel**. Matt's `setup-pre-commit` and Main Branch's
-`setup` are directly adjacent in user mindshare; both repos already
-co-exist on real users' machines. The collision is not theoretical.
+`write-a-skill`. There is no prefix and no namespace. The README documents
+installation through Vercel's `npx skills@latest` CLI rather than
+`/plugin install`. Where that installer actually writes files is not
+verified in this research pass — if it installs as a plugin under
+`~/.claude/plugins/`, the plugin namespace would still protect plain
+`/start`; if it copies files into personal `~/.claude/skills/` or project
+`.claude/skills/`, those skills would shadow plain `/start` per Claude
+Code's documented precedence. Either way, Matt's `setup-pre-commit` is
+adjacent enough to Main Branch's `setup` in user mindshare to confuse
+operators who install both, regardless of which install channel wins.
 
 **`get-shit-done`** ships ~30 commands all scoped under a `gsd:` prefix
 (`/gsd:help`, `/gsd:new-project`, `/gsd:debug`). Distribution is via
@@ -204,21 +207,172 @@ The cost is one round of user-visible slash command churn (`/start`
 becomes `/mb-start`). Plugin packaging would force the same churn
 later (`/mb:start`), so the marginal cost of doing it now is small.
 
-Open questions to resolve before renaming:
+### Daily-Use UX Cost
 
-- Does Claude Code support a slash alias so `/start` keeps working as a
-  shortcut for `/mb-start`? If yes, the UX cost is near zero. If no,
-  documentation has to do the work.
-- Which prefix? `mb-` is consistent with the CLI binary name. `mainbranch-`
-  is more discoverable but verbose. `noontide-` ties the prefix to the
-  publisher rather than the product.
-- Does renaming inside the existing symlink wiring (v0.2.4) help or hurt
-  the migration to plugin packaging (v0.2.5)? It probably helps: it
-  shrinks the diff between symlink-wired skills and plugin-packaged
-  skills to "the wrapper changed," not "every name changed."
+The product reason this question is hard: Main Branch's promise to
+non-technical operators is "open Claude Code, type `/start`, you're
+running." Renaming bundled skills, or moving to plugin namespacing,
+changes the daily ritual. That cost is real and should not be hand-waved.
+
+What changes and what does not:
+
+- **The `mb` CLI itself is unaffected.** `mb start`, `mb status`,
+  `mb doctor`, `mb update`, `mb onboard` — every command at the terminal
+  prompt — keeps the names it has today. The renaming question only
+  touches in-Claude-Code slash commands.
+- **The slash-command surface picks up extra characters.** `/start`
+  becomes either `/mb-start` (prefix, with or without plugin packaging)
+  or `/mb:start` (plugin namespace). Three to four extra keystrokes per
+  invocation.
+- **Claude Code slash autocomplete is the real mitigation.** A user who
+  types `/m` and the bundled skills are the only `mb-`-prefixed entries
+  on their machine generally sees the right command surface immediately.
+  Worst case: type `/mb` and tab. The "hard to remember" hit lands
+  mostly on first-time users who don't yet know to type the prefix at
+  all — which is exactly where onboarding copy can do the work.
+- **Plugin packaging would force the same churn later.** If we keep
+  `/start` now and migrate to plugin packaging in v0.2.5, operators have
+  to relearn the slash command then. Doing the rename once, in concert
+  with plugin packaging, is one disruption rather than two.
+
+What is honestly unknown:
+
+- **Does Claude Code support a true slash alias** that lets `/start`
+  resolve to a prefixed or namespaced skill in the absence of a same-named
+  shadowing skill? This research pass did not verify a documented alias
+  mechanism. Treating "alias works" as an assumption would be exactly
+  the kind of unverified runtime claim the OSS operating checklist warns
+  against. The plugin spike (#237) should produce smoke evidence on this
+  before we decide whether to keep `/start` as a courtesy.
+- **Where third-party non-marketplace installers (`npx skills add`,
+  similar) actually write files.** Verified during the plugin spike, not
+  before.
+
+Open questions tied to renaming:
+
+- Which prefix? `mb-` matches the CLI binary name. `mainbranch-` is more
+  discoverable but verbose. `noontide-` ties to the publisher rather than
+  the product. Recommendation in this doc: `mb-`, on the same grounds
+  that compound-engineering chose `ce-` over `compound-engineering-`.
+- If renaming lands inside symlink wiring (v0.2.4), does it help or hurt
+  the v0.2.5 plugin migration? It probably helps: the diff between a
+  symlink-wired `mb-start` and a plugin-packaged `mb-start` is "the
+  wrapper changed," not "every name changed."
+
+The honest framing for the maintainer is: keeping `/start` is the cheapest
+choice for users who never branch out beyond Main Branch's bundled skills,
+and it is also the riskiest choice for the moment a user installs anything
+else. The product north star ("make this easy for new people") points at
+keeping the bare command. The collision evidence ("real third-party skills
+named `triage`, `setup-pre-commit`, `tdd` already exist on this machine")
+points at the prefix. The plugin spike (#237) is the right place to
+resolve the tension because it is the only way to know whether a slash
+alias rescues both goals at once.
 
 This question is in scope for follow-up work but should be answered
 before the v0.2.5 plugin spike.
+
+### Strategic Posture: Distribution Channels
+
+The Claude Code skills ecosystem has three competing distribution
+channels in active use. Main Branch should pick a posture toward each
+intentionally, not by drift.
+
+**Anthropic plugin marketplace (`/plugin marketplace add`).**
+The Anthropic-blessed channel. Plugins are versioned, namespaced,
+auto-cached at `~/.claude/plugins/cache/`, and discoverable through
+Anthropic's plugin surfaces. This is the highest-leverage exposure
+channel for new audiences who already use Claude Code and browse for
+plugins. Recommendation: **target this as the durable destination.**
+Main Branch should publish its plugin manifest at
+`noontide-co/mainbranch` and let users install via
+`/plugin marketplace add noontide-co/mainbranch`. Discoverability,
+trust signal, and namespacing all come for free.
+
+**Vercel's `npx skills@latest` CLI.** A generic agent-skills installer
+that targets multiple coding agents from a git repo containing a
+`.claude-plugin/plugin.json` plus a skills folder. It is one of several
+third-party installers in this space; it is not Anthropic infrastructure
+and the destination behavior was not verified in this research pass.
+Recommendation: **be compatible, do not depend on.** If Main Branch ships
+a clean plugin manifest, third-party installers that read that manifest
+will work as a side benefit. We do not need to add an `npx mainbranch-skills`
+shim — we already have `mb`. Two installer surfaces would split the
+support story for no user gain.
+
+**`mb` itself as the install surface.** This is the channel we already
+own. `pipx install mainbranch` plus `mb onboard` plus `mb update` is a
+deterministic, scriptable, runtime-aware install path. It is the channel
+that makes the runtime-agnostic story credible: when we add Codex or
+Cursor adapters later, `mb` is what wires them. Recommendation: **keep
+`mb` as the canonical entry point.** When the plugin spike (#237)
+lands, `mb onboard` should write the plugin marketplace and
+`enabledPlugins` into project `.claude/settings.json` automatically, so
+the user still types four commands (`pipx install`, `mb onboard`, `cd`,
+`mb start --launch`) and never has to know the plugin marketplace exists.
+Power users can run `/plugin install mainbranch` directly from any repo
+if they prefer.
+
+**npm/Node tooling more broadly.** Main Branch is a Python project
+shipped via PyPI/pipx. Adding Node/npm to the install path doubles the
+user's prerequisite surface (Python *and* Node) and doubles our packaging
+maintenance. Recommendation: **no Node/npm in the install path.**
+Compatibility with npm-based installers (Vercel skills, npx-style
+plugin marketplaces, etc.) lands through the plugin manifest, not by
+shipping a Node-side installer.
+
+**Exposure read-through.** The plugin marketplace is the strongest
+discoverability bet that does not depend on Devon's personal audience or
+Skool community. Publishing under `noontide-co/mainbranch` puts Main
+Branch in the same surface where new Claude Code users find compound
+engineering and similar tools. Three things compound this: a clean
+plugin manifest, a vendor prefix (or namespace) that does not embarrass
+us when listed next to `compound-engineering` and `mattpocock-skills`,
+and an `mb` CLI that auto-wires the plugin so the user sees one command,
+not three. Skipping the marketplace and staying on symlinks is a real
+choice — it just means accepting that exposure to non-Devon-audience
+Claude Code users is harder.
+
+**What this does not decide.** Whether the plugin invocation form is
+`/start`, `/mb-start`, `/mb:start`, or some alias resolves to live runtime
+behavior the v0.2.5 spike (#237) must verify. This section commits to
+the channel, not the keystroke count.
+
+### Open Research Questions Worth A Targeted Pass
+
+The following are concrete unknowns that would sharpen the v0.2.5 spike
+and the renaming decision. They are the right things to point a fresh,
+journalistic research pass at — including a search-heavy assistant such
+as Grok pulling in the last 1–2 weeks of Anthropic blog posts, GitHub
+discussions, and plugin-marketplace launch notes.
+
+1. **Slash-command resolution under plugins.** When a plugin named `mb`
+   ships a skill named `start`, does the user invoke `/mb:start` only, or
+   does Claude Code fall back to `/start` when no shadowing skill is
+   present? Compound Engineering's README documents `/ce-debug` for
+   plugin skills, which suggests a non-namespaced invocation works at
+   least sometimes — but the official docs say plugin skills use a
+   `<plugin>:<skill>` namespace. This contradiction needs primary-source
+   verification.
+2. **Slash aliases.** Has Anthropic added any documented mechanism for
+   one slash command to alias another, in any release in the last 6
+   months? If yes, it changes the renaming UX cost.
+3. **`npx skills@latest` install destination.** Plugin cache, personal
+   `~/.claude/skills/`, project `.claude/skills/`, or some Vercel-specific
+   path? Determines whether non-marketplace installers shadow plain
+   `/start`.
+4. **Plugin marketplace discoverability surfaces.** Where do Claude Code
+   users actually browse plugins today? `claude.ai/settings/plugins`?
+   `anthropics/claude-plugins-official`? Twitter/blog posts? The
+   `/plugin` slash command catalog? This determines how much exposure
+   actually flows from publishing.
+5. **Anthropic posture toward third-party installers.** Are plugins
+   meant to be the canonical channel, or is Anthropic neutral toward
+   alternatives like Vercel skills CLI and OpenClaw? Tone matters for
+   long-term bet stability.
+
+If a fresh research pass nails these, the v0.2.5 plugin spike turns into
+a confirmation exercise rather than an open-ended exploration.
 
 ### Current Main Branch Behavior
 
