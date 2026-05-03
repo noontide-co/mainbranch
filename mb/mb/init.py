@@ -42,6 +42,7 @@ __pycache__/
 node_modules/
 .venv/
 .mb/backups/
+.mb/onboarding.json
 """
 
 

@@ -13,6 +13,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added `.mb/onboarding.json` as the lightweight onboarding progress contract,
+  plus `mb onboard status` and `mb onboard plan` for human and JSON resume
+  surfaces.
 - Added `mb graph --json` as a deterministic repo graph index for files,
   frontmatter links, wikilinks, and first-class people, companies, offers,
   channels, competitors, and metrics entity nodes while keeping DOT output as
@@ -21,6 +24,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   Main Branch product-boundary, release-readiness, runtime-claim,
   public/private, state-model, and issue/PR discipline, and linked it from
   agent and contributor docs.
+
+### Changed
+
+- `mb status` and `mb doctor` now surface incomplete onboarding progress so
+  agents can resume setup without relying on the previous chat transcript.
+- New and repaired business repos now gitignore `.mb/onboarding.json`; use
+  `--path` for scripted `mb onboard` repo paths now that `onboard` also has
+  `status` and `plan` subcommands.
 
 ## [0.2.2] - 2026-05-03
 

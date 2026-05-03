@@ -80,6 +80,10 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │
 ├── Pull business repo updates ───────→ (your repo, silently)
 │
+├── Onboarding progress check ────────→ `mb onboard status --json`
+│   ├── missing core reference? ──────→ collect only current missing inputs
+│   └── complete? ───────────────────→ continue to readiness/menu
+│
 ├── Offer detection ──────────────────→ (multi-offer only, see Step 8)
 │   ├── offers/ exists? ─────────────→ Prompt or restore from .vip/local.yaml
 │   └── no offers/ ──────────────────→ Single-offer mode, skip
@@ -139,6 +143,34 @@ See **[references/repo-detection.md](references/repo-detection.md)** for the ful
 ## Step 3: Pull Business Repo Updates
 
 Once business repo is confirmed, pull its latest updates from `REPO_PATH`. See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** "Pull Business Repo Updates" section for the pull command and the result-handling table.
+
+---
+
+## Step 3a: Resume Onboarding Progress
+
+Run:
+
+```bash
+mb onboard status --repo "$REPO_PATH" --json
+```
+
+Use the JSON envelope as the source of truth for onboarding progress:
+
+- `summary.next_recommended_action` tells you what to do next
+- `checklist[].missing_inputs` names the bounded inputs to collect
+- `profile.team_size` distinguishes solo, small-team, and larger-team setup
+- `boundaries.defer_until_needed` names data to avoid collecting in the first context window
+
+If `core_reference` is pending, collect only enough to draft the missing core
+files. Do not ask for full finances, credentials, raw customer/member exports,
+or exhaustive operations details before the core reference exists.
+
+If the user's team size or current success stage is missing, ask briefly and
+update the plan:
+
+```bash
+mb onboard plan --repo "$REPO_PATH" --team-size solo --success-stage working
+```
 
 ---
 
