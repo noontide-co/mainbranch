@@ -9,6 +9,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from mb import onboard as onboard_mod
+from mb import status as status_mod
 from mb.cli import app
 
 runner = CliRunner()
@@ -61,7 +62,16 @@ def test_onboard_rerun_is_idempotent(tmp_path: Path, monkeypatch) -> None:
 def test_onboard_connect_repairs_existing_initialized_repo(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(onboard_mod, "_which", _tool_path)
     repo = tmp_path / "acme"
-    onboard_mod.run(path=str(repo), name="Acme", mode="new", level="power")
+    onboard_mod.run(
+        path=str(repo),
+        name="Acme",
+        mode="new",
+        level="power",
+        team_size="solo",
+        business_type="coaching",
+        success_stage="working",
+        desired_outcome="usable core reference",
+    )
     settings = repo / ".claude" / "settings.local.json"
     settings.unlink()
 
@@ -132,6 +142,92 @@ def test_onboard_cli_yes_json_smoke(tmp_path: Path, monkeypatch) -> None:
     assert payload["ok"] is True
     assert payload["path"] == str(repo.resolve())
     assert payload["next_steps"][-1] == "/start"
+    assert (repo / ".mb" / "onboarding.json").exists()
+    assert payload["onboarding"]["summary"]["status"] == "in_progress"
+
+
+def test_onboard_status_reports_partial_small_team_progress(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "acme"
+    onboard_mod.run(
+        path=str(repo),
+        name="Acme",
+        mode="new",
+        level="power",
+        team_size="small-team",
+        business_type="agency",
+        success_stage="working",
+        desired_outcome="usable core reference",
+    )
+    (repo / "core" / "offer.md").write_text("# Offer\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["onboard", "status", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["state_exists"] is True
+    assert payload["profile"]["team_size"] == "small_team"
+    assert payload["summary"]["status"] == "in_progress"
+    assert payload["summary"]["next_step"] == "core_reference"
+    assert "audience" in payload["summary"]["missing_inputs"]
+    team_step = next(step for step in payload["checklist"] if step["id"] == "team_layer")
+    assert team_step["title"] == "Small-team GitHub loop"
+    assert team_step["required"] is True
+
+
+def test_onboard_plan_updates_profile_without_raw_business_state(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "solo"
+    onboard_mod.run(path=str(repo), name="Solo Co", mode="new", level="power")
+
+    result = runner.invoke(
+        app,
+        [
+            "onboard",
+            "plan",
+            "--repo",
+            str(repo),
+            "--team-size",
+            "solo",
+            "--business-type",
+            "coaching",
+            "--success-stage",
+            "successful",
+            "--desired-outcome",
+            "document the core reference",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["profile"]["success_stage"] == "successful"
+    state = json.loads((repo / ".mb" / "onboarding.json").read_text(encoding="utf-8"))
+    assert "never_store_here" in state["contract"]
+    assert "chat transcripts" in " ".join(state["contract"]["never_store_here"])
+
+
+def test_status_includes_onboarding_progress(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    monkeypatch.setattr(status_mod, "_which", _tool_path)
+    repo = tmp_path / "acme"
+    onboard_mod.run(
+        path=str(repo),
+        name="Acme",
+        mode="new",
+        level="power",
+        team_size="solo",
+        business_type="coaching",
+        success_stage="working",
+        desired_outcome="usable core reference",
+    )
+
+    report = status_mod.run(path=str(repo))
+
+    assert report["onboarding"]["summary"]["status"] == "in_progress"
+    assert any("Collect just enough" in action for action in report["readiness"]["next_actions"])
 
 
 def test_onboard_cli_interactive_path_renders_clear_labels(tmp_path: Path, monkeypatch) -> None:

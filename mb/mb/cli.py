@@ -58,6 +58,14 @@ migrate_app = typer.Typer(
 )
 app.add_typer(migrate_app, name="migrate")
 
+onboard_app = typer.Typer(
+    name="onboard",
+    help="Create, connect, and resume business repo onboarding.",
+    no_args_is_help=False,
+    invoke_without_command=True,
+)
+app.add_typer(onboard_app, name="onboard")
+
 CONNECT_METADATA_OPTION = typer.Option(
     [],
     "--metadata",
@@ -234,9 +242,9 @@ def _render_onboard_human(result: dict[str, Any]) -> None:
     console.print()
 
 
-@app.command("onboard")
+@onboard_app.callback()
 def onboard_cmd(
-    path_arg: str = typer.Argument("", help="Repo path to create or connect."),
+    ctx: typer.Context,
     path_opt: str = typer.Option("", "--path", help="Repo path to create or connect."),
     name: str = typer.Option("", "--name", help="Business name."),
     mode: str = typer.Option(
@@ -249,10 +257,32 @@ def onboard_cmd(
         "--level",
         help="Experience level: auto, beginner, intermediate, or power.",
     ),
+    team_size: str = typer.Option(
+        "solo",
+        "--team-size",
+        help="Onboarding persona: solo, small-team, larger-team, or unknown.",
+    ),
+    business_type: str = typer.Option(
+        "",
+        "--business-type",
+        help="Short business category for onboarding progress.",
+    ),
+    success_stage: str = typer.Option(
+        "unknown",
+        "--success-stage",
+        help="Current success stage: prelaunch, working, successful, scaling, or unknown.",
+    ),
+    desired_outcome: str = typer.Option(
+        "",
+        "--desired-outcome",
+        help="Short target outcome for onboarding progress.",
+    ),
     yes: bool = typer.Option(False, "--yes", "-y", help="Use defaults and never prompt."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Guide a human through first setup or reconnect an existing repo."""
+    if ctx.invoked_subcommand is not None:
+        return
     interactive = onboard_mod.is_interactive()
     if not yes and not interactive:
         typer.echo(
@@ -262,7 +292,7 @@ def onboard_cmd(
 
     selected_level = level
     selected_mode = mode
-    target = _onboard_target_path(path_arg, path_opt, name)
+    target = _onboard_target_path("", path_opt, name)
     business_name = name
 
     if not yes:
@@ -290,6 +320,10 @@ def onboard_cmd(
             name=business_name,
             mode=selected_mode,
             level=selected_level,
+            team_size=team_size,
+            business_type=business_type,
+            success_stage=success_stage,
+            desired_outcome=desired_outcome,
         )
     except ValueError as exc:
         typer.echo(f"mb onboard: {exc}", err=True)
@@ -298,6 +332,88 @@ def onboard_cmd(
         typer.echo(json.dumps(result, indent=2))
     else:
         _render_onboard_human(result)
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
+def _render_onboard_status_human(result: dict[str, Any]) -> None:
+    from rich.console import Console
+
+    console = Console()
+    summary = result["summary"]
+    console.print(f"\n[bold]mb onboard status[/bold]  {result['repo']}")
+    console.print(
+        f"{summary['status'].replace('_', ' ')}  "
+        f"{summary['completed_required']}/{summary['total_required']} required steps complete"
+    )
+    if not result["state_exists"]:
+        console.print("[yellow]No saved onboarding plan yet.[/yellow] Run `mb onboard plan`.")
+    profile = result["profile"]
+    console.print(
+        "\n[bold]Profile[/bold] "
+        f"team: {profile.get('team_size', 'unknown')}  "
+        f"type: {profile.get('business_type') or 'unknown'}  "
+        f"stage: {profile.get('success_stage', 'unknown')}"
+    )
+    console.print("\n[bold]Checklist[/bold]")
+    for step in result["checklist"]:
+        mark = "ok" if step["status"] == "complete" else "todo"
+        missing = ", ".join(step["missing_inputs"])
+        suffix = f" ({missing})" if missing else ""
+        console.print(f"  {mark:<4} {step['title']}{suffix}")
+    console.print("\n[bold]Next[/bold]")
+    console.print(f"  {summary['next_recommended_action']}")
+    console.print()
+
+
+@onboard_app.command("status")
+def onboard_status_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo to inspect."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Show saved onboarding progress and inferred missing core inputs."""
+    result = onboard_mod.onboarding_status(repo)
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        _render_onboard_status_human(result)
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
+@onboard_app.command("plan")
+def onboard_plan_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo whose plan is updated."),
+    name: str = typer.Option("", "--name", help="Business name."),
+    team_size: str = typer.Option(
+        "unknown",
+        "--team-size",
+        help="Onboarding persona: solo, small-team, larger-team, or unknown.",
+    ),
+    business_type: str = typer.Option("", "--business-type", help="Short business category."),
+    success_stage: str = typer.Option(
+        "unknown",
+        "--success-stage",
+        help="Current success stage: prelaunch, working, successful, scaling, or unknown.",
+    ),
+    desired_outcome: str = typer.Option("", "--desired-outcome", help="Short target outcome."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Create or update the lightweight onboarding progress plan."""
+    try:
+        result = onboard_mod.write_plan(
+            repo,
+            business_name=name,
+            team_size=team_size,
+            business_type=business_type,
+            success_stage=success_stage,
+            desired_outcome=desired_outcome,
+        )
+    except ValueError as exc:
+        typer.echo(f"mb onboard plan: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        _render_onboard_status_human(result)
     raise typer.Exit(0 if result["ok"] else 1)
 
 

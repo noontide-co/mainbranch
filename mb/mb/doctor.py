@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from mb import connect as connect_mod
+from mb import onboard as onboard_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status, version_key
 from mb.migrate import LATEST_SCHEMA_VERSION, pending_migrations, read_schema_version
@@ -289,6 +290,24 @@ def run(path: str) -> dict[str, Any]:
     checks.append(_repo_layout_check(repo))
     checks.append(_schema_version_check(repo))
     checks.append(connect_mod.doctor_check(repo))
+    onboarding = onboard_mod.onboarding_status(repo)
+    onboarding_summary = onboarding["summary"]
+    checks.append(
+        {
+            "name": "onboarding-progress",
+            "ok": onboarding_summary["status"] == "ready",
+            "detail": (
+                "core onboarding complete"
+                if onboarding_summary["status"] == "ready"
+                else (
+                    f"{onboarding_summary['completed_required']}/"
+                    f"{onboarding_summary['total_required']} required steps complete; "
+                    "run `mb onboard status`."
+                )
+            ),
+            "severity": "warn",
+        }
+    )
 
     cloud_hits = _detect_cloud_paths(repo)
     cloud_ok = not cloud_hits
@@ -326,6 +345,7 @@ def run(path: str) -> dict[str, Any]:
         "checks": checks,
         "repo": str(repo),
         "integrations": connect_mod.status_all(repo),
+        "onboarding": onboarding,
         "update": update,
         "python": sys.version.split()[0],
     }

@@ -14,6 +14,7 @@ import yaml
 
 from mb import __version__, github_activity
 from mb import connect as connect_mod
+from mb import onboard as onboard_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status
 
@@ -371,6 +372,14 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
         )
     if report["brain"]["stale_decisions"]:
         next_actions.append("Review stale proposed/running decisions in `decisions/`.")
+    onboarding_summary = (report.get("onboarding") or {}).get("summary") or {}
+    if onboarding_summary.get("status") == "in_progress":
+        next_actions.append(
+            str(
+                onboarding_summary.get("next_recommended_action")
+                or "Run `mb onboard status` to resume onboarding."
+            )
+        )
     if not report["github"]["authenticated"]:
         next_actions.append("Run `gh auth login` to include assigned issues and shipped PRs.")
     if not next_actions:
@@ -406,6 +415,7 @@ def run(path: str = ".") -> dict[str, Any]:
         "git": git,
         "git_activity": _git_recent_activity(repo_path, git),
         "brain": _brain(repo_path),
+        "onboarding": onboard_mod.onboarding_status(repo_path),
         "integrations": connect_mod.status_all(repo_path),
         "github": _github(repo_path, git),
     }
@@ -423,6 +433,7 @@ def render_human(report: dict[str, Any]) -> None:
     git = report["git"]
     runtime = report["runtime"]
     brain = report["brain"]
+    onboarding = report.get("onboarding") or {}
     integrations = report.get(
         "integrations",
         {"summary": {"configured": 0, "healthy": 0, "needs_repair": 0}, "providers": []},
@@ -488,6 +499,19 @@ def render_human(report: dict[str, Any]) -> None:
         console.print("\n[bold]Recent research[/bold]")
         for item in brain["recent_research"][:3]:
             console.print(f"  - {item['date'] or item['updated_at'][:10]}  {item['title']}")
+
+    onboarding_summary = onboarding.get("summary") or {}
+    if onboarding_summary.get("status") == "in_progress":
+        console.print("\n[bold]Onboarding[/bold]")
+        console.print(
+            "  "
+            f"{onboarding_summary.get('completed_required', 0)}/"
+            f"{onboarding_summary.get('total_required', 0)} required steps complete"
+        )
+        missing = onboarding_summary.get("missing_inputs") or []
+        if missing:
+            console.print(f"  missing: {', '.join(missing[:5])}")
+        console.print(f"  next: {onboarding_summary.get('next_recommended_action')}")
 
     if report["git_activity"]["items"]:
         console.print("\n[bold]Recent git activity[/bold]")

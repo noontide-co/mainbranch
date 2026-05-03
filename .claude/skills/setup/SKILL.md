@@ -5,7 +5,9 @@ description: "Bootstrap a new business repo with Main Branch structure, or migra
 
 # Repo Setup
 
-Get a new user fully configured with Claude Code and their business repo.
+Get a new user fully configured with Claude Code and their business repo. Use
+`mb onboard status --json` and `mb onboard plan` as the durable progress
+contract; do not keep onboarding state only in chat prose.
 
 ---
 
@@ -114,9 +116,27 @@ After business type, determine offer structure:
 
 This check is simple and non-intrusive. If they say yes, note it and move on — they can run `/setup` again in the other repo later.
 
-### 3. Gather Context (Be a Ruthless Journalist)
+### 3. Gather Bounded Context
 
-Your job: extract every fact possible. Don't settle for partial info. Users provide context in batches — keep asking until YOU say "we have enough."
+Your job is to collect enough to create a useful core reference, not every fact
+possible. Users provide context in batches. Keep the first pass bounded by
+`mb onboard status --json` and its missing inputs.
+
+Before asking for data, run:
+
+```bash
+mb onboard status --repo "$REPO_PATH" --json
+```
+
+If business type, team size, success stage, or desired outcome are missing, ask
+briefly and save them:
+
+```bash
+mb onboard plan --repo "$REPO_PATH" --team-size solo --success-stage working
+```
+
+Do not ask for full finances, credentials, raw customer/member exports, or
+exhaustive operations details during first-pass onboarding.
 
 See **[references/context-gathering.md](references/context-gathering.md)** for:
 - URL fetching fallback chain (WebFetch → Chrome → Playwright → manual)
@@ -124,7 +144,8 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 - Completeness criteria
 
 **Opening prompt:**
-> Dump everything about this business — sales pages, offer details, testimonials, notes, whatever exists.
+> Share the essentials for the core reference: what you sell, who it helps, why
+> it works, proof you can share, and a few voice samples.
 >
 > **Pro tip:** You can drag screenshots directly into this terminal window and I'll read them. If you have a Skool community, screenshot your about page, classroom, pricing — drag them all in. Fastest way to get me up to speed.
 >

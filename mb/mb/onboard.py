@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +16,25 @@ from mb.engine import link_skills, link_status
 
 LEVELS = {"beginner", "intermediate", "power"}
 MODES = {"new", "connect", "auto"}
+ONBOARDING_STATE_RELATIVE_PATH = Path(".mb") / "onboarding.json"
+ONBOARDING_STATE_VERSION = 1
+TEAM_SIZES = {"unknown", "solo", "small_team", "larger_team"}
+SUCCESS_STAGES = {"unknown", "prelaunch", "working", "successful", "scaling"}
+
+BOUNDARIES = {
+    "collect_now": [
+        "business type and team size",
+        "current success stage and desired direction",
+        "primary offer, audience, voice, proof, and operating constraints",
+        "GitHub/team workflow needs for this business size",
+    ],
+    "defer_until_needed": [
+        "full finances or ledgers",
+        "raw customer/member exports",
+        "credentials, tokens, and private account secrets",
+        "exhaustive operations documentation outside the core reference",
+    ],
+}
 
 
 def _which(name: str) -> str:
@@ -46,6 +67,158 @@ def _run_command(args: list[str], cwd: Path | None = None, timeout: float = 5.0)
 def _slug(value: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
     return slug or "my-business"
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _state_path(repo: Path) -> Path:
+    return repo / ONBOARDING_STATE_RELATIVE_PATH
+
+
+def _normalize_team_size(value: str) -> str:
+    normalized = value.strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "": "unknown",
+        "one": "solo",
+        "one_person": "solo",
+        "1": "solo",
+        "solo_operator": "solo",
+        "small": "small_team",
+        "team": "small_team",
+        "2_5": "small_team",
+        "2_to_5": "small_team",
+        "larger": "larger_team",
+        "large": "larger_team",
+        "6_plus": "larger_team",
+        "20_person": "larger_team",
+    }
+    normalized = aliases.get(normalized, normalized)
+    if normalized not in TEAM_SIZES:
+        raise ValueError("team-size must be solo, small-team, larger-team, or unknown")
+    return normalized
+
+
+def _normalize_success_stage(value: str) -> str:
+    normalized = value.strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "": "unknown",
+        "not_started": "prelaunch",
+        "already_successful": "successful",
+        "success": "successful",
+    }
+    normalized = aliases.get(normalized, normalized)
+    if normalized not in SUCCESS_STAGES:
+        raise ValueError(
+            "success-stage must be prelaunch, working, successful, scaling, or unknown"
+        )
+    return normalized
+
+
+def _load_state(repo: Path) -> dict[str, Any] | None:
+    path = _state_path(repo)
+    if not path.exists():
+        return None
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return loaded if isinstance(loaded, dict) else None
+
+
+def _initial_state(
+    *,
+    repo: Path,
+    business_name: str = "",
+    team_size: str = "unknown",
+    business_type: str = "",
+    success_stage: str = "unknown",
+    desired_outcome: str = "",
+) -> dict[str, Any]:
+    now = _now()
+    return {
+        "schema_version": ONBOARDING_STATE_VERSION,
+        "kind": "mainbranch.onboarding",
+        "created_at": now,
+        "updated_at": now,
+        "profile": {
+            "business_name": business_name.strip(),
+            "business_type": business_type.strip(),
+            "team_size": _normalize_team_size(team_size),
+            "success_stage": _normalize_success_stage(success_stage),
+            "desired_outcome": desired_outcome.strip(),
+        },
+        "contract": {
+            "state_path": str(ONBOARDING_STATE_RELATIVE_PATH),
+            "canonical_business_truth": [
+                "accepted offer, audience, voice, proof, decisions, and durable summaries",
+                "files under core/, research/, decisions/, campaigns/, log/, and documents/",
+            ],
+            "operational_progress": [
+                "checklist state, missing input labels, persona/team-size routing, and next action",
+                "safe setup metadata that lets a later agent resume without a transcript",
+            ],
+            "never_store_here": [
+                "credentials, secrets, raw customer/member exports, or full finances",
+                "chat transcripts or large pasted source dumps",
+            ],
+        },
+        "boundaries": BOUNDARIES,
+        "notes": [],
+        "source": "mb onboard",
+    }
+
+
+def _merge_state(existing: dict[str, Any] | None, updates: dict[str, Any]) -> dict[str, Any]:
+    state = existing.copy() if existing else {}
+    if not state:
+        state = updates
+    else:
+        state["schema_version"] = ONBOARDING_STATE_VERSION
+        state["kind"] = "mainbranch.onboarding"
+        state.setdefault("created_at", updates.get("created_at", _now()))
+        state["updated_at"] = _now()
+        state.setdefault("contract", updates["contract"])
+        state.setdefault("boundaries", BOUNDARIES)
+        state.setdefault("notes", [])
+        profile = dict(state.get("profile") or {})
+        for key, value in updates["profile"].items():
+            if value not in {"", "unknown"}:
+                profile[key] = value
+            else:
+                profile.setdefault(key, value)
+        state["profile"] = profile
+        state["source"] = updates.get("source", "mb onboard")
+    return state
+
+
+def write_plan(
+    repo: str | Path = ".",
+    *,
+    business_name: str = "",
+    team_size: str = "unknown",
+    business_type: str = "",
+    success_stage: str = "unknown",
+    desired_outcome: str = "",
+) -> dict[str, Any]:
+    """Create or update the lightweight onboarding progress plan."""
+    target = Path(repo).expanduser().resolve()
+    target.mkdir(parents=True, exist_ok=True)
+    existing = _load_state(target)
+    updates = _initial_state(
+        repo=target,
+        business_name=business_name,
+        team_size=team_size,
+        business_type=business_type,
+        success_stage=success_stage,
+        desired_outcome=desired_outcome,
+    )
+    state = _merge_state(existing, updates)
+    path = _state_path(target)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return onboarding_status(target)
 
 
 def _repo_markers(repo: Path) -> dict[str, bool]:
@@ -145,12 +318,196 @@ def _next_steps(repo: Path) -> list[str]:
     ]
 
 
+def _has_any_file(paths: list[Path]) -> bool:
+    for path in paths:
+        if path.is_file() and path.name != ".gitkeep" and path.stat().st_size > 0:
+            return True
+        if path.is_dir():
+            for child in path.rglob("*.md"):
+                if child.is_file() and child.stat().st_size > 0:
+                    return True
+    return False
+
+
+def _core_inputs(repo: Path) -> dict[str, bool]:
+    core = repo / "core"
+    reference_core = repo / "reference" / "core"
+    return {
+        "offer": _has_any_file(
+            [
+                core / "offer.md",
+                core / "offers",
+                reference_core / "offer.md",
+                repo / "reference" / "offers",
+            ]
+        ),
+        "audience": _has_any_file([core / "audience.md", reference_core / "audience.md"]),
+        "voice": _has_any_file([core / "voice.md", reference_core / "voice.md"]),
+        "soul": _has_any_file([core / "soul.md", reference_core / "soul.md"]),
+        "proof": _has_any_file(
+            [
+                core / "proof.md",
+                core / "testimonials.md",
+                repo / "reference" / "proof",
+            ]
+        ),
+    }
+
+
+def _profile_missing(profile: dict[str, Any]) -> list[str]:
+    missing: list[str] = []
+    for key in ("business_type", "success_stage", "desired_outcome"):
+        if not str(profile.get(key) or "").strip() or profile.get(key) == "unknown":
+            missing.append(key)
+    if profile.get("team_size") in {"", "unknown", None}:
+        missing.append("team_size")
+    return missing
+
+
+def _team_step(profile: dict[str, Any], repo: Path) -> dict[str, Any]:
+    team_size = str(profile.get("team_size") or "unknown")
+    if team_size == "solo":
+        return {
+            "id": "team_layer",
+            "title": "Solo operating loop",
+            "status": "complete",
+            "owner": "agent",
+            "missing_inputs": [],
+            "next_action": (
+                "Use GitHub issues as your personal task list when work starts to sprawl."
+            ),
+            "required": False,
+        }
+
+    missing = []
+    if not (repo / ".github" / "CODEOWNERS").exists():
+        missing.append(".github/CODEOWNERS")
+    if not _has_any_file([repo / "decisions", repo / "documents" / "team-workflow.md"]):
+        missing.append("team workflow or decision note")
+    label = "Small-team GitHub loop" if team_size == "small_team" else "Larger-team GitHub loop"
+    return {
+        "id": "team_layer",
+        "title": label,
+        "status": "complete" if not missing else "pending",
+        "owner": "agent",
+        "missing_inputs": missing,
+        "next_action": (
+            "Document owners, review expectations, and where team tasks/proposals live."
+        ),
+        "required": team_size in {"small_team", "larger_team"},
+    }
+
+
+def _step(
+    *,
+    step_id: str,
+    title: str,
+    complete: bool,
+    missing_inputs: list[str],
+    next_action: str,
+    owner: str = "agent",
+    required: bool = True,
+) -> dict[str, Any]:
+    return {
+        "id": step_id,
+        "title": title,
+        "status": "complete" if complete else "pending",
+        "owner": owner,
+        "required": required,
+        "missing_inputs": missing_inputs,
+        "next_action": next_action,
+    }
+
+
+def _checklist(repo: Path, state: dict[str, Any], markers: dict[str, bool]) -> list[dict[str, Any]]:
+    profile = dict(state.get("profile") or {})
+    core_inputs = _core_inputs(repo)
+    missing_core = [key for key, ok in core_inputs.items() if not ok]
+    return [
+        _step(
+            step_id="repo_scaffold",
+            title="Business repo scaffold",
+            complete=_looks_initialized(markers),
+            missing_inputs=[]
+            if _looks_initialized(markers)
+            else ["CLAUDE.md", "core/", "research/", "decisions/"],
+            next_action="Run `mb onboard --mode new --path <repo> --name <business>`.",
+            owner="mb",
+        ),
+        _step(
+            step_id="business_profile",
+            title="Business profile and success direction",
+            complete=not _profile_missing(profile),
+            missing_inputs=_profile_missing(profile),
+            next_action=(
+                "Ask only for business type, team size, current success stage, "
+                "and desired outcome; do not collect full operations detail yet."
+            ),
+        ),
+        _step(
+            step_id="core_reference",
+            title="Core reference",
+            complete=not missing_core,
+            missing_inputs=missing_core,
+            next_action=(
+                "Collect just enough to draft core offer, audience, voice, soul, and proof files."
+            ),
+        ),
+        _team_step(profile, repo),
+        _step(
+            step_id="runtime_handoff",
+            title="Runtime handoff",
+            complete=bool(link_status(repo)["ok"]),
+            missing_inputs=[] if link_status(repo)["ok"] else ["Claude Code skill wiring"],
+            next_action="Run `mb skill link --repo .`, then `mb start --json`.",
+            owner="mb",
+        ),
+    ]
+
+
+def onboarding_status(repo: str | Path = ".") -> dict[str, Any]:
+    """Return the deterministic onboarding progress envelope for a business repo."""
+    target = Path(repo).expanduser().resolve()
+    loaded = _load_state(target)
+    state = loaded or _initial_state(repo=target)
+    markers = _repo_markers(target)
+    checklist = _checklist(target, state, markers)
+    required = [step for step in checklist if step.get("required", True)]
+    complete = [step for step in required if step["status"] == "complete"]
+    next_step = next((step for step in checklist if step["status"] != "complete"), None)
+    return {
+        "ok": _looks_initialized(markers),
+        "repo": str(target),
+        "state_path": str(_state_path(target)),
+        "state_exists": loaded is not None,
+        "state_valid": loaded is not None or not _state_path(target).exists(),
+        "profile": state.get("profile") or {},
+        "contract": state.get("contract") or {},
+        "boundaries": state.get("boundaries") or BOUNDARIES,
+        "checklist": checklist,
+        "summary": {
+            "status": "ready" if len(complete) == len(required) else "in_progress",
+            "completed_required": len(complete),
+            "total_required": len(required),
+            "missing_inputs": [
+                item for step in required for item in step.get("missing_inputs", [])
+            ],
+            "next_step": next_step["id"] if next_step else "",
+            "next_recommended_action": next_step["next_action"] if next_step else "Run `mb start`.",
+        },
+    }
+
+
 def run(
     *,
     path: str,
     name: str = "",
     mode: str = "auto",
     level: str = "auto",
+    team_size: str = "unknown",
+    business_type: str = "",
+    success_stage: str = "unknown",
+    desired_outcome: str = "",
 ) -> dict[str, Any]:
     """Create or connect a business repo and verify the Claude Code handoff."""
     target = Path(path).expanduser().resolve()
@@ -207,6 +564,18 @@ def run(
         warnings.append("Claude Code skill discovery is not wired. Run `mb doctor` for details.")
 
     ok = not errors and wiring["ok"] and after["claude_md"]
+    progress = (
+        write_plan(
+            target,
+            business_name=result_business_name,
+            team_size=team_size,
+            business_type=business_type,
+            success_stage=success_stage,
+            desired_outcome=desired_outcome,
+        )
+        if target.exists()
+        else onboarding_status(target)
+    )
     return {
         "ok": ok,
         "status": "ok" if ok else "error",
@@ -226,6 +595,7 @@ def run(
         "warnings": [warning for warning in warnings if warning],
         "errors": errors,
         "doctor_command": f"mb doctor {target}",
+        "onboarding": progress,
         "next_steps": _next_steps(target),
         "init": init_result,
         "link": link_result,

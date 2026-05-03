@@ -11,6 +11,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added `.mb/onboarding.json` as the lightweight onboarding progress contract,
+  plus `mb onboard status` and `mb onboard plan` for human and JSON resume
+  surfaces.
+
+### Changed
+
+- `mb status` and `mb doctor` now surface incomplete onboarding progress so
+  agents can resume setup without relying on the previous chat transcript.
+
 ## [0.2.2] - 2026-05-03
 
 v0.2.2 turns the v0.2 command surface into a better operating foundation. It
