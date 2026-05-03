@@ -152,4 +152,6 @@ def test_onboard_cli_interactive_path_renders_clear_labels(tmp_path: Path, monke
     assert "interactive" in result.stdout
     assert "level / action: beginner / created" in result.stdout
     assert "path: beginner / created" not in result.stdout
+    assert "Connected accounts" in result.stdout
+    assert "CLAUDE.md -> Connected accounts" in result.stdout
     assert "Show the short why" not in result.stdout

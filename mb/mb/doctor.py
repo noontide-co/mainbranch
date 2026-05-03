@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from mb import connect as connect_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status, version_key
 from mb.migrate import LATEST_SCHEMA_VERSION, pending_migrations, read_schema_version
@@ -287,6 +288,7 @@ def run(path: str) -> dict[str, Any]:
     )
     checks.append(_repo_layout_check(repo))
     checks.append(_schema_version_check(repo))
+    checks.append(connect_mod.doctor_check(repo))
 
     cloud_hits = _detect_cloud_paths(repo)
     cloud_ok = not cloud_hits
@@ -323,6 +325,7 @@ def run(path: str) -> dict[str, Any]:
         "ok": overall and not hard_fail,
         "checks": checks,
         "repo": str(repo),
+        "integrations": connect_mod.status_all(repo),
         "update": update,
         "python": sys.version.split()[0],
     }

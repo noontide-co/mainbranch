@@ -16,9 +16,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added `mb skill validate <name>` and `mb skill validate --all` to check
   bundled skill frontmatter, self-contained local references, and the 500-line
   `SKILL.md` gate with JSON output for agents and CI.
+- Added `mb connect` with a provider registry, `list` and `status` views,
+  explicit `--from-env` credential import, local secret storage outside git,
+  repo-safe `.mb/connect.yaml` metadata, and doctor/status integration health
+  reporting.
 
 ### Changed
 
+- Documented per-repo connected-account boundaries in the generated business
+  `CLAUDE.md`, README, `mb init`, and `mb onboard` output so users keep Stripe,
+  ads, pixels, and MCP tool access tethered to the active business repo without
+  committing secrets.
 - `mb doctor` and CI now run bundled skill validation so broken skills are
   caught before release.
 

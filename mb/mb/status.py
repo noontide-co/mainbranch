@@ -13,6 +13,7 @@ from typing import Any
 import yaml
 
 from mb import __version__, github_activity
+from mb import connect as connect_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status
 
@@ -405,6 +406,7 @@ def run(path: str = ".") -> dict[str, Any]:
         "git": git,
         "git_activity": _git_recent_activity(repo_path, git),
         "brain": _brain(repo_path),
+        "integrations": connect_mod.status_all(repo_path),
         "github": _github(repo_path, git),
     }
     report["readiness"] = _readiness(report)
@@ -421,6 +423,10 @@ def render_human(report: dict[str, Any]) -> None:
     git = report["git"]
     runtime = report["runtime"]
     brain = report["brain"]
+    integrations = report.get(
+        "integrations",
+        {"summary": {"configured": 0, "healthy": 0, "needs_repair": 0}, "providers": []},
+    )
     github = report["github"]
     readiness = report["readiness"]
 
@@ -451,6 +457,15 @@ def render_human(report: dict[str, Any]) -> None:
     claude_mark = "[green]found[/green]" if claude["found"] else "[yellow]missing[/yellow]"
     skill_mark = "[green]wired[/green]" if skills["ok"] else "[yellow]missing[/yellow]"
     console.print(f"[bold]Runtime[/bold] Claude Code: {claude_mark}  skills: {skill_mark}")
+
+    integration_summary = integrations["summary"]
+    if integration_summary["configured"]:
+        console.print(
+            "[bold]Integrations[/bold] "
+            f"configured {integration_summary['configured']}  "
+            f"healthy {integration_summary['healthy']}  "
+            f"needs repair {integration_summary['needs_repair']}"
+        )
 
     counts = brain["counts"]
     console.print(

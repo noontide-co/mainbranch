@@ -119,6 +119,23 @@ my-business/
 
 You fill in the reference files inside `core/`. Claude reads them when generating.
 
+### Connected accounts live with the business repo
+
+Your business repo carries the boundaries for connected accounts. A repo for
+one business can point at one Stripe account, Google Ads customer, ad pixel set,
+and MCP server set; a different business repo should point at different ones.
+Switching repos should switch the tools that can spend money, publish, email,
+or mutate customer accounts.
+
+The repo should keep useful non-secret identifiers where agents can inspect
+them: Stripe account/product/price IDs in offer or finance notes, Google Ads
+customer and campaign IDs in `campaigns/`, ad pixel IDs beside the site or
+campaign files they belong to, and MCP server names/scopes in `CLAUDE.md` or
+local setup notes. Do not commit API keys, OAuth refresh tokens,
+service-account JSON, webhook secrets, MCP tokens, or bearer tokens. Keep
+secrets in a runtime's local config, the OS keychain, 1Password, `.env`, or
+`.claude/settings.local.json`, and keep those files gitignored.
+
 ---
 
 ## The `mb` CLI
@@ -131,6 +148,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb init` | Set up a fresh business repo (six folders, CLAUDE.md, git init). |
 | `mb status` | Show a local-first daily briefing: repo health, runtime wiring, recent decisions/research/git activity, and GitHub tasks when `gh` is authenticated. |
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
+| `mb connect` | Register provider credentials and integration metadata without committing secrets. |
 | `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
 | `mb graph` | Walk the link graph (`linked_research` / `linked_decisions` / `supersedes`) and emit Graphviz DOT. `--open` renders to PNG and opens it. |
 | `mb think <topic>` | Print the `/think` invocation hint. Run inside Claude Code for the full flow. |
@@ -142,6 +160,27 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb skill link --repo .` | Repair Claude Code skill discovery in a business repo. |
 
 Full list: `mb --help`.
+
+### Provider Connections
+
+`mb connect` is the local-first foundation for integrations such as Google,
+Meta, Cloudflare, Postiz, Apify, Beancount, and transcription providers.
+
+```bash
+mb connect list
+printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata account_id=...
+mb connect meta --from-env
+mb connect status --json
+```
+
+Secrets are stored outside the business repo, using the macOS Keychain when
+available and a local `~/.mainbranch/secrets/connect.json` fallback otherwise.
+The business repo only receives non-sensitive metadata in `.mb/connect.yaml`,
+such as the provider id, account label, credential backend, and last check time.
+Skills and future dashboards should read `mb connect status --json` or
+`.mb/connect.yaml`; they should never ask users to commit tokens.
+`--from-env` is explicit: `mb connect` does not silently import general-purpose
+environment variables.
 
 ---
 
