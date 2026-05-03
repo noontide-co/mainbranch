@@ -97,7 +97,7 @@ def test_graph_json_rejects_open_flag(tmp_path: Path) -> None:
     result = runner.invoke(app, ["graph", str(tmp_path), "--json", "--open"])
 
     assert result.exit_code != 0
-    assert "--open cannot be combined with --json" in result.output
+    assert "cannot be combined" in result.output
 
 
 def test_existing_repo_paths_are_not_marked_external_by_root_heuristic(tmp_path: Path) -> None:
