@@ -14,7 +14,7 @@ A composable skill for drafting a site / campaign brief. /site calls this in Ste
 - `offer.md`, `audience.md`, `voice.md` (resolved via `mb resolve`)
 - `research/*.md` produced earlier in the flow
 - Operator picks: `dial`, `archetype` (optional), `audience_current_archetype` (optional)
-- Picked headline formulas (2-3 from `site/references/headline-formulas.md`)
+- Picked headline formulas (2-3 from `references/headline-formulas.md`)
 
 ## Outputs
 
@@ -52,6 +52,6 @@ Plus the body sections: headline + subhead, value prop, mechanism summary, picke
 
 ## Cross-references
 
-- [site/references/archetypes.md](../site/references/archetypes.md)
-- [site/references/headline-formulas.md](../site/references/headline-formulas.md)
-- [skill-review/SKILL.md](../skill-review/SKILL.md)
+- [references/archetypes.md](references/archetypes.md)
+- [references/headline-formulas.md](references/headline-formulas.md)
+- `skill-review` composable skill

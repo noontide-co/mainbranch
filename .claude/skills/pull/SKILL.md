@@ -15,7 +15,7 @@ Runs `mb update` for the mechanical engine refresh. The CLI detects whether Main
 
 ### Step 1: Resolve VIP Path
 
-For the canonical bash + python3 resolver (settings.local.json first, ~/.config/vip/local.yaml fallback), see **[../../reference/vip-path-resolution.md](../../reference/vip-path-resolution.md)**.
+For the canonical bash + python3 resolver (settings.local.json first, ~/.config/vip/local.yaml fallback), see **[references/vip-path-resolution.md](references/vip-path-resolution.md)**.
 
 ### Step 2: Update Main Branch
 
@@ -126,5 +126,5 @@ If the user types "dismiss" / "seen" / "got it" after the banner appears, also b
 
 ## References
 
-- [../../reference/vip-path-resolution.md](../../reference/vip-path-resolution.md) — canonical vip-path resolver
-- [../../../CHANGELOG.md](../../../CHANGELOG.md) — release notes (the source surfaced as "what's new")
+- [references/vip-path-resolution.md](references/vip-path-resolution.md) — canonical vip-path resolver
+- Root `CHANGELOG.md` — release notes (the source surfaced as "what's new")

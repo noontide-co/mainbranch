@@ -48,23 +48,25 @@ jobs:
       - name: Pytest with coverage
         run: pytest tests/ -v --cov=mb --cov-report=term-missing --cov-fail-under=70
 
-  markdown-line-count:
-    name: SKILL.md line-count gate
+  skill-validate:
+    name: Bundled skill validation
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mb
     steps:
       - uses: actions/checkout@v6
-      - name: No SKILL.md over 500 lines
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install package
         run: |
-          set -e
-          fail=0
-          while IFS= read -r f; do
-            n=$(wc -l < "$f")
-            if [ "$n" -gt 500 ]; then
-              echo "::error file=$f::SKILL.md too long ($n lines > 500). Split references out."
-              fail=1
-            fi
-          done < <(find .claude/skills .claude/playbooks -name SKILL.md 2>/dev/null)
-          exit $fail
+          python -m pip install --upgrade pip
+          pip install -e .
+      - name: Validate bundled skills
+        run: mb skill validate --all --json
 
   wheel-install-smoke:
     # Release-path smoke test. The python matrix runs against an editable

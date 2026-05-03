@@ -17,3 +17,4 @@ fi
 "$PYTHON" -m ruff check .
 "$PYTHON" -m mypy mb
 "$PYTHON" -m pytest tests/ -v --cov=mb --cov-report=term-missing --cov-fail-under=70
+"$PYTHON" -m mb skill validate --all --json

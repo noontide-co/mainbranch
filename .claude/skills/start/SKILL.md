@@ -116,7 +116,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 
 Pull vip updates. CWD is the business repo — resolve vip path first. **Do NOT silently swallow failures.** Users on stale code get broken features.
 
-See **[../../reference/pull-engine-updates.md](../../reference/pull-engine-updates.md)** for the canonical pull script, result handling table, the failure warning to surface, and the matching Step 3 business-repo pull logic.
+See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** for the canonical pull script, result handling table, the failure warning to surface, and the matching Step 3 business-repo pull logic.
 
 ---
 
@@ -138,7 +138,7 @@ See **[references/repo-detection.md](references/repo-detection.md)** for the ful
 
 ## Step 3: Pull Business Repo Updates
 
-Once business repo is confirmed, pull its latest updates from `REPO_PATH`. See **[../../reference/pull-engine-updates.md](../../reference/pull-engine-updates.md)** "Pull Business Repo Updates" section for the pull command and the result-handling table.
+Once business repo is confirmed, pull its latest updates from `REPO_PATH`. See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** "Pull Business Repo Updates" section for the pull command and the result-handling table.
 
 ---
 
@@ -338,7 +338,7 @@ If re-invoked after compaction: re-read `~/.config/vip/local.yaml` for repo + id
 
 ## References
 
-- [../../reference/pull-engine-updates.md](../../reference/pull-engine-updates.md) — Step 1 + Step 3 pull scripts and failure warnings
+- [references/pull-engine-updates.md](references/pull-engine-updates.md) — Step 1 + Step 3 pull scripts and failure warnings
 - [references/repo-detection.md](references/repo-detection.md) — Step 2 full CWD detection, migration, multi-repo selection, REPO_PATH, vip-loaded verification
 - [references/triage-menu.md](references/triage-menu.md) — Step 10 CHANGELOG banner, menu, "while you wait" pattern, auto-suggest/skip rules
 - [references/auto-heal.md](references/auto-heal.md) — Bridge link recovery

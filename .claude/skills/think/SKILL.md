@@ -40,7 +40,7 @@ Both are work. Enriching the core levels up everything downstream.
 
 ## Pull Latest Updates
 
-See **[../../reference/pull-engine-updates.md](../../reference/pull-engine-updates.md)** for the canonical vip-resolution + pull bash block. Run it at the start of every /think invocation.
+See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** for the canonical vip-resolution + pull bash block. Run it at the start of every /think invocation.
 
 ---
 

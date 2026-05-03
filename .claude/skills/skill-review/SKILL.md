@@ -37,7 +37,7 @@ A synthesized review report:
 ## Flow
 
 1. **Load the artifact** and the dial.
-2. **Pick sweeps** from [`site/references/review.md`](../site/references/review.md) — dial-gated.
+2. **Pick sweeps** from [`references/review.md`](references/review.md) — dial-gated.
 3. **Spawn one foreground subagent per active sweep, in parallel.** Each returns short findings (P1/P2/P3 with line refs).
 4. **Run auxiliary gates** in parallel: De-AI'd, Framework-true, Archetype-fidelity.
 5. **(Convert dial only)** Run Expert Panel scoring across 3-5 personas.
@@ -54,5 +54,5 @@ A synthesized review report:
 
 ## Cross-references
 
-- [site/references/review.md](../site/references/review.md)
-- [site/references/anti-patterns.md](../site/references/anti-patterns.md)
+- [references/review.md](references/review.md)
+- [references/anti-patterns.md](references/anti-patterns.md)

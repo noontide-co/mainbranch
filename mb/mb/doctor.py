@@ -20,6 +20,7 @@ from typing import Any
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status, version_key
 from mb.migrate import LATEST_SCHEMA_VERSION, pending_migrations, read_schema_version
+from mb.skill_validate import run_all as validate_all_skills
 
 CLOUD_PREFIXES = (
     "Library/Mobile Documents",  # iCloud Drive
@@ -267,6 +268,23 @@ def run(path: str) -> dict[str, Any]:
     )
 
     checks.append(_mainbranch_version_check(update))
+    skill_validation = validate_all_skills()
+    skill_summary = skill_validation["summary"]
+    checks.append(
+        {
+            "name": "bundled-skills",
+            "ok": bool(skill_validation["ok"]),
+            "detail": (
+                f"{skill_summary['passed']}/{skill_summary['skills']} bundled skill(s) validate"
+                if skill_validation["ok"]
+                else (
+                    f"{skill_summary['failed']} bundled skill(s) failed validation; "
+                    "run `mb skill validate --all`."
+                )
+            ),
+            "severity": "ok" if skill_validation["ok"] else "error",
+        }
+    )
     checks.append(_repo_layout_check(repo))
     checks.append(_schema_version_check(repo))
 

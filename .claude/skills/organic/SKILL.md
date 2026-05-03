@@ -1,6 +1,6 @@
 ---
 name: organic
-description: CREATE organic content scripts (Reels, TikTok, carousels, static posts). Use when user wants to GENERATE new scripts from concepts. NOT for research/mining competitor content - that's /think. NOT for paid ads - use /ads instead. Modes: video, carousel, static. If user says "mine", "scrape", "research competitors" → route to /think.
+description: "CREATE organic content scripts (Reels, TikTok, carousels, static posts). Use when user wants to GENERATE new scripts from concepts. NOT for research/mining competitor content - that's /think. NOT for paid ads - use /ads instead. Modes: video, carousel, static. If user says \"mine\", \"scrape\", \"research competitors\" → route to /think."
 ---
 
 # Organic
@@ -31,7 +31,7 @@ Detect if user is in the right place:
 
 ## Pull Latest Updates
 
-For the canonical vip-resolution + pull bash block (and the failure warning), see [`.claude/reference/pull-engine-updates.md`](../../reference/pull-engine-updates.md). Run it at the start of every invocation.
+For the canonical vip-resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
 
 ---
 

@@ -11,6 +11,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added `mb skill validate <name>` and `mb skill validate --all` to check
+  bundled skill frontmatter, self-contained local references, and the 500-line
+  `SKILL.md` gate with JSON output for agents and CI.
+
+### Changed
+
+- `mb doctor` and CI now run bundled skill validation so broken skills are
+  caught before release.
+
 ## [0.2.1] - 2026-05-02
 
 v0.2.1 is the first post-0.2 durability release. It makes the new CLI front

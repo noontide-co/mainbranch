@@ -24,7 +24,7 @@ Say `/site` again after compaction, context loss, or switching focus. It reloads
 
 ## Pull Latest Updates
 
-For the canonical vip-resolution + pull bash block (and the failure warning), see [`.claude/reference/pull-engine-updates.md`](../../reference/pull-engine-updates.md). Run it at the start of every invocation.
+For the canonical vip-resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
 
 ---
 
@@ -40,7 +40,7 @@ Four behaviors `/site` uses on every run, not optional:
 
 **4. Publish-first, then iterate.** Push the rawest working version of the brief, then the rawest working concept, to GitHub immediately. Git history is the durable memory across context clears. Chat compaction can't be trusted. Iterate on top of committed work, not in-memory state.
 
-When research subagents record findings, they follow the [`/think` research patterns](../think/SKILL.md) — dated `research/YYYY-MM-DD-slug-claude-code.md` files with frontmatter (`linked_decisions: []`), so the research → decision → reference chain stays intact across the brief and the site.
+When research subagents record findings, they follow the `/think` research patterns — dated `research/YYYY-MM-DD-slug-claude-code.md` files with frontmatter (`linked_decisions: []`), so the research → decision → reference chain stays intact across the brief and the site.
 
 ---
 
