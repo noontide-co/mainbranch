@@ -40,7 +40,7 @@ Typical research questions:
 - What proof is available — testimonials with permission, outcome data, founder credentials?
 - What conversion-endpoint kind fits this offer (payment / lead / appointment)?
 
-Each subagent records its findings to a dated `research/YYYY-MM-DD-<slug>-claude-code.md` file in the business repo, with frontmatter following the [`/think` research pattern](../../think/SKILL.md):
+Each subagent records its findings to a dated `research/YYYY-MM-DD-<slug>-claude-code.md` file in the business repo, with frontmatter following the `/think` research pattern:
 
 ```yaml
 ---
@@ -66,7 +66,7 @@ The brief is the locked source of truth for the site. It's composed from:
 - The research files just produced
 - The conversion endpoint kind (operator's pick)
 
-The skill drafts the brief into a single markdown artifact in the business repo: `decisions/YYYY-MM-DD-minisite-brief-<offer-slug>.md` (per the [`/think` decision pattern](../../think/SKILL.md)).
+The skill drafts the brief into a single markdown artifact in the business repo: `decisions/YYYY-MM-DD-minisite-brief-<offer-slug>.md` (per the `/think` decision pattern).
 
 ### Step 2a — pick the dial
 
@@ -232,7 +232,7 @@ python3 .claude/skills/site/scripts/pages.py set-domain <name> <domain> --timeou
 
 ## 6. Conversion endpoint
 
-Operator picks the kind (per the [Conversion endpoint](../../../reference/minisite.md#conversion-endpoint) section of the engine spec):
+Operator picks the kind (per the [Conversion endpoint](minisite.md#conversion-endpoint) section of the engine spec):
 
 - **Stripe payment page** → run `stripe.py create-payment-link <offer-slug> --amount <cents> --success-url https://<domain>/start/thanks/`. Capture `payment_link.url` from the envelope.
 - **Lead form** → ask: "Where does form data go?" — capture provider + URL (Tally / Typeform / Google Form / native + Formspree / custom backend).
@@ -402,4 +402,4 @@ When the offer pulls more traffic and the minisite needs more pages or content d
 - [`cloudflare-pages-link.md`](cloudflare-pages-link.md) — CF Pages GitHub App handshake (used in step 5f if needed)
 - [`graduation.md`](graduation.md) — when to move beyond minisite shape
 - Engine spec: `mb-vip/.claude/reference/minisite.md` — the contract this flow implements
-- [`/think`](../../think/SKILL.md) — research and decision recording patterns this flow follows
+- `/think` — research and decision recording patterns this flow follows

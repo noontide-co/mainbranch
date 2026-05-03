@@ -48,22 +48,35 @@ jobs:
       - name: Pytest with coverage
         run: pytest tests/ -v --cov=mb --cov-report=term-missing --cov-fail-under=70
 
-  markdown-line-count:
+  skill-validate:
     name: SKILL.md line-count gate
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mb
     steps:
       - uses: actions/checkout@v6
-      - name: No SKILL.md over 500 lines
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install package
         run: |
-          set -e
+          python -m pip install --upgrade pip
+          pip install -e .
+      - name: Validate bundled skills
+        run: mb skill validate --all --json
+      - name: Validate playbook line-count gate
+        run: |
           fail=0
           while IFS= read -r f; do
-            n=$(wc -l < "$f")
+            n=$(wc -l < "../$f")
             if [ "$n" -gt 500 ]; then
               echo "::error file=$f::SKILL.md too long ($n lines > 500). Split references out."
               fail=1
             fi
-          done < <(find .claude/skills .claude/playbooks -name SKILL.md 2>/dev/null)
+          done < <(cd .. && find .claude/playbooks -name SKILL.md 2>/dev/null)
           exit $fail
 
   wheel-install-smoke:
@@ -230,6 +243,19 @@ jobs:
             || { echo "::error::mb skill list missing bundled start skill"; exit 1; }
           grep -qx "think" skills.txt \
             || { echo "::error::mb skill list missing bundled think skill"; exit 1; }
+
+      - name: Smoke — packaged bundled skills validate
+        run: |
+          .venv-smoke/bin/mb skill validate --all --json > skill-validate.json
+          cat skill-validate.json
+          .venv-smoke/bin/python - <<'PY'
+          import json
+
+          report = json.load(open("skill-validate.json"))
+          assert report["ok"] is True
+          assert report["summary"]["skills"] > 0
+          assert report["summary"]["failed"] == 0
+          PY
 
       - name: Smoke — mb init wires Claude Code skills
         run: |

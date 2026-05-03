@@ -82,7 +82,7 @@ If skill prompts like `/start` or `/ads` aren't showing in the dropdown:
 test -e .claude/skills/start && echo "START_BRIDGE_OK"
 ```
 
-If missing, add compatibility links (without replacing local folders). First resolve `$VIP_PATH` per **[../../../reference/vip-path-resolution.md](../../../reference/vip-path-resolution.md)**, then:
+If missing, add compatibility links (without replacing local folders). First resolve `$VIP_PATH` per **[vip-path-resolution.md](vip-path-resolution.md)**, then:
 
 ```bash
 # Create bridge links only for missing entries
@@ -285,7 +285,7 @@ rm ~/.config/vip/local.yaml
 
 You shouldn't have any uncommitted changes in vip.
 
-If you do, resolve them by first running the canonical resolver per **[../../../reference/vip-path-resolution.md](../../../reference/vip-path-resolution.md)** to populate `$VIP_PATH`, then:
+If you do, resolve them by first running the canonical resolver per **[vip-path-resolution.md](vip-path-resolution.md)** to populate `$VIP_PATH`, then:
 
 ```bash
 # Clean and pull (WARNING: discards any local changes in vip)

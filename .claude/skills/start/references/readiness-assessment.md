@@ -633,4 +633,4 @@ Even when the user states intent clearly ("/start ads"), run the scoring silentl
 - [../SKILL.md](../SKILL.md) -- The /start flow that invokes this assessment
 - [config-system.md](config-system.md) -- Config reading for experience level and default repo
 - [mcp-preflight.md](mcp-preflight.md) -- MCP check that runs before this assessment
-- [../../end/references/crystallize-agent.md](../../end/references/crystallize-agent.md) -- The /end soul awareness pattern this assessment draws from
+- `/end` crystallize-agent pattern -- The soul awareness pattern this assessment draws from

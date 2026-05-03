@@ -31,9 +31,9 @@ A composable skill for generating concept variations. /site calls this after the
 
 ## Foreground rule
 
-Subagents MUST be foreground. The known background-subagent file-write bug means files appear written but don't persist. Foreground only. See [`site/references/concept-variations.md`](../site/references/concept-variations.md) for the spawn pattern.
+Subagents MUST be foreground. The known background-subagent file-write bug means files appear written but don't persist. Foreground only. See [`references/concept-variations.md`](references/concept-variations.md) for the spawn pattern.
 
 ## Cross-references
 
-- [site/references/concept-variations.md](../site/references/concept-variations.md)
-- [site/references/minisite-generation-system.md](../site/references/minisite-generation-system.md)
+- [references/concept-variations.md](references/concept-variations.md)
+- [references/minisite-generation-system.md](references/minisite-generation-system.md)

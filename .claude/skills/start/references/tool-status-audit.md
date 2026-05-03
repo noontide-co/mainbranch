@@ -39,4 +39,4 @@ Use probe methods defined in `/think` (`Gemini`, `Grok`, `whisper`, document too
 
 - [SKILL.md](../SKILL.md)
 - [mcp-preflight.md](mcp-preflight.md)
-- [../../think/references/tool-status-self-healing.md](../../think/references/tool-status-self-healing.md)
+- `/think` tool-status-self-healing reference

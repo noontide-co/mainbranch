@@ -24,6 +24,7 @@ from mb import init as init_mod
 from mb import migrate as migrate_mod
 from mb import onboard as onboard_mod
 from mb import resolve as resolve_mod
+from mb import skill_validate as skill_validate_mod
 from mb import start as start_mod
 from mb import status as status_mod
 from mb import think as think_mod
@@ -638,6 +639,76 @@ def skill_list_cmd() -> None:
 
     for s in bundled_skills():
         typer.echo(s)
+
+
+@skill_app.command("validate")
+def skill_validate_cmd(
+    name: str | None = typer.Argument(None, help="Skill name (e.g. 'site')."),
+    all_skills: bool = typer.Option(False, "--all", help="Validate every bundled skill."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Validate bundled skill frontmatter and local references."""
+    if all_skills and name is not None:
+        payload = {
+            "ok": False,
+            "command": "mb skill validate",
+            "mode": "invalid",
+            "skills": [],
+            "summary": {"skills": 0, "passed": 0, "failed": 0, "errors": 1, "warnings": 0},
+            "errors": ["choose either a skill name or --all, not both"],
+        }
+        if json_out:
+            typer.echo(json.dumps(payload, indent=2))
+        else:
+            typer.echo("mb skill validate: choose either a skill name or --all", err=True)
+        raise typer.Exit(2)
+    if not all_skills and name is None:
+        payload = {
+            "ok": False,
+            "command": "mb skill validate",
+            "mode": "invalid",
+            "skills": [],
+            "summary": {"skills": 0, "passed": 0, "failed": 0, "errors": 1, "warnings": 0},
+            "errors": ["provide a skill name or --all"],
+        }
+        if json_out:
+            typer.echo(json.dumps(payload, indent=2))
+        else:
+            typer.echo("mb skill validate: provide a skill name or --all", err=True)
+        raise typer.Exit(2)
+
+    if all_skills:
+        report = skill_validate_mod.run_all()
+    else:
+        assert name is not None
+        skill_report = skill_validate_mod.run(name)
+        if skill_report is None:
+            payload = {
+                "ok": False,
+                "command": "mb skill validate",
+                "mode": "single",
+                "skills": [],
+                "summary": {
+                    "skills": 0,
+                    "passed": 0,
+                    "failed": 0,
+                    "errors": 1,
+                    "warnings": 0,
+                },
+                "errors": [f"skill not found: {name}"],
+            }
+            if json_out:
+                typer.echo(json.dumps(payload, indent=2))
+            else:
+                typer.echo(f"skill not found: {name}", err=True)
+            raise typer.Exit(2)
+        report = skill_validate_mod.envelope([skill_report], mode="single")
+
+    if json_out:
+        typer.echo(json.dumps(report, indent=2))
+    else:
+        skill_validate_mod.render_human(report)
+    raise typer.Exit(0 if report["ok"] else 1)
 
 
 @skill_app.command("link")

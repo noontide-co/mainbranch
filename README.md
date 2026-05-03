@@ -156,6 +156,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb educational <topic>` | Print an educational triage file (powers `mb doctor`'s "tell me more" prompts). |
 | `mb skill list` | List the skills bundled with this engine. |
 | `mb skill path <name>` | Print the on-disk path to a bundled skill. |
+| `mb skill validate <name>` | Validate one bundled skill's frontmatter, local references, and 500-line gate. Use `--all --json` for CI. |
 | `mb skill link --repo .` | Repair Claude Code skill discovery in a business repo. |
 
 Full list: `mb --help`.
