@@ -61,6 +61,8 @@ Tested on macOS and Linux. Windows is experimental; see [docs/compatibility.md](
 
 **New to Claude Code, git, or terminal?** Read [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md) — it covers everything step-by-step, including common errors.
 
+> Quick note: this README section is used for a lightweight Codex smoke test change.
+
 **Contributors** who want to hack on skills can clone the engine repo directly:
 
 ```bash
