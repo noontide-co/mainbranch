@@ -36,6 +36,8 @@ BOUNDARIES = {
     ],
 }
 
+ONBOARDING_GITIGNORE_ENTRY = ".mb/onboarding.json"
+
 
 def _which(name: str) -> str:
     return shutil.which(name) or ""
@@ -75,6 +77,20 @@ def _now() -> str:
 
 def _state_path(repo: Path) -> Path:
     return repo / ONBOARDING_STATE_RELATIVE_PATH
+
+
+def _ensure_onboarding_gitignore(repo: Path) -> bool:
+    gitignore = repo / ".gitignore"
+    existing_text = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
+    entries = {line.strip() for line in existing_text.splitlines()}
+    if ONBOARDING_GITIGNORE_ENTRY in entries or ".mb/" in entries:
+        return False
+    prefix = "" if not existing_text or existing_text.endswith("\n") else "\n"
+    gitignore.write_text(
+        existing_text + prefix + ONBOARDING_GITIGNORE_ENTRY + "\n",
+        encoding="utf-8",
+    )
+    return True
 
 
 def _normalize_team_size(value: str) -> str:
@@ -218,6 +234,7 @@ def write_plan(
     path = _state_path(target)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _ensure_onboarding_gitignore(target)
     return onboarding_status(target)
 
 
@@ -366,6 +383,16 @@ def _profile_missing(profile: dict[str, Any]) -> list[str]:
 
 def _team_step(profile: dict[str, Any], repo: Path) -> dict[str, Any]:
     team_size = str(profile.get("team_size") or "unknown")
+    if team_size == "unknown":
+        return {
+            "id": "team_layer",
+            "title": "Team operating loop",
+            "status": "pending",
+            "owner": "agent",
+            "missing_inputs": ["team_size"],
+            "next_action": "Ask whether this is a solo operator, small team, or larger team.",
+            "required": False,
+        }
     if team_size == "solo":
         return {
             "id": "team_layer",
@@ -423,6 +450,7 @@ def _checklist(repo: Path, state: dict[str, Any], markers: dict[str, bool]) -> l
     profile = dict(state.get("profile") or {})
     core_inputs = _core_inputs(repo)
     missing_core = [key for key, ok in core_inputs.items() if not ok]
+    wiring = link_status(repo)
     return [
         _step(
             step_id="repo_scaffold",
@@ -457,8 +485,8 @@ def _checklist(repo: Path, state: dict[str, Any], markers: dict[str, bool]) -> l
         _step(
             step_id="runtime_handoff",
             title="Runtime handoff",
-            complete=bool(link_status(repo)["ok"]),
-            missing_inputs=[] if link_status(repo)["ok"] else ["Claude Code skill wiring"],
+            complete=bool(wiring["ok"]),
+            missing_inputs=[] if wiring["ok"] else ["Claude Code skill wiring"],
             next_action="Run `mb skill link --repo .`, then `mb start --json`.",
             owner="mb",
         ),
@@ -573,7 +601,7 @@ def run(
             success_stage=success_stage,
             desired_outcome=desired_outcome,
         )
-        if target.exists()
+        if target.exists() and not errors
         else onboarding_status(target)
     )
     return {

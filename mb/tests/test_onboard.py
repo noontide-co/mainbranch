@@ -144,6 +144,7 @@ def test_onboard_cli_yes_json_smoke(tmp_path: Path, monkeypatch) -> None:
     assert payload["next_steps"][-1] == "/start"
     assert (repo / ".mb" / "onboarding.json").exists()
     assert payload["onboarding"]["summary"]["status"] == "in_progress"
+    assert ".mb/onboarding.json" in (repo / ".gitignore").read_text(encoding="utf-8")
 
 
 def test_onboard_status_reports_partial_small_team_progress(tmp_path: Path, monkeypatch) -> None:
@@ -173,6 +174,27 @@ def test_onboard_status_reports_partial_small_team_progress(tmp_path: Path, monk
     team_step = next(step for step in payload["checklist"] if step["id"] == "team_layer")
     assert team_step["title"] == "Small-team GitHub loop"
     assert team_step["required"] is True
+
+
+def test_onboard_status_unknown_team_size_is_not_larger_team(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "unknown-team"
+    onboard_mod.run(
+        path=str(repo),
+        name="Unknown Team",
+        mode="new",
+        level="power",
+        business_type="agency",
+        success_stage="working",
+        desired_outcome="usable core reference",
+    )
+
+    payload = onboard_mod.onboarding_status(repo)
+
+    team_step = next(step for step in payload["checklist"] if step["id"] == "team_layer")
+    assert team_step["title"] == "Team operating loop"
+    assert team_step["required"] is False
+    assert team_step["missing_inputs"] == ["team_size"]
 
 
 def test_onboard_plan_updates_profile_without_raw_business_state(
@@ -207,6 +229,35 @@ def test_onboard_plan_updates_profile_without_raw_business_state(
     state = json.loads((repo / ".mb" / "onboarding.json").read_text(encoding="utf-8"))
     assert "never_store_here" in state["contract"]
     assert "chat transcripts" in " ".join(state["contract"]["never_store_here"])
+
+
+def test_onboard_yes_does_not_overwrite_existing_team_size(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    monkeypatch.setattr(onboard_mod, "is_interactive", lambda: False)
+    repo = tmp_path / "team"
+    onboard_mod.run(path=str(repo), name="Team Co", mode="new", level="power")
+    plan = runner.invoke(
+        app,
+        [
+            "onboard",
+            "plan",
+            "--repo",
+            str(repo),
+            "--team-size",
+            "small-team",
+            "--json",
+        ],
+    )
+    assert plan.exit_code == 0
+
+    rerun = runner.invoke(
+        app,
+        ["onboard", "--yes", "--mode", "connect", "--path", str(repo), "--json"],
+    )
+
+    assert rerun.exit_code == 0
+    payload = json.loads(rerun.stdout)
+    assert payload["onboarding"]["profile"]["team_size"] == "small_team"
 
 
 def test_status_includes_onboarding_progress(tmp_path: Path, monkeypatch) -> None:

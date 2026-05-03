@@ -35,6 +35,7 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert ".claude/settings.local.json" in gitignore
     assert ".claude/skills/start" in gitignore
     assert ".mb/backups/" in gitignore
+    assert ".mb/onboarding.json" in gitignore
     claude_md = (target / "CLAUDE.md").read_text()
     assert "Acme Brewing" in claude_md
     assert "## Connected accounts" in claude_md

@@ -21,6 +21,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 - `mb status` and `mb doctor` now surface incomplete onboarding progress so
   agents can resume setup without relying on the previous chat transcript.
+- New and repaired business repos now gitignore `.mb/onboarding.json`; use
+  `--path` for scripted `mb onboard` repo paths now that `onboard` also has
+  `status` and `plan` subcommands.
 
 ## [0.2.2] - 2026-05-03
 

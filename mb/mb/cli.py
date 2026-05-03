@@ -258,7 +258,7 @@ def onboard_cmd(
         help="Experience level: auto, beginner, intermediate, or power.",
     ),
     team_size: str = typer.Option(
-        "solo",
+        "unknown",
         "--team-size",
         help="Onboarding persona: solo, small-team, larger-team, or unknown.",
     ),
