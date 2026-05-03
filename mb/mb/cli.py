@@ -8,6 +8,7 @@ because that's the working pattern.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,7 @@ from typing import Any
 import typer
 
 from mb import __version__
+from mb import connect as connect_mod
 from mb import doctor as doctor_mod
 from mb import educational as educational_mod
 from mb import graph as graph_mod
@@ -54,6 +56,13 @@ migrate_app = typer.Typer(
     invoke_without_command=True,
 )
 app.add_typer(migrate_app, name="migrate")
+
+CONNECT_METADATA_OPTION = typer.Option(
+    [],
+    "--metadata",
+    "-m",
+    help="Non-sensitive provider metadata as key=value. Repeat as needed.",
+)
 
 
 def _version_callback(value: bool) -> None:
@@ -303,6 +312,118 @@ def doctor_cmd(
     else:
         doctor_mod.render_human(report)
     raise typer.Exit(0 if report["ok"] else 1)
+
+
+@app.command("connect")
+def connect_cmd(
+    target: str = typer.Argument(
+        "",
+        help="Provider to connect, or `list` / `status`.",
+    ),
+    repo: str = typer.Option(".", "--repo", help="Business repo whose metadata is updated."),
+    account_label: str = typer.Option("", "--account", "--label", help="Human account label."),
+    token: str = typer.Option(
+        "",
+        "--token",
+        help="Secret token or key. Prefer --token-stdin for real credentials.",
+    ),
+    token_stdin: bool = typer.Option(
+        False,
+        "--token-stdin",
+        help="Read the secret token or key from stdin.",
+    ),
+    from_env: bool = typer.Option(
+        False,
+        "--from-env",
+        help="Read the provider credential from a known environment variable.",
+    ),
+    metadata: list[str] = CONNECT_METADATA_OPTION,
+    all_providers: bool = typer.Option(
+        False,
+        "--all",
+        help="With `mb connect status`, include providers not connected yet.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Connect provider credentials without committing secrets."""
+    if not target:
+        result = connect_mod.list_providers(repo)
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            connect_mod.render_list(result)
+        raise typer.Exit(0)
+    if target == "list":
+        result = connect_mod.list_providers(repo)
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            connect_mod.render_list(result)
+        raise typer.Exit(0)
+    if target == "status":
+        result = connect_mod.status_all(repo, include_all=all_providers)
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            connect_mod.render_status(result)
+        raise typer.Exit(0 if result["ok"] else 1)
+
+    try:
+        provider_info = connect_mod.normalize_provider(target)
+    except ValueError as exc:
+        typer.echo(f"mb connect: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    secret_value = token
+    if token_stdin:
+        secret_value = connect_mod.read_stdin_token()
+    credential_source = "prompt" if not secret_value else "token"
+    consumed_env_var = ""
+    if token_stdin:
+        credential_source = "stdin"
+    if from_env and not secret_value and provider_info.required_secrets:
+        for env_var in provider_info.env_vars:
+            value = os.environ.get(env_var, "").strip()
+            if value:
+                secret_value = value
+                credential_source = "env"
+                consumed_env_var = env_var
+                break
+        if not secret_value:
+            names = ", ".join(provider_info.env_vars) or "(none registered)"
+            typer.echo(f"mb connect: no credential found in env vars: {names}", err=True)
+            raise typer.Exit(1)
+    if not secret_value and provider_info.required_secrets and sys.stdin.isatty():
+        secret_value = typer.prompt(
+            f"{provider_info.name} {provider_info.required_secrets[0]}",
+            hide_input=True,
+            default="",
+            show_default=False,
+        )
+
+    try:
+        result = connect_mod.connect_provider(
+            provider_info.id,
+            repo=repo,
+            token=secret_value,
+            account_label=account_label,
+            metadata_pairs=metadata,
+        )
+        result["credential_source"] = {
+            "type": credential_source if secret_value else "missing",
+            "env_var": consumed_env_var,
+        }
+    except ValueError as exc:
+        typer.echo(f"mb connect: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    except RuntimeError as exc:
+        typer.echo(f"mb connect: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        connect_mod.render_connect_result(result)
+    raise typer.Exit(0 if result["ok"] else 1)
 
 
 @app.command("status")

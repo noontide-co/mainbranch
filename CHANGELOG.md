@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added `mb connect` with a provider registry, `list` and `status` views,
+  explicit `--from-env` credential import, local secret storage outside git,
+  repo-safe `.mb/connect.yaml` metadata, and doctor/status integration health
+  reporting.
+
 ### Changed
 
 - Documented per-repo connected-account boundaries in the generated business
