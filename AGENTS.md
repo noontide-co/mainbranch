@@ -21,6 +21,67 @@ Paperclip-adjacent orchestration, and local runtimes are compatibility targets
 only when tested. Do not claim support before there is an adapter or smoke
 evidence.
 
+## Quick Start
+
+For normal repo validation:
+
+```bash
+scripts/check.sh
+```
+
+For focused CLI work:
+
+```bash
+cd mb
+pytest tests/test_<area>.py -q
+```
+
+For package/install changes:
+
+```bash
+(cd mb && python -m build)
+python -m venv /tmp/mainbranch-smoke
+/tmp/mainbranch-smoke/bin/pip install mb/dist/*.whl
+/tmp/mainbranch-smoke/bin/mb --version
+/tmp/mainbranch-smoke/bin/mb skill list
+```
+
+## Repository Layout
+
+```
+.
++-- AGENTS.md          # shared instructions for repo agents
++-- CLAUDE.md          # Claude Code adapter instructions
++-- README.md          # public user-facing entrypoint
++-- CHANGELOG.md       # public release truth
++-- CONTRIBUTING.md    # contributor workflow
++-- decisions/         # dated product/architecture decisions
++-- docs/              # setup, compatibility, PRDs, migration docs
++-- mb/                # Python package, CLI, tests, bundled data
++-- .claude/skills/    # bundled Claude Code skill source
++-- templates/         # files copied into created business repos
++-- tools/             # experimental helper tools
++-- scripts/           # repo-level validation helpers
+```
+
+## Repo Surfaces
+
+Changes may affect one or more public surfaces:
+
+- CLI behavior in `mb/mb/` and `mb/tests/`;
+- packaged data under `mb/mb/_data/`;
+- bundled skills under `.claude/skills/`;
+- business-repo scaffolding under `templates/` and `mb/mb/init.py`;
+- user docs in `README.md`, `docs/BEGINNER-SETUP.md`, `docs/MIGRATING.md`,
+  `SUPPORT.md`, and `docs/compatibility.md`;
+- contributor/agent docs in `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, and
+  `.github/`;
+- release surfaces in `CHANGELOG.md`, GitHub Releases, PyPI metadata, and
+  Linear Releases.
+
+Do not assume a change is "just docs" when it changes instructions that agents,
+skills, users, or release automation follow.
+
 ## Public / Private Boundary
 
 This repository is public. Every committed file should be safe for a stranger to
@@ -42,9 +103,11 @@ Do not commit:
 - private community operations, launch plans, or partner/customer strategy;
 - untested runtime compatibility claims.
 
-Use `.context/` for local scratch and handoff notes. It is gitignored and is not
-durable product truth. Durable truth belongs in code, tests, docs, decisions,
-fixtures, or GitHub issues.
+Use OS temp for throwaway build artifacts, scratch repos, and smoke-test output.
+Use `.context/` only for repo-bound handoff notes such as `cold-start.md` or
+branch-specific collaboration state. It is gitignored and is not durable product
+truth. Durable truth belongs in code, tests, docs, decisions, fixtures, or GitHub
+issues.
 
 ## Start Protocol
 
@@ -128,6 +191,27 @@ GitHub remains the public durable issue thread:
   for review;
 - keep target release and priority visible in `.context/cold-start.md` and PR
   bodies for release-bearing work.
+
+## Linear-Hosted Agents
+
+When launched from Linear or assigned a Linear issue:
+
+- treat the Linear issue as the task brief, but verify durable details in this
+  repository before editing;
+- use the official Linear branch name if the task runner provides it;
+- preserve the Linear ID in branch, commit, and PR metadata;
+- map Linear status honestly: move to started/in progress only when coding or
+  writing actually begins, and do not mark shipped until release verification
+  proves users can install it;
+- keep GitHub issue closure accurate with `Closes #N` only for fully completed
+  GitHub issues;
+- comment when scope changes, blockers appear, or validation cannot reach the
+  required level;
+- open a PR when the hosted-agent workflow expects it, but never merge it unless
+  explicitly instructed.
+
+Workspace-level Linear guidance should stay short and point agents back here.
+This file is the detailed contract.
 
 ## GitHub Workflow
 
@@ -235,6 +319,27 @@ Level 5, runtime smoke:
 If a runtime cannot be launched because of auth or UI constraints, say that
 explicitly and describe the closest verified fallback. Do not pretend CLI tests
 cover runtime discovery.
+
+## Skill Maintenance
+
+Bundled skills are product code even when implemented as Markdown.
+
+When changing `.claude/skills/<name>/`:
+
+- keep each skill directory self-contained;
+- reference `references/`, `scripts/`, and `assets/` using paths relative to the
+  skill directory;
+- do not reference sibling skills with `../` paths or absolute local paths;
+- keep shared helper content small enough to duplicate when two skills need it;
+- keep `SKILL.md` under the line-count gate and move detail into
+  `references/`;
+- avoid platform-specific shell interpolation in cross-runtime skill content
+  unless there is a documented fallback;
+- test behavior with the relevant runtime smoke when discovery or invocation
+  changes.
+
+Mechanical Python tests do not prove LLM-facing skill behavior. If the prose or
+workflow changed, include a runtime/manual validation note.
 
 ## State Model
 
