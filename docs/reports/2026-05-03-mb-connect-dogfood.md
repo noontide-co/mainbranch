@@ -57,7 +57,9 @@ Google, Postiz, Apify, or transcription. To test the explicit env import path
 without printing a secret, a locally available `gh` credential was used only as
 an opaque in-memory value in a disposable environment. This verified
 `--from-env`, storage, status, and leakage behavior. It did not validate Postiz
-or any provider API.
+or any provider API. Future dogfood should use a purpose-created disposable
+credential for this kind of opaque storage test, then rotate or delete that
+credential after the run.
 
 ## Results
 
@@ -130,6 +132,9 @@ Confusing or incomplete:
 - there is no `mb connect test` or `mb connect doctor` command;
 - GitHub is part of the real onboarding loop but not part of `mb connect`;
 - `mb status` summarizes integration counts but does not name broken providers;
+- it is not clear whether a missing connected-provider secret should leave
+  `mb doctor` at exit zero because the integration check is warning severity,
+  or whether credential repair should make doctor fail;
 - `mb connect status --json` exposes low-level secret refs that are safe but
   not useful repair copy for a beginner-facing agent;
 - missing GitHub repo context creates repeated degraded query errors instead of
