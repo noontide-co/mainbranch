@@ -76,8 +76,8 @@ start   think   vsl     wiki
 ```
 
 Most of these are aggressively generic English verbs and nouns. They are
-almost certain to be claimed by other plugin or skill authors over time, and
-several already conflict with extremely common patterns:
+almost certain to be claimed by other skill authors over time, and several
+already conflict with extremely common patterns:
 
 - `start`, `end`, `setup`, `pull`, `help` are session and lifecycle words
   that any onboarding, deployment, git-helper, or chat-bookend skill would
@@ -94,16 +94,16 @@ of Main Branch, or hand-written) silently overrides the project-local
 `.claude/skills/start` we wire from the business repo. This is documented
 behavior, not a bug. Issue [#234][issue-234] addresses the Main-Branch-vs-
 Main-Branch shadow case, but the collision surface is broader: a user can
-install any plugin or skill named `start` and lose Main Branch's `/start`
-without warning.
+install any personal or project skill named `start` and lose Main Branch's
+`/start` without warning.
 
 The same doc states: *"Plugin skills use a `plugin-name:skill-name`
 namespace, so they cannot conflict with other levels."* That is the only
 collision-proof mechanism Anthropic documents. Renaming bundled skills to
 something less generic (for example `mb-start`, `mb-end`) would reduce the
 collision surface inside the current symlink wiring, but it would not solve
-it: any third-party plugin can still ship a skill called `mb-start` if no
-namespace is enforced. Plugin packaging encodes the publisher in the
+it: any third-party personal or project skill can still choose the same name if
+no namespace is enforced. Plugin packaging encodes the publisher in the
 namespace by default.
 
 This is the strongest single argument for treating the Claude Code plugin
