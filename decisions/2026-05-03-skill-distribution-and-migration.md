@@ -338,41 +338,109 @@ Claude Code users is harder.
 behavior the v0.2.5 spike (#237) must verify. This section commits to
 the channel, not the keystroke count.
 
-### Open Research Questions Worth A Targeted Pass
+### External Research Findings (May 2026 pass)
 
-The following are concrete unknowns that would sharpen the v0.2.5 spike
-and the renaming decision. They are the right things to point a fresh,
-journalistic research pass at — including a search-heavy assistant such
-as Grok pulling in the last 1–2 weeks of Anthropic blog posts, GitHub
-discussions, and plugin-marketplace launch notes.
+A targeted research pass with a search-heavy assistant (Grok) returned
+findings on the five open questions above. The validation framing in
+that output was discounted — Grok has a known tendency to validate
+existing direction. The substantive primary-source claims are folded in
+below; the praise was set aside.
 
-1. **Slash-command resolution under plugins.** When a plugin named `mb`
-   ships a skill named `start`, does the user invoke `/mb:start` only, or
-   does Claude Code fall back to `/start` when no shadowing skill is
-   present? Compound Engineering's README documents `/ce-debug` for
-   plugin skills, which suggests a non-namespaced invocation works at
-   least sometimes — but the official docs say plugin skills use a
-   `<plugin>:<skill>` namespace. This contradiction needs primary-source
-   verification.
-2. **Slash aliases.** Has Anthropic added any documented mechanism for
-   one slash command to alias another, in any release in the last 6
-   months? If yes, it changes the renaming UX cost.
-3. **`npx skills@latest` install destination.** Plugin cache, personal
-   `~/.claude/skills/`, project `.claude/skills/`, or some Vercel-specific
-   path? Determines whether non-marketplace installers shadow plain
-   `/start`.
-4. **Plugin marketplace discoverability surfaces.** Where do Claude Code
-   users actually browse plugins today? `claude.ai/settings/plugins`?
-   `anthropics/claude-plugins-official`? Twitter/blog posts? The
-   `/plugin` slash command catalog? This determines how much exposure
-   actually flows from publishing.
-5. **Anthropic posture toward third-party installers.** Are plugins
-   meant to be the canonical channel, or is Anthropic neutral toward
-   alternatives like Vercel skills CLI and OpenClaw? Tone matters for
-   long-term bet stability.
+**Confirmed:**
 
-If a fresh research pass nails these, the v0.2.5 plugin spike turns into
-a confirmation exercise rather than an open-ended exploration.
+- **Slash aliases — none exist.** No documented user-facing alias
+  mechanism in the last 6+ months. Hardcoded built-in aliases only
+  (`/compact` → `/reset`/`/new`). Open feature requests (Anthropic
+  GitHub issues #14576 from late 2025 and #32785 from early 2026) are
+  unmerged. **Implication:** keeping `/start` working as a courtesy in
+  parallel with `/mb-start` or `/mb:start` is not a documented option
+  today. The renaming UX cost is real.
+- **`npx skills@latest` writes plain non-namespaced skills.** Default is
+  project scope `./.claude/skills/<name>/SKILL.md`; `-g` writes to
+  `~/.claude/skills/<name>/SKILL.md`. Both paths are exactly the
+  shadow-prone surfaces Claude Code's documented precedence covers, and
+  the `mattpocock-skills` install path lands in personal scope when
+  invoked globally. **Implication:** the Matt Pocock collision concern
+  earlier in this doc is sharpened, not softened: those installs do
+  produce plain `/start` invocations that shadow project-local Main
+  Branch skills under Anthropic's documented precedence rule.
+- **Plugin marketplace discoverability surfaces.** Primary in-app surface
+  is `/plugin` → Discover tab; primary public surface is
+  `https://claude.com/plugins` (tied to `anthropics/claude-plugins-official`).
+  Secondary community hubs reportedly include `buildwithclaude.com`,
+  `claudepluginhub.com`, and `claudemarketplaces.com`; verifying their
+  reach is not load-bearing for this decision. **Implication:**
+  publishing under `noontide-co/mainbranch` reaches the in-app Discover
+  surface only if the marketplace is added by the user (which `mb` can
+  automate). Reach into the official `claude-plugins-official` listing
+  is gated by Anthropic approval.
+- **Anthropic posture is pro-ecosystem for compatible tools.** Third-
+  party marketplaces are explicitly first-class via
+  `/plugin marketplace add`. The April 2026 access restrictions Anthropic
+  shipped targeted non-official "harnesses" that bypass the Claude Code
+  binary, not plugins, skills, or MCP servers. **Implication:** Main
+  Branch positioned as a CLI plus a plugin/skill bundle is on the safe
+  side of Anthropic's policy stance; positioning it as a Claude Code
+  replacement would not be.
+
+**Still contradictory:**
+
+- **Slash-command resolution under plugins.** Anthropic's skills doc
+  states plugin skills require `plugin-name:skill-name` invocation and
+  do not fall back to non-namespaced `/start`. Compound Engineering's
+  README and CHANGELOG both document and use bare `/ce-debug`,
+  `/ce-plan`, `/ce-strategy` (verified locally at
+  `/Users/devonmeadows/Documents/GitHub/compound-engineering-plugin/README.md`
+  lines 16–75 and `CHANGELOG.md`). The external research suggests this
+  works because the *skill name itself* is `ce-debug`, not because of a
+  namespace fallback — meaning Compound is using the plugin shape only
+  as a distribution wrapper, while the actual invocation depends on the
+  prefix being baked into the skill name. That interpretation is
+  plausible but is not directly confirmed by Anthropic's docs. **The
+  v0.2.5 plugin spike (#237) must produce smoke evidence that resolves
+  this directly**: install a plugin that ships a skill named `start`,
+  verify whether `/start` or only `/mb:start` works, and verify whether
+  a skill named `mb-start` inside the same plugin is invoked as
+  `/mb-start` or `/mb:mb-start`. Treat any other interpretation as
+  unverified.
+
+**Flagged but not load-bearing:**
+
+- An "Open Agent Skills standard" reportedly published under
+  Linux-Foundation alignment in late 2025, claimed as portable across
+  Claude Code, Codex, Cursor, Gemini CLI, OpenCode, Windsurf, and GitHub
+  Copilot. This was not verified against primary sources in this pass.
+  If true it is meaningful for the runtime-adapter contract (#238) — it
+  would make Main Branch's existing `SKILL.md` plus YAML frontmatter
+  format runtime-portable for free. The adapter contract decision should
+  verify the standard exists and inspect the canonical spec before
+  claiming portability in compatibility docs.
+- A reported market shift from "install everything" toward curation and
+  quality filtering ("install fatigue") was mentioned in the external
+  research. It is consistent with what shows up in the local peer-repo
+  survey (Compound's CI prefix gate, PAI's vendor prefix, get-shit-done's
+  parent prefix) but is sentiment, not evidence. It does not change the
+  decision; it only sharpens the framing that a vendor-prefix lint and
+  collision-aware migration are the kinds of quality signals operators
+  are asking for.
+
+**Net effect on the recommendation.** The findings tighten three things
+without changing the sequence:
+
+1. The renaming question shifts from "decide before plugin spike" to
+   "decide alongside plugin spike," because the resolution behavior
+   determines whether the prefix lives on the skill name (Compound
+   pattern, `/mb-start`) or only in the plugin namespace (Anthropic-doc
+   pattern, `/mb:start`). Both produce roughly the same UX cost. The
+   spike answers which form is canonical.
+2. The `mattpocock-skills` shadow case is now confirmed concrete: their
+   global install does land in `~/.claude/skills/`, and Claude Code's
+   precedence rule does shadow project-local same-named skills. This
+   moves shadow detection from "good hygiene" to "table stakes for
+   shipping the plugin path."
+3. Positioning Main Branch as a CLI plus plugin/skill bundle is
+   long-term stable on Anthropic's policy stance. Positioning as a
+   competing harness is not. Stay in the plugin lane.
 
 ### Current Main Branch Behavior
 
