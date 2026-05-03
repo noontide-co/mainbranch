@@ -508,10 +508,10 @@ def graph_cmd(
     json_out: bool = typer.Option(False, "--json", help="Emit the machine-readable graph index."),
 ) -> None:
     """Build the repo graph index; emit DOT by default or JSON with --json."""
+    if json_out and open_after:
+        raise typer.BadParameter("--open cannot be combined with --json")
     index = graph_mod.build_index(path=path)
     if json_out:
-        if open_after:
-            raise typer.BadParameter("--open cannot be combined with --json")
         typer.echo(json.dumps(index, indent=2))
         return
     dot = graph_mod.index_to_dot(index)

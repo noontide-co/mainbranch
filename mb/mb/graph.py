@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 import yaml
 
 INDEX_VERSION = 1
+EdgeKey = tuple[str, str, str, tuple[tuple[str, str], ...]]
 
 LINK_FIELDS = (
     "linked_research",
@@ -189,20 +190,24 @@ def _add_node(nodes: dict[str, dict[str, Any]], node: dict[str, Any]) -> None:
 
 def _add_edge(
     edges: list[dict[str, Any]],
+    seen_edges: set[EdgeKey],
     *,
     source: str,
     target: str,
     edge_type: str,
     evidence: dict[str, str],
 ) -> None:
+    key = (source, target, edge_type, tuple(sorted(evidence.items())))
+    if key in seen_edges:
+        return
+    seen_edges.add(key)
     edge = {
         "source": source,
         "target": target,
         "type": edge_type,
         "evidence": evidence,
     }
-    if edge not in edges:
-        edges.append(edge)
+    edges.append(edge)
 
 
 def _frontmatter_summary(frontmatter: dict[str, Any]) -> dict[str, Any]:
@@ -271,12 +276,27 @@ def _add_reference_edge(
     repo: Path,
     nodes: dict[str, dict[str, Any]],
     edges: list[dict[str, Any]],
+    seen_edges: set[EdgeKey],
     source_id: str,
     ref: str,
     edge_type: str,
     evidence: dict[str, str],
 ) -> None:
-    if _is_external_ref(ref):
+    target = _resolve_repo_ref(repo, ref)
+    if target is not None and target.exists():
+        target_id = _file_id(target, repo)
+        if target_id not in nodes:
+            _add_node(
+                nodes,
+                {
+                    "id": target_id,
+                    "type": "file",
+                    "label": target.relative_to(repo).as_posix(),
+                    "path": target.relative_to(repo).as_posix(),
+                    "metadata": {},
+                },
+            )
+    elif _is_external_ref(ref):
         target_id = _external_id(ref)
         _add_node(
             nodes,
@@ -288,32 +308,24 @@ def _add_reference_edge(
             },
         )
     else:
-        target = _resolve_repo_ref(repo, ref)
-        if target is not None and target.exists():
-            target_id = _file_id(target, repo)
-            if target_id not in nodes:
-                _add_node(
-                    nodes,
-                    {
-                        "id": target_id,
-                        "type": "file",
-                        "label": target.relative_to(repo).as_posix(),
-                        "path": target.relative_to(repo).as_posix(),
-                        "metadata": {},
-                    },
-                )
-        else:
-            target_id = f"missing:{_slug(ref)}"
-            _add_node(
-                nodes,
-                {
-                    "id": target_id,
-                    "type": "missing",
-                    "label": ref,
-                    "metadata": {"ref": ref},
-                },
-            )
-    _add_edge(edges, source=source_id, target=target_id, edge_type=edge_type, evidence=evidence)
+        target_id = f"missing:{_slug(ref)}"
+        _add_node(
+            nodes,
+            {
+                "id": target_id,
+                "type": "missing",
+                "label": ref,
+                "metadata": {"ref": ref},
+            },
+        )
+    _add_edge(
+        edges,
+        seen_edges,
+        source=source_id,
+        target=target_id,
+        edge_type=edge_type,
+        evidence=evidence,
+    )
 
 
 def _iter_entity_values(frontmatter: dict[str, Any], body: str) -> list[tuple[str, str, str]]:
@@ -340,6 +352,7 @@ def build_index(path: str) -> dict[str, Any]:
     repo = Path(path).resolve()
     nodes: dict[str, dict[str, Any]] = {}
     edges: list[dict[str, Any]] = []
+    seen_edges: set[EdgeKey] = set()
     files = _iter_markdown_files(repo) if repo.exists() else []
     files_by_stem: dict[str, list[Path]] = {}
     files_by_rel: dict[str, Path] = {}
@@ -382,6 +395,7 @@ def build_index(path: str) -> dict[str, Any]:
                     repo=repo,
                     nodes=nodes,
                     edges=edges,
+                    seen_edges=seen_edges,
                     source_id=source_id,
                     ref=ref,
                     edge_type=field,
@@ -412,6 +426,7 @@ def build_index(path: str) -> dict[str, Any]:
                 target_id = _file_id(resolved, repo)
             _add_edge(
                 edges,
+                seen_edges,
                 source=source_id,
                 target=target_id,
                 edge_type="wikilink",
@@ -431,6 +446,7 @@ def build_index(path: str) -> dict[str, Any]:
             )
             _add_edge(
                 edges,
+                seen_edges,
                 source=source_id,
                 target=target_id,
                 edge_type="mentions",

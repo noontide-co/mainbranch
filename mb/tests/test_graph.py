@@ -98,3 +98,47 @@ def test_graph_json_rejects_open_flag(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "--open cannot be combined with --json" in result.output
+
+
+def test_existing_repo_paths_are_not_marked_external_by_root_heuristic(tmp_path: Path) -> None:
+    decisions = tmp_path / "decisions"
+    nested = tmp_path / "tools" / "research"
+    decisions.mkdir()
+    nested.mkdir(parents=True)
+    (nested / "notes.md").write_text("---\ntitle: Tool Notes\n---\n", encoding="utf-8")
+    (decisions / "decision.md").write_text(
+        "---\ntitle: Decision\nstatus: accepted\n"
+        "linked_research:\n  - tools/research/notes.md\n---\n",
+        encoding="utf-8",
+    )
+
+    index = build_index(path=str(tmp_path))
+
+    assert any(node["id"] == "file:tools/research/notes.md" for node in index["nodes"])
+    assert not any(node["id"] == "external:tools-research-notes-md" for node in index["nodes"])
+    assert any(
+        edge["source"] == "file:decisions/decision.md"
+        and edge["target"] == "file:tools/research/notes.md"
+        and edge["type"] == "linked_research"
+        for edge in index["edges"]
+    )
+
+
+def test_duplicate_entity_mentions_are_deduped(tmp_path: Path) -> None:
+    research = tmp_path / "research"
+    research.mkdir()
+    (research / "audience.md").write_text(
+        "---\ntitle: Audience\n---\n#channel/github appears twice: #channel/github\n",
+        encoding="utf-8",
+    )
+
+    index = build_index(path=str(tmp_path))
+    channel_edges = [
+        edge
+        for edge in index["edges"]
+        if edge["source"] == "file:research/audience.md"
+        and edge["target"] == "channel:github"
+        and edge["type"] == "mentions"
+    ]
+
+    assert len(channel_edges) == 1
