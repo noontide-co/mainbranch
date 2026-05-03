@@ -139,6 +139,23 @@ def test_connect_status_reports_missing_secret_as_repair_not_hard_crash(
     assert status_payload["providers"][0]["secrets"]["access_token"]["present"] is False
 
 
+def test_connect_status_tolerates_malformed_config_version(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    (repo / ".mb").mkdir()
+    (repo / ".mb" / "connect.yaml").write_text(
+        "version: not-a-number\nproviders: []\n",
+        encoding="utf-8",
+    )
+
+    status = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+
+    assert status.exit_code == 0
+    status_payload = json.loads(status.stdout)
+    assert status_payload["summary"]["configured"] == 0
+
+
 def test_doctor_and_status_include_integration_state(tmp_path: Path, monkeypatch) -> None:
     _local_secret_env(monkeypatch, tmp_path)
     repo = tmp_path / "biz"

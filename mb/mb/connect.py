@@ -176,8 +176,12 @@ def _read_config(repo: Path) -> dict[str, Any]:
     providers = raw.get("providers")
     if not isinstance(providers, dict):
         providers = {}
+    try:
+        version = int(raw.get("version") or 1)
+    except (TypeError, ValueError):
+        version = 1
     return {
-        "version": int(raw.get("version") or 1),
+        "version": version,
         "repo_id": str(raw.get("repo_id") or ""),
         "providers": providers,
     }
