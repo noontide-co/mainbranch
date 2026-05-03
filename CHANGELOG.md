@@ -16,6 +16,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added `.mb/onboarding.json` as the lightweight onboarding progress contract,
   plus `mb onboard status` and `mb onboard plan` for human and JSON resume
   surfaces.
+- Added `mb graph --json` as a deterministic repo graph index for files,
+  frontmatter links, wikilinks, and first-class people, companies, offers,
+  channels, competitors, and metrics entity nodes while keeping DOT output as
+  the default scriptable view.
+- Added `docs/OSS-OPERATING-CHECKLIST.md` as a public checklist for
+  Main Branch product-boundary, release-readiness, runtime-claim,
+  public/private, state-model, and issue/PR discipline, and linked it from
+  agent and contributor docs.
 
 ### Changed
 

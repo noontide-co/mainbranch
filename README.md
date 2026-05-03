@@ -151,7 +151,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
 | `mb connect` | Register provider credentials and integration metadata without committing secrets. |
 | `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
-| `mb graph` | Walk the link graph (`linked_research` / `linked_decisions` / `supersedes`) and emit Graphviz DOT. `--open` renders to PNG and opens it. |
+| `mb graph` | Build a repo graph index from frontmatter links, wikilinks, and entity tags. Emits Graphviz DOT by default, `--json` for agents/dashboards, and `--open` to render a PNG view. |
 | `mb think <topic>` | Print the `/think` invocation hint. Run inside Claude Code for the full flow. |
 | `mb resolve <key>` | Resolve a reference path (checks free first, then paid). |
 | `mb educational <topic>` | Print an educational triage file (powers `mb doctor`'s "tell me more" prompts). |

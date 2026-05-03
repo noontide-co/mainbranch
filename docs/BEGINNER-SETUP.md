@@ -163,7 +163,7 @@ do not need to move files immediately.
 | `mb doctor` | Check that everything is set up correctly. Walks you through fixes. |
 | `mb skill link --repo .` | Repair Claude Code skill discovery if `/start` doesn't show up. |
 | `mb validate` | Check your reference files have correct frontmatter. |
-| `mb graph` | Visualize the link graph between research and decisions. |
+| `mb graph` | Visualize or export the graph of files, links, wikilinks, and business entity tags. |
 | `mb skill list` | Show which skills your installed Main Branch ships. |
 
 For the full list: `mb --help`.
