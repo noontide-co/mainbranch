@@ -4,6 +4,11 @@ Main Branch is a public repo. Anyone can read it; not everyone is wired in to th
 
 These rules are **tool-agnostic.** Conductor users, Codex users, Cursor users, and direct CLI contributors all follow the same shape — the rules describe the work, not the editor.
 
+For changes that could affect public product shape, release discipline, runtime
+claims, contributor workflow, or public/private boundaries, use
+[docs/OSS-OPERATING-CHECKLIST.md](docs/OSS-OPERATING-CHECKLIST.md) during cold
+start and review.
+
 ---
 
 ## Branch + PR shape
@@ -120,6 +125,11 @@ PR reviews use this shape:
 - Severity tag: HIGH / MEDIUM / LOW
 - MUST FIX (blocks merge) vs SUGGESTIONS (nice-to-have, fine as follow-ups) — separated
 - Verdict at end: APPROVE / REQUEST CHANGES (with must-fix count) / NEEDS DISCUSSION
+
+Reviewers should also apply the
+[Main Branch OSS operating checklist](docs/OSS-OPERATING-CHECKLIST.md) when a PR
+touches product boundaries, runtime claims, release readiness, state model,
+GitHub/Linear workflow, or public/private content.
 
 ---
 

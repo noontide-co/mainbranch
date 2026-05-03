@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added `docs/OSS-OPERATING-CHECKLIST.md` as a public checklist for
+  Main Branch product-boundary, release-readiness, runtime-claim,
+  public/private, state-model, and issue/PR discipline, and linked it from
+  agent and contributor docs.
+
 ## [0.2.2] - 2026-05-03
 
 v0.2.2 turns the v0.2 command surface into a better operating foundation. It

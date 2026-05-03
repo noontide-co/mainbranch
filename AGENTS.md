@@ -56,7 +56,7 @@ python -m venv /tmp/mainbranch-smoke
 +-- CHANGELOG.md       # public release truth
 +-- CONTRIBUTING.md    # contributor workflow
 +-- decisions/         # dated product/architecture decisions
-+-- docs/              # setup, compatibility, PRDs, migration docs
++-- docs/              # setup, compatibility, PRDs, checklists, migration docs
 +-- mb/                # Python package, CLI, tests, bundled data
 +-- .claude/skills/    # bundled Claude Code skill source
 +-- templates/         # files copied into created business repos
@@ -116,16 +116,19 @@ Before editing:
 1. Read this file.
 2. Read `README.md`.
 3. Read the assigned GitHub/Linear issue and all comments.
-4. If the work touches v0.2 product direction, read:
+4. If the work touches public product shape, release discipline, runtime claims,
+   contributor workflow, or public/private boundaries, apply
+   `docs/OSS-OPERATING-CHECKLIST.md`.
+5. If the work touches v0.2 product direction, read:
    - `decisions/2026-05-02-github-native-business-os.md`
    - `docs/prd/v0-2-first-run-daily-briefing.md`
    - `docs/prd/v0-2-agent-workflow-and-evals.md`
-5. If the work touches the CLI/runtime boundary, read:
+6. If the work touches the CLI/runtime boundary, read:
    - `decisions/2026-05-01-mb-cli-vs-agent-workflows-boundary.md`
    - `docs/compatibility.md`
-6. If the work touches skills, inspect the relevant
+7. If the work touches skills, inspect the relevant
    `.claude/skills/<name>/SKILL.md` and nearby tests or fixtures.
-7. Check open PRs for overlapping files before making broad edits.
+8. Check open PRs for overlapping files before making broad edits.
 
 For substantial branches, write `.context/cold-start.md` before editing:
 
@@ -369,6 +372,7 @@ workflow changes. Skip it only for invisible maintenance.
 
 When reviewing, lead with findings:
 
+- public operating checklist in `docs/OSS-OPERATING-CHECKLIST.md`;
 - public/private boundary;
 - product direction;
 - state model;
