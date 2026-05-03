@@ -505,9 +505,16 @@ def validate_cmd(
 def graph_cmd(
     path: str = typer.Argument(".", help="Repo to graph."),
     open_after: bool = typer.Option(False, "--open", help="Render to PNG and open."),
+    json_out: bool = typer.Option(False, "--json", help="Emit the machine-readable graph index."),
 ) -> None:
-    """Walk linked_research / linked_decisions / supersedes; emit Graphviz DOT."""
-    dot = graph_mod.build_dot(path=path)
+    """Build the repo graph index; emit DOT by default or JSON with --json."""
+    index = graph_mod.build_index(path=path)
+    if json_out:
+        if open_after:
+            raise typer.BadParameter("--open cannot be combined with --json")
+        typer.echo(json.dumps(index, indent=2))
+        return
+    dot = graph_mod.index_to_dot(index)
     if open_after:
         graph_mod.open_dot(dot)
     else:

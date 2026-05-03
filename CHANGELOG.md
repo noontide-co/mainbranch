@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added `mb graph --json` as a deterministic repo graph index for files,
+  frontmatter links, wikilinks, and first-class people, companies, offers,
+  channels, competitors, and metrics entity nodes while keeping DOT output as
+  the default scriptable view.
+
 ## [0.2.2] - 2026-05-03
 
 v0.2.2 turns the v0.2 command surface into a better operating foundation. It
