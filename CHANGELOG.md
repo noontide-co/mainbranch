@@ -14,9 +14,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 ### Changed
 
 - Documented per-repo connected-account boundaries in the generated business
-  `CLAUDE.md`, README, and `mb init` output so users keep Stripe, ads, pixels,
-  and MCP tool access tethered to the active business repo without committing
-  secrets.
+  `CLAUDE.md`, README, `mb init`, and `mb onboard` output so users keep Stripe,
+  ads, pixels, and MCP tool access tethered to the active business repo without
+  committing secrets.
 
 ## [0.2.1] - 2026-05-02
 
