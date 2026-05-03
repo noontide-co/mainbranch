@@ -181,7 +181,7 @@ by the issue or task runner. Preserve Linear IDs in branch names, commit
 messages, and PR metadata so Linear Releases can attach work correctly.
 
 If no Linear issue exists, use a short concrete branch name such as
-`dmthepm/status-briefing` or `dmthepm/runtime-smoke`.
+`<gh-username>/status-briefing` or `<gh-username>/runtime-smoke`.
 
 GitHub remains the public durable issue thread:
 
