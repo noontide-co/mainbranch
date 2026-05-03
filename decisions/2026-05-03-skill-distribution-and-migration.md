@@ -16,6 +16,21 @@ tags: [v0-2, skills, runtime-adapters, claude-code, migration, decision]
 
 ## Decision
 
+**Architecture at a Glance**
+
+- **Portable Core**: Workflows defined as `SKILL.md` files. Cross-runtime
+  portability via the emerging open Skills standard is a roadmap target,
+  not a guarantee, until verified per #238.
+- **Primary Distribution (Claude Code)**: Official plugin package via
+  Anthropic marketplace — namespaced, discoverable, versioned.
+- **Short-Term Bridge**: Project-local symlinks plus
+  `additionalDirectories` with mandatory shadow detection and
+  noob-safe migration.
+- **Orchestration Layer**: `mb` CLI as the user-facing entry point and
+  runtime-agnostic orchestrator.
+- **Quality Layer**: `mb-` vendor prefix plus automated lint plus
+  explicit collision and shadow protection.
+
 Main Branch should ship the **migration and shadow-detection repair path first**,
 keep the current project-local Claude Code wiring as the short-term supported
 adapter, and design an official Claude Code plugin package as the likely durable
