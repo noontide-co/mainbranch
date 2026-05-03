@@ -35,7 +35,14 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert ".claude/settings.local.json" in gitignore
     assert ".claude/skills/start" in gitignore
     assert ".mb/backups/" in gitignore
-    assert "Acme Brewing" in (target / "CLAUDE.md").read_text()
+    claude_md = (target / "CLAUDE.md").read_text()
+    assert "Acme Brewing" in claude_md
+    assert "## Connected accounts" in claude_md
+    assert "Stripe account IDs" in claude_md
+    assert "Google Ads customer IDs" in claude_md
+    assert "MCP server names" in claude_md
+    assert "MCP tokens" in claude_md
+    assert "Never commit API keys" in claude_md
 
 
 def test_init_idempotent(tmp_path: Path) -> None:

@@ -231,6 +231,24 @@ Your business as files. Claude reads these; you edit them; git remembers them.
 - Status field: proposed | running | scaling | killed | graduated | died.
 - One owner per file (CODEOWNERS pattern).
 
+## Connected accounts
+
+Treat this repo as the boundary for connected business tools. When you switch
+business repos, switch the accounts, tokens, and MCP servers that can act on
+that business.
+
+Keep non-secret IDs in repo files when they help agents choose the right
+account: Stripe account/product/price IDs in `core/offers/<offer>/stripe.md`,
+Google Ads customer and campaign IDs in `campaigns/`, ad pixel IDs beside the
+site or campaign files they belong to, and MCP server names/scopes in local
+setup notes.
+
+Never commit API keys, OAuth refresh tokens, service-account JSON, webhook
+secrets, MCP tokens, or bearer tokens. Put secrets in a runtime local config,
+OS keychain, 1Password, `.env`, or `.claude/settings.local.json`; those files
+should stay gitignored. If a tool can spend money, publish, email, or mutate a
+customer account, verify it is tethered to this repo before using it.
+
 ## Helpful commands
 
 ```

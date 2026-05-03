@@ -18,6 +18,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   repo-safe `.mb/connect.yaml` metadata, and doctor/status integration health
   reporting.
 
+### Changed
+
+- Documented per-repo connected-account boundaries in the generated business
+  `CLAUDE.md`, README, `mb init`, and `mb onboard` output so users keep Stripe,
+  ads, pixels, and MCP tool access tethered to the active business repo without
+  committing secrets.
+
 ## [0.2.1] - 2026-05-02
 
 v0.2.1 is the first post-0.2 durability release. It makes the new CLI front
