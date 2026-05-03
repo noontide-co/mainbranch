@@ -49,7 +49,7 @@ jobs:
         run: pytest tests/ -v --cov=mb --cov-report=term-missing --cov-fail-under=70
 
   skill-validate:
-    name: Bundled skill validation
+    name: SKILL.md line-count gate
     runs-on: ubuntu-latest
     defaults:
       run:
