@@ -1,6 +1,6 @@
 # VIP Path Resolution
 
-Canonical resolver for locating the mb-vip engine repo from a Claude Code session running inside a business repo. Used by `/start`, `/pull`, `/setup`, `/help` (troubleshooting), and any reference file that needs to read or pull engine-side files.
+Canonical resolver for locating the Main Branch engine repo from a Claude Code session running inside a business repo. Used by `/start`, `/pull`, `/setup`, `/help` (troubleshooting), and any reference file that needs to read or pull engine-side files.
 
 **Single source of truth.** Other reference files MUST link here rather than inline the snippet — the resolver semantics (and the order of fallbacks) need to stay in lockstep across the engine, and inline copies drift.
 
@@ -43,7 +43,7 @@ except: print('')
 fi
 ```
 
-After this block, `$VIP_PATH` is either a valid path to the mb-vip checkout or empty.
+After this block, `$VIP_PATH` is either a valid path to the Main Branch engine checkout or empty.
 
 **Always validate before use:**
 
