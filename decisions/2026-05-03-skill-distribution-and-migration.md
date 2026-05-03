@@ -1,7 +1,7 @@
 ---
 type: decision
 date: 2026-05-03
-status: proposed
+status: accepted
 topic: Skill distribution and runtime migration model
 linked_issues:
   - https://github.com/noontide-co/mainbranch/issues/236
@@ -260,8 +260,11 @@ What is honestly unknown:
   against. The plugin spike (#237) should produce smoke evidence on this
   before we decide whether to keep `/start` as a courtesy.
 - **Where third-party non-marketplace installers (`npx skills add`,
-  similar) actually write files.** Verified during the plugin spike, not
-  before.
+  similar) actually write files.** Subsequently confirmed: the dominant
+  Vercel-labs `npx skills@latest` installer writes plain non-namespaced
+  skills to project `./.claude/skills/<name>/SKILL.md` (default) or
+  `~/.claude/skills/<name>/SKILL.md` (`-g`). See the External Research
+  Findings section below for the resolved evidence.
 
 Open questions tied to renaming:
 
@@ -279,7 +282,7 @@ choice for users who never branch out beyond Main Branch's bundled skills,
 and it is also the riskiest choice for the moment a user installs anything
 else. The product north star ("make this easy for new people") points at
 keeping the bare command. The collision evidence ("real third-party skills
-named `triage`, `setup-pre-commit`, `tdd` already exist on this machine")
+named `triage`, `setup-pre-commit`, `tdd` already exist in public skill repos")
 points at the prefix. The plugin spike (#237) is the right place to
 resolve the tension because it is the only way to know whether a slash
 alias rescues both goals at once.
@@ -307,9 +310,12 @@ trust signal, and namespacing all come for free.
 **Vercel's `npx skills@latest` CLI.** A generic agent-skills installer
 that targets multiple coding agents from a git repo containing a
 `.claude-plugin/plugin.json` plus a skills folder. It is one of several
-third-party installers in this space; it is not Anthropic infrastructure
-and the destination behavior was not verified in this research pass.
-Recommendation: **be compatible, do not depend on.** If Main Branch ships
+third-party installers in this space; it is not Anthropic infrastructure.
+Per Vercel-labs's public docs, default install writes to project
+`./.claude/skills/`; `-g` writes to personal `~/.claude/skills/`. Both
+land as plain non-namespaced skills that participate in Claude Code's
+documented precedence, which means a `-g` install can shadow a project-
+local same-named skill. Recommendation: **be compatible, do not depend on.** If Main Branch ships
 a clean plugin manifest, third-party installers that read that manifest
 will work as a side benefit. We do not need to add an `npx mainbranch-skills`
 shim — we already have `mb`. Two installer surfaces would split the
@@ -421,15 +427,20 @@ below; the praise was set aside.
 
 **Flagged but not load-bearing:**
 
-- An "Open Agent Skills standard" reportedly published under
-  Linux-Foundation alignment in late 2025, claimed as portable across
-  Claude Code, Codex, Cursor, Gemini CLI, OpenCode, Windsurf, and GitHub
-  Copilot. This was not verified against primary sources in this pass.
-  If true it is meaningful for the runtime-adapter contract (#238) — it
-  would make Main Branch's existing `SKILL.md` plus YAML frontmatter
-  format runtime-portable for free. The adapter contract decision should
-  verify the standard exists and inspect the canonical spec before
-  claiming portability in compatibility docs.
+- An "Open Agent Skills standard" referenced as the shared `SKILL.md` +
+  YAML frontmatter format that both Anthropic's Claude Code skills doc
+  and OpenAI's Codex skills doc cite as "the open agent skills standard"
+  Codex / Claude Code skills build on. The standard's existence as a
+  shared format is therefore first-party from at least two runtime
+  vendors and is not the part flagged for verification. What remains
+  unverified in this pass is (a) Linux-Foundation alignment specifically,
+  (b) the exact portability guarantees the standard makes about
+  cross-runtime invocation, scoping, or update behavior, and (c) which
+  other runtimes (Cursor, Gemini CLI, OpenCode, Windsurf, GitHub Copilot,
+  etc.) fully implement it versus loosely consume `SKILL.md` files.
+  Those three sub-questions belong to the runtime-adapter contract
+  (#238) and should be answered before any compatibility doc claims a
+  given non-Claude runtime is portable for free.
 - A reported market shift from "install everything" toward curation and
   quality filtering ("install fatigue") was mentioned in the external
   research. It is consistent with what shows up in the local peer-repo
@@ -766,12 +777,13 @@ Concrete follow-ups should be separate from this decision:
    first runtime adapter contract document or JSON shape before adding Codex,
    Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, or local runtime
    behavior.
-4. **New (file separately):** decide and execute bundled-skill renaming to a
-   vendor prefix (likely `mb-`) before the #237 plugin spike. Include a
-   slash-alias smoke if Claude Code supports it; otherwise document the
-   one-time UX change. Pattern reference: Compound Engineering's CI-enforced
-   `ce-` prefix.
-5. **New (file separately):** add bundled-skill-name lint to `mb` so future
-   skills cannot ship without the chosen prefix (mirrors Compound
-   Engineering's "test: enforce ce- prefix on skills and agents" gate).
+4. Implement [#240](https://github.com/noontide-co/mainbranch/issues/240):
+   rename bundled skills to a `mb-` vendor prefix alongside the #237
+   plugin spike. Include a slash-alias smoke if Claude Code supports it;
+   otherwise document the one-time UX change. Pattern reference:
+   Compound Engineering's CI-enforced `ce-` prefix.
+5. Implement [#241](https://github.com/noontide-co/mainbranch/issues/241):
+   add bundled-skill-name lint to `mb` so future skills cannot ship
+   without the chosen prefix (mirrors Compound Engineering's "test:
+   enforce ce- prefix on skills and agents" gate).
 6. Update compatibility docs only after adapter smoke changes what is supported.
