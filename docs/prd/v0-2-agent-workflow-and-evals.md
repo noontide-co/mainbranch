@@ -79,12 +79,13 @@ silently. If you find adjacent work, open or comment on a follow-up issue.
 
 ## Start Here
 
-1. Read `CLAUDE.md`.
-2. Read `decisions/2026-05-02-github-native-business-os.md`.
-3. Read `docs/prd/v0-2-first-run-daily-briefing.md`.
-4. Read `docs/prd/v0-2-agent-workflow-and-evals.md`.
-5. Read the assigned GitHub issue and all comments.
-6. Check open PRs that may touch the same files.
+1. Read `AGENTS.md`.
+2. Read runtime-specific instructions if present (`CLAUDE.md` for Claude Code).
+3. Read `decisions/2026-05-02-github-native-business-os.md`.
+4. Read `docs/prd/v0-2-first-run-daily-briefing.md`.
+5. Read `docs/prd/v0-2-agent-workflow-and-evals.md`.
+6. Read the assigned GitHub or Linear issue and all comments.
+7. Check open PRs that may touch the same files.
 
 ## North Star
 
@@ -146,7 +147,8 @@ Status:
 
 ## Read
 
-- [ ] CLAUDE.md
+- [ ] AGENTS.md
+- [ ] Runtime-specific instructions if present
 - [ ] Business OS decision
 - [ ] v0.2 PRD
 - [ ] Assigned issue/comments
@@ -317,9 +319,9 @@ Use for packaging, bundled skills, update, skill-linking, or first-run changes.
 Required:
 
 ```bash
-python -m build
+(cd mb && python -m build)
 python -m venv /tmp/mainbranch-smoke
-/tmp/mainbranch-smoke/bin/pip install dist/*.whl
+/tmp/mainbranch-smoke/bin/pip install mb/dist/*.whl
 /tmp/mainbranch-smoke/bin/mb --version
 /tmp/mainbranch-smoke/bin/mb skill list
 ```

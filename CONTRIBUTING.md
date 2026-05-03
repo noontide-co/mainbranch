@@ -10,9 +10,15 @@ These rules are **tool-agnostic.** Conductor users, Codex users, Cursor users, a
 
 **One workspace = one branch = one PR.** Hard rule. Cross-cutting work that "feels obvious" gets flagged and stopped. Never reuse a branch.
 
-**Branch convention** (current — Linear sync OFF): `<gh-username>/<short-descriptor>`. Descriptor is kebab-case, under 40 chars, no leading verbs (`fix-`, `add-`).
+**Branch convention:** if a Linear issue exists, use Linear's official branch
+name so Linear Releases can attach the work. Otherwise use
+`<gh-username>/<short-descriptor>`. Descriptor is kebab-case, under 40 chars,
+and concrete.
 
-**PR titles** use Conventional Commits: `feat(scope): ...`, `fix(scope): ...`, `docs: ...`, `test: ...`, `refactor: ...`, `chore: ...`, `ci: ...`. Breaking changes append `!` and a `BREAKING CHANGE:` footer.
+**PR titles** use this repo's bracketed vocabulary when useful:
+`[add]`, `[update]`, `[fix]`, `[remove]`, `[refactor]`, `[docs]`, or
+`[chore]`. Keep titles product-shaped, for example
+`[add] mb status daily briefing`.
 
 ---
 
@@ -22,29 +28,31 @@ Each commit body bullet-lists changes in THAT commit. A reviewer reading `git lo
 
 | Commit type | What goes in it |
 |---|---|
-| `feat(scope): ...` | Core behavior change |
-| `test(scope): ...` | Tests for new behavior (combine with feat if small) |
-| `docs: ...` | README, SPEC, SCHEMA, SKILL.md, CHANGELOG, examples |
-| `ci: ...` | Workflow edits, gate additions |
-| `chore(scope): ...` | Dep bumps, package metadata, mechanical renames |
-| `refactor(scope): ...` | Non-behavioral moves |
-| `fix(scope): ...` | Bug fixes mid-work |
+| `[add] ...` | New command, skill, docs surface, or capability |
+| `[update] ...` | Existing behavior or docs changed |
+| `[fix] ...` | Bug fix |
+| `[remove] ...` | Deleted stale behavior, docs, or metadata |
+| `[refactor] ...` | Non-behavioral code movement |
+| `[docs] ...` | Documentation-only change |
+| `[chore] ...` | Dependency, package metadata, or mechanical maintenance |
 
 ---
 
-## Pre-push gates (multi-gate, separate)
+## Pre-push gate
 
-The Python umbrella (`mb/`) has four distinct gates:
+Run the repo gate from the repository root before pushing:
 
 ```bash
-cd mb
-ruff format --check .   # formatter — separate gate
-ruff check .            # linter — separate gate
-mypy mb                 # type check
-pytest -q               # tests
+scripts/check.sh
 ```
 
-`ruff check` (linter) and `ruff format --check` (formatter) are DISTINCT. Local lint passing does NOT imply format is clean.
+It runs formatting, lint, type checks, tests, and the skill line-count gate from
+the same working directories CI uses. Do not replace it with root-level
+`mypy mb`; that can read the wrong configuration.
+
+When a change touches packaging, entrypoints, bundled data, first-run flows, or
+runtime wiring, add the relevant smoke from [AGENTS.md](AGENTS.md): package
+install, fixture repo, pipx/update, or runtime discovery.
 
 For Go tools (Phase 2):
 
@@ -55,8 +63,6 @@ go vet ./...
 golangci-lint run
 go test ./...
 ```
-
-For skill regression: run `bash ~/.claude/skills/test-skills/test-skills.sh` against your modified skill before pushing.
 
 **No `--no-verify`. No `git commit --no-verify`. No skipping.**
 
@@ -119,7 +125,10 @@ PR reviews use this shape:
 
 ## How to find the work
 
-The engine v0.1.0 decision is `decisions/2026-04-29-mb-vip-v0-1-0-master.md`. It locks vocabulary, repo shape, ship list, /site upgrade scope, and the conductor preferences encoded above.
+Start with [AGENTS.md](AGENTS.md). It is the shared operating contract for
+Codex, Claude Code, and other agents.
+
+The engine v0.1.0 decision is `decisions/2026-04-29-mb-vip-v0-1-0-master.md`. It locks the first public ship list and historical launch vocabulary.
 
 The companion business-side master plan is tracked in `noontide-co/projects#119`. Read it when a contribution touches product positioning, public launch sequencing, pricing, the agency arm, or the four CLI pillars.
 
