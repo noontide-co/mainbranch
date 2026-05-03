@@ -11,6 +11,28 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-05-03
+
+v0.2.2 turns the v0.2 command surface into a better operating foundation. It
+adds the first credential/integration registry, validates bundled skills as
+product code, and clarifies how per-repo connected accounts should stay tied to
+the active business repo.
+
+### What this means for you (plain English)
+
+- **`mb connect` now has a foundation.** You can list known providers, check
+  connected status, and import credentials explicitly from environment
+  variables into local storage without committing secrets.
+- **Skill packaging is checked before release.** `mb skill validate --all`
+  verifies bundled skills are self-contained, have valid frontmatter, and stay
+  under the line-count gate.
+- **`mb doctor` can catch more broken installs.** Doctor and CI now run bundled
+  skill validation, so missing skill references surface before users hit them.
+- **Connected tools stay repo-tethered.** Main Branch docs and generated
+  `CLAUDE.md` now tell users to keep ads, Stripe, pixels, MCP tools, and other
+  accounts connected to the active business repo instead of treating them as
+  global magic.
+
 ### Added
 
 - Added `mb skill validate <name>` and `mb skill validate --all` to check
