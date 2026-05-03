@@ -140,6 +140,12 @@ def init_cmd(
             typer.echo(f"  cd {result['path']}")
             typer.echo("  claude")
             typer.echo("  /start")
+            typer.echo("")
+            typer.echo("connected accounts:")
+            typer.echo(
+                "  See CLAUDE.md -> Connected accounts before wiring tools that "
+                "spend, publish, or mutate customer accounts."
+            )
         else:
             typer.echo(f"could not set up: {result.get('error')}", err=True)
             raise typer.Exit(1)

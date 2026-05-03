@@ -104,3 +104,13 @@ def test_skill_link_wires_repo(tmp_path) -> None:
     assert result.exit_code == 0
     assert (repo / ".claude" / "settings.local.json").exists()
     assert (repo / ".claude" / "skills" / "start" / "SKILL.md").exists()
+
+
+def test_init_output_points_to_connected_accounts_guidance(tmp_path) -> None:
+    repo = tmp_path / "biz"
+
+    result = runner.invoke(app, ["init", str(repo), "--name", "Acme"])
+
+    assert result.exit_code == 0
+    assert "connected accounts:" in result.stdout
+    assert "CLAUDE.md -> Connected accounts" in result.stdout
