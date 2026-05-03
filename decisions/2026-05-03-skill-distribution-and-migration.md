@@ -337,16 +337,16 @@ plugin marketplaces, etc.) lands through the plugin manifest, not by
 shipping a Node-side installer.
 
 **Exposure read-through.** The plugin marketplace is the strongest
-discoverability bet that does not depend on Devon's personal audience or
-Skool community. Publishing under `noontide-co/mainbranch` puts Main
-Branch in the same surface where new Claude Code users find compound
-engineering and similar tools. Three things compound this: a clean
-plugin manifest, a vendor prefix (or namespace) that does not embarrass
-us when listed next to `compound-engineering` and `mattpocock-skills`,
-and an `mb` CLI that auto-wires the plugin so the user sees one command,
-not three. Skipping the marketplace and staying on symlinks is a real
-choice — it just means accepting that exposure to non-Devon-audience
-Claude Code users is harder.
+discoverability bet that does not depend on the maintainer's existing
+audience. Publishing under `noontide-co/mainbranch` puts Main Branch in
+the same surface where new Claude Code users find compound engineering
+and similar tools. Three things compound this: a clean plugin manifest,
+a vendor prefix (or namespace) that does not embarrass us when listed
+next to `compound-engineering` and `mattpocock-skills`, and an `mb` CLI
+that auto-wires the plugin so the user sees one command, not three.
+Skipping the marketplace and staying on symlinks is a real choice — it
+just means accepting that exposure to Claude Code users outside the
+maintainer's existing audience is harder.
 
 **What this does not decide.** Whether the plugin invocation form is
 `/start`, `/mb-start`, `/mb:start`, or some alias resolves to live runtime
@@ -404,9 +404,9 @@ below; the praise was set aside.
   states plugin skills require `plugin-name:skill-name` invocation and
   do not fall back to non-namespaced `/start`. Compound Engineering's
   README and CHANGELOG both document and use bare `/ce-debug`,
-  `/ce-plan`, `/ce-strategy` (verified locally at
-  `/Users/devonmeadows/Documents/GitHub/compound-engineering-plugin/README.md`
-  lines 16–75 and `CHANGELOG.md`). The external research suggests this
+  `/ce-plan`, `/ce-strategy` (see `README.md` lines 16–75 and
+  `CHANGELOG.md` in `EveryInc/compound-engineering-plugin`). The external
+  research suggests this
   works because the *skill name itself* is `ce-debug`, not because of a
   namespace fallback — meaning Compound is using the plugin shape only
   as a distribution wrapper, while the actual invocation depends on the

@@ -19,13 +19,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   global skill detection and migration first, and target Claude Code plugin
   packaging as the durable destination because the bundled skill names are
   generic enough that plugin namespacing (not symlink hygiene) is the only
-  collision-proof escape. Includes evidence from public Claude Code skill
-  repos already on the maintainer's machine (Every.to's
-  `compound-engineering-plugin` enforces a `ce-` prefix in CI;
-  `mattpocock-skills` ships unprefixed and would collide with bundled
-  Main Branch skill names today). Adds a follow-up to decide whether to
-  rename bundled skills to a `mb-` prefix before the plugin spike lands.
-  Refs #236 and #234.
+  collision-proof escape. Includes evidence drawn from public Claude
+  Code skill repos (Every.to's `compound-engineering-plugin` enforces a
+  `ce-` prefix in CI; `mattpocock-skills` ships unprefixed and would
+  collide with bundled Main Branch skill names today). Adds a follow-up
+  to decide whether to rename bundled skills to a `mb-` prefix before
+  the plugin spike lands. Refs #236 and #234.
 
 ## [0.2.3] - 2026-05-03
 
