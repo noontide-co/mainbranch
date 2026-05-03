@@ -11,6 +11,26 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-05-03
+
+v0.2.3 makes Main Branch easier to resume after an interrupted first run and
+turns `mb graph` into a useful deterministic index for future dashboard,
+status, and agent-workflow work.
+
+### What this means for you (plain English)
+
+- **Onboarding can survive multiple sessions.** `mb onboard` now writes a
+  lightweight local progress file so agents can tell what setup inputs are
+  still missing without relying on the previous chat transcript.
+- **`mb status` and `mb doctor` know about onboarding gaps.** They can point a
+  beginner or agent back to the next setup step instead of silently treating an
+  empty repo as ready.
+- **`mb graph --json` now exposes real structure.** Files, frontmatter links,
+  wikilinks, and business entities become a machine-readable graph index.
+- **The public operating contract is clearer.** Contributors and agents now
+  have a public checklist for release readiness, runtime claims, issue/PR
+  discipline, and public/private boundaries.
+
 ### Added
 
 - Added `.mb/onboarding.json` as the lightweight onboarding progress contract,
@@ -24,6 +44,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   Main Branch product-boundary, release-readiness, runtime-claim,
   public/private, state-model, and issue/PR discipline, and linked it from
   agent and contributor docs.
+- Added a public-safe `mb connect` dogfood report documenting credential storage
+  behavior, beginner-facing repair gaps, and follow-up integration issues.
 
 ### Changed
 
