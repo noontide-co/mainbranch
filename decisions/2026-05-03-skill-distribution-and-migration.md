@@ -46,7 +46,13 @@ below.
 
 1. **v0.2 immediate:** implement stale global Claude Code skill detection and a
    noob-safe migration command. `mb doctor`, `mb start`, and `mb onboard` should
-   warn or block before a stale global `/start` can win silently.
+   warn or block before a stale global `/start` can win silently. **In
+   parallel, decide whether to rename bundled skills to a `mb-` prefix
+   before the plugin spike lands.** Compound Engineering already enforces
+   this pattern in CI for an existing public Claude Code plugin
+   (`ce-debug`, `ce-plan`, `ce-setup`); the prefix is a cheap, reversible
+   collision-shrinker independent of the plugin migration. See
+   "Bundled Skill Renaming" below.
 2. **v0.2 short term:** keep `mb skill link --repo .` as the Claude Code repair
    primitive. It should continue to write `.claude/settings.local.json` with the
    active engine root and create gitignored local bridge links.
@@ -114,6 +120,105 @@ the destination should not drift.
 
 [skills-docs]: https://code.claude.com/docs/en/skills
 [issue-234]: https://github.com/noontide-co/mainbranch/issues/234
+
+### Evidence From Peer Claude Code Skill Repos
+
+A short survey of public Claude Code skill repos confirms the collision
+surface is real and shows two settled responses to it:
+
+**Compound Engineering Plugin** (Every.to, `EveryInc/compound-engineering-plugin`)
+ships as a single Claude Code plugin with a marketplace. It enforces a
+`ce-` prefix on every bundled skill in CI: a commit titled
+*"test: enforce ce- prefix on skills and agents (#748)"* gates contributions.
+The actual skills look like `ce-commit`, `ce-code-review`, `ce-debug`,
+`ce-plan`, `ce-setup`, `ce-update`, `ce-work`, `ce-worktree`, with one
+intentional exception (`lfg`) for the orchestrator. Install command from
+their README:
+
+```text
+/plugin marketplace add EveryInc/compound-engineering-plugin
+/plugin install compound-engineering
+```
+
+Multi-platform manifests live side by side at `.claude-plugin/`,
+`.codex-plugin/`, `.cursor-plugin/`. Versioning is centralized in
+`package.json` and propagated to all platform manifests by a release
+script. This is a worked example of "plugin packaging plus prefix
+discipline" co-existing in production.
+
+**Matt Pocock's `mattpocock-skills`** is the counter-example. Skills are
+named `triage`, `tdd`, `diagnose`, `setup-pre-commit`, `caveman`,
+`grill-me`, `zoom-out`, `to-issues`, `to-prd`, `improve-codebase-architecture`,
+`write-a-skill`. There is no prefix, no namespace, and the README
+documents installation through Vercel's `npx skills@latest` CLI rather than
+the Claude Code plugin marketplace, which means **even the plugin
+namespace escape does not apply if the user installs through that
+distribution channel**. Matt's `setup-pre-commit` and Main Branch's
+`setup` are directly adjacent in user mindshare; both repos already
+co-exist on real users' machines. The collision is not theoretical.
+
+**`get-shit-done`** ships ~30 commands all scoped under a `gsd:` prefix
+(`/gsd:help`, `/gsd:new-project`, `/gsd:debug`). Distribution is via
+`npx get-shit-done-cc`, which writes into either project `.claude/` or
+global `~/.claude/`. Their answer to collisions is one parent prefix and
+verbose subcommand names.
+
+**Daniel Miessler's PAI** (`Personal_AI_Infrastructure`) prefixes every
+distribution unit with `pai-` (`pai-core-install`, `pai-hook-system`,
+`pai-observability-server`). Skills inside packs use domain-specific
+names (`OSINT`, `Algorithm`, `Voice`).
+
+**Daniel Miessler's Fabric** is a different shape (prompt patterns, not
+skills) but informative on overrides: bundled patterns live in
+`data/patterns/<name>/`, custom user patterns live in a separate
+directory, and *user patterns take precedence over bundled patterns of
+the same name*. Update is manual via `fabric -U`. This is the cleanest
+override-layer pattern in the survey.
+
+The settled industry answer for *cross-author collision* is some
+combination of:
+
+- a plugin/package namespace (`mb:start`, `compound-engineering:debug`);
+- and/or a vendor prefix on every bundled name (`ce-debug`, `pai-core`,
+  `gsd:help`).
+
+The plugin namespace alone is not enough when users install through
+non-marketplace channels (the Matt Pocock case). The vendor prefix alone
+is not enough when third-party authors ship the same prefix or pick the
+same name. The strongest production example in this survey
+(Compound Engineering) does both.
+
+This evidence does not change the recommendation's sequence — symlinks
+now, plugin destination next — but it does change the prefix question
+from "maybe later" to "decide before v0.2.5 plugin spike lands." See
+"Bundled Skill Renaming" below.
+
+### Bundled Skill Renaming
+
+Renaming the bundled skills to a `mb-` prefix (`mb-start`, `mb-end`,
+`mb-setup`, `mb-pull`, `mb-help`, `mb-site`, `mb-ads`, `mb-wiki`,
+`mb-think`, `mb-organic`, `mb-vsl`, plus `mb-skill-brief-draft`,
+`mb-skill-concept`, `mb-skill-review`) is a small, reversible change
+that closes the collision surface even before plugin packaging lands.
+The cost is one round of user-visible slash command churn (`/start`
+becomes `/mb-start`). Plugin packaging would force the same churn
+later (`/mb:start`), so the marginal cost of doing it now is small.
+
+Open questions to resolve before renaming:
+
+- Does Claude Code support a slash alias so `/start` keeps working as a
+  shortcut for `/mb-start`? If yes, the UX cost is near zero. If no,
+  documentation has to do the work.
+- Which prefix? `mb-` is consistent with the CLI binary name. `mainbranch-`
+  is more discoverable but verbose. `noontide-` ties the prefix to the
+  publisher rather than the product.
+- Does renaming inside the existing symlink wiring (v0.2.4) help or hurt
+  the migration to plugin packaging (v0.2.5)? It probably helps: it
+  shrinks the diff between symlink-wired skills and plugin-packaged
+  skills to "the wrapper changed," not "every name changed."
+
+This question is in scope for follow-up work but should be answered
+before the v0.2.5 plugin spike.
 
 ### Current Main Branch Behavior
 
@@ -424,4 +529,12 @@ Concrete follow-ups should be separate from this decision:
    first runtime adapter contract document or JSON shape before adding Codex,
    Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, or local runtime
    behavior.
-4. Update compatibility docs only after adapter smoke changes what is supported.
+4. **New (file separately):** decide and execute bundled-skill renaming to a
+   vendor prefix (likely `mb-`) before the #237 plugin spike. Include a
+   slash-alias smoke if Claude Code supports it; otherwise document the
+   one-time UX change. Pattern reference: Compound Engineering's CI-enforced
+   `ce-` prefix.
+5. **New (file separately):** add bundled-skill-name lint to `mb` so future
+   skills cannot ship without the chosen prefix (mirrors Compound
+   Engineering's "test: enforce ce- prefix on skills and agents" gate).
+6. Update compatibility docs only after adapter smoke changes what is supported.
