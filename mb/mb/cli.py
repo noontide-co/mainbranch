@@ -140,6 +140,12 @@ def init_cmd(
             typer.echo(f"  cd {result['path']}")
             typer.echo("  claude")
             typer.echo("  /start")
+            typer.echo("")
+            typer.echo("connected accounts:")
+            typer.echo(
+                "  See CLAUDE.md -> Connected accounts before wiring tools that "
+                "spend, publish, or mutate customer accounts."
+            )
         else:
             typer.echo(f"could not set up: {result.get('error')}", err=True)
             raise typer.Exit(1)
@@ -208,6 +214,11 @@ def _render_onboard_human(result: dict[str, Any]) -> None:
     console.print("\n[bold]Next[/bold]")
     for step in result["next_steps"]:
         console.print(f"  {step}")
+    console.print(
+        "\n[bold]Connected accounts[/bold]\n"
+        "  See CLAUDE.md -> Connected accounts before wiring tools that spend, "
+        "publish, or mutate customer accounts."
+    )
     if warnings:
         console.print(f"\nFor a full setup check, run `{result['doctor_command']}`.")
     console.print()

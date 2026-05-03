@@ -119,6 +119,23 @@ my-business/
 
 You fill in the reference files inside `core/`. Claude reads them when generating.
 
+### Connected accounts live with the business repo
+
+Your business repo carries the boundaries for connected accounts. A repo for
+one business can point at one Stripe account, Google Ads customer, ad pixel set,
+and MCP server set; a different business repo should point at different ones.
+Switching repos should switch the tools that can spend money, publish, email,
+or mutate customer accounts.
+
+The repo should keep useful non-secret identifiers where agents can inspect
+them: Stripe account/product/price IDs in offer or finance notes, Google Ads
+customer and campaign IDs in `campaigns/`, ad pixel IDs beside the site or
+campaign files they belong to, and MCP server names/scopes in `CLAUDE.md` or
+local setup notes. Do not commit API keys, OAuth refresh tokens,
+service-account JSON, webhook secrets, MCP tokens, or bearer tokens. Keep
+secrets in a runtime's local config, the OS keychain, 1Password, `.env`, or
+`.claude/settings.local.json`, and keep those files gitignored.
+
 ---
 
 ## The `mb` CLI

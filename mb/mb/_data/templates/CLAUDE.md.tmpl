@@ -25,6 +25,31 @@ Your business as files. Claude reads these; you edit them; git remembers them.
 - One owner per file via `.github/CODEOWNERS`.
 - Pull request titles use Conventional Commits.
 
+## Connected accounts
+
+Treat this repo as the boundary for connected business tools. When you switch
+business repos, you should also switch the accounts, tokens, and MCP servers
+that can act on that business.
+
+Keep public or non-secret account identifiers in repo files when they help
+agents choose the right account:
+
+- Stripe account IDs, product IDs, and price IDs can live in offer or finance
+  notes such as `core/offers/<offer>/stripe.md`.
+- Google Ads customer IDs and campaign IDs can live in campaign plans under
+  `campaigns/`.
+- Meta, TikTok, Google, or other ad pixel IDs can live beside the site or
+  campaign files they belong to.
+- MCP server names and intended scopes can live in `CLAUDE.md` or a local setup
+  note when they are not secret.
+
+Never commit API keys, OAuth refresh tokens, service-account JSON, webhook
+secrets, MCP tokens, or bearer tokens. Put secrets in the runtime's local
+config, an OS keychain, 1Password, `.env`, or `.claude/settings.local.json`;
+those files should stay gitignored. If a tool can spend money, publish, email,
+or mutate a customer account, verify that it is tethered to this repo before
+using it.
+
 ## Helpful commands
 
 ```
