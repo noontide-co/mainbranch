@@ -131,6 +131,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb init` | Set up a fresh business repo (six folders, CLAUDE.md, git init). |
 | `mb status` | Show a local-first daily briefing: repo health, runtime wiring, recent decisions/research/git activity, and GitHub tasks when `gh` is authenticated. |
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
+| `mb connect` | Register provider credentials and integration metadata without committing secrets. |
 | `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
 | `mb graph` | Walk the link graph (`linked_research` / `linked_decisions` / `supersedes`) and emit Graphviz DOT. `--open` renders to PNG and opens it. |
 | `mb think <topic>` | Print the `/think` invocation hint. Run inside Claude Code for the full flow. |
@@ -141,6 +142,24 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb skill link --repo .` | Repair Claude Code skill discovery in a business repo. |
 
 Full list: `mb --help`.
+
+### Provider Connections
+
+`mb connect` is the local-first foundation for integrations such as Google,
+Meta, Cloudflare, Postiz, Apify, Beancount, and transcription providers.
+
+```bash
+mb connect list
+printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata account_id=...
+mb connect status --json
+```
+
+Secrets are stored outside the business repo, using the macOS Keychain when
+available and a local `~/.mainbranch/secrets/connect.json` fallback otherwise.
+The business repo only receives non-sensitive metadata in `.mb/connect.yaml`,
+such as the provider id, account label, credential backend, and last check time.
+Skills and future dashboards should read `mb connect status --json` or
+`.mb/connect.yaml`; they should never ask users to commit tokens.
 
 ---
 

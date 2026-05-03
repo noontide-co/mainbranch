@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added `mb connect` with a provider registry, `list` and `status` views,
+  local secret storage outside git, repo-safe `.mb/connect.yaml` metadata, and
+  doctor/status integration health reporting.
+
 ## [0.2.1] - 2026-05-02
 
 v0.2.1 is the first post-0.2 durability release. It makes the new CLI front
