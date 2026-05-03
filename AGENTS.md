@@ -146,7 +146,7 @@ Out:
 
 ## Risks
 
-- 
+-
 
 ## Validation Plan
 
