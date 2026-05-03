@@ -11,6 +11,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Decision doc `decisions/2026-05-03-skill-distribution-and-migration.md`
+  records the proposed skill distribution and migration model: keep
+  project-local symlink wiring as the v0.2 supported adapter, ship stale
+  global skill detection and migration first, and target Claude Code plugin
+  packaging as the durable destination because the bundled skill names are
+  generic enough that plugin namespacing (not symlink hygiene) is the only
+  collision-proof escape. Refs #236 and #234.
+
 ## [0.2.3] - 2026-05-03
 
 v0.2.3 makes Main Branch easier to resume after an interrupted first run and

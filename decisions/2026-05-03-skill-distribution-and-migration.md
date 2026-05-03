@@ -33,6 +33,15 @@ repos as the primary update model. Do not claim Codex, Cursor, OpenClaw, Hermes,
 Paperclip-adjacent orchestration, or local runtime support until each has an
 adapter and smoke evidence.
 
+The plugin path is load-bearing for one reason in particular: **bundled
+Main Branch skill names are generic and almost guaranteed to collide with
+other authors' skills**. Plugin namespacing
+(`<plugin-name>:<skill-name>`) is the only documented mechanism that
+escapes Claude Code's personal-overrides-project precedence; it protects
+Main Branch users from third-party skill authors and protects third-party
+authors from Main Branch. See "Bundled Skill Name Collision Surface"
+below.
+
 ## Recommendation
 
 1. **v0.2 immediate:** implement stale global Claude Code skill detection and a
@@ -45,12 +54,66 @@ adapter and smoke evidence.
    package for Main Branch skills. Adopt it only after it preserves beginner
    `/start` ergonomics, supports local or project scope cleanly, updates through
    a documented path, and passes runtime smoke from a fresh business repo plus a
-   migrated old-user repo.
+   migrated old-user repo. The plugin spike must explicitly answer the
+   bundled-skill-name collision question: do users invoke `/mb:start` or do we
+   prove a plain-`/start` alias works under the plugin namespace? Lock that
+   answer before promoting plugin packaging to default.
 4. **Runtime-general future:** define runtime adapters as separate tested
    contracts. The portable workflow source can stay runtime-neutral, but each
    runtime needs its own discovery, install, update, and smoke contract.
 
 ## Evidence
+
+### Bundled Skill Name Collision Surface
+
+The bundled Main Branch skills today live in `.claude/skills/` and ship in
+the wheel at `mb/_engine/.claude/skills/`. The current names are:
+
+```
+ads     end     help    organic pull    setup   site
+skill-brief-draft       skill-concept   skill-review
+start   think   vsl     wiki
+```
+
+Most of these are aggressively generic English verbs and nouns. They are
+almost certain to be claimed by other plugin or skill authors over time, and
+several already conflict with extremely common patterns:
+
+- `start`, `end`, `setup`, `pull`, `help` are session and lifecycle words
+  that any onboarding, deployment, git-helper, or chat-bookend skill would
+  reasonably claim;
+- `site`, `ads`, `wiki`, `vsl`, `organic` are content-domain words that
+  marketing, ops, and CMS-adjacent skill authors would reasonably claim;
+- `think` collides with both Claude Code's documented `<thinking>` workflow
+  language and any number of reasoning or research skills already published
+  in the wider ecosystem.
+
+Per the [Claude Code skills doc][skills-docs], any user-installed
+`~/.claude/skills/start` (whether created by another tool, another version
+of Main Branch, or hand-written) silently overrides the project-local
+`.claude/skills/start` we wire from the business repo. This is documented
+behavior, not a bug. Issue [#234][issue-234] addresses the Main-Branch-vs-
+Main-Branch shadow case, but the collision surface is broader: a user can
+install any plugin or skill named `start` and lose Main Branch's `/start`
+without warning.
+
+The same doc states: *"Plugin skills use a `plugin-name:skill-name`
+namespace, so they cannot conflict with other levels."* That is the only
+collision-proof mechanism Anthropic documents. Renaming bundled skills to
+something less generic (for example `mb-start`, `mb-end`) would reduce the
+collision surface inside the current symlink wiring, but it would not solve
+it: any third-party plugin can still ship a skill called `mb-start` if no
+namespace is enforced. Plugin packaging encodes the publisher in the
+namespace by default.
+
+This is the strongest single argument for treating the Claude Code plugin
+shape as the durable destination rather than as a nice-to-have. The
+migration order in this decision is still symlink-first, plugin-next,
+because the issue explicitly disallows rewriting wiring in this PR — but
+the destination should not drift.
+
+[skills-docs]: https://code.claude.com/docs/en/skills
+[issue-234]: https://github.com/noontide-co/mainbranch/issues/234
 
 ### Current Main Branch Behavior
 
@@ -223,7 +286,11 @@ Pros:
 
 - Current Claude Code and Codex docs both identify plugins as the reusable
   distribution unit for skills.
-- Namespacing can avoid collisions with personal and project skills.
+- **Namespacing is the only documented mechanism that prevents collisions
+  with personal/global skills shipped by other authors.** Given how generic
+  Main Branch's bundled skill names are (`start`, `end`, `setup`, `pull`,
+  `help`, etc.), this stops being a nice-to-have and becomes the
+  load-bearing reason to move.
 - Plugin scopes make user, project, and local installs explicit.
 - Marketplaces and plugin updates provide a real distribution story.
 
