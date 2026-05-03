@@ -22,11 +22,11 @@ Closes #
 
 ## Commits by concern
 
-<!-- One logical change per commit. Conventional commit prefixes. -->
+<!-- One logical change per commit. Use this repo's bracketed vocabulary. -->
 
 - [ ] Each commit body bullet-lists the changes in that commit
 - [ ] Reviewer reading `git log --oneline main..HEAD` sees the shape of the work
-- [ ] Conventional Commits format: `feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`, `ci:`
+- [ ] Commit subjects use `[add]`, `[update]`, `[fix]`, `[remove]`, `[refactor]`, `[docs]`, or `[chore]`
 
 ## Test plan
 

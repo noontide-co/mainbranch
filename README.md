@@ -268,7 +268,9 @@ For platform support and security reporting, see [SUPPORT.md](SUPPORT.md), [SECU
 
 ## Technical details
 
-Looking for the full system documentation? See [CLAUDE.md](CLAUDE.md) — folder structure, file naming conventions, domain rubrics by business type, compliance frameworks, git commit conventions. You don't need to read it to get started.
+Contributors should start with [AGENTS.md](AGENTS.md) and
+[CONTRIBUTING.md](CONTRIBUTING.md). Claude Code-specific repo guidance lives in
+[CLAUDE.md](CLAUDE.md). You don't need any of these to get started as a user.
 
 All shipping decisions are dated, versioned, and committed alongside the code that implements them.
 
