@@ -590,4 +590,4 @@ status: complete
 
 - [../SKILL.md](../SKILL.md) -- The /start flow where triage is option 1 on the menu
 - [readiness-assessment.md](readiness-assessment.md) -- Scoring rubric and display format (runs before triage, provides scores to agents)
-- [../../end/references/crystallize-agent.md](../../end/references/crystallize-agent.md) -- The /end crystallize pattern this agent is modeled on (gating, tiering, token budget)
+- `/end` crystallize-agent pattern -- The model for this agent's gating, tiering, and token budget

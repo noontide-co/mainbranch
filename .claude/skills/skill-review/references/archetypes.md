@@ -42,4 +42,4 @@ The brief schema separates `archetype` (your offer) from `audience_current_arche
 
 - [headline-formulas.md](headline-formulas.md) — formulas matched to archetype + dial
 - Paired-imagery rule from the site generation system
-- Seven Sweeps review; archetype fidelity is part of "in-voice"
+- [review.md](review.md) — Seven Sweeps; archetype fidelity is part of "in-voice"

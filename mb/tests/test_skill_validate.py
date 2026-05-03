@@ -88,6 +88,43 @@ def test_skill_validate_flags_missing_local_reference(
     assert any("references/missing.md" in error for error in report["files"][0]["errors"])
 
 
+def test_skill_validate_checks_reference_file_links(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(tmp_path, "alpha")
+    _write(
+        tmp_path / ".claude" / "skills" / "alpha" / "references" / "details.md",
+        "See [missing](missing-detail.md).\n",
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("alpha")
+
+    assert report is not None
+    assert report["ok"] is False
+    reference_result = next(
+        item for item in report["files"] if item["path"] == "references/details.md"
+    )
+    assert reference_result["ok"] is False
+    assert "missing-detail.md" in reference_result["errors"][0]
+
+
+def test_skill_validate_ignores_reference_paths_inside_code_fences(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(
+        tmp_path,
+        "alpha",
+        body="```bash\ncat references/generated-at-runtime.md\n```\n",
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("alpha")
+
+    assert report is not None
+    assert report["ok"] is True
+
+
 def test_skill_validate_flags_parent_directory_references(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -140,6 +177,23 @@ def test_skill_validate_all_fails_when_no_bundled_skills(
     assert report["summary"]["skills"] == 0
     assert report["summary"]["errors"] == 1
     assert report["errors"] == ["no bundled skills found"]
+
+
+def test_skill_validate_human_output_includes_top_level_errors(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    report = {
+        "ok": False,
+        "command": "mb skill validate",
+        "mode": "all",
+        "skills": [],
+        "errors": ["no bundled skills found"],
+        "summary": {"skills": 0, "passed": 0, "failed": 0, "errors": 1, "warnings": 0},
+    }
+
+    skill_validate_mod.render_human(report)
+
+    assert "no bundled skills found" in capsys.readouterr().out
 
 
 def test_skill_validate_cli_json_and_exit_codes(

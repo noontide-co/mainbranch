@@ -91,7 +91,7 @@ Concept subagents must run in the foreground. Background subagents have a known 
 ## Cross-references
 
 - [`SKILL.md`](../SKILL.md) — Operating principles (foreground only, publish-first, parallel-by-default)
-- [`minisite-build.md`](minisite-build.md) — where concept generation fits in the operator walkthrough
+- `/site` minisite build flow — where concept generation fits in the operator walkthrough
 - [`minisite-generation-system.md`](minisite-generation-system.md) — the system prompt each concept subagent uses
 - [`anti-patterns.md`](anti-patterns.md) — what NOT to bake into concept prompts (over-prescription kills variance)
 - `start/references/config-system.md` — the `~/.config/vip/local.yaml` location for `default_concepts`

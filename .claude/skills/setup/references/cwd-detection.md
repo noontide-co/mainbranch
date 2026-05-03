@@ -8,7 +8,7 @@ Detailed flow for detecting the user's current working directory and configuring
 
 **Before anything else, ensure vip is up to date:**
 
-For the canonical resolver (bash + python3, settings.local.json first, ~/.config/vip/local.yaml fallback) see **[../../../reference/vip-path-resolution.md](../../../reference/vip-path-resolution.md)**. Run that snippet, then:
+For the canonical resolver (bash + python3, settings.local.json first, ~/.config/vip/local.yaml fallback) see **[vip-path-resolution.md](vip-path-resolution.md)**. Run that snippet, then:
 
 ```bash
 # Pull if found and valid

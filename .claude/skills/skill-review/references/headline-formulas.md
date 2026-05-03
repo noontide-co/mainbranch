@@ -76,5 +76,5 @@ Before locking a headline:
 ## Cross-references
 
 - [archetypes.md](archetypes.md) — picks formulas by archetype
-- AI-tell phrases banned from any formula
-- Seven Sweeps; "Specificity" sweep gates headlines
+- [anti-patterns.md](anti-patterns.md) — AI-tell phrases banned from any formula
+- [review.md](review.md) — Seven Sweeps; "Specificity" sweep gates headlines

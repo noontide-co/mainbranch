@@ -71,4 +71,4 @@ Each is a prompt for one review subagent. Picked up automatically alongside the 
 - [anti-patterns.md](anti-patterns.md) — the AI-tell list run by the De-AI'd auxiliary gate
 - [archetypes.md](archetypes.md) — fidelity checks against `do_not_state`
 - [headline-formulas.md](headline-formulas.md) — Specificity sweep gates headlines
-- [`/ads review`](../../ads/SKILL.md) — same multi-lens shape, same synthesis pattern
+- `/ads review` — same multi-lens shape, same synthesis pattern
