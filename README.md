@@ -35,6 +35,11 @@ Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running busine
 Read the product frame in [docs/ETHOS.md](docs/ETHOS.md), the user loop in
 [docs/OPERATOR-LOOPS.md](docs/OPERATOR-LOOPS.md), and the release direction in
 [docs/ROADMAP.md](docs/ROADMAP.md).
+Workspace, repo, dashboard, finance/legal, and team-log boundaries are defined
+in
+[decisions/2026-05-04-workspace-repo-sensitive-data-boundaries.md](decisions/2026-05-04-workspace-repo-sensitive-data-boundaries.md).
+Markdown/link conventions for GitHub and Obsidian live in
+[docs/markdown-link-conventions.md](docs/markdown-link-conventions.md).
 
 ---
 
@@ -294,13 +299,19 @@ surfaces as a banner the next time you run `/mb-start`.
 No. You invoke skills with slash prompts and answer questions.
 
 **What if I have multiple products under one brand?**
-Use one repo with an `offers/` folder. Each offer gets its own `offer.md`. Soul and voice stay shared in `core/`. Run `/mb-setup` or `/mb-think` to add offers.
+Use one repo with an `offers/` folder when the products share the same brand,
+team, voice, and access boundary. Each offer gets its own `offer.md`. If an
+offer graduates into its own team, provider accounts, site, finance boundary,
+or operating history, move it into its own repo and keep the company repo as a
+hub.
 
 **What's a bet vs. an offer?**
 A bet is a time-boxed operating hypothesis: what you'll try, why, by when, and how you'll know if it worked. An offer is a durable thing you sell. A good bet can graduate into an offer, campaign, workflow, content pillar, or decision; a bad bet gets closed with learning.
 
 **What if I have multiple separate businesses?**
-Create a separate repo for each brand. If they share the same soul and voice, they can share a repo. If not, separate repos.
+Create a separate repo for each brand, legal entity, provider-account boundary,
+or team-access boundary. If businesses truly share the same voice, team, and
+access rules, they can share a repo. If not, separate repos.
 
 **How do I update when new skills come out?**
 `mb update --repo .`, or run `/mb-update` inside Claude Code.

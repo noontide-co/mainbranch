@@ -13,6 +13,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added an accepted workspace/repo/sensitive-data boundary decision covering
+  business repos, workspaces, repo/workspace/private dashboards, team daily
+  logs, finance/legal data, future `mb books` behavior, and why editable files
+  cannot be admin authority. Closes #274; refs #120 and #128.
+- Added GitHub/Obsidian-compatible markdown and link conventions for
+  frontmatter paths, body links, wikilinks, entity tags, cross-repo references,
+  and optional Obsidian usage. Closes #275.
 - Added `bets/` as a first-class business-repo primitive with validation,
   graph links, `mb status` active-deadline reporting, and the new `/mb-bet`
   Claude Code workflow for `new`, `update`, `close`, `list`, and `narrate`.
@@ -49,6 +56,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   until each has a documented adapter and fresh-repo smoke evidence.
 - Updated `/mb-start` to read deterministic status/ranker facts before asking
   setup or routing questions. Refs #263.
+- Extended `mb validate --cross-refs` to warn on missing or ambiguous
+  Obsidian-style wikilinks while keeping wikilink checks out of default
+  validation.
 
 ## [0.2.6] - 2026-05-04
 

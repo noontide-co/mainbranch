@@ -208,6 +208,84 @@ def test_cross_refs_skip_bundled_package_data(tmp_path: Path) -> None:
     assert report["summary"]["warnings"] == 0
 
 
+def test_cross_refs_warn_on_missing_wikilink_target(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "decisions" / "2026-05-04-link.md",
+        "---\ndate: 2026-05-04\nstatus: accepted\n---\nSee [[missing-note]].\n",
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 1
+    finding = report["cross_refs"]["warnings"][0]
+    assert finding["code"] == "missing-wikilink-target"
+    assert finding["field"] == "wikilink"
+    assert finding["target"] == "missing-note"
+
+
+def test_cross_refs_warn_on_ambiguous_wikilink_target(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "research" / "note.md",
+        "---\ndate: 2026-05-04\ntopic: one\nsource: manual\n---\n# Note\n",
+    )
+    _write(
+        tmp_path / "documents" / "note.md",
+        "---\ntitle: Other note\n---\n# Other\n",
+    )
+    _write(
+        tmp_path / "decisions" / "2026-05-04-link.md",
+        "---\ndate: 2026-05-04\nstatus: accepted\n---\nSee [[note]].\n",
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    assert report["summary"]["warnings"] == 1
+    finding = report["cross_refs"]["warnings"][0]
+    assert finding["code"] == "ambiguous-wikilink"
+    assert finding["target"] == "note"
+
+
+def test_cross_refs_accept_resolved_wikilink_target_without_extension(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "research" / "audience.md",
+        "---\ndate: 2026-05-04\ntopic: audience\nsource: manual\n---\n# Audience\n",
+    )
+    _write(
+        tmp_path / "decisions" / "2026-05-04-link.md",
+        "---\ndate: 2026-05-04\nstatus: accepted\n---\nSee [[research/audience|audience]].\n",
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True, strict=True)
+
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 0
+
+
+def test_cross_refs_ignore_wikilink_like_syntax_inside_fenced_code(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "documents" / "netlify.md",
+        '---\ntitle: Netlify\n---\n```toml\n[[redirects]]\nfrom = "/"\n```\n',
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True, strict=True)
+
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 0
+
+
+def test_cross_refs_ignore_wikilink_like_syntax_inside_inline_code(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "documents" / "obsidian.md",
+        "---\ntitle: Obsidian\n---\nUse `[[example]]` only when the target exists.\n",
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True, strict=True)
+
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 0
+
+
 def test_cross_refs_flag_status_transition_regressions(tmp_path: Path) -> None:
     _write(
         tmp_path / "decisions" / "2026-04-28-old.md",

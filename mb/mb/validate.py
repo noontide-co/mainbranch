@@ -9,6 +9,7 @@ The schemas tolerate extras; only listed required keys are checked.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -41,6 +42,9 @@ LINK_FIELDS = (
     "related_prds",
     "supersedes",
 )
+
+WIKILINK_RE = re.compile(r"(?<!!)\[\[([^\]\n]+)\]\]")
+INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
 
 LOCAL_REF_ROOTS = {
     "bets",
@@ -213,6 +217,73 @@ def _is_external_ref(ref: str) -> bool:
 def _clean_ref(ref: str) -> str:
     without_anchor = ref.split("#", 1)[0]
     return without_anchor.split("?", 1)[0].strip()
+
+
+def _read_markdown_body(path: Path) -> str | None:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    if not text.startswith("---"):
+        return text
+    try:
+        end = text.index("\n---", 3)
+    except ValueError:
+        return text
+    return text[end + len("\n---") :]
+
+
+def _strip_fenced_code_blocks(markdown: str) -> str:
+    lines: list[str] = []
+    in_fence = False
+    for line in markdown.splitlines(keepends=True):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            lines.append("\n")
+            continue
+        if not in_fence:
+            lines.append(line)
+    return "".join(lines)
+
+
+def _strip_markdown_code(markdown: str) -> str:
+    return INLINE_CODE_RE.sub("", _strip_fenced_code_blocks(markdown))
+
+
+def _wikilink_target(raw_target: str) -> str:
+    target = raw_target.split("|", 1)[0].strip()
+    target = target.split("#", 1)[0].strip()
+    return target
+
+
+def _resolve_wikilink(
+    *,
+    repo: Path,
+    target: str,
+    files_by_stem: dict[str, list[Path]],
+    files_by_rel: dict[str, Path],
+) -> tuple[Path | None, bool]:
+    clean = _wikilink_target(target)
+    if not clean:
+        return None, False
+    candidates = [clean]
+    if not clean.endswith(".md"):
+        candidates.append(f"{clean}.md")
+    for candidate in candidates:
+        direct = files_by_rel.get(candidate)
+        if direct is not None:
+            return direct, False
+        repo_direct = (repo / candidate).resolve()
+        try:
+            repo_direct.relative_to(repo)
+        except ValueError:
+            continue
+        if repo_direct.exists():
+            return repo_direct, False
+    matches = files_by_stem.get(Path(clean).stem, [])
+    if len(matches) == 1:
+        return matches[0], False
+    return None, len(matches) > 1
 
 
 def _status_order_for(path: Path) -> dict[str, int] | None:
@@ -389,8 +460,16 @@ def _check_cross_refs(
 ) -> dict[str, Any]:
     findings: list[dict[str, str]] = []
     orphan_offers: list[dict[str, str]] = []
+    markdown_files = _iter_frontmatter_files(repo)
+    files_by_stem: dict[str, list[Path]] = {}
+    files_by_rel: dict[str, Path] = {}
 
-    for source in _iter_frontmatter_files(repo):
+    for file_path in markdown_files:
+        rel = file_path.relative_to(repo).as_posix()
+        files_by_rel[rel] = file_path
+        files_by_stem.setdefault(file_path.stem, []).append(file_path)
+
+    for source in markdown_files:
         fm, err = _read_frontmatter(source)
         if err is not None or fm is None:
             continue
@@ -463,6 +542,40 @@ def _check_cross_refs(
                         target_fm=target_fm,
                         findings=findings,
                     )
+
+    for source in markdown_files:
+        body = _read_markdown_body(source)
+        if body is None:
+            continue
+        for match in WIKILINK_RE.finditer(_strip_markdown_code(body)):
+            raw_target = match.group(1)
+            clean_target = _wikilink_target(raw_target)
+            if not clean_target:
+                continue
+            resolved, ambiguous = _resolve_wikilink(
+                repo=repo,
+                target=raw_target,
+                files_by_stem=files_by_stem,
+                files_by_rel=files_by_rel,
+            )
+            if resolved is not None:
+                continue
+            code = "ambiguous-wikilink" if ambiguous else "missing-wikilink-target"
+            message = (
+                f"wikilink target {raw_target!r} matches multiple markdown files"
+                if ambiguous
+                else f"wikilink target {raw_target!r} does not resolve to a markdown file"
+            )
+            findings.append(
+                _finding(
+                    code=code,
+                    source=source,
+                    repo=repo,
+                    field="wikilink",
+                    target=raw_target,
+                    message=message,
+                )
+            )
 
     offers_root = repo / "core" / "offers"
     if offers_root.exists():

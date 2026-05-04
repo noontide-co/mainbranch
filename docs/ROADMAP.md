@@ -19,6 +19,9 @@ Main Branch already ships:
 - privacy-safe GitHub issue drafting for user friction;
 - `bets/` and `/mb-bet` as the first narration primitive;
 - public contribution, support, security, compatibility, and agent guidance.
+- accepted workspace/repo/sensitive-data boundary guidance and
+  GitHub/Obsidian-compatible markdown/link conventions for future dashboard,
+  team daily log, bookkeeping, and multi-repo work.
 
 Claude Code is the supported runtime today. Other runtimes are compatibility
 targets until adapter code and smoke evidence exist.
@@ -70,12 +73,11 @@ Planned scope:
 - sidecar enrichment contract for optional tools such as public company
   context, analytics, bookkeeping, transcription, or deployment helpers
   ([#265](https://github.com/noontide-co/mainbranch/issues/265)).
-- Obsidian-compatible markdown/link conventions so business repos remain useful
-  in existing markdown tools
-  ([#275](https://github.com/noontide-co/mainbranch/issues/275));
-- a workspace/repo boundary decision for multi-repo businesses, private operator
-  dashboards, finance/legal access, and team daily logs
-  ([#274](https://github.com/noontide-co/mainbranch/issues/274)).
+- follow-up implementation work from the workspace/repo boundary decision and
+  markdown/link conventions, including dashboard spikes, team daily log
+  surfaces, finance/legal warnings, and broader link repair where issues prove
+  the need ([#274](https://github.com/noontide-co/mainbranch/issues/274),
+  [#275](https://github.com/noontide-co/mainbranch/issues/275)).
 
 ## Later: v0.4 - Launches Offers From Bets
 
