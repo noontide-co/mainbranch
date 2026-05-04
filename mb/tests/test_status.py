@@ -59,6 +59,9 @@ def test_status_json_degrades_without_github(tmp_path: Path, monkeypatch) -> Non
     assert (repo / ".mb" / "last-status-seen.json").is_file()
     assert "readiness" in report
     assert "update" in report
+    assert report["ranked_actions"]
+    assert report["ranked_actions"][0]["signals"]
+    assert "safe_to_share" in report["ranked_actions"][0]
 
 
 def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) -> None:
@@ -91,8 +94,10 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
                 "since_last_check",
                 "drift",
                 "readiness",
+                "ranked_actions",
                 "marker_update",
             ]
+            if isinstance(payload[key], dict)
         },
     }
     expected = json.loads(
@@ -117,6 +122,8 @@ def test_status_human_output_mentions_core_sections(tmp_path: Path, monkeypatch)
     assert "Runtime" in result.stdout
     assert "GitHub" in result.stdout
     assert "Next" in result.stdout
+    assert "why:" in result.stdout
+    assert "next:" in result.stdout
 
 
 def test_status_since_last_check_uses_repo_marker(tmp_path: Path, monkeypatch) -> None:
@@ -223,6 +230,7 @@ def test_status_required_update_json_and_human_copy(tmp_path: Path, monkeypatch)
     assert any(
         "pipx upgrade mainbranch" in action for action in payload["readiness"]["next_actions"]
     )
+    assert payload["ranked_actions"][0]["id"] == "mainbranch_update_required"
 
     human_result = runner.invoke(app, ["status", str(repo), "--verbose"])
 
@@ -248,6 +256,9 @@ def test_status_names_integration_repairs(tmp_path: Path, monkeypatch) -> None:
     assert any(item["id"] == "unhealthy_integrations" for item in payload["drift"]["items"])
     assert any(
         "mb connect meta --token-stdin" in action for action in payload["readiness"]["next_actions"]
+    )
+    assert any(
+        action["id"] == "repair_unhealthy_integrations" for action in payload["ranked_actions"]
     )
 
     human_result = runner.invoke(app, ["status", str(repo), "--verbose"])
@@ -386,6 +397,99 @@ def test_status_readiness_mentions_due_bets(tmp_path: Path) -> None:
     readiness = status_mod._readiness(report)
 
     assert any("active bets" in action for action in readiness["next_actions"])
+
+
+def test_status_ranker_mentions_due_bets(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(
+        status_mod,
+        "_git_info",
+        lambda repo: {
+            "available": True,
+            "inside_work_tree": True,
+            "branch": "main",
+            "commit": "abc123",
+            "dirty": False,
+            "dirty_count": 0,
+            "dirty_files": [],
+            "remote": "https://github.com/example/acme.git",
+            "error": "",
+        },
+    )
+    monkeypatch.setattr(
+        status_mod,
+        "_git_recent_activity",
+        lambda repo, git: {"available": True, "items": [], "error": ""},
+    )
+    monkeypatch.setattr(
+        status_mod,
+        "_github",
+        lambda repo, git: {
+            "available": True,
+            "authenticated": True,
+            "degraded": False,
+            "source": "gh",
+            "repo": "example/acme",
+            "summary": {
+                "assigned_tasks": 0,
+                "attention_requests": 0,
+                "open_proposals": 0,
+                "shipped_this_week": 0,
+                "recently_closed_tasks": 0,
+                "blocked_or_stale_tasks": 0,
+            },
+            "sections": {
+                "assigned_tasks": [],
+                "attention_requests": [],
+                "open_proposals": [],
+                "shipped_this_week": [],
+                "recently_closed_tasks": [],
+                "blocked_or_stale_tasks": [],
+            },
+            "errors": [],
+            "assigned_issues": [],
+            "review_requests": [],
+            "recent_merged_prs": [],
+            "context": {"ok": True, "state": "ready"},
+        },
+    )
+    monkeypatch.setattr(
+        status_mod.onboard_mod,
+        "onboarding_status",
+        lambda repo: {"summary": {"status": "ready"}, "checklist": []},
+    )
+    repo = tmp_path / "repo"
+    init_run(path=str(repo), name="Acme")
+    today = date.today()
+    (repo / "bets" / f"{today.isoformat()}-due.md").write_text(
+        (
+            "---\n"
+            "status: open\n"
+            f"opened: {today.isoformat()}\n"
+            f"deadline: {today.isoformat()}\n"
+            "appetite: 1 day\n"
+            "hypothesis: Fast follow-up increases replies.\n"
+            "metric: replies\n"
+            "target: 3 replies\n"
+            "result: ''\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_campaigns: []\n"
+            "linked_outcomes: []\n"
+            "public: false\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n\n"
+            "# Due bet\n"
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["status", str(repo), "--json", "--peek"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert any(action["id"] == "review_due_bets" for action in payload["ranked_actions"])
 
 
 def test_status_empty_bet_deadline_does_not_fall_back_to_opened_filename(tmp_path: Path) -> None:
@@ -835,6 +939,14 @@ def test_status_renderer_prints_optional_sections(capsys) -> None:
             "errors": ["merged PRs: degraded"],
         },
         "readiness": {"level": "ready", "score": 100, "next_actions": ["Run `claude`."]},
+        "ranked_actions": [
+            {
+                "id": "review_due_bets",
+                "title": "Review bets due this week",
+                "command": "/mb-bet update",
+                "reason": "1 active bet has a deadline soon.",
+            }
+        ],
     }
 
     status_mod.render_human(report, verbose=True, no_color=True)
@@ -849,3 +961,4 @@ def test_status_renderer_prints_optional_sections(capsys) -> None:
     assert "shipped this week: 1" in output
     assert "task #173" in output
     assert "shipped #192" in output
+    assert "Review bets due this week" in output

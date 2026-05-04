@@ -46,6 +46,8 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     assert report["command"]["follow_up"] == "/mb-start"
     assert report["launch"]["requested"] is False
     assert "update" in report
+    assert "ranked_actions" in report
+    assert report["status"]["available"] is True
 
 
 def test_start_degrades_when_claude_is_missing(tmp_path: Path, monkeypatch) -> None:

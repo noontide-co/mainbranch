@@ -10,9 +10,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from mb import status as status_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status
-from mb.status import _looks_like_mainbranch_repo
 
 
 def _which(name: str) -> str:
@@ -106,6 +106,30 @@ def _launch_claude(repo: Path) -> int:
         return 127
     except subprocess.SubprocessError:
         return 1
+
+
+def _status_facts(repo: Path) -> dict[str, Any]:
+    """Return the non-mutating status facts that agent skills should consume."""
+    try:
+        report = status_mod.run(path=str(repo), update_marker=False)
+    except Exception as exc:  # pragma: no cover - defensive CLI degradation
+        return {
+            "available": False,
+            "error": str(exc),
+            "ranked_actions": [],
+            "readiness": {},
+            "drift": {},
+        }
+    return {
+        "available": True,
+        "error": "",
+        "schema_version": report.get("schema_version"),
+        "generated_at": report.get("generated_at"),
+        "ranked_actions": report.get("ranked_actions") or [],
+        "readiness": report.get("readiness") or {},
+        "drift": report.get("drift") or {},
+        "since_last_check": report.get("since_last_check") or {},
+    }
 
 
 def _build_checks(
@@ -228,11 +252,12 @@ def _next_actions(
 def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
     """Build a handoff report and optionally launch Claude Code."""
     repo_path = Path(repo).expanduser().resolve()
-    repo_shape = _looks_like_mainbranch_repo(repo_path)
+    repo_shape = status_mod._looks_like_mainbranch_repo(repo_path)
     git = _git_status(repo_path)
     claude_path = _which("claude")
     wiring = link_status(repo_path)
     update = package_update_status(repo_path)
+    status_facts = _status_facts(repo_path)
     checks = _build_checks(repo_shape, git, claude_path, wiring, update)
     hard_failures = _hard_failures(checks)
     handoff_ready = not hard_failures
@@ -271,6 +296,8 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "path": claude_path,
             "skill_wiring": wiring,
         },
+        "status": status_facts,
+        "ranked_actions": status_facts.get("ranked_actions", []),
         "checks": checks,
         "command": {
             "cwd": str(repo_path),
@@ -335,4 +362,9 @@ def render_human(report: dict[str, Any]) -> None:
         console.print("\n[bold]Next[/bold]")
         for action in report["next_actions"]:
             console.print(f"  - {action}")
+    ranked_actions = report.get("ranked_actions") or []
+    if ranked_actions:
+        console.print("\n[bold]Recommended from mb status[/bold]")
+        for action in ranked_actions[:3]:
+            console.print(f"  - {action.get('title')}: {action.get('reason')}")
     console.print()

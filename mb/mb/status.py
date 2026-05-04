@@ -15,6 +15,7 @@ import yaml
 from mb import __version__, github_activity
 from mb import connect as connect_mod
 from mb import onboard as onboard_mod
+from mb import ranker as ranker_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status
 
@@ -954,6 +955,7 @@ def run(
     )
     report["drift"] = _drift(report)
     report["readiness"] = _readiness(report)
+    report["ranked_actions"] = ranker_mod.rank_status_report(report)
     report["ok"] = report["readiness"]["level"] != "not_ready"
     report["marker_update"] = (
         _write_last_seen_marker(repo_path, report)
@@ -1174,6 +1176,18 @@ def render_human(
             console.print(f"  [yellow]degraded:[/yellow] {error}")
 
     console.print("\n[bold]Next[/bold]")
-    for action in readiness["next_actions"]:
-        console.print(f"  - {action}")
+    ranked_actions = report.get("ranked_actions") or []
+    if ranked_actions:
+        for index, action in enumerate(ranked_actions[:3], start=1):
+            title = str(action.get("title") or action.get("id") or "Next action")
+            reason = str(action.get("reason") or "")
+            command = str(action.get("command") or "")
+            console.print(f"  {index}. {title}")
+            if reason:
+                console.print(f"     why: {reason}")
+            if command:
+                console.print(f"     next: {command}")
+    else:
+        for action in readiness["next_actions"]:
+            console.print(f"  - {action}")
     console.print()
