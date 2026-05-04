@@ -28,7 +28,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Philosophy, why, compound, passive memory | [philosophy.md](references/philosophy.md) |
 | /mb-think, research, decide, codify | [the-think-cycle.md](references/the-think-cycle.md) |
 | Task tracking, where left off, focus | [task-tracking-options.md](references/task-tracking-options.md) |
-| Error, command not found, MCP, Apify setup | [troubleshooting.md](references/troubleshooting.md) |
+| Error, command not found, MCP, Apify setup, GitHub issue | [troubleshooting.md](references/troubleshooting.md) |
 | Getting started, setup | Route to `/mb-setup` or `/mb-start` |
 | Which skill, when to use | [skills-guide.md](references/skills-guide.md) |
 | Create skill, Notion export, custom | [skills-guide.md](references/skills-guide.md) |
@@ -53,6 +53,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 - **End with action** — Suggest next skill (`/mb-think`, `/mb-setup`, `/mb-ads`, `/mb-vsl`)
 - **Beginner-friendly** — Many never used Terminal
 - **Honest about gaps** — The system is new and evolving. Acknowledge what's still being built rather than presenting everything as polished.
+- **Public issue safety** — Suggest `mb issue draft` for reproducible Main Branch friction, but never submit issues for the operator.
 
 ---
 

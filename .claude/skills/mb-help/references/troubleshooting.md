@@ -180,6 +180,41 @@ Good commands for refreshing context:
 
 ---
 
+## Turn Friction Into a GitHub Issue
+
+If a Main Branch command, skill, setup step, or doc gap is reproducibly confusing
+after the repair path above, help the operator create a privacy-safe public issue
+draft. Do not submit it for them.
+
+**Bug:**
+```bash
+mb issue draft bug --command "mb doctor" --what-happened "..." --expected "..."
+```
+
+**Feature gap:**
+```bash
+mb issue draft feature --problem "..." --proposal "..."
+```
+
+**Question:**
+```bash
+mb issue draft question --question "..." --context "..." --tried "..."
+```
+
+Drafts go under `.mb/issue-drafts/` and are gitignored. Tell the operator to
+review the draft for private business data, customer/member details, secrets,
+account IDs, screenshots, and local-only paths before running:
+
+```bash
+mb issue open .mb/issue-drafts/[draft].md --yes
+```
+
+Use this only for Main Branch product friction that belongs in the public issue
+tracker. Operator-specific business strategy belongs in the community or their
+private repo, not public GitHub.
+
+---
+
 ## MCP Not Working (Apify, etc.)
 
 ### "apify not found" in /mcp

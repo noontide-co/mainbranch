@@ -13,6 +13,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added `mb issue draft` and `mb issue open` so users can turn confusing
+  Main Branch friction into privacy-scrubbed local GitHub issue drafts before
+  explicitly submitting with `gh issue create`.
+- Added issue-drafting docs and `/mb-help` troubleshooting guidance for when
+  skills should suggest a bug, feature, or question draft without submitting on
+  the operator's behalf.
 - Added public ethos, operator-loop, and roadmap docs so future product work can
   anchor to the Know -> See -> Decide -> Execute -> Narrate loop and the
   current v0.3/v0.4 release direction.
