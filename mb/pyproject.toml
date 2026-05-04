@@ -72,6 +72,7 @@ mb = [
   "_data/templates/.gitignore.tmpl",
   "_engine/**/*",
   "_engine/.claude/**/*",
+  "_engine/.claude-plugin/**/*",
   "py.typed",
 ]
 
