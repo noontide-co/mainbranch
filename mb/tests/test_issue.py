@@ -210,3 +210,30 @@ def test_issue_open_submits_with_gh_when_reviewed(tmp_path: Path, monkeypatch) -
     assert create_call[:3] == ["gh", "issue", "create"]
     assert "--label" in create_call
     assert "question" in create_call
+
+
+def test_issue_open_gh_create_failure_keeps_manual_fallback(tmp_path: Path, monkeypatch) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    draft = issue_mod.create_draft(
+        repo=str(repo),
+        kind="bug",
+        title="bug: submit failure",
+        fields={"command": "mb doctor", "happened": "failed", "expected": "pass"},
+        include_doctor=False,
+    )
+
+    def fake_runner(args: list[str]) -> subprocess.CompletedProcess[str]:
+        if args[:3] == ["gh", "auth", "status"]:
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        return subprocess.CompletedProcess(args, 1, stdout="", stderr="label not found")
+
+    monkeypatch.setattr(issue_mod.shutil, "which", lambda name: "/usr/bin/gh")
+
+    result = issue_mod.open_draft(draft["path"], yes=True, runner=fake_runner)
+
+    assert result["ok"] is False
+    assert result["submitted"] is False
+    assert result["fallback"] is True
+    assert result["reason"] == "label not found"
+    assert result["manual_steps"]

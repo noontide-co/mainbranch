@@ -521,14 +521,13 @@ def open_draft(
         args.extend(["--label", label])
     result = runner(args)
     if result.returncode != 0:
-        return {
-            "ok": False,
-            "submitted": False,
-            "fallback": True,
-            "reason": result.stderr.strip() or result.stdout.strip() or "gh issue create failed",
-            "draft_path": str(draft_path),
-            "manual_url": f"https://github.com/{PUBLIC_REPO}/issues/new/choose",
-        }
+        fallback = _fallback(
+            title,
+            result.stderr.strip() or result.stdout.strip() or "gh issue create failed",
+            draft_path,
+        )
+        fallback["ok"] = False
+        return fallback
     return {
         "ok": True,
         "submitted": True,
