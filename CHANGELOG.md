@@ -11,6 +11,27 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-04
+
+v0.3.0 makes Main Branch better at telling a user what matters next. It adds
+the first public product frame, status/ranker improvements, bets, issue
+drafting, provider setup planning, and paid-traffic site readiness checks.
+
+### What this means for you (plain English)
+
+- **`mb status` is more useful.** It can now show deterministic drift signals,
+  recent changes, ranked next actions, active bets, and paid-traffic measurement
+  readiness.
+- **Main Branch can capture friction.** If something is confusing or broken,
+  `mb issue draft` can create a privacy-scrubbed local GitHub issue draft before
+  you decide to submit it.
+- **Paid site launch checks are safer.** `/mb-site`, `/mb-ads`, and
+  `mb site check` now route Google Ads/GTM advice through a local readiness
+  checklist instead of pretending to launch or mutate provider accounts.
+- **The product direction is public.** The ethos, operator loops, roadmap,
+  markdown conventions, and runtime boundary are now documented for agents and
+  contributors.
+
 ### Added
 
 - Added an accepted workspace/repo/sensitive-data boundary decision covering
