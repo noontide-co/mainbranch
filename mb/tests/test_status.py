@@ -459,6 +459,32 @@ def test_status_github_context_stops_before_low_level_remote_errors(
     assert "no git remotes found" not in json.dumps(github)
 
 
+def test_status_reuses_github_context_for_integrations(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    calls = 0
+
+    def fake_context(repo: Path, **kwargs: Any) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        return {
+            "ok": False,
+            "state": "missing_cli",
+            "summary": "GitHub CLI is not installed.",
+            "repair": "Install GitHub CLI, then run `gh auth login`.",
+            "repair_command": "gh auth login",
+            "safe_to_share": True,
+        }
+
+    monkeypatch.setattr(connect_mod, "github_context", fake_context)
+
+    report = status_mod.run(path=str(repo))
+
+    assert calls == 1
+    assert report["integrations"]["github"] == report["github"]["context"]
+
+
 def test_status_renderer_prints_optional_sections(capsys) -> None:
     report: dict[str, Any] = {
         "repo": {"path": "/tmp/biz", "looks_like_mainbranch_repo": True},

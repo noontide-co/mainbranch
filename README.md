@@ -181,7 +181,10 @@ available and a local `~/.mainbranch/secrets/connect.json` fallback otherwise.
 The business repo only receives non-sensitive metadata in `.mb/connect.yaml`,
 such as the provider id, account label, credential backend, and last check time.
 Stored credentials start as `unvalidated` until `mb connect test <provider>`
-proves the credential works, so a secret ref alone is never reported as healthy.
+runs the safest available check. Providers with a safe API probe validate
+against the provider; providers without one record that local credential
+presence was confirmed and that no automated probe exists yet. A secret ref
+alone is never reported as healthy.
 `mb connect status --json` and `mb connect doctor --json` include safe repair
 fields such as `state`, `summary`, `repair`, `repair_command`, and
 `safe_to_share` for onboarding agents. Skills and future dashboards should read

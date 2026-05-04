@@ -38,13 +38,6 @@ def _which(name: str) -> str:
     return shutil.which(name) or ""
 
 
-def _gh_status() -> tuple[bool, str]:
-    context = connect_mod.github_context(".")
-    if context["ok"]:
-        return True, "authenticated and GitHub repo context ready"
-    return False, str(context["summary"])
-
-
 def _net() -> tuple[bool, str]:
     """Best-effort: open a TCP connection to api.github.com:443."""
     try:
@@ -217,6 +210,7 @@ def run(path: str) -> dict[str, Any]:
     )
 
     gh_context = connect_mod.github_context(repo)
+    integration_status = connect_mod.status_all(repo, github=gh_context)
     checks.append(
         {
             "name": "github-context",
@@ -289,7 +283,7 @@ def run(path: str) -> dict[str, Any]:
     )
     checks.append(_repo_layout_check(repo))
     checks.append(_schema_version_check(repo))
-    checks.append(connect_mod.doctor_check(repo))
+    checks.append(connect_mod.doctor_check(repo, status=integration_status))
     onboarding = onboard_mod.onboarding_status(repo)
     onboarding_summary = onboarding["summary"]
     checks.append(
@@ -344,7 +338,7 @@ def run(path: str) -> dict[str, Any]:
         "ok": overall and not hard_fail,
         "checks": checks,
         "repo": str(repo),
-        "integrations": connect_mod.status_all(repo),
+        "integrations": integration_status,
         "onboarding": onboarding,
         "update": update,
         "python": sys.version.split()[0],

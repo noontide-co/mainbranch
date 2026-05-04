@@ -21,6 +21,29 @@ def test_doctor_runs_on_empty_dir(tmp_path: Path) -> None:
     assert "update" in report
 
 
+def test_doctor_reuses_github_context_for_integrations(tmp_path: Path, monkeypatch) -> None:
+    calls = 0
+
+    def fake_context(repo: Path) -> dict[str, object]:
+        nonlocal calls
+        calls += 1
+        return {
+            "ok": False,
+            "state": "missing_github_remote",
+            "summary": "This repo does not have a GitHub origin remote.",
+            "repair": "Add a GitHub origin remote before relying on GitHub tasks or proposals.",
+            "repair_command": "gh repo create --source . --remote origin --push",
+            "safe_to_share": True,
+        }
+
+    monkeypatch.setattr(doctor_mod.connect_mod, "github_context", fake_context)
+
+    report = run(path=str(tmp_path))
+
+    assert calls == 1
+    assert report["integrations"]["github"]["state"] == "missing_github_remote"
+
+
 def test_cloud_path_detection_via_symlink(tmp_path: Path, monkeypatch) -> None:
     # Build a fake repo whose core/finance/ is a symlink pointing at a path
     # whose realpath includes "Dropbox".

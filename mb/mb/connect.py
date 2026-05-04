@@ -564,7 +564,7 @@ def _stored_secret(provider: Provider, entry: dict[str, Any]) -> str:
     return SecretStore(backend).get(ref) if ref else ""
 
 
-def _http_get_json(url: str, headers: dict[str, str] | None = None) -> tuple[bool, str]:
+def _http_get_json(url: str, headers: dict[str, str] | None = None) -> tuple[str, str]:
     request = urllib.request.Request(url, headers=headers or {})
     try:
         with urllib.request.urlopen(request, timeout=VALIDATION_TIMEOUT_SECONDS) as response:
@@ -572,46 +572,53 @@ def _http_get_json(url: str, headers: dict[str, str] | None = None) -> tuple[boo
             body = response.read(8192)
     except urllib.error.HTTPError as exc:
         if exc.code in {400, 401, 403}:
-            return False, "provider rejected the credential"
-        return False, f"provider validation returned HTTP {exc.code}"
+            return "invalid", "provider rejected the credential"
+        if exc.code in {408, 429} or exc.code >= 500:
+            return "unvalidated", f"provider validation returned HTTP {exc.code}"
+        return "unvalidated", f"provider validation returned HTTP {exc.code}"
     except (urllib.error.URLError, TimeoutError, OSError):
-        return False, "provider validation could not reach the service"
+        return "unvalidated", "provider validation could not reach the service"
     if status < 200 or status >= 300:
-        return False, f"provider validation returned HTTP {status}"
+        if status in {400, 401, 403}:
+            return "invalid", "provider rejected the credential"
+        return "unvalidated", f"provider validation returned HTTP {status}"
     if body:
         with suppress(json.JSONDecodeError, UnicodeDecodeError):
             json.loads(body.decode("utf-8"))
-    return True, "credential validated with provider"
+    return "ready", "credential validated with provider"
 
 
 def _validate_with_provider(provider: Provider, secret: str) -> dict[str, Any]:
     checked_at = _now()
     if provider.id == "cloudflare":
-        ok, summary = _http_get_json(
+        state, summary = _http_get_json(
             "https://api.cloudflare.com/client/v4/user/tokens/verify",
             {"Authorization": f"Bearer {secret}"},
         )
     elif provider.id == "meta":
-        ok, summary = _http_get_json(
+        state, summary = _http_get_json(
             "https://graph.facebook.com/v19.0/me?fields=id",
             {"Authorization": f"Bearer {secret}"},
         )
     elif provider.id == "apify":
-        ok, summary = _http_get_json(
+        state, summary = _http_get_json(
             "https://api.apify.com/v2/users/me",
             {"Authorization": f"Bearer {secret}"},
         )
     else:
         return {
-            "ok": False,
-            "state": "unvalidated",
+            "ok": True,
+            "state": "ready",
             "checked_at": checked_at,
-            "summary": (f"{provider.name} does not have an automated safe validation probe yet."),
+            "summary": (
+                f"{provider.name} has no automated safe validation probe yet; "
+                "local credential presence was confirmed."
+            ),
             "safe_to_share": True,
         }
     return {
-        "ok": ok,
-        "state": "ready" if ok else "invalid",
+        "ok": state == "ready",
+        "state": state,
         "checked_at": checked_at,
         "summary": summary,
         "safe_to_share": True,
@@ -665,7 +672,12 @@ def test_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
     }
 
 
-def status_all(repo: str | Path = ".", *, include_all: bool = False) -> dict[str, Any]:
+def status_all(
+    repo: str | Path = ".",
+    *,
+    include_all: bool = False,
+    github: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     target = Path(repo).resolve()
     config = _read_config(target)
     configured = set(config["providers"].keys())
@@ -682,7 +694,7 @@ def status_all(repo: str | Path = ".", *, include_all: bool = False) -> dict[str
         "config_path": str(_config_path(target)),
         "repo_id": str(config.get("repo_id") or ""),
         "providers": providers,
-        "github": github_context(target),
+        "github": github or github_context(target),
         "safe_to_share": True,
         "summary": {
             "configured": len(connected),
@@ -789,8 +801,8 @@ def list_providers(repo: str | Path = ".") -> dict[str, Any]:
     return {"ok": True, "providers": providers, "config_path": status["config_path"]}
 
 
-def doctor_check(repo: str | Path = ".") -> dict[str, Any]:
-    status = status_all(repo)
+def doctor_check(repo: str | Path = ".", *, status: dict[str, Any] | None = None) -> dict[str, Any]:
+    status = status or status_all(repo)
     summary = status["summary"]
     if summary["configured"] == 0:
         return {
@@ -830,7 +842,8 @@ def doctor_check(repo: str | Path = ".") -> dict[str, Any]:
 
 
 def doctor(repo: str | Path = ".") -> dict[str, Any]:
-    status = status_all(repo)
+    github = github_context(repo)
+    status = status_all(repo, github=github)
     github = status["github"]
     checks = [
         {

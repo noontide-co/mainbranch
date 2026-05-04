@@ -449,6 +449,7 @@ def run(path: str = ".") -> dict[str, Any]:
     repo_shape = _looks_like_mainbranch_repo(repo_path)
     git = _git_info(repo_path)
     update = package_update_status(repo_path)
+    github = _github(repo_path, git)
     report: dict[str, Any] = {
         "ok": True,
         "repo": {"path": str(repo_path), **repo_shape},
@@ -459,8 +460,8 @@ def run(path: str = ".") -> dict[str, Any]:
         "git_activity": _git_recent_activity(repo_path, git),
         "brain": _brain(repo_path),
         "onboarding": onboard_mod.onboarding_status(repo_path),
-        "integrations": connect_mod.status_all(repo_path),
-        "github": _github(repo_path, git),
+        "integrations": connect_mod.status_all(repo_path, github=github.get("context")),
+        "github": github,
     }
     report["readiness"] = _readiness(report)
     report["ok"] = report["readiness"]["level"] != "not_ready"
