@@ -314,9 +314,12 @@ this shape:
 flag and the runtime process was actually started. If no runtime is configured,
 the command should degrade to plain hints and mark the runtime as unconfigured.
 
-`mb start --json` is the current Claude Code handoff envelope. New hint
-commands should converge on the fields above without breaking existing `mb
-start` consumers.
+`mb start --json` is the current Claude Code handoff envelope and is
+grandfathered with its existing `command` object and `launch.attempted` fields.
+New hint commands should use the fields above. If `mb start` ever migrates to
+the shared hint envelope, that must be a compatibility-managed CLI contract
+change with tests, changelog notes, and a transition path for existing
+consumers.
 
 ## Workflow Launcher and Playbook Gate
 
