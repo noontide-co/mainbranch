@@ -282,13 +282,46 @@ def _gh_json(args: list[str], repo: Path) -> tuple[bool, Any, str]:
 
 
 def _github(repo: Path, git: dict[str, Any]) -> dict[str, Any]:
-    return github_activity.collect(
+    context = connect_mod.github_context(repo, which_func=_which, command_runner=_run_command)
+    if not context["ok"]:
+        sections: dict[str, list[dict[str, Any]]] = {
+            "assigned_tasks": [],
+            "attention_requests": [],
+            "open_proposals": [],
+            "shipped_this_week": [],
+            "recently_closed_tasks": [],
+            "blocked_or_stale_tasks": [],
+        }
+        return {
+            "available": context["state"] != "missing_cli",
+            "authenticated": context["state"] not in {"missing_cli", "unauthenticated"},
+            "degraded": True,
+            "source": "gh",
+            "repo": "",
+            "summary": {
+                "assigned_tasks": 0,
+                "attention_requests": 0,
+                "open_proposals": 0,
+                "shipped_this_week": 0,
+                "recently_closed_tasks": 0,
+                "blocked_or_stale_tasks": 0,
+            },
+            "sections": sections,
+            "errors": [str(context["summary"])],
+            "assigned_issues": [],
+            "review_requests": [],
+            "recent_merged_prs": [],
+            "context": context,
+        }
+    report = github_activity.collect(
         repo,
         remote=str(git.get("remote", "")),
         which_func=_which,
         command_runner=_run_command,
         json_runner=_gh_json,
     )
+    report["context"] = context
+    return report
 
 
 def _recent_merged_prs(prs: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -380,7 +413,17 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
                 or "Run `mb onboard status` to resume onboarding."
             )
         )
-    if not report["github"]["authenticated"]:
+    integration_repairs = [
+        item for item in (report.get("integrations") or {}).get("providers", []) if not item["ok"]
+    ]
+    for item in integration_repairs[:3]:
+        command = str(item.get("repair_command") or "mb connect doctor")
+        next_actions.append(f"Repair {item['provider']} integration: `{command}`.")
+    github_context = report["github"].get("context") or {}
+    if github_context and not github_context.get("ok"):
+        command = str(github_context.get("repair_command") or "gh auth login")
+        next_actions.append(f"Repair GitHub context: `{command}`.")
+    elif not report["github"]["authenticated"]:
         next_actions.append("Run `gh auth login` to include assigned issues and shipped PRs.")
     if not next_actions:
         next_actions.append("Run `claude` in this repo, then `/mb-start`.")
@@ -406,6 +449,7 @@ def run(path: str = ".") -> dict[str, Any]:
     repo_shape = _looks_like_mainbranch_repo(repo_path)
     git = _git_info(repo_path)
     update = package_update_status(repo_path)
+    github = _github(repo_path, git)
     report: dict[str, Any] = {
         "ok": True,
         "repo": {"path": str(repo_path), **repo_shape},
@@ -416,8 +460,8 @@ def run(path: str = ".") -> dict[str, Any]:
         "git_activity": _git_recent_activity(repo_path, git),
         "brain": _brain(repo_path),
         "onboarding": onboard_mod.onboarding_status(repo_path),
-        "integrations": connect_mod.status_all(repo_path),
-        "github": _github(repo_path, git),
+        "integrations": connect_mod.status_all(repo_path, github=github.get("context")),
+        "github": github,
     }
     report["readiness"] = _readiness(report)
     report["ok"] = report["readiness"]["level"] != "not_ready"
@@ -477,6 +521,11 @@ def render_human(report: dict[str, Any]) -> None:
             f"healthy {integration_summary['healthy']}  "
             f"needs repair {integration_summary['needs_repair']}"
         )
+        for item in integrations.get("providers", []):
+            if not item["ok"]:
+                console.print(
+                    f"  - {item['provider']}: {item['state']}  next: {item['repair_command']}"
+                )
 
     counts = brain["counts"]
     console.print(
@@ -522,7 +571,12 @@ def render_human(report: dict[str, Any]) -> None:
             console.print(f"  - {item['date']} {item['commit']}  {item['subject']}  {files}")
 
     console.print("\n[bold]GitHub[/bold]")
-    if not github["available"]:
+    github_context = github.get("context") or {}
+    if github_context and not github_context.get("ok"):
+        console.print(f"  {github_context.get('summary')}")
+        if github_context.get("repair_command"):
+            console.print(f"  next: {github_context['repair_command']}")
+    elif not github["available"]:
         console.print("  gh unavailable; skipping issues and PRs.")
     elif not github["authenticated"]:
         console.print("  gh not authenticated; run `gh auth login` to include business tasks.")

@@ -77,7 +77,10 @@ def test_connect_provider_stores_secret_outside_repo(tmp_path: Path, monkeypatch
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert payload["ok"] is True
+    assert payload["ready"] is False
     assert payload["credential_backend"] == "local-file"
+    assert payload["status"]["state"] == "unvalidated"
+    assert payload["status"]["repair_command"] == "mb connect test cloudflare"
 
     config_path = repo / ".mb" / "connect.yaml"
     config_text = config_path.read_text(encoding="utf-8")
@@ -116,6 +119,7 @@ def test_connect_provider_only_reads_env_when_explicit(tmp_path: Path, monkeypat
         "type": "env",
         "env_var": "META_ACCESS_TOKEN",
     }
+    assert explicit_payload["status"]["state"] == "unvalidated"
     assert "meta-test-token" not in (repo / ".mb" / "connect.yaml").read_text(encoding="utf-8")
 
 
@@ -137,6 +141,194 @@ def test_connect_status_reports_missing_secret_as_repair_not_hard_crash(
     status_payload = json.loads(status.stdout)
     assert status_payload["summary"]["needs_repair"] == 1
     assert status_payload["providers"][0]["secrets"]["access_token"]["present"] is False
+    assert status_payload["providers"][0]["state"] == "missing_secret"
+    assert status_payload["providers"][0]["repair_command"] == "mb connect meta --token-stdin"
+    assert status_payload["providers"][0]["safe_to_share"] is True
+
+
+def test_connect_status_reports_unvalidated_secret_without_claiming_health(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        ["connect", "cloudflare", "--repo", str(repo), "--token", "cf-test-token", "--json"],
+    )
+
+    assert result.exit_code == 0
+    status = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+    assert status.exit_code == 1
+    payload = json.loads(status.stdout)
+    provider = payload["providers"][0]
+    assert payload["summary"]["configured"] == 1
+    assert payload["summary"]["healthy"] == 0
+    assert payload["summary"]["unvalidated"] == 1
+    assert provider["state"] == "unvalidated"
+    assert provider["summary"]
+    assert provider["repair"] == "Run `mb connect test cloudflare`."
+    assert provider["repair_command"] == "mb connect test cloudflare"
+    assert provider["safe_to_share"] is True
+    assert "cf-test-token" not in status.stdout
+
+
+def test_connect_test_marks_metadata_only_provider_ready(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "beancount", repo=repo, metadata_pairs=["ledger_path=core/finance/main.bean"]
+    )
+
+    result = runner.invoke(app, ["connect", "test", "beancount", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["status"]["state"] == "ready"
+    assert payload["status"]["repair_command"] == ""
+
+
+def test_connect_test_records_invalid_provider_without_leaking_secret(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(
+        app,
+        ["connect", "cloudflare", "--repo", str(repo), "--token", "cf-secret-token", "--json"],
+    )
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        lambda url, headers=None: ("invalid", "provider rejected the credential"),
+    )
+
+    result = runner.invoke(app, ["connect", "test", "cloudflare", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["status"]["state"] == "invalid"
+    assert payload["status"]["repair_command"] == "mb connect cloudflare --token-stdin"
+    assert payload["status"]["validation"]["summary"] == "provider rejected the credential"
+    assert "cf-secret-token" not in result.stdout
+
+
+def test_connect_test_no_probe_provider_reaches_ready_without_loop(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "google", "--repo", str(repo), "--token", "google-token"])
+
+    result = runner.invoke(app, ["connect", "test", "google", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["status"]["state"] == "ready"
+    assert payload["status"]["repair_command"] == ""
+    assert "no automated safe validation probe" in payload["validation"]["summary"]
+    assert "google-token" not in result.stdout
+
+    status = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+    assert status.exit_code == 0
+    status_payload = json.loads(status.stdout)
+    assert status_payload["summary"]["healthy"] == 1
+    assert status_payload["summary"]["needs_repair"] == 0
+    assert status_payload["providers"][0]["state"] == "ready"
+
+
+def test_connect_test_transient_provider_failure_stays_unvalidated(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "cloudflare", "--repo", str(repo), "--token", "cf-secret-token"])
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        lambda url, headers=None: ("unvalidated", "provider validation returned HTTP 503"),
+    )
+
+    result = runner.invoke(app, ["connect", "test", "cloudflare", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["status"]["state"] == "unvalidated"
+    assert payload["status"]["repair_command"] == "mb connect test cloudflare"
+    assert payload["status"]["validation"]["summary"] == "provider validation returned HTTP 503"
+    assert "cf-secret-token" not in result.stdout
+
+
+def test_connect_doctor_includes_github_context_and_provider_repairs(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "meta", "--repo", str(repo), "--json"])
+    monkeypatch.setattr(connect_mod.shutil, "which", lambda name: "")
+
+    result = runner.invoke(app, ["connect", "doctor", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    checks = {check["name"]: check for check in payload["checks"]}
+    assert checks["github-context"]["state"] == "missing_cli"
+    assert checks["provider:meta"]["state"] == "missing_secret"
+    assert checks["provider:meta"]["repair_command"] == "mb connect meta --token-stdin"
+    assert payload["safe_to_share"] is True
+
+
+def test_github_context_distinguishes_missing_remote(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(
+        connect_mod.shutil, "which", lambda name: "/usr/bin/gh" if name == "gh" else ""
+    )
+
+    def fake_run(args: list[str], cwd: Path | None = None, timeout: float = 5.0) -> dict[str, Any]:
+        if args[:3] == ["gh", "auth", "status"]:
+            return {"ok": True, "returncode": 0, "stdout": "", "stderr": ""}
+        if args[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
+            return {"ok": True, "returncode": 0, "stdout": "true\n", "stderr": ""}
+        if args[:4] == ["git", "config", "--get", "remote.origin.url"]:
+            return {"ok": False, "returncode": 1, "stdout": "", "stderr": ""}
+        raise AssertionError(args)
+
+    monkeypatch.setattr(connect_mod, "_run_command", fake_run)
+
+    context = connect_mod.github_context(tmp_path)
+
+    assert context["ok"] is False
+    assert context["state"] == "missing_github_remote"
+    assert context["repair_command"] == "gh repo create --source . --remote origin --push"
+
+
+def test_status_all_reuses_supplied_github_context(monkeypatch, tmp_path: Path) -> None:
+    context = {
+        "ok": True,
+        "state": "ready",
+        "summary": "cached GitHub context",
+        "repair": "",
+        "repair_command": "",
+        "safe_to_share": True,
+    }
+
+    def fail_context(repo: Path) -> dict[str, Any]:
+        raise AssertionError("github_context should not be recomputed")
+
+    monkeypatch.setattr(connect_mod, "github_context", fail_context)
+
+    status = connect_mod.status_all(tmp_path, github=context)
+
+    assert status["github"] == context
 
 
 def test_connect_status_tolerates_malformed_config_version(tmp_path: Path, monkeypatch) -> None:

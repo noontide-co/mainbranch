@@ -149,7 +149,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb init` | Set up a fresh business repo (six folders, CLAUDE.md, git init). |
 | `mb status` | Show a local-first daily briefing: repo health, runtime wiring, recent decisions/research/git activity, and GitHub tasks when `gh` is authenticated. |
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
-| `mb connect` | Register provider credentials and integration metadata without committing secrets. |
+| `mb connect` | Register provider credentials, test provider health, and inspect repair-safe integration status without committing secrets. |
 | `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
 | `mb graph` | Build a repo graph index from frontmatter links, wikilinks, and entity tags. Emits Graphviz DOT by default, `--json` for agents/dashboards, and `--open` to render a PNG view. |
 | `mb think <topic>` | Print the `/mb-think` invocation hint. Run inside Claude Code for the full flow. |
@@ -171,6 +171,8 @@ Meta, Cloudflare, Postiz, Apify, Beancount, and transcription providers.
 ```bash
 mb connect list
 printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata account_id=...
+mb connect test cloudflare
+mb connect doctor
 mb connect meta --from-env
 mb connect status --json
 ```
@@ -179,8 +181,16 @@ Secrets are stored outside the business repo, using the macOS Keychain when
 available and a local `~/.mainbranch/secrets/connect.json` fallback otherwise.
 The business repo only receives non-sensitive metadata in `.mb/connect.yaml`,
 such as the provider id, account label, credential backend, and last check time.
-Skills and future dashboards should read `mb connect status --json` or
-`.mb/connect.yaml`; they should never ask users to commit tokens.
+Stored credentials start as `unvalidated` until `mb connect test <provider>`
+runs the safest available check. Providers with a safe API probe validate
+against the provider; providers without one record that local credential
+presence was confirmed and that no automated probe exists yet. A secret ref
+alone is never reported as healthy.
+`mb connect status --json` and `mb connect doctor --json` include safe repair
+fields such as `state`, `summary`, `repair`, `repair_command`, and
+`safe_to_share` for onboarding agents. Skills and future dashboards should read
+those JSON commands or `.mb/connect.yaml`; they should never ask users to commit
+tokens.
 `--from-env` is explicit: `mb connect` does not silently import general-purpose
 environment variables.
 

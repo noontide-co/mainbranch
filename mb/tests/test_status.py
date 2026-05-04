@@ -11,6 +11,7 @@ from typing import Any
 
 from typer.testing import CliRunner
 
+from mb import connect as connect_mod
 from mb import status as status_mod
 from mb.cli import app
 from mb.init import run as init_run
@@ -103,6 +104,30 @@ def test_status_required_update_json_and_human_copy(tmp_path: Path, monkeypatch)
     assert "Update required." in human_result.stdout
     assert "pipx upgrade mainbranch" in human_result.stdout
     assert "mb skill link --repo ." in human_result.stdout
+
+
+def test_status_names_integration_repairs(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    connect_mod.connect_provider("meta", repo=repo)
+
+    json_result = runner.invoke(app, ["status", str(repo), "--json"])
+
+    assert json_result.exit_code == 0
+    payload = json.loads(json_result.stdout)
+    assert payload["integrations"]["providers"][0]["state"] == "missing_secret"
+    assert any(
+        "mb connect meta --token-stdin" in action for action in payload["readiness"]["next_actions"]
+    )
+
+    human_result = runner.invoke(app, ["status", str(repo)])
+
+    assert human_result.exit_code == 0
+    assert "meta: missing_secret" in human_result.stdout
+    assert "mb connect meta --token-stdin" in human_result.stdout
 
 
 def test_status_detects_non_business_repo(tmp_path: Path, monkeypatch) -> None:
@@ -233,6 +258,18 @@ def test_status_brain_marks_stale_decisions(tmp_path: Path, monkeypatch) -> None
 
 
 def test_status_github_authenticated_branches(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        connect_mod,
+        "github_context",
+        lambda repo, **kwargs: {
+            "ok": True,
+            "state": "ready",
+            "summary": "GitHub ready",
+            "repair": "",
+            "repair_command": "",
+            "safe_to_share": True,
+        },
+    )
     monkeypatch.setattr(status_mod, "_which", lambda name: "/usr/bin/gh" if name == "gh" else "")
     monkeypatch.setattr(
         status_mod,
@@ -306,6 +343,18 @@ def test_status_github_authenticated_branches(tmp_path: Path, monkeypatch) -> No
 
 
 def test_status_github_activity_business_sections(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        connect_mod,
+        "github_context",
+        lambda repo, **kwargs: {
+            "ok": True,
+            "state": "ready",
+            "summary": "GitHub ready",
+            "repair": "",
+            "repair_command": "",
+            "safe_to_share": True,
+        },
+    )
     monkeypatch.setattr(status_mod, "_which", lambda name: "/usr/bin/gh" if name == "gh" else "")
     monkeypatch.setattr(
         status_mod,
@@ -382,6 +431,58 @@ def test_status_github_activity_business_sections(tmp_path: Path, monkeypatch) -
     assert sections["shipped_this_week"][0]["what_shipped"] == "Launched 7"
     assert sections["recently_closed_tasks"][0]["business_status"] == "closed"
     assert sections["blocked_or_stale_tasks"][0]["labels"] == ["blocked"]
+
+
+def test_status_github_context_stops_before_low_level_remote_errors(
+    tmp_path: Path, monkeypatch
+) -> None:
+    context = {
+        "ok": False,
+        "state": "missing_github_remote",
+        "summary": "This repo does not have a GitHub origin remote.",
+        "repair": "Add a GitHub origin remote before relying on GitHub tasks or proposals.",
+        "repair_command": "gh repo create --source . --remote origin --push",
+        "safe_to_share": True,
+    }
+    monkeypatch.setattr(connect_mod, "github_context", lambda repo, **kwargs: context)
+
+    def fail_gh_json(args: list[str], repo: Path) -> tuple[bool, Any, str]:
+        raise AssertionError(args)
+
+    monkeypatch.setattr(status_mod, "_gh_json", fail_gh_json)
+
+    github = status_mod._github(tmp_path, {"remote": ""})
+
+    assert github["authenticated"] is True
+    assert github["context"]["state"] == "missing_github_remote"
+    assert github["errors"] == ["This repo does not have a GitHub origin remote."]
+    assert "no git remotes found" not in json.dumps(github)
+
+
+def test_status_reuses_github_context_for_integrations(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    calls = 0
+
+    def fake_context(repo: Path, **kwargs: Any) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        return {
+            "ok": False,
+            "state": "missing_cli",
+            "summary": "GitHub CLI is not installed.",
+            "repair": "Install GitHub CLI, then run `gh auth login`.",
+            "repair_command": "gh auth login",
+            "safe_to_share": True,
+        }
+
+    monkeypatch.setattr(connect_mod, "github_context", fake_context)
+
+    report = status_mod.run(path=str(repo))
+
+    assert calls == 1
+    assert report["integrations"]["github"] == report["github"]["context"]
 
 
 def test_status_renderer_prints_optional_sections(capsys) -> None:
