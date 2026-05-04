@@ -26,9 +26,10 @@ Current surfaces:
 
 Next improvements:
 
-- resumable onboarding that can span multiple sessions;
+- beginner-safe GitHub/provider onboarding with persistent readiness checks;
 - domain and public-context enrichment through optional sidecars;
-- better detection of missing or stale reference files.
+- clearer rules for when one business should become multiple repos or
+  workspaces.
 
 ## 2. See
 
@@ -47,10 +48,12 @@ Current surfaces:
 
 Next improvements:
 
-- `mb status` v1 with "since last check";
-- drift detection for stale context and broken wiring;
-- stable `--json` schemas for agents and dashboards;
-- a thin local dashboard once the JSON substrate is useful.
+- richer drift detection for stale context, stale links, and broken wiring;
+- provider-readiness signals for GitHub, Cloudflare, Google, Meta, Apify, and
+  other optional tools;
+- an Obsidian-compatible link/readability pass for markdown repos;
+- a local dashboard that visualizes existing repo/GitHub/provider truth without
+  becoming the source of truth.
 
 ## 3. Decide
 
@@ -71,7 +74,9 @@ Next improvements:
 - a deterministic next-action ranker;
 - top-three recommendations in `mb status` and `/mb-start`;
 - explicit pin, skip, and defer controls;
-- privacy-safe prompts to open GitHub issues when the user hits friction.
+- noob-safe prompts to open GitHub issues when the user hits friction;
+- decision trees for provider choices, paid-SaaS exceptions, sensitive data, and
+  workspace/repo boundaries.
 
 ## 4. Execute
 
@@ -104,6 +109,7 @@ Next improvements:
 
 - skills leaning more heavily on CLI facts instead of duplicate checks;
 - optional provider and sidecar contracts;
+- noob-safe connector flows for GitHub, Cloudflare, Google, Meta, and Apify;
 - richer site, ads, organic, bookkeeping, and fulfillment loops.
 
 ## 5. Narrate
@@ -118,14 +124,14 @@ Current surfaces:
 - `CHANGELOG.md`
 - decisions and retros;
 - `/mb-end`;
+- `bets/` and `/mb-bet`;
 - GitHub releases;
 - public site workflows through `/mb-site`
 
 Next improvements:
 
-- a `bets/` primitive for public operating bets;
-- `/mb-bet` with `new`, `update`, `close`, `list`, and `narrate` modes;
-- status integration for active bets and deadlines;
+- bet-to-offer graduation rules;
+- status and dashboard visibility for active bets, deadlines, and outcomes;
 - public bets pages generated from repo truth.
 
 ## Applying The Loops

@@ -16,6 +16,8 @@ Main Branch already ships:
 - beginner setup, migration, repair, and update paths;
 - local-first provider metadata and secret-safe connection checks;
 - graph and status primitives for future dashboard and agent workflows;
+- privacy-safe GitHub issue drafting for user friction;
+- `bets/` and `/mb-bet` as the first narration primitive;
 - public contribution, support, security, compatibility, and agent guidance.
 
 Claude Code is the supported runtime today. Other runtimes are compatibility
@@ -26,17 +28,26 @@ targets until adapter code and smoke evidence exist.
 The next major product step is turning `mb status` and `/mb-start` into a
 useful daily decision surface.
 
-Planned scope:
+Shipped scope:
 
 - `mb status` v1 with "since last check", drift detection, and a stable JSON
   schema ([#261](https://github.com/noontide-co/mainbranch/issues/261));
+- privacy-safe issue drafting for bugs, missing workflows, confusing errors,
+  and feature ideas ([#264](https://github.com/noontide-co/mainbranch/issues/264));
+- `bets/` and `/mb-bet` as the first primitive for tracking and narrating
+  operator bets ([#266](https://github.com/noontide-co/mainbranch/issues/266)).
+
+Remaining planned scope:
+
 - a deterministic next-action ranker with top-three recommendations and cited
   signals ([#262](https://github.com/noontide-co/mainbranch/issues/262));
 - `/mb-start` using the same status and ranker substrate
   ([#262](https://github.com/noontide-co/mainbranch/issues/262));
 - shared readiness checks so skills call `mb` instead of duplicating probes
   ([#263](https://github.com/noontide-co/mainbranch/issues/263));
-- docs that make the product ethos and operator loops explicit.
+- cleaner beginner/provider onboarding that explains the tool philosophy and
+  proves GitHub/provider readiness before noob users get stuck
+  ([#273](https://github.com/noontide-co/mainbranch/issues/273)).
 
 Anti-scope for v0.3.0:
 
@@ -44,7 +55,7 @@ Anti-scope for v0.3.0:
 - no broad multi-runtime support claims;
 - no marketplace;
 - no automatic model invocation from `mb`;
-- no issue-submission automation until the privacy layer is ready.
+- no provider setup that stores secrets in repo files.
 
 ## Soon: v0.3.x - Improves Itself In Public
 
@@ -53,29 +64,33 @@ friction easier to turn into public improvement.
 
 Planned scope:
 
-- privacy-safe issue drafting for bugs, missing workflows, confusing errors,
-  and feature ideas ([#264](https://github.com/noontide-co/mainbranch/issues/264));
 - `/mb-status` as a thin runtime wrapper over `mb status`;
 - a small read-only local dashboard spike over existing JSON outputs
   ([#189](https://github.com/noontide-co/mainbranch/issues/189));
 - sidecar enrichment contract for optional tools such as public company
   context, analytics, bookkeeping, transcription, or deployment helpers
   ([#265](https://github.com/noontide-co/mainbranch/issues/265)).
+- Obsidian-compatible markdown/link conventions so business repos remain useful
+  in existing markdown tools
+  ([#275](https://github.com/noontide-co/mainbranch/issues/275));
+- a workspace/repo boundary decision for multi-repo businesses, private operator
+  dashboards, finance/legal access, and team daily logs
+  ([#274](https://github.com/noontide-co/mainbranch/issues/274)).
 
-## Later: v0.4 - Launches Bets
+## Later: v0.4 - Launches Offers From Bets
 
-The next proof point after the daily decision loop is launching and narrating
-real business bets from the repo.
+The next proof point after the daily decision loop is graduating real business
+bets into offers, pages, ads, fulfillment, and public narration.
 
 Planned scope:
 
-- `bets/` as a first-class business-repo primitive;
-- `/mb-bet` with `new`, `update`, `close`, `list`, and `narrate` modes;
 - links between bets, decisions, research, campaigns, and outcomes;
 - public bets feed generated through site workflows;
-- `mb status` showing active bets, deadlines, and outcomes;
-- core bets work tracked in [#266](https://github.com/noontide-co/mainbranch/issues/266);
-- decisions on fulfillment and bookkeeping workflows.
+- offer launch workflow: keyword gate, lander, ads, and `/mb-start`
+  orchestration ([#89](https://github.com/noontide-co/mainbranch/issues/89));
+- decisions on fulfillment and bookkeeping workflows;
+- bookkeeping/P&L primitives that respect finance-data privacy boundaries
+  ([#128](https://github.com/noontide-co/mainbranch/issues/128)).
 
 ## Longer Range
 
@@ -88,7 +103,8 @@ Likely directions:
   orchestration, and local runtimes;
 - dashboard/server mode as an optional local or self-hosted view over repo
   truth, graph output, GitHub, and connected tools;
-- structured data layer for metrics, ads, analytics, P&L, and ledgers;
+- structured data layer for metrics, ads, analytics, P&L, and ledgers, with
+  explicit access boundaries before sensitive financial/legal data is surfaced;
 - richer sidecar ecosystem behind narrow JSON contracts;
 - deeper pages, paid ads, organic, fulfillment, and bookkeeping workflows.
 
