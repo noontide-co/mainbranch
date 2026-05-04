@@ -16,11 +16,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added public ethos, operator-loop, and roadmap docs so future product work can
   anchor to the Know -> See -> Decide -> Execute -> Narrate loop and the
   current v0.3/v0.4 release direction.
+- Added a proposed skill-to-CLI and runtime adapter contract covering lifecycle
+  and production skill boundaries, Claude Code as the reference adapter,
+  support levels, runtime-aware invocation hints, workflow launcher gates, and
+  onboarding resume state. Refs #220.
 
 ### Changed
 
 - Updated the README and agent instructions to point contributors and agents at
   the public product frame before making roadmap, runtime, or workflow changes.
+- Clarified compatibility docs so non-Claude runtimes remain roadmap surfaces
+  until each has a documented adapter and fresh-repo smoke evidence.
 
 ## [0.2.6] - 2026-05-04
 
