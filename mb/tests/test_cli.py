@@ -95,6 +95,7 @@ def test_skill_list_runs() -> None:
     result = runner.invoke(app, ["skill", "list"])
     assert result.exit_code == 0
     assert "mb-start" in result.stdout.splitlines()
+    assert "mb-update" in result.stdout.splitlines()
 
 
 def test_skill_link_wires_repo(tmp_path) -> None:

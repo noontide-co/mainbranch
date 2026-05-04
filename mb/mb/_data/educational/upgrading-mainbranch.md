@@ -15,7 +15,7 @@ mb --version
 ```
 
 `mb update` was added after the earliest public package, so old installs cannot
-run it yet. After the pipx upgrade, `mb update` and `/mb-pull` become the normal
+run it yet. After the pipx upgrade, `mb update` and `/mb-update` become the normal
 path.
 
 If you already have a business repo, repair Claude Code skill discovery from

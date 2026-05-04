@@ -17,7 +17,7 @@ mb --version
 ```
 
 `mb update` was added after the earliest public package, so old installs cannot
-run it yet. After the pipx upgrade, `mb update` and `/mb-pull` become the normal
+run it yet. After the pipx upgrade, `mb update` and `/mb-update` become the normal
 path.
 
 ## If you already have a business repo
@@ -64,4 +64,5 @@ the example path with your actual engine checkout:
 git -C ~/Documents/GitHub/mainbranch pull origin main
 ```
 
-`/mb-pull` detects the install mode and chooses the right update path.
+`/mb-update` detects the install mode and chooses the right update path.
+`/mb-pull` still works as a legacy alias.

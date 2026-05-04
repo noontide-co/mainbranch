@@ -359,7 +359,7 @@ Expected evidence:
 
 ### Level 5: Agent Runtime Smoke
 
-Use when first-run, skill discovery, `/mb-start`, `/mb-pull`, `/mb-think`, or runtime
+Use when first-run, skill discovery, `/mb-start`, `/mb-update`, `/mb-think`, or runtime
 handoff behavior changes.
 
 This is manual or semi-automated in v0.2.0. Do not pretend it is covered by

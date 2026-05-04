@@ -25,7 +25,7 @@ Conductor has a **Pre-Agent config** — a script that runs before Claude starts
 
 ```bash
 ENGINE_PATH="/absolute/path/to/mainbranch"
-for skill in mb-ads mb-end mb-help mb-organic mb-pull mb-setup mb-site mb-start mb-think mb-vsl mb-wiki; do
+for skill in mb-ads mb-end mb-help mb-organic mb-update mb-pull mb-setup mb-site mb-start mb-think mb-vsl mb-wiki; do
   target="$ENGINE_PATH/.claude/skills/$skill"
   link=".claude/skills/$skill"
   [ -d "$target" ] && [ ! -e "$link" ] && ln -s "$target" "$link" || true

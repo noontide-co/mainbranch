@@ -138,7 +138,7 @@ media:
 # OK spending more tokens for more variation.
 default_concepts: 2
 
-# CHANGELOG version tracking (managed by /mb-start and /mb-pull)
+# CHANGELOG version tracking (managed by /mb-start and /mb-update)
 # Last engine version the user has seen the "what's new" banner for.
 # Diff'd against the most recent versioned heading in
 # the active engine's `CHANGELOG.md` to decide whether to surface unread entries.

@@ -11,6 +11,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added `/mb-update` as the preferred Claude Code update skill so the slash
+  command matches the CLI command `mb update`.
+
+### Changed
+
+- Kept `/mb-pull` as a legacy alias for existing users while public docs now
+  teach `/mb-update`.
+
 ## [0.2.5] - 2026-05-04
 
 v0.2.5 finishes the noob-safe migration loop for past users with broken

@@ -173,6 +173,7 @@ def test_skill_list_command_runs() -> None:
     result = runner.invoke(app, ["skill", "list"])
     assert result.exit_code == 0
     assert "mb-start" in result.stdout.splitlines()
+    assert "mb-update" in result.stdout.splitlines()
 
 
 def test_claude_plugin_manifest_points_at_prefixed_skills() -> None:

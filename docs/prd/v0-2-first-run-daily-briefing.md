@@ -281,7 +281,7 @@ Acceptance:
 
 Linked issue: #174
 
-`mb update` should own the install-mode-aware refresh mechanism that `/mb-pull`
+`mb update` should own the install-mode-aware refresh mechanism that `/mb-update`
 can later call or explain.
 
 Required behavior:

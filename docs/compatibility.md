@@ -67,7 +67,7 @@ mb update
 `mb update` detects whether the engine is a `pipx` install or clone checkout,
 runs the appropriate update path, and refreshes skill links. Use
 `mb update --check` for a dry-run and `mb update --json` for automation.
-Inside Claude Code, `/mb-pull` calls `mb update` for this mechanical step and keeps
+Inside Claude Code, `/mb-update` calls `mb update` for this mechanical step and keeps
 ownership of the human-readable "what's new" summary.
 
 Early `0.1.x` installs do not have `mb update` yet. If `mb`, `mb doctor`,

@@ -212,7 +212,8 @@ Skills are pre-built workflows you invoke with slash prompts. Instead of figurin
 | `/mb-wiki` | Personal wiki with atomic notes |
 | `/mb-end` | Close session — summary, crystallize, commit |
 | `/mb-help` | Get answers, troubleshoot, learn the system |
-| `/mb-pull` | Quick update — delegates install-mode refresh to `mb update` and summarizes what's new |
+| `/mb-update` | Update Main Branch — delegates install-mode refresh to `mb update` and summarizes what's new |
+| `/mb-pull` | Legacy alias for `/mb-update` |
 
 ---
 
@@ -261,7 +262,7 @@ Main Branch is fully usable on its own. The paid community is the live narration
 
 ## Updating
 
-- **pipx users (most people)**: `mb update --repo .` from your business repo. Or just run `/mb-pull` inside Claude Code — it figures out which install you have and runs the right thing.
+- **pipx users (most people)**: `mb update --repo .` from your business repo. Or run `/mb-update` inside Claude Code — it figures out which install you have and runs the right thing.
 - **Clone (developer mode)**: `git pull origin main` from the engine repo.
 
 `/mb-start` checks for important updates at the beginning of a session and will
@@ -282,7 +283,7 @@ Use one repo with an `offers/` folder. Each offer gets its own `offer.md`. Soul 
 Create a separate repo for each brand. If they share the same soul and voice, they can share a repo. If not, separate repos.
 
 **How do I update when new skills come out?**
-`mb update --repo .`, or run `/mb-pull` inside Claude Code.
+`mb update --repo .`, or run `/mb-update` inside Claude Code.
 
 If `mb --version` still says `0.1.x`, run `pipx upgrade mainbranch` once before
 using `mb update`; old installs now surface this as an in-product
@@ -290,6 +291,7 @@ using `mb update`; old installs now surface this as an in-product
 surfaces. Existing business repos should then run `mb skill link --repo .` and
 `mb skill repair --repo .`, then `mb doctor` from the repo root. See
 [docs/MIGRATING.md](docs/MIGRATING.md) for the old-repo path.
+`/mb-pull` still works as a legacy alias, but new docs teach `/mb-update`.
 
 **Can Claude migrate an old setup for me?**
 Yes. Start Claude Code anywhere and paste the prompt in

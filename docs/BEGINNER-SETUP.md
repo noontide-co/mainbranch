@@ -118,7 +118,7 @@ When new versions drop:
 mb update --repo .
 ```
 
-Or run `/mb-pull` inside Claude Code — it figures out which install you have
+Or run `/mb-update` inside Claude Code — it figures out which install you have
 and runs the right thing. `/mb-start` also checks for important updates at the
 beginning of a session and will tell you when an update matters. The CHANGELOG
 entry for the new version surfaces as a banner the next time you run
@@ -168,7 +168,8 @@ starts, so repaired `/mb-start` links usually appear after restart.
 | `/mb-wiki` | Personal wiki with atomic notes. |
 | `/mb-end` | Close session intentionally — summary, crystallize, commit. |
 | `/mb-help` | Get answers, troubleshoot. |
-| `/mb-pull` | Update Main Branch (figures out pipx vs clone). |
+| `/mb-update` | Update Main Branch (figures out pipx vs clone). |
+| `/mb-pull` | Old name for `/mb-update`; still works for existing users. |
 
 ---
 

@@ -130,6 +130,8 @@ jobs:
             || { echo "::error::py.typed missing from wheel"; exit 1; }
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/skills/mb-start/SKILL\.md([[:space:]]|$)' \
             || { echo "::error::bundled skills missing from wheel"; exit 1; }
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/skills/mb-update/SKILL\.md([[:space:]]|$)' \
+            || { echo "::error::bundled mb-update skill missing from wheel"; exit 1; }
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/playbooks/ship-bet/SKILL\.md([[:space:]]|$)' \
             || { echo "::error::bundled playbooks missing from wheel"; exit 1; }
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/reference/vip-path-resolution\.md([[:space:]]|$)' \
@@ -245,6 +247,8 @@ jobs:
             || { echo "::error::mb skill list missing bundled mb-start skill"; exit 1; }
           grep -qx "mb-think" skills.txt \
             || { echo "::error::mb skill list missing bundled mb-think skill"; exit 1; }
+          grep -qx "mb-update" skills.txt \
+            || { echo "::error::mb skill list missing bundled mb-update skill"; exit 1; }
 
       - name: Smoke — packaged bundled skills validate
         run: |

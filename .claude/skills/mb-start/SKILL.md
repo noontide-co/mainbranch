@@ -340,7 +340,7 @@ Read `user.experience` from `~/.config/vip/local.yaml` (defaults to `beginner` i
 
 ## Intent Keywords
 
-Auto-detect user intent and route. Skills: `/mb-pull`, `/mb-help`, `/mb-setup`, `/mb-think`, `/mb-ads`, `/mb-vsl`, `/mb-organic`, `/newsletter`, `/mb-site`, `/mb-wiki`, `/mb-end`. Some skills spawn parallel subagents automatically.
+Auto-detect user intent and route. Skills: `/mb-update`, `/mb-help`, `/mb-setup`, `/mb-think`, `/mb-ads`, `/mb-vsl`, `/mb-organic`, `/mb-site`, `/mb-wiki`, `/mb-end`. Some skills spawn parallel subagents automatically.
 
 | Keywords | Route To |
 |----------|----------|
@@ -357,7 +357,7 @@ Auto-detect user intent and route. Skills: `/mb-pull`, `/mb-help`, `/mb-setup`, 
 | "content", "reels", "tiktok", "organic", "carousel" | `/mb-organic` |
 | "site", "landing page", "lander", "minisite", "website", "one-pager", "spin up a site", "deploy site", "put this online", "I need a site", "publish site", "graduate my site", "add a CMS to my site", "/mb-start launch" | `/mb-site` (or `/mb-start launch <offer>` for the speedrun orchestration) |
 | "wiki", "notes", "atomic", "wikilinks", "publish wiki" | `/mb-wiki` |
-| "pull", "update Main Branch", "get latest" | `/mb-pull` |
+| "pull", "update Main Branch", "get latest" | `/mb-update` |
 | "done", "wrapping up", "end my day", "closing out", "call it a day", "that's it" | `/mb-end` |
 
 ---

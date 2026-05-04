@@ -83,8 +83,10 @@ mb update --repo /path/to/your-business
 or, from inside Claude Code:
 
 ```text
-/mb-pull
+/mb-update
 ```
+
+`/mb-pull` still works as a legacy alias for existing users.
 
 ## Repair An Existing Business Repo
 
