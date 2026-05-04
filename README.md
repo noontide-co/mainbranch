@@ -32,6 +32,10 @@ Own the work. Rent only the rails.
 
 Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running business-as-files systems. Today the workflows ship for Claude Code; Codex, Cursor, OpenClaw, Hermes, and local runtimes are next. Your offer, audience, voice, research, decisions, and campaigns live in six folders inside your own git repo — versioned, portable, agent-readable.
 
+Read the product frame in [docs/ETHOS.md](docs/ETHOS.md), the user loop in
+[docs/OPERATOR-LOOPS.md](docs/OPERATOR-LOOPS.md), and the release direction in
+[docs/ROADMAP.md](docs/ROADMAP.md).
+
 ---
 
 ## Quick start
@@ -224,13 +228,22 @@ Skills are pre-built workflows you invoke with slash prompts. Instead of figurin
 - **Schema is v1; will evolve.** Frontmatter shapes covered by `mb validate` are stable for the current major; breaking changes bump the major.
 - **Runtime compatibility is still ahead.** Codex, Cursor, OpenClaw, Hermes, and local LLMs are roadmap targets, not supported adapters yet.
 
-The engine v0.1.0 decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.md`](decisions/2026-04-29-mb-vip-v0-1-0-master.md). The business-side master plan is tracked in [`noontide-co/projects#119`](https://github.com/noontide-co/projects/pull/119).
+| Runtime | Status | Notes |
+|---|---|---|
+| Claude Code | Supported today | First-class adapter with skill wiring, repair, and smoke-tested first-run flow. |
+| Codex | Roadmap | Target runtime; no public adapter support claim yet. |
+| Cursor | Roadmap | Target runtime; no public adapter support claim yet. |
+| OpenClaw | Roadmap | First-tier compatibility target because users operate there; no adapter support claim yet. |
+| Hermes / Paperclip-adjacent orchestration | Roadmap | Target orchestration layer; must consume stable repo and JSON contracts. |
+| Local runtimes | Roadmap | Long-range endpoint once adapter contracts are proven. |
+
+The engine v0.1.0 decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.md`](decisions/2026-04-29-mb-vip-v0-1-0-master.md). The business-side master plan amendment was merged in [`noontide-co/projects#119`](https://github.com/noontide-co/projects/pull/119).
 
 ---
 
 ## Roadmap
 
-The current package is the CLI + Claude Code first-run foundation. Next work deepens GitHub activity, credential/config foundations, graph/indexing, and runtime compatibility. Direction, not promises.
+The current package is the CLI + Claude Code first-run foundation. Next work makes Main Branch better at knowing what changed, what is stale, and what to do next. See [docs/ROADMAP.md](docs/ROADMAP.md) for the public roadmap. Direction, not promises.
 
 The proposed long-range product direction is captured in
 [`decisions/2026-05-02-github-native-business-os.md`](decisions/2026-05-02-github-native-business-os.md):
@@ -238,12 +251,10 @@ Main Branch as a GitHub-native business operating system, with `mb` as the
 control plane, GitHub as the team layer, graph/structured data as the
 intelligence layer, and agent runtimes as execution.
 
-- `mb books` — BeanCount integration for ledger workflows ([#128](https://github.com/noontide-co/mainbranch/issues/128))
-- `mb fulfillment` — agency-arm tooling for delivery ops
-- Runtime compatibility — Codex, Cursor, OpenClaw, Hermes, local LLMs
-- Deeper `/mb-site` workflows — lander → minisite → website graduation
-- Dashboard — visual operating loop for your bets and decisions, ships **free as part of `mb`** when the graph/sync substrate is ready
-- Skool → GitHub webhook automation
+- **v0.3.0: Knows what to do next.** `mb status` v1, drift detection, next-action ranking, and `/mb-start` using the same deterministic substrate.
+- **v0.3.x: Improves itself in public.** Privacy-safe issue drafting, `doctor --json`, `/mb-status`, a small dashboard spike, and optional sidecar contracts.
+- **v0.4: Launches bets.** `bets/`, `/mb-bet`, public narration, and status integration for active business bets.
+- **Longer range.** Runtime adapters, dashboard/server mode, structured data, bookkeeping, fulfillment, and deeper pages/ads/organic workflows.
 
 See [CHANGELOG.md](CHANGELOG.md) for what's in this release. Each release ships a "What this means for you" plain-English section above the technical detail.
 

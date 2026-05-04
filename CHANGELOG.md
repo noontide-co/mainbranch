@@ -11,6 +11,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added public ethos, operator-loop, and roadmap docs so future product work can
+  anchor to the Know -> See -> Decide -> Execute -> Narrate loop and the
+  current v0.3/v0.4 release direction.
+
+### Changed
+
+- Updated the README and agent instructions to point contributors and agents at
+  the public product frame before making roadmap, runtime, or workflow changes.
+
 ## [0.2.6] - 2026-05-04
 
 v0.2.6 adds `/mb-update` as the beginner-facing Claude Code update command

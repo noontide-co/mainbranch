@@ -21,6 +21,10 @@ Paperclip-adjacent orchestration, and local runtimes are compatibility targets
 only when tested. Do not claim support before there is an adapter or smoke
 evidence.
 
+The public product frame lives in `docs/ETHOS.md`, the operator loop taxonomy
+lives in `docs/OPERATOR-LOOPS.md`, and release direction lives in
+`docs/ROADMAP.md`.
+
 ## Quick Start
 
 For normal repo validation:
@@ -115,20 +119,25 @@ Before editing:
 
 1. Read this file.
 2. Read `README.md`.
-3. Read the assigned GitHub/Linear issue and all comments.
-4. If the work touches public product shape, release discipline, runtime claims,
+3. Read `docs/ETHOS.md`.
+4. Read the assigned GitHub/Linear issue and all comments.
+5. If the work touches public product shape, release discipline, runtime claims,
    contributor workflow, or public/private boundaries, apply
    `docs/OSS-OPERATING-CHECKLIST.md`.
-5. If the work touches v0.2 product direction, read:
+6. If the work touches roadmap, priorities, workflow shape, or product framing,
+   read:
+   - `docs/OPERATOR-LOOPS.md`
+   - `docs/ROADMAP.md`
+7. If the work touches v0.2 product direction, read:
    - `decisions/2026-05-02-github-native-business-os.md`
    - `docs/prd/v0-2-first-run-daily-briefing.md`
    - `docs/prd/v0-2-agent-workflow-and-evals.md`
-6. If the work touches the CLI/runtime boundary, read:
+8. If the work touches the CLI/runtime boundary, read:
    - `decisions/2026-05-01-mb-cli-vs-agent-workflows-boundary.md`
    - `docs/compatibility.md`
-7. If the work touches skills, inspect the relevant
+9. If the work touches skills, inspect the relevant
    `.claude/skills/<name>/SKILL.md` and nearby tests or fixtures.
-8. Check open PRs for overlapping files before making broad edits.
+10. Check open PRs for overlapping files before making broad edits.
 
 For substantial branches, write `.context/cold-start.md` before editing:
 
@@ -166,12 +175,17 @@ Prefer one coherent user loop per branch. Do not broaden scope silently. If you
 find adjacent work, open or comment on a follow-up issue instead of burying it in
 the current PR.
 
+Name which operator loop the branch improves: Know, See, Decide, Execute, or
+Narrate. Use `docs/OPERATOR-LOOPS.md` when the fit is unclear.
+
 Good issue slices look like:
 
 - one command surface, such as `mb status`;
 - one repair loop, such as `mb update`;
 - one validator, such as cross-reference validation;
 - one runtime proof, such as Claude Code `/start` discovery from a fresh repo.
+- one product loop, such as "turn user friction into a GitHub issue draft" or
+  "surface the next three actions from status signals."
 
 Avoid tiny PRs that cost more in cold start, review, CI, and merge overhead than
 they return. Large PRs are fine when they have one success metric and
