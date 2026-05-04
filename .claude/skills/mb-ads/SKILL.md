@@ -68,6 +68,29 @@ source ~/.config/vip/env.sh 2>/dev/null; echo "GOOGLE_API_KEY=${GOOGLE_API_KEY:+
 
 If set, note it for Batch 4 image generation after copy is saved.
 
+### 0e. Paid-Traffic Measurement Gate
+
+If this ad work is for Google Ads, paid traffic to a site/minisite/lander, retargeting, or any request that asks whether a campaign is ready to launch, check measurement readiness before saying "launch."
+
+1. Load `docs/google-ads-gtm-conversion-rubric.md`.
+2. Run `mb connect plan` or `mb connect status --all --json` from the business repo when provider readiness matters.
+3. If a site repo is known, run:
+
+```bash
+mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json
+```
+
+Use the returned `state`:
+
+- `blocked`: do not recommend launch; list the blocked checks and exact next command/manual step.
+- `ready_for_preview`: ads can be drafted, but traffic should not launch; tell the operator to run GTM Preview/Tag Assistant and finish provider metadata/approvals.
+- `ready_for_operator_review`: ads can be prepared for review, but launch still needs explicit operator approval for GTM publication, conversion actions, consent posture, budget, billing, and spend.
+- `ready`: local readiness checks passed, but do not mutate accounts or launch campaigns.
+
+Do not invent `ready_for_launch` or treat `ready` as campaign launch permission. Main Branch can prepare and review; the operator launches manually.
+
+Never ask the operator to paste Google Ads/GTM tokens, OAuth secrets, conversion uploads, or customer data into chat. Quote `mb connect` repair commands instead.
+
 ---
 
 ## Pipeboard Detection (Lazy)

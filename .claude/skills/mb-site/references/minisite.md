@@ -252,6 +252,8 @@ For operators with their own form endpoint or advanced flow. The operator suppli
 
 Pixels and analytics are **opt-in per offer** via `offer.md` frontmatter. The generation subagent injects them into all pages when declared; skips injection entirely when not.
 
+For paid-traffic, Google Ads, GTM, conversion tracking, retargeting, or launch-readiness work, the canonical contract is `docs/google-ads-gtm-conversion-rubric.md`. Load that rubric and run `mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json` before saying the site is ready for paid launch. The check is local/read-only; it does not publish GTM or mutate Google Ads.
+
 ### Supported tracking providers (V1)
 
 | Provider | offer.md field | Where it goes |
@@ -264,20 +266,23 @@ If multiple are declared, all install. If GTM is declared, GA4 and Meta Pixel ty
 
 ### Conversion events
 
-The generation subagent fires standard conversion events when the corresponding tracking is installed. The conversion event name matches the conversion endpoint's kind:
+Generated sites push Main Branch events to `window.dataLayer`; GTM maps those events to Google Ads, GA4, Meta, or other provider tags. Use the rubric's event vocabulary exactly:
 
-| Event | When | Pixels | Conversion kind |
-|---|---|---|---|
-| `PageView` | Every page load | All declared | (always) |
-| `InitiateCheckout` | Click on a Stripe CTA (home hero, secondary, pricing) | All declared | Stripe payment page |
-| `Purchase` | Page load on `/start/thanks/` (after Stripe success) | All declared | Stripe payment page |
-| `Lead` | Form submit success / page load on `/start/thanks/` | All declared | Lead form |
-| `Schedule` | Page load on `/start/thanks/` (after appointment booked, if redirect supported by provider) | All declared | Appointment booking |
-| (operator-defined) | Operator's webhook flow decides; default fires `Lead` on home-CTA click | All declared | Custom webhook |
+| Event | When | Default Ads role |
+|---|---|---|
+| `mb_cta_click` | User clicks a meaningful CTA. | Secondary |
+| `mb_form_start` | User starts a lead/signup form. | Secondary |
+| `mb_lead_submit` | Lead form succeeds. | Primary for lead-gen |
+| `mb_calendar_click` | User clicks an outbound calendar/booking URL. | Secondary unless no booking confirmation exists |
+| `mb_booked_call` | Booking is confirmed by provider callback or thank-you page. | Primary for call funnels |
+| `mb_email_signup` | Email/newsletter signup is confirmed. | Primary for signup funnels |
+| `mb_purchase` | Purchase is confirmed. | Primary for checkout funnels |
+| `mb_deposit` | Deposit/application fee is confirmed. | Primary for deposit funnels |
+| `mb_offline_conversion_ready` | Offline conversion record is staged for operator review. | Diagnostic only |
 
-For Stripe: `Purchase` payload includes `value: <amount_usd>`, `currency: usd`. The subagent reads the amount from `offer.md` at build time (Stripe doesn't pass it through the redirect).
+For Stripe: confirmed purchase/deposit events may include `value` and `currency` only when the operator has chosen value-based reporting and the value is not sensitive in the repo or browser context.
 
-For lead/appointment: standard pixel taxonomy events. The subagent uses the conversion-endpoint kind to pick which event(s) to fire.
+Do not push email, phone, full name, address, CRM notes, booking notes, raw customer IDs, or hashed user identifiers by default.
 
 ### What's NOT in the tracking architecture (V1)
 
@@ -300,6 +305,7 @@ For lead/appointment: standard pixel taxonomy events. The subagent uses the conv
 | Cloudflare creds + GitHub App | All tool calls | `verify_live.py` returns 3/3 (Cloudflare scopes + zone lookup + domain-check) |
 | Domain decision | Setup | Operator confirms own-or-buy |
 | Tracking IDs (if declared) | Generation | offer.md frontmatter parse — if any tracking field present, validate format |
+| Paid-traffic measurement readiness | Paid launch recommendation | `mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json` |
 
 ### Conversion-endpoint gates (only the chosen kind's gates apply)
 

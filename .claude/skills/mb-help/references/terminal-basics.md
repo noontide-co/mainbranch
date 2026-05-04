@@ -109,6 +109,36 @@ You can drag things from Finder (Mac) or Explorer (Windows) directly into Termin
 
 ---
 
+## Site Work: Business Repo or Site Repo?
+
+For `/mb-site`, use two stages:
+
+**1. Start in the business repo for planning.**
+
+```bash
+cd ~/Documents/GitHub/my-business
+claude
+/mb-site
+```
+
+This is where Claude reads your offer, audience, voice, research, decisions,
+and campaign context. `/mb-site` will create or select a separate site repo.
+
+**2. Switch to the site repo for implementation once it exists.**
+
+```bash
+cd ~/Documents/GitHub/my-offer-site
+claude
+/mb-site
+```
+
+This is where Claude edits pages, reviews the site, deploys, and runs
+measurement checks. The site repo should have `.mainbranch/source.json` pointing
+back to the business repo so Claude can still read the offer and campaign
+context.
+
+---
+
 ## Voice Input
 
 Don't want to type? Use dictation.

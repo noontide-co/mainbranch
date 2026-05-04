@@ -47,21 +47,66 @@ When research subagents record findings, they follow the `/mb-think` research pa
 ## Where Files Go
 
 ```
-your-business-repo/          <- Reference files READ from here
-├── reference/core/           (offer.md, audience.md, voice.md, soul.md)
-├── reference/proof/          (testimonials.md, angles/)
-└── reference/domain/         (content-strategy.md)
+your-business-repo/              <- Business context READ here
+├── core/                         (offer.md, audience.md, voice.md, soul.md)
+├── core/offers/<offer>/          (optional offer-specific context)
+├── campaigns/                    (site/campaign records and measurement state)
+├── decisions/                    (briefs and launch decisions)
+└── research/                     (research used by the brief)
 
-your-site-repo/              <- Site code WRITTEN here
-                             (shape-specific layout — see per-shape build refs)
-
-~/.mainbranch/sites.json     <- Config pointing to repos
+your-site-repo/                  <- Site code WRITTEN here
+├── .mainbranch/source.json       (local link back to business repo context)
+├── .mainbranch/conversion.json   (conversion endpoint and measurement plan)
+└── index.html / app/ / src/ ...  (shape-specific layout)
 
 mainbranch/ (engine)         <- Never modified by /mb-site
 └── .claude/skills/mb-site/
 ```
 
-The skill reads from the business repo and writes to the site repo. These are separate repos.
+The skill reads from the business repo and writes to the site repo. These are separate repos with explicit links in both directions.
+
+---
+
+## Invocation Mode
+
+Detect mode at the start of every invocation.
+
+**Business repo mode = plan/create/link.** If CWD has `core/` or `reference/core/`, say:
+> "I'm reading business context here and will create or select a site repo."
+
+Use this mode for planning, research, the site brief, offer selection, campaign records, and first site creation.
+
+**Site repo mode = edit/review/deploy/check.** If CWD has `.mainbranch/source.json`, read it and say:
+> "I'm editing the site here and reading business context from the linked business repo."
+
+Use this mode for implementation, review, preview, deploy, and `mb site check`. The local source link should look like:
+
+```json
+{
+  "business_repo": "/absolute/path/to/my-business",
+  "offer_path": "core/offers/flagship/offer.md",
+  "campaign_path": "campaigns/2026-05-paid-minisite.md",
+  "safe_to_share": true
+}
+```
+
+The business repo should keep the reverse site record in `campaigns/` or the relevant offer/campaign note: site repo path or URL, domain, Cloudflare project, environment, measurement state, launch status, and the next manual approval step. Keep account IDs placeholder-safe when the repo is public.
+
+Typical workflow:
+
+```bash
+cd ~/Documents/GitHub/my-business
+claude
+/mb-site
+```
+
+Then after the site repo exists:
+
+```bash
+cd ~/Documents/GitHub/my-offer-site
+claude
+/mb-site
+```
 
 ---
 
@@ -88,17 +133,14 @@ Netlify is supported as a legacy fallback for pre-V1 Next.js templates only — 
 
 ---
 
-## Config Discovery
+## Site Link Discovery
 
-On every invocation, check for existing config:
+Prefer repo-local links over global config.
 
-```bash
-cat ~/.mainbranch/sites.json 2>/dev/null || echo "NO_CONFIG"
-```
-
-- **Config found, one site:** Confirm with user, load site repo path
-- **Config found, multiple sites:** Ask which site to work on (numbered list)
-- **No config:** Route to setup mode
+- In site repo mode, read `.mainbranch/source.json` first.
+- In business repo mode, inspect the active campaign or offer note for the site repo path/URL and launch status.
+- If neither exists, route to setup mode and create the link files as part of the site creation flow.
+- Treat `~/.mainbranch/sites.json` as a legacy fallback only when no repo-local link exists.
 
 ---
 
@@ -107,27 +149,13 @@ cat ~/.mainbranch/sites.json 2>/dev/null || echo "NO_CONFIG"
 Before loading reference files, resolve the active offer:
 
 1. Check `.vip/local.yaml` for `current_offer`
-2. If set: load `reference/offers/[current_offer]/offer.md` as the active offer
-3. If not set AND `reference/offers/` exists: ask which offer this site is for
-4. If no `offers/` folder: use `reference/core/offer.md` (single-offer, backward compatible)
+2. If set: load `core/offers/[current_offer]/offer.md` as the active offer
+3. If not set AND `core/offers/` exists: ask which offer this site is for
+4. If no `core/offers/` folder: use `core/offer.md` (single-offer, backward compatible)
 
 **Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
 **Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
 **Accumulate files** (load both): `testimonials.md` (offer-specific + brand-level)
-
-`~/.mainbranch/sites.json` can include an `offer` field that overrides `.vip/local.yaml`:
-
-```json
-{
-  "name": "thelastbill",
-  "offer": "the-last-bill",
-  "site_repo": "/absolute/path/to/site-repo",
-  "business_repo": "/absolute/path/to/business-repo",
-  "shape": "minisite",
-  "hosting": "cloudflare",
-  "domain": "thelastbill.com"
-}
-```
 
 ---
 
@@ -135,10 +163,10 @@ Before loading reference files, resolve the active offer:
 
 | File | Path | Required |
 |---|---|---|
-| Offer | `offers/[active]/offer.md` or `core/offer.md` (resolved) | **Yes** |
-| Audience | `offers/[active]/audience.md` or `core/audience.md` (resolved) | **Yes** |
-| Voice | `reference/core/voice.md` | Recommended |
-| Soul | `reference/core/soul.md` | Optional |
+| Offer | `core/offers/[active]/offer.md` or `core/offer.md` (resolved) | **Yes** |
+| Audience | `core/offers/[active]/audience.md` or `core/audience.md` (resolved) | **Yes** |
+| Voice | `core/voice.md` | Recommended |
+| Soul | `core/soul.md` | Optional |
 | Testimonials | `reference/proof/testimonials.md` (+ offer-specific if exists) | Recommended |
 | Angles | `reference/proof/angles/*.md` | Optional |
 | Content Strategy | `reference/domain/content-strategy.md` | Optional |
@@ -238,15 +266,41 @@ When reference files change significantly (new offer, new pricing), consider re-
 
 ---
 
+## Paid-Traffic Measurement Readiness
+
+When the operator says paid traffic, Google Ads, GTM, conversion tracking, retargeting, or launch readiness, load `docs/google-ads-gtm-conversion-rubric.md` before generating or approving the site. Use the rubric's `mb_*` event vocabulary and do not recommend launch from prose alone.
+
+After the site repo has `.mainbranch/conversion.json` and built HTML, run:
+
+```bash
+mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json
+```
+
+If running from a site repo with `.mainbranch/source.json`, `mb site check . --json` can infer the linked business repo.
+
+Use that JSON as the readiness source of truth:
+
+- `blocked` means stop and give the exact failed checks plus the next command/manual step.
+- `ready_for_preview` means static instrumentation can be previewed, but provider metadata or approvals are still missing.
+- `ready_for_operator_review` means the operator must review GTM Preview/Tag Assistant, conversion actions, consent posture, and publication before any launch.
+- `ready` still does not launch anything; it only means local checks and recorded approvals passed.
+
+Do not invent `ready_for_launch` or say Main Branch can launch the campaign. The readiness states are exactly `missing`, `blocked`, `ready_for_preview`, `ready_for_operator_review`, and `ready`.
+
+Never ask the operator to paste Google Ads, GTM, OAuth, or API tokens into chat. Use `mb connect plan`, `mb connect status --all --json`, or `mb connect doctor --json` for provider readiness and quote the CLI's `next_command` / `repair_command`.
+
+---
+
 ## Recovery from Compaction
 
 If conversation compacted or context was lost:
 
 1. **Re-invoke `/mb-site`** to reload skill context
-2. **Check config:** `cat ~/.mainbranch/sites.json 2>/dev/null`
-3. **Identify the site shape** from the config's `shape` field; load the corresponding build ref
-4. **Check site repo status:** `cd <site_repo> && git status && git log --oneline -5`
-5. **Resume from last completed step** based on git history + sites.json state
+2. **Check invocation mode:** business repo mode (`core/`) or site repo mode (`.mainbranch/source.json`)
+3. **Load links:** read `.mainbranch/source.json` in the site repo, or the campaign/site record in the business repo
+4. **Identify the site shape** from the campaign/site record or existing files; load the corresponding build ref
+5. **Check site repo status:** `cd <site_repo> && git status && git log --oneline -5`
+6. **Resume from last completed step** based on git history, source links, and campaign launch status
 
 ---
 
@@ -288,6 +342,7 @@ Site shapes `/mb-site` covers: **lander** (1 page), **minisite** (~4–6 pages),
 - [references/lander-build.md](references/lander-build.md) — 1-page shape (V1 stub)
 - [references/minisite-build.md](references/minisite-build.md) — ~4–6 page shape (V1 target)
 - [references/website-build.md](references/website-build.md) — full-site shape (Next.js + future per-offer generation)
+- [references/site-repo-workflow.md](references/site-repo-workflow.md) — business repo mode vs site repo mode
 - [references/graduation.md](references/graduation.md) — paths between shapes + CMS bolt-on (Sanity, Contentful, Notion, etc.)
 
 **Generation + design (used by per-shape flows):**

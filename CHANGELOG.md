@@ -54,6 +54,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   landers/sites, including event naming, conversion action naming, consent
   guardrails, Cloudflare Pages instrumentation, verification gates, and future
   provider-readiness states. Refs #279.
+- Added `mb site check` for local paid-traffic measurement readiness checks
+  covering GTM installation, `mb_*` dataLayer events, consent/privacy posture,
+  Google Ads plan metadata, provider readiness summary, and manual operator
+  approval gates. Refs #283.
 
 ### Changed
 
@@ -69,6 +73,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Updated beginner setup and provider docs to teach GitHub, Cloudflare,
   Google/Workspace, Meta Ads, and Apify readiness without claiming unsupported
   provider workflows. Refs #273 and #144.
+- Updated `/mb-site`, `/mb-ads`, and `/mb-start` guidance to route
+  paid-traffic launch advice through the Google Ads/GTM rubric and
+  deterministic `mb site check` facts before recommending any launch step. Refs
+  #283.
+- Clarified `/mb-site` business-repo mode versus site-repo mode, including
+  `.mainbranch/source.json` source links and a progressive `/mb-help` answer
+  for where to start Claude during site work. Refs #283.
 
 ## [0.2.6] - 2026-05-04
 

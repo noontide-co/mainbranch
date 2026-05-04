@@ -23,7 +23,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 
 | Keywords | Reference |
 |----------|-----------|
-| Terminal, drag files, cd, folder | [terminal-basics.md](references/terminal-basics.md) |
+| Terminal, drag files, cd, folder, business repo vs site repo | [terminal-basics.md](references/terminal-basics.md) |
 | Two repos, engine, data model, data model | [two-repos.md](references/two-repos.md) |
 | Philosophy, why, compound, passive memory | [philosophy.md](references/philosophy.md) |
 | /mb-think, research, decide, codify | [the-think-cycle.md](references/the-think-cycle.md) |
@@ -64,6 +64,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Question | Answer |
 |----------|--------|
 | Start Claude in a folder? | `cd ~/Documents/GitHub/[your-business] && claude` — Claude sees files in that folder. Main Branch is linked via `settings.local.json`, with bridge links as a compatibility fallback for skill discovery. |
+| Do I start Claude in the business repo or site repo? | Start in the business repo for planning and creating a site. Switch to the site repo after it exists for edits, review, deploy, and `mb site check`; the site repo should have `.mainbranch/source.json` pointing back to the business repo. |
 | When use skill prompts? | For structured tasks: `/mb-start`, `/mb-think`, `/mb-ads`, `/mb-vsl` |
 | Drag files in? | Drag from Finder into Terminal, path appears |
 | Voice input? | [Wispr Flow](https://ref.wisprflow.ai/main) (affiliate link) |

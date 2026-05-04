@@ -23,6 +23,17 @@ first. If the operator needs a provider choice or repair explanation, run
 `next_command` / `repair_command`. Do not ask for tokens or provider setup in
 prose before the CLI has named the missing step.
 
+**Paid-traffic facts first:** When routing a paid-traffic minisite, Google Ads,
+GTM, retargeting, or "ready to launch" request, load
+`docs/google-ads-gtm-conversion-rubric.md`. If a site repo is known, run
+`mb site check "$SITE_REPO" --business-repo "$REPO_PATH" --json` before routing
+to `/mb-site` or `/mb-ads` launch advice. Treat `blocked` as stop, `ready_for_preview`
+as preview-only, and `ready_for_operator_review` as manual review before
+launch. Do not publish GTM, mutate Google Ads, upload conversions, or ask for
+tokens in prose. Do not invent `ready_for_launch`; the valid readiness states
+are `missing`, `blocked`, `ready_for_preview`, `ready_for_operator_review`, and
+`ready`.
+
 ---
 
 ## CRITICAL: Repo Selection Rules
@@ -154,8 +165,8 @@ Use this report before asking additional questions:
 - `onboarding.summary` and `onboarding.checklist` replace separate onboarding
   probes unless the status report is unavailable.
 - `integrations.github`, `integrations.providers`, `github.sections`,
-  `brain.bets`, and `since_last_check` supply the continuity facts for routing
-  and triage.
+  `measurement`, `brain.bets`, and `since_last_check` supply the continuity
+  facts for routing and triage.
 
 Only run a narrower fallback command such as `mb onboard status --json`,
 `mb doctor`, `mb validate --cross-refs`, or `mb connect doctor --json` when status
