@@ -1,0 +1,206 @@
+---
+name: mb-bet
+description: "Open, update, close, list, and narrate Main Branch business bets from repo truth. Use when the operator wants to frame an operating bet, track progress, capture a verdict, or draft public-safe narration."
+---
+
+# Bet
+
+Business bets are hub nodes in `bets/`. They connect decisions, research,
+campaigns, logs, documents, and outcomes without replacing any of them.
+
+Use `/mb-bet` for five modes:
+
+- `new` - open a bet with hypothesis, appetite, metric, target, deadline, and links.
+- `update` - add progress and link new evidence.
+- `close` - record result, verdict, learning, and follow-up links.
+- `list` - summarize active bets and deadlines.
+- `narrate` - draft public-safe site, community, or social copy from repo truth.
+
+Do not publish automatically. Narration drafts are files or message drafts only.
+
+## Repo Rules
+
+Work from the business repo. If unsure, confirm that `core/`, `research/`,
+`decisions/`, or `bets/` exists in the current directory. If not, ask the
+operator to start Claude from the business repo or run `/mb-start`.
+
+Before writing, run:
+
+```bash
+mb status --json
+```
+
+Use the result to spot active bets and repo readiness. After writing or editing
+bet files, run:
+
+```bash
+mb validate --cross-refs
+```
+
+If validation warns about missing bidirectional bet links, repair the linked
+file frontmatter when it is clearly in scope.
+
+## Bet Frontmatter
+
+Every bet file lives at `bets/YYYY-MM-DD-slug.md` and uses this frontmatter:
+
+```yaml
+---
+status: open
+opened: YYYY-MM-DD
+deadline: YYYY-MM-DD
+appetite: "2 weeks"
+hypothesis: "If we do X for Y, Z will happen because..."
+metric: "qualified calls booked"
+target: "10 qualified calls by deadline"
+result: ""
+linked_decisions: []
+linked_research: []
+linked_campaigns: []
+linked_outcomes: []
+public: false
+channels: []
+tags: []
+---
+```
+
+Allowed statuses: `open`, `paused`, `closed`, `canceled`.
+
+Use repo-relative paths in link fields:
+
+- `linked_decisions`: `decisions/*.md`
+- `linked_research`: `research/*.md`
+- `linked_campaigns`: `campaigns/*/campaign.md` or campaign artifacts
+- `linked_outcomes`: `log/*.md`, `documents/*.md`, or outcome artifacts
+
+When linking an existing file to a bet, add the reverse link too:
+
+```yaml
+linked_bets:
+  - bets/YYYY-MM-DD-slug.md
+```
+
+## Mode: new
+
+Use when the operator says they want to try, launch, test, prove, or make a bet.
+
+1. Ask only for missing essentials: hypothesis, appetite, deadline, metric,
+   target, public/private posture, channels, and any known linked files.
+2. Create `bets/YYYY-MM-DD-slug.md`.
+3. Add reverse `linked_bets` frontmatter to linked decisions, research,
+   campaigns, and outcome files when those files already exist and the edit is
+   clearly safe.
+4. End with the file path, deadline, target, and next action.
+
+Body template:
+
+```markdown
+# Bet Title
+
+## Why This Bet
+
+[The operating tension or opportunity.]
+
+## Hypothesis
+
+[Same claim as frontmatter, with context.]
+
+## Work Plan
+
+- [ ] [Concrete action]
+
+## Evidence Log
+
+- YYYY-MM-DD - Bet opened.
+
+## Result
+
+Open.
+
+## Narration Notes
+
+[Public-safe angles, claims to avoid, proof needed before sharing.]
+```
+
+## Mode: update
+
+Use when work happened but the bet is not finished.
+
+1. Read the bet and linked files.
+2. Append a dated `Evidence Log` entry.
+3. Update `linked_decisions`, `linked_research`, `linked_campaigns`, or
+   `linked_outcomes` if new files now matter.
+4. Keep `result` blank unless there is a real result.
+5. Repair reverse `linked_bets` fields on newly linked files.
+
+## Mode: close
+
+Use when the deadline passed, the target is hit, or the operator decides to stop.
+
+1. Ask for the actual result if repo evidence is not enough.
+2. Set `status: closed` or `status: canceled`.
+3. Fill `result` with the measured outcome and verdict.
+4. Add a `## Learning` section or update it if present.
+5. Link outcome files and add reverse `linked_bets` fields.
+6. Suggest follow-up decisions or issues only when the next step is concrete.
+
+## Mode: list
+
+Summarize active bets from `mb status --json` and direct file reads:
+
+- deadline
+- status
+- target
+- metric
+- public/private posture
+- blocked or overdue signals
+
+Keep it short. End with the next bet that needs attention.
+
+## Mode: narrate
+
+Draft public-safe narration from the bet and linked repo truth. Do not invent
+results, metrics, claims, testimonials, or publishing channels.
+
+Ask the operator which surface if unclear:
+
+1. site
+2. community
+3. social
+
+Draft format:
+
+```markdown
+# Narration Draft
+
+Surface: [site/community/social]
+Source bet: bets/YYYY-MM-DD-slug.md
+
+## Public Angle
+
+[What can be shared safely.]
+
+## Draft
+
+[Post or page copy.]
+
+## Claims To Verify
+
+- [Any metric, result, or proof that needs source confirmation.]
+
+## Source Links
+
+- [repo-relative paths read]
+```
+
+If the bet has `public: false`, ask before drafting public copy. Offer a private
+internal retrospective instead.
+
+## Exit
+
+Tell the operator what changed, which files were linked, whether validation
+passed, and the exact next command:
+
+```bash
+mb status
+```

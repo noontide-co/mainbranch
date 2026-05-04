@@ -169,7 +169,7 @@ def _initial_state(
             "state_path": str(ONBOARDING_STATE_RELATIVE_PATH),
             "canonical_business_truth": [
                 "accepted offer, audience, voice, proof, decisions, and durable summaries",
-                "files under core/, research/, decisions/, campaigns/, log/, and documents/",
+                "files under core/, research/, decisions/, bets/, campaigns/, log/, and documents/",
             ],
             "operational_progress": [
                 "checklist state, missing input labels, persona/team-size routing, and next action",

@@ -4,8 +4,8 @@ Main Branch has two repo shapes in the wild:
 
 - **Legacy shape:** `reference/core/`, `reference/domain/`, `reference/proof/`,
   and `outputs/`.
-- **Current shape:** `core/`, `research/`, `decisions/`, `log/`, `campaigns/`,
-  and `documents/`, with `reference/` kept as a compatibility layer for
+- **Current shape:** `core/`, `research/`, `decisions/`, `bets/`, `log/`,
+  `campaigns/`, and `documents/`, with `reference/` kept as a compatibility layer for
   agent-runtime skills.
 
 Existing repos do not need an urgent file move. The safe path is to update the
@@ -233,8 +233,8 @@ ln -s ../core/offers reference/offers
 Then add the current empty working folders:
 
 ```bash
-mkdir -p log campaigns documents core/finance
-touch log/.gitkeep campaigns/.gitkeep documents/.gitkeep core/finance/.gitkeep
+mkdir -p bets log campaigns documents core/finance
+touch bets/.gitkeep log/.gitkeep campaigns/.gitkeep documents/.gitkeep core/finance/.gitkeep
 ```
 
 Validate before merging the branch:

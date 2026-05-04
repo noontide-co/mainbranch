@@ -17,9 +17,12 @@ INDEX_VERSION = 1
 EdgeKey = tuple[str, str, str, tuple[tuple[str, str], ...]]
 
 LINK_FIELDS = (
+    "linked_bets",
     "linked_research",
     "linked_decision",
     "linked_decisions",
+    "linked_campaigns",
+    "linked_outcomes",
     "linked_prd",
     "linked_prds",
     "related_prds",
@@ -57,6 +60,7 @@ ENTITY_TAG_TYPES = {
 }
 
 LOCAL_REF_ROOTS = {
+    "bets",
     "campaigns",
     "core",
     "decisions",

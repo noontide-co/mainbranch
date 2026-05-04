@@ -1,6 +1,6 @@
 ---
 name: mb-start
-description: "Main entry point for Main Branch. Detects state and routes to the right skill. Use when: user says start/help/begin, is new/returning/lost, opens Main Branch without a task, or needs triage. Routes to /mb-setup, /mb-think, /mb-ads, /mb-vsl, /mb-organic, /mb-wiki, /mb-help."
+description: "Main entry point for Main Branch. Detects state and routes to the right skill. Use when: user says start/help/begin, is new/returning/lost, opens Main Branch without a task, or needs triage. Routes to /mb-setup, /mb-think, /mb-bet, /mb-ads, /mb-vsl, /mb-organic, /mb-wiki, /mb-help."
 ---
 
 # Start
@@ -99,6 +99,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 ├── Ready to work? ───────────────────→ Route by intent:
 │   │
 │   ├── "research" / "decide" ────────→ /mb-think
+│   ├── "bet" / "launch test" ─────────→ /mb-bet (new/update/close/list/narrate)
 │   ├── "ads" / "copy" ───────────────→ /mb-ads (triages to static/video/review)
 │   ├── "vsl" / "sales video" ────────→ /mb-vsl (triages to skool/b2b)
 │   ├── "content" / "organic" ────────→ /mb-organic

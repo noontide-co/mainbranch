@@ -27,6 +27,29 @@ def test_validate_passes_well_formed(tmp_path: Path) -> None:
         tmp_path / "research" / "2026-04-29-topic-claude-code.md",
         "---\ndate: 2026-04-29\ntopic: tau\nsource: claude-code\n---\n# r\n",
     )
+    _write(
+        tmp_path / "bets" / "2026-04-29-launch.md",
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-04-29\n"
+            "deadline: 2026-05-13\n"
+            "appetite: 2 weeks\n"
+            "hypothesis: If we launch, qualified calls will increase.\n"
+            "metric: qualified calls\n"
+            "target: 10 qualified calls\n"
+            "result: ''\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_campaigns: []\n"
+            "linked_outcomes: []\n"
+            "public: false\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n"
+            "# Launch bet\n"
+        ),
+    )
     report = run(path=str(tmp_path))
     assert report["ok"] is True
     assert all(f["ok"] for f in report["files"])
@@ -225,6 +248,92 @@ def test_cross_refs_flag_orphan_offer_dirs(tmp_path: Path) -> None:
             "message": "core/offers/alpha/ is missing offer.md",
         }
     ]
+
+
+def test_cross_refs_warn_when_bet_link_lacks_reverse_link(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "bets" / "2026-05-04-demo.md",
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-04\n"
+            "deadline: 2026-05-11\n"
+            "appetite: 1 week\n"
+            "hypothesis: If demo prospects see the workflow, calls increase.\n"
+            "metric: calls\n"
+            "target: 5 calls\n"
+            "result: ''\n"
+            "linked_decisions:\n"
+            "  - decisions/2026-05-04-demo.md\n"
+            "linked_research: []\n"
+            "linked_campaigns: []\n"
+            "linked_outcomes: []\n"
+            "public: true\n"
+            "channels:\n"
+            "  - site\n"
+            "tags:\n"
+            "  - channel:site\n"
+            "---\n"
+            "# Demo bet\n"
+        ),
+    )
+    _write(
+        tmp_path / "decisions" / "2026-05-04-demo.md",
+        "---\ndate: 2026-05-04\nstatus: accepted\n---\n# Demo\n",
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    assert report["summary"]["warnings"] == 1
+    finding = report["cross_refs"]["warnings"][0]
+    assert finding["code"] == "missing-bet-backlink"
+    assert finding["field"] == "linked_decisions"
+    assert "linked_bets: bets/2026-05-04-demo.md" in finding["message"]
+
+
+def test_cross_refs_pass_when_bet_links_are_bidirectional(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "bets" / "2026-05-04-demo.md",
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-04\n"
+            "deadline: 2026-05-11\n"
+            "appetite: 1 week\n"
+            "hypothesis: If demo prospects see the workflow, calls increase.\n"
+            "metric: calls\n"
+            "target: 5 calls\n"
+            "result: ''\n"
+            "linked_decisions:\n"
+            "  - decisions/2026-05-04-demo.md\n"
+            "linked_research: []\n"
+            "linked_campaigns: []\n"
+            "linked_outcomes: []\n"
+            "public: true\n"
+            "channels:\n"
+            "  - site\n"
+            "tags: []\n"
+            "---\n"
+            "# Demo bet\n"
+        ),
+    )
+    _write(
+        tmp_path / "decisions" / "2026-05-04-demo.md",
+        (
+            "---\n"
+            "date: 2026-05-04\n"
+            "status: accepted\n"
+            "linked_bets:\n"
+            "  - bets/2026-05-04-demo.md\n"
+            "---\n"
+            "# Demo\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 0
 
 
 def test_validate_cli_cross_refs_default_warns_strict_fails(tmp_path: Path) -> None:

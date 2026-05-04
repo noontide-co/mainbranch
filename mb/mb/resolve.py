@@ -8,7 +8,7 @@ Resolution order for a key like ``voice``:
 If only the stub matches, ``is_stub=True`` and the caller knows to
 display the upgrade banner.
 
-``v0.1`` ships with the canonical six-folder names locked. Per the
+``v0.1`` shipped with canonical folder names locked. Per the
 master decision, path-config flexibility is a v0.2 unlock; this module
 reads ``.vip/config.yaml``'s ``paths:`` block defensively but defaults
 to the lock.
@@ -29,6 +29,7 @@ CANONICAL_PATHS = {
     "core": "core",
     "research": "research",
     "decisions": "decisions",
+    "bets": "bets",
     "log": "log",
     "campaigns": "campaigns",
     "documents": "documents",

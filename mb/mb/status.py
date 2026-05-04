@@ -23,11 +23,13 @@ IMPORTANT_DIRS = (
     "reference/core",
     "research",
     "decisions",
+    "bets",
     "campaigns",
     "log",
     "documents",
 )
 STALE_DECISION_DAYS = 14
+ACTIVE_BET_STATUSES = {"open", "paused"}
 
 
 def _which(name: str) -> str:
@@ -124,6 +126,7 @@ def _git_recent_activity(repo: Path, git: dict[str, Any]) -> dict[str, Any]:
         "reference/core",
         "research",
         "decisions",
+        "bets",
         "campaigns",
         "log",
         "documents",
@@ -258,12 +261,77 @@ def _brain(repo: Path) -> dict[str, Any]:
     research = [
         _file_summary(repo, path) for path in _relative_markdown_files(repo, "research")[:5]
     ]
+    bets = _bets(repo)
 
     return {
         "counts": counts,
         "recent_decisions": decisions[:5],
         "stale_decisions": stale[:5],
         "recent_research": research,
+        "bets": bets,
+    }
+
+
+def _bet_summary(repo: Path, path: Path) -> dict[str, Any]:
+    meta = _read_frontmatter(path)
+    opened = _parse_date(meta.get("opened"), path)
+    deadline = _parse_date(meta.get("deadline"), path)
+    try:
+        rel = path.relative_to(repo).as_posix()
+    except ValueError:
+        rel = str(path)
+    channels = meta.get("channels")
+    if not isinstance(channels, list):
+        channels = []
+    return {
+        "path": rel,
+        "title": _title_from_markdown(path),
+        "status": str(meta.get("status", "") or ""),
+        "opened": opened.isoformat() if opened else "",
+        "deadline": deadline.isoformat() if deadline else "",
+        "appetite": str(meta.get("appetite", "") or ""),
+        "hypothesis": str(meta.get("hypothesis", "") or ""),
+        "metric": str(meta.get("metric", "") or ""),
+        "target": str(meta.get("target", "") or ""),
+        "result": str(meta.get("result", "") or ""),
+        "public": bool(meta.get("public", False)),
+        "channels": [str(channel) for channel in channels if isinstance(channel, str)],
+        "updated_at": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
+    }
+
+
+def _bet_sort_key(item: dict[str, Any]) -> tuple[str, str]:
+    deadline = str(item.get("deadline") or "9999-12-31")
+    return (deadline, str(item.get("path") or ""))
+
+
+def _bets(repo: Path) -> dict[str, Any]:
+    bet_items = [_bet_summary(repo, path) for path in _relative_markdown_files(repo, "bets")]
+    active = [
+        item for item in bet_items if str(item.get("status", "")).lower() in ACTIVE_BET_STATUSES
+    ]
+    active.sort(key=_bet_sort_key)
+    today = date.today()
+    due_soon: list[dict[str, Any]] = []
+    overdue: list[dict[str, Any]] = []
+    for item in active:
+        deadline = _parse_date(str(item.get("deadline") or ""), Path(str(item.get("path") or "")))
+        if deadline is None:
+            continue
+        days_until = (deadline - today).days
+        if days_until < 0:
+            overdue_item = dict(item)
+            overdue_item["days_overdue"] = abs(days_until)
+            overdue.append(overdue_item)
+        elif days_until <= 7:
+            due_item = dict(item)
+            due_item["days_until_deadline"] = days_until
+            due_soon.append(due_item)
+    return {
+        "active": active[:5],
+        "due_soon": due_soon[:5],
+        "overdue": overdue[:5],
+        "recent": bet_items[:5],
     }
 
 
@@ -405,6 +473,11 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
         )
     if report["brain"]["stale_decisions"]:
         next_actions.append("Review stale proposed/running decisions in `decisions/`.")
+    bets = report["brain"].get("bets") or {}
+    if bets.get("overdue"):
+        next_actions.append("Close or update overdue active bets in `bets/`.")
+    elif bets.get("due_soon"):
+        next_actions.append("Review active bets with deadlines in the next 7 days.")
     onboarding_summary = (report.get("onboarding") or {}).get("summary") or {}
     if onboarding_summary.get("status") == "in_progress":
         next_actions.append(
@@ -532,6 +605,7 @@ def render_human(report: dict[str, Any]) -> None:
         "[bold]Brain[/bold] "
         f"core {counts['core'] + counts['reference/core']}  "
         f"research {counts['research']}  decisions {counts['decisions']}  "
+        f"bets {counts['bets']}  "
         f"campaigns {counts['campaigns']}  log {counts['log']}  documents {counts['documents']}"
     )
 
@@ -548,6 +622,19 @@ def render_human(report: dict[str, Any]) -> None:
         console.print("\n[bold]Recent research[/bold]")
         for item in brain["recent_research"][:3]:
             console.print(f"  - {item['date'] or item['updated_at'][:10]}  {item['title']}")
+
+    bets = brain.get("bets") or {}
+    active_bets = bets.get("active") or []
+    if active_bets:
+        console.print("\n[bold]Active bets[/bold]")
+        for item in active_bets[:3]:
+            deadline = item.get("deadline") or "no deadline"
+            console.print(f"  - {deadline}  {item['title']} [{item['status']}]")
+    overdue_bets = bets.get("overdue") or []
+    if overdue_bets:
+        console.print("[yellow]Overdue active bets[/yellow]")
+        for item in overdue_bets[:3]:
+            console.print(f"  - {item['path']} ({item['days_overdue']} days overdue)")
 
     onboarding_summary = onboarding.get("summary") or {}
     if onboarding_summary.get("status") == "in_progress":

@@ -152,7 +152,7 @@ def _repo_layout_check(repo: Path) -> dict[str, Any]:
             "ok": False,
             "detail": (
                 "legacy reference/ layout detected without core/. Main Branch can "
-                "brief this repo, but current six-folder features may be limited. "
+                "brief this repo, but current schema features may be limited. "
                 "Read `docs/MIGRATING.md` before moving files."
             ),
             "severity": "warn",

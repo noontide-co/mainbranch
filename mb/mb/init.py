@@ -1,7 +1,7 @@
 """``mb init`` — non-interactive scaffold for a Main Branch business repo.
 
 Per master decision, v0.1 asks ONE question (business name). Path-config
-flexibility is locked; folder names are the canonical six. Re-running on
+flexibility is locked; folder names are canonical. Re-running on
 an existing repo returns ``status=already-initialized`` (idempotent).
 """
 
@@ -17,13 +17,14 @@ from typing import Any
 from mb.engine import link_skills
 from mb.migrate import LATEST_SCHEMA_VERSION, SCHEMA_MARKER
 
-# The canonical six. v0.1 lock; v0.2 unlocks via .vip/config.yaml paths block.
+# The canonical business folders. Keep these stable unless a schema migration lands.
 DATA_FOLDERS = [
     "core",
     "core/offers",
     "core/finance",
     "research",
     "decisions",
+    "bets",
     "log",
     "campaigns",
     "documents",
@@ -219,6 +220,7 @@ Your business as files. Claude reads these; you edit them; git remembers them.
 - `core/finance/` — ledger and tax artifacts
 - `research/` — dated notes from when you went looking
 - `decisions/` — dated choices, with rationale
+- `bets/` — operating bets with appetite, metric, target, and outcome
 - `log/` — running activity log
 - `campaigns/` — paid + organic campaign work
 - `documents/` — anything that doesn't belong above
@@ -227,7 +229,7 @@ Your business as files. Claude reads these; you edit them; git remembers them.
 
 ## Conventions
 
-- Decisions, research, and offers carry a small block of metadata at the top
+- Decisions, research, bets, and offers carry a small block of metadata at the top
   (frontmatter). Run `mb validate` to check it.
 - Status field: proposed | running | scaling | killed | graduated | died.
 - One owner per file (CODEOWNERS pattern).

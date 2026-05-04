@@ -48,6 +48,7 @@ def test_status_json_degrades_without_github(tmp_path: Path, monkeypatch) -> Non
     assert report["github"]["source"] == "gh"
     assert "assigned_tasks" in report["github"]["sections"]
     assert report["brain"]["counts"]["decisions"] == 1
+    assert report["brain"]["counts"]["bets"] == 0
     assert report["brain"]["recent_research"][0]["title"] == "Market"
     assert "readiness" in report
     assert "update" in report
@@ -249,12 +250,87 @@ def test_status_brain_marks_stale_decisions(tmp_path: Path, monkeypatch) -> None
     )
     (repo / "research").mkdir()
     (repo / "research" / "2026-05-01-market.md").write_text("# Market\n", encoding="utf-8")
+    deadline = date.today().replace(year=date.today().year + 1)
+    (repo / "bets").mkdir()
+    (repo / "bets" / "2026-05-01-launch.md").write_text(
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-01\n"
+            f"deadline: {deadline.isoformat()}\n"
+            "appetite: 2 weeks\n"
+            "hypothesis: Launching a demo will create calls.\n"
+            "metric: calls\n"
+            "target: 5 calls\n"
+            "result: ''\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_campaigns: []\n"
+            "linked_outcomes: []\n"
+            "public: true\n"
+            "channels:\n"
+            "  - site\n"
+            "tags: []\n"
+            "---\n\n"
+            "# Launch bet\n"
+        ),
+        encoding="utf-8",
+    )
 
     brain = status_mod._brain(repo)
 
     assert brain["recent_decisions"][0]["title"] == "Old proposal"
     assert brain["stale_decisions"][0]["age_days"] > status_mod.STALE_DECISION_DAYS
     assert brain["recent_research"][0]["title"] == "Market"
+    assert brain["bets"]["active"][0]["title"] == "Launch bet"
+    assert brain["bets"]["active"][0]["deadline"] == deadline.isoformat()
+
+
+def test_status_readiness_mentions_due_bets(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    (repo / "bets").mkdir(parents=True)
+    today = date.today()
+    (repo / "bets" / f"{today.isoformat()}-due.md").write_text(
+        (
+            "---\n"
+            "status: open\n"
+            f"opened: {today.isoformat()}\n"
+            f"deadline: {today.isoformat()}\n"
+            "appetite: 1 day\n"
+            "hypothesis: Fast follow-up increases replies.\n"
+            "metric: replies\n"
+            "target: 3 replies\n"
+            "result: ''\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_campaigns: []\n"
+            "linked_outcomes: []\n"
+            "public: false\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n\n"
+            "# Due bet\n"
+        ),
+        encoding="utf-8",
+    )
+    report = {
+        "repo": {"looks_like_mainbranch_repo": True},
+        "git": {"inside_work_tree": True, "dirty": False},
+        "install": {"ok": True},
+        "update": {"severity": "current", "command": ""},
+        "runtime": {
+            "skill_wiring": {"ok": True, "repair": ""},
+            "claude_code": {"found": True, "repair": ""},
+        },
+        "brain": status_mod._brain(repo),
+        "onboarding": {"summary": {"status": "ready"}},
+        "integrations": {"providers": []},
+        "github": {"authenticated": True, "context": {"ok": True}},
+    }
+
+    readiness = status_mod._readiness(report)
+
+    assert any("active bets" in action for action in readiness["next_actions"])
 
 
 def test_status_github_authenticated_branches(tmp_path: Path, monkeypatch) -> None:
@@ -500,6 +576,7 @@ def test_status_renderer_prints_optional_sections(capsys) -> None:
                 "reference/core": 1,
                 "research": 1,
                 "decisions": 1,
+                "bets": 1,
                 "campaigns": 1,
                 "log": 1,
                 "documents": 1,
@@ -513,6 +590,18 @@ def test_status_renderer_prints_optional_sections(capsys) -> None:
             "recent_research": [
                 {"date": "2026-05-01", "updated_at": "", "title": "Market"},
             ],
+            "bets": {
+                "active": [
+                    {
+                        "deadline": "2026-05-08",
+                        "title": "Launch bet",
+                        "status": "open",
+                    }
+                ],
+                "due_soon": [],
+                "overdue": [],
+                "recent": [],
+            },
         },
         "git_activity": {
             "items": [
@@ -541,6 +630,7 @@ def test_status_renderer_prints_optional_sections(capsys) -> None:
     assert "Recent decisions" in output
     assert "Stale proposed/running decisions" in output
     assert "Recent research" in output
+    assert "Active bets" in output
     assert "Recent git activity" in output
     assert "tasks assigned: 1" in output
     assert "shipped this week: 1" in output

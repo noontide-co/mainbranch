@@ -27,6 +27,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Two repos, engine, data model, data model | [two-repos.md](references/two-repos.md) |
 | Philosophy, why, compound, passive memory | [philosophy.md](references/philosophy.md) |
 | /mb-think, research, decide, codify | [the-think-cycle.md](references/the-think-cycle.md) |
+| /mb-bet, bet, hypothesis, deadline, public narration | [skills-guide.md](references/skills-guide.md) |
 | Task tracking, where left off, focus | [task-tracking-options.md](references/task-tracking-options.md) |
 | Error, command not found, MCP, Apify setup | [troubleshooting.md](references/troubleshooting.md) |
 | Getting started, setup | Route to `/mb-setup` or `/mb-start` |

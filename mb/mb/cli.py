@@ -141,7 +141,7 @@ def init_cmd(
     name: str = typer.Option("", "--name", help="Business name (skips prompt if given)."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
-    """Set up a fresh business repo (six folders, CLAUDE.md, git init)."""
+    """Set up a fresh business repo (business folders, CLAUDE.md, git init)."""
     result = init_mod.run(path=path, name=name)
     if json_out:
         typer.echo(json.dumps(result, indent=2))

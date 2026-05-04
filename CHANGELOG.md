@@ -13,6 +13,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added `bets/` as a first-class business-repo primitive with validation,
+  graph links, `mb status` active-deadline reporting, and the new `/mb-bet`
+  Claude Code workflow for `new`, `update`, `close`, `list`, and `narrate`.
 - Added public ethos, operator-loop, and roadmap docs so future product work can
   anchor to the Know -> See -> Decide -> Execute -> Narrate loop and the
   current v0.3/v0.4 release direction.

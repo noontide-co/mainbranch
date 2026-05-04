@@ -78,8 +78,8 @@ cd my-business
 ```
 
 `mb onboard` walks you through the setup, explains why Main Branch uses local
-files, git, and GitHub, scaffolds the six-folder taxonomy (`core/`,
-`research/`, `decisions/`, `log/`, `campaigns/`, `documents/`), and wires the
+files, git, and GitHub, scaffolds the business folder taxonomy (`core/`,
+`research/`, `decisions/`, `bets/`, `log/`, `campaigns/`, `documents/`), and wires the
 bridge files Claude Code needs to find Main Branch's skills.
 
 ---

@@ -167,7 +167,7 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 # Always create:
 mkdir -p .vip
 mkdir -p reference/core reference/visual-identity reference/proof/angles reference/domain
-mkdir -p research decisions campaigns documents
+mkdir -p research decisions bets log campaigns documents
 ```
 
 **Multi-offer only (if user has multiple offers from Step 2.5):**
@@ -216,6 +216,11 @@ Full structure (single-offer):
 │
 ├── decisions/             # Dated choices with rationale
 │   └── YYYY-MM-DD-topic.md
+│
+├── bets/                  # Operating bets with target, deadline, and result
+│   └── YYYY-MM-DD-topic.md
+│
+├── log/                   # Running activity log
 │
 └── outputs/               # All generated content (lifecycle via frontmatter status)
     └── YYYY-MM-DD-batch-name/

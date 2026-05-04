@@ -36,6 +36,43 @@ def test_links_become_edges(tmp_path: Path) -> None:
     assert "->" in out
 
 
+def test_bet_links_become_edges(tmp_path: Path) -> None:
+    bets = tmp_path / "bets"
+    decisions = tmp_path / "decisions"
+    bets.mkdir()
+    decisions.mkdir()
+    (bets / "2026-05-04-demo.md").write_text(
+        "---\n"
+        "status: open\n"
+        "opened: 2026-05-04\n"
+        "deadline: 2026-05-11\n"
+        "appetite: 1 week\n"
+        "hypothesis: Demo creates qualified calls.\n"
+        "metric: calls\n"
+        "target: 5 calls\n"
+        "result: ''\n"
+        "linked_decisions:\n  - decisions/2026-05-04-demo.md\n"
+        "linked_research: []\n"
+        "linked_campaigns: []\n"
+        "linked_outcomes: []\n"
+        "public: true\n"
+        "channels: []\n"
+        "tags: []\n"
+        "---\n",
+        encoding="utf-8",
+    )
+    (decisions / "2026-05-04-demo.md").write_text(
+        "---\ndate: 2026-05-04\nstatus: accepted\nlinked_bets:\n  - bets/2026-05-04-demo.md\n---\n",
+        encoding="utf-8",
+    )
+
+    index = build_index(path=str(tmp_path))
+    edge_types = {edge["type"] for edge in index["edges"]}
+
+    assert "linked_decisions" in edge_types
+    assert "linked_bets" in edge_types
+
+
 def test_build_index_includes_frontmatter_links_wikilinks_and_entities(tmp_path: Path) -> None:
     decisions = tmp_path / "decisions"
     research = tmp_path / "research"

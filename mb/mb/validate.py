@@ -27,11 +27,15 @@ OFFER_STATUS = {
     "rejected",
 }
 RESEARCH_STATUS = {"complete", "in-progress", "stale"}
+BET_STATUS = {"open", "paused", "closed", "canceled"}
 
 LINK_FIELDS = (
+    "linked_bets",
     "linked_research",
     "linked_decision",
     "linked_decisions",
+    "linked_campaigns",
+    "linked_outcomes",
     "linked_prd",
     "linked_prds",
     "related_prds",
@@ -39,6 +43,7 @@ LINK_FIELDS = (
 )
 
 LOCAL_REF_ROOTS = {
+    "bets",
     "campaigns",
     "core",
     "decisions",
@@ -83,6 +88,27 @@ SCHEMAS: dict[str, dict[str, Any]] = {
         "glob": "research/*.md",
         "required": ["date", "topic", "source"],
         "enums": {},
+    },
+    "bets": {
+        "glob": "bets/*.md",
+        "required": [
+            "status",
+            "opened",
+            "deadline",
+            "appetite",
+            "hypothesis",
+            "metric",
+            "target",
+            "result",
+            "linked_decisions",
+            "linked_research",
+            "linked_campaigns",
+            "linked_outcomes",
+            "public",
+            "channels",
+            "tags",
+        ],
+        "enums": {"status": BET_STATUS},
     },
     "log": {
         "glob": "log/*.md",
@@ -276,6 +302,87 @@ def _check_status_transition(
         )
 
 
+def _relative_ref(path: Path, repo: Path) -> str:
+    return path.relative_to(repo).as_posix()
+
+
+def _ref_list_contains(value: Any, expected: str) -> bool:
+    refs, valid_type = _coerce_refs(value)
+    return valid_type and expected in {_clean_ref(ref) for ref in refs}
+
+
+def _reverse_bet_field(source: Path, repo: Path) -> str:
+    parts = source.relative_to(repo).parts
+    if not parts:
+        return ""
+    section = parts[0]
+    if section == "decisions":
+        return "linked_decisions"
+    if section == "research":
+        return "linked_research"
+    if section == "campaigns":
+        return "linked_campaigns"
+    if section in {"log", "documents"}:
+        return "linked_outcomes"
+    return ""
+
+
+def _check_bet_backlink(
+    *,
+    source: Path,
+    target: Path,
+    repo: Path,
+    field: str,
+    ref: str,
+    target_fm: dict[str, Any],
+    findings: list[dict[str, str]],
+) -> None:
+    source_rel = _relative_ref(source, repo)
+    target_rel = _relative_ref(target, repo)
+    source_is_bet = source_rel.startswith("bets/")
+    target_is_bet = target_rel.startswith("bets/")
+
+    if (
+        source_is_bet
+        and not target_is_bet
+        and field
+        in {
+            "linked_decisions",
+            "linked_research",
+            "linked_campaigns",
+            "linked_outcomes",
+        }
+    ):
+        if not _ref_list_contains(target_fm.get("linked_bets"), source_rel):
+            findings.append(
+                _finding(
+                    code="missing-bet-backlink",
+                    source=source,
+                    repo=repo,
+                    field=field,
+                    target=ref,
+                    message=(f"{field} target {ref!r} should include linked_bets: {source_rel}"),
+                )
+            )
+        return
+
+    if field == "linked_bets" and target_is_bet and not source_is_bet:
+        reverse_field = _reverse_bet_field(source, repo)
+        if reverse_field and not _ref_list_contains(target_fm.get(reverse_field), source_rel):
+            findings.append(
+                _finding(
+                    code="missing-bet-backlink",
+                    source=source,
+                    repo=repo,
+                    field=field,
+                    target=ref,
+                    message=(
+                        f"{field} target {ref!r} should include {reverse_field}: {source_rel}"
+                    ),
+                )
+            )
+
+
 def _check_cross_refs(
     repo: Path,
     files_by_path: dict[str, dict[str, Any]],
@@ -345,6 +452,17 @@ def _check_cross_refs(
                     source_fm=fm,
                     findings=findings,
                 )
+                target_fm, target_err = _read_frontmatter(target)
+                if target_err is None and target_fm is not None:
+                    _check_bet_backlink(
+                        source=source,
+                        target=target,
+                        repo=repo,
+                        field=field,
+                        ref=ref,
+                        target_fm=target_fm,
+                        findings=findings,
+                    )
 
     offers_root = repo / "core" / "offers"
     if offers_root.exists():
