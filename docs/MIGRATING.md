@@ -12,6 +12,59 @@ Existing repos do not need an urgent file move. The safe path is to update the
 engine first, repair skill discovery, and only migrate file layout on a clean
 branch when you need the new shape.
 
+## Recommended: Let Claude Walk You Through It
+
+If you are already using Main Branch and do not want to reason about old
+symlinks, clone paths, or repo shapes, start Claude Code anywhere and paste this
+prompt:
+
+```text
+I want to migrate my existing Main Branch setup to the current pipx + /mb-start
+workflow.
+
+Please go slowly and do this safely:
+
+1. First run read-only checks only:
+   - mb --version
+   - mb update --check --json
+   - mb skill list
+   - find likely business repos under ~/Documents/GitHub that have CLAUDE.md
+     plus core/ or reference/core/, research/, or decisions/
+2. For each likely business repo, inspect without changing files:
+   - mb doctor <repo>
+   - mb status <repo>
+   - mb skill repair --repo <repo>
+   - mb migrate --repo <repo> status
+3. Show me the exact commands you recommend before running anything that writes.
+4. Do not delete real files. Only use Main Branch repair/apply commands after I
+   confirm.
+5. If a command says I need to restart Claude, stop and tell me exactly which
+   folder to open next and which slash command to run.
+```
+
+Claude should end by getting each chosen business repo to this state:
+
+```bash
+cd /path/to/your-business
+mb update --repo .
+mb skill link --repo .
+mb skill repair --repo .
+mb doctor
+mb status
+mb start
+```
+
+Then restart Claude Code from that business repo and run:
+
+```text
+/mb-start
+```
+
+This flow is intentionally confirmation-gated. `mb skill link` and
+`mb skill repair --apply` only move stale Main Branch symlinks and broken links
+with Main Branch skill names into timestamped backups. They do not delete
+user-authored skill folders, real files, or live third-party skill links.
+
 ## If You Are On `mb 0.1.x`
 
 Old `mb` versions do not have `mb update` yet. Run the bootstrap upgrade once:
@@ -39,6 +92,7 @@ From the business repo:
 
 ```bash
 cd /path/to/your-business
+mb update --repo .
 mb skill link --repo .
 mb skill repair --repo .
 mb doctor
@@ -81,7 +135,7 @@ Current Main Branch commands understand that legacy shape:
 The only thing legacy users usually need immediately is:
 
 ```bash
-pipx upgrade mainbranch
+mb update --repo /path/to/your-business
 mb skill link --repo /path/to/your-business
 mb skill repair --repo /path/to/your-business
 ```
@@ -210,12 +264,14 @@ the old config files yet.
 
 For old business repos:
 
-1. Upgrade Main Branch with `pipx upgrade mainbranch`.
-2. Run `mb skill link --repo /path/to/repo`.
-3. Run `mb skill repair --repo /path/to/repo`; use `--apply` only when it says
+1. Start with the Claude-led migration prompt above if you want guidance.
+2. Upgrade Main Branch with `mb update --repo /path/to/repo`; if your install
+   is still on `0.1.x`, run `pipx upgrade mainbranch` first.
+3. Run `mb skill link --repo /path/to/repo`.
+4. Run `mb skill repair --repo /path/to/repo`; use `--apply` only when it says
    a stale Main Branch symlink is safe to move.
-4. Run `mb doctor` and `mb status`.
-5. Run `mb migrate --check`, read the diff, then run `mb migrate --apply` on a
+5. Run `mb doctor` and `mb status`.
+6. Run `mb migrate --check`, read the diff, then run `mb migrate --apply` on a
    clean branch when you are ready.
 
 For personal knowledge repos that do not have `reference/core/`, treat them as

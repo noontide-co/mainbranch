@@ -1,6 +1,6 @@
 ---
 name: mb-pull
-description: Quick update Main Branch. Use when user wants to update the engine without running /mb-start, says "pull", "update", or "get latest", wants to see what changed, or after Devon announces features in Skool. Note that /mb-start updates automatically, so skip /mb-pull if running /mb-start next.
+description: Quick update Main Branch. Use when user wants to update the engine without running /mb-start, says "pull", "update", or "get latest", wants to see what changed, or after Devon announces features in Skool. /mb-start runs the same update check at session start, so skip /mb-pull if running /mb-start next.
 ---
 
 # Pull

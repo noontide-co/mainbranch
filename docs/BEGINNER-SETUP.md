@@ -115,10 +115,14 @@ Three lines. That's the daily flow.
 When new versions drop:
 
 ```bash
-pipx upgrade mainbranch
+mb update --repo .
 ```
 
-Or just run `/mb-pull` inside Claude Code — it figures out which install you have and runs the right thing. The CHANGELOG entry for the new version surfaces as a banner the next time you run `/mb-start`.
+Or run `/mb-pull` inside Claude Code — it figures out which install you have
+and runs the right thing. `/mb-start` also checks for important updates at the
+beginning of a session and will tell you when an update matters. The CHANGELOG
+entry for the new version surfaces as a banner the next time you run
+`/mb-start`.
 
 If you installed an early `0.1.x` version, upgrade once with
 `pipx upgrade mainbranch` before trying `mb update`. If you already had a
@@ -132,6 +136,22 @@ mb doctor
 
 For old `reference/core/` repos, read [MIGRATING.md](MIGRATING.md). You usually
 do not need to move files immediately.
+
+### Already Using The Old Setup?
+
+You can let Claude walk you through the migration. Start Claude Code anywhere
+and paste:
+
+```text
+I want to migrate my existing Main Branch setup to the current pipx + /mb-start
+workflow. Please run read-only checks first, find my likely business repos,
+show me the exact commands you recommend, and ask before running anything that
+writes files. Use docs/MIGRATING.md as the source of truth.
+```
+
+Claude may ask you to restart in a business repo after it repairs skill
+discovery. That is normal — Claude Code loads slash commands when a session
+starts, so repaired `/mb-start` links usually appear after restart.
 
 ---
 
