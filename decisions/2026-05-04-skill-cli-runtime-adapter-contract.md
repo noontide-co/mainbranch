@@ -1,7 +1,7 @@
 ---
 type: decision
 date: 2026-05-04
-status: proposed
+status: accepted
 topic: Skill-to-CLI and runtime adapter contract
 linked_decisions:
   - decisions/2026-05-01-mb-cli-vs-agent-workflows-boundary.md
