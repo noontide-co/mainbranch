@@ -50,6 +50,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added `mb connect plan` and `mb educational provider-readiness` so provider
   setup is presented as numbered business choices with readiness states and
   exact next commands. Refs #273.
+- Added the Google Ads, GTM, and conversion tracking rubric for paid-traffic
+  landers/sites, including event naming, conversion action naming, consent
+  guardrails, Cloudflare Pages instrumentation, verification gates, and future
+  provider-readiness states. Refs #279.
 
 ### Changed
 
