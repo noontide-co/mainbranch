@@ -11,6 +11,28 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-05-04
+
+v0.2.4 is the noob-safe migration and provider-trust release. It moves bundled
+Claude Code skills to collision-resistant `mb-` names, adds repair tools for
+legacy global skill wiring, makes legacy migration checks privacy-safe by
+default, and stops treating stored provider credentials as healthy until they
+are validated.
+
+### What this means for you (plain English)
+
+- **Skill commands are now prefixed.** New and repaired repos use `/mb-start`,
+  `/mb-think`, `/mb-ads`, and the rest of the `mb-` skill set so Main Branch is
+  less likely to collide with personal or third-party Claude Code skills.
+- **Old installs have a safer repair path.** `mb skill repair --repo .`,
+  `mb skill link --repo .`, `mb doctor`, and `mb start --json` can explain and
+  repair stale wiring without deleting unrelated user-authored skills.
+- **Migration checks are private by default.** Legacy repo migration plans show
+  path/action summaries unless you explicitly ask for full diffs.
+- **Connected accounts must prove they work.** `mb connect test <provider>` and
+  `mb connect doctor` distinguish missing, unvalidated, invalid, and ready
+  credentials without printing secrets.
+
 ### Added
 
 - `mb skill repair --repo .` detects personal Claude Code skills that shadow
