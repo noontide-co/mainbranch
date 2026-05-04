@@ -183,9 +183,7 @@ def _write_settings(repo: Path, root: Path) -> tuple[bool, list[str]]:
         if isinstance(p, str) and p != root_str and _is_stale_engine_path(p, root)
     ]
     cleaned = [
-        str(p)
-        for p in existing
-        if isinstance(p, str) and p != root_str and p not in removed_stale
+        str(p) for p in existing if isinstance(p, str) and p != root_str and p not in removed_stale
     ]
     permissions["additionalDirectories"] = [root_str, *cleaned]
 

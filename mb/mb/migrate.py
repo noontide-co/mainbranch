@@ -206,9 +206,7 @@ def check(repo: str | Path = ".", *, include_diff: bool = False) -> dict[str, An
         "has_changes": any(plan.has_changes for plan in plans),
         "migrations": [_plan_dict(plan) for plan in plans],
         "diff_included": include_diff,
-        "diff": _unified_diff(target, plans, include_marker=bool(pending))
-        if include_diff
-        else "",
+        "diff": _unified_diff(target, plans, include_marker=bool(pending)) if include_diff else "",
         "privacy_note": (
             "Full file diffs are hidden by default because legacy business repos "
             "can contain private strategy, proof, and offer details. Re-run with "
