@@ -19,7 +19,6 @@ HTML_EXCLUDED_DIRS = {
     ".mainbranch",
     ".mb",
     ".next",
-    "dist",
     "node_modules",
 }
 REUSABLE_SOURCE_DIRS = {

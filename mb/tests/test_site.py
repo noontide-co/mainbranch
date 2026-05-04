@@ -43,6 +43,15 @@ def _write_html(
     )
 
 
+def _write_dist_html(
+    site: Path, *, gtm_id: str = "GTM-ABC1234", events: list[str] | None = None
+) -> None:
+    (site / "dist").mkdir()
+    original = site / "index.html"
+    _write_html(site, gtm_id=gtm_id, events=events)
+    original.replace(site / "dist" / "index.html")
+
+
 def test_site_check_reports_ready_for_operator_review(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
     monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
@@ -91,6 +100,47 @@ def test_site_check_reports_ready_for_operator_review(tmp_path: Path, monkeypatc
     assert payload["facts"]["provider_state"]["google"]["state"] == "not_connected"
     assert not payload["blocked"]
     assert any(item["kind"] == "operator_approval" for item in payload["manual"])
+
+
+def test_site_check_inspects_dist_build_output(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business = tmp_path / "business"
+    site = tmp_path / "site"
+    init_run(path=str(business), name="Acme")
+    site.mkdir()
+    (business / "core" / "offer.md").write_text(
+        (
+            "---\n"
+            "gtm_container_id: GTM-ABC1234\n"
+            "google_ads_customer_id: '0000000000'\n"
+            "consent_posture: standard_tag_consent_reviewed\n"
+            "privacy_policy_url: https://example.com/privacy\n"
+            "---\n\n"
+            "# Offer\n"
+        ),
+        encoding="utf-8",
+    )
+    _write_conversion(
+        site,
+        {
+            "kind": "lead_form",
+            "url": "https://tally.so/r/example",
+            "render": "link_out",
+            "primary_conversions": ["mb_lead_submit"],
+        },
+    )
+    _write_dist_html(site, events=["mb_cta_click", "mb_form_start", "mb_lead_submit"])
+
+    result = runner.invoke(
+        app,
+        ["site", "check", str(site), "--business-repo", str(business), "--json"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["state"] == "ready_for_operator_review"
+    assert payload["html"]["html_files"] == ["dist/index.html"]
 
 
 def test_site_check_uses_source_link_when_business_repo_is_omitted(
