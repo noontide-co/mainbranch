@@ -16,6 +16,7 @@ from mb import __version__, github_activity
 from mb import connect as connect_mod
 from mb import onboard as onboard_mod
 from mb import ranker as ranker_mod
+from mb import site as site_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status
 
@@ -553,6 +554,42 @@ def _schema() -> dict[str, Any]:
     }
 
 
+def _measurement(repo: Path) -> dict[str, Any]:
+    """Return a compact paid-traffic measurement summary for status consumers."""
+
+    conversion_path = repo / site_mod.CONVERSION_RELATIVE_PATH
+    if not conversion_path.exists():
+        return {
+            "available": False,
+            "state": "missing",
+            "summary": "No paid-traffic site conversion plan found.",
+            "repair": (
+                "Run `/mb-site` for a paid-traffic minisite before checking launch readiness."
+            ),
+            "repair_command": "mb site check",
+            "safe_to_share": True,
+        }
+    result = site_mod.check(repo, business_repo=repo)
+    return {
+        "available": True,
+        "state": result["state"],
+        "ok": result["ok"],
+        "summary": result["summary"],
+        "repair": result["repair"],
+        "repair_command": "mb site check",
+        "facts": {
+            "conversion_kind": result["facts"].get("conversion_kind"),
+            "expected_events": result["facts"].get("expected_events"),
+            "gtm_container_id_present": bool(result["facts"].get("gtm_container_id")),
+            "google_ads_customer_id_present": bool(result["facts"].get("google_ads_customer_id")),
+            "primary_conversions": result["facts"].get("primary_conversions") or [],
+        },
+        "blocked_count": len(result.get("blocked") or []),
+        "manual_count": len(result.get("manual") or []),
+        "safe_to_share": True,
+    }
+
+
 def _marker_path(repo: Path) -> Path:
     return repo / LAST_STATUS_SEEN_RELATIVE_PATH
 
@@ -944,6 +981,7 @@ def run(
         "brain": brain,
         "onboarding": onboard_mod.onboarding_status(repo_path),
         "integrations": connect_mod.status_all(repo_path, github=github.get("context")),
+        "measurement": _measurement(repo_path),
         "github": github,
     }
     report["since_last_check"] = _since_last_check(
@@ -1068,6 +1106,14 @@ def render_human(
                 console.print(
                     f"  - {item['provider']}: {item['state']}  next: {item['repair_command']}"
                 )
+
+    measurement = report.get("measurement") or {}
+    if measurement.get("available"):
+        console.print(
+            f"[bold]Measurement[/bold] {measurement.get('state')}  {measurement.get('summary')}"
+        )
+        if verbose and measurement.get("repair"):
+            console.print(f"  next: {measurement['repair']}")
 
     counts = brain["counts"]
     console.print(

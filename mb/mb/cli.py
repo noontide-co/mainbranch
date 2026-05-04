@@ -26,6 +26,7 @@ from mb import migrate as migrate_mod
 from mb import onboard as onboard_mod
 from mb import resolve as resolve_mod
 from mb import similar_bets as similar_bets_mod
+from mb import site as site_mod
 from mb import skill_validate as skill_validate_mod
 from mb import start as start_mod
 from mb import status as status_mod
@@ -74,6 +75,13 @@ issue_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(issue_app, name="issue")
+
+site_app = typer.Typer(
+    name="site",
+    help="Inspect site readiness for launch-adjacent workflows.",
+    no_args_is_help=True,
+)
+app.add_typer(site_app, name="site")
 
 CONNECT_METADATA_OPTION = typer.Option(
     [],
@@ -758,6 +766,26 @@ def start_cmd(
     else:
         start_mod.render_human(report)
     raise typer.Exit(0 if report["ok"] else 1)
+
+
+@site_app.command("check")
+def site_check_cmd(
+    site_repo: str = typer.Argument(".", help="Site repo or built static site to inspect."),
+    business_repo: str = typer.Option(
+        "",
+        "--business-repo",
+        "--repo",
+        help="Business repo with offer and provider metadata.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Check paid-traffic measurement readiness without mutating provider accounts."""
+    result = site_mod.check(site_repo, business_repo=business_repo or None)
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        site_mod.render_check(result)
+    raise typer.Exit(0 if result["ok"] else 1)
 
 
 @app.command("validate")

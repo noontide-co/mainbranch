@@ -90,6 +90,7 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
                 "brain",
                 "onboarding",
                 "integrations",
+                "measurement",
                 "github",
                 "since_last_check",
                 "drift",

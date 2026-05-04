@@ -11,6 +11,7 @@
     "install",
     "integrations",
     "marker_update",
+    "measurement",
     "ok",
     "onboarding",
     "ranked_actions",
@@ -92,6 +93,14 @@
       "repo",
       "repo_id",
       "safe_to_share",
+      "summary"
+    ],
+    "measurement": [
+      "available",
+      "repair",
+      "repair_command",
+      "safe_to_share",
+      "state",
       "summary"
     ],
     "github": [
