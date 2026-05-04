@@ -11,6 +11,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added a proposed skill-to-CLI and runtime adapter contract covering lifecycle
+  and production skill boundaries, Claude Code as the reference adapter,
+  support levels, runtime-aware invocation hints, workflow launcher gates, and
+  onboarding resume state. Refs #220.
+
+### Changed
+
+- Clarified compatibility docs so non-Claude runtimes remain roadmap surfaces
+  until each has a documented adapter and fresh-repo smoke evidence.
+
 ## [0.2.6] - 2026-05-04
 
 v0.2.6 adds `/mb-update` as the beginner-facing Claude Code update command

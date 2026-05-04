@@ -33,6 +33,18 @@ Experimental means:
 - It is not part of the release gate.
 - Workarounds are welcome, but breakage is not treated as a launch blocker.
 
+Roadmap means:
+
+- The surface is a product target, not a support claim.
+- There is no supported adapter yet.
+- Public docs should not tell users to rely on it.
+
+For agent runtimes, support requires the runtime adapter contract in
+[decisions/2026-05-04-skill-cli-runtime-adapter-contract.md](../decisions/2026-05-04-skill-cli-runtime-adapter-contract.md):
+discovery rules, install/update behavior, generated-file and state rules,
+`mb doctor` / `mb status` / `mb start` expectations, and fresh-repo runtime
+smoke evidence. Claude Code is the reference adapter today.
+
 ## Recommended setup
 
 For most users:
@@ -94,3 +106,6 @@ mb doctor
 - The CLI scaffolds, validates, graphs, resolves, and links the current Claude
   Code skill adapter. Most business workflows still happen through Claude Code
   slash commands.
+- Codex, Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and local
+  runtimes remain roadmap surfaces until each has a documented adapter and
+  smoke evidence.

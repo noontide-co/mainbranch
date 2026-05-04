@@ -3,6 +3,10 @@
 `mb` owns the durable onboarding progress contract. Agent runtimes own the
 conversation and judgment around the user's answers.
 
+This is the lifecycle-skill resume surface defined by
+[the skill-to-CLI and runtime adapter contract](../decisions/2026-05-04-skill-cli-runtime-adapter-contract.md).
+Runtime skills should call it instead of relying on a previous chat transcript.
+
 ## Storage
 
 The progress file lives in the business repo:
