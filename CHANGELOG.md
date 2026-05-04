@@ -16,6 +16,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added `bets/` as a first-class business-repo primitive with validation,
   graph links, `mb status` active-deadline reporting, and the new `/mb-bet`
   Claude Code workflow for `new`, `update`, `close`, `list`, and `narrate`.
+- Added `mb issue draft` and `mb issue open` so users can turn confusing
+  Main Branch friction into privacy-scrubbed local GitHub issue drafts before
+  explicitly submitting with `gh issue create`.
+- Added issue-drafting docs and `/mb-help` troubleshooting guidance for when
+  skills should suggest a bug, feature, or question draft without submitting on
+  the operator's behalf.
 - Added public ethos, operator-loop, and roadmap docs so future product work can
   anchor to the Know -> See -> Decide -> Execute -> Narrate loop and the
   current v0.3/v0.4 release direction.
@@ -23,6 +29,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   and production skill boundaries, Claude Code as the reference adapter,
   support levels, runtime-aware invocation hints, workflow launcher gates, and
   onboarding resume state. Refs #220.
+- Added `mb status` schema v1.0 with repo-local since-last-check state,
+  deterministic drift signals, `--peek` non-mutating reads, `--verbose` detail
+  output, and `--no-color` human output. Refs #261.
 
 ### Changed
 

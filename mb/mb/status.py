@@ -6,7 +6,7 @@ import json
 import re
 import shutil
 import subprocess
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -28,8 +28,35 @@ IMPORTANT_DIRS = (
     "log",
     "documents",
 )
+STATUS_SCHEMA_VERSION = "1.0"
+LAST_STATUS_SEEN_RELATIVE_PATH = Path(".mb") / "last-status-seen.json"
+LAST_STATUS_SEEN_GITIGNORE_ENTRY = ".mb/last-status-seen.json"
 STALE_DECISION_DAYS = 14
+STALE_RESEARCH_DAYS = 45
 ACTIVE_BET_STATUSES = {"open", "paused"}
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc).replace(microsecond=0)
+
+
+def _format_timestamp(value: datetime) -> str:
+    return value.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _parse_timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    raw = value.strip()
+    if raw.endswith("Z"):
+        raw = raw[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 def _which(name: str) -> str:
@@ -126,7 +153,6 @@ def _git_recent_activity(repo: Path, git: dict[str, Any]) -> dict[str, Any]:
         "reference/core",
         "research",
         "decisions",
-        "bets",
         "campaigns",
         "log",
         "documents",
@@ -153,6 +179,71 @@ def _git_recent_activity(repo: Path, git: dict[str, Any]) -> dict[str, Any]:
         items.append(current)
 
     return {"available": True, "items": items[:8], "error": ""}
+
+
+def _parse_git_log_with_files(output: str, *, limit: int = 8) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    for raw_line in output.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        parts = line.split("\t", 2)
+        if len(parts) == 3 and re.fullmatch(r"[0-9a-f]{4,}", parts[0]):
+            if current is not None:
+                items.append(current)
+            current = {"commit": parts[0], "date": parts[1], "subject": parts[2], "files": []}
+            continue
+        if current is not None:
+            current["files"].append(line)
+    if current is not None:
+        items.append(current)
+    return items[:limit]
+
+
+def _git_since_last_seen(
+    repo: Path,
+    git: dict[str, Any],
+    marker: dict[str, Any],
+) -> dict[str, Any]:
+    if not git.get("inside_work_tree"):
+        return {
+            "available": False,
+            "commits": [],
+            "changed_files": [],
+            "error": git.get("error") or "git unavailable",
+        }
+
+    marker_git_raw = marker.get("git")
+    marker_git: dict[str, Any] = marker_git_raw if isinstance(marker_git_raw, dict) else {}
+    previous_commit = str(marker_git.get("commit") or "")
+    current_commit = str(git.get("commit") or "")
+    args = [
+        "git",
+        "log",
+        "--date=short",
+        "--pretty=format:%h%x09%ad%x09%s",
+        "--name-only",
+    ]
+    if previous_commit and current_commit and previous_commit != current_commit:
+        args.append(f"{previous_commit}..HEAD")
+    else:
+        previous_seen_at = _parse_timestamp(marker.get("seen_at"))
+        if previous_seen_at is None:
+            return {"available": True, "commits": [], "changed_files": [], "error": ""}
+        args.append(f"--since={previous_seen_at.isoformat()}")
+    result = _run_command(args, cwd=repo)
+    if not result["ok"]:
+        return {"available": False, "commits": [], "changed_files": [], "error": result["stderr"]}
+
+    commits = _parse_git_log_with_files(result["stdout"])
+    changed_files = sorted({file for item in commits for file in item["files"]})
+    return {
+        "available": True,
+        "commits": commits,
+        "changed_files": changed_files[:20],
+        "error": "",
+    }
 
 
 def _read_frontmatter(path: Path) -> dict[str, Any]:
@@ -199,7 +290,7 @@ def _parse_explicit_date(value: Any) -> date | None:
         return value
     if isinstance(value, str) and value.strip():
         try:
-            return date.fromisoformat(value[:10])
+            return date.fromisoformat(value.strip()[:10])
         except ValueError:
             return None
     return None
@@ -271,16 +362,28 @@ def _brain(repo: Path) -> dict[str, Any]:
                 stale_item["age_days"] = age_days
                 stale.append(stale_item)
 
-    research = [
-        _file_summary(repo, path) for path in _relative_markdown_files(repo, "research")[:5]
-    ]
+    research_files = _relative_markdown_files(repo, "research")
+    research: list[dict[str, Any]] = []
+    stale_research: list[dict[str, Any]] = []
+    for path in research_files:
+        meta = _read_frontmatter(path)
+        item = _file_summary(repo, path, meta)
+        research.append(item)
+        research_date = _parse_date(meta.get("date"), path)
+        if research_date is not None:
+            age_days = (today - research_date).days
+            if age_days > STALE_RESEARCH_DAYS:
+                stale_item = dict(item)
+                stale_item["age_days"] = age_days
+                stale_research.append(stale_item)
     bets = _bets(repo)
 
     return {
         "counts": counts,
         "recent_decisions": decisions[:5],
         "stale_decisions": stale[:5],
-        "recent_research": research,
+        "recent_research": research[:5],
+        "stale_research": stale_research[:5],
         "bets": bets,
     }
 
@@ -441,6 +544,283 @@ def _install() -> dict[str, Any]:
     }
 
 
+def _schema() -> dict[str, Any]:
+    return {
+        "name": "mainbranch.status",
+        "version": STATUS_SCHEMA_VERSION,
+        "compatibility": "v1 additions are additive; existing v1 keys must not change meaning.",
+    }
+
+
+def _marker_path(repo: Path) -> Path:
+    return repo / LAST_STATUS_SEEN_RELATIVE_PATH
+
+
+def _marker_gitignore_state(repo: Path) -> dict[str, Any]:
+    gitignore = repo / ".gitignore"
+    entry = LAST_STATUS_SEEN_GITIGNORE_ENTRY
+    if _which("git"):
+        check = _run_command(["git", "check-ignore", entry], cwd=repo)
+        if check["ok"]:
+            return {
+                "ok": True,
+                "path": ".gitignore",
+                "entry": entry,
+                "repair": "",
+            }
+    if not gitignore.exists():
+        return {
+            "ok": False,
+            "path": ".gitignore",
+            "entry": entry,
+            "repair": f"Add `{entry}` to `.gitignore`.",
+        }
+    try:
+        lines = gitignore.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        lines = []
+    ignored = entry in {line.strip() for line in lines}
+    return {
+        "ok": ignored,
+        "path": ".gitignore",
+        "entry": entry,
+        "repair": "" if ignored else f"Add `{entry}` to `.gitignore`.",
+    }
+
+
+def _read_last_seen_marker(repo: Path) -> dict[str, Any]:
+    path = _marker_path(repo)
+    if not path.exists():
+        return {
+            "exists": False,
+            "path": LAST_STATUS_SEEN_RELATIVE_PATH.as_posix(),
+            "error": "",
+        }
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "exists": True,
+            "path": LAST_STATUS_SEEN_RELATIVE_PATH.as_posix(),
+            "error": f"could not read last status marker: {exc}",
+        }
+    return data if isinstance(data, dict) else {"exists": True, "error": "invalid marker shape"}
+
+
+def _brain_count_changes(
+    current_counts: dict[str, int],
+    previous_counts: dict[str, Any],
+) -> list[dict[str, Any]]:
+    changes: list[dict[str, Any]] = []
+    for folder, current in sorted(current_counts.items()):
+        try:
+            previous = int(previous_counts.get(folder, 0))
+        except (TypeError, ValueError):
+            previous = 0
+        delta = current - previous
+        if delta:
+            changes.append({"folder": folder, "before": previous, "after": current, "delta": delta})
+    return changes
+
+
+def _since_last_check(
+    repo: Path,
+    *,
+    marker: dict[str, Any],
+    git: dict[str, Any],
+    brain: dict[str, Any],
+    generated_at: str,
+) -> dict[str, Any]:
+    marker_exists = bool(marker.get("exists", True)) and not marker.get("error")
+    previous_seen_at = str(marker.get("seen_at") or "") if marker_exists else ""
+    previous_brain_raw = marker.get("brain")
+    previous_brain: dict[str, Any] = (
+        previous_brain_raw if isinstance(previous_brain_raw, dict) else {}
+    )
+    previous_counts_raw = previous_brain.get("counts")
+    previous_counts: dict[str, Any] = (
+        previous_counts_raw if isinstance(previous_counts_raw, dict) else {}
+    )
+    git_since: dict[str, Any] = (
+        _git_since_last_seen(repo, git, marker)
+        if marker_exists
+        else {
+            "available": bool(git.get("inside_work_tree")),
+            "commits": [],
+            "changed_files": [],
+            "error": "",
+        }
+    )
+    count_changes = _brain_count_changes(brain.get("counts") or {}, previous_counts)
+    dirty_count = int(git.get("dirty_count") or 0)
+    commits = git_since.get("commits") or []
+    changed_files = git_since.get("changed_files") or []
+    summary = {
+        "commits": len(commits) if isinstance(commits, list) else 0,
+        "files_changed": len(changed_files) if isinstance(changed_files, list) else 0,
+        "dirty_files": dirty_count,
+        "brain_count_changes": len(count_changes),
+    }
+    first_run = not marker_exists
+    return {
+        "ok": not bool(marker.get("error")),
+        "marker_path": LAST_STATUS_SEEN_RELATIVE_PATH.as_posix(),
+        "marker_gitignore": _marker_gitignore_state(repo),
+        "previous_seen_at": previous_seen_at,
+        "current_seen_at": generated_at,
+        "first_run": first_run,
+        "summary": summary,
+        "git": git_since,
+        "brain_count_changes": count_changes,
+        "error": str(marker.get("error") or ""),
+        "safe_to_share": True,
+    }
+
+
+def _write_last_seen_marker(repo: Path, report: dict[str, Any]) -> dict[str, Any]:
+    if not report["repo"].get("looks_like_mainbranch_repo"):
+        return {
+            "attempted": False,
+            "ok": False,
+            "reason": "not a Main Branch repo",
+            "path": LAST_STATUS_SEEN_RELATIVE_PATH.as_posix(),
+        }
+    marker = {
+        "kind": "mainbranch.status.last_seen",
+        "schema_version": STATUS_SCHEMA_VERSION,
+        "seen_at": report["generated_at"],
+        "repo": str(repo),
+        "git": {
+            "branch": str(report["git"].get("branch") or ""),
+            "commit": str(report["git"].get("commit") or ""),
+        },
+        "brain": {"counts": report["brain"].get("counts") or {}},
+        "readiness": {
+            "level": str(report["readiness"].get("level") or ""),
+            "score": int(report["readiness"].get("score") or 0),
+        },
+        "safe_to_share": True,
+    }
+    path = _marker_path(repo)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8")
+    except OSError as exc:
+        return {
+            "attempted": True,
+            "ok": False,
+            "reason": str(exc),
+            "path": LAST_STATUS_SEEN_RELATIVE_PATH.as_posix(),
+        }
+    return {
+        "attempted": True,
+        "ok": True,
+        "reason": "",
+        "path": LAST_STATUS_SEEN_RELATIVE_PATH.as_posix(),
+    }
+
+
+def _drift(report: dict[str, Any]) -> dict[str, Any]:
+    items: list[dict[str, Any]] = []
+    stale_decisions = report["brain"].get("stale_decisions") or []
+    if stale_decisions:
+        items.append(
+            {
+                "id": "stale_decisions",
+                "severity": "warn",
+                "summary": f"{len(stale_decisions)} proposed/running decision(s) are stale.",
+                "evidence": [item["path"] for item in stale_decisions[:5]],
+                "repair": "Review stale proposed/running decisions in `decisions/`.",
+                "safe_to_share": True,
+            }
+        )
+    stale_research = report["brain"].get("stale_research") or []
+    if stale_research:
+        items.append(
+            {
+                "id": "stale_research",
+                "severity": "info",
+                "summary": (
+                    f"{len(stale_research)} research note(s) are older than "
+                    "current freshness rules."
+                ),
+                "evidence": [item["path"] for item in stale_research[:5]],
+                "repair": "Refresh or supersede stale research before using it for decisions.",
+                "safe_to_share": True,
+            }
+        )
+    onboarding_summary = (report.get("onboarding") or {}).get("summary") or {}
+    if onboarding_summary.get("status") == "in_progress":
+        items.append(
+            {
+                "id": "incomplete_onboarding",
+                "severity": "warn",
+                "summary": (
+                    f"{onboarding_summary.get('completed_required', 0)}/"
+                    f"{onboarding_summary.get('total_required', 0)} required onboarding "
+                    "steps complete."
+                ),
+                "evidence": list(onboarding_summary.get("missing_inputs") or [])[:5],
+                "repair": str(
+                    onboarding_summary.get("next_recommended_action")
+                    or "Run `mb onboard status` to resume onboarding."
+                ),
+                "safe_to_share": True,
+            }
+        )
+    skill_wiring = report["runtime"].get("skill_wiring") or {}
+    if not skill_wiring.get("ok"):
+        items.append(
+            {
+                "id": "broken_skill_wiring",
+                "severity": "error",
+                "summary": "Claude Code skill wiring is missing or unhealthy.",
+                "evidence": list(skill_wiring.get("missing") or [])[:5],
+                "repair": str(skill_wiring.get("repair") or "Run `mb skill link --repo .`."),
+                "safe_to_share": True,
+            }
+        )
+    broken_integrations = [
+        item
+        for item in (report.get("integrations") or {}).get("providers", [])
+        if not item.get("ok")
+    ]
+    if broken_integrations:
+        items.append(
+            {
+                "id": "unhealthy_integrations",
+                "severity": "warn",
+                "summary": f"{len(broken_integrations)} declared integration(s) need repair.",
+                "evidence": [
+                    f"{item['provider']}:{item['state']}" for item in broken_integrations[:5]
+                ],
+                "repair": str(broken_integrations[0].get("repair_command") or "mb connect doctor"),
+                "safe_to_share": True,
+            }
+        )
+    if not report["since_last_check"]["marker_gitignore"]["ok"]:
+        items.append(
+            {
+                "id": "status_marker_not_gitignored",
+                "severity": "info",
+                "summary": "The local status marker is not ignored by git yet.",
+                "evidence": [LAST_STATUS_SEEN_GITIGNORE_ENTRY],
+                "repair": report["since_last_check"]["marker_gitignore"]["repair"],
+                "safe_to_share": True,
+            }
+        )
+    return {
+        "ok": not any(item["severity"] == "error" for item in items),
+        "summary": {
+            "total": len(items),
+            "errors": len([item for item in items if item["severity"] == "error"]),
+            "warnings": len([item for item in items if item["severity"] == "warn"]),
+            "info": len([item for item in items if item["severity"] == "info"]),
+        },
+        "items": items,
+    }
+
+
 def _readiness(report: dict[str, Any]) -> dict[str, Any]:
     checks = [
         {
@@ -486,6 +866,8 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
         )
     if report["brain"]["stale_decisions"]:
         next_actions.append("Review stale proposed/running decisions in `decisions/`.")
+    if report["brain"].get("stale_research"):
+        next_actions.append("Refresh or supersede stale research before relying on it.")
     bets = report["brain"].get("bets") or {}
     if bets.get("overdue"):
         next_actions.append("Close or update overdue active bets in `bets/`.")
@@ -505,6 +887,9 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
     for item in integration_repairs[:3]:
         command = str(item.get("repair_command") or "mb connect doctor")
         next_actions.append(f"Repair {item['provider']} integration: `{command}`.")
+    marker_gitignore = (report.get("since_last_check") or {}).get("marker_gitignore") or {}
+    if marker_gitignore and not marker_gitignore.get("ok") and marker_gitignore.get("repair"):
+        next_actions.append(str(marker_gitignore["repair"]))
     github_context = report["github"].get("context") or {}
     if github_context and not github_context.get("ok"):
         command = str(github_context.get("repair_command") or "gh auth login")
@@ -529,14 +914,25 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def run(path: str = ".") -> dict[str, Any]:
+def run(
+    path: str = ".",
+    *,
+    update_marker: bool = True,
+    now: datetime | None = None,
+) -> dict[str, Any]:
     """Build a deterministic daily briefing report."""
     repo_path = Path(path).resolve()
+    generated_at = _format_timestamp(now or _utc_now())
     repo_shape = _looks_like_mainbranch_repo(repo_path)
     git = _git_info(repo_path)
     update = package_update_status(repo_path)
     github = _github(repo_path, git)
+    brain = _brain(repo_path)
+    marker = _read_last_seen_marker(repo_path)
     report: dict[str, Any] = {
+        "schema_version": STATUS_SCHEMA_VERSION,
+        "schema": _schema(),
+        "generated_at": generated_at,
         "ok": True,
         "repo": {"path": str(repo_path), **repo_shape},
         "install": _install(),
@@ -544,21 +940,44 @@ def run(path: str = ".") -> dict[str, Any]:
         "runtime": _runtime(repo_path),
         "git": git,
         "git_activity": _git_recent_activity(repo_path, git),
-        "brain": _brain(repo_path),
+        "brain": brain,
         "onboarding": onboard_mod.onboarding_status(repo_path),
         "integrations": connect_mod.status_all(repo_path, github=github.get("context")),
         "github": github,
     }
+    report["since_last_check"] = _since_last_check(
+        repo_path,
+        marker=marker,
+        git=git,
+        brain=brain,
+        generated_at=generated_at,
+    )
+    report["drift"] = _drift(report)
     report["readiness"] = _readiness(report)
     report["ok"] = report["readiness"]["level"] != "not_ready"
+    report["marker_update"] = (
+        _write_last_seen_marker(repo_path, report)
+        if update_marker
+        else {
+            "attempted": False,
+            "ok": False,
+            "reason": "disabled",
+            "path": LAST_STATUS_SEEN_RELATIVE_PATH.as_posix(),
+        }
+    )
     return report
 
 
-def render_human(report: dict[str, Any]) -> None:
+def render_human(
+    report: dict[str, Any],
+    *,
+    verbose: bool = False,
+    no_color: bool = False,
+) -> None:
     """Print a concise terminal briefing."""
     from rich.console import Console
 
-    console = Console()
+    console = Console(no_color=no_color)
     repo = report["repo"]
     git = report["git"]
     runtime = report["runtime"]
@@ -570,6 +989,8 @@ def render_human(report: dict[str, Any]) -> None:
     )
     github = report["github"]
     readiness = report["readiness"]
+    since = report.get("since_last_check") or {}
+    drift = report.get("drift") or {"summary": {"total": 0}, "items": []}
 
     console.print(f"\n[bold]mb status[/bold]  {repo['path']}")
     alert = format_update_alert(report.get("update", {}))
@@ -579,6 +1000,39 @@ def render_human(report: dict[str, Any]) -> None:
     console.print(
         f"[bold]{readiness['level'].replace('_', ' ')}[/bold]  {readiness['score']}/100\n"
     )
+
+    since_summary = since.get("summary") or {}
+    if since.get("first_run"):
+        console.print(
+            f"[bold]Since last check[/bold] first run; recording {since.get('marker_path')}."
+        )
+    else:
+        previous_seen = str(since.get("previous_seen_at") or "unknown")
+        console.print(
+            "[bold]Since last check[/bold] "
+            f"{since_summary.get('commits', 0)} commit(s), "
+            f"{since_summary.get('files_changed', 0)} tracked file change(s), "
+            f"{since_summary.get('dirty_files', 0)} dirty file(s), "
+            f"{since_summary.get('brain_count_changes', 0)} brain count change(s) "
+            f"since {previous_seen}"
+        )
+    if since.get("error"):
+        console.print(f"  [yellow]degraded:[/yellow] {since['error']}")
+
+    drift_summary = drift.get("summary") or {}
+    if drift_summary.get("total", 0):
+        console.print(
+            "[bold]Drift[/bold] "
+            f"{drift_summary.get('errors', 0)} error(s), "
+            f"{drift_summary.get('warnings', 0)} warning(s), "
+            f"{drift_summary.get('info', 0)} info"
+        )
+        for item in (drift.get("items") or [])[:5]:
+            console.print(f"  - {item['severity']}: {item['summary']}")
+            if verbose and item.get("repair"):
+                console.print(f"    next: {item['repair']}")
+    else:
+        console.print("[bold]Drift[/bold] no stale or broken status signals detected")
 
     repo_mark = (
         "[green]yes[/green]" if repo["looks_like_mainbranch_repo"] else "[yellow]no[/yellow]"
@@ -608,7 +1062,7 @@ def render_human(report: dict[str, Any]) -> None:
             f"needs repair {integration_summary['needs_repair']}"
         )
         for item in integrations.get("providers", []):
-            if not item["ok"]:
+            if not item["ok"] and verbose:
                 console.print(
                     f"  - {item['provider']}: {item['state']}  next: {item['repair_command']}"
                 )
@@ -618,20 +1072,24 @@ def render_human(report: dict[str, Any]) -> None:
         "[bold]Brain[/bold] "
         f"core {counts['core'] + counts['reference/core']}  "
         f"research {counts['research']}  decisions {counts['decisions']}  "
-        f"bets {counts['bets']}  "
-        f"campaigns {counts['campaigns']}  log {counts['log']}  documents {counts['documents']}"
+        f"bets {counts['bets']}  campaigns {counts['campaigns']}  "
+        f"log {counts['log']}  documents {counts['documents']}"
     )
 
-    if brain["recent_decisions"]:
+    if verbose and brain["recent_decisions"]:
         console.print("\n[bold]Recent decisions[/bold]")
         for item in brain["recent_decisions"][:3]:
             suffix = f" [{item['status']}]" if item["status"] else ""
             console.print(f"  - {item['date'] or item['updated_at'][:10]}  {item['title']}{suffix}")
-    if brain["stale_decisions"]:
+    if verbose and brain["stale_decisions"]:
         console.print("[yellow]Stale proposed/running decisions[/yellow]")
         for item in brain["stale_decisions"][:3]:
             console.print(f"  - {item['path']} ({item['age_days']} days)")
-    if brain["recent_research"]:
+    if verbose and brain.get("stale_research"):
+        console.print("[yellow]Stale research[/yellow]")
+        for item in brain["stale_research"][:3]:
+            console.print(f"  - {item['path']} ({item['age_days']} days)")
+    if verbose and brain["recent_research"]:
         console.print("\n[bold]Recent research[/bold]")
         for item in brain["recent_research"][:3]:
             console.print(f"  - {item['date'] or item['updated_at'][:10]}  {item['title']}")
@@ -650,7 +1108,7 @@ def render_human(report: dict[str, Any]) -> None:
             console.print(f"  - {item['path']} ({item['days_overdue']} days overdue)")
 
     onboarding_summary = onboarding.get("summary") or {}
-    if onboarding_summary.get("status") == "in_progress":
+    if verbose and onboarding_summary.get("status") == "in_progress":
         console.print("\n[bold]Onboarding[/bold]")
         console.print(
             "  "
@@ -662,7 +1120,7 @@ def render_human(report: dict[str, Any]) -> None:
             console.print(f"  missing: {', '.join(missing[:5])}")
         console.print(f"  next: {onboarding_summary.get('next_recommended_action')}")
 
-    if report["git_activity"]["items"]:
+    if verbose and report["git_activity"]["items"]:
         console.print("\n[bold]Recent git activity[/bold]")
         for item in report["git_activity"]["items"][:3]:
             files = ", ".join(item["files"][:2])
@@ -683,29 +1141,35 @@ def render_human(report: dict[str, Any]) -> None:
     else:
         summary = github.get("summary") or {}
         sections = github.get("sections") or {}
-        console.print(
-            f"  tasks assigned: {summary.get('assigned_tasks', len(github['assigned_issues']))}  "
-            f"attention: {summary.get('attention_requests', len(github['review_requests']))}  "
-            f"open proposals: {summary.get('open_proposals', 0)}  "
-            "shipped this week: "
-            f"{summary.get('shipped_this_week', len(github['recent_merged_prs']))}"
+        assigned_count = summary.get("assigned_tasks", len(github.get("assigned_issues", [])))
+        attention_count = summary.get(
+            "attention_requests",
+            len(github.get("review_requests", [])),
         )
-        assigned_tasks = sections.get("assigned_tasks") or github["assigned_issues"]
-        attention_requests = sections.get("attention_requests") or github["review_requests"]
+        shipped_count = summary.get("shipped_this_week", len(github.get("recent_merged_prs", [])))
+        console.print(
+            f"  tasks assigned: {assigned_count}  "
+            f"attention: {attention_count}  "
+            f"open proposals: {summary.get('open_proposals', 0)}  "
+            f"shipped this week: {shipped_count}"
+        )
+        assigned_tasks = sections.get("assigned_tasks") or github.get("assigned_issues", [])
+        attention_requests = sections.get("attention_requests") or github.get("review_requests", [])
         open_proposals = sections.get("open_proposals") or []
-        shipped = sections.get("shipped_this_week") or github["recent_merged_prs"]
+        shipped = sections.get("shipped_this_week") or github.get("recent_merged_prs", [])
         blocked_or_stale = sections.get("blocked_or_stale_tasks") or []
-        for issue in assigned_tasks[:3]:
-            console.print(f"  - task #{issue['number']}: {issue['title']}")
-        for item in attention_requests[:3]:
-            reason = item.get("reason", "Needs attention")
-            console.print(f"  - attention #{item['number']}: {item['title']} ({reason})")
-        for pr in open_proposals[:3]:
-            console.print(f"  - proposal #{pr['number']}: {pr['title']}")
-        for pr in shipped[:3]:
-            console.print(f"  - shipped #{pr['number']}: {pr['what_shipped']}")
-        for issue in blocked_or_stale[:3]:
-            console.print(f"  - blocked/stale #{issue['number']}: {issue['title']}")
+        if verbose:
+            for issue in assigned_tasks[:3]:
+                console.print(f"  - task #{issue['number']}: {issue['title']}")
+            for item in attention_requests[:3]:
+                reason = item.get("reason", "Needs attention")
+                console.print(f"  - attention #{item['number']}: {item['title']} ({reason})")
+            for pr in open_proposals[:3]:
+                console.print(f"  - proposal #{pr['number']}: {pr['title']}")
+            for pr in shipped[:3]:
+                console.print(f"  - shipped #{pr['number']}: {pr['what_shipped']}")
+            for issue in blocked_or_stale[:3]:
+                console.print(f"  - blocked/stale #{issue['number']}: {issue['title']}")
         for error in github["errors"][:2]:
             console.print(f"  [yellow]degraded:[/yellow] {error}")
 

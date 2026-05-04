@@ -8,6 +8,11 @@ description: "Open, update, close, list, and narrate Main Branch business bets f
 Business bets are hub nodes in `bets/`. They connect decisions, research,
 campaigns, logs, documents, and outcomes without replacing any of them.
 
+A bet is not an offer. An offer is a durable thing the business sells. A bet is
+a time-boxed operating hypothesis with appetite, target, deadline, evidence,
+and a verdict. A successful bet may graduate into an offer, workflow, content
+pillar, campaign, or decision; a failed bet should be closed with learning.
+
 Use `/mb-bet` for five modes:
 
 - `new` - open a bet with hypothesis, appetite, metric, target, deadline, and links.

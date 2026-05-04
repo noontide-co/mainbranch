@@ -44,6 +44,8 @@ node_modules/
 .venv/
 .mb/backups/
 .mb/onboarding.json
+.mb/last-status-seen.json
+.mb/issue-drafts/
 """
 
 

@@ -153,9 +153,11 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb onboard` | Human setup flow: create or connect a business repo, explain the substrate, wire Claude Code skills, and show the next `/mb-start` step. |
 | `mb onboard status` | Show durable onboarding progress from `.mb/onboarding.json`, including missing core-reference inputs and the next recommended action. |
 | `mb init` | Set up a fresh business repo (business folders, CLAUDE.md, git init). |
-| `mb status` | Show a local-first daily briefing: repo health, runtime wiring, recent decisions/research/bets/git activity, and GitHub tasks when `gh` is authenticated. |
+| `mb status` | Show a local-first daily briefing: since-last-check changes, drift, repo health, runtime wiring, recent decisions/research/bets/git activity, and GitHub tasks when `gh` is authenticated. Use `--json` for the v1 status schema, `--verbose` for detail, and `--peek` for non-mutating reads. |
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
 | `mb connect` | Register provider credentials, test provider health, and inspect repair-safe integration status without committing secrets. |
+| `mb issue draft` | Create a local, privacy-scrubbed GitHub issue draft under `.mb/issue-drafts/` for bugs, feature gaps, or questions. |
+| `mb issue open` | Submit a reviewed issue draft with `gh issue create`, or print a browser/manual fallback when GitHub CLI is unavailable. |
 | `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `bets/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
 | `mb graph` | Build a repo graph index from frontmatter links, wikilinks, and entity tags. Emits Graphviz DOT by default, `--json` for agents/dashboards, and `--open` to render a PNG view. |
 | `mb think <topic>` | Print the `/mb-think` invocation hint. Run inside Claude Code for the full flow. |
@@ -293,6 +295,9 @@ No. You invoke skills with slash prompts and answer questions.
 **What if I have multiple products under one brand?**
 Use one repo with an `offers/` folder. Each offer gets its own `offer.md`. Soul and voice stay shared in `core/`. Run `/mb-setup` or `/mb-think` to add offers.
 
+**What's a bet vs. an offer?**
+A bet is a time-boxed operating hypothesis: what you'll try, why, by when, and how you'll know if it worked. An offer is a durable thing you sell. A good bet can graduate into an offer, campaign, workflow, content pillar, or decision; a bad bet gets closed with learning.
+
 **What if I have multiple separate businesses?**
 Create a separate repo for each brand. If they share the same soul and voice, they can share a repo. If not, separate repos.
 
@@ -339,6 +344,8 @@ For platform support and security reporting, see [SUPPORT.md](SUPPORT.md), [SECU
 - "Skills aren't working" — run `mb skill link --repo .` from your business repo to repair bridge symlinks, then restart Claude. If still broken, run `/mb-setup`.
 - "Output sounds generic" — add more detail to your reference files, especially `core/voice.md`.
 - "I edited Main Branch but can't push" — that's expected for most users. Main Branch is the shared engine. Your business data goes in YOUR repo.
+
+**Turn friction into a public issue:** run `mb issue draft bug --command "mb doctor" --what-happened "..."` from your business repo. Review the local draft under `.mb/issue-drafts/`, then run `mb issue open <draft> --yes` when it is safe to submit. See [docs/issue-drafting.md](docs/issue-drafting.md).
 
 ---
 
