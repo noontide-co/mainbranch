@@ -21,8 +21,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   support levels, runtime-aware invocation hints, workflow launcher gates, and
   onboarding resume state. Refs #220.
 - Added `mb status` schema v1.0 with repo-local since-last-check state,
-  deterministic drift signals, `--verbose` detail output, and `--no-color`
-  human output. Refs #261.
+  deterministic drift signals, `--peek` non-mutating reads, `--verbose` detail
+  output, and `--no-color` human output. Refs #261.
 
 ### Changed
 

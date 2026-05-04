@@ -577,9 +577,14 @@ def status_cmd(
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed briefing sections."),
     no_color: bool = typer.Option(False, "--no-color", help="Disable ANSI color in human output."),
+    peek: bool = typer.Option(
+        False,
+        "--peek",
+        help="Read status without updating the last-status-seen marker.",
+    ),
 ) -> None:
     """Show a cheap daily briefing for a Main Branch repo."""
-    report = status_mod.run(path=path)
+    report = status_mod.run(path=path, update_marker=not peek)
     if json_out:
         typer.echo(json.dumps(report, indent=2))
     else:

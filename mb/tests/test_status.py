@@ -143,6 +143,37 @@ def test_status_since_last_check_uses_repo_marker(tmp_path: Path, monkeypatch) -
     } in second_payload["since_last_check"]["brain_count_changes"]
 
 
+def test_status_peek_does_not_update_seen_marker(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    first = runner.invoke(app, ["status", str(repo), "--json"])
+    marker_before = (repo / ".mb" / "last-status-seen.json").read_text(encoding="utf-8")
+    peek = runner.invoke(app, ["status", str(repo), "--json", "--peek"])
+    marker_after = (repo / ".mb" / "last-status-seen.json").read_text(encoding="utf-8")
+
+    assert first.exit_code == 0
+    assert peek.exit_code == 0
+    payload = json.loads(peek.stdout)
+    assert payload["marker_update"]["reason"] == "disabled"
+    assert marker_after == marker_before
+
+
+def test_marker_gitignore_state_honors_broader_gitignore_patterns(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    runner.invoke(app, ["init", str(repo), "--name", "Acme"])
+    (repo / ".gitignore").write_text(".mb/\n", encoding="utf-8")
+
+    state = status_mod._marker_gitignore_state(repo)
+
+    assert state["ok"] is True
+    assert state["repair"] == ""
+
+
 def test_status_no_color_and_verbose_output(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     repo = tmp_path / "acme"
@@ -223,6 +254,35 @@ def test_status_names_integration_repairs(tmp_path: Path, monkeypatch) -> None:
     assert human_result.exit_code == 0
     assert "meta: missing_secret" in human_result.stdout
     assert "mb connect meta --token-stdin" in human_result.stdout
+
+
+def test_status_drift_aligns_unhealthy_integrations_with_readiness(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    provider = {
+        "provider": "meta",
+        "ok": False,
+        "connected": False,
+        "state": "unvalidated",
+        "repair_command": "mb connect test meta",
+    }
+    report = status_mod.run(path=str(repo), update_marker=False)
+    report["integrations"]["providers"] = [provider]
+    report["integrations"]["summary"] = {
+        "configured": 1,
+        "healthy": 0,
+        "needs_repair": 1,
+        "unvalidated": 1,
+    }
+
+    drift = status_mod._drift(report)
+    readiness = status_mod._readiness(report)
+
+    assert any(item["id"] == "unhealthy_integrations" for item in drift["items"])
+    assert any("mb connect test meta" in action for action in readiness["next_actions"])
 
 
 def test_status_detects_non_business_repo(tmp_path: Path, monkeypatch) -> None:

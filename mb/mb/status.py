@@ -478,23 +478,33 @@ def _marker_path(repo: Path) -> Path:
 
 def _marker_gitignore_state(repo: Path) -> dict[str, Any]:
     gitignore = repo / ".gitignore"
+    entry = LAST_STATUS_SEEN_GITIGNORE_ENTRY
+    if _which("git"):
+        check = _run_command(["git", "check-ignore", entry], cwd=repo)
+        if check["ok"]:
+            return {
+                "ok": True,
+                "path": ".gitignore",
+                "entry": entry,
+                "repair": "",
+            }
     if not gitignore.exists():
         return {
             "ok": False,
             "path": ".gitignore",
-            "entry": LAST_STATUS_SEEN_GITIGNORE_ENTRY,
-            "repair": f"Add `{LAST_STATUS_SEEN_GITIGNORE_ENTRY}` to `.gitignore`.",
+            "entry": entry,
+            "repair": f"Add `{entry}` to `.gitignore`.",
         }
     try:
         lines = gitignore.read_text(encoding="utf-8").splitlines()
     except OSError:
         lines = []
-    ignored = LAST_STATUS_SEEN_GITIGNORE_ENTRY in {line.strip() for line in lines}
+    ignored = entry in {line.strip() for line in lines}
     return {
         "ok": ignored,
         "path": ".gitignore",
-        "entry": LAST_STATUS_SEEN_GITIGNORE_ENTRY,
-        "repair": "" if ignored else f"Add `{LAST_STATUS_SEEN_GITIGNORE_ENTRY}` to `.gitignore`.",
+        "entry": entry,
+        "repair": "" if ignored else f"Add `{entry}` to `.gitignore`.",
     }
 
 
@@ -693,7 +703,7 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
     broken_integrations = [
         item
         for item in (report.get("integrations") or {}).get("providers", [])
-        if item.get("connected") and not item.get("ok")
+        if not item.get("ok")
     ]
     if broken_integrations:
         items.append(
