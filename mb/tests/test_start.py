@@ -11,6 +11,7 @@ from typing import Any
 from typer.testing import CliRunner
 
 from mb import start as start_mod
+from mb import status as status_mod
 from mb.cli import app
 from mb.init import run as init_run
 
@@ -46,8 +47,8 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     assert report["command"]["follow_up"] == "/mb-start"
     assert report["launch"]["requested"] is False
     assert "update" in report
-    assert "ranked_actions" in report
-    assert report["status"]["available"] is True
+    assert "ranked_actions" not in report
+    assert "status" not in report
 
 
 def test_start_degrades_when_claude_is_missing(tmp_path: Path, monkeypatch) -> None:
@@ -129,6 +130,21 @@ def test_start_recommended_update_keeps_handoff_ready(tmp_path: Path, monkeypatc
     assert report["update"]["severity"] == "recommended"
     update_check = next(check for check in report["checks"] if check["name"] == "mainbranch_update")
     assert update_check["severity"] == "warn"
+
+
+def test_start_does_not_run_full_status_pipeline(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(start_mod, "_which", _with_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    def fail_github(*args: object, **kwargs: object) -> object:
+        raise AssertionError("mb start should not collect full status facts")
+
+    monkeypatch.setattr(status_mod, "_github", fail_github)
+
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
 
 
 def test_start_asks_for_repo_when_path_is_not_business_repo(tmp_path: Path, monkeypatch) -> None:

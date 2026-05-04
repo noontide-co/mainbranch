@@ -962,3 +962,48 @@ def test_status_renderer_prints_optional_sections(capsys) -> None:
     assert "task #173" in output
     assert "shipped #192" in output
     assert "Review bets due this week" in output
+
+
+def test_status_renderer_falls_back_to_readiness_actions_for_legacy_reports(capsys) -> None:
+    report: dict[str, Any] = {
+        "repo": {"path": "/tmp/biz", "looks_like_mainbranch_repo": True},
+        "install": {"detail": "mb 0.2.6 (wheel mode)"},
+        "runtime": {
+            "claude_code": {"found": True},
+            "skill_wiring": {"ok": True},
+        },
+        "git": {"inside_work_tree": True, "branch": "main", "dirty": False},
+        "brain": {
+            "counts": {
+                "core": 0,
+                "reference/core": 0,
+                "research": 0,
+                "decisions": 0,
+                "bets": 0,
+                "campaigns": 0,
+                "log": 0,
+                "documents": 0,
+            },
+            "recent_decisions": [],
+            "stale_decisions": [],
+            "stale_research": [],
+            "recent_research": [],
+            "bets": {"active": [], "due_soon": [], "overdue": [], "recent": []},
+        },
+        "git_activity": {"items": []},
+        "github": {
+            "available": False,
+            "authenticated": False,
+            "errors": [],
+        },
+        "readiness": {
+            "level": "ready",
+            "score": 100,
+            "next_actions": ["Run `claude` in this repo, then `/mb-start`."],
+        },
+    }
+
+    status_mod.render_human(report, no_color=True)
+
+    output = capsys.readouterr().out
+    assert "Run `claude` in this repo, then `/mb-start`." in output

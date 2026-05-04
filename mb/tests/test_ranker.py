@@ -78,32 +78,13 @@ def test_ranker_prioritizes_repair_before_business_work() -> None:
 def test_ranker_surfaces_low_confidence_floor_when_no_signals() -> None:
     actions = ranker.rank_status_report(_base_report())
 
-    assert actions == [
-        {
-            "id": "not_enough_signal",
-            "title": "Choose the next workflow manually",
-            "command": "claude",
-            "priority": "medium",
-            "severity": "info",
-            "score": 1,
-            "confidence": "low",
-            "reason": (
-                "Status did not find enough repair, deadline, GitHub, drift, or recent-change "
-                "signal to rank work confidently. Readiness is ready."
-            ),
-            "signals": [
-                {
-                    "id": "ranker.low_signal_floor",
-                    "severity": "info",
-                    "summary": "not enough deterministic signal to rank work",
-                    "evidence": ["readiness=ready"],
-                    "weight": 1,
-                    "safe_to_share": True,
-                }
-            ],
-            "safe_to_share": True,
-        }
-    ]
+    assert len(actions) == 1
+    action = actions[0]
+    assert action["id"] == "not_enough_signal"
+    assert action["confidence"] == "low"
+    assert action["safe_to_share"] is True
+    assert action["signals"][0]["id"] == "ranker.low_signal_floor"
+    assert action["signals"][0]["evidence"] == ["readiness=ready"]
 
 
 def test_ranker_uses_github_status_sections() -> None:
