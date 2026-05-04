@@ -112,7 +112,7 @@ to:
 
 ```bash
 mb skill link --repo "$REPO_PATH"
-mb doctor --repo "$REPO_PATH"
+mb doctor "$REPO_PATH"
 ```
 
 Never overwrite `~/.config/vip/local.yaml` with `cat >`. If you edit it, read
