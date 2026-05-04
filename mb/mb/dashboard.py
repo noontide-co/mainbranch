@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import ipaddress
 import json
 import threading
 import webbrowser
@@ -13,6 +14,8 @@ from urllib.parse import urlparse
 
 from mb import graph as graph_mod
 from mb import status as status_mod
+
+DASHBOARD_SCHEMA_VERSION = "0.1"
 
 
 def _local_state(repo: Path) -> dict[str, Any]:
@@ -42,24 +45,24 @@ def build_data(repo: str = ".") -> dict[str, Any]:
     bets = brain.get("bets") or {}
     github = status_report.get("github") or {}
     readiness = status_report.get("readiness") or {}
-    ranked_actions = readiness.get("ranked_actions") or readiness.get("top_actions") or []
-    next_actions = ranked_actions or readiness.get("next_actions") or []
+    next_actions = readiness.get("next_actions") or []
     offers_root = repo_path / "core" / "offers"
     has_bet_memory = bool(counts.get("bets")) or (
         offers_root.exists() and any(offers_root.glob("*/offer.md"))
     )
     return {
-        "schema_version": "1.0",
+        "schema_version": DASHBOARD_SCHEMA_VERSION,
         "schema": {
             "name": "mainbranch.dashboard",
-            "version": "1.0",
-            "compatibility": "v1 additions are additive; existing v1 keys must not change meaning.",
+            "version": DASHBOARD_SCHEMA_VERSION,
+            "stability": "preview",
+            "compatibility": (
+                "0.x dashboard spike schema may change before a stable consumer ships."
+            ),
         },
         "repo": {
             "path": str(repo_path),
             "view": "repo",
-            "workspace_ready": False,
-            "workspace_note": "Single-repo dashboard v0; workspace/operator views can layer later.",
         },
         "status": status_report,
         "graph": {
@@ -118,6 +121,12 @@ def _html_list(items: list[Any], *, empty: str) -> str:
     return "<ul>" + "".join(rendered) + "</ul>"
 
 
+def _public_items(items: Any) -> list[dict[str, Any]]:
+    if not isinstance(items, list):
+        return []
+    return [item for item in items if isinstance(item, dict) and item.get("public") is True]
+
+
 def render_html(data: dict[str, Any]) -> str:
     """Render a small self-contained dashboard page."""
     sections = data["sections"]
@@ -129,6 +138,8 @@ def render_html(data: dict[str, Any]) -> str:
     assigned = (github.get("sections") or {}).get("assigned_tasks") or []
     proposals = (github.get("sections") or {}).get("open_proposals") or []
     drift_total = html.escape(str((health.get("drift") or {}).get("total", 0)))
+    public_active_bets = _public_items(bets.get("active"))
+    public_due_bets = _public_items(bets.get("overdue")) + _public_items(bets.get("due_soon"))
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -181,11 +192,11 @@ def render_html(data: dict[str, Any]) -> str:
     </section>
     <section>
       <h2>Active Bets</h2>
-      {_html_list(bets.get("active") or [], empty="No active bets found.")}
+      {_html_list(public_active_bets, empty="No public active bets found.")}
     </section>
     <section>
       <h2>Due / Overdue</h2>
-      {_html_list((bets.get("overdue") or []) + (bets.get("due_soon") or []), empty="No due bets.")}
+      {_html_list(public_due_bets, empty="No public due bets.")}
     </section>
     <section>
       <h2>GitHub Tasks</h2>
@@ -220,8 +231,32 @@ class DashboardServer(HTTPServer):
     repo: Path
 
 
-def make_server(repo: str = ".", host: str = "127.0.0.1", port: int = 0) -> DashboardServer:
+def _is_loopback_host(host: str) -> bool:
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def _validate_bind_host(host: str, *, allow_lan: bool) -> None:
+    if allow_lan or _is_loopback_host(host):
+        return
+    raise ValueError(
+        "mb dashboard only binds loopback hosts by default; use --allow-lan to expose it."
+    )
+
+
+def make_server(
+    repo: str = ".",
+    host: str = "127.0.0.1",
+    port: int = 0,
+    *,
+    allow_lan: bool = False,
+) -> DashboardServer:
     """Create a dashboard HTTP server. Use port 0 for an ephemeral port."""
+    _validate_bind_host(host, allow_lan=allow_lan)
     repo_path = Path(repo).resolve()
 
     class Handler(BaseHTTPRequestHandler):
@@ -251,7 +286,6 @@ def make_server(repo: str = ".", host: str = "127.0.0.1", port: int = 0) -> Dash
 
     server = DashboardServer((host, port), Handler)
     server.repo = repo_path
-    server.timeout = 0.2
     return server
 
 
@@ -261,9 +295,10 @@ def serve(
     host: str = "127.0.0.1",
     port: int = 8765,
     open_browser: bool = False,
+    allow_lan: bool = False,
 ) -> None:
     """Start the blocking local dashboard server."""
-    server = make_server(repo=repo, host=host, port=port)
+    server = make_server(repo=repo, host=host, port=port, allow_lan=allow_lan)
     address = server.server_address
     raw_host = address[0]
     actual_host = raw_host.decode("utf-8") if isinstance(raw_host, bytes) else str(raw_host)

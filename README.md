@@ -155,7 +155,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb init` | Set up a fresh business repo (business folders, CLAUDE.md, git init). |
 | `mb status` | Show a local-first daily briefing: ranked next actions, since-last-check changes, drift, repo health, runtime wiring, recent decisions/research/bets/git activity, and GitHub tasks when `gh` is authenticated. Use `--json` for the v1 status schema, `--verbose` for detail, and `--peek` for non-mutating reads. |
 | `mb similar-bets <thesis>` | Query `bets/*.md` plus graduated/dead offer context for deterministic similar past bets, outcome evidence, linked files, and JSON for agents or dashboards. |
-| `mb dashboard` | Start an explicit read-only local dashboard over existing `mb status --json --peek`, `mb graph --json`, GitHub, `.mb/`, and bets data. Use `--json` to inspect the dashboard contract without serving. |
+| `mb dashboard` | Start an explicit read-only local dashboard over existing `mb status --json --peek`, `mb graph --json`, GitHub, `.mb/`, and bets data. Serving binds loopback hosts by default; use `--json` to inspect the preview contract without serving. |
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
 | `mb connect` | Register provider credentials, test provider health, and inspect repair-safe integration status without committing secrets. |
 | `mb issue draft` | Create a local, privacy-scrubbed GitHub issue draft under `.mb/issue-drafts/` for bugs, feature gaps, or questions. |

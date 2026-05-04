@@ -18,6 +18,7 @@ def _write_repo(repo: Path) -> None:
     (repo / "decisions").mkdir()
     (repo / "research").mkdir()
     (repo / "core" / "offers" / "ads-lab").mkdir(parents=True)
+    (repo / "core" / "offers" / "ops-audit").mkdir(parents=True)
     (repo / "decisions" / "github-agency.md").write_text(
         "---\ntitle: GitHub Agency Decision\nstatus: accepted\n---\n"
         "# GitHub Agency Decision\n\nUse GitHub tasks for agency delivery.\n",
@@ -65,6 +66,17 @@ def _write_repo(repo: Path) -> None:
         "# Ads Lab\n\nA dead agency offer with a post-mortem about call quality.\n",
         encoding="utf-8",
     )
+    (repo / "core" / "offers" / "ops-audit" / "offer.md").write_text(
+        "---\n"
+        "title: Ops Audit\n"
+        "status: running\n"
+        "metric: qualified calls\n"
+        "tags:\n"
+        "  - agency\n"
+        "---\n"
+        "# Ops Audit\n\nA running agency offer.\n",
+        encoding="utf-8",
+    )
 
 
 def test_similar_bets_json_prefers_bets_and_includes_offer_context(tmp_path: Path) -> None:
@@ -84,15 +96,27 @@ def test_similar_bets_json_prefers_bets_and_includes_offer_context(tmp_path: Pat
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert payload["schema"]["name"] == "mainbranch.similar_bets"
-    assert payload["summary"]["records_scanned"] == 2
+    assert payload["summary"]["records_scanned"] == 3
     assert payload["summary"]["bets"] == 1
-    assert payload["summary"]["offers"] == 1
+    assert payload["summary"]["offers"] == 2
     assert payload["summary"]["graduated"] == 1
     assert payload["summary"]["killed"] == 1
     assert payload["matches"][0]["source_type"] == "bet"
     assert payload["matches"][0]["outcome_bucket"] == "graduated"
     assert "decisions/github-agency.md" in payload["matches"][0]["linked_files"]
     assert payload["matches"][0]["similarity"]["graph_overlap"]
+    assert payload["schema"]["status_inputs"]["offers"] == [
+        "died",
+        "graduated",
+        "killed",
+        "proposed",
+        "running",
+        "scaling",
+    ]
+    assert any(
+        match["path"] == "core/offers/ops-audit/offer.md" and match["outcome_bucket"] == "active"
+        for match in payload["matches"]
+    )
 
 
 def test_similar_bets_human_output_names_evidence(tmp_path: Path, capsys) -> None:

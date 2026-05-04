@@ -17,8 +17,8 @@ runner = CliRunner()
 
 def _fake_data(repo: str = ".") -> dict[str, object]:
     return {
-        "schema_version": "1.0",
-        "schema": {"name": "mainbranch.dashboard", "version": "1.0"},
+        "schema_version": "0.1",
+        "schema": {"name": "mainbranch.dashboard", "version": "0.1", "stability": "preview"},
         "repo": {"path": str(Path(repo).resolve()), "view": "repo"},
         "status": {},
         "graph": {"summary": {"files": 2, "nodes": 3, "edges": 1}, "nodes": [], "edges": []},
@@ -26,7 +26,10 @@ def _fake_data(repo: str = ".") -> dict[str, object]:
         "sections": {
             "repo_health": {"level": "ready", "score": 95, "drift": {"total": 0}},
             "bets": {
-                "active": [{"title": "Launch bet", "deadline": "2026-05-08"}],
+                "active": [
+                    {"title": "Launch bet", "deadline": "2026-05-08", "public": True},
+                    {"title": "Private bet", "deadline": "2026-05-09", "public": False},
+                ],
                 "due_soon": [],
                 "overdue": [],
             },
@@ -60,6 +63,14 @@ def test_dashboard_json_cli_uses_existing_contracts(monkeypatch, tmp_path: Path)
     assert payload["schema"]["name"] == "mainbranch.dashboard"
     assert payload["sections"]["repo_health"]["score"] == 95
     assert payload["sections"]["similar_bets"]["command"].startswith("mb similar-bets")
+    assert payload["schema"]["version"] == "0.1"
+
+
+def test_dashboard_refuses_non_loopback_host_without_opt_in(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["dashboard", "--repo", str(tmp_path), "--host", "0.0.0.0"])
+
+    assert result.exit_code == 2
+    assert "only binds loopback hosts by default" in result.stderr
 
 
 def test_dashboard_server_serves_nonblank_page_and_json(monkeypatch, tmp_path: Path) -> None:
@@ -67,11 +78,9 @@ def test_dashboard_server_serves_nonblank_page_and_json(monkeypatch, tmp_path: P
     server = dashboard.make_server(repo=str(tmp_path), port=0)
     host, port = server.server_address
 
-    def handle_two_requests() -> None:
-        server.handle_request()
-        server.handle_request()
-
-    thread = threading.Thread(target=handle_two_requests, daemon=True)
+    thread = threading.Thread(
+        target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True
+    )
     thread.start()
     try:
         conn = HTTPConnection(str(host), int(port), timeout=3)
@@ -85,11 +94,13 @@ def test_dashboard_server_serves_nonblank_page_and_json(monkeypatch, tmp_path: P
         payload = json.loads(response.read().decode("utf-8"))
         conn.close()
     finally:
+        server.shutdown()
         server.server_close()
         thread.join(timeout=3)
 
     assert "Main Branch Dashboard" in page
     assert "Launch bet" in page
+    assert "Private bet" not in page
     assert len(page) > 500
     assert payload["schema"]["name"] == "mainbranch.dashboard"
     assert payload["sections"]["graph"]["nodes"] == 3

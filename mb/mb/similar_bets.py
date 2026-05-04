@@ -10,12 +10,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import typer
 import yaml
 
 from mb import graph as graph_mod
 
 SCHEMA_VERSION = "1.0"
 MAX_BODY_CHARS = 8000
+DOCUMENTED_BET_STATUSES = {"open", "paused", "closed", "canceled"}
+DOCUMENTED_OFFER_STATUSES = {"proposed", "running", "scaling", "killed", "graduated", "died"}
 STOPWORDS = {
     "a",
     "an",
@@ -172,25 +175,33 @@ def _outcome_bucket(source_type: str, status: str, frontmatter: dict[str, Any], 
             body[:MAX_BODY_CHARS],
         ]
     ).lower()
+    normalized_status = status.lower()
     if source_type == "offer":
-        if status.lower() in {"died", "dead", "killed", "canceled", "cancelled"}:
+        if normalized_status in {"died", "killed"}:
             return "killed"
-        if status.lower() in {"graduated", "shipped", "launched"}:
+        if normalized_status == "graduated":
             return "graduated"
-        if status.lower() in {"scaling", "scaled", "working", "active"}:
+        if normalized_status == "scaling":
             return "worked"
-    if status.lower() in {"canceled", "cancelled"}:
+        if normalized_status in {"proposed", "running"}:
+            return "active"
+        return "unknown"
+    if normalized_status == "canceled":
         return "killed"
-    if any(word in text for word in ("graduated", "became an offer", "became a workflow")):
-        return "graduated"
-    if any(word in text for word in ("failed", "missed", "lost", "did not", "didn't", "killed")):
-        return "failed"
-    if any(word in text for word in ("worked", "hit", "won", "success", "profitable", "scaled")):
-        return "worked"
-    if status.lower() in {"closed"} and str(frontmatter.get("result", "") or "").strip():
-        return "evidence"
-    if status.lower() in {"open", "paused"}:
+    if normalized_status in {"open", "paused"}:
         return "active"
+    if normalized_status == "closed" and str(frontmatter.get("result", "") or "").strip():
+        if any(word in text for word in ("graduated", "became an offer", "became a workflow")):
+            return "graduated"
+        if any(
+            word in text for word in ("failed", "missed", "lost", "did not", "didn't", "killed")
+        ):
+            return "failed"
+        if any(
+            word in text for word in ("worked", "hit", "won", "success", "profitable", "scaled")
+        ):
+            return "worked"
+        return "evidence"
     return "unknown"
 
 
@@ -386,6 +397,13 @@ def run(path: str = ".", thesis: str = "", *, limit: int = 5) -> dict[str, Any]:
             "name": "mainbranch.similar_bets",
             "version": SCHEMA_VERSION,
             "compatibility": "v1 additions are additive; existing v1 keys must not change meaning.",
+            "status_inputs": {
+                "bets": sorted(DOCUMENTED_BET_STATUSES),
+                "offers": sorted(DOCUMENTED_OFFER_STATUSES),
+            },
+            "outcome_bucket_note": (
+                "Buckets summarize documented statuses plus result/body wording for closed bets."
+            ),
         },
         "generated_at": _utc_now(),
         "repo": {"path": str(repo)},
@@ -407,16 +425,16 @@ def run(path: str = ".", thesis: str = "", *, limit: int = 5) -> dict[str, Any]:
 
 def render_human(report: dict[str, Any]) -> None:
     """Print concise terminal output for similar-bets results."""
-    print(f"mb similar-bets  {json.dumps(report['thesis'])}")
+    typer.echo(f"mb similar-bets  {json.dumps(report['thesis'])}")
     summary = report["summary"]
-    print(
+    typer.echo(
         f"{summary['matches']} match(es) from {summary['records_scanned']} record(s); "
         f"worked {summary['worked']}, failed {summary['failed']}, "
         f"graduated {summary['graduated']}, killed {summary['killed']}."
     )
     for match in report["matches"]:
-        print(f"- {match['score']:.2f}  {match['path']}  [{match['outcome_bucket']}]")
+        typer.echo(f"- {match['score']:.2f}  {match['path']}  [{match['outcome_bucket']}]")
         for reason in match["why"][:3]:
-            print(f"  why: {reason}")
+            typer.echo(f"  why: {reason}")
         for item in match["evidence"]["summary"][:2]:
-            print(f"  evidence: {item}")
+            typer.echo(f"  evidence: {item}")
