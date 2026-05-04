@@ -894,8 +894,14 @@ def provider_plan(repo: str | Path = ".") -> dict[str, Any]:
             "safe_to_share": bool(github.get("safe_to_share", True)),
         }
     ]
-    for provider_id in ("cloudflare", "google", "meta", "apify"):
-        item = by_id[provider_id]
+    provider_ids = sorted(
+        (provider_id for provider_id in PROVIDER_GUIDANCE if provider_id != "github"),
+        key=lambda provider_id: int(PROVIDER_GUIDANCE[provider_id]["priority"]),
+    )
+    for provider_id in provider_ids:
+        item = by_id.get(provider_id)
+        if item is None:
+            continue
         guidance = PROVIDER_GUIDANCE[provider_id]
         steps.append(
             {

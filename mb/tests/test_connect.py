@@ -80,6 +80,7 @@ def test_connect_plan_returns_numbered_provider_choices(tmp_path: Path, monkeypa
     assert steps["github"]["safe_to_share"] is True
     assert steps["meta"]["next_command"] == "mb connect meta --token-stdin"
     assert payload["summary"]["total"] == 5
+    assert not (repo / ".mb" / "connect.yaml").exists()
 
 
 def test_connect_plan_human_output_uses_numbered_choices(tmp_path: Path, monkeypatch) -> None:
@@ -101,6 +102,7 @@ def test_connect_plan_human_output_uses_numbered_choices(tmp_path: Path, monkeyp
     assert "1. GitHub (ready)" in result.stdout
     assert "2. Cloudflare (not_connected)" in result.stdout
     assert "next: mb connect cloudflare --token-stdin" in result.stdout
+    assert not (repo / ".mb" / "connect.yaml").exists()
 
 
 def test_connect_provider_stores_secret_outside_repo(tmp_path: Path, monkeypatch) -> None:

@@ -614,7 +614,7 @@ def connect_cmd(
             typer.echo(json.dumps(result, indent=2))
         else:
             connect_mod.render_plan(result)
-        raise typer.Exit(0 if result["ok"] else 1)
+        raise typer.Exit(0)
     if target == "status":
         result = connect_mod.status_all(repo, include_all=all_providers)
         if json_out:
