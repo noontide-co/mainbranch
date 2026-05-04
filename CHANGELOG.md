@@ -11,6 +11,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-05-04
+
+v0.2.6 adds `/mb-update` as the beginner-facing Claude Code update command
+while keeping `/mb-pull` as a compatibility alias for existing users.
+
+### What this means for you (plain English)
+
+- **Use `/mb-update` going forward.** It matches the terminal command
+  `mb update`, so new users only need to remember one word.
+- **Old `/mb-pull` still works.** Existing users can keep using it while docs
+  and onboarding copy move to `/mb-update`.
+
 ### Added
 
 - Added `/mb-update` as the preferred Claude Code update skill so the slash
