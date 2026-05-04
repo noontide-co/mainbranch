@@ -192,6 +192,19 @@ def _parse_date(value: Any, fallback_path: Path) -> date | None:
     return None
 
 
+def _parse_explicit_date(value: Any) -> date | None:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str) and value.strip():
+        try:
+            return date.fromisoformat(value[:10])
+        except ValueError:
+            return None
+    return None
+
+
 def _relative_markdown_files(repo: Path, folder: str) -> list[Path]:
     root = repo / folder
     if not root.exists():
@@ -275,7 +288,7 @@ def _brain(repo: Path) -> dict[str, Any]:
 def _bet_summary(repo: Path, path: Path) -> dict[str, Any]:
     meta = _read_frontmatter(path)
     opened = _parse_date(meta.get("opened"), path)
-    deadline = _parse_date(meta.get("deadline"), path)
+    deadline = _parse_explicit_date(meta.get("deadline"))
     try:
         rel = path.relative_to(repo).as_posix()
     except ValueError:
@@ -315,7 +328,7 @@ def _bets(repo: Path) -> dict[str, Any]:
     due_soon: list[dict[str, Any]] = []
     overdue: list[dict[str, Any]] = []
     for item in active:
-        deadline = _parse_date(str(item.get("deadline") or ""), Path(str(item.get("path") or "")))
+        deadline = _parse_explicit_date(item.get("deadline"))
         if deadline is None:
             continue
         days_until = (deadline - today).days

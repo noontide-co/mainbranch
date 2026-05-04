@@ -169,6 +169,9 @@ def test_status_low_level_helpers_handle_edge_cases(tmp_path: Path, monkeypatch)
     assert status_mod._parse_date(date(2026, 5, 2), plain) == date(2026, 5, 2)
     assert status_mod._parse_date("not-a-date", tmp_path / "2026-05-01-note.md") == date(2026, 5, 1)
     assert status_mod._parse_date("not-a-date", tmp_path / "note.md") is None
+    assert status_mod._parse_explicit_date("2026-05-02") == date(2026, 5, 2)
+    assert status_mod._parse_explicit_date("") is None
+    assert status_mod._parse_explicit_date("not-a-date") is None
 
     external = tmp_path / "external.md"
     external.write_text("no heading\n", encoding="utf-8")
@@ -331,6 +334,41 @@ def test_status_readiness_mentions_due_bets(tmp_path: Path) -> None:
     readiness = status_mod._readiness(report)
 
     assert any("active bets" in action for action in readiness["next_actions"])
+
+
+def test_status_empty_bet_deadline_does_not_fall_back_to_opened_filename(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    (repo / "bets").mkdir(parents=True)
+    (repo / "bets" / "2020-01-01-no-deadline.md").write_text(
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2020-01-01\n"
+            "deadline: ''\n"
+            "appetite: 1 week\n"
+            "hypothesis: A no-deadline bet should stay active but not due.\n"
+            "metric: replies\n"
+            "target: 3 replies\n"
+            "result: ''\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_campaigns: []\n"
+            "linked_outcomes: []\n"
+            "public: false\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n\n"
+            "# No deadline\n"
+        ),
+        encoding="utf-8",
+    )
+
+    bets = status_mod._brain(repo)["bets"]
+
+    assert bets["active"][0]["title"] == "No deadline"
+    assert bets["active"][0]["deadline"] == ""
+    assert bets["due_soon"] == []
+    assert bets["overdue"] == []
 
 
 def test_status_github_authenticated_branches(tmp_path: Path, monkeypatch) -> None:

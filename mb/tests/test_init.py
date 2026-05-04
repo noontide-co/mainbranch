@@ -1,4 +1,4 @@
-"""``mb init`` scaffolds the canonical six folders + CLAUDE.md."""
+"""``mb init`` scaffolds the canonical business folders + CLAUDE.md."""
 
 from __future__ import annotations
 
