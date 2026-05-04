@@ -118,6 +118,11 @@ mb connect status --json
 mb connect doctor
 ```
 
+`mb connect status --json` is the read contract for configured providers.
+`mb connect doctor` is the repair-oriented view over the same provider state:
+it may include broader environment checks and should prioritize exact commands
+that get the operator back to a healthy connection.
+
 Context retrieval uses one new command family:
 
 ```bash
@@ -131,7 +136,8 @@ The first implementation should keep the surface intentionally small:
   this can be a company name or domain.
 - `--kind <kind>` may disambiguate the subject when a provider supports more
   than one subject kind.
-- `--refresh` bypasses a fresh local cache and fetches again.
+- `--refresh` ignores any cached entry and fetches again, replacing the cache on
+  success.
 - `--offline` reads only cache and fails clearly when no cache exists.
 - `--no-cache` avoids writing a local cache for sensitive or throwaway lookups.
 - `--json` emits the sidecar envelope plus Main Branch wrapper metadata.
@@ -153,8 +159,8 @@ contract:
 
 | Exit code | Meaning | `mb` behavior |
 |---|---|---|
-| 0 | Complete success | Accept envelope when schema is valid. |
-| 1 | Degraded or partial result | Accept envelope only if status is `partial` or `degraded`; surface warnings. |
+| 0 | Usable response | Accept envelope when schema is valid and status is `ok`, `empty`, `partial`, or `degraded`. |
+| 1 | Provider-reported error | Accept envelope only if status is `error`; surface safe errors and repair commands. |
 | 2 | User/config/auth problem | Treat as provider not ready; print repair command. |
 | 3 | Unsupported request | Treat as deterministic failure; do not retry. |
 | 4 | Transient upstream problem | Surface retry guidance; may use stale cache. |
@@ -163,6 +169,12 @@ contract:
 `mb` validates the envelope before exposing it to skills or dashboards. Invalid
 JSON, a missing `schema_version`, or an unsupported schema version is a provider
 failure even when the process exits successfully.
+
+Status and exit code must agree. `ok`, `empty`, `partial`, and `degraded`
+should exit 0 with a valid envelope because they are usable responses.
+`error` should exit 1 with a valid envelope because the provider understood the
+request but returned no usable data. Exit codes 2 and higher are reserved for
+failures where the request could not be completed as a valid sidecar response.
 
 Sidecars must not prompt interactively during `mb context fetch`. A provider
 that needs setup should fail with a repair command that points back to
