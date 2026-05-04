@@ -167,6 +167,16 @@ def test_migrate_ignores_os_metadata_files(tmp_path: Path) -> None:
     assert not any(".DS_Store" in str(change) for change in changes)
     assert not any("._offer.md" in str(change) for change in changes)
 
+    applied = runner.invoke(app, ["migrate", "--repo", str(repo), "--apply", "--json"])
+    assert applied.exit_code == 0
+    applied_payload = json.loads(applied.stdout)
+    assert applied_payload["ok"] is True
+    assert (repo / "reference" / "core").is_symlink()
+    assert (repo / "reference" / "offers").is_symlink()
+    backup = Path(applied_payload["backup"]["path"])
+    assert (backup / "reference" / "offers" / ".DS_Store").exists()
+    assert (backup / "reference" / "core" / "._offer.md").exists()
+
 
 def test_migrate_apply_aborts_before_writes_on_conflict(tmp_path: Path) -> None:
     repo = _legacy_repo(tmp_path)

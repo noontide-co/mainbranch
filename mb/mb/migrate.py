@@ -17,6 +17,7 @@ ENVELOPE_SCHEMA_VERSION = 1
 LATEST_SCHEMA_VERSION = "0.2"
 SCHEMA_MARKER = ".mb/schema_version"
 BACKUPS_GITIGNORE_ENTRY = ".mb/backups/"
+IGNORED_OS_METADATA_FILES = {".DS_Store", "Thumbs.db", "Desktop.ini"}
 
 
 class MigrationApplyError(RuntimeError):
@@ -232,6 +233,10 @@ def _gitignore_content_with_backups(text: str) -> str:
     return prefix + BACKUPS_GITIGNORE_ENTRY + "\n"
 
 
+def _is_os_metadata_file(path: Path) -> bool:
+    return path.name in IGNORED_OS_METADATA_FILES or path.name.startswith("._")
+
+
 def _ensure_gitignore_plan(repo: Path, plans: list[MigrationPlan]) -> None:
     if not plans:
         return
@@ -292,9 +297,15 @@ def _apply_change(repo: Path, change: PlannedChange) -> None:
         path.write_text(change.content, encoding="utf-8")
         return
     if change.kind == "remove_empty_dir":
-        if path.is_dir() and not any(path.iterdir()):
-            path.rmdir()
-        elif path.exists():
+        if path.is_dir():
+            for child in path.iterdir():
+                if child.is_file() and not child.is_symlink() and _is_os_metadata_file(child):
+                    child.unlink()
+            if not any(path.iterdir()):
+                path.rmdir()
+                return
+            raise MigrationApplyError(f"{change.path} is not empty; aborting before replacement")
+        if path.exists():
             raise MigrationApplyError(f"{change.path} is not empty; aborting before replacement")
         return
     if change.kind == "symlink":
