@@ -9,6 +9,13 @@ Single entry point for Main Branch. Detect user state, context level, experience
 
 **Recommended workflow:** Start Claude in your business repo, run `/mb-start`. It handles everything. Main Branch is loaded through `additionalDirectories`, with bridge links as a compatibility fallback for skill discovery.
 
+**Status facts first:** Once the business repo path is known, run
+`mb status --json --peek` before asking setup or routing questions. Treat that
+JSON as the source of truth for update severity, readiness, drift, onboarding,
+integrations, GitHub tasks/proposals, bets, dirty git, since-last-check, and
+`ranked_actions`. Do not duplicate those checks with ad hoc shell probes unless
+the status report says a section is unavailable.
+
 ---
 
 ## CRITICAL: Repo Selection Rules
@@ -64,14 +71,19 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │   ├── CWD has .claude/skills/? ─────→ User is in the engine repo (old workflow). Trigger migration.
 │   └── Neither? ────────────────────→ Check config, then ask user.
 │
-├── Check engine updates ──────────────→ Use mb update for the active install
+├── Read status facts ────────────────→ `mb status --json --peek`
+│   ├── ranked_actions? ──────────────→ show top recommendation before menu
+│   ├── readiness/drift blockers? ────→ use cited status repair commands
+│   └── unavailable section? ─────────→ use only the documented fallback for that section
+│
+├── Check engine updates ──────────────→ Use status update severity and `mb update`
 │
 ├── Load config ──────────────────────→ See [config-system.md](references/config-system.md)
 │   ├── ~/.config/vip/local.yaml ─────→ legacy engine path + default_repo + user identity
 │   └── [repo]/.vip/config.yaml ──────→ Team settings, MCP requirements
 │
-├── Verify Main Branch loaded ────────────────→ Check additionalDirectories has Main Branch
-│   └── Missing? ────────────────────→ Run `mb skill link --repo .`, or route to /mb-setup if setup is incomplete
+├── Verify Main Branch loaded ────────→ Use status runtime.skill_wiring facts
+│   └── Missing? ────────────────────→ Run the repair command cited by status
 │
 ├── MCP pre-flight ───────────────────→ See [mcp-preflight.md](references/mcp-preflight.md)
 │   └── Missing required MCP? ────────→ Offer setup or skip
@@ -80,7 +92,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │
 ├── Pull business repo updates ───────→ (your repo, silently)
 │
-├── Onboarding progress check ────────→ `mb onboard status --json`
+├── Onboarding progress check ────────→ Use status onboarding facts
 │   ├── missing core reference? ──────→ collect only current missing inputs
 │   └── complete? ───────────────────→ continue to readiness/menu
 │
@@ -91,7 +103,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 ├── Has repo but thin? ───────────────→ /mb-think codify
 │   (reference files exist but incomplete)
 │
-├── Present menu ────────────────────→ Readiness gates which options show
+├── Present menu ────────────────────→ status readiness gates which options show
 │   (option 1 = triage, recommended)
 │
 ├── User picks option 1? ───────────→ Spawn triage agents (see triage-agent.md)
@@ -117,11 +129,38 @@ Apply to: business repo selection, skill routing, any multiple choice.
 
 ---
 
+## Step 0: Read Status Facts
+
+After repo selection, run:
+
+```bash
+mb status --json --peek
+```
+
+Use this report before asking additional questions:
+
+- `ranked_actions` is the deterministic top-three next-action list. Surface
+  the first action as the recommendation, including its reason and cited signal
+  summaries.
+- `readiness` gates whether setup/repair work must happen before output skills.
+- `drift.items` names stale or broken status signals and repair commands.
+- `onboarding.summary` and `onboarding.checklist` replace separate onboarding
+  probes unless the status report is unavailable.
+- `github.sections`, `brain.bets`, and `since_last_check` supply the continuity
+  facts for routing and triage.
+
+Only run a narrower fallback command such as `mb onboard status --json`,
+`mb doctor`, `mb validate --cross-refs`, or `mb connect doctor` when status
+points at that section as unavailable, degraded, or needing repair.
+
 ## Step 1: Pull Engine Updates
 
-Check Main Branch updates from the business repo. **Do NOT silently swallow failures.** Users on stale code get broken features.
+Use the `update` section from `mb status --json --peek`. **Do NOT silently
+swallow required updates.** Users on stale code get broken features.
 
-See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** for the canonical pull script, result handling table, the failure warning to surface, and the matching Step 3 business-repo pull logic.
+If `update.severity` is `required` or the top ranked action is an update action,
+run the cited command (`mb update` or the package-manager command from status),
+then run `mb status --json --peek` again before routing.
 
 ---
 
@@ -149,7 +188,8 @@ Once business repo is confirmed, pull its latest updates from `REPO_PATH`. See *
 
 ## Step 3a: Resume Onboarding Progress
 
-Run:
+Prefer the `onboarding` section from `mb status --json --peek`. If status is
+unavailable or the operator specifically asks for onboarding detail, run:
 
 ```bash
 mb onboard status --repo "$REPO_PATH" --json
@@ -209,7 +249,9 @@ See [tool-status-audit.md](references/tool-status-audit.md) for the full procedu
 
 ## Step 6: Readiness Assessment
 
-**Run AFTER MCP pre-flight and tool-status audit, BEFORE routing.** Scores reference files, checks session state, and gates routing so users don't jump into output skills with thin context.
+Use `readiness` and `ranked_actions` from `mb status --json --peek` before
+routing. The legacy scoring rubric below is fallback detail for gaps that status
+does not expose yet.
 
 See [readiness-assessment.md](references/readiness-assessment.md) for complete scoring rubric, session state checks, soul health check, skill-specific requirements, and display format.
 

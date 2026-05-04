@@ -153,7 +153,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb onboard` | Human setup flow: create or connect a business repo, explain the substrate, wire Claude Code skills, and show the next `/mb-start` step. |
 | `mb onboard status` | Show durable onboarding progress from `.mb/onboarding.json`, including missing core-reference inputs and the next recommended action. |
 | `mb init` | Set up a fresh business repo (business folders, CLAUDE.md, git init). |
-| `mb status` | Show a local-first daily briefing: since-last-check changes, drift, repo health, runtime wiring, recent decisions/research/bets/git activity, and GitHub tasks when `gh` is authenticated. Use `--json` for the v1 status schema, `--verbose` for detail, and `--peek` for non-mutating reads. |
+| `mb status` | Show a local-first daily briefing: ranked next actions, since-last-check changes, drift, repo health, runtime wiring, recent decisions/research/bets/git activity, and GitHub tasks when `gh` is authenticated. Use `--json` for the v1 status schema, `--verbose` for detail, and `--peek` for non-mutating reads. |
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
 | `mb connect` | Register provider credentials, test provider health, and inspect repair-safe integration status without committing secrets. |
 | `mb issue draft` | Create a local, privacy-scrubbed GitHub issue draft under `.mb/issue-drafts/` for bugs, feature gaps, or questions. |
@@ -211,6 +211,7 @@ Skills are pre-built workflows you invoke with slash prompts. Instead of figurin
 | Skill | What it does |
 |---|---|
 | `/mb-start` | Main entry point — figures out what you need and routes you there |
+| `/mb-status` | Thin Claude Code wrapper over `mb status --json --peek` for daily briefing facts and ranked next actions |
 | `/mb-setup` | Set up your business repo (run this first if you're new) |
 | `/mb-think` | Research, make decisions, add context, transcribe local recordings, update reference files |
 | `/mb-bet` | Open, update, close, list, and narrate business bets |

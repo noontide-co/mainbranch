@@ -43,6 +43,7 @@ Remaining planned scope:
   signals ([#262](https://github.com/noontide-co/mainbranch/issues/262));
 - `/mb-start` using the same status and ranker substrate
   ([#262](https://github.com/noontide-co/mainbranch/issues/262));
+- `/mb-status` as a thin runtime wrapper over deterministic status facts;
 - shared readiness checks so skills call `mb` instead of duplicating probes
   ([#263](https://github.com/noontide-co/mainbranch/issues/263));
 - cleaner beginner/provider onboarding that explains the tool philosophy and
@@ -64,7 +65,6 @@ friction easier to turn into public improvement.
 
 Planned scope:
 
-- `/mb-status` as a thin runtime wrapper over `mb status`;
 - a small read-only local dashboard spike over existing JSON outputs
   ([#189](https://github.com/noontide-co/mainbranch/issues/189));
 - sidecar enrichment contract for optional tools such as public company

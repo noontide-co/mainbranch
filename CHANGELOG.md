@@ -32,6 +32,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added `mb status` schema v1.0 with repo-local since-last-check state,
   deterministic drift signals, `--peek` non-mutating reads, `--verbose` detail
   output, and `--no-color` human output. Refs #261.
+- Added deterministic `mb status` ranked next actions with cited signals,
+  confidence, and `safe_to_share` fields, plus top-three human rendering. Refs
+  #262.
+- Added `/mb-status` as a thin Claude Code wrapper over
+  `mb status --json --peek`.
 
 ### Changed
 
@@ -39,6 +44,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   the public product frame before making roadmap, runtime, or workflow changes.
 - Clarified compatibility docs so non-Claude runtimes remain roadmap surfaces
   until each has a documented adapter and fresh-repo smoke evidence.
+- Updated `/mb-start` to read deterministic status/ranker facts before asking
+  setup or routing questions. Refs #263.
 
 ## [0.2.6] - 2026-05-04
 
