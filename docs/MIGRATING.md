@@ -50,20 +50,23 @@ mb start
 `/mb-think`, `/mb-ads`, and the other bundled skills point at the installed
 Main Branch package instead of an old clone path. It also removes stale
 Main Branch engine paths from `.claude/settings.local.json` so Claude Code does
-not keep access to two engine copies after a clone-to-pipx migration.
+not keep access to two engine copies after a clone-to-pipx migration. During
+that link step, Main Branch also moves provably stale or broken personal
+symlinks with Main Branch skill names into a timestamped backup.
 
 `mb skill repair --repo .` checks your personal `~/.claude/skills/` directory
 for entries that can beat the project-local Main Branch skills in Claude Code.
 It reports the resolved target for each finding. If the entry is a provably
-stale Main Branch symlink, run:
+stale Main Branch symlink or a broken symlink using one of Main Branch's current
+or legacy skill names, run:
 
 ```bash
 mb skill repair --repo . --apply
 ```
 
-That moves the symlink to a timestamped backup under
+That moves the symlink itself to a timestamped backup under
 `~/.claude/skills/.mainbranch-backups/`. It does not delete or move
-user-authored or third-party skills.
+user-authored directories, real files, or live third-party skill links.
 
 ## Do Not Start By Moving Files
 

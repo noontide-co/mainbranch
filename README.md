@@ -158,8 +158,8 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb skill list` | List the skills bundled with this engine. |
 | `mb skill path <name>` | Print the on-disk path to a bundled skill. |
 | `mb skill validate <name>` | Validate one bundled skill's frontmatter, local references, and 500-line gate. Use `--all --json` for CI. |
-| `mb skill link --repo .` | Repair Claude Code skill discovery in a business repo. |
-| `mb skill repair --repo .` | Detect personal Claude Code skills that shadow Main Branch and explain safe repair. Use `--apply` only for stale Main Branch symlinks. |
+| `mb skill link --repo .` | Repair Claude Code skill discovery in a business repo and back up stale or broken Main Branch personal symlinks. |
+| `mb skill repair --repo .` | Detect personal Claude Code skills that shadow Main Branch and explain safe repair. Use `--apply` only for stale Main Branch symlinks or broken links with Main Branch skill names. |
 
 Full list: `mb --help`.
 

@@ -52,6 +52,37 @@ def test_personal_legacy_mainbranch_symlink_is_reported_and_backed_up(
     assert Path(applied["findings"][0]["backup_path"]).is_symlink()
 
 
+def test_personal_legacy_broken_symlink_is_reported_and_backed_up(
+    tmp_path: Path, monkeypatch
+) -> None:
+    personal = tmp_path / "home" / ".claude" / "skills"
+    personal.mkdir(parents=True)
+    (personal / "start").symlink_to(tmp_path / "missing-engine" / "start")
+    repo = tmp_path / "biz"
+    _write_skill(repo, "mb-start")
+
+    monkeypatch.setattr(engine_mod, "bundled_skills", lambda: ["mb-start"])
+
+    dry = engine_mod.inspect_personal_skill_conflicts(repo, personal_skills_dir=personal)
+
+    assert dry["ok"] is True
+    assert dry["summary"]["legacy_globals"] == 1
+    assert dry["summary"]["repairable"] == 1
+    assert dry["findings"][0]["classification"] == "broken-symlink"
+    assert (personal / "start").is_symlink()
+
+    applied = engine_mod.inspect_personal_skill_conflicts(
+        repo,
+        apply=True,
+        personal_skills_dir=personal,
+    )
+
+    assert applied["summary"]["repaired"] == 1
+    assert not (personal / "start").exists()
+    assert not (personal / "start").is_symlink()
+    assert Path(applied["findings"][0]["backup_path"]).is_symlink()
+
+
 def test_personal_third_party_active_shadow_is_reported_but_not_repaired(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -73,6 +104,27 @@ def test_personal_third_party_active_shadow_is_reported_but_not_repaired(
     assert result["summary"]["repairable"] == 0
     assert result["findings"][0]["classification"] == "not-mainbranch-link"
     assert (personal / "mb-start" / "SKILL.md").exists()
+
+
+def test_link_skills_auto_repairs_broken_legacy_personal_symlink(
+    tmp_path: Path, monkeypatch
+) -> None:
+    personal = tmp_path / "home" / ".claude" / "skills"
+    personal.mkdir(parents=True)
+    (personal / "start").symlink_to(tmp_path / "missing-engine" / "start")
+    repo = tmp_path / "biz"
+
+    monkeypatch.setattr(engine_mod, "bundled_skills", lambda: ["mb-start"])
+    monkeypatch.setattr(engine_mod, "_personal_skills_dir", lambda: personal)
+
+    result = engine_mod.link_skills(repo)
+
+    assert result["ok"] is True
+    assert result["shadow_report"]["summary"]["repaired"] == 1
+    assert result["shadow_report"]["findings"][0]["classification"] == "broken-symlink"
+    assert not (personal / "start").exists()
+    assert not (personal / "start").is_symlink()
+    assert (repo / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
 
 
 def test_link_skills_removes_legacy_project_symlink(tmp_path: Path) -> None:

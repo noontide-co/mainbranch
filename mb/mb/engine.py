@@ -336,7 +336,7 @@ def _conflict_finding(
 ) -> dict[str, Any]:
     entry = global_dir / name
     classification, target = _classify_personal_skill(entry, name)
-    safe_to_repair = classification == "stale-mainbranch-link"
+    safe_to_repair = classification in {"stale-mainbranch-link", "broken-symlink"}
     backup_path = ""
     repaired = False
     error = ""
@@ -379,8 +379,9 @@ def inspect_personal_skill_conflicts(
 ) -> dict[str, Any]:
     """Inspect or repair personal Claude Code skills that can shadow Main Branch.
 
-    ``apply`` only moves entries that are provably stale Main Branch symlinks.
-    User-authored or third-party skills are reported but never changed.
+    ``apply`` only moves stale Main Branch symlinks and broken symlinks matching
+    Main Branch's current or legacy skill names. User-authored or third-party
+    skills are reported but never changed.
     """
     target = Path(repo).expanduser().resolve()
     global_dir = personal_skills_dir or _personal_skills_dir()
@@ -512,7 +513,7 @@ def link_skills(repo: str | Path) -> dict[str, Any]:
         "removed_legacy": removed_legacy,
         "removed_stale_engine_paths": removed_stale_engine_paths,
         "errors": [],
-        "shadow_report": inspect_personal_skill_conflicts(target, apply=False),
+        "shadow_report": inspect_personal_skill_conflicts(target, apply=True),
     }
 
 

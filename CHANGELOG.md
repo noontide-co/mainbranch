@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- `mb skill link --repo .` and `mb skill repair --repo . --apply` now move
+  broken personal Claude Code symlinks with Main Branch current or legacy skill
+  names to timestamped backups instead of leaving old `/start`, `/think`, and
+  similar traps in place. User-authored directories, real files, and live
+  third-party skill links remain report-only.
+
 ## [0.2.4] - 2026-05-04
 
 v0.2.4 is the noob-safe migration and provider-trust release. It moves bundled

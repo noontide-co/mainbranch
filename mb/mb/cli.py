@@ -912,7 +912,7 @@ def skill_repair_cmd(
     apply_changes: bool = typer.Option(
         False,
         "--apply",
-        help="Move provably stale Main Branch personal skill links to a timestamped backup.",
+        help="Move stale or broken Main Branch personal skill links to a timestamped backup.",
     ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
@@ -945,10 +945,12 @@ def skill_repair_cmd(
                     else:
                         typer.echo("  safe repair: run `mb skill repair --repo . --apply`")
                 else:
-                    typer.echo("  not changed: this is not provably a stale Main Branch link")
+                    typer.echo(
+                        "  not changed: this is not a stale or broken Main Branch skill link"
+                    )
         if not apply_changes and summary["repairable"]:
             typer.echo("")
-            typer.echo("To move stale Main Branch symlinks to backup:")
+            typer.echo("To move stale or broken Main Branch symlinks to backup:")
             typer.echo("  mb skill repair --repo . --apply")
     raise typer.Exit(0 if result["ok"] else 1)
 
