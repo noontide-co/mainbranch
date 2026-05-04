@@ -22,6 +22,7 @@ Traceback File "/Users/alex/business/core/offer.md", line 4
 Authorization: Bearer abcdefghijklmnop
 https://example.com/callback?token=abc123
 customer@example.com
+--token=plain-secret
 """
 
     scrubbed = issue_mod.scrub_text(raw)
@@ -31,7 +32,8 @@ customer@example.com
     assert "abcdefghijklmnop" not in scrubbed.text
     assert "abc123" not in scrubbed.text
     assert "customer@example.com" not in scrubbed.text
-    assert scrubbed.redactions["sensitive_env"] == 1
+    assert "plain-secret" not in scrubbed.text
+    assert scrubbed.redactions["sensitive_env"] == 2
     assert scrubbed.redactions["local_path"] == 1
     assert scrubbed.redactions["token"] == 1
     assert scrubbed.redactions["url_secret"] == 1
@@ -80,6 +82,7 @@ def test_issue_draft_bug_creates_local_gitignored_scrubbed_draft(tmp_path: Path)
     assert payload["privacy"]["requires_operator_review"] is True
     assert payload["redactions"]["email"] == 1
     assert payload["redactions"]["local_path"] >= 1
+    assert payload["next_command"].startswith("mb issue open .mb/issue-drafts/")
 
 
 def test_issue_draft_supports_feature_and_question_shapes(tmp_path: Path) -> None:
@@ -129,6 +132,30 @@ def test_issue_draft_requires_existing_repo(tmp_path: Path) -> None:
             fields={"command": "mb status"},
             include_doctor=False,
         )
+
+
+def test_issue_draft_degrades_when_doctor_fails(tmp_path: Path, monkeypatch) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    def fail_doctor(path: str) -> dict[str, object]:
+        raise RuntimeError("failed at /Users/alex/business with token=secret")
+
+    monkeypatch.setattr(issue_mod.doctor_mod, "run", fail_doctor)
+
+    result = issue_mod.create_draft(
+        repo=str(repo),
+        kind="bug",
+        title="bug: doctor failure",
+        fields={"command": "mb doctor", "happened": "doctor crashed"},
+    )
+
+    body = Path(result["path"]).read_text(encoding="utf-8")
+    assert result["ok"] is True
+    assert "mb doctor --json could not run" in body
+    assert "/Users/alex" not in body
+    assert "token=secret" not in body
+    assert "`mb issue draft bug --no-doctor`" in body
 
 
 def test_issue_open_requires_yes_and_returns_manual_fallback(tmp_path: Path) -> None:

@@ -24,11 +24,11 @@ ISSUE_DRAFTS_GITIGNORE_ENTRY = ".mb/issue-drafts/"
 ISSUE_KINDS = {"bug", "feature", "question"}
 
 SENSITIVE_ENV_RE = re.compile(
-    r"(?im)^([A-Z_][A-Z0-9_]*(?:TOKEN|KEY|SECRET|PASSWORD|PASS|PWD|"
+    r"(?im)^([A-Z0-9_]*(?:TOKEN|KEY|SECRET|PASSWORD|PASS|PWD|"
     r"CREDENTIAL|AUTH|BEARER)[A-Z0-9_]*\s*=\s*).+$"
 )
 INLINE_SECRET_RE = re.compile(
-    r"(?i)\b([A-Z_][A-Z0-9_]*(?:TOKEN|KEY|SECRET|PASSWORD|PASS|PWD|"
+    r"(?i)(?<![?&])\b([A-Z0-9_]*(?:TOKEN|KEY|SECRET|PASSWORD|PASS|PWD|"
     r"CREDENTIAL|AUTH|BEARER)[A-Z0-9_]*\s*=\s*)(?!\[REDACTED\])[^\s`'\",;]+"
 )
 BEARER_RE = re.compile(r"(?i)\b(bearer\s+)[A-Za-z0-9._~+/=-]{10,}")
@@ -182,7 +182,22 @@ def _scrub_field(value: str) -> tuple[str, dict[str, int]]:
 
 
 def _safe_doctor_json(repo: Path) -> tuple[str, dict[str, int]]:
-    report = doctor_mod.run(path=str(repo))
+    try:
+        report = doctor_mod.run(path=str(repo))
+    except Exception as exc:
+        scrubbed = scrub_text(str(exc))
+        return (
+            json.dumps(
+                {
+                    "ok": False,
+                    "error": "mb doctor --json could not run while drafting this issue.",
+                    "detail": scrubbed.text,
+                    "fallback": "Re-run with `mb issue draft bug --no-doctor` if needed.",
+                },
+                indent=2,
+            ),
+            scrubbed.redactions,
+        )
     scrubbed, redactions = scrub_value(report)
     return json.dumps(scrubbed, indent=2), redactions
 
@@ -369,7 +384,6 @@ def create_draft(
     created_at = _now().isoformat(timespec="seconds")
     slug = _slug(scrubbed_title.text)
     filename = f"{created_at.replace(':', '').replace('+0000', 'Z')}-{normalized_kind}-{slug}.md"
-    filename = filename.replace("+00:00", "Z")
     path = draft_dir / filename
     counter = 2
     while path.exists():
@@ -395,6 +409,7 @@ removing private business context before submitting a public issue.
 
 {body}
 """
+    relative_path = str(path.relative_to(repo_path))
     path.write_text(content, encoding="utf-8")
     return {
         "ok": True,
@@ -402,7 +417,7 @@ removing private business context before submitting a public issue.
         "title": scrubbed_title.text,
         "labels": labels,
         "path": str(path),
-        "relative_path": str(path.relative_to(repo_path)),
+        "relative_path": relative_path,
         "repo": str(repo_path),
         "gitignore_updated": gitignore_updated,
         "redactions": redactions,
@@ -411,7 +426,7 @@ removing private business context before submitting a public issue.
             "requires_operator_review": True,
             "submitted": False,
         },
-        "next_command": f"mb issue open {path}",
+        "next_command": f"mb issue open {relative_path}",
     }
 
 
