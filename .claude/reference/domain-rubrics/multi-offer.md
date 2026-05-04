@@ -32,7 +32,7 @@ Guide for structuring businesses with multiple offers under a single brand. When
 
 Separate brands = separate repos. Always.
 
-If you run multiple businesses, each gets its own repo with its own `soul.md`, `voice.md`, `offer.md`, and `audience.md`. The engine (vip) stays the same -- you just point it at a different data repo.
+If you run multiple businesses, each gets its own repo with its own `soul.md`, `voice.md`, `offer.md`, and `audience.md`. The Main Branch engine stays the same -- you just point it at a different data repo.
 
 The relevant question during a session is: "Are any other business repos relevant right now?" NOT "Do you have multiple businesses?" Each session works with one business repo at a time. Cross-business work means switching repos, not merging them.
 
@@ -137,12 +137,12 @@ current_offer: community    # Active offer for this session
 
 **Rules:**
 - Git-ignored (session state, not shared between machines or collaborators)
-- Written by `/start` when user selects an offer
+- Written by `/mb-start` when user selects an offer
 - Read by all skills that need offer context
 - If file is missing or `current_offer` is null: single-offer mode (everything reads from `core/`)
 - Skills should never fail because `.vip/local.yaml` is missing -- they fall back to single-offer behavior
 
-**The .vip/ folder** is for local session state only. Never commit it. Add `.vip/` to `.gitignore` during `/setup`.
+**The .vip/ folder** is for local session state only. Never commit it. Add `.vip/` to `.gitignore` during `/mb-setup`.
 
 ---
 
@@ -199,7 +199,7 @@ status: active
 
 ## Migration Path: Single-Offer to Multi-Offer
 
-This is an atomic operation performed by `/setup` when a user adds their second offer.
+This is an atomic operation performed by `/mb-setup` when a user adds their second offer.
 
 ### What Happens
 
@@ -255,14 +255,14 @@ If a user removes all but one offer, the `offers/` folder can be deleted and the
 
 | Skill | How It Uses Multi-Offer |
 |-------|-------------------------|
-| `/start` | Detects `offers/` folder, prompts for offer selection, writes `.vip/local.yaml` |
-| `/setup` | Creates `offers/` structure, handles single-to-multi migration |
-| `/think` | Reads active offer context; decisions may affect specific offers |
-| `/ads` | Generates ads for active offer using resolved offer.md + audience.md |
-| `/vsl` | Writes scripts for active offer |
-| `/organic` | Creates content using brand-level strategy + active offer details |
-| `/site` | Builds landing pages for active offer |
-| `/end` | Summarizes work across whichever offer was active |
+| `/mb-start` | Detects `offers/` folder, prompts for offer selection, writes `.vip/local.yaml` |
+| `/mb-setup` | Creates `offers/` structure, handles single-to-multi migration |
+| `/mb-think` | Reads active offer context; decisions may affect specific offers |
+| `/mb-ads` | Generates ads for active offer using resolved offer.md + audience.md |
+| `/mb-vsl` | Writes scripts for active offer |
+| `/mb-organic` | Creates content using brand-level strategy + active offer details |
+| `/mb-site` | Builds landing pages for active offer |
+| `/mb-end` | Summarizes work across whichever offer was active |
 
 ---
 

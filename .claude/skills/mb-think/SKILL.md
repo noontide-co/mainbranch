@@ -40,7 +40,7 @@ Both are work. Enriching the core levels up everything downstream.
 
 ## Pull Latest Updates
 
-See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** for the canonical vip-resolution + pull bash block. Run it at the start of every /mb-think invocation.
+See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** for the canonical engine resolution + pull bash block. Run it at the start of every /mb-think invocation.
 
 ---
 
@@ -73,7 +73,7 @@ Before loading reference files, resolve the active offer:
 
 ## Where Files Go
 
-All files save to YOUR business repo, not the engine (vip).
+All files save to YOUR business repo, not the Main Branch engine.
 
 ```
 your-business-repo/          <- Files saved here
@@ -84,7 +84,7 @@ your-business-repo/          <- Files saved here
     ├── offers/               <- Per-offer (if multi-offer)
     └── domain/
 
-vip/ (engine)                 <- Never modified
+mainbranch/ (engine)          <- Never modified
 ```
 
 ---

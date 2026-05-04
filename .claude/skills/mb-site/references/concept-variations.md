@@ -51,11 +51,11 @@ Operators can override by supplying their own leans (e.g., "I want one warm + on
 
 ## Default concept count
 
-Stored in `~/.config/vip/local.yaml` per the `start/references/config-system.md` config split:
+Stored in `~/.config/vip/local.yaml` per the `mb-start/references/config-system.md` config split:
 
 ```yaml
 # ~/.config/vip/local.yaml
-vip_path: /path/to/vip
+vip_path: /path/to/mainbranch
 user: dmthepm
 default_concepts: 3  # optional; defaults to 2 if absent
 ```
@@ -94,4 +94,4 @@ Concept subagents must run in the foreground. Background subagents have a known 
 - [`minisite-build.md`](minisite-build.md) — where concept generation fits in the operator walkthrough
 - [`minisite-generation-system.md`](minisite-generation-system.md) — the system prompt each concept subagent uses
 - [`anti-patterns.md`](anti-patterns.md) — what NOT to bake into concept prompts (over-prescription kills variance)
-- `start/references/config-system.md` — the `~/.config/vip/local.yaml` location for `default_concepts`
+- `mb-start/references/config-system.md` — the `~/.config/vip/local.yaml` location for `default_concepts`

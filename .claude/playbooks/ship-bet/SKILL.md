@@ -15,14 +15,14 @@ A playbook that takes one bet from `core/offers/<slug>/offer.md` (status: `propo
 ## Intended flow (v0.2 implementation)
 
 ```
-1. /think codify    — confirm offer is named in core/offers/<slug>/
+1. /mb-think codify    — confirm offer is named in core/offers/<slug>/
 2. skill-brief-draft  — draft minisite brief from offer + audience + voice
 3. skill-review     — Seven Sweeps + Expert Panel against the brief
-4. /site build      — generate, deploy to Cloudflare Pages
+4. /mb-site build      — generate, deploy to Cloudflare Pages
 5. skill-concept    — N variations on localhost, operator picks one
-6. /site publish    — push picked concept; auto-deploy
-7. /ads generate    — first ad creative from the brief
-8. /ads review      — compliance + lens check
+6. /mb-site publish    — push picked concept; auto-deploy
+7. /mb-ads generate    — first ad creative from the brief
+8. /mb-ads review      — compliance + lens check
 9. log/             — write playbook-run summary
 ```
 
@@ -45,8 +45,8 @@ A playbook that takes one bet from `core/offers/<slug>/offer.md` (status: `propo
 
 ## Cross-references
 
-- [skill-brief-draft/SKILL.md](../../skills/skill-brief-draft/SKILL.md)
-- [skill-concept/SKILL.md](../../skills/skill-concept/SKILL.md)
-- [skill-review/SKILL.md](../../skills/skill-review/SKILL.md)
-- [site/SKILL.md](../../skills/site/SKILL.md)
-- [ads/SKILL.md](../../skills/ads/SKILL.md)
+- [skill-brief-draft/SKILL.md](../../skills/mb-skill-brief-draft/SKILL.md)
+- [skill-concept/SKILL.md](../../skills/mb-skill-concept/SKILL.md)
+- [skill-review/SKILL.md](../../skills/mb-skill-review/SKILL.md)
+- [site/SKILL.md](../../skills/mb-site/SKILL.md)
+- [ads/SKILL.md](../../skills/mb-ads/SKILL.md)

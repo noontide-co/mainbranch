@@ -41,9 +41,9 @@ For first-time setup, do not default to "switch workspace now." Prefer option 1 
 
 ### Pull Latest Engine Updates and Detect CWD (FIRST)
 
-**Pull vip + detect CWD before context gathering.** Three cases: CWD is the business repo (happy path), CWD is vip (migration), or CWD is neither (ask user).
+**Repair Main Branch wiring + detect CWD before context gathering.** Three cases: CWD is the business repo (happy path), CWD is the engine repo (migration), or CWD is neither (ask user).
 
-See **[references/cwd-detection.md](references/cwd-detection.md)** for the full pull script and all three cases (Case 1 happy path, Case 2 vip migration, Case 3 ask). This must happen BEFORE any context gathering — if conversation compacts later, the essential config is already saved.
+See **[references/cwd-detection.md](references/cwd-detection.md)** for the full repair path and all three cases (Case 1 happy path, Case 2 engine migration, Case 3 ask). This must happen BEFORE any context gathering — if conversation compacts later, the essential config is already saved.
 
 ---
 
@@ -95,7 +95,7 @@ Don't block setup on this. Continue and mention it at the end.
 
 **IMPORTANT:** If user has a Skool community, choose **Community/Skool** even if they also do coaching, courses, or services outside Skool. The community is the hub — other offerings feed into it.
 
-Read the appropriate rubric from `.claude/reference/domain-rubrics/ (in vip)`.
+Read the appropriate rubric from `.claude/reference/domain-rubrics/` in the Main Branch engine.
 
 ### 2.5: Offer Structure
 
@@ -109,7 +109,7 @@ After business type, determine offer structure:
 - Ask: "What should we call each offer? Short slugs work best (e.g., 'community', 'newsletter', 'done-for-you')"
 - Ask: "How do these relate? Is there a natural progression — like a free tier that feeds into a paid one?" (This builds `product-ladder.md`)
 - Store offer names for Step 4 folder creation
-- Note: The multi-offer rubric lives at `.claude/reference/domain-rubrics/multi-offer.md` (in vip) — read it if the user has multiple offers
+- Note: The multi-offer rubric lives at `.claude/reference/domain-rubrics/multi-offer.md` in the Main Branch engine; read it if the user has multiple offers
 
 **Multi-business check (brief, not interrogating):**
 > "Are any other business repos relevant right now? If you run completely separate brands, they each get their own repo. We're setting up this one."
@@ -270,7 +270,7 @@ Based on business type, create domain-specific folders:
 **E-commerce:** `reference/domain/products/`, `reference/domain/fulfillment/`
 **Community:** `reference/domain/classroom/`, `reference/domain/membership/`, `reference/domain/funnel/`, `reference/domain/content-strategy.md`, `reference/domain/funnel/skool-surfaces.md`
 
-See `.claude/reference/domain-rubrics/ (in vip)` for full specifications.
+See `.claude/reference/domain-rubrics/` in the Main Branch engine for full specifications.
 
 ### 7. Draft CLAUDE.md
 
@@ -278,7 +278,7 @@ See `references/claude-md-guide.md` for structure.
 
 **Key sections:**
 - One-line description
-- Engine reference (vip)
+- Engine reference (Main Branch)
 - Folder structure diagram
 - Business summary
 - Quick reference (audience, voice, offer)
@@ -289,7 +289,7 @@ See `references/claude-md-guide.md` for structure.
 
 Simple human-readable overview:
 - What the business is
-- How to use the repo with vip
+- How to use the repo with Main Branch
 - Quick stats
 
 ### 9. Initial Commit
@@ -341,7 +341,7 @@ Format: `[type] Brief description` with Co-Authored-By line. Types: `[init]`, `[
 
 ## References
 
-- **CWD Detection:** `references/cwd-detection.md` — Pull engine updates + Case 1/2/3 flows for detecting where the user is
+- **CWD Detection:** `references/cwd-detection.md` — Check engine updates + Case 1/2/3 flows for detecting where the user is
 - **File Education:** `references/file-education.md` — What to teach the user about each core file, priority order, visual style scaffolding
 - **Context Gathering:** `references/context-gathering.md` — Checklists by business type, completeness criteria
 - **Templates:** `references/templates.md` — All file templates
@@ -389,7 +389,7 @@ Once setup is complete, tell the user:
 > claude
 > /mb-start
 > ```
-> vip linkage is managed by setup (`settings.local.json` + compatibility bridge links) — no need to touch the vip folder.
+> Main Branch linkage is managed by setup (`settings.local.json` + compatibility bridge links) — no need to touch the Main Branch engine folder.
 >
 > **Key skills to try:**
 > - `/mb-think` — Research topics, make decisions, update reference

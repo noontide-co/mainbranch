@@ -12,9 +12,9 @@ CWD-first detection of the business repo, with config fallback. The user starts 
    ├── YES → This IS the business repo. Use CWD. Skip to config loading.
    └── NO → Continue to step 2.
 
-2. Check CWD for vip fingerprint (old workflow):
+2. Check CWD for Main Branch engine fingerprint (old workflow):
    test -f ".claude/skills/mb-start/SKILL.md"
-   ├── YES → User is in vip (old workflow). Trigger migration guidance.
+   ├── YES → User is in the engine repo (old workflow). Trigger migration guidance.
    └── NO → Continue to step 3.
 
 3. Fall back to config:
@@ -23,9 +23,9 @@ CWD-first detection of the business repo, with config fallback. The user starts 
    └── Nothing valid? → Discovery or /mb-setup
 ```
 
-### Migration Guidance (Step 2 — User Is in vip)
+### Migration Guidance (Step 2 - User Is in the Engine Repo)
 
-> "It looks like you're running Claude inside the vip engine folder. The recommended workflow is now to run Claude from your business repo instead.
+> "It looks like you're running Claude inside the Main Branch engine folder. The recommended workflow is now to run Claude from your business repo instead.
 >
 > 1. **Quick switch:** Close this session, `cd [their-repo-path]` then `claude` then `/mb-start`
 > 2. **Need setup help?** `/mb-setup` will configure everything
@@ -41,7 +41,7 @@ Once business repo is identified (from CWD or config), load settings:
 
 ```
 1. Read ~/.config/vip/local.yaml
-   ├── Found? → Get vip_path + default_repo + recent_repos + user identity
+   ├── Found? → Get legacy engine path + default_repo + recent_repos + user identity
    └── Missing? → Acceptable if CWD is the repo; config gets created by /mb-setup
 
 2. Read [repo]/.vip/config.yaml
@@ -85,7 +85,7 @@ Use fallbacks in order:
 
 **Verify with Read, not Glob:** Use `Read` on `[path]/reference/core/soul.md` or `[path]/core/soul.md` to confirm it's a business repo. `soul.md` is always in `core/` (even multi-offer repos).
 
-**Skip vip** — any path containing `.claude/skills/mb-start/SKILL.md` is the engine, not a business repo.
+**Skip the engine repo** - any path containing `.claude/skills/mb-start/SKILL.md` is the engine, not a business repo.
 
 ---
 
@@ -105,7 +105,7 @@ After repo detection/selection, set one canonical variable and use it everywhere
 REPO_PATH="[absolute-path-to-selected-business-repo]"
 ```
 
-**Rule:** All business-repo operations must target `REPO_PATH` (not implicit CWD). This is critical when `/mb-start` is invoked from vip and the selected repo is elsewhere.
+**Rule:** All business-repo operations must target `REPO_PATH` (not implicit CWD). This is critical when `/mb-start` is invoked from the engine repo and the selected repo is elsewhere.
 
 If `~/.config/vip/local.yaml` doesn't have this repo saved, offer to save:
 
@@ -114,7 +114,7 @@ If `~/.config/vip/local.yaml` doesn't have this repo saved, offer to save:
 If yes, update `~/.config/vip/local.yaml`:
 
 ```yaml
-vip_path: /path/to/vip
+vip_path: /path/to/mainbranch
 default_repo: /full/path/to/repo
 recent_repos:
   - /full/path/to/repo
@@ -127,13 +127,13 @@ user:
 
 ---
 
-## Verify vip Is Loaded (Config + Compatibility Links)
+## Verify Main Branch Is Loaded (Config + Compatibility Links)
 
-After detecting the business repo, confirm vip is accessible and `/mb-start` bridge exists in the selected repo (`REPO_PATH`):
+After detecting the business repo, confirm Main Branch is accessible and `/mb-start` bridge exists in the selected repo (`REPO_PATH`):
 
 ```bash
-# 1. Resolve vip path from selected repo's settings.local.json
-VIP_PATH=$(test -f "$REPO_PATH/.claude/settings.local.json" && REPO_PATH="$REPO_PATH" python3 -c "
+# 1. Resolve engine path from selected repo's settings.local.json
+ENGINE_PATH=$(test -f "$REPO_PATH/.claude/settings.local.json" && REPO_PATH="$REPO_PATH" python3 -c "
 import json, os
 with open(os.path.join(os.environ['REPO_PATH'], '.claude/settings.local.json')) as f:
     dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
@@ -146,13 +146,13 @@ for d in dirs:
 test -e "$REPO_PATH/.claude/skills/mb-start" && echo "START_BRIDGE_OK"
 ```
 
-**If `additionalDirectories` missing:** Run `/mb-setup` to configure.
+**If `additionalDirectories` missing:** run `mb skill link --repo "$REPO_PATH"`, then restart Claude.
 
 **If bridge links missing** (but `additionalDirectories` exists): run the canonical repair from [auto-heal.md](auto-heal.md), targeting `REPO_PATH`.
 
-Tell the user: "Repaired missing vip bridge links in **[repo-name]**. Local custom skills are preserved."
+Tell the user: "Repaired missing Main Branch bridge links in **[repo-name]**. Local custom skills are preserved."
 
-**If `/mb-start` was invoked from vip:** always run this verification block for the selected `REPO_PATH` before routing. This is the migration safety net for existing users.
+**If `/mb-start` was invoked from the engine repo:** always run this verification block for the selected `REPO_PATH` before routing. This is the migration safety net for existing users.
 
 **Why both are needed:**
 - `additionalDirectories` = file access (read reference files, compliance docs)

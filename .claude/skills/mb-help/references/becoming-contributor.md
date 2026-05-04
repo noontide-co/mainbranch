@@ -6,7 +6,7 @@ Main Branch is built by its community. If you want to contribute back, here's ho
 
 ## What Contributors Do
 
-Contributors help improve the engine (vip) for everyone:
+Contributors help improve the Main Branch engine for everyone:
 
 - **Skills** - Build new skills or improve existing ones
 - **Frameworks** - Add compliance frameworks, review lenses
@@ -102,7 +102,7 @@ This isn't bought - it's earned through contribution quality.
 
 ## Technical Requirements
 
-To contribute to vip, you need:
+To contribute to Main Branch, you need:
 
 1. **Git basics** - Clone, branch, commit, pull request
 2. **Skill understanding** - How SKILL.md files work

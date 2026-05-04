@@ -1,6 +1,6 @@
 # Config System
 
-Four-file system: vip linkage, personal settings, team settings, and API keys — each in the right place.
+Four-file system: Main Branch engine linkage, personal settings, team settings, and API keys — each in the right place.
 
 ---
 
@@ -8,25 +8,25 @@ Four-file system: vip linkage, personal settings, team settings, and API keys �
 
 | File | Location | Purpose | Git-tracked? |
 |------|----------|---------|--------------|
-| `settings.local.json` | `[repo]/.claude/` | Links vip as additionalDirectory | No (auto git-ignored by Claude Code) |
-| `local.yaml` | `~/.config/vip/` | User identity + vip_path + default repo | No |
+| `settings.local.json` | `[repo]/.claude/` | Links the active Main Branch engine as additionalDirectory | No (auto git-ignored by Claude Code) |
+| `local.yaml` | `~/.config/vip/` | Legacy machine-local file for user identity, engine path, and default repo | No |
 | `env.sh` | `~/.config/vip/` | API keys for optional research tools | No |
 | `config.yaml` | `[repo]/.vip/` | Team/business settings, MCP requirements | Yes |
 
 **Key split:**
-- **Settings** = "Where is vip?" (per-repo, per-machine — `.claude/settings.local.json`)
+- **Settings** = "Where is Main Branch?" (per-repo, per-machine — `.claude/settings.local.json`)
 - **Local** = "Who am I? What repo do I want?" (per-person, per-machine)
 - **Env** = "What API keys do I have?" (per-person, sourced by shell)
 - **Repo** = "How does this business/team operate?" (shared)
 
-### .claude/settings.local.json (vip linkage)
+### .claude/settings.local.json (Main Branch linkage)
 
-Created by `/mb-setup`. Tells Claude Code to load vip as a read-only additional directory:
+Created by `mb skill link` and `/mb-setup`. Tells Claude Code to load Main Branch as a read-only additional directory:
 
 ```json
 {
   "permissions": {
-    "additionalDirectories": ["/absolute/path/to/vip"]
+    "additionalDirectories": ["/absolute/path/to/mainbranch"]
   }
 }
 ```
@@ -35,20 +35,20 @@ Created by `/mb-setup`. Tells Claude Code to load vip as a read-only additional 
 
 ### .claude/ bridge links (compatibility fallback)
 
-`additionalDirectories` is the canonical config for loading vip. In some environments/versions, skill discovery can still be inconsistent. Compatibility links in local `.claude/` provide a fallback without changing user workflow.
+`additionalDirectories` is the canonical config for loading Main Branch. In some environments/versions, skill discovery can still be inconsistent. Compatibility links in local `.claude/` provide a fallback without changing user workflow.
 
 ```
 business-repo/.claude/
 ├── settings.local.json       # real file (auto git-ignored)
 ├── skills/                   # real local folder (for project custom skills)
-│   ├── start -> /path/to/vip/.claude/skills/mb-start
-│   ├── ads   -> /path/to/vip/.claude/skills/mb-ads
+│   ├── mb-start -> /path/to/mainbranch/.claude/skills/mb-start
+│   ├── mb-ads   -> /path/to/mainbranch/.claude/skills/mb-ads
 │   └── ... (only missing entries linked)
-├── lenses/                   # real local folder; missing vip entries linked
-└── reference/                # real local folder; missing vip entries linked
+├── lenses/                   # real local folder; missing Main Branch entries linked
+└── reference/                # real local folder; missing Main Branch entries linked
 ```
 
-Created by `/mb-setup` as a compatibility layer. `/mb-start` can auto-repair missing links.
+Created by `mb skill link` and `/mb-setup` as a compatibility layer. `/mb-start` can auto-repair missing links.
 
 **Both are needed:**
 - `additionalDirectories` = file access (reading reference files across repos)
@@ -91,7 +91,7 @@ cat ~/.config/vip/env.sh 2>/dev/null
 - Optional — system works without it (Apify handles most research)
 - Progressive — add keys when you need them, not before
 
-**Created by:** `setup/SKILL.md` Step 4a. Tool-specific setup guides also reference this file: `think/references/gemini-setup.md`, `think/references/grok-setup.md`, `setup/references/nano-banana-setup.md`.
+**Created by:** `/mb-setup` when optional API-key setup is needed. Tool-specific setup guides also reference this file: `mb-think/references/gemini-setup.md`, `mb-think/references/grok-setup.md`, `mb-setup/references/nano-banana-setup.md`.
 
 **Shell integration:** `/mb-setup` adds this line to `~/.zshrc` or `~/.bashrc`:
 ```bash
@@ -111,7 +111,7 @@ cat ~/.config/vip/local.yaml 2>/dev/null
 ```yaml
 # NOTE: All paths MUST be absolute. Never use ~ (tools don't expand it).
 # /mb-start writes absolute paths automatically when saving config.
-vip_path: /absolute/path/to/vip
+vip_path: /absolute/path/to/mainbranch  # legacy key name; points at Main Branch
 default_repo: /absolute/path/to/my-business
 recent_repos:
   - /absolute/path/to/my-business
@@ -141,7 +141,7 @@ default_concepts: 2
 # CHANGELOG version tracking (managed by /mb-start and /mb-pull)
 # Last engine version the user has seen the "what's new" banner for.
 # Diff'd against the most recent versioned heading in
-# `<vip_path>/CHANGELOG.md` to decide whether to surface unread entries.
+# the active engine's `CHANGELOG.md` to decide whether to surface unread entries.
 # Bumped when the user routes to any skill or types "dismiss".
 last_seen_version: "0.1.0"
 ```
@@ -182,7 +182,7 @@ cat ~/.claude/settings.json 2>/dev/null | grep business_repo_path
 **If found:**
 1. Extract the path
 2. Offer migration: "Found your repo in old settings. Migrate to new config?"
-3. If yes: Create `~/.config/vip/local.yaml` with that path
+3. If yes: create or update `~/.config/vip/local.yaml` with that repo path, preserving existing keys.
 
 ---
 
@@ -201,7 +201,7 @@ If yes → Create `.vip/config.yaml` with defaults from `/mb-setup`.
 
 | Scenario | Behavior |
 |----------|----------|
-| New user, no repo | Route to /mb-setup |
+| New user, no repo | Route to `/mb-setup` |
 | Existing user, no config | Discovery works, offer upgrade |
 | Existing user, accepts | Fast path going forward |
 | Existing user, declines | Works exactly as before |

@@ -228,4 +228,4 @@ Or run `/mb-think research "content ideas for [your niche]"` to brainstorm.
 | `/mb-ads video` | Paid video ads |
 | `/mb-ads static` | Paid image ads |
 | `/mb-think` | Researching content strategy |
-| `/mb-think codify` | Adding more voice/context (see `think/references/codify-phase.md`) |
+| `/mb-think codify` | Adding more voice/context (see `mb-think/references/codify-phase.md`) |

@@ -28,7 +28,7 @@ mb update --repo "${REPO_PATH:-.}" --json 2>&1
 >
 > You can continue, but some features may not work as expected."
 
-**Do not skip this warning.** A user running stale vip is the #1 cause of "why doesn't X work" support questions.
+**Do not skip this warning.** A user running stale Main Branch is the #1 cause of "why doesn't X work" support questions.
 
 ---
 

@@ -154,6 +154,6 @@ If user declines, fall back to Claude Code's Read tool with a warning about size
 ## See Also
 
 - `think/SKILL.md` — Routes to this pipeline when file paths detected
-- `think/references/local-transcription.md` — Parallel pipeline for video/audio files
-- `think/references/research-phase.md` — Where extracted documents feed into
-- `start/references/config-system.md` — Media path configuration in local.yaml
+- `mb-think/references/local-transcription.md` — Parallel pipeline for video/audio files
+- `mb-think/references/research-phase.md` — Where extracted documents feed into
+- `mb-start/references/config-system.md` — Media path configuration in local.yaml

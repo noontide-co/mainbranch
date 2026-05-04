@@ -24,7 +24,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Keywords | Reference |
 |----------|-----------|
 | Terminal, drag files, cd, folder | [terminal-basics.md](references/terminal-basics.md) |
-| Two repos, vip, engine, data model | [two-repos.md](references/two-repos.md) |
+| Two repos, engine, data model, data model | [two-repos.md](references/two-repos.md) |
 | Philosophy, why, compound, passive memory | [philosophy.md](references/philosophy.md) |
 | /mb-think, research, decide, codify | [the-think-cycle.md](references/the-think-cycle.md) |
 | Task tracking, where left off, focus | [task-tracking-options.md](references/task-tracking-options.md) |
@@ -60,7 +60,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 
 | Question | Answer |
 |----------|--------|
-| Start Claude in a folder? | `cd ~/Documents/GitHub/[your-business] && claude` — Claude sees files in that folder. vip is linked via `settings.local.json`, with bridge links as a compatibility fallback for skill discovery. |
+| Start Claude in a folder? | `cd ~/Documents/GitHub/[your-business] && claude` — Claude sees files in that folder. Main Branch is linked via `settings.local.json`, with bridge links as a compatibility fallback for skill discovery. |
 | When use skill prompts? | For structured tasks: `/mb-start`, `/mb-think`, `/mb-ads`, `/mb-vsl` |
 | Drag files in? | Drag from Finder into Terminal, path appears |
 | Voice input? | [Wispr Flow](https://ref.wisprflow.ai/main) (affiliate link) |
@@ -81,5 +81,5 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | How do I recover after compaction? | Point Claude at recent files: "look at my last 3 decisions" or "read the commits from today." Or just run /mb-start — it scans your folders and rebuilds context automatically. You can also open files yourself in Cursor, Warp, VS Code, or any text editor. |
 | Is this system finished? | Still new and actively being tuned. We're building around Claude Code, minimizing commands you need to learn while giving you real power. There's progressive discovery in /mb-think — the more you use it, the more it reveals. You might find workflows we haven't documented yet. Post them in Skool. |
 | Where can I see my files? | Open your business repo folder in Finder, Cursor, Warp, VS Code, or any text editor. They're regular .md files on your hard drive. GitHub Desktop also shows them with version history. |
-| Skills not showing in Conductor? | Conductor workspaces are isolated — they don't know where vip is. You need a Pre-Agent (PA) config script that creates bridge symlinks and `settings.local.json` before Claude starts. See [conductor-setup.md](references/conductor-setup.md) for the script and setup steps. |
-| What's a PA config? | Pre-Agent config — a script Conductor runs before Claude starts in a workspace. Used to set up vip bridge links so skills appear. One-time setup per workspace. |
+| Skills not showing in Conductor? | Conductor workspaces are isolated — they don't know where Main Branch is. You need a Pre-Agent (PA) config script that creates bridge symlinks and `settings.local.json` before Claude starts. See [conductor-setup.md](references/conductor-setup.md) for the script and setup steps. |
+| What's a PA config? | Pre-Agent config — a script Conductor runs before Claude starts in a workspace. Used to set up Main Branch bridge links so skills appear. One-time setup per workspace. |

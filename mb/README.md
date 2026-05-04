@@ -22,24 +22,26 @@ mb --version
 
 | Command | What it does |
 |---|---|
-| `mb onboard` | Human setup flow. Creates or connects a business repo, explains the local files/git/GitHub substrate, wires Claude Code skills, verifies discovery, and prints the next `/start` step. Supports `--yes` and `--json` for smoke tests. |
+| `mb onboard` | Human setup flow. Creates or connects a business repo, explains the local files/git/GitHub substrate, wires Claude Code skills, verifies discovery, and prints the next `/mb-start` step. Supports `--yes` and `--json` for smoke tests. |
 | `mb init` | Scaffold a new business repo (six folders, CLAUDE.md, CODEOWNERS, `git init`) and wire the bundled Claude Code skill adapter. One question only: business name. |
 | `mb doctor` | Diagnostic. Checks Claude Code, gh auth, network, librsvg, runtime wiring, and package freshness. Warns on cloud-backed finance paths and offers educational triage. |
 | `mb status` | Daily briefing. Summarizes repo shape, install/runtime readiness, recent brain files, recent git activity, and GitHub tasks when `gh` is authenticated. Supports `--json`. |
-| `mb start` | Runtime handoff. Verifies the current business repo, git, Claude Code, and `/start` skill wiring, then prints the exact `claude` command or launches it with `--launch`. Supports `--json`. |
+| `mb start` | Runtime handoff. Verifies the current business repo, git, Claude Code, and `/mb-start` skill wiring, then prints the exact `claude` command or launches it with `--launch`. Supports `--json`. |
 | `mb validate` | Frontmatter shape check across `decisions/`, `core/offers/`, `research/`, `log/`, `campaigns/`, `documents/`. Exit 1 on any fail. |
 | `mb graph` | Walk linked_research / linked_decisions / supersedes; emit Graphviz DOT to stdout. `--open` shells to `dot` + `open`. |
 | `mb update` | Refresh the Main Branch engine according to install mode (`pipx` upgrade or clone `git pull`) and repair skill links. `--check` dry-runs; `--json` emits an envelope. |
-| `mb migrate` | Inspect and apply numbered repo schema migrations. `status`, `--check`, and `--apply` support `--json`; `--check` prints a unified diff before writes. |
-| `mb think <topic>` | Print the /think workflow invocation hint for the currently supported runtime. |
+| `mb migrate` | Inspect and apply numbered repo schema migrations. `status`, `--check`, and `--apply` support `--json`; `--check` prints privacy-safe summaries by default, with full diffs behind `--diff`. |
+| `mb think <topic>` | Print the /mb-think workflow invocation hint for the currently supported runtime. |
 | `mb resolve <key>` | Resolve a reference path (checks free first, then paid). |
 | `mb skill path <name>` | Print the on-disk path to a bundled skill. |
 | `mb skill link --repo <path>` | Wire or repair Claude Code skill discovery for a business repo. Future runtime adapters should get equivalent wiring commands. |
+| `mb skill repair --repo <path>` | Detect personal Claude Code skills that shadow Main Branch and safely back up stale Main Branch symlinks with `--apply`. |
 | `mb educational <topic>` | Print an educational triage file. Powers `mb doctor`'s "tell me more" prompts. |
 
 Users on early `0.1.x` installs must bootstrap once with
 `pipx upgrade mainbranch` before `mb update` exists locally. Existing business
-repos should run `mb skill link --repo .` after upgrading.
+repos should run `mb skill link --repo .`, then `mb skill repair --repo .` after
+upgrading.
 
 ## Status
 

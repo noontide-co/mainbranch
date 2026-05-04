@@ -298,7 +298,7 @@ def _ensure_pages_dns_record(
             "content": pages_subdomain,
             "ttl": 1,
             "proxied": True,
-            "comment": "Managed by mb-vip pages.py set-domain",
+            "comment": "Managed by Main Branch pages.py set-domain",
         },
     )
     provenance["cf_pages_dns_record_create"] = _provider_row(create)

@@ -38,7 +38,7 @@ The v0.1 architecture made the right foundational calls:
 But the product experience is still narrow:
 
 - `mb init` is a scaffold, not an adaptive onboarding flow.
-- `/start` is a Claude Code skill, not yet a full business briefing.
+- `/mb-start` is a Claude Code skill, not yet a full business briefing.
 - `mb graph` is a DOT exporter, not an operator-facing intelligence surface.
 - Tool integrations are skill-specific and credential handling is not yet a
   first-class system.
@@ -93,7 +93,7 @@ The repo should gain an Obsidian-style graph layer over time:
 - research-to-decision-to-campaign relationships;
 - git history reports for how important files changed over time.
 
-The graph is for both humans and agents. It lets `/start`, `/think`, and future
+The graph is for both humans and agents. It lets `/mb-start`, `/mb-think`, and future
 runtime adapters enrich context quickly without loading the whole repo.
 
 ### 4. Structured Data Layer
@@ -240,7 +240,7 @@ The onboarding flow should:
 - explain why GitHub, git, Cloudflare, and local files are used;
 - wire Claude Code skills and verify discovery;
 - introduce GitHub language mapping;
-- end with the exact daily ritual: open repo, run the runtime, invoke `/start`.
+- end with the exact daily ritual: open repo, run the runtime, invoke `/mb-start`.
 
 The tone can carry playful trail-style flavor for first-time CLI users, but it
 must be skippable and must not slow down technical users.
@@ -264,7 +264,7 @@ Credentials never belong in the business repo.
 
 ## Daily Briefing Direction
 
-`/start` should become the daily business briefing.
+`/mb-start` should become the daily business briefing.
 
 It should eventually summarize:
 
@@ -343,5 +343,5 @@ The v0.2 product direction is working when a non-technical operator can:
 7. close the loop with a decision, PR, or updated reference file.
 
 The system should feel continuous, but the continuity should come from the repo,
-GitHub activity, graph, database index, and `/start`/`/end` ritual, not from a
+GitHub activity, graph, database index, and `/mb-start`/`/mb-end` ritual, not from a
 fragile long-running CLI process.

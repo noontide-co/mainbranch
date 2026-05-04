@@ -30,7 +30,7 @@ mb update --repo /path/to/your-business
 or, from inside Claude Code:
 
 ```text
-/pull
+/mb-pull
 ```
 
 ## Repair An Existing Business Repo
@@ -40,14 +40,30 @@ From the business repo:
 ```bash
 cd /path/to/your-business
 mb skill link --repo .
+mb skill repair --repo .
 mb doctor
 mb status
 mb start
 ```
 
-`mb skill link --repo .` rewrites the local Claude Code wiring so `/start`,
-`/think`, `/ads`, and the other bundled skills point at the installed
-Main Branch package instead of an old clone path.
+`mb skill link --repo .` rewrites the local Claude Code wiring so `/mb-start`,
+`/mb-think`, `/mb-ads`, and the other bundled skills point at the installed
+Main Branch package instead of an old clone path. It also removes stale
+Main Branch engine paths from `.claude/settings.local.json` so Claude Code does
+not keep access to two engine copies after a clone-to-pipx migration.
+
+`mb skill repair --repo .` checks your personal `~/.claude/skills/` directory
+for entries that can beat the project-local Main Branch skills in Claude Code.
+It reports the resolved target for each finding. If the entry is a provably
+stale Main Branch symlink, run:
+
+```bash
+mb skill repair --repo . --apply
+```
+
+That moves the symlink to a timestamped backup under
+`~/.claude/skills/.mainbranch-backups/`. It does not delete or move
+user-authored or third-party skills.
 
 ## Do Not Start By Moving Files
 
@@ -64,6 +80,7 @@ The only thing legacy users usually need immediately is:
 ```bash
 pipx upgrade mainbranch
 mb skill link --repo /path/to/your-business
+mb skill repair --repo /path/to/your-business
 ```
 
 ## Automated Layout Migration
@@ -77,15 +94,33 @@ Inspect the current schema state:
 mb migrate status
 ```
 
-Preview the exact filesystem changes as a unified diff:
+You can put `--repo` before or after `status`; both inspect the same repo:
+
+```bash
+mb migrate --repo /path/to/your-business status
+mb migrate status --repo /path/to/your-business
+```
+
+Preview the filesystem changes:
 
 ```bash
 mb migrate --check
 mb migrate --check --json
 ```
 
+By default, `--check` is privacy-safe: it prints path/action summaries and JSON
+counts without embedding full file bodies from your legacy reference files.
+Those files can contain private strategy, proof, offer details, or customer
+language. Only print the full unified diff when it will stay local:
+
+```bash
+mb migrate --check --diff
+mb migrate --check --diff --json
+```
+
 `--check` exits non-zero when migrations are pending so scripts and agents can
-detect drift without writing files.
+detect drift without writing files. The path migration ignores local OS metadata
+such as `.DS_Store`, `Thumbs.db`, `Desktop.ini`, and AppleDouble `._*` files.
 
 Apply only after reading the diff:
 
@@ -98,6 +133,11 @@ moves legacy core files into `core/`, moves legacy offer files into
 `core/offers/`, leaves compatibility links under `reference/`, updates stale
 `CLAUDE.md` path references, writes a migration decision artifact, and stamps
 `.mb/schema_version`.
+
+After apply, `mb validate` may still report old frontmatter schema debt in
+research and decision files. That means the layout migration worked but older
+markdown files still need field/status cleanup. Repair those in small batches,
+then run `mb validate --cross-refs` once frontmatter errors are down to zero.
 
 ## Manual Layout Migration
 
@@ -169,8 +209,10 @@ For old business repos:
 
 1. Upgrade Main Branch with `pipx upgrade mainbranch`.
 2. Run `mb skill link --repo /path/to/repo`.
-3. Run `mb doctor` and `mb status`.
-4. Run `mb migrate --check`, read the diff, then run `mb migrate --apply` on a
+3. Run `mb skill repair --repo /path/to/repo`; use `--apply` only when it says
+   a stale Main Branch symlink is safe to move.
+4. Run `mb doctor` and `mb status`.
+5. Run `mb migrate --check`, read the diff, then run `mb migrate --apply` on a
    clean branch when you are ready.
 
 For personal knowledge repos that do not have `reference/core/`, treat them as

@@ -41,10 +41,10 @@ pipx install mainbranch
 mb onboard --name "My Business" --path my-business
 cd my-business
 claude
-/start
+/mb-start
 ```
 
-That's it. `mb onboard` guides the human setup, creates or connects your business repo, wires Claude Code to the bundled skills, and shows the exact next commands. `mb init` still exists as the quiet scriptable primitive underneath it. `/start` walks you through the rest — gathers your business context (offer, audience, voice), drafts the reference files, and routes you to the right workflow.
+That's it. `mb onboard` guides the human setup, creates or connects your business repo, wires Claude Code to the bundled skills, and shows the exact next commands. `mb init` still exists as the quiet scriptable primitive underneath it. `/mb-start` walks you through the rest — gathers your business context (offer, audience, voice), drafts the reference files, and routes you to the right workflow.
 
 After the first session, the daily flow is:
 
@@ -52,7 +52,7 @@ After the first session, the daily flow is:
 cd ~/Documents/GitHub/my-business
 mb status
 claude
-/start
+/mb-start
 ```
 
 You'll need a Claude Pro ($20/mo) or Max subscription. Install Claude Code itself from [claude.ai](https://claude.ai) — see [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md) for a step-by-step.
@@ -144,7 +144,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 
 | Command | What it does |
 |---|---|
-| `mb onboard` | Human setup flow: create or connect a business repo, explain the substrate, wire Claude Code skills, and show the next `/start` step. |
+| `mb onboard` | Human setup flow: create or connect a business repo, explain the substrate, wire Claude Code skills, and show the next `/mb-start` step. |
 | `mb onboard status` | Show durable onboarding progress from `.mb/onboarding.json`, including missing core-reference inputs and the next recommended action. |
 | `mb init` | Set up a fresh business repo (six folders, CLAUDE.md, git init). |
 | `mb status` | Show a local-first daily briefing: repo health, runtime wiring, recent decisions/research/git activity, and GitHub tasks when `gh` is authenticated. |
@@ -152,13 +152,14 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb connect` | Register provider credentials and integration metadata without committing secrets. |
 | `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
 | `mb graph` | Build a repo graph index from frontmatter links, wikilinks, and entity tags. Emits Graphviz DOT by default, `--json` for agents/dashboards, and `--open` to render a PNG view. |
-| `mb think <topic>` | Print the `/think` invocation hint. Run inside Claude Code for the full flow. |
+| `mb think <topic>` | Print the `/mb-think` invocation hint. Run inside Claude Code for the full flow. |
 | `mb resolve <key>` | Resolve a reference path (checks free first, then paid). |
 | `mb educational <topic>` | Print an educational triage file (powers `mb doctor`'s "tell me more" prompts). |
 | `mb skill list` | List the skills bundled with this engine. |
 | `mb skill path <name>` | Print the on-disk path to a bundled skill. |
 | `mb skill validate <name>` | Validate one bundled skill's frontmatter, local references, and 500-line gate. Use `--all --json` for CI. |
 | `mb skill link --repo .` | Repair Claude Code skill discovery in a business repo. |
+| `mb skill repair --repo .` | Detect personal Claude Code skills that shadow Main Branch and explain safe repair. Use `--apply` only for stale Main Branch symlinks. |
 
 Full list: `mb --help`.
 
@@ -187,21 +188,21 @@ environment variables.
 
 ## Skills
 
-Skills are pre-built workflows you invoke with slash prompts. Instead of figuring out how to prompt Claude, you type `/ads` and Claude knows exactly what to do — reads your business files, then generates output that matches your voice.
+Skills are pre-built workflows you invoke with slash prompts. Instead of figuring out how to prompt Claude, you type `/mb-ads` and Claude knows exactly what to do — reads your business files, then generates output that matches your voice.
 
 | Skill | What it does |
 |---|---|
-| `/start` | Main entry point — figures out what you need and routes you there |
-| `/setup` | Set up your business repo (run this first if you're new) |
-| `/think` | Research, make decisions, add context, transcribe local recordings, update reference files |
-| `/ads` | Create ad copy (static or video) and review for compliance |
-| `/vsl` | Write video sales letter scripts (Skool or B2B) |
-| `/organic` | Generate organic content — Reels, TikTok, carousels |
-| `/site` | Generate and deploy landing pages from your reference files |
-| `/wiki` | Personal wiki with atomic notes |
-| `/end` | Close session — summary, crystallize, commit |
-| `/help` | Get answers, troubleshoot, learn the system |
-| `/pull` | Quick update — delegates install-mode refresh to `mb update` and summarizes what's new |
+| `/mb-start` | Main entry point — figures out what you need and routes you there |
+| `/mb-setup` | Set up your business repo (run this first if you're new) |
+| `/mb-think` | Research, make decisions, add context, transcribe local recordings, update reference files |
+| `/mb-ads` | Create ad copy (static or video) and review for compliance |
+| `/mb-vsl` | Write video sales letter scripts (Skool or B2B) |
+| `/mb-organic` | Generate organic content — Reels, TikTok, carousels |
+| `/mb-site` | Generate and deploy landing pages from your reference files |
+| `/mb-wiki` | Personal wiki with atomic notes |
+| `/mb-end` | Close session — summary, crystallize, commit |
+| `/mb-help` | Get answers, troubleshoot, learn the system |
+| `/mb-pull` | Quick update — delegates install-mode refresh to `mb update` and summarizes what's new |
 
 ---
 
@@ -229,7 +230,7 @@ intelligence layer, and agent runtimes as execution.
 - `mb books` — BeanCount integration for ledger workflows ([#128](https://github.com/noontide-co/mainbranch/issues/128))
 - `mb fulfillment` — agency-arm tooling for delivery ops
 - Runtime compatibility — Codex, Cursor, OpenClaw, Hermes, local LLMs
-- Deeper `/site` workflows — lander → minisite → website graduation
+- Deeper `/mb-site` workflows — lander → minisite → website graduation
 - Dashboard — visual operating loop for your bets and decisions, ships **free as part of `mb`** when the graph/sync substrate is ready
 - Skool → GitHub webhook automation
 
@@ -250,10 +251,10 @@ Main Branch is fully usable on its own. The paid community is the live narration
 
 ## Updating
 
-- **pipx users (most people)**: `pipx upgrade mainbranch`. Or just run `/pull` inside Claude Code — it figures out which install you have and runs the right thing.
+- **pipx users (most people)**: `pipx upgrade mainbranch`. Or just run `/mb-pull` inside Claude Code — it figures out which install you have and runs the right thing.
 - **Clone (developer mode)**: `git pull origin main` from the engine repo.
 
-The CHANGELOG entry for the new version surfaces as a banner the next time you run `/start`.
+The CHANGELOG entry for the new version surfaces as a banner the next time you run `/mb-start`.
 
 ---
 
@@ -263,19 +264,19 @@ The CHANGELOG entry for the new version surfaces as a banner the next time you r
 No. You invoke skills with slash prompts and answer questions.
 
 **What if I have multiple products under one brand?**
-Use one repo with an `offers/` folder. Each offer gets its own `offer.md`. Soul and voice stay shared in `core/`. Run `/setup` or `/think` to add offers.
+Use one repo with an `offers/` folder. Each offer gets its own `offer.md`. Soul and voice stay shared in `core/`. Run `/mb-setup` or `/mb-think` to add offers.
 
 **What if I have multiple separate businesses?**
 Create a separate repo for each brand. If they share the same soul and voice, they can share a repo. If not, separate repos.
 
 **How do I update when new skills come out?**
-`pipx upgrade mainbranch`, or run `/pull` inside Claude Code.
+`pipx upgrade mainbranch`, or run `/mb-pull` inside Claude Code.
 
 If `mb --version` still says `0.1.x`, run `pipx upgrade mainbranch` once before
 using `mb update`; old installs now surface this as an in-product
 "Update required" alert on the main launch, doctor, status, and start
 surfaces. Existing business repos should then run `mb skill link --repo .` and
-`mb doctor` from the repo root. See
+`mb skill repair --repo .`, then `mb doctor` from the repo root. See
 [docs/MIGRATING.md](docs/MIGRATING.md) for the old-repo path.
 
 **Can I edit the skills?**
@@ -285,7 +286,7 @@ You can, but you don't need to. They're designed to work out of the box.
 ChatGPT is a chat surface that resets between sessions. Main Branch is a CLI plus a skill set that reads files Claude can re-read every session — your offer, audience, voice, decisions, research — so outputs stay consistent with your business instead of restarting from zero.
 
 **I'm stuck. What do I do?**
-Type `/start` again. It picks up where you left off.
+Type `/mb-start` again. It picks up where you left off.
 
 ---
 
@@ -300,8 +301,8 @@ For platform support and security reporting, see [SUPPORT.md](SUPPORT.md), [SECU
 **Common issues:**
 
 - "404 error" or "Repository not found" — verify the URL and your network. The repo is public; no access request needed.
-- "Claude doesn't see my files" — make sure you started Claude in your business repo folder and ran `/start`.
-- "Skills aren't working" — run `mb skill link --repo .` from your business repo to repair bridge symlinks, then restart Claude. If still broken, run `/setup`.
+- "Claude doesn't see my files" — make sure you started Claude in your business repo folder and ran `/mb-start`.
+- "Skills aren't working" — run `mb skill link --repo .` from your business repo to repair bridge symlinks, then restart Claude. If still broken, run `/mb-setup`.
 - "Output sounds generic" — add more detail to your reference files, especially `core/voice.md`.
 - "I edited Main Branch but can't push" — that's expected for most users. Main Branch is the shared engine. Your business data goes in YOUR repo.
 

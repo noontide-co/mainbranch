@@ -14,7 +14,7 @@ Not every ad needs outcome testimonials. This playbook covers all major persuasi
 
 **Angles are an evolving library, not a locked set.** New angles emerge from research, mining, and think cycles. The library is additive — every session may surface a new angle or refine an existing one. Positioning should evolve as understanding deepens.
 
-When a new emotional territory, audience insight, or competitive position is discovered through /think, it becomes a candidate for a new angle file in `reference/proof/angles/`.
+When a new emotional territory, audience insight, or competitive position is discovered through /mb-think, it becomes a candidate for a new angle file in `reference/proof/angles/`.
 
 ---
 

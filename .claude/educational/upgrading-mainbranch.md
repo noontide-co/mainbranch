@@ -17,7 +17,7 @@ mb --version
 ```
 
 `mb update` was added after the earliest public package, so old installs cannot
-run it yet. After the pipx upgrade, `mb update` and `/pull` become the normal
+run it yet. After the pipx upgrade, `mb update` and `/mb-pull` become the normal
 path.
 
 ## If you already have a business repo
@@ -57,10 +57,11 @@ For old repos with `reference/core/`, do not move files first. That legacy
 layout is still supported while the automated `mb migrate` command is pending.
 Read `docs/MIGRATING.md` in the engine repo before doing any layout migration.
 
-If you use the older clone-based setup, updates still come from Git:
+If you use the older clone-based setup, updates still come from Git. Replace
+the example path with your actual engine checkout:
 
 ```bash
-git -C ~/Documents/GitHub/mb-vip pull origin main
+git -C ~/Documents/GitHub/mainbranch pull origin main
 ```
 
-`/pull` detects the install mode and chooses the right update path.
+`/mb-pull` detects the install mode and chooses the right update path.

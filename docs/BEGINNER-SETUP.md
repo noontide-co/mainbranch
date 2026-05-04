@@ -93,17 +93,17 @@ claude
 Then in Claude Code:
 
 ```
-/start
+/mb-start
 ```
 
-`/start` walks you through the rest — gathers your business context (offer, audience, voice), drafts the reference files, routes you to the right skill for what you want to do.
+`/mb-start` walks you through the rest — gathers your business context (offer, audience, voice), drafts the reference files, routes you to the right skill for what you want to do.
 
 That's it. From this point on:
 
 ```bash
 cd ~/Documents/GitHub/my-business
 claude
-/start
+/mb-start
 ```
 
 Three lines. That's the daily flow.
@@ -118,7 +118,7 @@ When new versions drop:
 pipx upgrade mainbranch
 ```
 
-Or just run `/pull` inside Claude Code — it figures out which install you have and runs the right thing. The CHANGELOG entry for the new version surfaces as a banner the next time you run `/start`.
+Or just run `/mb-pull` inside Claude Code — it figures out which install you have and runs the right thing. The CHANGELOG entry for the new version surfaces as a banner the next time you run `/mb-start`.
 
 If you installed an early `0.1.x` version, upgrade once with
 `pipx upgrade mainbranch` before trying `mb update`. If you already had a
@@ -126,6 +126,7 @@ business repo from the old setup, run this from that repo afterward:
 
 ```bash
 mb skill link --repo .
+mb skill repair --repo .
 mb doctor
 ```
 
@@ -138,16 +139,16 @@ do not need to move files immediately.
 
 | Skill | What it does |
 |---|---|
-| `/start` | Main entry point — figures out what you need and routes you. |
-| `/think` | Research, decide, codify — turns thinking into reference files. |
-| `/ads` | Generate ad copy and review for compliance. |
-| `/vsl` | Write video sales letter scripts. |
-| `/organic` | Generate organic content (Reels, TikTok, carousels). |
-| `/site` | Generate and deploy landing pages. |
-| `/wiki` | Personal wiki with atomic notes. |
-| `/end` | Close session intentionally — summary, crystallize, commit. |
-| `/help` | Get answers, troubleshoot. |
-| `/pull` | Update Main Branch (figures out pipx vs clone). |
+| `/mb-start` | Main entry point — figures out what you need and routes you. |
+| `/mb-think` | Research, decide, codify — turns thinking into reference files. |
+| `/mb-ads` | Generate ad copy and review for compliance. |
+| `/mb-vsl` | Write video sales letter scripts. |
+| `/mb-organic` | Generate organic content (Reels, TikTok, carousels). |
+| `/mb-site` | Generate and deploy landing pages. |
+| `/mb-wiki` | Personal wiki with atomic notes. |
+| `/mb-end` | Close session intentionally — summary, crystallize, commit. |
+| `/mb-help` | Get answers, troubleshoot. |
+| `/mb-pull` | Update Main Branch (figures out pipx vs clone). |
 
 ---
 
@@ -155,13 +156,14 @@ do not need to move files immediately.
 
 | Command | What it does |
 |---|---|
-| `mb onboard` | Guided setup for humans. Creates or connects a business repo and shows the next `/start` step. |
+| `mb onboard` | Guided setup for humans. Creates or connects a business repo and shows the next `/mb-start` step. |
 | `mb init` | Scaffold a fresh business repo. |
 | `mb status` | Show a daily repo/runtime/GitHub briefing. |
 | `mb start` | Check runtime handoff readiness and print or launch Claude Code. |
 | `mb update` | Update Main Branch based on pipx vs clone install mode. |
 | `mb doctor` | Check that everything is set up correctly. Walks you through fixes. |
-| `mb skill link --repo .` | Repair Claude Code skill discovery if `/start` doesn't show up. |
+| `mb skill link --repo .` | Repair Claude Code skill discovery if `/mb-start` doesn't show up. |
+| `mb skill repair --repo .` | Check for old personal Claude Code skills that can shadow Main Branch. |
 | `mb validate` | Check your reference files have correct frontmatter. |
 | `mb graph` | Visualize or export the graph of files, links, wikilinks, and business entity tags. |
 | `mb skill list` | Show which skills your installed Main Branch ships. |
@@ -172,13 +174,15 @@ For the full list: `mb --help`.
 
 ## Common Issues
 
-**`/start` not recognized in Claude Code:**
+**`/mb-start` not recognized in Claude Code:**
 
 ```bash
 mb skill link --repo .
+mb skill repair --repo .
 ```
 
-Then restart Claude. This re-wires skill discovery in your business repo.
+Then restart Claude. This re-wires skill discovery in your business repo and
+checks whether an old personal skill is taking precedence.
 
 **`mb` not found after install:** run `pipx ensurepath`, close your terminal completely, reopen it.
 
@@ -190,7 +194,7 @@ Then restart Claude. This re-wires skill discovery in your business repo.
 
 ## Help
 
-- **In Claude Code:** type `/help` or describe the issue in plain English.
+- **In Claude Code:** type `/mb-help` or describe the issue in plain English.
 - **In Skool:** post in the Main Branch group with a screenshot of the exact error. Tag Devon for setup issues.
 - **For contributors:** open an issue at [https://github.com/noontide-co/mainbranch/issues](https://github.com/noontide-co/mainbranch/issues).
 - **Platform support:** see [compatibility](compatibility.md).
@@ -206,7 +210,7 @@ You don't need to memorize anything. The daily flow is three lines:
 ```bash
 cd ~/Documents/GitHub/my-business
 claude
-/start
+/mb-start
 ```
 
 Keep going.

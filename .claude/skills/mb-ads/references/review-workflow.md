@@ -170,7 +170,7 @@ git commit -m "[review] {type} batch - N fixes applied"
 
 ## Context Files
 
-**From engine (vip):**
+**From Main Branch engine:**
 - `.claude/lenses/` — The 6 review lenses
 - `.claude/reference/compliance/` — Shared compliance frameworks
 

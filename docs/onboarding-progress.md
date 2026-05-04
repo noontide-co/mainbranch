@@ -78,7 +78,7 @@ Manual runtime smoke for onboarding resume:
 3. `cd /tmp/mainbranch-onboard-smoke`;
 4. run `mb onboard status --json` and confirm missing core inputs are reported;
 5. launch `claude`;
-6. run `/start`;
-7. verify `/start` uses `mb onboard status --json` to resume and does not ask
+6. run `/mb-start`;
+7. verify `/mb-start` uses `mb onboard status --json` to resume and does not ask
    for full finances, credentials, or exhaustive operations details before the
    core reference exists.

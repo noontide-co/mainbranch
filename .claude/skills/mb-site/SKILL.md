@@ -24,7 +24,7 @@ Say `/mb-site` again after compaction, context loss, or switching focus. It relo
 
 ## Pull Latest Updates
 
-For the canonical vip-resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
+For the canonical engine resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
 
 ---
 
@@ -57,7 +57,7 @@ your-site-repo/              <- Site code WRITTEN here
 
 ~/.mainbranch/sites.json     <- Config pointing to repos
 
-vip/ (engine)                <- Never modified by /mb-site
+mainbranch/ (engine)         <- Never modified by /mb-site
 └── .claude/skills/mb-site/
 ```
 
@@ -161,7 +161,7 @@ Ask the operator. Route based on the answer; don't assume.
 >
 > - 🟩 **Minisite** (~4–6 pages, static HTML) — home + how-it-works + 2–4 LLM-picked + privacy/terms/start-thanks. Designed fresh per offer by a generation subagent. **V1 target.**
 >   Best for: paid-ad lander tests, single-offer first deploys, payment / lead-form / booking funnels.
->   Flow: [`references/minisite-build.md`](references/minisite-build.md). Engine spec: `mb-vip/.claude/reference/minisite.md`.
+>   Flow: [`references/minisite-build.md`](references/minisite-build.md). Engine spec: `.claude/reference/minisite.md`.
 >
 > - 🟨 **Website** (full, multi-section, build step likely) — depth, blog, multiple offers, knowledge base, course area.
 >   *V1 status:* per-offer Website generation pending. Legacy Next.js templates (`saas`, `high-ticket`) work today as starting points.

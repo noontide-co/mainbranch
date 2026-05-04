@@ -168,7 +168,7 @@ outputs/
 
 Outputs inform new research. What worked? What didn't? This becomes new research, which informs new decisions, which updates context.
 
-In the Generate step, the **newsletter is the keystone piece** -- long-form thinking that gets adapted into platform-specific content by /organic and amplified by /ads. In the Learn step, performance data flows back into `content-strategy.md` -- updating the hooks library, metrics benchmarks, and pillar effectiveness.
+In the Generate step, the **newsletter is the keystone piece** -- long-form thinking that gets adapted into platform-specific content by /mb-organic and amplified by /mb-ads. In the Learn step, performance data flows back into `content-strategy.md` -- updating the hooks library, metrics benchmarks, and pillar effectiveness.
 
 ---
 
@@ -241,7 +241,7 @@ mainbranch/
 │   │   │   └── SKILL.md
 │   │   └── ...
 │   │
-│   ├── lenses/                      # Review criteria for /ads review
+│   ├── lenses/                      # Review criteria for /mb-ads review
 │   │   ├── README.md
 │   │   ├── ftc-compliance.md
 │   │   ├── meta-policy.md
@@ -288,7 +288,7 @@ skills/
 
 ```markdown
 ---
-name: ads
+name: mb-ads
 description: Generate ad copy and review for compliance. Routes to static, video, or review mode.
 ---
 
@@ -319,11 +319,11 @@ Skills expect business context in standardized locations:
 | Angles | `reference/proof/angles/*.md` | At least one |
 | Testimonials | `reference/proof/testimonials.md` (+ offer-specific if exists) | Recommended |
 | Typicality | `reference/proof/typicality.md` | For outcome claims |
-| Content Strategy | `reference/domain/content-strategy.md` (always brand-level) | Recommended for /organic, /newsletter |
+| Content Strategy | `reference/domain/content-strategy.md` (always brand-level) | Recommended for /mb-organic, /newsletter |
 | Product Ladder | `reference/domain/product-ladder.md` | Multi-offer only |
 | Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | When generating ads, organic, VSLs, or site copy (congruence) |
 | Session State | `.vip/local.yaml` | Multi-offer only |
-| Site config | `~/.mainbranch/sites.json` | When building/publishing with /site |
+| Site config | `~/.mainbranch/sites.json` | When building/publishing with /mb-site |
 
 Skills should fail gracefully with clear errors if required context is missing.
 
@@ -331,7 +331,7 @@ Skills should fail gracefully with clear errors if required context is missing.
 
 ## How Lenses Work
 
-Lenses are review criteria used by `/ads review` mode. Each lens is a markdown file containing:
+Lenses are review criteria used by `/mb-ads review` mode. Each lens is a markdown file containing:
 
 1. What to check
 2. How to score issues (P1/P2/P3)
@@ -367,11 +367,11 @@ Lenses are review criteria used by `/ads review` mode. Each lens is a markdown f
 
 ### Multi-Lens Review
 
-The `/ads review` mode spawns parallel agents, one per lens:
+The `/mb-ads review` mode spawns parallel agents, one per lens:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    /ads review                          │
+│                    /mb-ads review                          │
 │                        │                                │
 │    ┌───────┬───────┬───────┬───────┬───────┬───────┐   │
 │    ▼       ▼       ▼       ▼       ▼       ▼       │   │
@@ -404,7 +404,7 @@ The `/ads review` mode spawns parallel agents, one per lens:
 4. Agent returns: file path + write status + summary (always), full content (only if write failed)
 5. Main conversation checks the file exists; if not, writes from returned content
 
-**Read-only pattern (safest):** For agents that only analyze (like `/ads review` lenses or `/pr-review` checks), agents read + return findings. Main conversation acts on findings. Zero persistence risk.
+**Read-only pattern (safest):** For agents that only analyze (like `/mb-ads review` lenses or `/pr-review` checks), agents read + return findings. Main conversation acts on findings. Zero persistence risk.
 
 **Avoid stuck loops:** If an agent keeps retrying the same denied permission, it will loop indefinitely. Instruct agents to report back if permissions are missing rather than retry.
 
@@ -474,8 +474,8 @@ Skills should load context progressively:
 
 1. Clone Main Branch locally
 2. Create or clone your business repo
-3. Run `/setup` to configure Main Branch linkage (writes `.claude/settings.local.json` and compatibility links when needed)
-4. Start Claude in your business repo and run `/start`
+3. Run `/mb-setup` to configure Main Branch linkage (writes `.claude/settings.local.json` and compatibility links when needed)
+4. Start Claude in your business repo and run `/mb-start`
 
 ### In Practice
 
@@ -494,13 +494,13 @@ Claude Code Session:
     └── ...
 ```
 
-When you invoke `/ads`:
+When you invoke `/mb-ads`:
 1. Claude loads skill from Main Branch
 2. Skill reads context from my-business/reference/
 3. Output goes to my-business/outputs/
 4. Review uses lenses from Main Branch
 
-Users with a wiki or site have additional repos accessed via config files (`~/.mainbranch/wiki.json`, `~/.mainbranch/sites.json`), not as working directories.
+Users with a wiki or site have additional repos accessed via config files (`~/.mainbranch/mb-wiki.json`, `~/.mainbranch/sites.json`), not as working directories.
 
 ---
 
@@ -509,33 +509,33 @@ Users with a wiki or site have additional repos accessed via config files (`~/.m
 The content pipeline follows a **newsletter-first waterfall**: one keystone piece becomes many platform-adapted outputs.
 
 ```
-/think → research, decisions, content-strategy.md
+/mb-think → research, decisions, content-strategy.md
     │
     ▼
 /newsletter → keystone long-form (weekly email)
     │
     ▼
-/organic → platform-adapted social (reels, tiktok, carousels)
+/mb-organic → platform-adapted social (reels, tiktok, carousels)
     │
     ▼
-/ads → paid amplification of top performers
+/mb-ads → paid amplification of top performers
     │
     ▼
-/think → performance analysis, strategy updates → content-strategy.md
+/mb-think → performance analysis, strategy updates → content-strategy.md
 ```
 
 ### Infrastructure Layer
 
 Some skills produce infrastructure that sits outside the recurring content cycle — built once, updated when reference changes:
 
-- `/site` — Conversion endpoint (landing pages where pipeline traffic lands)
-- `/wiki` — Knowledge base (published notes)
+- `/mb-site` — Conversion endpoint (landing pages where pipeline traffic lands)
+- `/mb-wiki` — Knowledge base (published notes)
 
 These are destinations the pipeline drives traffic to, not recurring content items.
 
 ### Energy-Protected Audience Feedback Loop
 
-The pipeline is designed so the creator **never opens a social app to post**. AI handles adaptation and distribution. The creator's energy stays in thinking and writing -- not scrolling. Audience feedback (metrics, comments, engagement) flows back through /think into content-strategy.md, closing the loop without requiring the creator to be on-platform.
+The pipeline is designed so the creator **never opens a social app to post**. AI handles adaptation and distribution. The creator's energy stays in thinking and writing -- not scrolling. Audience feedback (metrics, comments, engagement) flows back through /mb-think into content-strategy.md, closing the loop without requiring the creator to be on-platform.
 
 ### Output Lifecycle (Frontmatter-Based)
 
@@ -555,12 +555,12 @@ This replaces the previous folder-move lifecycle pattern where files moved betwe
 
 | Skill | Pipeline Role |
 |-------|---------------|
-| `/think` | Builds content-strategy.md, analyzes performance |
+| `/mb-think` | Builds content-strategy.md, analyzes performance |
 | `/newsletter` | Generates keystone long-form (coming soon) |
-| `/organic` | Adapts keystone into platform-specific formats |
-| `/ads` | Amplifies top-performing organic content |
-| `/site` | Conversion endpoint — landing pages where pipeline traffic lands |
-| `/end` | Session close — summarizes activity, surfaces crystallize moments, commits work |
+| `/mb-organic` | Adapts keystone into platform-specific formats |
+| `/mb-ads` | Amplifies top-performing organic content |
+| `/mb-site` | Conversion endpoint — landing pages where pipeline traffic lands |
+| `/mb-end` | Session close — summarizes activity, surfaces crystallize moments, commits work |
 
 ---
 
@@ -603,7 +603,7 @@ current_offer: community    # Active offer for this session
 ```
 
 - Git-ignored (session state, not shared)
-- Written by `/start`, read by all skills
+- Written by `/mb-start`, read by all skills
 - If missing or null: single-offer mode (everything reads from `core/`)
 
 ### Canonical Path Resolution

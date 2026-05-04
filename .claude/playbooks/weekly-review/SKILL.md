@@ -17,8 +17,8 @@ A playbook that runs every Friday: surface what changed, force a status update o
 ```
 1. mb validate          — confirm frontmatter is clean
 2. mb graph             — print the link graph (changes since last week)
-3. /think               — for each running offer, force a status update
-4. /end                 — close the session with a log entry
+3. /mb-think               — for each running offer, force a status update
+4. /mb-end                 — close the session with a log entry
 5. log/                 — write weekly-review-YYYY-MM-DD.md
 ```
 
@@ -41,5 +41,5 @@ Every running offer gets a one-line status update during the playbook. Killed an
 
 ## Cross-references
 
-- [think/SKILL.md](../../skills/think/SKILL.md)
-- [end/SKILL.md](../../skills/end/SKILL.md)
+- [think/SKILL.md](../../skills/mb-think/SKILL.md)
+- [end/SKILL.md](../../skills/mb-end/SKILL.md)

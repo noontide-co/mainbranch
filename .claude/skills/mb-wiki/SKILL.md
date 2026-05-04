@@ -21,13 +21,13 @@ Create and maintain personal wikis with atomic notes, WikiLinks, and auto-deploy
 
 ## Pull Latest Updates (Always)
 
-See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** for the canonical vip-resolution + pull bash block. Run it at the start of every /mb-wiki invocation.
+See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** for the canonical engine resolution + pull bash block. Run it at the start of every /mb-wiki invocation.
 
 ---
 
 ## Where Files Go
 
-**Wiki files go to YOUR WIKI REPO, not your business repo or vip.**
+**Wiki files go to YOUR WIKI REPO, not your business repo or the Main Branch engine.**
 
 ```
 your-wiki-repo/              <- Files saved here
@@ -37,7 +37,7 @@ your-wiki-repo/              <- Files saved here
 
 ~/.mainbranch/mb-wiki.json      <- Config pointing to wiki repo
 
-vip/ (engine)                <- Never modified by /mb-wiki
+mainbranch/ (engine)         <- Never modified by /mb-wiki
 └── .claude/skills/mb-wiki/     <- This skill lives here
 ```
 
@@ -320,7 +320,7 @@ Live at: https://yourdomain.com
 
 ## References
 
-- [references/pull-engine-updates.md](references/pull-engine-updates.md) — Canonical vip-resolution + pull bash block
+- [references/pull-engine-updates.md](references/pull-engine-updates.md) — Canonical engine resolution + pull bash block
 - [references/setup-mode.md](references/setup-mode.md) — Full 12-step setup mode procedure (commands, Windows fixes, CF dashboard walkthrough, config save)
 - [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md) — Dashboard walkthrough
 - [references/customization.md](references/customization.md) — Update avatar, name, social links after setup

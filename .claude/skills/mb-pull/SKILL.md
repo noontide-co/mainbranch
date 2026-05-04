@@ -13,7 +13,7 @@ Update the Main Branch engine.
 
 Runs `mb update` for the mechanical engine refresh. The CLI detects whether Main Branch was installed with pipx or from a clone, updates that install, and refreshes skill links for the current business repo. This skill keeps ownership of the "what's new" narrative after the CLI step completes.
 
-### Step 1: Resolve VIP Path
+### Step 1: Resolve Engine Path
 
 For the canonical bash + python3 resolver (settings.local.json first, ~/.config/vip/local.yaml fallback), see **[references/vip-path-resolution.md](references/vip-path-resolution.md)**.
 
@@ -55,7 +55,7 @@ After a successful pull, surface unread CHANGELOG entries so the user knows what
 ENGINE_VERSION=$(python3 -c "
 import re, sys
 try:
-    body = open('$VIP_PATH/CHANGELOG.md').read()
+    body = open('$ENGINE_PATH/CHANGELOG.md').read()
     # First versioned heading after the [Unreleased] block
     m = re.search(r'^## \[(\d+\.\d+\.\d+[^\]]*)\]', body, re.M)
     print(m.group(1) if m else '')

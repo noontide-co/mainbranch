@@ -27,7 +27,7 @@ The core insight — from Tony Robbins' interview with Alex Hormozi — is that 
 | Others | Main Branch |
 |--------|-------------|
 | Magic passive memory | Active management |
-| Start fresh every chat | `/start` loads your context |
+| Start fresh every chat | `/mb-start` loads your context |
 | Generic outputs | Business-specific |
 | Content treadmill | Newsletter-first, AI-adapted distribution |
 | Rent infrastructure | Own it (portable files) |
@@ -81,7 +81,7 @@ When you're drifting into pure execution, re-read `soul.md`.
 
 Testimonials aren't just social proof — they're reconnection fuel that makes you *feel* the impact.
 
-Your parts (The Builder and The Soul) need both — reference keeps them in dialogue. When your reference files produce a live landing page through `/site`, the reconnection becomes public — your words on a real page, facing real people.
+Your parts (The Builder and The Soul) need both — reference keeps them in dialogue. When your reference files produce a live landing page through `/mb-site`, the reconnection becomes public — your words on a real page, facing real people.
 
 ---
 

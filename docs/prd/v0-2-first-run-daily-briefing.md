@@ -44,7 +44,7 @@ Current behavior:
 - `mb init` scaffolded a repo but did not teach or adapt.
 - Bare `mb` behaved like a traditional command reference.
 - The handoff to Claude Code was mostly copy/paste guidance.
-- `/start` carried the daily entry surface, but `mb` did not give a
+- `/mb-start` carried the daily entry surface, but `mb` did not give a
   pre-runtime status view.
 - GitHub was present, but not yet reframed as the business team layer.
 
@@ -240,7 +240,7 @@ Acceptance:
 - Does not invoke a model.
 - Does not modify repo files.
 - Does not require GitHub auth to be useful.
-- `/start` can later call or mimic its data model.
+- `/mb-start` can later call or mimic its data model.
 
 ### 4. `mb start`
 
@@ -262,7 +262,7 @@ Required behavior:
 ```bash
 cd <repo>
 claude
-# then run /start
+# then run /mb-start
 ```
 
 Optional behavior:
@@ -281,7 +281,7 @@ Acceptance:
 
 Linked issue: #174
 
-`mb update` should own the install-mode-aware refresh mechanism that `/pull`
+`mb update` should own the install-mode-aware refresh mechanism that `/mb-pull`
 can later call or explain.
 
 Required behavior:
@@ -371,7 +371,7 @@ Success criteria:
   clear repair path;
 - `mb update` handles pipx and clone/source installs accurately;
 - the full first-run loop is proven with CLI tests, fixture repo smoke, and a
-  Claude Code `/start` smoke or an explicit blocker note.
+  Claude Code `/mb-start` smoke or an explicit blocker note.
 
 ### v0.2.1
 
@@ -412,7 +412,7 @@ Success criteria:
 
 - #189 dashboard spike
 - #128 `mb books`
-- site/ads/think deeper workflow surfaces
+- mb-site/mb-ads/mb-think deeper workflow surfaces
 - first structured data sync
 
 Success criteria:
@@ -435,7 +435,7 @@ Success criteria:
 | #173 `mb status` daily briefing v0 | Urgent | Closed | v0.2.0 |
 | #186 `mb start` runtime handoff helper | High | Closed | v0.2.0 |
 | #174 `mb update` install-mode-aware refresh | High | Closed | v0.2.0 |
-| #80 `/ads` compliance gate | Urgent | To Do | v0.1.3 |
+| #80 `/mb-ads` compliance gate | Urgent | To Do | v0.1.3 |
 | #188 GitHub activity briefing primitives | High | To Do | v0.2.1 |
 | #187 `mb connect` foundation | High | To Do | v0.2.1 |
 | #121 graph index + interactive view | High | To Do | v0.2.1 |
@@ -459,7 +459,7 @@ v0.2.0 was done when a fresh user could:
 3. choose onboarding;
 4. create or connect a business repo;
 5. run `mb status` and understand the repo state;
-6. run `mb start` and reach Claude Code with clear `/start` instructions;
+6. run `mb start` and reach Claude Code with clear `/mb-start` instructions;
 7. update Main Branch through `mb update`;
 8. recover from common missing-tool states through clear repair guidance.
 
@@ -467,5 +467,5 @@ Development work for this release should follow the agent workflow and runtime
 eval ladder in
 [`docs/prd/v0-2-agent-workflow-and-evals.md`](v0-2-agent-workflow-and-evals.md).
 In particular, CLI tests are not enough for first-run work: changes that affect
-skill discovery, runtime handoff, or `/start` need a Claude Code smoke or an
+skill discovery, runtime handoff, or `/mb-start` need a Claude Code smoke or an
 explicit note explaining why it could not be run.

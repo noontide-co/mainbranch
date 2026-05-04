@@ -359,7 +359,7 @@ Expected evidence:
 
 ### Level 5: Agent Runtime Smoke
 
-Use when first-run, skill discovery, `/start`, `/pull`, `/think`, or runtime
+Use when first-run, skill discovery, `/mb-start`, `/mb-pull`, `/mb-think`, or runtime
 handoff behavior changes.
 
 This is manual or semi-automated in v0.2.0. Do not pretend it is covered by
@@ -375,13 +375,13 @@ cd test-business
 mb doctor
 claude
 # inside Claude Code:
-# /start
+# /mb-start
 ```
 
 Record evidence in the PR:
 
 - Claude Code opened in the business repo, not the engine repo;
-- `/start` was discoverable;
+- `/mb-start` was discoverable;
 - skill had access to expected repo context;
 - failure or missing auth path was clear if the runtime could not be launched.
 
@@ -436,7 +436,7 @@ The first-run/daily-briefing release is not done until both layers pass:
 
 - deterministic CLI checks prove `mb` can scaffold, inspect, update, and hand
   off reliably;
-- runtime smoke proves a human can actually enter Claude Code and use `/start`
+- runtime smoke proves a human can actually enter Claude Code and use `/mb-start`
   from the generated business repo.
 
 That is the product promise. Unit tests alone are necessary but insufficient.

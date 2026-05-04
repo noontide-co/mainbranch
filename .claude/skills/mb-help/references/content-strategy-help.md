@@ -57,7 +57,7 @@ You build content-strategy.md through `/mb-think` cycles, not all at once. The r
 
 4. **Fill in over time.** The Hooks Library, Framework Library, and Metrics sections grow as you create content and learn what works. They are not filled upfront.
 
-Each step is a `/mb-think` cycle: research, decide, codify into content-strategy.md. See `think/references/codify-phase.md` for the full codify workflow, including the Content Strategy Updates section.
+Each step is a `/mb-think` cycle: research, decide, codify into content-strategy.md. See `mb-think/references/codify-phase.md` for the full codify workflow, including the Content Strategy Updates section.
 
 ---
 

@@ -44,7 +44,7 @@ This is expected behavior, not an error.
 
 **Main Branch is read-only for most users.** You can pull updates but cannot push changes.
 
-Your business data goes in YOUR OWN repo (created via `/mb-setup`). That repo you can push to.
+Your business data goes in YOUR OWN repo (created by `mb onboard` or `/mb-setup`). That repo you can push to.
 
 ---
 
@@ -82,17 +82,25 @@ If skill prompts like `/mb-start` or `/mb-ads` aren't showing in the dropdown:
 test -e .claude/skills/mb-start && echo "START_BRIDGE_OK"
 ```
 
-If missing, add compatibility links (without replacing local folders). First resolve `$VIP_PATH` per **[vip-path-resolution.md](vip-path-resolution.md)**, then:
+If missing, run the noob-safe repair path from the business repo:
+
+```bash
+mb skill link --repo .
+mb skill repair --repo .
+mb doctor
+```
+
+If the `mb` CLI is unavailable and you are repairing an old clone-based setup by hand, add compatibility links without replacing local folders. First resolve `$ENGINE_PATH` per **[vip-path-resolution.md](vip-path-resolution.md)**, then:
 
 ```bash
 # Create bridge links only for missing entries
 mkdir -p .claude/skills .claude/lenses .claude/reference
-for d in "$VIP_PATH"/.claude/skills/*; do
+for d in "$ENGINE_PATH"/.claude/skills/*; do
   [ -d "$d" ] || continue
   n=$(basename "$d")
   [ -e ".claude/skills/$n" ] || ln -s "$d" ".claude/skills/$n"
 done
-for p in "$VIP_PATH"/.claude/lenses/* "$VIP_PATH"/.claude/reference/*; do
+for p in "$ENGINE_PATH"/.claude/lenses/* "$ENGINE_PATH"/.claude/reference/*; do
   [ -e "$p" ] || continue
   base=$(basename "$p")
   parent=$(basename "$(dirname "$p")")
@@ -100,14 +108,14 @@ for p in "$VIP_PATH"/.claude/lenses/* "$VIP_PATH"/.claude/reference/*; do
 done
 ```
 
-**Why this bridge?** It preserves project-local custom skills in `.claude/skills/` while adding missing vip entries when discovery is inconsistent.
+**Why this bridge?** It preserves project-local custom skills in `.claude/skills/` while adding missing Main Branch entries when discovery is inconsistent.
 
-**Check 2: Is vip loaded as an additional directory?**
+**Check 2: Is Main Branch loaded as an additional directory?**
 ```bash
 cat .claude/settings.local.json
 ```
 
-You should see vip listed under `permissions.additionalDirectories`. If not, run `/mb-setup`.
+You should see the active Main Branch engine path listed under `permissions.additionalDirectories`. If not, run `mb skill link --repo .`.
 
 **Check 3: Did you start in your business repo?**
 
@@ -125,14 +133,14 @@ claude
 
 ## Conductor: Skills Not Showing
 
-Conductor workspaces are isolated — Claude doesn't know where vip is unless you tell it.
+Conductor workspaces are isolated; Claude doesn't know where Main Branch is unless you tell it.
 
-**The fix:** Add a Pre-Agent (PA) config script to your workspace. This runs before Claude starts and creates the bridge links + `settings.local.json` that skills need.
+**The fix:** Run `mb skill link --repo .` in the workspace when possible. If you need a Pre-Agent (PA) config script, use one that creates the bridge links plus `settings.local.json` before Claude starts.
 
 See [conductor-setup.md](conductor-setup.md) for the full script and setup walkthrough.
 
 **Quick version:**
-1. Find your vip path (e.g., `~/Documents/GitHub/mb-vip`)
+1. Find your Main Branch engine path
 2. Add the PA config script to your Conductor workspace
 3. The script creates symlinks + settings, then exits
 4. Start the agent again — skills appear
@@ -221,14 +229,14 @@ This resumes your previous conversation with full context.
 
 If `/mb-start` doesn't load your business repo:
 
-**Check machine-local config:**
+**Check legacy machine-local config:**
 ```bash
 cat ~/.config/vip/local.yaml
 ```
 
 Should show:
 ```yaml
-vip_path: /Users/yourname/Documents/GitHub/vip
+vip_path: /Users/yourname/Documents/GitHub/mainbranch
 default_repo: /Users/yourname/Documents/GitHub/your-business
 recent_repos:
   - /Users/yourname/Documents/GitHub/your-business
@@ -246,19 +254,19 @@ cat /path/to/your/repo/.vip/config.yaml
 
 | Problem | Solution |
 |---------|----------|
-| No `~/.config/vip/local.yaml` | Run `/mb-start` — it will discover your repo and offer to save the path |
+| No `~/.config/vip/local.yaml` | Run `/mb-start` — it will discover your repo and can save the path |
 | Path is wrong | Run `/mb-start` and select your repo when prompted, say "yes" to save |
 | Folder was moved | Delete `~/.config/vip/local.yaml` and run `/mb-start` again |
 | No `.vip/config.yaml` in repo | Run `/mb-start` — it will offer to create config for faster startups |
 
 **Migration from old system:**
-If you have an old `~/.claude/settings.json` with `business_repo_path`, `/mb-start` will detect it and offer to migrate to the new config system. The new architecture uses `.claude/settings.local.json` (in your business repo) to load vip as an additional directory.
+If you have an old `~/.claude/settings.json` with `business_repo_path`, run `mb skill link --repo .`, then `mb start --json`. The current architecture uses `.claude/settings.local.json` in your business repo to load the active Main Branch engine as an additional directory.
 
 ---
 
 ## Config System Explained
 
-See `start/references/config-system.md` for the full canonical reference on the config system.
+See `mb-start/references/config-system.md` for the full canonical reference on the config system.
 
 **Two files, different purposes:**
 
@@ -281,18 +289,25 @@ rm ~/.config/vip/local.yaml
 
 ---
 
-## Git Conflicts in vip
+## Git Conflicts in an Old Engine Clone
 
-You shouldn't have any uncommitted changes in vip.
+Most users should update with `pipx upgrade mainbranch` or `mb update`. If you still have an old clone-based engine install, keep business work out of that clone.
 
-If you do, resolve them by first running the canonical resolver per **[vip-path-resolution.md](vip-path-resolution.md)** to populate `$VIP_PATH`, then:
+From the business repo, prefer:
 
 ```bash
-# Clean and pull (WARNING: discards any local changes in vip)
-if [ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/mb-start/SKILL.md" ]; then
-  git -C "$VIP_PATH" checkout .
-  git -C "$VIP_PATH" pull origin main
+mb update --repo .
+mb skill link --repo .
+mb doctor
+```
+
+If you deliberately maintain a clone-based engine install, resolve `$ENGINE_PATH` per **[vip-path-resolution.md](vip-path-resolution.md)** and inspect it manually before pulling:
+
+```bash
+if [ -n "$ENGINE_PATH" ] && [ -f "$ENGINE_PATH/.claude/skills/mb-start/SKILL.md" ]; then
+  git -C "$ENGINE_PATH" status --short
+  git -C "$ENGINE_PATH" pull origin main
 fi
 ```
 
-**Warning:** `git checkout .` discards all uncommitted changes in vip. This is safe because vip is read-only — you shouldn't have local changes there. If you do, move them to your business repo first.
+If `git status --short` shows local changes, do not discard them blindly. Move business content to your business repo, or keep engine contribution work on its own branch.

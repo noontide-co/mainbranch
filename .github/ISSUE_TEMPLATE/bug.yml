@@ -44,7 +44,7 @@ body:
     id: command
     attributes:
       label: Command or skill that failed
-      description: e.g. `mb init`, `mb skill link --repo .`, `/start`, `/think`
+      description: e.g. `mb init`, `mb skill link --repo .`, `/mb-start`, `/mb-think`
       placeholder: "mb skill link --repo ."
     validations:
       required: true

@@ -4,7 +4,7 @@ The minisite shape: ~4–6 pages of static HTML, no build step, deployed to Clou
 
 V1 target. The default for paid-ad lander tests, single-offer first deploys, lead-form funnels, and conversion-gateway flows.
 
-The canonical contract for what a minisite *is* (page list, per-page content, conversion endpoint, tracking, walkthrough UX) lives at `mb-vip/.claude/reference/minisite.md` (engine-side spec). This file is the **/mb-site skill's implementation flow** — how the skill walks the operator through producing one.
+The canonical contract for what a minisite *is* (page list, per-page content, conversion endpoint, tracking, walkthrough UX) lives at `.claude/reference/minisite.md` (engine-side spec). This file is the **/mb-site skill's implementation flow** — how the skill walks the operator through producing one.
 
 ---
 
@@ -401,5 +401,5 @@ When the offer pulls more traffic and the minisite needs more pages or content d
 - [`naming-heuristic.md`](naming-heuristic.md) — domain naming playbook (used in step 5a if needed)
 - [`cloudflare-pages-link.md`](cloudflare-pages-link.md) — CF Pages GitHub App handshake (used in step 5f if needed)
 - [`graduation.md`](graduation.md) — when to move beyond minisite shape
-- Engine spec: `mb-vip/.claude/reference/minisite.md` — the contract this flow implements
+- Engine spec: `.claude/reference/minisite.md` — the contract this flow implements
 - `/mb-think` — research and decision recording patterns this flow follows

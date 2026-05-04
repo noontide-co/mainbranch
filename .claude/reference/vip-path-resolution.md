@@ -1,6 +1,6 @@
-# VIP Path Resolution
+# Engine Path Resolution
 
-Canonical resolver for locating the mb-vip engine repo from a Claude Code session running inside a business repo. Used by `/start`, `/pull`, `/setup`, `/help` (troubleshooting), and any reference file that needs to read or pull engine-side files.
+Canonical resolver for locating the Main Branch engine from a Claude Code session running inside a business repo. Used by `/mb-start`, `/mb-pull`, `/mb-setup`, `/mb-help` (troubleshooting), and any reference file that needs to read or pull engine-side files.
 
 **Single source of truth.** Other reference files MUST link here rather than inline the snippet — the resolver semantics (and the order of fallbacks) need to stay in lockstep across the engine, and inline copies drift.
 
@@ -8,31 +8,31 @@ Canonical resolver for locating the mb-vip engine repo from a Claude Code sessio
 
 ## Resolution order
 
-1. **`.claude/settings.local.json` → `permissions.additionalDirectories`** (preferred). The directory passed to Claude Code via `additionalDirectories` is the canonical loading mechanism for vip in Phase 2. No external config needed; pure filesystem.
+1. **`.claude/settings.local.json` → `permissions.additionalDirectories`** (preferred). The directory passed to Claude Code via `additionalDirectories` is the canonical loading mechanism for Main Branch in Phase 2. No external config needed; pure filesystem.
 2. **`~/.config/vip/local.yaml` → `vip_path`** (fallback). For users who haven't yet migrated to `additionalDirectories`, or whose `settings.local.json` is missing / malformed.
 
-The first valid path that contains `.claude/skills/start/SKILL.md` wins.
+The first valid path that contains `.claude/skills/mb-start/SKILL.md` wins.
 
 ---
 
 ## The canonical bash + python3 snippet
 
 ```bash
-# Canonical vip resolution (settings.local.json first — no extra deps)
-VIP_PATH=$(python3 -c "
+# Canonical engine resolution (settings.local.json first; no extra deps)
+ENGINE_PATH=$(python3 -c "
 import json, os
 try:
     with open('.claude/settings.local.json') as f:
         dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
     for d in dirs:
-        if os.path.isfile(os.path.join(d, '.claude/skills/start/SKILL.md')):
+        if os.path.isfile(os.path.join(d, '.claude/skills/mb-start/SKILL.md')):
             print(d); break
 except: print('')
 " 2>/dev/null)
 
 # Fallback: check ~/.config/vip/local.yaml (needs PyYAML)
-if [ -z "$VIP_PATH" ] || [ ! -f "$VIP_PATH/.claude/skills/start/SKILL.md" ]; then
-  VIP_PATH=$(python3 -c "
+if [ -z "$ENGINE_PATH" ] || [ ! -f "$ENGINE_PATH/.claude/skills/mb-start/SKILL.md" ]; then
+  ENGINE_PATH=$(python3 -c "
 import os
 try:
     import yaml
@@ -43,13 +43,13 @@ except: print('')
 fi
 ```
 
-After this block, `$VIP_PATH` is either a valid path to the mb-vip checkout or empty.
+After this block, `$ENGINE_PATH` is either a valid path to the Main Branch engine or empty.
 
 **Always validate before use:**
 
 ```bash
-[ -n "$VIP_PATH" ] && [ -f "$VIP_PATH/.claude/skills/start/SKILL.md" ] && \
-  <command using $VIP_PATH>
+[ -n "$ENGINE_PATH" ] && [ -f "$ENGINE_PATH/.claude/skills/mb-start/SKILL.md" ] && \
+  <command using $ENGINE_PATH>
 ```
 
 ---
@@ -67,8 +67,8 @@ The order matters: `settings.local.json` is harness-authoritative, `local.yaml` 
 
 | Symptom | Likely cause | Recovery |
 |---|---|---|
-| `$VIP_PATH` is empty | Neither fallback resolved | Run `/setup` to configure, or add the engine path to `~/.config/vip/local.yaml` manually. |
-| `$VIP_PATH` set but `.claude/skills/start/SKILL.md` missing | Stale config pointing at a deleted / renamed checkout | Re-run `/setup` to refresh, or update `~/.config/vip/local.yaml` to the current path. |
+| `$ENGINE_PATH` is empty | Neither fallback resolved | Run `mb skill link --repo .`, then restart Claude. Use `~/.config/vip/local.yaml` only as a legacy fallback. |
+| `$ENGINE_PATH` set but `.claude/skills/mb-start/SKILL.md` missing | Stale config pointing at a deleted / renamed checkout | Run `mb skill link --repo .`; it rewrites `.claude/settings.local.json` to the active engine and removes stale Main Branch engine paths. |
 | `python3` not found | Minimal environment | Document as a setup prerequisite (every Main Branch user needs python3 in `$PATH`). |
 | `yaml` import fails (fallback path only) | PyYAML not installed | The fallback is best-effort. Surface the underlying message and fall through to "no engine found" recovery. |
 | Resolved path readable but `git pull` fails | Auth / network / locked-file | Surface the warning from `pull-engine-updates.md` ("Common fixes" — GitHub Desktop, Skool subscription, network). |
@@ -87,9 +87,9 @@ A reference file that inlines the resolver and *also* customises it should comme
 
 ## Callers that link to this file
 
-- `.claude/skills/pull/SKILL.md`
-- `.claude/skills/setup/references/cwd-detection.md`
-- `.claude/skills/help/references/troubleshooting.md` (skills-not-working + git-conflicts sections)
+- `.claude/skills/mb-pull/SKILL.md`
+- `.claude/skills/mb-setup/references/cwd-detection.md`
+- `.claude/skills/mb-help/references/troubleshooting.md` (skills-not-working + git-conflicts sections)
 - `.claude/reference/pull-engine-updates.md`
 
 If you add a new caller, link here. Do not copy the snippet inline.

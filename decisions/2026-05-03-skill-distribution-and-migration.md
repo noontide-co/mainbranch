@@ -61,7 +61,7 @@ below.
 
 1. **v0.2 immediate:** implement stale global Claude Code skill detection and a
    noob-safe migration command. `mb doctor`, `mb start`, and `mb onboard` should
-   warn or block before a stale global `/start` can win silently. **In
+   warn or block before a stale global `/mb-start` can win silently. **In
    parallel, decide whether to rename bundled skills to a `mb-` prefix
    before the plugin spike lands.** Compound Engineering already enforces
    this pattern in CI for an existing public Claude Code plugin
@@ -73,11 +73,11 @@ below.
    active engine root and create gitignored local bridge links.
 3. **v0.2/v0.3 design target:** prototype a Claude Code plugin or marketplace
    package for Main Branch skills. Adopt it only after it preserves beginner
-   `/start` ergonomics, supports local or project scope cleanly, updates through
+   `/mb-start` ergonomics, supports local or project scope cleanly, updates through
    a documented path, and passes runtime smoke from a fresh business repo plus a
    migrated old-user repo. The plugin spike must explicitly answer the
    bundled-skill-name collision question: do users invoke `/mb:start` or do we
-   prove a plain-`/start` alias works under the plugin namespace? Lock that
+   prove a plain-`/mb-start` alias works under the plugin namespace? Lock that
    answer before promoting plugin packaging to default.
 4. **Runtime-general future:** define runtime adapters as separate tested
    contracts. The portable workflow source can stay runtime-neutral, but each
@@ -110,13 +110,13 @@ already conflict with extremely common patterns:
   in the wider ecosystem.
 
 Per the [Claude Code skills doc][skills-docs], any user-installed
-`~/.claude/skills/start` (whether created by another tool, another version
+`~/.claude/skills/mb-start` (whether created by another tool, another version
 of Main Branch, or hand-written) silently overrides the project-local
-`.claude/skills/start` we wire from the business repo. This is documented
+`.claude/skills/mb-start` we wire from the business repo. This is documented
 behavior, not a bug. Issue [#234][issue-234] addresses the Main-Branch-vs-
 Main-Branch shadow case, but the collision surface is broader: a user can
 install any personal or project skill named `start` and lose Main Branch's
-`/start` without warning.
+`/mb-start` without warning.
 
 The same doc states: *"Plugin skills use a `plugin-name:skill-name`
 namespace, so they cannot conflict with other levels."* That is the only
@@ -169,8 +169,8 @@ installation through Vercel's `npx skills@latest` CLI rather than
 `/plugin install`. Where that installer actually writes files is not
 verified in this research pass — if it installs as a plugin under
 `~/.claude/plugins/`, the plugin namespace would still protect plain
-`/start`; if it copies files into personal `~/.claude/skills/` or project
-`.claude/skills/`, those skills would shadow plain `/start` per Claude
+`/mb-start`; if it copies files into personal `~/.claude/skills/` or project
+`.claude/skills/`, those skills would shadow plain `/mb-start` per Claude
 Code's documented precedence. Either way, Matt's `setup-pre-commit` is
 adjacent enough to Main Branch's `setup` in user mindshare to confuse
 operators who install both, regardless of which install channel wins.
@@ -218,14 +218,14 @@ Renaming the bundled skills to a `mb-` prefix (`mb-start`, `mb-end`,
 `mb-think`, `mb-organic`, `mb-vsl`, plus `mb-skill-brief-draft`,
 `mb-skill-concept`, `mb-skill-review`) is a small, reversible change
 that closes the collision surface even before plugin packaging lands.
-The cost is one round of user-visible slash command churn (`/start`
+The cost is one round of user-visible slash command churn (`/mb-start`
 becomes `/mb-start`). Plugin packaging would force the same churn
 later (`/mb:start`), so the marginal cost of doing it now is small.
 
 ### Daily-Use UX Cost
 
 The product reason this question is hard: Main Branch's promise to
-non-technical operators is "open Claude Code, type `/start`, you're
+non-technical operators is "open Claude Code, type `/mb-start`, you're
 running." Renaming bundled skills, or moving to plugin namespacing,
 changes the daily ritual. That cost is real and should not be hand-waved.
 
@@ -235,7 +235,7 @@ What changes and what does not:
   `mb doctor`, `mb update`, `mb onboard` — every command at the terminal
   prompt — keeps the names it has today. The renaming question only
   touches in-Claude-Code slash commands.
-- **The slash-command surface picks up extra characters.** `/start`
+- **The slash-command surface picks up extra characters.** `/mb-start`
   becomes either `/mb-start` (prefix, with or without plugin packaging)
   or `/mb:start` (plugin namespace). Three to four extra keystrokes per
   invocation.
@@ -246,19 +246,19 @@ What changes and what does not:
   mostly on first-time users who don't yet know to type the prefix at
   all — which is exactly where onboarding copy can do the work.
 - **Plugin packaging would force the same churn later.** If we keep
-  `/start` now and migrate to plugin packaging in v0.2.5, operators have
+  `/mb-start` now and migrate to plugin packaging in v0.2.5, operators have
   to relearn the slash command then. Doing the rename once, in concert
   with plugin packaging, is one disruption rather than two.
 
 What is honestly unknown:
 
-- **Does Claude Code support a true slash alias** that lets `/start`
+- **Does Claude Code support a true slash alias** that lets `/mb-start`
   resolve to a prefixed or namespaced skill in the absence of a same-named
   shadowing skill? This research pass did not verify a documented alias
   mechanism. Treating "alias works" as an assumption would be exactly
   the kind of unverified runtime claim the OSS operating checklist warns
   against. The plugin spike (#237) should produce smoke evidence on this
-  before we decide whether to keep `/start` as a courtesy.
+  before we decide whether to keep `/mb-start` as a courtesy.
 - **Where third-party non-marketplace installers (`npx skills add`,
   similar) actually write files.** Subsequently confirmed: the dominant
   Vercel-labs `npx skills@latest` installer writes plain non-namespaced
@@ -277,7 +277,7 @@ Open questions tied to renaming:
   symlink-wired `mb-start` and a plugin-packaged `mb-start` is "the
   wrapper changed," not "every name changed."
 
-The honest framing for the maintainer is: keeping `/start` is the cheapest
+The honest framing for the maintainer is: keeping `/mb-start` is the cheapest
 choice for users who never branch out beyond Main Branch's bundled skills,
 and it is also the riskiest choice for the moment a user installs anything
 else. The product north star ("make this easy for new people") points at
@@ -355,7 +355,7 @@ just means accepting that exposure to Claude Code users outside the
 maintainer's existing audience is harder.
 
 **What this does not decide.** Whether the plugin invocation form is
-`/start`, `/mb-start`, `/mb:start`, or some alias resolves to live runtime
+`/mb-start`, `/mb-start`, `/mb:start`, or some alias resolves to live runtime
 behavior the v0.2.5 spike (#237) must verify. This section commits to
 the channel, not the keystroke count.
 
@@ -373,7 +373,7 @@ below; the praise was set aside.
   mechanism in the last 6+ months. Hardcoded built-in aliases only
   (`/compact` → `/reset`/`/new`). Open feature requests (Anthropic
   GitHub issues #14576 from late 2025 and #32785 from early 2026) are
-  unmerged. **Implication:** keeping `/start` working as a courtesy in
+  unmerged. **Implication:** keeping `/mb-start` working as a courtesy in
   parallel with `/mb-start` or `/mb:start` is not a documented option
   today. The renaming UX cost is real.
 - **`npx skills@latest` writes plain non-namespaced skills.** Default is
@@ -383,7 +383,7 @@ below; the praise was set aside.
   the `mattpocock-skills` install path lands in personal scope when
   invoked globally. **Implication:** the Matt Pocock collision concern
   earlier in this doc is sharpened, not softened: those installs do
-  produce plain `/start` invocations that shadow project-local Main
+  produce plain `/mb-start` invocations that shadow project-local Main
   Branch skills under Anthropic's documented precedence rule.
 - **Plugin marketplace discoverability surfaces.** Primary in-app surface
   is `/plugin` → Discover tab; primary public surface is
@@ -408,7 +408,7 @@ below; the praise was set aside.
 
 - **Slash-command resolution under plugins.** Anthropic's skills doc
   states plugin skills require `plugin-name:skill-name` invocation and
-  do not fall back to non-namespaced `/start`. Compound Engineering's
+  do not fall back to non-namespaced `/mb-start`. Compound Engineering's
   README and CHANGELOG both document and use bare `/ce-debug`,
   `/ce-plan`, `/ce-strategy` (see `README.md` lines 16–75 and
   `CHANGELOG.md` in `EveryInc/compound-engineering-plugin`). The external
@@ -420,7 +420,7 @@ below; the praise was set aside.
   plausible but is not directly confirmed by Anthropic's docs. **The
   v0.2.5 plugin spike (#237) must produce smoke evidence that resolves
   this directly**: install a plugin that ships a skill named `start`,
-  verify whether `/start` or only `/mb:start` works, and verify whether
+  verify whether `/mb-start` or only `/mb:start` works, and verify whether
   a skill named `mb-start` inside the same plugin is invoked as
   `/mb-start` or `/mb:mb-start`. Treat any other interpretation as
   unverified.
@@ -480,7 +480,7 @@ or source checkout and wires business repos through `mb.engine`:
 - `link_skills()` creates `.claude/skills/<name>` symlinks, or copies if
   symlinks fail, and gitignores the generated local wiring.
 - `link_status()` requires both the active engine root in
-  `additionalDirectories` and a project-local `.claude/skills/start/SKILL.md`.
+  `additionalDirectories` and a project-local `.claude/skills/mb-start/SKILL.md`.
 - `mb start`, `mb doctor`, `mb status`, and `mb onboard` all rely on
   `link_status()` and tell users to run `mb skill link --repo .` when wiring is
   missing.
@@ -652,8 +652,8 @@ Cons:
 - Plugin install/update is a runtime-specific operation that may require Claude
   Code version checks, trust prompts, marketplace setup, and runtime smoke.
 - Plugin cache semantics require the package to be self-contained.
-- Main Branch must verify beginner `/start` ergonomics. If namespacing changes
-  invocation from `/start` to a qualified plugin command, that is a product
+- Main Branch must verify beginner `/mb-start` ergonomics. If namespacing changes
+  invocation from `/mb-start` to a qualified plugin command, that is a product
   cost, not an implementation detail.
 
 Plugin packaging should be the target, not an untested rewrite.
@@ -671,7 +671,7 @@ The migration must be boring, reversible, and explicit.
   engine root, a missing path, or an unrelated user-created skill;
 - whether project-local `.claude/settings.local.json` points at the active
   engine root;
-- whether project-local `.claude/skills/start/SKILL.md` exists;
+- whether project-local `.claude/skills/mb-start/SKILL.md` exists;
 - whether copied project-local generated skill folders are stale relative to the
   active bundled skill set;
 - Claude Code version or feature availability when plugin migration is later
@@ -697,9 +697,9 @@ The migration must be boring, reversible, and explicit.
 
 Suggested command split:
 
-- `mb doctor`: detect shadows, mark stale global `/start` as a hard runtime
+- `mb doctor`: detect shadows, mark stale global `/mb-start` as a hard runtime
   handoff problem, and print exact next commands.
-- `mb start`: block handoff when stale global `/start` is likely to win.
+- `mb start`: block handoff when stale global `/mb-start` is likely to win.
 - `mb onboard`: run the same preflight before declaring setup complete.
 - `mb skill link --repo .`: repair project-local wiring and report global
   shadows without modifying global state.
@@ -747,7 +747,7 @@ Keep copy fallback only for systems where symlinks are unavailable.
 Kill the current `additionalDirectories` bridge as the primary Claude Code path
 only when plugin packaging proves all of this:
 
-- fresh `mb onboard` to Claude Code `/start` works;
+- fresh `mb onboard` to Claude Code `/mb-start` works;
 - an old-user repo with stale global skills migrates cleanly;
 - `mb update` or documented Claude plugin update keeps skills current;
 - beginner-facing invocation remains acceptable;
@@ -757,7 +757,7 @@ only when plugin packaging proves all of this:
 
 Kill the plugin path, or defer it, if:
 
-- plugin namespacing makes `/start` confusing for beginners without a clean
+- plugin namespacing makes `/mb-start` confusing for beginners without a clean
   alias;
 - project or local scope cannot be automated or explained safely;
 - marketplace setup adds more first-run friction than the current bridge;

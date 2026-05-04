@@ -2,7 +2,7 @@
 type: decision
 date: 2026-04-29
 status: proposed
-topic: mb-vip v0.1.0 — engine-side master decision (skill composition, repo shape, PyPI packaging, /site upgrade, conductor preferences)
+topic: mb-vip v0.1.0 — engine-side master decision (skill composition, repo shape, PyPI packaging, /mb-site upgrade, conductor preferences)
 mirrors: noontide-projects/decisions/2026-04-29-main-branch-v0-1-0-master.md
 linked_research:
   - noontide-projects/research/2026-04-29-marketing-site-brief-framework-yt-mining.md
@@ -11,7 +11,7 @@ linked_research:
   - noontide-projects/research/2026-04-29-plan-critique-5-devex-multi-team.md
   - noontide-projects/research/2026-04-29-v0-2-roadmap-and-conductor-patterns.md
 participants: [Devon, Claude]
-tags: [v0-1-0, mb-vip, engine, /site, pypi, conductor-preferences]
+tags: [v0-1-0, mb-vip, engine, /mb-site, pypi, conductor-preferences]
 ---
 
 # mb-vip v0.1.0 — Engine Master Decision
@@ -20,7 +20,7 @@ tags: [v0-1-0, mb-vip, engine, /site, pypi, conductor-preferences]
 
 This file is the engine-side mirror of the noontide-projects master decision (`noontide-projects/decisions/2026-04-29-main-branch-v0-1-0-master.md`). The noontide-projects master sets the business-level locks: vocabulary (tool/skill/playbook), folder shape, OSS-vs-paid mechanism, pricing, dashboard commitment, and the 8-item v0.1.0 ship list at the conceptual level. This file lands the same locks on the **engine repo (`mb-vip`)** with concrete file paths, package shape, and per-skill change lists.
 
-It exists because Devon already acked the noontide-projects master on 2026-04-29 ("agree, lets update everythg, clean move on, 89 merge") and the open commitment in that master was: *"The matching `mb-vip` decision (skill changes, /site dial rename, brand-as-3rd-position, archetype field) gets its own file in that repo."* This is that file.
+It exists because Devon already acked the noontide-projects master on 2026-04-29 ("agree, lets update everythg, clean move on, 89 merge") and the open commitment in that master was: *"The matching `mb-vip` decision (skill changes, /mb-site dial rename, brand-as-3rd-position, archetype field) gets its own file in that repo."* This is that file.
 
 There is no relitigation here. Vocabulary, folder shape, dial naming, archetype catalog, OSS/paid mechanism, PyPI commitment, and conductor-preferences-for-mb-vip are all decided in the noontide-projects master or in the linked research files. This file translates them into engine-repo execution.
 
@@ -30,7 +30,7 @@ The decision is `status: proposed` because it has not yet been opened as a PR. I
 
 ## Relationship to the noontide-projects master decision
 
-The noontide-projects master decision is the **business** master: it covers thesis, pricing, persona, bets-in-public, dashboard commitment, OSS-vs-paid mechanism at the business level, and the launch phasing. This file is the **engine** master: it covers the code that ships, the file paths that move, the package on PyPI, the `/site` skill upgrade, and the conductor preferences for working in the `mb-vip` repo itself.
+The noontide-projects master decision is the **business** master: it covers thesis, pricing, persona, bets-in-public, dashboard commitment, OSS-vs-paid mechanism at the business level, and the launch phasing. This file is the **engine** master: it covers the code that ships, the file paths that move, the package on PyPI, the `/mb-site` skill upgrade, and the conductor preferences for working in the `mb-vip` repo itself.
 
 | Concern | noontide-projects master | this file (mb-vip master) |
 |---|---|---|
@@ -43,7 +43,7 @@ The noontide-projects master decision is the **business** master: it covers thes
 | OSS/paid one-line rule (MIT ships shapes; paid ships contents) | Source of truth | Engine-side resolution: how skills find paid reference, what stub returns when missing |
 | PyPI distribution commitment | Source of truth (decision to ship) | Source of truth (package shape, entry points, install path) |
 | Conductor preferences for mb-vip | Names the commitment | Source of truth (full template) |
-| `/site` skill upgrade (brand dial, 9 archetypes, Seven Sweeps, AI-tells, paired imagery) | Names the commitment | Source of truth (file-by-file change list) |
+| `/mb-site` skill upgrade (brand dial, 9 archetypes, Seven Sweeps, AI-tells, paired imagery) | Names the commitment | Source of truth (file-by-file change list) |
 | Repo reorg of `mb-vip` itself (skills flat, playbooks flat, no molecules/compounds dirs) | Names the lock | Source of truth (path-by-path migration) |
 | Tools repo layout (`tools/<name>/`, `mb/`) | Names the lock | Source of truth (per-tool implementation language, build path) |
 | Educational triage content (`.claude/educational/`) | Names the pattern | Source of truth (initial topic list, file format) |
@@ -62,7 +62,7 @@ Inherited from the noontide-projects master, restated here so the engine repo ne
 | `atom` | `tool` | CLI binaries under `tools/<name>/` and dispatched by `mb` umbrella |
 | `molecule` | `skill` | `.claude/skills/<name>/SKILL.md` — flat layout, no `molecules/` subdir |
 | `compound` | `playbook` | `.claude/playbooks/<name>/SKILL.md` — flat layout, no `compounds/` subdir |
-| "vibe" (third /site dial) | `brand` | The third value of the `dial:` brief field, alongside `convert` and `story` |
+| "vibe" (third /mb-site dial) | `brand` | The third value of the `dial:` brief field, alongside `convert` and `story` |
 | `core/brand/` (consumer-repo path) | `core/visual-identity/` | (Resolved in noontide-projects master; engine references it as the path skills read) |
 
 **There is no `atom-*` binary in v0.1.0 ship**, only `tool-*`. Aliases for 30 days are nice but engine-side defaults must be `tool-` from day one.
@@ -158,12 +158,12 @@ mb-vip/
 │   │   ├── organic/
 │   │   ├── pull/
 │   │   ├── setup/
-│   │   ├── site/                  # heavy upgrade — see /site section below
+│   │   ├── site/                  # heavy upgrade — see /mb-site section below
 │   │   ├── start/
 │   │   ├── think/
 │   │   ├── vsl/
 │   │   ├── wiki/
-│   │   ├── skill-brief-draft/     # NEW — composable skill called by /site
+│   │   ├── skill-brief-draft/     # NEW — composable skill called by /mb-site
 │   │   ├── skill-concept/         # NEW — composable skill
 │   │   └── skill-review/          # NEW — composable skill (Seven Sweeps)
 │   ├── playbooks/                 # NEW top-level — flat, no compounds/
@@ -187,7 +187,7 @@ mb-vip/
 |---|---|---|---|
 | Engine README honesty pass | `README.md` | `README.md` | Edit: add "Built for Claude Code; cross-platform v0.2+; PyPI as `pipx install mainbranch`" |
 | Skill files (10 existing) | `.claude/skills/<name>/` | `.claude/skills/<name>/` | Stay flat. Lock: no nested `molecules/` or `compounds/` subdirs ever introduced. |
-| Composable skills (3 new) | — | `.claude/skills/skill-{brief-draft,concept,review}/` | Create. /site calls these via depth-3 chain. |
+| Composable skills (3 new) | — | `.claude/skills/skill-{brief-draft,concept,review}/` | Create. /mb-site calls these via depth-3 chain. |
 | Playbooks dir (new) | — | `.claude/playbooks/` | Create with two skeletons (`ship-bet/`, `weekly-review/`). Real impl deferred. |
 | Educational triage dir | — | `.claude/educational/` | Create with three initial topic files. |
 | Tools source (5) | (currently nowhere or in `experimental/`) | `tools/tool-{domain,dns,pages,stripe,og-render}/` | Create or move. Each gets its own `SKILL.md` next to its binary per discrawl/paperclip pattern lifted from `cli-agent-infra-repos-mining.md`. |
@@ -274,7 +274,7 @@ The noontide-projects master locked the 8-item conceptual ship list. This sectio
 
 | Spec | Value |
 |---|---|
-| Sequence | `mb init` → `mb think audience` (invokes `/think` skill in Claude Code) → `core/audience.md` is committed |
+| Sequence | `mb init` → `mb think audience` (invokes `/mb-think` skill in Claude Code) → `core/audience.md` is committed |
 | Time target | Under 5 minutes on a fresh machine with Claude Code already installed |
 | Test | Engine repo CI runs this on a clean container weekly post-launch (v0.2 work; v0.1 is manually verified) |
 
@@ -369,8 +369,8 @@ Skills stay markdown. Skills are NOT Python modules. The Python package's only j
 2. Carry skill markdown as **package data** (read-only, bundled in the wheel).
 3. Expose `mb skill path <name>` so other tools can find skill files on disk.
 
-The flow when Claude Code invokes `/site`:
-- Claude Code looks in its own skills resolution order (`~/.claude/skills/site/SKILL.md` first; `vip_path/.claude/skills/site/SKILL.md` fallback).
+The flow when Claude Code invokes `/mb-site`:
+- Claude Code looks in its own skills resolution order (`~/.claude/skills/mb-site/SKILL.md` first; `vip_path/.claude/skills/mb-site/SKILL.md` fallback).
 - After `pipx install`, the user runs `mb init --link-skills` once which symlinks the bundled skills into the user's Claude Code skills dir.
 - Editing the bundled skills is read-only (they live in site-packages); to customize, the user copies the skill into their own `~/.claude/skills/<name>/` and Claude Code's resolution order picks up the override.
 
@@ -424,11 +424,11 @@ Engine contributors (Devon, Joel) keep cloning the repo for development — `pip
 
 ---
 
-## /site Skill Upgrade
+## /mb-site Skill Upgrade
 
-This is the single largest engine-side change in v0.1.0. The /site skill goes from a brief-flow target to a brief-flow target *anchored on Hughes' archetype framework + Corey Haines' review gates + the AI-tell anti-pattern list*. All three were locked by the linked research files; this section names the file changes.
+This is the single largest engine-side change in v0.1.0. The /mb-site skill goes from a brief-flow target to a brief-flow target *anchored on Hughes' archetype framework + Corey Haines' review gates + the AI-tell anti-pattern list*. All three were locked by the linked research files; this section names the file changes.
 
-### File-by-file change list under `.claude/skills/site/`
+### File-by-file change list under `.claude/skills/mb-site/`
 
 | File | Change | Source of content |
 |---|---|---|
@@ -468,7 +468,7 @@ This is the single largest engine-side change in v0.1.0. The /site skill goes fr
 | Redemption | Bad guy goes to jail / wrong gets righted. Transformation offers — but **don't promise this ending**. | `archetypes/redemption.md` |
 | Tragic Comedy | We thought we were in redemption, actually we're in farce. Reframe device when audience expectation is wrong. | `archetypes/tragic-comedy.md` |
 
-**Progressive disclosure rule:** the brief draft step shows `archetypes.md` (the one-line index) by default. Operator picks one, skill loads the per-archetype detail file lazily. /site never loads all 9 detail files at once.
+**Progressive disclosure rule:** the brief draft step shows `archetypes.md` (the one-line index) by default. Operator picks one, skill loads the per-archetype detail file lazily. /mb-site never loads all 9 detail files at once.
 
 ### Brief schema additions
 
@@ -737,11 +737,11 @@ The stub files in `<site-packages>/mb/_data/stubs/` are short markdown files tha
 3. Tell the user where to get the real one (`Subscribe at mainbranch.io/run for the curated reference.`).
 4. Include 2–3 generic example anchor lines that won't conflict with any real brand (fake-business "Acme Brewing" voice, etc.).
 
-This means: an OSS user (free, no subscription) can `pipx install mainbranch`, run `/site` in Claude Code, and get a fully-functional walkthrough that produces a generic-looking site. It works. It just doesn't sound like Devon (or like the user's own brand) until reference is filled in.
+This means: an OSS user (free, no subscription) can `pipx install mainbranch`, run `/mb-site` in Claude Code, and get a fully-functional walkthrough that produces a generic-looking site. It works. It just doesn't sound like Devon (or like the user's own brand) until reference is filled in.
 
 ### Test mode for OSS users without paid reference
 
-`mb test --skill site` runs the /site skill against a fixture business (`<site-packages>/mb/_data/fixtures/acme-brewing/`) with stub references and asserts the skill produces *something*. This is the v0.1.0 OSS contract: skills are runnable end-to-end against fixtures, even without paid reference.
+`mb test --skill site` runs the /mb-site skill against a fixture business (`<site-packages>/mb/_data/fixtures/acme-brewing/`) with stub references and asserts the skill produces *something*. This is the v0.1.0 OSS contract: skills are runnable end-to-end against fixtures, even without paid reference.
 
 CI runs `mb test --all` on every PR. If a skill breaks against the fixture, the PR fails.
 
@@ -793,7 +793,7 @@ last_reviewed: YYYY-MM-DD
 | File | Triggered by | Subject |
 |---|---|---|
 | `anti-cloud-backup.md` | `mb doctor` finding `core/finance/` files in iCloud / Drive / Dropbox | Why financial records shouldn't sit in cloud-default backup. Forgejo + Backblaze + restic stack. Subpoena exposure. Encryption-at-rest. |
-| `opinionated-stack-cloudflare-vs-vercel.md` | `/site` skill default to Cloudflare Pages | Why Cloudflare Pages over Vercel for Main Branch sites. Pricing. Cold-start. Edge defaults. Lock-in posture. |
+| `opinionated-stack-cloudflare-vs-vercel.md` | `/mb-site` skill default to Cloudflare Pages | Why Cloudflare Pages over Vercel for Main Branch sites. Pricing. Cold-start. Edge defaults. Lock-in posture. |
 | `github-vs-gdocs.md` | First-run `mb init` user comes from a Google-Docs background | Why Markdown-in-git beats Google Docs for business reference. Versioning. Diff. Multi-agent compatibility. The "your business is a tree of files" framing. |
 
 ### Pattern reuse
@@ -811,7 +811,7 @@ This pattern is reusable beyond `mb doctor`. It's the standard shape for any opi
 | Agent | v0.1.0 status | v0.2+ target |
 |---|---|---|
 | Claude Code | Fully supported. Skills run end-to-end. Tools called by skills work. | Stays first-class |
-| Codex | Skills are not a Codex concept. Manual port required (1–2 days per skill). Not supported. | v0.3 stretch — port `/think` and `/site` |
+| Codex | Skills are not a Codex concept. Manual port required (1–2 days per skill). Not supported. | v0.3 stretch — port `/mb-think` and `/mb-site` |
 | Cursor | Cursor Rules can load SKILL.md as guidance but tool routing doesn't work. Manual paste possible. Not supported. | v0.3 stretch |
 | Hermes / Paperclip | Skills don't load. `mb` CLI doesn't run inside Paperclip routine. Not supported. | v0.2 — `mb` runnable inside Paperclip routine; migration docs from OpenClaw |
 | Local LLMs (llama.cpp, Ollama) | Tool-use protocol parity uneven. Fat skills with 5+ tool calls fail mid-flow on weaker models. Not supported and **no claim made**. | Never (as a default claim). v0.4+ stretch if local tool-use stabilizes. |
@@ -839,13 +839,13 @@ Eight bullets. Read out loud before merging.
 
 1. **PyPI distribution shape is unproven for skill-bundled packages.** `companyctx` and `morning-paper` are precedent for Python CLIs on PyPI, but neither bundles markdown-as-data the way mb-vip needs to. The `--link-skills` symlink dance is novel; may break on Windows; may confuse users who expect `pipx install` to be self-contained. Mitigation: tested manual fallback (clone-the-engine still works). Failure mode: users grumble about a two-step install.
 
-2. **The 9-archetype catalog is a content-write deliverable, not a code deliverable.** `archetypes.md` plus 9 detail files is roughly 3 days of careful prose. If Devon is the bottleneck, /site upgrade slips. Mitigation: ship index + 3 most-used archetypes (David-Goliath, Wounded-Healer, Broken-Hero) at v0.1.0; ship remaining 6 in v0.1.1 dot release.
+2. **The 9-archetype catalog is a content-write deliverable, not a code deliverable.** `archetypes.md` plus 9 detail files is roughly 3 days of careful prose. If Devon is the bottleneck, /mb-site upgrade slips. Mitigation: ship index + 3 most-used archetypes (David-Goliath, Wounded-Healer, Broken-Hero) at v0.1.0; ship remaining 6 in v0.1.1 dot release.
 
 3. **Seven Sweeps + Expert Panel Scoring is heavyweight for `convert` dial.** Five-persona scoring per draft adds 2–4 minutes to every brief. Operators may bypass with `--skip-review`. Bypass becomes default. Mitigation: log bypass count in skill telemetry (v0.2 work); if more than 50% of `convert` runs bypass, the gate is wrong-sized.
 
-4. **Brief schema migration policy is "don't auto-migrate."** Existing minisite briefs in noontide-projects will lack `dial`, `archetype`, `do_not_state`, etc. /site will work on them (old schema is tolerated for files dated before 2026-04-29) but will not gate them on the new fields. This is intentional but creates drift: Devon's old briefs and his new briefs are not directly comparable. Mitigation: `mb validate --upgrade-brief <file>` in v0.2 walks an interactive upgrade.
+4. **Brief schema migration policy is "don't auto-migrate."** Existing minisite briefs in noontide-projects will lack `dial`, `archetype`, `do_not_state`, etc. /mb-site will work on them (old schema is tolerated for files dated before 2026-04-29) but will not gate them on the new fields. This is intentional but creates drift: Devon's old briefs and his new briefs are not directly comparable. Mitigation: `mb validate --upgrade-brief <file>` in v0.2 walks an interactive upgrade.
 
-5. **Paired-imagery rule depends on `librsvg` being installed.** OG image generation is the load-bearing part of the rule. `tool-og-render` ships bundled with `mainbranch` but shells out to `rsvg-convert` (system dep) with `cairosvg` Python fallback. If neither is present, /site falls back to single-image OG with a warning. Mitigation: `mb doctor` calls it out clearly; `brew install librsvg` is one-line.
+5. **Paired-imagery rule depends on `librsvg` being installed.** OG image generation is the load-bearing part of the rule. `tool-og-render` ships bundled with `mainbranch` but shells out to `rsvg-convert` (system dep) with `cairosvg` Python fallback. If neither is present, /mb-site falls back to single-image OG with a warning. Mitigation: `mb doctor` calls it out clearly; `brew install librsvg` is one-line.
 
 6. **Conductor preferences file is brand-new at the engine repo and untested in workflow.** companyctx-derived preferences are mature in companyctx; pasting them onto a multi-language repo (Python umbrella + Go tools + Node og-render + Markdown skills) may surface gate-suite mismatches we haven't seen. Mitigation: pre-push gate suite ships per-language (Python ruff/mypy/pytest + Go fmt/vet/test + Node lint/test); first PR run will surface anything that's wrong.
 
@@ -870,12 +870,12 @@ Concrete bullet list of file moves, renames, new files. The codification queue f
 - New dir: `mb/` with Python package source (`mb/`, `tests/`, `pyproject.toml`, `README.md`)
 - New dir: `.claude/playbooks/` with `ship-bet/SKILL.md` and `weekly-review/SKILL.md` skeletons
 - New dir: `.claude/educational/` with three initial topic files (`anti-cloud-backup.md`, `opinionated-stack-cloudflare-vs-vercel.md`, `github-vs-gdocs.md`)
-- New dir: `.claude/skills/skill-brief-draft/` (composable skill — depth-3 escape hatch)
-- New dir: `.claude/skills/skill-concept/` (composable skill)
-- New dir: `.claude/skills/skill-review/` (composable skill — wraps Seven Sweeps)
+- New dir: `.claude/skills/mb-skill-brief-draft/` (composable skill — depth-3 escape hatch)
+- New dir: `.claude/skills/mb-skill-concept/` (composable skill)
+- New dir: `.claude/skills/mb-skill-review/` (composable skill — wraps Seven Sweeps)
 - New dir: `templates/consumer/` with `CLAUDE.md.tmpl`, `CODEOWNERS.tmpl`, `.gitignore.tmpl`
 
-### /site skill file changes (under `.claude/skills/site/`)
+### /mb-site skill file changes (under `.claude/skills/mb-site/`)
 
 - Edit: `SKILL.md` — add brief schema additions section, link new ref files
 - Edit: `references/minisite-build.md` — Step 2 dial pick → archetype pick → adjacency map
@@ -925,7 +925,7 @@ Engine-side ships:
 - This decision file lands as `decisions/2026-04-29-mb-vip-v0-1-0-master.md`, status `proposed` → `accepted` on merge.
 - Repo reorg: skills stay flat, playbooks dir created flat, educational dir created.
 - Vocabulary sweep (any remaining `atom-*` / `molecule` / `compound` mentions in skill files → `tool-*` / `skill` / `playbook`).
-- /site skill upgrade *outline only*: brief schema doc'd in `SKILL.md`, `archetypes.md` index file lands, 3 archetype detail files land, Seven Sweeps lands in `review.md`, AI-tells lands in `anti-patterns.md`. Remaining 6 archetypes are `status: stub` placeholders that load but say "detail coming v0.1.1."
+- /mb-site skill upgrade *outline only*: brief schema doc'd in `SKILL.md`, `archetypes.md` index file lands, 3 archetype detail files land, Seven Sweeps lands in `review.md`, AI-tells lands in `anti-patterns.md`. Remaining 6 archetypes are `status: stub` placeholders that load but say "detail coming v0.1.1."
 - Conductor preferences file lands at `conductor-preferences.md`.
 - `pyproject.toml` lands; `mb` umbrella package compiles and installs in dev mode (`pipx install -e ./mb`); `mb --version` works.
 - Tool source skeletons land in `tools/` (`tool-*/SKILL.md`, `tool-*/cmd/main.go` or equivalent — does not need to compile to ship Phase 1).
@@ -942,7 +942,7 @@ Adds:
 - README.md updates with `pipx install mainbranch` as the recommended path; `git clone` as developer path.
 - Compatibility matrix doc lands at `docs/compatibility.md`.
 - `mb test --skill site --fixture acme-brewing` ships green.
-- /site skill upgrade *full*: remaining 6 archetype detail files ship.
+- /mb-site skill upgrade *full*: remaining 6 archetype detail files ship.
 
 Tag `oe-v0.1.0`. Public.
 
@@ -953,7 +953,7 @@ Tag `oe-v0.1.0`. Public.
 **2026-05-29 (30 days)**, or sooner if:
 
 - PyPI distribution slips past Phase 2 (re-open this file).
-- /site brief schema migration breaks more than 2 in-flight Devon briefs (re-open).
+- /mb-site brief schema migration breaks more than 2 in-flight Devon briefs (re-open).
 - More than 3 of the 9 archetype detail files slip past v0.1.1 (re-open).
 - `mb doctor` false-positive rate on anti-cloud-backup detection above 10% (re-open `educational/` design).
 - Conductor preferences gate suite causes more than 1 hour of agent rework per PR (re-open the gate scoping).
@@ -970,7 +970,7 @@ Priority-ordered. Devon picks these up after v0.1.0 ships, or punts them with in
 
 3. **`tool-og-render` engine upgrade to resvg (v0.2+).** v0.1.0 ships `rsvg-convert` + `cairosvg` fallback (PR #100, live-tested). Grok pressure-test 2026-04-29 recommended `resvg` (Rust) as the upgrade path — single static binary <3MB, sub-10ms render, identical macOS/Linux output, no system deps. Drop-in replacement via `brew install resvg`. Gate the swap on: (a) one real failure mode emerging in `rsvg-convert` that resvg fixes, OR (b) v0.2 release window opening. Priority: low; the existing engine works.
 
-4. **Composable skills (`skill-brief-draft`, `skill-concept`, `skill-review`) ownership.** They're new in v0.1.0 and called by /site. If /vsl, /ads, /organic want to call them too, that's a refactor at v0.2. Pre-emptively design for it now, or punt? Punt unless concrete reuse is asked for. (Priority: low.)
+4. **Composable skills (`skill-brief-draft`, `skill-concept`, `skill-review`) ownership.** They're new in v0.1.0 and called by /mb-site. If /mb-vsl, /mb-ads, /mb-organic want to call them too, that's a refactor at v0.2. Pre-emptively design for it now, or punt? Punt unless concrete reuse is asked for. (Priority: low.)
 
 5. **Engine-repo Skill folder for `tool-*` SKILL.md files vs co-located in `tools/`.** Currently the plan is co-located: `tools/tool-domain/SKILL.md` lives next to the binary source. Alternative: `.claude/skills/tool-domain/SKILL.md` mirrors. Co-located is cleaner (one ecosystem, single source of truth for the tool's docs); mirror is more discoverable for skills that compose. Pick co-located for v0.1.0; mirror via symlink in v0.2 if discovery becomes a problem. (Priority: low.)
 
@@ -978,4 +978,4 @@ Priority-ordered. Devon picks these up after v0.1.0 ships, or punts them with in
 
 7. **Educational triage content beyond the initial three.** As more opinionated defaults land, more `educational/<topic>.md` files are needed. Catalog what's missing: `cal-com-vs-calendly.md`, `beancount-vs-quickbooks.md`, `forgejo-vs-github-personal.md`, `claude-code-vs-cursor.md`, etc. (Priority: medium; rolling.)
 
-8. **The "given my past losses, help me decide today" skill.** Capture mechanism is in place (status: died offers in consumer repos). Skill itself is v0.2+ build. Engine-side: read `core/offers/<slug>/` files where status is `died`, surface the post-mortem rationale during `/think` calls that look similar. (Priority: low; nice-to-have.)
+8. **The "given my past losses, help me decide today" skill.** Capture mechanism is in place (status: died offers in consumer repos). Skill itself is v0.2+ build. Engine-side: read `core/offers/<slug>/` files where status is `died`, surface the post-mortem rationale during `/mb-think` calls that look similar. (Priority: low; nice-to-have.)

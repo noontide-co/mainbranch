@@ -1,13 +1,13 @@
 ---
 name: mb-start
-description: "Main entry point for Main Branch. Detects state and routes to the right skill. Use when: user says start/help/begin, is new/returning/lost, opens vip without a task, or needs triage. Routes to /mb-setup, /mb-think, /mb-ads, /mb-vsl, /mb-organic, /mb-wiki, /mb-help."
+description: "Main entry point for Main Branch. Detects state and routes to the right skill. Use when: user says start/help/begin, is new/returning/lost, opens Main Branch without a task, or needs triage. Routes to /mb-setup, /mb-think, /mb-ads, /mb-vsl, /mb-organic, /mb-wiki, /mb-help."
 ---
 
 # Start
 
 Single entry point for Main Branch. Detect user state, context level, experience — route to the right skill.
 
-**Recommended workflow:** Start Claude in your business repo, run `/mb-start`. It handles everything. vip is loaded through `additionalDirectories`, with bridge links as a compatibility fallback for skill discovery.
+**Recommended workflow:** Start Claude in your business repo, run `/mb-start`. It handles everything. Main Branch is loaded through `additionalDirectories`, with bridge links as a compatibility fallback for skill discovery.
 
 ---
 
@@ -61,17 +61,17 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │
 ├── Detect business repo ─────────────→ CWD-first detection (see Step 2)
 │   ├── CWD has reference/core/ or core/? → This IS the repo. Proceed.
-│   ├── CWD has .claude/skills/? ─────→ User is in vip (old workflow). Trigger migration.
+│   ├── CWD has .claude/skills/? ─────→ User is in the engine repo (old workflow). Trigger migration.
 │   └── Neither? ────────────────────→ Check config, then ask user.
 │
-├── Pull engine updates ──────────────→ Resolve vip path, pull THAT dir (not CWD)
+├── Check engine updates ──────────────→ Use mb update for the active install
 │
 ├── Load config ──────────────────────→ See [config-system.md](references/config-system.md)
-│   ├── ~/.config/vip/local.yaml ─────→ vip_path + default_repo + user identity
+│   ├── ~/.config/vip/local.yaml ─────→ legacy engine path + default_repo + user identity
 │   └── [repo]/.vip/config.yaml ──────→ Team settings, MCP requirements
 │
-├── Verify vip loaded ────────────────→ Check additionalDirectories has vip
-│   └── Missing? ────────────────────→ Offer to run /mb-setup to configure
+├── Verify Main Branch loaded ────────────────→ Check additionalDirectories has Main Branch
+│   └── Missing? ────────────────────→ Run `mb skill link --repo .`, or route to /mb-setup if setup is incomplete
 │
 ├── MCP pre-flight ───────────────────→ See [mcp-preflight.md](references/mcp-preflight.md)
 │   └── Missing required MCP? ────────→ Offer setup or skip
@@ -118,7 +118,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 
 ## Step 1: Pull Engine Updates
 
-Pull vip updates. CWD is the business repo — resolve vip path first. **Do NOT silently swallow failures.** Users on stale code get broken features.
+Check Main Branch updates from the business repo. **Do NOT silently swallow failures.** Users on stale code get broken features.
 
 See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** for the canonical pull script, result handling table, the failure warning to surface, and the matching Step 3 business-repo pull logic.
 
@@ -132,11 +132,11 @@ The user starts Claude in their business repo. Check CWD first before falling ba
 
 ```
 1. test -d "reference/core" || test -d "core"  → THIS IS the business repo. Skip to config.
-2. test -f ".claude/skills/mb-start/SKILL.md"  → user is in vip; migrate.
+2. test -f ".claude/skills/mb-start/SKILL.md"  → user is in the engine repo; migrate.
 3. Otherwise → fall back to ~/.config/vip/local.yaml.
 ```
 
-See **[references/repo-detection.md](references/repo-detection.md)** for the full flow: CWD detection, migration guidance for users in vip, config loading, multi-repo selection, the discovery algorithm when no config exists, the canonical `REPO_PATH` variable, and the verify-vip-is-loaded block (config + bridge links).
+See **[references/repo-detection.md](references/repo-detection.md)** for the full flow: CWD detection, migration guidance for users in the engine repo, config loading, multi-repo selection, the discovery algorithm when no config exists, the canonical `REPO_PATH` variable, and the Main Branch wiring verification block.
 
 ---
 
@@ -301,7 +301,7 @@ Check `reference/core/*.md`. No folder → `/mb-setup`. Exists → check complet
 
 "Help" or confused → route to `/mb-help`. Give quick overview first:
 
-> "1. **vip** = engine (skills + frameworks, linked via setup). 2. **Your repo** = data (offer, audience, voice).
+> "1. **Main Branch** = engine (skills + frameworks, linked via setup). 2. **Your repo** = data (offer, audience, voice).
 > Daily: `cd your-business-repo && claude` then `/mb-start`.
 > For detailed help: `/mb-help` + your question."
 
@@ -357,7 +357,7 @@ Auto-detect user intent and route. Skills: `/mb-pull`, `/mb-help`, `/mb-setup`, 
 | "content", "reels", "tiktok", "organic", "carousel" | `/mb-organic` |
 | "site", "landing page", "lander", "minisite", "website", "one-pager", "spin up a site", "deploy site", "put this online", "I need a site", "publish site", "graduate my site", "add a CMS to my site", "/mb-start launch" | `/mb-site` (or `/mb-start launch <offer>` for the speedrun orchestration) |
 | "wiki", "notes", "atomic", "wikilinks", "publish wiki" | `/mb-wiki` |
-| "pull", "update vip", "get latest" | `/mb-pull` |
+| "pull", "update Main Branch", "get latest" | `/mb-pull` |
 | "done", "wrapping up", "end my day", "closing out", "call it a day", "that's it" | `/mb-end` |
 
 ---
@@ -371,7 +371,7 @@ If re-invoked after compaction: re-read `~/.config/vip/local.yaml` for repo + id
 ## References
 
 - [references/pull-engine-updates.md](references/pull-engine-updates.md) — Step 1 + Step 3 pull scripts and failure warnings
-- [references/repo-detection.md](references/repo-detection.md) — Step 2 full CWD detection, migration, multi-repo selection, REPO_PATH, vip-loaded verification
+- [references/repo-detection.md](references/repo-detection.md) — Step 2 full CWD detection, migration, multi-repo selection, REPO_PATH, Main Branch wiring verification
 - [references/triage-menu.md](references/triage-menu.md) — Step 10 CHANGELOG banner, menu, "while you wait" pattern, auto-suggest/skip rules
 - [references/auto-heal.md](references/auto-heal.md) — Bridge link recovery
 - [references/config-system.md](references/config-system.md) — Config loading and recovery

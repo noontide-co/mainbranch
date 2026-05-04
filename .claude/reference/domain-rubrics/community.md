@@ -109,7 +109,7 @@ reference/
 
 ### funnel/skool-surfaces.md
 
-**Purpose:** Live copy from Skool about page and pricing cards. Content-generating skills (`/ads`, `/organic`, `/vsl`, `/site`) check this for congruence — ensuring all customer-facing surfaces speak the same language.
+**Purpose:** Live copy from Skool about page and pricing cards. Content-generating skills (`/mb-ads`, `/mb-organic`, `/mb-vsl`, `/mb-site`) check this for congruence — ensuring all customer-facing surfaces speak the same language.
 
 **Required sections:**
 - About page copy (verbatim, with character count)
@@ -163,7 +163,7 @@ reference/
 
 ### content-strategy.md
 
-**Purpose:** Strategic backbone for all content creation. Defines pillars, platforms, cadence, and metrics. Consumed by `/organic`, `/ads`, and `/newsletter` (coming soon).
+**Purpose:** Strategic backbone for all content creation. Defines pillars, platforms, cadence, and metrics. Consumed by `/mb-organic`, `/mb-ads`, and `/newsletter` (coming soon).
 
 **Required sections:**
 - Content Pillars (3-5 themes with sub-topics)
@@ -178,7 +178,7 @@ reference/
 - Framework Library
 - Hooks Library
 
-**How it gets built:** Through `/think` cycles, not upfront. `/setup` scaffolds an empty template. Users fill sections through research, experimentation, and iteration.
+**How it gets built:** Through `/mb-think` cycles, not upfront. `/mb-setup` scaffolds an empty template. Users fill sections through research, experimentation, and iteration.
 
 **How pillars are derived:**
 Each pillar must pass three tests:
@@ -252,7 +252,7 @@ When mining performance data, Skool's dashboard (Settings → Dashboard) provide
 
 ### Mining Suggestions
 
-When running `/think` to analyze Skool performance:
+When running `/mb-think` to analyze Skool performance:
 - Screenshot the Dashboard header (Members, MRR, Conversion, Retention)
 - Screenshot the Members tab (shows churn trends)
 - Screenshot the Cohorts tab (shows retention by signup month)
@@ -264,14 +264,14 @@ When running `/think` to analyze Skool performance:
 
 | Skill | What It Reads |
 |-------|---------------|
-| `/think` | Writes to `content-strategy.md` during codify phase |
-| `/organic` | `content-strategy.md` for pillar alignment, platform format |
-| `/ads` | `content-strategy.md` for topic selection, funnel mapping |
+| `/mb-think` | Writes to `content-strategy.md` during codify phase |
+| `/mb-organic` | `content-strategy.md` for pillar alignment, platform format |
+| `/mb-ads` | `content-strategy.md` for topic selection, funnel mapping |
 | `/newsletter` | `content-strategy.md` for pillar topics, repurposing flow (coming soon) |
-| `/vsl skool` | `funnel/stages.md`, `membership/benefits.md` |
-| `/ads` (congruence) | `funnel/skool-surfaces.md` for ad-to-landing alignment |
-| `/organic` (congruence) | `funnel/skool-surfaces.md` for content-to-landing alignment |
-| `/site` (congruence) | `funnel/skool-surfaces.md` for site-to-Skool alignment |
+| `/mb-vsl skool` | `funnel/stages.md`, `membership/benefits.md` |
+| `/mb-ads` (congruence) | `funnel/skool-surfaces.md` for ad-to-landing alignment |
+| `/mb-organic` (congruence) | `funnel/skool-surfaces.md` for content-to-landing alignment |
+| `/mb-site` (congruence) | `funnel/skool-surfaces.md` for site-to-Skool alignment |
 
 ---
 
@@ -292,9 +292,9 @@ Four levers for personality-driven retention:
 
 ### Practical Implications for Skills
 
-- `/organic` should create content that demonstrates personality, not just teaches
-- `/ads` should feature the founder's voice and perspective, not generic benefit claims
-- `/vsl` Skool scripts should lead with epiphany bridge (personality) not feature stack
+- `/mb-organic` should create content that demonstrates personality, not just teaches
+- `/mb-ads` should feature the founder's voice and perspective, not generic benefit claims
+- `/mb-vsl` Skool scripts should lead with epiphany bridge (personality) not feature stack
 - `soul.md` is not just internal context — it's the retention engine. Rich soul = strong retention.
 - `voice.md` personality markers directly drive content authenticity, which drives retention
 

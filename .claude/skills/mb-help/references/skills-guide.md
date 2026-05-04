@@ -10,8 +10,8 @@ Skills are specialized workflows. Each one does something specific. This guide h
 **Use when:** Beginning a session, unsure what to do next, want Claude to figure out your state.
 
 **What it does:**
-- Pulls latest vip updates (via canonical VIP resolution)
-- Verifies your business repo and vip are connected
+- Pulls latest Main Branch updates
+- Verifies your business repo and Main Branch are connected
 - Checks your setup completeness
 - Routes you to the right skill
 
@@ -284,14 +284,14 @@ When the same skill name exists in multiple locations, Claude uses this priority
 
 1. **Project `.claude/skills/`** (highest priority)
 2. **User `~/.claude/skills/`** (global)
-3. **vip `.claude/skills/`** (shared engine)
+3. **Main Branch `.claude/skills/`** (shared engine)
 
-This means you can override vip skills with your own version if needed.
+This means you can override Main Branch skills with your own version if needed.
 
 | Location | Scope | Example Use |
 |----------|-------|-------------|
 | `your-repo/.claude/skills/` | One project | `/notion-export` for this business |
 | `~/.claude/skills/` | All projects | `/daily-standup` everywhere |
-| `vip/.claude/skills/` | Shared (read-only) | `/mb-ads`, `/mb-think`, `/mb-start` |
+| `mainbranch/.claude/skills/` | Shared (read-only) | `/mb-ads`, `/mb-think`, `/mb-start` |
 
-See [becoming-contributor.md](becoming-contributor.md) to contribute skills back to vip.
+See [becoming-contributor.md](becoming-contributor.md) to contribute skills back to Main Branch.

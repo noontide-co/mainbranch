@@ -11,7 +11,7 @@ Routes to the right framework based on your offer type.
 
 ## Pull Latest Updates
 
-For the canonical vip-resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
+For the canonical engine resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
 
 ---
 

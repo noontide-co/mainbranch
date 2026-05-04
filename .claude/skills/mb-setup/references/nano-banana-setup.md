@@ -31,7 +31,7 @@ Nano Banana generates images from text prompts using Google's Gemini models. In 
 
 ### 2. Add to Environment
 
-Add to `~/.config/vip/env.sh` (created during `/mb-setup` — see Step 4a in `setup/SKILL.md` for full env setup):
+Add to `~/.config/vip/env.sh` (created during `/mb-setup` — see Step 4a in `mb-setup/SKILL.md` for full env setup):
 
 ```bash
 export GOOGLE_API_KEY="your-api-key-here"
@@ -132,8 +132,8 @@ Free tier includes limited image generation. Paid credits scale to hundreds of i
 
 ## See Also
 
-- `think/references/gemini-setup.md` — Gemini research setup (same GOOGLE_API_KEY)
-- `start/references/config-system.md` — Full config file layout (local.yaml, env.sh, config.yaml)
+- `mb-think/references/gemini-setup.md` — Gemini research setup (same GOOGLE_API_KEY)
+- `mb-start/references/config-system.md` — Full config file layout (local.yaml, env.sh, config.yaml)
 
 ## Resources
 
