@@ -13,6 +13,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added `mb connect test <provider>` and `mb connect doctor` so users and
+  onboarding agents can distinguish missing, unvalidated, invalid, and ready
+  provider credentials without printing secret values or raw provider
+  responses. The JSON output now includes safe repair fields such as `state`,
+  `summary`, `repair`, `repair_command`, and `safe_to_share`.
 - Decision doc `decisions/2026-05-03-skill-distribution-and-migration.md`
   records the proposed skill distribution and migration model: keep
   project-local symlink wiring as the v0.2 supported adapter, ship stale
@@ -25,6 +30,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   collide with bundled Main Branch skill names today). Adds a follow-up
   to decide whether to rename bundled skills to a `mb-` prefix before
   the plugin spike lands. Refs #236 and #234.
+
+### Changed
+
+- `mb connect status --json`, `mb doctor`, and `mb status` no longer treat a
+  stored secret ref as provider health. Stored credentials report
+  `unvalidated` until `mb connect test <provider>` succeeds, and repair output
+  names the affected provider plus the next command.
+- GitHub integration health now distinguishes missing `gh`, unauthenticated
+  `gh`, missing GitHub remotes, non-git folders, and ready GitHub repo context
+  in secret-safe status and doctor output.
 
 ## [0.2.3] - 2026-05-03
 

@@ -12,7 +12,6 @@ from __future__ import annotations
 import os
 import shutil
 import socket
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -40,20 +39,10 @@ def _which(name: str) -> str:
 
 
 def _gh_status() -> tuple[bool, str]:
-    if not _which("gh"):
-        return False, "gh not on PATH"
-    try:
-        out = subprocess.run(
-            ["gh", "auth", "status"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if out.returncode == 0:
-            return True, "authenticated"
-        return False, "not authenticated"
-    except subprocess.SubprocessError:
-        return False, "gh probe failed"
+    context = connect_mod.github_context(".")
+    if context["ok"]:
+        return True, "authenticated and GitHub repo context ready"
+    return False, str(context["summary"])
 
 
 def _net() -> tuple[bool, str]:
@@ -227,8 +216,19 @@ def run(path: str) -> dict[str, Any]:
         }
     )
 
-    gh_ok, gh_detail = _gh_status()
-    checks.append({"name": "gh-auth", "ok": gh_ok, "detail": gh_detail})
+    gh_context = connect_mod.github_context(repo)
+    checks.append(
+        {
+            "name": "github-context",
+            "ok": bool(gh_context["ok"]),
+            "detail": gh_context["summary"],
+            "severity": "warn",
+            "state": gh_context["state"],
+            "repair": gh_context["repair"],
+            "repair_command": gh_context["repair_command"],
+            "safe_to_share": True,
+        }
+    )
 
     net_ok, net_detail = _net()
     checks.append({"name": "network", "ok": net_ok, "detail": net_detail})

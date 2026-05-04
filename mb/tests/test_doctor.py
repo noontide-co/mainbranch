@@ -13,7 +13,7 @@ def test_doctor_runs_on_empty_dir(tmp_path: Path) -> None:
     report = run(path=str(tmp_path))
     assert "checks" in report
     names = {c["name"] for c in report["checks"]}
-    assert {"claude-code", "gh-auth", "network", "anti-cloud-backup"}.issubset(names)
+    assert {"claude-code", "github-context", "network", "anti-cloud-backup"}.issubset(names)
     assert "skill-wiring" in names
     assert "mainbranch-version" in names
     assert "repo-layout" in names

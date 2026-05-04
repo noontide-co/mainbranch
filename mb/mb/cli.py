@@ -435,7 +435,11 @@ def doctor_cmd(
 def connect_cmd(
     target: str = typer.Argument(
         "",
-        help="Provider to connect, or `list` / `status`.",
+        help="Provider to connect, or `list` / `status` / `doctor` / `test`.",
+    ),
+    provider: str = typer.Argument(
+        "",
+        help="Provider for subcommands such as `mb connect test <provider>`.",
     ),
     repo: str = typer.Option(".", "--repo", help="Business repo whose metadata is updated."),
     account_label: str = typer.Option("", "--account", "--label", help="Human account label."),
@@ -484,6 +488,30 @@ def connect_cmd(
         else:
             connect_mod.render_status(result)
         raise typer.Exit(0 if result["ok"] else 1)
+    if target == "doctor":
+        result = connect_mod.doctor(repo)
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            connect_mod.render_doctor(result)
+        raise typer.Exit(0 if result["ok"] else 1)
+    if target == "test":
+        if not provider:
+            typer.echo("mb connect test: provider required", err=True)
+            raise typer.Exit(2)
+        try:
+            result = connect_mod.test_provider(provider, repo)
+        except ValueError as exc:
+            typer.echo(f"mb connect test: {exc}", err=True)
+            raise typer.Exit(2) from exc
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            connect_mod.render_test_result(result)
+        raise typer.Exit(0 if result["ok"] else 1)
+    if provider:
+        typer.echo(f"mb connect: unexpected extra argument {provider!r}", err=True)
+        raise typer.Exit(2)
 
     try:
         provider_info = connect_mod.normalize_provider(target)
