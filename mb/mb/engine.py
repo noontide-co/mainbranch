@@ -144,12 +144,7 @@ def _looks_like_engine_root_path(path: Path) -> bool:
 
 def _looks_like_missing_legacy_engine_path(value: str) -> bool:
     parts = {part.lower() for part in Path(value).parts}
-    lowered = value.lower()
-    return (
-        bool(parts & {"mb-vip", "mainbranch", "vip"})
-        or "mainbranch" in lowered
-        or "mb-vip" in lowered
-    )
+    return bool(parts & {"mb-vip", "mainbranch"})
 
 
 def _is_stale_engine_path(value: str, active_root: Path) -> bool:

@@ -237,6 +237,21 @@ def _is_os_metadata_file(path: Path) -> bool:
     return path.name in IGNORED_OS_METADATA_FILES or path.name.startswith("._")
 
 
+def _remove_ignored_metadata_tree(path: Path) -> None:
+    if not path.is_dir():
+        return
+    for child in path.rglob("*"):
+        if child.is_file() and not child.is_symlink() and _is_os_metadata_file(child):
+            child.unlink()
+    for child in sorted(
+        (item for item in path.rglob("*") if item.is_dir()),
+        key=lambda item: len(item.parts),
+        reverse=True,
+    ):
+        if not any(child.iterdir()):
+            child.rmdir()
+
+
 def _ensure_gitignore_plan(repo: Path, plans: list[MigrationPlan]) -> None:
     if not plans:
         return
@@ -298,9 +313,7 @@ def _apply_change(repo: Path, change: PlannedChange) -> None:
         return
     if change.kind == "remove_empty_dir":
         if path.is_dir():
-            for child in path.iterdir():
-                if child.is_file() and not child.is_symlink() and _is_os_metadata_file(child):
-                    child.unlink()
+            _remove_ignored_metadata_tree(path)
             if not any(path.iterdir()):
                 path.rmdir()
                 return

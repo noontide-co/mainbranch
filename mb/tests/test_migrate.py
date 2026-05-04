@@ -158,6 +158,11 @@ def test_migrate_ignores_os_metadata_files(tmp_path: Path) -> None:
     repo = _legacy_repo(tmp_path)
     (repo / "reference" / "offers" / ".DS_Store").write_text("metadata", encoding="utf-8")
     (repo / "reference" / "core" / "._offer.md").write_text("metadata", encoding="utf-8")
+    (repo / "reference" / "offers" / "flagship" / "assets").mkdir()
+    (repo / "reference" / "offers" / "flagship" / "assets" / ".DS_Store").write_text(
+        "metadata",
+        encoding="utf-8",
+    )
 
     result = runner.invoke(app, ["migrate", "--repo", str(repo), "--check", "--json"])
 
@@ -176,6 +181,16 @@ def test_migrate_ignores_os_metadata_files(tmp_path: Path) -> None:
     backup = Path(applied_payload["backup"]["path"])
     assert (backup / "reference" / "offers" / ".DS_Store").exists()
     assert (backup / "reference" / "core" / "._offer.md").exists()
+    assert (backup / "reference" / "offers" / "flagship" / "assets" / ".DS_Store").exists()
+
+
+def test_migrate_diff_rejects_status_subcommand(tmp_path: Path) -> None:
+    repo = _legacy_repo(tmp_path)
+
+    result = runner.invoke(app, ["migrate", "--repo", str(repo), "--diff", "status"])
+
+    assert result.exit_code == 2
+    assert "--diff can only be used with --check" in result.stderr
 
 
 def test_migrate_apply_aborts_before_writes_on_conflict(tmp_path: Path) -> None:

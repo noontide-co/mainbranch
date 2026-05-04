@@ -9,10 +9,12 @@ behaviour tests on the affected modules.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from typer.testing import CliRunner
 
+from mb import __version__
 from mb.cli import app
 
 runner = CliRunner()
@@ -177,8 +179,13 @@ def test_claude_plugin_manifest_points_at_prefixed_skills() -> None:
     """The plugin prototype keeps namespaced skills behind current bridge wiring."""
     manifest_path = Path(__file__).resolve().parents[2] / ".claude-plugin" / "plugin.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    pyproject = (manifest_path.parents[1] / "mb" / "pyproject.toml").read_text(encoding="utf-8")
+    pyproject_version = re.search(r'^version = "([^"]+)"$', pyproject, re.MULTILINE)
 
     assert manifest["name"] == "mainbranch"
+    assert manifest["version"] == __version__
+    assert pyproject_version is not None
+    assert manifest["version"] == pyproject_version.group(1)
     assert manifest["skills"] == "./.claude/skills/"
     assert (manifest_path.parents[1] / ".claude" / "skills" / "mb-start" / "SKILL.md").is_file()
 

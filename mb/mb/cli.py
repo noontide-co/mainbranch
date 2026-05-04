@@ -707,6 +707,9 @@ def migrate_cmd(
     """Run `mb migrate --check` or `mb migrate --apply`; defaults to status."""
     ctx.obj = {"repo": repo}
     if ctx.invoked_subcommand is not None:
+        if diff:
+            typer.echo("mb migrate: --diff can only be used with --check", err=True)
+            raise typer.Exit(2)
         return
     if check and apply_changes:
         typer.echo("mb migrate: choose only one of --check or --apply", err=True)

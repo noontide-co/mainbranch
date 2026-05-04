@@ -218,14 +218,14 @@ Renaming the bundled skills to a `mb-` prefix (`mb-start`, `mb-end`,
 `mb-think`, `mb-organic`, `mb-vsl`, plus `mb-skill-brief-draft`,
 `mb-skill-concept`, `mb-skill-review`) is a small, reversible change
 that closes the collision surface even before plugin packaging lands.
-The cost is one round of user-visible slash command churn (`/mb-start`
+The cost is one round of user-visible slash command churn (`/start`
 becomes `/mb-start`). Plugin packaging would force the same churn
 later (`/mb:start`), so the marginal cost of doing it now is small.
 
 ### Daily-Use UX Cost
 
 The product reason this question is hard: Main Branch's promise to
-non-technical operators is "open Claude Code, type `/mb-start`, you're
+non-technical operators is "open Claude Code, type `/start`, you're
 running." Renaming bundled skills, or moving to plugin namespacing,
 changes the daily ritual. That cost is real and should not be hand-waved.
 
@@ -235,7 +235,7 @@ What changes and what does not:
   `mb doctor`, `mb update`, `mb onboard` — every command at the terminal
   prompt — keeps the names it has today. The renaming question only
   touches in-Claude-Code slash commands.
-- **The slash-command surface picks up extra characters.** `/mb-start`
+- **The slash-command surface picks up extra characters.** `/start`
   becomes either `/mb-start` (prefix, with or without plugin packaging)
   or `/mb:start` (plugin namespace). Three to four extra keystrokes per
   invocation.
@@ -246,19 +246,19 @@ What changes and what does not:
   mostly on first-time users who don't yet know to type the prefix at
   all — which is exactly where onboarding copy can do the work.
 - **Plugin packaging would force the same churn later.** If we keep
-  `/mb-start` now and migrate to plugin packaging in v0.2.5, operators have
+  `/start` now and migrate to plugin packaging in v0.2.5, operators have
   to relearn the slash command then. Doing the rename once, in concert
   with plugin packaging, is one disruption rather than two.
 
 What is honestly unknown:
 
-- **Does Claude Code support a true slash alias** that lets `/mb-start`
+- **Does Claude Code support a true slash alias** that lets `/start`
   resolve to a prefixed or namespaced skill in the absence of a same-named
   shadowing skill? This research pass did not verify a documented alias
   mechanism. Treating "alias works" as an assumption would be exactly
   the kind of unverified runtime claim the OSS operating checklist warns
   against. The plugin spike (#237) should produce smoke evidence on this
-  before we decide whether to keep `/mb-start` as a courtesy.
+  before we decide whether to keep `/start` as a courtesy.
 - **Where third-party non-marketplace installers (`npx skills add`,
   similar) actually write files.** Subsequently confirmed: the dominant
   Vercel-labs `npx skills@latest` installer writes plain non-namespaced
@@ -355,7 +355,7 @@ just means accepting that exposure to Claude Code users outside the
 maintainer's existing audience is harder.
 
 **What this does not decide.** Whether the plugin invocation form is
-`/mb-start`, `/mb-start`, `/mb:start`, or some alias resolves to live runtime
+`/start`, `/mb-start`, `/mb:start`, or some alias resolves to live runtime
 behavior the v0.2.5 spike (#237) must verify. This section commits to
 the channel, not the keystroke count.
 
@@ -420,7 +420,7 @@ below; the praise was set aside.
   plausible but is not directly confirmed by Anthropic's docs. **The
   v0.2.5 plugin spike (#237) must produce smoke evidence that resolves
   this directly**: install a plugin that ships a skill named `start`,
-  verify whether `/mb-start` or only `/mb:start` works, and verify whether
+  verify whether `/start` or only `/mb:start` works, and verify whether
   a skill named `mb-start` inside the same plugin is invoked as
   `/mb-start` or `/mb:mb-start`. Treat any other interpretation as
   unverified.

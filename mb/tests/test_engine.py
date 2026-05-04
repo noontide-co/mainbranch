@@ -95,6 +95,7 @@ def test_link_skills_removes_stale_mainbranch_engine_paths(tmp_path: Path) -> No
     repo = tmp_path / "biz"
     stale_engine = tmp_path / "old-mainbranch"
     other_dir = tmp_path / "other-tools"
+    unrelated_missing = tmp_path / "vip-clients"
     _write_skill(stale_engine, "start")
     (stale_engine / "CHANGELOG.md").write_text("# Changelog\n", encoding="utf-8")
     other_dir.mkdir()
@@ -106,7 +107,8 @@ def test_link_skills_removes_stale_mainbranch_engine_paths(tmp_path: Path) -> No
                 "permissions": {
                     "additionalDirectories": [
                         str(stale_engine),
-                        str(tmp_path / "missing-mb-vip"),
+                        str(tmp_path / "mb-vip"),
+                        str(unrelated_missing),
                         str(other_dir),
                     ]
                 }
@@ -120,10 +122,11 @@ def test_link_skills_removes_stale_mainbranch_engine_paths(tmp_path: Path) -> No
 
     assert result["ok"] is True
     assert str(stale_engine) in result["removed_stale_engine_paths"]
-    assert str(tmp_path / "missing-mb-vip") in result["removed_stale_engine_paths"]
+    assert str(tmp_path / "mb-vip") in result["removed_stale_engine_paths"]
     repaired = json.loads(settings.read_text(encoding="utf-8"))
     dirs = repaired["permissions"]["additionalDirectories"]
     assert dirs[0] == result["engine_root"]
     assert str(stale_engine) not in dirs
-    assert str(tmp_path / "missing-mb-vip") not in dirs
+    assert str(tmp_path / "mb-vip") not in dirs
+    assert str(unrelated_missing) in dirs
     assert str(other_dir) in dirs
