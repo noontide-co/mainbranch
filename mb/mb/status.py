@@ -554,29 +554,82 @@ def _schema() -> dict[str, Any]:
     }
 
 
-def _measurement(repo: Path) -> dict[str, Any]:
-    """Return a compact paid-traffic measurement summary for status consumers."""
+SITE_REPO_PATH_FIELDS = (
+    "site_repo_path",
+    "site_repo",
+    "site_path",
+    "site_repository_path",
+)
 
-    conversion_path = repo / site_mod.CONVERSION_RELATIVE_PATH
-    if not conversion_path.exists():
-        return {
-            "available": False,
-            "state": "missing",
-            "summary": "No paid-traffic site conversion plan found.",
-            "repair": (
-                "Run `/mb-site` for a paid-traffic minisite before checking launch readiness."
-            ),
-            "repair_command": "mb site check",
-            "safe_to_share": True,
-        }
-    result = site_mod.check(repo, business_repo=repo)
+
+def _site_repo_path_values(value: Any) -> list[Any]:
+    if isinstance(value, dict):
+        items: list[Any] = []
+        for key in SITE_REPO_PATH_FIELDS:
+            if key in value:
+                items.append(value[key])
+        return items
+    if isinstance(value, list):
+        return [item for entry in value for item in _site_repo_path_values(entry)]
+    return [value]
+
+
+def _resolve_site_repo_path(repo: Path, value: Any) -> Path | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    raw = value.strip()
+    if re.match(r"^[a-z][a-z0-9+.-]*://", raw, flags=re.IGNORECASE):
+        return None
+    candidate = Path(raw).expanduser()
+    if not candidate.is_absolute():
+        candidate = repo / candidate
+    return candidate.resolve()
+
+
+def _candidate_site_repo_records(repo: Path) -> list[dict[str, Any]]:
+    paths = _relative_markdown_files(repo, "campaigns")
+    paths.extend(path for path in _relative_markdown_files(repo, "core") if path.name == "offer.md")
+    paths.extend(
+        path for path in _relative_markdown_files(repo, "reference/core") if path.name == "offer.md"
+    )
+
+    records: list[dict[str, Any]] = []
+    seen: set[Path] = set()
+    for path in paths:
+        meta = _read_frontmatter(path)
+        candidate_values: list[Any] = []
+        for key in SITE_REPO_PATH_FIELDS:
+            if key in meta:
+                candidate_values.append(meta[key])
+        for nested_key in ("site", "site_record", "measurement", "launch"):
+            if nested_key in meta:
+                candidate_values.extend(_site_repo_path_values(meta[nested_key]))
+
+        for value in candidate_values:
+            site_repo = _resolve_site_repo_path(repo, value)
+            if site_repo is None or site_repo in seen:
+                continue
+            if not (site_repo / site_mod.CONVERSION_RELATIVE_PATH).exists():
+                continue
+            try:
+                source = path.relative_to(repo).as_posix()
+            except ValueError:
+                source = str(path)
+            records.append({"path": site_repo, "source": source})
+            seen.add(site_repo)
+    return records
+
+
+def _measurement_payload(result: dict[str, Any], *, repair_command: str) -> dict[str, Any]:
     return {
         "available": True,
         "state": result["state"],
         "ok": result["ok"],
         "summary": result["summary"],
         "repair": result["repair"],
-        "repair_command": "mb site check",
+        "repair_command": repair_command,
+        "site_repo": result.get("site_repo", ""),
+        "business_repo": result.get("business_repo", ""),
         "facts": {
             "conversion_kind": result["facts"].get("conversion_kind"),
             "expected_events": result["facts"].get("expected_events"),
@@ -586,6 +639,35 @@ def _measurement(repo: Path) -> dict[str, Any]:
         },
         "blocked_count": len(result.get("blocked") or []),
         "manual_count": len(result.get("manual") or []),
+        "safe_to_share": True,
+    }
+
+
+def _measurement(repo: Path) -> dict[str, Any]:
+    """Return a compact paid-traffic measurement summary for status consumers."""
+
+    conversion_path = repo / site_mod.CONVERSION_RELATIVE_PATH
+    if conversion_path.exists():
+        result = site_mod.check(repo, business_repo=repo)
+        return _measurement_payload(result, repair_command="mb site check")
+
+    site_records = _candidate_site_repo_records(repo)
+    if site_records:
+        site_repo = site_records[0]["path"]
+        result = site_mod.check(site_repo, business_repo=repo)
+        payload = _measurement_payload(
+            result,
+            repair_command=f'mb site check "{site_repo}" --business-repo .',
+        )
+        payload["source_record"] = site_records[0]["source"]
+        return payload
+
+    return {
+        "available": False,
+        "state": "missing",
+        "summary": "No paid-traffic site conversion plan found.",
+        "repair": "Run `/mb-site` for a paid-traffic minisite before checking launch readiness.",
+        "repair_command": "mb site check",
         "safe_to_share": True,
     }
 

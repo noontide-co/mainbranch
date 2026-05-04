@@ -229,6 +229,16 @@ def _read_many(paths: list[Path]) -> list[tuple[Path, str]]:
     return items
 
 
+def _has_google_manager_url(text: str, *, script_name: str, gtm_container_id: str) -> bool:
+    if not gtm_container_id:
+        return False
+    pattern = (
+        rf"googletagmanager\.com/{re.escape(script_name)}"
+        rf"\?[^\"'<>\s]*\bid={re.escape(gtm_container_id)}(?:[&#\"'<>\s]|$)"
+    )
+    return bool(re.search(pattern, text, flags=re.IGNORECASE))
+
+
 def _check_html(
     site_repo: Path,
     *,
@@ -256,8 +266,12 @@ def _check_html(
         )
         return evidence, details
 
-    has_gtm_script = "googletagmanager.com/gtm.js" in combined
-    has_gtm_noscript = "googletagmanager.com/ns.html" in combined
+    has_gtm_script = _has_google_manager_url(
+        combined, script_name="gtm.js", gtm_container_id=gtm_container_id
+    )
+    has_gtm_noscript = _has_google_manager_url(
+        combined, script_name="ns.html", gtm_container_id=gtm_container_id
+    )
     has_sri = bool(
         re.search(
             r"<script[^>]+(?:googletagmanager\.com/(?:gtm|gtag)\.js)[^>]+integrity=",
@@ -348,7 +362,9 @@ def _check_html(
                     template_live_ids.append(_relative(site_repo, source_path))
                     break
     details["reusable_template_live_gtm_ids"] = sorted(set(template_live_ids))
-    if template_live_ids:
+    if not gtm_container_id:
+        pass
+    elif template_live_ids:
         evidence.append(
             {
                 "kind": "template_gtm_config",
@@ -448,6 +464,14 @@ def check(
                 "summary": f"{CONVERSION_RELATIVE_PATH.as_posix()} is {conversion_error}.",
             }
         )
+    else:
+        evidence.append(
+            {
+                "kind": "conversion_plan",
+                "state": "passed",
+                "summary": f"Conversion endpoint kind is {conversion_kind or 'unspecified'}.",
+            }
+        )
     if source_error and source_error != "missing":
         evidence.append(
             {
@@ -470,9 +494,9 @@ def check(
     else:
         evidence.append(
             {
-                "kind": "conversion_plan",
-                "state": "passed",
-                "summary": f"Conversion endpoint kind is {conversion_kind or 'unspecified'}.",
+                "kind": "site_source_link",
+                "state": "missing",
+                "summary": f"{SOURCE_RELATIVE_PATH.as_posix()} is missing.",
             }
         )
 

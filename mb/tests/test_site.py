@@ -177,6 +177,84 @@ def test_site_check_blocks_missing_gtm_noscript_event_and_consent(tmp_path: Path
     assert "consent_privacy" in blocked_kinds
 
 
+def test_site_check_keeps_conversion_and_source_link_evidence_distinct(tmp_path: Path) -> None:
+    site = tmp_path / "site"
+    site.mkdir()
+
+    result = runner.invoke(app, ["site", "check", str(site), "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    evidence_by_kind: dict[str, list[dict[str, object]]] = {}
+    for item in payload["evidence"]:
+        evidence_by_kind.setdefault(item["kind"], []).append(item)
+    assert evidence_by_kind["conversion_plan"] == [
+        {
+            "kind": "conversion_plan",
+            "state": "missing",
+            "summary": ".mainbranch/conversion.json is missing.",
+        }
+    ]
+    assert evidence_by_kind["site_source_link"] == [
+        {
+            "kind": "site_source_link",
+            "state": "missing",
+            "summary": ".mainbranch/source.json is missing.",
+        }
+    ]
+
+
+def test_site_check_blocks_wrong_gtm_loader_id(tmp_path: Path) -> None:
+    business = tmp_path / "business"
+    site = tmp_path / "site"
+    init_run(path=str(business), name="Acme")
+    site.mkdir()
+    (business / "core" / "offer.md").write_text(
+        (
+            "---\n"
+            "gtm_container_id: GTM-ABC1234\n"
+            "consent_posture: standard_tag_consent_reviewed\n"
+            "privacy_policy_url: https://example.com/privacy\n"
+            "---\n\n"
+            "# Offer\n"
+        ),
+        encoding="utf-8",
+    )
+    _write_conversion(
+        site,
+        {"kind": "lead_form", "url": "https://tally.so/r/example", "render": "link_out"},
+    )
+    _write_html(site, gtm_id="GTM-OTHER1", events=["mb_cta_click", "mb_form_start"])
+
+    result = runner.invoke(
+        app,
+        ["site", "check", str(site), "--business-repo", str(business), "--json"],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    static_html = next(item for item in payload["evidence"] if item["kind"] == "static_html")
+    assert static_html["state"] == "blocked"
+    assert "head script" in static_html["summary"]
+    assert "body noscript" in static_html["summary"]
+
+
+def test_site_check_skips_template_gtm_config_when_no_container_is_declared(tmp_path: Path) -> None:
+    site = tmp_path / "site"
+    site.mkdir()
+    _write_conversion(
+        site,
+        {"kind": "lead_form", "url": "https://tally.so/r/example", "render": "link_out"},
+    )
+    _write_html(site, events=["mb_cta_click", "mb_form_start"])
+
+    result = runner.invoke(app, ["site", "check", str(site), "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert not any(item["kind"] == "template_gtm_config" for item in payload["evidence"])
+
+
 def test_status_includes_measurement_summary_when_conversion_plan_exists(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -213,3 +291,48 @@ def test_status_includes_measurement_summary_when_conversion_plan_exists(
     assert payload["measurement"]["available"] is True
     assert payload["measurement"]["state"] == "ready_for_operator_review"
     assert payload["measurement"]["facts"]["primary_conversions"] == ["mb_lead_submit"]
+
+
+def test_status_follows_business_repo_site_record_for_measurement(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr("mb.status._which", lambda name: "")
+    business = tmp_path / "business"
+    site = tmp_path / "site"
+    init_run(path=str(business), name="Acme")
+    site.mkdir()
+    (business / "core" / "offer.md").write_text(
+        (
+            "---\n"
+            "gtm_container_id: GTM-ABC1234\n"
+            "google_ads_customer_id: '0000000000'\n"
+            "consent_posture: standard_tag_consent_reviewed\n"
+            "privacy_policy_url: https://example.com/privacy\n"
+            "---\n\n"
+            "# Offer\n"
+        ),
+        encoding="utf-8",
+    )
+    (business / "campaigns" / "paid-site.md").write_text(
+        f"---\nsite_repo_path: {site}\n---\n\n# Paid Site\n",
+        encoding="utf-8",
+    )
+    _write_conversion(
+        site,
+        {
+            "kind": "lead_form",
+            "url": "https://tally.so/r/example",
+            "render": "link_out",
+            "primary_conversions": ["mb_lead_submit"],
+        },
+    )
+    _write_html(site, events=["mb_cta_click", "mb_form_start", "mb_lead_submit"])
+
+    result = runner.invoke(app, ["status", str(business), "--json", "--peek"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["measurement"]["available"] is True
+    assert payload["measurement"]["site_repo"] == str(site.resolve())
+    assert payload["measurement"]["business_repo"] == str(business.resolve())
+    assert payload["measurement"]["source_record"] == "campaigns/paid-site.md"

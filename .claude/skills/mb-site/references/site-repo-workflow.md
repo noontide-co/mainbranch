@@ -32,6 +32,13 @@ claude
 Use this mode to edit site code, review pages, preview, deploy, and run
 readiness checks while reading linked business context.
 
+When `/mb-site` creates or selects a site repo, it should also link Main Branch
+skills into that repo so Claude can discover `/mb-site` there:
+
+```bash
+mb skill link --repo ~/Documents/GitHub/my-offer-site
+```
+
 The site repo must include `.mainbranch/source.json`:
 
 ```json

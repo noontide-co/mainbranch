@@ -108,6 +108,12 @@ claude
 /mb-site
 ```
 
+When creating or selecting the site repo, make sure Main Branch skills are linked there too:
+
+```bash
+mb skill link --repo ~/Documents/GitHub/my-offer-site
+```
+
 ---
 
 ## Prerequisites
@@ -139,7 +145,7 @@ Prefer repo-local links over global config.
 
 - In site repo mode, read `.mainbranch/source.json` first.
 - In business repo mode, inspect the active campaign or offer note for the site repo path/URL and launch status.
-- If neither exists, route to setup mode and create the link files as part of the site creation flow.
+- If neither exists, route to setup mode and create the link files plus project skill links as part of the site creation flow.
 - Treat `~/.mainbranch/sites.json` as a legacy fallback only when no repo-local link exists.
 
 ---
