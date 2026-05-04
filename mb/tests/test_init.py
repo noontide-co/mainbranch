@@ -24,16 +24,16 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert (target / ".gitignore").exists()
     assert (target / ".mb" / "schema_version").read_text(encoding="utf-8") == "0.2\n"
     assert (target / ".claude" / "settings.local.json").exists()
-    assert (target / ".claude" / "skills" / "start" / "SKILL.md").exists()
+    assert (target / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
 
     settings = json.loads((target / ".claude" / "settings.local.json").read_text())
     dirs = settings["permissions"]["additionalDirectories"]
     assert dirs
-    assert (Path(dirs[0]) / ".claude" / "skills" / "start" / "SKILL.md").exists()
+    assert (Path(dirs[0]) / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
 
     gitignore = (target / ".gitignore").read_text()
     assert ".claude/settings.local.json" in gitignore
-    assert ".claude/skills/start" in gitignore
+    assert ".claude/skills/mb-start" in gitignore
     assert ".mb/backups/" in gitignore
     assert ".mb/onboarding.json" in gitignore
     claude_md = (target / "CLAUDE.md").read_text()

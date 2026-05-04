@@ -391,6 +391,33 @@ def _check_cross_refs(
     }
 
 
+def _legacy_frontmatter_repair(repo: Path, error_count: int) -> dict[str, Any] | None:
+    if error_count == 0:
+        return None
+    migrated_markers = [
+        repo / ".mb" / "schema_version",
+        repo / "decisions" / "2026-05-02-mainbranch-v02-path-migration.md",
+    ]
+    has_compat_links = (repo / "reference" / "core").is_symlink() or (
+        repo / "reference" / "offers"
+    ).is_symlink()
+    if not has_compat_links and not any(path.exists() for path in migrated_markers):
+        return None
+    return {
+        "code": "legacy-frontmatter-schema-debt",
+        "message": (
+            "Layout migration can succeed while old markdown files still fail the "
+            "current frontmatter schema. Treat these as legacy content repairs, "
+            "not as evidence that the path migration failed."
+        ),
+        "next_steps": [
+            "Run `mb validate --json` and group failures by missing key or status enum.",
+            "Repair frontmatter in small batches on the migration branch.",
+            "Use `mb validate --cross-refs` after schema errors are down to zero.",
+        ],
+    }
+
+
 def run(
     path: str,
     verbose: bool = False,
@@ -426,6 +453,7 @@ def run(
         "repo": str(repo),
         "strict": strict,
         "cross_refs": cross_ref_report,
+        "legacy_repair": _legacy_frontmatter_repair(repo, error_count),
         "summary": {"errors": error_count, "warnings": warning_count},
     }
 
@@ -456,6 +484,12 @@ def render_human(report: dict[str, Any], verbose: bool = False) -> None:
                     console.print(f"        - {e}")
                 for warning in f.get("warnings", []):
                     console.print(f"        - {warning}")
+    legacy_repair = report.get("legacy_repair")
+    if legacy_repair:
+        console.print("\n[bold yellow]Legacy frontmatter repair[/bold yellow]")
+        console.print(f"  {legacy_repair['message']}")
+        for step in legacy_repair.get("next_steps", []):
+            console.print(f"  - {step}")
     console.print()
     if report["ok"]:
         if report["summary"]["warnings"]:

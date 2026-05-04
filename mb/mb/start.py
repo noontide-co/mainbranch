@@ -124,7 +124,10 @@ def _build_checks(
         "recommended": "warn",
         "unknown": "info",
     }.get(update_severity, "info")
-    return [
+    shadow_summary = wiring.get("shadow_report", {}).get("summary", {})
+    active_shadows = int(shadow_summary.get("active_shadows", 0) or 0)
+    legacy_globals = int(shadow_summary.get("legacy_globals", 0) or 0)
+    checks = [
         {
             "name": "mainbranch_repo",
             "ok": bool(repo_shape["looks_like_mainbranch_repo"]),
@@ -169,10 +172,13 @@ def _build_checks(
             "name": "skill_wiring",
             "ok": bool(wiring["ok"]),
             "severity": "error",
-            "detail": "start skill discoverable"
+            "detail": "mb-start skill discoverable"
             if wiring["ok"]
-            else "Claude Code start skill is not wired",
-            "repair": "Run `mb skill link --repo .` from the business repo.",
+            else "Claude Code mb-start skill is not wired or is shadowed",
+            "repair": (
+                "Run `mb skill repair --repo .`, then `mb skill link --repo .` "
+                "from the business repo."
+            ),
         },
         {
             "name": "install_mode",
@@ -182,6 +188,20 @@ def _build_checks(
             "repair": "Reinstall Main Branch with `pipx install mainbranch` if commands fail.",
         },
     ]
+    if active_shadows or legacy_globals:
+        checks.append(
+            {
+                "name": "skill_shadows",
+                "ok": active_shadows == 0,
+                "severity": "error" if active_shadows else "warn",
+                "detail": (
+                    f"{active_shadows} active personal skill shadow(s), "
+                    f"{legacy_globals} legacy personal skill trap(s)"
+                ),
+                "repair": "Run `mb skill repair --repo .` for details.",
+            }
+        )
+    return checks
 
 
 def _hard_failures(checks: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -199,7 +219,9 @@ def _next_actions(
 ) -> list[str]:
     actions = [str(check["repair"]) for check in checks if not check["ok"] and check["repair"]]
     if handoff_ready:
-        actions.extend([f"Run `{_display_command(repo)}`.", "Then type `/start` in Claude Code."])
+        actions.extend(
+            [f"Run `{_display_command(repo)}`.", "Then type `/mb-start` in Claude Code."]
+        )
     return actions[:6]
 
 
@@ -254,7 +276,7 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "cwd": str(repo_path),
             "argv": ["claude"],
             "display": _display_command(repo_path),
-            "follow_up": "/start",
+            "follow_up": "/mb-start",
         },
         "launch": launch_report,
         "next_actions": _next_actions(repo_path, checks, handoff_ready),
@@ -295,7 +317,7 @@ def render_human(report: dict[str, Any]) -> None:
         + ("[green]found[/green]" if runtime["found"] else "[red]missing[/red]")
     )
     console.print(
-        "[bold]Skills[/bold]  /start "
+        "[bold]Skills[/bold]  /mb-start "
         + ("[green]wired[/green]" if wiring["ok"] else "[red]missing[/red]")
     )
 

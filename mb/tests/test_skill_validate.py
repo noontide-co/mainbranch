@@ -51,10 +51,10 @@ def _patch_engine(monkeypatch: pytest.MonkeyPatch, root: Path) -> None:
 def test_skill_validate_passes_frontmatter_references_and_line_gate(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _skill(tmp_path, "alpha")
+    _skill(tmp_path, "mb-alpha")
     _patch_engine(monkeypatch, tmp_path)
 
-    report = skill_validate_mod.run("alpha")
+    report = skill_validate_mod.run("mb-alpha")
 
     assert report is not None
     assert report["ok"] is True
@@ -64,24 +64,37 @@ def test_skill_validate_passes_frontmatter_references_and_line_gate(
 def test_skill_validate_flags_missing_description(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _skill(tmp_path, "alpha", frontmatter="---\nname: alpha\n---\n")
+    _skill(tmp_path, "mb-alpha", frontmatter="---\nname: mb-alpha\n---\n")
     _patch_engine(monkeypatch, tmp_path)
 
-    report = skill_validate_mod.run("alpha")
+    report = skill_validate_mod.run("mb-alpha")
 
     assert report is not None
     assert report["ok"] is False
     assert "missing key: description" in report["files"][0]["errors"]
 
 
-def test_skill_validate_flags_missing_local_reference(
+def test_skill_validate_flags_unprefixed_bundled_skill(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    skill_root = _skill(tmp_path, "alpha", body="See [missing](references/missing.md).\n")
-    (skill_root / "references" / "details.md").unlink()
+    _skill(tmp_path, "alpha", frontmatter="---\nname: alpha\ndescription: Test skill.\n---\n")
     _patch_engine(monkeypatch, tmp_path)
 
     report = skill_validate_mod.run("alpha")
+
+    assert report is not None
+    assert report["ok"] is False
+    assert "must use the 'mb-' vendor prefix" in report["files"][0]["errors"][0]
+
+
+def test_skill_validate_flags_missing_local_reference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    skill_root = _skill(tmp_path, "mb-alpha", body="See [missing](references/missing.md).\n")
+    (skill_root / "references" / "details.md").unlink()
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-alpha")
 
     assert report is not None
     assert report["ok"] is False
@@ -91,14 +104,14 @@ def test_skill_validate_flags_missing_local_reference(
 def test_skill_validate_checks_reference_file_links(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _skill(tmp_path, "alpha")
+    _skill(tmp_path, "mb-alpha")
     _write(
-        tmp_path / ".claude" / "skills" / "alpha" / "references" / "details.md",
+        tmp_path / ".claude" / "skills" / "mb-alpha" / "references" / "details.md",
         "See [missing](missing-detail.md).\n",
     )
     _patch_engine(monkeypatch, tmp_path)
 
-    report = skill_validate_mod.run("alpha")
+    report = skill_validate_mod.run("mb-alpha")
 
     assert report is not None
     assert report["ok"] is False
@@ -114,12 +127,12 @@ def test_skill_validate_ignores_reference_paths_inside_code_fences(
 ) -> None:
     _skill(
         tmp_path,
-        "alpha",
+        "mb-alpha",
         body="```bash\ncat references/generated-at-runtime.md\n```\n",
     )
     _patch_engine(monkeypatch, tmp_path)
 
-    report = skill_validate_mod.run("alpha")
+    report = skill_validate_mod.run("mb-alpha")
 
     assert report is not None
     assert report["ok"] is True
@@ -128,11 +141,11 @@ def test_skill_validate_ignores_reference_paths_inside_code_fences(
 def test_skill_validate_flags_parent_directory_references(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _skill(tmp_path, "alpha", body="See [other](../beta/SKILL.md).\n")
-    _skill(tmp_path, "beta")
+    _skill(tmp_path, "mb-alpha", body="See [other](../beta/SKILL.md).\n")
+    _skill(tmp_path, "mb-beta")
     _patch_engine(monkeypatch, tmp_path)
 
-    report = skill_validate_mod.run("alpha")
+    report = skill_validate_mod.run("mb-alpha")
 
     assert report is not None
     assert report["ok"] is False
@@ -141,10 +154,10 @@ def test_skill_validate_flags_parent_directory_references(
 
 def test_skill_validate_flags_line_count(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     body = "\n".join(f"line {i}" for i in range(skill_validate_mod.MAX_SKILL_LINES + 1))
-    _skill(tmp_path, "alpha", body=body)
+    _skill(tmp_path, "mb-alpha", body=body)
     _patch_engine(monkeypatch, tmp_path)
 
-    report = skill_validate_mod.run("alpha")
+    report = skill_validate_mod.run("mb-alpha")
 
     assert report is not None
     assert report["ok"] is False
@@ -152,8 +165,8 @@ def test_skill_validate_flags_line_count(tmp_path: Path, monkeypatch: pytest.Mon
 
 
 def test_skill_validate_all_envelope(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    _skill(tmp_path, "alpha")
-    _skill(tmp_path, "beta", body="See [missing](references/missing.md).\n")
+    _skill(tmp_path, "mb-alpha")
+    _skill(tmp_path, "mb-beta", body="See [missing](references/missing.md).\n")
     _patch_engine(monkeypatch, tmp_path)
 
     report = skill_validate_mod.run_all()
@@ -199,17 +212,17 @@ def test_skill_validate_human_output_includes_top_level_errors(
 def test_skill_validate_cli_json_and_exit_codes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _skill(tmp_path, "alpha")
-    _skill(tmp_path, "beta", body="See [missing](references/missing.md).\n")
+    _skill(tmp_path, "mb-alpha")
+    _skill(tmp_path, "mb-beta", body="See [missing](references/missing.md).\n")
     _patch_engine(monkeypatch, tmp_path)
 
-    result = runner.invoke(app, ["skill", "validate", "alpha", "--json"])
+    result = runner.invoke(app, ["skill", "validate", "mb-alpha", "--json"])
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert payload["ok"] is True
     assert payload["summary"]["passed"] == 1
 
-    result = runner.invoke(app, ["skill", "validate", "beta", "--json"])
+    result = runner.invoke(app, ["skill", "validate", "mb-beta", "--json"])
     assert result.exit_code == 1
     payload = json.loads(result.stdout)
     assert payload["ok"] is False

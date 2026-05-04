@@ -246,7 +246,7 @@ def _repo_markers(repo: Path) -> dict[str, bool]:
         "core": (repo / "core").is_dir() or (repo / "reference" / "core").exists(),
         "research": (repo / "research").is_dir(),
         "decisions": (repo / "decisions").is_dir(),
-        "skill_start": (repo / ".claude" / "skills" / "start" / "SKILL.md").is_file(),
+        "skill_start": (repo / ".claude" / "skills" / "mb-start" / "SKILL.md").is_file(),
     }
 
 
@@ -331,7 +331,7 @@ def _next_steps(repo: Path) -> list[str]:
     return [
         f"cd {repo}",
         "claude",
-        "/start",
+        "/mb-start",
     ]
 
 

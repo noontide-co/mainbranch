@@ -36,9 +36,9 @@ def test_onboard_yes_creates_repo_and_reports_next_steps(tmp_path: Path, monkeyp
     assert result["action"] == "created"
     assert result["level"] == "beginner"
     assert (repo / "CLAUDE.md").exists()
-    assert (repo / ".claude" / "skills" / "start" / "SKILL.md").exists()
+    assert (repo / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
     assert result["skill_wiring"]["ok"] is True
-    assert result["next_steps"] == [f"cd {repo.resolve()}", "claude", "/start"]
+    assert result["next_steps"] == [f"cd {repo.resolve()}", "claude", "/mb-start"]
     assert any("Claude Code" in warning for warning in result["warnings"])
     assert any(
         "gh auth login" in warning or "GitHub CLI" in warning for warning in result["warnings"]
@@ -141,7 +141,7 @@ def test_onboard_cli_yes_json_smoke(tmp_path: Path, monkeypatch) -> None:
     payload = json.loads(result.stdout)
     assert payload["ok"] is True
     assert payload["path"] == str(repo.resolve())
-    assert payload["next_steps"][-1] == "/start"
+    assert payload["next_steps"][-1] == "/mb-start"
     assert (repo / ".mb" / "onboarding.json").exists()
     assert payload["onboarding"]["summary"]["status"] == "in_progress"
     assert ".mb/onboarding.json" in (repo / ".gitignore").read_text(encoding="utf-8")

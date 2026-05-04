@@ -94,7 +94,7 @@ def test_plain_escape_hatch_keeps_help_in_tty(monkeypatch: pytest.MonkeyPatch) -
 def test_skill_list_runs() -> None:
     result = runner.invoke(app, ["skill", "list"])
     assert result.exit_code == 0
-    assert "start" in result.stdout.splitlines()
+    assert "mb-start" in result.stdout.splitlines()
 
 
 def test_skill_link_wires_repo(tmp_path) -> None:
@@ -103,7 +103,7 @@ def test_skill_link_wires_repo(tmp_path) -> None:
     result = runner.invoke(app, ["skill", "link", "--repo", str(repo), "--json"])
     assert result.exit_code == 0
     assert (repo / ".claude" / "settings.local.json").exists()
-    assert (repo / ".claude" / "skills" / "start" / "SKILL.md").exists()
+    assert (repo / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
 
 
 def test_init_output_points_to_connected_accounts_guidance(tmp_path) -> None:

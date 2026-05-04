@@ -16,6 +16,7 @@ from mb import engine
 from mb.validate import _check_one, _read_frontmatter
 
 MAX_SKILL_LINES = 500
+SKILL_NAME_PREFIX = "mb-"
 SKILL_SCHEMA: dict[str, Any] = {
     "glob": "SKILL.md",
     "required": ["name", "description"],
@@ -172,6 +173,12 @@ def _validate_skill_at(name: str, skill_root: Path) -> dict[str, Any]:
     line_count = len(text.splitlines())
     frontmatter_result = _check_one(skill_file, SKILL_SCHEMA)
     skill_errors.extend(frontmatter_result["errors"])
+    if not name.startswith(SKILL_NAME_PREFIX):
+        skill_errors.append(
+            f"bundled skill directory {name!r} must use the {SKILL_NAME_PREFIX!r} "
+            "vendor prefix; see GitHub issue #241 and "
+            "decisions/2026-05-03-skill-distribution-and-migration.md"
+        )
 
     fm, fm_err = _read_frontmatter(skill_file)
     if fm_err is None and fm is not None:

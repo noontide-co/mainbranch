@@ -1,4 +1,4 @@
-"""Dry-run gate for `/ads` compliance copy changes."""
+"""Dry-run gate for `/mb-ads` compliance copy changes."""
 
 from __future__ import annotations
 
@@ -232,7 +232,7 @@ def _render_skipped(skipped: list[SkippedChange]) -> str:
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Show `/ads` compliance copy changes before rewriting the source file."
+        description="Show `/mb-ads` compliance copy changes before rewriting the source file."
     )
     parser.add_argument("source", type=Path, help="Ad copy markdown file to review.")
     parser.add_argument("findings", type=Path, help="JSON findings with evidence/fix fields.")

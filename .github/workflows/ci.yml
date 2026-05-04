@@ -128,12 +128,14 @@ jobs:
           python -m zipfile -l "$wheel"
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/py\.typed([[:space:]]|$)' \
             || { echo "::error::py.typed missing from wheel"; exit 1; }
-          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/skills/start/SKILL\.md([[:space:]]|$)' \
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/skills/mb-start/SKILL\.md([[:space:]]|$)' \
             || { echo "::error::bundled skills missing from wheel"; exit 1; }
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/playbooks/ship-bet/SKILL\.md([[:space:]]|$)' \
             || { echo "::error::bundled playbooks missing from wheel"; exit 1; }
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/reference/vip-path-resolution\.md([[:space:]]|$)' \
             || { echo "::error::bundled reference files missing from wheel"; exit 1; }
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude-plugin/plugin\.json([[:space:]]|$)' \
+            || { echo "::error::Claude Code plugin prototype missing from wheel"; exit 1; }
 
       - name: Create fresh venv and install the wheel
         # Fresh venv means no repo sources on sys.path — a genuine
@@ -239,10 +241,10 @@ jobs:
         run: |
           .venv-smoke/bin/mb skill list > skills.txt
           cat skills.txt
-          grep -qx "start" skills.txt \
-            || { echo "::error::mb skill list missing bundled start skill"; exit 1; }
-          grep -qx "think" skills.txt \
-            || { echo "::error::mb skill list missing bundled think skill"; exit 1; }
+          grep -qx "mb-start" skills.txt \
+            || { echo "::error::mb skill list missing bundled mb-start skill"; exit 1; }
+          grep -qx "mb-think" skills.txt \
+            || { echo "::error::mb skill list missing bundled mb-think skill"; exit 1; }
 
       - name: Smoke — packaged bundled skills validate
         run: |
@@ -263,8 +265,8 @@ jobs:
           .venv-smoke/bin/mb init "$repo" --name "Acme Brewing"
           test -f "$repo/.claude/settings.local.json" \
             || { echo "::error::settings.local.json missing"; exit 1; }
-          test -f "$repo/.claude/skills/start/SKILL.md" \
-            || { echo "::error::start skill bridge missing"; exit 1; }
+          test -f "$repo/.claude/skills/mb-start/SKILL.md" \
+            || { echo "::error::mb-start skill bridge missing"; exit 1; }
           .venv-smoke/bin/python - "$repo" <<'PY'
           import json, pathlib, sys
           repo = pathlib.Path(sys.argv[1])
@@ -272,7 +274,7 @@ jobs:
           dirs = settings["permissions"]["additionalDirectories"]
           assert dirs, "additionalDirectories empty"
           root = pathlib.Path(dirs[0])
-          assert (root / ".claude/skills/start/SKILL.md").is_file(), root
+          assert (root / ".claude/skills/mb-start/SKILL.md").is_file(), root
           assert (root / ".claude/reference/vip-path-resolution.md").is_file(), root
           PY
 
@@ -283,8 +285,8 @@ jobs:
           cat onboard.json
           test -f "$repo/CLAUDE.md" \
             || { echo "::error::CLAUDE.md missing after onboard"; exit 1; }
-          test -f "$repo/.claude/skills/start/SKILL.md" \
-            || { echo "::error::start skill bridge missing after onboard"; exit 1; }
+          test -f "$repo/.claude/skills/mb-start/SKILL.md" \
+            || { echo "::error::mb-start skill bridge missing after onboard"; exit 1; }
           .venv-smoke/bin/python - "$repo" <<'PY'
           import json, pathlib, sys
 
@@ -317,7 +319,7 @@ jobs:
           assert report["repo"]["looks_like_mainbranch_repo"] is True
           assert report["runtime"]["skill_wiring"]["ok"] is True
           assert report["command"]["cwd"] == str(repo.resolve())
-          assert report["command"]["follow_up"] == "/start"
+          assert report["command"]["follow_up"] == "/mb-start"
           assert report["launch"]["attempted"] is False
           PY
 

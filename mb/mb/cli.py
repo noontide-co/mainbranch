@@ -157,7 +157,7 @@ def init_cmd(
             typer.echo("next:")
             typer.echo(f"  cd {result['path']}")
             typer.echo("  claude")
-            typer.echo("  /start")
+            typer.echo("  /mb-start")
             typer.echo("")
             typer.echo("connected accounts:")
             typer.echo(
@@ -641,7 +641,7 @@ def graph_cmd(
 def think_cmd(
     topic: str = typer.Argument(..., help="Topic to think about."),
 ) -> None:
-    """Print the /think invocation hint (run inside Claude Code for full flow)."""
+    """Print the /mb-think invocation hint (run inside Claude Code for full flow)."""
     think_mod.run(topic=topic)
 
 
@@ -697,13 +697,22 @@ def migrate_cmd(
     repo: str = typer.Option(".", "--repo", help="Business repo to migrate."),
     check: bool = typer.Option(False, "--check", help="Dry-run pending migrations."),
     apply_changes: bool = typer.Option(False, "--apply", help="Apply pending migrations."),
+    diff: bool = typer.Option(
+        False,
+        "--diff",
+        help="With --check, include the full unified diff. May print private repo content.",
+    ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Run `mb migrate --check` or `mb migrate --apply`; defaults to status."""
+    ctx.obj = {"repo": repo}
     if ctx.invoked_subcommand is not None:
         return
     if check and apply_changes:
         typer.echo("mb migrate: choose only one of --check or --apply", err=True)
+        raise typer.Exit(2)
+    if diff and not check:
+        typer.echo("mb migrate: --diff can only be used with --check", err=True)
         raise typer.Exit(2)
     if apply_changes:
         result = migrate_mod.apply(repo)
@@ -713,7 +722,7 @@ def migrate_cmd(
             migrate_mod.render_apply(result)
         raise typer.Exit(0 if result["ok"] else 1)
     if check:
-        result = migrate_mod.check(repo)
+        result = migrate_mod.check(repo, include_diff=diff)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
@@ -730,11 +739,13 @@ def migrate_cmd(
 
 @migrate_app.command("status")
 def migrate_status_cmd(
-    repo: str = typer.Option(".", "--repo", help="Business repo to inspect."),
+    ctx: typer.Context,
+    repo: str | None = typer.Option(None, "--repo", help="Business repo to inspect."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Show current schema version and pending migrations."""
-    result = migrate_mod.status(repo)
+    root_repo = (ctx.obj or {}).get("repo", ".") if isinstance(ctx.obj, dict) else "."
+    result = migrate_mod.status(repo or root_repo)
     if json_out:
         typer.echo(json.dumps(result, indent=2))
     else:
@@ -743,7 +754,7 @@ def migrate_status_cmd(
 
 @skill_app.command("path")
 def skill_path_cmd(
-    name: str = typer.Argument(..., help="Skill name (e.g. 'site')."),
+    name: str = typer.Argument(..., help="Skill name (e.g. 'mb-site')."),
 ) -> None:
     """Print the on-disk path to a bundled skill."""
     from mb.resolve import skill_path
@@ -766,7 +777,7 @@ def skill_list_cmd() -> None:
 
 @skill_app.command("validate")
 def skill_validate_cmd(
-    name: str | None = typer.Argument(None, help="Skill name (e.g. 'site')."),
+    name: str | None = typer.Argument(None, help="Skill name (e.g. 'mb-site')."),
     all_skills: bool = typer.Option(False, "--all", help="Validate every bundled skill."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
@@ -856,12 +867,59 @@ def skill_link_cmd(
             if result["skipped"]:
                 typer.echo(f"  · {len(result['skipped'])} already wired")
             typer.echo("")
-            typer.echo("you're set — run `claude` and then /start.")
+            typer.echo("you're set — run `claude` and then /mb-start.")
         else:
             typer.echo("could not link Main Branch skills:", err=True)
             for error in result["errors"]:
                 typer.echo(f"  - {error}", err=True)
             raise typer.Exit(1)
+
+
+@skill_app.command("repair")
+def skill_repair_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo to inspect."),
+    apply_changes: bool = typer.Option(
+        False,
+        "--apply",
+        help="Move provably stale Main Branch personal skill links to a timestamped backup.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Inspect or repair personal Claude Code skills that shadow Main Branch."""
+    from mb.engine import inspect_personal_skill_conflicts
+
+    result = inspect_personal_skill_conflicts(repo, apply=apply_changes)
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        summary = result["summary"]
+        typer.echo(f"checked personal Claude Code skills: {result['personal_skills_dir']}")
+        if summary["findings"] == 0:
+            typer.echo("no personal skill shadows or legacy Main Branch skill traps found.")
+        else:
+            typer.echo(
+                f"found {summary['findings']} issue(s): "
+                f"{summary['active_shadows']} active shadow(s), "
+                f"{summary['legacy_globals']} legacy command trap(s)."
+            )
+            for finding in result["findings"]:
+                typer.echo("")
+                typer.echo(f"- {finding['name']} ({finding['classification']})")
+                typer.echo(f"  path: {finding['global_path']}")
+                if finding["global_target"]:
+                    typer.echo(f"  target: {finding['global_target']}")
+                if finding["safe_to_repair"]:
+                    if finding["repaired"]:
+                        typer.echo(f"  moved to: {finding['backup_path']}")
+                    else:
+                        typer.echo("  safe repair: run `mb skill repair --repo . --apply`")
+                else:
+                    typer.echo("  not changed: this is not provably a stale Main Branch link")
+        if not apply_changes and summary["repairable"]:
+            typer.echo("")
+            typer.echo("To move stale Main Branch symlinks to backup:")
+            typer.echo("  mb skill repair --repo . --apply")
+    raise typer.Exit(0 if result["ok"] else 1)
 
 
 def _entry() -> None:

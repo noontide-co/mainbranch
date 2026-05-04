@@ -1,0 +1,17 @@
+{
+  "name": "mainbranch",
+  "version": "0.2.3",
+  "description": "Main Branch Claude Code skills for running a business from markdown files in git.",
+  "author": {
+    "name": "Noontide"
+  },
+  "repository": "https://github.com/noontide-co/mainbranch",
+  "license": "MIT",
+  "keywords": [
+    "mainbranch",
+    "business-as-files",
+    "claude-code",
+    "skills"
+  ],
+  "skills": "./.claude/skills/"
+}

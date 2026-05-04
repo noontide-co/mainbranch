@@ -254,20 +254,39 @@ def run(path: str) -> dict[str, Any]:
 
     wiring = link_status(repo)
     wiring_ok = bool(wiring["ok"])
+    shadow_summary = wiring.get("shadow_report", {}).get("summary", {})
+    active_shadows = int(shadow_summary.get("active_shadows", 0) or 0)
+    legacy_globals = int(shadow_summary.get("legacy_globals", 0) or 0)
     checks.append(
         {
             "name": "skill-wiring",
             "ok": wiring_ok,
             "detail": (
-                f"start skill linked via {wiring['engine_root']}"
+                f"mb-start skill linked via {wiring['engine_root']}"
                 if wiring_ok
-                else "Claude Code skill links missing. Run `mb skill link --repo .`."
+                else (
+                    "Claude Code skill links missing or shadowed. Run "
+                    "`mb skill repair --repo .`, then `mb skill link --repo .`."
+                )
             ),
             "severity": "ok"
             if wiring_ok
             else ("warn" if not (repo / "CLAUDE.md").exists() else "error"),
         }
     )
+    if active_shadows or legacy_globals:
+        checks.append(
+            {
+                "name": "skill-shadowing",
+                "ok": active_shadows == 0,
+                "detail": (
+                    f"{active_shadows} active personal skill shadow(s), "
+                    f"{legacy_globals} legacy personal skill trap(s). "
+                    "Run `mb skill repair --repo .` for details."
+                ),
+                "severity": "error" if active_shadows else "warn",
+            }
+        )
 
     checks.append(_mainbranch_version_check(update))
     skill_validation = validate_all_skills()

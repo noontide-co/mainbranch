@@ -193,7 +193,7 @@ def status(repo: str | Path = ".") -> dict[str, Any]:
     return _base_envelope(target, "status")
 
 
-def check(repo: str | Path = ".") -> dict[str, Any]:
+def check(repo: str | Path = ".", *, include_diff: bool = False) -> dict[str, Any]:
     """Plan pending migrations without writing files."""
     target = Path(repo).resolve()
     result = _base_envelope(target, "check")
@@ -205,7 +205,15 @@ def check(repo: str | Path = ".") -> dict[str, Any]:
     result["plan"] = {
         "has_changes": any(plan.has_changes for plan in plans),
         "migrations": [_plan_dict(plan) for plan in plans],
-        "diff": _unified_diff(target, plans, include_marker=bool(pending)),
+        "diff_included": include_diff,
+        "diff": _unified_diff(target, plans, include_marker=bool(pending))
+        if include_diff
+        else "",
+        "privacy_note": (
+            "Full file diffs are hidden by default because legacy business repos "
+            "can contain private strategy, proof, and offer details. Re-run with "
+            "`--diff` only when the output will stay local."
+        ),
         "errors": errors,
     }
     result["errors"] = errors
@@ -302,7 +310,7 @@ def _apply_change(repo: Path, change: PlannedChange) -> None:
 def apply(repo: str | Path = ".") -> dict[str, Any]:
     """Apply pending migrations after creating a repo-local backup."""
     target = Path(repo).resolve()
-    result = check(target)
+    result = check(target, include_diff=False)
     result["action"] = "apply"
     plans = [
         migrations.plan_for(info, module, target) for info, module in pending_migrations(target)
@@ -366,6 +374,19 @@ def render_check(result: dict[str, Any]) -> None:
     diff = str(plan.get("diff", ""))
     if diff:
         print(diff, end="")
+    elif plan.get("has_changes"):
+        print("pending migration changes:")
+        for migration in plan.get("migrations", []):
+            info = migration["migration"]
+            print(f"  {info['id']} {info['name']} ({info['from_version']} -> {info['to_version']})")
+            for change in migration.get("changes", []):
+                detail = change.get("path") or change.get("target") or change.get("source")
+                if change.get("kind") == "move_file":
+                    detail = f"{change.get('source')} -> {change.get('target')}"
+                print(f"    - {change.get('kind')}: {detail}")
+        print()
+        print(plan.get("privacy_note", "Full diffs are hidden by default."))
+        print("Run `mb migrate --check --diff` to print the full unified diff locally.")
     else:
         print("no migrations pending")
 

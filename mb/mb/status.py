@@ -63,7 +63,7 @@ def _looks_like_mainbranch_repo(repo: Path) -> dict[str, Any]:
         "core": (repo / "core").is_dir() or (repo / "reference" / "core").exists(),
         "research": (repo / "research").is_dir(),
         "decisions": (repo / "decisions").is_dir(),
-        "skill_wiring": (repo / ".claude" / "skills" / "start" / "SKILL.md").is_file(),
+        "skill_wiring": (repo / ".claude" / "skills" / "mb-start" / "SKILL.md").is_file(),
     }
     required_shape_count = sum(bool(markers[name]) for name in ("core", "research", "decisions"))
     looks_like = bool(markers["claude_md"] and required_shape_count >= 2)
@@ -312,7 +312,7 @@ def _runtime(repo: Path) -> dict[str, Any]:
             **wiring,
             "repair": ""
             if wiring["ok"]
-            else "Run `mb skill link --repo .` from the business repo.",
+            else "Run `mb skill repair --repo .`, then `mb skill link --repo .`.",
         },
     }
 
@@ -383,7 +383,7 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
     if not report["github"]["authenticated"]:
         next_actions.append("Run `gh auth login` to include assigned issues and shipped PRs.")
     if not next_actions:
-        next_actions.append("Run `claude` in this repo, then `/start`.")
+        next_actions.append("Run `claude` in this repo, then `/mb-start`.")
 
     percent = round((score / possible) * 100) if possible else 0
     if percent >= 85:

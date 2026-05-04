@@ -28,6 +28,11 @@ LEGACY_MOVES = (
     ("reference/core", "core"),
     ("reference/offers", "core/offers"),
 )
+IGNORED_METADATA_FILES = {
+    ".DS_Store",
+    "Thumbs.db",
+    "Desktop.ini",
+}
 DECISION_PATH = "decisions/2026-05-02-mainbranch-v02-path-migration.md"
 DECISION_CONTENT = """\
 ---
@@ -72,7 +77,15 @@ def _bytes_equal(left: Path, right: Path) -> bool:
 def _relative_files(root: Path) -> list[Path]:
     if not root.exists() or root.is_symlink():
         return []
-    return sorted(path for path in root.rglob("*") if path.is_file() and not path.is_symlink())
+    return sorted(
+        path
+        for path in root.rglob("*")
+        if path.is_file() and not path.is_symlink() and not _is_metadata_file(path)
+    )
+
+
+def _is_metadata_file(path: Path) -> bool:
+    return path.name in IGNORED_METADATA_FILES or path.name.startswith("._")
 
 
 def _plan_move_tree(

@@ -43,7 +43,7 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     assert report["runtime"]["skill_wiring"]["ok"] is True
     assert report["command"]["argv"] == ["claude"]
     assert report["command"]["display"].endswith(" && claude")
-    assert report["command"]["follow_up"] == "/start"
+    assert report["command"]["follow_up"] == "/mb-start"
     assert report["launch"]["requested"] is False
     assert "update" in report
 

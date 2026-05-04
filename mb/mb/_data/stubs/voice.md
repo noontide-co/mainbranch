@@ -5,7 +5,7 @@ status: stub
 
 # Voice — public stub
 
-This is the public stub. It's enough to walk a /site or /ads flow end-to-end,
+This is the public stub. It's enough to walk a /mb-site or /mb-ads flow end-to-end,
 but it does NOT sound like Devon (or your brand). To use the curated voice
 corpus, subscribe at **https://mainbranch.io/run**.
 

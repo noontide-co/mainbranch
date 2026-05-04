@@ -52,6 +52,22 @@ def test_validate_flags_bad_status_enum(tmp_path: Path) -> None:
     assert report["ok"] is False
 
 
+def test_validate_explains_legacy_frontmatter_debt_after_migration(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "decisions" / "2026-04-29-legacy.md",
+        "---\ndate: 2026-04-29\nstatus: pending\n---\n# legacy\n",
+    )
+    (tmp_path / ".mb").mkdir()
+    (tmp_path / ".mb" / "schema_version").write_text("0.2\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["validate", str(tmp_path), "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["legacy_repair"]["code"] == "legacy-frontmatter-schema-debt"
+    assert "not as evidence that the path migration failed" in payload["legacy_repair"]["message"]
+
+
 def test_validate_handles_no_frontmatter(tmp_path: Path) -> None:
     _write(tmp_path / "decisions" / "2026-04-29-naked.md", "no frontmatter here\n")
     report = run(path=str(tmp_path))

@@ -21,6 +21,7 @@ ENGINE_SUBDIRS = (
 
 
 def _copy_generated_data(target_root: Path) -> None:
+    engine_root = target_root / "mb" / "_engine"
     engine_claude = target_root / "mb" / "_engine" / ".claude"
     for name in ENGINE_SUBDIRS:
         source = REPO_ROOT / ".claude" / name
@@ -34,6 +35,12 @@ def _copy_generated_data(target_root: Path) -> None:
             target,
             ignore=shutil.ignore_patterns("__pycache__", ".DS_Store"),
         )
+    plugin_source = REPO_ROOT / ".claude-plugin"
+    if plugin_source.exists():
+        plugin_target = engine_root / ".claude-plugin"
+        if plugin_target.exists():
+            shutil.rmtree(plugin_target)
+        shutil.copytree(plugin_source, plugin_target)
 
 
 class build_py(_build_py):

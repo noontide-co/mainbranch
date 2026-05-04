@@ -8,6 +8,7 @@ behaviour tests on the affected modules.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -56,7 +57,7 @@ def test_think_command_prints_hint() -> None:
     """`mb think <topic>` prints the invocation hint without crashing."""
     result = runner.invoke(app, ["think", "ad-strategy"])
     assert result.exit_code == 0
-    assert "/think" in result.stdout
+    assert "/mb-think" in result.stdout
     assert "ad-strategy" in result.stdout
 
 
@@ -169,7 +170,17 @@ def test_skill_list_command_runs() -> None:
     """`mb skill list` finds bundled skills in source checkouts."""
     result = runner.invoke(app, ["skill", "list"])
     assert result.exit_code == 0
-    assert "start" in result.stdout.splitlines()
+    assert "mb-start" in result.stdout.splitlines()
+
+
+def test_claude_plugin_manifest_points_at_prefixed_skills() -> None:
+    """The plugin prototype keeps namespaced skills behind current bridge wiring."""
+    manifest_path = Path(__file__).resolve().parents[2] / ".claude-plugin" / "plugin.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest["name"] == "mainbranch"
+    assert manifest["skills"] == "./.claude/skills/"
+    assert (manifest_path.parents[1] / ".claude" / "skills" / "mb-start" / "SKILL.md").is_file()
 
 
 def test_main_help_describes_engine() -> None:
