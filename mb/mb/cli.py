@@ -21,6 +21,7 @@ from mb import doctor as doctor_mod
 from mb import educational as educational_mod
 from mb import graph as graph_mod
 from mb import init as init_mod
+from mb import issue as issue_mod
 from mb import migrate as migrate_mod
 from mb import onboard as onboard_mod
 from mb import resolve as resolve_mod
@@ -65,6 +66,13 @@ onboard_app = typer.Typer(
     invoke_without_command=True,
 )
 app.add_typer(onboard_app, name="onboard")
+
+issue_app = typer.Typer(
+    name="issue",
+    help="Draft and open privacy-safe GitHub issues.",
+    no_args_is_help=True,
+)
+app.add_typer(issue_app, name="issue")
 
 CONNECT_METADATA_OPTION = typer.Option(
     [],
@@ -428,7 +436,125 @@ def doctor_cmd(
         typer.echo(json.dumps(report, indent=2))
     else:
         doctor_mod.render_human(report)
+        if not report["ok"]:
+            typer.echo(
+                "\nIf this should become a public task, run "
+                "`mb issue draft bug --command 'mb doctor' --what-happened '<summary>'` "
+                "after removing private details."
+            )
     raise typer.Exit(0 if report["ok"] else 1)
+
+
+@issue_app.command("draft")
+def issue_draft_cmd(
+    kind: str = typer.Argument("bug", help="Issue shape: bug, feature, or question."),
+    repo: str = typer.Option(".", "--repo", help="Business repo where the draft is stored."),
+    title: str = typer.Option("", "--title", help="Issue title. Prefix is added by template."),
+    command: str = typer.Option("", "--command", help="Command or skill that failed."),
+    what_happened: str = typer.Option(
+        "",
+        "--what-happened",
+        "--happened",
+        help="Actual behavior or error output.",
+    ),
+    expected: str = typer.Option("", "--expected", help="Expected behavior."),
+    diagnostics: str = typer.Option("", "--diagnostics", help="Extra diagnostic text to scrub."),
+    diagnostics_file: str = typer.Option(
+        "",
+        "--diagnostics-file",
+        help="Read extra diagnostics from a local file, then scrub them.",
+    ),
+    problem: str = typer.Option("", "--problem", help="Feature request problem statement."),
+    surface: str = typer.Option(
+        "Other / not sure",
+        "--surface",
+        help="Feature surface: CLI subcommand, Skill, Both, or Other / not sure.",
+    ),
+    proposal: str = typer.Option("", "--proposal", help="Feature request proposal."),
+    alternatives: str = typer.Option("", "--alternatives", help="Alternatives considered."),
+    related: str = typer.Option("", "--related", help="Related issues or PRs."),
+    question: str = typer.Option("", "--question", help="Question to ask."),
+    context: str = typer.Option("", "--context", help="Context for a question."),
+    tried: str = typer.Option("", "--tried", help="What you have tried."),
+    include_doctor: bool = typer.Option(
+        True,
+        "--doctor/--no-doctor",
+        help="For bug drafts, include scrubbed `mb doctor --json` output.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Create a local, scrubbed issue draft under .mb/issue-drafts/."""
+    diagnostics_text = diagnostics
+    if diagnostics_file:
+        try:
+            diagnostics_text = Path(diagnostics_file).read_text(encoding="utf-8")
+        except OSError as exc:
+            typer.echo(f"mb issue draft: could not read diagnostics file: {exc}", err=True)
+            raise typer.Exit(2) from exc
+    fields = {
+        "command": command,
+        "happened": what_happened,
+        "expected": expected,
+        "diagnostics": diagnostics_text,
+        "problem": problem,
+        "surface": surface,
+        "proposal": proposal,
+        "alternatives": alternatives,
+        "related": related,
+        "question": question,
+        "context": context,
+        "tried": tried,
+    }
+    try:
+        result = issue_mod.create_draft(
+            repo=repo,
+            kind=kind,
+            title=title,
+            fields=fields,
+            include_doctor=include_doctor,
+        )
+    except ValueError as exc:
+        typer.echo(f"mb issue draft: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        typer.echo(f"drafted {result['kind']} issue: {result['relative_path']}")
+        typer.echo("review it before submitting; drafts are local and gitignored by default.")
+        if result["redactions"]:
+            summary = ", ".join(f"{key}={value}" for key, value in result["redactions"].items())
+            typer.echo(f"redactions: {summary}")
+        typer.echo("next:")
+        typer.echo(f"  {result['next_command']} --yes")
+
+
+@issue_app.command("open")
+def issue_open_cmd(
+    draft: str = typer.Argument(..., help="Draft markdown file from `mb issue draft`."),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Submit with gh after you have reviewed the draft.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Open a reviewed issue draft through gh, or print a manual fallback."""
+    try:
+        result = issue_mod.open_draft(draft, yes=yes)
+    except ValueError as exc:
+        typer.echo(f"mb issue open: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    elif result.get("submitted"):
+        typer.echo(f"opened issue: {result['url']}")
+    else:
+        typer.echo("issue not submitted.")
+        typer.echo(result["reason"])
+        typer.echo("manual fallback:")
+        for step in result["manual_steps"]:
+            typer.echo(f"  - {step}")
+    raise typer.Exit(0 if result["ok"] else 1)
 
 
 @app.command("connect")

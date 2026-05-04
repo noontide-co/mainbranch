@@ -43,6 +43,7 @@ node_modules/
 .venv/
 .mb/backups/
 .mb/onboarding.json
+.mb/issue-drafts/
 """
 
 

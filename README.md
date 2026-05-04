@@ -154,6 +154,8 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb status` | Show a local-first daily briefing: repo health, runtime wiring, recent decisions/research/git activity, and GitHub tasks when `gh` is authenticated. |
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
 | `mb connect` | Register provider credentials, test provider health, and inspect repair-safe integration status without committing secrets. |
+| `mb issue draft` | Create a local, privacy-scrubbed GitHub issue draft under `.mb/issue-drafts/` for bugs, feature gaps, or questions. |
+| `mb issue open` | Submit a reviewed issue draft with `gh issue create`, or print a browser/manual fallback when GitHub CLI is unavailable. |
 | `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
 | `mb graph` | Build a repo graph index from frontmatter links, wikilinks, and entity tags. Emits Graphviz DOT by default, `--json` for agents/dashboards, and `--open` to render a PNG view. |
 | `mb think <topic>` | Print the `/mb-think` invocation hint. Run inside Claude Code for the full flow. |
@@ -336,6 +338,8 @@ For platform support and security reporting, see [SUPPORT.md](SUPPORT.md), [SECU
 - "Skills aren't working" — run `mb skill link --repo .` from your business repo to repair bridge symlinks, then restart Claude. If still broken, run `/mb-setup`.
 - "Output sounds generic" — add more detail to your reference files, especially `core/voice.md`.
 - "I edited Main Branch but can't push" — that's expected for most users. Main Branch is the shared engine. Your business data goes in YOUR repo.
+
+**Turn friction into a public issue:** run `mb issue draft bug --command "mb doctor" --what-happened "..."` from your business repo. Review the local draft under `.mb/issue-drafts/`, then run `mb issue open <draft> --yes` when it is safe to submit. See [docs/issue-drafting.md](docs/issue-drafting.md).
 
 ---
 
