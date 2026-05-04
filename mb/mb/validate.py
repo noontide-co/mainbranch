@@ -278,7 +278,7 @@ def _resolve_wikilink(
             repo_direct.relative_to(repo)
         except ValueError:
             continue
-        if repo_direct.exists():
+        if repo_direct.is_file() and repo_direct.suffix == ".md":
             return repo_direct, False
     matches = files_by_stem.get(Path(clean).stem, [])
     if len(matches) == 1:
