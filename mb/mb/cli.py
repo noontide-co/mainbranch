@@ -17,7 +17,6 @@ import typer
 
 from mb import __version__
 from mb import connect as connect_mod
-from mb import dashboard as dashboard_mod
 from mb import doctor as doctor_mod
 from mb import educational as educational_mod
 from mb import graph as graph_mod
@@ -813,36 +812,6 @@ def similar_bets_cmd(
         typer.echo(json.dumps(report, indent=2))
     else:
         similar_bets_mod.render_human(report)
-
-
-@app.command("dashboard")
-def dashboard_cmd(
-    repo: str = typer.Option(".", "--repo", help="Business repo to view."),
-    host: str = typer.Option("127.0.0.1", "--host", help="Local host to bind."),
-    port: int = typer.Option(8765, "--port", min=0, help="Local port; use 0 for ephemeral."),
-    open_browser: bool = typer.Option(False, "--open", help="Open the dashboard in a browser."),
-    allow_lan: bool = typer.Option(
-        False,
-        "--allow-lan",
-        help="Allow binding a non-loopback host. This can expose local repo data.",
-    ),
-    json_out: bool = typer.Option(False, "--json", help="Print dashboard data instead of serving."),
-) -> None:
-    """Start a read-only local dashboard over existing Main Branch facts."""
-    if json_out:
-        typer.echo(json.dumps(dashboard_mod.build_data(repo), indent=2))
-        return
-    try:
-        dashboard_mod.serve(
-            repo=repo,
-            host=host,
-            port=port,
-            open_browser=open_browser,
-            allow_lan=allow_lan,
-        )
-    except ValueError as exc:
-        typer.echo(f"mb dashboard: {exc}", err=True)
-        raise typer.Exit(2) from exc
 
 
 @app.command("think")

@@ -39,10 +39,7 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `mb status --json --peek`.
 - Added `mb similar-bets <thesis>` for deterministic bets memory over
   `bets/*.md` plus graduated/dead offer context, with JSON shaped for agent,
-  ranker, and dashboard consumers. Refs #143.
-- Added `mb dashboard` as an explicit read-only local dashboard spike over
-  existing status, graph, GitHub, `.mb/`, and bets data contracts, with
-  loopback-only serving by default. Refs #189.
+  ranker, and future consumers. Refs #143.
 
 ### Changed
 
