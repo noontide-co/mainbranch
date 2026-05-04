@@ -180,14 +180,19 @@ Full list: `mb --help`.
 
 `mb connect` is the local-first foundation for integrations such as Google,
 Meta, Cloudflare, Postiz, Apify, Beancount, and transcription providers.
+Use `mb connect plan` when you are not sure what to connect first; it explains
+GitHub, Cloudflare, Google/Workspace, Meta Ads, and Apify as numbered business
+choices with the current readiness state and exact next command.
 
 ```bash
+mb connect plan
 mb connect list
 printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata account_id=...
 mb connect test cloudflare
 mb connect doctor
 mb connect meta --from-env
 mb connect status --json
+mb educational provider-readiness
 ```
 
 Secrets are stored outside the business repo, using the macOS Keychain when

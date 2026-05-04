@@ -28,6 +28,18 @@ mb status --json --peek
    - cited signal summaries
 5. Then summarize only the sections that matter for the operator's question.
    Do not re-run shell probes that duplicate status facts.
+6. If provider readiness is the question, use `integrations.github` and
+   `integrations.providers` from status first. If the operator needs choices or
+   repair commands, run:
+
+```bash
+mb connect plan
+mb connect doctor --json
+```
+
+Summarize GitHub, Cloudflare, Google/Workspace, Meta Ads, and Apify as numbered
+business choices. Use the CLI's `next_command` or `repair_command`; do not ask
+the operator to paste tokens into files or public issue text.
 
 ## Mutating The Last-Check Marker
 

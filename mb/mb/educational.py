@@ -44,14 +44,32 @@ def load(topic: str) -> str | None:
     return None
 
 
+def topics() -> list[str]:
+    """Return known educational topics from active engine and bundled data."""
+
+    names: set[str] = set()
+    engine = _engine_path()
+    if engine is not None:
+        names.update(path.stem for path in engine.glob("*.md"))
+    try:
+        ref = resources.files("mb").joinpath("_data").joinpath("educational")
+        names.update(
+            path.name.removesuffix(".md") for path in ref.iterdir() if path.name.endswith(".md")
+        )
+    except (FileNotFoundError, ModuleNotFoundError, AttributeError):
+        pass
+    return sorted(names)
+
+
 def run(topic: str) -> None:
     """Print the educational file or an honest error."""
     body = load(topic)
     if body is None:
+        available = ", ".join(topics()) or (
+            "anti-cloud-backup, cloudflare-vs-vercel, github-vs-gdocs, upgrading-mainbranch"
+        )
         print(
-            f"educational topic not found: {topic}\n"
-            "Try one of: anti-cloud-backup, cloudflare-vs-vercel, "
-            "github-vs-gdocs, upgrading-mainbranch",
+            f"educational topic not found: {topic}\nTry one of: {available}",
             file=sys.stderr,
         )
         sys.exit(1)

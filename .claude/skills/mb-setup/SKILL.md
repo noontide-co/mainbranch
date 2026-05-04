@@ -9,6 +9,11 @@ Get a new user fully configured with Claude Code and their business repo. Use
 `mb onboard status --json` and `mb onboard plan` as the durable progress
 contract; do not keep onboarding state only in chat prose.
 
+For provider setup, use `mb connect plan`, `mb connect status --all --json`,
+and `mb connect doctor --json` as the durable readiness contract. Explain
+providers as business capabilities, not developer config, and end with exact
+commands.
+
 ---
 
 ## Before We Begin

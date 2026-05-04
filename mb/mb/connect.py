@@ -121,6 +121,75 @@ PROVIDERS: tuple[Provider, ...] = (
     ),
 )
 
+PROVIDER_GUIDANCE: dict[str, dict[str, Any]] = {
+    "github": {
+        "priority": 1,
+        "why": (
+            "GitHub is the task, proposal, review, and shipped-work layer for the business repo."
+        ),
+        "use_when": (
+            "Use for daily task tracking, public issue drafts, pull requests, reviews, "
+            "and team visibility."
+        ),
+        "defer_when": (
+            "You can start solo local setup without it, but issue, proposal, and team "
+            "loops will be limited."
+        ),
+        "status_command": "mb connect doctor --json",
+    },
+    "cloudflare": {
+        "priority": 2,
+        "why": (
+            "Cloudflare is the default low-lock-in rail for sites, DNS, Pages, and future Workers."
+        ),
+        "use_when": (
+            "Use when the business needs a landing page, custom domain, deploy, or DNS check."
+        ),
+        "defer_when": "Defer until you are ready to publish or connect a domain.",
+        "status_command": "mb connect status --all --json",
+    },
+    "google": {
+        "priority": 3,
+        "why": (
+            "Google/Workspace is the bridge for existing Docs, Sheets, Drive, and workspace assets."
+        ),
+        "use_when": (
+            "Use when the business has source material in Google Drive or needs "
+            "spreadsheet/docs context."
+        ),
+        "defer_when": (
+            "Do not connect it just because a Google account exists; connect it when "
+            "a workflow needs it."
+        ),
+        "status_command": "mb connect status --all --json",
+    },
+    "meta": {
+        "priority": 4,
+        "why": (
+            "Meta Ads readiness lets ad workflows reason about ad accounts, campaigns, and pixels."
+        ),
+        "use_when": (
+            "Use when the business is generating, reviewing, or learning from Meta/Facebook ads."
+        ),
+        "defer_when": (
+            "Defer for organic, research, or site work that does not need ad-account facts."
+        ),
+        "status_command": "mb connect status --all --json",
+    },
+    "apify": {
+        "priority": 5,
+        "why": (
+            "Apify is the optional research sidecar for scraping, YouTube, Instagram, "
+            "and web mining."
+        ),
+        "use_when": (
+            "Use when research or organic workflows need structured external data collection."
+        ),
+        "defer_when": "Defer for first-pass reference setup or local-only thinking.",
+        "status_command": "mb connect status --all --json",
+    },
+}
+
 
 def provider_map() -> dict[str, Provider]:
     return {provider.id: provider for provider in PROVIDERS}
@@ -797,8 +866,67 @@ def list_providers(repo: str | Path = ".") -> dict[str, Any]:
     providers = []
     for provider in provider_registry():
         state = by_id[provider["id"]]["state"]
-        providers.append({**provider, "state": state})
+        guidance = PROVIDER_GUIDANCE.get(provider["id"], {})
+        providers.append({**provider, **guidance, "state": state})
     return {"ok": True, "providers": providers, "config_path": status["config_path"]}
+
+
+def provider_plan(repo: str | Path = ".") -> dict[str, Any]:
+    """Return noob-safe provider setup choices backed by readiness facts."""
+
+    status = status_all(repo, include_all=True)
+    by_id = {item["provider"]: item for item in status["providers"]}
+    github = status["github"]
+    steps: list[dict[str, Any]] = [
+        {
+            "id": "github",
+            "name": "GitHub",
+            "category": "work",
+            "priority": PROVIDER_GUIDANCE["github"]["priority"],
+            "ready": bool(github["ok"]),
+            "state": github["state"],
+            "summary": github["summary"],
+            "why": PROVIDER_GUIDANCE["github"]["why"],
+            "use_when": PROVIDER_GUIDANCE["github"]["use_when"],
+            "defer_when": PROVIDER_GUIDANCE["github"]["defer_when"],
+            "status_command": PROVIDER_GUIDANCE["github"]["status_command"],
+            "next_command": github["repair_command"] or "gh auth status",
+            "safe_to_share": bool(github.get("safe_to_share", True)),
+        }
+    ]
+    for provider_id in ("cloudflare", "google", "meta", "apify"):
+        item = by_id[provider_id]
+        guidance = PROVIDER_GUIDANCE[provider_id]
+        steps.append(
+            {
+                "id": provider_id,
+                "name": item["name"],
+                "category": normalize_provider(provider_id).category,
+                "priority": guidance["priority"],
+                "ready": bool(item["ok"]),
+                "state": item["state"],
+                "summary": item["summary"],
+                "why": guidance["why"],
+                "use_when": guidance["use_when"],
+                "defer_when": guidance["defer_when"],
+                "status_command": guidance["status_command"],
+                "next_command": item["repair_command"] or f"mb connect test {provider_id}",
+                "safe_to_share": bool(item.get("safe_to_share", True)),
+            }
+        )
+    ready = len([step for step in steps if step["ready"]])
+    return {
+        "ok": True,
+        "readiness_ok": status["ok"],
+        "repo": status["repo"],
+        "steps": sorted(steps, key=lambda step: int(step["priority"])),
+        "summary": {
+            "total": len(steps),
+            "ready": ready,
+            "needs_setup": len(steps) - ready,
+        },
+        "safe_to_share": True,
+    }
 
 
 def doctor_check(repo: str | Path = ".", *, status: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -884,6 +1012,18 @@ def render_list(result: dict[str, Any]) -> None:
             f"{provider['id']:<14} {provider['state']:<14} "
             f"{provider['auth']:<22} {provider['description']}"
         )
+
+
+def render_plan(result: dict[str, Any]) -> None:
+    print(f"mb connect plan  {result['repo']}")
+    print("Choose the provider that matches the business job in front of you:")
+    for index, step in enumerate(result["steps"], start=1):
+        state = "ready" if step["ready"] else step["state"]
+        print(f"{index}. {step['name']} ({state})")
+        print(f"   why: {step['why']}")
+        print(f"   use when: {step['use_when']}")
+        if not step["ready"]:
+            print(f"   next: {step['next_command']}")
 
 
 def render_status(result: dict[str, Any]) -> None:

@@ -562,7 +562,7 @@ def issue_open_cmd(
 def connect_cmd(
     target: str = typer.Argument(
         "",
-        help="Provider to connect, or `list` / `status` / `doctor` / `test`.",
+        help="Provider to connect, or `list` / `plan` / `status` / `doctor` / `test`.",
     ),
     provider: str = typer.Argument(
         "",
@@ -608,6 +608,13 @@ def connect_cmd(
         else:
             connect_mod.render_list(result)
         raise typer.Exit(0)
+    if target == "plan":
+        result = connect_mod.provider_plan(repo)
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            connect_mod.render_plan(result)
+        raise typer.Exit(0 if result["ok"] else 1)
     if target == "status":
         result = connect_mod.status_all(repo, include_all=all_providers)
         if json_out:

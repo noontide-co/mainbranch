@@ -52,6 +52,16 @@ def test_educational_upgrading_mainbranch_exists() -> None:
     assert "pipx upgrade mainbranch" in result
 
 
+def test_educational_provider_readiness_exists() -> None:
+    from mb.educational import load, topics
+
+    result = load("provider-readiness")
+
+    assert result is not None
+    assert "mb connect plan" in result
+    assert "provider-readiness" in topics()
+
+
 # ------------------------------------------------------------------------ think
 
 

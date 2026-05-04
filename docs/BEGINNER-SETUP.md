@@ -110,6 +110,44 @@ Three lines. That's the daily flow.
 
 ---
 
+## Provider Readiness
+
+Providers are outside accounts Main Branch can use when a business workflow
+needs them. You do not need to connect everything during first setup.
+
+Use the plan command from your business repo:
+
+```bash
+mb connect plan
+```
+
+It shows numbered choices:
+
+1. **GitHub** — tasks, proposals, reviews, and shipped history.
+2. **Cloudflare** — sites, DNS, Pages, and future Workers.
+3. **Google / Workspace** — existing Docs, Drive, Sheets, and Slides.
+4. **Meta Ads** — ad accounts, campaigns, and pixels.
+5. **Apify** — research sidecar for scraping, YouTube, Instagram, and web mining.
+
+If a provider is missing, Main Branch prints the next command. Examples:
+
+```bash
+gh auth login
+printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata account_id=...
+mb connect status --all --json
+mb connect doctor --json
+```
+
+Secrets stay outside your repo. Main Branch stores only safe metadata in
+`.mb/connect.yaml`, such as provider name, account label, and last check time.
+For the longer plain-English explanation, run:
+
+```bash
+mb educational provider-readiness
+```
+
+---
+
 ## Updating Main Branch
 
 When new versions drop:
@@ -181,6 +219,7 @@ starts, so repaired `/mb-start` links usually appear after restart.
 | `mb init` | Scaffold a fresh business repo. |
 | `mb status` | Show a daily repo/runtime/GitHub briefing. |
 | `mb start` | Check runtime handoff readiness and print or launch Claude Code. |
+| `mb connect plan` | Show numbered provider setup choices with readiness and exact next commands. |
 | `mb update` | Update Main Branch based on pipx vs clone install mode. |
 | `mb doctor` | Check that everything is set up correctly. Walks you through fixes. |
 | `mb skill link --repo .` | Repair Claude Code skill discovery if `/mb-start` doesn't show up. |

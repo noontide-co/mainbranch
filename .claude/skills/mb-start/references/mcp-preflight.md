@@ -1,18 +1,56 @@
-# MCP Pre-Flight Check
+# Provider And MCP Pre-Flight Check
 
-Verify required MCPs are installed before routing to skills that need them.
+Verify provider readiness and required runtime tools before routing to skills
+that need them.
 
 ---
 
 ## Why This Matters
 
-MCPs install to USER'S machine (`~/.claude.json`), not the repo. When someone clones their business repo on a new machine, MCPs won't be there.
+Provider metadata belongs to the business repo through `.mb/connect.yaml`, while
+secrets and MCP installs live on the user's machine. When someone clones their
+business repo on a new machine, provider metadata may be visible but local
+secrets and MCP tools may still be missing.
+
+Start with deterministic CLI facts:
+
+```bash
+mb status --json --peek
+mb connect plan
+mb connect doctor --json
+```
+
+Use the CLI's `state`, `summary`, `next_command`, and `repair_command` before
+probing runtime tools manually.
 
 ---
 
 ## Check Flow
 
-### 1. Read expected MCPs from config
+### 1. Read provider readiness from mb
+
+Use `mb status --json --peek` for the daily route. If the operator asks which
+account to connect or a selected workflow needs outside access, run:
+
+```bash
+mb connect plan
+mb connect status --all --json
+```
+
+Required provider choices for the setup/provider loop:
+
+| Provider | Business job | Check |
+|---|---|---|
+| GitHub | tasks, proposals, reviews, shipped history | `mb connect doctor --json` |
+| Cloudflare | sites, DNS, Pages, Workers | `mb connect status --all --json` |
+| Google / Workspace | Drive, Docs, Sheets, Slides | `mb connect status --all --json` |
+| Meta Ads | ad accounts, campaigns, pixels | `mb connect status --all --json` |
+| Apify | scraping, YouTube, Instagram, research sidecars | `mb connect status --all --json` |
+
+Only continue to MCP/tool presence checks when the selected skill needs runtime
+tools that `mb connect` cannot inspect directly.
+
+### 2. Read expected MCPs from config
 
 ```yaml
 # From .vip/config.yaml
@@ -22,20 +60,20 @@ mcps:
     setup_guide: ".claude/skills/mb-organic/references/apify-setup.md"
 ```
 
-### 2. Check if MCP tools are available
+### 3. Check if MCP tools are available
 
 Look for tool presence:
 - `mcp__apify__*` tools → Apify loaded (handles web scraping + YouTube transcripts)
 - `mcp__whisper__*` tools → whisper-mcp loaded (local video/audio transcription)
 
-### 3. Prompt if missing
+### 4. Prompt if missing
 
 If routing to skill that needs missing MCP:
 
-> "The organic skill works best with Apify. Not set up on this machine.
+> "This action needs Apify research access. `mb connect plan` says Apify is [state].
 >
-> 1. Set up now (5 min, one-time)
-> 2. Skip for now (some features limited)"
+> 1. Set up now — `[exact command from mb]`
+> 2. Skip for now — YouTube and Instagram mining will be limited"
 
 If user picks 1 → Show setup guide path, walk through it.
 

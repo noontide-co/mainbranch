@@ -30,6 +30,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | /mb-bet, bet, hypothesis, deadline, public narration | [skills-guide.md](references/skills-guide.md) |
 | Task tracking, where left off, focus | [task-tracking-options.md](references/task-tracking-options.md) |
 | Error, command not found, MCP, Apify setup, GitHub issue | [troubleshooting.md](references/troubleshooting.md) |
+| Provider readiness, GitHub setup, Cloudflare, Google Workspace, Meta Ads, Apify | [provider-readiness.md](references/provider-readiness.md) |
 | Getting started, setup | Route to `/mb-setup` or `/mb-start` |
 | Which skill, when to use | [skills-guide.md](references/skills-guide.md) |
 | Create skill, Notion export, custom | [skills-guide.md](references/skills-guide.md) |
@@ -83,5 +84,6 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | How do I recover after compaction? | Point Claude at recent files: "look at my last 3 decisions" or "read the commits from today." Or just run /mb-start — it scans your folders and rebuilds context automatically. You can also open files yourself in Cursor, Warp, VS Code, or any text editor. |
 | Is this system finished? | Still new and actively being tuned. We're building around Claude Code, minimizing commands you need to learn while giving you real power. There's progressive discovery in /mb-think — the more you use it, the more it reveals. You might find workflows we haven't documented yet. Post them in Skool. |
 | Where can I see my files? | Open your business repo folder in Finder, Cursor, Warp, VS Code, or any text editor. They're regular .md files on your hard drive. GitHub Desktop also shows them with version history. |
+| What should I connect first? | Run `mb connect plan` from your business repo. It shows GitHub, Cloudflare, Google/Workspace, Meta Ads, and Apify as numbered choices with readiness and exact next commands. |
 | Skills not showing in Conductor? | Conductor workspaces are isolated — they don't know where Main Branch is. You need a Pre-Agent (PA) config script that creates bridge symlinks and `settings.local.json` before Claude starts. See [conductor-setup.md](references/conductor-setup.md) for the script and setup steps. |
 | What's a PA config? | Pre-Agent config — a script Conductor runs before Claude starts in a workspace. Used to set up Main Branch bridge links so skills appear. One-time setup per workspace. |

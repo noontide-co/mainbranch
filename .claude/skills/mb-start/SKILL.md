@@ -16,6 +16,13 @@ integrations, GitHub tasks/proposals, bets, dirty git, since-last-check, and
 `ranked_actions`. Do not duplicate those checks with ad hoc shell probes unless
 the status report says a section is unavailable.
 
+**Provider facts first:** When setup or routing depends on GitHub, Cloudflare,
+Google/Workspace, Meta Ads, or Apify, read the status `integrations` facts
+first. If the operator needs a provider choice or repair explanation, run
+`mb connect plan` or `mb connect doctor --json` and use the cited
+`next_command` / `repair_command`. Do not ask for tokens or provider setup in
+prose before the CLI has named the missing step.
+
 ---
 
 ## CRITICAL: Repo Selection Rules
@@ -86,7 +93,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │   └── Missing? ────────────────────→ Run the repair command cited by status
 │
 ├── MCP pre-flight ───────────────────→ See [mcp-preflight.md](references/mcp-preflight.md)
-│   └── Missing required MCP? ────────→ Offer setup or skip
+│   └── Provider/tool missing? ───────→ Use `mb connect plan` / status repair facts
 │
 ├── No business repo found? ──────────→ /mb-setup (creates repo, saves path)
 │
@@ -146,11 +153,12 @@ Use this report before asking additional questions:
 - `drift.items` names stale or broken status signals and repair commands.
 - `onboarding.summary` and `onboarding.checklist` replace separate onboarding
   probes unless the status report is unavailable.
-- `github.sections`, `brain.bets`, and `since_last_check` supply the continuity
-  facts for routing and triage.
+- `integrations.github`, `integrations.providers`, `github.sections`,
+  `brain.bets`, and `since_last_check` supply the continuity facts for routing
+  and triage.
 
 Only run a narrower fallback command such as `mb onboard status --json`,
-`mb doctor`, `mb validate --cross-refs`, or `mb connect doctor` when status
+`mb doctor`, `mb validate --cross-refs`, or `mb connect doctor --json` when status
 points at that section as unavailable, degraded, or needing repair.
 
 ## Step 1: Pull Engine Updates
@@ -215,14 +223,32 @@ mb onboard plan --repo "$REPO_PATH" --team-size solo --success-stage working
 
 ---
 
-## Step 4: MCP Pre-Flight (Not Full Research Detection)
+## Step 4: Provider And Tool Pre-Flight (Not Full Research Detection)
 
-Check for MCPs required by skills user might invoke. See [mcp-preflight.md](references/mcp-preflight.md).
+Check provider and MCP readiness only for skills the user might invoke. See
+[mcp-preflight.md](references/mcp-preflight.md).
+
+Start from CLI facts:
+
+```bash
+mb status --json --peek
+mb connect plan
+mb connect doctor --json
+```
+
+Use the status and connect JSON before checking runtime tool presence. The
+operator-facing pattern is:
+
+> "This action needs [business capability].
+>
+> 1. Set up [provider] now — `[exact command]`
+> 2. Skip for this session — [specific limitation]"
 
 **Full research tool detection still happens in /mb-think** — deferred to when user actually needs research. This keeps /mb-start fast and avoids checking tools user might not use this session.
 
 **What /mb-start DOES check:**
-- MCPs that skills depend on (Apify for /mb-organic, etc.)
+- Provider readiness from `mb status --json --peek` and `mb connect plan`
+- MCPs that a selected skill depends on when provider status says runtime tools are still unknown
 - Critical blockers (missing config, broken paths)
 
 **What /mb-start DOES NOT do here:**

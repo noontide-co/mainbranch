@@ -47,6 +47,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added `mb similar-bets <thesis>` for deterministic bets memory over
   `bets/*.md` plus graduated/dead offer context, with JSON shaped for agent,
   ranker, and future consumers. Refs #143.
+- Added `mb connect plan` and `mb educational provider-readiness` so provider
+  setup is presented as numbered business choices with readiness states and
+  exact next commands. Refs #273.
 
 ### Changed
 
@@ -59,6 +62,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Extended `mb validate --cross-refs` to warn on missing or ambiguous
   Obsidian-style wikilinks while keeping wikilink checks out of default
   validation.
+- Updated beginner setup and provider docs to teach GitHub, Cloudflare,
+  Google/Workspace, Meta Ads, and Apify readiness without claiming unsupported
+  provider workflows. Refs #273 and #144.
 
 ## [0.2.6] - 2026-05-04
 

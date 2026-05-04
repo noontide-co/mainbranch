@@ -49,7 +49,58 @@ def test_connect_list_json_does_not_create_repo_metadata(tmp_path: Path) -> None
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert any(provider["id"] == "cloudflare" for provider in payload["providers"])
+    cloudflare = next(
+        provider for provider in payload["providers"] if provider["id"] == "cloudflare"
+    )
+    assert "low-lock-in rail" in cloudflare["why"]
+    assert cloudflare["status_command"] == "mb connect status --all --json"
     assert not (repo / ".mb" / "connect.yaml").exists()
+
+
+def test_connect_plan_returns_numbered_provider_choices(tmp_path: Path, monkeypatch) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    github_context = {
+        "ok": False,
+        "state": "unauthenticated",
+        "summary": "GitHub CLI is installed but not authenticated.",
+        "repair": "Run `gh auth login`.",
+        "repair_command": "gh auth login",
+        "safe_to_share": True,
+    }
+    monkeypatch.setattr(connect_mod, "github_context", lambda repo: github_context)
+
+    result = runner.invoke(app, ["connect", "plan", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    steps = {step["id"]: step for step in payload["steps"]}
+    assert list(steps) == ["github", "cloudflare", "google", "meta", "apify"]
+    assert steps["github"]["next_command"] == "gh auth login"
+    assert steps["github"]["safe_to_share"] is True
+    assert steps["meta"]["next_command"] == "mb connect meta --token-stdin"
+    assert payload["summary"]["total"] == 5
+
+
+def test_connect_plan_human_output_uses_numbered_choices(tmp_path: Path, monkeypatch) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    github_context = {
+        "ok": True,
+        "state": "ready",
+        "summary": "GitHub CLI auth and repo remote are ready.",
+        "repair": "",
+        "repair_command": "",
+        "safe_to_share": True,
+    }
+    monkeypatch.setattr(connect_mod, "github_context", lambda repo: github_context)
+
+    result = runner.invoke(app, ["connect", "plan", "--repo", str(repo)])
+
+    assert result.exit_code == 0
+    assert "1. GitHub (ready)" in result.stdout
+    assert "2. Cloudflare (not_connected)" in result.stdout
+    assert "next: mb connect cloudflare --token-stdin" in result.stdout
 
 
 def test_connect_provider_stores_secret_outside_repo(tmp_path: Path, monkeypatch) -> None:
