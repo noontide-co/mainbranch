@@ -151,7 +151,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb onboard` | Human setup flow: create or connect a business repo, explain the substrate, wire Claude Code skills, and show the next `/mb-start` step. |
 | `mb onboard status` | Show durable onboarding progress from `.mb/onboarding.json`, including missing core-reference inputs and the next recommended action. |
 | `mb init` | Set up a fresh business repo (six folders, CLAUDE.md, git init). |
-| `mb status` | Show a local-first daily briefing: repo health, runtime wiring, recent decisions/research/git activity, and GitHub tasks when `gh` is authenticated. |
+| `mb status` | Show a local-first daily briefing: since-last-check changes, drift, repo health, runtime wiring, recent decisions/research/git activity, and GitHub tasks when `gh` is authenticated. Use `--json` for the v1 status schema and `--verbose` for detail. |
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
 | `mb connect` | Register provider credentials, test provider health, and inspect repair-safe integration status without committing secrets. |
 | `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |

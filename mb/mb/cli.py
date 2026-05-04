@@ -575,13 +575,15 @@ def connect_cmd(
 def status_cmd(
     path: str = typer.Argument(".", help="Business repo to brief."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed briefing sections."),
+    no_color: bool = typer.Option(False, "--no-color", help="Disable ANSI color in human output."),
 ) -> None:
     """Show a cheap daily briefing for a Main Branch repo."""
     report = status_mod.run(path=path)
     if json_out:
         typer.echo(json.dumps(report, indent=2))
     else:
-        status_mod.render_human(report)
+        status_mod.render_human(report, verbose=verbose, no_color=no_color)
 
 
 @app.command("start")

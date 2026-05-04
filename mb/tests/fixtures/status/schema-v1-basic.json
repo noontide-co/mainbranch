@@ -1,0 +1,140 @@
+{
+  "schema_version": "1.0",
+  "schema_name": "mainbranch.status",
+  "top_level_keys": [
+    "brain",
+    "drift",
+    "generated_at",
+    "git",
+    "git_activity",
+    "github",
+    "install",
+    "integrations",
+    "marker_update",
+    "ok",
+    "onboarding",
+    "readiness",
+    "repo",
+    "runtime",
+    "schema",
+    "schema_version",
+    "since_last_check",
+    "update"
+  ],
+  "section_keys": {
+    "repo": [
+      "looks_like_mainbranch_repo",
+      "markers",
+      "missing_markers",
+      "path"
+    ],
+    "install": [
+      "detail",
+      "mode",
+      "ok",
+      "version"
+    ],
+    "update": [
+      "command",
+      "installed",
+      "latest",
+      "minimum_supported",
+      "post_update_commands",
+      "reason",
+      "severity"
+    ],
+    "runtime": [
+      "claude_code",
+      "skill_wiring"
+    ],
+    "git": [
+      "available",
+      "branch",
+      "commit",
+      "dirty",
+      "dirty_count",
+      "dirty_files",
+      "error",
+      "inside_work_tree",
+      "remote"
+    ],
+    "git_activity": [
+      "available",
+      "error",
+      "items"
+    ],
+    "brain": [
+      "counts",
+      "recent_decisions",
+      "recent_research",
+      "stale_decisions",
+      "stale_research"
+    ],
+    "onboarding": [
+      "boundaries",
+      "checklist",
+      "contract",
+      "ok",
+      "profile",
+      "repo",
+      "state_exists",
+      "state_path",
+      "state_valid",
+      "summary"
+    ],
+    "integrations": [
+      "config_path",
+      "github",
+      "ok",
+      "providers",
+      "repo",
+      "repo_id",
+      "safe_to_share",
+      "summary"
+    ],
+    "github": [
+      "assigned_issues",
+      "authenticated",
+      "available",
+      "context",
+      "degraded",
+      "errors",
+      "recent_merged_prs",
+      "repo",
+      "review_requests",
+      "sections",
+      "source",
+      "summary"
+    ],
+    "since_last_check": [
+      "brain_count_changes",
+      "current_seen_at",
+      "error",
+      "first_run",
+      "git",
+      "marker_gitignore",
+      "marker_path",
+      "ok",
+      "previous_seen_at",
+      "safe_to_share",
+      "summary"
+    ],
+    "drift": [
+      "items",
+      "ok",
+      "summary"
+    ],
+    "readiness": [
+      "checks",
+      "level",
+      "next_actions",
+      "score"
+    ],
+    "marker_update": [
+      "attempted",
+      "ok",
+      "path",
+      "reason"
+    ]
+  }
+}
