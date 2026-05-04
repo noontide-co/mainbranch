@@ -11,6 +11,21 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-05-04
+
+v0.2.5 finishes the noob-safe migration loop for past users with broken
+personal Claude Code skill symlinks from older Main Branch setups.
+
+### What this means for you (plain English)
+
+- **Old broken `/start`-style symlinks are cleaned up automatically.** Running
+  `mb skill link --repo .` now backs up broken personal symlinks with Main
+  Branch skill names before wiring the current `/mb-start` skill set.
+- **Real personal or third-party skills are still protected.** Main Branch only
+  moves stale Main Branch links and broken symlinks with Main Branch current or
+  legacy names; directories, real files, and live third-party links are
+  reported but not moved.
+
 ### Fixed
 
 - `mb skill link --repo .` and `mb skill repair --repo . --apply` now move
