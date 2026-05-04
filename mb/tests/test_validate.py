@@ -278,6 +278,24 @@ def test_cross_refs_accept_resolved_wikilink_target_with_heading_anchor(tmp_path
     assert report["summary"]["warnings"] == 0
 
 
+def test_cross_refs_do_not_stem_fallback_for_path_like_wikilinks(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "documents" / "audience.md",
+        "---\ntitle: Audience\n---\n# Audience\n",
+    )
+    _write(
+        tmp_path / "decisions" / "2026-05-04-link.md",
+        "---\ndate: 2026-05-04\nstatus: accepted\n---\nSee [[research/audience]].\n",
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    assert report["summary"]["warnings"] == 1
+    finding = report["cross_refs"]["warnings"][0]
+    assert finding["code"] == "missing-wikilink-target"
+    assert finding["target"] == "research/audience"
+
+
 def test_cross_refs_warn_when_wikilink_resolves_only_to_directory(tmp_path: Path) -> None:
     (tmp_path / "campaigns" / "spring-launch").mkdir(parents=True)
     _write(

@@ -266,6 +266,7 @@ def _resolve_wikilink(
     clean = _wikilink_target(target)
     if not clean:
         return None, False
+    is_bare_wikilink = len(Path(clean).parts) == 1
     candidates = [clean]
     if not clean.endswith(".md"):
         candidates.append(f"{clean}.md")
@@ -280,6 +281,8 @@ def _resolve_wikilink(
             continue
         if repo_direct.is_file() and repo_direct.suffix == ".md":
             return repo_direct, False
+    if not is_bare_wikilink:
+        return None, False
     matches = files_by_stem.get(Path(clean).stem, [])
     if len(matches) == 1:
         return matches[0], False
