@@ -22,9 +22,20 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added checkpoint resume facts to `mb start --json` and wired `/mb-start`,
   `/mb-end`, and `/mb-think` toward `mb checkpoint` so checkpointing can happen
   throughout long agent sessions instead of only at end-of-day. Refs #292.
+- Locked the operator-loop taxonomy at four loops -- Sense, Decide, Ship,
+  Reflect -- with full reasoning, alternatives considered, and the
+  skills-vs-loops principle in the new decision file. Closes #306.
 
 ### Changed
 
+- Rewrote `docs/OPERATOR-LOOPS.md` to the four-loop taxonomy
+  (Sense -> Decide -> Ship -> Reflect) with examples, anti-examples, loop
+  chains, the skills-vs-loops principle, and the channels-vs-loops separation
+  (Paid, Organic, Pages, Ops). Refs #306.
+- Updated `docs/ETHOS.md` to the four-loop framing and renamed Principle 3
+  from "Operator Sovereignty" to "The Operator Decides" so the principle
+  reads in operator language without philosophy-grad-school framing. Refs
+  #306.
 - Clarified beginner, migration, and `/mb-help` docs that `.mb/` is the current
   repo-local Main Branch state folder and `.mb-vip/` is not required. Refs
   #296.
@@ -72,8 +83,8 @@ drafting, provider setup planning, and paid-traffic site readiness checks.
   skills should suggest a bug, feature, or question draft without submitting on
   the operator's behalf.
 - Added public ethos, operator-loop, and roadmap docs so future product work can
-  anchor to the Know -> See -> Decide -> Execute -> Narrate loop and the
-  current v0.3/v0.4 release direction.
+  anchor to the Sense -> Decide -> Ship -> Reflect loop and the current
+  v0.3/v0.4 release direction.
 - Added a proposed skill-to-CLI and runtime adapter contract covering lifecycle
   and production skill boundaries, Claude Code as the reference adapter,
   support levels, runtime-aware invocation hints, workflow launcher gates, and

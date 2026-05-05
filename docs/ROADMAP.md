@@ -117,8 +117,8 @@ Likely directions:
 ## Reading Order
 
 - [ETHOS.md](ETHOS.md) for the product principles.
-- [OPERATOR-LOOPS.md](OPERATOR-LOOPS.md) for the Know -> See -> Decide ->
-  Execute -> Narrate loop.
+- [OPERATOR-LOOPS.md](OPERATOR-LOOPS.md) for the Sense -> Decide -> Ship ->
+  Reflect loop.
 - [compatibility.md](compatibility.md) for runtime support status.
 - [CHANGELOG.md](../CHANGELOG.md) for what actually shipped.
 - [GitHub issues](https://github.com/noontide-co/mainbranch/issues) for the
