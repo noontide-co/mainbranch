@@ -297,6 +297,28 @@ def _proposal(changes: list[dict[str, Any]], blocks: list[dict[str, str]]) -> di
     }
 
 
+def _commit_body(proposal: dict[str, Any]) -> str:
+    body = proposal.get("body", {})
+    changed = body.get("changed", []) if isinstance(body, dict) else []
+    why = str(body.get("why", "") if isinstance(body, dict) else "")
+    next_step = str(body.get("next", "") if isinstance(body, dict) else "")
+    lines = ["Changed:"]
+    if isinstance(changed, list) and changed:
+        lines.extend(f"- {path}" for path in changed)
+    else:
+        lines.append("- repo files")
+    if why:
+        lines.extend(["", "Why:", f"- {why}"])
+    if next_step:
+        lines.extend(["", "Next:", f"- {next_step}"])
+    return "\n".join(lines)
+
+
+def _head_sha(repo: Path) -> str:
+    result = _run_git(repo, ["rev-parse", "HEAD"])
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
 def plan(repo: str | Path = ".", *, mode: str = "beginner") -> dict[str, Any]:
     """Plan a checkpoint without staging or committing changes."""
     target = Path(repo).resolve()
@@ -384,11 +406,121 @@ def plan(repo: str | Path = ".", *, mode: str = "beginner") -> dict[str, Any]:
     }
 
 
+def commit(
+    repo: str | Path = ".",
+    *,
+    message: str = "",
+    mode: str = "beginner",
+    yes: bool = False,
+) -> dict[str, Any]:
+    """Commit an approved checkpoint plan."""
+    planned = plan(repo=repo, mode=mode)
+    if planned.get("status") == "clean":
+        return {
+            "ok": True,
+            "status": "clean",
+            "repo": planned.get("repo"),
+            "committed": False,
+            "plan": planned,
+            "errors": [],
+        }
+    if not planned.get("ok"):
+        return {
+            "ok": False,
+            "status": "blocked",
+            "repo": planned.get("repo"),
+            "committed": False,
+            "plan": planned,
+            "errors": ["checkpoint plan is blocked"],
+        }
+    if not yes:
+        return {
+            "ok": False,
+            "status": "approval_required",
+            "repo": planned.get("repo"),
+            "committed": False,
+            "plan": planned,
+            "errors": ["pass --yes after reviewing the checkpoint plan"],
+        }
+
+    proposal = planned.get("proposal")
+    if not isinstance(proposal, dict):
+        return {
+            "ok": False,
+            "status": "error",
+            "repo": planned.get("repo"),
+            "committed": False,
+            "plan": planned,
+            "errors": ["checkpoint plan did not include a proposal"],
+        }
+
+    repo_path = Path(str(planned["repo"]))
+    commit_message = message.strip() or str(proposal["message"])
+    paths = [str(change["path"]) for change in planned.get("changes", [])]
+    if not paths:
+        return {
+            "ok": True,
+            "status": "clean",
+            "repo": str(repo_path),
+            "committed": False,
+            "plan": planned,
+            "errors": [],
+        }
+
+    add = _run_git(repo_path, ["add", "--", *paths])
+    if add.returncode != 0:
+        return {
+            "ok": False,
+            "status": "error",
+            "repo": str(repo_path),
+            "committed": False,
+            "plan": planned,
+            "errors": [_git_error("git add", add)],
+        }
+    body = _commit_body({**proposal, "message": commit_message})
+    commit_result = _run_git(repo_path, ["commit", "-m", commit_message, "-m", body])
+    if commit_result.returncode != 0:
+        return {
+            "ok": False,
+            "status": "error",
+            "repo": str(repo_path),
+            "committed": False,
+            "plan": planned,
+            "errors": [_git_error("git commit", commit_result)],
+        }
+
+    return {
+        "ok": True,
+        "status": "committed",
+        "repo": str(repo_path),
+        "committed": True,
+        "commit": {
+            "sha": _head_sha(repo_path),
+            "message": commit_message,
+            "body": body,
+        },
+        "plan": planned,
+        "errors": [],
+    }
+
+
 def render_human(result: dict[str, Any]) -> None:
     """Render a checkpoint plan for operators."""
     status = result.get("status")
     print("mb checkpoint")
     print(f"repo: {result.get('repo')}")
+    if status == "committed":
+        commit_info = result.get("commit", {})
+        sha = commit_info.get("sha", "") if isinstance(commit_info, dict) else ""
+        message = commit_info.get("message", "") if isinstance(commit_info, dict) else ""
+        print(f"saved checkpoint: {message}")
+        if sha:
+            print(f"commit: {sha[:12]}")
+        return
+    if status == "approval_required":
+        print("approval required.")
+        print("review the plan, then rerun with --yes to save the checkpoint.")
+        return
     if status == "clean":
         print("nothing to checkpoint.")
         return
