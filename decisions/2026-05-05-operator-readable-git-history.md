@@ -116,25 +116,25 @@ Avoid subjects that require Main Branch internals to understand:
 
 This table is the initial machine-consumable contract for status grouping,
 checkpoint planning, validation, retros, and future dashboard timelines.
-Tooling may override the default loop or channel when the changed path or
+Tooling may override the loop or channel when the changed path or
 object gives a stronger signal, but it should start here.
 
-| Prefix | Default loop | Channel hint | Use when | Common objects |
+| Prefix | Loop | Channel hint | Use when | Common objects |
 |---|---|---|---|---|
-| `[added]` | Sense | - | New durable context or state exists | `offer.md`, research note, proof, audience segment |
-| `[updated]` | Sense | - | Existing durable context changed | offer, pricing, audience, voice, daily log |
+| `[added]` | Sense or Ship | path-derived | New durable context, state, or reviewable artifact exists | `offer.md`, research note, proof, audience segment, site copy |
+| `[updated]` | Sense or Ship | path-derived | Existing durable context or artifact changed | offer, pricing, audience, voice, daily log, ad batch |
 | `[decided]` | Decide | - | A choice and its rationale were accepted | bet, launch date, provider choice, offer direction |
-| `[opened]` | Decide | - | A bet, public issue, or outcome thread became active | bet, public issue, launch thread |
-| `[closed]` | Reflect | - | A bet, public issue, or outcome thread got a verdict | bet, public issue, launch thread |
+| `[opened]` | Decide | - | A bet or public issue became active | bet, public issue |
+| `[closed]` | Reflect | - | A bet or public issue got a verdict | bet, public issue |
 | `[drafted]` | Ship | path-derived | A reviewable artifact was produced, whether or not it is public yet | ads, VSL, organic batch, site copy |
 | `[shipped]` | Ship | path-derived | Work reached a recipient, deploy target, or public surface | site, page, email, ad batch, offer |
 | `[connected]` | Ship | Ops | A provider or local integration became usable | Stripe, GitHub, Cloudflare, Meta Ads |
 | `[ran]` | Ship | Ops | A maintenance, update, migration, validation, or import ran | `mb update`, migration, import, smoke |
-| `[fixed]` | Ship | path-derived; Ops for infrastructure | A broken workflow, file, link, provider, or setup path was repaired | checkout copy, skill wiring, provider metadata |
+| `[fixed]` | Ship | path-derived | A broken workflow, file, link, provider, or setup path was repaired | checkout copy, skill wiring, provider metadata |
 
 `[fixed]` can describe business work when the object is business-facing, such
 as `[fixed] checkout copy -- clarified guarantee`. For grouping, tooling should
-prefer stronger path signals over the default Ops hint. Path and body signals
+prefer stronger path signals over the row default. Path and body signals
 should reclassify by default: `core/` and `research/` usually map to Sense,
 accepted `decisions/` and opened `bets/` map to Decide, `campaigns/` and
 published artifacts map to Ship, and bet verdicts, retros, superseded

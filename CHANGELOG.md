@@ -17,9 +17,6 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   business commit verb contract, Sense / Decide / Ship / Reflect loop mapping,
   checkpoint trailer guidance, and follow-up implementation slices. Closes
   #300.
-- Locked the operator-loop taxonomy at four loops -- Sense, Decide, Ship,
-  Reflect -- with full reasoning, alternatives considered, and the
-  skills-vs-loops principle in the new decision file. Refs #306.
 - Added planning-only `mb checkpoint --plan --json` so agents can inspect
   dirty business repos, classify changed files, run safety gates, and propose
   readable checkpoint messages before commit execution ships. Refs #290.
