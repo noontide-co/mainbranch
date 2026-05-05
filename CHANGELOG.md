@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added `docs/DEPENDENCY-CHOICES.md` to make dependency, integration, sidecar,
+  CLI, MCP server, and provider-adapter judgment public, including the
+  Pipeboard removal / official Meta Ads CLI planned path as the first running
+  choices-log example. Closes #305.
 - Added an accepted operator-readable git history decision that defines the
   business commit verb contract, Sense / Decide / Ship / Reflect loop mapping,
   checkpoint trailer guidance, and follow-up implementation slices. Closes

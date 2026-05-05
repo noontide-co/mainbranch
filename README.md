@@ -40,6 +40,8 @@ in
 [decisions/2026-05-04-workspace-repo-sensitive-data-boundaries.md](decisions/2026-05-04-workspace-repo-sensitive-data-boundaries.md).
 Markdown/link conventions for GitHub and Obsidian live in
 [docs/markdown-link-conventions.md](docs/markdown-link-conventions.md).
+Dependency, integration, sidecar, and provider-adapter choices are recorded in
+[docs/DEPENDENCY-CHOICES.md](docs/DEPENDENCY-CHOICES.md).
 
 ---
 

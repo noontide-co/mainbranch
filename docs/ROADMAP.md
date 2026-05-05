@@ -119,6 +119,8 @@ Likely directions:
 - [ETHOS.md](ETHOS.md) for the product principles.
 - [OPERATOR-LOOPS.md](OPERATOR-LOOPS.md) for the Sense -> Decide -> Ship ->
   Reflect loop.
+- [DEPENDENCY-CHOICES.md](DEPENDENCY-CHOICES.md) for dependency, integration,
+  sidecar, CLI, MCP server, and provider-adapter judgment.
 - [compatibility.md](compatibility.md) for runtime support status.
 - [CHANGELOG.md](../CHANGELOG.md) for what actually shipped.
 - [GitHub issues](https://github.com/noontide-co/mainbranch/issues) for the
