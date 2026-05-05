@@ -41,9 +41,10 @@ Use lower-case, past-tense business verbs as the default commit prefixes:
 - `[ran]`
 - `[fixed]`
 
-Main Branch may still map these commits to Know / See / Decide / Execute /
-Show / System internally. It should not ask operators to write those loop
-names into normal business commit subjects.
+Main Branch may still map these commits to the Know / See / Decide / Execute /
+Show loops internally, while classifying infrastructure events under a separate
+System category. It should not ask operators to write loop or category names
+into normal business commit subjects.
 
 ## Why Not Loop Tags
 
@@ -110,10 +111,10 @@ Avoid subjects that require Main Branch internals to understand:
 
 This table is the initial machine-consumable contract for status grouping,
 checkpoint planning, validation, retros, and future dashboard timelines.
-Tooling may override the default loop when the changed path or object gives a
-stronger signal, but it should start here.
+Tooling may override the default loop or category when the changed path or
+object gives a stronger signal, but it should start here.
 
-| Prefix | Default loop | Use when | Common objects |
+| Prefix | Default loop / category | Use when | Common objects |
 |---|---|---|---|
 | `[added]` | Know | New durable business context or artifact exists | `offer.md`, research note, proof, audience segment |
 | `[updated]` | Know | Existing durable context changed | offer, pricing, audience, voice, daily log |
@@ -128,7 +129,7 @@ stronger signal, but it should start here.
 
 `[fixed]` can describe business work when the object is business-facing, such
 as `[fixed] checkout copy -- clarified guarantee`. For grouping, tooling should
-prefer stronger path signals over the default System loop.
+prefer stronger path signals over the default System category.
 
 ## Commit Body
 
