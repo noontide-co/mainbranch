@@ -70,7 +70,14 @@ Use clone mode only if you are editing the engine, docs, or bundled skills.
 
 ## Updating
 
-Use the CLI update contract from inside your business repo:
+For normal Claude Code users, run:
+
+```text
+/mb-update
+```
+
+For CLI automation and power users, use the update contract from inside your
+business repo:
 
 ```bash
 mb update

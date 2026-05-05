@@ -7,7 +7,12 @@ last-updated: 2026-05-02
 
 # How Main Branch updates work after pipx install
 
-If `mb --version` says `0.1.x`, run the bootstrap upgrade once:
+The normal update path is `/mb-update` inside Claude Code, or `mb update` from
+the business repo for power users. Main Branch detects pipx vs clone installs
+and refreshes skill links for the repo.
+
+Use raw `pipx` only as a bootstrap fallback for very old installs. If
+`mb --version` says `0.1.x`, run this once:
 
 ```bash
 pipx upgrade mainbranch
@@ -15,8 +20,8 @@ mb --version
 ```
 
 `mb update` was added after the earliest public package, so old installs cannot
-run it yet. After the pipx upgrade, `mb update` and `/mb-update` become the normal
-path.
+run it yet. After the pipx upgrade, `/mb-update` and `mb update` become the
+normal path.
 
 If you already have a business repo, repair Claude Code skill discovery from
 inside that repo:

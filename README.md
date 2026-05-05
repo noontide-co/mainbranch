@@ -296,7 +296,9 @@ Main Branch is fully usable on its own. The paid community is the live narration
 
 ## Updating
 
-- **pipx users (most people)**: `mb update --repo .` from your business repo. Or run `/mb-update` inside Claude Code — it figures out which install you have and runs the right thing.
+- **Normal user path**: run `/mb-update` inside Claude Code. It figures out
+  which install you have and runs the right thing.
+- **Power user CLI path**: `mb update --repo .` from your business repo.
 - **Clone (developer mode)**: `git pull origin main` from the engine repo.
 
 `/mb-start` checks for important updates at the beginning of a session and will
@@ -326,21 +328,24 @@ or team-access boundary. If businesses truly share the same voice, team, and
 access rules, they can share a repo. If not, separate repos.
 
 **How do I update when new skills come out?**
-`mb update --repo .`, or run `/mb-update` inside Claude Code.
+Run `/mb-update` inside Claude Code. Power users can run `mb update --repo .`
+from the business repo.
 
-If `mb --version` still says `0.1.x`, run `pipx upgrade mainbranch` once before
-using `mb update`; old installs now surface this as an in-product
-"Update required" alert on the main launch, doctor, status, and start
-surfaces. Existing business repos should then run `mb skill link --repo .` and
-`mb skill repair --repo .`, then `mb doctor` from the repo root. See
-[docs/MIGRATING.md](docs/MIGRATING.md) for the old-repo path.
+If `mb --version` still says `0.1.x`, ask Claude to help bootstrap the update.
+The fallback is `pipx upgrade mainbranch` once before using `mb update`; old
+installs now surface this as an in-product "Update required" alert on the main
+launch, doctor, status, and start surfaces. Existing business repos should then
+be repaired with `mb skill link --repo .`, `mb skill repair --repo .`, and
+`mb doctor` from the repo root. See [docs/MIGRATING.md](docs/MIGRATING.md) for
+the old-repo path.
 `/mb-pull` still works as a legacy alias, but new docs teach `/mb-update`.
 
 **Can Claude migrate an old setup for me?**
 Yes. Start Claude Code anywhere and paste the prompt in
 [docs/MIGRATING.md](docs/MIGRATING.md#recommended-let-claude-walk-you-through-it).
-Claude should inspect first, show you exact commands, and ask before applying
-repairs or layout migrations.
+Claude should inspect first, update Main Branch through `/mb-update` or
+`mb update`, recommend one repo at a time, and ask before applying repairs or
+layout migrations.
 
 **Can I edit the skills?**
 You can, but you don't need to. They're designed to work out of the box.

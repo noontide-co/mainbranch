@@ -281,8 +281,8 @@ Acceptance:
 
 Linked issue: #174
 
-`mb update` should own the install-mode-aware refresh mechanism that `/mb-update`
-can later call or explain.
+`mb update` owns the install-mode-aware refresh mechanism that `/mb-update`
+calls and explains for normal Claude Code users.
 
 Required behavior:
 
@@ -290,7 +290,8 @@ Required behavior:
   - pipx/PyPI;
   - editable/source clone;
   - unknown.
-- For pipx installs, recommend or run `pipx upgrade mainbranch`.
+- For pipx installs, run the package refresh behind `mb update`; do not make
+  normal users choose package-manager commands.
 - For clone/source mode, recommend or run `git pull --ff-only`.
 - Repair skill links after update when needed.
 - Print what changed or where to read changelog when available.

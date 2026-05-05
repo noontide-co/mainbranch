@@ -326,7 +326,10 @@ rm ~/.config/vip/local.yaml
 
 ## Git Conflicts in an Old Engine Clone
 
-Most users should update with `pipx upgrade mainbranch` or `mb update`. If you still have an old clone-based engine install, keep business work out of that clone.
+Most users should update through `/mb-update` or `mb update`; raw package
+commands are only bootstrap fallbacks for old installs where `mb update` is not
+available. If you still have an old clone-based engine install, keep business
+work out of that clone.
 
 From the business repo, prefer:
 

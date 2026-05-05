@@ -65,7 +65,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Question | Answer |
 |----------|--------|
 | Start Claude in a folder? | `cd ~/Documents/GitHub/[your-business] && claude` — Claude sees files in that folder. Main Branch is linked via `settings.local.json`, with bridge links as a compatibility fallback for skill discovery. |
-| I see `.mb/`, not `.mb-vip/`. Is that wrong? | You're good. `.mb/` is the current repo-local Main Branch state folder. `.mb-vip/` was old clone-based setup language and is not required. If slash commands are missing, run `mb update --repo .`, `mb skill link --repo .`, `mb skill repair --repo .`, then restart Claude. |
+| I see `.mb/`, not `.mb-vip/`. Is that wrong? | You're good. `.mb/` is the current repo-local Main Branch state folder. `.mb-vip/` was old clone-based setup language and is not required. If slash commands are missing, use `/mb-update` or run `mb update --repo .`, then repair skill links and restart Claude. |
 | Do I start Claude in the business repo or site repo? | Start in the business repo for planning and creating a site. Switch to the site repo after it exists for edits, review, deploy, and `mb site check`; the site repo should have `.mainbranch/source.json` pointing back to the business repo. |
 | When use skill prompts? | For structured tasks: `/mb-start`, `/mb-think`, `/mb-ads`, `/mb-vsl` |
 | Drag files in? | Drag from Finder into Terminal, path appears |

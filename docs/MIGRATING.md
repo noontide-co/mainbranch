@@ -12,6 +12,10 @@ Existing repos do not need an urgent file move. The safe path is to update the
 engine first, repair skill discovery, and only migrate file layout on a clean
 branch when you need the new shape.
 
+The update is urgent. Do not continue a migration against a stale Main Branch
+engine when a newer package is available. Update first, then repair repos. The
+update changes the installed Main Branch tool, not the user's business files.
+
 ## `.mb` Is The Current Folder
 
 If you see a `.mb/` folder in your business repo, that is expected. `.mb/` is
@@ -23,9 +27,10 @@ You do **not** need a `.mb-vip/` folder. That name belongs to old clone-based
 setup language and the former internal repo name. The current pipx setup does
 not require a local engine clone inside your business repo.
 
-Open Claude Code in the business repo folder, not in an engine clone. If
-slash commands are missing, repair the skill wiring instead of creating a
-`.mb-vip/` folder:
+Open Claude Code in the business repo folder, not in an engine clone. If slash
+commands are missing, ask Claude to repair the skill wiring instead of creating
+a `.mb-vip/` folder. These are the underlying commands Claude or a power user
+may run:
 
 ```bash
 mb update --repo .
@@ -45,7 +50,8 @@ prompt:
 I want to migrate my existing Main Branch setup to the current pipx + /mb-start
 workflow.
 
-Please go slowly and do this safely:
+Please go slowly, but treat the Main Branch update as required before repo
+repair. I may be new to Terminal, Git, branches, and GitHub.
 
 1. First run read-only checks only:
    - mb --version
@@ -53,19 +59,37 @@ Please go slowly and do this safely:
    - mb skill list
    - find likely business repos under ~/Documents/GitHub that have CLAUDE.md
      plus core/ or reference/core/, research/, or decisions/
-2. For each likely business repo, inspect without changing files:
+2. If Main Branch is outdated, stop repo work and tell me in plain English:
+   "Main Branch needs to update before we touch your business folders. This
+   updates the tool installed on your computer, not your business files. Should
+   I run the update now?"
+3. After I confirm, update Main Branch immediately through the Main Branch
+   update path. If `/mb-update` is available, use it. Otherwise run
+   `mb update --repo <repo>` from the business repo. Only mention raw package
+   commands like `pipx upgrade mainbranch` if `mb update` is unavailable because
+   the installed version is too old.
+   Do not present the update as an optional phase.
+4. Then inspect likely business repos without changing files:
    - mb doctor <repo>
    - mb status <repo>
    - mb skill repair --repo <repo>
    - mb migrate --repo <repo> status
-3. Show me the exact commands you recommend before running anything that writes.
-4. Do not delete real files. Only use Main Branch repair/apply commands after I
+5. Recommend one repo to repair first, not a whole multi-repo project plan.
+6. Show me the one next write action you recommend before running it.
+7. Do not delete real files. Only use Main Branch repair/apply commands after I
    confirm.
-5. If a command says I need to restart Claude, stop and tell me exactly which
+8. If you create or switch to a git branch, explain that it is a safe draft copy
+   of the work. Do not merge, delete, or rename branches unless I explicitly
+   confirm.
+9. If a command says I need to restart Claude, stop and tell me exactly which
    folder to open next and which slash command to run.
+10. Do not end by giving me a list of internal mb commands to choose from. End
+   with the exact folder to open, the exact `claude` command, and `/mb-start`.
 ```
 
-Claude should end by getting each chosen business repo to this state:
+After the user confirms the update and one repo repair, Claude should get the
+chosen business repo to this state. This is implementation detail for Claude and
+power users, not a beginner checklist:
 
 ```bash
 cd /path/to/your-business
@@ -87,6 +111,32 @@ This flow is intentionally confirmation-gated. `mb skill link` and
 `mb skill repair --apply` only move stale Main Branch symlinks and broken links
 with Main Branch skill names into timestamped backups. They do not delete
 user-authored skill folders, real files, or live third-party skill links.
+
+## If Claude Creates A Branch
+
+Claude Code or `mb migrate --apply` may create or use a git branch before
+changing files. That is good: a branch is a safe draft area, not finished work.
+Do not leave a beginner wondering whether they should merge it.
+
+When a migration or repair run leaves the user on a branch, Claude should end
+with:
+
+- the branch name;
+- whether files changed;
+- what checks passed or still need attention;
+- the exact next folder and `/mb-start` command if the repo is ready;
+- whether the branch should be kept as a draft, opened as a GitHub proposal, or
+  reviewed by someone more technical before merging.
+
+Use business language first:
+
+- **branch** = a safe draft copy of the work;
+- **pull request** = a proposal for review;
+- **merge** = make the draft the main version.
+
+Claude must not merge, delete, or rename the branch unless the user explicitly
+confirms. If the user is unsure, the safe answer is to keep the branch and ask
+for review.
 
 ## If You Are On `mb 0.1.x`
 
@@ -111,7 +161,7 @@ or, from inside Claude Code:
 
 `/mb-pull` still works as a legacy alias for existing users.
 
-## Repair An Existing Business Repo
+## Power User: Repair An Existing Business Repo
 
 From the business repo:
 
@@ -164,6 +214,10 @@ mb update --repo /path/to/your-business
 mb skill link --repo /path/to/your-business
 mb skill repair --repo /path/to/your-business
 ```
+
+For beginners, Claude should run that sequence after confirmation and translate
+the result into the simple restart flow: open the business folder, run
+`claude`, then type `/mb-start`.
 
 ## Automated Layout Migration
 
@@ -290,8 +344,10 @@ the old config files yet.
 For old business repos:
 
 1. Start with the Claude-led migration prompt above if you want guidance.
-2. Upgrade Main Branch with `mb update --repo /path/to/repo`; if your install
-   is still on `0.1.x`, run `pipx upgrade mainbranch` first.
+2. Update Main Branch through `/mb-update` in Claude Code, or
+   `mb update --repo /path/to/repo` for the power-user CLI path. Use
+   `pipx upgrade mainbranch` only if the install is still on `0.1.x` and
+   `mb update` is unavailable.
 3. Run `mb skill link --repo /path/to/repo`.
 4. Run `mb skill repair --repo /path/to/repo`; use `--apply` only when it says
    a stale Main Branch symlink is safe to move.

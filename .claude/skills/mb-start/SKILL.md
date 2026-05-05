@@ -182,6 +182,13 @@ points at that section as unavailable, degraded, or needing repair.
 Use the `update` section from `mb status --json --peek`. **Do NOT silently
 swallow required updates.** Users on stale code get broken features.
 
+For normal users, updating is not a menu of package-manager commands. Do the
+update through the Main Branch product path: route to `/mb-update` when the user
+asked about updating, or run `mb update --repo . --json` yourself during
+`/mb-start` when status says the update is required. Only mention
+`pipx upgrade mainbranch` as a bootstrap fallback when `mb update` is
+unavailable or the installed version is `0.1.x`.
+
 If `update.severity` is `required` or the top ranked action is an update action,
 run the cited command. When status does not cite a narrower command, use:
 

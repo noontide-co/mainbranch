@@ -46,12 +46,10 @@ Say:
 Run the preferred repair path above. If `mb start --json` reports
 `handoff_ready: true`, tell the user to restart Claude and run `/mb-start`.
 
-If `mb` is missing, ask the user to install or upgrade:
+If `mb` is missing, ask the user to install Main Branch:
 
 ```bash
 pipx install mainbranch
-# or
-pipx upgrade mainbranch
 ```
 
 Then re-run the preferred repair path.

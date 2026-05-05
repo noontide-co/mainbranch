@@ -136,7 +136,11 @@ If HEAL_OK:
 > "I've set up the skill bridge links. **Please restart Claude** (Ctrl+C, then `claude`) — skills like `/mb-start` will appear in the dropdown on next launch."
 
 If HEAL_FAILED:
-> "Auto-repair failed. If you installed with pipx, run `pipx upgrade mainbranch` and `mb skill link --repo .`. If you cloned the engine, check that the path in `.claude/settings.local.json` is correct."
+> "Auto-repair failed. Run `/mb-update` or `mb update --repo .` first, then try
+> `mb skill link --repo .` again. If `mb update` is unavailable because this is
+> an old `0.1.x` install, bootstrap once with `pipx upgrade mainbranch`. If you
+> cloned the engine, check that the path in `.claude/settings.local.json` is
+> correct."
 
 ---
 

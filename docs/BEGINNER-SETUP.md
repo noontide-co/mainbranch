@@ -158,21 +158,33 @@ mb educational provider-readiness
 
 ## Updating Main Branch
 
-When new versions drop:
+When new versions drop, use Claude Code:
+
+```text
+/mb-update
+```
+
+`/mb-update` figures out which install you have and runs the right update path.
+`/mb-start` also checks for important updates at the beginning of a session and
+will tell you when updating matters. The CHANGELOG entry for the new version
+surfaces as a banner the next time you run `/mb-start`.
+
+Power users can run the same product update path from a business repo:
 
 ```bash
 mb update --repo .
 ```
 
-Or run `/mb-update` inside Claude Code — it figures out which install you have
-and runs the right thing. `/mb-start` also checks for important updates at the
-beginning of a session and will tell you when an update matters. The CHANGELOG
-entry for the new version surfaces as a banner the next time you run
-`/mb-start`.
+If you installed an early `0.1.x` version, `/mb-update` or `mb update` may say
+the install is too old to update itself. Ask Claude to help with the bootstrap.
+The fallback command is:
 
-If you installed an early `0.1.x` version, upgrade once with
-`pipx upgrade mainbranch` before trying `mb update`. If you already had a
-business repo from the old setup, run this from that repo afterward:
+```bash
+pipx upgrade mainbranch
+```
+
+If you already had a business repo from the old setup, ask Claude to repair that
+repo afterward. The underlying repair commands are:
 
 ```bash
 mb skill link --repo .

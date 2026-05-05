@@ -9,7 +9,10 @@ loops: [ship]
 Update the Main Branch engine and refresh this business repo's skill links.
 
 Use this instead of asking the user to remember whether they installed with
-pipx or an old clone. The CLI owns the mechanics.
+pipx or an old clone. The CLI owns the mechanics. Do not suggest raw package
+commands such as `pipx upgrade mainbranch` as the first update path; only use
+that as the bootstrap fallback when `mb update` is unavailable or the installed
+version is `0.1.x`.
 
 ---
 
@@ -28,7 +31,7 @@ Handle the JSON result:
 | `"ok": true`, `old_version != new_version` | "Updated Main Branch and refreshed skill links." |
 | `"ok": true`, `old_version == new_version` | "Main Branch is already up to date." |
 | `"ok": false` | Show the first error and the repair copy below. |
-| Invalid JSON | "I couldn't read the update result. Run `mb update --check --repo .` and send me the output." |
+| Invalid JSON | Run `mb update --check --repo .` yourself if possible; if not, ask the user for that output. |
 
 If the result includes warnings, show them after the main status.
 

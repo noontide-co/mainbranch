@@ -16,6 +16,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Clarified quick start and beginner docs so daily users run `claude` then
   `/mb-start` without a separate `mb status` step. `mb status` is now framed as
   the terminal-only briefing that `/mb-start` reads internally.
+- Clarified migration, beginner, README, educational, and skill guidance so
+  Claude treats Main Branch updates as the required first fix through
+  `/mb-update` / `mb update`, repairs one repo at a time, and explains any git
+  branch as a safe draft instead of leaving beginners to decide what to merge.
 
 ## [0.3.1] - 2026-05-05
 
