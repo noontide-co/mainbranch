@@ -5,10 +5,12 @@ status: accepted
 topic: Operator-readable git history
 linked_decisions:
   - decisions/2026-05-02-github-native-business-os.md
+linked_docs:
+  - docs/OPERATOR-LOOPS.md
 linked_issues:
   - https://github.com/noontide-co/mainbranch/issues/300
 participants: [Devon, Codex]
-tags: [v0-3, git-history, checkpoints, operator-loops, narration]
+tags: [v0-3, git-history, checkpoints, operator-loops, show]
 ---
 
 # Operator-Readable Git History
@@ -19,6 +21,12 @@ Business-repo commits should read like an operator journal. A non-technical
 operator should be able to scan `git log --oneline`, a future dashboard
 timeline, or a team daily log and understand what happened without learning git
 or the Main Branch loop taxonomy.
+
+This contract applies to **business repos** created by `mb init` / `mb onboard`.
+The Main Branch engine repo keeps its existing contributor commit style
+(`[add] [update] [fix] [remove] [refactor]`). That is an engineering-grammar
+contract for contributors, not an operator-grammar contract for business
+owners. The two contracts coexist by audience, not by overlap.
 
 Use lower-case, past-tense business verbs as the default commit prefixes:
 
@@ -34,20 +42,26 @@ Use lower-case, past-tense business verbs as the default commit prefixes:
 - `[fixed]`
 
 Main Branch may still map these commits to Know / See / Decide / Execute /
-Narrate / System internally. It should not ask operators to write those loop
+Show / System internally. It should not ask operators to write those loop
 names into normal business commit subjects.
 
 ## Why Not Loop Tags
 
-The operator loops are product architecture. They help Main Branch rank work,
-group status signals, and design workflows. They are not the language a
+The operator loops are product architecture, defined in
+[OPERATOR-LOOPS.md](../docs/OPERATOR-LOOPS.md). They help Main Branch rank
+work, group status signals, and design workflows. They are not the language a
 business operator naturally uses to remember the quarter.
+
+The loop names themselves were chosen to be plain enough to read in product
+docs (Know / See / Decide / Execute / Show), but commit prefixes optimize for a
+different read: operators scanning their own history months later. Verbs win
+that read; categories do not.
 
 Compare:
 
 ```text
 [execute] workshop-waitlist lander
-[narrate] workshop-waitlist outcome
+[show] workshop-waitlist outcome
 ```
 
 With:
@@ -104,8 +118,8 @@ stronger signal, but it should start here.
 | `[added]` | Know | New durable business context or artifact exists | `offer.md`, research note, proof, audience segment |
 | `[updated]` | Know | Existing durable context changed | offer, pricing, audience, voice, daily log |
 | `[decided]` | Decide | A choice and its rationale were accepted | launch date, provider choice, offer direction |
-| `[opened]` | Narrate | A bet, task, campaign, or issue became active | bet, campaign, follow-up task |
-| `[closed]` | Narrate | A bet, task, campaign, or issue got an outcome | bet, campaign, follow-up task |
+| `[opened]` | Show | A bet, task, campaign, or issue became active | bet, campaign, follow-up task |
+| `[closed]` | Show | A bet, task, campaign, or issue got an outcome | bet, campaign, follow-up task |
 | `[drafted]` | Execute | Draft work was produced but not shipped | ads, VSL, organic batch, site copy |
 | `[shipped]` | Execute | Work became visible, deployed, published, or sent | site, page, email, ad batch, offer |
 | `[connected]` | System | A provider or local integration became usable | Stripe, GitHub, Cloudflare, Meta Ads |
@@ -293,3 +307,9 @@ For this decision slice:
 - Beginner checkpointing can be readable without being lax about safety.
 - Power users and CI can opt into stricter reference and prefix validation
   without making the first-run path feel like developer ceremony.
+- The verb contract becomes the substrate for the public bets feed (loop Show):
+  `[opened]` and `[closed]` commits with `Refs: bets/<slug>.md` are the
+  canonical events the bets-feed renderer reads. Renaming or removing these
+  verbs after v0.3.x requires coordinated migration across `mb checkpoint`,
+  `mb status`, the bets-feed module, and any operator wikis or dashboards
+  consuming git log.
