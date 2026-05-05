@@ -1,37 +1,45 @@
 # Tool Status Audit
 
-Lightweight self-healing pass run during `/mb-start` before readiness scoring.
+Lightweight provider/readiness pass run during `/mb-start` before routing.
 
 ---
 
 ## Goal
 
-Repair stale false negatives in `.vip/config.yaml` without running a full research tool scan.
+Use deterministic `mb` facts for provider readiness, setup repair, and stale
+status before any skill-specific runtime checks. `/mb-start` should not
+reimplement provider probes or mutate provider state from prose.
 
 ---
 
 ## Audit Flow
 
-1. Read `.vip/config.yaml` `tools` section
-2. For each tool entry:
-   - If `status: false` and stale (`last_checked` missing, invalid, or older than 30 days), re-probe
-   - If entry exists and `last_checked` is missing, add `last_checked: [today]`
-3. Write config updates immediately
-4. Notify only on state changes:
-   - `false → true`: "Found [tool] installed — updated your config."
-   - `true → false`: "Warning: [tool] was previously available but is now missing."
-5. If no status changes, stay silent
+1. Read `mb status --json --peek`.
+2. If a provider, GitHub, runtime-wiring, or drift section is degraded, missing,
+   or selected by the operator, run:
+
+   ```bash
+   mb connect doctor --json
+   ```
+
+3. Use the CLI's `summary`, `next_command`, and `repair_command` in the
+   operator-facing answer.
+4. Run `mb connect plan` when the operator asks what to connect first.
+5. Stay silent when status reports the selected path as healthy.
 
 ---
 
 ## Scope Boundary
 
-- This is not full `/mb-think` tool detection.
-- Only stale false entries are probed.
-- `status: true` entries are not routinely re-probed here.
-- Full detection and tool surfacing remain in `/mb-think`.
+- This is not full `/mb-think` runtime detection.
+- Provider readiness belongs to `mb status`, `mb connect plan`, and
+  `mb connect doctor --json`.
+- Local runtime tool presence is checked only when a selected workflow needs it
+  and `mb` cannot inspect it directly.
+- Full research tool surfacing remains in `/mb-think`.
 
-Use probe methods defined in `/mb-think` (`Gemini`, `Grok`, `whisper`, document tools, and lazy `Pipeboard` handling).
+Use probe methods defined in `/mb-think` only for runtime-local tools after the
+provider facts have been read.
 
 ---
 

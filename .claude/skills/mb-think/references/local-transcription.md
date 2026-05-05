@@ -20,7 +20,9 @@ which mlx_whisper 2>/dev/null || which whisper-cli 2>/dev/null || echo "No whisp
 which ffmpeg 2>/dev/null || echo "No ffmpeg found"
 ```
 
-**IMPORTANT:** Check config first. If `tools.whisper.status: true` exists in `.vip/config.yaml`, read `tools.whisper.notes` to see which variant is installed. Skip detection.
+**IMPORTANT:** This is runtime-local detection, not provider readiness. If the
+session already knows which whisper variant works, use that. Otherwise check the
+needed runtime tool when local transcription is selected.
 
 ---
 

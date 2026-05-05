@@ -1,6 +1,9 @@
-# Tool Detection (Config-First, Per-Probe Methods)
+# Tool Detection (CLI Facts First, Runtime Probes Second)
 
-Tool status persists in `.vip/config.yaml` under `tools:`. Read config first, only probe unknowns, always write results back.
+Provider readiness belongs to `mb status --json --peek`, `mb connect plan`, and
+`mb connect doctor --json`. Use those facts before probing local runtime tools.
+The checks below are for runtime-local capabilities that `mb` cannot inspect
+directly inside the current Claude Code session.
 
 ---
 
@@ -8,27 +11,31 @@ Tool status persists in `.vip/config.yaml` under `tools:`. Read config first, on
 
 | Value | Meaning | Action |
 |-------|---------|--------|
-| `true` | Verified working | Use tool, skip detection |
-| `false` | Known unavailable | Skip detection (unless stale) |
-| `null` | Unknown | Run detection |
-| (missing) | Never checked | Run detection |
+| `true` | Runtime tool verified in this session/config | Use tool, skip runtime probe |
+| `false` | Runtime tool known unavailable | Skip runtime probe unless the user selected this path |
+| `null` | Unknown | Run runtime probe only when needed |
+| (missing) | Never checked | Run runtime probe only when needed |
 
 ## Staleness Check
 
-Treat `status: false` as stale when `last_checked` is missing, invalid, or older than 30 days. Re-probe stale false entries.
+Do not routine re-probe stale provider entries here. If provider readiness is
+stale or degraded, use `mb connect doctor --json`. Runtime-local entries can be
+rechecked when a selected workflow needs that tool.
 
 ---
 
 ## Detection Flow
 
-On first /mb-think invocation each session:
+On first `/mb-think` invocation each session:
 
 ```
-1. Read .vip/config.yaml → tools section
-2. Detect unknown tools and re-detect stale false entries
-3. Normalize metadata (`last_checked`) on existing tool entries missing it
-4. WRITE config updates immediately (status + notes + last_checked for touched entries)
-5. Report once (experience-appropriate)
+1. Read `mb status --json --peek`.
+2. Run `mb connect doctor --json` if a selected provider is degraded/missing.
+3. If the selected research path needs a runtime-local tool, check only that
+   tool.
+4. Cache session knowledge and update local runtime notes only for the tool you
+   actually touched.
+5. Report once (experience-appropriate).
 ```
 
 For full self-healing contract (stale semantics, status-change messaging, and true-tool degradation handling), see [tool-status-self-healing.md](tool-status-self-healing.md).
@@ -37,7 +44,9 @@ For full self-healing contract (stale semantics, status-change messaging, and tr
 
 ## Detection Methods
 
-**Apify:** Check if `mcp__apify__search-actors` tool exists in session.
+**Apify:** Use `mb connect doctor --json` for provider readiness first. Then
+check if `mcp__apify__search-actors` exists in session when the selected path
+needs Apify runtime tools.
 
 **Gemini:**
 ```bash
@@ -62,13 +71,16 @@ pip3 list 2>/dev/null | grep -i "mlx-whisper" && echo "WHISPER=mlx_whisper"
 
 **Nano Banana** (image generation): Available when Gemini is configured (uses GOOGLE_API_KEY). Detect alongside Gemini.
 
-**Pipeboard** (Meta ad account access): Check for MCP tools, then probe:
+**Meta Ads account access:** Use `mb connect doctor --json` for provider
+readiness first. Then check for read-only ad account MCP tools only when the
+selected path needs live account context:
 ```bash
 # Detection: check if mcp__pipeboard__* tools exist in session
 # If found, probe with get_ad_accounts (lightweight call)
 # If probe succeeds, cache status: true
 ```
-Pipeboard is a remote MCP at `mcp.pipeboard.co/meta-ads-mcp` (OAuth, no local install). Free tier: 30 calls/week. Pro: $29.90/mo, 100 calls/week. **Lazy detection only** -- triggered when topic is ads-related, not on every /mb-think invocation. See `/mb-ads` SKILL.md for full Pipeboard integration details.
+Lazy runtime detection only -- triggered when topic is ads-related, not on every
+`/mb-think` invocation. See `/mb-ads` SKILL.md for the account-context flow.
 
 **Document tools:**
 ```bash
@@ -83,7 +95,8 @@ which marker_single >/dev/null 2>&1 && echo "MARKER=true"
 
 ## Config Update (REQUIRED)
 
-After detection, **immediately update config** using Edit tool:
+After a runtime-local detection that is not already represented by `mb`,
+optionally update local runtime notes:
 
 ```yaml
 tools:
@@ -97,7 +110,8 @@ tools:
     last_checked: 2026-03-02
 ```
 
-**Do not skip this step.** Config updates prevent re-probing next session. Use the self-healing contract in [tool-status-self-healing.md](tool-status-self-healing.md).
+Do not store secrets in repo files. Provider setup and repair language still
+comes from `mb connect`.
 
 ---
 
@@ -121,7 +135,7 @@ When user's intent matches an unavailable tool, **surface the option once per se
 | "X sentiment" | Grok | "X sentiment is best with Grok (real-time). Use web search? Set up Grok (5 min, $5 credit)?" |
 | "deep research" | Gemini | "Deep synthesis works best with Gemini (free tier). Web search fallback? Set up (3 min)?" |
 | Local file | whisper | "Local transcription needs whisper (10 min). Set up? External service? Skip?" |
-| "ad performance", "what's working", "check my CPA" | Pipeboard | "Pulling ad account data needs a Meta Ads connection (5 min setup, uses Pipeboard). Set up? Research from reference only? Skip?" |
+| "ad performance", "what's working", "check my CPA" | Meta Ads account context | "Pulling ad account data needs a Meta Ads connection. Run `mb connect plan`, research from reference only, or skip?" |
 
 **Rules:**
 - Surface once per session per tool (track in session state)

@@ -210,8 +210,13 @@ Use the `update` section from `mb status --json --peek`. **Do NOT silently
 swallow required updates.** Users on stale code get broken features.
 
 If `update.severity` is `required` or the top ranked action is an update action,
-run the cited command (`mb update` or the package-manager command from status),
-then run `mb status --json --peek` again before routing.
+run the cited command. When status does not cite a narrower command, use:
+
+```bash
+mb update --repo "$REPO_PATH" --json
+```
+
+Then run `mb status --json --peek` again before routing.
 
 ---
 
@@ -300,17 +305,21 @@ operator-facing pattern is:
 
 **Why defer:** Most sessions don't use all tools. Checking everything upfront wastes time and clutters the greeting. /mb-think detects tools when user's intent requires them and surfaces setup options at the right moment.
 
-If user's stated intent involves research, route to /mb-think — it will handle tool detection with config-first logic (reads `.vip/config.yaml`, only probes unknowns, updates config with results).
+If user's stated intent involves research, route to /mb-think. It will use
+`mb` provider facts first, then detect only the runtime tools needed for the
+selected research path.
 
 ---
 
-## Step 5: Tool Status Audit (Lightweight Self-Heal)
+## Step 5: Tool Status Audit (Deterministic Facts First)
 
-Run a lightweight `.vip/config.yaml` audit before readiness to repair stale `status: false` entries and normalize missing `last_checked` values.
+Run a lightweight provider/readiness audit before routing:
 
-- Re-probe only stale false entries (missing/invalid/old `last_checked`)
-- Write updates immediately when status or metadata is repaired
-- Notify only when status changes (`false → true` or `true → false`)
+- Use `mb status --json --peek` facts already gathered.
+- Run `mb connect doctor --json` when a provider section is degraded, missing,
+  or selected by the operator.
+- Quote the CLI's `next_command` / `repair_command`.
+- Do not re-probe provider credentials from prose or mutate `.vip/config.yaml`.
 
 See [tool-status-audit.md](references/tool-status-audit.md) for the full procedure and messaging rules.
 
@@ -384,18 +393,18 @@ find "$REPO_PATH/reference/offers" -mindepth 2 -maxdepth 2 -name "offer.md" 2>/d
 
 ## Step 9: Detect State and Assess Completeness
 
-Check `reference/core/*.md`. No folder → `/mb-setup`. Exists → check completeness:
+Use `readiness`, `onboarding`, `drift.items`, and `ranked_actions` from
+`mb status --json --peek` first. If those sections are unavailable, use this
+fallback check.
 
-| File | Complete If |
-|------|------------|
-| soul.md | >30 lines or "Beliefs" section |
-| offer.md | >50 lines or "Price" section |
-| audience.md | >30 lines or "Pains" section |
-| voice.md | >20 lines or "Tone" section |
+Fallback: check `reference/core/*.md`. No folder → `/mb-setup`. If two or more
+core files are missing/thin, route to `/mb-think codify`; otherwise route by
+intent. Use [readiness-assessment.md](references/readiness-assessment.md) for
+the exact fallback thresholds.
 
-2+ empty/missing → `/mb-think codify`. Complete → route by intent.
-
-**Multi-offer completeness:** When `offers/` exists, also check the active offer's `offer.md` for substance. A thin offer file (< 20 lines) means `/mb-think` should be recommended to flesh it out. Don't count brand-level `core/offer.md` as a substitute for a missing offer-specific file.
+**Multi-offer completeness:** When status does not expose offer readiness, check
+the active offer's `offer.md`; a thin/missing offer-specific file should route
+to `/mb-think`.
 
 ---
 
@@ -421,26 +430,17 @@ Check `reference/core/*.md`. No folder → `/mb-setup`. Exists → check complet
 
 ## Context Awareness
 
-| Level | Action |
-|-------|--------|
-| Fresh (0-20%) | Full load, explain briefly |
-| Working (20-70%) | Route to task |
-| Heavy (70-85%) | Warn: "Finish this, then new session" |
-| Critical (85%+) | "Context nearly full. Wrap up." |
-
-Show percentage when relevant: "You're at ~60% — plenty of room."
+Fresh context gets a fuller load; working context routes directly; heavy context
+gets a brief warning; critical context routes to `/mb-end`. Show percentage only
+when relevant.
 
 ---
 
 ## Adapt to Experience
 
-Read `user.experience` from `~/.config/vip/local.yaml` (defaults to `beginner` if missing).
-
-| Experience | Behavior |
-|------------|----------|
-| `beginner` | Verbose explanations, show context tips, more hand-holding |
-| `intermediate` | Balanced — explain when relevant, skip basics |
-| `advanced` | Minimal — get out of the way, route fast |
+Read `user.experience` from `~/.config/vip/local.yaml` (defaults to `beginner`
+if missing): beginner = explain more, intermediate = balanced, advanced = route
+fast.
 
 **First-time** (no config, thin reference): Be verbose, route to /mb-setup
 **Returning** (config exists): Quick confirmation, route by intent
@@ -489,7 +489,7 @@ If re-invoked after compaction: re-read `~/.config/vip/local.yaml` for repo + id
 - [references/config-system.md](references/config-system.md) — Config loading and recovery
 - [references/mcp-preflight.md](references/mcp-preflight.md) — MCP pre-flight checks
 - [references/readiness-assessment.md](references/readiness-assessment.md) — Step 6 readiness scoring
-- [references/tool-status-audit.md](references/tool-status-audit.md) — Step 5 self-heal
+- [references/tool-status-audit.md](references/tool-status-audit.md) — Step 5 provider/readiness audit
 - [references/triage-agent.md](references/triage-agent.md) — Triage agent prompts and synthesis
 
 ---

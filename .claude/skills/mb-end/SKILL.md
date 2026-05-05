@@ -64,6 +64,16 @@ A quick `/mb-end` (user says "just commit and close") can be steps 1-3 and 6. Bu
 
 ## Step 2: Scan Today's Activity
 
+First read checkpoint continuity:
+
+```bash
+mb checkpoint --status --json
+```
+
+Use `recent[]` to name where the last session left off and `pending.status` to
+explain whether meaningful unsaved work exists. Then scan today's activity for
+the reflective summary.
+
 Run these in the user's business repo:
 
 ```bash

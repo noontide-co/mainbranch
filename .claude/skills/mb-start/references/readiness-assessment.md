@@ -1,6 +1,10 @@
 # Readiness Assessment Reference
 
-Complete reference for the readiness assessment run by `/mb-start` at Step 6. Contains scoring rubric, session state check, soul health check, routing gates, skill-specific readiness, and display format.
+Complete fallback reference for readiness assessment when `/mb-start` needs
+detail that `mb status --json --peek` does not expose. Use status `readiness`,
+`drift.items`, `onboarding`, `since_last_check`, and `ranked_actions` first.
+Only use the checks below for section-level detail or when status reports that
+a section is unavailable/degraded.
 
 ---
 

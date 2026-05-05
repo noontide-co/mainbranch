@@ -136,7 +136,8 @@ External conversion tools (markitdown, pandoc, marker) produce clean markdown th
 
 ## Tool Detection
 
-Check `.vip/config.yaml` tools section. If conversion tools aren't detected:
+This is runtime-local detection. Check conversion tools only when document
+ingestion is selected:
 
 ```bash
 which markitdown 2>/dev/null && echo "MARKITDOWN=1" || echo "MARKITDOWN=0"

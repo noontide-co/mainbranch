@@ -5,7 +5,7 @@ Canonical command for pulling latest Main Branch updates at the start of any ski
 `mb update` owns the install-mode mechanics. It detects pipx vs clone installs, runs the correct update command, and refreshes skill links for the business repo.
 
 ```bash
-mb update --repo "${REPO_PATH:-.}" --json 2>&1
+mb update --repo . --json 2>&1
 ```
 
 ## Handle the Result

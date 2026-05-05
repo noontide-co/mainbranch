@@ -1,17 +1,31 @@
 # Pre-Flight Readiness Algorithm
 
-Score reference file depth before generating ads. Prevents thin reference from producing generic output.
+Read deterministic status first, then score ad-specific reference depth before
+generating ads when status lacks the needed creative detail. This prevents thin
+reference from producing generic output without duplicating repo-health,
+provider, drift, or setup checks.
 
 ---
 
 ## When to Run
 
-- **`/mb-ads` Step 0** — Before triage menu appears
-- **`/mb-start`** — As part of global gap scan (surfaces priorities)
+- **`/mb-ads` Step 0** — After `mb status --json --peek`, before triage menu appears
+- **`/mb-start`** — Only as fallback/detail after status `readiness`
 
 ---
 
 ## Scoring Matrix
+
+First run:
+
+```bash
+mb status --json --peek
+```
+
+Use status `readiness`, `drift.items`, `ranked_actions`, `integrations`, and
+`measurement` as source of truth for setup, stale context, provider readiness,
+and repair commands. The scoring below is ad-specific creative depth, not repo
+health.
 
 Score each file 0-3 based on line count + section presence.
 

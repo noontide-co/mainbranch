@@ -40,19 +40,19 @@ GitHub.
 
 2. **Cloudflare** - sites, DNS, Pages, and future Workers.
    - Use when: publish a landing page, attach a domain, or deploy a site.
-   - Check/fix: `mb connect status --all --json`.
+   - Check/fix: `mb connect doctor --json`.
 
 3. **Google / Workspace** - Drive, Docs, Sheets, Slides, and source material.
    - Use when: a workflow needs existing Google files.
-   - Check/fix: `mb connect status --all --json`.
+   - Check/fix: `mb connect doctor --json`.
 
 4. **Meta Ads** - ad accounts, campaigns, pixels, and future performance facts.
    - Use when: paid-ad generation, review, or learning needs account context.
-   - Check/fix: `mb connect status --all --json`.
+   - Check/fix: `mb connect doctor --json`.
 
 5. **Apify** - optional research sidecar for scraping, YouTube, Instagram, and web mining.
    - Use when: research or organic workflows need structured external data.
-   - Check/fix: `mb connect status --all --json`.
+   - Check/fix: `mb connect doctor --json`.
 
 ## Support Boundary
 

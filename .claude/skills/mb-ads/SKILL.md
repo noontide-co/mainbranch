@@ -9,7 +9,10 @@ Create ads, generate creative variations, review for compliance, and check ad ac
 
 ## Step 0: Pre-Flight Readiness
 
-**Before triage, find the business repo and score reference file depth.** This prevents generating generic ads from thin reference.
+**Before triage, find the business repo, read deterministic Main Branch facts,
+then score ad-specific reference depth only when needed.** This prevents
+generating generic ads from thin reference without duplicating repo-health or
+provider checks that `mb` already owns.
 
 ### 0a. Find Business Repo (REQUIRED — do this first)
 
@@ -19,16 +22,25 @@ Create ads, generate creative variations, review for compliance, and check ad ac
 
 If CWD is NOT a business repo:
 
+Run:
+
 ```bash
-cat ~/.config/vip/local.yaml 2>/dev/null
+mb status --json --peek
 ```
 
-- If `default_repo:` exists → **ask user to confirm:** "Found saved repo: [name]. Use this? (y/n)"
-- If no config or no default_repo → **ask the user:** "Which business repo should I use? Give me the path."
-- If the command returns nothing or errors → **that is fine. Just ask the user. Do NOT search for repos.**
-- If `/mb-ads` was invoked from `/mb-start`, the repo is already identified — use it without asking.
+- If status identifies a usable business repo, ask the user to confirm it.
+- If status cannot identify a repo, ask: "Which business repo should I use?
+  Give me the path."
+- If `/mb-ads` was invoked from `/mb-start`, the repo is already identified —
+  use it without asking.
 
 **Always confirm the repo before proceeding.** Never assume.
+
+After the repo is confirmed, run `mb status --json --peek` from that repo. Use
+`readiness`, `drift.items`, `integrations`, `measurement`, and `ranked_actions`
+as the source of truth for setup, stale context, GitHub, provider readiness, and
+repair commands. Only run the direct scoring below for ad-specific creative
+depth when status is unavailable or lacks the needed ad-specific detail.
 
 ### 0b. Score Reference Files (fast — direct Read only, NO agents)
 
@@ -60,20 +72,23 @@ Composite = sum of all 6 scores (max 18).
 
 Display the readiness report, then proceed. See [references/preflight-algorithm.md](references/preflight-algorithm.md) for gap guidance and smart mix recommendations.
 
-### 0d. Check Nano Banana
+### 0d. Check Image Generation Readiness
 
 ```bash
-source ~/.config/vip/env.sh 2>/dev/null; echo "GOOGLE_API_KEY=${GOOGLE_API_KEY:+set}"
+mb connect doctor --json
 ```
 
-If set, note it for Batch 4 image generation after copy is saved.
+Use status/connect facts first for Google/Workspace readiness. Only check local
+environment variables when image generation is actually selected and the CLI
+does not report that capability. Never ask the operator to paste API keys into
+chat or public issue text.
 
 ### 0e. Paid-Traffic Measurement Gate
 
 If this ad work is for Google Ads, paid traffic to a site/minisite/lander, retargeting, or any request that asks whether a campaign is ready to launch, check measurement readiness before saying "launch."
 
 1. Load `docs/google-ads-gtm-conversion-rubric.md`.
-2. Run `mb connect plan` or `mb connect status --all --json` from the business repo when provider readiness matters.
+2. Run `mb connect plan` or `mb connect doctor --json` from the business repo when provider readiness matters.
 3. If a site repo is known, run:
 
 ```bash
@@ -93,40 +108,25 @@ Never ask the operator to paste Google Ads/GTM tokens, OAuth secrets, conversion
 
 ---
 
-## Pipeboard Detection (Lazy)
+## Meta Ad Account Readiness (Lazy)
 
-Check for Meta ad account access on first /mb-ads invocation when topic is ads-related. Same pattern as Gemini/Grok/whisper detection -- config-first, probe unknowns, cache results.
+Check Meta ad account access only when the user's request needs live ad account
+context. Do not duplicate provider setup or health checks in prose.
 
-### Detection Flow
+### Readiness Flow
 
 ```
-1. Read .vip/config.yaml → tools.pipeboard
-2. If status: true → note available, skip detection
-3. If status: false AND last_checked is valid and <30 days old → skip
-4. If status: null OR missing OR stale false:
-   a. Check for mcp__pipeboard__* tools in session
-   b. If found: probe with get_ad_accounts (lightweight)
-   c. If probe succeeds: write status: true to config
-   d. If not found or probe fails: write status: false to config
-5. Never block on detection failure
+1. Read `mb status --json --peek` → integrations/providers/measurement facts.
+2. If the operator needs setup choices, run `mb connect plan`.
+3. If something looks broken, run `mb connect doctor --json`.
+4. Only after `mb` says Meta Ads account context is ready or repairable, check
+   whether the current Claude Code session exposes the required read-only MCP
+   tools.
+5. Never block generation on missing ad account access.
 ```
 
-`stale false` means: `status: false` and `last_checked` is missing, invalid, or >=30 days old.
-
-### Config Update (REQUIRED after detection)
-
-```yaml
-tools:
-  pipeboard:
-    status: true              # detection result
-    method: mcp
-    tier: free                # free | pro (self-reported)
-    notes: "meta-ads MCP configured via remote URL"
-    last_checked: 2026-02-10
-    weekly_calls_used: 0      # lightweight tracking (Phase 1.5)
-```
-
-**Graceful degradation:** If Pipeboard is not configured, skip all account-related features. The skill works fully without it. Pipeboard is additive, not required.
+**Graceful degradation:** If Meta Ads account context is not ready, skip all
+account-related features. The skill works fully from repo reference files.
 
 ### User-Facing Display
 
@@ -134,16 +134,16 @@ tools:
 
 **Pre-flight status line (add after Nano Banana check):**
 
-If configured:
+If ready:
 > `Ad account:   ✓ connected (I can check what's performing before we create)`
 
-If not configured:
+If not ready:
 > `Ad account:   — not connected (optional — lets me see your live Meta ad performance to inform new ads)`
 
 **Never say:** "Pipeboard: not configured (no account check — that's fine)" — this means nothing to a new user.
 
 **If user asks what this means:**
-> "You can optionally connect your Meta/Facebook ad account so I can pull live performance data — what's spending, what's winning, CPAs, creative that's working. This helps me create ads that fit your account structure and build on what's already performing. It uses a tool called Pipeboard (free tier: 30 calls/week). Want to set it up, or skip and work from your reference files?"
+> "You can optionally connect your Meta/Facebook ad account so I can pull live performance data — what's spending, what's winning, CPAs, creative that's working. This helps me create ads that fit your account structure and build on what's already performing. Want to run `mb connect plan`, or skip and work from your reference files?"
 
 ---
 
@@ -162,9 +162,9 @@ Detect what the user wants from natural language. Route internally to the right 
 | "video scripts", "ad scripts", "spoken word" | Video Scripts | Spoken-word script pipeline |
 | "I'm repurposing a video", "I shot a video" | Video Repurpose | Transcribe + extract hooks + copy variants |
 | "I want ideas for an ad", "brainstorm" | Ideation | Account check (if available) + concept generation |
-| "Check my ad performance", "what's working" | Account Check | Pipeboard read-only (requires Pipeboard) |
-| "Give me 5 variations of this winning ad" | Performance Iteration | Pull winner + generate variants (requires Pipeboard) |
-| "What's working before we create?" | Pre-Gen Account Check | Account overview + creative audit (requires Pipeboard) |
+| "Check my ad performance", "what's working" | Account Check | Read-only Meta Ads context if `mb connect` and runtime tools are ready |
+| "Give me 5 variations of this winning ad" | Performance Iteration | Pull winner + generate variants if account context is ready |
+| "What's working before we create?" | Pre-Gen Account Check | Account overview + creative audit if account context is ready |
 | "review", "audit", "compliance check" | Review | 6-lens compliance review |
 
 **Also accepts:** "static", "static ads", "video", "video scripts", "one-liners", "review" -- these route to the same pipelines.
@@ -173,7 +173,8 @@ Detect what the user wants from natural language. Route internally to the right 
 
 ### Proactive Account Awareness
 
-If Pipeboard is configured (tools.pipeboard.status: true in config):
+If `mb status --json --peek` / `mb connect doctor --json` reports Meta Ads
+ready and the current runtime exposes the read-only ad account tools:
 
 **Before generating:** Suggest checking the account first. Explain the value briefly — don't assume the user knows what this does:
 > "Your Meta ad account is connected. Want me to pull your live performance data first? I can see what's spending, which creative has the best CPA, and use that to inform what we create. (Takes ~30 seconds.)"
@@ -186,7 +187,7 @@ If user says yes, run Account Check component (see [references/pipeboard-integra
 
 If user says no, proceed to generation with reference files only.
 
-**After generating:** If Pipeboard is available, show account context:
+**After generating:** If Meta Ads account context is available, show account context:
 > "Here's what's currently live. Your new creative could fit as [suggested placement]."
 
 Account awareness is currently read-only. Write operations (duplicate + swap) are on the roadmap -- see [references/pipeboard-integration.md](references/pipeboard-integration.md).
@@ -252,7 +253,7 @@ Before creating ads, the business repo must have:
 | Visual Style | `reference/visual-identity/visual-style.md` | Optional (affects image gen) |
 | Content Strategy | `reference/domain/content-strategy.md` (always brand-level) | Optional (improves topic selection) |
 | Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | Optional (congruence check) |
-| Ad Account Access | `.vip/config.yaml` → `tools.pipeboard.status` | Optional (enables live performance data) |
+| Ad Account Access | `mb status --json --peek` + `mb connect doctor --json` | Optional (enables live performance data) |
 
 If required files are missing, Step 0 pre-flight catches this and routes appropriately.
 
@@ -354,7 +355,7 @@ If context was compacted mid-task, check:
 2. **What entry point?** Full pipeline, copy only, hook library, video scripts, review, account check
 3. **What stage?** Planning angles, writing hooks, generating prompts, reviewing, pulling account data
 4. **What's done?** Check outputs/ folder for partial work
-5. **Pipeboard status?** Read `.vip/config.yaml` for `tools.pipeboard.status`
+5. **Ad account status?** Re-run `mb status --json --peek`; if needed, run `mb connect doctor --json`
 6. **Resume:** Continue from the last completed step
 
 For full pipeline: Did we finish image prompts (Part 1) before copy (Part 2)?
@@ -370,4 +371,4 @@ For review: Which lenses completed?
 **Hook library (creative variations):** Flexible quantity (default 30), Andromeda-optimized
 **Video scripts:** 15-30 diverse scripts, spoken-word optimized
 **Review:** 6 lenses, P1/P2/P3 report, fix suggestions
-**Account check:** Pipeboard read-only -- campaigns, performance, creative audit (requires Pipeboard)
+**Account check:** read-only Meta Ads context -- campaigns, performance, creative audit when `mb connect` and runtime tools are ready

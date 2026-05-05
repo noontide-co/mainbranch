@@ -76,8 +76,8 @@ Native task management in your repo. Claude can read/write via `gh` CLI.
 
 **Setup:**
 ```bash
-# Ensure gh is authenticated
-gh auth status
+# Check GitHub task readiness from the business repo
+mb connect doctor --json
 ```
 
 **Usage:**

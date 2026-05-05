@@ -1,14 +1,19 @@
 # Pipeboard Integration
 
-Meta ad account awareness via Pipeboard MCP. Read-only in Phase 1. Write operations in Phase 1.5.
+Meta ad account awareness via a read-only runtime MCP. `mb connect` owns
+provider readiness and repair facts; this reference only describes how account
+context is used once the provider and runtime tool are ready.
 
 ---
 
 ## What Pipeboard Provides
 
-Pipeboard exposes Meta's Marketing API as 29 MCP tools via remote MCP at `mcp.pipeboard.co/meta-ads-mcp`. OAuth handles auth -- no local install, no Meta Developer account needed.
+Pipeboard is the current MCP implementation for Meta account reads. OAuth
+handles auth -- no local install or committed secret is required.
 
-**Detection:** Lazy -- triggered at /mb-think or /mb-ads when ads-related, NOT at /mb-start. See detection flow in SKILL.md.
+**Readiness:** Lazy -- triggered at `/mb-think` or `/mb-ads` when ads-related,
+not at `/mb-start`. Start with `mb status --json --peek` and
+`mb connect doctor --json`; only then check runtime MCP tool presence.
 
 ---
 
@@ -148,7 +153,8 @@ Pro tier supports daily checks and multiple creative iterations per week with he
 
 ## Graceful Degradation
 
-Pipeboard is **additive, not required.** The entire /mb-ads skill works without it.
+Ad account context is **additive, not required.** The entire /mb-ads skill works
+without it.
 
 | With Ad Account Connected | Without Ad Account |
 |---------------------------|-------------------|
@@ -158,49 +164,47 @@ Pipeboard is **additive, not required.** The entire /mb-ads skill works without 
 | Suggest where new creative fits | User decides placement |
 | Duplicate + swap (Phase 1.5) | Manual upload in Ads Manager |
 
-**Never block on missing ad account connection.** If detection fails or tool is missing, proceed with standard generation flow. Mention the option once per session, then move on.
+**Never block on missing ad account connection.** If `mb connect` reports a
+missing provider or the runtime tool is unavailable, proceed with standard
+generation flow. Mention the option once per session, then move on.
 
 ---
 
-## Config Schema
+## Provider Facts
 
-```yaml
-# In .vip/config.yaml under tools:
-tools:
-  pipeboard:
-    status: true              # true | false | null
-    method: mcp               # always mcp for Pipeboard
-    tier: free                # free | pro (self-reported or detected)
-    notes: "meta-ads MCP configured via remote URL"
-    last_checked: 2026-02-10  # date of last detection
-    weekly_calls_used: 0      # lightweight tracking (Phase 1.5)
+Provider metadata and repair state come from the CLI:
+
+```bash
+mb status --json --peek
+mb connect plan
+mb connect doctor --json
 ```
+
+Use the CLI's `summary`, `next_command`, and `repair_command` fields. Do not
+write provider readiness into `.vip/config.yaml` from this skill.
 
 ---
 
-## Detection Flow
+## Readiness Flow
 
-Triggered lazily at /mb-think or /mb-ads when topic is ads-related:
+Triggered lazily at `/mb-think` or `/mb-ads` when topic is ads-related:
 
 ```
-1. Read .vip/config.yaml → tools.pipeboard
-2. If status: true → use it, skip detection
-3. If status: false AND last_checked is valid and <30 days old → skip
-4. If status: null OR missing OR stale false:
-   a. Check for mcp__pipeboard__* tools in session
-   b. If found: probe with get_ad_accounts (lightweight)
-   c. If probe succeeds: write status: true to config
-   d. If not found or probe fails: write status: false to config
-5. Never block on detection failure
+1. Read `mb status --json --peek`.
+2. If the operator needs setup choices, run `mb connect plan`.
+3. If the provider is degraded or missing, run `mb connect doctor --json` and
+   quote the repair command.
+4. If provider facts are ready, check for read-only ad account MCP tools in the
+   current runtime session.
+5. Never block generation on missing account access.
 ```
-
-`stale false` means: `status: false` and `last_checked` is missing, invalid, or >=30 days old.
 
 ---
 
 ## Proactive Suggestions
 
-When Pipeboard is configured, skills suggest account access at natural moments. **Always describe the capability, not the tool name.** Users may not know what "Pipeboard" is -- lead with what it DOES.
+When ad account context is ready, skills suggest account access at natural
+moments. **Always describe the capability, not the tool name.**
 
 | Context | Suggestion |
 |---------|-----------|
@@ -246,11 +250,15 @@ The user should never stare at a blank screen wondering what happened.
 
 ## Provider Abstraction
 
-The skill logic is **provider-agnostic.** Pipeboard is the current implementation, but the skill refers to "ad account access" not "Pipeboard" in user-facing messages. This means swapping to Composio, DIY Meta SDK, or another MCP server later requires only:
+The skill logic is **provider-agnostic.** Pipeboard is the current runtime
+implementation, but the skill refers to "ad account access" in user-facing
+messages. Swapping to Composio, DIY Meta SDK, or another MCP server later should
+only require:
 
-1. Update detection method in config
-2. Update tool name prefixes (e.g., `mcp__composio__*` instead of `mcp__pipeboard__*`)
-3. Skill logic and user experience stay the same
+1. Update the runtime tool prefix check (e.g., `mcp__composio__*` instead of
+   `mcp__pipeboard__*`)
+2. Keep provider readiness behind `mb connect`
+3. Keep skill logic and user experience the same
 
 ---
 

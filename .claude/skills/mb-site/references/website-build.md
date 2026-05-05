@@ -37,14 +37,14 @@ These are Devon-specific examples, not the broader Website tier. Future per-offe
 
 **3. Check prerequisites.**
 ```bash
-node --version    # Need 18+
-pnpm --version    # Package manager
-gh auth status    # GitHub CLI authenticated
+node --version          # Need 18+
+pnpm --version          # Package manager
+mb connect doctor --json # GitHub/provider readiness
 ```
 If anything missing, install before proceeding:
 - Wrong Node version → `nvm use 18`
 - pnpm not found → `npm install -g pnpm`
-- gh not authenticated → `gh auth login`
+- GitHub not ready → use the repair command from `mb connect doctor --json`
 
 **4. Create GitHub repo.**
 ```bash

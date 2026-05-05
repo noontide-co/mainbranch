@@ -36,7 +36,9 @@ python3 -c "from google import genai; print('OK')" 2>/dev/null
 **If available:** Offer Batch 4 (image generation) after copy + compliance.
 **If unavailable:** Output text prompts only. Note: "Image prompts saved. Paste into Gemini or another image tool to generate."
 
-Also check `.vip/config.yaml` → `tools.nano_banana.status` for cached detection result.
+Use `mb status --json --peek` / `mb connect doctor --json` first for
+Google/Workspace readiness. Treat the local SDK import check above as a
+runtime-only fallback when the selected mode actually needs image generation.
 
 ---
 

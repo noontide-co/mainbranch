@@ -212,8 +212,8 @@ EOF
 ## GitHub CLI Reference
 
 ```bash
-# Check authentication
-gh auth status
+# Check GitHub readiness from the business repo
+mb connect doctor --json
 
 # Create private repo and push
 gh repo create [name] --private --source=. --push

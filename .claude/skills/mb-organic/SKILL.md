@@ -33,6 +33,11 @@ Detect if user is in the right place:
 
 For the canonical engine resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
 
+Then run `mb status --json --peek` from the business repo and use its
+`readiness`, `drift.items`, and `ranked_actions` facts before asking setup or
+reference-health questions. Direct file checks below are content-specific, not
+repo-health probes.
+
 ---
 
 ## About Mining (Lives in /mb-think Now)
@@ -80,7 +85,7 @@ Requires `reference/core/voice.md` (always core), plus resolved `offer.md` and `
 
 **Congruence check:** If `reference/domain/funnel/skool-surfaces.md` exists, read it. Organic content should echo the same positioning and claims visible on the Skool about page and pricing cards. No contradictions between organic and the landing experience.
 
-**CWD-first:** If `reference/core/` exists in CWD, you're already in the business repo. Otherwise, resolve via `~/.config/vip/local.yaml` (`default_repo`). If missing, ask the user or run `/mb-setup`.
+**CWD-first:** If `reference/core/` exists in CWD, you're already in the business repo. Otherwise, run `mb status --json --peek` and use its repo/readiness facts if available. If status cannot identify a repo, ask the user or run `/mb-setup`.
 
 Missing files? See [references/first-time-setup.md](references/first-time-setup.md).
 

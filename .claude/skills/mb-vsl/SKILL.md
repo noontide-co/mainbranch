@@ -13,6 +13,10 @@ Routes to the right framework based on your offer type.
 
 For the canonical engine resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
 
+Then run `mb status --json --peek` from the business repo and use its
+`readiness`, `drift.items`, and `ranked_actions` facts before asking for missing
+setup or reference context. Do not duplicate repo-health checks in prose.
+
 ---
 
 ## Critical Rule: Never Invent Facts

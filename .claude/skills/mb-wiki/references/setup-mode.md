@@ -7,11 +7,13 @@ Quick first-time wiki setup. Installs default template and deploys via wrangler 
 ## 1. Ask: Repo Name? Location?
 Default: `wiki` in home directory (`~/mb-wiki`)
 
-## 2. Check GitHub CLI
+## 2. Check GitHub Readiness
 ```bash
-gh auth status
+mb connect doctor --json
 ```
-If not authenticated, guide user to run `gh auth login`.
+If this is not a business repo or `mb` cannot inspect GitHub readiness here,
+fall back to `gh auth status`. If GitHub is not authenticated, guide user to
+run `gh auth login`.
 
 ## 3. Create GitHub Repo and Clone
 ```bash

@@ -34,7 +34,7 @@ account to connect or a selected workflow needs outside access, run:
 
 ```bash
 mb connect plan
-mb connect status --all --json
+mb connect doctor --json
 ```
 
 Required provider choices for the setup/provider loop:
@@ -42,10 +42,10 @@ Required provider choices for the setup/provider loop:
 | Provider | Business job | Check |
 |---|---|---|
 | GitHub | tasks, proposals, reviews, shipped history | `mb connect doctor --json` |
-| Cloudflare | sites, DNS, Pages, Workers | `mb connect status --all --json` |
-| Google / Workspace | Drive, Docs, Sheets, Slides | `mb connect status --all --json` |
-| Meta Ads | ad accounts, campaigns, pixels | `mb connect status --all --json` |
-| Apify | scraping, YouTube, Instagram, research sidecars | `mb connect status --all --json` |
+| Cloudflare | sites, DNS, Pages, Workers | `mb connect doctor --json` |
+| Google / Workspace | Drive, Docs, Sheets, Slides | `mb connect doctor --json` |
+| Meta Ads | ad accounts, campaigns, pixels | `mb connect doctor --json` |
+| Apify | scraping, YouTube, Instagram, research sidecars | `mb connect doctor --json` |
 
 Only continue to MCP/tool presence checks when the selected skill needs runtime
 tools that `mb connect` cannot inspect directly.
@@ -68,7 +68,8 @@ Look for tool presence:
 
 ### 4. Prompt if missing
 
-If routing to skill that needs missing MCP:
+If routing to a skill that needs a missing runtime tool after `mb connect`
+facts have been read:
 
 > "This action needs Apify research access. `mb connect plan` says Apify is [state].
 >
@@ -89,7 +90,8 @@ If user picks 1 → Show setup guide path, walk through it.
 
 ## Research Tools Check
 
-These tools enhance `/mb-think` but are optional (except Apify which is important):
+These runtime tools enhance `/mb-think` after provider readiness is known. They
+are optional and should not replace `mb connect` facts:
 
 | Tool | Check Method | If Missing |
 |------|--------------|------------|
@@ -100,7 +102,7 @@ These tools enhance `/mb-think` but are optional (except Apify which is importan
 
 ### Detection Order
 
-Run on first `/mb-think` invocation:
+Run only when the selected `/mb-think` path needs that runtime tool:
 
 ```bash
 # 1. Apify - check for MCP tools (most important)
@@ -137,6 +139,8 @@ which whisper-cli >/dev/null 2>&1 && echo "whisper-cli available"
 - Don't nag about missing optional tools
 - Only offer setup when user tries to use missing capability
 - Always provide fallback path
+- Use `mb connect plan` / `mb connect doctor --json` for provider setup and
+  repair language before any runtime-specific checks.
 
 ---
 

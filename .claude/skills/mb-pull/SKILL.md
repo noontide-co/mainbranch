@@ -11,7 +11,7 @@ description: Legacy alias for /mb-update. Use only when the user explicitly type
 Run the same update command:
 
 ```bash
-mb update --repo "${REPO_PATH:-.}" --json 2>&1
+mb update --repo . --json 2>&1
 ```
 
 Then follow the result handling in `/mb-update`.

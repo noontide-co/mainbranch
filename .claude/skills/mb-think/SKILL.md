@@ -52,11 +52,23 @@ See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** f
 
 ---
 
-## Tool Detection (Config-First)
+## Tool Detection (CLI Facts First)
 
-Tool status persists in `.vip/config.yaml` under `tools:`. Read config first, only probe unknowns, always write results back.
+Provider readiness comes from `mb` first. Run or reuse:
 
-**Quick gist:** On first /mb-think invocation each session, read `tools` from config, re-probe unknowns or stale-false entries, write results back immediately, report once at experience-appropriate verbosity. Surface a tool option to the user only when their intent needs it and it's missing — once per session per tool.
+```bash
+mb status --json --peek
+mb connect doctor --json
+```
+
+Use those facts for GitHub, Google/Workspace, Meta Ads, Apify, and other
+provider repair language. Runtime-local tool checks happen only after a
+selected research path needs them and `mb` cannot inspect the tool directly.
+
+**Quick gist:** On first `/mb-think` invocation, read status/connect facts. When
+the user's intent needs a runtime-local tool, check only that tool, cache
+session knowledge, and offer the `mb connect` repair command or a fallback.
+Surface a missing-tool option once per session per tool.
 
 See **[references/tool-detection.md](references/tool-detection.md)** for the full status-value table, staleness rules, per-tool detection methods (Apify, Gemini, Grok, whisper, Nano Banana, Pipeboard, document tools), required config-update format, and the intent-based tool surfacing matrix.
 

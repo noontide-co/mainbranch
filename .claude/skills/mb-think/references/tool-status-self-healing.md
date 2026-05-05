@@ -1,6 +1,8 @@
 # Tool Status Self-Healing
 
-Operational contract for tool status in `.vip/config.yaml`.
+Operational contract for runtime-local tool notes. Provider readiness and
+repair belong to `mb status --json --peek`, `mb connect plan`, and
+`mb connect doctor --json`.
 
 ---
 
@@ -11,7 +13,8 @@ A tool entry is **stale false** when all are true:
 - `status: false`
 - `last_checked` is missing, invalid, or older than 30 days
 
-Only stale false entries are re-probed during routine audits.
+Do not routine re-probe provider entries here. Runtime-local entries can be
+rechecked when a selected workflow needs that exact tool.
 
 ---
 
@@ -19,15 +22,13 @@ Only stale false entries are re-probed during routine audits.
 
 On first `/mb-think` invocation each session:
 
-1. Read `.vip/config.yaml` `tools` section
-2. Build detection list:
-   - `status: null` or missing → detect
-   - `status: false` + stale false → re-detect
-   - `status: true` or recent false → skip
-3. Normalize metadata:
-   - Add `last_checked: [today]` to any existing tool entry missing it
-4. Run probe methods from `SKILL.md`
-5. Write updates immediately
+1. Read `mb status --json --peek`.
+2. Run `mb connect doctor --json` if the selected provider is missing or
+   degraded.
+3. Build a runtime detection list only for the selected workflow.
+4. Run the relevant runtime probe methods from `SKILL.md`.
+5. Cache session knowledge and optionally update local runtime notes for tools
+   actually touched.
 
 Every touched entry must include:
 - `status`
@@ -51,13 +52,16 @@ If status does not change, use normal experience-level reporting.
 
 ## Degradation Rule for `status: true`
 
-If a tool marked `status: true` fails at use time (missing command, missing MCP tool, auth failure):
+If a runtime-local tool marked `status: true` fails at use time (missing command
+or missing MCP tool):
 
 1. Re-probe that tool immediately
 2. Update config to `status: false`, set `last_checked: [today]`, add explanatory notes
 3. Warn the user in the same turn
 
-Never let a previously-true tool fail silently.
+Never let a previously-true runtime-local tool fail silently. If the failure is
+provider auth/readiness, report the `mb connect doctor --json` repair command
+instead of inventing one.
 
 ---
 
@@ -73,13 +77,10 @@ tools:
     status: false
     notes: "No CLI or MCP tool detected"
     last_checked: 2026-03-02
-  pipeboard:
-    status: null
-    method: mcp
-    tier: null
-    notes: "unknown"
-    last_checked: null
-    weekly_calls_used: 0
+  document_tools:
+    status: true
+    notes: "markitdown verified"
+    last_checked: 2026-03-02
 ```
 
 ---
