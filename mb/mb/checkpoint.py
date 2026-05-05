@@ -319,6 +319,71 @@ def _head_sha(repo: Path) -> str:
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
+def recent(repo: str | Path = ".", *, limit: int = 5) -> dict[str, Any]:
+    """Return recent checkpoint commits for resume surfaces."""
+    target = Path(repo).resolve()
+    root, root_error = _git_root(target)
+    if root is None:
+        return {
+            "ok": False,
+            "repo": str(target),
+            "commits": [],
+            "errors": [root_error or "not a git repo"],
+        }
+    result = _run_git(
+        root,
+        [
+            "log",
+            f"--max-count={limit}",
+            "--grep=^\\[checkpoint\\]",
+            "--extended-regexp",
+            "--format=%H%x1f%ct%x1f%s",
+        ],
+    )
+    if result.returncode != 0:
+        return {
+            "ok": False,
+            "repo": str(root),
+            "commits": [],
+            "errors": [_git_error("git log checkpoint history", result)],
+        }
+    commits = []
+    for line in result.stdout.splitlines():
+        parts = line.split("\x1f", 2)
+        if len(parts) != 3:
+            continue
+        sha, timestamp, subject = parts
+        commits.append(
+            {
+                "sha": sha,
+                "timestamp": int(timestamp) if timestamp.isdigit() else 0,
+                "subject": subject,
+            }
+        )
+    return {"ok": True, "repo": str(root), "commits": commits, "errors": []}
+
+
+def status(repo: str | Path = ".", *, mode: str = "beginner") -> dict[str, Any]:
+    """Return checkpoint resume facts: recent checkpoints plus pending plan."""
+    planned = plan(repo=repo, mode=mode)
+    history = recent(repo=planned.get("repo", repo))
+    pending = {
+        "status": planned.get("status"),
+        "has_changes": planned.get("has_changes", False),
+        "summary": planned.get("summary", {}),
+        "proposal": planned.get("proposal"),
+        "safety": planned.get("safety", {}),
+        "errors": planned.get("errors", []),
+    }
+    return {
+        "ok": bool(planned.get("status") != "error" and history.get("ok")),
+        "repo": planned.get("repo") or history.get("repo") or str(Path(repo).resolve()),
+        "recent": history.get("commits", []),
+        "pending": pending,
+        "errors": [*planned.get("errors", []), *history.get("errors", [])],
+    }
+
+
 def plan(repo: str | Path = ".", *, mode: str = "beginner") -> dict[str, Any]:
     """Plan a checkpoint without staging or committing changes."""
     target = Path(repo).resolve()
@@ -552,4 +617,4 @@ def render_human(result: dict[str, Any]) -> None:
         print("suggested checkpoint:")
         print(f"  {proposal['message']}")
         print("")
-        print("This is a plan only. Commit execution ships in the next slice.")
+        print("This is a plan only. Rerun with --message and --yes to save it.")

@@ -21,6 +21,14 @@ Something came your way — a video, a voice memo, a vague feeling, a problem to
 - Switching focus
 - Anytime you feel lost
 
+**Save checkpoints at natural boundaries.** After a research batch, accepted
+decision, codify pass, or major reference-file update, run
+`mb checkpoint --plan --json`. If the plan is ready, ask whether to save a
+checkpoint before moving to the next phase. If approved, run
+`mb checkpoint --message "[checkpoint] <plain business summary>" --yes`. If the
+plan is blocked, explain the safety block and do not work around it with raw
+git.
+
 ---
 
 ## Two Modes of Work

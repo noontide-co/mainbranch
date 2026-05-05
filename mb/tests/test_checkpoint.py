@@ -253,3 +253,23 @@ def test_checkpoint_commit_clean_repo_is_noop(tmp_path: Path) -> None:
     payload = json.loads(result.stdout)
     assert payload["status"] == "clean"
     assert payload["committed"] is False
+
+
+def test_checkpoint_status_reports_recent_checkpoint_and_pending_work(tmp_path: Path) -> None:
+    repo = _business_repo(tmp_path)
+    (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
+    checkpoint_mod.commit(
+        repo,
+        message="[checkpoint] Update offer",
+        yes=True,
+    )
+    (repo / "research" / "next.md").write_text("# Next\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["checkpoint", "--repo", str(repo), "--status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["recent"][0]["subject"] == "[checkpoint] Update offer"
+    assert payload["pending"]["status"] == "ready"
+    assert payload["pending"]["summary"]["surfaces"] == {"research": 1}

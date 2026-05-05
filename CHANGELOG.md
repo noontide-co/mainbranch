@@ -19,6 +19,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added guarded `mb checkpoint --message ... --yes` execution so approved
   checkpoint plans can become readable git commits without exposing raw git
   mechanics to beginners. Refs #291.
+- Added checkpoint resume facts to `mb start --json` and wired `/mb-start`,
+  `/mb-end`, and `/mb-think` toward `mb checkpoint` so checkpointing can happen
+  throughout long agent sessions instead of only at end-of-day. Refs #292.
 
 ## [0.3.0] - 2026-05-04
 

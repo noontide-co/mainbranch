@@ -912,6 +912,11 @@ def checkpoint_cmd(
         "--plan",
         help="Preview checkpointable changes without committing.",
     ),
+    status_check: bool = typer.Option(
+        False,
+        "--status",
+        help="Show recent checkpoint commits plus pending checkpoint state.",
+    ),
     message: str = typer.Option("", "--message", "-m", help="Commit message for --yes."),
     yes: bool = typer.Option(False, "--yes", help="Save the checkpoint after safety gates pass."),
     mode: str = typer.Option(
@@ -924,6 +929,8 @@ def checkpoint_cmd(
     """Plan or save a git checkpoint."""
     if yes or message:
         result = checkpoint_mod.commit(repo=repo, message=message, mode=mode, yes=yes)
+    elif status_check:
+        result = checkpoint_mod.status(repo=repo, mode=mode)
     else:
         _ = plan
         result = checkpoint_mod.plan(repo=repo, mode=mode)

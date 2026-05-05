@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from mb import checkpoint as checkpoint_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status
 from mb.status import _looks_like_mainbranch_repo
@@ -233,6 +234,7 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
     claude_path = _which("claude")
     wiring = link_status(repo_path)
     update = package_update_status(repo_path)
+    checkpoint = checkpoint_mod.status(repo_path)
     checks = _build_checks(repo_shape, git, claude_path, wiring, update)
     hard_failures = _hard_failures(checks)
     handoff_ready = not hard_failures
@@ -263,6 +265,7 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
         "handoff_ready": handoff_ready,
         "repo": {"path": str(repo_path), **repo_shape},
         "update": update,
+        "checkpoint": checkpoint,
         "git": git,
         "runtime": {
             "name": "claude-code",
@@ -294,6 +297,7 @@ def render_human(report: dict[str, Any]) -> None:
     wiring = runtime["skill_wiring"]
     command = report["command"]
     launch = report["launch"]
+    checkpoint = report.get("checkpoint", {})
 
     console.print(f"\n[bold]mb start[/bold]  {repo['path']}\n")
     alert = format_update_alert(report.get("update", {}))
@@ -320,6 +324,12 @@ def render_human(report: dict[str, Any]) -> None:
         "[bold]Skills[/bold]  /mb-start "
         + ("[green]wired[/green]" if wiring["ok"] else "[red]missing[/red]")
     )
+    if isinstance(checkpoint, dict):
+        pending = checkpoint.get("pending", {})
+        recent = checkpoint.get("recent", [])
+        pending_status = pending.get("status") if isinstance(pending, dict) else "unknown"
+        recent_label = recent[0]["subject"] if isinstance(recent, list) and recent else "none yet"
+        console.print(f"[bold]Checkpoint[/bold]  pending={pending_status}  last={recent_label}")
 
     console.print("\n[bold]Command[/bold]")
     console.print(f"  {command['display']}")

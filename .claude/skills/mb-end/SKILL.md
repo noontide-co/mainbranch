@@ -272,33 +272,36 @@ If an insight was substantial enough to update reference directly (soul.md, offe
 
 ---
 
-## Step 6: Commit & Close
+## Step 6: Checkpoint & Close
 
-### Check for uncommitted work
+Use the checkpoint CLI. Do not hand-roll staging logic unless `mb checkpoint`
+is unavailable.
 
 ```bash
-git status --short 2>/dev/null
+mb checkpoint --plan --json
 ```
 
-**If there are uncommitted changes:**
+**If `status == "ready"`:**
 
-> "You have uncommitted changes:
+> "You have unsaved work:
 >
-> - [list modified/new files, brief]
+> - [summarize changed surfaces/files from the plan]
 >
-> Want me to commit these?"
+> Want me to save a checkpoint before we close?"
 
 If yes:
-- Stage the changed files (prefer specific files over `git add -A`)
-- Write a descriptive commit message following the `[type] Brief description` convention
-- If work was offer-specific, suggest commit message like: `[update] community offer: added pricing tiers and guarantee`
-- If the user shared final thoughts in Step 4, incorporate them into the commit message
-- Include the crystallize research file in the commit
-- Commit
+- Run `mb checkpoint --message "[checkpoint] <plain business summary>" --yes`.
+- Use beginner-safe language: "saved checkpoint," not "ran git commit."
+- Include the crystallize research file in the checkpoint if one was created.
 
-If no: Leave them. Some people prefer to commit at start of next session.
+If no: Leave the work unchanged. Some people prefer to checkpoint at the start
+of next session.
 
-**If no uncommitted changes:** Skip this.
+**If `status == "blocked"`:** Explain the safety block from JSON. Do not commit
+around it with raw git. Tell the user the checkpoint was not saved because Main
+Branch found something that may be local, private, conflicted, or unsafe.
+
+**If `status == "clean"`:** Skip this.
 
 ### The Close
 

@@ -46,6 +46,7 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     assert report["command"]["display"].endswith(" && claude")
     assert report["command"]["follow_up"] == "/mb-start"
     assert report["launch"]["requested"] is False
+    assert report["checkpoint"]["pending"]["status"] == "ready"
     assert "update" in report
     assert "ranked_actions" not in report
     assert "status" not in report
@@ -145,6 +146,47 @@ def test_start_does_not_run_full_status_pipeline(tmp_path: Path, monkeypatch) ->
     result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
 
     assert result.exit_code == 0
+
+
+def test_start_surfaces_recent_checkpoint_history(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(start_mod, "_which", _with_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    subprocess_result = start_mod._run_command(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=repo,
+    )
+    assert subprocess_result["ok"] is True
+    subprocess_result = start_mod._run_command(
+        ["git", "config", "user.name", "Test User"], cwd=repo
+    )
+    assert subprocess_result["ok"] is True
+    subprocess_result = start_mod._run_command(["git", "add", "."], cwd=repo)
+    assert subprocess_result["ok"] is True
+    subprocess_result = start_mod._run_command(["git", "commit", "-m", "initial"], cwd=repo)
+    assert subprocess_result["ok"] is True
+    (repo / "core" / "offer.md").write_text("# Offer\n", encoding="utf-8")
+    commit = runner.invoke(
+        app,
+        [
+            "checkpoint",
+            "--repo",
+            str(repo),
+            "--message",
+            "[checkpoint] Update offer",
+            "--yes",
+            "--json",
+        ],
+    )
+    assert commit.exit_code == 0
+    (repo / "research" / "next.md").write_text("# Next\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    report = json.loads(result.stdout)
+    assert report["checkpoint"]["recent"][0]["subject"] == "[checkpoint] Update offer"
+    assert report["checkpoint"]["pending"]["status"] == "ready"
 
 
 def test_start_asks_for_repo_when_path_is_not_business_repo(tmp_path: Path, monkeypatch) -> None:
