@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added planning-only `mb checkpoint --plan --json` so agents can inspect
+  dirty business repos, classify changed files, run safety gates, and propose
+  readable checkpoint messages before commit execution ships. Refs #290.
+
 ## [0.3.0] - 2026-05-04
 
 v0.3.0 makes Main Branch better at telling a user what matters next. It adds

@@ -16,6 +16,7 @@ from typing import Any
 import typer
 
 from mb import __version__
+from mb import checkpoint as checkpoint_mod
 from mb import connect as connect_mod
 from mb import doctor as doctor_mod
 from mb import educational as educational_mod
@@ -900,6 +901,31 @@ def update_cmd(
         typer.echo(json.dumps(result, indent=2))
     else:
         update_mod.render_human(result)
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
+@app.command("checkpoint")
+def checkpoint_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo to inspect."),
+    plan: bool = typer.Option(
+        False,
+        "--plan",
+        help="Preview checkpointable changes. Commit execution is not shipped yet.",
+    ),
+    mode: str = typer.Option(
+        "beginner",
+        "--mode",
+        help="Checkpoint grouping mode: beginner or concern.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Plan a git checkpoint without staging or committing changes."""
+    _ = plan
+    result = checkpoint_mod.plan(repo=repo, mode=mode)
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        checkpoint_mod.render_human(result)
     raise typer.Exit(0 if result["ok"] else 1)
 
 
