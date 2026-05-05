@@ -36,6 +36,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   from "Operator Sovereignty" to "The Operator Decides" so the principle
   reads in operator language without philosophy-grad-school framing. Refs
   #306.
+- Aligned the four-channel framing (Paid, Organic, Pages, Ops) across
+  README, ROADMAP, and OPERATOR-LOOPS, and clarified the audience as
+  operators and small teams running real businesses (solo founders, small
+  agencies, course creators, productized services, indie SaaS, small ecom
+  teams). Refs #306.
 - Clarified beginner, migration, and `/mb-help` docs that `.mb/` is the current
   repo-local Main Branch state folder and `.mb-vip/` is not required. Refs
   #296.

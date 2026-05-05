@@ -1,10 +1,10 @@
 # Operator Loops
 
 Main Branch organizes operator workflow into **four loops**. The audience is
-operators and small teams running real businesses — solo founders, small
-agencies, course creators, productized services, indie SaaS, small ecom
-teams. The taxonomy works for one person and for two-to-five people sharing a
-business repo.
+operators and small teams running real businesses: solo founders, small
+agencies, course creators, productized services, indie SaaS, and small ecom
+teams. The taxonomy works for one person and for two-to-five people sharing
+a business repo.
 
 The four loops:
 
@@ -128,7 +128,7 @@ through Ops.
 - Skills leaning more heavily on CLI facts instead of duplicate checks
 - Optional provider and sidecar contracts
 - Beginner-safe connector flows for GitHub, Cloudflare, Google, Meta, Apify
-- Richer site, ads, organic, bookkeeping, and fulfillment loops
+- Richer Paid, Organic, Pages, and Ops surfaces (books, P&L, compliance)
 - Agent checkpoints that save meaningful work before context is lost
 
 ## 4. Reflect

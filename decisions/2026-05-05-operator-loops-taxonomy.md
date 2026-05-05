@@ -17,8 +17,8 @@ tags: [v0-3, loops, taxonomy, architecture, foundation]
 ## Decision
 
 Main Branch organizes operator workflow into **four loops**. The audience is
-operators and small teams running real businesses — solo founders, small
-agencies, course creators, productized services, indie SaaS, small ecom
+operators and small teams running real businesses: solo founders, small
+agencies, course creators, productized services, indie SaaS, and small ecom
 teams. The taxonomy works for one person and for small teams sharing a
 business repo.
 

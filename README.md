@@ -22,7 +22,9 @@ Main Branch is that environment. Your offer, audience, voice, decisions, researc
 
 The end state isn't sitting at a terminal all day. It's the opposite — eventually you dump thoughts from your phone, drafts get made, you approve, it executes. We're not all the way there. The work is still real. But the substrate is the right one to build on.
 
-We run businesses on this ourselves. The Skool community wraps Main Branch — you watch us ship offers through `mb` live, on real ad accounts, including the AI-native agency arm we're building on top of it.
+Every bet you ship leaves a lesson. The lessons update your offer, your audience, your voice. Your business gets smarter every week — without you having to remember. The agent recommends; you make the call.
+
+We run our own businesses on this. Inside our Skool community you watch us do it live: shipping offers through `mb`, running real ad accounts, and building the agency on top of it.
 
 Own the work. Rent only the rails.
 
@@ -30,11 +32,9 @@ Own the work. Rent only the rails.
 
 ## What it is
 
-Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running business-as-files systems. Today the workflows ship for Claude Code; Codex, Cursor, OpenClaw, Hermes, and local runtimes are next. Your offer, audience, voice, research, decisions, bets, and campaigns live in your own git repo — versioned, portable, agent-readable.
+Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running business-as-files systems. It's built for operators and small teams running real businesses: solo founders, small agencies, course creators, productized services, indie SaaS, and small ecom teams. Today the workflows ship for Claude Code. Codex, Cursor, OpenClaw, Hermes, and local runtimes are next. Your offer, audience, voice, research, decisions, bets, and campaigns live in your own git repo — versioned, portable, agent-readable.
 
-Read the product frame in [docs/ETHOS.md](docs/ETHOS.md), the user loop in
-[docs/OPERATOR-LOOPS.md](docs/OPERATOR-LOOPS.md), and the release direction in
-[docs/ROADMAP.md](docs/ROADMAP.md).
+Read the product frame in [docs/ETHOS.md](docs/ETHOS.md), the four operator loops (Sense → Decide → Ship → Reflect) and the four channels (Paid, Organic, Pages, Ops) in [docs/OPERATOR-LOOPS.md](docs/OPERATOR-LOOPS.md), and the release direction in [docs/ROADMAP.md](docs/ROADMAP.md).
 Workspace, repo, dashboard, finance/legal, and team-log boundaries are defined
 in
 [decisions/2026-05-04-workspace-repo-sensitive-data-boundaries.md](decisions/2026-05-04-workspace-repo-sensitive-data-boundaries.md).
@@ -271,7 +271,7 @@ intelligence layer, and agent runtimes as execution.
 - **v0.3.0: Knows what to do next.** `mb status` v1, drift detection, next-action ranking, and `/mb-start` using the same deterministic substrate.
 - **v0.3.x: Improves itself in public.** Privacy-safe issue drafting, `doctor --json`, `/mb-status`, a small dashboard spike, and optional sidecar contracts.
 - **v0.4: Launches bets.** `bets/`, `/mb-bet`, public narration, and status integration for active business bets.
-- **Longer range.** Runtime adapters, dashboard/server mode, structured data, bookkeeping, fulfillment, and deeper pages/ads/organic workflows.
+- **Longer range.** Runtime adapters, dashboard/server mode, structured data, deeper Ops surfaces (books, P&L, compliance), and richer Paid, Organic, and Pages workflows.
 
 See [CHANGELOG.md](CHANGELOG.md) for what's in this release. Each release ships a "What this means for you" plain-English section above the technical detail.
 

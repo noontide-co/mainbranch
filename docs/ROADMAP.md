@@ -94,7 +94,7 @@ Planned scope:
 - public bets feed generated through site workflows;
 - offer launch workflow: keyword gate, lander, ads, and `/mb-start`
   orchestration ([#89](https://github.com/noontide-co/mainbranch/issues/89));
-- decisions on fulfillment and bookkeeping workflows;
+- decisions on Ops surfaces (books, P&L, compliance) and fulfillment scope;
 - bookkeeping/P&L primitives that respect finance-data privacy boundaries
   ([#128](https://github.com/noontide-co/mainbranch/issues/128)).
 
@@ -112,7 +112,7 @@ Likely directions:
 - structured data layer for metrics, ads, analytics, P&L, and ledgers, with
   explicit access boundaries before sensitive financial/legal data is surfaced;
 - richer sidecar ecosystem behind narrow JSON contracts;
-- deeper pages, paid ads, organic, fulfillment, and bookkeeping workflows.
+- deeper Paid, Organic, Pages, and Ops workflows under the four-pillar framing.
 
 ## Reading Order
 
