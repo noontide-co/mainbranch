@@ -18,7 +18,7 @@ directly inside the current Claude Code session.
 
 ## Staleness Check
 
-Do not routine re-probe stale provider entries here. If provider readiness is
+Do not routinely re-probe stale provider entries here. If provider readiness is
 stale or degraded, use `mb connect doctor --json`. Runtime-local entries can be
 rechecked when a selected workflow needs that tool.
 

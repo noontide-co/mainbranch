@@ -13,7 +13,7 @@ A tool entry is **stale false** when all are true:
 - `status: false`
 - `last_checked` is missing, invalid, or older than 30 days
 
-Do not routine re-probe provider entries here. Runtime-local entries can be
+Do not routinely re-probe provider entries here. Runtime-local entries can be
 rechecked when a selected workflow needs that exact tool.
 
 ---
