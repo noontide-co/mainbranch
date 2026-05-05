@@ -18,20 +18,22 @@ The promise is simple: own the work, rent only the rails.
 
 ## What We Are Building
 
-Main Branch should help an operator move through five loops:
+Main Branch should help an operator move through four loops:
 
-1. **Know the business** - capture offers, audience, voice, proof, research,
-   decisions, and context in files the operator owns.
-2. **See what is happening** - summarize repo health, recent changes, stale
-   context, connected tools, GitHub tasks, and local setup state.
-3. **Decide what matters** - surface the next best actions with clear evidence,
-   while leaving the operator in charge.
-4. **Execute the work** - run focused workflows for pages, ads, organic
-   content, research, fulfillment, bookkeeping, and other business domains.
-5. **Narrate and learn** - turn bets, outcomes, changelogs, decisions, and
-   retros into public or private operating memory.
+1. **Sense** - pull state in: offers, audience, voice, research, decisions,
+   `mb status`, drift, freshness, connected tools, GitHub activity.
+2. **Decide** - choose what to wager next: the bet, the priority, the override.
+   Plain English: pick what matters and commit.
+3. **Ship** - produce and release the work: pages, ads, organic content, VSLs,
+   provider connections, system updates, the commit itself. One verb covers
+   producing the artifact and putting it in the world.
+4. **Reflect** - extract the lesson, usually scheduled: bet verdicts, retros,
+   decisions superseded, reference files updated from what you learned. The
+   output of Reflect feeds back into Sense.
 
-Those loops are described in detail in [OPERATOR-LOOPS.md](OPERATOR-LOOPS.md).
+Those loops are described in detail in [OPERATOR-LOOPS.md](OPERATOR-LOOPS.md),
+and the full reasoning lives in
+[decisions/2026-05-05-operator-loops-taxonomy.md](../decisions/2026-05-05-operator-loops-taxonomy.md).
 
 ## Product Principles
 
@@ -52,11 +54,12 @@ Agent-runtime skills own synthesis, writing, review, routing, and judgment. A
 skill may call `mb` for facts. It should not reimplement repo-health probes or
 structural invariants in prose.
 
-### 3. Operator Sovereignty
+### 3. The Operator Decides
 
 Main Branch should recommend, not seize control. The system can tell the
 operator what looks stale, risky, blocked, or important. It should cite the
-signals behind that recommendation and make override paths explicit.
+signals behind that recommendation and make override paths explicit. The agent
+recommends; the operator makes the call.
 
 Publishing, spending money, contacting customers, mutating accounts, and
 shipping public-facing work should remain intentional operator actions unless a
