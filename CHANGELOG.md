@@ -11,6 +11,27 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-05-05
+
+v0.3.1 tightens the v0.3 product frame after the first public release. It
+locks the operator loop language, adds checkpoint primitives for long agent
+runs, removes stale third-party Meta Ads connector assumptions, and documents
+how Main Branch chooses dependencies.
+
+### What this means for you (plain English)
+
+- **Long agent sessions can checkpoint work.** `mb checkpoint` can inspect
+  dirty business repos, propose readable checkpoint messages, and save approved
+  commits.
+- **The product language is more stable.** Public docs and skills now use the
+  Sense -> Decide -> Ship -> Reflect loop taxonomy.
+- **Meta Ads setup is less misleading.** Main Branch no longer presents
+  Pipeboard as the Meta Ads path and keeps official Meta support planned until
+  detection and read-only smoke are wired.
+- **Dependency choices are public.** Contributors can see why a dependency,
+  sidecar, CLI, MCP server, or provider adapter is adopted, planned, removed,
+  or declined.
+
 ### Added
 
 - Added `docs/DEPENDENCY-CHOICES.md` to make dependency, integration, sidecar,
