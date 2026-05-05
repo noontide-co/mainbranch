@@ -113,6 +113,10 @@ claude
 
 Three lines. That's the daily flow.
 
+`/mb-start` runs the same status facts internally, so you do not need to run
+`mb status` before opening Claude Code. Use `mb status` only when you want a
+terminal-only briefing.
+
 ---
 
 ## Provider Readiness
@@ -221,8 +225,8 @@ starts, so repaired `/mb-start` links usually appear after restart.
 |---|---|
 | `mb onboard` | Guided setup for humans. Creates or connects a business repo and shows the next `/mb-start` step. |
 | `mb init` | Scaffold a fresh business repo. |
-| `mb status` | Show a daily repo/runtime/GitHub briefing. |
-| `mb start` | Check runtime handoff readiness and print or launch Claude Code. |
+| `mb status` | Show a terminal-only repo/runtime/GitHub briefing. `/mb-start` reads these facts internally. |
+| `mb start` | Check runtime handoff readiness and print or launch Claude Code with `--launch`. |
 | `mb connect plan` | Show numbered provider setup choices with readiness and exact next commands. |
 | `mb update` | Update Main Branch based on pipx vs clone install mode. |
 | `mb doctor` | Check that everything is set up correctly. Walks you through fixes. |

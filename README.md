@@ -61,10 +61,15 @@ After the first session, the daily flow is:
 
 ```bash
 cd ~/Documents/GitHub/my-business
-mb status
 claude
 /mb-start
 ```
+
+`/mb-start` reads `mb status --json --peek` internally, so you do not need to
+run `mb status` first. Use `mb status` when you want the same deterministic
+briefing in the terminal without opening Claude Code. If you want `mb` to check
+handoff readiness and open Claude Code for you, run `mb start --launch` from
+the business repo.
 
 You'll need a Claude Pro ($20/mo) or Max subscription. Install Claude Code itself from [claude.ai](https://claude.ai) — see [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md) for a step-by-step.
 
@@ -160,7 +165,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb onboard` | Human setup flow: create or connect a business repo, explain the substrate, wire Claude Code skills, and show the next `/mb-start` step. |
 | `mb onboard status` | Show durable onboarding progress from `.mb/onboarding.json`, including missing core-reference inputs and the next recommended action. |
 | `mb init` | Set up a fresh business repo (business folders, CLAUDE.md, git init). |
-| `mb status` | Show a local-first daily briefing: ranked next actions, since-last-check changes, drift, repo health, runtime wiring, recent decisions/research/bets/git activity, and GitHub tasks when `gh` is authenticated. Use `--json` for the v1 status schema, `--verbose` for detail, and `--peek` for non-mutating reads. |
+| `mb status` | Show the local-first briefing in the terminal without opening Claude Code: ranked next actions, since-last-check changes, drift, repo health, runtime wiring, recent decisions/research/bets/git activity, and GitHub tasks when `gh` is authenticated. Use `--json` for the v1 status schema, `--verbose` for detail, and `--peek` for non-mutating reads. |
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
 | `mb connect` | Register provider credentials, test provider health, and inspect repair-safe integration status without committing secrets. |
 | `mb site check` | Check local paid-traffic measurement readiness for a site repo: GTM installation, Main Branch dataLayer events, consent posture, Google Ads plan metadata, and operator-review gates. |

@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Clarified quick start and beginner docs so daily users run `claude` then
+  `/mb-start` without a separate `mb status` step. `mb status` is now framed as
+  the terminal-only briefing that `/mb-start` reads internally.
+
 ## [0.3.1] - 2026-05-05
 
 v0.3.1 tightens the v0.3 product frame after the first public release. It
