@@ -254,9 +254,9 @@ What needs to change in the repo to land this taxonomy:
 
 ## Sources / show our work
 
-The decision was driven by eight parallel research streams (canonical workflow frameworks, 10 real operator profiles, 20+ operator tool taxonomies, classification stress-test, gstack and gbrain studies, runtime compatibility, AI-era reframe). The most load-bearing single artifact — a 20-activity classification across eight candidate taxonomies, plus a cross-business-type stress test — ships as the representative research record at [`docs/research/2026-05-05-operator-loops-stress-test.md`](../docs/research/2026-05-05-operator-loops-stress-test.md).
+The decision was driven by eight parallel research streams covering canonical workflow frameworks, real operator profiles across business types, operator tool taxonomies, classification stress-tests, gstack and gbrain studies, runtime compatibility, and an AI-era reframe.
 
-Future contributors who want to question the taxonomy should start there. The decision body above carries the synthesis.
+The engine repo ships decisions and product. Durable research and the streams that led to a decision live in our private planning repo. The decision body above is the public synthesis; future contributors who want to question the taxonomy can read the reasoning, alternatives, and stress-test results captured here without re-running the eight streams.
 
 ## Decision authority
 
