@@ -175,8 +175,8 @@ Prefer one coherent user loop per branch. Do not broaden scope silently. If you
 find adjacent work, open or comment on a follow-up issue instead of burying it in
 the current PR.
 
-Name which operator loop the branch improves: Know, See, Decide, Execute, or
-Narrate. Use `docs/OPERATOR-LOOPS.md` when the fit is unclear.
+Name which operator loop the branch improves: Sense, Decide, Ship, or
+Reflect. Use `docs/OPERATOR-LOOPS.md` when the fit is unclear.
 
 Good issue slices look like:
 
