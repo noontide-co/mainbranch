@@ -191,7 +191,6 @@ mb connect list
 printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata account_id=...
 mb connect test cloudflare
 mb connect doctor
-mb connect meta --from-env
 mb connect status --json
 mb educational provider-readiness
 ```

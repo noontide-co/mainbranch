@@ -69,7 +69,7 @@ the user's intent needs a runtime-local tool, check only that tool, cache
 session knowledge, and offer the `mb connect` repair command or a fallback.
 Surface a missing-tool option once per session per tool.
 
-See **[references/tool-detection.md](references/tool-detection.md)** for the full status-value table, staleness rules, per-tool detection methods (Apify, Gemini, Grok, whisper, Nano Banana, Pipeboard, document tools), required config-update format, and the intent-based tool surfacing matrix.
+See **[references/tool-detection.md](references/tool-detection.md)** for the full status-value table, staleness rules, per-tool detection methods (Apify, Gemini, Grok, whisper, Nano Banana, Meta ad account context, document tools), required config-update format, and the intent-based tool surfacing matrix.
 
 For self-healing semantics (stale false handling, status-change messaging, true-tool degradation), see [tool-status-self-healing.md](references/tool-status-self-healing.md).
 
@@ -139,7 +139,7 @@ When routing to research mode, detect research TYPE from user intent:
 | Deep web research | "deep research", "comprehensive analysis", "research everything" | Gemini | Multi-source WebSearch |
 | Local transcription | Local file path (.mp4, .m4a), "transcribe my recording" | whisper | CLI mlx_whisper or whisper-cli |
 | Instagram mining | Instagram handle, "mine [handle]", "competitor posts" | Apify | Manual screenshots |
-| Ad account research | "ad performance", "what's working", "check CPA", "audit my ads" | Pipeboard | Manual Ads Manager check |
+| Ad account research | "ad performance", "what's working", "check CPA", "audit my ads" | Verified Meta ad account context | Manual Ads Manager check |
 | General research | Default, "research [topic]", "what do we know" | WebSearch + codebase | Always available |
 
 **Multiple types needed at once?** Spawn them as parallel Task agents in a single message. Example: user says "research what [creator] says on YouTube and what people think on X" — spawn one agent for YouTube transcript mining and another for X/Twitter sentiment simultaneously. Each saves its own research file; main conversation synthesizes when both return.
@@ -173,8 +173,8 @@ When routing to research mode, detect research TYPE from user intent:
 > "Local transcription needs a whisper variant. Check: `which mlx_whisper` or `which whisper-cli`. Or upload to a transcription service and paste the result."
 
 **Ad account data without connection:**
-> "Ad account research works best with a direct Meta Ads connection (OAuth, no developer account needed, uses Pipeboard). Options:
-> 1. Set up now (5 min, free tier: 30 calls/week)
+> "Ad account research works best with live Meta ad account context. It is optional and only available after `mb connect` reports the official Meta path ready. Options:
+> 1. Run `mb connect plan`
 > 2. Check Ads Manager manually and paste what you find
 > 3. Skip account data, research from reference files only"
 
@@ -248,7 +248,7 @@ Gather from codebase, web, user input, local recordings.
 | Local video/audio | whisper-cpp ([local-transcription.md](references/local-transcription.md)) | `-local-mining.md` |
 | Voice memos | whisper-cpp | `-voice-mining.md` |
 | Instagram mining | Apify or manual | `-ig-mining.md` |
-| Ad account data | Pipeboard MCP (Meta Ads) | `-ad-account.md` |
+| Ad account data | Verified Meta Ads account context | `-ad-account.md` |
 | Competitor sites | Browser MCP or web fetch | `-competitor-mining.md` |
 | Your own emails/DMs | Paste into conversation | `-internal-mining.md` |
 | Deep research | Build prompt → Gemini/GPT | `-gemini.md` or `-gpt.md` |

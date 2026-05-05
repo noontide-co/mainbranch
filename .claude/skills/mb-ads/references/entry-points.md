@@ -14,14 +14,14 @@ Real ad workflows don't fit neat categories. Someone might have images but need 
 
 ### User-Says Table
 
-| User Says | Intent | Components Assembled | Pipeboard? |
+| User Says | Intent | Components Assembled | Ad account? |
 |-----------|--------|---------------------|------------|
 | "I want ideas for an ad" | Ideation | Account check (if available) + research + concept generation | Read-only |
 | "I'm repurposing a video" | Video Repurpose | Transcribe + extract hooks + copy variants | No |
 | "I already have images, just need copy" | Copy Only | Skip image gen, primaries + headlines | No |
 | "Just need images for existing copy" | Image Only | Nano Banana image gen only | No |
 | "Full from scratch" | Full Pipeline | Copy + compliance + images (classic static flow) | Optional |
-| "Check my ad performance" | Account Check | Pipeboard read-only -- insights, winners/losers | Required |
+| "Check my ad performance" | Account Check | Read-only account context -- insights, winners/losers | Required |
 | "Give me 50 creative variations" | Hook Library | Bulk generation (flexible quantity) | No |
 | "Give me 5 variations of this winning ad" | Performance Iteration | Pull winner + generate variants | Read-only |
 | "Make me video scripts" | Video Scripts | Full video script pipeline | No |
@@ -72,7 +72,7 @@ Each entry point assembles different components. Components are modular -- they 
 | Component | What It Does | Reference |
 |-----------|-------------|-----------|
 | **Pre-flight** | Score reference files, check readiness | [preflight-algorithm.md](preflight-algorithm.md) |
-| **Account Check** | Pull live account data via Pipeboard | [pipeboard-integration.md](pipeboard-integration.md) |
+| **Account Check** | Pull live account data when `mb connect` and runtime tools are verified | [meta-ads-integration.md](meta-ads-integration.md) |
 | **Copy Engine** | Generate primaries, headlines, hooks | SKILL.md (Static Ads section) |
 | **Hook Library** | Generate N creative variations (also called "one-liners") | [one-liner-methodology.md](one-liner-methodology.md) |
 | **Video Scripts** | Generate spoken-word scripts | [video-templates-hooks.md](video-templates-hooks.md) |
@@ -121,7 +121,7 @@ User message arrives
 │
 ├─ Detect intent (see detection logic above)
 │
-├─ If Pipeboard available AND relevant intent:
+├─ If Meta ad account context is verified AND relevant intent:
 │   └─ "Want me to check what's working before we create?"
 │       ├─ Yes → Account Check component runs first
 │       └─ No → Skip, proceed to generation
@@ -159,7 +159,7 @@ Where `{type}` maps from the entry point:
 | Situation | What Happens |
 |-----------|-------------|
 | Intent unclear | Ask: "What do you have and what do you need?" |
-| Ad account required but missing | "This needs your Meta ad account connected (5 min setup, uses a tool called Pipeboard). Set up? Or skip and work from reference only." |
+| Ad account required but missing | "This needs live Meta ad account context, which is optional and not ready here. Check Ads Manager manually and paste metrics, or skip and work from reference files only." |
 | Pre-flight fails (thin reference) | Route to /mb-think (same as current behavior) |
 | User changes mind mid-pipeline | "No problem. What would you like instead?" Re-detect intent. |
 
@@ -167,18 +167,23 @@ Where `{type}` maps from the entry point:
 
 ## Roadmap Entry Points
 
-These entry points require Pipeboard write operations and are not yet active. They are documented here for future implementation.
+These entry points require official Meta write operations and are not yet
+active. They are documented here for future implementation.
 
-| User Says | Intent | Components | Pipeboard |
+| User Says | Intent | Components | Account access |
 |-----------|--------|-----------|-----------|
 | "Duplicate this ad set with new creative" | Duplicate + Swap | Clone ad set + swap creative | Write (required) |
 
-**Duplicate + Swap** automates Devon's manual workflow: duplicate a winning ad set (PAUSED), upload new image, create new creative, swap it in. Requires Phase 1.5 write tools (`duplicate_adset`, `upload_ad_image`, `create_ad_creative`, `update_ad`). See [pipeboard-integration.md](pipeboard-integration.md) for the full workflow.
+**Duplicate + Swap** would duplicate a winning ad set in a paused/reviewable
+state, upload new creative, and swap it in only after explicit operator
+approval. This remains roadmap until the official Meta write surface has setup
+proof, verified tool names, and approval gates. See
+[meta-ads-integration.md](meta-ads-integration.md) for the boundary.
 
 ---
 
 ## See Also
 
-- [pipeboard-integration.md](pipeboard-integration.md) -- Account access details
+- [meta-ads-integration.md](meta-ads-integration.md) -- Account access details
 - [one-liner-methodology.md](one-liner-methodology.md) -- Hook library methodology (Joel's cold-traffic work preserved)
 - [preflight-algorithm.md](preflight-algorithm.md) -- Pre-flight scoring

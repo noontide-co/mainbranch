@@ -25,7 +25,6 @@ For machine-readable status, use:
 
 ```bash
 mb status --json --peek
-mb connect status --all --json
 mb connect doctor --json
 ```
 
@@ -37,22 +36,22 @@ mb connect doctor --json
    - You can start local setup without it, but team/task loops are limited.
 
 2. **Cloudflare** - sites, DNS, Pages, and future Workers.
-   - Check: `mb connect status --all --json`
+   - Check: `mb connect doctor --json`
    - Common setup: `printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata account_id=...`
    - Connect it when you are ready to publish or attach a domain.
 
 3. **Google / Workspace** - Drive, Docs, Sheets, Slides, and workspace source material.
-   - Check: `mb connect status --all --json`
+   - Check: `mb connect doctor --json`
    - Common setup: `mb connect google --from-env`
    - Connect it when a workflow needs existing Google files. Do not connect it just because you have a Google account.
 
-4. **Meta Ads** - ad accounts, campaigns, pixels, and future performance context.
-   - Check: `mb connect status --all --json`
-   - Common setup: `printf '%s' "$META_ACCESS_TOKEN" | mb connect meta --token-stdin --metadata ad_account_id=...`
-   - Connect it when paid-ad work needs account facts.
+4. **Meta Ads** - ad accounts, campaigns, pixels, and future performance context through the official Meta Ads path once verified.
+   - Check: `mb connect doctor --json`
+   - Common setup: planned pending official setup proof and read-only smoke.
+   - Connect it when paid-ad work needs account facts and `mb` reports the official path ready.
 
 5. **Apify** - research sidecar for scraping, YouTube, Instagram, and web mining.
-   - Check: `mb connect status --all --json`
+   - Check: `mb connect doctor --json`
    - Common setup: `printf '%s' "$APIFY_TOKEN" | mb connect apify --token-stdin`
    - Connect it when research or organic workflows need structured external data.
 

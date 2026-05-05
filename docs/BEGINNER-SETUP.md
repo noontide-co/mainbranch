@@ -139,7 +139,6 @@ If a provider is missing, Main Branch prints the next command. Examples:
 ```bash
 gh auth login
 printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata account_id=...
-mb connect status --all --json
 mb connect doctor --json
 ```
 

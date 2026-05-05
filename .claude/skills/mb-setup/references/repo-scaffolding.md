@@ -134,13 +134,11 @@ tools:
     status: null
     notes: "unknown"
     last_checked: null
-  pipeboard:
+  meta_ads:
     status: null
-    method: mcp
-    tier: null
+    method: official_connector_pending
     notes: "unknown"
     last_checked: null
-    weekly_calls_used: 0
 
 # === CONTENT ===
 content:

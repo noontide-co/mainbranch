@@ -1,6 +1,6 @@
 ---
 name: mb-ads
-description: "Create and review Meta/Facebook/Instagram ads. Flexible entry points: full pipeline (copy + images), copy only, images only, creative variations (hook library), video scripts, video repurpose, compliance review, or ad account check (Pipeboard). Use when asked to create ads, ad copy, image prompts, video scripts, creative variations, or review ads. Say /mb-ads or describe what you need."
+description: "Create and review Meta/Facebook/Instagram ads. Flexible entry points: full pipeline (copy + images), copy only, images only, creative variations (hook library), video scripts, video repurpose, compliance review, or optional Meta ad account check. Use when asked to create ads, ad copy, image prompts, video scripts, creative variations, or review ads. Say /mb-ads or describe what you need."
 loops: [ship, reflect]
 ---
 
@@ -131,7 +131,9 @@ account-related features. The skill works fully from repo reference files.
 
 ### User-Facing Display
 
-**Never assume the user knows what Pipeboard is.** In all user-facing messages, describe the CAPABILITY (connecting your Meta ad account), not the tool name. Use "Pipeboard" only in parentheses as a reference, never as the lead.
+In user-facing messages, describe the capability: connecting a Meta ad account,
+pulling live performance, or auditing active campaigns. Do not mention connector
+vendor names or unsupported setup paths.
 
 **Pre-flight status line (add after Nano Banana check):**
 
@@ -141,7 +143,8 @@ If ready:
 If not ready:
 > `Ad account:   — not connected (optional — lets me see your live Meta ad performance to inform new ads)`
 
-**Never say:** "Pipeboard: not configured (no account check — that's fine)" — this means nothing to a new user.
+**Never say:** "provider tool not configured" or name an implementation detail
+the user does not need. Keep the status line capability-first.
 
 **If user asks what this means:**
 > "You can optionally connect your Meta/Facebook ad account so I can pull live performance data — what's spending, what's winning, CPAs, creative that's working. This helps me create ads that fit your account structure and build on what's already performing. Want to run `mb connect plan`, or skip and work from your reference files?"
@@ -180,7 +183,7 @@ ready and the current runtime exposes the read-only ad account tools:
 **Before generating:** Suggest checking the account first. Explain the value briefly — don't assume the user knows what this does:
 > "Your Meta ad account is connected. Want me to pull your live performance data first? I can see what's spending, which creative has the best CPA, and use that to inform what we create. (Takes ~30 seconds.)"
 
-If user says yes, run Account Check component (see [references/pipeboard-integration.md](references/pipeboard-integration.md)):
+If user says yes, run Account Check component (see [references/meta-ads-integration.md](references/meta-ads-integration.md)):
 - Pull active campaigns and top performers
 - Surface winning patterns (angles, hooks, images with low CPA)
 - Extract naming conventions so new ads match
@@ -191,7 +194,9 @@ If user says no, proceed to generation with reference files only.
 **After generating:** If Meta Ads account context is available, show account context:
 > "Here's what's currently live. Your new creative could fit as [suggested placement]."
 
-Account awareness is currently read-only. Write operations (duplicate + swap) are on the roadmap -- see [references/pipeboard-integration.md](references/pipeboard-integration.md).
+Account awareness is currently read-only. Write operations are on the roadmap
+and require explicit operator approval gates -- see
+[references/meta-ads-integration.md](references/meta-ads-integration.md).
 
 ---
 

@@ -75,9 +75,9 @@ pip3 list 2>/dev/null | grep -i "mlx-whisper" && echo "WHISPER=mlx_whisper"
 readiness first. Then check for read-only ad account MCP tools only when the
 selected path needs live account context:
 ```bash
-# Detection: check if mcp__pipeboard__* tools exist in session
-# If found, probe with get_ad_accounts (lightweight call)
-# If probe succeeds, cache status: true
+# Detection is pending the official Meta Ads AI Connectors setup proof.
+# Until `mb` reports Meta ready and verified tool names exist, do not probe
+# third-party Meta tools or ask users to configure legacy connector paths.
 ```
 Lazy runtime detection only -- triggered when topic is ads-related, not on every
 `/mb-think` invocation. See `/mb-ads` SKILL.md for the account-context flow.
