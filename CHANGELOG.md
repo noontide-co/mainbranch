@@ -13,6 +13,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added an accepted operator-readable git history decision that defines the
+  business commit verb contract, loop mapping, checkpoint trailer guidance, and
+  follow-up implementation slices. Closes #300.
 - Added planning-only `mb checkpoint --plan --json` so agents can inspect
   dirty business repos, classify changed files, run safety gates, and propose
   readable checkpoint messages before commit execution ships. Refs #290.

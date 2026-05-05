@@ -124,6 +124,8 @@ be lost."
 
 ## Commit Grouping
 
+Commit subjects should follow the accepted
+[operator-readable git history contract](../../decisions/2026-05-05-operator-readable-git-history.md).
 The system should support two modes.
 
 ### Beginner Mode: One Checkpoint
@@ -131,9 +133,9 @@ The system should support two modes.
 Use one commit per meaningful run segment:
 
 ```text
-[checkpoint] Draft paid traffic site plan
-[checkpoint] Update flagship offer and audience
-[checkpoint] Research competitor positioning
+[drafted] paid traffic site plan
+[updated] flagship offer and audience
+[added] competitor positioning research
 ```
 
 The commit body can carry the detail:
@@ -156,13 +158,14 @@ Next:
 When the agent can separate concerns cleanly:
 
 ```text
-[update] Offer: clarify guarantee
-[add] Campaign: paid site measurement plan
-[docs] Decision: accept GTM conversion rubric
+[updated] offer.md -- clarified guarantee
+[added] paid site measurement plan
+[decided] GTM conversion rubric -- accepted
 ```
 
 Power mode is useful for contributors and technical operators, but it should
-not be the beginner default.
+not be the beginner default. Loop names such as Know, See, Decide, Execute, and
+Narrate are internal grouping signals, not default commit prefixes.
 
 ## Privacy and Safety Gates
 
@@ -191,7 +194,7 @@ Candidate options:
 ```bash
 mb checkpoint --plan
 mb checkpoint --json
-mb checkpoint --message "[checkpoint] Draft paid traffic site plan"
+mb checkpoint --message "[drafted] paid traffic site plan"
 mb checkpoint --yes
 mb checkpoint --mode beginner
 mb checkpoint --mode concern
@@ -308,7 +311,7 @@ mb onboard --yes --name "Test Business" --path "$tmpdir/test-business"
 cd "$tmpdir/test-business"
 # modify core/offer.md
 mb checkpoint --plan --json
-mb checkpoint --message "[checkpoint] Update test offer" --yes
+mb checkpoint --message "[updated] test offer" --yes
 mb status --json --peek
 ```
 
@@ -353,6 +356,10 @@ files, not chat transcripts.
 - Should checkpoint preferences live in `.mb/` or runtime-local config?
 - How should multi-repo work checkpoint when a business repo drives a separate
   site repo?
+
+The prefix list, daily checkpoint prefix question, reference trailer stance, AI
+attribution stance, and beginner-vs-power validation stance are settled in the
+[operator-readable git history decision](../../decisions/2026-05-05-operator-readable-git-history.md).
 
 ## Acceptance Criteria
 
