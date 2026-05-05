@@ -64,7 +64,7 @@ PROVIDERS: tuple[Provider, ...] = (
         id="meta",
         name="Meta",
         category="ads",
-        auth="meta_ads_cli_env_pending",
+        auth="meta_cli_pending",
         required_secrets=(),
         metadata_fields=("ad_account_id", "business_id"),
         description=(
@@ -298,7 +298,7 @@ def _repair(provider: Provider, state: str, missing: list[str] | None = None) ->
                 "Meta MCP or access-token setup as a fallback; wait for the "
                 "official Meta Ads CLI detection/read-only smoke to land."
             ),
-            "repair_command": "mb educational provider-readiness",
+            "repair_command": "",
         }
     missing_fields = ", ".join(missing or provider.required_secrets)
     connect_command = f"mb connect {provider.id} --token-stdin"
@@ -578,7 +578,7 @@ def status_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
         return {
             "provider": provider.id,
             "name": provider.name,
-            "connected": bool(isinstance(entry, dict) and entry.get("connected", False)),
+            "connected": False,
             "ok": False,
             "state": "planned",
             "summary": repair["summary"],
@@ -965,7 +965,14 @@ def provider_plan(repo: str | Path = ".") -> dict[str, Any]:
                 "use_when": guidance["use_when"],
                 "defer_when": guidance["defer_when"],
                 "status_command": guidance["status_command"],
-                "next_command": item["repair_command"] or f"mb connect test {provider_id}",
+                "next_command": (
+                    item["repair_command"]
+                    or (
+                        "mb educational provider-readiness"
+                        if item["state"] == "planned"
+                        else f"mb connect test {provider_id}"
+                    )
+                ),
                 "safe_to_share": bool(item.get("safe_to_share", True)),
             }
         )

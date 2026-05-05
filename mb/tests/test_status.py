@@ -277,11 +277,11 @@ def test_status_drift_aligns_unhealthy_integrations_with_readiness(
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
     provider = {
-        "provider": "meta",
+        "provider": "cloudflare",
         "ok": False,
-        "connected": False,
+        "connected": True,
         "state": "unvalidated",
-        "repair_command": "mb connect test meta",
+        "repair_command": "mb connect test cloudflare",
     }
     report = status_mod.run(path=str(repo), update_marker=False)
     report["integrations"]["providers"] = [provider]
@@ -296,7 +296,7 @@ def test_status_drift_aligns_unhealthy_integrations_with_readiness(
     readiness = status_mod._readiness(report)
 
     assert any(item["id"] == "unhealthy_integrations" for item in drift["items"])
-    assert any("mb connect test meta" in action for action in readiness["next_actions"])
+    assert any("mb connect test cloudflare" in action for action in readiness["next_actions"])
 
 
 def test_status_detects_non_business_repo(tmp_path: Path, monkeypatch) -> None:

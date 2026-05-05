@@ -903,7 +903,7 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
     broken_integrations = [
         item
         for item in (report.get("integrations") or {}).get("providers", [])
-        if not item.get("ok")
+        if item.get("connected") and not item.get("ok")
     ]
     if broken_integrations:
         items.append(
@@ -1002,7 +1002,9 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
             )
         )
     integration_repairs = [
-        item for item in (report.get("integrations") or {}).get("providers", []) if not item["ok"]
+        item
+        for item in (report.get("integrations") or {}).get("providers", [])
+        if item.get("connected") and not item["ok"]
     ]
     for item in integration_repairs[:3]:
         command = str(item.get("repair_command") or "mb connect doctor")

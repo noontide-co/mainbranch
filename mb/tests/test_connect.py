@@ -49,6 +49,8 @@ def test_connect_list_json_does_not_create_repo_metadata(tmp_path: Path) -> None
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert any(provider["id"] == "cloudflare" for provider in payload["providers"])
+    meta = next(provider for provider in payload["providers"] if provider["id"] == "meta")
+    assert meta["auth"] == "meta_cli_pending"
     cloudflare = next(
         provider for provider in payload["providers"] if provider["id"] == "cloudflare"
     )
@@ -121,9 +123,19 @@ def test_meta_status_remains_planned_even_with_stale_metadata(tmp_path: Path) ->
     status = connect_mod.status_provider("meta", repo)
 
     assert status["state"] == "planned"
-    assert status["connected"] is True
-    assert status["repair_command"] == "mb educational provider-readiness"
+    assert status["connected"] is False
+    assert status["repair_command"] == ""
     assert status["metadata"] == {"ad_account_id": "act_123"}
+
+    aggregate = connect_mod.status_all(repo)
+    assert aggregate["ok"] is True
+    assert aggregate["summary"]["configured"] == 0
+    assert aggregate["summary"]["needs_repair"] == 0
+    assert aggregate["providers"][0]["state"] == "planned"
+
+    check = connect_mod.doctor_check(repo, status=aggregate)
+    assert check["ok"] is True
+    assert check["detail"] == "no providers connected"
 
 
 def test_connect_plan_human_output_uses_numbered_choices(tmp_path: Path, monkeypatch) -> None:
