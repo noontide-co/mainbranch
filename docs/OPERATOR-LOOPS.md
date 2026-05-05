@@ -1,155 +1,267 @@
 # Operator Loops
 
-Main Branch work should be understood through the operator's loop, not only the
-implementation surface. A command, skill, issue, or release should make at
-least one of these loops better.
+Main Branch organizes operator workflow into **four loops**. The audience is
+operators and small teams running real businesses — solo founders, small
+agencies, course creators, productized services, indie SaaS, small ecom
+teams. The taxonomy works for one person and for two-to-five people sharing a
+business repo.
 
-## 1. Know
+The four loops:
 
-**Question:** What does this business know about itself?
+1. **Sense** — pull state in
+2. **Decide** — choose what to wager
+3. **Ship** — produce and release the work
+4. **Reflect** — extract the lesson
 
-This loop captures the durable context an agent needs before doing serious
-work:
+A command, skill, issue, or release should make at least one of these loops better. The full reasoning behind this taxonomy lives in
+[decisions/2026-05-05-operator-loops-taxonomy.md](../decisions/2026-05-05-operator-loops-taxonomy.md).
 
-- offers, audience, voice, proof, constraints, and pricing;
-- research, competitors, insights, and raw notes;
-- decisions and why they were made;
-- campaigns, logs, documents, and operating history.
+## Loops are workflow phases, not categories
 
-Current surfaces:
+The four loops describe *what an operator is doing right now*. They are
+verbs, not buckets. Channels (Paid, Organic, Pages, Ops) live underneath as
+the *what you're shipping*. Skills live across the loops as *tools that
+traverse 1+ loops*. Most skills span two or three loops.
 
-- `mb onboard`
-- `mb init`
-- `/mb-start`
-- `/mb-think`
-- `core/`, `research/`, `decisions/`, `campaigns/`, `log/`, `documents/`
+The cycle isn't strictly linear. Real workflows chain loops — for example,
+Reflect → Sense (a retro updates `core/offer.md` so the next time you Sense,
+you see the new offer). See "Loops chain together" below.
 
-Next improvements:
+## 1. Sense
 
-- beginner-safe GitHub/provider onboarding with persistent readiness checks;
-- domain and public-context enrichment through optional sidecars;
-- clearer rules for when one business should become multiple repos or
-  workspaces.
+**Question:** What's true right now — about the business, the market, the
+inbox, the numbers?
 
-## 2. See
+This is the act of pulling state in. Both real-time observation and durable
+reference-file reads sit here.
 
-**Question:** What changed, what is stale, and what is healthy?
+| Sense looks like | Sense doesn't look like |
+|---|---|
+| Reading what's there | Acting on what you read |
+| Observation, capture, monitoring | Choosing the next move |
+| Real-time (`mb status`, dashboard) and durable (`core/offer.md`) | Producing new content |
 
-This loop turns the repo, local environment, GitHub activity, connected tools,
-and graph into a concise briefing.
-
-Current surfaces:
+**Current surfaces**
 
 - `mb status`
 - `mb doctor`
 - `mb graph`
 - `mb connect status`
-- GitHub issues, pull requests, and release history
+- `core/`, `research/`, `decisions/`, `campaigns/`, `log/`, `documents/`
+- GitHub issues, pull requests, release history
 
-Next improvements:
+**Next improvements**
 
-- richer drift detection for stale context, stale links, and broken wiring;
-- provider-readiness signals for GitHub, Cloudflare, Google, Meta, Apify, and
-  other optional tools;
-- an Obsidian-compatible link/readability pass for markdown repos;
-- a local dashboard that visualizes existing repo/GitHub/provider truth without
-  becoming the source of truth.
+- Drift detection for stale context, broken wiring, expired credentials
+- Provider-readiness signals for GitHub, Cloudflare, Google, Meta, Apify
+- An optional local dashboard that visualizes existing repo / GitHub / provider
+  truth without becoming the source of truth
+- "Since last check" deltas so the daily briefing answers "what changed?"
 
-## 3. Decide
+## 2. Decide
 
 **Question:** What should I do next, and why?
 
-This loop ranks possible work without pretending the system owns the business.
-Main Branch should cite evidence and let the operator override it.
+The act of choosing what to wager — committing to one direction from finite
+options. Discrete moments, not continuous activity.
 
-Current surfaces:
+| Decide looks like | Decide doesn't look like |
+|---|---|
+| Bounded choice from finite options | Open-ended exploration |
+| Committing to a direction | Doing the work |
+| Discrete moments (start of week, before a launch, when stuck) | Continuous activity |
+
+**Current surfaces**
 
 - `/mb-start`
 - `/mb-think`
 - GitHub issues and priorities
-- `mb status`
+- `mb status` (the next-action ranker, when present)
 
-Next improvements:
+**Next improvements**
 
-- a deterministic next-action ranker;
-- top-three recommendations in `mb status` and `/mb-start`;
-- explicit pin, skip, and defer controls;
-- noob-safe prompts to open GitHub issues when the user hits friction;
-- decision trees for provider choices, paid-SaaS exceptions, sensitive data, and
-  workspace/repo boundaries.
+- A deterministic next-action ranker
+- Top-three recommendations in `mb status` and `/mb-start`
+- Explicit pin, skip, and defer controls
+- Decision trees for provider choices, paid-SaaS exceptions, sensitive data,
+  and workspace/repo boundaries
 
-## 4. Execute
+## 3. Ship
 
-**Question:** What work are we shipping?
+**Question:** What work are we putting into the world?
 
-This loop is where domain workflows live. The domains are not the whole
-product, but they are where the product proves itself.
+The act of producing and releasing in one motion. Indie-operator definition:
+anything that goes from your head into the world. Universal across business
+types — fitness coaches ship programs, consultants ship deliverables, ecom
+operators ship creatives, SaaS founders ship features.
 
-Current surfaces:
+| Ship looks like | Ship doesn't look like |
+|---|---|
+| Output reaching a recipient | Reflection on the output |
+| One verb covering production and release together | Two separate phases ("make" then "show") |
+| Operational craft (`mb connect`, `mb update`) and growth craft (ads, sites) | Picking what to ship |
+
+**Current surfaces**
 
 - `/mb-ads`
 - `/mb-vsl`
 - `/mb-organic`
 - `/mb-site`
 - `/mb-wiki`
-- `/mb-end`
 - `mb connect`
+- `mb checkpoint`
+- `mb update`
 
-Execution domains:
+**Execution domains (channels — the four pillars)**
 
-- pages and CMS;
-- paid ads and compliance;
-- organic content;
-- research and positioning;
-- fulfillment and delivery;
-- bookkeeping and P&L;
-- integrations and sidecar CLIs.
+- **Paid** — Meta ads, sponsored placements
+- **Organic** — Reels, threads, newsletter, YouTube, Skool posts
+- **Pages** — landers, minisites, websites
+- **Ops** — bookkeeping, P&L, compliance, operating health
 
-Next improvements:
+A Ship event is `(loop, channel)`. Posting an ad = Ship through Paid.
+Sending the newsletter = Ship through Organic. Running `mb update` = Ship
+through Ops.
 
-- skills leaning more heavily on CLI facts instead of duplicate checks;
-- optional provider and sidecar contracts;
-- noob-safe connector flows for GitHub, Cloudflare, Google, Meta, and Apify;
-- richer site, ads, organic, bookkeeping, and fulfillment loops.
-- agent checkpoints that save meaningful execution progress before context is
-  lost.
+**Next improvements**
 
-## 5. Narrate
+- Skills leaning more heavily on CLI facts instead of duplicate checks
+- Optional provider and sidecar contracts
+- Beginner-safe connector flows for GitHub, Cloudflare, Google, Meta, Apify
+- Richer site, ads, organic, bookkeeping, and fulfillment loops
+- Agent checkpoints that save meaningful work before context is lost
 
-**Question:** What did we learn, and what should others see?
+## 4. Reflect
 
-This loop turns shipped work and business outcomes into durable internal memory
-and optional public narration.
+**Question:** What did we learn, and what changes because of it?
 
-Current surfaces:
+The act of extracting the lesson — usually scheduled. Output that updates
+Sense substrate (offer, voice, audience, decisions) and feeds the next round
+of work.
 
-- `CHANGELOG.md`
-- decisions and retros;
-- `/mb-end`;
-- git checkpoint commits;
-- `bets/` and `/mb-bet`;
-- GitHub releases;
-- public site workflows through `/mb-site`
+| Reflect looks like | Reflect doesn't look like |
+|---|---|
+| Extracting from past work | Producing new work |
+| Calendared (weekly review, end-of-bet, monthly retro) | Continuous |
+| Output that updates Sense substrate | Output for external audiences |
+| Verdict, lesson, change-of-mind | Status update |
 
-Next improvements:
+**Current surfaces**
 
-- bet-to-offer graduation rules;
-- status and dashboard visibility for active bets, deadlines, and outcomes;
-- `/mb-start` reconstruction from checkpoint commits;
-- public bets pages generated from repo truth.
+- `/mb-end`
+- `/mb-bet close` and `/mb-bet narrate`
+- `bets/` and the bet lifecycle (verdicts go here)
+- `decisions/` (when superseding a prior decision is itself a reflection)
+- `CHANGELOG.md` (release-as-retro)
+- `git` history — readable commits at meaningful boundaries
 
-## Applying The Loops
+**Next improvements**
+
+- Bet-to-offer graduation rules
+- Status and dashboard visibility for active bets, deadlines, and outcomes
+- Public bets pages generated from repo truth
+- Quarterly retro skills that scan recent bets and decisions
+
+**Why Reflect is its own loop and not a phase inside Ship.** When loops run
+fast (especially under AI), the calendared review step is the only protection
+against compounding error. Frameworks that treat reflection as automatic
+(PDCA, OODA, Lean Startup) find it gets dropped. Frameworks that name it
+(GTD's Weekly Review, EOS's Issues, gbrain's Dream Cycle) see operators
+actually do it. Naming Reflect is the intervention.
+
+## Loops chain together
+
+The cycle is not strictly linear. Real workflows chain loops:
+
+- **Reflect → Sense.** A retro updates `core/offer.md`. The next time you
+  Sense, you see the new offer.
+- **Decide → Ship.** Most bets go straight from decided to shipped within
+  a session.
+- **Ship → Reflect → Ship.** Ship the lander, reflect on conversion data
+  after 7 days, ship a revised version.
+- **Sense → Decide → Sense.** Sometimes new data prompts more sensing
+  before you can decide.
+- **Reflect → Ship.** A bet's verdict (Reflect) might be tweeted (Ship the
+  verdict to Twitter). The two loops chain — they're not the same loop
+  because the artifact moves through a channel.
+
+Loop chains are a normal pattern, not a taxonomy bug. The cycle compounds
+when chains close — especially Reflect → Sense, where lessons become durable
+context.
+
+## Skills are journeys; loops are stations
+
+A skill traverses one or more loops. Skills can have brand names that don't
+mirror loop names. There is no requirement for skill-to-loop 1:1 mapping.
+
+| Skill | Loops it spans | Why |
+|---|---|---|
+| `/mb-status` | Sense | Pure status read |
+| `/mb-start` | Sense + Decide | Triages current state and routes to next action |
+| `/mb-think` | Sense + Decide + Ship | Research → decide → codify (codify is Ship of the decision into a file) |
+| `/mb-bet new` | Decide | Pure framing/wagering |
+| `/mb-bet close` | Reflect | Pure verdict-rendering |
+| `/mb-bet narrate` | Reflect → Ship | Render the lesson, then publish it |
+| `/mb-site` | Ship | Build + deploy in one motion |
+| `/mb-ads` | Ship (with Reflect-style review gates) | Draft + post |
+| `/mb-end` | Reflect (with optional Ship of the reflection) | Session crystallize |
+| `mb status` (CLI) | Sense | Daily briefing |
+| `mb checkpoint` | Ship | The commit is itself a Ship event |
+
+The `/mb-think` skill name is preserved — "Think" is a brand name for a
+multi-loop research-decide-codify skill, not a loop. Operators say "I'm going
+to /mb-think this through"; the skill name describes the activity feel, not
+a phase.
+
+**Skill convention:** new skills declare which loops they touch in
+`SKILL.md` frontmatter:
+
+```yaml
+---
+name: mb-bet
+description: ...
+loops: [decide, reflect, ship]
+---
+```
+
+This lets `mb status` and downstream tooling reason about loop coverage
+without parsing prose.
+
+## Applying the loops
 
 When opening or working an issue, name the loop it improves:
 
-- **Know** for onboarding, reference, research, decisions, and context capture.
-- **See** for status, doctor, graph, update, migrations, and integrations.
-- **Decide** for ranking, triage, recommendations, issue drafting, and
-  operator overrides.
-- **Execute** for domain workflows and sidecar tools.
-- **Narrate** for bets, retros, release notes, public pages, and community
-  updates.
+- **Sense** for status, doctor, graph, drift, integrations, reference-file
+  capture
+- **Decide** for ranking, triage, recommendations, issue drafting, operator
+  overrides
+- **Ship** for domain workflows (ads, sites, organic, VSL), connectors,
+  package updates, operational craft
+- **Reflect** for bets, retros, verdicts, decision supersession, public bets
+  pages
 
 A large branch is acceptable when it improves one coherent loop with one
 observable success metric. A tiny branch is not automatically better if it
 costs more cold start, review, CI, and release overhead than it returns.
+
+## Channels (the four pillars)
+
+Underneath Ship sit the four channels every operator can recognize:
+
+- **Paid** — paid acquisition, ad creatives, ad accounts, sponsored placements
+- **Organic** — owned audience content (Reels, TikTok, threads, YouTube,
+  newsletter, Skool posts)
+- **Pages** — landers, minisites, websites, public bet pages, deployed assets
+- **Ops** — bookkeeping (Beancount), P&L, compliance, integrations, operating
+  health
+
+Skills cluster by channel today (`/mb-ads` for Paid, `/mb-organic` and
+`/mb-vsl` for Organic, `/mb-site` for Pages, `mb books` planned for Ops).
+Channels grow over time without bloating the loop count — adding new sidecar
+CLIs adds new Ship channels, not new loops.
+
+## See also
+
+- [decisions/2026-05-05-operator-loops-taxonomy.md](../decisions/2026-05-05-operator-loops-taxonomy.md) — full reasoning, alternatives considered, research record
+- [docs/ETHOS.md](ETHOS.md) — product principles
+- [docs/ROADMAP.md](ROADMAP.md) — release direction
