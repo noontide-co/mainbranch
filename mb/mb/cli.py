@@ -910,8 +910,10 @@ def checkpoint_cmd(
     plan: bool = typer.Option(
         False,
         "--plan",
-        help="Preview checkpointable changes. Commit execution is not shipped yet.",
+        help="Preview checkpointable changes without committing.",
     ),
+    message: str = typer.Option("", "--message", "-m", help="Commit message for --yes."),
+    yes: bool = typer.Option(False, "--yes", help="Save the checkpoint after safety gates pass."),
     mode: str = typer.Option(
         "beginner",
         "--mode",
@@ -919,9 +921,12 @@ def checkpoint_cmd(
     ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
-    """Plan a git checkpoint without staging or committing changes."""
-    _ = plan
-    result = checkpoint_mod.plan(repo=repo, mode=mode)
+    """Plan or save a git checkpoint."""
+    if yes or message:
+        result = checkpoint_mod.commit(repo=repo, message=message, mode=mode, yes=yes)
+    else:
+        _ = plan
+        result = checkpoint_mod.plan(repo=repo, mode=mode)
     if json_out:
         typer.echo(json.dumps(result, indent=2))
     else:

@@ -153,3 +153,103 @@ def test_checkpoint_rejects_invalid_mode(tmp_path: Path) -> None:
     payload = json.loads(result.stdout)
     assert payload["status"] == "error"
     assert "mode must be beginner or concern" in payload["errors"][0]
+
+
+def test_checkpoint_commit_requires_yes_after_plan_review(tmp_path: Path) -> None:
+    repo = _business_repo(tmp_path)
+    (repo / "core" / "offer.md").write_text("# Offer\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "checkpoint",
+            "--repo",
+            str(repo),
+            "--message",
+            "[checkpoint] Update offer",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "approval_required"
+    assert payload["committed"] is False
+    assert "pass --yes" in payload["errors"][0]
+
+
+def test_checkpoint_commit_saves_readable_checkpoint(tmp_path: Path) -> None:
+    repo = _business_repo(tmp_path)
+    (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "checkpoint",
+            "--repo",
+            str(repo),
+            "--message",
+            "[checkpoint] Update offer",
+            "--yes",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "committed"
+    assert payload["committed"] is True
+    assert payload["commit"]["message"] == "[checkpoint] Update offer"
+    assert "core/offer.md" in payload["commit"]["body"]
+    assert payload["commit"]["sha"]
+    assert _git(repo, "status", "--porcelain").stdout == ""
+    log = _git(repo, "log", "-1", "--pretty=%B").stdout
+    assert "[checkpoint] Update offer" in log
+    assert "Changed:\n- core/offer.md" in log
+
+
+def test_checkpoint_commit_refuses_blocked_plan_without_commit(tmp_path: Path) -> None:
+    repo = _business_repo(tmp_path)
+    (repo / ".env").write_text("API_KEY=super-secret\n", encoding="utf-8")
+    _git(repo, "add", "-f", ".env")
+
+    result = runner.invoke(
+        app,
+        [
+            "checkpoint",
+            "--repo",
+            str(repo),
+            "--message",
+            "[checkpoint] Unsafe",
+            "--yes",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "blocked"
+    assert payload["committed"] is False
+    assert _git(repo, "log", "--oneline").stdout.count("\n") == 1
+
+
+def test_checkpoint_commit_clean_repo_is_noop(tmp_path: Path) -> None:
+    repo = _business_repo(tmp_path)
+
+    result = runner.invoke(
+        app,
+        [
+            "checkpoint",
+            "--repo",
+            str(repo),
+            "--message",
+            "[checkpoint] Nothing",
+            "--yes",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "clean"
+    assert payload["committed"] is False
