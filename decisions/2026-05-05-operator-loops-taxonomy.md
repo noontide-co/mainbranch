@@ -254,19 +254,9 @@ What needs to change in the repo to land this taxonomy:
 
 ## Sources / show our work
 
-The eight research findings live in `.context/loops-design/`:
+The decision was driven by eight parallel research streams (canonical workflow frameworks, 10 real operator profiles, 20+ operator tool taxonomies, classification stress-test, gstack and gbrain studies, runtime compatibility, AI-era reframe). The most load-bearing single artifact — a 20-activity classification across eight candidate taxonomies, plus a cross-business-type stress test — ships as the representative research record at [`docs/research/2026-05-05-operator-loops-stress-test.md`](../docs/research/2026-05-05-operator-loops-stress-test.md).
 
-- `01-theory.md` — canonical workflow frameworks
-- `02-empirical.md` — 10 real operator profiles across business types
-- `03-tools.md` — 20+ operator tool taxonomies
-- `04-stress-test.md` — 20-activity classification
-- `05-garry-gstack.md` — gstack `/ship` pattern
-- `06-garry-gbrain.md` — gbrain Dream Cycle / brain-agent loop
-- `07-runtimes-hermes-openclaw-gsd.md` — runtime plug-in compatibility
-- `08-ai-reframe.md` — AI-era reframe
-- `FINAL.md` — synthesis
-
-These ship as research record, not user-facing docs. Future contributors who want to question the taxonomy can read them cold.
+Future contributors who want to question the taxonomy should start there. The decision body above carries the synthesis.
 
 ## Decision authority
 
