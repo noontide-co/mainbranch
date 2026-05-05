@@ -20,6 +20,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   Claude treats Main Branch updates as the required first fix through
   `/mb-update` / `mb update`, repairs one repo at a time, and explains any git
   branch as a safe draft instead of leaving beginners to decide what to merge.
+- Tightened migration read-only checks to use `mb status --peek` and clarified
+  that `.mb/last-status-seen.json` is local operational state, not migration
+  work to commit.
 
 ## [0.3.1] - 2026-05-05
 

@@ -37,7 +37,7 @@ mb update --repo .
 mb skill link --repo .
 mb skill repair --repo .
 mb doctor
-mb status
+mb status --peek
 ```
 
 ## Recommended: Let Claude Walk You Through It
@@ -71,7 +71,7 @@ repair. I may be new to Terminal, Git, branches, and GitHub.
    Do not present the update as an optional phase.
 4. Then inspect likely business repos without changing files:
    - mb doctor <repo>
-   - mb status <repo>
+   - mb status <repo> --json --peek
    - mb skill repair --repo <repo>
    - mb migrate --repo <repo> status
 5. Recommend one repo to repair first, not a whole multi-repo project plan.
@@ -97,7 +97,7 @@ mb update --repo .
 mb skill link --repo .
 mb skill repair --repo .
 mb doctor
-mb status
+mb status --peek
 mb start
 ```
 
@@ -138,6 +138,20 @@ Claude must not merge, delete, or rename the branch unless the user explicitly
 confirms. If the user is unsure, the safe answer is to keep the branch and ask
 for review.
 
+If Claude accidentally dirties an existing branch during discovery, stop before
+running layout migration. Move the already-written Main Branch repair work onto
+a branch, keep user-authored files separate, and do not commit local status
+markers:
+
+1. Show `git status --short` for the repo.
+2. If only Main Branch repair files changed, create a branch such as
+   `mainbranch-repair`.
+3. Commit durable repair files such as `.gitignore` changes.
+4. Do not commit `.mb/last-status-seen.json`; it is local operational state and
+   should be gitignored.
+5. If the repo already had unrelated dirty or untracked user files, leave that
+   repo out of batch migration until the user reviews it.
+
 ## If You Are On `mb 0.1.x`
 
 Old `mb` versions do not have `mb update` yet. Run the bootstrap upgrade once:
@@ -171,7 +185,7 @@ mb update --repo .
 mb skill link --repo .
 mb skill repair --repo .
 mb doctor
-mb status
+mb status --peek
 mb start
 ```
 
@@ -318,7 +332,7 @@ Validate before merging the branch:
 
 ```bash
 mb doctor
-mb status
+mb status --peek
 mb validate
 mb start --json
 git diff --stat
@@ -351,7 +365,7 @@ For old business repos:
 3. Run `mb skill link --repo /path/to/repo`.
 4. Run `mb skill repair --repo /path/to/repo`; use `--apply` only when it says
    a stale Main Branch symlink is safe to move.
-5. Run `mb doctor` and `mb status`.
+5. Run `mb doctor` and `mb status --peek`.
 6. Run `mb migrate --check`, read the diff, then run `mb migrate --apply` on a
    clean branch when you are ready.
 
