@@ -12,6 +12,29 @@ Existing repos do not need an urgent file move. The safe path is to update the
 engine first, repair skill discovery, and only migrate file layout on a clean
 branch when you need the new shape.
 
+## `.mb` Is The Current Folder
+
+If you see a `.mb/` folder in your business repo, that is expected. `.mb/` is
+Main Branch's repo-local operational state: onboarding progress, provider
+metadata, backups, issue drafts, schema markers, and other rebuildable helper
+files.
+
+You do **not** need a `.mb-vip/` folder. That name belongs to old clone-based
+setup language and the former internal repo name. The current pipx setup does
+not require a local engine clone inside your business repo.
+
+Open Claude Code in the business repo folder, not in an engine clone. If
+slash commands are missing, repair the skill wiring instead of creating a
+`.mb-vip/` folder:
+
+```bash
+mb update --repo .
+mb skill link --repo .
+mb skill repair --repo .
+mb doctor
+mb status
+```
+
 ## Recommended: Let Claude Walk You Through It
 
 If you are already using Main Branch and do not want to reason about old

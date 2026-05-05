@@ -82,6 +82,11 @@ files, git, and GitHub, scaffolds the business folder taxonomy (`core/`,
 `research/`, `decisions/`, `bets/`, `log/`, `campaigns/`, `documents/`), and wires the
 bridge files Claude Code needs to find Main Branch's skills.
 
+You may also see a `.mb/` folder. That is normal. It stores Main Branch's local
+operational state for that business repo, such as onboarding progress, safe
+provider metadata, backups, and issue drafts. You do not need a `.mb-vip/`
+folder; that name comes from the old clone-based setup.
+
 ---
 
 ## Step 3: First Session
@@ -243,6 +248,9 @@ mb skill repair --repo .
 
 Then restart Claude. This re-wires skill discovery in your business repo and
 checks whether an old personal skill is taking precedence.
+
+**I only see `.mb/`, not `.mb-vip/`:** good. `.mb/` is the current folder.
+`.mb-vip/` was old setup language and is not required.
 
 **`mb` not found after install:** run `pipx ensurepath`, close your terminal completely, reopen it.
 

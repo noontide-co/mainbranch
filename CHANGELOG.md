@@ -23,6 +23,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `/mb-end`, and `/mb-think` toward `mb checkpoint` so checkpointing can happen
   throughout long agent sessions instead of only at end-of-day. Refs #292.
 
+### Changed
+
+- Clarified beginner, migration, and `/mb-help` docs that `.mb/` is the current
+  repo-local Main Branch state folder and `.mb-vip/` is not required. Refs
+  #296.
+- Added release-truth rules to the agent contract and OSS checklist so docs do
+  not describe a version as shipped until CHANGELOG, GitHub Release, and PyPI
+  state agree. Closes #295.
+
 ## [0.3.0] - 2026-05-04
 
 v0.3.0 makes Main Branch better at telling a user what matters next. It adds

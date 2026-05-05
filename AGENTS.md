@@ -382,6 +382,19 @@ PR bodies should give reviewers product scope and validation evidence:
 Update `CHANGELOG.md` for user-visible CLI, skill, packaging, compatibility, or
 workflow changes. Skip it only for invisible maintenance.
 
+## Release Truth
+
+Do not describe a version as shipped until the release surfaces agree:
+
+- `CHANGELOG.md` has the version section;
+- the matching `oe-vX.Y.Z` GitHub Release exists;
+- PyPI shows `mainbranch X.Y.Z` when the change is package-visible;
+- release notes, README copy, and roadmap language match those facts.
+
+`CHANGELOG.md` may describe unreleased work only under `[Unreleased]`. If a
+draft PR, planning doc, or local branch mentions a version that has not been
+released, use "planned", "target", or "next" rather than "shipped".
+
 ## Review Focus
 
 When reviewing, lead with findings:

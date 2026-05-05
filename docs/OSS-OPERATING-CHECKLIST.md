@@ -112,6 +112,10 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
 - [ ] Deprecated CLI surfaces, schemas, JSON contracts, or runtime adapters are
   marked with the deprecation date, the release that will remove them, and a
   migration command or fallback so users are not stranded.
+- [ ] Public docs describe a version as shipped only when `CHANGELOG.md`, the
+  matching `oe-vX.Y.Z` GitHub Release, and PyPI package state agree.
+- [ ] Planned release copy uses "planned", "target", or "next" until release
+  verification proves users can install it.
 
 ## 8. Issue / PR Discipline
 
