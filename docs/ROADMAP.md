@@ -17,7 +17,7 @@ Main Branch already ships:
 - local-first provider metadata and secret-safe connection checks;
 - graph and status primitives for future dashboard and agent workflows;
 - privacy-safe GitHub issue drafting for user friction;
-- `bets/` and `/mb-bet` as the first narration primitive;
+- `bets/` and `/mb-bet` as the first Reflect primitive;
 - public contribution, support, security, compatibility, and agent guidance.
 - accepted workspace/repo/sensitive-data boundary guidance and
   GitHub/Obsidian-compatible markdown/link conventions for future dashboard,
@@ -38,7 +38,7 @@ Shipped scope:
   schema ([#261](https://github.com/noontide-co/mainbranch/issues/261));
 - privacy-safe issue drafting for bugs, missing workflows, confusing errors,
   and feature ideas ([#264](https://github.com/noontide-co/mainbranch/issues/264));
-- `bets/` and `/mb-bet` as the first primitive for tracking and narrating
+- `bets/` and `/mb-bet` as the first primitive for tracking and reflecting on
   operator bets ([#266](https://github.com/noontide-co/mainbranch/issues/266)).
 
 Remaining planned scope:
@@ -86,7 +86,7 @@ Planned scope:
 ## Later: v0.4 - Launches Offers From Bets
 
 The next proof point after the daily decision loop is graduating real business
-bets into offers, pages, ads, fulfillment, and public narration.
+bets into offers, pages, ads, fulfillment, and public Ship surfaces.
 
 Planned scope:
 

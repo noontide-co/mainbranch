@@ -28,14 +28,12 @@ reference implementation, not a required install. Main Branch must continue to
 work when `companyctx` is missing, unauthenticated, degraded, or replaced by a
 different provider.
 
-Sidecars enrich the Know, See, and Execute loops:
+Sidecars enrich the Sense and Ship loops:
 
-- Know: fetch public or external context that helps a business repo understand
-  offers, markets, customers, competitors, and constraints.
-- See: report whether connected context providers are configured, healthy,
-  stale, or degraded.
-- Execute: give skills and future dashboards structured facts without making
-  each workflow invent a new integration style.
+- Sense: fetch public or external context and report whether connected context
+  providers are configured, healthy, stale, or degraded.
+- Ship: give skills and future dashboards structured facts without making each
+  workflow invent a new integration style.
 
 The core rule is simple: sidecars return evidence; Main Branch decides how to
 surface it; humans and skills decide which durable business truth to write back
@@ -347,8 +345,8 @@ the upstream API should report that limitation explicitly and stay below
 
 Sidecars must not mutate external accounts during health checks or context
 fetches. Spending money, publishing, emailing, deploying, or changing third
-party account state belongs behind an explicit Execute command and human
-approval gate, not behind enrichment.
+party account state belongs behind an explicit Ship command and human approval
+gate, not behind enrichment.
 
 ## Failure Behavior
 
@@ -369,7 +367,7 @@ business repo.
 ## Reference and Future Sidecars
 
 `companyctx` is the first reference sidecar because public company/domain
-context is useful across Know, See, and Execute workflows and can stay optional.
+context is useful across Sense and Ship workflows and can stay optional.
 It should prove:
 
 - command discovery;

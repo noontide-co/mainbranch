@@ -110,7 +110,7 @@ customer names, or legal advice.
 ## Finance, Legal, and `mb books`
 
 `mb books` must not quietly turn a shared business repo into a finance database.
-Bookkeeping is an Execute loop, but its data boundary is stricter than normal
+Bookkeeping is a Ship loop, but its data boundary is stricter than normal
 campaign or decision work.
 
 Safe for a team-visible business repo:

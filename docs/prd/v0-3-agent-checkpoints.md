@@ -164,8 +164,8 @@ When the agent can separate concerns cleanly:
 ```
 
 Power mode is useful for contributors and technical operators, but it should
-not be the beginner default. Loop names such as Know, See, Decide, Execute, and
-Show are internal grouping signals, not default commit prefixes.
+not be the beginner default. Loop names such as Sense, Decide, Ship, and
+Reflect are internal grouping signals, not default commit prefixes.
 
 ## Privacy and Safety Gates
 

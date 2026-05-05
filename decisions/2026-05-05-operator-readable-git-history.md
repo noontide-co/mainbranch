@@ -5,12 +5,14 @@ status: accepted
 topic: Operator-readable git history
 linked_decisions:
   - decisions/2026-05-02-github-native-business-os.md
+  - decisions/2026-05-05-operator-loops-taxonomy.md
 linked_docs:
   - docs/OPERATOR-LOOPS.md
 linked_issues:
   - https://github.com/noontide-co/mainbranch/issues/300
+  - https://github.com/noontide-co/mainbranch/issues/306
 participants: [Devon, Codex]
-tags: [v0-3, git-history, checkpoints, operator-loops, show]
+tags: [v0-3, git-history, checkpoints, operator-loops, reflect]
 ---
 
 # Operator-Readable Git History
@@ -41,28 +43,31 @@ Use lower-case, past-tense business verbs as the default commit prefixes:
 - `[ran]`
 - `[fixed]`
 
-Main Branch may still map these commits to the Know / See / Decide / Execute /
-Show loops internally, while classifying infrastructure events under a separate
-System category. It should not ask operators to write loop or category names
-into normal business commit subjects.
+Main Branch may still map these commits to the four canonical loops from the
+operator-loop taxonomy decision: Sense / Decide / Ship / Reflect. Operational
+maintenance is not a fifth loop; it is Ship through the Ops channel unless a
+stronger path or body signal says otherwise. Main Branch should not ask
+operators to write loop or channel names into normal business commit subjects.
 
 ## Why Not Loop Tags
 
 The operator loops are product architecture, defined in
-[OPERATOR-LOOPS.md](../docs/OPERATOR-LOOPS.md). They help Main Branch rank
-work, group status signals, and design workflows. They are not the language a
-business operator naturally uses to remember the quarter.
+[OPERATOR-LOOPS.md](../docs/OPERATOR-LOOPS.md) and locked by
+[the operator-loop taxonomy decision](2026-05-05-operator-loops-taxonomy.md).
+They help Main Branch rank work, group status signals, and design workflows.
+They are not the language a business operator naturally uses to remember the
+quarter.
 
 The loop names themselves were chosen to be plain enough to read in product
-docs (Know / See / Decide / Execute / Show), but commit prefixes optimize for a
+docs (Sense / Decide / Ship / Reflect), but commit prefixes optimize for a
 different read: operators scanning their own history months later. Verbs win
-that read; categories do not.
+that read; loop names do not.
 
 Compare:
 
 ```text
-[execute] workshop-waitlist lander
-[show] workshop-waitlist outcome
+[ship] workshop-waitlist lander
+[reflect] workshop-waitlist outcome
 ```
 
 With:
@@ -111,28 +116,29 @@ Avoid subjects that require Main Branch internals to understand:
 
 This table is the initial machine-consumable contract for status grouping,
 checkpoint planning, validation, retros, and future dashboard timelines.
-Tooling may override the default loop or category when the changed path or
+Tooling may override the default loop or channel when the changed path or
 object gives a stronger signal, but it should start here.
 
-| Prefix | Default loop / category | Use when | Common objects |
-|---|---|---|---|
-| `[added]` | Know | New durable business context or artifact exists | `offer.md`, research note, proof, audience segment |
-| `[updated]` | Know | Existing durable context changed | offer, pricing, audience, voice, daily log |
-| `[decided]` | Decide | A choice and its rationale were accepted | launch date, provider choice, offer direction |
-| `[opened]` | Show | A bet, public issue, or public outcome thread became active | bet, public issue, launch thread |
-| `[closed]` | Show | A bet, public issue, or public outcome thread got an outcome | bet, public issue, launch thread |
-| `[drafted]` | Execute | Draft work was produced but not shipped | ads, VSL, organic batch, site copy |
-| `[shipped]` | Execute | Work became visible, deployed, published, or sent | site, page, email, ad batch, offer |
-| `[connected]` | System | A provider or local integration became usable | Stripe, GitHub, Cloudflare, Meta Ads |
-| `[ran]` | System | A maintenance, update, migration, validation, or import ran | `mb update`, migration, import, smoke |
-| `[fixed]` | System | A broken workflow, file, link, provider, or setup path was repaired | link, skill wiring, provider metadata |
+| Prefix | Default loop | Channel hint | Use when | Common objects |
+|---|---|---|---|---|
+| `[added]` | Sense | - | New durable context or state exists | `offer.md`, research note, proof, audience segment |
+| `[updated]` | Sense | - | Existing durable context changed | offer, pricing, audience, voice, daily log |
+| `[decided]` | Decide | - | A choice and its rationale were accepted | bet, launch date, provider choice, offer direction |
+| `[opened]` | Decide | - | A bet, public issue, or outcome thread became active | bet, public issue, launch thread |
+| `[closed]` | Reflect | - | A bet, public issue, or outcome thread got a verdict | bet, public issue, launch thread |
+| `[drafted]` | Ship | path-derived | A reviewable artifact was produced, whether or not it is public yet | ads, VSL, organic batch, site copy |
+| `[shipped]` | Ship | path-derived | Work reached a recipient, deploy target, or public surface | site, page, email, ad batch, offer |
+| `[connected]` | Ship | Ops | A provider or local integration became usable | Stripe, GitHub, Cloudflare, Meta Ads |
+| `[ran]` | Ship | Ops | A maintenance, update, migration, validation, or import ran | `mb update`, migration, import, smoke |
+| `[fixed]` | Ship | path-derived; Ops for infrastructure | A broken workflow, file, link, provider, or setup path was repaired | checkout copy, skill wiring, provider metadata |
 
 `[fixed]` can describe business work when the object is business-facing, such
 as `[fixed] checkout copy -- clarified guarantee`. For grouping, tooling should
-prefer stronger path signals over the default System category.
-Task and campaign paths should also reclassify by default: `tasks/` work maps
-to Decide unless the commit closes a public outcome thread, and `campaigns/`
-work maps to Execute unless the commit records a public outcome.
+prefer stronger path signals over the default Ops hint. Path and body signals
+should reclassify by default: `core/` and `research/` usually map to Sense,
+accepted `decisions/` and opened `bets/` map to Decide, `campaigns/` and
+published artifacts map to Ship, and bet verdicts, retros, superseded
+decisions, and lessons map to Reflect.
 
 ## Commit Body
 
@@ -234,7 +240,7 @@ intended repo.
 
 ```text
 [decided] v0.3 launch date -- May 15
-[added] decision provider-boundary -- keep secrets outside repo
+[decided] provider boundary -- keep secrets outside repo
 ```
 
 ### Sites
@@ -289,7 +295,7 @@ intended repo.
    `/mb-bet` to call the checkpoint contract instead of inventing per-skill
    commit prefixes.
 6. Teach `mb status` and future dashboards to group recent git history by the
-   internal loop map while displaying the original operator-readable subject.
+   four-loop map while displaying the original operator-readable subject.
 
 ## Validation Contract
 
@@ -311,9 +317,9 @@ For this decision slice:
 - Beginner checkpointing can be readable without being lax about safety.
 - Power users and CI can opt into stricter reference and prefix validation
   without making the first-run path feel like developer ceremony.
-- The verb contract becomes the substrate for the public bets feed (loop Show):
-  `[opened]` and `[closed]` commits with `Refs: bets/<slug>.md` are the
-  canonical events the bets-feed renderer reads. Renaming or removing these
-  verbs after v0.3.x requires coordinated migration across `mb checkpoint`,
-  `mb status`, the bets-feed module, and any operator wikis or dashboards
-  consuming git log.
+- The verb contract becomes the substrate for the public bets feed:
+  `[opened]` commits with `Refs: bets/<slug>.md` are Decide events, and
+  `[closed]` commits with the same ref are Reflect events. Publishing those
+  outcomes is a chained Ship event. Renaming or removing these verbs after
+  v0.3.x requires coordinated migration across `mb checkpoint`, `mb status`,
+  the bets-feed module, and any operator wikis or dashboards consuming git log.

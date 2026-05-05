@@ -48,7 +48,10 @@ Get this wrong and every downstream surface inherits the confusion. The taxonomy
 
 ## How we decided
 
-Two parallel research rounds, eight subagents total. Each was told to take a position rather than fence-sit. Findings live alongside this decision in `.context/loops-design/`.
+Two parallel research rounds, eight subagents total. Each was told to take a
+position rather than fence-sit. The public synthesis below captures the
+reasoning, alternatives, and stress-test results without depending on private
+scratch files.
 
 ### Round 1 — four perspectives
 
