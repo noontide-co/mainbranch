@@ -45,10 +45,10 @@ mb connect doctor --json
    - Common setup: `mb connect google --from-env`
    - Connect it when a workflow needs existing Google files. Do not connect it just because you have a Google account.
 
-4. **Meta Ads** - ad accounts, campaigns, pixels, and future performance context through the official Meta Ads path once verified.
+4. **Meta Ads** - ad accounts, campaigns, pixels, and future performance context through the official Meta Ads CLI once Main Branch wiring is verified.
    - Check: `mb connect doctor --json`
-   - Common setup: planned pending official setup proof and read-only smoke.
-   - Connect it when paid-ad work needs account facts and `mb` reports the official path ready.
+   - Common setup: planned for `meta-ads` / `meta`; do not run `mb connect meta` until this provider is wired.
+   - Connect it when paid-ad work needs account facts and `mb` reports the CLI path ready.
 
 5. **Apify** - research sidecar for scraping, YouTube, Instagram, and web mining.
    - Check: `mb connect doctor --json`
@@ -58,6 +58,8 @@ mb connect doctor --json
 ## Readiness states
 
 - `not_connected` means no repo-safe provider metadata exists yet.
+- `planned` means the provider is a supported direction, but this `mb` release
+  does not yet wire a safe setup, detection, or validation path.
 - `missing_secret` means metadata exists but the local secret is missing.
 - `unvalidated` means a credential is stored, but it has not been tested.
 - `invalid` means validation failed and the credential should be replaced.

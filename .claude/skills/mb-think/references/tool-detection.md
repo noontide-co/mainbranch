@@ -72,12 +72,13 @@ pip3 list 2>/dev/null | grep -i "mlx-whisper" && echo "WHISPER=mlx_whisper"
 **Nano Banana** (image generation): Available when Gemini is configured (uses GOOGLE_API_KEY). Detect alongside Gemini.
 
 **Meta Ads account access:** Use `mb connect doctor --json` for provider
-readiness first. Then check for read-only ad account MCP tools only when the
-selected path needs live account context:
+readiness first. The intended runtime path is the official Meta Ads CLI
+(`meta-ads` package, `meta` binary), but Main Branch detection is not wired yet:
 ```bash
-# Detection is pending the official Meta Ads AI Connectors setup proof.
-# Until `mb` reports Meta ready and verified tool names exist, do not probe
-# third-party Meta tools or ask users to configure legacy connector paths.
+# Future detection once mb reports Meta ready:
+# which meta
+# meta --version
+# meta auth status
 ```
 Lazy runtime detection only -- triggered when topic is ads-related, not on every
 `/mb-think` invocation. See `/mb-ads` SKILL.md for the account-context flow.

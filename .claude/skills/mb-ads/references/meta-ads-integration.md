@@ -5,29 +5,71 @@ live account context only after deterministic `mb` provider facts say the Meta
 path is ready and the current runtime exposes verified read-only account tools.
 
 Main Branch no longer supports third-party Meta MCP setup or detection as a
-fallback. Until the official Meta Ads AI Connectors path has setup proof and a
-read-only smoke, skills must work from repo reference files and manual Ads
-Manager input.
+fallback. The official Meta Ads CLI is real, but Main Branch has not wired
+safe detection and read-only smoke yet. Until `mb` reports Meta as ready, skills
+must work from repo reference files and manual Ads Manager input.
 
 ---
 
 ## Current Support State
 
-Meta's official Ads AI Connectors path is the intended supported route:
+Meta Ads AI Connectors has two surfaces:
 
-- remote MCP for AI clients that can connect to Meta-hosted MCP servers;
-- local Ads CLI shape for terminal agents;
-- Meta-authenticated account access rather than committed tokens;
-- read and write surfaces reported by Meta's launch materials, with mutation
-  gated by explicit operator approval in Main Branch.
+- **Meta Ads CLI**: local Python package `meta-ads`, binary `meta`. This is the
+  Main Branch target because Claude Code-first workflows can call Bash.
+- **Meta-hosted MCP**: remote server at `https://mcp.facebook.com/ads` for
+  supported chat clients. Treat it as forward-looking for Claude Code until the
+  OAuth handshake is proven there.
 
-This repository has not yet verified the official setup command, tool names, or
-authenticated read-only smoke from a fresh business repo. Therefore:
+Meta's package metadata classifies the CLI as Alpha as of its 2026-04-29 launch.
+Expect setup and command details to move over the next few months.
+
+Main Branch has not wired the CLI into `mb connect` yet. Therefore:
 
 - do not tell users Meta account access is ready unless `mb` says it is ready;
 - do not ask users to configure third-party Meta connector fallbacks;
 - do not ask users to paste Meta tokens into chat or repo files;
 - do not run live campaign mutations from this skill.
+
+Official docs:
+
+- https://developers.facebook.com/blog/post/2026/04/29/introducing-ads-cli/
+- https://developers.facebook.com/documentation/ads-commerce/ads-ai-connectors/ads-cli/setup/get-started
+- https://developers.facebook.com/documentation/ads-commerce/ads-ai-connectors/ads-cli/command-reference
+
+---
+
+## Official CLI Setup Facts
+
+When Main Branch wires this provider, the setup path should follow Meta's CLI
+docs:
+
+1. Install the package as `meta-ads`; the binary is `meta`.
+2. Use a Meta Developer App and a system user access token for the CLI path.
+3. Store `ACCESS_TOKEN`, `AD_ACCOUNT_ID`, and optional `BUSINESS_ID` in a
+   gitignored project-level `.env` file, or in Meta's user-level
+   `~/.config/meta/` fallback.
+4. Verify with `meta auth status`.
+
+The CLI uses this precedence: CLI flag, environment variable, project `.env`,
+then user-level `~/.config/meta/`.
+
+Do not recommend `meta auth login`, `meta-ads-cli`, `npm install -g
+@meta/ads-cli`, or `mcp.meta.com/ads`.
+
+Meta's documented baseline token scopes are:
+
+- `business_management`
+- `ads_management`
+- `pages_show_list`
+- `pages_read_engagement`
+- `pages_manage_ads`
+- `catalog_management`
+- `read_insights`
+
+Some Business Manager configurations require a second admin to approve system
+user token generation. Surface that as conditional repair copy, not a universal
+rule.
 
 ---
 
@@ -59,7 +101,10 @@ Triggered lazily at `/mb-think` or `/mb-ads` when the topic is ads-related:
 3. If provider facts are degraded, missing, or planned, run
    `mb connect doctor --json` and quote the repair/setup guidance.
 4. Only if `mb` reports Meta account context ready, check the current runtime
-   for the verified official read-only account tools.
+   for the verified official CLI:
+   - `which meta`
+   - `meta --version`
+   - `meta auth status`
 5. Never block generation on missing account access.
 ```
 
@@ -108,15 +153,32 @@ campaign changes.
 
 Before any future write operation exists, Main Branch needs:
 
-1. verified official tool names and setup docs;
+1. wired `mb connect` detection for `meta auth status`;
 2. read-only smoke from a fresh business repo;
 3. explicit preview of every account change;
 4. explicit operator approval in chat;
-5. paused-by-default campaign/ad/ad-set creation where the official surface
-   supports it;
+5. PAUSED-by-default campaign/ad/ad-set creation preserved;
 6. no budget changes without a separate approval gate.
 
 Until those conditions are met, write operations are roadmap only.
+
+---
+
+## CLI Sharp Edges
+
+Future implementers should preserve these constraints in setup and repair copy:
+
+- `meta auth status` is the documented auth check. There is no documented
+  `meta auth login`.
+- Campaign and ad set creation default to PAUSED. Activation remains a separate
+  operator action.
+- Creating fresh creatives can require the Meta Developer App to be in Live
+  Mode; document this because the CLI docs do not surface it clearly.
+- Use project-level `.env` as the default credential location, and keep it
+  gitignored.
+- Use `~/.config/meta/` only as the user-level fallback.
+- If the operator hits a two-admin token approval gate, explain that it depends
+  on the Business Manager's security configuration.
 
 ---
 

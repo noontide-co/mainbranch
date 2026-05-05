@@ -64,12 +64,12 @@ PROVIDERS: tuple[Provider, ...] = (
         id="meta",
         name="Meta",
         category="ads",
-        auth="official_ads_ai_connector_pending",
+        auth="meta_ads_cli_env_pending",
         required_secrets=(),
-        metadata_fields=("ad_account_id", "business_id", "mcp_server", "cli_profile"),
+        metadata_fields=("ad_account_id", "business_id"),
         description=(
-            "Meta Ads account access through Meta's official Ads AI Connectors path, "
-            "pending setup proof."
+            "Meta Ads account access through Meta's official Ads CLI, pending "
+            "Main Branch detection and smoke."
         ),
     ),
     Provider(
@@ -169,12 +169,12 @@ PROVIDER_GUIDANCE: dict[str, dict[str, Any]] = {
         "priority": 4,
         "why": (
             "Meta Ads readiness will let ad workflows reason about ad accounts, campaigns, "
-            "and pixels through Meta's official Ads AI Connectors path."
+            "and pixels through Meta's official Ads CLI path."
         ),
         "use_when": (
             "Use when the business is generating, reviewing, or learning from Meta/Facebook ads. "
-            "For now, treat live account access as planned until setup and read-only "
-            "smoke are verified."
+            "For now, treat live account access as planned until Main Branch detection "
+            "and read-only smoke are wired."
         ),
         "defer_when": (
             "Defer for organic, research, or site work that does not need ad-account facts."
@@ -292,14 +292,11 @@ def _secret_ref(repo_id: str, provider_id: str, field: str) -> str:
 def _repair(provider: Provider, state: str, missing: list[str] | None = None) -> dict[str, str]:
     if provider.id == "meta":
         return {
-            "summary": (
-                "Meta Ads official connector support is planned but not verified in "
-                "this mb release."
-            ),
+            "summary": ("Meta Ads CLI support is planned but not wired in this mb release."),
             "repair": (
                 "Use reference-file ad workflows for now. Do not add third-party "
                 "Meta MCP or access-token setup as a fallback; wait for the "
-                "official Meta Ads AI Connectors setup/read-only smoke to land."
+                "official Meta Ads CLI detection/read-only smoke to land."
             ),
             "repair_command": "mb educational provider-readiness",
         }
@@ -513,6 +510,11 @@ def connect_provider(
     """Connect a provider by writing repo metadata and local secrets."""
 
     provider = normalize_provider(provider_id)
+    if provider.id == "meta":
+        raise ValueError(
+            "Meta Ads CLI support is planned but not wired in this mb release; "
+            "run `mb connect plan` or `mb educational provider-readiness`."
+        )
     target = Path(repo).resolve()
     config = _read_config(target)
     repo_id = _ensure_repo_id(config)

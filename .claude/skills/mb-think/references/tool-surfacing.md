@@ -21,7 +21,7 @@ How to help users discover research tools without blocking them.
 | **Gemini** | Deep research (Flash + Deep Research Agent) | Important | `$GOOGLE_API_KEY` exists | 3 min | Free tier / $2-5 |
 | **Grok** | X/Twitter real-time sentiment | Enhancing | `$XAI_API_KEY` + `xai_sdk` package | 5 min | ~$0.02-0.30/query |
 | **whisper** | Local video/audio transcription | Enabling | `mcp__whisper__*` OR `which mlx_whisper` OR `which whisper-cli` | 2 min | Free (local) |
-| **Meta ad account context** | Live Meta account access once the official path is verified | Enhancing | `mb connect doctor --json` reports ready, then verified runtime tools exist | Pending | Normal Meta ads spend |
+| **Meta ad account context** | Live Meta account access once the official CLI path is wired | Enhancing | `mb connect doctor --json` reports ready, then `meta auth status` succeeds | Pending | Normal Meta ads spend |
 | **markitdown** | PDF/DOCX/PPTX conversion | Convenience | `which markitdown` | 1 min | Free |
 | **pandoc** | High-quality DOCX conversion | Convenience | `which pandoc` | 1 min | Free |
 | **marker** | Complex/scanned PDF OCR | Convenience | `which marker_single` | 5 min | Free |
@@ -156,7 +156,7 @@ After completing research with a fallback, optionally mention the upgrade:
 | Grok | `.claude/skills/mb-think/references/grok-setup.md` |
 | Gemini | `.claude/skills/mb-think/references/gemini-setup.md` |
 | whisper | `.claude/skills/mb-think/references/local-transcription.md` |
-| Meta ad account context | Official Meta Ads path pending setup proof. See `.claude/skills/mb-ads/references/meta-ads-integration.md` |
+| Meta ad account context | Official Meta Ads CLI path pending Main Branch wiring. See `.claude/skills/mb-ads/references/meta-ads-integration.md` |
 | markitdown | `pip install 'markitdown[all]'` (no guide needed) |
 | pandoc | `brew install pandoc` or OS package manager |
 | marker | `pip install marker-pdf` (may need system deps) |

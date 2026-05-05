@@ -34,8 +34,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 - Updated Meta Ads provider readiness and bundled ad/research skills to remove
   third-party connector setup language and treat Meta's official Ads AI
-  Connectors path as planned until setup proof and read-only smoke are
-  verified. Refs #304.
+  Connectors CLI path as planned until Main Branch detection and read-only
+  smoke are wired. Refs #304.
 - Aligned the operator-readable git history contract with the four-loop
   taxonomy from the operator-loop decision: Sense, Decide, Ship, and Reflect.
   Refs #300 and #306.

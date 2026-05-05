@@ -84,6 +84,48 @@ def test_connect_plan_returns_numbered_provider_choices(tmp_path: Path, monkeypa
     assert not (repo / ".mb" / "connect.yaml").exists()
 
 
+def test_connect_meta_is_planned_and_does_not_write_metadata(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(app, ["connect", "meta", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 2
+    assert "Meta Ads CLI support is planned" in result.stderr
+    assert not (repo / ".mb" / "connect.yaml").exists()
+
+
+def test_meta_status_remains_planned_even_with_stale_metadata(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    config_path = repo / ".mb" / "connect.yaml"
+    config_path.parent.mkdir()
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "version": 1,
+                "repo_id": "repo",
+                "providers": {
+                    "meta": {
+                        "provider": "meta",
+                        "connected": True,
+                        "account_label": "Old Meta",
+                        "metadata": {"ad_account_id": "act_123"},
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    status = connect_mod.status_provider("meta", repo)
+
+    assert status["state"] == "planned"
+    assert status["connected"] is True
+    assert status["repair_command"] == "mb educational provider-readiness"
+    assert status["metadata"] == {"ad_account_id": "act_123"}
+
+
 def test_connect_plan_human_output_uses_numbered_choices(tmp_path: Path, monkeypatch) -> None:
     repo = tmp_path / "biz"
     repo.mkdir()

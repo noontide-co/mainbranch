@@ -46,7 +46,8 @@ GitHub.
    - Use when: a workflow needs existing Google files.
    - Check/fix: `mb connect doctor --json`.
 
-4. **Meta Ads** - ad accounts, campaigns, pixels, and future performance facts.
+4. **Meta Ads** - ad accounts, campaigns, pixels, and future performance facts
+   through the official Meta Ads CLI once Main Branch wiring is verified.
    - Use when: paid-ad generation, review, or learning needs account context.
    - Check/fix: `mb connect doctor --json`.
 
