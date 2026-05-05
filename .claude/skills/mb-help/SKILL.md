@@ -1,6 +1,7 @@
 ---
 name: mb-help
 description: "Answer questions about Main Branch and Claude Code. Use when: user asks how/what/why questions, is confused about two-repo model or skills, encounters errors, says help or stuck, asks about workflow, is a beginner, or wants to know what to do next."
+loops: [sense, decide]
 ---
 
 # Help
@@ -27,7 +28,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Two repos, engine, data model, data model | [two-repos.md](references/two-repos.md) |
 | Philosophy, why, compound, passive memory | [philosophy.md](references/philosophy.md) |
 | /mb-think, research, decide, codify | [the-think-cycle.md](references/the-think-cycle.md) |
-| /mb-bet, bet, hypothesis, deadline, public show | [skills-guide.md](references/skills-guide.md) |
+| /mb-bet, bet, hypothesis, deadline, public narration | [skills-guide.md](references/skills-guide.md) |
 | Task tracking, where left off, focus | [task-tracking-options.md](references/task-tracking-options.md) |
 | Error, command not found, MCP, Apify setup, GitHub issue | [troubleshooting.md](references/troubleshooting.md) |
 | Provider readiness, GitHub setup, Cloudflare, Google Workspace, Meta Ads, Apify | [provider-readiness.md](references/provider-readiness.md) |

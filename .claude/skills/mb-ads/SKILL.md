@@ -1,6 +1,7 @@
 ---
 name: mb-ads
 description: "Create and review Meta/Facebook/Instagram ads. Flexible entry points: full pipeline (copy + images), copy only, images only, creative variations (hook library), video scripts, video repurpose, compliance review, or ad account check (Pipeboard). Use when asked to create ads, ad copy, image prompts, video scripts, creative variations, or review ads. Say /mb-ads or describe what you need."
+loops: [ship, reflect]
 ---
 
 # Ads Skill

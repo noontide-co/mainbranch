@@ -17,9 +17,10 @@ from mb.validate import _check_one, _read_frontmatter
 
 MAX_SKILL_LINES = 500
 SKILL_NAME_PREFIX = "mb-"
+VALID_LOOP_SLUGS = {"sense", "decide", "ship", "reflect"}
 SKILL_SCHEMA: dict[str, Any] = {
     "glob": "SKILL.md",
-    "required": ["name", "description"],
+    "required": ["name", "description", "loops"],
     "enums": {},
 }
 
@@ -190,6 +191,24 @@ def _validate_skill_at(name: str, skill_root: Path) -> dict[str, Any]:
             skill_errors.append(f"name={skill_name!r} does not match skill directory {name!r}")
         if not isinstance(description, str) or not description.strip():
             skill_errors.append("description must be a non-empty string")
+        loops = fm.get("loops")
+        if (
+            not isinstance(loops, list)
+            or not loops
+            or not all(isinstance(loop, str) for loop in loops)
+        ):
+            skill_errors.append(
+                f"loops must be a non-empty list using canonical slugs: {sorted(VALID_LOOP_SLUGS)}"
+            )
+        else:
+            invalid_loops = sorted(set(loops) - VALID_LOOP_SLUGS)
+            if invalid_loops:
+                skill_errors.append(
+                    f"loops contains invalid slugs {invalid_loops}; "
+                    f"expected only {sorted(VALID_LOOP_SLUGS)}"
+                )
+            if len(set(loops)) != len(loops):
+                skill_errors.append("loops must not contain duplicate slugs")
 
     if line_count > MAX_SKILL_LINES:
         skill_errors.append(f"SKILL.md has {line_count} lines; limit is {MAX_SKILL_LINES}")

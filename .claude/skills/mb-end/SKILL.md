@@ -1,6 +1,7 @@
 ---
 name: mb-end
 description: "Session-closing skill that helps users wrap up intentionally. Use when: user says done, wrapping up, end my day, closing out, call it a day, goodnight, that's it for today, checkpoint, pause. Bookend to /mb-start. Scans git activity, surfaces what happened, spawns a crystallize agent for deep analysis, commits uncommitted work, and closes with a brief summary. Works for end-of-day, end-of-research-batch, end-of-decision-sprint, or mid-work checkpoints."
+loops: [reflect, ship]
 ---
 
 # End

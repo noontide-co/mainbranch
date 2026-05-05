@@ -11,6 +11,7 @@ description: |
   (7) Generating "Recent Updates" notes from Git history
 
   Triggered by: /mb-wiki, "add a note", "publish wiki", "create wiki", "configure wiki", "personalize wiki"
+loops: [ship]
 ---
 
 # Wiki Skill

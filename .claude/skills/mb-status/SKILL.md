@@ -1,6 +1,7 @@
 ---
 name: mb-status
 description: "Thin Main Branch status wrapper. Use when the operator asks what changed, what is healthy, what is stale, what to do next, or wants a daily briefing inside Claude Code."
+loops: [sense]
 ---
 
 # Status

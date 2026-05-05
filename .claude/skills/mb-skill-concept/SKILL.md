@@ -3,6 +3,7 @@ name: mb-skill-concept
 tier: skill
 calls: []
 description: "Generate N concept variations of a site / asset on localhost in parallel, foreground subagents. Default 2. Operator picks one to publish. Used by /mb-site as the concept-generation step."
+loops: [ship]
 ---
 
 # skill-concept

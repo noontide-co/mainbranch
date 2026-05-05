@@ -1,6 +1,7 @@
 ---
 name: mb-pull
 description: Legacy alias for /mb-update. Use only when the user explicitly types /mb-pull or says pull latest using old Main Branch language.
+loops: [ship]
 ---
 
 # Pull

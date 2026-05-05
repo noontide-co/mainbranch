@@ -1,6 +1,7 @@
 ---
 name: mb-update
 description: Update Main Branch. Use when the user says update, upgrade, pull latest, get latest Main Branch, asks whether they are current, or after Devon announces a new release. Preferred over legacy /mb-pull.
+loops: [ship]
 ---
 
 # Update
@@ -79,4 +80,3 @@ If no changelog is available, do not guess. Say:
 
 > "Update complete. I couldn't find the local changelog, so run `mb --version`
 > to confirm the installed version."
-

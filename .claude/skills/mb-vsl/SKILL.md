@@ -1,6 +1,7 @@
 ---
 name: mb-vsl
 description: "Write high-converting Video Sales Letter scripts for any offer type. Routes to appropriate framework based on context. Use when: (1) Creating VSL scripts for Skool communities or membership offers (2) Writing sales videos for B2B high-ticket services ($3K-$50K+) (3) User says \"VSL\", \"video sales letter\", \"sales video script\", \"about page video\" (4) Need structured frameworks: 18-section for Skool/membership or 7-step Haynes for B2B. Produces camera-ready scripts optimized for spoken delivery. Never invents facts."
+loops: [ship]
 ---
 
 # VSL Script Writer

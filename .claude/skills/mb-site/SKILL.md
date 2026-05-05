@@ -8,6 +8,7 @@ description: "Triage and build any site shape — lander (1 page), minisite (~4 
   (5) Previewing or publishing changes
 
   Triggered by: /mb-site, 'build a site', 'landing page', 'lander', 'minisite', 'website', 'I need a site', 'spin up a site', 'put this online', 'publish site', 'deploy site', 'update my site', 'graduate my site', 'add a CMS to my site'"
+loops: [ship]
 ---
 
 # Site

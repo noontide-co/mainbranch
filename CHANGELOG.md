@@ -44,7 +44,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Updated bundled lifecycle and output skills to lean on deterministic
   `mb status --json --peek`, `mb connect plan`, `mb connect doctor --json`,
   and `mb update --repo .` facts instead of duplicating repo-health,
-  provider-readiness, and update probes in skill prose. Refs #263.
+  provider-readiness, and update probes in skill prose. Added `loops:`
+  frontmatter aligned to Sense, Decide, Ship, and Reflect from the #307
+  taxonomy work. Refs #263 and #306.
 - Clarified beginner, migration, and `/mb-help` docs that `.mb/` is the current
   repo-local Main Branch state folder and `.mb-vip/` is not required. Refs
   #296.

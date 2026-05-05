@@ -1,6 +1,7 @@
 ---
 name: mb-organic
 description: "CREATE organic content scripts (Reels, TikTok, carousels, static posts). Use when user wants to GENERATE new scripts from concepts. NOT for research/mining competitor content - that's /mb-think. NOT for paid ads - use /mb-ads instead. Modes: video, carousel, static. If user says \"mine\", \"scrape\", \"research competitors\" → route to /mb-think."
+loops: [ship]
 ---
 
 # Organic

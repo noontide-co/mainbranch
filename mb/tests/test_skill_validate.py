@@ -28,7 +28,7 @@ def _skill(
 ) -> Path:
     skill_root = root / ".claude" / "skills" / name
     if frontmatter is None:
-        frontmatter = f"---\nname: {name}\ndescription: Test skill.\n---\n"
+        frontmatter = f"---\nname: {name}\ndescription: Test skill.\nloops: [sense]\n---\n"
     _write(skill_root / "SKILL.md", frontmatter + "\n# Test\n\n" + body)
     _write(skill_root / "references" / "details.md", "# Details\n")
     return skill_root
@@ -64,7 +64,7 @@ def test_skill_validate_passes_frontmatter_references_and_line_gate(
 def test_skill_validate_flags_missing_description(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _skill(tmp_path, "mb-alpha", frontmatter="---\nname: mb-alpha\n---\n")
+    _skill(tmp_path, "mb-alpha", frontmatter="---\nname: mb-alpha\nloops: [sense]\n---\n")
     _patch_engine(monkeypatch, tmp_path)
 
     report = skill_validate_mod.run("mb-alpha")
@@ -77,7 +77,11 @@ def test_skill_validate_flags_missing_description(
 def test_skill_validate_flags_unprefixed_bundled_skill(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _skill(tmp_path, "alpha", frontmatter="---\nname: alpha\ndescription: Test skill.\n---\n")
+    _skill(
+        tmp_path,
+        "alpha",
+        frontmatter="---\nname: alpha\ndescription: Test skill.\nloops: [sense]\n---\n",
+    )
     _patch_engine(monkeypatch, tmp_path)
 
     report = skill_validate_mod.run("alpha")
@@ -85,6 +89,44 @@ def test_skill_validate_flags_unprefixed_bundled_skill(
     assert report is not None
     assert report["ok"] is False
     assert "must use the 'mb-' vendor prefix" in report["files"][0]["errors"][0]
+
+
+def test_skill_validate_flags_missing_loops(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(
+        tmp_path,
+        "mb-alpha",
+        frontmatter="---\nname: mb-alpha\ndescription: Test skill.\n---\n",
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-alpha")
+
+    assert report is not None
+    assert report["ok"] is False
+    assert "missing key: loops" in report["files"][0]["errors"]
+
+
+def test_skill_validate_flags_invalid_loops(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(
+        tmp_path,
+        "mb-alpha",
+        frontmatter=(
+            "---\nname: mb-alpha\ndescription: Test skill.\nloops: [sense, narrate, sense]\n---\n"
+        ),
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-alpha")
+
+    assert report is not None
+    assert report["ok"] is False
+    errors = report["files"][0]["errors"]
+    assert any("invalid slugs ['narrate']" in error for error in errors)
+    assert "loops must not contain duplicate slugs" in errors
 
 
 def test_skill_validate_flags_missing_local_reference(

@@ -1,6 +1,7 @@
 ---
 name: mb-bet
-description: "Open, update, close, list, and show Main Branch business bets from repo truth. Use when the operator wants to frame an operating bet, track progress, capture a verdict, or draft public-safe show copy."
+description: "Open, update, close, list, and narrate Main Branch business bets from repo truth. Use when the operator wants to frame an operating bet, track progress, capture a verdict, or draft public-safe narration."
+loops: [decide, reflect, ship]
 ---
 
 # Bet
@@ -19,9 +20,9 @@ Use `/mb-bet` for five modes:
 - `update` - add progress and link new evidence.
 - `close` - record result, verdict, learning, and follow-up links.
 - `list` - summarize active bets and deadlines.
-- `show` - draft public-safe site, community, or social copy from repo truth.
+- `narrate` - draft public-safe site, community, or social copy from repo truth.
 
-Do not publish automatically. Show drafts are files or message drafts only.
+Do not publish automatically. Narration drafts are files or message drafts only.
 
 ## Repo Rules
 
@@ -122,7 +123,7 @@ Body template:
 
 Open.
 
-## Show Notes
+## Narration Notes
 
 [Public-safe angles, claims to avoid, proof needed before sharing.]
 ```
@@ -162,9 +163,9 @@ Summarize active bets from `mb status --json --peek` and direct file reads:
 
 Keep it short. End with the next bet that needs attention.
 
-## Mode: show
+## Mode: narrate
 
-Draft public-safe show copy from the bet and linked repo truth. Do not invent
+Draft public-safe narration from the bet and linked repo truth. Do not invent
 results, metrics, claims, testimonials, or publishing channels.
 
 Ask the operator which surface if unclear:
@@ -176,7 +177,7 @@ Ask the operator which surface if unclear:
 Draft format:
 
 ```markdown
-# Show Draft
+# Narration Draft
 
 Surface: [site/community/social]
 Source bet: bets/YYYY-MM-DD-slug.md
