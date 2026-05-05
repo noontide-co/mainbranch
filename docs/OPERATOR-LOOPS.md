@@ -111,6 +111,8 @@ Next improvements:
 - optional provider and sidecar contracts;
 - noob-safe connector flows for GitHub, Cloudflare, Google, Meta, and Apify;
 - richer site, ads, organic, bookkeeping, and fulfillment loops.
+- agent checkpoints that save meaningful execution progress before context is
+  lost.
 
 ## 5. Narrate
 
@@ -124,6 +126,7 @@ Current surfaces:
 - `CHANGELOG.md`
 - decisions and retros;
 - `/mb-end`;
+- git checkpoint commits;
 - `bets/` and `/mb-bet`;
 - GitHub releases;
 - public site workflows through `/mb-site`
@@ -132,6 +135,7 @@ Next improvements:
 
 - bet-to-offer graduation rules;
 - status and dashboard visibility for active bets, deadlines, and outcomes;
+- `/mb-start` reconstruction from checkpoint commits;
 - public bets pages generated from repo truth.
 
 ## Applying The Loops

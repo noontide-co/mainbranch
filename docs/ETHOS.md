@@ -12,6 +12,7 @@ operating substrate:
 - GitHub issues are tasks and requests;
 - pull requests are proposals and review conversations;
 - git history is the evolution story.
+- checkpoints make long agent runs durable before chat context is lost.
 
 The promise is simple: own the work, rent only the rails.
 
@@ -109,6 +110,18 @@ when the behavior depends on a real runtime.
 
 The product should feel alive, but the substrate should stay boring enough to
 debug.
+
+### 9. Git Is The Hidden App
+
+Main Branch should use git as the invisible save system for business work.
+Operators should not need to understand branches, diffs, or commits to benefit
+from them. Agents should checkpoint meaningful work throughout a run so future
+sessions can reconstruct what changed, what was decided, and what remains open
+from repo history.
+
+Checkpointing is not noisy autosave. It is durable business memory: readable
+commits at meaningful boundaries, with privacy and secret-safety gates before
+anything is recorded.
 
 ## What We Are Not Building Yet
 

@@ -22,6 +22,7 @@ Main Branch already ships:
 - accepted workspace/repo/sensitive-data boundary guidance and
   GitHub/Obsidian-compatible markdown/link conventions for future dashboard,
   team daily log, bookkeeping, and multi-repo work.
+- initial paid-traffic site readiness checks through `mb site check`.
 
 Claude Code is the supported runtime today. Other runtimes are compatibility
 targets until adapter code and smoke evidence exist.
@@ -73,6 +74,9 @@ Planned scope:
 - sidecar enrichment contract for optional tools such as public company
   context, analytics, bookkeeping, transcription, or deployment helpers
   ([#265](https://github.com/noontide-co/mainbranch/issues/265)).
+- agent checkpoints as hidden Git memory so long Claude Code runs can be saved
+  throughout execution and resumed by `/mb-start`
+  ([#288](https://github.com/noontide-co/mainbranch/issues/288)).
 - follow-up implementation work from the workspace/repo boundary decision and
   markdown/link conventions, including dashboard spikes, team daily log
   surfaces, finance/legal warnings, and broader link repair where issues prove
