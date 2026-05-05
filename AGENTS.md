@@ -358,6 +358,34 @@ When changing `.claude/skills/<name>/`:
 Mechanical Python tests do not prove LLM-facing skill behavior. If the prose or
 workflow changed, include a runtime/manual validation note.
 
+### SKILL.md frontmatter — `loops:` field
+
+Every `SKILL.md` should declare which operator loops it traverses. The
+operator-loop taxonomy lives in [docs/OPERATOR-LOOPS.md](docs/OPERATOR-LOOPS.md):
+`sense`, `decide`, `ship`, `reflect`. A skill is a journey across loops; loops
+are stations the skill passes through.
+
+```yaml
+---
+name: mb-bet
+description: Open, update, close, list, and narrate Main Branch business bets.
+loops: [decide, reflect, ship]
+---
+```
+
+Rules:
+
+- Skills can span 1+ loops. Most useful skills span 2-3 (for example,
+  `/mb-think` is `[sense, decide, ship]` because it researches, decides, and
+  codifies the decision into a file).
+- Skill names do not have to mirror loop names. `/mb-think` is a brand-name
+  multi-loop skill, not a "Think loop" claim.
+- Only the four canonical loop slugs are valid (`sense`, `decide`, `ship`,
+  `reflect`). Channels (Paid, Organic, Pages, Ops) are not loops and do not
+  belong in this field.
+- Downstream tooling (`mb status`, future dashboards, the bets feed) reads
+  this field. Keep it accurate.
+
 ## State Model
 
 - Canonical business state stays in git.
