@@ -160,7 +160,7 @@ When the agent can separate concerns cleanly:
 ```text
 [updated] offer.md -- clarified guarantee
 [added] paid site measurement plan
-[decided] GTM conversion rubric -- accepted
+[decided] GTM conversion rubric -- require consent events before launch
 ```
 
 Power mode is useful for contributors and technical operators, but it should

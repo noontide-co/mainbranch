@@ -119,8 +119,8 @@ object gives a stronger signal, but it should start here.
 | `[added]` | Know | New durable business context or artifact exists | `offer.md`, research note, proof, audience segment |
 | `[updated]` | Know | Existing durable context changed | offer, pricing, audience, voice, daily log |
 | `[decided]` | Decide | A choice and its rationale were accepted | launch date, provider choice, offer direction |
-| `[opened]` | Show | A bet, task, campaign, or issue became active | bet, campaign, follow-up task |
-| `[closed]` | Show | A bet, task, campaign, or issue got an outcome | bet, campaign, follow-up task |
+| `[opened]` | Show | A bet, public issue, or public outcome thread became active | bet, public issue, launch thread |
+| `[closed]` | Show | A bet, public issue, or public outcome thread got an outcome | bet, public issue, launch thread |
 | `[drafted]` | Execute | Draft work was produced but not shipped | ads, VSL, organic batch, site copy |
 | `[shipped]` | Execute | Work became visible, deployed, published, or sent | site, page, email, ad batch, offer |
 | `[connected]` | System | A provider or local integration became usable | Stripe, GitHub, Cloudflare, Meta Ads |
@@ -130,6 +130,9 @@ object gives a stronger signal, but it should start here.
 `[fixed]` can describe business work when the object is business-facing, such
 as `[fixed] checkout copy -- clarified guarantee`. For grouping, tooling should
 prefer stronger path signals over the default System category.
+Task and campaign paths should also reclassify by default: `tasks/` work maps
+to Decide unless the commit closes a public outcome thread, and `campaigns/`
+work maps to Execute unless the commit records a public outcome.
 
 ## Commit Body
 
