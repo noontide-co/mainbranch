@@ -185,7 +185,7 @@ If `update.severity` is `required` or the top ranked action is an update action,
 run the cited command. When status does not cite a narrower command, use:
 
 ```bash
-mb update --repo "$REPO_PATH" --json
+mb update --repo . --json
 ```
 
 Then run `mb status --json --peek` again before routing.

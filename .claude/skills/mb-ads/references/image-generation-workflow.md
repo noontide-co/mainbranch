@@ -37,8 +37,9 @@ python3 -c "from google import genai; print('OK')" 2>/dev/null
 **If unavailable:** Output text prompts only. Note: "Image prompts saved. Paste into Gemini or another image tool to generate."
 
 Use `mb status --json --peek` / `mb connect doctor --json` first for
-Google/Workspace readiness. Treat the local SDK import check above as a
-runtime-only fallback when the selected mode actually needs image generation.
+Google/Workspace readiness. Those commands do not prove the Gemini API key used
+by Nano Banana is present; use the local SDK/env check above when the selected
+mode actually needs image generation.
 
 ---
 
