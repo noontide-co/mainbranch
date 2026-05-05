@@ -16,11 +16,9 @@ integrations, GitHub tasks/proposals, bets, dirty git, since-last-check, and
 `ranked_actions`. Do not duplicate those checks with ad hoc shell probes unless
 the status report says a section is unavailable.
 
-**Checkpoint facts first:** Also run `mb checkpoint --status --json` from the
-business repo. If `recent[]` has entries, summarize the latest checkpoint as
-"where we left off." If `pending.status` is `ready`, say there is unsaved work
-and offer to save a checkpoint before starting new work. If `pending.status` is
-`blocked`, explain the safety block and do not commit around it.
+**Continuity facts:** Use `since_last_check`, dirty-git, and recent GitHub/git
+activity from status to explain "where we left off." The checkpoint CLI is
+future v0.3.x work; do not ask current PyPI users to run it.
 
 **Provider facts first:** When setup or routing depends on GitHub, Cloudflare,
 Google/Workspace, Meta Ads, or Apify, read the status `integrations` facts
@@ -100,11 +98,6 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │   ├── readiness/drift blockers? ────→ use cited status repair commands
 │   └── unavailable section? ─────────→ use only the documented fallback for that section
 │
-├── Read checkpoint facts ────────────→ `mb checkpoint --status --json`
-│   ├── recent checkpoint? ───────────→ summarize "where we left off"
-│   ├── pending ready? ───────────────→ offer to save before new work
-│   └── pending blocked? ─────────────→ explain safety block; do not commit
-│
 ├── Check engine updates ──────────────→ Use status update severity and `mb update`
 │
 ├── Load config ──────────────────────→ See [config-system.md](references/config-system.md)
@@ -140,7 +133,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 ├── Ready to work? ───────────────────→ Route by intent:
 │   │
 │   ├── "research" / "decide" ────────→ /mb-think
-│   ├── "bet" / "launch test" ─────────→ /mb-bet (new/update/close/list/narrate)
+│   ├── "bet" / "launch test" ─────────→ /mb-bet (new/update/close/list/show)
 │   ├── "ads" / "copy" ───────────────→ /mb-ads (triages to static/video/review)
 │   ├── "vsl" / "sales video" ────────→ /mb-vsl (triages to skool/b2b)
 │   ├── "content" / "organic" ────────→ /mb-organic
@@ -182,27 +175,6 @@ Use this report before asking additional questions:
 Only run a narrower fallback command such as `mb onboard status --json`,
 `mb doctor`, `mb validate --cross-refs`, or `mb connect doctor --json` when status
 points at that section as unavailable, degraded, or needing repair.
-
-## Step 0b: Read Checkpoint Facts
-
-Then run:
-
-```bash
-mb checkpoint --status --json
-```
-
-Use this report for session continuity:
-
-- `recent[0]` is the latest checkpoint commit. Summarize it in plain English
-  before asking the user to choose work.
-- `pending.status == "ready"` means the repo has unsaved meaningful work. Ask:
-  "Want me to save a checkpoint before we start something new?"
-- If the user says yes, run:
-  `mb checkpoint --message "[checkpoint] <plain summary>" --yes`
-- `pending.status == "blocked"` means safety gates found a local bridge file,
-  secret-like content, conflict, or engine-repo write. Explain the block and do
-  not work around it with raw git commands.
-- `pending.status == "clean"` means there is no unsaved checkpoint work.
 
 ## Step 1: Pull Engine Updates
 

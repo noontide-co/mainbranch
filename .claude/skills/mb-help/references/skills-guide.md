@@ -56,20 +56,20 @@ See [the-think-cycle.md](the-think-cycle.md) for deep dive.
 ---
 
 ### /mb-bet - Business Bets
-**Use when:** Opening, updating, closing, listing, or narrating an operating bet.
+**Use when:** Opening, updating, closing, listing, or showing an operating bet.
 
 **What it does:**
 - Creates `bets/YYYY-MM-DD-slug.md` with hypothesis, appetite, metric, target, and deadline
 - Links bets to decisions, research, campaigns, and outcomes
 - Captures verdicts and learning when a bet closes
-- Drafts public-safe narration without publishing automatically
+- Drafts public-safe show copy without publishing automatically
 
 **Modes:**
 - `/mb-bet new` - Open a bet
 - `/mb-bet update` - Add progress and evidence
 - `/mb-bet close` - Record result and learning
 - `/mb-bet list` - Summarize active bets and deadlines
-- `/mb-bet narrate` - Draft site, community, or social narration from repo truth
+- `/mb-bet show` - Draft site, community, or social show copy from repo truth
 
 ---
 

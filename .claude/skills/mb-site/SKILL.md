@@ -309,7 +309,7 @@ If conversation compacted or context was lost:
 2. **Check invocation mode:** business repo mode (`core/`) or site repo mode (`.mainbranch/source.json`)
 3. **Load links:** read `.mainbranch/source.json` in the site repo, or the campaign/site record in the business repo
 4. **Identify the site shape** from the campaign/site record or existing files; load the corresponding build ref
-5. **Check continuity:** run `mb checkpoint --status --json` from the linked business repo, then use site-repo git history only for site-code changes
+5. **Check continuity:** use business-repo `mb status --json --peek` facts first, then site-repo git history only for site-code changes
 6. **Resume from last completed step** based on git history, source links, and campaign launch status
 
 ---

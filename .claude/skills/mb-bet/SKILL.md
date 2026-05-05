@@ -1,6 +1,6 @@
 ---
 name: mb-bet
-description: "Open, update, close, list, and narrate Main Branch business bets from repo truth. Use when the operator wants to frame an operating bet, track progress, capture a verdict, or draft public-safe narration."
+description: "Open, update, close, list, and show Main Branch business bets from repo truth. Use when the operator wants to frame an operating bet, track progress, capture a verdict, or draft public-safe show copy."
 ---
 
 # Bet
@@ -19,9 +19,9 @@ Use `/mb-bet` for five modes:
 - `update` - add progress and link new evidence.
 - `close` - record result, verdict, learning, and follow-up links.
 - `list` - summarize active bets and deadlines.
-- `narrate` - draft public-safe site, community, or social copy from repo truth.
+- `show` - draft public-safe site, community, or social copy from repo truth.
 
-Do not publish automatically. Narration drafts are files or message drafts only.
+Do not publish automatically. Show drafts are files or message drafts only.
 
 ## Repo Rules
 
@@ -32,7 +32,7 @@ operator to start Claude from the business repo or run `/mb-start`.
 Before writing, run:
 
 ```bash
-mb status --json
+mb status --json --peek
 ```
 
 Use the result to spot active bets and repo readiness. After writing or editing
@@ -122,7 +122,7 @@ Body template:
 
 Open.
 
-## Narration Notes
+## Show Notes
 
 [Public-safe angles, claims to avoid, proof needed before sharing.]
 ```
@@ -151,7 +151,7 @@ Use when the deadline passed, the target is hit, or the operator decides to stop
 
 ## Mode: list
 
-Summarize active bets from `mb status --json` and direct file reads:
+Summarize active bets from `mb status --json --peek` and direct file reads:
 
 - deadline
 - status
@@ -162,9 +162,9 @@ Summarize active bets from `mb status --json` and direct file reads:
 
 Keep it short. End with the next bet that needs attention.
 
-## Mode: narrate
+## Mode: show
 
-Draft public-safe narration from the bet and linked repo truth. Do not invent
+Draft public-safe show copy from the bet and linked repo truth. Do not invent
 results, metrics, claims, testimonials, or publishing channels.
 
 Ask the operator which surface if unclear:
@@ -176,7 +176,7 @@ Ask the operator which surface if unclear:
 Draft format:
 
 ```markdown
-# Narration Draft
+# Show Draft
 
 Surface: [site/community/social]
 Source bet: bets/YYYY-MM-DD-slug.md
