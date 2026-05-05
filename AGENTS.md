@@ -383,8 +383,10 @@ Rules:
 - Only the four canonical loop slugs are valid (`sense`, `decide`, `ship`,
   `reflect`). Channels (Paid, Organic, Pages, Ops) are not loops and do not
   belong in this field.
-- Downstream tooling (`mb status`, future dashboards, the bets feed) reads
-  this field. Keep it accurate.
+- The convention is forward-looking: no bundled skill declares `loops:` yet
+  and no `mb` code parses it today. As `mb status` loop grouping, the future
+  dashboard, and the bets feed land, they will read this field. Declare it
+  on new skills so the tooling has clean inputs to consume when it ships.
 
 ## State Model
 
