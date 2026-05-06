@@ -552,3 +552,38 @@ def test_validate_flags_unknown_campaign_status(tmp_path: Path) -> None:
     assert report["ok"] is False
     bad = [f for f in report["files"] if not f["ok"]]
     assert any("status" in e for f in bad for e in f["errors"])
+
+
+def test_cross_refs_flag_campaign_status_transition_regressions(tmp_path: Path) -> None:
+    # A newer campaign supersedes an older one but reports a status earlier
+    # in the campaign lifecycle. The status-transition checker should flag it
+    # against CAMPAIGN_STATUS_ORDER, not the offer order.
+    _write(
+        tmp_path / "campaigns" / "2026-05-old-push" / "campaign.md",
+        (
+            "---\n"
+            "slug: old-push\n"
+            "status: completed\n"  # order = 3
+            "---\n"
+            "# old push\n"
+        ),
+    )
+    _write(
+        tmp_path / "campaigns" / "2026-05-new-push" / "campaign.md",
+        (
+            "---\n"
+            "slug: new-push\n"
+            "status: draft\n"  # order = 0 — backward
+            "supersedes: campaigns/2026-05-old-push/campaign.md\n"
+            "---\n"
+            "# new push\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    transition_warnings = [
+        w for w in report["cross_refs"]["warnings"] if w["code"] == "status-transition"
+    ]
+    assert len(transition_warnings) == 1
+    assert "move backward" in transition_warnings[0]["message"]
