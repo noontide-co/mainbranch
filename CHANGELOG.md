@@ -11,6 +11,37 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- `mb validate` now checks `campaigns/*/campaign.md` `status:` against the
+  campaign lifecycle (`draft, planned, active, paused, completed, canceled,
+  archived`) defined in
+  [decisions/2026-05-06-campaign-primitive-and-architecture-model.md](decisions/2026-05-06-campaign-primitive-and-architecture-model.md).
+  The previous implementation reused the offer enum, so a campaign written
+  to the merged decision (`status: active`) failed validation. Refs #328.
+- Corrected the `linked_bets:` example in the campaign primitive decision
+  and supporting docs to use the dated `bets/2026-05-06-workshop-waitlist.md`
+  shape, matching every other primitive's path convention. Refs #328.
+
+### Added
+
+- New decision
+  [decisions/2026-05-06-campaigns-refuse-list.md](decisions/2026-05-06-campaigns-refuse-list.md)
+  publishes the fields the engine refuses to add to `campaign.md` (epic,
+  numeric priority, multi-assignee, story points, kpi_dashboard, linked_okrs,
+  free-text description, and others). The product is judged by what it
+  refuses; the refuse list is now the public default and a clear path to
+  changing it. Refs #328.
+- New decision
+  [decisions/2026-05-06-main-branch-operating-spine.md](decisions/2026-05-06-main-branch-operating-spine.md)
+  codifies Main Branch's operating philosophy as a durable product
+  decision: the system speaks Linear-quiet, the operator runs
+  Hormozi-volume, and the bets layer carries Robbins identity. Includes
+  ten cross-cutting principles, a voice/tone profile for operator-facing
+  surfaces, and the principle that the operator owns the vocabulary
+  (campaigns can be called *drops*, *launches*, *challenges*, *promos*
+  in operator-facing surfaces). Refs #328.
+
 ## [0.3.2] - 2026-05-06
 
 v0.3.2 makes Main Branch safer to repair and clearer about where business
