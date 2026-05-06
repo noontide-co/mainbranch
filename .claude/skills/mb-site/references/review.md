@@ -59,7 +59,7 @@ Operators extend with their own sweeps by dropping `.md` files in their business
 
 ```
 your-business-repo/
-└── reference/review/
+└── core/operations/review/
     ├── compliance-tier-1.md
     └── on-brand-tone.md
 ```

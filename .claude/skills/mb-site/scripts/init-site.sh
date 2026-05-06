@@ -149,5 +149,5 @@ echo "     python3 .claude/skills/mb-site/scripts/pages.py create-project $SITE_
 echo "     (Legacy Netlify path: see references/deployment.md.)"
 echo ""
 echo "  3. Configure brand:"
-echo "     Run /mb-site configure to apply your brand from reference files"
+echo "     Run /mb-site configure to apply your brand from core business files"
 echo ""

@@ -75,7 +75,7 @@ Concept subagents must run in the foreground. Background subagents have a known 
 ## Token-saving tips
 
 - **Home page only.** No nav, no other pages. Each concept is one `index.html` + `styles.css` + `og.svg` + `favicon.svg`.
-- **Reuse offer/audience/voice loads.** All N subagents read the same reference files; the orchestration loads once and passes the content into each subagent's prompt rather than having each re-read.
+- **Reuse offer/audience/voice loads.** All N subagents read the same business context files; the orchestration loads once and passes the content into each subagent's prompt rather than having each re-read.
 - **Discard fast.** When the operator picks, immediately delete the unpicked concepts so the project repo stays clean. The git history of the `.mainbranch/concepts/` folder shows what was tried.
 
 ---

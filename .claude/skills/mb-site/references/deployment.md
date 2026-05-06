@@ -220,5 +220,6 @@ Netlify was chosen because all three existing Noontide sites deploy there. Consi
 ## See Also
 
 - [frontend-design.md](frontend-design.md) — Typography, color, motion, performance targets
-- [section-patterns.md](section-patterns.md) — How reference files map to page sections
-- [examples-and-troubleshooting.md](examples-and-troubleshooting.md) — Usage examples and common fixes
+- [section-patterns.md](section-patterns.md) — How business context files map to page sections
+- [examples.md](examples.md) — Usage examples
+- [troubleshooting.md](troubleshooting.md) — Common fixes

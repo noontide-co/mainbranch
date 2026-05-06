@@ -81,7 +81,7 @@ git push -u origin main
 - **Cloudflare Pages (default):** `python3 .claude/skills/mb-site/scripts/pages.py create-project <name> --repo-owner <owner> --repo-name <repo> --branch main` — git-connected, auto-deploys on push. Configure build command (`pnpm build`) + output directory (`out` or `dist`) in the CF dashboard once.
 - **Netlify (legacy):** see [`deployment.md`](deployment.md). Key settings: Build command = `pnpm build`, Publish directory = `out`, NODE_VERSION = `20`.
 
-**10. Detect business repo.** Ask: "Where is your business repo with reference files?" Confirm the path has `core/` files, with legacy `reference/core/` fallback only if `core/` is absent. If the business repo has `core/offers/`, ask which offer this site is for. Store the offer in the sites.json config. Treat `reference/core` and `reference/offers` as compatibility bridges, not duplicate files.
+**10. Detect business repo.** Ask: "Where is your business repo with core business files?" Confirm the path has `core/` files, with legacy `reference/core/` fallback only if `core/` is absent. If the business repo has `core/offers/`, ask which offer this site is for. Store the offer in the sites.json config. Treat `reference/core` and `reference/offers` as compatibility bridges, not duplicate files.
 
 **11. Save config.** Write `~/.mainbranch/sites.json`:
 ```json
@@ -101,13 +101,13 @@ git push -u origin main
 Create `~/.mainbranch/` directory if it doesn't exist.
 
 **Exit:**
-> "Site deployed at https://<url>. Run `/mb-site configure` to apply your brand, or `/mb-site build` to start customizing sections from your reference files."
+> "Site deployed at https://<url>. Run `/mb-site configure` to apply your brand, or `/mb-site build` to start customizing sections from your core business files."
 
 ---
 
 ## configure (Next.js website)
 
-Apply brand identity from reference files to the site's visual system.
+Apply brand identity from business context files to the site's visual system.
 
 **What it reads:**
 - `voice.md` — Aesthetic direction, tone, personality
@@ -147,11 +147,11 @@ See [`frontend-design.md`](frontend-design.md) for font pairings, color systems,
 
 ## build (Next.js website)
 
-The core generation mode. Reads reference files and generates page sections.
+The core generation mode. Reads business context files and generates page sections.
 
 **How it works:**
 1. Resolve offer context — use offer-specific `offer.md` and `audience.md` when available
-2. Read reference files from business repo (resolved paths)
+2. Read business context files from the business repo (resolved paths)
 3. Generate or update `site-config.ts` — the single source of all brand-specific content
 4. Generate or edit component files in `components/`
 5. Update page composition in `app/page.tsx`
@@ -175,7 +175,7 @@ export const siteConfig = {
     ctaText: "Derived from offer.md CTA",
     ctaUrl: "#pricing",
   },
-  // ... sections populated from reference files
+  // ... sections populated from business context files
 }
 ```
 
@@ -201,12 +201,12 @@ export const siteConfig = {
 See [`section-patterns.md`](section-patterns.md) for detailed generation rules per section.
 
 **Build flows:**
-- **Full rebuild:** Read all reference files → regenerate `site-config.ts` → regenerate all components.
+- **Full rebuild:** Read all business context files → regenerate `site-config.ts` → regenerate all components.
 - **Add section:** Ask which section type → read relevant reference → generate component → add to `page.tsx`.
 - **Edit section:** Read current component → read relevant reference → update content and copy.
 
 **Copy guidelines:**
-- Pull language directly from reference files. Don't invent marketing speak.
+- Pull language directly from business context files. Don't invent marketing speak.
 - Headlines from `offer.md` — the transformation, not the feature.
 - Pain points from `audience.md` — their words, not generic.
 - Testimonials from `testimonials.md` only — never fabricate.

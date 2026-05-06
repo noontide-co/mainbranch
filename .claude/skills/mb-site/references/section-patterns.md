@@ -2,15 +2,15 @@
 
 > **Applies to: Website (Next.js) shape only.** The minisite shape uses LLM-decided sections per [`minisite-generation-system.md`](minisite-generation-system.md) — no fixed section catalog. Use this file when working in the legacy Next.js Website templates (`saas`, `high-ticket`).
 
-How reference files map to page sections. This is the translation layer Claude uses during `/mb-site build` mode for the Website shape.
+How business context files map to page sections. This is the translation layer Claude uses during `/mb-site build` mode for the Website shape.
 
 ---
 
 ## How It Works
 
-1. Read reference files from business repo
+1. Read business context files from the business repo
 2. Determine which sections the page needs (based on template + business type)
-3. For each section, extract data from the relevant reference files
+3. For each section, extract data from the relevant business context files
 4. Generate `site-config.ts` entries and component code
 5. Compose sections in `app/page.tsx`
 
@@ -333,7 +333,7 @@ export const siteConfig = {
 }
 ```
 
-Components import from this file. During `/mb-site build`, Claude generates this file from reference files, then regenerates components to consume it.
+Components import from this file. During `/mb-site build`, Claude generates this file from business context files, then regenerates components to consume it.
 
 ---
 
@@ -344,4 +344,5 @@ Components import from this file. During `/mb-site build`, Claude generates this
 - [frontend-design.md](frontend-design.md) — Typography, color, motion, anti-AI-slop standards (Next.js)
 - [cloudflare-pages-link.md](cloudflare-pages-link.md) — CF Pages GitHub App OAuth handshake (current default deploy)
 - [deployment.md](deployment.md) — Netlify deploy walkthrough (legacy fallback)
-- [examples-and-troubleshooting.md](examples-and-troubleshooting.md) — Usage examples and common fixes
+- [examples.md](examples.md) — Usage examples
+- [troubleshooting.md](troubleshooting.md) — Common fixes

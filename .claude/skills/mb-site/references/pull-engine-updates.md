@@ -55,11 +55,11 @@ fi
 
 ### If Pull Fails (and Repo Has a Remote)
 
-> "Couldn't pull updates for [repo-name]. You may be working on older reference files.
+> "Couldn't pull updates for [repo-name]. You may be working on older business context files.
 >
 > Try: Open GitHub Desktop → select [repo-name] → click 'Fetch origin'"
 
 ### Why Both Repos
 
 - Main Branch engine → new skills, playbooks, compliance frameworks
-- Business repo → your reference files, decisions, research
+- Business repo → your core business files, decisions, research
