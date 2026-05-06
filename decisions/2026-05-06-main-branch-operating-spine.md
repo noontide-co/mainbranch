@@ -38,10 +38,16 @@ from Linear, dbt, YC, ADRs, Diataxis. Operator-facing language must speak
 business-owner.
 
 This is a contract. Engine internals can carry their stable engineering
-names (`primitive`, `schema`, `frontmatter`, `validate`, `graph`,
-`provider refs`, `sidecar`). Operator-facing surfaces — skill prompts,
-`mb status` output, error messages, doc copy in `README.md` — must not
-expose those words. A glossary can translate them when needed.
+names (`primitive`, `schema`, `frontmatter`, `provider refs`, `sidecar`,
+`graph`). Public CLI command names (`mb validate`, `mb graph`, `mb status`)
+and concrete file concepts (`frontmatter`, `decisions/`, `bets/`) may
+appear in command reference and `docs/` technical material because that
+is what operators type and inspect. The rule is narrower: **avoid
+unexplained internal jargon in beginner and operator-facing copy** —
+skill prompts, conversational `mb status` output, error messages, the
+top of `README.md`, onboarding flows, and any first-touch surface should
+not require a glossary lookup to read. A glossary can translate when
+needed.
 
 ## Ten Cross-Cutting Principles
 
@@ -74,9 +80,9 @@ them.
    writes `core/` files in timeless language.
 
 7. **The system refuses loudly.** `mb` exits non-zero with a clear reason
-   when an operator tries to do the wrong thing. The refused-fields
-   decision (#324 follow-up) is part of this principle. The product is
-   judged by what it refuses.
+   when an operator tries to do the wrong thing. The companion
+   [campaigns refuse-list decision](2026-05-06-campaigns-refuse-list.md)
+   is part of this principle. The product is judged by what it refuses.
 
 8. **The system asks better questions.** Skills do not fill out forms;
    they have conversations that produce real artifacts. The artifact
@@ -111,9 +117,11 @@ them.
 - Filler phrases that read like tutorials.
 - Enterprise jargon: *stakeholder, initiative, alignment, synergy,
   blocker, OKR, KPI, deliverable*.
-- Engineer jargon at the operator surface: *primitive, schema, frontmatter,
-  validate, graph, enum, provider refs, sidecar, canonical, ADR, runtime,
-  adapter, fixture, smoke test*.
+- Unexplained internal jargon in beginner copy: *primitive, schema, enum,
+  provider refs, sidecar, canonical, ADR, runtime, adapter, fixture,
+  smoke test*. (Public CLI command names like `mb validate` and `mb graph`
+  may appear in command reference; the test is whether a first-time
+  operator could read the line without a glossary lookup.)
 - Numeric priorities (P0/P1) — see the refuse-list decision.
 - False urgency. Scarcity theater. Hype.
 
@@ -122,10 +130,12 @@ them.
 - Every future PR is evaluated against the ten principles. The PR description
   should call out which principle the change serves and any principle it
   bends.
-- The voice profile applies to all operator-facing copy: `README.md`,
-  `mb status` output, skill prompts in `.claude/skills/*/SKILL.md`, error
-  messages, and onboarding flows. AGENTS.md and engine-internal docs may
-  use engineering language because their audience is contributors.
+- The voice profile applies to beginner and operator-facing copy: the top
+  of `README.md`, `mb status` conversational output, skill prompts in
+  `.claude/skills/*/SKILL.md`, error messages, and onboarding flows.
+  Command reference, `docs/` technical material, AGENTS.md, and
+  engine-internal docs may use engineering language because their audience
+  is operators-as-readers or contributors.
 - Issue grooming uses the principles as a rubric. An issue that violates
   a principle either gets reshaped or is rejected with the principle cited.
 
@@ -155,13 +165,25 @@ them.
 
 ## Sources
 
-This decision is the synthesis of 8 parallel research reports written for
-MAIN-247 and stored in `.context/` of the originating workspace. The reports
-surveyed Hormozi / Brunson / Walker / Hormozi / direct-response heritage
-(volume archetype), YC / Linear / Stripe / Basecamp / Apple HIG (taste
-archetype), and Robbins / Naval / Munger / Buffett / Dalio / Clear (identity
-archetype), then resolved the tensions between them.
+The three archetypes are deliberately drawn from public bodies of work:
 
-The reports are not committed (workspace `.context/` is gitignored). The
-durable artifacts are this decision, the campaigns refuse-list decision,
-and the campaign primitive decision they sit alongside.
+- **Volume archetype** — Russell Brunson (DotCom Secrets, Expert Secrets),
+  Alex Hormozi ($100M Offers, $100M Leads), Jeff Walker (Product Launch
+  Formula), and the direct-response copywriting heritage (Schwartz,
+  Halbert, Kennedy). Lessons borrowed: offers come before features,
+  reps are the unit, double down on winners, name the promise.
+- **Taste archetype** — Y Combinator's startup writing, Linear's product
+  philosophy and method, Stripe's documentation craft, Basecamp's Shape
+  Up, and Apple's Human Interface Guidelines. Lessons borrowed: sharp
+  primitives, opinionated defaults, lifecycle that maps to reality, the
+  product is judged by what it refuses.
+- **Identity archetype** — Tony Robbins (RPM), Naval Ravikant (leverage,
+  specific knowledge), Charlie Munger and Warren Buffett (clarity in
+  one paragraph), Ray Dalio (principles), James Clear (identity-based
+  habits). Lessons borrowed: long-arc vision tied to weekly execution,
+  identity is reference not goal, weekly state of the business in one
+  paragraph.
+
+The decision is durable on its own merits; the archetype list above
+exists to make the lineage of the principles legible to future
+contributors.
