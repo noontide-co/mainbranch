@@ -154,11 +154,11 @@ Subtle visual interest in margins (texture, gradient, atmospheric elements).
 
 ---
 
-## Vibe Preservation for Variants
+## Mood Preservation for Variants
 
-When generating multiple images for the same campaign, use the vibe preservation pattern from X/Twitter practitioners:
+When generating multiple images for the same campaign, use the mood preservation pattern from X/Twitter practitioners:
 
-> "Generate a new image with SIGNIFICANTLY different composition, objects, and color palette compared to the previous image. CRITICAL: Strictly preserve the original 'vibe', 'aesthetic', and 'mood'."
+> "Generate a new image with SIGNIFICANTLY different composition, objects, and color palette compared to the previous image. CRITICAL: Strictly preserve the original mood, aesthetic, and tone."
 
 This produces diverse-but-cohesive ad sets that satisfy Andromeda's need for genuine visual variety while maintaining campaign coherence.
 

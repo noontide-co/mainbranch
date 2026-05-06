@@ -169,7 +169,7 @@ Concept: Reframing consistency advice
 
 ## Image Context
 
-Photo of creator at desk, casual/authentic vibe. Or graphic with pull quote.
+Photo of creator at desk, casual/authentic feel. Or graphic with pull quote.
 
 ---
 
