@@ -11,6 +11,31 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-05-06
+
+v0.3.5 tightens the Cloudflare account-token repair from v0.3.4. Main Branch
+now recognizes `cfat_` Cloudflare Account API tokens automatically when
+`account_id` metadata is present, and `/mb-site` setup docs show the safer
+account-token command shape.
+
+### What this means for you (plain English)
+
+- **Cloudflare account tokens need less ceremony.** A stored token beginning
+  with `cfat_` now routes to the account-token validation path automatically
+  when account metadata is present.
+- **The docs match the safer path.** `/mb-site` setup guidance now teaches the
+  account-scoped token command with `account_id` metadata instead of implying
+  every operator should use a personal user token.
+
+### Fixed
+
+- `mb connect test cloudflare` now auto-detects `cfat_` account tokens and uses
+  the account-token validation path when `account_id` metadata is present,
+  without requiring `token_type=account`. Refs #335.
+- `/mb-site` setup guidance, `setup_creds.sh`, and the Cloudflare Pages
+  reference now show the `mb connect cloudflare --token-stdin --metadata ...`
+  command shape for account-scoped Cloudflare tokens. Refs #335.
+
 ## [0.3.4] - 2026-05-06
 
 v0.3.4 repairs the Cloudflare setup path used by `/mb-site`. Account-scoped
@@ -42,14 +67,12 @@ repo is not connected yet.
 
 - `mb connect test cloudflare` now supports Cloudflare account-scoped token
   validation via `--metadata token_type=account --metadata account_id=...`
-  while preserving the existing user-token verify path. `cfat_` account tokens
-  now route to the account-token validation path automatically when
-  `account_id` metadata is present. Failed provider checks include safe
-  upstream diagnostics such as endpoint family, HTTP status, and provider error
-  codes/messages in JSON. Account-token validation falls back to a read-only
-  account probe if Cloudflare returns 404 for the token verify path, so valid
-  credentials are not immediately classified as bad solely because the verify
-  endpoint shape changed. Refs #335.
+  while preserving the existing user-token verify path. Failed provider checks
+  include safe upstream diagnostics such as endpoint family, HTTP status, and
+  provider error codes/messages in JSON. Account-token validation falls back to
+  a read-only account probe if Cloudflare returns 404 for the token verify path,
+  so valid credentials are not immediately classified as bad solely because the
+  verify endpoint shape changed. Refs #335.
 - `mb connect` now derives repo-scoped credential identity from stable git
   remote/common-dir facts for new connect metadata before falling back to the
   local path, avoiding separate keychain refs for parallel worktrees of the same
