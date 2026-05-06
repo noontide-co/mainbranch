@@ -11,6 +11,26 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-05-06
+
+v0.3.4 repairs the Cloudflare setup path used by `/mb-site`. Account-scoped
+Cloudflare tokens can now validate cleanly, provider failures include safer
+diagnostics, and site workflows stop before Cloudflare-dependent work when the
+repo is not connected yet.
+
+### What this means for you (plain English)
+
+- **Cloudflare setup is less brittle.** Main Branch can validate account-scoped
+  Cloudflare tokens as well as the older user-token path.
+- **Credential errors are easier to fix.** `mb connect test cloudflare --json`
+  now reports safe endpoint-family, HTTP status, and provider error details
+  instead of hiding every failure behind a generic rejection.
+- **Worktrees share the right identity.** New connect metadata derives
+  credential identity from stable git facts so parallel worktrees do not split
+  keychain entries for the same business repo.
+- **`/mb-site` stops earlier.** Domain, DNS, Pages, custom-domain, and deploy
+  work now gate on Cloudflare readiness instead of failing halfway through.
+
 ### Changed
 
 - `/mb-site` now hard-gates Cloudflare-dependent domain, DNS, Pages, custom
