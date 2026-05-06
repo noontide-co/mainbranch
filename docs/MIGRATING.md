@@ -5,8 +5,10 @@ Main Branch has two repo shapes in the wild:
 - **Legacy shape:** `reference/core/`, `reference/domain/`,
   `reference/proof/`, `reference/visual-identity/`, and `outputs/`.
 - **Current shape:** `core/`, `research/`, `decisions/`, `bets/`, `log/`,
-  `campaigns/`, and `documents/`. `reference/` is compatibility-only for old
-  repos and old readers.
+  `pushes/`, and `documents/`. `reference/` is compatibility-only for old
+  repos and old readers; `campaigns/` is also compatibility-only and
+  detected by `mb doctor` with a preview path via
+  `mb migrate campaigns --plan`.
 
 Existing repos do not need an urgent file move. The safe path is to update the
 engine first, repair skill discovery, and only migrate file layout on a clean
@@ -421,9 +423,14 @@ ln -s ../core/offers reference/offers
 Then add the current empty working folders:
 
 ```bash
-mkdir -p bets log campaigns documents core/finance
-touch bets/.gitkeep log/.gitkeep campaigns/.gitkeep documents/.gitkeep core/finance/.gitkeep
+mkdir -p bets log pushes documents core/finance
+touch bets/.gitkeep log/.gitkeep pushes/.gitkeep documents/.gitkeep core/finance/.gitkeep
 ```
+
+If your repo already has a `campaigns/` folder from earlier Main Branch
+versions, leave it in place — `mb` reads it as compatibility. Run
+`mb doctor` and `mb migrate campaigns --plan` to preview the move to
+`pushes/` when you're ready.
 
 Validate before merging the branch:
 

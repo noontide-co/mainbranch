@@ -18,7 +18,7 @@ You're renting your business. Not just the dashboards — the operational memory
 
 The open-source gap closed in 2025. The tools to own your stack exist now. Almost nobody has carved time to migrate, because there's no coherent environment that ties it together.
 
-Main Branch is that environment. Your offer, audience, voice, decisions, research, bets, and campaigns live as markdown files in a git repo you own. The `mb` CLI scaffolds it. The bundled skills read those files and produce work that sounds like you — without re-prompting.
+Main Branch is that environment. Your offer, audience, voice, decisions, research, bets, and pushes (launches, drops, challenges, promos — whatever your business calls them) live as markdown files in a git repo you own. The `mb` CLI scaffolds it. The bundled skills read those files and produce work that sounds like you — without re-prompting.
 
 The end state isn't sitting at a terminal all day. It's the opposite — eventually you dump thoughts from your phone, drafts get made, you approve, it executes. We're not all the way there. The work is still real. But the substrate is the right one to build on.
 
@@ -32,7 +32,7 @@ Own the work. Rent only the rails.
 
 ## What it is
 
-Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running business-as-files systems. It's built for operators and small teams running real businesses: solo founders, small agencies, course creators, productized services, indie SaaS, and small ecom teams. Today the workflows ship for Claude Code. Codex, Cursor, OpenClaw, Hermes, and local runtimes are next. Your offer, audience, voice, research, decisions, bets, and campaigns live in your own git repo — versioned, portable, agent-readable.
+Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running business-as-files systems. It's built for operators and small teams running real businesses: solo founders, small agencies, course creators, productized services, indie SaaS, and small ecom teams. Today the workflows ship for Claude Code. Codex, Cursor, OpenClaw, Hermes, and local runtimes are next. Your offer, audience, voice, research, decisions, bets, and pushes live in your own git repo — versioned, portable, agent-readable.
 
 Read the product frame in [docs/ETHOS.md](docs/ETHOS.md), the four operator loops (Sense → Decide → Ship → Reflect) and the four channels (Paid, Organic, Pages, Ops) in [docs/OPERATOR-LOOPS.md](docs/OPERATOR-LOOPS.md), and the release direction in [docs/ROADMAP.md](docs/ROADMAP.md).
 Workspace, repo, dashboard, finance/legal, and team-log boundaries are defined
@@ -131,7 +131,7 @@ my-business/
 ├── decisions/
 ├── bets/
 ├── log/
-├── campaigns/
+├── pushes/
 └── documents/
 ```
 
@@ -147,8 +147,9 @@ or mutate customer accounts.
 
 The repo should keep useful non-secret identifiers where agents can inspect
 them: Stripe account/product/price IDs in offer or finance notes, Google Ads
-customer and campaign IDs in `campaigns/`, ad pixel IDs beside the site or
-campaign files they belong to, and MCP server names/scopes in `CLAUDE.md` or
+customer and campaign IDs (provider's term for their object) in
+`pushes/<push>/push.md` `provider_refs:`, ad pixel IDs beside the site or
+push files they belong to, and MCP server names/scopes in `CLAUDE.md` or
 local setup notes. Do not commit API keys, OAuth refresh tokens,
 service-account JSON, webhook secrets, MCP tokens, or bearer tokens. Keep
 secrets in a runtime's local config, the OS keychain, 1Password, `.env`, or
@@ -171,7 +172,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb site check` | Check local paid-traffic measurement readiness for a site repo: GTM installation, Main Branch dataLayer events, consent posture, Google Ads plan metadata, and operator-review gates. |
 | `mb issue draft` | Create a local, privacy-scrubbed GitHub issue draft under `.mb/issue-drafts/` for bugs, feature gaps, or questions. |
 | `mb issue open` | Submit a reviewed issue draft with `gh issue create`, or print a browser/manual fallback when GitHub CLI is unavailable. |
-| `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `bets/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
+| `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `bets/`, `log/`, `pushes/` (and legacy `campaigns/` as compatibility), `documents/`. Pass/fail per file. |
 | `mb graph` | Build a repo graph index from frontmatter links, wikilinks, and entity tags. Emits Graphviz DOT by default, `--json` for agents/dashboards, and `--open` to render a PNG view. |
 | `mb think <topic>` | Print the `/mb-think` invocation hint. Run inside Claude Code for the full flow. |
 | `mb resolve <key>` | Resolve a reference path (checks free first, then paid). |

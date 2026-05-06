@@ -23,7 +23,7 @@ Google Docs is the default place businesses put their thinking — meeting notes
 
 ## What we recommend instead
 
-A private GitHub (or Forgejo) repo with a CLAUDE.md at the root and a primitive folder structure: `core/`, `research/`, `decisions/`, `bets/`, `log/`, `campaigns/`, `documents/`. Markdown for everything. Frontmatter for status. The repo is the company brain. Conductor or any AI agent reads it as the working substrate.
+A private GitHub (or Forgejo) repo with a CLAUDE.md at the root and a primitive folder structure: `core/`, `research/`, `decisions/`, `bets/`, `log/`, `pushes/`, `documents/`. Markdown for everything. Frontmatter for status. The repo is the company brain. Conductor or any AI agent reads it as the working substrate.
 
 The pitch in one sentence: **your business is a tree of files**. Once it is, every agent that can read files becomes a coworker.
 
@@ -50,14 +50,14 @@ The pitch in one sentence: **your business is a tree of files**. Once it is, eve
    - decisions/ — dated choices with rationale, frontmatter status field
    - bets/ — operating bets with targets, deadlines, and outcomes
    - log/ — daily/weekly notes, inbox-style dumps
-   - campaigns/ — outputs grouped by campaign
+   - pushes/ — coordinated pushes (launches, drops, challenges, promos)
    - documents/ — long-form artifacts (briefs, SOPs, contracts)
    ```
 
 4. Set up the primitive folders:
    ```bash
    mkdir -p core/{soul,offer,audience,voice,visual-identity,finance} \
-            research decisions bets log campaigns documents
+            research decisions bets log pushes documents
    git add . && git commit -m "[init] business primitive structure"
    git push
    ```
