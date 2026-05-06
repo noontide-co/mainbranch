@@ -38,16 +38,11 @@ from Linear, dbt, YC, ADRs, Diataxis. Operator-facing language must speak
 business-owner.
 
 This is a contract. Engine internals can carry their stable engineering
-names (`primitive`, `schema`, `frontmatter`, `provider refs`, `sidecar`,
-`graph`). Public CLI command names (`mb validate`, `mb graph`, `mb status`)
-and concrete file concepts (`frontmatter`, `decisions/`, `bets/`) may
-appear in command reference and `docs/` technical material because that
-is what operators type and inspect. The rule is narrower: **avoid
-unexplained internal jargon in beginner and operator-facing copy** —
-skill prompts, conversational `mb status` output, error messages, the
-top of `README.md`, onboarding flows, and any first-touch surface should
-not require a glossary lookup to read. A glossary can translate when
-needed.
+names (`primitive`, `schema`, `frontmatter`, `validate`, `graph`,
+`provider refs`, `sidecar`). Beginner and operator workflow copy should
+avoid unexplained internal jargon. Command reference, contributor docs,
+and technical troubleshooting may name exact commands, file concepts, and
+schemas when precision matters.
 
 ## Ten Cross-Cutting Principles
 
@@ -80,9 +75,9 @@ them.
    writes `core/` files in timeless language.
 
 7. **The system refuses loudly.** `mb` exits non-zero with a clear reason
-   when an operator tries to do the wrong thing. The companion
-   [campaigns refuse-list decision](2026-05-06-campaigns-refuse-list.md)
-   is part of this principle. The product is judged by what it refuses.
+   when an operator tries to do the wrong thing. The campaigns refuse-list
+   decision is part of this principle. The product is judged by what it
+   refuses.
 
 8. **The system asks better questions.** Skills do not fill out forms;
    they have conversations that produce real artifacts. The artifact
@@ -127,9 +122,8 @@ them.
 
 ## What This Decision Authorizes
 
-- Every future PR is evaluated against the ten principles. The PR description
-  should call out which principle the change serves and any principle it
-  bends.
+- Product-shape PRs should be reviewed against the ten principles. When a
+  change bends one of them, the PR description should name the tradeoff.
 - The voice profile applies to beginner and operator-facing copy: the top
   of `README.md`, `mb status` conversational output, skill prompts in
   `.claude/skills/*/SKILL.md`, error messages, and onboarding flows.
@@ -165,25 +159,10 @@ them.
 
 ## Sources
 
-The three archetypes are deliberately drawn from public bodies of work:
+This decision synthesizes research across direct-response operating systems
+(Hormozi, Brunson, Walker), product-taste systems (YC, Linear, Stripe,
+Basecamp, Apple HIG), and long-arc identity/investing systems (Robbins,
+Naval, Munger, Buffett, Dalio, Clear).
 
-- **Volume archetype** — Russell Brunson (DotCom Secrets, Expert Secrets),
-  Alex Hormozi ($100M Offers, $100M Leads), Jeff Walker (Product Launch
-  Formula), and the direct-response copywriting heritage (Schwartz,
-  Halbert, Kennedy). Lessons borrowed: offers come before features,
-  reps are the unit, double down on winners, name the promise.
-- **Taste archetype** — Y Combinator's startup writing, Linear's product
-  philosophy and method, Stripe's documentation craft, Basecamp's Shape
-  Up, and Apple's Human Interface Guidelines. Lessons borrowed: sharp
-  primitives, opinionated defaults, lifecycle that maps to reality, the
-  product is judged by what it refuses.
-- **Identity archetype** — Tony Robbins (RPM), Naval Ravikant (leverage,
-  specific knowledge), Charlie Munger and Warren Buffett (clarity in
-  one paragraph), Ray Dalio (principles), James Clear (identity-based
-  habits). Lessons borrowed: long-arc vision tied to weekly execution,
-  identity is reference not goal, weekly state of the business in one
-  paragraph.
-
-The decision is durable on its own merits; the archetype list above
-exists to make the lineage of the principles legible to future
-contributors.
+The durable artifacts are this decision, the campaigns refuse-list decision,
+and the campaign primitive decision they sit alongside.

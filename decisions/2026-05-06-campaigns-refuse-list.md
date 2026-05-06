@@ -33,7 +33,7 @@ decision says what a campaign is. This one says what a campaign is not.
 | `estimated_hours` / `story_points` | Performative precision. Operators don't track campaigns by hour. | Use `deadline:` and `review_on:` — calendar dates that already exist. |
 | `kpi_dashboard` | Visualization is not the campaign record. | Point at the metric source via `metrics_sources[]` or the future flat `external_refs[]`. |
 | `linked_okrs` | OKR theater. Most small businesses don't run OKRs and the ones that do already use Linear/Tability/Lattice. | Use `linked_bets` for hypothesis tracking. Use `linked_decisions` for direction. |
-| `description` (free-text) | Free-text descriptions go stale and don't drive any decision the operator has to make. The structured goal answers "what are we trying to do?"; `review-log.md` carries the narrative. | Use `goal:` (structured), `promise:` (≤140 chars, future schema), and `review-log.md` for narrative. |
+| `description` (free-text frontmatter) | Always rots when it tries to carry the campaign's whole story. It also duplicates the markdown body, where narrative belongs. | Use `goal:` (structured), `promise:` (<=140 chars, future schema), and `review-log.md` for narrative. |
 | `tier` / `severity` | Imports incident-management vocabulary into a marketing primitive. | If the push is high-stakes, that's evident from the linked offer and bet. |
 | `confidence_score` | Performative quantification of judgment. | Operator judgment lives in the linked bet hypothesis. |
 | `sentiment` / `mood` | Subjective and stale within a day. | If a push needs a feeling note, it goes in `review-log.md`. |
