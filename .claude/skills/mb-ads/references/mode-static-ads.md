@@ -55,7 +55,7 @@ platform: meta
 ---
 ```
 
-7. Save to `outputs/YYYY-MM-DD-static-ads-[offer]-{campaign}/static-ads-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
+7. Save to `campaigns/YYYY-MM-DD-static-ads-[offer]-{campaign}/static-ads-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
 8. Tell user: "Copy saved. Running automatic post-generation pipeline..."
 9. Run the **Automatic Post-Generation Pipeline** (see SKILL.md). This handles git commit, compliance review, and image generation automatically.
 

@@ -40,17 +40,17 @@ For multi-offer setups, also explain:
 2. `core/offer.md` — What you sell (or brand thesis if multi-offer)
 3. `core/audience.md` — Who buys
 4. `core/voice.md` — How you sound
-5. `reference/proof/testimonials.md` — Social proof
-6. `reference/proof/angles/` — Messaging entry points
-7. `reference/visual-identity/visual-style.md` — Visual brand identity (colors, typography, mood, image prompt fragments)
-8. `reference/domain/content-strategy.md` — Content pillars, platforms, cadence (template for community businesses)
-9. `reference/domain/funnel/skool-surfaces.md` — Live Skool about page + pricing card copy (community businesses with Skool)
+5. `core/proof/testimonials.md` — Social proof
+6. `core/proof/angles/` — Messaging entry points
+7. `core/brand/visual-style.md` — Visual brand identity (colors, typography, mood, image prompt fragments)
+8. `core/content-strategy.md` — Content pillars, platforms, cadence (template for community businesses)
+9. `core/operations/funnel/skool-surfaces.md` — Live Skool about page + pricing card copy (community businesses with Skool)
 
 ### Multi-Offer Additional Files (if applicable)
 
 10. `core/offers/[name]/offer.md` — Offer-specific details for each offer
 11. `core/offers/[name]/audience.md` — Only if this offer targets a different segment
-12. `reference/domain/product-ladder.md` — How offers relate to each other
+12. `core/product-ladder.md` — How offers relate to each other
 
 > **Note:** content-strategy.md and visual-style.md start as templates and get filled through `/mb-think` cycles. Not required at setup — scaffolded with placeholder sections.
 

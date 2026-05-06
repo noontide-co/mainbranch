@@ -181,7 +181,7 @@ Copy and paste into Ads Manager after images are ready.
 
 ## Naming Conventions
 
-**Folder:** `outputs/YYYY-MM-DD-static-ads-{campaign}/`
+**Folder:** `campaigns/YYYY-MM-DD-static-ads-{campaign}/`
 - Date: `YYYY-MM-DD`
 - Type: `static-ads`
 - Campaign name: lowercase with dashes (required)

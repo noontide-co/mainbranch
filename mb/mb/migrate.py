@@ -35,13 +35,18 @@ def read_schema_version(repo: str | Path) -> str:
     if marker.exists():
         value = marker.read_text(encoding="utf-8").strip()
         return value or "unknown"
-    if (target / "reference" / "core").exists() and not (
-        target / "reference" / "core"
-    ).is_symlink():
-        return "0.1"
-    if (target / "reference" / "offers").exists() and not (
-        target / "reference" / "offers"
-    ).is_symlink():
+    legacy_reference_paths = (
+        "core",
+        "offers",
+        "proof",
+        "brand",
+        "visual-identity",
+        "domain",
+    )
+    if any(
+        (target / "reference" / path).exists() and not (target / "reference" / path).is_symlink()
+        for path in legacy_reference_paths
+    ):
         return "0.1"
     if (target / "core").is_dir():
         return LATEST_SCHEMA_VERSION

@@ -53,9 +53,9 @@ At the repo path, resolve offer context first (see Offer Context Resolution abov
 [resolved offer.md]          → 0 (missing), 1 (<20 lines), 2 (20-80), 3 (80+)
 [resolved audience.md]       → same scoring
 core/voice.md                → same scoring
-reference/proof/testimonials.md → same scoring
-reference/proof/angles/*.md  → count .md files EXCLUDING README.md: 0=0, 1=1, 2-3=2, 4+=3
-reference/visual-identity/visual-style.md → same scoring (optional)
+core/proof/testimonials.md → same scoring
+core/proof/angles/*.md  → count .md files EXCLUDING README.md: 0=0, 1=1, 2-3=2, 4+=3
+core/brand/visual-style.md → same scoring (optional)
 ```
 
 In multi-offer mode, score the offer-specific `offer.md` and `audience.md` (resolved via path resolution), not the brand-level `core/offer.md`.
@@ -261,18 +261,18 @@ Before creating ads, the business repo must have:
 | Offer | `core/offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | Yes |
 | Audience | `core/offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Yes |
 | Voice | `core/voice.md` (always core) | Yes |
-| Testimonials | `reference/proof/testimonials.md` + `core/offers/[active]/testimonials.md` (accumulate) | Yes |
-| Angles | `reference/proof/angles/*.md` | Yes (at least 1) |
-| Visual Style | `reference/visual-identity/visual-style.md` | Optional (affects image gen) |
-| Content Strategy | `reference/domain/content-strategy.md` (always brand-level) | Optional (improves topic selection) |
-| Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | Optional (congruence check) |
+| Testimonials | `core/proof/testimonials.md` + `core/offers/[active]/testimonials.md` (accumulate) | Yes |
+| Angles | `core/proof/angles/*.md` | Yes (at least 1) |
+| Visual Style | `core/brand/visual-style.md` | Optional (affects image gen) |
+| Content Strategy | `core/content-strategy.md` (always brand-level) | Optional (improves topic selection) |
+| Skool Surfaces | `core/operations/funnel/skool-surfaces.md` | Optional (congruence check) |
 | Ad Account Access | `mb status --json --peek` + `mb connect doctor --json` | Optional (enables live performance data) |
 
 If required files are missing, Step 0 pre-flight catches this and routes appropriately.
 
 **Content funnel awareness:** Ads are the "immediate ROI" pillar of the two-pillar value prop (ads + content). In the content pipeline, ads drive newsletter signups, newsletter nurtures, Skool trial converts, revenue follows. If `content-strategy.md` exists, use content pillars to inform angle selection, metrics to understand what performs organically (ads amplify top-performing organic content), and funnel mapping to determine whether ads should target awareness, consideration, or conversion.
 
-**Skool surface congruence:** If `reference/domain/funnel/skool-surfaces.md` exists, check it before finalizing any batch. Ad copy must not promise anything not visible on the Skool about page or pricing cards. Pricing mentioned in ads must match current tier structure. Language and framing should echo (not contradict) the about page positioning. The about page is the FIXED surface — ads are the VARIABLE surface.
+**Skool surface congruence:** If `core/operations/funnel/skool-surfaces.md` exists, check it before finalizing any batch. Ad copy must not promise anything not visible on the Skool about page or pricing cards. Pricing mentioned in ads must match current tier structure. Language and framing should echo (not contradict) the about page positioning. The about page is the FIXED surface — ads are the VARIABLE surface.
 
 **Angle library note:** Angles are NOT locked. They evolve as understanding deepens. Every `/mb-think` session may surface new angles. The angle library is additive — new angles supplement, never replace. When selecting angles for a batch, mix established angles with any newly codified ones.
 
@@ -367,7 +367,7 @@ If context was compacted mid-task, check:
 1. **Which offer?** Read `.vip/local.yaml` for `current_offer` to restore offer context
 2. **What entry point?** Full pipeline, copy only, hook library, video scripts, review, account check
 3. **What stage?** Planning angles, writing hooks, generating prompts, reviewing, pulling account data
-4. **What's done?** Check outputs/ folder for partial work
+4. **What's done?** Check campaigns/ folder for partial work
 5. **Ad account status?** Re-run `mb status --json --peek`; if needed, run `mb connect doctor --json`
 6. **Resume:** Continue from the last completed step
 

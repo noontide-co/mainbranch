@@ -76,12 +76,12 @@ This is optional — standard naming without the offer prefix works fine. Use th
 
 ## Content Strategy Research Routing
 
-When the user's research topic involves content pillars, platform selection, content cadence, or content performance, check `reference/domain/content-strategy.md` first. If it exists, read it to understand current strategy before researching.
+When the user's research topic involves content pillars, platform selection, content cadence, or content performance, check `core/content-strategy.md` first. If it exists, read it to understand current strategy before researching.
 
 **Trigger topics:** content pillars, which platforms, content plan, cadence, content mix, repurposing, hooks, content frameworks, content metrics, newsletter strategy
 
 **Research flow for content strategy topics:**
-1. Read existing `reference/domain/content-strategy.md` (if present) to understand current state
+1. Read existing `core/content-strategy.md` (if present) to understand current state
 2. Read `core/soul.md` + resolved `offer.md` + resolved `audience.md` for pillar derivation context
 3. Conduct research (web, mining, competitor analysis)
 4. Synthesize into a research file as usual
@@ -319,7 +319,7 @@ In multi-offer mode, use offer-qualified paths:
 | `core/offers/community/offer.md` | Add tier structure, update pricing |
 | `core/offer.md` | Update brand-level positioning |
 | `core/audience.md` | Segment by tier |
-| `domain/product-ladder.md` | Update ascension logic |
+| `core/product-ladder.md` | Update ascension logic |
 
 In single-offer mode, paths stay standard:
 

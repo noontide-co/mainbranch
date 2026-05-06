@@ -109,7 +109,7 @@ Outside reference: set up Stripe subscription, update sales page copy.
 Reference files affected:
 - `core/offers/community/offer.md` — updated pricing section
 - `core/offer.md` — updated brand thesis
-- `reference/domain/product-ladder.md` — updated ascension logic
+- `core/product-ladder.md` — updated ascension logic
 
 Outside reference: update Skool pricing cards.
 ```
@@ -121,7 +121,7 @@ Outside reference: update Skool pricing cards.
 When documenting a decision, note which offer it affects:
 - **Offer-specific:** affects one offer's files (e.g., `core/offers/community/offer.md`)
 - **Brand-level:** affects core/ files (e.g., `core/voice.md`, `core/offer.md` brand thesis)
-- **Cross-offer:** affects `domain/product-ladder.md` or multiple offers simultaneously
+- **Cross-offer:** affects `core/product-ladder.md` or multiple offers simultaneously
 
 ---
 

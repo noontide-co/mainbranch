@@ -270,7 +270,7 @@ I need:
 4. Common objections mentioned"""
 
 # Save quotes and patterns to research/
-# Consider codifying strong angles to reference/proof/angles/
+# Consider codifying strong angles to core/proof/angles/
 ```
 
 ### Pattern 4: Fallback (WebSearch)

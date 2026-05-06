@@ -30,7 +30,9 @@ _BARE_SKILL_REF_RE = re.compile(
     r"(?<![\w./(`-])((?:\.\/)?(?:references|examples|scripts|assets)/[^\s`()\[\]<>,]+)"
 )
 _REFERENCE_ROOTS = ("references", "examples", "scripts", "assets")
-_LEGACY_REFERENCE_PATH_RE = re.compile(r"reference/(?:core|offers)(?![\w-])")
+_LEGACY_REFERENCE_PATH_RE = re.compile(
+    r"reference/(?:core|offers|proof|brand|visual-identity|domain)(?![\w-])"
+)
 _LEGACY_REFERENCE_ALLOW_TERMS = (
     "legacy",
     "fallback",
@@ -167,9 +169,9 @@ def _check_legacy_reference_guidance(text: str) -> list[str]:
         if any(term in normalized for term in _LEGACY_REFERENCE_ALLOW_TERMS):
             continue
         warnings.append(
-            f"line {line_number}: legacy reference/core or reference/offers path "
+            f"line {line_number}: legacy business-repo reference/* path "
             "mentioned without compatibility/fallback context; prefer canonical "
-            "core/ or core/offers/ write guidance"
+            "core/ write guidance"
         )
     return warnings
 

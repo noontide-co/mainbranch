@@ -64,8 +64,8 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 [init] Bootstrap business repo with Main Branch structure
 
 - Created core/ (soul, offer, audience, voice)
-- Created reference/proof/ (testimonials, angles)
-- Created reference/domain/products/
+- Created core/proof/ (testimonials, angles)
+- Created core/operations/products/
 - Drafted CLAUDE.md and README.md
 
 Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
@@ -138,7 +138,7 @@ git add -A
 git add core/offer.md core/audience.md
 
 # Stage by folder
-git add reference/proof/
+git add core/proof/
 
 # Check what's staged
 git status
@@ -184,7 +184,7 @@ EOF
 ### After Output Generation
 
 ```bash
-git add outputs/
+git add campaigns/
 git commit -m "$(cat <<'EOF'
 [add] January email campaign batch
 

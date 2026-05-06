@@ -78,8 +78,8 @@ If offer specified, overrides session `current_offer` for this run. If the activ
 |------|------|---------|
 | Offer | `core/offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | What you sell, price, inclusions, guarantee |
 | Audience | `core/offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Who buys, their pains, objections |
-| Testimonials | `reference/proof/testimonials.md` + `core/offers/[active]/testimonials.md` (accumulate) | Success stories with specifics |
-| Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | Live Skool about page + pricing copy (congruence) |
+| Testimonials | `core/proof/testimonials.md` + `core/offers/[active]/testimonials.md` (accumulate) | Success stories with specifics |
+| Skool Surfaces | `core/operations/funnel/skool-surfaces.md` | Live Skool about page + pricing copy (congruence) |
 
 **If missing:** Ask user to provide or run `/mb-think` first.
 
@@ -136,7 +136,7 @@ For high-ticket B2B services. Full reference: `references/frameworks/b2b-haynes.
 
 ## Output Path
 
-**Standard:** `outputs/YYYY-MM-DD-vsl-[offer]-{campaign}/vsl-script.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
+**Standard:** `campaigns/YYYY-MM-DD-vsl-[offer]-{campaign}/vsl-script.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
 
 Campaign name is REQUIRED. Ask user if not provided. Examples: `skool-about`, `agency-pitch`, `membership-sales`.
 
@@ -185,7 +185,7 @@ Just say `/mb-vsl` again and describe where you were:
 2. **Check for in-progress scripts:**
 
 ```bash
-ls -ltd outputs/*-vsl-*/ 2>/dev/null | head -3
+ls -ltd campaigns/*-vsl-*/ 2>/dev/null | head -3
 ```
 
 3. **Re-read key files:**
@@ -196,7 +196,7 @@ ls -ltd outputs/*-vsl-*/ 2>/dev/null | head -3
 | `references/frameworks/skool-18-section.md` | Full 18-section template |
 | `references/frameworks/b2b-haynes.md` | Full 7-step B2B framework |
 | Resolved `offer.md` | Offer details for script (offer-specific or core) |
-| User's `reference/proof/testimonials.md` | Proof for script |
+| User's `core/proof/testimonials.md` | Proof for script |
 
 3. **Confirm with user:**
 

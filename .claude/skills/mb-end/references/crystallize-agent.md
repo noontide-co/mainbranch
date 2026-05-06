@@ -33,7 +33,7 @@ If none exist, write: "First crystallize session. No prior outputs."]
 
 === CONTENT STRATEGY ===
 
-[Full text of reference/domain/content-strategy.md, or "Not yet created."]
+[Full text of core/content-strategy.md, or "Not yet created."]
 
 === TODAY'S GIT ACTIVITY ===
 
@@ -109,7 +109,7 @@ Look at the current state of reference files. What is thin? What section is a pl
 
 ### 7b. Check for Angle and Enemy Emergence
 
-Look at today's research and decisions. Did a new emotional territory, buyer motivation, named enemy, or lifestyle angle emerge that was not codified into `reference/proof/angles/`?
+Look at today's research and decisions. Did a new emotional territory, buyer motivation, named enemy, or lifestyle angle emerge that was not codified into `core/proof/angles/`?
 
 Signs of uncaptured angles:
 - Research file describes a new audience motivation

@@ -178,10 +178,10 @@ Before loading reference files, resolve the active offer:
 | Audience | `core/offers/[active]/audience.md` or `core/audience.md` (resolved) | **Yes** |
 | Voice | `core/voice.md` | Recommended |
 | Soul | `core/soul.md` | Optional |
-| Testimonials | `reference/proof/testimonials.md` (+ offer-specific if exists) | Recommended |
-| Angles | `reference/proof/angles/*.md` | Optional |
-| Content Strategy | `reference/domain/content-strategy.md` | Optional |
-| Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | Optional (congruence) |
+| Testimonials | `core/proof/testimonials.md` (+ offer-specific if exists) | Recommended |
+| Angles | `core/proof/angles/*.md` | Optional |
+| Content Strategy | `core/content-strategy.md` | Optional |
+| Skool Surfaces | `core/operations/funnel/skool-surfaces.md` | Optional (congruence) |
 
 If required files are missing, stop and route to `/mb-think codify`:
 > "Your offer.md is missing. I need it to generate the site. Run `/mb-think` to build your reference files first."

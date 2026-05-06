@@ -50,7 +50,7 @@ Every variation **MUST** include at least one specific element:
 
 1. Ask for campaign name (required)
 2. Confirm quantity: "How many? A few to test (5-10) or a full batch (30+)?" -- or use the number they already specified
-3. Create folder: `outputs/YYYY-MM-DD-creative-variations-[offer]-{campaign}/` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
+3. Create folder: `campaigns/YYYY-MM-DD-creative-variations-[offer]-{campaign}/` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
 4. Save full generation context + creative variations to: `creative-variations-batch-001.md`
 5. Tell user: "Saved {N} creative variations. Running automatic post-generation pipeline..."
 6. Run the **Automatic Post-Generation Pipeline** (see SKILL.md). This handles git commit, compliance review, and image generation automatically.

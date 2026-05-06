@@ -84,8 +84,8 @@ git diff --name-only --diff-filter=AM HEAD@{6am}..HEAD 2>/dev/null
 |----------|---------------|
 | Research files created | New files in `research/` |
 | Decisions made | New or modified files in `decisions/` |
-| Reference files updated | Modified files in `reference/` |
-| Outputs generated | New files in `outputs/` |
+| Core files updated | Modified files in `core/` |
+| Campaign artifacts generated | New files in `campaigns/` |
 | Uncommitted changes | `git status --short` output |
 
 **Multi-offer detection (skip if no `core/offers/` folder — single-offer mode, everything reads from `core/`):** If `core/offers/` exists, note which offers had files changed:
@@ -175,7 +175,7 @@ git log --since="6am" --name-only --diff-filter=AM -- decisions/ 2>/dev/null
 git log --since="6am" --name-only --diff-filter=A -- research/ 2>/dev/null
 
 # Reference changes
-git diff --name-only HEAD@{6am}..HEAD -- reference/ 2>/dev/null
+git diff --name-only HEAD@{6am}..HEAD -- core/ 2>/dev/null
 ```
 
 **When to skip crystallize entirely:**
@@ -194,9 +194,9 @@ Before spawning the agent, read and collect:
 | Today's git summary | From Step 2 output | Always |
 | Today's decision files (full text) | Read each file detected in 5a | Always |
 | Today's research files (full text) | Read each file detected in 5a | Always |
-| Reference file diffs | `git diff HEAD@{6am}..HEAD -- core/ reference/` | If reference changed |
+| Core file diffs | `git diff HEAD@{6am}..HEAD -- core/` | If core changed |
 | `core/soul.md` | Read full file | Always |
-| `reference/domain/content-strategy.md` | Read full file | If it exists |
+| `core/content-strategy.md` | Read full file | If it exists |
 | Past crystallize outputs | Read `research/*-end-of-day-crystallize.md` | If any exist |
 
 **Heavy-day adaptation:** If more than 5 research files exist for today, pass commit messages + file names for all research, but full text only for the 3-5 most recent or most connected to today's decisions.

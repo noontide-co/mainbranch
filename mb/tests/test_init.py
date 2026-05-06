@@ -14,11 +14,11 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert result["status"] == "ok"
     for folder in DATA_FOLDERS:
         assert (target / folder).is_dir(), f"missing {folder}"
-    assert (target / "reference" / "core" / ".gitkeep").exists()
-    assert (target / "reference" / "offers" / ".gitkeep").exists()
-    assert (target / "reference" / "proof" / "angles").is_dir()
-    assert (target / "reference" / "domain").is_dir()
-    assert (target / "reference" / "visual-identity").is_dir()
+    assert not (target / "reference").exists()
+    assert (target / "core" / "proof").is_dir()
+    assert (target / "core" / "brand").is_dir()
+    assert (target / "core" / "strategy").is_dir()
+    assert (target / "core" / "operations").is_dir()
     assert (target / "bets").is_dir()
     assert (target / "CLAUDE.md").exists()
     assert (target / ".github" / "CODEOWNERS").exists()

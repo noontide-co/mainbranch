@@ -89,9 +89,9 @@ If offer specified, overrides session `current_offer` for this run.
 
 Requires `core/voice.md` (always core), plus resolved `offer.md` and `audience.md` (offer-aware — checks `core/offers/[active]/` first, falls back to `core/`).
 
-**Optional but recommended:** `reference/domain/content-strategy.md` — If present, /mb-organic reads content pillars to align generated content and platform strategy for format selection. Note that `content-strategy.md` is brand-level, but content can be offer-specific. Works perfectly without it.
+**Optional but recommended:** `core/content-strategy.md` — If present, /mb-organic reads content pillars to align generated content and platform strategy for format selection. Note that `content-strategy.md` is brand-level, but content can be offer-specific. Works perfectly without it.
 
-**Congruence check:** If `reference/domain/funnel/skool-surfaces.md` exists, read it. Organic content should echo the same positioning and claims visible on the Skool about page and pricing cards. No contradictions between organic and the landing experience.
+**Congruence check:** If `core/operations/funnel/skool-surfaces.md` exists, read it. Organic content should echo the same positioning and claims visible on the Skool about page and pricing cards. No contradictions between organic and the landing experience.
 
 **CWD-first:** If `core/` or legacy `reference/core/` exists in CWD, you're already in the business repo. Otherwise, run `mb status --json --peek` and use its repo/readiness facts if available. If status cannot identify a repo, ask the user or run `/mb-setup`.
 
@@ -163,7 +163,7 @@ Generate multi-slide carousel copy from a concept.
 
 Generate single-post caption from a concept.
 
-**Output path (all script modes):** `outputs/YYYY-MM-DD-organic-[offer]-{campaign}/organic-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
+**Output path (all script modes):** `campaigns/YYYY-MM-DD-organic-[offer]-{campaign}/organic-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
 
 **Output frontmatter:**
 ```yaml
@@ -185,10 +185,10 @@ Campaign name is REQUIRED. Ask user if not provided. Examples: `january-hooks`, 
 **At session start, scan what's been done:**
 
 1. Check `research/*-competitor-mine.md` — Who was mined? When?
-2. Check `outputs/*-organic-*/` — What scripts exist?
+2. Check `campaigns/*-organic-*/` — What scripts exist?
 3. Don't suggest re-mining same handles from today
 4. Recommend generating from existing mining if concepts unused
-5. Check `reference/domain/content-strategy.md` — What pillars are defined? What platform is the target?
+5. Check `core/content-strategy.md` — What pillars are defined? What platform is the target?
 
 **Example context-aware response:**
 ```
@@ -220,7 +220,7 @@ Before saving: show file paths.
 3. **Select concept** — User picks from mined concepts or provides their own
 4. **Adapt to brand** — Map concept to user's offer, audience, voice
 5. **Generate scripts** — Use appropriate framework (video/carousel/static)
-6. **Save output** — Scripts to `outputs/YYYY-MM-DD-organic-{campaign}/`
+6. **Save output** — Scripts to `campaigns/YYYY-MM-DD-organic-{campaign}/`
 7. **Commit prompt** — "Saved to [path]. Want me to commit this to git?"
 
 **Mining lives in `/mb-think` now.** If user needs to mine competitors, route them there first.
@@ -272,13 +272,13 @@ See [references/organic-frameworks.md](references/organic-frameworks.md) for sof
 
 ## Integration with /mb-think
 
-To save winning angles: route to `/mb-think codify` → `reference/proof/angles/`.
+To save winning angles: route to `/mb-think codify` → `core/proof/angles/`.
 
 ---
 
 ## Content Strategy Integration
 
-If `reference/domain/content-strategy.md` exists, /mb-organic uses it to improve output:
+If `core/content-strategy.md` exists, /mb-organic uses it to improve output:
 
 - **Pillar alignment:** Suggest topics from defined pillars when user has no specific concept
 - **Platform format:** Default to the format matching the target platform from platform strategy

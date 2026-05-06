@@ -39,13 +39,13 @@ When checking section markers, search for these headings (case-insensitive). The
 
 ### How to Score
 
-**CRITICAL: Use absolute paths for ALL file reads and searches.** The repo path from Step 2 is an absolute path (e.g., `/Users/devon/Documents/GitHub/my-business`). Always use it — never use `~` or relative paths. The Glob and Read tools do not expand `~`, so `~/Documents/GitHub/repo/reference/proof` will silently return 0 results even when files exist.
+**CRITICAL: Use absolute paths for ALL file reads and searches.** The repo path from Step 2 is an absolute path (e.g., `/Users/devon/Documents/GitHub/my-business`). Always use it — never use `~` or relative paths. The Glob and Read tools do not expand `~`, so `~/Documents/GitHub/repo/core/proof` will silently return 0 results even when files exist.
 
 1. **Read each file** with the Read tool using the absolute repo path (e.g., `[repo-path]/core/soul.md`). If the read fails or returns empty, score 0.
 2. **Count lines** for the primary threshold check.
 3. **Check for section markers** (case-insensitive grep for key headings from the table above) as a quality override -- a 25-line soul.md with a "Beliefs" section shows intentional work and scores 2, not 1. Use specific markers to identify exactly what's missing.
-4. **For testimonials:** Read `[repo-path]/reference/proof/testimonials.md`. Count occurrences of `###` or `**"` patterns (each indicates one testimonial).
-5. **For angles:** Glob `[repo-path]/reference/proof/angles/*.md` to count files, excluding `README.md`.
+4. **For testimonials:** Read `[repo-path]/core/proof/testimonials.md`. Count occurrences of `###` or `**"` patterns (each indicates one testimonial).
+5. **For angles:** Glob `[repo-path]/core/proof/angles/*.md` to count files, excluding `README.md`.
 
 ### Multi-Offer Scoring
 
@@ -56,7 +56,7 @@ When `.vip/local.yaml` has `current_offer` set:
    - Check `core/offers/[current_offer]/offer.md` first. If it exists, score it.
    - If it does not exist, score `core/offer.md`.
    - Same for `audience.md`.
-3. Testimonials and angles: check both `reference/proof/` (brand-level) and `core/offers/[current_offer]/` if offer-specific proof exists.
+3. Testimonials and angles: check both `core/proof/` (brand-level) and `core/offers/[current_offer]/` if offer-specific proof exists.
 
 Legacy fallback: if the repo has no `core/`, read `reference/core/` and
 `reference/offers/`. In current repos those paths are compatibility bridges to
@@ -127,7 +127,7 @@ Do not nag. Some research is exploratory and never needs a decision. This is inf
 
 ```bash
 # Does content-strategy.md exist and have substance?
-wc -l reference/domain/content-strategy.md 2>/dev/null
+wc -l core/content-strategy.md 2>/dev/null
 ```
 
 If missing or <10 lines, note it -- but only for businesses that would benefit (community, coaching, content-driven). Not relevant for pure e-commerce.
@@ -163,7 +163,7 @@ Flag any core file not modified in 30+ days. Not a score penalty — an observat
 ### Check C: Angle Count Mismatch (1 call)
 
 ```bash
-ls [repo-path]/reference/proof/angles/*.md 2>/dev/null
+ls [repo-path]/core/proof/angles/*.md 2>/dev/null
 ```
 
 Compare actual .md file count (excluding README.md) against angles README if it exists. Flag if counts differ.

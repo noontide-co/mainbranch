@@ -11,7 +11,7 @@ How to track ongoing work across sessions. Pick one approach and commit.
 The system is designed so valuable outputs become files:
 - Insight? → `research/`
 - Decision? → `decisions/`
-- Truth changed? → `reference/`
+- Truth changed? → `core/`
 
 When you do this, conversations become disposable. The value lives in files.
 
@@ -48,7 +48,7 @@ status: proposed  # ← This is your progress indicator
 
 Reference files affected:
 - `core/offer.md` — update pricing section with new tier structure
-- `reference/proof/angles/` — create new value-stack angle
+- `core/proof/angles/` — create new value-stack angle
 
 Outside reference:
 - Set up Stripe tiers

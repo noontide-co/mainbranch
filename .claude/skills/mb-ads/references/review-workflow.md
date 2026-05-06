@@ -5,7 +5,7 @@
 Before reviewing, commit current state to preserve the original:
 
 ```bash
-git add outputs/YYYY-MM-DD-{type}-{campaign}/
+git add campaigns/YYYY-MM-DD-{type}-{campaign}/
 git commit -m "[output] {type} batch pre-review"
 ```
 
@@ -118,7 +118,7 @@ For each P2/P3 issue:
 2. Run the gate in dry-run mode:
 
    ```bash
-   python -m mb.ads_compliance_gate outputs/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md outputs/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json
+   python -m mb.ads_compliance_gate campaigns/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md campaigns/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json
    ```
 
 3. Show the resulting diff to the user.
@@ -126,7 +126,7 @@ For each P2/P3 issue:
 5. Only if the user says yes, run:
 
    ```bash
-   python -m mb.ads_compliance_gate outputs/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md outputs/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json --approve --review-log outputs/YYYY-MM-DD-{type}-{campaign}/review-log.md
+   python -m mb.ads_compliance_gate campaigns/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md campaigns/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json --approve --review-log campaigns/YYYY-MM-DD-{type}-{campaign}/review-log.md
    ```
 
 If the user says no, stop with the source file unchanged. Do not apply partial edits unless the user gives a narrower approval.
@@ -162,7 +162,7 @@ For P1 issues:
 After fixes are approved and applied:
 
 ```bash
-git add outputs/YYYY-MM-DD-{type}-{campaign}/
+git add campaigns/YYYY-MM-DD-{type}-{campaign}/
 git commit -m "[review] {type} batch - N fixes applied"
 ```
 
@@ -175,8 +175,8 @@ git commit -m "[review] {type} batch - N fixes applied"
 - `.claude/reference/compliance/` — Shared compliance frameworks
 
 **From business repo:**
-- `reference/proof/testimonials.md` — Available testimonials for substantiation check
-- `reference/proof/typicality.md` — Outcome data for claim validation
+- `core/proof/testimonials.md` — Available testimonials for substantiation check
+- `core/proof/typicality.md` — Outcome data for claim validation
 - `core/offer.md` — To verify claims match actual offering
 
 ## Quick Review (Single Lens)

@@ -89,8 +89,8 @@ For complex GPT outputs:
 | Offer details, pricing | core/offer.md |
 | Audience insights | core/audience.md |
 | Voice/tone examples | core/voice.md |
-| Testimonials | reference/proof/testimonials.md |
-| Winning ad copy | reference/proof/angles/ |
+| Testimonials | core/proof/testimonials.md |
+| Winning ad copy | core/proof/angles/ |
 | Strategy discussions | research/ (dated) |
 | Decisions made | decisions/ (dated) |
 

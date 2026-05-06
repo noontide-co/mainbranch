@@ -155,7 +155,7 @@ Usually means:
 
 ### "Can I save winning angles I discover?"
 
-Yes. Route to `/mb-think codify` to add them to `reference/proof/angles/`.
+Yes. Route to `/mb-think codify` to add them to `core/proof/angles/`.
 
 This makes them available for future generations across all skills.
 
@@ -171,7 +171,7 @@ This makes them available for future generations across all skills.
 
 2. /mb-organic video "concept from research"
    → Script generated in your voice
-   → Saved to outputs/
+   → Saved to campaigns/
 
 3. Repeat for carousel, static as needed
 

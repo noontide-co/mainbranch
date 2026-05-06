@@ -153,7 +153,7 @@ Then center-crop to 1:1 in post-processing.
 
 ## Smart Mix Recommendation
 
-Based on `reference/visual-identity/visual-style.md` depth:
+Based on `core/brand/visual-style.md` depth:
 
 | visual-style.md State | Mix |
 |----------------------|-----|
@@ -319,7 +319,7 @@ If retry fails: return status "fail" with error message. Do NOT keep retrying.
 ## Output Structure
 
 ```
-outputs/YYYY-MM-DD-static-ads-{campaign}/
+campaigns/YYYY-MM-DD-static-ads-{campaign}/
 ├── static-ads-batch-001.md        ← Copy (Batch 1)
 ├── proposed-compliance-fixes.json ← Compliance proposals
 ├── review-log.md                  ← Compliance changes after approval

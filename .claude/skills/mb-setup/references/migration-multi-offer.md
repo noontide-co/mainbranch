@@ -33,7 +33,7 @@ If `core/offer.md` exists and no `offers/` folder: this is a migration.
    # (new offer.md will be written in the guide-writing step below)
 
    # Create product-ladder.md
-   mkdir -p reference/domain
+   mkdir -p core/operations
    # (product-ladder.md will be written below)
 
    # Create session state
@@ -51,7 +51,7 @@ If `core/offer.md` exists and no `offers/` folder: this is a migration.
 6. **Write the new offer's `offer.md`:**
    Guide them through the standard offer template for the new offer.
 
-7. **Write `reference/domain/product-ladder.md`:**
+7. **Write `core/product-ladder.md`:**
    > "How do these offers relate? Is there a natural progression?"
 
 8. **Commit atomically:**

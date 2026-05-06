@@ -24,7 +24,7 @@ platform: meta
 ---
 ```
 
-7. **Save Output:** `outputs/YYYY-MM-DD-video-ads-[offer]-{campaign}/video-ads-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
+7. **Save Output:** `campaigns/YYYY-MM-DD-video-ads-[offer]-{campaign}/video-ads-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
 8. Tell user: "Video scripts saved. Running automatic post-generation pipeline..."
 9. Run the **Automatic Post-Generation Pipeline** (see SKILL.md). This handles git commit and compliance review automatically. (No image generation for video scripts.)
 

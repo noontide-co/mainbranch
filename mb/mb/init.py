@@ -21,6 +21,10 @@ from mb.migrate import LATEST_SCHEMA_VERSION, SCHEMA_MARKER
 DATA_FOLDERS = [
     "core",
     "core/offers",
+    "core/proof",
+    "core/brand",
+    "core/strategy",
+    "core/operations",
     "core/finance",
     "research",
     "decisions",
@@ -48,13 +52,6 @@ node_modules/
 .mb/last-status-seen.json
 .mb/issue-drafts/
 """
-
-
-REFERENCE_DIRS = [
-    "reference/proof/angles",
-    "reference/domain",
-    "reference/visual-identity",
-]
 
 
 def _gh_username() -> str:
@@ -91,19 +88,6 @@ def _render(text: str, mapping: dict[str, str]) -> str:
     for key, val in mapping.items():
         out = out.replace("{{" + key + "}}", val)
     return out
-
-
-def _link_or_mkdir(source: Path, dest: Path) -> str:
-    if dest.exists() or dest.is_symlink():
-        return "exists"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        rel_source = os.path.relpath(source, start=dest.parent)
-        dest.symlink_to(rel_source, target_is_directory=True)
-        return "symlink"
-    except OSError:
-        dest.mkdir(parents=True, exist_ok=True)
-        return "directory"
 
 
 def run(path: str, name: str) -> dict[str, Any]:
@@ -144,21 +128,6 @@ def run(path: str, name: str) -> dict[str, Any]:
         if not keep.exists():
             keep.write_text("", encoding="utf-8")
             created.append(f"{sub}/.gitkeep")
-
-    for sub in REFERENCE_DIRS:
-        d = target / sub
-        d.mkdir(parents=True, exist_ok=True)
-        keep = d / ".gitkeep"
-        if not keep.exists():
-            keep.write_text("", encoding="utf-8")
-            created.append(f"{sub}/.gitkeep")
-
-    # Older Claude Code skills may read reference/core and reference/offers.
-    # Keep those paths as compatibility bridges to the CLI's root core tree.
-    for source_name, dest_name in (("core", "reference/core"), ("core/offers", "reference/offers")):
-        mode = _link_or_mkdir(target / source_name, target / dest_name)
-        if mode != "exists":
-            created.append(dest_name + ("/" if mode == "directory" else ""))
 
     marker = target / SCHEMA_MARKER
     marker.parent.mkdir(parents=True, exist_ok=True)
@@ -218,8 +187,13 @@ Your business as files. Claude reads these; you edit them; git remembers them.
 
 ## Folders
 
-- `core/` — the things that don't change often (offer, audience, voice, soul)
+- `core/` — the business brain: offer, audience, voice, soul, proof, brand,
+  strategy, operations, finance
 - `core/offers/` — per-offer specifics
+- `core/proof/` — testimonials, typicality, and reusable proof
+- `core/brand/` — visual identity, voice guardrails, and brand systems
+- `core/strategy/` — strategic context that should remain evergreen
+- `core/operations/` — operating context such as fulfillment, classroom, funnel, or membership notes
 - `core/finance/` — ledger and tax artifacts
 - `research/` — dated notes from when you went looking
 - `decisions/` — dated choices, with rationale
@@ -227,9 +201,6 @@ Your business as files. Claude reads these; you edit them; git remembers them.
 - `log/` — running activity log
 - `campaigns/` — paid + organic campaign work
 - `documents/` — anything that doesn't belong above
-- `reference/` — proof/domain files plus compatibility paths for old readers
-  (`reference/core` points at `core/`; `reference/offers` points at
-  `core/offers/`; edit canonical `core/` paths, not both)
 
 ## Conventions
 

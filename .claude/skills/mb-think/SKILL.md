@@ -106,10 +106,10 @@ your-business-repo/          <- Files saved here
 ├── research/                 <- Research output
 ├── decisions/                <- Decision output
 ├── core/                     <- Brand-level codify updates
-│   └── offers/               <- Per-offer codify updates
-└── reference/                <- Proof/domain files plus compatibility bridges
-    ├── proof/
-    └── domain/
+│   ├── offers/               <- Per-offer codify updates
+│   ├── proof/                <- Testimonials, typicality, angles
+│   ├── brand/                <- Visual identity and brand systems
+│   └── operations/           <- Fulfillment, classroom, funnel, membership notes
 
 mainbranch/ (engine)          <- Never modified
 ```
@@ -203,7 +203,7 @@ On every `/mb-think` invocation, detect state and guide the next step:
 ls -lt research/*.md 2>/dev/null | head -3
 grep -l "status: proposed\|status: accepted" decisions/*.md 2>/dev/null
 # Also check content strategy state
-ls reference/domain/content-strategy.md 2>/dev/null
+ls core/content-strategy.md 2>/dev/null
 ```
 
 | If you find... | Then... |
@@ -317,7 +317,7 @@ See [decide-phase.md](references/decide-phase.md) for format details.
 
 Apply changes described in `## What Changes` to reference files. Mark decision as codified.
 
-**Codify targets include:** `core/*.md`, `core/voice.md` (named enemies section — each content pillar fights a named concept enemy), `core/offers/[active]/offer.md`, `core/offers/[active]/audience.md` (when multi-offer), `reference/proof/angles/*.md` (evolving library — new angles add, never replace), `reference/proof/testimonials.md`, **`reference/domain/content-strategy.md`** (pillars, hooks library, framework library, metrics — saves are #1 purchase intent signal), `reference/domain/funnel/skool-surfaces.md` (live Skool copy — update when about page or pricing changes), `reference/domain/product-ladder.md` (when multi-offer, cross-offer decisions).
+**Codify targets include:** `core/*.md`, `core/voice.md` (named enemies section — each content pillar fights a named concept enemy), `core/offers/[active]/offer.md`, `core/offers/[active]/audience.md` (when multi-offer), `core/proof/angles/*.md` (evolving library — new angles add, never replace), `core/proof/testimonials.md`, **`core/content-strategy.md`** (pillars, hooks library, framework library, metrics — saves are #1 purchase intent signal), `core/operations/funnel/skool-surfaces.md` (live Skool copy — update when about page or pricing changes), `core/product-ladder.md` (when multi-offer, cross-offer decisions).
 
 ---
 
@@ -421,7 +421,7 @@ The repo is a precision instrument. The think cycle exists to filter — not to 
 
 Reference files aren't just documentation. They're how you stay connected to why you do this.
 
-Angles evolve. Each research session may surface a new emotional entry point, a new enemy to name, a new lifestyle aspiration. The angle library in `reference/proof/angles/` is additive — it grows as understanding deepens. Treating angles as locked is an anti-pattern.
+Angles evolve. Each research session may surface a new emotional entry point, a new enemy to name, a new lifestyle aspiration. The angle library in `core/proof/angles/` is additive — it grows as understanding deepens. Treating angles as locked is an anti-pattern.
 
 When AI makes information infinite, curation is the moat. The think cycle is curation in action — filtering signal from noise, codifying what matters, discarding what doesn't. Every reference file update is a curation decision.
 

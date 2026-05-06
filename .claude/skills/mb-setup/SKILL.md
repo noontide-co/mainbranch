@@ -164,23 +164,21 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 - audience.md (who, pains, desires, objections)
 - voice.md (tone, phrases, personality)
 - testimonials.md (3-5 with specific outcomes)
-- domain/ (business-type specific structure)
+- core/operations/ (business-type specific structure)
 
 ### 4. Create Folder Structure
 
 ```bash
 # Always create:
 mkdir -p .vip
-mkdir -p core core/offers core/finance reference/visual-identity reference/proof/angles reference/domain
+mkdir -p core core/offers core/finance core/brand core/proof/angles core/operations
 mkdir -p research decisions bets log campaigns documents
-
-# Compatibility bridges for older skills/tools:
-ln -sfn ../core reference/core
-ln -sfn ../core/offers reference/offers
 ```
 
-Treat `reference/core` and `reference/offers` as aliases, not duplicate files.
-Write user reference content once under `core/` or `core/offers/`.
+Do not create a canonical `reference/` folder in new repos. If an old repo
+already has `reference/core` or `reference/offers`, treat those paths as legacy
+compatibility aliases and write user context once under `core/` or
+`core/offers/`.
 
 **Multi-offer only (if user has multiple offers from Step 2.5):**
 
@@ -196,8 +194,8 @@ echo "current_offer: [first-offer]" > .vip/local.yaml
 # Ensure .vip/local.yaml is git-ignored (session state, not shared)
 grep -q ".vip/local.yaml" .gitignore 2>/dev/null || echo ".vip/local.yaml" >> .gitignore
 
-# Create product-ladder.md placeholder
-mkdir -p reference/domain
+# Create product-ladder.md placeholder at core/product-ladder.md
+touch core/product-ladder.md
 ```
 
 Full structure (single-offer):
@@ -211,21 +209,19 @@ Full structure (single-offer):
 ├── .vip/                  # VIP configuration (git-tracked)
 │   └── config.yaml        # User preferences, infrastructure refs
 │
-├── core/                  # Evergreen brand truth
+├── core/                  # Evergreen business brain
 │   ├── soul.md            # Why you exist
 │   ├── offer.md           # What you sell / brand thesis
 │   ├── audience.md        # Who buys
 │   ├── voice.md           # How you sound
-│   ├── finance/           # Ledger and tax artifacts
-│   └── offers/            # Per-offer specifics when multi-offer
-│
-├── reference/             # Proof/domain files plus compatibility bridges
-│   ├── visual-identity/
+│   ├── content-strategy.md # Content pillars, platforms, cadence
 │   ├── proof/
 │   │   ├── testimonials.md
 │   │   └── angles/        # Proven messaging entry points
-│   └── domain/            # Business-type specific
-│       └── content-strategy.md  # Content pillars, platforms, cadence
+│   ├── brand/             # Visual identity and brand systems
+│   ├── operations/        # Business-type specific operating context
+│   ├── finance/           # Ledger and tax artifacts
+│   └── offers/            # Per-offer specifics when multi-offer
 │
 ├── research/              # Dated investigations
 │   └── YYYY-MM-DD-topic-[source].md
@@ -238,28 +234,21 @@ Full structure (single-offer):
 │
 ├── log/                   # Running activity log
 │
-└── outputs/               # All generated content (lifecycle via frontmatter status)
+└── campaigns/             # Campaign work and generated campaign artifacts
     └── YYYY-MM-DD-batch-name/
 ```
 
-Full structure (multi-offer — adds `offers/` and `product-ladder.md`):
+Full structure (multi-offer — adds offer folders and `product-ladder.md`):
 ```
 {business-name}/
 ├── ...                    # Same as above, plus:
-├── reference/
-│   ├── core/              # Brand-level (shared)
-│   │   ├── soul.md        # ALWAYS core — brand identity
-│   │   ├── offer.md       # Brand thesis (high-level)
-│   │   ├── audience.md    # Shared audience
-│   │   └── voice.md       # ALWAYS core — brand voice
-│   ├── offers/            # Offer-specific overrides
-│   │   ├── community/
-│   │   │   └── offer.md   # Offer-specific details
-│   │   └── course/
-│   │       └── offer.md
-│   └── domain/
-│       ├── product-ladder.md      # How offers relate
-│       └── content-strategy.md
+├── core/
+│   ├── product-ladder.md  # How offers relate
+│   └── offers/            # Offer-specific overrides
+│       ├── community/
+│       │   └── offer.md   # Offer-specific details
+│       └── course/
+│           └── offer.md
 └── .vip/
     ├── config.yaml        # Git-tracked team settings
     └── local.yaml         # Git-IGNORED session state (current_offer)
@@ -288,8 +277,8 @@ See **[references/file-education.md](references/file-education.md)** for the edu
 
 Based on business type, create domain-specific folders:
 
-**E-commerce:** `reference/domain/products/`, `reference/domain/fulfillment/`
-**Community:** `reference/domain/classroom/`, `reference/domain/membership/`, `reference/domain/funnel/`, `reference/domain/content-strategy.md`, `reference/domain/funnel/skool-surfaces.md`
+**E-commerce:** `core/operations/products/`, `core/operations/fulfillment/`
+**Community:** `core/operations/classroom/`, `core/operations/membership/`, `core/operations/funnel/`, `core/content-strategy.md`, `core/operations/funnel/skool-surfaces.md`
 
 See `.claude/reference/domain-rubrics/` in the Main Branch engine for full specifications.
 
@@ -322,8 +311,8 @@ git commit -m "$(cat <<'EOF'
 
 - Created core/ (soul, offer, audience, voice)
 - Created core/offers/ (per-offer specifics)
-- Created reference/proof/ (testimonials, angles)
-- Created reference/domain/ ([domain-type] specific)
+- Created core/proof/ (testimonials, angles)
+- Created core/operations/ ([domain-type] specific)
 - Drafted CLAUDE.md and README.md
 
 Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
@@ -341,14 +330,14 @@ EOF
 | core/voice.md | [OK] Complete / [WARN] Missing [X] |
 | proof/testimonials.md | [OK] Has content / [FAIL] Empty |
 | proof/angles/ | [OK] [N] angles / [WARN] None yet |
-| domain/ | [OK] Populated / [WARN] Needs [X] |
+| core/operations/ | [OK] Populated / [WARN] Needs [X] |
 
 **Multi-offer additional checks (if applicable):**
 
 | File | Status |
 |------|--------|
 | core/offers/[name]/offer.md | [OK] Complete / [WARN] Thin (< 20 lines) / [FAIL] Missing |
-| domain/product-ladder.md | [OK] Complete / [WARN] Placeholder |
+| core/product-ladder.md | [OK] Complete / [WARN] Placeholder |
 | .vip/local.yaml | [OK] Set to [offer] / [FAIL] Missing |
 
 Ask user for missing pieces or note for later.

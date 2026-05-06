@@ -126,13 +126,13 @@ testimonials X/3, angles X/3. Composite X/18.]
 === REFERENCE FILES ===
 
 [Full text of each reference file in core/, core/offers/[active]/ if multi-offer,
-proof/testimonials.md, proof/angles/*.md, domain/content-strategy.md,
-domain/product-ladder.md if multi-offer, domain/funnel/skool-surfaces.md if exists]
+core/proof/testimonials.md, core/proof/angles/*.md, core/content-strategy.md,
+core/product-ladder.md if multi-offer, core/operations/funnel/skool-surfaces.md if exists]
 
 === DOMAIN RUBRIC ===
 
 [The relevant domain rubric from vip: community.md, ecommerce.md, or multi-offer.md.
-Determine which by checking reference/domain/ contents.]
+Determine which by checking core/operations/ contents.]
 
 === REFERENCE FILE CHANGE HISTORY (30 DAYS) ===
 

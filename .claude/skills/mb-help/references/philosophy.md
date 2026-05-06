@@ -89,7 +89,7 @@ The instinct to "save everything" is fear of losing context. That fear is the sy
 **In a good session, value migrates to files:**
 - Insight? → `research/`
 - Decision? → `decisions/`
-- Truth changed? → `reference/`
+- Truth changed? → `core/`
 
 The conversation is scaffolding. The building stands without it.
 

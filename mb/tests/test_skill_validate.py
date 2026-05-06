@@ -179,6 +179,7 @@ def test_skill_validate_warns_on_legacy_reference_paths_without_fallback_context
     assert report is not None
     assert report["ok"] is True
     assert report["summary"]["warnings"] == 1
+    assert "legacy business-repo reference/* path" in report["files"][0]["warnings"][0]
     assert "prefer canonical core/" in report["files"][0]["warnings"][0]
 
 
@@ -220,6 +221,24 @@ def test_skill_validate_warns_on_legacy_reference_paths_in_referenced_markdown(
     )
     assert len(reference_result["warnings"]) == 1
     assert "prefer canonical core/" in reference_result["warnings"][0]
+
+
+def test_skill_validate_warns_on_retired_reference_subfolders(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(
+        tmp_path,
+        "mb-alpha",
+        body="Write new angles to reference/proof/angles/.\n",
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-alpha")
+
+    assert report is not None
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 1
+    assert "legacy business-repo reference/* path" in report["files"][0]["warnings"][0]
 
 
 def test_skill_validate_ignores_reference_paths_inside_code_fences(

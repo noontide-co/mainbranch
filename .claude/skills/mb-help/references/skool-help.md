@@ -9,7 +9,7 @@ If you're running a Skool community, Main Branch has specific support for your b
 When you run `/mb-setup` and select "Community/Skool," your repo gets structured for community-based businesses:
 
 ```
-reference/domain/
+core/operations/
 ├── classroom/       # Course content structure
 ├── membership/      # Tiers, pricing, access levels
 └── funnel/          # How members find and join
@@ -35,7 +35,7 @@ Write Video Sales Letters for your community.
 If you have courses in your Skool classroom, document them in:
 
 ```
-reference/domain/classroom/
+core/operations/classroom/
 ├── courses/
 │   └── [course-name]/
 │       ├── course.md          # Overview
@@ -55,7 +55,7 @@ This structure mirrors Skool's hierarchy: Course → Folder → Page.
 Document your membership structure in:
 
 ```
-reference/domain/membership/
+core/operations/membership/
 ├── tiers.md         # Free, paid, VIP, etc.
 ├── pricing.md       # What each tier costs
 └── access.md        # What each tier gets
@@ -68,7 +68,7 @@ reference/domain/membership/
 How do people find and join your community?
 
 ```
-reference/domain/funnel/
+core/operations/funnel/
 ├── traffic.md       # Where members come from
 ├── landing.md       # Landing page messaging
 └── onboarding.md    # First 7 days experience
@@ -80,7 +80,7 @@ reference/domain/funnel/
 
 ### "How do I sync my classroom content?"
 
-Currently manual. Document your classroom structure in reference/domain/classroom/.
+Currently manual. Document your classroom structure in core/operations/classroom/.
 
 Future: We're building automation to sync classroom content directly.
 
@@ -90,8 +90,8 @@ Claude can draft responses for you to copy-paste into Skool.
 
 ### "How do I use my community content for ads?"
 
-1. Document your best testimonials in reference/proof/testimonials.md
-2. Document winning messaging in reference/proof/angles/
+1. Document your best testimonials in core/proof/testimonials.md
+2. Document winning messaging in core/proof/angles/
 3. Run `/mb-ads static` or `/mb-ads video`
 4. Skills read your community context automatically
 

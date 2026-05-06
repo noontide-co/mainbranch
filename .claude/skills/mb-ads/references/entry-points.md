@@ -130,7 +130,7 @@ User message arrives
 │
 ├─ Execute pipeline:
 │   ├─ Copy/Hooks/Video generation
-│   ├─ Save output to outputs/
+│   ├─ Save output to campaigns/
 │   └─ Post-Gen Pipeline (auto: commit + compliance + images)
 │
 └─ Done (write operations like Duplicate + Swap are on the roadmap)
@@ -143,7 +143,7 @@ User message arrives
 Campaign name is still required before saving output. The entry point doesn't change this -- all output paths include the campaign name:
 
 ```
-outputs/YYYY-MM-DD-{type}-[offer]-{campaign}/
+campaigns/YYYY-MM-DD-{type}-[offer]-{campaign}/
 ```
 
 Where `{type}` maps from the entry point:

@@ -11,22 +11,35 @@ INFO = MigrationInfo(
     name="001_v01_to_v02_path_config",
     from_version="0.1",
     to_version="0.2",
-    description="Move legacy reference/core paths into current core paths.",
+    description="Move legacy reference paths into current core paths.",
 )
 
 CURRENT_DIRS = (
     "core",
     "core/offers",
+    "core/proof",
+    "core/brand",
+    "core/strategy",
+    "core/operations",
     "core/finance",
     "research",
     "decisions",
+    "bets",
     "log",
     "campaigns",
     "documents",
 )
-LEGACY_MOVES = (
+LEGACY_TREE_MOVES = (
     ("reference/core", "core"),
     ("reference/offers", "core/offers"),
+    ("reference/proof", "core/proof"),
+    ("reference/brand", "core/brand"),
+    ("reference/visual-identity", "core/brand"),
+    ("reference/domain", "core/operations"),
+)
+LEGACY_FILE_MOVES = (
+    ("reference/domain/content-strategy.md", "core/content-strategy.md"),
+    ("reference/domain/product-ladder.md", "core/product-ladder.md"),
 )
 IGNORED_METADATA_FILES = {
     ".DS_Store",
@@ -53,6 +66,11 @@ the current v0.2 layout.
 
 - Moved `reference/core/*` into `core/`.
 - Moved `reference/offers/*` into `core/offers/` when present.
+- Moved `reference/proof/*` into `core/proof/`.
+- Moved `reference/brand/*` and `reference/visual-identity/*` into `core/brand/`.
+- Moved brand-level `reference/domain/content-strategy.md` and
+  `reference/domain/product-ladder.md` into `core/`.
+- Moved remaining `reference/domain/*` operating context into `core/operations/`.
 - Kept `reference/core` and `reference/offers` as compatibility links.
 - Added current Main Branch working folders.
 - Wrote `.mb/schema_version`.
@@ -74,13 +92,17 @@ def _bytes_equal(left: Path, right: Path) -> bool:
         return False
 
 
-def _relative_files(root: Path) -> list[Path]:
+def _relative_files(root: Path, *, exclude: set[Path] | None = None) -> list[Path]:
     if not root.exists() or root.is_symlink():
         return []
+    excluded = exclude or set()
     return sorted(
         path
         for path in root.rglob("*")
-        if path.is_file() and not path.is_symlink() and not _is_metadata_file(path)
+        if path.is_file()
+        and not path.is_symlink()
+        and not _is_metadata_file(path)
+        and path.relative_to(root) not in excluded
     )
 
 
@@ -93,6 +115,8 @@ def _plan_move_tree(
     plan: MigrationPlan,
     source_rel: str,
     target_rel: str,
+    *,
+    exclude: set[Path] | None = None,
 ) -> None:
     source_root = repo / source_rel
     target_root = repo / target_rel
@@ -102,7 +126,7 @@ def _plan_move_tree(
         plan.errors.append(f"{source_rel} exists but is not a directory")
         return
 
-    files = _relative_files(source_root)
+    files = _relative_files(source_root, exclude=exclude)
     for source in files:
         rel = source.relative_to(source_root)
         target = target_root / rel
@@ -140,11 +164,32 @@ def _plan_move_tree(
     plan.changes.append(PlannedChange(kind="remove_empty_dir", path=source_rel))
 
 
+def _plan_move_file(repo: Path, plan: MigrationPlan, source_rel: str, target_rel: str) -> None:
+    source = repo / source_rel
+    target = repo / target_rel
+    if not source.exists() or source.is_symlink():
+        return
+    if not source.is_file():
+        plan.errors.append(f"{source_rel} exists but is not a file")
+        return
+    if target.exists():
+        if _bytes_equal(source, target):
+            plan.changes.append(
+                PlannedChange(kind="delete_file", path=source_rel, source=source_rel)
+            )
+            return
+        plan.errors.append(f"{target_rel} already exists with different contents")
+        return
+    plan.changes.append(
+        PlannedChange(kind="move_file", path=target_rel, source=source_rel, target=target_rel)
+    )
+
+
 def _plan_compat_link(repo: Path, plan: MigrationPlan, path_rel: str, target: str) -> None:
     path = repo / path_rel
     if _is_correct_symlink(path, target):
         return
-    if any(path_rel == source for source, _target in LEGACY_MOVES) and path.is_dir():
+    if any(path_rel == source for source, _target in LEGACY_TREE_MOVES) and path.is_dir():
         plan.changes.append(PlannedChange(kind="symlink", path=path_rel, target=target))
         return
     if path.exists() or path.is_symlink():
@@ -159,6 +204,13 @@ def _plan_compat_link(repo: Path, plan: MigrationPlan, path_rel: str, target: st
 def _updated_claude_text(text: str) -> str:
     replacements = (
         ("reference/core/*.md", "core/*.md"),
+        ("reference/domain/content-strategy.md", "core/content-strategy.md"),
+        ("reference/domain/product-ladder.md", "core/product-ladder.md"),
+        ("reference/proof/angles/", "core/proof/angles/"),
+        ("reference/proof/", "core/proof/"),
+        ("reference/visual-identity/", "core/brand/"),
+        ("reference/brand/", "core/brand/"),
+        ("reference/domain/", "core/operations/"),
         ("reference/core/", "core/"),
         ("reference/offers/", "core/offers/"),
         ("reference/core", "core"),
@@ -205,8 +257,16 @@ def plan(repo: Path) -> MigrationPlan:
                 PlannedChange(kind="write_file", path=f"{directory}/.gitkeep", content="")
             )
 
-    for source, target in LEGACY_MOVES:
-        _plan_move_tree(repo, result, source, target)
+    for source, target in LEGACY_FILE_MOVES:
+        _plan_move_file(repo, result, source, target)
+
+    for source, target in LEGACY_TREE_MOVES:
+        exclude = (
+            {Path("content-strategy.md"), Path("product-ladder.md")}
+            if source == "reference/domain"
+            else None
+        )
+        _plan_move_tree(repo, result, source, target, exclude=exclude)
 
     _plan_compat_link(repo, result, "reference/core", "../core")
     _plan_compat_link(repo, result, "reference/offers", "../core/offers")

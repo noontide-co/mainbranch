@@ -100,7 +100,7 @@ linked_decisions: []
 |------|------------------|
 | `core/offer.md` | [What might change] |
 | `core/audience.md` | [What might change] |
-| `reference/proof/angles/` | [What might change] |
+| `core/proof/angles/` | [What might change] |
 
 ### Open Questions
 
@@ -234,7 +234,7 @@ Three-tier pricing with free/paid/premium maximizes reach while creating natural
 |------|------------------|
 | `core/offer.md` | Add tier descriptions, pricing logic |
 | `core/audience.md` | Segment by tier (free seeker vs committed buyer) |
-| `reference/proof/angles/value.md` | Update ROI math for each tier |
+| `core/proof/angles/value.md` | Update ROI math for each tier |
 
 ### Open Questions
 

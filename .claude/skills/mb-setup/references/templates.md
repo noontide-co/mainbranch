@@ -222,7 +222,7 @@ Before shipping copy, ask:
 
 ---
 
-## reference/proof/testimonials.md
+## core/proof/testimonials.md
 
 ```markdown
 ---
@@ -262,7 +262,7 @@ Common words/phrases customers use:
 
 ---
 
-## reference/proof/angles/[angle-name].md
+## core/proof/angles/[angle-name].md
 
 ```markdown
 ---
@@ -297,7 +297,7 @@ status: active
 
 ---
 
-## reference/domain/content-strategy.md
+## core/content-strategy.md
 
 ```markdown
 ---
@@ -593,7 +593,8 @@ ENGINE (mainbranch)     +     DATA (this repo)     =     OUTPUT
 └── Pull updates, don't edit           └── You own this          └── Content
 ```
 
-Skills from the engine read your `reference/` files and generate content to `outputs/`.
+Skills from the engine read your `core/`, `research/`, and `decisions/` files
+and generate campaign work under `campaigns/`.
 
 ---
 

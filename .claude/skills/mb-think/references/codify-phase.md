@@ -170,7 +170,7 @@ legacy fallback when `core/` is absent.
 
 ## Content Strategy Updates
 
-When codifying decisions about content pillars, platform selection, cadence, or content performance, update `reference/domain/content-strategy.md`. Sections to update:
+When codifying decisions about content pillars, platform selection, cadence, or content performance, update `core/content-strategy.md`. Sections to update:
 
 | Decision About | Update Section |
 |----------------|----------------|
@@ -201,7 +201,7 @@ Mining: Competitor content analysis
     → Codify: Add to Framework Library + Hooks Library in content-strategy.md
 ```
 
-If `content-strategy.md` does not exist and the user is codifying content-related decisions, suggest creating it: "This looks like content strategy work. Want to create `reference/domain/content-strategy.md` to store this?" See `mb-setup/references/templates.md` for the template, and `mb-help/references/content-strategy-help.md` for user-facing FAQ.
+If `content-strategy.md` does not exist and the user is codifying content-related decisions, suggest creating it: "This looks like content strategy work. Want to create `core/content-strategy.md` to store this?" See `mb-setup/references/templates.md` for the template, and `mb-help/references/content-strategy-help.md` for user-facing FAQ.
 
 ---
 
@@ -209,9 +209,9 @@ If `content-strategy.md` does not exist and the user is codifying content-relate
 
 When research surfaces a new emotional territory, buyer motivation, or competitive position:
 
-1. Check `reference/proof/angles/` for existing angles
+1. Check `core/proof/angles/` for existing angles
 2. If the new territory is genuinely distinct from existing angles, create a new angle file
-3. Update `reference/proof/angles/README.md` to include the new angle in the library index
+3. Update `core/proof/angles/README.md` to include the new angle in the library index
 4. Note: angles are ADDITIVE. New angles supplement existing ones. Never delete or replace angles unless a decision explicitly retires one.
 
 **Common angle emergence patterns:**
@@ -230,7 +230,7 @@ When research or decisions identify a named enemy:
 2. Add the new enemy with its pillar mapping
 3. Enemies are ALWAYS concepts, never people or companies
 4. Each content pillar should fight one primary enemy
-5. Update `reference/domain/content-strategy.md` pillar descriptions to reference their enemy
+5. Update `core/content-strategy.md` pillar descriptions to reference their enemy
 
 ---
 

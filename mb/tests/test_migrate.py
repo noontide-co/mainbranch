@@ -18,12 +18,39 @@ def _legacy_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "legacy"
     (repo / "reference" / "core").mkdir(parents=True)
     (repo / "reference" / "offers" / "flagship").mkdir(parents=True)
+    (repo / "reference" / "proof" / "angles").mkdir(parents=True)
+    (repo / "reference" / "visual-identity").mkdir(parents=True)
+    (repo / "reference" / "domain" / "funnel").mkdir(parents=True)
     (repo / "research").mkdir()
     (repo / "decisions").mkdir()
     (repo / "reference" / "core" / "offer.md").write_text("# Offer\n", encoding="utf-8")
     (repo / "reference" / "core" / "audience.md").write_text("# Audience\n", encoding="utf-8")
     (repo / "reference" / "offers" / "flagship" / "offer.md").write_text(
         "# Flagship\n",
+        encoding="utf-8",
+    )
+    (repo / "reference" / "proof" / "testimonials.md").write_text(
+        "# Testimonials\n",
+        encoding="utf-8",
+    )
+    (repo / "reference" / "proof" / "angles" / "clarity.md").write_text(
+        "# Clarity\n",
+        encoding="utf-8",
+    )
+    (repo / "reference" / "visual-identity" / "visual-style.md").write_text(
+        "# Visual Style\n",
+        encoding="utf-8",
+    )
+    (repo / "reference" / "domain" / "content-strategy.md").write_text(
+        "# Content Strategy\n",
+        encoding="utf-8",
+    )
+    (repo / "reference" / "domain" / "product-ladder.md").write_text(
+        "# Product Ladder\n",
+        encoding="utf-8",
+    )
+    (repo / "reference" / "domain" / "funnel" / "skool-surfaces.md").write_text(
+        "# Skool Surfaces\n",
         encoding="utf-8",
     )
     (repo / "CLAUDE.md").write_text(
@@ -56,6 +83,13 @@ def test_migrate_check_prints_privacy_safe_summary_when_pending(tmp_path: Path) 
     assert result.exit_code == 1
     assert "pending migration changes:" in result.stdout
     assert "move_file: reference/core/offer.md -> core/offer.md" in result.stdout
+    assert (
+        "move_file: reference/proof/testimonials.md -> core/proof/testimonials.md" in result.stdout
+    )
+    assert (
+        "move_file: reference/domain/content-strategy.md -> core/content-strategy.md"
+        in result.stdout
+    )
     assert "Run `mb migrate --check --diff`" in result.stdout
     assert "--- a/reference/core/offer.md" not in result.stdout
     assert "# Offer" not in result.stdout
@@ -70,6 +104,11 @@ def test_migrate_check_diff_is_explicit(tmp_path: Path) -> None:
     assert "--- a/reference/core/offer.md" in result.stdout
     assert "+++ b/core/offer.md" in result.stdout
     assert "+++ b/core/offers/flagship/offer.md" in result.stdout
+    assert "+++ b/core/proof/testimonials.md" in result.stdout
+    assert "+++ b/core/brand/visual-style.md" in result.stdout
+    assert "+++ b/core/content-strategy.md" in result.stdout
+    assert "+++ b/core/product-ladder.md" in result.stdout
+    assert "+++ b/core/operations/funnel/skool-surfaces.md" in result.stdout
     assert "+++ b/.gitignore" in result.stdout
     assert "+.mb/backups/" in result.stdout
     assert "+++ b/.mb/schema_version" in result.stdout
@@ -142,8 +181,17 @@ def test_migrate_apply_moves_files_backs_up_and_is_idempotent(tmp_path: Path) ->
     assert ".mb/backups/" in (repo / ".gitignore").read_text(encoding="utf-8")
     assert (repo / "core" / "offer.md").read_text(encoding="utf-8") == "# Offer\n"
     assert (repo / "core" / "offers" / "flagship" / "offer.md").exists()
+    assert (repo / "core" / "proof" / "testimonials.md").exists()
+    assert (repo / "core" / "proof" / "angles" / "clarity.md").exists()
+    assert (repo / "core" / "brand" / "visual-style.md").exists()
+    assert (repo / "core" / "content-strategy.md").exists()
+    assert (repo / "core" / "product-ladder.md").exists()
+    assert (repo / "core" / "operations" / "funnel" / "skool-surfaces.md").exists()
     assert (repo / "reference" / "core").is_symlink()
     assert (repo / "reference" / "offers").is_symlink()
+    assert not (repo / "reference" / "proof").exists()
+    assert not (repo / "reference" / "visual-identity").exists()
+    assert not (repo / "reference" / "domain").exists()
     assert "core/*.md" in (repo / "CLAUDE.md").read_text(encoding="utf-8")
     assert (repo / "decisions" / "2026-05-02-mainbranch-v02-path-migration.md").exists()
 

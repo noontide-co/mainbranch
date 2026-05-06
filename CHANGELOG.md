@@ -49,6 +49,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   canonical write paths, with `reference/core` and `reference/offers` only as
   legacy compatibility bridges, and added skill validation warnings for stale
   direct legacy path guidance.
+- Retired committed business-repo `reference/` scaffolding in favor of
+  canonical `core/` subfolders for proof, brand, strategy, and operations;
+  expanded migration and skill validation to treat legacy `reference/*` paths
+  as compatibility-only. Refs #318.
 
 ## [0.3.1] - 2026-05-05
 

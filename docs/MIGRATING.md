@@ -2,11 +2,11 @@
 
 Main Branch has two repo shapes in the wild:
 
-- **Legacy shape:** `reference/core/`, `reference/domain/`, `reference/proof/`,
-  and `outputs/`.
+- **Legacy shape:** `reference/core/`, `reference/domain/`,
+  `reference/proof/`, `reference/visual-identity/`, and `outputs/`.
 - **Current shape:** `core/`, `research/`, `decisions/`, `bets/`, `log/`,
-  `campaigns/`, and `documents/`, with `reference/` kept as a compatibility layer for
-  agent-runtime skills.
+  `campaigns/`, and `documents/`. `reference/` is compatibility-only for old
+  repos and old readers.
 
 Existing repos do not need an urgent file move. The safe path is to update the
 engine first, repair skill discovery, and only migrate file layout on a clean
