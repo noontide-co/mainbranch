@@ -4,7 +4,7 @@ Copy and customize these templates when creating reference files.
 
 ---
 
-## reference/core/offer.md
+## core/offer.md
 
 ```markdown
 ---
@@ -67,7 +67,7 @@ How it works — the unique approach that delivers the transformation:
 
 ---
 
-## reference/core/audience.md
+## core/audience.md
 
 ```markdown
 ---
@@ -151,7 +151,7 @@ Words and phrases they use to describe their problem:
 
 ---
 
-## reference/core/voice.md
+## core/voice.md
 
 ```markdown
 ---

@@ -6,7 +6,7 @@ When an existing user with `core/offer.md` wants to add another offer (detected 
 
 Check for existing single-offer structure:
 ```bash
-ls reference/core/offer.md 2>/dev/null && ! ls reference/offers/*/offer.md 2>/dev/null
+ls core/offer.md 2>/dev/null && ! ls core/offers/*/offer.md 2>/dev/null
 ```
 
 If `core/offer.md` exists and no `offers/` folder: this is a migration.
@@ -25,11 +25,11 @@ If `core/offer.md` exists and no `offers/` folder: this is a migration.
 4. **Execute atomically:**
    ```bash
    # Move existing offer to its own folder
-   mkdir -p "reference/offers/[existing-name]"
-   git mv reference/core/offer.md "reference/offers/[existing-name]/offer.md"
+   mkdir -p "core/offers/[existing-name]"
+   git mv core/offer.md "core/offers/[existing-name]/offer.md"
 
    # Create new offer folder
-   mkdir -p "reference/offers/[new-name]"
+   mkdir -p "core/offers/[new-name]"
    # (new offer.md will be written in the guide-writing step below)
 
    # Create product-ladder.md

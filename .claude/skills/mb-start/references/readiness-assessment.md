@@ -41,7 +41,7 @@ When checking section markers, search for these headings (case-insensitive). The
 
 **CRITICAL: Use absolute paths for ALL file reads and searches.** The repo path from Step 2 is an absolute path (e.g., `/Users/devon/Documents/GitHub/my-business`). Always use it — never use `~` or relative paths. The Glob and Read tools do not expand `~`, so `~/Documents/GitHub/repo/reference/proof` will silently return 0 results even when files exist.
 
-1. **Read each file** with the Read tool using the absolute repo path (e.g., `[repo-path]/reference/core/soul.md`). If the read fails or returns empty, score 0.
+1. **Read each file** with the Read tool using the absolute repo path (e.g., `[repo-path]/core/soul.md`). If the read fails or returns empty, score 0.
 2. **Count lines** for the primary threshold check.
 3. **Check for section markers** (case-insensitive grep for key headings from the table above) as a quality override -- a 25-line soul.md with a "Beliefs" section shows intentional work and scores 2, not 1. Use specific markers to identify exactly what's missing.
 4. **For testimonials:** Read `[repo-path]/reference/proof/testimonials.md`. Count occurrences of `###` or `**"` patterns (each indicates one testimonial).
@@ -51,12 +51,16 @@ When checking section markers, search for these headings (case-insensitive). The
 
 When `.vip/local.yaml` has `current_offer` set:
 
-1. Score `reference/core/soul.md` and `reference/core/voice.md` from core (these are always brand-level).
+1. Score `core/soul.md` and `core/voice.md` from core (these are always brand-level).
 2. For offer and audience, resolve using the canonical path algorithm:
-   - Check `reference/offers/[current_offer]/offer.md` first. If it exists, score it.
-   - If it does not exist, score `reference/core/offer.md`.
+   - Check `core/offers/[current_offer]/offer.md` first. If it exists, score it.
+   - If it does not exist, score `core/offer.md`.
    - Same for `audience.md`.
-3. Testimonials and angles: check both `reference/proof/` (brand-level) and `reference/offers/[current_offer]/` if offer-specific proof exists.
+3. Testimonials and angles: check both `reference/proof/` (brand-level) and `core/offers/[current_offer]/` if offer-specific proof exists.
+
+Legacy fallback: if the repo has no `core/`, read `reference/core/` and
+`reference/offers/`. In current repos those paths are compatibility bridges to
+canonical `core/` paths. Do not score or report them as duplicate files.
 
 ### Composite Score
 
@@ -139,7 +143,7 @@ Lightweight metadata checks that catch common decay without reading full file co
 ### Check A: Frontmatter Status Scan (1 call)
 
 ```bash
-grep -l "status: draft" [repo-path]/reference/core/*.md 2>/dev/null
+grep -l "status: draft" [repo-path]/core/*.md 2>/dev/null
 ```
 
 Flag any file that scored 3/3 structurally but has `status: draft` in frontmatter. Highest-signal check — the user explicitly declared this file unfinished.
@@ -149,7 +153,7 @@ Flag any file that scored 3/3 structurally but has `status: draft` in frontmatte
 ### Check B: Staleness Detection (1 call)
 
 ```bash
-git log --format="%ai" -1 -- [repo-path]/reference/core/soul.md [repo-path]/reference/core/offer.md [repo-path]/reference/core/audience.md [repo-path]/reference/core/voice.md
+git log --format="%ai" -1 -- [repo-path]/core/soul.md [repo-path]/core/offer.md [repo-path]/core/audience.md [repo-path]/core/voice.md
 ```
 
 Flag any core file not modified in 30+ days. Not a score penalty — an observation.
@@ -254,7 +258,7 @@ Modeled on /mb-end's crystallize pattern. For returning users, reconnection at s
 ### When to Trigger
 
 **Trigger conditions (ALL must be true):**
-1. `reference/core/soul.md` exists and has substance (score 2+)
+1. `core/soul.md` exists and has substance (score 2+)
 2. Last commit was >3 days ago (returning after absence)
 3. This is not the user's first session ever (config exists with `user.name`)
 
@@ -273,7 +277,7 @@ git log -1 --format="%ar" 2>/dev/null
 
 ### The Ask
 
-Read `reference/core/soul.md` (first 50 lines is enough to get the WHY). Then ask:
+Read `core/soul.md` (first 50 lines is enough to get the WHY). Then ask:
 
 > "Welcome back. Your last session was [N] days ago.
 >

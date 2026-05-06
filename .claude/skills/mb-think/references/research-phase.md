@@ -9,11 +9,11 @@ Detailed workflow for research mode in `/mb-think`.
 ## Offer Context Resolution
 
 When researching an offer-specific topic, load:
-- `offers/[active]/offer.md` (if exists) for offer-specific context
+- `core/offers/[active]/offer.md` (if exists) for offer-specific context
 - `core/offer.md` for brand-level context
 - Both may be relevant — offer-specific for details, core for brand positioning
 
-Check `.vip/local.yaml` for `current_offer` before starting research. If `reference/offers/` exists but `current_offer` is not set, ask which offer this research relates to.
+Check `.vip/local.yaml` for `current_offer` before starting research. If `core/offers/` exists but `current_offer` is not set, ask which offer this research relates to. Use legacy `reference/offers/` only when `core/` is absent.
 
 ---
 
@@ -82,7 +82,7 @@ When the user's research topic involves content pillars, platform selection, con
 
 **Research flow for content strategy topics:**
 1. Read existing `reference/domain/content-strategy.md` (if present) to understand current state
-2. Read `reference/core/soul.md` + `offer.md` + `audience.md` for pillar derivation context
+2. Read `core/soul.md` + resolved `offer.md` + resolved `audience.md` for pillar derivation context
 3. Conduct research (web, mining, competitor analysis)
 4. Synthesize into a research file as usual
 5. In the **Implications for Reference Files** section, note which sections of `content-strategy.md` should be updated
@@ -316,7 +316,7 @@ In multi-offer mode, use offer-qualified paths:
 
 | File | Potential Update |
 |------|------------------|
-| `offers/community/offer.md` | Add tier structure, update pricing |
+| `core/offers/community/offer.md` | Add tier structure, update pricing |
 | `core/offer.md` | Update brand-level positioning |
 | `core/audience.md` | Segment by tier |
 | `domain/product-ladder.md` | Update ascension logic |
@@ -325,11 +325,11 @@ In single-offer mode, paths stay standard:
 
 | File | Potential Update |
 |------|------------------|
-| `reference/core/offer.md` | Add tier structure, update pricing |
-| `reference/core/audience.md` | Segment by tier |
+| `core/offer.md` | Add tier structure, update pricing |
+| `core/audience.md` | Segment by tier |
 
 **Bad:** "Update offer.md"
-**Good:** "Update offers/community/offer.md — Add three-tier pricing with benefits per tier"
+**Good:** "Update core/offers/community/offer.md — Add three-tier pricing with benefits per tier"
 
 ### Open Questions
 

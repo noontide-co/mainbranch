@@ -44,7 +44,7 @@ Claude will:
 |------|----------|---------|
 | Research | `research/2026-01-19-topic-claude-code.md` | Dated investigations |
 | Decisions | `decisions/2026-01-19-topic.md` | Choices with rationale |
-| Reference | `reference/core/offer.md` | Evergreen truth skills consume |
+| Reference | `core/offer.md` | Evergreen truth skills consume |
 
 ---
 

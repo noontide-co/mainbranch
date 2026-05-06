@@ -43,7 +43,7 @@ are `missing`, `blocked`, `ready_for_preview`, `ready_for_operator_review`, and
 
 ## CRITICAL: Repo Selection Rules
 
-**CWD-first wins.** If `reference/core/` or `core/` exists in CWD, the user is already in their business repo — no selection needed. Just confirm: "Working in **[repo-name]**."
+**CWD-first wins.** If `core/` or legacy `reference/core/` exists in CWD, the user is already in their business repo — no selection needed. Just confirm: "Working in **[repo-name]**."
 
 **Only ask which repo when CWD is NOT a business repo** (fallback to config). In that case, list ALL validated repos from `recent_repos`:
 
@@ -67,7 +67,7 @@ are `missing`, `blocked`, `ready_for_preview`, `ready_for_operator_review`, and
 **DO NOT skip this question when in fallback mode.** Users have multiple repos. The saved default is a suggestion, not automatic.
 
 **Exceptions (skip selection entirely):**
-- CWD has `reference/core/` or `core/` — user chose their repo by cd'ing into it
+- CWD has `core/` or legacy `reference/core/` — user chose their repo by cd'ing into it
 - User explicitly ran `/mb-start [repo-name]` with a specific path
 
 **After user selects a repo:** If the selected repo is not the current `default_repo`, ask: "Want me to save [repo-name] as your default? (faster startup next time)" If yes, update `default_repo` in `~/.config/vip/local.yaml`.
@@ -90,7 +90,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 ├── Check context level ──────────────→ Fresh? Full load. Heavy? Warn user.
 │
 ├── Detect business repo ─────────────→ CWD-first detection (see Step 2)
-│   ├── CWD has reference/core/ or core/? → This IS the repo. Proceed.
+│   ├── CWD has core/ or legacy reference/core/? → This IS the repo. Proceed.
 │   ├── CWD has .claude/skills/? ─────→ User is in the engine repo (old workflow). Trigger migration.
 │   └── Neither? ────────────────────→ Check config, then ask user.
 │
@@ -207,7 +207,7 @@ The user starts Claude in their business repo. Check CWD first before falling ba
 **Quick gist:**
 
 ```
-1. test -d "reference/core" || test -d "core"  → THIS IS the business repo. Skip to config.
+1. test -d "core" || test -d "reference/core"  → THIS IS the business repo. Skip to config.
 2. test -f ".claude/skills/mb-start/SKILL.md"  → user is in the engine repo; migrate.
 3. Otherwise → fall back to ~/.config/vip/local.yaml.
 ```
@@ -351,8 +351,12 @@ Adapt display to `user.experience` level (beginner = full breakdown, advanced = 
 After loading core context, check for multi-offer:
 
 ```bash
-find "$REPO_PATH/reference/offers" -mindepth 2 -maxdepth 2 -name "offer.md" 2>/dev/null
+find "$REPO_PATH/core/offers" -mindepth 2 -maxdepth 2 -name "offer.md" 2>/dev/null
 ```
+
+If `core/offers` is absent but legacy `reference/offers` exists and `core/` is
+also absent, use `reference/offers` as the fallback. In current repos,
+`reference/offers` is a bridge to `core/offers`, not a separate offer tree.
 
 **If no offers/ folder:** Single-offer mode. Skip to Step 2. Everything reads from `core/`.
 
@@ -377,7 +381,8 @@ Use `readiness`, `onboarding`, `drift.items`, and `ranked_actions` from
 `mb status --json --peek` first. If those sections are unavailable, use this
 fallback check.
 
-Fallback: check `reference/core/*.md`. No folder → `/mb-setup`. If two or more
+Fallback: check `core/*.md`, then legacy `reference/core/*.md` only when
+`core/` is absent. No folder → `/mb-setup`. If two or more
 core files are missing/thin, route to `/mb-think codify`; otherwise route by
 intent. Use [readiness-assessment.md](references/readiness-assessment.md) for
 the exact fallback thresholds.

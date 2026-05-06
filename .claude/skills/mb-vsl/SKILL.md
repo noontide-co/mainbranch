@@ -53,9 +53,15 @@ If unclear, ask: "Is this for a Skool/membership community ($47-$497/month) or a
 Before loading reference files, resolve the active offer:
 
 1. Check `.vip/local.yaml` for `current_offer`
-2. If set: load `reference/offers/[current_offer]/offer.md` as the active offer
-3. If not set AND `reference/offers/` exists: ask which offer
-4. If no `offers/` folder: use `reference/core/offer.md` (single-offer, backward compatible)
+2. If set: load `core/offers/[current_offer]/offer.md` as the active offer
+3. If not set AND `core/offers/` exists: ask which offer
+4. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
+5. Legacy fallback: if the repo does not have `core/`, read the old
+   `reference/core/` and `reference/offers/` paths.
+
+In current repos, `reference/core` and `reference/offers` are compatibility
+bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
+files, and write once to the canonical `core/` path.
 
 **Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
 **Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
@@ -70,9 +76,9 @@ If offer specified, overrides session `current_offer` for this run. If the activ
 
 | File | Path | Purpose |
 |------|------|---------|
-| Offer | `offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | What you sell, price, inclusions, guarantee |
-| Audience | `offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Who buys, their pains, objections |
-| Testimonials | `reference/proof/testimonials.md` + `offers/[active]/testimonials.md` (accumulate) | Success stories with specifics |
+| Offer | `core/offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | What you sell, price, inclusions, guarantee |
+| Audience | `core/offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Who buys, their pains, objections |
+| Testimonials | `reference/proof/testimonials.md` + `core/offers/[active]/testimonials.md` (accumulate) | Success stories with specifics |
 | Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | Live Skool about page + pricing copy (congruence) |
 
 **If missing:** Ask user to provide or run `/mb-think` first.

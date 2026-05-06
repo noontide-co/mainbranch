@@ -106,7 +106,7 @@ Website (Next.js): check `globals.css` for correct CSS variable names. Check `la
 
 ### "Reference files not found"
 
-Check `~/.mainbranch/sites.json` — the `business_repo` path must point to your business repo with `reference/core/` files (or `reference/offers/<active>/` for multi-offer setups).
+Check `~/.mainbranch/sites.json` — the `business_repo` path must point to your business repo with `core/` files (or `core/offers/<active>/` for multi-offer setups). Legacy `reference/core` and `reference/offers` paths are only compatibility bridges to those canonical folders.
 
 ### Site looks generic / like AI
 

@@ -25,7 +25,7 @@ reference/
     └── content-strategy.md
 ```
 
-It lives in `reference/domain/`, not `reference/core/`. Core files (soul, offer, audience, voice) are required for every business. Content strategy is domain-level -- it emerges over time through `/mb-think` cycles, not at setup.
+It lives in `reference/domain/`, not `core/`. Core files (soul, offer, audience, voice) are required for every business. Content strategy is domain-level -- it emerges over time through `/mb-think` cycles, not at setup.
 
 **Why domain and not core?** You need to have your core reference solid before a content strategy makes sense. You also need some real content experience (what platforms you like, what topics land, what hooks work) before you can codify a strategy. It is emergent, not foundational.
 

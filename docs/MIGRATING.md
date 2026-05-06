@@ -294,7 +294,13 @@ Current Main Branch commands understand that legacy shape:
 - `mb status` counts `reference/core/`.
 - `mb start` treats a repo with `reference/core/`, `research/`, and
   `decisions/` as a business repo.
-- Claude Code skills still read compatibility paths under `reference/`.
+- Claude Code skills can read compatibility paths under `reference/` when
+  `core/` is absent.
+
+After migration, `reference/core` and `reference/offers` are compatibility
+links back to `core/` and `core/offers/`. They are not duplicate files. Agents
+should write once to the canonical `core/` or `core/offers/` path and should
+not ask users to edit both a canonical path and its `reference/` bridge.
 
 The only thing legacy users usually need immediately is:
 
@@ -358,6 +364,9 @@ moves legacy core files into `core/`, moves legacy offer files into
 `core/offers/`, leaves compatibility links under `reference/`, updates stale
 `CLAUDE.md` path references, writes a migration decision artifact, and stamps
 `.mb/schema_version`.
+
+Those compatibility links exist so older readers keep working. Current skills
+and agents should treat `core/` and `core/offers/` as the write targets.
 
 After apply, `mb validate` may still report old frontmatter schema debt in
 research and decision files. That means the layout migration worked but older

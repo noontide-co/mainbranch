@@ -153,7 +153,7 @@ def run(path: str, name: str) -> dict[str, Any]:
             keep.write_text("", encoding="utf-8")
             created.append(f"{sub}/.gitkeep")
 
-    # Current Claude Code skills read reference/core and reference/offers.
+    # Older Claude Code skills may read reference/core and reference/offers.
     # Keep those paths as compatibility bridges to the CLI's root core tree.
     for source_name, dest_name in (("core", "reference/core"), ("core/offers", "reference/offers")):
         mode = _link_or_mkdir(target / source_name, target / dest_name)
@@ -227,8 +227,9 @@ Your business as files. Claude reads these; you edit them; git remembers them.
 - `log/` — running activity log
 - `campaigns/` — paid + organic campaign work
 - `documents/` — anything that doesn't belong above
-- `reference/` — compatibility paths Claude Code skills read from
-  (`reference/core` points at `core/`)
+- `reference/` — proof/domain files plus compatibility paths for old readers
+  (`reference/core` points at `core/`; `reference/offers` points at
+  `core/offers/`; edit canonical `core/` paths, not both)
 
 ## Conventions
 

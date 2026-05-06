@@ -43,7 +43,7 @@ All templates follow the same JSON structure. Placeholders are filled at generat
 
 | Placeholder | Source |
 |-------------|--------|
-| `{{brand_name}}` | `reference/core/offer.md` → business name |
+| `{{brand_name}}` | `core/offer.md` -> business name |
 | `{{campaign_name}}` | User input at triage |
 | `{{angle_name}}` | Selected angle from Batch 1 |
 | `{{template_type}}` | graphic, lofi, interrupt, or textoverlay |

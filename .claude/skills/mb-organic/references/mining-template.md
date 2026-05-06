@@ -230,8 +230,8 @@ Most effective hook types observed:
 | File | Potential Update |
 |------|------------------|
 | reference/proof/angles/*.md | [New angles discovered — create or update angle files] |
-| reference/core/voice.md | [Voice patterns to adopt/avoid] |
-| reference/core/audience.md | [New understanding of what resonates with them] |
+| core/voice.md | [Voice patterns to adopt/avoid] |
+| core/audience.md | [New understanding of what resonates with them] |
 | reference/visual-identity/guardrails.md | [Patterns to avoid, anti-patterns spotted] |
 
 ### Before You Generate: Update Reference First

@@ -41,9 +41,12 @@ Score each file 0-3 based on line count + section presence.
 Use canonical path resolution for offer and audience files (multi-offer aware):
 
 1. Check `.vip/local.yaml` for `current_offer`
-2. If `current_offer` is set and `offers/{current_offer}/offer.md` exists, score that file
-3. Otherwise fall back to `reference/core/offer.md`
+2. If `current_offer` is set and `core/offers/{current_offer}/offer.md` exists, score that file
+3. Otherwise fall back to `core/offer.md`
 4. Same resolution for `audience.md`
+5. Legacy fallback: if `core/` is absent, read old `reference/core/` and
+   `reference/offers/` paths. In current repos, those are compatibility bridges
+   to canonical `core/` paths, not duplicate files.
 
 See `docs/system-architecture.md` (Canonical Path Resolution) for the full algorithm.
 
@@ -51,7 +54,7 @@ See `docs/system-architecture.md` (Canonical Path Resolution) for the full algor
 |------|-------------|--------|
 | `offer.md` (resolved) | Price, mechanism, benefits, guarantee | Required |
 | `audience.md` (resolved) | Pains, desires, demographics, psychographics | Required |
-| `reference/core/voice.md` | Tone, phrases, personality, don'ts | Required |
+| `core/voice.md` | Tone, phrases, personality, don'ts | Required |
 | `reference/proof/testimonials.md` | Named testimonials with outcomes | Required |
 | `reference/proof/angles/` | At least 1 angle file beyond README | Required |
 | `reference/visual-identity/visual-style.md` | Colors, typography, mood, prompt fragments | Optional (affects image gen) |

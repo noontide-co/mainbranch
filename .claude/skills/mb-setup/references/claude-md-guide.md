@@ -93,7 +93,7 @@ This repo contains your **business data**. It's powered by **Main Branch** (the 
 - [Characteristic 1]
 - [Characteristic 2]
 
-**Full profile:** `reference/core/audience.md`
+**Full profile:** `core/audience.md`
 
 ---
 
@@ -105,7 +105,7 @@ This repo contains your **business data**. It's powered by **Main Branch** (the 
 - "[Phrase 1]"
 - "[Phrase 2]"
 
-**Full system:** `reference/core/voice.md`
+**Full system:** `core/voice.md`
 
 ---
 
@@ -123,7 +123,7 @@ This repo contains your **business data**. It's powered by **Main Branch** (the 
 | Tier | What | When Loaded |
 |------|------|-------------|
 | **Always** | This CLAUDE.md | Every session |
-| **Core** | reference/core/*.md | When generating content |
+| **Core** | core/*.md | When generating content |
 | **On-demand** | research/, decisions/ | When reasoning about choices |
 | **Deep reference** | reference/visual-identity/, reference/proof/ | When writing copy |
 | **Domain** | reference/domain/ | When business-type matters |
@@ -172,7 +172,7 @@ CLAUDE.md is **Tier 1** — always loaded, so keep it lean.
 
 Pattern:
 1. **Summary in CLAUDE.md** — Quick reference
-2. **Pointer to full file** — "Full system: `reference/core/voice.md`"
+2. **Pointer to full file** — "Full system: `core/voice.md`"
 3. **Claude loads on-demand** — When actually needed
 
 Example:
@@ -182,7 +182,7 @@ Example:
 **Tone:** Calm, grounded, never preachy
 **Key phrases:** "Wearable notes to self", "Stay awake. Stay happy."
 
-**Full system:** `reference/core/voice.md`
+**Full system:** `core/voice.md`
 ```
 
 ---

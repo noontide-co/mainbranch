@@ -88,8 +88,8 @@ When `current_offer` is set (multi-offer mode), audit offer-specific files first
 
 | File | Status | Gaps |
 |------|--------|------|
-| offers/[active]/offer.md | Good | - |
-| offers/[active]/audience.md | Thin | Missing objections |
+| core/offers/[active]/offer.md | Good | - |
+| core/offers/[active]/audience.md | Thin | Missing objections |
 | core/offer.md (brand-level) | Good | - |
 | core/audience.md (brand-level) | Good | - |
 | core/voice.md | Empty | Needs everything |
@@ -150,7 +150,7 @@ After codifying, show summary. Use offer-qualified paths when in multi-offer mod
 
 | File | Changes |
 |------|---------|
-| offers/community/offer.md | Added three-tier pricing section |
+| core/offers/community/offer.md | Added three-tier pricing section |
 | core/offer.md | Updated brand thesis to reflect multi-tier positioning |
 | core/voice.md | Added 5 phrases, 3 personality markers |
 | proof/testimonials.md | Added 3 new testimonials |
@@ -158,7 +158,13 @@ After codifying, show summary. Use offer-qualified paths when in multi-offer mod
 **Still missing:** [anything not addressed]
 ```
 
-**Target resolution:** When `current_offer` is set, offer-specific changes go to `offers/[active]/`. Brand-level changes go to `core/`. If unsure whether a change is offer-specific or brand-level, ask the user.
+**Target resolution:** When `current_offer` is set, offer-specific changes go to `core/offers/[active]/`. Brand-level changes go to `core/`. If unsure whether a change is offer-specific or brand-level, ask the user.
+
+**Compatibility bridges:** In current repos, `reference/core` points at
+`core/` and `reference/offers` points at `core/offers/`. These are aliases for
+older skill paths, not duplicate files. Write once to the canonical `core/` or
+`core/offers/` target. Only use `reference/core/` or `reference/offers/` as a
+legacy fallback when `core/` is absent.
 
 ---
 
@@ -220,7 +226,7 @@ When research surfaces a new emotional territory, buyer motivation, or competiti
 
 When research or decisions identify a named enemy:
 
-1. Check `reference/core/voice.md` for existing Named Enemies section
+1. Check `core/voice.md` for existing Named Enemies section
 2. Add the new enemy with its pillar mapping
 3. Enemies are ALWAYS concepts, never people or companies
 4. Each content pillar should fight one primary enemy

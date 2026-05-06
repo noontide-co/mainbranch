@@ -8,9 +8,9 @@ Before running `/mb-organic`, you need three core reference files. This guide he
 
 | File | Purpose | Minimum |
 |------|---------|---------|
-| `reference/core/voice.md` | How you sound on camera | 1 paragraph |
-| `reference/core/audience.md` | Who watches your content | 2-3 sentences |
-| `reference/core/offer.md` | What you do/sell | 1 sentence |
+| `core/voice.md` | How you sound on camera | 1 paragraph |
+| `core/audience.md` | Who watches your content | 2-3 sentences |
+| `core/offer.md` | What you do/sell | 1 sentence |
 
 **Don't have these?** Run `/mb-setup` first, or create them manually below.
 
@@ -151,3 +151,6 @@ Once you have the three core files:
 3. Want to research competitors first? Run `/mb-think` -- mining saves to `research/`, then `/mb-organic` generates from it
 
 The skill will guide you from there.
+If the repo has no `core/` folder, use legacy `reference/core/` as a temporary
+read fallback until the repo is migrated. In current repos, `reference/core` is
+a compatibility bridge to `core/`, not a second file to edit.

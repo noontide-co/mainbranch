@@ -65,9 +65,16 @@ For the full mining methodology (Visual/Audible/Emotional framework, AI capabili
 Before loading reference files, resolve the active offer:
 
 1. Check `.vip/local.yaml` for `current_offer`
-2. If set: load `reference/offers/[current_offer]/offer.md` as the active offer
-3. If not set AND `reference/offers/` exists: ask which offer
-4. If no `offers/` folder: use `reference/core/offer.md` (single-offer, backward compatible)
+2. If set: load `core/offers/[current_offer]/offer.md` as the active offer
+3. If not set AND `core/offers/` exists: ask which offer
+4. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
+5. Legacy fallback: if the repo does not have `core/`, read the old
+   `reference/core/` and `reference/offers/` paths.
+
+In current repos, `reference/core` and `reference/offers` are compatibility
+bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
+files. Read through them only as fallback, and write once to the canonical
+`core/` path when reference updates are needed.
 
 **Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
 **Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
@@ -80,13 +87,13 @@ If offer specified, overrides session `current_offer` for this run.
 
 ## First-Time Setup
 
-Requires `reference/core/voice.md` (always core), plus resolved `offer.md` and `audience.md` (offer-aware — checks `offers/[active]/` first, falls back to `core/`).
+Requires `core/voice.md` (always core), plus resolved `offer.md` and `audience.md` (offer-aware — checks `core/offers/[active]/` first, falls back to `core/`).
 
 **Optional but recommended:** `reference/domain/content-strategy.md` — If present, /mb-organic reads content pillars to align generated content and platform strategy for format selection. Note that `content-strategy.md` is brand-level, but content can be offer-specific. Works perfectly without it.
 
 **Congruence check:** If `reference/domain/funnel/skool-surfaces.md` exists, read it. Organic content should echo the same positioning and claims visible on the Skool about page and pricing cards. No contradictions between organic and the landing experience.
 
-**CWD-first:** If `reference/core/` exists in CWD, you're already in the business repo. Otherwise, run `mb status --json --peek` and use its repo/readiness facts if available. If status cannot identify a repo, ask the user or run `/mb-setup`.
+**CWD-first:** If `core/` or legacy `reference/core/` exists in CWD, you're already in the business repo. Otherwise, run `mb status --json --peek` and use its repo/readiness facts if available. If status cannot identify a repo, ask the user or run `/mb-setup`.
 
 Missing files? See [references/first-time-setup.md](references/first-time-setup.md).
 
@@ -255,7 +262,7 @@ See [references/static-template.md](references/static-template.md).
 
 ## Voice Adaptation
 
-Read `reference/core/voice.md`. Match tone, use their vocabulary, avoid their "never say" list.
+Read `core/voice.md` (or legacy `reference/core/voice.md` only when `core/` is absent). Match tone, use their vocabulary, avoid their "never say" list.
 
 **Authenticity:** Sounds like creator (not copywriter). Uses contractions. Matches energy. No AI tells ("dive into", "unlock", "game-changer").
 

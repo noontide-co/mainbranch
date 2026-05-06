@@ -125,7 +125,7 @@ testimonials X/3, angles X/3. Composite X/18.]
 
 === REFERENCE FILES ===
 
-[Full text of each reference file in core/, offers/[active]/ if multi-offer,
+[Full text of each reference file in core/, core/offers/[active]/ if multi-offer,
 proof/testimonials.md, proof/angles/*.md, domain/content-strategy.md,
 domain/product-ladder.md if multi-offer, domain/funnel/skool-surfaces.md if exists]
 

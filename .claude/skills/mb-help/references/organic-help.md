@@ -10,9 +10,9 @@ Before using `/mb-organic`, you need three files in your business repo:
 
 | File | What It Contains |
 |------|------------------|
-| `reference/core/voice.md` | How you sound on camera |
-| `reference/core/audience.md` | Who watches your content |
-| `reference/core/offer.md` | What you do/sell |
+| `core/voice.md` | How you sound on camera |
+| `core/audience.md` | Who watches your content |
+| `core/offer.md` | What you do/sell |
 
 **Don't have these?** Run `/mb-setup` first.
 
@@ -59,7 +59,7 @@ The complete generation workflow:
 Generate a Reels/TikTok script:
 - From a concept in your saved research
 - From a topic you provide
-- Applies your voice from `reference/core/voice.md`
+- Applies your voice from `core/voice.md`
 
 ### Carousel: `/mb-organic carousel "topic"`
 
@@ -99,9 +99,9 @@ The skill needs these files in your business repo:
 
 | File | Required? | Purpose |
 |------|-----------|---------|
-| `reference/core/offer.md` | Yes | Context for CTAs |
-| `reference/core/audience.md` | Yes | Who you're creating for |
-| `reference/core/voice.md` | Yes | How you sound on camera |
+| `core/offer.md` | Yes | Context for CTAs |
+| `core/audience.md` | Yes | Who you're creating for |
+| `core/voice.md` | Yes | How you sound on camera |
 | `research/*.md` | No | Saved research from `/mb-think` (competitor mining, content ideas) |
 
 If missing core files, run `/mb-setup` first.
@@ -138,7 +138,7 @@ Same structure. Different words. Your topic.
 
 ### "How is voice applied?"
 
-The skill reads `reference/core/voice.md` and:
+The skill reads `core/voice.md` and:
 - Matches your tone (casual, professional, energetic)
 - Uses your vocabulary
 - Avoids your "never say" phrases
@@ -206,7 +206,7 @@ Mining happens through `/mb-think`, not `/mb-organic`. Each competitor uses ~3-5
 
 ### "Output doesn't sound like me"
 
-Check `reference/core/voice.md`:
+Check `core/voice.md`:
 - Is it detailed enough?
 - Does it have examples of how you talk?
 - Does it list phrases to avoid?

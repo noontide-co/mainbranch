@@ -76,7 +76,7 @@ The skill reads from the business repo and writes to the site repo. These are se
 
 Detect mode at the start of every invocation.
 
-**Business repo mode = plan/create/link.** If CWD has `core/` or `reference/core/`, say:
+**Business repo mode = plan/create/link.** If CWD has `core/` or legacy `reference/core/`, say:
 > "I'm reading business context here and will create or select a site repo."
 
 Use this mode for planning, research, the site brief, offer selection, campaign records, and first site creation.

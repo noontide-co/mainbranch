@@ -29,7 +29,7 @@ If none exist, write: "First crystallize session. No prior outputs."]
 
 === SOUL.MD ===
 
-[Full text of reference/core/soul.md]
+[Full text of core/soul.md]
 
 === CONTENT STRATEGY ===
 

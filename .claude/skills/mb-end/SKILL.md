@@ -55,7 +55,7 @@ A quick `/mb-end` (user says "just commit and close") can be steps 1-3 and 6. Bu
 
 ## Step 1: Find the Business Repo
 
-**CWD-first:** If `reference/core/` exists in CWD, you're already in the business repo — use it. Otherwise, read `~/.config/vip/local.yaml` for `default_repo` as fallback.
+**CWD-first:** If `core/` or legacy `reference/core/` exists in CWD, you're already in the business repo — use it. Otherwise, read `~/.config/vip/local.yaml` for `default_repo` as fallback.
 
 **If no repo found:** Skip to a simple close. No business repo means no git activity to scan.
 
@@ -88,9 +88,9 @@ git diff --name-only --diff-filter=AM HEAD@{6am}..HEAD 2>/dev/null
 | Outputs generated | New files in `outputs/` |
 | Uncommitted changes | `git status --short` output |
 
-**Multi-offer detection (skip if no `offers/` folder — single-offer mode, everything reads from `core/`):** If `reference/offers/` exists, note which offers had files changed:
+**Multi-offer detection (skip if no `core/offers/` folder — single-offer mode, everything reads from `core/`):** If `core/offers/` exists, note which offers had files changed:
 ```bash
-git diff --name-only HEAD@{midnight}..HEAD -- reference/offers/ 2>/dev/null | head -20
+git diff --name-only HEAD@{midnight}..HEAD -- core/offers/ 2>/dev/null | head -20
 ```
 Report: "Offers affected: community, newsletter" (or "Brand-level changes only" if only core/ changed)
 
@@ -194,8 +194,8 @@ Before spawning the agent, read and collect:
 | Today's git summary | From Step 2 output | Always |
 | Today's decision files (full text) | Read each file detected in 5a | Always |
 | Today's research files (full text) | Read each file detected in 5a | Always |
-| Reference file diffs | `git diff HEAD@{6am}..HEAD -- reference/` | If reference changed |
-| `reference/core/soul.md` | Read full file | Always |
+| Reference file diffs | `git diff HEAD@{6am}..HEAD -- core/ reference/` | If reference changed |
+| `core/soul.md` | Read full file | Always |
 | `reference/domain/content-strategy.md` | Read full file | If it exists |
 | Past crystallize outputs | Read `research/*-end-of-day-crystallize.md` | If any exist |
 

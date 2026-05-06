@@ -27,7 +27,7 @@ Present each blurb before writing the corresponding file.
 For multi-offer setups, also explain:
 
 ### offer.md (brand-level)
-> "This is your brand-level offer.md — the umbrella story. It covers what your brand stands for across all offers. Each specific offer gets its own file in `offers/[name]/offer.md` with pricing, mechanism, and details."
+> "This is your brand-level offer.md — the umbrella story. It covers what your brand stands for across all offers. Each specific offer gets its own file in `core/offers/[name]/offer.md` with pricing, mechanism, and details."
 
 ### product-ladder.md
 > "product-ladder.md maps how your offers relate. Which one do people discover first? Where do they go next? This helps us create content and ads that guide people through your world."
@@ -36,10 +36,10 @@ For multi-offer setups, also explain:
 
 ## Priority Order (Single-Offer)
 
-1. `reference/core/soul.md` — Why you exist (reconnection fuel)
-2. `reference/core/offer.md` — What you sell (or brand thesis if multi-offer)
-3. `reference/core/audience.md` — Who buys
-4. `reference/core/voice.md` — How you sound
+1. `core/soul.md` — Why you exist (reconnection fuel)
+2. `core/offer.md` — What you sell (or brand thesis if multi-offer)
+3. `core/audience.md` — Who buys
+4. `core/voice.md` — How you sound
 5. `reference/proof/testimonials.md` — Social proof
 6. `reference/proof/angles/` — Messaging entry points
 7. `reference/visual-identity/visual-style.md` — Visual brand identity (colors, typography, mood, image prompt fragments)
@@ -48,8 +48,8 @@ For multi-offer setups, also explain:
 
 ### Multi-Offer Additional Files (if applicable)
 
-10. `reference/offers/[name]/offer.md` — Offer-specific details for each offer
-11. `reference/offers/[name]/audience.md` — Only if this offer targets a different segment
+10. `core/offers/[name]/offer.md` — Offer-specific details for each offer
+11. `core/offers/[name]/audience.md` — Only if this offer targets a different segment
 12. `reference/domain/product-ladder.md` — How offers relate to each other
 
 > **Note:** content-strategy.md and visual-style.md start as templates and get filled through `/mb-think` cycles. Not required at setup — scaffolded with placeholder sections.

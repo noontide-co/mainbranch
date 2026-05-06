@@ -1,6 +1,10 @@
 # Minimal Voice Template
 
-Copy this template to `reference/core/voice.md` and fill in your details.
+Copy this template to `core/voice.md` and fill in your details.
+
+If this is an old repo without `core/`, `reference/core/voice.md` is the legacy
+fallback. In current repos, `reference/core` points at `core/`; do not maintain
+both paths separately.
 
 ---
 

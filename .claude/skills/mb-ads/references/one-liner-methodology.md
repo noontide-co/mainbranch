@@ -33,7 +33,7 @@ Each is a DIFFERENT reason to buy. Different psychological driver. Different mar
 
 | Mode | How to Detect | What to Pull |
 |------|---------------|--------------|
-| **Has business repo** | Reference files exist | `reference/core/offer.md`, `reference/core/audience.md`, `reference/core/voice.md` (if exists), testimonials |
+| **Has business repo** | Reference files exist | `core/offer.md`, `core/audience.md`, `core/voice.md` (if exists), testimonials |
 | **Alternate structure** | Systems files exist | `systems/01-the-offer.md`, `systems/02-the-customer.md` |
 | **No repo** | Nothing found | Ask user for materials |
 

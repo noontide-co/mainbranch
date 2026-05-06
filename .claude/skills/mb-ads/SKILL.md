@@ -19,7 +19,7 @@ provider checks that `mb` already owns.
 
 **NEVER search the filesystem. NEVER use Explore or Task agents to find repos. NEVER scan ~/Documents/GitHub/.**
 
-**CWD-first:** If `reference/core/` exists in CWD, you're already in the business repo — use it.
+**CWD-first:** If `core/` or legacy `reference/core/` exists in CWD, you're already in the business repo — use it.
 
 If CWD is NOT a business repo:
 
@@ -52,7 +52,7 @@ At the repo path, resolve offer context first (see Offer Context Resolution abov
 ```
 [resolved offer.md]          → 0 (missing), 1 (<20 lines), 2 (20-80), 3 (80+)
 [resolved audience.md]       → same scoring
-reference/core/voice.md      → same scoring
+core/voice.md                → same scoring
 reference/proof/testimonials.md → same scoring
 reference/proof/angles/*.md  → count .md files EXCLUDING README.md: 0=0, 1=1, 2-3=2, 4+=3
 reference/visual-identity/visual-style.md → same scoring (optional)
@@ -232,9 +232,16 @@ These patterns that work in standard ads will get rejected in Employment:
 Before loading reference files, resolve the active offer:
 
 1. Check `.vip/local.yaml` for `current_offer`
-2. If set: load `reference/offers/[current_offer]/offer.md` as the active offer
-3. If not set AND `reference/offers/` exists: ask which offer
-4. If no `offers/` folder: use `reference/core/offer.md` (single-offer, backward compatible)
+2. If set: load `core/offers/[current_offer]/offer.md` as the active offer
+3. If not set AND `core/offers/` exists: ask which offer
+4. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
+5. Legacy fallback: if the repo does not have `core/`, read the old
+   `reference/core/` and `reference/offers/` paths.
+
+In current repos, `reference/core` and `reference/offers` are compatibility
+bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
+files: read through them only as fallback, and never ask the user to update both
+paths.
 
 **Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
 **Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
@@ -251,10 +258,10 @@ Before creating ads, the business repo must have:
 
 | File | Path | Required |
 |------|------|----------|
-| Offer | `offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | Yes |
-| Audience | `offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Yes |
-| Voice | `reference/core/voice.md` (always core) | Yes |
-| Testimonials | `reference/proof/testimonials.md` + `offers/[active]/testimonials.md` (accumulate) | Yes |
+| Offer | `core/offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | Yes |
+| Audience | `core/offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Yes |
+| Voice | `core/voice.md` (always core) | Yes |
+| Testimonials | `reference/proof/testimonials.md` + `core/offers/[active]/testimonials.md` (accumulate) | Yes |
 | Angles | `reference/proof/angles/*.md` | Yes (at least 1) |
 | Visual Style | `reference/visual-identity/visual-style.md` | Optional (affects image gen) |
 | Content Strategy | `reference/domain/content-strategy.md` (always brand-level) | Optional (improves topic selection) |

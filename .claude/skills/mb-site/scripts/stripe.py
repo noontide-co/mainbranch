@@ -340,7 +340,7 @@ def _classify_error(result: StripeResult) -> tuple[StripeErrorCode, str]:
 # ---------------------------------------------------------------------------
 
 # Lowercased slug: alphanumeric + hyphen + underscore. Matches typical offer
-# directory naming under reference/offers/<slug>/.
+# directory naming under core/offers/<slug>/.
 OFFER_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,62}$")
 
 
@@ -476,7 +476,7 @@ def create_payment_link(
             error=StripeError(
                 code="invalid_offer_slug",
                 message=slug_err,
-                suggestion="Use the offer's directory name from reference/offers/.",
+                suggestion="Use the offer's directory name from core/offers/.",
             ),
         )
         sys.exit(emit(env))

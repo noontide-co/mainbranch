@@ -188,7 +188,7 @@ cat ~/.claude/settings.json 2>/dev/null | grep business_repo_path
 
 ## Creating Missing Config
 
-If repo has `reference/core/` but no `.vip/config.yaml`:
+If repo has `core/` or legacy `reference/core/` but no `.vip/config.yaml`:
 
 > "Your repo exists but doesn't have VIP config. Create it?
 > Benefits: faster startups, synced preferences, MCP tracking."
@@ -276,7 +276,7 @@ Users rename folders, move repos, or clone to new locations. Config paths go sta
 **Before presenting ANY repo as a numbered option, verify the path exists:**
 
 ```bash
-test -d "[path]/reference/core" && echo "valid" || echo "invalid"
+if test -d "[path]/core" || test -d "[path]/reference/core"; then echo "valid"; else echo "invalid"; fi
 ```
 
 Never show a dead path. Never load a dead path and show "0/18 EMPTY" for a repo that simply moved.
@@ -286,7 +286,7 @@ Never show a dead path. Never load a dead path and show "0/18 EMPTY" for a repo 
 When a config path is invalid:
 
 1. **Check parent directory** — if the parent exists, the folder was likely renamed
-2. **Scan siblings** — look for `reference/core/` in adjacent folders
+2. **Scan siblings** — look for `core/` or legacy `reference/core/` in adjacent folders
 3. **If match found** — tell the user: "Looks like **[old-name]** moved to **[new-name]**. Updating your config."
 4. **If no match** — silently drop the stale entry from the list
 

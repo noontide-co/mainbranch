@@ -164,6 +164,41 @@ def test_skill_validate_checks_reference_file_links(
     assert "missing-detail.md" in reference_result["errors"][0]
 
 
+def test_skill_validate_warns_on_legacy_reference_paths_without_fallback_context(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(
+        tmp_path,
+        "mb-alpha",
+        body="Read `reference/core/offer.md` before writing.\n",
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-alpha")
+
+    assert report is not None
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 1
+    assert "prefer canonical core/" in report["files"][0]["warnings"][0]
+
+
+def test_skill_validate_allows_legacy_reference_paths_with_fallback_context(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(
+        tmp_path,
+        "mb-alpha",
+        body=("Use `reference/core/offer.md` only as a legacy fallback when `core/` is absent.\n"),
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-alpha")
+
+    assert report is not None
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 0
+
+
 def test_skill_validate_ignores_reference_paths_inside_code_fences(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

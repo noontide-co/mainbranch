@@ -39,7 +39,7 @@ Every variation **MUST** include at least one specific element:
 
 | Mode | How to Detect | What to Pull |
 |------|---------------|--------------|
-| **Has business repo** | Reference files exist | Resolved `offer.md`, resolved `audience.md`, `reference/core/voice.md`, testimonials |
+| **Has business repo** | Reference files exist | Resolved `offer.md`, resolved `audience.md`, `core/voice.md`, testimonials |
 | **No repo** | Nothing found | Ask user for materials |
 
 ---

@@ -47,7 +47,7 @@ status: proposed  # ← This is your progress indicator
 ## What Changes
 
 Reference files affected:
-- `reference/core/offer.md` — update pricing section with new tier structure
+- `core/offer.md` — update pricing section with new tier structure
 - `reference/proof/angles/` — create new value-stack angle
 
 Outside reference:

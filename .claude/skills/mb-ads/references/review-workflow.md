@@ -177,7 +177,7 @@ git commit -m "[review] {type} batch - N fixes applied"
 **From business repo:**
 - `reference/proof/testimonials.md` — Available testimonials for substantiation check
 - `reference/proof/typicality.md` — Outcome data for claim validation
-- `reference/core/offer.md` — To verify claims match actual offering
+- `core/offer.md` — To verify claims match actual offering
 
 ## Quick Review (Single Lens)
 

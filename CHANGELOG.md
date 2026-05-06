@@ -37,6 +37,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   not business repo work to commit.
 - Clarified migration runtime smoke language so agents distinguish slash-command
   discovery and read-only core access from a full `/mb-think` workflow.
+- Updated bundled skill guidance to treat `core/` and `core/offers/` as the
+  canonical write paths, with `reference/core` and `reference/offers` only as
+  legacy compatibility bridges, and added skill validation warnings for stale
+  direct legacy path guidance.
 
 ## [0.3.1] - 2026-05-05
 

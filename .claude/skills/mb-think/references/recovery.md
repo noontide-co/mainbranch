@@ -99,7 +99,7 @@ If the file doesn't exist or `current_offer` is not set, check recent `research/
 
 Confirm with user: "Were you working on [offer]?"
 
-If the repo has `reference/offers/` but no `current_offer` is recoverable, ask before proceeding: "Which offer are you working on?"
+If the repo has `core/offers/` but no `current_offer` is recoverable, ask before proceeding: "Which offer are you working on?" Use legacy `reference/offers/` only when `core/` is absent.
 
 ---
 

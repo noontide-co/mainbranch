@@ -13,7 +13,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 ## Workflow
 
 1. **Triage** — Parse user's question/brain-dump
-2. **Detect business type** — Check `reference/core/*.md` (Skool? Ecommerce?)
+2. **Detect business type** — Check `core/*.md` (Skool? Ecommerce?), with legacy `reference/core/*.md` fallback only if `core/` is absent
 3. **Load reference** — Find topic in references/ table below
 4. **Answer** — Explain "why" not just "what"
 5. **Route** — End with next skill or action
@@ -77,9 +77,9 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | What are subagents? | Claude can spawn parallel agents to research or review simultaneously. You'll see it happen automatically in `/mb-think` (multi-source research) and `/mb-ads review` (6 compliance lenses). Each agent gets its own context window so your main conversation stays clean. |
 | How do I manage context/tokens? | Context management is a skill that develops over time. Your files (research/, decisions/, reference/) survive compaction — only conversation memory compresses. After compaction, help Claude rebuild by pointing it at recent files or running /mb-start. Save insights to research files early — if it's in a file, it's safe. |
 | How do I close a session? | Run `/mb-end`. It summarizes what happened, asks if you have final thoughts, offers a crystallize moment if you made decisions, commits uncommitted work, and says goodbye. Bookend to `/mb-start`. |
-| What is multi-offer? | Multiple products under one brand, one repo. Each offer gets its own `reference/offers/[name]/offer.md`. Soul and voice stay in `core/` because they're brand-level. Use when you sell multiple things (community + newsletter + done-for-you). If you have no `offers/` folder, you're in single-offer mode — everything reads from `core/` and nothing changes. |
+| What is multi-offer? | Multiple products under one brand, one repo. Each offer gets its own `core/offers/[name]/offer.md`. Soul and voice stay in `core/` because they're brand-level. Use when you sell multiple things (community + newsletter + done-for-you). If you have no `core/offers/` folder, you're in single-offer mode — everything reads from `core/` and nothing changes. |
 | How do I switch offers? | Say `/mb-start [offer-name]` or answer when /mb-start prompts. The active offer is stored in `.vip/local.yaml`. |
-| Where do offer files go? | `reference/offers/[name]/offer.md` for offer-specific details. `reference/core/offer.md` stays as the brand-level thesis. |
+| Where do offer files go? | `core/offers/[name]/offer.md` for offer-specific details. `core/offer.md` stays as the brand-level thesis. Legacy `reference/offers` and `reference/core` may point at those folders as compatibility bridges; do not edit both. |
 | What stays in core with multiple offers? | `soul.md` (always), `voice.md` (always), `audience.md` (base, with optional per-offer overrides), `content-strategy.md` (brand-level distribution). |
 | How do I add another offer? | Run `/mb-setup` -- it detects your existing setup and offers a migration path. Or use `/mb-think` to plan the new offer first. |
 | Do I need separate repos for separate businesses? | If they share `soul.md` and `voice.md`, same repo with `offers/`. If they have different identities, different repos. The test: shared soul = shared repo. |

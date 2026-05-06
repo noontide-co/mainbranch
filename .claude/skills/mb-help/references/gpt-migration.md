@@ -86,9 +86,9 @@ For complex GPT outputs:
 
 | GPT Content | Main Branch Location |
 |-------------|---------------------|
-| Offer details, pricing | reference/core/offer.md |
-| Audience insights | reference/core/audience.md |
-| Voice/tone examples | reference/core/voice.md |
+| Offer details, pricing | core/offer.md |
+| Audience insights | core/audience.md |
+| Voice/tone examples | core/voice.md |
 | Testimonials | reference/proof/testimonials.md |
 | Winning ad copy | reference/proof/angles/ |
 | Strategy discussions | research/ (dated) |

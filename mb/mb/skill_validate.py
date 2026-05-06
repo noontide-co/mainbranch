@@ -30,6 +30,24 @@ _BARE_SKILL_REF_RE = re.compile(
     r"(?<![\w./(`-])((?:\.\/)?(?:references|examples|scripts|assets)/[^\s`()\[\]<>,]+)"
 )
 _REFERENCE_ROOTS = ("references", "examples", "scripts", "assets")
+_LEGACY_REFERENCE_PATH_RE = re.compile(r"reference/(?:core|offers)(?:/|`|$)")
+_LEGACY_REFERENCE_ALLOW_TERMS = (
+    "legacy",
+    "fallback",
+    "compatibility",
+    "bridge",
+    "older",
+    "old ",
+    "absent",
+    "points at",
+    "not duplicate",
+    "not a duplicate",
+    "do not edit both",
+    "never ask",
+    "test -d",
+    "read fallback",
+    "temporary",
+)
 
 
 def _clean_reference(raw: str) -> str | None:
@@ -134,6 +152,28 @@ def _check_references(skill_root: Path, source: Path, text: str) -> list[str]:
     return errors
 
 
+def _check_legacy_reference_guidance(text: str) -> list[str]:
+    warnings: list[str] = []
+    in_fence = False
+    lines = text.splitlines()
+    for line_number, line in enumerate(lines, start=1):
+        if line.lstrip().startswith(("```", "~~~")):
+            in_fence = not in_fence
+            continue
+        if in_fence or not _LEGACY_REFERENCE_PATH_RE.search(line):
+            continue
+        context = " ".join(lines[max(0, line_number - 2) : min(len(lines), line_number + 1)])
+        normalized = context.lower()
+        if any(term in normalized for term in _LEGACY_REFERENCE_ALLOW_TERMS):
+            continue
+        warnings.append(
+            f"line {line_number}: legacy reference/core or reference/offers path "
+            "mentioned without compatibility/fallback context; prefer canonical "
+            "core/ or core/offers/ write guidance"
+        )
+    return warnings
+
+
 def _iter_referenced_markdown(skill_root: Path) -> list[Path]:
     roots = [skill_root / "references", skill_root / "examples"]
     return [
@@ -149,7 +189,8 @@ def _validate_skill_at(name: str, skill_root: Path) -> dict[str, Any]:
     skill_file = skill_root / "SKILL.md"
     skill_errors: list[str] = []
     all_errors: list[str] = []
-    warnings: list[str] = []
+    skill_warnings: list[str] = []
+    all_warnings: list[str] = []
     line_count = 0
 
     if not skill_file.is_file():
@@ -164,7 +205,7 @@ def _validate_skill_at(name: str, skill_root: Path) -> dict[str, Any]:
                     "schema": "skill",
                     "ok": False,
                     "errors": skill_errors,
-                    "warnings": warnings,
+                    "warnings": skill_warnings,
                 }
             ],
             "summary": {"errors": len(skill_errors), "warnings": 0, "line_count": 0},
@@ -214,6 +255,8 @@ def _validate_skill_at(name: str, skill_root: Path) -> dict[str, Any]:
         skill_errors.append(f"SKILL.md has {line_count} lines; limit is {MAX_SKILL_LINES}")
 
     skill_errors.extend(_check_references(skill_root, skill_file, text))
+    skill_warnings.extend(_check_legacy_reference_guidance(text))
+    all_warnings.extend(skill_warnings)
     all_errors.extend(skill_errors)
 
     file_result = {
@@ -221,16 +264,18 @@ def _validate_skill_at(name: str, skill_root: Path) -> dict[str, Any]:
         "schema": "skill",
         "ok": not skill_errors,
         "errors": skill_errors,
-        "warnings": warnings,
+        "warnings": skill_warnings,
         "line_count": line_count,
     }
     files = [file_result]
     for referenced_file in _iter_referenced_markdown(skill_root):
+        referenced_text = referenced_file.read_text(encoding="utf-8")
         reference_errors = _check_references(
             skill_root,
             referenced_file,
-            referenced_file.read_text(encoding="utf-8"),
+            referenced_text,
         )
+        reference_warnings = _check_legacy_reference_guidance(referenced_text)
         rel_path = str(referenced_file.relative_to(skill_root))
         all_errors.extend(f"{rel_path}: {error}" for error in reference_errors)
         files.append(
@@ -239,16 +284,21 @@ def _validate_skill_at(name: str, skill_root: Path) -> dict[str, Any]:
                 "schema": "skill-reference",
                 "ok": not reference_errors,
                 "errors": reference_errors,
-                "warnings": [],
+                "warnings": reference_warnings,
             }
         )
+        all_warnings.extend(f"{rel_path}: {warning}" for warning in reference_warnings)
 
     return {
         "ok": not all_errors,
         "name": name,
         "path": str(skill_root),
         "files": files,
-        "summary": {"errors": len(all_errors), "warnings": len(warnings), "line_count": line_count},
+        "summary": {
+            "errors": len(all_errors),
+            "warnings": len(all_warnings),
+            "line_count": line_count,
+        },
     }
 
 

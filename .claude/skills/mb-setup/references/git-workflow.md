@@ -63,7 +63,7 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 ```
 [init] Bootstrap business repo with Main Branch structure
 
-- Created reference/core/ (offer, audience, voice)
+- Created core/ (soul, offer, audience, voice)
 - Created reference/proof/ (testimonials, angles)
 - Created reference/domain/products/
 - Drafted CLAUDE.md and README.md
@@ -135,7 +135,7 @@ EOF
 git add -A
 
 # Stage specific files
-git add reference/core/offer.md reference/core/audience.md
+git add core/offer.md core/audience.md
 
 # Stage by folder
 git add reference/proof/

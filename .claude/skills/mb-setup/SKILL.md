@@ -108,7 +108,7 @@ After business type, determine offer structure:
 
 > "How many distinct products or services do you sell?"
 
-**If one:** "Single offer — clean and simple. All your details go in `reference/core/`. Most people start here."
+**If one:** "Single offer — clean and simple. All your details go in `core/`. Most people start here."
 
 **If multiple:** "Multiple offers under one brand. You share the same soul and voice, but each offer has its own specifics."
 - Ask: "What should we call each offer? Short slugs work best (e.g., 'community', 'newsletter', 'done-for-you')"
@@ -171,16 +171,21 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 ```bash
 # Always create:
 mkdir -p .vip
-mkdir -p reference/core reference/visual-identity reference/proof/angles reference/domain
+mkdir -p core core/offers core/finance reference/visual-identity reference/proof/angles reference/domain
 mkdir -p research decisions bets log campaigns documents
 ```
+
+If the repo needs compatibility bridges for older skills, create
+`reference/core -> ../core` and `reference/offers -> ../core/offers`. Treat
+those as aliases, not duplicate files. Write user reference content once under
+`core/` or `core/offers/`.
 
 **Multi-offer only (if user has multiple offers from Step 2.5):**
 
 ```bash
 # Create offer folders for each offer
 for offer in [offer-names]; do
-  mkdir -p "reference/offers/$offer"
+  mkdir -p "core/offers/$offer"
 done
 
 # Write initial current_offer
@@ -204,12 +209,16 @@ Full structure (single-offer):
 ├── .vip/                  # VIP configuration (git-tracked)
 │   └── config.yaml        # User preferences, infrastructure refs
 │
-├── reference/             # Evergreen truth
-│   ├── core/              # REQUIRED
-│   │   ├── offer.md       # What you sell
-│   │   ├── audience.md    # Who buys
-│   │   └── voice.md       # How you sound
-│   ├── brand/             # Deep brand systems (optional)
+├── core/                  # Evergreen brand truth
+│   ├── soul.md            # Why you exist
+│   ├── offer.md           # What you sell / brand thesis
+│   ├── audience.md        # Who buys
+│   ├── voice.md           # How you sound
+│   ├── finance/           # Ledger and tax artifacts
+│   └── offers/            # Per-offer specifics when multi-offer
+│
+├── reference/             # Proof/domain files plus compatibility bridges
+│   ├── visual-identity/
 │   ├── proof/
 │   │   ├── testimonials.md
 │   │   └── angles/        # Proven messaging entry points
@@ -309,7 +318,8 @@ git add -A
 git commit -m "$(cat <<'EOF'
 [init] Bootstrap business repo with Main Branch structure
 
-- Created reference/core/ (offer, audience, voice)
+- Created core/ (soul, offer, audience, voice)
+- Created core/offers/ (per-offer specifics)
 - Created reference/proof/ (testimonials, angles)
 - Created reference/domain/ ([domain-type] specific)
 - Drafted CLAUDE.md and README.md
@@ -335,7 +345,7 @@ EOF
 
 | File | Status |
 |------|--------|
-| offers/[name]/offer.md | [OK] Complete / [WARN] Thin (< 20 lines) / [FAIL] Missing |
+| core/offers/[name]/offer.md | [OK] Complete / [WARN] Thin (< 20 lines) / [FAIL] Missing |
 | domain/product-ladder.md | [OK] Complete / [WARN] Placeholder |
 | .vip/local.yaml | [OK] Set to [offer] / [FAIL] Missing |
 
@@ -372,7 +382,7 @@ If conversation compacts mid-setup:
 - "You created the folder structure but we haven't sorted content"
 
 **For Claude:** When resuming:
-1. Check if business repo exists (look for `reference/core/`)
+1. Check if business repo exists (look for `core/`, with legacy `reference/core/` fallback)
 2. If exists, check which files are populated vs empty
 3. Resume from the appropriate step based on what's done
 4. Confirm with user: "I see [business-name] with [X] files. Looks like we're at step [N]. Continue?"
