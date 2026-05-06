@@ -456,6 +456,56 @@ def test_connect_test_routes_cloudflare_account_tokens_to_account_endpoint(
     ]
 
 
+def test_connect_test_detects_cloudflare_account_token_prefix(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(
+        app,
+        [
+            "connect",
+            "cloudflare",
+            "--repo",
+            str(repo),
+            "--token",
+            "cfat_secret-token",
+            "--metadata",
+            "account_id=0123456789abcdef0123456789abcdef",
+        ],
+    )
+    calls: list[str] = []
+
+    def fake_http(url: str, headers=None, **kwargs) -> dict[str, Any]:
+        calls.append(url)
+        return {
+            "ok": True,
+            "state": "ready",
+            "summary": "Cloudflare credential validated with provider.",
+            "safe_to_share": True,
+            "upstream": {
+                "endpoint_family": kwargs["endpoint_family"],
+                "http_status": 200,
+                "response_received": True,
+                "error_codes": [],
+                "error_messages": [],
+                "safe_to_share": True,
+            },
+        }
+
+    monkeypatch.setattr(connect_mod, "_http_get_json", fake_http)
+
+    result = runner.invoke(app, ["connect", "test", "cloudflare", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["validation"]["upstream"]["endpoint_family"] == (
+        "cloudflare_account_token_verify"
+    )
+    assert calls == [
+        "https://api.cloudflare.com/client/v4/accounts/0123456789abcdef0123456789abcdef/tokens/verify"
+    ]
+
+
 def test_connect_test_routes_cloudflare_user_tokens_to_user_endpoint(
     tmp_path: Path, monkeypatch
 ) -> None:

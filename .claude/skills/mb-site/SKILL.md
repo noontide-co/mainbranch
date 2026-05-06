@@ -67,7 +67,7 @@ Say `/mb-site` again after compaction, context loss, or switching focus. It relo
      - **connect now:** `printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata token_type=account --metadata account_id=... && mb connect test cloudflare`
      - **continue read-only:** availability checks, naming, brief, and research only; no buy, DNS, Pages, custom-domain, or deploy calls.
      - **skip for now:** record the blocker in the push/site notes and stage a follow-up task.
-   - User API tokens remain supported as a fallback by omitting `token_type=account`; prefer account-scoped tokens for multi-business operators.
+   - `cfat_` account tokens route automatically when `account_id` is present; keep `token_type=account` in examples because it is explicit and works on older `mb` versions. User API tokens remain supported as a fallback by omitting `token_type=account`.
 5. Resolve the active offer and required business context with [`references/site-context.md`](references/site-context.md).
 6. Ask what the operator is building, then load only the shape reference needed next.
 

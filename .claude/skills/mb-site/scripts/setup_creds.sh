@@ -6,6 +6,11 @@
 # ~/.config/vip/env.sh with chmod 600. Idempotent — re-running replaces
 # existing values for these three vars without duplicating lines.
 #
+# This is the legacy env bridge for /mb-site atoms. From the business repo,
+# also run `mb connect cloudflare --token-stdin --metadata token_type=account
+# --metadata account_id=<account-id>` so Main Branch stores provider readiness
+# metadata in .mb/connect.yaml and keeps the secret outside git.
+#
 # Token must have these scopes on the account that owns the /mb-site assets
 # (registrar domains + Pages projects + DNS zones):
 #   Cloudflare Registrar:Edit
@@ -34,6 +39,9 @@ Vars set:  CLOUDFLARE_API_TOKEN, CLOUDFLARE_API_TOKEN_REGISTRAR, CF_ACCOUNT_ID
 
 Existing values for these three vars will be replaced (idempotent).
 Token input is hidden; nothing is echoed back to the terminal.
+
+This script writes the legacy atom env bridge. It does not replace the
+repo-scoped Main Branch connection stored by `mb connect`.
 
 EOF
 
@@ -89,12 +97,16 @@ else
   echo "WARNING: nothing matched after write — file may have unexpected format." >&2
 fi
 
-cat <<'EOF'
+cat <<EOF
 
 Next:
   source ~/.config/vip/env.sh
+  printf '%s' "\$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata token_type=account --metadata account_id=${CF_ACCT}
+  mb connect test cloudflare
   python3 .claude/skills/mb-site/scripts/verify_live.py
 
-Expected: 3/4 → 4/4 once Porkbun keys land. CF auth + zone lookup should
-flip green immediately. Token + account never printed; safe to scroll back.
+`cfat_` account tokens route automatically when account_id metadata is present;
+`token_type=account` stays in the command because it is explicit and works on
+older mb versions. Expected: CF auth + zone lookup should flip green
+immediately. The token is never printed; safe to scroll back.
 EOF

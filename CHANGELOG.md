@@ -42,12 +42,14 @@ repo is not connected yet.
 
 - `mb connect test cloudflare` now supports Cloudflare account-scoped token
   validation via `--metadata token_type=account --metadata account_id=...`
-  while preserving the existing user-token verify path. Failed provider checks
-  include safe upstream diagnostics such as endpoint family, HTTP status, and
-  provider error codes/messages in JSON. Account-token validation falls back to
-  a read-only account probe if Cloudflare returns 404 for the token verify path,
-  so valid credentials are not immediately classified as bad solely because the
-  verify endpoint shape changed. Refs #335.
+  while preserving the existing user-token verify path. `cfat_` account tokens
+  now route to the account-token validation path automatically when
+  `account_id` metadata is present. Failed provider checks include safe
+  upstream diagnostics such as endpoint family, HTTP status, and provider error
+  codes/messages in JSON. Account-token validation falls back to a read-only
+  account probe if Cloudflare returns 404 for the token verify path, so valid
+  credentials are not immediately classified as bad solely because the verify
+  endpoint shape changed. Refs #335.
 - `mb connect` now derives repo-scoped credential identity from stable git
   remote/common-dir facts for new connect metadata before falling back to the
   local path, avoiding separate keychain refs for parallel worktrees of the same
