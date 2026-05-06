@@ -445,7 +445,10 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
     while idx < len(args):
         arg = args[idx]
         if arg == "--help":
-            typer.echo("Usage: mb doctor repair [--repo PATH] [--plan | --apply] [--json]")
+            typer.echo(
+                "Usage: mb doctor repair [--repo PATH] [--plan | --apply] "
+                "[--include-migration] [--json]"
+            )
             typer.echo("")
             typer.echo("Plan or apply guided business-repo reconciliation repairs.")
             raise typer.Exit(0)
@@ -484,12 +487,29 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
         typer.echo(json.dumps(report, indent=2))
     else:
         doctor_mod.render_repair(report)
-    raise typer.Exit(0)
+    raise typer.Exit(0 if report["ok"] else 1)
+
+
+def _doctor_help() -> None:
+    typer.echo("Usage: mb doctor [OPTIONS] [PATH]")
+    typer.echo("")
+    typer.echo("Check the health of a Main Branch repo. Exits 1 on red checks.")
+    typer.echo("")
+    typer.echo("Options:")
+    typer.echo("  --json   Machine-readable output.")
+    typer.echo("  --help   Show this message and exit.")
+    typer.echo("")
+    typer.echo("Repair:")
+    typer.echo("  mb doctor repair [--repo PATH] [--plan | --apply] [--include-migration] [--json]")
 
 
 @app.command(
     "doctor",
-    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+    context_settings={
+        "allow_extra_args": True,
+        "ignore_unknown_options": True,
+        "help_option_names": [],
+    },
 )
 def doctor_cmd(
     ctx: typer.Context,
@@ -497,8 +517,18 @@ def doctor_cmd(
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Check the health of a Main Branch repo. Exits 1 on red checks."""
+    if path == "--help":
+        _doctor_help()
+        raise typer.Exit(0)
     if path == "repair":
         _doctor_repair_from_args(list(ctx.args), json_out=json_out)
+        return
+    if path.startswith("-"):
+        typer.echo(f"mb doctor: unknown option {path}", err=True)
+        raise typer.Exit(2)
+    if ctx.args:
+        typer.echo(f"mb doctor: unknown option(s): {' '.join(ctx.args)}", err=True)
+        raise typer.Exit(2)
     report = doctor_mod.run(path=path)
     if json_out:
         typer.echo(json.dumps(report, indent=2))

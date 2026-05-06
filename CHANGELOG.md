@@ -15,6 +15,7 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 - Added `mb doctor repair --plan/--apply` as a guided repo reconciliation
   surface with read-only planning, JSON output, safe wiring/local-state repairs,
+  optional `--include-migration` migration apply after preview review,
   validation and graph summaries, git review guidance, and explicit runtime
   smoke reminders. Refs #314.
 

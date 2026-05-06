@@ -496,13 +496,22 @@ def _legacy_claude_symlinks(repo: Path) -> dict[str, Any]:
             target_text = str(target)
             target_parts = {part.lower() for part in Path(target_text).parts}
             raw_parts = {part.lower() for part in Path(str(raw_target)).parts}
-            clone_named = any(
-                "mb-vip" in part or "mainbranch" in part for part in target_parts | raw_parts
-            )
-            stale = engine_mod._is_stale_engine_path(target_text, active_root) or (
-                engine_mod._looks_like_missing_legacy_engine_path(str(raw_target))
-                or engine_mod._looks_like_missing_legacy_engine_path(target_text)
-                or clone_named
+            clone_named = bool((target_parts | raw_parts) & {"mb-vip", "mainbranch"})
+            try:
+                inside_active_root = target.resolve(strict=True).is_relative_to(
+                    active_root.resolve(strict=True)
+                )
+            except (FileNotFoundError, OSError):
+                inside_active_root = False
+            stale = (
+                False
+                if inside_active_root
+                else engine_mod.is_stale_engine_path(target_text, active_root)
+                or (
+                    engine_mod.looks_like_missing_legacy_engine_path(str(raw_target))
+                    or engine_mod.looks_like_missing_legacy_engine_path(target_text)
+                    or clone_named
+                )
             )
             if stale:
                 state = "warn"

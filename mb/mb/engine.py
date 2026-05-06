@@ -147,6 +147,11 @@ def _looks_like_missing_legacy_engine_path(value: str) -> bool:
     return bool(parts & {"mb-vip", "mainbranch"})
 
 
+def looks_like_missing_legacy_engine_path(value: str) -> bool:
+    """Return whether a missing path looks like an old Main Branch engine clone."""
+    return _looks_like_missing_legacy_engine_path(value)
+
+
 def _is_stale_engine_path(value: str, active_root: Path) -> bool:
     candidate = Path(value).expanduser()
     try:
@@ -157,6 +162,11 @@ def _is_stale_engine_path(value: str, active_root: Path) -> bool:
     if candidate.exists():
         return _looks_like_engine_root_path(candidate)
     return _looks_like_missing_legacy_engine_path(value)
+
+
+def is_stale_engine_path(value: str, active_root: Path) -> bool:
+    """Return whether ``value`` points at a stale Main Branch engine root."""
+    return _is_stale_engine_path(value, active_root)
 
 
 def _write_settings(repo: Path, root: Path) -> tuple[bool, list[str]]:

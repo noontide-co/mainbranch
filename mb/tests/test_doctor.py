@@ -179,7 +179,7 @@ def test_doctor_repair_plan_distinguishes_read_and_write_actions(tmp_path: Path)
 
     result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--json"])
 
-    assert result.exit_code == 0
+    assert result.exit_code == 1
     payload = json.loads(result.stdout)
     actions = {action["id"]: action for action in payload["actions"]}
     assert actions["migration-preview"]["mode"] == "read"
@@ -190,7 +190,7 @@ def test_doctor_repair_plan_distinguishes_read_and_write_actions(tmp_path: Path)
 def test_doctor_repair_apply_moves_old_clone_symlink_to_backup(tmp_path: Path) -> None:
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
-    old_engine = tmp_path / "mb-vip-old"
+    old_engine = tmp_path / "mb-vip"
     old_lens = old_engine / ".claude" / "lenses" / "ops"
     old_lens.mkdir(parents=True)
     stale_link = repo / ".claude" / "lenses" / "ops"
@@ -207,3 +207,50 @@ def test_doctor_repair_apply_moves_old_clone_symlink_to_backup(tmp_path: Path) -
     backups = list((repo / ".mb" / "backups").rglob("claude-links/.claude/lenses/ops"))
     assert backups
     assert ".mb/backups/" in (repo / ".gitignore").read_text(encoding="utf-8")
+
+
+def test_doctor_rejects_unknown_options_on_existing_path() -> None:
+    result = runner.invoke(app, ["doctor", "--jsonn"])
+
+    assert result.exit_code == 2
+    assert "unknown option" in result.stderr
+
+
+def test_doctor_repair_exits_nonzero_when_json_report_is_red(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        doctor_mod,
+        "repair_plan",
+        lambda repo=".": {
+            "ok": False,
+            "read_only": True,
+            "repo": str(tmp_path),
+            "summary": {"error": 1},
+        },
+    )
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(tmp_path), "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+
+
+def test_doctor_legacy_symlink_keeps_current_active_engine_root(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    active_root = tmp_path / "Documents" / "GitHub" / "mainbranch"
+    active_lens = active_root / ".claude" / "lenses" / "ops"
+    active_lens.mkdir(parents=True)
+    lens_link = repo / ".claude" / "lenses" / "ops"
+    lens_link.parent.mkdir(parents=True)
+    lens_link.symlink_to(active_lens, target_is_directory=True)
+
+    monkeypatch.setattr(doctor_mod.engine_mod, "engine_root", lambda: active_root)
+
+    result = doctor_mod._legacy_claude_symlinks(repo)
+
+    assert result["repairable"] == 0
+    assert result["findings"][0]["state"] == "info"
+    assert result["findings"][0]["safe_to_repair"] is False
