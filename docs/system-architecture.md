@@ -6,6 +6,23 @@
 > from markdown files in git. This document describes the current public repo
 > model after the `core/` folder decision, the campaign primitive decision,
 > and the push primitive and operator-vocabulary decision.
+>
+> **Shipped vs accepted.** The accepted target architecture below names
+> `pushes/` as the canonical primitive and `core/vocabulary.md` as the
+> operator-owned vocabulary file. As of this writing, shipped `mb init` and
+> onboarding templates still scaffold `campaigns/` and do not scaffold
+> `pushes/` or `core/vocabulary.md`; `mb validate` validates
+> `campaigns/*/campaign.md` against the campaign lifecycle; the `mb push`
+> CLI surface and the `kind:` enum validator do not exist yet. The
+> deterministic engine work (validators, graph, status JSON, scaffolding)
+> lands in
+> [#323](https://github.com/noontide-co/mainbranch/issues/323); the skill,
+> runtime, and migration code (including `mb init` switching to `pushes/`,
+> reading `core/vocabulary.md`, and the migration command) lands in
+> [#324](https://github.com/noontide-co/mainbranch/issues/324). Until both
+> ship, this document describes the **target** that `mb` is moving toward,
+> not what `mb init` produces today. New writes by hand or by future skills
+> should follow the target; existing `campaigns/` repos keep working.
 
 ## Architecture In One Sentence
 
