@@ -11,6 +11,26 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-05-06
+
+v0.3.3 turns the campaign architecture work into the clearer push primitive.
+It adds canonical `pushes/` scaffolding and validation, keeps legacy
+`campaigns/` readable during migration, and splits `/mb-site` into smaller
+runtime-loadable references.
+
+### What this means for you (plain English)
+
+- **Your business can use its own words.** Main Branch stores the canonical
+  primitive as a `push`, while `core/vocabulary.md` lets an operator call that
+  work a launch, drop, challenge, promo, campaign, or another local term.
+- **New repos start in the new shape.** `mb init` and `mb onboard` now scaffold
+  `pushes/`; existing `campaigns/` records still read as compatibility input.
+- **Push records are checkable.** `mb validate`, `mb status --json --peek`,
+  `mb start --json`, and `mb graph --json` now expose canonical push facts and
+  schema errors.
+- **Site work loads less context.** `/mb-site` is now a compact router with
+  focused minisite references instead of one large skill document.
+
 ### Added (MAIN-248 / #323)
 
 - `mb validate` now enforces the canonical `pushes/<YYYY-MM-DD-slug>/push.md`
@@ -103,6 +123,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Defined `campaigns/` as the first coordinated-push model, refreshed the
+  system architecture model around current business-repo folders, and blessed
+  `documents/transcripts/`, `documents/prototypes/`, and `documents/archive/`
+  for non-campaign artifacts before the later `pushes/` decision superseded the
+  storage name in part. Refs #321.
+- Refactored `/mb-site` into a compact router with progressively loadable
+  minisite step references, and split examples from troubleshooting so agents
+  can load only the detail needed for the current site step. Refs #107 and
+  #110.
 - The campaign primitive decision
   ([decisions/2026-05-06-campaign-primitive-and-architecture-model.md](decisions/2026-05-06-campaign-primitive-and-architecture-model.md))
   is superseded **in part**: the canonical storage shape moves to `push`,
@@ -140,10 +169,6 @@ guidance from real dogfood.
 
 ### Changed
 
-- Defined `campaigns/` as the canonical primitive for coordinated pushes,
-  refreshed the system architecture model around current business-repo folders,
-  and blessed `documents/transcripts/`, `documents/prototypes/`, and
-  `documents/archive/` for non-campaign artifacts. Refs #321.
 - Clarified quick start and beginner docs so daily users run `claude` then
   `/mb-start` without a separate `mb status` step. `mb status` is now framed as
   the terminal-only briefing that `/mb-start` reads internally.
@@ -176,10 +201,6 @@ guidance from real dogfood.
   canonical `core/` subfolders for proof, brand, strategy, and operations;
   expanded migration and skill validation to treat legacy `reference/*` paths
   as compatibility-only. Refs #318.
-- Refactored `/mb-site` into a compact router with progressively loadable
-  minisite step references, and split examples from troubleshooting so agents
-  can load only the detail needed for the current site step. Refs #107 and
-  #110.
 
 ## [0.3.1] - 2026-05-05
 
