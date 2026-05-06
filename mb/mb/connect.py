@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Callable
 from contextlib import suppress
@@ -289,10 +290,15 @@ def _git_output(repo: Path, args: list[str]) -> str:
 
 def _normalized_remote(value: str) -> str:
     remote = value.strip()
-    if remote.startswith("git@github.com:"):
-        return "https://github.com/" + remote.removeprefix("git@github.com:").removesuffix(".git")
-    if remote.startswith("https://github.com/"):
-        return remote.removesuffix(".git")
+    if remote.startswith("git@") and ":" in remote:
+        host, path = remote.removeprefix("git@").split(":", 1)
+        return f"https://{host}/{path}".removesuffix(".git")
+    parsed = urllib.parse.urlparse(remote)
+    if parsed.scheme and parsed.netloc:
+        host = parsed.hostname or parsed.netloc
+        path = parsed.path.lstrip("/")
+        if path:
+            return f"https://{host}/{path}".removesuffix(".git")
     return remote.removesuffix(".git")
 
 
@@ -319,11 +325,13 @@ def _repo_identity(repo: Path) -> dict[str, str]:
 
 def _ensure_repo_id(config: dict[str, Any], repo: Path) -> str:
     identity = _repo_identity(repo)
-    repo_id = identity["repo_id"]
+    existing = str(config.get("repo_id") or "").strip()
+    repo_id = existing or identity["repo_id"]
     config["repo_id"] = repo_id
     config["repo_identity"] = {
         "source": identity["source"],
         "basis_sha256": identity["basis_sha256"],
+        "repo_id_source": "existing_config" if existing else identity["source"],
     }
     return repo_id
 
@@ -341,7 +349,22 @@ def _secret_ref(repo_id: str, provider_id: str, field: str) -> str:
     return f"mainbranch://{digest}/{provider_id}/{field}"
 
 
-def _repair(provider: Provider, state: str, missing: list[str] | None = None) -> dict[str, str]:
+def _repair(
+    provider: Provider,
+    state: str,
+    missing: list[str] | None = None,
+    validation: dict[str, Any] | None = None,
+) -> dict[str, str]:
+    validation = validation or {}
+    validation_repair = str(validation.get("repair") or "")
+    validation_repair_command = str(validation.get("repair_command") or "")
+    validation_summary = str(validation.get("summary") or "")
+    if validation_repair or validation_repair_command:
+        return {
+            "summary": validation_summary or f"{provider.name} needs metadata repair.",
+            "repair": validation_repair,
+            "repair_command": validation_repair_command,
+        }
     if provider.id == "meta":
         return {
             "summary": ("Meta Ads CLI support is planned but not wired in this mb release."),
@@ -642,7 +665,7 @@ def status_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
         meta_validation: dict[str, Any] = (
             raw_meta_validation if isinstance(raw_meta_validation, dict) else {}
         )
-        repair = _repair(provider, "planned")
+        repair = _repair(provider, "planned", validation=meta_validation)
         return {
             "provider": provider.id,
             "name": provider.name,
@@ -717,7 +740,7 @@ def status_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
         else:
             state = "unvalidated"
             ok = False
-    repair = _repair(provider, state, missing)
+    repair = _repair(provider, state, missing, validation)
     return {
         "provider": provider.id,
         "name": provider.name,
@@ -739,6 +762,8 @@ def status_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
             "upstream": validation.get("upstream")
             if isinstance(validation.get("upstream"), dict)
             else {},
+            "repair": str(validation.get("repair") or ""),
+            "repair_command": str(validation.get("repair_command") or ""),
             "safe_to_share": True,
         },
     }
@@ -920,11 +945,20 @@ def _validate_with_provider(
             if not account_id:
                 return {
                     "ok": False,
-                    "state": "invalid",
+                    "state": "unvalidated",
                     "checked_at": checked_at,
                     "summary": (
                         "Cloudflare account-token validation requires non-secret "
                         "`account_id` metadata."
+                    ),
+                    "repair": (
+                        "Run `mb connect cloudflare --metadata token_type=account "
+                        "--metadata account_id=<account-id>`, then "
+                        "`mb connect test cloudflare`."
+                    ),
+                    "repair_command": (
+                        "mb connect cloudflare --metadata token_type=account "
+                        "--metadata account_id=<account-id>"
                     ),
                     "safe_to_share": True,
                     "upstream": {
@@ -947,6 +981,26 @@ def _validate_with_provider(
             provider_name=provider.name,
             endpoint_family=endpoint_family,
         )
+        raw_upstream = result.get("upstream")
+        upstream: dict[str, Any] = raw_upstream if isinstance(raw_upstream, dict) else {}
+        if token_type == "account" and upstream.get("http_status") == 404:
+            fallback = _http_get_json(
+                f"https://api.cloudflare.com/client/v4/accounts/{account_id}",
+                {"Authorization": f"Bearer {secret}"},
+                provider_name=provider.name,
+                endpoint_family="cloudflare_account_read",
+            )
+            raw_fallback_upstream = fallback.get("upstream")
+            fallback_upstream: dict[str, Any] = (
+                raw_fallback_upstream if isinstance(raw_fallback_upstream, dict) else {}
+            )
+            fallback_upstream["fallback_from"] = endpoint_family
+            fallback["upstream"] = fallback_upstream
+            if fallback.get("ok"):
+                fallback["summary"] = (
+                    "Cloudflare account-scoped credential validated with account read fallback."
+                )
+            result = fallback
     elif provider.id == "apify":
         result = _http_get_json(
             "https://api.apify.com/v2/users/me",
@@ -970,6 +1024,8 @@ def _validate_with_provider(
         "state": str(result["state"]),
         "checked_at": checked_at,
         "summary": str(result["summary"]),
+        "repair": str(result.get("repair") or ""),
+        "repair_command": str(result.get("repair_command") or ""),
         "safe_to_share": True,
         "upstream": result.get("upstream", {}),
     }
@@ -1013,6 +1069,9 @@ def test_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
         "summary": validation["summary"],
         "safe_to_share": True,
     }
+    if validation.get("repair") or validation.get("repair_command"):
+        entry["validation"]["repair"] = validation.get("repair", "")
+        entry["validation"]["repair_command"] = validation.get("repair_command", "")
     if isinstance(validation.get("upstream"), dict):
         entry["validation"]["upstream"] = validation["upstream"]
     entry["last_checked_at"] = validation["checked_at"]

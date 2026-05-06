@@ -200,6 +200,35 @@ def test_doctor_repair_adds_connect_yaml_to_gitignore(tmp_path: Path) -> None:
     assert ".mb/connect.yaml" in gitignore.read_text(encoding="utf-8")
 
 
+def test_doctor_repair_untracks_existing_connect_yaml(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    connect_path = repo / ".mb" / "connect.yaml"
+    connect_path.write_text("version: 1\nrepo_id: legacy\nproviders: {}\n", encoding="utf-8")
+    doctor_mod._run_git(repo, ["add", "-f", ".mb/connect.yaml"])
+
+    plan = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert plan.exit_code in {0, 1}
+    plan_payload = json.loads(plan.stdout)
+    checks = {
+        check["name"]: check
+        for section in plan_payload["sections"]
+        if section["id"] == "gitignore"
+        for check in section["checks"]
+    }
+    assert checks[".mb/connect.yaml"]["summary"] == "tracked; repair will untrack"
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    applied = {action["id"]: action for action in payload["applied_actions"]}
+    assert "gitignore-local-state-untrack" in applied
+    assert connect_path.exists()
+    assert not doctor_mod._run_git(repo, ["ls-files", "--error-unmatch", ".mb/connect.yaml"])["ok"]
+
+
 def test_doctor_warns_on_legacy_campaigns_records(tmp_path: Path) -> None:
     repo = tmp_path / "legacy-pushes"
     init_run(path=str(repo), name="Acme")

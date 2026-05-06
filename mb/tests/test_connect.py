@@ -233,6 +233,39 @@ def test_connect_repo_identity_is_stable_across_worktrees(tmp_path: Path, monkey
     )
 
 
+def test_connect_normalizes_common_remote_protocol_variants() -> None:
+    assert connect_mod._normalized_remote("git@gitlab.com:team/business.git") == (
+        "https://gitlab.com/team/business"
+    )
+    assert connect_mod._normalized_remote("ssh://git@gitlab.com/team/business.git") == (
+        "https://gitlab.com/team/business"
+    )
+    assert connect_mod._normalized_remote("https://gitlab.com/team/business.git") == (
+        "https://gitlab.com/team/business"
+    )
+
+
+def test_connect_preserves_existing_repo_id_to_avoid_orphaned_secrets(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    (repo / ".mb").mkdir(parents=True)
+    (repo / ".mb" / "connect.yaml").write_text(
+        yaml.safe_dump({"version": 1, "repo_id": "legacy-random-id", "providers": {}}),
+        encoding="utf-8",
+    )
+
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-secret-token")
+
+    config = yaml.safe_load((repo / ".mb" / "connect.yaml").read_text(encoding="utf-8"))
+    assert config["repo_id"] == "legacy-random-id"
+    assert config["repo_identity"]["repo_id_source"] == "existing_config"
+    assert config["providers"]["cloudflare"]["secrets"]["api_token"]["ref"] == (
+        connect_mod._secret_ref("legacy-random-id", "cloudflare", "api_token")
+    )
+
+
 def test_connect_provider_only_reads_env_when_explicit(tmp_path: Path, monkeypatch) -> None:
     _local_secret_env(monkeypatch, tmp_path)
     monkeypatch.setenv("APIFY_TOKEN", "apify-test-token")
@@ -462,6 +495,83 @@ def test_connect_test_routes_cloudflare_user_tokens_to_user_endpoint(
     assert calls == ["https://api.cloudflare.com/client/v4/user/tokens/verify"]
 
 
+def test_connect_test_account_token_uses_account_read_fallback_on_verify_404(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(
+        app,
+        [
+            "connect",
+            "cloudflare",
+            "--repo",
+            str(repo),
+            "--token",
+            "cf-secret-token",
+            "--metadata",
+            "token_type=account",
+            "--metadata",
+            "account_id=0123456789abcdef0123456789abcdef",
+        ],
+    )
+    calls: list[tuple[str, str]] = []
+
+    def fake_http(url: str, headers=None, **kwargs) -> dict[str, Any]:
+        endpoint = kwargs["endpoint_family"]
+        calls.append((endpoint, url))
+        if endpoint == "cloudflare_account_token_verify":
+            return {
+                "ok": False,
+                "state": "invalid",
+                "summary": "Cloudflare could not find the requested account/token resource.",
+                "safe_to_share": True,
+                "upstream": {
+                    "endpoint_family": endpoint,
+                    "http_status": 404,
+                    "response_received": True,
+                    "error_codes": ["1003"],
+                    "error_messages": ["Not found"],
+                    "safe_to_share": True,
+                },
+            }
+        return {
+            "ok": True,
+            "state": "ready",
+            "summary": "Cloudflare credential validated with provider.",
+            "safe_to_share": True,
+            "upstream": {
+                "endpoint_family": endpoint,
+                "http_status": 200,
+                "response_received": True,
+                "error_codes": [],
+                "error_messages": [],
+                "safe_to_share": True,
+            },
+        }
+
+    monkeypatch.setattr(connect_mod, "_http_get_json", fake_http)
+
+    result = runner.invoke(app, ["connect", "test", "cloudflare", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["validation"]["upstream"]["endpoint_family"] == "cloudflare_account_read"
+    assert payload["validation"]["upstream"]["fallback_from"] == "cloudflare_account_token_verify"
+    assert "fallback" in payload["validation"]["summary"]
+    assert calls == [
+        (
+            "cloudflare_account_token_verify",
+            "https://api.cloudflare.com/client/v4/accounts/0123456789abcdef0123456789abcdef/tokens/verify",
+        ),
+        (
+            "cloudflare_account_read",
+            "https://api.cloudflare.com/client/v4/accounts/0123456789abcdef0123456789abcdef",
+        ),
+    ]
+
+
 def test_connect_test_account_token_requires_account_id(tmp_path: Path, monkeypatch) -> None:
     _local_secret_env(monkeypatch, tmp_path)
     repo = tmp_path / "biz"
@@ -484,8 +594,14 @@ def test_connect_test_account_token_requires_account_id(tmp_path: Path, monkeypa
 
     assert result.exit_code == 1
     payload = json.loads(result.stdout)
-    assert payload["status"]["state"] == "invalid"
+    assert payload["status"]["state"] == "unvalidated"
+    assert payload["status"]["repair_command"] == (
+        "mb connect cloudflare --metadata token_type=account --metadata account_id=<account-id>"
+    )
     assert "account_id" in payload["validation"]["summary"]
+    assert payload["validation"]["repair_command"] == (
+        "mb connect cloudflare --metadata token_type=account --metadata account_id=<account-id>"
+    )
     assert payload["validation"]["upstream"]["response_received"] is False
 
 

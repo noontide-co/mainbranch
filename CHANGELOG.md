@@ -24,14 +24,19 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   validation via `--metadata token_type=account --metadata account_id=...`
   while preserving the existing user-token verify path. Failed provider checks
   include safe upstream diagnostics such as endpoint family, HTTP status, and
-  provider error codes/messages in JSON. Refs #335.
+  provider error codes/messages in JSON. Account-token validation falls back to
+  a read-only account probe if Cloudflare returns 404 for the token verify path,
+  so valid credentials are not immediately classified as bad solely because the
+  verify endpoint shape changed. Refs #335.
 - `mb connect` now derives repo-scoped credential identity from stable git
-  remote/common-dir facts before falling back to the local path, avoiding
-  separate keychain refs for parallel worktrees of the same business repo.
-  Refs #335.
+  remote/common-dir facts for new connect metadata before falling back to the
+  local path, avoiding separate keychain refs for parallel worktrees of the same
+  business repo. Existing non-empty `repo_id` values are preserved so previously
+  stored keychain refs are not orphaned. Refs #335.
 - New and repaired business repos now gitignore `.mb/connect.yaml` by default,
-  and interactive `mb connect <provider> --token-stdin` prints paste/EOF
-  instructions before reading from a TTY. Refs #335.
+  and doctor repair untracks an already-committed `.mb/connect.yaml` while
+  leaving the file on disk. Interactive `mb connect <provider> --token-stdin`
+  prints paste/EOF instructions before reading from a TTY. Refs #335.
 - `/mb-site` no longer tells operators to use `domain.py buy` for live domain
   purchases; the command remains a structured unavailable placeholder until
   registrar support lands behind explicit guardrails. Refs #335.

@@ -461,6 +461,27 @@ def _missing_gitignore_entries(repo: Path) -> list[str]:
     ]
 
 
+def _tracked_local_state_paths(repo: Path) -> list[str]:
+    tracked: list[str] = []
+    for rel in LOCAL_STATE_PATHS:
+        result = _run_git(repo, ["ls-files", "--error-unmatch", rel])
+        if result["ok"]:
+            tracked.append(rel)
+    return tracked
+
+
+def _untrack_local_state_path(repo: Path, rel: str) -> dict[str, Any]:
+    path = repo / rel
+    result = _run_git(repo, ["rm", "--cached", "--", rel])
+    return {
+        "path": rel,
+        "ok": bool(result["ok"]),
+        "stdout": result["stdout"],
+        "stderr": result["stderr"],
+        "exists_on_disk": path.exists() or path.is_symlink(),
+    }
+
+
 def _local_state_summary(repo: Path) -> dict[str, Any]:
     local = [
         {"path": rel, "exists": (repo / rel).exists() or (repo / rel).is_symlink()}
@@ -473,18 +494,22 @@ def _local_state_summary(repo: Path) -> dict[str, Any]:
     missing_gitignore = [
         item["path"]
         for item in local
-        if item["exists"] and item["path"] not in _read_gitignore_entries(repo)
+        if item["exists"] and item["path"] in _missing_gitignore_entries(repo)
     ]
+    tracked = _tracked_local_state_paths(repo)
     return {
-        "state": "warn" if missing_gitignore else "ok",
+        "state": "warn" if missing_gitignore or tracked else "ok",
         "summary": (
             f"{len(missing_gitignore)} local .mb path(s) need gitignore coverage"
             if missing_gitignore
+            else f"{len(tracked)} local .mb path(s) are still tracked"
+            if tracked
             else ".mb local operational state is separated from durable markers"
         ),
         "local": local,
         "durable": durable,
         "missing_gitignore": missing_gitignore,
+        "tracked": tracked,
     }
 
 
@@ -1002,8 +1027,9 @@ def repair_plan(
     )
 
     missing_gitignore = _missing_gitignore_entries(target)
+    tracked_local_state = _tracked_local_state_paths(target)
     gitignore_actions: list[dict[str, Any]] = []
-    if missing_gitignore:
+    if missing_gitignore or tracked_local_state:
         action = _action(
             id="gitignore-local-state",
             title="Protect Main Branch local state in .gitignore",
@@ -1011,26 +1037,41 @@ def repair_plan(
             mode="write",
             command="mb doctor repair --apply",
             safe_to_apply=True,
-            reason="these entries are local operational state and should not be committed",
-            writes=[".gitignore"],
+            reason=(
+                "these entries are local operational state; doctor repair adds "
+                "gitignore coverage and untracks any already-committed local state"
+            ),
+            writes=[".gitignore", *tracked_local_state],
         )
         actions.append(action)
         gitignore_actions.append(action)
+    gitignore_state = "warn" if missing_gitignore or tracked_local_state else "ok"
     sections.append(
         _section(
             "gitignore",
             "Local State Gitignore",
-            "warn" if missing_gitignore else "ok",
+            gitignore_state,
             (
-                f"{len(missing_gitignore)} missing local-state entrie(s)"
+                f"{len(missing_gitignore)} missing gitignore entrie(s), "
+                f"{len(tracked_local_state)} tracked local-state file(s)"
                 if missing_gitignore
+                else f"{len(tracked_local_state)} tracked local-state file(s)"
+                if tracked_local_state
                 else "Main Branch local state is ignored"
             ),
             checks=[
                 {
                     "name": entry,
-                    "state": "warn" if entry in missing_gitignore else "ok",
-                    "summary": "missing" if entry in missing_gitignore else "covered",
+                    "state": "warn"
+                    if entry in missing_gitignore or entry in tracked_local_state
+                    else "ok",
+                    "summary": (
+                        "tracked; repair will untrack"
+                        if entry in tracked_local_state
+                        else "missing"
+                        if entry in missing_gitignore
+                        else "covered"
+                    ),
                 }
                 for entry in LOCAL_GITIGNORE_ENTRIES
             ],
@@ -1278,6 +1319,7 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
     applied: list[dict[str, Any]] = []
 
     missing_gitignore = _missing_gitignore_entries(target)
+    tracked_local_state = _tracked_local_state_paths(target)
     if missing_gitignore:
         changed = _append_unique_lines(target / ".gitignore", missing_gitignore)
         applied.append(
@@ -1292,6 +1334,25 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
                 writes=[".gitignore"],
                 applied=changed,
                 result={"added": missing_gitignore},
+            )
+        )
+    if tracked_local_state:
+        results = [_untrack_local_state_path(target, rel) for rel in tracked_local_state]
+        applied.append(
+            _action(
+                id="gitignore-local-state-untrack",
+                title="Untracked Main Branch local state from git",
+                state="ok" if all(item["ok"] for item in results) else "error",
+                mode="write",
+                command="mb doctor repair --apply",
+                safe_to_apply=True,
+                reason=(
+                    "removed local operational state from the git index while "
+                    "leaving the files on disk"
+                ),
+                writes=tracked_local_state,
+                applied=any(item["ok"] for item in results),
+                result={"untracked": results},
             )
         )
 
