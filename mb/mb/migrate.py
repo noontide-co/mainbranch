@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import difflib
 import json
+import re
 import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 from mb import migrations
 from mb.migrations.base import MigrationInfo, MigrationPlan, PlannedChange
@@ -433,3 +436,243 @@ def render_apply(result: dict[str, Any]) -> None:
     if backup.get("path"):
         print(f"backup: {backup['path']}")
     print(f"schema version: {result['current_version']}")
+
+
+# ---------------------------------------------------------------------------
+# campaigns -> pushes migration planner (preview-only)
+#
+# Per the MAIN-251 push primitive decision, the canonical engine primitive is
+# `pushes/`. This planner walks legacy `campaigns/<slug>/campaign.md` records
+# and proposes per-record moves to `pushes/<YYYY-MM-DD-slug>/push.md`.
+#
+# Plan-only in this release: the planner classifies records but does not move
+# files. Apply lands in a follow-up PR with explicit operator approval and
+# backup. Per the issue's Migration Rubric, no silent migration; ambiguous
+# generated folders surface for operator review.
+# ---------------------------------------------------------------------------
+
+CAMPAIGNS_PLAN_SCHEMA = "mb.migrate.campaigns"
+CAMPAIGNS_PLAN_SCHEMA_VERSION = 1
+
+_DATED_DAY_PREFIX = re.compile(r"^(\d{4}-\d{2}-\d{2})-")
+_DATED_MONTH_PREFIX = re.compile(r"^(\d{4}-\d{2})-")
+_PUSH_FOLDER_NAMES = {"ads", "emails", "posts", "reviews", "assets", "source"}
+_PUSH_FILE_NAMES = {
+    "ads.md",
+    "emails.md",
+    "posts.md",
+    "site.md",
+    "review-log.md",
+}
+
+
+def _read_campaign_frontmatter(path: Path) -> dict[str, Any]:
+    """Best-effort YAML frontmatter read; returns {} on failure."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    if not text.startswith("---"):
+        return {}
+    try:
+        end = text.index("\n---", 3)
+    except ValueError:
+        return {}
+    block = text[3:end].lstrip("\n")
+    try:
+        data = yaml.safe_load(block)
+    except yaml.YAMLError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _infer_push_date(folder_name: str, frontmatter: dict[str, Any]) -> tuple[str, str] | None:
+    """Return (YYYY-MM-DD date string, source-label) or None when ambiguous."""
+    day_match = _DATED_DAY_PREFIX.match(folder_name)
+    if day_match:
+        return day_match.group(1), "folder.day-prefix"
+    month_match = _DATED_MONTH_PREFIX.match(folder_name)
+    if month_match:
+        return f"{month_match.group(1)}-01", "folder.month-prefix"
+    for field in ("started", "review_on"):
+        value = frontmatter.get(field)
+        if isinstance(value, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            return value, f"frontmatter.{field}"
+        if hasattr(value, "isoformat"):
+            iso = value.isoformat()
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", iso):
+                return iso, f"frontmatter.{field}"
+    return None
+
+
+def _slug_without_date_prefix(folder_name: str) -> str:
+    day_match = _DATED_DAY_PREFIX.match(folder_name)
+    if day_match:
+        return folder_name[len(day_match.group(0)) :]
+    month_match = _DATED_MONTH_PREFIX.match(folder_name)
+    if month_match:
+        return folder_name[len(month_match.group(0)) :]
+    return folder_name
+
+
+def _enumerate_folder_contents(folder: Path, repo: Path) -> list[str]:
+    contents: list[str] = []
+    for child in sorted(folder.iterdir()):
+        if child.name == "campaign.md":
+            continue
+        if child.name == ".gitkeep":
+            continue
+        rel = child.relative_to(repo).as_posix()
+        contents.append(rel)
+    return contents
+
+
+def _classify_campaign_folder(folder: Path, repo: Path) -> dict[str, Any]:
+    """Classify one direct child of campaigns/ as a move, ambiguous, or blocker."""
+    rel = folder.relative_to(repo).as_posix()
+    record = folder / "campaign.md"
+    if not record.is_file():
+        # No campaign.md -- this is generated material, not a coordinated push.
+        # Per the rubric, do not auto-promote into pushes/.
+        contents = _enumerate_folder_contents(folder, repo)
+        return {
+            "kind": "ambiguous",
+            "from": rel,
+            "reason": "no campaign.md inside this folder; cannot infer a coordinated push",
+            "suggestion": (
+                "review with the operator. Likely homes: documents/archive/, "
+                "documents/prototypes/, or leave in place with a warning."
+            ),
+            "contents": contents,
+        }
+
+    frontmatter = _read_campaign_frontmatter(record)
+    inferred = _infer_push_date(folder.name, frontmatter)
+    slug = _slug_without_date_prefix(folder.name)
+    if inferred is None:
+        return {
+            "kind": "blocker",
+            "from": rel,
+            "reason": (
+                "cannot infer a date for the push folder name. Folder has no "
+                "YYYY-MM-DD or YYYY-MM prefix and frontmatter has no `started` "
+                "or `review_on` date."
+            ),
+            "suggestion": (
+                "add `started: YYYY-MM-DD` to the campaign.md frontmatter or "
+                "rename the folder with a dated prefix, then re-run the plan."
+            ),
+        }
+    date_str, date_source = inferred
+    push_folder = f"pushes/{date_str}-{slug}"
+    push_record_rel = f"{push_folder}/push.md"
+    folder_contents = _enumerate_folder_contents(folder, repo)
+    frontmatter_changes: list[str] = []
+    if frontmatter.get("type") == "campaign":
+        frontmatter_changes.append("type: campaign -> type: push")
+    if "linked_campaigns" in frontmatter:
+        frontmatter_changes.append("linked_campaigns -> linked_pushes (rename)")
+    has_provider_meta_ads = (
+        isinstance(frontmatter.get("provider_refs"), dict)
+        and "meta_ads" in frontmatter["provider_refs"]
+    )
+    notes: list[str] = []
+    if has_provider_meta_ads:
+        notes.append(
+            "provider_refs.meta_ads.campaign_id preserved (Meta's term for its object, "
+            "not the engine primitive)"
+        )
+    return {
+        "kind": "move",
+        "from": rel,
+        "to": push_record_rel,
+        "date": date_str,
+        "date_source": date_source,
+        "slug": slug,
+        "frontmatter_changes": frontmatter_changes,
+        "folder_contents": folder_contents,
+        "notes": notes,
+    }
+
+
+def plan_campaigns_to_pushes(repo: str | Path = ".") -> dict[str, Any]:
+    """Read-only plan classifying every campaigns/ child as a move, ambiguous, or blocker.
+
+    Returns a structured dict that ``mb migrate campaigns --plan`` renders or
+    serializes to JSON. Does not write any files. Apply lands in a follow-up
+    PR with backups and explicit operator approval.
+    """
+    target = Path(repo).expanduser().resolve()
+    envelope: dict[str, Any] = {
+        "schema": CAMPAIGNS_PLAN_SCHEMA,
+        "schema_version": CAMPAIGNS_PLAN_SCHEMA_VERSION,
+        "repo": str(target),
+        "ok": True,
+        "moves": [],
+        "ambiguous": [],
+        "blockers": [],
+        "summary": {"moves": 0, "ambiguous": 0, "blockers": 0},
+        "next": (
+            "Plan-only in this release. `mb migrate campaigns --apply` is not yet "
+            "implemented; the apply path lands in a follow-up PR with backups and "
+            "explicit operator approval."
+        ),
+    }
+
+    campaigns_dir = target / "campaigns"
+    if not campaigns_dir.is_dir():
+        envelope["next"] = "no legacy campaigns/ folder; nothing to migrate"
+        return envelope
+
+    children = [child for child in sorted(campaigns_dir.iterdir()) if child.is_dir()]
+    if not children:
+        envelope["next"] = "campaigns/ folder is empty; nothing to migrate"
+        return envelope
+
+    for folder in children:
+        classification = _classify_campaign_folder(folder, target)
+        kind = classification.pop("kind")
+        if kind == "move":
+            envelope["moves"].append(classification)
+        elif kind == "ambiguous":
+            envelope["ambiguous"].append(classification)
+        else:
+            envelope["blockers"].append(classification)
+
+    envelope["summary"]["moves"] = len(envelope["moves"])
+    envelope["summary"]["ambiguous"] = len(envelope["ambiguous"])
+    envelope["summary"]["blockers"] = len(envelope["blockers"])
+    envelope["ok"] = len(envelope["blockers"]) == 0
+    return envelope
+
+
+def render_campaigns_plan(result: dict[str, Any]) -> None:
+    """Operator-facing rendering of `mb migrate campaigns --plan`."""
+    summary = result["summary"]
+    print(f"campaigns -> pushes plan for {result['repo']}")
+    print(
+        f"  moves: {summary['moves']}  "
+        f"ambiguous: {summary['ambiguous']}  "
+        f"blockers: {summary['blockers']}"
+    )
+    for move in result["moves"]:
+        print(f"\nmove: {move['from']}")
+        print(f"  -> {move['to']}")
+        print(f"  date: {move['date']}  (source: {move['date_source']})")
+        for change in move.get("frontmatter_changes", []):
+            print(f"  frontmatter: {change}")
+        for note in move.get("notes", []):
+            print(f"  note: {note}")
+        if move.get("folder_contents"):
+            print(
+                f"  folder contents to move with the push: {len(move['folder_contents'])} item(s)"
+            )
+    for ambiguous in result["ambiguous"]:
+        print(f"\nambiguous: {ambiguous['from']}")
+        print(f"  reason: {ambiguous['reason']}")
+        print(f"  suggestion: {ambiguous['suggestion']}")
+    for blocker in result["blockers"]:
+        print(f"\nblocker: {blocker['from']}")
+        print(f"  reason: {blocker['reason']}")
+        print(f"  suggestion: {blocker['suggestion']}")
+    print(f"\n{result['next']}")

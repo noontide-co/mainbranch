@@ -299,3 +299,147 @@ def test_migrate_status_clean_current_repo(tmp_path: Path) -> None:
 
 def test_migration_version_map_is_derived_from_registered_metadata() -> None:
     assert migrations.version_map()["0.1"] == "mb.migrations.001_v01_to_v02_path_config"
+
+
+# ---------------------------------------------------------------------------
+# campaigns -> pushes plan-only migration (MAIN-249)
+# ---------------------------------------------------------------------------
+
+
+def test_plan_campaigns_no_legacy_folder_is_a_clean_noop(tmp_path: Path) -> None:
+    result = migrate_mod.plan_campaigns_to_pushes(tmp_path)
+
+    assert result["schema"] == migrate_mod.CAMPAIGNS_PLAN_SCHEMA
+    assert result["ok"] is True
+    assert result["summary"] == {"moves": 0, "ambiguous": 0, "blockers": 0}
+    assert "no legacy campaigns/" in result["next"]
+
+
+def test_plan_campaigns_classifies_dated_folder_as_move(tmp_path: Path) -> None:
+    folder = tmp_path / "campaigns" / "2026-04-15-spring-launch"
+    folder.mkdir(parents=True)
+    (folder / "campaign.md").write_text(
+        "---\n"
+        "type: campaign\n"
+        "slug: spring-launch\n"
+        "status: active\n"
+        "started: 2026-04-15\n"
+        "linked_campaigns: []\n"
+        "provider_refs:\n"
+        "  meta_ads:\n"
+        "    campaign_id: '123'\n"
+        "---\n"
+        "# Spring Launch\n",
+        encoding="utf-8",
+    )
+    (folder / "ads.md").write_text("# ads\n", encoding="utf-8")
+    (folder / "review-log.md").write_text("# review log\n", encoding="utf-8")
+
+    result = migrate_mod.plan_campaigns_to_pushes(tmp_path)
+
+    assert result["summary"] == {"moves": 1, "ambiguous": 0, "blockers": 0}
+    move = result["moves"][0]
+    assert move["from"] == "campaigns/2026-04-15-spring-launch"
+    assert move["to"] == "pushes/2026-04-15-spring-launch/push.md"
+    assert move["date"] == "2026-04-15"
+    assert move["date_source"] == "folder.day-prefix"
+    assert "type: campaign -> type: push" in move["frontmatter_changes"]
+    assert "linked_campaigns -> linked_pushes (rename)" in move["frontmatter_changes"]
+    assert any("provider_refs.meta_ads.campaign_id" in note for note in move["notes"])
+    assert "campaigns/2026-04-15-spring-launch/ads.md" in move["folder_contents"]
+
+
+def test_plan_campaigns_uses_month_prefix_when_only_month_is_present(tmp_path: Path) -> None:
+    folder = tmp_path / "campaigns" / "2026-04-spring"
+    folder.mkdir(parents=True)
+    (folder / "campaign.md").write_text(
+        "---\nslug: spring\nstatus: active\n---\n# spring\n",
+        encoding="utf-8",
+    )
+
+    result = migrate_mod.plan_campaigns_to_pushes(tmp_path)
+
+    assert result["summary"]["moves"] == 1
+    move = result["moves"][0]
+    assert move["date"] == "2026-04-01"
+    assert move["date_source"] == "folder.month-prefix"
+    assert move["to"] == "pushes/2026-04-01-spring/push.md"
+
+
+def test_plan_campaigns_uses_frontmatter_date_when_folder_has_no_prefix(tmp_path: Path) -> None:
+    folder = tmp_path / "campaigns" / "spring-launch"
+    folder.mkdir(parents=True)
+    (folder / "campaign.md").write_text(
+        "---\nslug: spring-launch\nstatus: active\nstarted: 2026-04-15\n---\n# spring\n",
+        encoding="utf-8",
+    )
+
+    result = migrate_mod.plan_campaigns_to_pushes(tmp_path)
+
+    assert result["summary"]["moves"] == 1
+    move = result["moves"][0]
+    assert move["date"] == "2026-04-15"
+    assert move["date_source"] == "frontmatter.started"
+
+
+def test_plan_campaigns_blocks_when_no_date_is_inferable(tmp_path: Path) -> None:
+    folder = tmp_path / "campaigns" / "spring-launch"
+    folder.mkdir(parents=True)
+    (folder / "campaign.md").write_text(
+        "---\nslug: spring-launch\nstatus: active\n---\n# spring\n",
+        encoding="utf-8",
+    )
+
+    result = migrate_mod.plan_campaigns_to_pushes(tmp_path)
+
+    assert result["summary"]["blockers"] == 1
+    assert result["ok"] is False
+    blocker = result["blockers"][0]
+    assert "cannot infer a date" in blocker["reason"]
+
+
+def test_plan_campaigns_routes_subfolder_without_campaign_md_to_ambiguous(tmp_path: Path) -> None:
+    # Per the rubric, ambiguous generated folders (e.g. campaigns/organic-scripts/)
+    # should not be auto-promoted to pushes. They surface for operator review.
+    folder = tmp_path / "campaigns" / "organic-scripts"
+    folder.mkdir(parents=True)
+    (folder / "post-1.md").write_text("# post 1\n", encoding="utf-8")
+    (folder / "post-2.md").write_text("# post 2\n", encoding="utf-8")
+
+    result = migrate_mod.plan_campaigns_to_pushes(tmp_path)
+
+    assert result["summary"] == {"moves": 0, "ambiguous": 1, "blockers": 0}
+    ambiguous = result["ambiguous"][0]
+    assert ambiguous["from"] == "campaigns/organic-scripts"
+    assert "no campaign.md" in ambiguous["reason"]
+
+
+def test_migrate_campaigns_cli_plan_emits_machine_readable_json(tmp_path: Path) -> None:
+    folder = tmp_path / "campaigns" / "2026-04-15-spring-launch"
+    folder.mkdir(parents=True)
+    (folder / "campaign.md").write_text(
+        "---\nslug: spring-launch\nstatus: active\n---\n# spring\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["migrate", "--repo", str(tmp_path), "campaigns", "--plan", "--json"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["schema"] == migrate_mod.CAMPAIGNS_PLAN_SCHEMA
+    assert payload["summary"]["moves"] == 1
+    assert payload["moves"][0]["to"] == "pushes/2026-04-15-spring-launch/push.md"
+
+
+def test_migrate_campaigns_cli_without_plan_flag_refuses(tmp_path: Path) -> None:
+    """Apply is not yet implemented; the command refuses without --plan."""
+    result = runner.invoke(
+        app,
+        ["migrate", "--repo", str(tmp_path), "campaigns"],
+    )
+
+    assert result.exit_code == 2
+    assert "--plan is required" in result.stderr or "--plan is required" in (result.output or "")

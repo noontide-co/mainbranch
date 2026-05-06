@@ -1078,6 +1078,43 @@ def migrate_cmd(
         migrate_mod.render_status(result)
 
 
+@migrate_app.command("campaigns")
+def migrate_campaigns_cmd(
+    ctx: typer.Context,
+    plan: bool = typer.Option(
+        False,
+        "--plan",
+        help=(
+            "Print a read-only plan classifying campaigns/ records as moves, "
+            "ambiguous, or blockers."
+        ),
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Preview the legacy ``campaigns/`` -> canonical ``pushes/`` migration.
+
+    Plan-only in this release. The apply path lands in a follow-up PR with
+    backups and explicit operator approval; running without ``--plan`` exits
+    with the same plan output and a notice that apply is not yet implemented.
+    """
+    repo_value = ctx.obj.get("repo", ".") if ctx.obj else "."
+    if not plan:
+        typer.echo(
+            "mb migrate campaigns: --plan is required (apply is not yet implemented)",
+            err=True,
+        )
+        raise typer.Exit(2)
+    result = migrate_mod.plan_campaigns_to_pushes(repo_value)
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        migrate_mod.render_campaigns_plan(result)
+    summary = result["summary"]
+    has_blockers = summary.get("blockers", 0) > 0
+    has_anything = sum(summary.values()) > 0
+    raise typer.Exit(1 if has_blockers else (0 if has_anything else 0))
+
+
 @migrate_app.command("status")
 def migrate_status_cmd(
     ctx: typer.Context,
