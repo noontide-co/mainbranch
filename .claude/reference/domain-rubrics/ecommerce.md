@@ -7,15 +7,15 @@ date: 2026-01-16
 
 # E-commerce Domain Rubric
 
-Guide for structuring `reference/domain/` folder for e-commerce businesses.
+Guide for structuring `core/operations/` folder for e-commerce businesses.
 
 ---
 
-## Required Domain Structure
+## Required Operations Structure
 
 ```
-reference/
-└── domain/
+core/
+└── operations/
     ├── products/
     │   ├── catalog.md        # Full product catalog (from Shopify/platform)
     │   ├── materials.md      # Materials, sourcing, care instructions
@@ -124,16 +124,16 @@ Depending on your e-commerce niche, you may add:
 
 E-commerce domain files work alongside universal reference:
 
-| Universal (reference/) | E-commerce Specific (reference/domain/) |
-|------------------------|----------------------------------------|
+| Core file | E-commerce operations file |
+|-----------|----------------------------|
 | `core/offer.md` | `products/catalog.md` |
 | `core/audience.md` | — |
 | `core/voice.md` | — |
-| `brand/voice-system.md` | — |
-| `proof/testimonials.md` | — |
-| `proof/angles/` | — |
+| `core/brand/voice-system.md` | — |
+| `core/proof/testimonials.md` | — |
+| `core/proof/angles/` | — |
 
-**The relationship:** `core/offer.md` summarizes what you sell. `domain/products/catalog.md` has the full inventory.
+**The relationship:** `core/offer.md` summarizes what you sell. `core/operations/products/catalog.md` has the full inventory.
 
 ---
 

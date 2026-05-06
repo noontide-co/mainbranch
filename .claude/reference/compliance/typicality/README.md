@@ -143,7 +143,7 @@ If no typicality file exists for a client, the `/mb-ads review` mode should:
 Client-specific typicality data lives in each client's own repo:
 
 ```
-{client-repo}/reference/proof/typicality.md
+{client-repo}/core/proof/typicality.md
 ```
 
 Copy the template below to create a new client typicality file.

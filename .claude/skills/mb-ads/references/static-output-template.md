@@ -189,7 +189,7 @@ Copy and paste into Ads Manager after images are ready.
 **Batch file:** `static-ads-batch-{###}.md`
 - Example: `static-ads-batch-001.md`
 
-**Full path example:** `outputs/2026-01-15-static-ads-january-launch/static-ads-batch-001.md`
+**Full path example:** `campaigns/2026-01-15-static-ads-january-launch/static-ads-batch-001.md`
 
 **Review log:** `review-log.md` (same folder)
 

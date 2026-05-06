@@ -20,14 +20,23 @@ It is a reference file that skills read when generating content. Without it, ski
 ## Where does it live?
 
 ```
-reference/
-└── domain/
-    └── content-strategy.md
+core/
+└── content-strategy.md
 ```
 
-It lives in `core/operations/`, not `core/`. Core files (soul, offer, audience, voice) are required for every business. Content strategy is domain-level -- it emerges over time through `/mb-think` cycles, not at setup.
+It lives at top-level `core/content-strategy.md` beside `soul.md`,
+`offer.md`, `audience.md`, and `voice.md`.
 
-**Why domain and not core?** You need to have your core reference solid before a content strategy makes sense. You also need some real content experience (what platforms you like, what topics land, what hooks work) before you can codify a strategy. It is emergent, not foundational.
+**Why top-level core?** Content strategy is brand-level evergreen strategy. It
+connects the business's soul, offer, audience, and voice to distribution
+choices: pillars, platforms, cadence, hooks, and metrics. It is not an
+operations file. Use `core/operations/` for delivery systems like classroom,
+membership, funnel, and fulfillment.
+
+You still need enough core reference before a content strategy makes sense.
+The file usually emerges through `/mb-think` cycles after the operator has
+some real content experience: what platforms they like, what topics land, and
+what hooks work.
 
 ---
 

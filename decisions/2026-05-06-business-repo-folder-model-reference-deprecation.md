@@ -5,7 +5,7 @@ status: accepted
 topic: Business repo folder model and reference deprecation
 linked_issues:
   - https://github.com/noontide-co/mainbranch/issues/318
-supersedes:
+linked_decisions:
   - decisions/2026-04-29-mb-vip-v0-1-0-master.md
 ---
 
@@ -52,6 +52,10 @@ that skills need to read. Keeping this under one obvious folder is better than
 introducing a new `brain/` top-level folder or preserving `reference/` as a
 second source of truth.
 
+This decision supersedes only the business-repo folder and path claims from
+the 2026-04-29 v0.1.0 master decision. It does not supersede that decision's
+vocabulary, packaging, PyPI, dial, archetype, or OSS/paid mechanism choices.
+
 ## Path Map
 
 Legacy business-repo paths map to the current model this way:
@@ -62,6 +66,7 @@ Legacy business-repo paths map to the current model this way:
 | `reference/offers/*` | `core/offers/*` |
 | `reference/proof/*` | `core/proof/*` |
 | `reference/brand/*` | `core/brand/*` |
+| `reference/strategy/*` | `core/strategy/*` |
 | `reference/visual-identity/*` | `core/brand/*` |
 | `reference/domain/content-strategy.md` | `core/content-strategy.md` |
 | `reference/domain/product-ladder.md` | `core/product-ladder.md` |

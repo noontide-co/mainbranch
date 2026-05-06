@@ -48,9 +48,9 @@ If none exist, write: "First crystallize session. No prior outputs."]
 [Full text of each research file created today, or summaries if >5 files.
 If none: "No research today."]
 
-=== REFERENCE FILE CHANGES ===
+=== CORE FILE CHANGES ===
 
-[Git diff output for reference/, or "No reference changes today."]
+[Git diff output for core/, or "No core changes today."]
 
 === YOUR TASK ===
 

@@ -34,6 +34,7 @@ LEGACY_TREE_MOVES = (
     ("reference/offers", "core/offers"),
     ("reference/proof", "core/proof"),
     ("reference/brand", "core/brand"),
+    ("reference/strategy", "core/strategy"),
     ("reference/visual-identity", "core/brand"),
     ("reference/domain", "core/operations"),
 )
@@ -68,6 +69,7 @@ the current v0.2 layout.
 - Moved `reference/offers/*` into `core/offers/` when present.
 - Moved `reference/proof/*` into `core/proof/`.
 - Moved `reference/brand/*` and `reference/visual-identity/*` into `core/brand/`.
+- Moved `reference/strategy/*` into `core/strategy/`.
 - Moved brand-level `reference/domain/content-strategy.md` and
   `reference/domain/product-ladder.md` into `core/`.
 - Moved remaining `reference/domain/*` operating context into `core/operations/`.
@@ -210,6 +212,7 @@ def _updated_claude_text(text: str) -> str:
         ("reference/proof/", "core/proof/"),
         ("reference/visual-identity/", "core/brand/"),
         ("reference/brand/", "core/brand/"),
+        ("reference/strategy/", "core/strategy/"),
         ("reference/domain/", "core/operations/"),
         ("reference/core/", "core/"),
         ("reference/offers/", "core/offers/"),

@@ -38,41 +38,41 @@ The relevant question during a session is: "Are any other business repos relevan
 
 ---
 
-## Required Domain Structure
+## Required Repo Structure
 
 ```
-reference/
-├── core/                        # Brand-level (always present)
-│   ├── soul.md                  # ALWAYS core, never per-offer
-│   ├── offer.md                 # Brand thesis (multi-offer) or full offer (single)
-│   ├── audience.md              # Base audience (shared across offers)
-│   └── voice.md                 # ALWAYS core, never per-offer
+core/
+├── soul.md                      # ALWAYS core, never per-offer
+├── offer.md                     # Brand thesis (multi-offer) or full offer (single)
+├── audience.md                  # Base audience (shared across offers)
+├── voice.md                     # ALWAYS core, never per-offer
+├── content-strategy.md          # Pillars, platforms, cadence (brand-level)
+├── product-ladder.md            # How offers relate (multi-offer only)
 ├── offers/                      # (multi-offer only)
 │   └── [name]/
 │       ├── offer.md             # Offer-specific details (required)
 │       └── audience.md          # Offer-specific audience override (optional)
-├── brand/                       # Deep brand systems (always core)
+├── brand/                       # Deep brand systems
 ├── proof/
 │   ├── testimonials.md          # Brand-level testimonials
 │   ├── typicality.md            # FTC outcome data
 │   └── angles/                  # Messaging entry points
 │       └── [angle-name].md
-└── domain/
-    ├── product-ladder.md        # How offers relate (multi-offer only)
-    ├── content-strategy.md      # Pillars, platforms, cadence (brand-level)
-    └── ...                      # Business-type specific folders
+└── operations/                  # Business-type specific folders
 ```
 
 ### Offer Folder Contents
 
-Each offer folder under `offers/` contains:
+Each offer folder under `core/offers/` contains:
 
 | File | Required | Purpose |
 |------|----------|---------|
 | `offer.md` | Yes | Offer-specific pricing, mechanism, benefits, transformation |
 | `audience.md` | No | Audience override if this offer targets a different segment |
 
-**Offer-specific testimonials** can be placed as `offers/[name]/testimonials.md` if testimonials are strongly offer-specific. Otherwise, brand-level `proof/testimonials.md` suffices.
+**Offer-specific testimonials** can be placed as
+`core/offers/[name]/testimonials.md` if testimonials are strongly
+offer-specific. Otherwise, brand-level `core/proof/testimonials.md` suffices.
 
 ---
 
@@ -86,22 +86,22 @@ Skills resolve context files using a cascading lookup. The active offer is deter
 |------|------------|-----------|
 | `soul.md` | `core/soul.md` | Soul is brand identity -- if offers need different souls, they need different repos |
 | `voice.md` | `core/voice.md` | Voice is brand personality -- consistent across all offers |
-| `content-strategy.md` | `domain/content-strategy.md` | Content strategy is brand-level distribution |
-| `brand/*` | `brand/*` | Brand systems are always shared |
+| `content-strategy.md` | `core/content-strategy.md` | Content strategy is brand-level distribution |
+| `brand/*` | `core/brand/*` | Brand systems are always shared |
 
 ### Offer-Aware (Cascade with Fallback)
 
 | File | Resolution | Fallback |
 |------|------------|----------|
-| `offer.md` | `offers/[active]/offer.md` | `core/offer.md` |
-| `audience.md` | `offers/[active]/audience.md` | `core/audience.md` |
+| `offer.md` | `core/offers/[active]/offer.md` | `core/offer.md` |
+| `audience.md` | `core/offers/[active]/audience.md` | `core/audience.md` |
 
 ### Accumulate (Merge Brand + Offer)
 
 | File | Resolution |
 |------|------------|
-| `testimonials.md` | `offers/[active]/testimonials.md` (if exists) + `proof/testimonials.md` |
-| `angles/*.md` | All angles apply to all offers (brand-level) |
+| `testimonials.md` | `core/offers/[active]/testimonials.md` (if exists) + `core/proof/testimonials.md` |
+| `angles/*.md` | `core/proof/angles/*.md` applies to all offers by default |
 
 ### Resolution Pseudocode
 
@@ -113,13 +113,13 @@ resolve_context(file_type):
 
   # Always domain -- brand-level
   if file_type in [content-strategy]:
-    return domain/content-strategy.md
+    return core/content-strategy.md
 
   # Offer-aware -- check active offer first
   current_offer = read .vip/local.yaml -> current_offer
 
-  if current_offer AND exists offers/{current_offer}/{file_type}.md:
-    return offers/{current_offer}/{file_type}.md
+  if current_offer AND exists core/offers/{current_offer}/{file_type}.md:
+    return core/offers/{current_offer}/{file_type}.md
 
   # Fallback to core
   return core/{file_type}.md
@@ -148,7 +148,7 @@ current_offer: community    # Active offer for this session
 
 ## product-ladder.md
 
-**Location:** `reference/domain/product-ladder.md`
+**Location:** `core/product-ladder.md`
 
 **Purpose:** Documents how offers relate to each other -- the strategic relationship, not just a list.
 
@@ -184,10 +184,10 @@ status: active
 
 | Offer Count | Guidance |
 |-------------|----------|
-| **1** | Single-offer mode. No `offers/` folder needed. Everything in `core/`. |
+| **1** | Single-offer mode. No `core/offers/` folder needed. Everything in `core/`. |
 | **2-3** | Multi-offer sweet spot. Clean separation, easy to manage. |
 | **4-10** | Still works. `product-ladder.md` should group offers into tiers or families. Consider whether some offers are variants vs. truly separate products. |
-| **10+** | Reconsider architecture. Either group into product families (sub-folders under `offers/`) or split into separate repos if souls diverge. |
+| **10+** | Reconsider architecture. Either group into product families under `core/offers/` or split into separate repos if souls diverge. |
 
 **Warning signs you need separate repos:**
 - Offers need different voice.md files
@@ -204,25 +204,27 @@ This is an atomic operation performed by `/mb-setup` when a user adds their seco
 ### What Happens
 
 1. Current `core/offer.md` becomes the brand thesis (high-level, covers all offers)
-2. Current offer details move to `offers/[name]/offer.md`
-3. `offers/` folder is created
-4. `domain/product-ladder.md` is created
+2. Current offer details move to `core/offers/[name]/offer.md`
+3. `core/offers/` folder is created
+4. `core/product-ladder.md` is created
 5. `.vip/local.yaml` is created (and `.vip/` added to `.gitignore`)
 6. `core/audience.md` stays in place (shared baseline)
-7. If the new offer targets a different audience segment, `offers/[name]/audience.md` is created
+7. If the new offer targets a different audience segment, `core/offers/[name]/audience.md` is created
 
 ### What Does NOT Change
 
 - `core/soul.md` -- untouched
 - `core/voice.md` -- untouched
-- `brand/*` -- untouched
-- `proof/*` -- untouched (testimonials stay brand-level unless explicitly split)
-- `domain/content-strategy.md` -- untouched
-- All research, decisions, outputs -- untouched
+- `core/brand/*` -- untouched
+- `core/proof/*` -- untouched (testimonials stay brand-level unless explicitly split)
+- `core/content-strategy.md` -- untouched
+- All research, decisions, campaigns -- untouched
 
 ### Rollback
 
-If a user removes all but one offer, the `offers/` folder can be deleted and the remaining offer details merged back into `core/offer.md`. This is the reverse atomic operation.
+If a user removes all but one offer, the `core/offers/` folder can be deleted
+and the remaining offer details merged back into `core/offer.md`. This is the
+reverse atomic operation.
 
 ---
 
@@ -233,21 +235,21 @@ If a user removes all but one offer, the `offers/` folder can be deleted and the
 | `soul.md` | Soul is brand identity. Different souls = different repos. |
 | `voice.md` | Voice is brand personality. One brand, one voice. |
 | `content-strategy.md` | Distribution is brand-level. Offers are topics within pillars, not separate strategies. |
-| `brand/*` | Brand systems (visual, guardrails) are unified. |
+| `core/brand/*` | Brand systems (visual, guardrails) are unified. |
 
 ---
 
 ## Integration with Core Reference
 
-| Universal (reference/) | Multi-Offer Specific |
-|------------------------|----------------------|
+| Core file | Multi-offer specific file |
+|-----------|---------------------------|
 | `core/soul.md` | -- (always core) |
 | `core/voice.md` | -- (always core) |
-| `core/offer.md` | `offers/[name]/offer.md` |
-| `core/audience.md` | `offers/[name]/audience.md` |
-| `proof/testimonials.md` | `offers/[name]/testimonials.md` (optional) |
-| `domain/content-strategy.md` | -- (always brand-level) |
-| -- | `domain/product-ladder.md` |
+| `core/offer.md` | `core/offers/[name]/offer.md` |
+| `core/audience.md` | `core/offers/[name]/audience.md` |
+| `core/proof/testimonials.md` | `core/offers/[name]/testimonials.md` (optional) |
+| `core/content-strategy.md` | -- (always brand-level) |
+| -- | `core/product-ladder.md` |
 
 ---
 
@@ -255,8 +257,8 @@ If a user removes all but one offer, the `offers/` folder can be deleted and the
 
 | Skill | How It Uses Multi-Offer |
 |-------|-------------------------|
-| `/mb-start` | Detects `offers/` folder, prompts for offer selection, writes `.vip/local.yaml` |
-| `/mb-setup` | Creates `offers/` structure, handles single-to-multi migration |
+| `/mb-start` | Detects `core/offers/` folder, prompts for offer selection, writes `.vip/local.yaml` |
+| `/mb-setup` | Creates `core/offers/` structure, handles single-to-multi migration |
 | `/mb-think` | Reads active offer context; decisions may affect specific offers |
 | `/mb-ads` | Generates ads for active offer using resolved offer.md + audience.md |
 | `/mb-vsl` | Writes scripts for active offer |

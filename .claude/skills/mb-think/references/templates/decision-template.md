@@ -268,7 +268,7 @@ The research shows three tiers maximizes both reach and revenue. Our audience va
 
 ## What Changes
 
-offer.md gets a three-tier pricing structure with benefits per tier (Free, $97 Core, $297 Premium). audience.md adds three segments: Free Seeker, Core Member, Power User — each with distinct psychographics and buying triggers. A new angle file (tier-comparison.md) captures upgrade messaging. domain/membership/tiers.md gets the full tier specification.
+offer.md gets a three-tier pricing structure with benefits per tier (Free, $97 Core, $297 Premium). audience.md adds three segments: Free Seeker, Core Member, Power User — each with distinct psychographics and buying triggers. A new angle file (tier-comparison.md) captures upgrade messaging. core/operations/membership/tiers.md gets the full tier specification.
 
 Outside reference: create free tier content curriculum, define premium-only cadence, configure Skool tiers.
 

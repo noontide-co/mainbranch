@@ -47,7 +47,7 @@ This is not an audit. It is a thoughtful friend helping you close the session.
 6. Commit & close
 ```
 
-Step 4 is optional. **Step 5 is NOT optional** -- if meaningful activity happened (decisions, research, reference changes), you MUST spawn the crystallize agent. Do not try to do the crystallize analysis inline. Do not skip it. The subagent gets a fresh context window and spends real tokens reading the day's files. That depth is the whole point.
+Step 4 is optional. **Step 5 is NOT optional** -- if meaningful activity happened (decisions, research, core changes), you MUST spawn the crystallize agent. Do not try to do the crystallize analysis inline. Do not skip it. The subagent gets a fresh context window and spends real tokens reading the day's files. That depth is the whole point.
 
 A quick `/mb-end` (user says "just commit and close") can be steps 1-3 and 6. But if there is meaningful activity and the user did not explicitly skip, always run Step 5.
 
@@ -157,7 +157,7 @@ Ask once:
 
 ## Step 5: Crystallize
 
-**YOU MUST SPAWN A SUBAGENT FOR THIS STEP.** Do not attempt the crystallize analysis in the main conversation. The main conversation has been burning tokens all session. The crystallize agent gets a fresh context window and spends 50-100K tokens reading the actual files from today -- decisions, research, soul.md, reference diffs. That depth is what makes the question good. Without the subagent, you will default to generic questions like "What did you learn?" which is the exact failure this architecture was built to prevent.
+**YOU MUST SPAWN A SUBAGENT FOR THIS STEP.** Do not attempt the crystallize analysis in the main conversation. The main conversation has been burning tokens all session. The crystallize agent gets a fresh context window and spends 50-100K tokens reading the actual files from today -- decisions, research, soul.md, core diffs. That depth is what makes the question good. Without the subagent, you will default to generic questions like "What did you learn?" which is the exact failure this architecture was built to prevent.
 
 A dedicated subagent performs deep analysis of the session's work and generates one crystallize output -- context plus questions that make the user stop and think.
 
@@ -165,7 +165,7 @@ A dedicated subagent performs deep analysis of the session's work and generates 
 
 ### 5a. Check for Meaningful Activity
 
-Check if decisions, research, or significant reference changes happened today:
+Check if decisions, research, or significant core changes happened today:
 
 ```bash
 # Decisions created or modified today
@@ -174,16 +174,16 @@ git log --since="6am" --name-only --diff-filter=AM -- decisions/ 2>/dev/null
 # Research created today
 git log --since="6am" --name-only --diff-filter=A -- research/ 2>/dev/null
 
-# Reference changes
+# Core changes
 git diff --name-only HEAD@{6am}..HEAD -- core/ 2>/dev/null
 ```
 
 **When to skip crystallize entirely:**
-- No decisions, research, or reference changes (truly nothing happened)
+- No decisions, research, or core changes (truly nothing happened)
 - Context window critically low (under 30K remaining)
 - User explicitly asked for a quick close ("just commit and close")
 
-**Light days:** If only minor activity (one small edit, no decisions), the agent still runs but shifts focus to reference gaps. See [references/crystallize-agent.md](references/crystallize-agent.md) for light-day behavior.
+**Light days:** If only minor activity (one small edit, no decisions), the agent still runs but shifts focus to core gaps. See [references/crystallize-agent.md](references/crystallize-agent.md) for light-day behavior.
 
 ### 5b. Gather File Contents
 
@@ -211,13 +211,13 @@ Task(
   description: "Crystallize agent: analyze today's session work and generate
     a crystallize output (context block + questions) that surfaces unnamed
     tensions, connects tactical work to existential purpose, and identifies
-    reference gaps."
+    core gaps."
 )
 ```
 
 **Agent prompt construction:** Build a structured prompt containing all gathered content from 5b, plus the agent instructions. See [references/crystallize-agent.md](references/crystallize-agent.md) for the complete agent prompt template, analysis process, anti-patterns, and question design criteria.
 
-**Pass to crystallize agent:** Include `current_offer` from `.vip/local.yaml` so the agent can analyze offer-specific reference changes and ask offer-relevant questions.
+**Pass to crystallize agent:** Include `current_offer` from `.vip/local.yaml` so the agent can analyze offer-specific core changes and ask offer-relevant questions.
 
 **The agent is read-only.** It reads files and returns findings. It does not write files. The main conversation handles all file writes.
 

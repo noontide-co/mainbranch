@@ -130,7 +130,7 @@ Value = (Dream Outcome × Likelihood of Achievement) / (Time Delay × Effort & S
 
 ## Enemy-Driven Positioning
 
-When the business has declared named enemies (check `reference/core/voice.md` for a Named Enemies section), verify:
+When the business has declared named enemies (check `core/voice.md` for a Named Enemies section), verify:
 
 | Check | Pass | Fail |
 |-------|------|------|

@@ -7,23 +7,23 @@ date: 2026-01-16
 
 # Community/Skool Domain Rubric
 
-Guide for structuring `reference/domain/` folder for community-based businesses (Skool, Circle, memberships).
+Guide for structuring `core/operations/` and `core/content-strategy.md` for
+community-based businesses (Skool, Circle, memberships).
 
 ---
 
-## Required Domain Structure
+## Required Operations Structure
 
 ```
-reference/
-└── domain/
-    ├── content-strategy.md   # Pillars, platforms, cadence, metrics
-    │
+core/
+├── content-strategy.md       # Brand-level pillars, platforms, cadence, metrics
+└── operations/
     ├── classroom/
     │   ├── modules.md        # Course modules and lessons
     │   └── resources.md      # Downloads, templates, tools
     │
     ├── funnel/
-    │   ├── stages.md         # Awareness → Member journey
+    │   ├── stages.md         # Awareness -> Member journey
     │   ├── touchpoints.md    # Key conversion moments
     │   └── skool-surfaces.md # Live about page + pricing card copy
     │
@@ -202,15 +202,15 @@ Pillars emerge from the intersection of soul.md + offer.md + audience.md. If a p
 
 ## Integration with Core Reference
 
-| Universal (reference/) | Community Specific (reference/domain/) |
-|------------------------|---------------------------------------|
+| Core file | Community operations file |
+|-----------|---------------------------|
 | `core/offer.md` | `membership/pricing.md` |
 | `core/audience.md` | `funnel/stages.md` |
 | `core/voice.md` | — |
-| `proof/testimonials.md` | — |
-| — | `content-strategy.md` |
+| `core/proof/testimonials.md` | — |
+| `core/content-strategy.md` | — |
 
-**The relationship:** `core/offer.md` summarizes the transformation. `domain/classroom/` is the delivery. `domain/membership/` is the access structure. `domain/content-strategy.md` is the distribution backbone — it connects ALL core files (soul for pillar derivation, offer for promotional content, audience for topic relevance, voice for content tone).
+**The relationship:** `core/offer.md` summarizes the transformation. `core/operations/classroom/` is the delivery. `core/operations/membership/` is the access structure. `core/content-strategy.md` is the distribution backbone — it connects ALL core files (soul for pillar derivation, offer for promotional content, audience for topic relevance, voice for content tone).
 
 ---
 

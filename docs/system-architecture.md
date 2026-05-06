@@ -17,7 +17,7 @@ Main Branch operates on a fundamental separation:
 
 ```
 ENGINE (mainbranch)     +     DATA (your business repo)     =     OUTPUT
-├── Skills                             ├── Reference                       ├── Ads, Scripts, Content (outputs/)
+├── Skills                             ├── Reference                       ├── Ads, Scripts, Content (campaigns/)
 ├── Lenses                             │   (incl. content-strategy.md)     ├── Wiki (separate repo)
 └── Frameworks                         ├── Research                        └── Site (separate repo)
                                        ├── Decisions
@@ -38,7 +38,7 @@ See `docs/philosophy.md` for the deeper explanation. The short version:
 
 **Active reference is work, but that work IS the thinking.** Files you can read, edit, version control. The repo is truth. Articulating context = understanding your business.
 
-**Curation over collection.** The repo is a precision instrument. Every file earns its place by improving what LLMs can do for you. Research gets synthesized, decisions get distilled, and only the sharpest context survives into reference. Quantity of context hurts; quality compounds.
+**Curation over collection.** The repo is a precision instrument. Every file earns its place by improving what LLMs can do for you. Research gets synthesized, decisions get distilled, and only the sharpest context survives into `core/`. Quantity of context hurts; quality compounds.
 
 ---
 
@@ -53,7 +53,7 @@ See `docs/philosophy.md` for the deeper explanation. The short version:
 └─────────┘    └─────────┘    └─────────┘    └─────────┘
      │              │              │              │
      ▼              ▼              ▼              ▼
-  research/     decisions/     reference/      outputs/
+  research/     decisions/       core/       campaigns/
 ```
 
 ### 1. Research (Dated)
@@ -125,8 +125,8 @@ See: `research/2026-01-10-competitor-pricing-analysis.md`
 
 ## What Changes
 
-Reference files affected:
-- `reference/core/offer.md` — update pricing section
+Core files affected:
+- `core/offer.md` — update pricing section
 - New ads needed for updated price point
 ```
 
@@ -135,28 +135,27 @@ Reference files affected:
 Update permanent context based on decisions. These files are what skills consume.
 
 ```
-reference/
-├── core/
-│   ├── offer.md           # What you sell, pricing, mechanism
-│   ├── audience.md        # Who you sell to, psychographics
-│   └── voice.md           # How you sound
+core/
+├── offer.md               # What you sell, pricing, mechanism
+├── audience.md            # Who you sell to, psychographics
+├── voice.md               # How you sound
 ├── brand/                 # Deep brand systems
 ├── proof/
 │   ├── testimonials.md
 │   └── angles/
 │       ├── overwhelm-to-clarity.md
 │       └── professional-credibility.md
-└── domain/                # Business-type specific
+└── operations/            # Business-type specific delivery systems
 ```
 
 **Evergreen files don't have dates in the filename.** They represent current truth, not point-in-time snapshots.
 
-### 4. Generate (Output)
+### 4. Generate (Campaigns)
 
-Skills consume context and produce outputs.
+Skills consume context and produce campaign work.
 
 ```
-outputs/
+campaigns/
 ├── 2026-01-15-january-launch/
 │   ├── batch-001-static-ads.md
 │   ├── batch-002-video-scripts.md
@@ -166,7 +165,7 @@ outputs/
 
 ### 5. Learn (Loop Back)
 
-Outputs inform new research. What worked? What didn't? This becomes new research, which informs new decisions, which updates context.
+Campaigns inform new research. What worked? What didn't? This becomes new research, which informs new decisions, which updates context.
 
 In the Generate step, the **newsletter is the keystone piece** -- long-form thinking that gets adapted into platform-specific content by /mb-organic and amplified by /mb-ads. In the Learn step, performance data flows back into `content-strategy.md` -- updating the hooks library, metrics benchmarks, and pillar effectiveness.
 
@@ -180,12 +179,13 @@ your-business/
 ├── .vip/                        # SESSION STATE — git-ignored
 │   └── local.yaml               # Active offer, session config
 │
-├── reference/                   # EVERGREEN — What skills consume
-│   ├── core/                    # REQUIRED — Fundamental context
-│   │   ├── soul.md              # Why you exist
-│   │   ├── offer.md             # What you sell (or brand thesis if multi-offer)
-│   │   ├── audience.md          # Who you sell to
-│   │   └── voice.md             # How you sound
+├── core/                        # EVERGREEN — What skills consume
+│   ├── soul.md                  # Why you exist
+│   ├── offer.md                 # What you sell (or brand thesis if multi-offer)
+│   ├── audience.md              # Who you sell to
+│   ├── voice.md                 # How you sound
+│   ├── content-strategy.md      # Pillars, platforms, cadence, metrics
+│   ├── product-ladder.md        # How offers relate (multi-offer only)
 │   ├── offers/                  # (MULTI-OFFER ONLY)
 │   │   └── [name]/
 │   │       ├── offer.md         # Offer-specific details
@@ -196,9 +196,7 @@ your-business/
 │   │   ├── typicality.md        # FTC outcome data
 │   │   └── angles/              # Messaging entry points
 │   │       └── [angle-name].md
-│   └── domain/                  # Business-type specific
-│       ├── product-ladder.md    # How offers relate (multi-offer only)
-│       └── content-strategy.md  # Pillars, platforms, cadence, metrics
+│   └── operations/              # Business-type specific delivery systems
 │
 ├── research/                    # DATED — Point-in-time exploration
 │   └── YYYY-MM-DD-slug.md
@@ -206,7 +204,7 @@ your-business/
 ├── decisions/                   # DATED — Choices with rationale
 │   └── YYYY-MM-DD-slug.md
 │
-└── outputs/                     # All generated content — lifecycle via frontmatter status
+└── campaigns/                   # Generated campaign work — lifecycle via frontmatter status
     └── YYYY-MM-DD-batch-name/
 ```
 
@@ -215,7 +213,7 @@ your-business/
 1. **Flat > Deep** — Max 2 levels of nesting. Agents navigate via grep, not directory walking.
 2. **Semantic names** — Folder names describe content type, not arbitrary categories.
 3. **Dated vs Evergreen** — Dated content uses `YYYY-MM-DD-` prefix. Evergreen doesn't.
-4. **First-timer friendly** — Someone new sees: reference, research, decisions, outputs. Self-explanatory.
+4. **First-timer friendly** — Someone new sees: core, research, decisions, campaigns. Self-explanatory.
 
 ---
 
@@ -258,7 +256,7 @@ mainbranch/
 │       │   ├── testimonial-decision-rubric.md
 │       │   └── typicality/
 │       │       └── README.md
-│       └── domain-rubrics/          # Domain-specific folder structures
+│       └── domain-rubrics/          # Business-type operations rubrics
 │           ├── ecommerce.md
 │           ├── community.md
 │           └── multi-offer.md
@@ -312,16 +310,16 @@ Skills expect business context in standardized locations:
 
 | Context Type | Where to Look | Required |
 |--------------|---------------|----------|
-| Offer | `offers/[active]/offer.md` then `reference/core/offer.md` | Yes |
-| Audience | `offers/[active]/audience.md` then `reference/core/audience.md` | Yes |
-| Soul | `reference/core/soul.md` (always core) | Yes |
-| Voice | `reference/core/voice.md` (always core) | Recommended |
-| Angles | `reference/proof/angles/*.md` | At least one |
-| Testimonials | `reference/proof/testimonials.md` (+ offer-specific if exists) | Recommended |
-| Typicality | `reference/proof/typicality.md` | For outcome claims |
-| Content Strategy | `reference/domain/content-strategy.md` (always brand-level) | Recommended for /mb-organic, /newsletter |
-| Product Ladder | `reference/domain/product-ladder.md` | Multi-offer only |
-| Skool Surfaces | `reference/domain/funnel/skool-surfaces.md` | When generating ads, organic, VSLs, or site copy (congruence) |
+| Offer | `core/offers/[active]/offer.md` then `core/offer.md` | Yes |
+| Audience | `core/offers/[active]/audience.md` then `core/audience.md` | Yes |
+| Soul | `core/soul.md` | Yes |
+| Voice | `core/voice.md` | Recommended |
+| Angles | `core/proof/angles/*.md` | At least one |
+| Testimonials | `core/proof/testimonials.md` (+ offer-specific if exists) | Recommended |
+| Typicality | `core/proof/typicality.md` | For outcome claims |
+| Content Strategy | `core/content-strategy.md` (always brand-level) | Recommended for /mb-organic, /newsletter |
+| Product Ladder | `core/product-ladder.md` | Multi-offer only |
+| Skool Surfaces | `core/operations/funnel/skool-surfaces.md` | When generating ads, organic, VSLs, or site copy (congruence) |
 | Session State | `.vip/local.yaml` | Multi-offer only |
 | Site config | `~/.mainbranch/sites.json` | When building/publishing with /mb-site |
 
@@ -460,9 +458,9 @@ Skills should load context progressively:
 | Tier | What | When | Token Cost |
 |------|------|------|------------|
 | **Always** | CLAUDE.md | Every session | Low |
-| **Just-in-time** | reference/core/*.md | When generating | Medium |
+| **Just-in-time** | core/*.md | When generating | Medium |
 | **On-demand** | research/, decisions/, content-strategy.md, skool-surfaces.md | When reasoning or generating content | Medium |
-| **Deep reference** | reference/proof/, lenses/ | When reviewing | High |
+| **Deep reference** | core/proof/, lenses/ | When reviewing | High |
 
 **Why this matters:** Token efficiency. Don't load everything upfront. Load what's needed when it's needed.
 
@@ -484,8 +482,8 @@ Claude Code Session:
 ├── Primary (CWD): ~/projects/my-business/
 │   ├── .claude/settings.local.json  ← additionalDirectories points to mainbranch
 │   ├── .claude/skills/*             ← bridge links for skill discovery fallback
-│   ├── reference/
-│   ├── outputs/
+│   ├── core/
+│   ├── campaigns/
 │   └── ...
 │
 └── Additional directory (read-only): ~/Documents/GitHub/mainbranch/
@@ -496,8 +494,8 @@ Claude Code Session:
 
 When you invoke `/mb-ads`:
 1. Claude loads skill from Main Branch
-2. Skill reads context from my-business/reference/
-3. Output goes to my-business/outputs/
+2. Skill reads context from my-business/core/
+3. Output goes to my-business/campaigns/
 4. Review uses lenses from Main Branch
 
 Users with a wiki or site have additional repos accessed via config files (`~/.mainbranch/mb-wiki.json`, `~/.mainbranch/sites.json`), not as working directories.
@@ -506,7 +504,7 @@ Users with a wiki or site have additional repos accessed via config files (`~/.m
 
 ## Content Pipeline Architecture
 
-The content pipeline follows a **newsletter-first waterfall**: one keystone piece becomes many platform-adapted outputs.
+The content pipeline follows a **newsletter-first waterfall**: one keystone piece becomes many platform-adapted campaign assets.
 
 ```
 /mb-think → research, decisions, content-strategy.md
@@ -526,7 +524,7 @@ The content pipeline follows a **newsletter-first waterfall**: one keystone piec
 
 ### Infrastructure Layer
 
-Some skills produce infrastructure that sits outside the recurring content cycle — built once, updated when reference changes:
+Some skills produce infrastructure that sits outside the recurring content cycle — built once, updated when core context changes:
 
 - `/mb-site` — Conversion endpoint (landing pages where pipeline traffic lands)
 - `/mb-wiki` — Knowledge base (published notes)
@@ -537,17 +535,18 @@ These are destinations the pipeline drives traffic to, not recurring content ite
 
 The pipeline is designed so the creator **never opens a social app to post**. AI handles adaptation and distribution. The creator's energy stays in thinking and writing -- not scrolling. Audience feedback (metrics, comments, engagement) flows back through /mb-think into content-strategy.md, closing the loop without requiring the creator to be on-platform.
 
-### Output Lifecycle (Frontmatter-Based)
+### Campaign Lifecycle (Frontmatter-Based)
 
-All generated content lives in `outputs/`. Lifecycle is tracked via the `status` field in YAML frontmatter, not folder moves:
+Generated campaign work lives in `campaigns/`. Lifecycle is tracked via the
+`status` field in YAML frontmatter, not folder moves:
 
 - `status: draft` — Work in progress
 - `status: scheduled` — Approved, ready to publish
 - `status: published` — Live on platform
 - `status: final` — Complete, no publishing lifecycle (VSL scripts, reviewed ad batches)
 
-To find all drafts: `grep -rl "^status: draft" outputs/ --include="*.md"`
-To find scheduled content: `grep -rl "^status: scheduled" outputs/ --include="*.md"`
+To find all drafts: `grep -rl "^status: draft" campaigns/ --include="*.md"`
+To find scheduled content: `grep -rl "^status: scheduled" campaigns/ --include="*.md"`
 
 This replaces the previous folder-move lifecycle pattern where files moved between subdirectories.
 
@@ -579,19 +578,18 @@ Separate brands = separate repos. Always. The question during a session is: "Are
 ### Folder Structure (Multi-Offer)
 
 ```
-reference/
-├── core/                        # Brand-level (always present)
-│   ├── soul.md                  # ALWAYS core, never per-offer
-│   ├── offer.md                 # Brand thesis (multi-offer) or full offer (single)
-│   ├── audience.md              # Base audience (shared across offers)
-│   └── voice.md                 # ALWAYS core, never per-offer
+core/
+├── soul.md                      # ALWAYS core, never per-offer
+├── offer.md                     # Brand thesis (multi-offer) or full offer (single)
+├── audience.md                  # Base audience (shared across offers)
+├── voice.md                     # ALWAYS core, never per-offer
+├── content-strategy.md          # Pillars, platforms, cadence (brand-level)
+├── product-ladder.md            # How offers relate (multi-offer only)
 ├── offers/                      # (multi-offer only)
 │   └── [name]/
 │       ├── offer.md             # Offer-specific details (required)
 │       └── audience.md          # Offer-specific audience override (optional)
-└── domain/
-    ├── product-ladder.md        # How offers relate (multi-offer only)
-    └── content-strategy.md      # Pillars, platforms, cadence (brand-level)
+└── operations/                  # Business-type specific delivery systems
 ```
 
 ### Session Offer Context
@@ -616,15 +614,15 @@ resolve_context(file_type):
   if file_type in [soul, voice]:
     return core/{file_type}.md
 
-  # Always domain -- brand-level
+  # Always core -- brand-level
   if file_type in [content-strategy]:
-    return domain/content-strategy.md
+    return core/content-strategy.md
 
   # Offer-aware -- check active offer first
   current_offer = read .vip/local.yaml -> current_offer
 
-  if current_offer AND exists offers/{current_offer}/{file_type}.md:
-    return offers/{current_offer}/{file_type}.md
+  if current_offer AND exists core/offers/{current_offer}/{file_type}.md:
+    return core/offers/{current_offer}/{file_type}.md
 
   # Fallback to core
   return core/{file_type}.md
@@ -644,7 +642,7 @@ resolve_context(file_type):
                     └──────┬───────┘
                            │ NO
                     ┌──────▼───────┐
-                    │ content-     │──── YES ──── domain/content-strategy.md
+                    │ content-     │──── YES ──── core/content-strategy.md
                     │ strategy?    │
                     └──────┬───────┘
                            │ NO
@@ -655,8 +653,8 @@ resolve_context(file_type):
                     └──────┬───────┘
                            │ YES
                     ┌──────▼───────┐
-                    │ offers/      │
-                    │ {offer}/     │──── YES ──── offers/{offer}/{type}.md
+                    │ core/offers/ │
+                    │ {offer}/     │──── YES ──── core/offers/{offer}/{type}.md
                     │ {type}.md    │
                     │ exists?      │
                     └──────┬───────┘
@@ -667,7 +665,10 @@ resolve_context(file_type):
 
 ### Backward Compatibility
 
-No `offers/` folder = single-offer mode. Everything works exactly as before. The resolution algorithm falls through to `core/` at every step when there is no active offer or no `offers/` folder. Existing single-offer repos require zero changes.
+No `core/offers/` folder = single-offer mode. Everything works exactly as
+before. The resolution algorithm falls through to `core/` at every step when
+there is no active offer or no `core/offers/` folder. Existing single-offer
+repos require zero changes.
 
 ### What Never Goes Per-Offer
 
@@ -676,7 +677,7 @@ No `offers/` folder = single-offer mode. Everything works exactly as before. The
 | `soul.md` | Soul is brand identity -- different souls need different repos |
 | `voice.md` | Voice is brand personality -- one brand, one voice |
 | `content-strategy.md` | Distribution is brand-level, not per-product |
-| `brand/*` | Brand systems are unified across all offers |
+| `core/brand/*` | Brand systems are unified across all offers |
 
 See `.claude/reference/domain-rubrics/multi-offer.md` for the complete rubric including scaling guidelines, migration path, and skill integration details.
 
@@ -719,9 +720,9 @@ Decisions note what context they updated:
 ```markdown
 ## What Changes
 
-Reference files affected:
-- `reference/core/offer.md` — updated pricing section
-- `reference/proof/angles/value-stack.md` — new angle added
+Core files affected:
+- `core/offer.md` — updated pricing section
+- `core/proof/angles/value-stack.md` — new angle added
 ```
 
 This creates a traceable chain: Research → Decision → Context → Output
@@ -733,8 +734,8 @@ Decisions about content pillars, platforms, or cadence update content-strategy.m
 ```markdown
 ## What Changes
 
-Reference files affected:
-- `reference/domain/content-strategy.md` — add "transformation stories" pillar, update platform strategy with Instagram Reels cadence
+Core files affected:
+- `core/content-strategy.md` — add "transformation stories" pillar, update platform strategy with Instagram Reels cadence
 ```
 
 Content strategy links back to the decisions that informed pillar choices, creating the same traceable chain.
@@ -749,9 +750,9 @@ Content strategy links back to the decisions that informed pillar choices, creat
 | Content strategy | `slug.md` | `content-strategy.md` |
 | Research | `YYYY-MM-DD-slug.md` | `2026-01-10-competitor-analysis.md` |
 | Decisions | `YYYY-MM-DD-slug.md` | `2026-01-11-pricing-strategy.md` |
-| Output batches | `YYYY-MM-DD-batch-name/` | `2026-01-15-january-launch/` |
-| Output drafts | `YYYY-MM-DD-descriptive.md` | `2026-02-03-newsletter-issue.md` |
-| Typicality data | `typicality.md` | `reference/proof/typicality.md` |
+| Campaign batches | `YYYY-MM-DD-batch-name/` | `2026-01-15-january-launch/` |
+| Campaign drafts | `YYYY-MM-DD-descriptive.md` | `2026-02-03-newsletter-issue.md` |
+| Typicality data | `typicality.md` | `core/proof/typicality.md` |
 
 ### Why Dates in Filenames
 

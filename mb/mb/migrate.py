@@ -40,6 +40,7 @@ def read_schema_version(repo: str | Path) -> str:
         "offers",
         "proof",
         "brand",
+        "strategy",
         "visual-identity",
         "domain",
     )

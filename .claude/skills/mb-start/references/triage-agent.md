@@ -78,13 +78,13 @@ Gather these in main and pass as structured text in each agent's prompt:
 | Readiness scores (from Step 6) | Already computed | ~20 lines | All 3 agents |
 | Absolute repo path | From Step 2 | 1 line | All 3 agents (agents use this to Read files themselves) |
 | Git log (30 days) | `git log --since="30 days ago" --oneline --no-merges` | ~30 lines | Agent 2 |
-| Reference file change list (30 days) | `git log --since="30 days ago" --name-only -- reference/` | ~20 lines | Agent 1, 3 |
+| Core file change list (30 days) | `git log --since="30 days ago" --name-only -- core/` | ~20 lines | Agent 1, 3 |
 | Open decision file names | `grep -rl "status: proposed\|status: accepted" decisions/ 2>/dev/null` | ~10 lines | Agent 2 |
 | Unlinked research count | `grep -rl "linked_decisions: \[\]" research/ 2>/dev/null \| wc -l` | 1 line | Agent 2 |
 | Past triage file names | `ls research/*-start-triage.md 2>/dev/null` | ~5 lines | Agent 3 |
 | Past crystallize file names | `ls research/*-end-of-day-crystallize.md 2>/dev/null` | ~5 lines | Agent 3 |
 | `current_offer` | From `.vip/local.yaml` | 1 line | All 3 agents |
-| Output lifecycle listing | `grep -rl "status: draft\|status: scheduled" outputs/ 2>/dev/null` | ~10 lines | Agent 2 |
+| Campaign lifecycle listing | `grep -rl "status: draft\|status: scheduled" campaigns/ 2>/dev/null` | ~10 lines | Agent 2 |
 
 **What agents read themselves (in their own context, NOT in main):**
 - soul.md, offer.md, audience.md, voice.md — Agent 1 reads all, Agent 3 reads soul
@@ -123,9 +123,9 @@ testimonials X/3, angles X/3. Composite X/18.]
 
 [current_offer from .vip/local.yaml, or "single-offer mode"]
 
-=== REFERENCE FILES ===
+=== CORE FILES ===
 
-[Full text of each reference file in core/, core/offers/[active]/ if multi-offer,
+[Full text of each core file in core/, core/offers/[active]/ if multi-offer,
 core/proof/testimonials.md, core/proof/angles/*.md, core/content-strategy.md,
 core/product-ladder.md if multi-offer, core/operations/funnel/skool-surfaces.md if exists]
 
@@ -134,13 +134,13 @@ core/product-ladder.md if multi-offer, core/operations/funnel/skool-surfaces.md 
 [The relevant domain rubric from vip: community.md, ecommerce.md, or multi-offer.md.
 Determine which by checking core/operations/ contents.]
 
-=== REFERENCE FILE CHANGE HISTORY (30 DAYS) ===
+=== CORE FILE CHANGE HISTORY (30 DAYS) ===
 
-[Git log output for reference/ changes]
+[Git log output for core/ changes]
 
 === YOUR TASK ===
 
-1. For each reference file scoring below 3: identify the SPECIFIC sections that
+1. For each core file scoring below 3: identify the SPECIFIC sections that
    are missing or thin. Use the file content, not just line count.
 
 2. For each gap found: state what downstream skill it weakens and what question
@@ -203,12 +203,13 @@ and first 10 lines of each.]
 
 [Research files with linked_decisions: []. Include filename and date.]
 
-=== OUTPUT LIFECYCLE STATE ===
+=== CAMPAIGN LIFECYCLE STATE ===
 
-[Files in outputs/ grouped by frontmatter status: draft, scheduled, published, final.
-Use: grep -rl "status: draft" outputs/ 2>/dev/null
-or "No outputs with lifecycle status" if none have status field.
-Also list most recent 5 items in outputs/.]
+[Files in campaigns/ grouped by frontmatter status: draft, scheduled,
+published, final.
+Use: grep -rl "status: draft" campaigns/ 2>/dev/null
+or "No campaigns with lifecycle status" if none have status field.
+Also list most recent 5 items in campaigns/.]
 
 === CONTENT STRATEGY ===
 
@@ -230,16 +231,16 @@ Analyze these dimensions:
    some research is exploratory. But research older than 14 days without a
    decision may be going stale.
 
-3. **Output lifecycle state:** Any outputs with status: draft? Scheduled?
-   When was the last output published? Is there a gap between reference
-   readiness and output generation?
+3. **Campaign lifecycle state:** Any campaign files with status: draft?
+   Scheduled? When was the last campaign asset published? Is there a gap
+   between core readiness and campaign generation?
 
-4. **Output recency:** When was the last batch generated? What type?
-   Long gap between reference updates and output generation = missed opportunity.
+4. **Campaign recency:** When was the last batch generated? What type?
+   Long gap between core updates and campaign generation = missed opportunity.
 
 5. **Velocity pattern:** What's the ratio of enrichment work (research/,
-   reference/ changes) to output work (outputs/)? All enrichment
-   with no output = stuck in thinking. All output with no enrichment =
+   core/ changes) to campaign work (campaigns/)? All enrichment
+   with no campaign output = stuck in thinking. All campaign output with no enrichment =
    running on stale context.
 
 6. **Content strategy health:** Does content-strategy.md have populated pillars?
@@ -295,9 +296,9 @@ If none: "No crystallize history."]
 
 [Full text of 5 most recent decision files]
 
-=== REFERENCE FILE CHANGE HISTORY (30 DAYS) ===
+=== CORE FILE CHANGE HISTORY (30 DAYS) ===
 
-[Git log output for reference/ changes]
+[Git log output for core/ changes]
 
 === READINESS SCORES ===
 

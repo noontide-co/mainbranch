@@ -19,6 +19,8 @@ def _legacy_repo(tmp_path: Path) -> Path:
     (repo / "reference" / "core").mkdir(parents=True)
     (repo / "reference" / "offers" / "flagship").mkdir(parents=True)
     (repo / "reference" / "proof" / "angles").mkdir(parents=True)
+    (repo / "reference" / "brand").mkdir(parents=True)
+    (repo / "reference" / "strategy").mkdir(parents=True)
     (repo / "reference" / "visual-identity").mkdir(parents=True)
     (repo / "reference" / "domain" / "funnel").mkdir(parents=True)
     (repo / "research").mkdir()
@@ -39,6 +41,14 @@ def _legacy_repo(tmp_path: Path) -> Path:
     )
     (repo / "reference" / "visual-identity" / "visual-style.md").write_text(
         "# Visual Style\n",
+        encoding="utf-8",
+    )
+    (repo / "reference" / "brand" / "voice-system.md").write_text(
+        "# Voice System\n",
+        encoding="utf-8",
+    )
+    (repo / "reference" / "strategy" / "market-position.md").write_text(
+        "# Market Position\n",
         encoding="utf-8",
     )
     (repo / "reference" / "domain" / "content-strategy.md").write_text(
@@ -184,12 +194,16 @@ def test_migrate_apply_moves_files_backs_up_and_is_idempotent(tmp_path: Path) ->
     assert (repo / "core" / "proof" / "testimonials.md").exists()
     assert (repo / "core" / "proof" / "angles" / "clarity.md").exists()
     assert (repo / "core" / "brand" / "visual-style.md").exists()
+    assert (repo / "core" / "brand" / "voice-system.md").exists()
+    assert (repo / "core" / "strategy" / "market-position.md").exists()
     assert (repo / "core" / "content-strategy.md").exists()
     assert (repo / "core" / "product-ladder.md").exists()
     assert (repo / "core" / "operations" / "funnel" / "skool-surfaces.md").exists()
     assert (repo / "reference" / "core").is_symlink()
     assert (repo / "reference" / "offers").is_symlink()
     assert not (repo / "reference" / "proof").exists()
+    assert not (repo / "reference" / "brand").exists()
+    assert not (repo / "reference" / "strategy").exists()
     assert not (repo / "reference" / "visual-identity").exists()
     assert not (repo / "reference" / "domain").exists()
     assert "core/*.md" in (repo / "CLAUDE.md").read_text(encoding="utf-8")
