@@ -16,6 +16,8 @@ from urllib.parse import urlparse
 
 import yaml
 
+from mb import pushes as pushes_mod
+
 DECISION_STATUS = {"proposed", "accepted", "rejected", "superseded", "running"}
 OFFER_STATUS = {
     "proposed",
@@ -29,15 +31,9 @@ OFFER_STATUS = {
 }
 RESEARCH_STATUS = {"complete", "in-progress", "stale"}
 BET_STATUS = {"open", "paused", "closed", "canceled"}
-CAMPAIGN_STATUS = {
-    "draft",
-    "planned",
-    "active",
-    "paused",
-    "completed",
-    "canceled",
-    "archived",
-}
+CAMPAIGN_STATUS = pushes_mod.PUSH_STATUS
+PUSH_KIND = pushes_mod.PUSH_KIND
+PUSH_HEALTH = pushes_mod.PUSH_HEALTH
 
 LINK_FIELDS = (
     "linked_bets",
@@ -147,11 +143,24 @@ SCHEMAS: dict[str, dict[str, Any]] = {
         "glob": "campaigns/*/campaign.md",
         "required": ["slug", "status"],
         "enums": {"status": CAMPAIGN_STATUS},
+        "primitive": "legacy-campaign",
     },
     "pushes": {
         "glob": "pushes/*/push.md",
-        "required": ["slug", "status"],
-        "enums": {"status": CAMPAIGN_STATUS},
+        "required": [
+            "type",
+            "slug",
+            "kind",
+            "status",
+            "health",
+            "goal",
+            "owner",
+            "audience",
+            "offer",
+            "promise",
+        ],
+        "enums": {"kind": PUSH_KIND, "status": CAMPAIGN_STATUS, "health": PUSH_HEALTH},
+        "primitive": "push",
     },
     "documents": {
         "glob": "documents/*.md",
@@ -195,7 +204,63 @@ def _check_one(path: Path, schema: dict[str, Any]) -> dict[str, Any]:
     for k, allowed in schema.get("enums", {}).items():
         if k in fm and fm[k] not in allowed:
             errors.append(f"{k}={fm[k]!r} not in {sorted(allowed)}")
+    primitive = schema.get("primitive")
+    if primitive == "push":
+        _check_push_frontmatter(path, fm, errors)
+    elif primitive == "legacy-campaign":
+        _check_legacy_campaign_frontmatter(fm, errors)
     return {"path": str(path), "ok": not errors, "errors": errors, "warnings": []}
+
+
+def _require_non_empty_string(fm: dict[str, Any], key: str, errors: list[str]) -> None:
+    if key not in fm:
+        return
+    value = fm.get(key)
+    if not isinstance(value, str) or not value.strip():
+        errors.append(f"{key} must be a non-empty string")
+
+
+def _scalar_as_string(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    iso_method = getattr(value, "isoformat", None)
+    if callable(iso_method):
+        iso = iso_method()
+        return iso.strip() if isinstance(iso, str) else ""
+    if isinstance(value, int | float):
+        return str(value)
+    return ""
+
+
+def _check_push_frontmatter(path: Path, fm: dict[str, Any], errors: list[str]) -> None:
+    if not pushes_mod.PUSH_FOLDER_RE.fullmatch(path.parent.name):
+        errors.append("push folder must match YYYY-MM-DD-slug")
+    if fm.get("type") != "push":
+        errors.append("type must be 'push'")
+    for key in ("slug", "kind", "status", "health", "owner", "audience", "offer", "promise"):
+        _require_non_empty_string(fm, key, errors)
+    promise = fm.get("promise")
+    if isinstance(promise, str) and len(promise.strip()) > 140:
+        errors.append("promise must be 140 characters or fewer")
+    goal = fm.get("goal")
+    if "goal" not in fm:
+        return
+    if not isinstance(goal, dict):
+        errors.append("goal must be a mapping with metric, target, and by")
+        return
+    for key in ("metric", "target", "by"):
+        value = _scalar_as_string(goal.get(key))
+        if not value:
+            errors.append(f"goal.{key} must be a non-empty string")
+    by = _scalar_as_string(goal.get("by"))
+    if by and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", by):
+        errors.append("goal.by must be YYYY-MM-DD")
+
+
+def _check_legacy_campaign_frontmatter(fm: dict[str, Any], errors: list[str]) -> None:
+    record_type = fm.get("type")
+    if record_type is not None and record_type not in {"campaign", "push"}:
+        errors.append("type must be 'campaign' or 'push' for legacy campaign records")
 
 
 def _is_hidden_or_generated(path: Path, repo: Path) -> bool:

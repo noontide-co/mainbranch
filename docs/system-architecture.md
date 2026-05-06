@@ -11,13 +11,12 @@
 > as the canonical primitive and `core/vocabulary.md` as the operator-owned
 > vocabulary file. Current `mb init` scaffolds those paths; validators, graph,
 > status, checkpoints, doctor, and the campaigns migration planner read
-> `pushes/` while preserving legacy `campaigns/` compatibility. The remaining
-> deterministic polish in
-> [#323](https://github.com/noontide-co/mainbranch/issues/323) is the advanced
-> push schema (`kind`, health, structured goal, owner, audience, promise),
-> JSON deprecation cleanup, and any future `mb push` command surface. Existing
-> `campaigns/` repos keep working, but new coordinated work should land in
-> `pushes/`.
+> `pushes/` while preserving legacy `campaigns/` compatibility. The current
+> deterministic contract also validates the push schema (`kind`, health,
+> structured goal, owner, audience, offer, promise) and exposes canonical push
+> facts in status/start/graph JSON with explicit legacy campaign deprecation
+> markers. Existing `campaigns/` repos keep working, but new coordinated work
+> should land in `pushes/`.
 
 ## Architecture In One Sentence
 
@@ -243,7 +242,15 @@ type: push
 slug: workshop-waitlist
 kind: launch
 status: active
-goal: "40 qualified waitlist signups"
+health: on-track
+goal:
+  metric: qualified waitlist signups
+  target: "40"
+  by: 2026-05-20
+owner: Devon
+audience: founders testing Main Branch
+offer: core/offers/workshop/offer.md
+promise: Own the workshop launch memory in git.
 channels: [paid, email, site]
 started: 2026-05-06
 review_on: 2026-05-20
@@ -264,12 +271,14 @@ metrics_sources:
 ---
 ```
 
-The current validator only enforces a smaller subset. The frontmatter above is
-the architecture target for follow-up CLI, graph, status, skill, and migration
-work. `kind:` is a canonical engine subtype (`launch | drop | challenge | promo
-| nurture | outreach | event | announcement | round | wave`); the operator's
-display word for a push (e.g. *drop*, *campaign*) lives in
-`core/vocabulary.md` and never overrides `kind:` on disk.
+The current validator enforces the canonical record shape above: `type: push`,
+bounded `kind:`, lifecycle `status:`, separate `health:`, structured
+`goal: { metric, target, by }`, one `owner`, a named `audience`, a named
+`offer`, and a short `promise`. `kind:` is a canonical engine subtype
+(`launch | drop | challenge | promo | nurture | outreach | event |
+announcement | round | wave`); the operator's display word for a push
+(e.g. *drop*, *campaign*) lives in `core/vocabulary.md` and never overrides
+`kind:` on disk.
 
 Push status maps to operator loops:
 
@@ -283,10 +292,10 @@ Push status maps to operator loops:
 | `canceled` | The push was intentionally stopped. |
 | `archived` | Historical record only. |
 
-`channels` is a loose, validation-hinted list rather than a hard enum. Main
-Branch recognizes common slugs such as `paid`, `organic`, `email`, `site`,
-`community`, `partner`, `outreach`, and `internal`, and warns instead of
-failing when a business needs a more specific channel.
+`channels` is a loose list rather than a hard enum. Common slugs include
+`paid`, `organic`, `email`, `site`, `community`, `partner`, `outreach`, and
+`internal`, but the canonical schema does not fail a push when a business needs
+a more specific channel.
 
 #### Legacy `campaigns/` shape (compatibility read)
 

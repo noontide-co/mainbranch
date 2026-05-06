@@ -13,6 +13,8 @@ from urllib.parse import urlparse
 
 import yaml
 
+from mb import pushes as pushes_mod
+
 INDEX_VERSION = 1
 EdgeKey = tuple[str, str, str, tuple[tuple[str, str], ...]]
 
@@ -218,7 +220,21 @@ def _add_edge(
 
 def _frontmatter_summary(frontmatter: dict[str, Any]) -> dict[str, Any]:
     summary: dict[str, Any] = {}
-    for key in ("title", "topic", "slug", "status", "date", "source"):
+    for key in (
+        "title",
+        "topic",
+        "type",
+        "slug",
+        "kind",
+        "status",
+        "health",
+        "date",
+        "source",
+        "owner",
+        "audience",
+        "offer",
+        "promise",
+    ):
         if key in frontmatter and isinstance(frontmatter[key], str):
             summary[key] = frontmatter[key]
     return summary
@@ -461,6 +477,7 @@ def build_index(path: str) -> dict[str, Any]:
 
     sorted_nodes = sorted(nodes.values(), key=_node_sort_key)
     sorted_edges = sorted(edges, key=_edge_sort_key)
+    push_facts = pushes_mod.facts(repo)
     entity_counts = {
         entity_type: sum(1 for node in sorted_nodes if node["type"] == entity_type)
         for entity_type in sorted(set(ENTITY_TAG_TYPES.values()))
@@ -475,7 +492,19 @@ def build_index(path: str) -> dict[str, Any]:
             "nodes": len(sorted_nodes),
             "edges": len(sorted_edges),
             "entities": entity_counts,
+            "push_count": push_facts["count"],
+            "canonical_push_count": push_facts["canonical_count"],
+            "legacy_campaign_count": push_facts["legacy_campaign_count"],
         },
+        "pushes": push_facts["records"],
+        "active_pushes": push_facts["active"],
+        "push_count": push_facts["count"],
+        "canonical_push_count": push_facts["canonical_count"],
+        "campaigns": push_facts["legacy_campaigns"],
+        "active_campaigns": push_facts["active_legacy_campaigns"],
+        "campaign_count": push_facts["legacy_campaign_count"],
+        "deprecated_campaign_keys": True,
+        "push_compatibility": push_facts["compatibility"],
     }
 
 

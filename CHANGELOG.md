@@ -11,6 +11,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added (MAIN-248 / #323)
+
+- `mb validate` now enforces the canonical `pushes/<YYYY-MM-DD-slug>/push.md`
+  schema: `type: push`, bounded `kind:`, lifecycle `status:`, separate
+  `health:`, structured `goal: { metric, target, by }`, `owner`, `audience`,
+  `offer`, and short `promise`. Legacy `campaigns/*/campaign.md` records
+  remain readable as compatibility input. Refs #323.
+- `mb status --json --peek`, `mb start --json`, and `mb graph --json` now expose
+  canonical push facts (`pushes`, `active_pushes`, `push_count`) plus explicit
+  legacy campaign compatibility keys and deprecation markers during the
+  compatibility window. Refs #323.
+
 ### Added (MAIN-249 / #324)
 
 - `mb init` and `mb onboard` now scaffold the canonical `pushes/` folder

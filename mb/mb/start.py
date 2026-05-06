@@ -13,7 +13,7 @@ from typing import Any
 from mb import checkpoint as checkpoint_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status
-from mb.status import _looks_like_mainbranch_repo
+from mb.status import _looks_like_mainbranch_repo, push_facts
 
 
 def _which(name: str) -> str:
@@ -235,6 +235,7 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
     wiring = link_status(repo_path)
     update = package_update_status(repo_path)
     checkpoint = checkpoint_mod.status(repo_path)
+    push_report = push_facts(repo_path)
     checks = _build_checks(repo_shape, git, claude_path, wiring, update)
     hard_failures = _hard_failures(checks)
     handoff_ready = not hard_failures
@@ -266,6 +267,15 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
         "repo": {"path": str(repo_path), **repo_shape},
         "update": update,
         "checkpoint": checkpoint,
+        "pushes": push_report["records"],
+        "active_pushes": push_report["active"],
+        "push_count": push_report["count"],
+        "canonical_push_count": push_report["canonical_count"],
+        "campaigns": push_report["legacy_campaigns"],
+        "active_campaigns": push_report["active_legacy_campaigns"],
+        "campaign_count": push_report["legacy_campaign_count"],
+        "deprecated_campaign_keys": True,
+        "push_compatibility": push_report["compatibility"],
         "git": git,
         "runtime": {
             "name": "claude-code",

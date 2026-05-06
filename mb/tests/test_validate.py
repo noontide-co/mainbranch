@@ -554,8 +554,31 @@ def test_validate_flags_unknown_campaign_status(tmp_path: Path) -> None:
     assert any("status" in e for f in bad for e in f["errors"])
 
 
-def _push(status: str, slug: str = "workshop-waitlist") -> str:
-    return f"---\nslug: {slug}\nstatus: {status}\n---\n# {slug}\n"
+def _push(
+    status: str,
+    slug: str = "workshop-waitlist",
+    *,
+    kind: str = "launch",
+    health: str = "on-track",
+) -> str:
+    return (
+        "---\n"
+        "type: push\n"
+        f"slug: {slug}\n"
+        f"kind: {kind}\n"
+        f"status: {status}\n"
+        f"health: {health}\n"
+        "goal:\n"
+        "  metric: qualified calls\n"
+        "  target: 10 qualified calls\n"
+        "  by: 2026-05-20\n"
+        "owner: Devon\n"
+        "audience: founders testing Main Branch\n"
+        "offer: core/offers/workshop/offer.md\n"
+        "promise: Own the launch memory in git.\n"
+        "---\n"
+        f"# {slug}\n"
+    )
 
 
 def test_validate_accepts_push_lifecycle_statuses(tmp_path: Path) -> None:
@@ -571,15 +594,137 @@ def test_validate_accepts_push_lifecycle_statuses(tmp_path: Path) -> None:
     assert all(f["ok"] for f in push_files)
 
 
-def test_validate_rejects_unknown_push_status(tmp_path: Path) -> None:
+def test_validate_requires_canonical_push_schema(tmp_path: Path) -> None:
     _write(
-        tmp_path / "pushes" / "2026-05-06-typo" / "push.md",
-        _push("live"),  # operator-vocab synonym; not engine canonical
+        tmp_path / "pushes" / "2026-05-06-incomplete" / "push.md",
+        "---\nslug: incomplete\nstatus: active\n---\n# incomplete\n",
     )
 
     report = run(path=str(tmp_path))
 
     assert report["ok"] is False
+    bad = [file for file in report["files"] if file["path"].endswith("push.md")][0]
+    assert "missing key: type" in bad["errors"]
+    assert "missing key: kind" in bad["errors"]
+    assert "missing key: goal" in bad["errors"]
+    assert "missing key: owner" in bad["errors"]
+    assert "missing key: audience" in bad["errors"]
+    assert "missing key: offer" in bad["errors"]
+    assert "missing key: promise" in bad["errors"]
+
+
+def test_validate_requires_canonical_push_folder_shape(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "workshop-waitlist" / "push.md",
+        _push("active"),
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is False
+    bad = [file for file in report["files"] if file["path"].endswith("push.md")][0]
+    assert "push folder must match YYYY-MM-DD-slug" in bad["errors"]
+
+
+def test_validate_rejects_invalid_push_shape_fields(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-invalid" / "push.md",
+        (
+            "---\n"
+            "type: campaign\n"
+            "slug: invalid\n"
+            "kind: sprint\n"
+            "status: active\n"
+            "health: spicy\n"
+            "goal: 40 calls\n"
+            "owner: ''\n"
+            "audience: founders\n"
+            "offer: core/offers/workshop/offer.md\n"
+            "promise: " + ("x" * 141) + "\n"
+            "---\n"
+            "# invalid\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["path"].endswith("push.md")][0]
+    assert report["ok"] is False
+    assert "type must be 'push'" in bad["errors"]
+    assert any("kind=" in error for error in bad["errors"])
+    assert any("health=" in error for error in bad["errors"])
+    assert "goal must be a mapping with metric, target, and by" in bad["errors"]
+    assert "owner must be a non-empty string" in bad["errors"]
+    assert "promise must be 140 characters or fewer" in bad["errors"]
+
+
+def test_validate_rejects_incomplete_structured_push_goal(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-bad-goal" / "push.md",
+        (
+            "---\n"
+            "type: push\n"
+            "slug: bad-goal\n"
+            "kind: launch\n"
+            "status: active\n"
+            "health: on-track\n"
+            "goal:\n"
+            "  metric: qualified calls\n"
+            "  target: ''\n"
+            "  by: soon\n"
+            "owner: Devon\n"
+            "audience: founders\n"
+            "offer: core/offers/workshop/offer.md\n"
+            "promise: Own the launch memory in git.\n"
+            "---\n"
+            "# bad goal\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["path"].endswith("push.md")][0]
+    assert "goal.target must be a non-empty string" in bad["errors"]
+    assert "goal.by must be YYYY-MM-DD" in bad["errors"]
+
+
+def test_validate_rejects_unknown_push_status(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-typo" / "push.md",
+        _push("live", slug="typo"),  # operator-vocab synonym; not engine canonical
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is False
+
+
+def test_validate_rejects_unknown_push_kind_even_when_vocabulary_renames_it(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "core" / "vocabulary.md",
+        (
+            "---\n"
+            "type: vocabulary\n"
+            "status: active\n"
+            "terms:\n"
+            "  kinds:\n"
+            "    sprint: sprint\n"
+            "---\n"
+            "# Vocabulary\n"
+        ),
+    )
+    _write(
+        tmp_path / "pushes" / "2026-05-06-sprint" / "push.md",
+        _push("active", slug="sprint", kind="sprint"),
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is False
+    bad = [file for file in report["files"] if file["path"].endswith("push.md")][0]
+    assert any("kind=" in error for error in bad["errors"])
 
 
 def test_cross_refs_resolve_linked_pushes_field(tmp_path: Path) -> None:

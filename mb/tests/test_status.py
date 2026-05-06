@@ -108,6 +108,56 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
     assert actual == expected
 
 
+def test_status_json_exposes_push_and_legacy_campaign_facts(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    push = repo / "pushes" / "2026-05-06-workshop"
+    push.mkdir(parents=True)
+    (push / "push.md").write_text(
+        "---\n"
+        "type: push\n"
+        "slug: workshop\n"
+        "kind: launch\n"
+        "status: active\n"
+        "health: on-track\n"
+        "goal:\n"
+        "  metric: qualified calls\n"
+        "  target: 10 qualified calls\n"
+        "  by: 2026-05-20\n"
+        "owner: Devon\n"
+        "audience: founders\n"
+        "offer: core/offers/workshop/offer.md\n"
+        "promise: Own the launch memory in git.\n"
+        "---\n"
+        "# Workshop\n",
+        encoding="utf-8",
+    )
+    campaign = repo / "campaigns" / "2026-05-legacy"
+    campaign.mkdir(parents=True)
+    (campaign / "campaign.md").write_text(
+        "---\ntype: campaign\nslug: legacy\nstatus: active\n---\n# Legacy\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["status", str(repo), "--json", "--peek"])
+
+    assert result.exit_code == 0
+    report = json.loads(result.stdout)
+    assert report["push_count"] == 2
+    assert report["canonical_push_count"] == 1
+    assert report["campaign_count"] == 1
+    assert report["deprecated_campaign_keys"] is True
+    assert report["push_compatibility"]["legacy_campaign_keys_deprecated"] is True
+    assert report["pushes"][0]["path"] == "pushes/2026-05-06-workshop/push.md"
+    assert report["pushes"][0]["date"] == "2026-05-06"
+    assert report["campaigns"][0]["path"] == "campaigns/2026-05-legacy/campaign.md"
+    assert {item["path"] for item in report["active_pushes"]} == {
+        "pushes/2026-05-06-workshop/push.md",
+        "campaigns/2026-05-legacy/campaign.md",
+    }
+
+
 def test_status_human_output_mentions_core_sections(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     repo = tmp_path / "acme"

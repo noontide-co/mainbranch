@@ -15,6 +15,7 @@ import yaml
 from mb import __version__, github_activity
 from mb import connect as connect_mod
 from mb import onboard as onboard_mod
+from mb import pushes as pushes_mod
 from mb import ranker as ranker_mod
 from mb import site as site_mod
 from mb.engine import install_mode, link_status
@@ -381,6 +382,7 @@ def _brain(repo: Path) -> dict[str, Any]:
                 stale_item["age_days"] = age_days
                 stale_research.append(stale_item)
     bets = _bets(repo)
+    push_facts = pushes_mod.facts(repo)
 
     return {
         "counts": counts,
@@ -389,6 +391,7 @@ def _brain(repo: Path) -> dict[str, Any]:
         "recent_research": research[:5],
         "stale_research": stale_research[:5],
         "bets": bets,
+        "pushes": push_facts,
     }
 
 
@@ -554,6 +557,11 @@ def _schema() -> dict[str, Any]:
         "version": STATUS_SCHEMA_VERSION,
         "compatibility": "v1 additions are additive; existing v1 keys must not change meaning.",
     }
+
+
+def push_facts(repo: str | Path) -> dict[str, Any]:
+    """Return normalized push facts for JSON consumers."""
+    return pushes_mod.facts(repo)
 
 
 SITE_REPO_PATH_FIELDS = (
@@ -1053,6 +1061,7 @@ def run(
     update = package_update_status(repo_path)
     github = _github(repo_path, git)
     brain = _brain(repo_path)
+    push_report = brain["pushes"]
     marker = _read_last_seen_marker(repo_path)
     report: dict[str, Any] = {
         "schema_version": STATUS_SCHEMA_VERSION,
@@ -1066,6 +1075,15 @@ def run(
         "git": git,
         "git_activity": _git_recent_activity(repo_path, git),
         "brain": brain,
+        "pushes": push_report["records"],
+        "active_pushes": push_report["active"],
+        "push_count": push_report["count"],
+        "canonical_push_count": push_report["canonical_count"],
+        "campaigns": push_report["legacy_campaigns"],
+        "active_campaigns": push_report["active_legacy_campaigns"],
+        "campaign_count": push_report["legacy_campaign_count"],
+        "deprecated_campaign_keys": True,
+        "push_compatibility": push_report["compatibility"],
         "onboarding": onboard_mod.onboarding_status(repo_path),
         "integrations": connect_mod.status_all(repo_path, github=github.get("context")),
         "measurement": _measurement(repo_path),

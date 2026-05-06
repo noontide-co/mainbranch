@@ -47,9 +47,58 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     assert report["command"]["follow_up"] == "/mb-start"
     assert report["launch"]["requested"] is False
     assert report["checkpoint"]["pending"]["status"] == "ready"
+    assert report["push_count"] == 0
+    assert report["deprecated_campaign_keys"] is True
+    assert report["push_compatibility"]["legacy_campaigns_read"] is True
     assert "update" in report
     assert "ranked_actions" not in report
     assert "status" not in report
+
+
+def test_start_json_exposes_push_and_legacy_campaign_facts(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(start_mod, "_which", _with_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    push = repo / "pushes" / "2026-05-06-workshop"
+    push.mkdir(parents=True)
+    (push / "push.md").write_text(
+        "---\n"
+        "type: push\n"
+        "slug: workshop\n"
+        "kind: launch\n"
+        "status: active\n"
+        "health: on-track\n"
+        "goal:\n"
+        "  metric: qualified calls\n"
+        "  target: 10 qualified calls\n"
+        "  by: 2026-05-20\n"
+        "owner: Devon\n"
+        "audience: founders\n"
+        "offer: core/offers/workshop/offer.md\n"
+        "promise: Own the launch memory in git.\n"
+        "---\n"
+        "# Workshop\n",
+        encoding="utf-8",
+    )
+    campaign = repo / "campaigns" / "2026-05-legacy"
+    campaign.mkdir(parents=True)
+    (campaign / "campaign.md").write_text(
+        "---\ntype: campaign\nslug: legacy\nstatus: active\n---\n# Legacy\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    report = json.loads(result.stdout)
+    assert report["push_count"] == 2
+    assert report["canonical_push_count"] == 1
+    assert report["campaign_count"] == 1
+    assert {item["path"] for item in report["active_pushes"]} == {
+        "pushes/2026-05-06-workshop/push.md",
+        "campaigns/2026-05-legacy/campaign.md",
+    }
+    assert report["campaigns"][0]["deprecated"] is True
 
 
 def test_start_degrades_when_claude_is_missing(tmp_path: Path, monkeypatch) -> None:

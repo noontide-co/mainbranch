@@ -73,6 +73,75 @@ def test_bet_links_become_edges(tmp_path: Path) -> None:
     assert "linked_bets" in edge_types
 
 
+def test_graph_exposes_push_facts_and_ignores_provider_refs(tmp_path: Path) -> None:
+    pushes = tmp_path / "pushes" / "2026-05-06-workshop"
+    decisions = tmp_path / "decisions"
+    pushes.mkdir(parents=True)
+    decisions.mkdir()
+    (pushes / "push.md").write_text(
+        "---\n"
+        "type: push\n"
+        "slug: workshop\n"
+        "kind: launch\n"
+        "status: active\n"
+        "health: on-track\n"
+        "goal:\n"
+        "  metric: qualified calls\n"
+        "  target: 10 qualified calls\n"
+        "  by: 2026-05-20\n"
+        "owner: Devon\n"
+        "audience: founders\n"
+        "offer: core/offers/workshop/offer.md\n"
+        "promise: Own the launch memory in git.\n"
+        "linked_decisions:\n"
+        "  - decisions/2026-05-06-workshop.md\n"
+        "provider_refs:\n"
+        "  meta_ads:\n"
+        "    campaign_id: '123'\n"
+        "metrics_sources:\n"
+        "  - .mb/sidecars/meta-ads/workshop.sqlite\n"
+        "---\n"
+        "# Workshop\n",
+        encoding="utf-8",
+    )
+    (decisions / "2026-05-06-workshop.md").write_text(
+        "---\ndate: 2026-05-06\nstatus: accepted\n---\n# Workshop decision\n",
+        encoding="utf-8",
+    )
+
+    index = build_index(path=str(tmp_path))
+
+    assert index["push_count"] == 1
+    assert index["summary"]["push_count"] == 1
+    assert index["canonical_push_count"] == 1
+    assert index["summary"]["canonical_push_count"] == 1
+    assert index["pushes"][0]["path"] == "pushes/2026-05-06-workshop/push.md"
+    assert index["pushes"][0]["kind"] == "launch"
+    assert index["push_compatibility"]["legacy_campaign_keys_deprecated"] is True
+    edge_targets = {edge["target"] for edge in index["edges"]}
+    assert "file:decisions/2026-05-06-workshop.md" in edge_targets
+    assert not any("123" in target for target in edge_targets)
+    assert not any("sidecars" in target for target in edge_targets)
+
+
+def test_graph_keeps_legacy_campaign_facts_during_compatibility(tmp_path: Path) -> None:
+    campaign = tmp_path / "campaigns" / "2026-05-workshop"
+    campaign.mkdir(parents=True)
+    (campaign / "campaign.md").write_text(
+        "---\ntype: campaign\nslug: workshop\nstatus: active\n---\n# Workshop\n",
+        encoding="utf-8",
+    )
+
+    index = build_index(path=str(tmp_path))
+
+    assert index["push_count"] == 1
+    assert index["summary"]["push_count"] == 1
+    assert index["campaign_count"] == 1
+    assert index["summary"]["legacy_campaign_count"] == 1
+    assert index["campaigns"][0]["legacy"] is True
+    assert index["deprecated_campaign_keys"] is True
+
+
 def test_build_index_includes_frontmatter_links_wikilinks_and_entities(tmp_path: Path) -> None:
     decisions = tmp_path / "decisions"
     research = tmp_path / "research"
