@@ -11,6 +11,25 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-05-06
+
+v0.3.2 makes Main Branch safer to repair and clearer about where business
+memory lives. It adds guided doctor repair, retires the old committed
+`reference/` folder model for new repos, and tightens migration/runtime
+guidance from real dogfood.
+
+### What this means for you (plain English)
+
+- **Doctor can now help repair a repo.** `mb doctor repair --plan` explains
+  what is stale or unsafe before anything writes, and `--apply` can fix safe
+  wiring/local-state issues.
+- **New business repos use `core/` as the business brain.** Legacy
+  `reference/*` paths are compatibility fallbacks, not places where new truth
+  should be written.
+- **Migration guidance is less confusing.** Claude-led updates now start with
+  Main Branch update/repair, use read-only checks by default, and pause before
+  git decisions that normal users should not have to judge alone.
+
 ### Added
 
 - Added `mb doctor repair --plan/--apply` as a guided repo reconciliation
