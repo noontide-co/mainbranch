@@ -4,7 +4,8 @@
 >
 > Main Branch is a CLI plus agent-runtime skill system for running a business
 > from markdown files in git. This document describes the current public repo
-> model after the `core/` folder decision and the campaign primitive decision.
+> model after the `core/` folder decision, the campaign primitive decision,
+> and the push primitive and operator-vocabulary decision.
 
 ## Architecture In One Sentence
 
@@ -19,7 +20,8 @@ mb CLI                       core/                          provider APIs
 bundled skills               research/                      sidecar databases
 validators                   decisions/                     local caches
 templates                    bets/                          dashboard views
-docs                         campaigns/
+docs                         pushes/   (canonical)
+                             campaigns/ (compatibility read)
                              log/
                              documents/
 ```
@@ -59,6 +61,7 @@ my-business/
 │   ├── offer.md
 │   ├── audience.md
 │   ├── voice.md
+│   ├── vocabulary.md            # optional operator-owned display words
 │   ├── content-strategy.md
 │   ├── product-ladder.md
 │   ├── offers/
@@ -70,7 +73,8 @@ my-business/
 ├── research/
 ├── decisions/
 ├── bets/
-├── campaigns/
+├── pushes/                      # canonical coordinated pushes
+├── campaigns/                   # legacy compatibility read; new repos do not create this
 ├── log/
 └── documents/
 ```
@@ -117,7 +121,7 @@ product or business truth until superseded.
 `bets/` contains time-boxed operating hypotheses: what the operator will try,
 why it might work, by when, and how success or failure will be judged.
 
-A bet is usually Decide -> Ship -> Reflect. It may lead to a campaign, an offer
+A bet is usually Decide -> Ship -> Reflect. It may lead to a push, an offer
 change, a workflow, a content pillar, a provider setup, or a decision.
 
 ### `pushes/` (canonical) and `campaigns/` (compatibility)
@@ -144,11 +148,11 @@ in operator-facing copy without changing canonical storage.
 
 A push is not a generic generated-artifact bucket.
 
-A campaign has:
+A push has:
 
 - a named goal or outcome;
 - a recipient or audience, including internal stakeholders for Ops adoption
-  campaigns;
+  pushes;
 - one or more distribution or adoption channels;
 - a bounded time window or review moment;
 - artifacts and actions that belong to the same push;
@@ -178,14 +182,14 @@ Examples that do not qualify by themselves:
 - archived repo dumps;
 - generated artifacts with no named push or outcome.
 
-#### Campaign Folder Shape
+#### Push Folder Shape (canonical)
 
-The conventional campaign shape is:
+The canonical push shape is:
 
 ```text
-campaigns/
-  2026-05-workshop-waitlist/
-    campaign.md
+pushes/
+  2026-05-06-workshop-waitlist/
+    push.md
     ads.md
     emails.md
     posts.md
@@ -195,15 +199,16 @@ campaigns/
     source/
 ```
 
-The folder name gives humans chronological scanability. `campaign.md` is the
-record. Other files are campaign artifacts, source notes used by the campaign,
+The folder name gives humans chronological scanability and uses **day**
+precision (`YYYY-MM-DD-slug`) to match every other dated primitive in the
+repo. `push.md` is the record. Other files are push artifacts, source notes,
 operator review notes, or asset references for that same push.
 
-For larger campaigns, typed subfolders are acceptable:
+For larger pushes, typed subfolders are acceptable:
 
 ```text
-campaigns/2026-05-workshop-waitlist/
-  campaign.md
+pushes/2026-05-06-workshop-waitlist/
+  push.md
   ads/
   emails/
   posts/
@@ -213,20 +218,21 @@ campaigns/2026-05-workshop-waitlist/
   source/
 ```
 
-Do not create a campaign folder just because a file was generated. If the work
-does not have a campaign goal, put it in the primitive that owns it.
+Do not create a push folder just because a file was generated. If the work
+does not have a push goal, put it in the primitive that owns it.
 
-#### Campaign Record
+#### Push Record (canonical)
 
-Recommended `campaign.md` frontmatter:
+Recommended `push.md` frontmatter:
 
 ```yaml
 ---
-type: campaign
+type: push
 slug: workshop-waitlist
+kind: launch
 status: active
 goal: "40 qualified waitlist signups"
-channels: [paid, email, pages]
+channels: [paid, email, site]
 started: 2026-05-06
 review_on: 2026-05-20
 linked_strategy:
@@ -248,9 +254,12 @@ metrics_sources:
 
 The current validator only enforces a smaller subset. The frontmatter above is
 the architecture target for follow-up CLI, graph, status, skill, and migration
-work.
+work. `kind:` is a canonical engine subtype (`launch | drop | challenge | promo
+| nurture | outreach | event | announcement | round | wave`); the operator's
+display word for a push (e.g. *drop*, *campaign*) lives in
+`core/vocabulary.md` and never overrides `kind:` on disk.
 
-Campaign status should map to operator loops:
+Push status maps to operator loops:
 
 | Status | Loop meaning |
 | --- | --- |
@@ -262,10 +271,27 @@ Campaign status should map to operator loops:
 | `canceled` | The push was intentionally stopped. |
 | `archived` | Historical record only. |
 
-`channels` should start as a loose, validation-hinted list rather than a hard
-enum. Main Branch can recognize common slugs such as `paid`, `organic`,
-`email`, `pages`, `community`, `partner`, `outreach`, and `ops`, while warning
-instead of failing when a business needs a more specific channel.
+`channels` is a loose, validation-hinted list rather than a hard enum. Main
+Branch recognizes common slugs such as `paid`, `organic`, `email`, `site`,
+`community`, `partner`, `outreach`, and `internal`, and warns instead of
+failing when a business needs a more specific channel.
+
+#### Legacy `campaigns/` shape (compatibility read)
+
+Repos created before the push primitive decision have the equivalent shape
+under `campaigns/`:
+
+```text
+campaigns/
+  2026-05-workshop-waitlist/
+    campaign.md
+    ...
+```
+
+with `type: campaign`, `linked_campaigns`, and the campaign-shaped fields from
+the campaign primitive decision. `mb` reads these records identically to
+`pushes/`. New writes go to `pushes/`. There is no silent migration; see the
+push primitive decision for the migration policy.
 
 ### `log/`
 
@@ -273,12 +299,12 @@ instead of failing when a business needs a more specific channel.
 operator handoffs, and non-decision work records.
 
 Use `log/` when the durable value is chronology and recovery rather than a
-research finding, accepted decision, bet, or campaign artifact.
+research finding, accepted decision, bet, or push artifact.
 
 ### `documents/`
 
 `documents/` contains supporting material that is durable enough to keep but
-not itself core truth, research synthesis, a decision, a bet, a campaign, or a
+not itself core truth, research synthesis, a decision, a bet, a push, or a
 log entry.
 
 Blessed conventional subfolders:
@@ -298,11 +324,11 @@ Use this routing rule when deciding where generated work belongs:
 
 | Artifact | Canonical home |
 | --- | --- |
-| Paid ad batch tied to a named push | `campaigns/<campaign>/ads/...` |
-| Organic sequence tied to a named push | `campaigns/<campaign>/posts/...` |
-| Email or newsletter launch sequence | `campaigns/<campaign>/emails/...` |
-| Landing-page launch record | `campaigns/<campaign>/site.md` or child site repo |
-| Campaign review notes | `campaigns/<campaign>/review-log.md` or `reviews/` |
+| Paid ad batch tied to a named push | `pushes/<push>/ads/...` |
+| Organic sequence tied to a named push | `pushes/<push>/posts/...` |
+| Email or newsletter launch sequence | `pushes/<push>/emails/...` |
+| Landing-page launch record | `pushes/<push>/site.md` or child site repo |
+| Push review notes | `pushes/<push>/review-log.md` or `reviews/` |
 | Raw transcript or source capture | `documents/transcripts/...` |
 | Synthesized findings from source material | `research/YYYY-MM-DD-slug.md` |
 | Throwaway code, HTML, script, or image experiment | `documents/prototypes/...` |
@@ -313,8 +339,10 @@ Use this routing rule when deciding where generated work belongs:
 | Inert legacy import | `documents/archive/...` or separate archive repo |
 | Local cruft | ignored or deleted, not migrated |
 
-Legacy `outputs/` content should not be bulk-moved into `campaigns/`.
-Ambiguous items need an operator review path through migration or doctor repair.
+Legacy `outputs/` content should not be bulk-moved into `pushes/` (or
+`campaigns/`). Ambiguous items need an operator review path through migration
+or doctor repair. Existing repos with `campaigns/<campaign>/...` paths keep
+working as compatibility reads; new writes go to `pushes/<push>/...`.
 
 ## Relationship Model
 
@@ -324,7 +352,7 @@ The core relationship model is:
 strategy decides where we should push
 bet defines what we are trying to learn
 offer defines what we are selling
-campaign coordinates the push
+push coordinates the work
 provider data records what happened
 research / decision / log captures what we learned or changed
 ```
@@ -334,15 +362,16 @@ In practice:
 - Strategy lives in `core/content-strategy.md` or additional `core/strategy/...`
   files.
 - Offers live in `core/offer.md` and `core/offers/...`.
-- Bets live in `bets/...` and can link to one or more campaigns.
-- Campaigns link back to bets, offers, decisions, research, and strategy.
-- Provider refs identify external campaign/account objects without copying raw
-  provider data into the business repo.
+- Bets live in `bets/...` and can link to one or more pushes.
+- Pushes link back to bets, offers, decisions, research, and strategy.
+- Provider refs identify external provider campaign/account objects (e.g.
+  Meta Ads "campaigns" — the provider's term, not the engine primitive)
+  without copying raw provider data into the business repo.
 - Metrics sources point to provider APIs, local sidecars, `.mb/` caches,
   private analytics stores, or exported files under a boundary the operator has
   intentionally chosen.
 - Reflection usually lands in a bet verdict, research note, decision update,
-  campaign review log, or `log/` entry.
+  push review log, or `log/` entry.
 
 ## State Boundaries
 
@@ -352,7 +381,7 @@ Canonical business state:
 - `research/`
 - `decisions/`
 - `bets/`
-- `campaigns/`
+- `pushes/` (canonical) and `campaigns/` (compatibility read)
 - `log/`
 - `documents/`
 - git history
@@ -402,7 +431,7 @@ Runtime skills own judgment-heavy work:
 
 - asking the operator the right question;
 - interpreting business context;
-- drafting research, decisions, bets, campaign artifacts, and review notes;
+- drafting research, decisions, bets, push artifacts, and review notes;
 - routing generated work to the right primitive;
 - calling deterministic `mb` commands for facts instead of reimplementing repo
   health probes in prose;
@@ -423,27 +452,27 @@ otherwise.
 Correct pattern:
 
 ```text
-campaigns/2026-05-workshop-waitlist/campaign.md
+pushes/2026-05-06-workshop-waitlist/push.md
   provider_refs.meta_ads.campaign_id -> provider object
   metrics_sources[] -> sidecar/cache/private analytics source
 
 mb status / dashboard
-  reads campaign.md, graph, git, GitHub, and provider-safe summaries
+  reads push.md, graph, git, GitHub, and provider-safe summaries
   displays facts and recommendations
 ```
 
 Incorrect pattern:
 
 ```text
-campaign.md becomes a raw ads database
-dashboard database becomes the only place campaign truth exists
+push.md becomes a raw ads database
+dashboard database becomes the only place push truth exists
 .mb/cache is treated as business memory
 ```
 
 ## Graph And Status
 
 `mb graph` should index durable markdown relationships: linked decisions,
-research, bets, campaigns, offers, outcomes, and documents.
+research, bets, pushes (and legacy campaigns), offers, outcomes, and documents.
 
 `mb status` should read those same durable relationships plus cheap local facts
 to answer:
@@ -451,12 +480,14 @@ to answer:
 - what is stale;
 - what is active;
 - what changed since last check;
-- which campaigns need Ship or Reflect attention;
-- which bets lack linked campaign work;
+- which pushes need Ship or Reflect attention;
+- which bets lack linked push work;
 - which provider or sidecar signals need operator review.
 
-The status and graph surfaces should consume the campaign primitive instead of
-inventing a separate campaign model.
+The status and graph surfaces should consume the push primitive (and read
+legacy campaign records as compatibility) instead of inventing a separate
+push model. JSON output adds push keys alongside legacy campaign keys for at
+least one minor release per the push primitive decision.
 
 ## Validation And Migration
 
@@ -481,8 +512,11 @@ Older architecture notes used `reference/`, `domain/`, `.vip/local.yaml`, and
 code, migration guidance, or historical decisions, but current public
 architecture is:
 
-- `core/` for evergreen business truth;
-- `campaigns/` for coordinated pushes;
+- `core/` for evergreen business truth (with optional `core/vocabulary.md`
+  for operator-owned display words);
+- `pushes/` for coordinated pushes (canonical), with `campaigns/` retained
+  as a compatibility read for repos created under the earlier campaign
+  primitive decision;
 - `documents/` for supporting/raw/prototype/archive material;
 - `.mb/` for explicit local Main Branch state;
 - provider/sidecar/dashboard state outside canonical memory unless explicitly
