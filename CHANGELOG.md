@@ -11,6 +11,39 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added (MAIN-249 / #324)
+
+- `mb init` and `mb onboard` now scaffold the canonical `pushes/` folder
+  instead of legacy `campaigns/`, and bundle an optional
+  `core/vocabulary.md` template so a business can name what it calls a
+  push (drop, launch, challenge, promo, campaign, etc.) without changing
+  any engine internals. Existing repos with `campaigns/` keep working as
+  compatibility reads. Refs #324.
+- `mb validate` and `mb graph` accept canonical `pushes/<YYYY-MM-DD-slug>/push.md`
+  records and the `linked_pushes` link field alongside legacy campaigns;
+  `mb status` indexes `pushes/` and surfaces legacy `campaigns/` count
+  as a parenthetical drift signal. Full kind/health/structured-goal
+  schema is left to #323. Refs #324, refs #323.
+- `mb doctor` warns when a repo still has legacy `campaigns/` records
+  ("Legacy campaigns folder detected. Main Branch now writes pushes/.
+  Run `mb migrate campaigns --plan` to preview a safe move.") and
+  exposes a structured `legacy_campaigns_to_pushes` repair item via
+  `mb doctor repair --plan --json`. Refs #324.
+- `mb migrate campaigns --plan` (read-only) prints a per-record plan
+  classifying each `campaigns/<slug>/campaign.md` record as a move
+  (deterministic destination), ambiguous (route to operator review),
+  or blocker (cannot infer a safe move). The apply path is explicitly
+  deferred to a follow-up PR with backups and explicit operator
+  approval. Implements the Migration Rubric from the issue body. Refs
+  #324.
+- Top-priority bundled skills (`/mb-ads`, `/mb-organic`, `/mb-vsl`,
+  `/mb-site`, `/mb-bet`, `/mb-start`) carry a new "Output destinations
+  and operator vocabulary" section telling them to write to `pushes/`,
+  read `core/vocabulary.md` when present, and recommend `mb doctor` /
+  `mb migrate campaigns --plan` on legacy repos. `linked_pushes` is
+  added to bet frontmatter alongside legacy `linked_campaigns`. Refs
+  #324.
+
 ### Fixed
 
 - `mb validate` now checks `campaigns/*/campaign.md` `status:` against the
