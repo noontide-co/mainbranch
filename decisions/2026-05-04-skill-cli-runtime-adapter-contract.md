@@ -35,7 +35,7 @@ operator. They may call `mb` to inspect state or perform mechanical repairs, but
 they must not make `mb` responsible for model invocation, chat memory, retries,
 streaming UI, or runtime-specific conversation branching.
 
-Runtime adapters are explicit contracts, not compatibility vibes. A runtime is
+Runtime adapters are explicit contracts, not compatibility intent. A runtime is
 not supported until it has adapter code or documented wiring, command/JSON
 contracts, generated-file and state rules, and smoke evidence from a fresh
 business repo. Claude Code is the reference adapter today. Codex, Cursor,

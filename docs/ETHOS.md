@@ -104,7 +104,7 @@ ads metrics, bookkeeping, transcription, analytics, or deployment helpers.
 Sidecars should be optional providers behind stable contracts, not hard
 dependencies of the core engine.
 
-### 8. Evidence Beats Vibes
+### 8. Evidence Beats Hunches
 
 Do not ship runtime claims, migration paths, packaging changes, or first-run
 flows without evidence. Use the validation ladder in [AGENTS.md](../AGENTS.md):
