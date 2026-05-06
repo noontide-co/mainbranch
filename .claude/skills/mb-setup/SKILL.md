@@ -173,12 +173,14 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 mkdir -p .vip
 mkdir -p core core/offers core/finance reference/visual-identity reference/proof/angles reference/domain
 mkdir -p research decisions bets log campaigns documents
+
+# Compatibility bridges for older skills/tools:
+ln -sfn ../core reference/core
+ln -sfn ../core/offers reference/offers
 ```
 
-If the repo needs compatibility bridges for older skills, create
-`reference/core -> ../core` and `reference/offers -> ../core/offers`. Treat
-those as aliases, not duplicate files. Write user reference content once under
-`core/` or `core/offers/`.
+Treat `reference/core` and `reference/offers` as aliases, not duplicate files.
+Write user reference content once under `core/` or `core/offers/`.
 
 **Multi-offer only (if user has multiple offers from Step 2.5):**
 

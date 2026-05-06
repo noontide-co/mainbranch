@@ -30,7 +30,7 @@ _BARE_SKILL_REF_RE = re.compile(
     r"(?<![\w./(`-])((?:\.\/)?(?:references|examples|scripts|assets)/[^\s`()\[\]<>,]+)"
 )
 _REFERENCE_ROOTS = ("references", "examples", "scripts", "assets")
-_LEGACY_REFERENCE_PATH_RE = re.compile(r"reference/(?:core|offers)(?:/|`|$)")
+_LEGACY_REFERENCE_PATH_RE = re.compile(r"reference/(?:core|offers)(?![\w-])")
 _LEGACY_REFERENCE_ALLOW_TERMS = (
     "legacy",
     "fallback",

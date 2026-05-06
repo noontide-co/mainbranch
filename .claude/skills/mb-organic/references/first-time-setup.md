@@ -151,6 +151,7 @@ Once you have the three core files:
 3. Want to research competitors first? Run `/mb-think` -- mining saves to `research/`, then `/mb-organic` generates from it
 
 The skill will guide you from there.
+
 If the repo has no `core/` folder, use legacy `reference/core/` as a temporary
 read fallback until the repo is migrated. In current repos, `reference/core` is
 a compatibility bridge to `core/`, not a second file to edit.

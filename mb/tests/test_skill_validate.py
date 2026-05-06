@@ -170,7 +170,7 @@ def test_skill_validate_warns_on_legacy_reference_paths_without_fallback_context
     _skill(
         tmp_path,
         "mb-alpha",
-        body="Read `reference/core/offer.md` before writing.\n",
+        body="Read reference/core, then write.\n",
     )
     _patch_engine(monkeypatch, tmp_path)
 
@@ -197,6 +197,29 @@ def test_skill_validate_allows_legacy_reference_paths_with_fallback_context(
     assert report is not None
     assert report["ok"] is True
     assert report["summary"]["warnings"] == 0
+
+
+def test_skill_validate_warns_on_legacy_reference_paths_in_referenced_markdown(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    skill_root = _skill(
+        tmp_path,
+        "mb-alpha",
+        body="See [setup](references/setup.md).\n",
+    )
+    _write(skill_root / "references" / "setup.md", "Read reference/offers.\n")
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-alpha")
+
+    assert report is not None
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 1
+    reference_result = next(
+        item for item in report["files"] if item["path"] == "references/setup.md"
+    )
+    assert len(reference_result["warnings"]) == 1
+    assert "prefer canonical core/" in reference_result["warnings"][0]
 
 
 def test_skill_validate_ignores_reference_paths_inside_code_fences(
