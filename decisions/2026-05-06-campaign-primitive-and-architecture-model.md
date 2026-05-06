@@ -15,6 +15,15 @@ linked_decisions:
 
 # Campaign Primitive And Architecture Model
 
+> **Superseded in part by
+> [decisions/2026-05-06-push-primitive-and-operator-vocabulary.md](2026-05-06-push-primitive-and-operator-vocabulary.md).**
+> The canonical engine primitive is now `push` (folder `pushes/`,
+> `type: push`, `linked_pushes`). `campaigns/` records remain as
+> compatibility reads — `mb validate`, `mb graph`, and `mb status` continue
+> to index them. New writes go to `pushes/`. The relationship model,
+> definition of a coordinated push, lifecycle, and non-campaign artifact
+> routing in this decision are unchanged.
+
 ## Decision
 
 `campaigns/` is the canonical business-repo home for coordinated pushes, not a

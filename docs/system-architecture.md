@@ -120,10 +120,29 @@ why it might work, by when, and how success or failure will be judged.
 A bet is usually Decide -> Ship -> Reflect. It may lead to a campaign, an offer
 change, a workflow, a content pillar, a provider setup, or a decision.
 
-### `campaigns/`
+### `pushes/` (canonical) and `campaigns/` (compatibility)
 
-`campaigns/` contains coordinated pushes that ship work into the world or into
-an adoption surface. A campaign is not a generic generated-artifact bucket.
+The canonical engine primitive for coordinated pushes is `pushes/`.
+[decisions/2026-05-06-push-primitive-and-operator-vocabulary.md](../decisions/2026-05-06-push-primitive-and-operator-vocabulary.md)
+makes this the durable name: folder `pushes/<YYYY-MM-DD-slug>/push.md`,
+frontmatter `type: push`, link field `linked_pushes`, JSON keys
+push-shaped, and `kind:` as a bounded enum
+(`launch | drop | challenge | promo | nurture | outreach | event |
+announcement | round | wave`).
+
+Existing `campaigns/<slug>/campaign.md` records remain compatibility
+reads. `mb validate`, `mb graph`, and `mb status` index them
+identically; `type: campaign` is a recognized alias on read; new writes
+go to `pushes/`. The relationship model, lifecycle, and definition of a
+coordinated push from
+[decisions/2026-05-06-campaign-primitive-and-architecture-model.md](../decisions/2026-05-06-campaign-primitive-and-architecture-model.md)
+are unchanged.
+
+The operator's preferred word for a push (e.g. *drop*, *launch*,
+*challenge*, *campaign*) lives in `core/vocabulary.md` and is mirrored
+in operator-facing copy without changing canonical storage.
+
+A push is not a generic generated-artifact bucket.
 
 A campaign has:
 
