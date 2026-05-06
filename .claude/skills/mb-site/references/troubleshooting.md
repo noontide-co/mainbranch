@@ -25,17 +25,22 @@ See [`cloudflare-pages-link.md`](cloudflare-pages-link.md) for the full walkthro
 
 ## `verify_live.py` Fails
 
-```bash
-source ~/.config/vip/env.sh
-python3 .claude/skills/mb-site/scripts/verify_live.py
-```
-
-Expect Cloudflare scopes, zone lookup, and domain-check CLI to pass. If anything is red, route to:
+First check the canonical Main Branch provider state:
 
 ```bash
-bash .claude/skills/mb-site/scripts/setup_creds.sh
+mb connect doctor --json
 ```
 
+If `provider:cloudflare` is not `ready`, reconnect and retest before running
+Cloudflare-dependent `/mb-site` tools:
+
+```bash
+printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata token_type=account --metadata account_id=...
+mb connect test cloudflare
+```
+
+Use a user API token only as a fallback by omitting `token_type=account`.
+After `mb connect` is ready, `verify_live.py` is the deeper manual smoke.
 Porkbun skipped is fine for the Cloudflare-registered path.
 
 ## Website Build Failing

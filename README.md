@@ -196,7 +196,7 @@ choices with the current readiness state and exact next command.
 ```bash
 mb connect plan
 mb connect list
-printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata account_id=...
+printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata token_type=account --metadata account_id=...
 mb connect test cloudflare
 mb connect doctor
 mb connect status --json
@@ -205,8 +205,9 @@ mb educational provider-readiness
 
 Secrets are stored outside the business repo, using the macOS Keychain when
 available and a local `~/.mainbranch/secrets/connect.json` fallback otherwise.
-The business repo only receives non-sensitive metadata in `.mb/connect.yaml`,
-such as the provider id, account label, credential backend, and last check time.
+The business repo only receives non-sensitive, gitignored metadata in
+`.mb/connect.yaml`, such as the provider id, account label, credential backend,
+account-token type, and last check time.
 Stored credentials start as `unvalidated` until `mb connect test <provider>`
 runs the safest available check. Providers with a safe API probe validate
 against the provider; providers without one record that local credential

@@ -10,18 +10,27 @@ Default deploy target is Cloudflare Pages. Netlify is supported only as a legacy
 |---|---|---|
 | Cloudflare account | All site shapes by default | https://dash.cloudflare.com |
 | `gh` CLI authenticated | Repo creation | `brew install gh` then `gh auth login` |
-| Cloudflare API token, account ID, GitHub App install | Domain/DNS/Pages flow | `bash .claude/skills/mb-site/scripts/setup_creds.sh`, then [`cloudflare-pages-link.md`](cloudflare-pages-link.md) |
+| Cloudflare API token, account ID, GitHub App install | Domain/DNS/Pages flow | `mb connect cloudflare --token-stdin --metadata token_type=account --metadata account_id=...`, then [`cloudflare-pages-link.md`](cloudflare-pages-link.md) |
 | `offer.md` and `audience.md` | Site generation | Build via `/mb-think` first if missing |
 | Node 18+ and pnpm | Website shape with Next.js or Astro build step | `brew install node && npm install -g pnpm` |
 
-Verify site-tool credentials with:
+Hard-gate Cloudflare-dependent work with:
 
 ```bash
-source ~/.config/vip/env.sh
-python3 .claude/skills/mb-site/scripts/verify_live.py
+mb connect doctor --json
 ```
 
-Expect Cloudflare scopes, zone lookup, and domain-check CLI to pass. Porkbun skipped is fine for the Cloudflare-registered path.
+If `provider:cloudflare` is not `ready`, do not run domain buy, DNS, Pages,
+custom-domain, or deploy tools. Offer the operator: connect now with
+`printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata token_type=account --metadata account_id=... && mb connect test cloudflare`;
+continue read-only for availability checks, naming, brief, and research only;
+or skip for now and record the blocker. User API tokens remain supported by
+omitting `token_type=account`, but account-scoped tokens are preferred for
+multi-business operators.
+
+`verify_live.py` remains a deeper manual smoke after `mb connect` says
+Cloudflare is ready. Expect Cloudflare scopes, zone lookup, and domain-check CLI
+to pass. Porkbun skipped is fine for the Cloudflare-registered path.
 
 ## Active Offer Resolution
 

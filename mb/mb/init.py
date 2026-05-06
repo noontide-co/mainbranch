@@ -48,6 +48,7 @@ node_modules/
 .venv/
 .claude/worktrees/
 .mb/backups/
+.mb/connect.yaml
 .mb/onboarding.json
 .mb/last-status-seen.json
 .mb/issue-drafts/

@@ -302,7 +302,7 @@ Do not push email, phone, full name, address, CRM notes, booking notes, raw cust
 |---|---|---|
 | `offer.md` exists and has minimum fields | Generation | File presence + frontmatter parse |
 | `audience.md` exists | Generation | File presence |
-| Cloudflare creds + GitHub App | All tool calls | `verify_live.py` returns 3/3 (Cloudflare scopes + zone lookup + domain-check) |
+| Cloudflare connected + GitHub App | Domain/DNS/Pages/deploy tool calls | `mb connect doctor --json` shows `provider:cloudflare` ready before dispatch; `verify_live.py` is a deeper manual smoke |
 | Domain decision | Setup | Operator confirms own-or-buy |
 | Tracking IDs (if declared) | Generation | offer.md frontmatter parse — if any tracking field present, validate format |
 | Paid-traffic measurement readiness | Paid launch recommendation | `mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json` |
@@ -335,8 +335,7 @@ The orchestration mode (lives in `/mb-start`, ships in #92) walks the operator t
 
 - Operator picks: own-existing or buy-new
 - If buy-new: route through `references/naming-heuristic.md`
-- For API-supported TLDs: `domain.py buy <name>` after explicit Y on price
-- For dashboard-only TLDs: route to https://dash.cloudflare.com/registrar with confirmation
+- `domain.py buy` is not live in this build; route new purchases through https://dash.cloudflare.com/registrar with confirmation
 
 ### Phase 3 — Infrastructure (tool chain)
 

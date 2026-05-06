@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import stat
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -197,11 +198,39 @@ def test_connect_provider_stores_secret_outside_repo(tmp_path: Path, monkeypatch
     cloudflare = config["providers"]["cloudflare"]
     assert cloudflare["metadata"] == {"account_id": "acct_123"}
     assert cloudflare["account_label"] == "Acme CF"
+    assert config["repo_identity"]["source"] in {"git_common_dir", "path"}
 
     secret_file = tmp_path / "home" / "secrets" / "connect.json"
     assert "cf-test-token" in secret_file.read_text(encoding="utf-8")
     assert stat.S_IMODE(secret_file.parent.stat().st_mode) == 0o700
     assert stat.S_IMODE(secret_file.stat().st_mode) == 0o600
+
+
+def test_connect_repo_identity_is_stable_across_worktrees(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    first = tmp_path / "biz-one"
+    second = tmp_path / "biz-two"
+    first.mkdir()
+    second.mkdir()
+
+    def fake_git(repo: Path, args: list[str]) -> str:
+        if args == ["config", "--get", "remote.origin.url"]:
+            return "git@github.com:acme/business.git"
+        return ""
+
+    monkeypatch.setattr(connect_mod, "_git_output", fake_git)
+
+    connect_mod.connect_provider("cloudflare", repo=first, token="first-token")
+    connect_mod.connect_provider("cloudflare", repo=second, token="second-token")
+
+    first_config = yaml.safe_load((first / ".mb" / "connect.yaml").read_text(encoding="utf-8"))
+    second_config = yaml.safe_load((second / ".mb" / "connect.yaml").read_text(encoding="utf-8"))
+    assert first_config["repo_id"] == second_config["repo_id"]
+    assert first_config["repo_identity"]["source"] == "git_remote"
+    assert (
+        first_config["providers"]["cloudflare"]["secrets"]["api_token"]["ref"]
+        == second_config["providers"]["cloudflare"]["secrets"]["api_token"]["ref"]
+    )
 
 
 def test_connect_provider_only_reads_env_when_explicit(tmp_path: Path, monkeypatch) -> None:
@@ -312,7 +341,20 @@ def test_connect_test_records_invalid_provider_without_leaking_secret(
     monkeypatch.setattr(
         connect_mod,
         "_http_get_json",
-        lambda url, headers=None: ("invalid", "provider rejected the credential"),
+        lambda url, headers=None, **kwargs: {
+            "ok": False,
+            "state": "invalid",
+            "summary": "Cloudflare rejected the credential. Create a fresh token and reconnect it.",
+            "safe_to_share": True,
+            "upstream": {
+                "endpoint_family": kwargs["endpoint_family"],
+                "http_status": 403,
+                "response_received": True,
+                "error_codes": ["9109"],
+                "error_messages": ["Invalid access token"],
+                "safe_to_share": True,
+            },
+        },
     )
 
     result = runner.invoke(app, ["connect", "test", "cloudflare", "--repo", str(repo), "--json"])
@@ -322,8 +364,129 @@ def test_connect_test_records_invalid_provider_without_leaking_secret(
     assert payload["ok"] is False
     assert payload["status"]["state"] == "invalid"
     assert payload["status"]["repair_command"] == "mb connect cloudflare --token-stdin"
-    assert payload["status"]["validation"]["summary"] == "provider rejected the credential"
+    assert "rejected the credential" in payload["status"]["validation"]["summary"]
+    assert payload["validation"]["upstream"]["endpoint_family"] == "cloudflare_user_token_verify"
+    assert payload["validation"]["upstream"]["http_status"] == 403
+    assert payload["validation"]["upstream"]["error_codes"] == ["9109"]
     assert "cf-secret-token" not in result.stdout
+
+
+def test_connect_test_routes_cloudflare_account_tokens_to_account_endpoint(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(
+        app,
+        [
+            "connect",
+            "cloudflare",
+            "--repo",
+            str(repo),
+            "--token",
+            "cf-secret-token",
+            "--metadata",
+            "token_type=account",
+            "--metadata",
+            "account_id=0123456789abcdef0123456789abcdef",
+        ],
+    )
+    calls: list[str] = []
+
+    def fake_http(url: str, headers=None, **kwargs) -> dict[str, Any]:
+        calls.append(url)
+        return {
+            "ok": True,
+            "state": "ready",
+            "summary": "Cloudflare credential validated with provider.",
+            "safe_to_share": True,
+            "upstream": {
+                "endpoint_family": kwargs["endpoint_family"],
+                "http_status": 200,
+                "response_received": True,
+                "error_codes": [],
+                "error_messages": [],
+                "safe_to_share": True,
+            },
+        }
+
+    monkeypatch.setattr(connect_mod, "_http_get_json", fake_http)
+
+    result = runner.invoke(app, ["connect", "test", "cloudflare", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["validation"]["upstream"]["endpoint_family"] == "cloudflare_account_token_verify"
+    assert calls == [
+        "https://api.cloudflare.com/client/v4/accounts/0123456789abcdef0123456789abcdef/tokens/verify"
+    ]
+
+
+def test_connect_test_routes_cloudflare_user_tokens_to_user_endpoint(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(
+        app,
+        ["connect", "cloudflare", "--repo", str(repo), "--token", "cf-secret-token"],
+    )
+    calls: list[str] = []
+
+    def fake_http(url: str, headers=None, **kwargs) -> dict[str, Any]:
+        calls.append(url)
+        return {
+            "ok": True,
+            "state": "ready",
+            "summary": "Cloudflare credential validated with provider.",
+            "safe_to_share": True,
+            "upstream": {
+                "endpoint_family": kwargs["endpoint_family"],
+                "http_status": 200,
+                "response_received": True,
+                "error_codes": [],
+                "error_messages": [],
+                "safe_to_share": True,
+            },
+        }
+
+    monkeypatch.setattr(connect_mod, "_http_get_json", fake_http)
+
+    result = runner.invoke(app, ["connect", "test", "cloudflare", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["validation"]["upstream"]["endpoint_family"] == "cloudflare_user_token_verify"
+    assert calls == ["https://api.cloudflare.com/client/v4/user/tokens/verify"]
+
+
+def test_connect_test_account_token_requires_account_id(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(
+        app,
+        [
+            "connect",
+            "cloudflare",
+            "--repo",
+            str(repo),
+            "--token",
+            "cf-secret-token",
+            "--metadata",
+            "token_type=account",
+        ],
+    )
+
+    result = runner.invoke(app, ["connect", "test", "cloudflare", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["status"]["state"] == "invalid"
+    assert "account_id" in payload["validation"]["summary"]
+    assert payload["validation"]["upstream"]["response_received"] is False
 
 
 def test_connect_test_no_probe_provider_reaches_ready_without_loop(
@@ -362,7 +525,22 @@ def test_connect_test_transient_provider_failure_stays_unvalidated(
     monkeypatch.setattr(
         connect_mod,
         "_http_get_json",
-        lambda url, headers=None: ("unvalidated", "provider validation returned HTTP 503"),
+        lambda url, headers=None, **kwargs: {
+            "ok": False,
+            "state": "unvalidated",
+            "summary": (
+                "Cloudflare validation returned HTTP 503. Retry after the provider recovers."
+            ),
+            "safe_to_share": True,
+            "upstream": {
+                "endpoint_family": kwargs["endpoint_family"],
+                "http_status": 503,
+                "response_received": True,
+                "error_codes": [],
+                "error_messages": [],
+                "safe_to_share": True,
+            },
+        },
     )
 
     result = runner.invoke(app, ["connect", "test", "cloudflare", "--repo", str(repo), "--json"])
@@ -372,8 +550,24 @@ def test_connect_test_transient_provider_failure_stays_unvalidated(
     assert payload["ok"] is False
     assert payload["status"]["state"] == "unvalidated"
     assert payload["status"]["repair_command"] == "mb connect test cloudflare"
-    assert payload["status"]["validation"]["summary"] == "provider validation returned HTTP 503"
+    assert "HTTP 503" in payload["status"]["validation"]["summary"]
     assert "cf-secret-token" not in result.stdout
+
+
+def test_token_stdin_prints_interactive_eof_prompt(monkeypatch, capsys) -> None:
+    class FakeStdin:
+        def isatty(self) -> bool:
+            return True
+
+        def read(self) -> str:
+            return "secret-token\n"
+
+    monkeypatch.setattr(sys, "stdin", FakeStdin())
+
+    token = connect_mod.read_stdin_token()
+
+    assert token == "secret-token"
+    assert "Ctrl-D" in capsys.readouterr().err
 
 
 def test_connect_doctor_includes_github_context_and_provider_repairs(

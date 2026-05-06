@@ -11,6 +11,31 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- `/mb-site` now hard-gates Cloudflare-dependent domain, DNS, Pages, custom
+  domain, and deploy work on `mb connect doctor --json` readiness. The skill
+  offers connect-now, read-only, and skip-for-now paths instead of discovering
+  missing Cloudflare credentials halfway through setup. Refs #335.
+
+### Fixed
+
+- `mb connect test cloudflare` now supports Cloudflare account-scoped token
+  validation via `--metadata token_type=account --metadata account_id=...`
+  while preserving the existing user-token verify path. Failed provider checks
+  include safe upstream diagnostics such as endpoint family, HTTP status, and
+  provider error codes/messages in JSON. Refs #335.
+- `mb connect` now derives repo-scoped credential identity from stable git
+  remote/common-dir facts before falling back to the local path, avoiding
+  separate keychain refs for parallel worktrees of the same business repo.
+  Refs #335.
+- New and repaired business repos now gitignore `.mb/connect.yaml` by default,
+  and interactive `mb connect <provider> --token-stdin` prints paste/EOF
+  instructions before reading from a TTY. Refs #335.
+- `/mb-site` no longer tells operators to use `domain.py buy` for live domain
+  purchases; the command remains a structured unavailable placeholder until
+  registrar support lands behind explicit guardrails. Refs #335.
+
 ## [0.3.3] - 2026-05-06
 
 v0.3.3 turns the campaign architecture work into the clearer push primitive.

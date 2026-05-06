@@ -12,7 +12,6 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
-import uuid
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -25,6 +24,7 @@ import yaml
 CONFIG_RELATIVE_PATH = Path(".mb") / "connect.yaml"
 SERVICE_NAME = "mainbranch"
 SENSITIVE_KEY_PARTS = ("token", "secret", "password", "credential", "api_key", "apikey", "key")
+SAFE_METADATA_KEYS = {"token_type", "token_scope", "api_token_type"}
 VALIDATION_TIMEOUT_SECONDS = 8
 CommandRunner = Callable[[list[str], Path | None, float], dict[str, Any]]
 Which = Callable[[str], str | None]
@@ -240,7 +240,7 @@ def _config_path(repo: Path) -> Path:
 
 
 def _empty_config() -> dict[str, Any]:
-    return {"version": 1, "repo_id": "", "providers": {}}
+    return {"version": 1, "repo_id": "", "repo_identity": {}, "providers": {}}
 
 
 def _read_config(repo: Path) -> dict[str, Any]:
@@ -263,16 +263,68 @@ def _read_config(repo: Path) -> dict[str, Any]:
     return {
         "version": version,
         "repo_id": str(raw.get("repo_id") or ""),
+        "repo_identity": raw.get("repo_identity")
+        if isinstance(raw.get("repo_identity"), dict)
+        else {},
         "providers": providers,
     }
 
 
-def _ensure_repo_id(config: dict[str, Any]) -> str:
-    repo_id = str(config.get("repo_id") or "")
-    if repo_id:
-        return repo_id
-    repo_id = uuid.uuid4().hex
+def _git_output(repo: Path, args: list[str]) -> str:
+    try:
+        proc = subprocess.run(
+            ["git", *args],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            timeout=3,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError):
+        return ""
+    if proc.returncode != 0:
+        return ""
+    return proc.stdout.strip()
+
+
+def _normalized_remote(value: str) -> str:
+    remote = value.strip()
+    if remote.startswith("git@github.com:"):
+        return "https://github.com/" + remote.removeprefix("git@github.com:").removesuffix(".git")
+    if remote.startswith("https://github.com/"):
+        return remote.removesuffix(".git")
+    return remote.removesuffix(".git")
+
+
+def _repo_identity(repo: Path) -> dict[str, str]:
+    remote = _git_output(repo, ["config", "--get", "remote.origin.url"])
+    if remote:
+        source = "git_remote"
+        basis = _normalized_remote(remote)
+    else:
+        common_dir = _git_output(repo, ["rev-parse", "--git-common-dir"])
+        if common_dir:
+            source = "git_common_dir"
+            basis = str(
+                (repo / common_dir).resolve()
+                if not Path(common_dir).is_absolute()
+                else Path(common_dir).resolve()
+            )
+        else:
+            source = "path"
+            basis = str(repo.resolve())
+    digest = hashlib.sha256(f"mainbranch-connect-v2:{source}:{basis}".encode()).hexdigest()
+    return {"source": source, "repo_id": digest[:32], "basis_sha256": digest}
+
+
+def _ensure_repo_id(config: dict[str, Any], repo: Path) -> str:
+    identity = _repo_identity(repo)
+    repo_id = identity["repo_id"]
     config["repo_id"] = repo_id
+    config["repo_identity"] = {
+        "source": identity["source"],
+        "basis_sha256": identity["basis_sha256"],
+    }
     return repo_id
 
 
@@ -492,10 +544,26 @@ def _parse_metadata(pairs: list[str]) -> dict[str, str]:
         if not key:
             raise ValueError("metadata keys cannot be empty")
         lowered = key.lower().replace("-", "_")
-        if any(part in lowered for part in SENSITIVE_KEY_PARTS):
+        if lowered not in SAFE_METADATA_KEYS and any(
+            part in lowered for part in SENSITIVE_KEY_PARTS
+        ):
             raise ValueError(f"metadata key {key!r} looks sensitive; use --token/--token-stdin")
         metadata[key] = value
     return metadata
+
+
+def _cloudflare_token_type(metadata: dict[str, Any]) -> str:
+    raw = (
+        metadata.get("token_type")
+        or metadata.get("token_scope")
+        or metadata.get("api_token_type")
+        or metadata.get("api_scope")
+        or ""
+    )
+    value = str(raw).strip().lower().replace("_", "-")
+    if value in {"account", "account-scoped", "account-owned", "account-token"}:
+        return "account"
+    return "user"
 
 
 def connect_provider(
@@ -517,7 +585,7 @@ def connect_provider(
         )
     target = Path(repo).resolve()
     config = _read_config(target)
-    repo_id = _ensure_repo_id(config)
+    repo_id = _ensure_repo_id(config, target)
     metadata = _parse_metadata(metadata_pairs or [])
     store = SecretStore(secret_backend)
 
@@ -668,6 +736,9 @@ def status_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
             "state": str(validation.get("state") or state),
             "checked_at": str(validation.get("checked_at") or ""),
             "summary": str(validation.get("summary") or ""),
+            "upstream": validation.get("upstream")
+            if isinstance(validation.get("upstream"), dict)
+            else {},
             "safe_to_share": True,
         },
     }
@@ -685,41 +756,203 @@ def _stored_secret(provider: Provider, entry: dict[str, Any]) -> str:
     return SecretStore(backend).get(ref) if ref else ""
 
 
-def _http_get_json(url: str, headers: dict[str, str] | None = None) -> tuple[str, str]:
+def _provider_error_summary(provider_name: str, upstream: dict[str, Any]) -> str:
+    status = upstream.get("http_status")
+    messages = [str(item) for item in upstream.get("error_messages", []) if str(item)]
+    base = messages[0] if messages else ""
+    if status in {400, 401}:
+        return f"{provider_name} rejected the credential. Create a fresh token and reconnect it."
+    if status == 403:
+        return (
+            f"{provider_name} accepted the request shape but denied access. "
+            "Check token permissions, account binding, and account_id metadata."
+        )
+    if status == 404:
+        return (
+            f"{provider_name} could not find the requested account/token resource. "
+            "Check account_id metadata and token ownership."
+        )
+    if status == 429:
+        return f"{provider_name} rate-limited validation. Retry `mb connect test` later."
+    if isinstance(status, int) and status >= 500:
+        return (
+            f"{provider_name} validation returned HTTP {status}. Retry after the provider recovers."
+        )
+    if base:
+        return f"{provider_name} validation failed: {base}"
+    return f"{provider_name} validation could not complete."
+
+
+def _extract_upstream_errors(payload: Any) -> tuple[list[str], list[str]]:
+    if not isinstance(payload, dict):
+        return [], []
+    codes: list[str] = []
+    messages: list[str] = []
+    for field in ("errors", "messages"):
+        raw_items = payload.get(field)
+        if not isinstance(raw_items, list):
+            continue
+        for item in raw_items:
+            if not isinstance(item, dict):
+                continue
+            code = item.get("code")
+            message = item.get("message")
+            if code not in {None, ""}:
+                codes.append(str(code))
+            if message:
+                messages.append(str(message))
+    return codes, messages
+
+
+def _http_get_json(
+    url: str,
+    headers: dict[str, str] | None = None,
+    *,
+    provider_name: str = "provider",
+    endpoint_family: str = "unknown",
+) -> dict[str, Any]:
     request = urllib.request.Request(url, headers=headers or {})
+    upstream: dict[str, Any] = {
+        "endpoint_family": endpoint_family,
+        "http_status": None,
+        "response_received": False,
+        "error_codes": [],
+        "error_messages": [],
+        "safe_to_share": True,
+    }
     try:
         with urllib.request.urlopen(request, timeout=VALIDATION_TIMEOUT_SECONDS) as response:
             status = int(getattr(response, "status", 0) or 0)
             body = response.read(8192)
     except urllib.error.HTTPError as exc:
-        if exc.code in {400, 401, 403}:
-            return "invalid", "provider rejected the credential"
-        if exc.code in {408, 429} or exc.code >= 500:
-            return "unvalidated", f"provider validation returned HTTP {exc.code}"
-        return "unvalidated", f"provider validation returned HTTP {exc.code}"
+        body = b""
+        with suppress(OSError):
+            body = exc.read(8192)
+        payload: Any = {}
+        if body:
+            with suppress(json.JSONDecodeError, UnicodeDecodeError):
+                payload = json.loads(body.decode("utf-8"))
+        codes, messages = _extract_upstream_errors(payload)
+        upstream.update(
+            {
+                "http_status": int(exc.code),
+                "response_received": True,
+                "error_codes": codes,
+                "error_messages": messages,
+            }
+        )
+        state = "invalid" if exc.code in {400, 401, 403, 404} else "unvalidated"
+        return {
+            "ok": False,
+            "state": state,
+            "summary": _provider_error_summary(provider_name, upstream),
+            "upstream": upstream,
+            "safe_to_share": True,
+        }
     except (urllib.error.URLError, TimeoutError, OSError):
-        return "unvalidated", "provider validation could not reach the service"
-    if status < 200 or status >= 300:
-        if status in {400, 401, 403}:
-            return "invalid", "provider rejected the credential"
-        return "unvalidated", f"provider validation returned HTTP {status}"
+        return {
+            "ok": False,
+            "state": "unvalidated",
+            "summary": f"{provider_name} validation could not reach the service.",
+            "upstream": upstream,
+            "safe_to_share": True,
+        }
+    payload = {}
     if body:
         with suppress(json.JSONDecodeError, UnicodeDecodeError):
-            json.loads(body.decode("utf-8"))
-    return "ready", "credential validated with provider"
+            payload = json.loads(body.decode("utf-8"))
+    codes, messages = _extract_upstream_errors(payload)
+    upstream.update(
+        {
+            "http_status": status,
+            "response_received": True,
+            "error_codes": codes,
+            "error_messages": messages,
+        }
+    )
+    if status < 200 or status >= 300:
+        state = "invalid" if status in {400, 401, 403, 404} else "unvalidated"
+        return {
+            "ok": False,
+            "state": state,
+            "summary": _provider_error_summary(provider_name, upstream),
+            "upstream": upstream,
+            "safe_to_share": True,
+        }
+    if isinstance(payload, dict) and payload.get("success") is False:
+        return {
+            "ok": False,
+            "state": "invalid",
+            "summary": _provider_error_summary(provider_name, upstream),
+            "upstream": upstream,
+            "safe_to_share": True,
+        }
+    token_status = ""
+    if isinstance(payload, dict) and isinstance(payload.get("result"), dict):
+        token_status = str(payload["result"].get("status") or "")
+    if token_status and token_status != "active":
+        upstream["token_status"] = token_status
+        return {
+            "ok": False,
+            "state": "invalid",
+            "summary": f"{provider_name} token is {token_status}; reconnect an active token.",
+            "upstream": upstream,
+            "safe_to_share": True,
+        }
+    return {
+        "ok": True,
+        "state": "ready",
+        "summary": f"{provider_name} credential validated with provider.",
+        "upstream": upstream,
+        "safe_to_share": True,
+    }
 
 
-def _validate_with_provider(provider: Provider, secret: str) -> dict[str, Any]:
+def _validate_with_provider(
+    provider: Provider, secret: str, metadata: dict[str, Any] | None = None
+) -> dict[str, Any]:
     checked_at = _now()
+    metadata = metadata or {}
     if provider.id == "cloudflare":
-        state, summary = _http_get_json(
-            "https://api.cloudflare.com/client/v4/user/tokens/verify",
+        token_type = _cloudflare_token_type(metadata)
+        if token_type == "account":
+            account_id = str(metadata.get("account_id") or "").strip()
+            if not account_id:
+                return {
+                    "ok": False,
+                    "state": "invalid",
+                    "checked_at": checked_at,
+                    "summary": (
+                        "Cloudflare account-token validation requires non-secret "
+                        "`account_id` metadata."
+                    ),
+                    "safe_to_share": True,
+                    "upstream": {
+                        "endpoint_family": "cloudflare_account_token_verify",
+                        "http_status": None,
+                        "response_received": False,
+                        "error_codes": [],
+                        "error_messages": [],
+                        "safe_to_share": True,
+                    },
+                }
+            url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/tokens/verify"
+            endpoint_family = "cloudflare_account_token_verify"
+        else:
+            url = "https://api.cloudflare.com/client/v4/user/tokens/verify"
+            endpoint_family = "cloudflare_user_token_verify"
+        result = _http_get_json(
+            url,
             {"Authorization": f"Bearer {secret}"},
+            provider_name=provider.name,
+            endpoint_family=endpoint_family,
         )
     elif provider.id == "apify":
-        state, summary = _http_get_json(
+        result = _http_get_json(
             "https://api.apify.com/v2/users/me",
             {"Authorization": f"Bearer {secret}"},
+            provider_name=provider.name,
+            endpoint_family="apify_user_me",
         )
     else:
         return {
@@ -733,11 +966,12 @@ def _validate_with_provider(provider: Provider, secret: str) -> dict[str, Any]:
             "safe_to_share": True,
         }
     return {
-        "ok": state == "ready",
-        "state": state,
+        "ok": bool(result["ok"]),
+        "state": str(result["state"]),
         "checked_at": checked_at,
-        "summary": summary,
+        "summary": str(result["summary"]),
         "safe_to_share": True,
+        "upstream": result.get("upstream", {}),
     }
 
 
@@ -769,7 +1003,9 @@ def test_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
                 "status": status_provider(provider.id, target),
                 "safe_to_share": True,
             }
-        validation = _validate_with_provider(provider, secret)
+        raw_metadata = entry.get("metadata")
+        metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
+        validation = _validate_with_provider(provider, secret, metadata)
 
     entry["validation"] = {
         "state": validation["state"],
@@ -777,6 +1013,8 @@ def test_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
         "summary": validation["summary"],
         "safe_to_share": True,
     }
+    if isinstance(validation.get("upstream"), dict):
+        entry["validation"]["upstream"] = validation["upstream"]
     entry["last_checked_at"] = validation["checked_at"]
     config["providers"][provider.id] = entry
     _write_config(target, config)
@@ -798,6 +1036,7 @@ def status_all(
 ) -> dict[str, Any]:
     target = Path(repo).resolve()
     config = _read_config(target)
+    identity = _repo_identity(target)
     configured = set(config["providers"].keys())
     providers = []
     for provider in PROVIDERS:
@@ -810,7 +1049,7 @@ def status_all(
         "ok": not broken,
         "repo": str(target),
         "config_path": str(_config_path(target)),
-        "repo_id": str(config.get("repo_id") or ""),
+        "repo_id": str(config.get("repo_id") or identity["repo_id"]),
         "providers": providers,
         "github": github or github_context(target),
         "safe_to_share": True,
@@ -1125,9 +1364,19 @@ def render_test_result(result: dict[str, Any]) -> None:
     status = result["status"]
     state = "ok" if result["ok"] else "warn"
     print(f"mb connect test {result['provider']}: {state} ({status['state']})")
-    summary = (result.get("validation") or status.get("validation") or {}).get("summary")
+    validation = result.get("validation") or status.get("validation") or {}
+    summary = validation.get("summary")
     if summary:
         print(f"summary: {summary}")
+    upstream = validation.get("upstream") if isinstance(validation, dict) else {}
+    if isinstance(upstream, dict) and upstream.get("endpoint_family"):
+        details = [f"endpoint: {upstream['endpoint_family']}"]
+        if upstream.get("http_status") is not None:
+            details.append(f"http: {upstream['http_status']}")
+        codes = upstream.get("error_codes")
+        if isinstance(codes, list) and codes:
+            details.append(f"codes: {', '.join(str(code) for code in codes[:3])}")
+        print("provider: " + "  ".join(details))
     if status.get("repair_command"):
         print(f"next: {status['repair_command']}")
 
@@ -1152,4 +1401,9 @@ def render_connect_result(result: dict[str, Any]) -> None:
 
 
 def read_stdin_token() -> str:
+    if sys.stdin.isatty():
+        print(
+            "Paste the credential, then press Ctrl-D on a new line to finish.",
+            file=sys.stderr,
+        )
     return sys.stdin.read().strip()

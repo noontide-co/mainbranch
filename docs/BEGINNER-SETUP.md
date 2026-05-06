@@ -143,12 +143,13 @@ If a provider is missing, Main Branch prints the next command. Examples:
 
 ```bash
 gh auth login
-printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata account_id=...
+printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata token_type=account --metadata account_id=...
 mb connect doctor --json
 ```
 
 Secrets stay outside your repo. Main Branch stores only safe metadata in
-`.mb/connect.yaml`, such as provider name, account label, and last check time.
+`.mb/connect.yaml`, such as provider name, account label, account-token type,
+and last check time. The file is gitignored by default.
 For the longer plain-English explanation, run:
 
 ```bash

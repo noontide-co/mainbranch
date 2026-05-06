@@ -62,8 +62,14 @@ Say `/mb-site` again after compaction, context loss, or switching focus. It relo
 1. Load [`references/pull-engine-updates.md`](references/pull-engine-updates.md) and run the canonical update check.
 2. Detect business repo mode vs site repo mode. Load [`references/site-repo-workflow.md`](references/site-repo-workflow.md) for repo boundaries, source links, and reverse site records.
 3. When a business repo is known, run `mb status --json --peek` and use its `readiness`, `drift.items`, `integrations`, `measurement`, and `ranked_actions` facts before inventing setup, provider, or launch-readiness checks in prose.
-4. Resolve the active offer and required business context with [`references/site-context.md`](references/site-context.md).
-5. Ask what the operator is building, then load only the shape reference needed next.
+4. Before any domain purchase, DNS, Cloudflare Pages project, custom-domain attach, or deploy work, run `mb connect doctor --json` from the business repo and check `provider:cloudflare`.
+   - If Cloudflare is not `ready`, stop before dispatching site tools and present exactly three choices:
+     - **connect now:** `printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata token_type=account --metadata account_id=... && mb connect test cloudflare`
+     - **continue read-only:** availability checks, naming, brief, and research only; no buy, DNS, Pages, custom-domain, or deploy calls.
+     - **skip for now:** record the blocker in the push/site notes and stage a follow-up task.
+   - User API tokens remain supported as a fallback by omitting `token_type=account`; prefer account-scoped tokens for multi-business operators.
+5. Resolve the active offer and required business context with [`references/site-context.md`](references/site-context.md).
+6. Ask what the operator is building, then load only the shape reference needed next.
 
 ## Operating Principles
 

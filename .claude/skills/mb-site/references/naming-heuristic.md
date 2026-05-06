@@ -86,7 +86,7 @@ Watch for:
 
 - "Parked by speculator with offer-for-sale page" — technically available via aftermarket but at $500–$5000+
 - "Active site, content unrelated" — domain is owned but unused; can't acquire without negotiation
-- "Truly available" — clean RDAP/WHOIS path, ready for `domain.py buy`
+- "Truly available" — clean RDAP/WHOIS path, ready for operator purchase through the Cloudflare Registrar dashboard
 
 Pick the one with the cleanest history + the strongest fit. Two-name shortlists tend to deadlock; three-name shortlists usually have a clear winner once you read the real WHOIS.
 

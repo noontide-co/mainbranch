@@ -11,6 +11,7 @@ from mb.cli import app
 from mb.init import run as init_run
 
 runner = CliRunner()
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _write_conversion(site: Path, payload: dict[str, object]) -> None:
@@ -50,6 +51,19 @@ def _write_dist_html(
     original = site / "index.html"
     _write_html(site, gtm_id=gtm_id, events=events)
     original.replace(site / "dist" / "index.html")
+
+
+def test_mb_site_skill_hard_gates_cloudflare_dependent_work() -> None:
+    skill = (REPO_ROOT / ".claude" / "skills" / "mb-site" / "SKILL.md").read_text(encoding="utf-8")
+    setup = (
+        REPO_ROOT / ".claude" / "skills" / "mb-site" / "references" / "minisite-setup.md"
+    ).read_text(encoding="utf-8")
+
+    assert "mb connect doctor --json" in skill
+    assert "continue read-only" in skill
+    assert "--metadata token_type=account --metadata account_id=..." in skill
+    assert "no buy, DNS, Pages, custom-domain, or deploy calls" in setup
+    assert "Main Branch cannot buy domains through `domain.py` yet" in setup
 
 
 def test_site_check_reports_ready_for_operator_review(tmp_path: Path, monkeypatch) -> None:

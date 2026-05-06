@@ -37,7 +37,8 @@ mb connect doctor --json
 
 2. **Cloudflare** - sites, DNS, Pages, and future Workers.
    - Check: `mb connect doctor --json`
-   - Common setup: `printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata account_id=...`
+   - Preferred setup for multi-business operators: `printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata token_type=account --metadata account_id=...`
+   - User API tokens remain supported as a fallback: omit `token_type=account` to use Cloudflare's user-token verify path.
    - Connect it when you are ready to publish or attach a domain.
 
 3. **Google / Workspace** - Drive, Docs, Sheets, Slides, and workspace source material.
@@ -66,8 +67,9 @@ mb connect doctor --json
 - `ready` means the safest available check passed.
 
 Secrets stay outside the business repo. `.mb/connect.yaml` stores only safe
-metadata, labels, secret references, and last-check facts. Do not paste tokens
-into markdown files, GitHub issues, screenshots, or committed config.
+metadata, labels, secret references, and last-check facts, and is gitignored by
+default. Do not paste tokens into markdown files, GitHub issues, screenshots,
+or committed config.
 
 ## Why this is business onboarding
 

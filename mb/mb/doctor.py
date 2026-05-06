@@ -44,17 +44,19 @@ LOCAL_GITIGNORE_ENTRIES = (
     ".claude/settings.local.json",
     ".claude/worktrees/",
     ".mb/backups/",
+    ".mb/connect.yaml",
     ".mb/onboarding.json",
     ".mb/last-status-seen.json",
     ".mb/issue-drafts/",
 )
 LOCAL_STATE_PATHS = (
     ".mb/backups",
+    ".mb/connect.yaml",
     ".mb/onboarding.json",
     ".mb/last-status-seen.json",
     ".mb/issue-drafts",
 )
-DURABLE_MB_PATHS = (".mb/schema_version", ".mb/connect.yaml")
+DURABLE_MB_PATHS = (".mb/schema_version",)
 LEGACY_CLAUDE_LINK_DIRS = (".claude/lenses", ".claude/reference")
 REFERENCE_COMPAT_LINKS = {
     "reference/core": "../core",

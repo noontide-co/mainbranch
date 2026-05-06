@@ -173,6 +173,33 @@ def test_doctor_repair_plan_is_read_only_for_status_marker(tmp_path: Path) -> No
     assert not marker.exists()
 
 
+def test_doctor_repair_adds_connect_yaml_to_gitignore(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    gitignore = repo / ".gitignore"
+    gitignore.write_text(
+        gitignore.read_text(encoding="utf-8").replace(".mb/connect.yaml\n", ""),
+        encoding="utf-8",
+    )
+
+    plan = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert plan.exit_code in {0, 1}
+    plan_payload = json.loads(plan.stdout)
+    checks = {
+        check["name"]: check
+        for section in plan_payload["sections"]
+        if section["id"] == "gitignore"
+        for check in section["checks"]
+    }
+    assert checks[".mb/connect.yaml"]["state"] == "warn"
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"])
+
+    assert result.exit_code in {0, 1}
+    assert ".mb/connect.yaml" in gitignore.read_text(encoding="utf-8")
+
+
 def test_doctor_warns_on_legacy_campaigns_records(tmp_path: Path) -> None:
     repo = tmp_path / "legacy-pushes"
     init_run(path=str(repo), name="Acme")

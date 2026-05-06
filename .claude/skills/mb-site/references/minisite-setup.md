@@ -16,20 +16,23 @@ Use an empty repo. Do not merge a template into the minisite shape.
 
 ## 5b. Prerequisites
 
-Confirm credentials are in place:
+Hard-gate Cloudflare-dependent setup before tool dispatch:
 
 ```bash
-source ~/.config/vip/env.sh
-python3 .claude/skills/mb-site/scripts/verify_live.py
+mb connect doctor --json
 ```
 
-Expect Cloudflare scopes, zone lookup, and domain-check CLI to pass. If anything is red, route to:
+If `provider:cloudflare` is not `ready`, stop and offer three choices:
 
-```bash
-bash .claude/skills/mb-site/scripts/setup_creds.sh
-```
+- **connect now:** `printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata token_type=account --metadata account_id=... && mb connect test cloudflare`
+- **continue read-only:** domain availability, naming, brief, and research only; no buy, DNS, Pages, custom-domain, or deploy calls.
+- **skip for now:** record the Cloudflare blocker in the push/site notes and stage a follow-up.
 
-Then re-run `verify_live.py`.
+Prefer Cloudflare account-scoped tokens for multi-business operators. User API
+tokens remain supported as a fallback by omitting `token_type=account`.
+
+After `mb connect` reports Cloudflare ready, `verify_live.py` can be used as a
+deeper manual smoke for Cloudflare scopes, zone lookup, and domain-check CLI.
 
 ## 5c. Domain: Existing Or New
 
@@ -42,13 +45,9 @@ Ask:
 python3 .claude/skills/mb-site/scripts/domain.py check <name> --tlds .com,.co,.io
 ```
 
-For API-supported TLDs and after explicit operator approval on price, proceed:
-
-```bash
-python3 .claude/skills/mb-site/scripts/domain.py buy <name>
-```
-
-For dashboard-only TLDs, fall back to https://dash.cloudflare.com/registrar.
+Main Branch cannot buy domains through `domain.py` yet. If the operator needs a
+new domain, route them to https://dash.cloudflare.com/registrar after the
+availability check, then resume once they confirm they own the full domain.
 
 ## 5d. DNS Ensure
 

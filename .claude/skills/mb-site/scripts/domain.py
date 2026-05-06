@@ -3,8 +3,8 @@
 
 Subcommands:
     check  Wraps the `domain-check` brew CLI (RDAP, no auth) for availability lookups.
-    buy    Registers via Cloudflare Registrar (default) or Porkbun (legacy/lifecycle).
-           [Code lands here; live integration deferred to first real-project domain.]
+    buy    Unavailable placeholder that emits a structured error; use the registrar
+           dashboard until live registration support lands behind guardrails.
 
 Invocation: `python3 domain.py <subcommand> [args]`
 Output: companyctx-shape envelope JSON on stdout, logs on stderr.
@@ -273,7 +273,7 @@ def check(name: str, tlds: str, full_domain: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
-# domain buy (code only — live integration deferred to real-project domain)
+# domain buy (unavailable until live registrar support lands)
 # ---------------------------------------------------------------------------
 
 DomainBuyErrorCode = Literal[
@@ -335,7 +335,7 @@ def _select_registrar(explicit: str | None) -> tuple[str | None, DomainBuyError 
         message="No registrar credentials found.",
         suggestion=(
             "Add CLOUDFLARE_API_TOKEN_REGISTRAR (preferred) or "
-            "PORKBUN_API_KEY + PORKBUN_SECRET_KEY to ~/.config/vip/env.sh"
+            "PORKBUN_API_KEY + PORKBUN_SECRET_KEY to your local shell environment."
         ),
     )
 
@@ -365,10 +365,9 @@ def _select_registrar(explicit: str | None) -> tuple[str | None, DomainBuyError 
 def buy(name: str, registrar: str | None, years: int, max_price: float, assume_yes: bool) -> None:
     """Register a domain. NAME must be a full domain (e.g. 'mybrand.com').
 
-    NOTE: live registrar calls are not yet wired. This command currently
-    validates inputs, selects a registrar, and emits a structured
-    `registrar_unsupported` error. The actual API integration lands
-    against the first real-project domain (no junk asset purchases).
+    NOTE: live registrar calls are not wired. This command validates inputs
+    and emits a structured `registrar_unsupported` error so `/mb-site` cannot
+    imply that Main Branch can buy the domain.
     """
     name = name.strip().lower()
 
@@ -418,8 +417,8 @@ def buy(name: str, registrar: str | None, years: int, max_price: float, assume_y
             code="registrar_unsupported",
             message=f"Registrar API for {selected!r} not yet wired in this build.",
             suggestion=(
-                "Live registration is deferred to the first real-project domain. "
-                "Wire the API call before invoking with --yes against a real name."
+                "Buy the domain in the registrar dashboard, then rerun `/mb-site` "
+                "after you own the full domain."
             ),
         ),
     )
