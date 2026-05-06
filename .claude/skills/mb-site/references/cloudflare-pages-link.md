@@ -2,8 +2,33 @@
 
 Two scenarios live in this doc, in order of how often you'll hit them:
 
+0. **Provider readiness check** (must be green before Pages/DNS/domain tool calls)
 1. **First time on this Cloudflare account: bind the GitHub App** (the OAuth handshake step that gets you out of CF code `8000011`)
 2. **Manual Pages project creation via dashboard** (rare — `pages.py create-project` is the default; this is the dashboard fallback)
+
+---
+
+## 0. Provider readiness check
+
+Before Cloudflare Pages, DNS, custom-domain, deploy, or domain-purchase work,
+run this from the business repo:
+
+```bash
+mb connect doctor --json
+```
+
+If `provider:cloudflare` is not `ready`, connect the account token before
+continuing:
+
+```bash
+printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --token-stdin --metadata token_type=account --metadata account_id=...
+mb connect test cloudflare
+```
+
+`cfat_` account tokens route automatically when `account_id` metadata is
+present; `token_type=account` stays in the command because it is explicit and
+works on older `mb` versions. User API tokens remain supported as a fallback by
+omitting `token_type=account`.
 
 ---
 

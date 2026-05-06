@@ -575,7 +575,9 @@ def _parse_metadata(pairs: list[str]) -> dict[str, str]:
     return metadata
 
 
-def _cloudflare_token_type(metadata: dict[str, Any]) -> str:
+def _cloudflare_token_type(metadata: dict[str, Any], secret: str = "") -> str:
+    if secret.strip().startswith("cfat_"):
+        return "account"
     raw = (
         metadata.get("token_type")
         or metadata.get("token_scope")
@@ -939,7 +941,7 @@ def _validate_with_provider(
     checked_at = _now()
     metadata = metadata or {}
     if provider.id == "cloudflare":
-        token_type = _cloudflare_token_type(metadata)
+        token_type = _cloudflare_token_type(metadata, secret)
         if token_type == "account":
             account_id = str(metadata.get("account_id") or "").strip()
             if not account_id:
