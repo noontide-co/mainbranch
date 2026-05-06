@@ -10,6 +10,20 @@ Create organic content scripts in your voice — Reels, TikToks, carousels, stat
 
 **Need help?** Type `/mb-help` + your question anytime. If conversation compacts, `/mb-help` reloads fresh context.
 
+## Output destinations and operator vocabulary
+
+When this skill produces a coordinated push (a content sequence with a goal,
+audience, and review date), write the wrapping record to
+`pushes/<YYYY-MM-DD-slug>/push.md` (`type: push`, `linked_pushes` for inbound
+links). One-off scripts and source captures route to `documents/transcripts/`
+or `documents/prototypes/` per the artifact-routing rules in the system
+architecture doc; they don't need a push wrapper.
+
+If `core/vocabulary.md` defines display words (e.g. `terms.push.singular: drop`),
+speak the operator's word in conversation while still writing canonical files.
+If the repo still has legacy `campaigns/` records, recommend `mb doctor` and
+`mb migrate campaigns --plan` before creating new push work.
+
 ---
 
 ## Triage

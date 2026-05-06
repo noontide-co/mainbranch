@@ -15,6 +15,26 @@ loops: [ship]
 
 Pick a site shape, build it from business context, and ship it through a linked site repo. Cloudflare Pages with git auto-deploy is the default deploy path.
 
+## Output destinations and operator vocabulary
+
+Site/lander records that wrap a coordinated push (a launch, drop, or
+challenge with a goal and timeline) live under `pushes/<YYYY-MM-DD-slug>/`
+on the business-repo side; the wrapping record is `push.md` (`type: push`),
+and the site record is typically `pushes/<YYYY-MM-DD-slug>/site.md`. Site
+files themselves live in the linked site repo (Cloudflare Pages, etc.) and
+are not duplicated in the business repo.
+
+Reverse references from the site repo's `.mainbranch/source.json` use
+canonical push paths (`campaign_path: pushes/<...>/push.md`); on legacy
+repos that still have `campaigns/`, those references continue to resolve
+via compatibility read.
+
+If `core/vocabulary.md` defines display words (e.g. `terms.push.singular:
+launch`), speak the operator's word in conversation while still writing
+canonical files. If the repo still has legacy `campaigns/` records,
+recommend `mb doctor` and `mb migrate campaigns --plan` before creating
+new push work.
+
 ## Re-Invoke Often
 
 Say `/mb-site` again after compaction, context loss, or switching focus. It reloads skill context. Do it whenever the conversation feels stale.

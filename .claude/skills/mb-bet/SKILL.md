@@ -62,6 +62,7 @@ target: "10 qualified calls by deadline"
 result: ""
 linked_decisions: []
 linked_research: []
+linked_pushes: []
 linked_campaigns: []
 linked_outcomes: []
 public: false
@@ -76,7 +77,13 @@ Use repo-relative paths in link fields:
 
 - `linked_decisions`: `decisions/*.md`
 - `linked_research`: `research/*.md`
-- `linked_campaigns`: `campaigns/*/campaign.md` or campaign artifacts
+- `linked_pushes` (canonical): `pushes/YYYY-MM-DD-slug/push.md` or push artifacts
+- `linked_campaigns` (legacy compatibility, leave as `[]` for new bets):
+  `campaigns/*/campaign.md` records on existing repos that have not yet
+  migrated. New bets always include both fields with `linked_pushes`
+  populated and `linked_campaigns: []`. When the operator is on a legacy
+  campaigns/ repo, recommend `mb doctor` and `mb migrate campaigns --plan`
+  before creating new push work.
 - `linked_outcomes`: `log/*.md`, `documents/*.md`, or outcome artifacts
 
 When linking an existing file to a bet, add the reverse link too:
@@ -94,8 +101,8 @@ Use when the operator says they want to try, launch, test, prove, or make a bet.
    target, public/private posture, channels, and any known linked files.
 2. Create `bets/YYYY-MM-DD-slug.md`.
 3. Add reverse `linked_bets` frontmatter to linked decisions, research,
-   campaigns, and outcome files when those files already exist and the edit is
-   clearly safe.
+   pushes (or legacy campaigns), and outcome files when those files already
+   exist and the edit is clearly safe.
 4. End with the file path, deadline, target, and next action.
 
 Body template:
@@ -134,8 +141,8 @@ Use when work happened but the bet is not finished.
 
 1. Read the bet and linked files.
 2. Append a dated `Evidence Log` entry.
-3. Update `linked_decisions`, `linked_research`, `linked_campaigns`, or
-   `linked_outcomes` if new files now matter.
+3. Update `linked_decisions`, `linked_research`, `linked_pushes` (or legacy
+   `linked_campaigns`), or `linked_outcomes` if new files now matter.
 4. Keep `result` blank unless there is a real result.
 5. Repair reverse `linked_bets` fields on newly linked files.
 

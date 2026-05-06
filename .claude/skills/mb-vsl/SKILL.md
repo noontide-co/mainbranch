@@ -8,6 +8,20 @@ loops: [ship]
 
 Routes to the right framework based on your offer type.
 
+## Output destinations and operator vocabulary
+
+VSL scripts that wrap a coordinated push (a launch, drop, challenge, etc.)
+land under `pushes/<YYYY-MM-DD-slug>/` (canonical engine primitive). The
+push record itself is `pushes/<YYYY-MM-DD-slug>/push.md` (`type: push`).
+A one-off VSL that isn't part of a coordinated push can sit under the
+relevant offer in `core/offers/<offer>/` instead.
+
+If `core/vocabulary.md` defines display words (e.g. `terms.push.singular:
+launch`), speak the operator's word in conversation while still writing
+canonical files. If the repo still has legacy `campaigns/` records,
+recommend `mb doctor` and `mb migrate campaigns --plan` before creating
+new push work.
+
 ---
 
 ## Pull Latest Updates

@@ -8,6 +8,27 @@ loops: [ship, reflect]
 
 Create ads, generate creative variations, review for compliance, and check ad account performance.
 
+## Output destinations and operator vocabulary
+
+This skill writes new coordinated work to `pushes/<YYYY-MM-DD-slug>/` (the
+canonical engine primitive). Examples below say "push" for the wrapping
+record; this is the engine's word. If `core/vocabulary.md` defines a
+display word — for example `terms.push.singular: drop` — speak the
+operator's word ("drop") in conversation while still writing canonical
+files (`pushes/...`, `type: push`, `linked_pushes`). Never rename folders,
+frontmatter, link fields, JSON keys, or commands based on vocabulary.
+
+If the repo still has legacy `campaigns/` records, preview the migration
+**before** creating new push work:
+
+```text
+mb doctor                       # confirms legacy campaigns/ drift
+mb migrate campaigns --plan     # read-only preview of moves
+```
+
+The word "campaign" elsewhere in this skill refers to Meta Ads campaigns
+(the provider's term for its object) — not the Main Branch primitive.
+
 ## Step 0: Pre-Flight Readiness
 
 **Before triage, find the business repo, read deterministic Main Branch facts,
@@ -367,7 +388,7 @@ If context was compacted mid-task, check:
 1. **Which offer?** Read `.vip/local.yaml` for `current_offer` to restore offer context
 2. **What entry point?** Full pipeline, copy only, hook library, video scripts, review, account check
 3. **What stage?** Planning angles, writing hooks, generating prompts, reviewing, pulling account data
-4. **What's done?** Check campaigns/ folder for partial work
+4. **What's done?** Check `pushes/` (and legacy `campaigns/` on unmigrated repos) for partial work
 5. **Ad account status?** Re-run `mb status --json --peek`; if needed, run `mb connect doctor --json`
 6. **Resume:** Continue from the last completed step
 

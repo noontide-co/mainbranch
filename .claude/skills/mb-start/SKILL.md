@@ -10,6 +10,19 @@ Single entry point for Main Branch. Detect user state, context level, experience
 
 **Recommended workflow:** Start Claude in your business repo, run `/mb-start`. It handles everything. Main Branch is loaded through `additionalDirectories`, with bridge links as a compatibility fallback for skill discovery.
 
+## Output destinations and operator vocabulary
+
+This skill routes to other skills; it does not write coordinated work itself.
+When summarizing repo state, count records under `pushes/` (canonical) and
+flag `campaigns/` separately as legacy compatibility — `mb status` and
+`mb doctor` already do this. If `core/vocabulary.md` defines display words
+(e.g. `terms.push.singular: drop`), speak the operator's word in
+conversation while still referring to canonical paths in any commands.
+
+If the repo has legacy `campaigns/` records, surface the doctor warning
+and recommend `mb migrate campaigns --plan` as a triage option before
+routing the operator into a skill that creates new push work.
+
 **Status facts first:** Once the business repo path is known, run
 `mb status --json --peek` before asking setup or routing questions. Treat that
 JSON as the source of truth for update severity, readiness, drift, onboarding,

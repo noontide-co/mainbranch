@@ -84,7 +84,7 @@ Gather these in main and pass as structured text in each agent's prompt:
 | Past triage file names | `ls research/*-start-triage.md 2>/dev/null` | ~5 lines | Agent 3 |
 | Past crystallize file names | `ls research/*-end-of-day-crystallize.md 2>/dev/null` | ~5 lines | Agent 3 |
 | `current_offer` | From `.vip/local.yaml` | 1 line | All 3 agents |
-| Campaign lifecycle listing | `grep -rl "status: draft\|status: scheduled" campaigns/ 2>/dev/null` | ~10 lines | Agent 2 |
+| Push lifecycle listing | `grep -rl "status: draft\|status: planned\|status: active" pushes/ campaigns/ 2>/dev/null` | ~10 lines | Agent 2 |
 
 **What agents read themselves (in their own context, NOT in main):**
 - soul.md, offer.md, audience.md, voice.md — Agent 1 reads all, Agent 3 reads soul
@@ -203,13 +203,16 @@ and first 10 lines of each.]
 
 [Research files with linked_decisions: []. Include filename and date.]
 
-=== CAMPAIGN LIFECYCLE STATE ===
+=== PUSH LIFECYCLE STATE ===
 
-[Files in campaigns/ grouped by frontmatter status: draft, scheduled,
-published, final.
-Use: grep -rl "status: draft" campaigns/ 2>/dev/null
-or "No campaigns with lifecycle status" if none have status field.
-Also list most recent 5 items in campaigns/.]
+[Files in pushes/ (and legacy campaigns/) grouped by canonical
+frontmatter status: draft, planned, active, paused, completed,
+canceled, archived. Stale legacy statuses like "scheduled" or
+"published" come from pre-push records and signal that the operator
+should run `mb migrate campaigns --plan`.
+Use: grep -rl "status: draft" pushes/ campaigns/ 2>/dev/null
+or "No pushes with lifecycle status" if none have status field.
+Also list most recent 5 items in pushes/ (or campaigns/ on legacy repos).]
 
 === CONTENT STRATEGY ===
 
@@ -235,13 +238,13 @@ Analyze these dimensions:
    Scheduled? When was the last campaign asset published? Is there a gap
    between core readiness and campaign generation?
 
-4. **Campaign recency:** When was the last batch generated? What type?
-   Long gap between core updates and campaign generation = missed opportunity.
+4. **Push recency:** When was the last batch generated? What type?
+   Long gap between core updates and push generation = missed opportunity.
 
 5. **Velocity pattern:** What's the ratio of enrichment work (research/,
-   core/ changes) to campaign work (campaigns/)? All enrichment
-   with no campaign output = stuck in thinking. All campaign output with no enrichment =
-   running on stale context.
+   core/ changes) to push work (pushes/, or legacy campaigns/)? All
+   enrichment with no push output = stuck in thinking. All push output
+   with no enrichment = running on stale context.
 
 6. **Content strategy health:** Does content-strategy.md have populated pillars?
    Hooks library? Framework library? Metrics section? Or is it a skeleton?
