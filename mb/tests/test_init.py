@@ -20,6 +20,15 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert (target / "core" / "strategy").is_dir()
     assert (target / "core" / "operations").is_dir()
     assert (target / "bets").is_dir()
+    # Canonical primitive is `pushes/`; legacy `campaigns/` is not scaffolded.
+    assert (target / "pushes").is_dir()
+    assert not (target / "campaigns").exists()
+    # Operator vocabulary is an optional file scaffolded by init.
+    assert (target / "core" / "vocabulary.md").exists()
+    vocab = (target / "core" / "vocabulary.md").read_text(encoding="utf-8")
+    assert "type: vocabulary" in vocab
+    assert "terms:" in vocab
+    assert "singular: push" in vocab
     assert (target / "CLAUDE.md").exists()
     assert (target / ".github" / "CODEOWNERS").exists()
     assert (target / ".gitignore").exists()
@@ -48,6 +57,11 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "MCP tokens" in claude_md
     assert "Never commit API keys" in claude_md
     assert "`bets/`" in claude_md
+    # CLAUDE.md teaches the canonical push primitive and the optional
+    # vocabulary file; legacy campaigns/ appears only as compatibility.
+    assert "`pushes/`" in claude_md
+    assert "core/vocabulary.md" in claude_md
+    assert "legacy `campaigns/`" in claude_md
 
 
 def test_init_idempotent(tmp_path: Path) -> None:

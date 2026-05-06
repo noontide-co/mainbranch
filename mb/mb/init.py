@@ -30,7 +30,7 @@ DATA_FOLDERS = [
     "decisions",
     "bets",
     "log",
-    "campaigns",
+    "pushes",
     "documents",
 ]
 
@@ -143,6 +143,14 @@ def run(path: str, name: str) -> dict[str, Any]:
     (target / "CLAUDE.md").write_text(_render(claude_tmpl, mapping), encoding="utf-8")
     created.append("CLAUDE.md")
 
+    vocabulary_tmpl = _read_template("core_vocabulary.md.tmpl")
+    if vocabulary_tmpl:
+        vocabulary_path = target / "core" / "vocabulary.md"
+        vocabulary_path.parent.mkdir(parents=True, exist_ok=True)
+        if not vocabulary_path.exists():
+            vocabulary_path.write_text(_render(vocabulary_tmpl, mapping), encoding="utf-8")
+            created.append("core/vocabulary.md")
+
     codeowners_tmpl = _read_template("CODEOWNERS.tmpl") or f"* @{gh_user}\n"
     github_dir = target / ".github"
     github_dir.mkdir(exist_ok=True)
@@ -199,8 +207,38 @@ Your business as files. Claude reads these; you edit them; git remembers them.
 - `decisions/` — dated choices, with rationale
 - `bets/` — operating bets with appetite, metric, target, and outcome
 - `log/` — running activity log
-- `campaigns/` — paid + organic campaign work
+- `pushes/` — coordinated pushes (launches, drops, challenges, promos, etc.)
 - `documents/` — anything that doesn't belong above
+
+If your repo was created before the push primitive decision, you may also have
+a legacy `campaigns/` folder. `mb` continues to read it; new coordinated work
+should land in `pushes/`. Run `mb doctor` to see whether your repo is on the
+canonical shape and `mb migrate campaigns --plan` to preview a safe move.
+
+## Optional: operator vocabulary
+
+`core/vocabulary.md` is an optional file where the business names what it
+calls coordinated pushes. A coach might call them *drops*; a creator might
+call them *launches*; a community might call them *challenges*. The file
+shape:
+
+    ---
+    type: vocabulary
+    status: active
+    terms:
+      push:
+        singular: drop
+        plural: drops
+      statuses:
+        active: live
+        completed: shipped
+    ---
+
+    Optional prose explanation goes here.
+
+Vocabulary changes how skills and `mb status` speak in conversation. It does
+not rename folders, frontmatter types, link fields, JSON keys, validator
+rules, or commands. Engine internals stay canonical.
 
 ## Conventions
 
@@ -217,9 +255,9 @@ that business.
 
 Keep non-secret IDs in repo files when they help agents choose the right
 account: Stripe account/product/price IDs in `core/offers/<offer>/stripe.md`,
-Google Ads customer and campaign IDs in `campaigns/`, ad pixel IDs beside the
-site or campaign files they belong to, and MCP server names/scopes in local
-setup notes.
+Google Ads customer and campaign IDs (provider's term for their object) in
+`pushes/<push>/push.md` `provider_refs:`, ad pixel IDs beside the site or
+push files they belong to, and MCP server names/scopes in local setup notes.
 
 Never commit API keys, OAuth refresh tokens, service-account JSON, webhook
 secrets, MCP tokens, or bearer tokens. Put secrets in a runtime local config,

@@ -16,15 +16,30 @@ Your business as files. Claude reads these; you edit them; git remembers them.
 - `decisions/` — dated choices, with rationale
 - `bets/` — operating bets with appetite, metric, target, and outcome
 - `log/` — running activity log
-- `campaigns/` — paid + organic campaign work
+- `pushes/` — coordinated pushes (launches, drops, challenges, promos, etc.)
 - `documents/` — anything that doesn't belong above
+
+If your repo has a legacy `campaigns/` folder from before the push primitive
+decision, `mb` continues to read it. New coordinated work should land in
+`pushes/`. Run `mb doctor` to see whether your repo is on the canonical shape
+and `mb migrate campaigns --plan` to preview a safe move.
+
+## Operator vocabulary (optional)
+
+`core/vocabulary.md` is an optional file where this business names what it
+calls coordinated pushes — *drops*, *launches*, *challenges*, *promos*,
+*plays*, *rounds*, *waves*. Skills and `mb status` speak the operator's
+words back when the file exists; engine internals (folder names, frontmatter,
+JSON keys, validators, commands) stay canonical regardless. See the file
+itself for the bounded shape.
 
 ## Conventions
 
-- Decisions, research, bets, offers, and campaigns carry a small block of metadata
+- Decisions, research, bets, offers, and pushes carry a small block of metadata
   at the top (frontmatter). Run `mb validate` to check it.
 - Status field: `proposed | running | scaling | killed | graduated | died`
-  (decisions also use `accepted | rejected | superseded`).
+  (decisions use `accepted | rejected | superseded`; pushes use
+  `draft | planned | active | paused | completed | canceled | archived`).
 - One owner per file via `.github/CODEOWNERS`.
 - Pull request titles use Conventional Commits.
 
@@ -39,10 +54,10 @@ agents choose the right account:
 
 - Stripe account IDs, product IDs, and price IDs can live in offer or finance
   notes such as `core/offers/<offer>/stripe.md`.
-- Google Ads customer IDs and campaign IDs can live in campaign plans under
-  `campaigns/`.
+- Google Ads customer IDs and campaign IDs (provider's term for their object)
+  can live in `pushes/<push>/push.md` `provider_refs:`.
 - Meta, TikTok, Google, or other ad pixel IDs can live beside the site or
-  campaign files they belong to.
+  push files they belong to.
 - MCP server names and intended scopes can live in `CLAUDE.md` or a local setup
   note when they are not secret.
 

@@ -1,0 +1,60 @@
+---
+type: vocabulary
+status: active
+terms:
+  push:
+    singular: push
+    plural: pushes
+  statuses: {}
+  channels: {}
+  kinds: {}
+---
+
+# Vocabulary
+
+This is an optional file. It tells skills and `mb status` what this business
+calls operating primitives, so a coach can see "drops" or "challenges" or
+"launches" instead of "pushes" in conversation.
+
+The engine stays canonical regardless. Folder names, frontmatter `type:`
+values, link fields, JSON keys, validator rules, and CLI command names do
+not change based on this file.
+
+## Bounded shape
+
+Only these top-level keys under `terms:` are recognized:
+
+- `push.singular` / `push.plural` — what this business calls one push and
+  many pushes.
+- `statuses` — display words for canonical statuses (e.g. `active: live`,
+  `completed: shipped`).
+- `channels` — display phrases for canonical channels (e.g. `paid: paid
+  traffic`, `organic: content`).
+- `kinds` — display words for canonical push kinds (e.g. `drop: drop`,
+  `launch: launch`).
+
+Anything outside this set is ignored.
+
+## Default behavior
+
+This template ships with neutral defaults — `push: pushes`. Edit the file to
+match this business's voice. If the file is deleted, the engine speaks its
+canonical words.
+
+## Example
+
+A coach who runs Skool challenges might use:
+
+    terms:
+      push:
+        singular: challenge
+        plural: challenges
+      statuses:
+        active: running
+        completed: wrapped
+      channels:
+        paid: paid traffic
+        community: inside Skool
+      kinds:
+        challenge: challenge
+        nurture: nurture
