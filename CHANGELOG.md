@@ -41,6 +41,27 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   surfaces, and the principle that the operator owns the vocabulary
   (campaigns can be called *drops*, *launches*, *challenges*, *promos*
   in operator-facing surfaces). Refs #328.
+- New decision
+  [decisions/2026-05-06-push-primitive-and-operator-vocabulary.md](decisions/2026-05-06-push-primitive-and-operator-vocabulary.md)
+  makes `push` the canonical engine primitive (folder `pushes/`,
+  `type: push`, `linked_pushes`, push-shaped JSON keys, bounded `kind:`
+  enum) while preserving existing `campaigns/` records as compatibility
+  reads. Operator vocabulary lives in a new optional `core/vocabulary.md`
+  — committed business truth, not `.mb/` or Claude memory — so the
+  operator's business calls a push whatever it wants (*drop*, *launch*,
+  *challenge*, *campaign*) while canonical storage stays consistent.
+  Migration is preview-then-apply; deterministic implementation lives in
+  #323 and skill/runtime/migration code lives in #324. Refs #329.
+
+### Changed
+
+- The campaign primitive decision
+  ([decisions/2026-05-06-campaign-primitive-and-architecture-model.md](decisions/2026-05-06-campaign-primitive-and-architecture-model.md))
+  is superseded **in part**: the canonical storage shape moves to `push`,
+  but the relationship model, definition of a coordinated push, lifecycle
+  states, and non-campaign artifact routing stand. The system architecture
+  doc now points at `pushes/` as the canonical primitive while documenting
+  `campaigns/` as a compatibility read. Refs #329.
 
 ## [0.3.2] - 2026-05-06
 
