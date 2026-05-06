@@ -36,9 +36,9 @@ Claude: What should we call this batch? (e.g., "morning-routine", "productivity-
 User: morning-routine
 
 Claude: [Generates script using story framework]
-[Saves to campaigns/2026-01-26-organic-morning-routine/organic-batch-001.md]
+[Saves to pushes/2026-01-26-organic-morning-routine/organic-batch-001.md]
 
-Saved to campaigns/2026-01-26-organic-morning-routine/organic-batch-001.md
+Saved to pushes/2026-01-26-organic-morning-routine/organic-batch-001.md
 Want me to commit this to git?
 ```
 
@@ -69,5 +69,5 @@ When conversations get long, Claude's memory compresses. If mid-/mb-organic and 
 **For Claude:** When resuming:
 
 1. Check `research/*-competitor-mine.md` for recent mining
-2. Check `campaigns/*-organic-*/` for existing scripts
+2. Check `pushes/*-organic-*/` for existing scripts; only inspect `campaigns/` as a legacy fallback
 3. Confirm with user: "I see today's mining has X concepts. Want to continue generating from those?"

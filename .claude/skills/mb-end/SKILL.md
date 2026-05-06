@@ -85,7 +85,7 @@ git diff --name-only --diff-filter=AM HEAD@{6am}..HEAD 2>/dev/null
 | Research files created | New files in `research/` |
 | Decisions made | New or modified files in `decisions/` |
 | Core files updated | Modified files in `core/` |
-| Campaign artifacts generated | New files in `campaigns/` |
+| Push artifacts generated | New files in `pushes/` |
 | Uncommitted changes | `git status --short` output |
 
 **Multi-offer detection (skip if no `core/offers/` folder — single-offer mode, everything reads from `core/`):** If `core/offers/` exists, note which offers had files changed:

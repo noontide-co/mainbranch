@@ -199,7 +199,7 @@ Just say `/mb-vsl` again and describe where you were:
 2. **Check for in-progress scripts:**
 
 ```bash
-ls -ltd campaigns/*-vsl-*/ 2>/dev/null | head -3
+ls -ltd pushes/*-vsl-*/ 2>/dev/null | head -3
 ```
 
 3. **Re-read key files:**

@@ -39,7 +39,7 @@ This repo contains your **business data**. It's powered by **Main Branch** (the 
 **How it works:**
 - Engine (Main Branch): Contains skills, lenses, frameworks. You pull updates but never edit.
 - Data (this repo): Contains your business context. You own and edit this.
-- Skills read from `core/`, `research/`, and `decisions/`, then write campaign work to `campaigns/`.
+- Skills read from `core/`, `research/`, and `decisions/`, then write coordinated work to `pushes/`.
 
 **If `/mb-start` isn't available:** Skills may need bridge links. Find the Main Branch path from `.claude/settings.local.json` (the `additionalDirectories` array), then read `[engine-path]/.claude/skills/mb-start/references/auto-heal.md` and follow the repair steps. After repair, tell the user to restart Claude.
 
@@ -65,7 +65,7 @@ This repo contains your **business data**. It's powered by **Main Branch** (the 
 │
 ├── research/              # Dated investigations
 ├── decisions/             # Dated choices with rationale
-└── campaigns/             # Generated campaign work
+└── pushes/                # Coordinated work records and generated output
 ```
 
 ---

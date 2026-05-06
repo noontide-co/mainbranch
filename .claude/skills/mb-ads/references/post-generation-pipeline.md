@@ -5,7 +5,7 @@
 ## Step 1: Git Commit Pre-Review
 
 ```bash
-git add campaigns/YYYY-MM-DD-*
+git add pushes/YYYY-MM-DD-*
 git commit -m "[output] {type} batch pre-review"
 ```
 
@@ -89,7 +89,7 @@ When all agents return:
    - Run the compliance gate in dry-run mode before any source copy edit:
 
      ```bash
-     python -m mb.ads_compliance_gate campaigns/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md campaigns/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json
+     python -m mb.ads_compliance_gate pushes/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md pushes/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json
      ```
 
    - Show the full proposed diff to the user and ask: "Apply these compliance copy changes? (y/n)"
@@ -97,7 +97,7 @@ When all agents return:
    - If the user says yes, apply through the same gate with explicit approval:
 
      ```bash
-     python -m mb.ads_compliance_gate campaigns/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md campaigns/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json --approve --review-log campaigns/YYYY-MM-DD-{type}-{campaign}/review-log.md
+     python -m mb.ads_compliance_gate pushes/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md pushes/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json --approve --review-log pushes/YYYY-MM-DD-{type}-{campaign}/review-log.md
      ```
 
 2. **Image synthesis (if applicable):**
@@ -121,7 +121,7 @@ Pipeline complete:
   [If P2/P3 declined: say source copy was left unchanged]
 
   Files:
-    campaigns/YYYY-MM-DD-{type}-{campaign}/
+    pushes/YYYY-MM-DD-{type}-{campaign}/
     |- {batch-file}.md (copy, unchanged unless approved)
     |- proposed-compliance-fixes.json
     [|- review-log.md]
@@ -136,7 +136,7 @@ Pipeline complete:
 If user approves:
 
 ```bash
-git add campaigns/YYYY-MM-DD-*
+git add pushes/YYYY-MM-DD-*
 git commit -m "[review] {type} batch - N fixes applied"
 ```
 

@@ -47,7 +47,7 @@ reference-file reads sit here.
 - `mb doctor`
 - `mb graph`
 - `mb connect status`
-- `core/`, `research/`, `decisions/`, `campaigns/`, `log/`, `documents/`
+- `core/`, `research/`, `decisions/`, `pushes/`, legacy `campaigns/`, `log/`, `documents/`
 - GitHub issues, pull requests, release history
 
 **Next improvements**

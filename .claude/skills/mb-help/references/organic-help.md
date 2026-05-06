@@ -171,7 +171,7 @@ This makes them available for future generations across all skills.
 
 2. /mb-organic video "concept from research"
    → Script generated in your voice
-   → Saved to campaigns/
+   → Saved to pushes/
 
 3. Repeat for carousel, static as needed
 

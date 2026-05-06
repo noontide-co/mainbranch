@@ -100,12 +100,12 @@ Write `<site_repo>/.mainbranch/source.json`:
 {
   "business_repo": "/absolute/path/to/my-business",
   "offer_path": "core/offers/flagship/offer.md",
-  "campaign_path": "campaigns/2026-05-paid-minisite.md",
+  "campaign_path": "pushes/2026-05-06-paid-minisite/push.md",
   "safe_to_share": true
 }
 ```
 
-The business repo should keep the reverse site record in `campaigns/` or the relevant offer/campaign note: site repo path or URL, domain, Cloudflare project, environment, measurement state, launch status, and the next manual approval step.
+The business repo should keep the reverse site record in the relevant `pushes/` record or offer note: site repo path or URL, domain, Cloudflare project, environment, measurement state, launch status, and the next manual approval step. The `campaign_path` key is a historical compatibility name; point it at the current push record.
 
 Treat `~/.mainbranch/sites.json` as legacy fallback only when no repo-local link exists. If needed, write or extend:
 

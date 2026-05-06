@@ -354,18 +354,31 @@ def _legacy_campaigns_check(repo: Path) -> dict[str, Any]:
             "severity": "ok",
         }
 
+    plan = migrate_mod.plan_campaigns_to_pushes(repo)
     legacy_records: list[str] = []
     ambiguous_files: list[str] = []
-    for child in sorted(campaigns_dir.rglob("*.md")):
-        if not child.is_file() or child.is_symlink():
-            continue
-        rel = child.relative_to(repo).as_posix()
-        if child.name == "campaign.md":
-            legacy_records.append(rel)
-        else:
-            ambiguous_files.append(rel)
+    blocker_paths: list[str] = []
 
-    total = len(legacy_records) + len(ambiguous_files)
+    for move in plan.get("moves", []):
+        from_path = str(move["from"])
+        legacy_records.append(f"{from_path}/campaign.md")
+        ambiguous_files.extend(str(path) for path in move.get("review_inside_folder", []))
+
+    for ambiguous in plan.get("ambiguous", []):
+        ambiguous_files.append(str(ambiguous["from"]))
+
+    for blocker in plan.get("blockers", []):
+        from_path = str(blocker["from"])
+        blocker_paths.append(from_path)
+        record = repo / from_path / "campaign.md"
+        if record.is_file():
+            legacy_records.append(f"{from_path}/campaign.md")
+
+    legacy_records = sorted(set(legacy_records))
+    ambiguous_files = sorted(set(ambiguous_files))
+    blocker_paths = sorted(set(blocker_paths))
+
+    total = len(legacy_records) + len(ambiguous_files) + len(blocker_paths)
     if total == 0:
         # Empty campaigns/ folder (e.g. just a .gitkeep). No drift to warn.
         return {
@@ -384,9 +397,14 @@ def _legacy_campaigns_check(repo: Path) -> dict[str, Any]:
         )
     if ambiguous_files:
         parts.append(
-            f"{len(ambiguous_files)} ambiguous file(s) under campaigns/ that may "
+            f"{len(ambiguous_files)} ambiguous path(s) under campaigns/ that may "
             "belong in pushes/, documents/, or stay in place; "
             "review with `mb migrate campaigns --plan`."
+        )
+    if blocker_paths:
+        parts.append(
+            f"{len(blocker_paths)} blocker(s) under campaigns/ require operator input "
+            "before migration can be planned."
         )
 
     return {
@@ -396,6 +414,7 @@ def _legacy_campaigns_check(repo: Path) -> dict[str, Any]:
         "severity": "warn",
         "legacy_records": legacy_records,
         "ambiguous_files": ambiguous_files,
+        "blockers": blocker_paths,
     }
 
 

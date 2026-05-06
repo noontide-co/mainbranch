@@ -181,7 +181,7 @@ Copy and paste into Ads Manager after images are ready.
 
 ## Naming Conventions
 
-**Folder:** `campaigns/YYYY-MM-DD-static-ads-{campaign}/`
+**Folder:** `pushes/YYYY-MM-DD-static-ads-{campaign}/`
 - Date: `YYYY-MM-DD`
 - Type: `static-ads`
 - Campaign name: lowercase with dashes (required)
@@ -189,7 +189,7 @@ Copy and paste into Ads Manager after images are ready.
 **Batch file:** `static-ads-batch-{###}.md`
 - Example: `static-ads-batch-001.md`
 
-**Full path example:** `campaigns/2026-01-15-static-ads-january-launch/static-ads-batch-001.md`
+**Full path example:** `pushes/2026-01-15-static-ads-january-launch/static-ads-batch-001.md`
 
 **Review log:** `review-log.md` (same folder)
 

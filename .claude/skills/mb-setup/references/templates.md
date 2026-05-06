@@ -594,7 +594,7 @@ ENGINE (mainbranch)     +     DATA (this repo)     =     OUTPUT
 ```
 
 Skills from the engine read your `core/`, `research/`, and `decisions/` files
-and generate campaign work under `campaigns/`.
+and generate coordinated work under `pushes/`.
 
 ---
 

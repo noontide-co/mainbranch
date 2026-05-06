@@ -7,22 +7,17 @@
 > model after the `core/` folder decision, the campaign primitive decision,
 > and the push primitive and operator-vocabulary decision.
 >
-> **Shipped vs accepted.** The accepted target architecture below names
-> `pushes/` as the canonical primitive and `core/vocabulary.md` as the
-> operator-owned vocabulary file. As of this writing, shipped `mb init` and
-> onboarding templates still scaffold `campaigns/` and do not scaffold
-> `pushes/` or `core/vocabulary.md`; `mb validate` validates
-> `campaigns/*/campaign.md` against the campaign lifecycle; the `mb push`
-> CLI surface and the `kind:` enum validator do not exist yet. The
-> deterministic engine work (validators, graph, status JSON, scaffolding)
-> lands in
-> [#323](https://github.com/noontide-co/mainbranch/issues/323); the skill,
-> runtime, and migration code (including `mb init` switching to `pushes/`,
-> reading `core/vocabulary.md`, and the migration command) lands in
-> [#324](https://github.com/noontide-co/mainbranch/issues/324). Until both
-> ship, this document describes the **target** that `mb` is moving toward,
-> not what `mb init` produces today. New writes by hand or by future skills
-> should follow the target; existing `campaigns/` repos keep working.
+> **Shipped vs accepted.** The accepted architecture below names `pushes/`
+> as the canonical primitive and `core/vocabulary.md` as the operator-owned
+> vocabulary file. Current `mb init` scaffolds those paths; validators, graph,
+> status, checkpoints, doctor, and the campaigns migration planner read
+> `pushes/` while preserving legacy `campaigns/` compatibility. The remaining
+> deterministic polish in
+> [#323](https://github.com/noontide-co/mainbranch/issues/323) is the advanced
+> push schema (`kind`, health, structured goal, owner, audience, promise),
+> JSON deprecation cleanup, and any future `mb push` command surface. Existing
+> `campaigns/` repos keep working, but new coordinated work should land in
+> `pushes/`.
 
 ## Architecture In One Sentence
 

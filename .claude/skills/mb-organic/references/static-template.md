@@ -6,9 +6,9 @@ Template for single-post captions. Optimized for feed posts with images or graph
 
 ## Output Format
 
-Save static posts to: `campaigns/organic-scripts/YYYY-MM-DD-[concept-slug]-static.md`
+Save static posts to: `pushes/YYYY-MM-DD-organic-[concept-slug]/static-post.md`
 
-Example: `campaigns/organic-scripts/2026-01-19-content-tip-static.md`
+Example: `pushes/2026-01-19-organic-content-tip/static-post.md`
 
 ---
 

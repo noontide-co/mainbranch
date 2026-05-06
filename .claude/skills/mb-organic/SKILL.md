@@ -199,7 +199,7 @@ Campaign name is REQUIRED. Ask user if not provided. Examples: `january-hooks`, 
 **At session start, scan what's been done:**
 
 1. Check `research/*-competitor-mine.md` — Who was mined? When?
-2. Check `campaigns/*-organic-*/` — What scripts exist?
+2. Check `pushes/*-organic-*/` — What scripts exist? Treat `campaigns/` as a legacy fallback only.
 3. Don't suggest re-mining same handles from today
 4. Recommend generating from existing mining if concepts unused
 5. Check `core/content-strategy.md` — What pillars are defined? What platform is the target?

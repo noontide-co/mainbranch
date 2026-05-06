@@ -193,6 +193,29 @@ def test_doctor_warns_on_legacy_campaigns_records(tmp_path: Path) -> None:
     assert legacy_check["legacy_records"] == ["campaigns/2026-04-spring-launch/campaign.md"]
 
 
+def test_doctor_uses_campaigns_migration_plan_for_ambiguous_artifacts(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "legacy-pushes-with-artifacts"
+    init_run(path=str(repo), name="Acme")
+    legacy = repo / "campaigns" / "2026-04-15-spring-launch"
+    legacy.mkdir(parents=True)
+    (legacy / "campaign.md").write_text(
+        "---\nslug: spring-launch\nstatus: active\n---\n# spring launch\n",
+        encoding="utf-8",
+    )
+    (legacy / "ads.md").write_text("# ads\n", encoding="utf-8")
+    (legacy / "random-notes.md").write_text("# random\n", encoding="utf-8")
+
+    report = doctor_mod.run(path=str(repo))
+
+    legacy_check = next(c for c in report["checks"] if c["name"] == "legacy-campaigns")
+    assert legacy_check["ok"] is False
+    assert legacy_check["legacy_records"] == ["campaigns/2026-04-15-spring-launch/campaign.md"]
+    assert "campaigns/2026-04-15-spring-launch/ads.md" not in legacy_check["ambiguous_files"]
+    assert "campaigns/2026-04-15-spring-launch/random-notes.md" in legacy_check["ambiguous_files"]
+
+
 def test_doctor_clean_repo_has_no_legacy_campaigns_warning(tmp_path: Path) -> None:
     repo = tmp_path / "fresh"
     init_run(path=str(repo), name="Acme")

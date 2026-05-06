@@ -774,10 +774,14 @@ def render_campaigns_plan(result: dict[str, Any]) -> None:
             print(f"  frontmatter: {change}")
         for note in move.get("notes", []):
             print(f"  note: {note}")
-        if move.get("folder_contents"):
-            print(
-                f"  folder contents to move with the push: {len(move['folder_contents'])} item(s)"
-            )
+        if move.get("move_with_push"):
+            print(f"  move with push: {len(move['move_with_push'])} item(s)")
+            for path in move["move_with_push"]:
+                print(f"    - {path}")
+        if move.get("review_inside_folder"):
+            print(f"  review before apply: {len(move['review_inside_folder'])} item(s)")
+            for path in move["review_inside_folder"]:
+                print(f"    - {path}")
     for ambiguous in result["ambiguous"]:
         print(f"\nambiguous: {ambiguous['from']}")
         print(f"  reason: {ambiguous['reason']}")

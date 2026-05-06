@@ -143,7 +143,7 @@ The commit body can carry the detail:
 ```text
 Changed:
 - core/offer.md
-- campaigns/2026-05-paid-site.md
+- pushes/2026-05-04-paid-site/push.md
 - decisions/2026-05-04-paid-site-plan.md
 
 Why:

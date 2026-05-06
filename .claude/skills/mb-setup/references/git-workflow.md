@@ -184,7 +184,7 @@ EOF
 ### After Output Generation
 
 ```bash
-git add campaigns/
+git add pushes/
 git commit -m "$(cat <<'EOF'
 [add] January email campaign batch
 

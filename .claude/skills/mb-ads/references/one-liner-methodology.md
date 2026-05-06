@@ -257,7 +257,7 @@ See [one-liner-examples.md](one-liner-examples.md) for more patterns and real ex
 
 ### Step 6: Output
 
-**Save to file, not chat.** Output goes to `campaigns/YYYY-MM-DD-creative-variations-{campaign-name}/batch.md`.
+**Save to file, not chat.** Output goes to `pushes/YYYY-MM-DD-creative-variations-{campaign-name}/batch.md`.
 
 The file should include:
 
@@ -393,7 +393,7 @@ If context was compacted mid-task, check:
 
 ```bash
 # Check for recent output in business repo
-ls -lt campaigns/*.md 2>/dev/null | head -3
+ls -ltd pushes/*-creative-variations-*/ 2>/dev/null | head -3
 ```
 
 Then confirm: "I see we were generating one-liners. Continue from #[X]?"

@@ -540,6 +540,30 @@ def test_migrate_campaigns_cli_plan_emits_machine_readable_json(tmp_path: Path) 
     assert payload["moves"][0]["to"] == "pushes/2026-04-15-spring-launch/push.md"
 
 
+def test_migrate_campaigns_cli_plan_renders_move_children_for_humans(
+    tmp_path: Path,
+) -> None:
+    folder = tmp_path / "campaigns" / "2026-04-15-spring-launch"
+    folder.mkdir(parents=True)
+    (folder / "campaign.md").write_text(
+        "---\nslug: spring-launch\nstatus: active\n---\n# spring\n",
+        encoding="utf-8",
+    )
+    (folder / "ads.md").write_text("# ads\n", encoding="utf-8")
+    (folder / "random-notes.md").write_text("# random\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["migrate", "--repo", str(tmp_path), "campaigns", "--plan"],
+    )
+
+    assert result.exit_code == 0
+    assert "move with push: 1 item(s)" in result.stdout
+    assert "campaigns/2026-04-15-spring-launch/ads.md" in result.stdout
+    assert "review before apply: 1 item(s)" in result.stdout
+    assert "campaigns/2026-04-15-spring-launch/random-notes.md" in result.stdout
+
+
 def test_migrate_campaigns_cli_without_plan_flag_refuses(tmp_path: Path) -> None:
     """Apply is not yet implemented; the command refuses without --plan."""
     result = runner.invoke(

@@ -22,7 +22,7 @@ Use stable, lowercase, hyphenated filenames:
 decisions/2026-05-04-pricing-model.md
 research/2026-05-04-audience-notes.md
 bets/2026-05-04-trial-offer.md
-campaigns/spring-launch/campaign.md
+pushes/2026-05-04-spring-launch/push.md
 core/offers/main-branch/offer.md
 ```
 
@@ -45,12 +45,15 @@ linked_decisions:
   - decisions/2026-05-04-pricing-model.md
 linked_research:
   - research/2026-05-04-audience-notes.md
-linked_campaigns:
-  - campaigns/spring-launch/campaign.md
+linked_pushes:
+  - pushes/2026-05-04-spring-launch/push.md
 ```
 
 Do not use Obsidian wikilink syntax in frontmatter. Do not omit the extension.
 Do not use absolute local paths.
+
+Legacy `linked_campaigns` frontmatter remains readable for migrated repos, but
+new records should use `linked_pushes`.
 
 Allowed external references:
 

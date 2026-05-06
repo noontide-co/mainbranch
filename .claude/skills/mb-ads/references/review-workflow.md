@@ -5,7 +5,7 @@
 Before reviewing, commit current state to preserve the original:
 
 ```bash
-git add campaigns/YYYY-MM-DD-{type}-{campaign}/
+git add pushes/YYYY-MM-DD-{type}-{campaign}/
 git commit -m "[output] {type} batch pre-review"
 ```
 
@@ -118,7 +118,7 @@ For each P2/P3 issue:
 2. Run the gate in dry-run mode:
 
    ```bash
-   python -m mb.ads_compliance_gate campaigns/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md campaigns/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json
+   python -m mb.ads_compliance_gate pushes/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md pushes/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json
    ```
 
 3. Show the resulting diff to the user.
@@ -126,7 +126,7 @@ For each P2/P3 issue:
 5. Only if the user says yes, run:
 
    ```bash
-   python -m mb.ads_compliance_gate campaigns/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md campaigns/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json --approve --review-log campaigns/YYYY-MM-DD-{type}-{campaign}/review-log.md
+   python -m mb.ads_compliance_gate pushes/YYYY-MM-DD-{type}-{campaign}/{batch-file}.md pushes/YYYY-MM-DD-{type}-{campaign}/proposed-compliance-fixes.json --approve --review-log pushes/YYYY-MM-DD-{type}-{campaign}/review-log.md
    ```
 
 If the user says no, stop with the source file unchanged. Do not apply partial edits unless the user gives a narrower approval.
@@ -162,7 +162,7 @@ For P1 issues:
 After fixes are approved and applied:
 
 ```bash
-git add campaigns/YYYY-MM-DD-{type}-{campaign}/
+git add pushes/YYYY-MM-DD-{type}-{campaign}/
 git commit -m "[review] {type} batch - N fixes applied"
 ```
 

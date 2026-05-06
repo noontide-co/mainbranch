@@ -319,7 +319,7 @@ If retry fails: return status "fail" with error message. Do NOT keep retrying.
 ## Output Structure
 
 ```
-campaigns/YYYY-MM-DD-static-ads-{campaign}/
+pushes/YYYY-MM-DD-static-ads-{campaign}/
 ├── static-ads-batch-001.md        ← Copy (Batch 1)
 ├── proposed-compliance-fixes.json ← Compliance proposals
 ├── review-log.md                  ← Compliance changes after approval

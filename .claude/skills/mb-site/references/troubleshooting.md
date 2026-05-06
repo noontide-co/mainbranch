@@ -65,7 +65,7 @@ Website (Next.js): check `globals.css` for correct CSS variable names, `layout.t
 
 ## Business Context Not Found
 
-Check `.mainbranch/source.json` in the site repo or the reverse site record in `campaigns/`.
+Check `.mainbranch/source.json` in the site repo or the reverse site record in `pushes/`. Inspect `campaigns/` only for legacy repos.
 
 The `business_repo` path must point to a business repo with canonical `core/` files. Legacy `reference/core` and `reference/offers` paths are compatibility bridges only.
 
