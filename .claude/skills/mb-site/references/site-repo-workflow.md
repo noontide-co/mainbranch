@@ -45,7 +45,7 @@ The site repo must include `.mainbranch/source.json`:
 {
   "business_repo": "/absolute/path/to/my-business",
   "offer_path": "core/offers/flagship/offer.md",
-  "campaign_path": "campaigns/2026-05-paid-minisite.md",
+  "campaign_path": "pushes/2026-05-06-paid-minisite/push.md",
   "safe_to_share": true
 }
 ```
@@ -56,8 +56,10 @@ infer the business repo from `source.json` when `--business-repo` is omitted.
 
 ## Reverse Link
 
-The business repo should keep a reverse site record in `campaigns/` or the
-relevant offer/campaign note:
+The business repo should keep a reverse site record in `pushes/<YYYY-MM-DD-slug>/`
+(canonical) or the relevant offer note. Legacy repos may still have the
+record under `campaigns/<slug>/`; `mb` reads both. The reverse record can
+include:
 
 - site repo path or GitHub URL;
 - deployed URL and domain;

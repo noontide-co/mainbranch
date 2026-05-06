@@ -55,7 +55,7 @@ platform: meta
 ---
 ```
 
-7. Save to `campaigns/YYYY-MM-DD-static-ads-[offer]-{campaign}/static-ads-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
+7. Save to `pushes/YYYY-MM-DD-static-ads-[offer]-{slug}/static-ads-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode). On legacy repos that still have `campaigns/`, run `mb migrate campaigns --plan` first; do not write new ad batches under `campaigns/`.
 8. Tell user: "Copy saved. Running automatic post-generation pipeline..."
 9. Run the **Automatic Post-Generation Pipeline** (see SKILL.md). This handles git commit, compliance review, and image generation automatically.
 

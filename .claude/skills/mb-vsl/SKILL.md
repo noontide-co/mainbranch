@@ -150,7 +150,7 @@ For high-ticket B2B services. Full reference: `references/frameworks/b2b-haynes.
 
 ## Output Path
 
-**Standard:** `campaigns/YYYY-MM-DD-vsl-[offer]-{campaign}/vsl-script.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
+**Standard:** `pushes/YYYY-MM-DD-vsl-[offer]-{slug}/vsl-script.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode). On legacy repos that still have `campaigns/`, run `mb migrate campaigns --plan` first; do not write new VSLs under `campaigns/`.
 
 Campaign name is REQUIRED. Ask user if not provided. Examples: `skool-about`, `agency-pitch`, `membership-sales`.
 

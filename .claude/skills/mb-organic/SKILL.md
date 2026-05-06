@@ -177,7 +177,7 @@ Generate multi-slide carousel copy from a concept.
 
 Generate single-post caption from a concept.
 
-**Output path (all script modes):** `campaigns/YYYY-MM-DD-organic-[offer]-{campaign}/organic-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
+**Output path (all script modes):** `pushes/YYYY-MM-DD-organic-[offer]-{slug}/organic-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode). On legacy repos that still have `campaigns/`, run `mb migrate campaigns --plan` first; do not write new content under `campaigns/`.
 
 **Output frontmatter:**
 ```yaml
@@ -234,7 +234,7 @@ Before saving: show file paths.
 3. **Select concept** — User picks from mined concepts or provides their own
 4. **Adapt to brand** — Map concept to user's offer, audience, voice
 5. **Generate scripts** — Use appropriate framework (video/carousel/static)
-6. **Save output** — Scripts to `campaigns/YYYY-MM-DD-organic-{campaign}/`
+6. **Save output** — Scripts to `pushes/YYYY-MM-DD-organic-{slug}/` (canonical). Never `campaigns/`; that folder is legacy compatibility only.
 7. **Commit prompt** — "Saved to [path]. Want me to commit this to git?"
 
 **Mining lives in `/mb-think` now.** If user needs to mine competitors, route them there first.
