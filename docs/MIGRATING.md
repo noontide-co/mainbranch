@@ -59,6 +59,9 @@ repair. I may be new to Terminal, Git, branches, and GitHub.
    - mb skill list
    - find likely business repos under ~/Documents/GitHub that have CLAUDE.md
      plus core/ or reference/core/, research/, or decisions/
+   Treat every command as a possible writer until its help or docs prove
+   otherwise. Use `--peek`, `--check`, or equivalent dry-run flags where they
+   exist.
 2. If Main Branch is outdated, stop repo work and tell me in plain English:
    "Main Branch needs to update before we touch your business folders. This
    updates the tool installed on your computer, not your business files. Should
@@ -144,6 +147,18 @@ Use business language first:
 If the user is unsure, the safe answer is to keep the branch local and ask for
 review.
 
+Before recommending merge, Claude should separate structural verification from
+runtime verification. `mb doctor`, `mb validate`, rename detection, and line
+counts prove the filesystem shape. They do not prove Claude Code skills behave
+correctly through compatibility symlinks. On the first migration for a user or
+repo family, prefer a small runtime smoke before merge:
+
+1. Open Claude Code from the migrated business repo.
+2. Run `/mb-start`.
+3. Confirm a bundled skill can read the migrated core context.
+4. Confirm no skill writes into the engine repo.
+5. Then summarize whether the branch is ready to push, review, or merge.
+
 If Claude accidentally dirties an existing branch during discovery, stop before
 running layout migration. Move the already-written Main Branch repair work onto
 a branch, keep user-authored files separate, and do not commit local status
@@ -157,6 +172,28 @@ markers:
    should be gitignored.
 5. If the repo already had unrelated dirty or untracked user files, leave that
    repo out of batch migration until the user reviews it.
+
+## Command Mutability During Migration
+
+Migration work should be one repo at a time. Do not batch `mb update`,
+`mb skill link`, `mb status`, or `mb migrate --apply` across many business repos
+unless the user explicitly asks for batch writes after seeing the risk.
+
+Useful defaults:
+
+- `mb status` writes `.mb/last-status-seen.json`; use `mb status --peek` for
+  read-only discovery.
+- `mb update` can update the installed engine and refresh repo-local skill
+  links; treat it as a write.
+- `mb skill link` writes Claude Code wiring and `.gitignore` repair entries;
+  treat it as a write.
+- `mb skill repair` without `--apply` reports personal-skill conflicts;
+  `--apply` moves stale Main Branch symlinks to backups.
+- `mb migrate status` and `mb migrate --check` inspect; `mb migrate --apply`
+  writes the layout migration.
+
+Check command help before assuming flag shape. Some commands take a positional
+repo path, while others use `--repo`.
 
 ## If You Are On `mb 0.1.x`
 
@@ -295,6 +332,18 @@ research and decision files. That means the layout migration worked but older
 markdown files still need field/status cleanup. Repair those in small batches,
 then run `mb validate --cross-refs` once frontmatter errors are down to zero.
 
+Before merge, inspect git's own view of the migration:
+
+```bash
+git diff --stat --find-renames main..HEAD
+git status --short
+```
+
+Git-reported `100%` renames are stronger evidence than line-count comparisons.
+If the first migrated repo is the pilot for a larger set, let the branch sit
+until `/mb-start` and at least one bundled skill have been smoke-tested from
+that repo.
+
 ## Manual Layout Migration
 
 The automated command above is preferred. Keep this manual process only as a
@@ -341,6 +390,7 @@ mb doctor
 mb status --peek
 mb validate
 mb start --json
+git diff --stat --find-renames
 git diff --stat
 ```
 

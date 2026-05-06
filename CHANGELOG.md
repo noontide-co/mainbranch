@@ -26,6 +26,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Clarified that Claude-led migration should pause after branch summaries so
   users and maintainers can review git decisions instead of having Claude push,
   open, merge, rebase, or delete branches by default.
+- Added migration dogfood guidance that distinguishes structural checks from
+  runtime smoke, documents command mutability, and recommends one-repo-at-a-time
+  migration with `--peek` / `--check` discovery.
 
 ## [0.3.1] - 2026-05-05
 
