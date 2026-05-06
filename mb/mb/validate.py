@@ -29,6 +29,15 @@ OFFER_STATUS = {
 }
 RESEARCH_STATUS = {"complete", "in-progress", "stale"}
 BET_STATUS = {"open", "paused", "closed", "canceled"}
+CAMPAIGN_STATUS = {
+    "draft",
+    "planned",
+    "active",
+    "paused",
+    "completed",
+    "canceled",
+    "archived",
+}
 
 LINK_FIELDS = (
     "linked_bets",
@@ -76,6 +85,15 @@ OFFER_STATUS_ORDER = {
     "graduated": 3,
     "died": 3,
 }
+CAMPAIGN_STATUS_ORDER = {
+    "draft": 0,
+    "planned": 1,
+    "active": 2,
+    "paused": 2,
+    "completed": 3,
+    "canceled": 3,
+    "archived": 4,
+}
 
 SCHEMAS: dict[str, dict[str, Any]] = {
     "decisions": {
@@ -122,7 +140,7 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     "campaigns": {
         "glob": "campaigns/*/campaign.md",
         "required": ["slug", "status"],
-        "enums": {"status": OFFER_STATUS},
+        "enums": {"status": CAMPAIGN_STATUS},
     },
     "documents": {
         "glob": "documents/*.md",
@@ -293,7 +311,9 @@ def _status_order_for(path: Path) -> dict[str, int] | None:
     parts = path.parts
     if "decisions" in parts:
         return DECISION_STATUS_ORDER
-    if "offers" in parts or "campaigns" in parts:
+    if "campaigns" in parts:
+        return CAMPAIGN_STATUS_ORDER
+    if "offers" in parts:
         return OFFER_STATUS_ORDER
     return None
 
