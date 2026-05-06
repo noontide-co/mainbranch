@@ -26,6 +26,7 @@ IMPORTANT_DIRS = (
     "research",
     "decisions",
     "bets",
+    "pushes",
     "campaigns",
     "log",
     "documents",
@@ -155,6 +156,7 @@ def _git_recent_activity(repo: Path, git: dict[str, Any]) -> dict[str, Any]:
         "reference/core",
         "research",
         "decisions",
+        "pushes",
         "campaigns",
         "log",
         "documents",
@@ -587,7 +589,8 @@ def _resolve_site_repo_path(repo: Path, value: Any) -> Path | None:
 
 
 def _candidate_site_repo_records(repo: Path) -> list[dict[str, Any]]:
-    paths = _relative_markdown_files(repo, "campaigns")
+    paths = _relative_markdown_files(repo, "pushes")
+    paths.extend(_relative_markdown_files(repo, "campaigns"))
     paths.extend(path for path in _relative_markdown_files(repo, "core") if path.name == "offer.md")
     paths.extend(
         path for path in _relative_markdown_files(repo, "reference/core") if path.name == "offer.md"
@@ -1200,11 +1203,16 @@ def render_human(
             console.print(f"  next: {measurement['repair']}")
 
     counts = brain["counts"]
+    pushes_count = counts.get("pushes", 0)
+    campaigns_count = counts.get("campaigns", 0)
+    pushes_segment = f"pushes {pushes_count}"
+    if campaigns_count:
+        pushes_segment += f" (legacy campaigns {campaigns_count})"
     console.print(
         "[bold]Brain[/bold] "
         f"core {counts['core'] + counts['reference/core']}  "
         f"research {counts['research']}  decisions {counts['decisions']}  "
-        f"bets {counts['bets']}  campaigns {counts['campaigns']}  "
+        f"bets {counts['bets']}  {pushes_segment}  "
         f"log {counts['log']}  documents {counts['documents']}"
     )
 

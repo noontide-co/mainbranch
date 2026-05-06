@@ -363,7 +363,7 @@ def test_status_follows_business_repo_site_record_for_measurement(
         ),
         encoding="utf-8",
     )
-    (business / "campaigns" / "paid-site.md").write_text(
+    (business / "pushes" / "paid-site.md").write_text(
         f"---\nsite_repo_path: {site}\n---\n\n# Paid Site\n",
         encoding="utf-8",
     )
@@ -385,4 +385,4 @@ def test_status_follows_business_repo_site_record_for_measurement(
     assert payload["measurement"]["available"] is True
     assert payload["measurement"]["site_repo"] == str(site.resolve())
     assert payload["measurement"]["business_repo"] == str(business.resolve())
-    assert payload["measurement"]["source_record"] == "campaigns/paid-site.md"
+    assert payload["measurement"]["source_record"] == "pushes/paid-site.md"

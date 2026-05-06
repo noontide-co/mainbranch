@@ -11,6 +11,7 @@ from mb.freshness import looks_like_business_repo
 
 SURFACE_ORDER = [
     "core",
+    "pushes",
     "campaigns",
     "decisions",
     "research",
@@ -112,6 +113,8 @@ def _is_conflict_status(raw: str) -> bool:
 def _surface(path: str) -> str:
     if path.startswith("core/") or path == "core":
         return "core"
+    if path.startswith("pushes/") or path == "pushes":
+        return "pushes"
     if path.startswith("campaigns/") or path == "campaigns":
         return "campaigns"
     if path.startswith("decisions/") or path == "decisions":
@@ -261,6 +264,7 @@ def _surface_phrase(surfaces: list[str]) -> str:
         return "work"
     labels = {
         "core": "core",
+        "pushes": "pushes",
         "campaigns": "campaigns",
         "decisions": "decisions",
         "research": "research",

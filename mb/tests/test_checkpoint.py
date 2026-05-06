@@ -51,7 +51,7 @@ def test_checkpoint_plan_classifies_dirty_business_files(tmp_path: Path) -> None
     repo = _business_repo(tmp_path)
     (repo / "core" / "offer.md").write_text("# Offer\n", encoding="utf-8")
     (repo / "decisions" / "2026-05-05-test.md").write_text("# Decision\n", encoding="utf-8")
-    (repo / "campaigns" / "paid.md").write_text("# Campaign\n", encoding="utf-8")
+    (repo / "pushes" / "paid.md").write_text("# Push\n", encoding="utf-8")
 
     report = checkpoint_mod.plan(repo)
 
@@ -60,15 +60,15 @@ def test_checkpoint_plan_classifies_dirty_business_files(tmp_path: Path) -> None
     assert report["summary"]["changed_files"] == 3
     assert report["summary"]["surfaces"] == {
         "core": 1,
-        "campaigns": 1,
+        "pushes": 1,
         "decisions": 1,
     }
-    assert report["proposal"]["message"] == "[checkpoint] Update core, campaigns, and decisions"
+    assert report["proposal"]["message"] == "[checkpoint] Update core, pushes, and decisions"
     paths = {change["path"] for change in report["changes"]}
     assert paths == {
         "core/offer.md",
         "decisions/2026-05-05-test.md",
-        "campaigns/paid.md",
+        "pushes/paid.md",
     }
 
 
