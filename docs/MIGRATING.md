@@ -128,15 +128,21 @@ with:
 - whether the branch should be kept as a draft, opened as a GitHub proposal, or
   reviewed by someone more technical before merging.
 
+That final choice belongs to the user. Claude should explain what it thinks the
+next git step is and why, then stop. Do not push, open a pull request, merge,
+delete, rename, rebase, or force-push unless the user explicitly asks for that
+git operation after seeing the branch summary. During migration dogfood or
+support, this pause is useful product evidence: the maintainer can see whether
+Claude understood branches, commits, review, and merge risk.
+
 Use business language first:
 
 - **branch** = a safe draft copy of the work;
 - **pull request** = a proposal for review;
 - **merge** = make the draft the main version.
 
-Claude must not merge, delete, or rename the branch unless the user explicitly
-confirms. If the user is unsure, the safe answer is to keep the branch and ask
-for review.
+If the user is unsure, the safe answer is to keep the branch local and ask for
+review.
 
 If Claude accidentally dirties an existing branch during discovery, stop before
 running layout migration. Move the already-written Main Branch repair work onto

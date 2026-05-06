@@ -23,6 +23,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Tightened migration read-only checks to use `mb status --peek` and clarified
   that `.mb/last-status-seen.json` is local operational state, not migration
   work to commit.
+- Clarified that Claude-led migration should pause after branch summaries so
+  users and maintainers can review git decisions instead of having Claude push,
+  open, merge, rebase, or delete branches by default.
 
 ## [0.3.1] - 2026-05-05
 
