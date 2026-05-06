@@ -44,6 +44,7 @@ LINK_FIELDS = (
     "linked_research",
     "linked_decision",
     "linked_decisions",
+    "linked_pushes",
     "linked_campaigns",
     "linked_outcomes",
     "linked_prd",
@@ -64,6 +65,7 @@ LOCAL_REF_ROOTS = {
     "documents",
     "log",
     "outputs",
+    "pushes",
     "reference",
     "research",
 }
@@ -113,6 +115,10 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "bets": {
         "glob": "bets/*.md",
+        # `linked_campaigns` stays required for backward compatibility with
+        # every committed bet. New bet writes also include `linked_pushes`
+        # (canonical, recognized in LINK_FIELDS). A follow-up PR can drop
+        # `linked_campaigns` from required once the migration apply lands.
         "required": [
             "status",
             "opened",
@@ -139,6 +145,11 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "campaigns": {
         "glob": "campaigns/*/campaign.md",
+        "required": ["slug", "status"],
+        "enums": {"status": CAMPAIGN_STATUS},
+    },
+    "pushes": {
+        "glob": "pushes/*/push.md",
         "required": ["slug", "status"],
         "enums": {"status": CAMPAIGN_STATUS},
     },
@@ -311,7 +322,7 @@ def _status_order_for(path: Path) -> dict[str, int] | None:
     parts = path.parts
     if "decisions" in parts:
         return DECISION_STATUS_ORDER
-    if "campaigns" in parts:
+    if "pushes" in parts or "campaigns" in parts:
         return CAMPAIGN_STATUS_ORDER
     if "offers" in parts:
         return OFFER_STATUS_ORDER
@@ -414,6 +425,8 @@ def _reverse_bet_field(source: Path, repo: Path) -> str:
         return "linked_decisions"
     if section == "research":
         return "linked_research"
+    if section == "pushes":
+        return "linked_pushes"
     if section == "campaigns":
         return "linked_campaigns"
     if section in {"log", "documents"}:
@@ -443,6 +456,7 @@ def _check_bet_backlink(
         in {
             "linked_decisions",
             "linked_research",
+            "linked_pushes",
             "linked_campaigns",
             "linked_outcomes",
         }

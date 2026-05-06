@@ -21,6 +21,7 @@ LINK_FIELDS = (
     "linked_research",
     "linked_decision",
     "linked_decisions",
+    "linked_pushes",
     "linked_campaigns",
     "linked_outcomes",
     "linked_prd",
@@ -68,6 +69,7 @@ LOCAL_REF_ROOTS = {
     "documents",
     "log",
     "outputs",
+    "pushes",
     "reference",
     "research",
 }

@@ -554,6 +554,82 @@ def test_validate_flags_unknown_campaign_status(tmp_path: Path) -> None:
     assert any("status" in e for f in bad for e in f["errors"])
 
 
+def _push(status: str, slug: str = "workshop-waitlist") -> str:
+    return f"---\nslug: {slug}\nstatus: {status}\n---\n# {slug}\n"
+
+
+def test_validate_accepts_push_lifecycle_statuses(tmp_path: Path) -> None:
+    for status in ("draft", "planned", "active", "paused", "completed", "canceled", "archived"):
+        path = tmp_path / "pushes" / f"2026-05-06-{status}-push" / "push.md"
+        _write(path, _push(status, slug=f"{status}-push"))
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is True, report
+    push_files = [f for f in report["files"] if "pushes/" in f["path"]]
+    assert len(push_files) == 7
+    assert all(f["ok"] for f in push_files)
+
+
+def test_validate_rejects_unknown_push_status(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-typo" / "push.md",
+        _push("live"),  # operator-vocab synonym; not engine canonical
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is False
+
+
+def test_cross_refs_resolve_linked_pushes_field(tmp_path: Path) -> None:
+    """linked_pushes is recognized as a graph link field and must resolve."""
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target"),
+    )
+    _write(
+        tmp_path / "decisions" / "2026-05-06-with-link.md",
+        (
+            "---\n"
+            "date: 2026-05-06\n"
+            "status: accepted\n"
+            "linked_pushes:\n"
+            "  - pushes/2026-05-06-target/push.md\n"
+            "---\n"
+            "# decision\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 0
+
+
+def test_cross_refs_warn_on_missing_linked_pushes_target(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "decisions" / "2026-05-06-broken.md",
+        (
+            "---\n"
+            "date: 2026-05-06\n"
+            "status: accepted\n"
+            "linked_pushes:\n"
+            "  - pushes/2026-05-06-missing/push.md\n"
+            "---\n"
+            "# broken\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 1
+    finding = report["cross_refs"]["warnings"][0]
+    assert finding["code"] == "missing-target"
+    assert finding["field"] == "linked_pushes"
+
+
 def test_cross_refs_flag_campaign_status_transition_regressions(tmp_path: Path) -> None:
     # A newer campaign supersedes an older one but reports a status earlier
     # in the campaign lifecycle. The status-transition checker should flag it
