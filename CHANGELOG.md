@@ -29,6 +29,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added migration dogfood guidance that distinguishes structural checks from
   runtime smoke, documents command mutability, and recommends one-repo-at-a-time
   migration with `--peek` / `--check` discovery.
+- Added migration guidance for static runtime-smoke fallbacks and for detecting
+  old clone-path `.claude/lenses/` or `.claude/reference/` symlinks that
+  skill-link repair does not yet own.
 
 ## [0.3.1] - 2026-05-05
 

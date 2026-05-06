@@ -159,6 +159,20 @@ repo family, prefer a small runtime smoke before merge:
 4. Confirm no skill writes into the engine repo.
 5. Then summarize whether the branch is ready to push, review, or merge.
 
+If an interactive Claude Code runtime smoke is not possible from the current
+session, say that plainly. A static fallback can inspect `mb start`, skill
+symlinks, `settings.local.json`, and referenced files, but it is not runtime
+smoke. Label it as static fallback and list exactly what it does not prove.
+
+During either static fallback or runtime smoke, inspect `.claude/` for old
+clone-path symlinks outside the `mb-*` skill directories, especially
+`.claude/lenses/` and `.claude/reference/`. `mb skill link` and
+`mb skill repair` currently own Main Branch skill names; they may not repair
+older lens/reference symlinks from clone-based setups. If those symlinks still
+point at an old engine clone, report them as follow-up work and do not claim
+the clone-to-pipx migration is fully complete until runtime behavior has been
+observed without relying on the clone.
+
 If Claude accidentally dirties an existing branch during discovery, stop before
 running layout migration. Move the already-written Main Branch repair work onto
 a branch, keep user-authored files separate, and do not commit local status
