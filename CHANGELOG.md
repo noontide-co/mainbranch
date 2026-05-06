@@ -40,6 +40,10 @@ guidance from real dogfood.
 
 ### Changed
 
+- Defined `campaigns/` as the canonical primitive for coordinated pushes,
+  refreshed the system architecture model around current business-repo folders,
+  and blessed `documents/transcripts/`, `documents/prototypes/`, and
+  `documents/archive/` for non-campaign artifacts. Refs #321.
 - Clarified quick start and beginner docs so daily users run `claude` then
   `/mb-start` without a separate `mb status` step. `mb status` is now framed as
   the terminal-only briefing that `/mb-start` reads internally.

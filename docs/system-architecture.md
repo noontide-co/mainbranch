@@ -1,825 +1,470 @@
 # System Architecture
 
-> **Status:** Legacy architecture reference. This file still contains
-> pre-package-era paths such as `reference/core/` and `.vip/local.yaml`.
-> For the current public repo shape, use `mb onboard`, `mb status`, and
-> the tree in `README.md`. Treat this document as historical design context
-> until it is rewritten around the shipped `core/`, `research/`,
-> `decisions/`, `log/`, `campaigns/`, and `documents/` taxonomy.
+> **Status:** Current architecture reference.
+>
+> Main Branch is a CLI plus agent-runtime skill system for running a business
+> from markdown files in git. This document describes the current public repo
+> model after the `core/` folder decision and the campaign primitive decision.
 
-Complete technical reference for how Main Branch works as an AI-native business operating system.
+## Architecture In One Sentence
 
----
+Main Branch keeps canonical business memory in the business repo, uses `mb` as
+the deterministic control plane over that repo, and lets runtime skills perform
+judgment-heavy work while leaving provider data, secrets, caches, and dashboard
+state outside canonical memory.
 
-## Core Concept: Engine + Data
-
-Main Branch operates on a fundamental separation:
-
-```
-ENGINE (mainbranch)     +     DATA (your business repo)     =     OUTPUT
-├── Skills                             ├── Reference                       ├── Ads, Scripts, Content (campaigns/)
-├── Lenses                             │   (incl. content-strategy.md)     ├── Wiki (separate repo)
-└── Frameworks                         ├── Research                        └── Site (separate repo)
-                                       ├── Decisions
-                                       └── Compliance
-```
-
-**The engine is business-agnostic.** It doesn't know about any specific offer, audience, or proof. It expects to find that information in standardized locations within whatever business repo it's pointed at.
-
-**The data is engine-agnostic.** Business repos don't contain skills or logic. They contain context that any compatible engine can consume.
-
----
-
-## Why This Architecture
-
-See `docs/philosophy.md` for the deeper explanation. The short version:
-
-**Passive memory keeps you shallow.** You can't see what AI "remembers," it hallucinates, nothing gets synthesized, you never articulate what matters.
-
-**Active reference is work, but that work IS the thinking.** Files you can read, edit, version control. The repo is truth. Articulating context = understanding your business.
-
-**Curation over collection.** The repo is a precision instrument. Every file earns its place by improving what LLMs can do for you. Research gets synthesized, decisions get distilled, and only the sharpest context survives into `core/`. Quantity of context hurts; quality compounds.
-
----
-
-## The Compound Context Cycle
-
-```
-    ┌─────────────────────────────────────────────────────┐
-    │                                                     │
-    ▼                                                     │
-┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐ │
-│Research │───▶│ Decide  │───▶│ Codify  │───▶│Generate │─┘
-└─────────┘    └─────────┘    └─────────┘    └─────────┘
-     │              │              │              │
-     ▼              ▼              ▼              ▼
-  research/     decisions/       core/       campaigns/
+```text
+Main Branch engine     +     business repo            +     optional systems
+mb CLI                       core/                          provider APIs
+bundled skills               research/                      sidecar databases
+validators                   decisions/                     local caches
+templates                    bets/                          dashboard views
+docs                         campaigns/
+                             log/
+                             documents/
 ```
 
-### 1. Research (Dated)
+The engine is business-agnostic. The business repo is engine-readable but not
+engine-owned. Provider systems and dashboards are inputs or views; they do not
+replace the repo.
 
-Explore questions, gather information. Point-in-time snapshots.
+## Operating Loops
 
-```
-research/
-├── 2026-01-10-competitor-pricing-analysis.md
-├── 2026-01-12-audience-pain-points.md
-└── 2026-01-13-testimonial-themes.md
-```
+Main Branch architecture follows the four operator loops in
+[OPERATOR-LOOPS.md](OPERATOR-LOOPS.md):
 
-**Frontmatter:**
-```yaml
----
-type: research
-date: 2026-01-10
-source: gemini | claude | web | expert
-topics: [pricing, competitors]
-linked_decisions:
-  - 2026-01-11-pricing-strategy
-status: complete
----
-```
+- **Sense:** read current state from files, git, GitHub, provider metadata, and
+  deterministic `mb` reports.
+- **Decide:** choose a bet, priority, offer direction, or repair path.
+- **Ship:** produce and release work into the world or into the operating
+  system.
+- **Reflect:** extract lessons, close bets, update decisions, and improve the
+  next Sense pass.
 
-### 2. Decide (Dated)
+Files are not categories for their own sake. They are durable stations in those
+loops.
 
-Make choices with rationale. Links to research that informed it.
+## Business Repo Shape
 
-```
-decisions/
-├── 2026-01-11-pricing-strategy.md
-├── 2026-01-13-primary-angle.md
-└── 2026-01-14-testimonial-selection.md
-```
+A current Main Branch business repo uses this shape:
 
-**Structure:**
-```markdown
----
-type: decision
-date: 2026-01-11
-status: active
----
-# Pricing Strategy
-
-## Situation
-[What's happening, what prompted this decision]
-
-## Research
-### competitor-pricing-analysis
-**Date:** 2026-01-10
-**Source:** Gemini deep research
-[Summary of findings]
-See: `research/2026-01-10-competitor-pricing-analysis.md`
-
-## Options
-
-### Option A: Premium pricing (selected)
-**Pros:** ...
-**Cons:** ...
-
-### Option B: Value pricing (rejected)
-**Pros:** ...
-**Cons:** ...
-
-## Decision
-[The actual choice with rationale]
-
-## What Changes
-
-Core files affected:
-- `core/offer.md` — update pricing section
-- New ads needed for updated price point
-```
-
-### 3. Codify (Evergreen)
-
-Update permanent context based on decisions. These files are what skills consume.
-
-```
-core/
-├── offer.md               # What you sell, pricing, mechanism
-├── audience.md            # Who you sell to, psychographics
-├── voice.md               # How you sound
-├── brand/                 # Deep brand systems
-├── proof/
-│   ├── testimonials.md
-│   └── angles/
-│       ├── overwhelm-to-clarity.md
-│       └── professional-credibility.md
-└── operations/            # Business-type specific delivery systems
-```
-
-**Evergreen files don't have dates in the filename.** They represent current truth, not point-in-time snapshots.
-
-### 4. Generate (Campaigns)
-
-Skills consume context and produce campaign work.
-
-```
-campaigns/
-├── 2026-01-15-january-launch/
-│   ├── batch-001-static-ads.md
-│   ├── batch-002-video-scripts.md
-│   └── review-notes.md
-└── 2026-01-20-retargeting/
-```
-
-### 5. Learn (Loop Back)
-
-Campaigns inform new research. What worked? What didn't? This becomes new research, which informs new decisions, which updates context.
-
-In the Generate step, the **newsletter is the keystone piece** -- long-form thinking that gets adapted into platform-specific content by /mb-organic and amplified by /mb-ads. In the Learn step, performance data flows back into `content-strategy.md` -- updating the hooks library, metrics benchmarks, and pillar effectiveness.
-
----
-
-## Folder Structure: Business Repos
-
-```
-your-business/
-├── CLAUDE.md                    # Instructions + engine reference
-├── .vip/                        # SESSION STATE — git-ignored
-│   └── local.yaml               # Active offer, session config
-│
-├── core/                        # EVERGREEN — What skills consume
-│   ├── soul.md                  # Why you exist
-│   ├── offer.md                 # What you sell (or brand thesis if multi-offer)
-│   ├── audience.md              # Who you sell to
-│   ├── voice.md                 # How you sound
-│   ├── content-strategy.md      # Pillars, platforms, cadence, metrics
-│   ├── product-ladder.md        # How offers relate (multi-offer only)
-│   ├── offers/                  # (MULTI-OFFER ONLY)
-│   │   └── [name]/
-│   │       ├── offer.md         # Offer-specific details
-│   │       └── audience.md      # Offer-specific audience (optional)
-│   ├── brand/                   # Deep brand systems
+```text
+my-business/
+├── CLAUDE.md
+├── .gitignore
+├── .mb/                         # explicit Main Branch state
+├── .claude/                     # local runtime wiring; only worktrees/ ignored
+├── core/
+│   ├── soul.md
+│   ├── offer.md
+│   ├── audience.md
+│   ├── voice.md
+│   ├── content-strategy.md
+│   ├── product-ladder.md
+│   ├── offers/
 │   ├── proof/
-│   │   ├── testimonials.md      # Approved testimonials
-│   │   ├── typicality.md        # FTC outcome data
-│   │   └── angles/              # Messaging entry points
-│   │       └── [angle-name].md
-│   └── operations/              # Business-type specific delivery systems
-│
-├── research/                    # DATED — Point-in-time exploration
-│   └── YYYY-MM-DD-slug.md
-│
-├── decisions/                   # DATED — Choices with rationale
-│   └── YYYY-MM-DD-slug.md
-│
-└── campaigns/                   # Generated campaign work — lifecycle via frontmatter status
-    └── YYYY-MM-DD-batch-name/
+│   ├── brand/
+│   ├── strategy/
+│   ├── operations/
+│   └── finance/
+├── research/
+├── decisions/
+├── bets/
+├── campaigns/
+├── log/
+└── documents/
 ```
 
-### Design Principles
+The canonical business brain is `core/`. The old committed business-repo
+`reference/` folder is compatibility-only for old repos, as defined in
+[decisions/2026-05-06-business-repo-folder-model-reference-deprecation.md](../decisions/2026-05-06-business-repo-folder-model-reference-deprecation.md).
 
-1. **Flat > Deep** — Max 2 levels of nesting. Agents navigate via grep, not directory walking.
-2. **Semantic names** — Folder names describe content type, not arbitrary categories.
-3. **Dated vs Evergreen** — Dated content uses `YYYY-MM-DD-` prefix. Evergreen doesn't.
-4. **First-timer friendly** — Someone new sees: core, research, decisions, campaigns. Self-explanatory.
+## Primitive Contracts
 
----
+### `core/`
 
-## Folder Structure: Engine Repo
+`core/` contains evergreen business truth that skills can read repeatedly:
+offer, audience, soul, voice, proof, brand systems, strategy, operations, and
+finance boundaries.
 
-```
-mainbranch/
-├── CLAUDE.md                        # Philosophy + reference
-├── docs/
-│   └── system-architecture.md       # This file
-│
-├── .claude/
-│   ├── skills/                      # Invokable capabilities
-│   │   ├── ads/
-│   │   │   └── SKILL.md
-│   │   ├── vsl/
-│   │   │   └── SKILL.md
-│   │   ├── think/
-│   │   │   └── SKILL.md
-│   │   ├── site/
-│   │   │   └── SKILL.md
-│   │   ├── end/
-│   │   │   └── SKILL.md
-│   │   └── ...
-│   │
-│   ├── lenses/                      # Review criteria for /mb-ads review
-│   │   ├── README.md
-│   │   ├── ftc-compliance.md
-│   │   ├── meta-policy.md
-│   │   ├── copy-quality.md
-│   │   ├── visual-standards.md
-│   │   ├── voice-authenticity.md
-│   │   └── substantiation.md
-│   │
-│   └── reference/
-│       ├── compliance/              # Shared compliance frameworks
-│       │   ├── README.md
-│       │   ├── ftc-scrutiny-categories.md
-│       │   ├── angle-playbook.md
-│       │   ├── testimonial-decision-rubric.md
-│       │   └── typicality/
-│       │       └── README.md
-│       └── domain-rubrics/          # Business-type operations rubrics
-│           ├── ecommerce.md
-│           ├── community.md
-│           └── multi-offer.md
-│
-└── templates/
-    └── modules/
-        └── brand-style-template.md  # Visual style guide template
+Evergreen files do not usually carry dates in the filename. They represent the
+current best version of the business, not a point-in-time snapshot.
+
+### `research/`
+
+`research/` contains point-in-time findings from when the operator went
+looking. Research can cite source material, but it should synthesize what
+matters rather than becoming an indiscriminate capture folder.
+
+Typical files:
+
+```text
+research/2026-05-06-competitor-offer-analysis.md
+research/2026-05-06-customer-language-review.md
 ```
 
----
+### `decisions/`
 
-## How Skills Work
+`decisions/` contains choices with rationale. A decision explains the situation,
+options, accepted direction, rejected alternatives, and what files or workflows
+change because of it.
 
-Skills are modular capabilities that Claude can invoke. They follow Claude Code's skill specification.
+Decisions can be proposed before acceptance. Accepted decisions become durable
+product or business truth until superseded.
 
-### Skill Structure
+### `bets/`
 
-```
-skills/
-└── skill-name/
-    ├── SKILL.md           # Required: frontmatter + instructions
-    ├── references/        # Optional: detailed docs loaded on-demand
-    └── scripts/           # Optional: executable code
-```
+`bets/` contains time-boxed operating hypotheses: what the operator will try,
+why it might work, by when, and how success or failure will be judged.
 
-### SKILL.md Format
+A bet is usually Decide -> Ship -> Reflect. It may lead to a campaign, an offer
+change, a workflow, a content pillar, a provider setup, or a decision.
 
-```markdown
----
-name: mb-ads
-description: Generate ad copy and review for compliance. Routes to static, video, or review mode.
----
+### `campaigns/`
 
-# Ads
+`campaigns/` contains coordinated pushes that ship work into the world or into
+an adoption surface. A campaign is not a generic generated-artifact bucket.
 
-[Instructions for Claude when this skill is invoked]
+A campaign has:
 
-## What This Skill Does
-...
+- a named goal or outcome;
+- a recipient or audience, including internal stakeholders for Ops adoption
+  campaigns;
+- one or more distribution or adoption channels;
+- a bounded time window or review moment;
+- artifacts and actions that belong to the same push;
+- links to the bets, offers, strategy, decisions, research, logs, and provider
+  data that explain or measure it.
 
-## Context Required
-...
+Examples that qualify:
 
-## Output Format
-...
-```
+- paid ad push;
+- organic content sequence;
+- email or newsletter launch sequence;
+- site or landing-page launch;
+- community activation push;
+- partner or outreach push;
+- product, offer, waitlist, beta, or event announcement;
+- internal adoption or migration push with a clear goal, owner, timeline, and
+  outcome.
 
-### Context Discovery
+Examples that do not qualify by themselves:
 
-Skills expect business context in standardized locations:
+- raw transcripts;
+- one-off code experiments;
+- provider exports;
+- raw analytics tables;
+- loose session recovery notes;
+- PR review notes for the engine;
+- archived repo dumps;
+- generated artifacts with no named push or outcome.
 
-| Context Type | Where to Look | Required |
-|--------------|---------------|----------|
-| Offer | `core/offers/[active]/offer.md` then `core/offer.md` | Yes |
-| Audience | `core/offers/[active]/audience.md` then `core/audience.md` | Yes |
-| Soul | `core/soul.md` | Yes |
-| Voice | `core/voice.md` | Recommended |
-| Angles | `core/proof/angles/*.md` | At least one |
-| Testimonials | `core/proof/testimonials.md` (+ offer-specific if exists) | Recommended |
-| Typicality | `core/proof/typicality.md` | For outcome claims |
-| Content Strategy | `core/content-strategy.md` (always brand-level) | Recommended for /mb-organic, /newsletter |
-| Product Ladder | `core/product-ladder.md` | Multi-offer only |
-| Skool Surfaces | `core/operations/funnel/skool-surfaces.md` | When generating ads, organic, VSLs, or site copy (congruence) |
-| Session State | `.vip/local.yaml` | Multi-offer only |
-| Site config | `~/.mainbranch/sites.json` | When building/publishing with /mb-site |
+#### Campaign Folder Shape
 
-Skills should fail gracefully with clear errors if required context is missing.
+The conventional campaign shape is:
 
----
-
-## How Lenses Work
-
-Lenses are review criteria used by `/mb-ads review` mode. Each lens is a markdown file containing:
-
-1. What to check
-2. How to score issues (P1/P2/P3)
-3. Examples of violations
-4. References to regulations or guidelines
-
-### Lens Structure
-
-```markdown
-# FTC Compliance Lens
-
-## What This Lens Checks
-[Overview]
-
-## Priority Levels
-- **P1 (Blocking):** [Definition]
-- **P2 (Should Fix):** [Definition]
-- **P3 (Consider):** [Definition]
-
-## Checklist
-
-### Earnings/Income Claims
-[Specific checks]
-
-### Testimonials
-[Specific checks]
-
-...
-
-## References
-[Links to FTC guidance, case law, etc.]
+```text
+campaigns/
+  2026-05-workshop-waitlist/
+    campaign.md
+    ads.md
+    emails.md
+    posts.md
+    site.md
+    review-log.md
+    assets/
+    source/
 ```
 
-### Multi-Lens Review
+The folder name gives humans chronological scanability. `campaign.md` is the
+record. Other files are campaign artifacts, source notes used by the campaign,
+operator review notes, or asset references for that same push.
 
-The `/mb-ads review` mode spawns parallel agents, one per lens:
+For larger campaigns, typed subfolders are acceptable:
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    /mb-ads review                          │
-│                        │                                │
-│    ┌───────┬───────┬───────┬───────┬───────┬───────┐   │
-│    ▼       ▼       ▼       ▼       ▼       ▼       │   │
-│   FTC    Meta    Copy   Visual  Voice  Subst.     │   │
-│    │       │       │       │       │       │       │   │
-│    └───────┴───────┴───────┴───────┴───────┘       │   │
-│                        │                            │   │
-│                        ▼                            │   │
-│              Synthesized Report                     │   │
-│              (P1 → P2 → P3)                         │   │
-└─────────────────────────────────────────────────────────┘
+```text
+campaigns/2026-05-workshop-waitlist/
+  campaign.md
+  ads/
+  emails/
+  posts/
+  site/
+  reviews/
+  assets/
+  source/
 ```
 
-### Spawning Subagents: Permissions and Durability
+Do not create a campaign folder just because a file was generated. If the work
+does not have a campaign goal, put it in the primitive that owns it.
 
-**Critical:** When spawning subagents with the Task tool, they inherit limited permissions. If your agent needs to:
+#### Campaign Record
 
-- Create folders or move files → **Needs Bash access**
-- Write files outside working directories → **Needs explicit paths**
-- Run git commands → **Needs Bash access**
-- Use MCP tools (Apify, etc.) → **Must run in foreground** (background agents can't access MCP)
-
-**Known bug — subagent writes may not persist:** Claude Code Task tool subagents sometimes report successful file writes via the Write tool, but the files don't appear on disk (GitHub [#4462](https://github.com/anthropics/claude-code/issues/4462), [#9458](https://github.com/anthropics/claude-code/issues/9458), [#13890](https://github.com/anthropics/claude-code/issues/13890)). This is intermittent — writes succeed most of the time, but fail silently when the bug triggers.
-
-**Recommended pattern — write with fallback:**
-
-1. Use `subagent_type: "general-purpose"` (has Write, Edit, Bash, MCP)
-2. Agent writes the file
-3. Agent verifies the write (Read or ls the file)
-4. Agent returns: file path + write status + summary (always), full content (only if write failed)
-5. Main conversation checks the file exists; if not, writes from returned content
-
-**Read-only pattern (safest):** For agents that only analyze (like `/mb-ads review` lenses or `/pr-review` checks), agents read + return findings. Main conversation acts on findings. Zero persistence risk.
-
-**Avoid stuck loops:** If an agent keeps retrying the same denied permission, it will loop indefinitely. Instruct agents to report back if permissions are missing rather than retry.
-
-**Do NOT run agents in background if they need MCP tools.** Background agents auto-deny permissions and cannot access MCP servers ([#13254](https://github.com/anthropics/claude-code/issues/13254)).
-
----
-
-## Compliance Framework
-
-### Three Layers
-
-1. **Planning Layer** (`.claude/reference/compliance/`)
-   - FTC scrutiny categories
-   - Angle playbook with rules
-   - Testimonial decision rubric
-   - Used BEFORE creating ads
-
-2. **Review Layer** (`.claude/lenses/`)
-   - FTC compliance lens
-   - Meta policy lens
-   - Used AFTER creating ads
-
-3. **Data Layer** (`compliance/typicality/` in business repos)
-   - Actual outcome data for FTC defense
-   - Required for outcome testimonials
-   - Business-specific
-
-### FTC Scrutiny Tiers
-
-| Tier | Industries | Scrutiny Level |
-|------|------------|----------------|
-| **Tier 1** | Income/biz opp, weight loss, health cures, financial | Extreme — outcome claims need bulletproof typicality |
-| **Tier 2** | Health-adjacent, education, coaching, credit | High — outcome claims need strong typicality |
-| **Tier 3** | General consumer, lifestyle, productivity | Normal — standard advertising rules apply |
-
-### Testimonial Decision
-
-Before using outcome testimonials, ask:
-
-1. Do we have typicality data showing what AVERAGE users achieve?
-2. Is the industry Tier 1 or Tier 2?
-3. Is the testimonial extraordinary or representative?
-4. Can we defend this if FTC asks?
-
-Often the answer is: **Use mechanism/community/price angles instead of outcome testimonials.**
-
----
-
-## Context Tiers
-
-Skills should load context progressively:
-
-| Tier | What | When | Token Cost |
-|------|------|------|------------|
-| **Always** | CLAUDE.md | Every session | Low |
-| **Just-in-time** | core/*.md | When generating | Medium |
-| **On-demand** | research/, decisions/, content-strategy.md, skool-surfaces.md | When reasoning or generating content | Medium |
-| **Deep reference** | core/proof/, lenses/ | When reviewing | High |
-
-**Why this matters:** Token efficiency. Don't load everything upfront. Load what's needed when it's needed.
-
----
-
-## Multi-Repo Workflow
-
-### Setup
-
-1. Clone Main Branch locally
-2. Create or clone your business repo
-3. Run `/mb-setup` to configure Main Branch linkage (writes `.claude/settings.local.json` and compatibility links when needed)
-4. Start Claude in your business repo and run `/mb-start`
-
-### In Practice
-
-```
-Claude Code Session:
-├── Primary (CWD): ~/projects/my-business/
-│   ├── .claude/settings.local.json  ← additionalDirectories points to mainbranch
-│   ├── .claude/skills/*             ← bridge links for skill discovery fallback
-│   ├── core/
-│   ├── campaigns/
-│   └── ...
-│
-└── Additional directory (read-only): ~/Documents/GitHub/mainbranch/
-    ├── .claude/skills/              ← canonical skill source
-    ├── .claude/lenses/
-    └── ...
-```
-
-When you invoke `/mb-ads`:
-1. Claude loads skill from Main Branch
-2. Skill reads context from my-business/core/
-3. Output goes to my-business/campaigns/
-4. Review uses lenses from Main Branch
-
-Users with a wiki or site have additional repos accessed via config files (`~/.mainbranch/mb-wiki.json`, `~/.mainbranch/sites.json`), not as working directories.
-
----
-
-## Content Pipeline Architecture
-
-The content pipeline follows a **newsletter-first waterfall**: one keystone piece becomes many platform-adapted campaign assets.
-
-```
-/mb-think → research, decisions, content-strategy.md
-    │
-    ▼
-/newsletter → keystone long-form (weekly email)
-    │
-    ▼
-/mb-organic → platform-adapted social (reels, tiktok, carousels)
-    │
-    ▼
-/mb-ads → paid amplification of top performers
-    │
-    ▼
-/mb-think → performance analysis, strategy updates → content-strategy.md
-```
-
-### Infrastructure Layer
-
-Some skills produce infrastructure that sits outside the recurring content cycle — built once, updated when core context changes:
-
-- `/mb-site` — Conversion endpoint (landing pages where pipeline traffic lands)
-- `/mb-wiki` — Knowledge base (published notes)
-
-These are destinations the pipeline drives traffic to, not recurring content items.
-
-### Energy-Protected Audience Feedback Loop
-
-The pipeline is designed so the creator **never opens a social app to post**. AI handles adaptation and distribution. The creator's energy stays in thinking and writing -- not scrolling. Audience feedback (metrics, comments, engagement) flows back through /mb-think into content-strategy.md, closing the loop without requiring the creator to be on-platform.
-
-### Campaign Lifecycle (Frontmatter-Based)
-
-Generated campaign work lives in `campaigns/`. Lifecycle is tracked via the
-`status` field in YAML frontmatter, not folder moves:
-
-- `status: draft` — Work in progress
-- `status: scheduled` — Approved, ready to publish
-- `status: published` — Live on platform
-- `status: final` — Complete, no publishing lifecycle (VSL scripts, reviewed ad batches)
-
-To find all drafts: `grep -rl "^status: draft" campaigns/ --include="*.md"`
-To find scheduled content: `grep -rl "^status: scheduled" campaigns/ --include="*.md"`
-
-This replaces the previous folder-move lifecycle pattern where files moved between subdirectories.
-
-### Skill Connections to Content Pipeline
-
-| Skill | Pipeline Role |
-|-------|---------------|
-| `/mb-think` | Builds content-strategy.md, analyzes performance |
-| `/newsletter` | Generates keystone long-form (coming soon) |
-| `/mb-organic` | Adapts keystone into platform-specific formats |
-| `/mb-ads` | Amplifies top-performing organic content |
-| `/mb-site` | Conversion endpoint — landing pages where pipeline traffic lands |
-| `/mb-end` | Session close — summarizes activity, surfaces crystallize moments, commits work |
-
----
-
-## Multi-Offer Architecture
-
-Some businesses sell multiple products or services under a single brand. Multi-offer architecture handles this without duplicating repos or breaking the single-offer workflow.
-
-### The Shared Soul Test
-
-If products share `soul.md` and `voice.md`, they belong in the same repo. Different souls or voices = different repos. This is the only test that matters.
-
-### Multi-Business Boundary
-
-Separate brands = separate repos. Always. The question during a session is: "Are any other business repos relevant right now?" NOT "Do you have multiple businesses?" Each session works with one business repo at a time.
-
-### Folder Structure (Multi-Offer)
-
-```
-core/
-├── soul.md                      # ALWAYS core, never per-offer
-├── offer.md                     # Brand thesis (multi-offer) or full offer (single)
-├── audience.md                  # Base audience (shared across offers)
-├── voice.md                     # ALWAYS core, never per-offer
-├── content-strategy.md          # Pillars, platforms, cadence (brand-level)
-├── product-ladder.md            # How offers relate (multi-offer only)
-├── offers/                      # (multi-offer only)
-│   └── [name]/
-│       ├── offer.md             # Offer-specific details (required)
-│       └── audience.md          # Offer-specific audience override (optional)
-└── operations/                  # Business-type specific delivery systems
-```
-
-### Session Offer Context
-
-The active offer is stored in `.vip/local.yaml` at the business repo root:
-
-```yaml
-current_offer: community    # Active offer for this session
-```
-
-- Git-ignored (session state, not shared)
-- Written by `/mb-start`, read by all skills
-- If missing or null: single-offer mode (everything reads from `core/`)
-
-### Canonical Path Resolution
-
-Skills resolve context files using this algorithm:
-
-```
-resolve_context(file_type):
-  # Always core -- no offer override possible
-  if file_type in [soul, voice]:
-    return core/{file_type}.md
-
-  # Always core -- brand-level
-  if file_type in [content-strategy]:
-    return core/content-strategy.md
-
-  # Offer-aware -- check active offer first
-  current_offer = read .vip/local.yaml -> current_offer
-
-  if current_offer AND exists core/offers/{current_offer}/{file_type}.md:
-    return core/offers/{current_offer}/{file_type}.md
-
-  # Fallback to core
-  return core/{file_type}.md
-```
-
-### Resolution Flow Diagram
-
-```
-                    ┌──────────────┐
-                    │ Skill needs  │
-                    │ context file │
-                    └──────┬───────┘
-                           │
-                    ┌──────▼───────┐
-                    │ soul.md or   │──── YES ──── core/{type}.md
-                    │ voice.md?    │
-                    └──────┬───────┘
-                           │ NO
-                    ┌──────▼───────┐
-                    │ content-     │──── YES ──── core/content-strategy.md
-                    │ strategy?    │
-                    └──────┬───────┘
-                           │ NO
-                    ┌──────▼───────┐
-                    │ .vip/local   │──── NO ───── core/{type}.md (single-offer)
-                    │ .yaml exists │
-                    │ w/ offer?    │
-                    └──────┬───────┘
-                           │ YES
-                    ┌──────▼───────┐
-                    │ core/offers/ │
-                    │ {offer}/     │──── YES ──── core/offers/{offer}/{type}.md
-                    │ {type}.md    │
-                    │ exists?      │
-                    └──────┬───────┘
-                           │ NO
-                           │
-                    core/{type}.md (fallback)
-```
-
-### Backward Compatibility
-
-No `core/offers/` folder = single-offer mode. Everything works exactly as
-before. The resolution algorithm falls through to `core/` at every step when
-there is no active offer or no `core/offers/` folder. Existing single-offer
-repos require zero changes.
-
-### What Never Goes Per-Offer
-
-| File | Rationale |
-|------|-----------|
-| `soul.md` | Soul is brand identity -- different souls need different repos |
-| `voice.md` | Voice is brand personality -- one brand, one voice |
-| `content-strategy.md` | Distribution is brand-level, not per-product |
-| `core/brand/*` | Brand systems are unified across all offers |
-
-See `.claude/reference/domain-rubrics/multi-offer.md` for the complete rubric including scaling guidelines, migration path, and skill integration details.
-
----
-
-## File Linking
-
-### Research → Decision
-
-Research files link to decisions they inform:
-
-```yaml
-# In research/2026-01-10-pricing-analysis.md
----
-linked_decisions:
-  - 2026-01-11-pricing-strategy
----
-```
-
-### Decision → Research
-
-Decisions reference research inline:
-
-```markdown
-# In decisions/2026-01-11-pricing-strategy.md
-
-## Research
-
-### pricing-analysis
-**Date:** 2026-01-10
-**Source:** Gemini deep research
-[Summary]
-See: `research/2026-01-10-pricing-analysis.md`
-```
-
-### Decision → Context
-
-Decisions note what context they updated:
-
-```markdown
-## What Changes
-
-Core files affected:
-- `core/offer.md` — updated pricing section
-- `core/proof/angles/value-stack.md` — new angle added
-```
-
-This creates a traceable chain: Research → Decision → Context → Output
-
-### Decision → Content Strategy
-
-Decisions about content pillars, platforms, or cadence update content-strategy.md:
-
-```markdown
-## What Changes
-
-Core files affected:
-- `core/content-strategy.md` — add "transformation stories" pillar, update platform strategy with Instagram Reels cadence
-```
-
-Content strategy links back to the decisions that informed pillar choices, creating the same traceable chain.
-
----
-
-## Naming Conventions
-
-| Content Type | Format | Example |
-|--------------|--------|---------|
-| Core context | `slug.md` | `offer.md`, `audience.md`, `voice.md` |
-| Content strategy | `slug.md` | `content-strategy.md` |
-| Research | `YYYY-MM-DD-slug.md` | `2026-01-10-competitor-analysis.md` |
-| Decisions | `YYYY-MM-DD-slug.md` | `2026-01-11-pricing-strategy.md` |
-| Campaign batches | `YYYY-MM-DD-batch-name/` | `2026-01-15-january-launch/` |
-| Campaign drafts | `YYYY-MM-DD-descriptive.md` | `2026-02-03-newsletter-issue.md` |
-| Typicality data | `typicality.md` | `core/proof/typicality.md` |
-
-### Why Dates in Filenames
-
-- Chronological sorting without metadata parsing
-- Grep-friendly (`grep "2026-01" research/`)
-- Git history shows evolution
-- No ambiguity about "which version"
-
----
-
-## Frontmatter Standards
-
-### Minimum (All Files)
+Recommended `campaign.md` frontmatter:
 
 ```yaml
 ---
-type: research | decision | reference | output
-status: draft | active | complete | archived
----
-```
-
-### Research Files
-
-```yaml
----
-type: research
-date: 2026-01-10
-source: gemini | claude | web | expert | internal
-topics: [topic1, topic2]
-linked_decisions:
-  - decision-id
-status: draft | complete | codified | superseded
----
-```
-
-### Decision Files
-
-```yaml
----
-type: decision
-date: 2026-01-11
-status: proposed | accepted | codified
-urgency: low | normal | high | critical
----
-```
-
-### Reference Files
-
-```yaml
----
-type: reference
+type: campaign
+slug: workshop-waitlist
 status: active
-updated: 2026-01-13
+goal: "40 qualified waitlist signups"
+channels: [paid, email, pages]
+started: 2026-05-06
+review_on: 2026-05-20
+linked_strategy:
+  - core/content-strategy.md
+linked_offers:
+  - core/offers/workshop/offer.md
+linked_bets:
+  - bets/workshop-waitlist.md
+linked_decisions:
+  - decisions/2026-05-06-workshop-price.md
+linked_research: []
+provider_refs:
+  meta_ads:
+    campaign_id: "example-placeholder"
+metrics_sources:
+  - ".mb/sidecars/meta-ads/workshop-waitlist.sqlite"
 ---
 ```
 
----
+The current validator only enforces a smaller subset. The frontmatter above is
+the architecture target for follow-up CLI, graph, status, skill, and migration
+work.
 
-## Summary
+Campaign status should map to operator loops:
 
-1. **Engine + Data separation** — Skills in engine, context in business repos
-2. **Active context management** — You build and maintain the context, learning as you go
-3. **Compound context cycle** — Research → Decide → Codify → Generate → Learn
-4. **Flat structure** — Max 2 levels, semantic names, first-timer friendly
-5. **File linking** — Research links to decisions, decisions link to context
-6. **Progressive loading** — Context tiers for token efficiency
-7. **Compliance layers** — Planning, review, and data layers
-8. **Multi-repo workflow** — Engine linked via additional directory + bridge fallback, business repo as primary
-9. **Content pipeline** — Newsletter-first waterfall: keystone → organic → ads → learn
-10. **Multi-offer support** — Cascading path resolution for businesses with multiple products under one brand
+| Status | Loop meaning |
+| --- | --- |
+| `draft` | Decide is still forming the push. |
+| `planned` | Decide is complete; Ship has not started. |
+| `active` | Ship is underway. |
+| `paused` | Sense or Decide must resolve a blocker. |
+| `completed` | Ship is done; Reflect should evaluate it. |
+| `canceled` | The push was intentionally stopped. |
+| `archived` | Historical record only. |
+
+`channels` should start as a loose, validation-hinted list rather than a hard
+enum. Main Branch can recognize common slugs such as `paid`, `organic`,
+`email`, `pages`, `community`, `partner`, `outreach`, and `ops`, while warning
+instead of failing when a business needs a more specific channel.
+
+### `log/`
+
+`log/` contains what happened: daily records, session summaries, recovery notes,
+operator handoffs, and non-decision work records.
+
+Use `log/` when the durable value is chronology and recovery rather than a
+research finding, accepted decision, bet, or campaign artifact.
+
+### `documents/`
+
+`documents/` contains supporting material that is durable enough to keep but
+not itself core truth, research synthesis, a decision, a bet, a campaign, or a
+log entry.
+
+Blessed conventional subfolders:
+
+```text
+documents/transcripts/   # raw or lightly cleaned source transcripts
+documents/prototypes/    # throwaway code, HTML, images, scripts, or demos
+documents/archive/       # inert legacy imports or reference dumps
+```
+
+Use separate repos when a prototype, site, app, offer, finance surface, or
+archive graduates into its own operating boundary.
+
+## Artifact Routing
+
+Use this routing rule when deciding where generated work belongs:
+
+| Artifact | Canonical home |
+| --- | --- |
+| Paid ad batch tied to a named push | `campaigns/<campaign>/ads/...` |
+| Organic sequence tied to a named push | `campaigns/<campaign>/posts/...` |
+| Email or newsletter launch sequence | `campaigns/<campaign>/emails/...` |
+| Landing-page launch record | `campaigns/<campaign>/site.md` or child site repo |
+| Campaign review notes | `campaigns/<campaign>/review-log.md` or `reviews/` |
+| Raw transcript or source capture | `documents/transcripts/...` |
+| Synthesized findings from source material | `research/YYYY-MM-DD-slug.md` |
+| Throwaway code, HTML, script, or image experiment | `documents/prototypes/...` |
+| Operational site, app, or offer repo | separate child repo with links back |
+| Session recovery or daily work record | `log/YYYY-MM-DD.md` |
+| Accepted architecture or product choice | `decisions/YYYY-MM-DD-slug.md` |
+| Engine coordination or review | GitHub issue or pull request |
+| Inert legacy import | `documents/archive/...` or separate archive repo |
+| Local cruft | ignored or deleted, not migrated |
+
+Legacy `outputs/` content should not be bulk-moved into `campaigns/`.
+Ambiguous items need an operator review path through migration or doctor repair.
+
+## Relationship Model
+
+The core relationship model is:
+
+```text
+strategy decides where we should push
+bet defines what we are trying to learn
+offer defines what we are selling
+campaign coordinates the push
+provider data records what happened
+research / decision / log captures what we learned or changed
+```
+
+In practice:
+
+- Strategy lives in `core/content-strategy.md` or additional `core/strategy/...`
+  files.
+- Offers live in `core/offer.md` and `core/offers/...`.
+- Bets live in `bets/...` and can link to one or more campaigns.
+- Campaigns link back to bets, offers, decisions, research, and strategy.
+- Provider refs identify external campaign/account objects without copying raw
+  provider data into the business repo.
+- Metrics sources point to provider APIs, local sidecars, `.mb/` caches,
+  private analytics stores, or exported files under a boundary the operator has
+  intentionally chosen.
+- Reflection usually lands in a bet verdict, research note, decision update,
+  campaign review log, or `log/` entry.
+
+## State Boundaries
+
+Canonical business state:
+
+- `core/`
+- `research/`
+- `decisions/`
+- `bets/`
+- `campaigns/`
+- `log/`
+- `documents/`
+- git history
+- GitHub issues and pull requests
+
+Local operational state:
+
+- `.mb/` caches, indexes, schema markers, repair backups, and local connection
+  metadata;
+- `.claude/settings.local.json` and runtime wiring;
+- runtime-specific local files;
+- OS keychain, environment variables, 1Password, or other secret stores.
+
+External or optional state:
+
+- provider APIs;
+- local SQLite sidecars;
+- private analytics or finance repos;
+- exported CSVs in private storage;
+- future dashboard indexes.
+
+Secrets, bearer tokens, OAuth refresh tokens, service-account JSON, customer
+exports, raw member data, and sensitive finance/legal data do not belong in
+public examples or committed business repo files.
+
+## `mb` Responsibilities
+
+`mb` is the deterministic control plane. It owns:
+
+- repo scaffolding through `mb onboard` and `mb init`;
+- repo health through `mb doctor`;
+- safe reconciliation through `mb doctor repair`;
+- frontmatter and cross-reference checks through `mb validate`;
+- graph output through `mb graph`;
+- daily facts and next-action substrate through `mb status` and `mb start`;
+- provider metadata through `mb connect`;
+- update and migration paths through `mb update` and `mb migrate`;
+- skill discovery and repair through `mb skill`;
+- git checkpoint plans and guarded commits through `mb checkpoint`.
+
+`mb` should stay inspectable, scriptable, and exit-coded. It should expose JSON
+where skills, dashboards, or future adapters need stable facts.
+
+## Skill Responsibilities
+
+Runtime skills own judgment-heavy work:
+
+- asking the operator the right question;
+- interpreting business context;
+- drafting research, decisions, bets, campaign artifacts, and review notes;
+- routing generated work to the right primitive;
+- calling deterministic `mb` commands for facts instead of reimplementing repo
+  health probes in prose;
+- keeping runtime claims honest.
+
+Claude Code is the supported runtime today. Other runtimes are compatibility
+targets until adapter code and smoke evidence exist.
+
+## Provider, Sidecar, And Dashboard Boundaries
+
+Provider systems record live operational facts. Sidecars can enrich Main Branch
+with structured data. Dashboards can make repo and provider truth easier to
+see.
+
+They remain optional and non-canonical unless a future accepted decision says
+otherwise.
+
+Correct pattern:
+
+```text
+campaigns/2026-05-workshop-waitlist/campaign.md
+  provider_refs.meta_ads.campaign_id -> provider object
+  metrics_sources[] -> sidecar/cache/private analytics source
+
+mb status / dashboard
+  reads campaign.md, graph, git, GitHub, and provider-safe summaries
+  displays facts and recommendations
+```
+
+Incorrect pattern:
+
+```text
+campaign.md becomes a raw ads database
+dashboard database becomes the only place campaign truth exists
+.mb/cache is treated as business memory
+```
+
+## Graph And Status
+
+`mb graph` should index durable markdown relationships: linked decisions,
+research, bets, campaigns, offers, outcomes, and documents.
+
+`mb status` should read those same durable relationships plus cheap local facts
+to answer:
+
+- what is stale;
+- what is active;
+- what changed since last check;
+- which campaigns need Ship or Reflect attention;
+- which bets lack linked campaign work;
+- which provider or sidecar signals need operator review.
+
+The status and graph surfaces should consume the campaign primitive instead of
+inventing a separate campaign model.
+
+## Validation And Migration
+
+The validation ladder is in [AGENTS.md](../AGENTS.md). The short rule is:
+prove the surface you changed.
+
+- Docs and decisions need public/private review and link sanity.
+- CLI behavior needs focused tests and exit-code/JSON coverage.
+- Packaging, templates, bundled data, or skill discovery need install smoke.
+- First-run or repo-shape changes need fixture repo smoke.
+- Runtime discovery or LLM-facing workflow changes need runtime smoke, or an
+  explicit blocker note.
+
+Migration should preserve user-authored content, distinguish compatibility
+bridges from split truth, and leave ambiguous legacy `outputs/` artifacts for
+operator review rather than silently classifying them.
+
+## Superseded Model
+
+Older architecture notes used `reference/`, `domain/`, `.vip/local.yaml`, and
+`outputs/` as central concepts. Those names can still appear in compatibility
+code, migration guidance, or historical decisions, but current public
+architecture is:
+
+- `core/` for evergreen business truth;
+- `campaigns/` for coordinated pushes;
+- `documents/` for supporting/raw/prototype/archive material;
+- `.mb/` for explicit local Main Branch state;
+- provider/sidecar/dashboard state outside canonical memory unless explicitly
+  linked and bounded.
