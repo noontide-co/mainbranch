@@ -15,14 +15,34 @@ linked_decisions:
 
 # Campaign Primitive And Architecture Model
 
-> **Superseded in part by
+> **⚠️ Superseded in part by
 > [decisions/2026-05-06-push-primitive-and-operator-vocabulary.md](2026-05-06-push-primitive-and-operator-vocabulary.md).**
+>
+> **The body below is historical except where preserved by this notice.**
 > The canonical engine primitive is now `push` (folder `pushes/`,
-> `type: push`, `linked_pushes`). `campaigns/` records remain as
-> compatibility reads — `mb validate`, `mb graph`, and `mb status` continue
-> to index them. New writes go to `pushes/`. The relationship model,
-> definition of a coordinated push, lifecycle, and non-campaign artifact
-> routing in this decision are unchanged.
+> `type: push`, `linked_pushes`). When the body says "`campaigns/` is the
+> canonical home," read that as the *historical* canonical. New writes go
+> to `pushes/`; `campaigns/` is a compatibility read only.
+>
+> What the body still gets right (preserved by the supersession note):
+> - the definition of a coordinated push;
+> - the relationship model (*strategy → bet → offer → push → provider
+>   data → reflection*);
+> - the lifecycle (`draft, planned, active, paused, completed, canceled,
+>   archived`) — same lifecycle, now applied to `pushes/`;
+> - the non-campaign artifact routing (where `research/`, `documents/`,
+>   `log/` content goes).
+>
+> What is now wrong if read literally:
+> - any sentence asserting that `campaigns/` is the canonical write
+>   target;
+> - the example `campaign.md` frontmatter as the canonical schema (it is
+>   the legacy schema and stays valid on read; new writes use `push.md`);
+> - the implication that `linked_campaigns` is the durable link field
+>   (it is now an alias on read; `linked_pushes` is canonical).
+>
+> Treat the new decision as authoritative when this body and that
+> decision conflict.
 
 ## Decision
 

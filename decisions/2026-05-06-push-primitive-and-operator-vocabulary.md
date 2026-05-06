@@ -60,31 +60,61 @@ describes the *shape* of the push (a launch is multi-phase; a drop is
 single-shot; a nurture is sequential). It is not the operator's
 display word; that belongs in operator vocabulary (§3).
 
-## 2. Legacy `campaigns/` Compatibility
+## 2. Legacy `campaigns/` Compatibility — Canonical Write, Dual Read
 
-`mb` continues to **read** every committed `campaigns/<slug>/campaign.md`
+The compatibility contract is **canonical write, dual read**.
+
+### New writes (canonical)
+
+`mb` writes new records as:
+
+- folder `pushes/<YYYY-MM-DD-slug>/push.md`;
+- frontmatter `type: push`;
+- link field `linked_pushes`;
+- push-shaped JSON keys.
+
+New skills, scaffolding, fixtures, and bundled docs use this shape.
+
+### Legacy reads (compatibility)
+
+`mb` continues to read every committed `campaigns/<slug>/campaign.md`
 record. Specifically:
 
 - `mb validate` accepts `campaigns/*/campaign.md` against the campaign
   schema and lifecycle from
   [decisions/2026-05-06-campaign-primitive-and-architecture-model.md](2026-05-06-campaign-primitive-and-architecture-model.md).
-- `mb graph` and `mb status` index `campaigns/` records and surface them
-  in the same shape as `pushes/`.
+- `mb graph` and `mb status` index `campaigns/` records.
 - `type: campaign` is a recognized alias of `type: push` on read.
 - `linked_campaigns` is a recognized alias of `linked_pushes` on read.
 - `campaign_path` and any committed examples that name campaign-shaped
   paths continue to resolve.
 
-`mb` **writes** new records as `pushes/`. New skills, scaffolding, and
-docs use the canonical push shape. There is no silent rewrite of
-existing private repos — every migration is operator-initiated and
-preview-first (§5).
+There is no silent rewrite of existing private repos — every migration
+is operator-initiated and preview-first (§5).
 
-This is a compatibility contract, not a permanent dual life. The
-write-side support for `campaigns/` will sunset after the migration
-command lands and at least one minor release of co-existence has
-shipped. The read-side support stays until the engine ships a
-deprecation that names a removal release.
+### JSON output transition is additive
+
+For at least one minor release after this decision lands, `mb status`,
+`mb graph`, and any other JSON-emitting command surface **add** push
+keys (`pushes`, `active_pushes`, etc.) **alongside** legacy campaign
+keys (`campaigns`, `active_campaigns`, etc.). Legacy keys carry an
+explicit deprecation marker in the JSON payload (e.g. a sibling
+`deprecated_campaign_keys: true` field, or the legacy keys themselves
+nested under `_deprecated:`) so consumers can detect the shift without
+breaking on first contact.
+
+Removal of the legacy keys is scheduled in a future release whose
+release notes name the removal target and the migration window. Until
+that release ships, JSON consumers may rely on either set; they are
+encouraged to migrate to the push keys at their own pace.
+
+### Sunset
+
+This is a compatibility contract, not a permanent dual life. Write-side
+support for `campaigns/` (i.e. tolerance of new commits writing to the
+legacy folder) sunsets after the migration command lands and at least
+one minor release of co-existence has shipped. Read-side support stays
+until the engine ships a deprecation that names a removal release.
 
 ## 3. Operator Vocabulary At `core/vocabulary.md`
 
@@ -103,50 +133,85 @@ These are two separate concerns and live in two separate files.
 
 ### Shape
 
+Machine-readable terms live in **frontmatter**, in a bounded `terms:`
+block. The body is for prose explanation only; tooling does not parse
+it:
+
 ```yaml
 ---
 type: vocabulary
+status: active
+terms:
+  push:
+    singular: drop
+    plural: drops
+  statuses:
+    active: live
+    completed: shipped
+  channels:
+    paid: paid traffic
+    organic: content
+  kinds:
+    launch: launch
+    drop: drop
+    challenge: challenge
 ---
-push: drop
-status:
-  active: live
-  completed: shipped
-channels:
-  paid: paid traffic
-  organic: content
-kind:
-  launch: launch
-  drop: drop
-  challenge: challenge
+
+This business calls coordinated pushes "drops." Active drops are
+"live"; completed drops are "shipped." See core/voice.md for tone.
 ```
 
-Bounded keys only — `push`, `status`, `channels`, `kind`. Anything
-outside that set is ignored or warned by the validator. Per-key values
-are display words; they replace the canonical word in operator-facing
-copy without changing the underlying engine state.
+Bounded keys only under `terms:` — `push`, `statuses`, `channels`,
+`kinds`. The `push` entry takes both `singular` and `plural` because
+operator-facing copy says both forms ("Your active drop" / "Two drops
+in flight"). Anything outside the bounded shape is ignored or warned
+by the validator. Per-key values are display words; they replace the
+canonical word in operator-facing copy without changing the underlying
+engine state.
 
 ### What vocabulary affects
 
 - Skill prompts (e.g. `/mb-push new` says "want to open a drop?" when
-  `push: drop` is set).
+  `terms.push.singular: drop` is set).
 - `mb status` conversational output ("Your active drop: Workshop
   waitlist. Day 14.").
 - Error messages aimed at operators.
 - Narration drafts (the operator's word goes in published artifacts).
 
-### What vocabulary does not affect
+### What vocabulary cannot change
 
-- Frontmatter on disk (`type: push`, `kind: launch`).
-- Link fields (`linked_pushes`).
-- Folder names (`pushes/`).
-- JSON output keys (`pushes`, `active_pushes`).
-- `mb validate` rules and enums.
-- AGENTS.md, contributor docs, command reference, troubleshooting.
+`core/vocabulary.md` is operator prose only. It must not rename, alias,
+or otherwise redirect any of these:
+
+- folder names (`pushes/`, `campaigns/`, `core/`, `bets/`, `decisions/`);
+- frontmatter `type:` values (`push`, `campaign`, `bet`, `decision`);
+- link field names (`linked_pushes`, `linked_campaigns`, `linked_bets`,
+  `linked_decisions`);
+- JSON output keys (`pushes`, `active_pushes`, `bets`, etc.);
+- validator rules and enums (`CAMPAIGN_STATUS`, the `kind:` enum, the
+  bounded vocabulary keys themselves);
+- CLI command names (`mb push`, `mb status`, `mb validate`, `mb graph`,
+  `mb doctor`, `mb migrate`);
+- contributor documentation (AGENTS.md, command reference, troubleshooting).
 
 The rule from the operating spine applies: canonical storage is boring
 and consistent; operator-facing language is personalized and consistent.
 **Folder names, frontmatter types, JSON keys, and prose labels do not
 mix casually.**
+
+### `kind:` is a canonical engine subtype, not vocabulary
+
+`kind:` describes the *shape* of a push: a `launch` is a multi-phase
+effort with pre-launch and post-launch arcs; a `drop` is a single-shot
+release; a `challenge` is a time-bounded participation push. These are
+engine concepts, set on `push.md` frontmatter, validated against the
+bounded enum.
+
+A business whose vocabulary maps `terms.push.singular: drop` does **not**
+change `kind:`. Their multi-phase launch is still `kind: launch` on
+disk and surfaces to the operator as "your launch drop" or "your
+drop." The display word and the engine subtype are independent
+concerns.
 
 ### Default and fallback
 
@@ -154,8 +219,8 @@ mix casually.**
   `active`, `completed`).
 - Partial `core/vocabulary.md` → engine speaks operator's word where
   defined, falls back to canonical otherwise.
-- Unknown keys in `core/vocabulary.md` → validator warns; engine
-  ignores.
+- Unknown keys under `terms:` → validator warns; engine ignores.
+- Body content → ignored by tooling; included for human readers.
 
 ## 4. `git push` And `mb push`
 
