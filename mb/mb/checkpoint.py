@@ -156,6 +156,7 @@ def _is_local_bridge(path: str) -> bool:
     return (
         path == ".claude/settings.local.json"
         or path.startswith(".claude/skills/")
+        or path.startswith(".claude/worktrees/")
         or path.startswith(".mb/backups/")
         or path.startswith(".mb/issue-drafts/")
     )

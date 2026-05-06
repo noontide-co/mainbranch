@@ -129,6 +129,20 @@ def test_checkpoint_blocks_forced_local_bridge_files(tmp_path: Path) -> None:
     assert report["safety"]["blocks"][0]["code"] == "local_bridge_file"
 
 
+def test_checkpoint_blocks_forced_claude_code_worktrees(tmp_path: Path) -> None:
+    repo = _business_repo(tmp_path)
+    worktree_state = repo / ".claude" / "worktrees" / "session" / "state.json"
+    worktree_state.parent.mkdir(parents=True)
+    worktree_state.write_text("{}", encoding="utf-8")
+    _git(repo, "add", "-f", ".claude/worktrees/session/state.json")
+
+    report = checkpoint_mod.plan(repo)
+
+    assert report["ok"] is False
+    assert report["status"] == "blocked"
+    assert report["safety"]["blocks"][0]["code"] == "local_bridge_file"
+
+
 def test_checkpoint_blocks_engine_repo(tmp_path: Path) -> None:
     repo = tmp_path / "engine"
     (repo / "mb" / "mb").mkdir(parents=True)

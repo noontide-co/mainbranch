@@ -173,6 +173,12 @@ point at an old engine clone, report them as follow-up work and do not claim
 the clone-to-pipx migration is fully complete until runtime behavior has been
 observed without relying on the clone.
 
+Claude Code app sessions may create `.claude/worktrees/` while you test a repo.
+That directory is local runtime state, not migration work. Current `mb init` and
+`mb skill link` add `.claude/worktrees/` to `.gitignore`; if an older repo shows
+it in `git status`, run `mb skill link --repo .` before judging the migration
+diff.
+
 If Claude accidentally dirties an existing branch during discovery, stop before
 running layout migration. Move the already-written Main Branch repair work onto
 a branch, keep user-authored files separate, and do not commit local status
@@ -184,7 +190,9 @@ markers:
 3. Commit durable repair files such as `.gitignore` changes.
 4. Do not commit `.mb/last-status-seen.json`; it is local operational state and
    should be gitignored.
-5. If the repo already had unrelated dirty or untracked user files, leave that
+5. Do not commit `.claude/worktrees/`; it is local Claude Code app state and
+   should be gitignored.
+6. If the repo already had unrelated dirty or untracked user files, leave that
    repo out of batch migration until the user reviews it.
 
 ## Command Mutability During Migration
@@ -201,6 +209,8 @@ Useful defaults:
   links; treat it as a write.
 - `mb skill link` writes Claude Code wiring and `.gitignore` repair entries;
   treat it as a write.
+- `.claude/worktrees/` is Claude Code app local state. It should be ignored, not
+  committed.
 - `mb skill repair` without `--apply` reports personal-skill conflicts;
   `--apply` moves stale Main Branch symlinks to backups.
 - `mb migrate status` and `mb migrate --check` inspect; `mb migrate --apply`

@@ -32,6 +32,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added migration guidance for static runtime-smoke fallbacks and for detecting
   old clone-path `.claude/lenses/` or `.claude/reference/` symlinks that
   skill-link repair does not yet own.
+- Updated generated repo scaffolds, `mb skill link`, and checkpoint safety so
+  Claude Code app `.claude/worktrees/` state is treated as local runtime output,
+  not business repo work to commit.
 
 ## [0.3.1] - 2026-05-05
 

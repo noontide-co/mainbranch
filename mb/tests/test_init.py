@@ -34,6 +34,7 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
 
     gitignore = (target / ".gitignore").read_text()
     assert ".claude/settings.local.json" in gitignore
+    assert ".claude/worktrees/" in gitignore
     assert ".claude/skills/mb-start" in gitignore
     assert ".mb/backups/" in gitignore
     assert ".mb/onboarding.json" in gitignore

@@ -42,6 +42,7 @@ __pycache__/
 .pytest_cache/
 node_modules/
 .venv/
+.claude/worktrees/
 .mb/backups/
 .mb/onboarding.json
 .mb/last-status-seen.json

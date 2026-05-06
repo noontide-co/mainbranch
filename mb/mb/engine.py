@@ -497,6 +497,7 @@ def link_skills(repo: str | Path) -> dict[str, Any]:
 
     gitignore_entries = [
         ".claude/settings.local.json",
+        ".claude/worktrees/",
         *[f".claude/skills/{name}" for name in bundled_skills()],
     ]
     if _append_unique_gitignore(target, gitignore_entries):

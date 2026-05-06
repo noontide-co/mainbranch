@@ -143,6 +143,20 @@ def test_link_skills_removes_legacy_project_symlink(tmp_path: Path) -> None:
     assert (repo / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
 
 
+def test_link_skills_ignores_claude_code_worktrees(tmp_path: Path, monkeypatch) -> None:
+    repo = tmp_path / "biz"
+
+    monkeypatch.setattr(engine_mod, "bundled_skills", lambda: ["mb-start"])
+
+    result = engine_mod.link_skills(repo)
+
+    assert result["ok"] is True
+    gitignore = (repo / ".gitignore").read_text(encoding="utf-8")
+    assert ".claude/settings.local.json" in gitignore
+    assert ".claude/worktrees/" in gitignore
+    assert ".claude/skills/mb-start" in gitignore
+
+
 def test_link_skills_removes_stale_mainbranch_engine_paths(tmp_path: Path) -> None:
     repo = tmp_path / "biz"
     stale_engine = tmp_path / "old-mainbranch"
