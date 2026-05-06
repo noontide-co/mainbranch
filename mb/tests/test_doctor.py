@@ -173,6 +173,60 @@ def test_doctor_repair_plan_is_read_only_for_status_marker(tmp_path: Path) -> No
     assert not marker.exists()
 
 
+def test_doctor_warns_on_legacy_campaigns_records(tmp_path: Path) -> None:
+    repo = tmp_path / "legacy-pushes"
+    init_run(path=str(repo), name="Acme")
+    legacy = repo / "campaigns" / "2026-04-spring-launch"
+    legacy.mkdir(parents=True)
+    (legacy / "campaign.md").write_text(
+        "---\nslug: spring-launch\nstatus: active\n---\n# spring launch\n",
+        encoding="utf-8",
+    )
+
+    report = doctor_mod.run(path=str(repo))
+
+    legacy_check = next(c for c in report["checks"] if c["name"] == "legacy-campaigns")
+    assert legacy_check["ok"] is False
+    assert legacy_check["severity"] == "warn"
+    assert "1 legacy campaign record" in legacy_check["detail"]
+    assert "mb migrate campaigns --plan" in legacy_check["detail"]
+    assert legacy_check["legacy_records"] == ["campaigns/2026-04-spring-launch/campaign.md"]
+
+
+def test_doctor_clean_repo_has_no_legacy_campaigns_warning(tmp_path: Path) -> None:
+    repo = tmp_path / "fresh"
+    init_run(path=str(repo), name="Acme")
+
+    report = doctor_mod.run(path=str(repo))
+
+    legacy_check = next(c for c in report["checks"] if c["name"] == "legacy-campaigns")
+    # `mb init` no longer scaffolds campaigns/, so there is nothing to warn on.
+    assert legacy_check["ok"] is True
+    assert legacy_check.get("severity") in {"ok", None}
+
+
+def test_doctor_repair_plan_exposes_legacy_campaigns_to_pushes_action(tmp_path: Path) -> None:
+    repo = tmp_path / "legacy-pushes-repair"
+    init_run(path=str(repo), name="Acme")
+    legacy = repo / "campaigns" / "2026-04-spring-launch"
+    legacy.mkdir(parents=True)
+    (legacy / "campaign.md").write_text(
+        "---\nslug: spring-launch\nstatus: active\n---\n# spring launch\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    actions = {action["id"]: action for action in payload["actions"]}
+    assert "legacy_campaigns_to_pushes" in actions
+    item = actions["legacy_campaigns_to_pushes"]
+    assert item["mode"] == "read"
+    assert item["safe_to_apply"] is True
+    assert item["command"] == "mb migrate campaigns --plan"
+
+
 def test_doctor_repair_plan_distinguishes_read_and_write_actions(tmp_path: Path) -> None:
     repo = tmp_path / "legacy"
     (repo / "reference" / "core").mkdir(parents=True)
