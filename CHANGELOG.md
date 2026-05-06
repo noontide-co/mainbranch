@@ -22,6 +22,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   canonical push facts (`pushes`, `active_pushes`, `push_count`) plus explicit
   legacy campaign compatibility keys and deprecation markers during the
   compatibility window. Refs #323.
+- Bundled write-heavy skills now show the minimum valid `push.md`
+  frontmatter required by `mb validate`, so runtime-generated push records
+  are less likely to drift from the deterministic schema. Refs #323.
 
 ### Added (MAIN-249 / #324)
 

@@ -22,6 +22,24 @@ canonical files. If the repo still has legacy `campaigns/` records,
 recommend `mb doctor` and `mb migrate campaigns --plan` before creating
 new push work.
 
+When creating `push.md`, include the validator-required frontmatter and fill
+the values from repo truth or operator answers:
+
+```yaml
+---
+type: push
+slug: YYYY-MM-DD-slug
+kind: launch
+status: planned
+health: unknown
+goal: { metric: "", target: "", by: YYYY-MM-DD }
+owner: ""
+audience: ""
+offer: core/offers/<offer>/offer.md
+promise: ""
+---
+```
+
 ---
 
 ## Pull Latest Updates

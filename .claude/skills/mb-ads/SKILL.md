@@ -29,6 +29,24 @@ mb migrate campaigns --plan     # read-only preview of moves
 The word "campaign" elsewhere in this skill refers to Meta Ads campaigns
 (the provider's term for its object) — not the Main Branch primitive.
 
+When creating `push.md`, include the validator-required frontmatter and fill
+the values from repo truth or operator answers:
+
+```yaml
+---
+type: push
+slug: YYYY-MM-DD-slug
+kind: launch
+status: planned
+health: unknown
+goal: { metric: "", target: "", by: YYYY-MM-DD }
+owner: ""
+audience: ""
+offer: core/offers/<offer>/offer.md
+promise: ""
+---
+```
+
 ## Step 0: Pre-Flight Readiness
 
 **Before triage, find the business repo, read deterministic Main Branch facts,
