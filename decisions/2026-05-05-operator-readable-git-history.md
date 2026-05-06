@@ -159,7 +159,7 @@ Next:
 - Draft the lander in /mb-site.
 
 Refs:
-- bets/workshop-waitlist.md
+- bets/2026-05-06-workshop-waitlist.md
 - decisions/2026-05-05-workshop-price.md
 - https://github.com/noontide-co/mainbranch/issues/300
 ```

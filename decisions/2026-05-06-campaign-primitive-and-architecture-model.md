@@ -152,7 +152,7 @@ linked_strategy:
 linked_offers:
   - core/offers/workshop/offer.md
 linked_bets:
-  - bets/workshop-waitlist.md
+  - bets/2026-05-06-workshop-waitlist.md
 linked_decisions:
   - decisions/2026-05-06-workshop-price.md
 linked_research: []
