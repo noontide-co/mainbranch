@@ -35,6 +35,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Updated generated repo scaffolds, `mb skill link`, and checkpoint safety so
   Claude Code app `.claude/worktrees/` state is treated as local runtime output,
   not business repo work to commit.
+- Clarified migration runtime smoke language so agents distinguish slash-command
+  discovery and read-only core access from a full `/mb-think` workflow.
 
 ## [0.3.1] - 2026-05-05
 

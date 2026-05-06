@@ -155,7 +155,15 @@ repo family, prefer a small runtime smoke before merge:
 
 1. Open Claude Code from the migrated business repo.
 2. Run `/mb-start`.
-3. Confirm a bundled skill can read the migrated core context.
+3. Run a bundled skill smoke and label what it proved:
+   - Discovery smoke: ask a read-only factual question such as
+     `/mb-think what is the soul of this production?`. Pass means Claude Code
+     recognized the slash command and read migrated core context from the
+     business repo. It does not prove the full `/mb-think` workflow.
+   - Full flow smoke: ask for a real research/decide/codify task and explicitly
+     say to pause before writing files. Pass means the skill follows its normal
+     workflow, writes only to the business repo after approval, and does not
+     write into the Main Branch engine.
 4. Confirm no skill writes into the engine repo.
 5. Then summarize whether the branch is ready to push, review, or merge.
 
@@ -365,8 +373,9 @@ git status --short
 
 Git-reported `100%` renames are stronger evidence than line-count comparisons.
 If the first migrated repo is the pilot for a larger set, let the branch sit
-until `/mb-start` and at least one bundled skill have been smoke-tested from
-that repo.
+until `/mb-start` and at least one bundled skill discovery smoke have been run
+from that repo. Require a full skill-flow smoke only when the migration changes
+skill behavior, write paths, or runtime discovery.
 
 ## Manual Layout Migration
 
