@@ -6,6 +6,7 @@ import difflib
 import json
 import re
 import shutil
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -498,9 +499,10 @@ def _infer_push_date(folder_name: str, frontmatter: dict[str, Any]) -> tuple[str
         value = frontmatter.get(field)
         if isinstance(value, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
             return value, f"frontmatter.{field}"
-        if hasattr(value, "isoformat"):
-            iso = value.isoformat()
-            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", iso):
+        iso_method = getattr(value, "isoformat", None)
+        if callable(iso_method):
+            iso = iso_method()
+            if isinstance(iso, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", iso):
                 return iso, f"frontmatter.{field}"
     return None
 
@@ -515,16 +517,103 @@ def _slug_without_date_prefix(folder_name: str) -> str:
     return folder_name
 
 
-def _enumerate_folder_contents(folder: Path, repo: Path) -> list[str]:
-    contents: list[str] = []
+def _enumerate_folder_contents(folder: Path, repo: Path) -> tuple[list[str], list[str]]:
+    """Split a campaign folder's children into (recognized, unrecognized) artifacts.
+
+    Recognized = listed in the Migration Rubric (ads/, emails/, posts/, site.md,
+    review-log.md, assets/, source/, etc.). These are auto-moved with the push.
+    Unrecognized = anything else inside the folder; these are flagged as
+    ambiguous within the move and surfaced for operator review rather than
+    silently moved.
+    """
+    recognized: list[str] = []
+    unrecognized: list[str] = []
     for child in sorted(folder.iterdir()):
         if child.name == "campaign.md":
             continue
         if child.name == ".gitkeep":
             continue
         rel = child.relative_to(repo).as_posix()
-        contents.append(rel)
-    return contents
+        is_recognized_dir = child.is_dir() and child.name in _PUSH_FOLDER_NAMES
+        is_recognized_file = child.is_file() and child.name in _PUSH_FILE_NAMES
+        if is_recognized_dir or is_recognized_file:
+            recognized.append(rel)
+        else:
+            unrecognized.append(rel)
+    return recognized, unrecognized
+
+
+def _git_first_added_date(repo: Path, path: Path) -> str | None:
+    """Best-effort git first-added date (YYYY-MM-DD) for a file.
+
+    Returns None when not in a git repo, when the file has never been committed,
+    or when git is unavailable. Never raises.
+    """
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "log",
+                "--diff-filter=A",
+                "--follow",
+                "--format=%ad",
+                "--date=short",
+                "--",
+                str(path.relative_to(repo)),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if not lines:
+        return None
+    candidate = lines[-1]
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", candidate):
+        return candidate
+    return None
+
+
+def _infer_push_date_with_git(
+    folder_name: str,
+    frontmatter: dict[str, Any],
+    record_path: Path,
+    repo: Path,
+) -> tuple[str, str] | None:
+    """Apply the full Migration Rubric date inference, including git fallback."""
+    primary = _infer_push_date(folder_name, frontmatter)
+    if primary is not None:
+        return primary
+    git_date = _git_first_added_date(repo, record_path)
+    if git_date is not None:
+        return git_date, "git.first-added"
+    return None
+
+
+def _classify_loose_top_level_file(child: Path, repo: Path) -> dict[str, Any]:
+    """A file at the top of campaigns/ has no folder context and no record. Ambiguous."""
+    rel = child.relative_to(repo).as_posix()
+    return {
+        "kind": "ambiguous",
+        "from": rel,
+        "reason": (
+            "loose file at the top of campaigns/ (not inside a campaign folder). "
+            "No campaign.md context; cannot infer a coordinated push."
+        ),
+        "suggestion": (
+            "review with the operator. If it is generated content, consider "
+            "documents/prototypes/ or documents/archive/. If it belongs to a "
+            "specific push, move it inside the push folder by hand and re-run "
+            "the plan. If unsure, leave in place."
+        ),
+    }
 
 
 def _classify_campaign_folder(folder: Path, repo: Path) -> dict[str, Any]:
@@ -534,7 +623,8 @@ def _classify_campaign_folder(folder: Path, repo: Path) -> dict[str, Any]:
     if not record.is_file():
         # No campaign.md -- this is generated material, not a coordinated push.
         # Per the rubric, do not auto-promote into pushes/.
-        contents = _enumerate_folder_contents(folder, repo)
+        recognized, unrecognized = _enumerate_folder_contents(folder, repo)
+        contents = recognized + unrecognized
         return {
             "kind": "ambiguous",
             "from": rel,
@@ -547,7 +637,7 @@ def _classify_campaign_folder(folder: Path, repo: Path) -> dict[str, Any]:
         }
 
     frontmatter = _read_campaign_frontmatter(record)
-    inferred = _infer_push_date(folder.name, frontmatter)
+    inferred = _infer_push_date_with_git(folder.name, frontmatter, record, repo)
     slug = _slug_without_date_prefix(folder.name)
     if inferred is None:
         return {
@@ -555,8 +645,8 @@ def _classify_campaign_folder(folder: Path, repo: Path) -> dict[str, Any]:
             "from": rel,
             "reason": (
                 "cannot infer a date for the push folder name. Folder has no "
-                "YYYY-MM-DD or YYYY-MM prefix and frontmatter has no `started` "
-                "or `review_on` date."
+                "YYYY-MM-DD or YYYY-MM prefix, frontmatter has no `started` or "
+                "`review_on` date, and the file has no git history."
             ),
             "suggestion": (
                 "add `started: YYYY-MM-DD` to the campaign.md frontmatter or "
@@ -566,7 +656,7 @@ def _classify_campaign_folder(folder: Path, repo: Path) -> dict[str, Any]:
     date_str, date_source = inferred
     push_folder = f"pushes/{date_str}-{slug}"
     push_record_rel = f"{push_folder}/push.md"
-    folder_contents = _enumerate_folder_contents(folder, repo)
+    move_with_push, review_inside_folder = _enumerate_folder_contents(folder, repo)
     frontmatter_changes: list[str] = []
     if frontmatter.get("type") == "campaign":
         frontmatter_changes.append("type: campaign -> type: push")
@@ -582,6 +672,11 @@ def _classify_campaign_folder(folder: Path, repo: Path) -> dict[str, Any]:
             "provider_refs.meta_ads.campaign_id preserved (Meta's term for its object, "
             "not the engine primitive)"
         )
+    if review_inside_folder:
+        notes.append(
+            "unrecognized files inside this folder will NOT auto-move with the push; "
+            "see review_inside_folder for the operator-review list"
+        )
     return {
         "kind": "move",
         "from": rel,
@@ -590,7 +685,8 @@ def _classify_campaign_folder(folder: Path, repo: Path) -> dict[str, Any]:
         "date_source": date_source,
         "slug": slug,
         "frontmatter_changes": frontmatter_changes,
-        "folder_contents": folder_contents,
+        "move_with_push": move_with_push,
+        "review_inside_folder": review_inside_folder,
         "notes": notes,
     }
 
@@ -624,13 +720,28 @@ def plan_campaigns_to_pushes(repo: str | Path = ".") -> dict[str, Any]:
         envelope["next"] = "no legacy campaigns/ folder; nothing to migrate"
         return envelope
 
-    children = [child for child in sorted(campaigns_dir.iterdir()) if child.is_dir()]
-    if not children:
+    direct_children = [
+        child for child in sorted(campaigns_dir.iterdir()) if child.name != ".gitkeep"
+    ]
+    if not direct_children:
         envelope["next"] = "campaigns/ folder is empty; nothing to migrate"
         return envelope
 
-    for folder in children:
-        classification = _classify_campaign_folder(folder, target)
+    for child in direct_children:
+        if child.is_file():
+            classification = _classify_loose_top_level_file(child, target)
+        elif child.is_dir():
+            classification = _classify_campaign_folder(child, target)
+        else:
+            # Symlink or other; skip with a conservative ambiguous entry.
+            classification = {
+                "kind": "ambiguous",
+                "from": child.relative_to(target).as_posix(),
+                "reason": "non-file, non-directory entry under campaigns/",
+                "suggestion": (
+                    "review with the operator; the migrate planner does not touch symlinks."
+                ),
+            }
         kind = classification.pop("kind")
         if kind == "move":
             envelope["moves"].append(classification)

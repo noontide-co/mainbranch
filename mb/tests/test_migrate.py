@@ -346,7 +346,113 @@ def test_plan_campaigns_classifies_dated_folder_as_move(tmp_path: Path) -> None:
     assert "type: campaign -> type: push" in move["frontmatter_changes"]
     assert "linked_campaigns -> linked_pushes (rename)" in move["frontmatter_changes"]
     assert any("provider_refs.meta_ads.campaign_id" in note for note in move["notes"])
-    assert "campaigns/2026-04-15-spring-launch/ads.md" in move["folder_contents"]
+    # ads.md and review-log.md are recognized push artifacts and auto-move with the push.
+    assert "campaigns/2026-04-15-spring-launch/ads.md" in move["move_with_push"]
+    assert "campaigns/2026-04-15-spring-launch/review-log.md" in move["move_with_push"]
+    assert move["review_inside_folder"] == []
+
+
+def test_plan_campaigns_flags_unrecognized_files_inside_a_move_for_review(
+    tmp_path: Path,
+) -> None:
+    """Per the rubric, only recognized push artifacts auto-move with the push.
+
+    Unrecognized files inside the campaign folder (e.g. random notes, non-push
+    subfolders) should NOT be auto-promoted; they surface for operator review.
+    """
+    folder = tmp_path / "campaigns" / "2026-04-15-spring-launch"
+    folder.mkdir(parents=True)
+    (folder / "campaign.md").write_text(
+        "---\nslug: spring-launch\nstatus: active\nstarted: 2026-04-15\n---\n# spring\n",
+        encoding="utf-8",
+    )
+    (folder / "ads.md").write_text("# ads\n", encoding="utf-8")  # recognized
+    (folder / "random-notes.md").write_text("# random\n", encoding="utf-8")  # unrecognized
+    (folder / "weird-subdir").mkdir()  # unrecognized folder
+    (folder / "weird-subdir" / "thing.md").write_text("# thing\n", encoding="utf-8")
+
+    result = migrate_mod.plan_campaigns_to_pushes(tmp_path)
+
+    move = result["moves"][0]
+    assert "campaigns/2026-04-15-spring-launch/ads.md" in move["move_with_push"]
+    assert "campaigns/2026-04-15-spring-launch/random-notes.md" in move["review_inside_folder"]
+    assert "campaigns/2026-04-15-spring-launch/weird-subdir" in move["review_inside_folder"]
+    assert any(
+        "unrecognized files inside this folder will NOT auto-move" in note for note in move["notes"]
+    )
+
+
+def test_plan_campaigns_classifies_loose_top_level_file_as_ambiguous(tmp_path: Path) -> None:
+    """A file directly under campaigns/ (not inside a push folder) is ambiguous.
+
+    Doctor flags these as ambiguous_files; migrate must agree, not silently
+    skip them by walking only directories.
+    """
+    (tmp_path / "campaigns").mkdir()
+    (tmp_path / "campaigns" / "loose.md").write_text("# loose\n", encoding="utf-8")
+
+    result = migrate_mod.plan_campaigns_to_pushes(tmp_path)
+
+    assert result["summary"] == {"moves": 0, "ambiguous": 1, "blockers": 0}
+    ambiguous = result["ambiguous"][0]
+    assert ambiguous["from"] == "campaigns/loose.md"
+    assert "loose file at the top of campaigns/" in ambiguous["reason"]
+
+
+def test_plan_campaigns_uses_git_first_added_date_when_other_signals_are_missing(
+    tmp_path: Path,
+) -> None:
+    """Migration Rubric: folder prefix > frontmatter > git first-added.
+
+    A repo with a real git history exposes the file's first-added date; the
+    planner uses it when no other signal is available.
+    """
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    folder = repo / "campaigns" / "spring-launch"
+    folder.mkdir(parents=True)
+    record = folder / "campaign.md"
+    record.write_text(
+        "---\nslug: spring-launch\nstatus: active\n---\n# spring\n",
+        encoding="utf-8",
+    )
+
+    import subprocess
+
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=repo,
+        check=True,
+    )
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-m",
+            "initial",
+            "--date",
+            "2026-04-10T00:00:00",
+        ],
+        cwd=repo,
+        check=True,
+        env={
+            "GIT_AUTHOR_DATE": "2026-04-10T00:00:00",
+            "GIT_COMMITTER_DATE": "2026-04-10T00:00:00",
+            "PATH": "/usr/bin:/bin:/usr/local/bin",
+        },
+    )
+
+    result = migrate_mod.plan_campaigns_to_pushes(repo)
+
+    assert result["summary"]["moves"] == 1
+    move = result["moves"][0]
+    assert move["date"] == "2026-04-10"
+    assert move["date_source"] == "git.first-added"
 
 
 def test_plan_campaigns_uses_month_prefix_when_only_month_is_present(tmp_path: Path) -> None:
