@@ -435,12 +435,70 @@ def onboard_plan_cmd(
     raise typer.Exit(0 if result["ok"] else 1)
 
 
-@app.command("doctor")
+def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
+    repo = "."
+    plan = False
+    apply_changes = False
+    include_migration = False
+    local_json = json_out
+    idx = 0
+    while idx < len(args):
+        arg = args[idx]
+        if arg == "--help":
+            typer.echo("Usage: mb doctor repair [--repo PATH] [--plan | --apply] [--json]")
+            typer.echo("")
+            typer.echo("Plan or apply guided business-repo reconciliation repairs.")
+            raise typer.Exit(0)
+        if arg == "--repo":
+            idx += 1
+            if idx >= len(args):
+                typer.echo("mb doctor repair: --repo requires a path", err=True)
+                raise typer.Exit(2)
+            repo = args[idx]
+        elif arg == "--plan":
+            plan = True
+        elif arg == "--apply":
+            apply_changes = True
+        elif arg == "--include-migration":
+            include_migration = True
+        elif arg == "--json":
+            local_json = True
+        else:
+            typer.echo(f"mb doctor repair: unknown option {arg}", err=True)
+            raise typer.Exit(2)
+        idx += 1
+
+    if plan and apply_changes:
+        typer.echo("mb doctor repair: choose only one of --plan or --apply", err=True)
+        raise typer.Exit(2)
+    if include_migration and not apply_changes:
+        typer.echo("mb doctor repair: --include-migration requires --apply", err=True)
+        raise typer.Exit(2)
+
+    if apply_changes:
+        report = doctor_mod.repair_apply(repo=repo, include_migration=include_migration)
+    else:
+        report = doctor_mod.repair_plan(repo=repo)
+
+    if local_json:
+        typer.echo(json.dumps(report, indent=2))
+    else:
+        doctor_mod.render_repair(report)
+    raise typer.Exit(0)
+
+
+@app.command(
+    "doctor",
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+)
 def doctor_cmd(
+    ctx: typer.Context,
     path: str = typer.Argument(".", help="Repo to diagnose."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Check the health of a Main Branch repo. Exits 1 on red checks."""
+    if path == "repair":
+        _doctor_repair_from_args(list(ctx.args), json_out=json_out)
     report = doctor_mod.run(path=path)
     if json_out:
         typer.echo(json.dumps(report, indent=2))

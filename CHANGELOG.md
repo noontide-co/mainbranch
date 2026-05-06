@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added `mb doctor repair --plan/--apply` as a guided repo reconciliation
+  surface with read-only planning, JSON output, safe wiring/local-state repairs,
+  validation and graph summaries, git review guidance, and explicit runtime
+  smoke reminders. Refs #314.
+
 ### Changed
 
 - Clarified quick start and beginner docs so daily users run `claude` then

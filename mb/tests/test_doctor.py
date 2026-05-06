@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
+from typer.testing import CliRunner
+
 from mb import doctor as doctor_mod
+from mb.cli import app
 from mb.doctor import _detect_cloud_paths, _repo_layout_check, run
 from mb.init import run as init_run
+
+runner = CliRunner()
 
 
 def test_doctor_runs_on_empty_dir(tmp_path: Path) -> None:
@@ -141,3 +147,63 @@ def test_doctor_json_and_human_output_include_required_update(
     output = capsys.readouterr().out
     assert "Update required." in output
     assert "pipx upgrade mainbranch" in output
+
+
+def test_doctor_command_still_runs_after_repair_subcommand_added(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["doctor", str(tmp_path), "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    assert payload["repo"] == str(tmp_path.resolve())
+    assert "checks" in payload
+
+
+def test_doctor_repair_plan_is_read_only_for_status_marker(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    marker = repo / ".mb" / "last-status-seen.json"
+    assert not marker.exists()
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["schema"] == "mb.doctor.repair"
+    assert payload["read_only"] is True
+    assert not marker.exists()
+
+
+def test_doctor_repair_plan_distinguishes_read_and_write_actions(tmp_path: Path) -> None:
+    repo = tmp_path / "legacy"
+    (repo / "reference" / "core").mkdir(parents=True)
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    actions = {action["id"]: action for action in payload["actions"]}
+    assert actions["migration-preview"]["mode"] == "read"
+    assert actions["migration-apply"]["mode"] == "write"
+    assert actions["migration-apply"]["safe_to_apply"] is False
+
+
+def test_doctor_repair_apply_moves_old_clone_symlink_to_backup(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    old_engine = tmp_path / "mb-vip-old"
+    old_lens = old_engine / ".claude" / "lenses" / "ops"
+    old_lens.mkdir(parents=True)
+    stale_link = repo / ".claude" / "lenses" / "ops"
+    stale_link.parent.mkdir(parents=True, exist_ok=True)
+    stale_link.symlink_to(old_lens, target_is_directory=True)
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    applied_ids = {action["id"] for action in payload["applied_actions"]}
+    assert "legacy-claude-link-repair" in applied_ids
+    assert not stale_link.exists()
+    backups = list((repo / ".mb" / "backups").rglob("claude-links/.claude/lenses/ops"))
+    assert backups
+    assert ".mb/backups/" in (repo / ".gitignore").read_text(encoding="utf-8")
