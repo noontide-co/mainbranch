@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added a public Claude Code runtime dogfood runbook for release-bearing manual
+  smoke evidence, including sanitized fixture setup, read-only CLI checks,
+  `/mb-start`, `/mb-think`, `/mb-organic`, checkpoint behavior, repo-boundary
+  checks, and a paste-back evidence template. Refs #355.
+
 ## [0.3.6] - 2026-05-07
 
 v0.3.6 makes Main Branch more disciplined about how business work gets saved,
@@ -39,6 +46,10 @@ pretending untested provider automation is shipped.
 
 ### Added
 
+- Documented the proven Claude Code invocation contract for `/mb-start`,
+  including extra-text behavior, natural-language routing, the required
+  project-local `.claude/skills/mb-*` bridge links, and the repair path when
+  Claude Code reports `Unknown command: /mb-start`. Refs #354.
 - `mb checkpoint` now uses the accepted business-readable checkpoint verb
   contract, proposes subjects such as `[added] market.md`, validates checkpoint
   messages with `--validate` or stdin, and exposes parsed verb/loop/channel
@@ -62,6 +73,9 @@ pretending untested provider automation is shipped.
 
 ### Changed
 
+- Package builds now use SPDX-style MIT license metadata and the CI/local
+  quality gates type-check tests, raise the coverage floor to 79%, and keep
+  Windows as an explicit experimental, non-CI-gated platform. Refs #135.
 - Added `/mb-think` winning-ad research guidance for customer language,
   competitor gap maps, review mining, script teardown, and social comment
   mining, with `/mb-ads` routing pointers and provider-boundary notes for

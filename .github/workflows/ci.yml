@@ -42,11 +42,11 @@ jobs:
       - name: Ruff lint
         run: ruff check .
 
-      - name: Mypy (strict)
-        run: mypy mb
+      - name: Mypy (strict package, checked tests)
+        run: mypy mb tests
 
       - name: Pytest with coverage
-        run: pytest tests/ -v --cov=mb --cov-report=term-missing --cov-fail-under=70
+        run: pytest tests/ -v --cov=mb --cov-report=term-missing --cov-fail-under=79
 
   skill-validate:
     name: SKILL.md line-count gate

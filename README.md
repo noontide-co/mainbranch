@@ -96,7 +96,9 @@ outcomes, and checkpoints.
 
 You'll need a Claude Pro ($20/mo) or Max subscription. Install Claude Code itself from [claude.ai](https://claude.ai) — see [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md) for a step-by-step.
 
-Tested on macOS and Linux. Windows is experimental; see [docs/compatibility.md](docs/compatibility.md). Power users on Windows should use WSL2 for the closest supported path.
+Tested on macOS and Linux. Windows is experimental and not part of the CI
+release gate; see [docs/compatibility.md](docs/compatibility.md). Power users
+on Windows should use WSL2 for the closest supported path.
 
 **New to Claude Code, git, or terminal?** Read [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md) — it covers everything step-by-step, including common errors.
 
@@ -284,6 +286,12 @@ environment variables.
 
 Skills are pre-built workflows you invoke with slash prompts. Instead of figuring out how to prompt Claude, you type `/mb-ads` and Claude knows exactly what to do — reads your business files, then generates output that matches your voice.
 
+The supported Claude Code contract is project-local skill discovery through the
+business repo's `.claude/skills/mb-*` bridge links. Plain `/mb-start` is the
+daily entrypoint; extra text after it is treated as normal instruction, not a
+stable `$ARGUMENTS` command API. See
+[docs/claude-code-invocation-contract.md](docs/claude-code-invocation-contract.md).
+
 Some skills ship growth work. Others maintain operating memory. `/mb-start`,
 `/mb-status`, `/mb-think`, `/mb-bet`, `/mb-end`, `mb checkpoint`, `mb graph`,
 and `mb connect` are as important as the content skills because they keep the
@@ -436,7 +444,7 @@ For platform support and security reporting, see [SUPPORT.md](SUPPORT.md), [SECU
 
 - "404 error" or "Repository not found" — verify the URL and your network. The repo is public; no access request needed.
 - "Claude doesn't see my files" — make sure you started Claude in your business repo folder and ran `/mb-start`.
-- "Skills aren't working" — run `mb skill link --repo .` from your business repo to repair bridge symlinks, then restart Claude. If still broken, run `/mb-setup`.
+- "Skills aren't working" — run `mb skill link --repo .` from your business repo to repair bridge symlinks and known stale Main Branch shadows, then restart Claude. If still broken, run `mb skill repair --repo .` to inspect unresolved personal-skill conflicts or run `/mb-setup`.
 - "Output sounds generic" — add more detail to your core files, especially `core/voice.md`.
 - "I edited Main Branch but can't push" — that's expected for most users. Main Branch is the shared engine. Your business data goes in YOUR repo.
 

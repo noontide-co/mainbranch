@@ -201,6 +201,20 @@ def test_claude_plugin_manifest_points_at_prefixed_skills() -> None:
     assert (manifest_path.parents[1] / ".claude" / "skills" / "mb-start" / "SKILL.md").is_file()
 
 
+def test_claude_code_invocation_contract_documents_supported_skill_surface() -> None:
+    """Public docs keep the proven Claude Code skill contract visible."""
+    root = Path(__file__).resolve().parents[2]
+    contract = (root / "docs" / "claude-code-invocation-contract.md").read_text(encoding="utf-8")
+    compatibility = (root / "docs" / "compatibility.md").read_text(encoding="utf-8")
+
+    assert "project-local" in contract
+    assert "bridge links" in contract
+    assert ".claude/skills/mb-start" in contract
+    assert "Unknown command: /mb-start" in contract
+    assert "$ARGUMENTS" in contract
+    assert "Claude Code Invocation Contract" in compatibility
+
+
 def test_main_help_describes_engine() -> None:
     """Root help mentions the engine purpose."""
     result = runner.invoke(app, ["--help"])

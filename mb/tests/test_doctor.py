@@ -42,7 +42,11 @@ def test_doctor_reuses_github_context_for_integrations(tmp_path: Path, monkeypat
             "safe_to_share": True,
         }
 
-    monkeypatch.setattr(doctor_mod.connect_mod, "github_context", fake_context)
+    monkeypatch.setattr(
+        doctor_mod.connect_mod,  # type: ignore[attr-defined]
+        "github_context",
+        fake_context,
+    )
 
     report = run(path=str(tmp_path))
 
@@ -430,7 +434,11 @@ def test_doctor_legacy_symlink_keeps_current_active_engine_root(
     lens_link.parent.mkdir(parents=True)
     lens_link.symlink_to(active_lens, target_is_directory=True)
 
-    monkeypatch.setattr(doctor_mod.engine_mod, "engine_root", lambda: active_root)
+    monkeypatch.setattr(
+        doctor_mod.engine_mod,  # type: ignore[attr-defined]
+        "engine_root",
+        lambda: active_root,
+    )
 
     result = doctor_mod._legacy_claude_symlinks(repo)
 

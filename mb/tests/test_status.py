@@ -587,7 +587,7 @@ def test_status_ranker_mentions_due_bets(tmp_path: Path, monkeypatch) -> None:
         },
     )
     monkeypatch.setattr(
-        status_mod.onboard_mod,
+        status_mod.onboard_mod,  # type: ignore[attr-defined]
         "onboarding_status",
         lambda repo: {"summary": {"status": "ready"}, "checklist": []},
     )

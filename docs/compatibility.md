@@ -18,6 +18,10 @@ This page is the public compatibility contract for that surface.
 
 **Windows tip — try WSL2.** If you're on Windows and want a working setup today, use [Windows Subsystem for Linux 2 (WSL2)](https://learn.microsoft.com/en-us/windows/wsl/install). Inside WSL2, follow the supported Linux flow. The pipx install path works there.
 
+Main Branch intentionally does not run a `windows-latest` CI gate while Windows
+is experimental. Windows bugs are useful signal, but release quality is gated on
+the supported macOS/Linux path and the Linux Python CI matrix.
+
 ## What "supported" means
 
 Supported means:
@@ -44,6 +48,14 @@ For agent runtimes, support requires the runtime adapter contract in
 discovery rules, install/update behavior, generated-file and state rules,
 `mb doctor` / `mb status` / `mb start` expectations, and fresh-repo runtime
 smoke evidence. Claude Code is the reference adapter today.
+
+For release-bearing Claude Code smoke evidence, use the
+[Claude Code runtime dogfood runbook](claude-code-runtime-dogfood.md).
+
+For the exact supported Claude Code slash-command behavior, including
+`/mb-start`, extra text after the slash command, natural-language routing, and
+skill-link repair, see
+[Claude Code Invocation Contract](claude-code-invocation-contract.md).
 
 ## Recommended setup
 
@@ -113,6 +125,11 @@ mb doctor
 - The CLI scaffolds, validates, graphs, resolves, and links the current Claude
   Code skill adapter. Most business workflows still happen through Claude Code
   slash commands.
+- Claude Code slash-command discovery depends on project-local
+  `.claude/skills/mb-*` bridge links in the business repo. The
+  `.claude/settings.local.json` `additionalDirectories` entry grants engine
+  file access, but it is not enough by itself for reliable `/mb-start`
+  discovery.
 - Codex, Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and local
   runtimes remain roadmap surfaces until each has a documented adapter and
   smoke evidence.

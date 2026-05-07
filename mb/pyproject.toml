@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,8 @@ version = "0.3.6"
 description = "Main Branch engine umbrella - scaffolds, validates, and graphs business-as-files repos. Claude Code first, runtime-agnostic by design."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
   { name = "Devon Meadows", email = "devon@noontide.co" }
 ]
@@ -23,7 +24,6 @@ classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
@@ -98,12 +98,19 @@ no_implicit_optional = true
 module = ["yaml.*", "rich.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+# Check test bodies without forcing every pytest fixture parameter to be annotated.
+disallow_untyped_defs = false
+check_untyped_defs = true
+disable_error_code = ["no-untyped-def"]
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra --strict-markers"
 testpaths = ["tests"]
 
 [tool.coverage.report]
-# Block merge if total coverage drops below 70%. Tests don't have to cover
+# Block merge if total coverage drops below 79%. Tests don't have to cover
 # every branch — they have to cover the ones the user actually hits.
-fail_under = 70
+fail_under = 79

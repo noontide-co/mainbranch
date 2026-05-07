@@ -15,8 +15,8 @@ fi
 
 "$PYTHON" -m ruff format --check .
 "$PYTHON" -m ruff check .
-"$PYTHON" -m mypy mb
-"$PYTHON" -m pytest tests/ -v --cov=mb --cov-report=term-missing --cov-fail-under=70
+"$PYTHON" -m mypy mb tests
+"$PYTHON" -m pytest tests/ -v --cov=mb --cov-report=term-missing --cov-fail-under=79
 "$PYTHON" -m mb skill validate --all --json
 fail=0
 while IFS= read -r f; do
