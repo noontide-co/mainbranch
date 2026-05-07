@@ -34,43 +34,37 @@ Main Branch already ships:
 Claude Code is the supported runtime today. Other runtimes are compatibility
 targets until adapter code and smoke evidence exist.
 
-## Current: v0.3.x - Tighten The Daily Operating Loop
+## Current Direction: Make The Daily Loop Boring
 
-The current product step is tightening `mb status`, `/mb-start`, `/mb-status`,
-doctor repair, checkpoints, pushes, provider readiness, and issue drafting into
-a reliable daily decision surface.
+The current product step is making the normal day feel coherent: open the
+business repo, start Claude Code, ask `/mb-start`, see what matters, repair what
+is stale, ship the next piece of work, and save a readable checkpoint before
+moving on.
 
-Shipped scope:
+The work clusters into a few durable buckets:
 
-- `mb status` v1 with "since last check", drift detection, and a stable JSON
-  schema ([#261](https://github.com/noontide-co/mainbranch/issues/261));
-- deterministic next-action ranking with cited status signals;
-- `/mb-start` and `/mb-status` reading the same status substrate instead of
-  duplicating repo probes;
-- shared readiness and repair surfaces through `mb doctor`, `mb doctor repair`,
-  `mb update`, `mb start`, and provider readiness JSON;
-- privacy-safe issue drafting for bugs, missing workflows, confusing errors,
-  and feature ideas ([#264](https://github.com/noontide-co/mainbranch/issues/264));
-- `bets/` and `/mb-bet` as the first primitive for tracking and reflecting on
-  operator bets ([#266](https://github.com/noontide-co/mainbranch/issues/266));
-- `pushes/` as the canonical coordinated-work folder, with `campaigns/`
-  retained as compatibility read;
-- git checkpoints as business-readable save points during long agent runs.
-
-Active follow-up scope:
-
-- make checkpoint verbs business-readable and consistent
-  ([#301](https://github.com/noontide-co/mainbranch/issues/301));
-- install business commit validation into repo workflows
-  ([#302](https://github.com/noontide-co/mainbranch/issues/302));
-- use the business git journal in status and timelines
-  ([#303](https://github.com/noontide-co/mainbranch/issues/303));
-- define a stable JSON result envelope across `mb` commands
-  ([#297](https://github.com/noontide-co/mainbranch/issues/297));
-- harden old-layout migration and legacy reference-path repair
-  ([#284](https://github.com/noontide-co/mainbranch/issues/284));
-- move provider automation behind explicit approval gates
-  ([#286](https://github.com/noontide-co/mainbranch/issues/286)).
+- **Start and status.** `/mb-start`, `/mb-status`, and `mb status` should read
+  the same facts: since-last-check changes, ranked next actions, drift,
+  onboarding progress, update severity, provider readiness, GitHub tasks, and
+  recent business activity.
+- **Repair and migration.** `mb doctor`, `mb doctor repair`, `mb update`, and
+  `mb migrate` should make stale installs, old repo layouts, broken skill
+  wiring, ignored local state, and provider setup problems visible and
+  repairable without asking a non-developer to reason through git plumbing.
+- **Business-readable history.** Checkpoints should feel like saved business
+  progress, not developer ceremony. The git journal should become a readable
+  timeline for status, handoff, retros, and future dashboards.
+- **Pushes and growth workflows.** Ads, organic content, VSLs, sites, research,
+  bets, and coordinated pushes remain the strongest shipped wedge. `pushes/` is
+  the canonical folder for coordinated work; `campaigns/` remains a
+  compatibility read for older repos.
+- **Provider rails.** Cloudflare, GitHub, Google/Workspace, ads providers,
+  Apify, Postiz-style social scheduling, and future sidecars should enter
+  through explicit, tested rails with approval gates where money, publishing,
+  account mutation, or customer contact is involved.
+- **Issue and friction capture.** Confusing errors, missing workflows, and
+  repeated repair steps should turn into privacy-safe issue drafts so real use
+  improves the public engine.
 
 Anti-scope for v0.3.x:
 
@@ -97,11 +91,8 @@ Planned scope:
   provider metrics;
 - team daily log surfaces built from commits, checkpoints, issues, PRs, and
   explicit `log/` files instead of treating raw chat as source of truth;
-- follow-up implementation work from the workspace/repo boundary decision and
-  markdown/link conventions, including dashboard spikes, team daily log
-  surfaces, finance/legal warnings, and broader link repair where issues prove
-  the need ([#274](https://github.com/noontide-co/mainbranch/issues/274),
-  [#275](https://github.com/noontide-co/mainbranch/issues/275)).
+- finance/legal warnings and access-boundary views that make sensitive repos
+  obvious without pulling private raw data into shared business memory.
 
 Anti-scope:
 
@@ -112,7 +103,7 @@ Anti-scope:
 - no "connect every SaaS" hub. Provider rails are curated, official where
   possible, deterministic, smoke-tested, and optional.
 
-## Later: v0.4 - Bets And Pushes Become Operating Systems
+## Later: Bets And Pushes Become Operating Systems
 
 The next proof point after the daily decision loop is graduating real business
 bets into offers, pages, ads, fulfillment, and public Ship surfaces.
@@ -121,13 +112,13 @@ Planned scope:
 
 - links between bets, decisions, research, pushes, and outcomes;
 - public bets feed generated through site workflows;
-- offer launch workflow: keyword gate, lander, ads, and `/mb-start`
-  orchestration ([#89](https://github.com/noontide-co/mainbranch/issues/89));
+- offer launch workflows that connect research, keyword gates, landers, ads,
+  organic distribution, tracking, and `/mb-start` orchestration;
 - deterministic site/CMS rails over Cloudflare Pages, DNS, GitHub, and
   operator-approved measurement checks;
 - decisions on Ops surfaces (books, P&L, compliance) and fulfillment scope;
 - bookkeeping/P&L primitives that respect finance-data privacy boundaries
-  ([#128](https://github.com/noontide-co/mainbranch/issues/128)).
+  while still giving operators useful summaries.
 
 ## Longer Range
 
