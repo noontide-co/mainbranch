@@ -22,6 +22,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `/mb-start`, `/mb-think`, `/mb-organic`, checkpoint behavior, repo-boundary
   checks, and a paste-back evidence template. Refs #355.
 
+### Changed
+
+- Documented the public build-vs-wrap-vs-sidecar boundary for provider CLIs,
+  MCP servers, hosted workflows, and future sidecars, with concrete guidance
+  for Cloudflare, Postiz, Apify/X research, Vercel-style platforms,
+  Beancount-style bookkeeping, and Google Ads/GTM readiness. Refs #366.
+
 ## [0.3.6] - 2026-05-07
 
 v0.3.6 makes Main Branch more disciplined about how business work gets saved,

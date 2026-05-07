@@ -81,6 +81,58 @@ Use this rubric before adding, promoting, replacing, or removing a dependency.
 | Does it mutate external accounts? | Spending, publishing, emailing, deploying, and customer/account mutation need explicit operator action and provider authority. |
 | What is the exit plan? | Record the replacement, fallback, deprecation path, or reason the dependency can stay optional. |
 
+## Build, Wrap, Sidecar, Or Decline
+
+Use this rule when a provider, CLI, API, MCP server, hosted workflow, or future
+helper tool already exists.
+
+| Product move | Use when | Do not use when | Main Branch owns |
+|---|---|---|---|
+| Use the provider directly | The official CLI, API, MCP server, or dashboard is already the right operator-facing surface; the workflow is low-risk, one-off, or provider-native; and Main Branch does not need repo context to explain it. | The workflow affects daily status, setup, repair, publishing, spending, account mutation, or business-memory routing. | Documentation, exact commands, and optional links from business files. |
+| Wrap with `mb` | The provider affects a Main Branch loop and operators need readiness checks, safe metadata, repair commands, JSON facts, approval gates, or business-language routing. | The wrapper would hide provider authority, duplicate a large provider product, or run judgment-heavy synthesis inside `mb`. | Connection metadata, health/readiness states, repair guidance, deterministic checks, and approval boundaries. |
+| Build an optional sidecar CLI | The job is specialized, provider-heavy, independently testable, and useful across workflows, but would bloat core `mb`; it can return a stable JSON envelope with provenance and safe failure behavior. | The behavior is universal repo structure, migration, validation, or runtime wiring that every business repo needs. | Discovery, invocation, envelope validation, cache policy, status surfacing, and graceful degradation. |
+| Graduate into core `mb` | The behavior is deterministic, repo-structural, broadly needed by skills/status/dashboards, and does not require provider-specific bulk or background service state. | The behavior depends on synthesis, conversation, broad provider APIs, private account data, or optional enrichment. | A stable command, exit codes, tests, future JSON contract, package data, and repair path. |
+| Keep manual or decline | The surface is fragile, policy-risky, private-data-heavy, not smoke-testable, not worth the setup burden, or would turn Main Branch into a SaaS hub, bot, scheduler, marketplace, or provider. | A narrow, official, smoke-testable path exists and materially improves an operator loop. | The reason, the fallback, and any follow-up research issue if the surface may become viable later. |
+
+The default is not "build." The default is: use the official rail when it is
+enough, wrap it only where Main Branch can make the daily loop safer and more
+inspectable, build sidecars only for optional specialized evidence, and promote
+to core only after the behavior proves it belongs to every repo.
+
+## Promotion Evidence
+
+A surface moves up the ladder only when the evidence matches the risk.
+
+| Promotion | Minimum evidence |
+|---|---|
+| Reference or planned | Public docs or accepted decision; no support claim; clear fallback when missing. |
+| Optional read-only wrapper | Safe setup path, read-only smoke, bounded output, provenance, failure/repair behavior, and no committed raw private data. |
+| Optional mutation wrapper | Provider authority, explicit operator approval gate, dry-run or draft path when possible, mutation smoke in a safe account, rate-limit and rollback/failure notes, and public-safe evidence in the PR. |
+| Optional sidecar | One-shot CLI contract, stable JSON envelope, exit-code semantics, schema validation, cache/degraded-state behavior, credential boundary, and package/install impact understood. |
+| Core `mb` behavior | Focused CLI tests, exit codes, `--json` behavior where useful, fixture repo smoke when repo shape changes, package/install smoke when packaged data or entrypoints change, docs, changelog when user-visible, and runtime/manual smoke when skills depend on it. |
+
+Secrets, OAuth refresh tokens, service-account JSON, API keys, raw provider
+exports, ledgers, transcripts, customer/member data, raw DMs, conversion upload
+rows, and private account analytics never become promotion evidence in public
+docs or fixtures. Record sanitized summaries, command output shapes, and
+public-safe screenshots or notes instead.
+
+## Concrete Applications
+
+Use these examples as the current boundary until a later accepted decision or
+smoke result changes them.
+
+| Surface | Current move | Boundary |
+|---|---|---|
+| Company/context enrichment | Optional sidecar reference | `companyctx` proves the sidecar contract for public company/domain context. `mb` may discover, invoke, validate, cache, and summarize it, but the core install must work without it. |
+| Bookkeeping / Beancount-style finance | Optional future sidecar or private Ops workflow | Plain-text ledgers fit the files-first philosophy, but raw finance data has a stricter access boundary. Keep raw ledgers in private sources; write only approved summaries to shared repos. |
+| Vercel-style platform workflows | Use provider directly unless a rail is adopted | Vercel CLI/API can own Vercel-native deploys, env pulls, logs, and domains. Main Branch should not wrap it by default or present it as the default site rail while Cloudflare is the adopted path. Wrap only if a specific tested business loop needs readiness, repair, or approval gates. |
+| Cloudflare sites, DNS, and Pages | Adopted provider rail where smoke-tested; wrap with `mb` | Cloudflare remains the current low-lock-in rail for site/DNS/Page workflows. `mb connect`, site checks, and skill guidance should expose readiness and repair facts without committing tokens or hiding publish/deploy approval. |
+| Postiz / social scheduling | Candidate scheduling rail after MCP/API smoke | Treat Postiz as planned for scheduling, drafting, connected-account inspection, and publishing support only after focused smoke. It is not a general inbox, auto-DM, auto-like, or growth-bot dependency. |
+| Apify / X/Twitter research | Optional read-only research sidecar | Apify Store actors cover public X post search, profile/timeline mining, replies, quotes, trends, and network research. Main Branch should wrap actor choice, limits, cost/token estimates, provenance, and raw-output handling rather than build a scraper. Posting, replies, likes, retweets, follows, DMs, and comment-to-DM flows stay planned or declined until official authority, approvals, tests, docs, and smoke evidence exist. |
+| Google Ads / GTM readiness | `mb` readiness wrapper plus possible future sidecar | `mb` owns static site instrumentation checks, safe metadata, readiness states, and repair guidance. Google owns account state. Publishing GTM, creating conversion actions, uploads, billing, budgets, and campaign launch require explicit operator approval and provider smoke before support claims. |
+| Provider-readiness checks | Core `mb` when deterministic, sidecar when provider-heavy | Generic connection state, safe metadata, and repair commands belong in `mb connect`, `mb doctor`, and `mb status`. Deep provider inspection belongs in optional wrappers or sidecars when the provider-specific surface would bloat core. |
+
 ## Decision States
 
 Use boring words when recording a choice:
@@ -116,6 +168,7 @@ why a tool disappeared.
 | 2026-05-07 | Growth automation playbooks | Comment-to-DM and resource-delivery providers | Accepted add-on boundary | Comment-keyword and DM-keyword funnels are useful growth playbooks, but provider write actions mutate inboxes and customer conversations. Main Branch should own playbook specs, approval evidence, resources, and outcomes under `pushes/`, while partner tools or official APIs own mutation until tested. | Keep ManyChat-style tools as add-on candidates, not core dependencies. Defer X comment-to-DM execution, LinkedIn write automation, TikTok DM/comment write, and browser-automation mass-DM tools; see [the growth automation playbook decision](../decisions/2026-05-07-growth-automation-playbook-addons.md). | Schema: [#350](https://github.com/noontide-co/mainbranch/issues/350); X boundary: [#351](https://github.com/noontide-co/mainbranch/issues/351); source context: [#341](https://github.com/noontide-co/mainbranch/issues/341) |
 | 2026-05-04 | Workspace docs and sheets | Google Workspace | Planned optional provider | Many operators already have Docs, Sheets, and Drive source material. Main Branch should ingest or reference that material without making Google the canonical memory. | Treat Google Workspace as source/input and provider metadata; durable summaries and decisions flow back into the business repo. | Follow-up issue needed |
 | 2026-05-04 | GitHub-native task and release flow | GitHub CLI | Adopted core operational dependency | GitHub issues, pull requests, releases, and auth are central public primitives; `gh` is inspectable, scriptable, and already expected by contributor and issue-drafting flows. | Keep browser/manual fallbacks for user-facing issue submission where needed; use `gh` for GitHub truth and mutations in agent workflows. | [#264](https://github.com/noontide-co/mainbranch/issues/264) |
+| 2026-05-07 | Provider/tool boundary | Build vs wrap vs sidecar rule | Adopted docs rule | Main Branch needs one public rule for when to use an external CLI/API/MCP directly, wrap it through `mb`, build an optional sidecar, promote behavior into core, or leave the surface manual or declined. | Apply the rule above before adding provider dependencies, sidecars, or support claims. Create follow-up implementation issues only when concrete smoke evidence or a specific user loop justifies them. | [#366](https://github.com/noontide-co/mainbranch/issues/366) |
 
 ## Related Public Contracts
 
