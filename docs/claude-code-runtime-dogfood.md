@@ -54,6 +54,47 @@ MB="$(command -v mb)"
 "$MB" --version
 ```
 
+## Automated Harness
+
+Use the automated harness when you need repeatable deterministic evidence for a
+PR, release candidate, runtime-discovery change, or skill-discovery change:
+
+```bash
+scripts/claude-runtime-dogfood.py --install-mode editable
+```
+
+The harness creates a disposable sanitized business repo, installs the package
+under test into a temp virtual environment, runs the read-only CLI checks below,
+checks fixture and engine repo boundaries, and writes a public-safe evidence
+folder. The final output prints the evidence path and a paste-ready
+`evidence-template.md`.
+
+For a wheel smoke:
+
+```bash
+(cd mb && python -m build)
+scripts/claude-runtime-dogfood.py --install-mode wheel --wheel mb/dist/mainbranch-*.whl
+```
+
+For a release smoke against PyPI:
+
+```bash
+scripts/claude-runtime-dogfood.py --install-mode pypi --pypi-version 0.3.6
+```
+
+The optional print-mode proxy path runs chained `claude -p` prompts and
+preserves the returned session id when Claude Code emits one:
+
+```bash
+scripts/claude-runtime-dogfood.py --install-mode editable --run-claude-print --max-budget-usd 0.25
+```
+
+Print-mode evidence is a proxy. It is useful for repeatable regression signal,
+budget/auth failures, transcript excerpts, and rubric scoring, but it is not
+the same as interactive Claude Code TUI evidence. Release-bearing runtime
+claims still need the manual interactive phase below unless the PR explicitly
+documents why the runtime could not be launched.
+
 ## Phase 1: Fresh Fixture Setup
 
 This phase creates a disposable, sanitized business repo. It is allowed to
@@ -300,9 +341,10 @@ Pass condition:
 
 ## Evidence Template
 
-Paste this into the PR or issue comment. Include short excerpts or summaries of
-Claude behavior; do not paste private business data, tokens, account IDs, or
-long transcripts.
+The automated harness writes this shape to `evidence-template.md`. If you run
+the manual phases directly, paste this into the PR or issue comment. Include
+short excerpts or summaries of Claude behavior; do not paste private business
+data, tokens, account IDs, or long transcripts.
 
 ```md
 ## Claude Code Runtime Dogfood Evidence

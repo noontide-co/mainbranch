@@ -104,6 +104,10 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
   smoke evidence, or the PR states exactly why it could not be run.
 - [ ] Release validation that depends on Claude Code behavior uses the
   [Claude Code runtime dogfood runbook](claude-code-runtime-dogfood.md).
+- [ ] Repeatable Claude Code release evidence uses
+  `scripts/claude-runtime-dogfood.py` for deterministic fixture, CLI,
+  repo-boundary, and evidence-template collection, with print-mode evidence
+  labeled as a proxy when used.
 - [ ] Bundled `templates/` and the fixture business-repo flow stay in sync with
   `.mb/` schema, skill-discovery, and onboarding changes.
 - [ ] `CHANGELOG.md` is updated for user-visible CLI, skill, packaging,

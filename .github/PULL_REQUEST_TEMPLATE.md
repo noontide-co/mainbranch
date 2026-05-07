@@ -39,6 +39,7 @@ scripts/check.sh
 - [ ] `scripts/check.sh` passes
 - [ ] Wheel install smoke (if packaging touched)
 - [ ] SKILL.md ≤500 lines (if any skill touched)
+- [ ] Claude runtime dogfood harness / manual smoke evidence (if runtime, first-run, skill discovery, or release validation touched)
 
 ## CHANGELOG
 

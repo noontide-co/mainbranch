@@ -335,6 +335,11 @@ Level 5, runtime smoke:
 
 For Claude Code release-bearing runtime evidence, follow the
 [Claude Code runtime dogfood runbook](docs/claude-code-runtime-dogfood.md).
+Use `scripts/claude-runtime-dogfood.py --install-mode editable` when you need
+repeatable deterministic fixture, CLI, repo-boundary, and evidence-template
+collection. Its optional `--run-claude-print` path is proxy evidence only; it
+does not replace interactive Claude Code TUI smoke for release-bearing runtime
+claims.
 
 If a runtime cannot be launched because of auth or UI constraints, say that
 explicitly and describe the closest verified fallback. Do not pretend CLI tests

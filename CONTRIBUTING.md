@@ -60,6 +60,15 @@ runtime wiring, add the relevant smoke from [AGENTS.md](AGENTS.md): package
 install, fixture repo, pipx/update, or runtime discovery.
 For release-bearing Claude Code runtime validation, use the
 [Claude Code runtime dogfood runbook](docs/claude-code-runtime-dogfood.md).
+For repeatable deterministic Claude evidence, start with:
+
+```bash
+scripts/claude-runtime-dogfood.py --install-mode editable
+```
+
+Add `--run-claude-print --max-budget-usd 0.25` when Claude Code print mode is
+available and you want proxy transcript/rubric evidence. Interactive Claude
+Code smoke is still required for release-bearing runtime claims.
 
 For Go tools (Phase 2):
 
