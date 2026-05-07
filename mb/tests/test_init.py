@@ -37,7 +37,8 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert (target / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
     assert (target / ".git" / "hooks" / "commit-msg").exists()
     hook = (target / ".git" / "hooks" / "commit-msg").read_text(encoding="utf-8")
-    assert "mb checkpoint --validate -" in hook
+    assert "MB_BIN=" in hook
+    assert '"$MB_CHECKPOINT" checkpoint --validate -' in hook
     assert result["checkpoint_hook"]["state"] == "installed"
 
     settings = json.loads((target / ".claude" / "settings.local.json").read_text())

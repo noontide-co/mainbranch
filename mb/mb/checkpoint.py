@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import re
+import shlex
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -36,23 +39,62 @@ SECRET_RE = re.compile(
 HOOK_NAME = "commit-msg"
 HOOK_BEGIN = "# >>> mainbranch checkpoint hook >>>"
 HOOK_END = "# <<< mainbranch checkpoint hook <<<"
-HOOK_BODY = f"""\
+
+
+def _resolved_mb_path() -> str:
+    current_command = Path(sys.argv[0])
+    if current_command.name == "mb":
+        if current_command.is_absolute() and current_command.exists():
+            return str(current_command.resolve())
+        resolved_command = shutil.which(str(current_command))
+        if resolved_command:
+            return resolved_command
+    return shutil.which("mb") or ""
+
+
+def _hook_body(mb_path: str = "") -> str:
+    quoted_mb = shlex.quote(mb_path)
+    return f"""\
 #!/bin/sh
 {HOOK_BEGIN}
 # Main Branch business repos use readable checkpoint subjects.
 # This hook validates only the commit subject through the installed mb CLI.
+MB_BIN={quoted_mb}
 
 if [ "$#" -lt 1 ]; then
   exit 0
 fi
 
-if ! command -v mb >/dev/null 2>&1; then
+subject=$(sed -n '1p' "$1")
+case "$subject" in
+  Merge\\ *|Revert\\ *|fixup!\\ *|squash!\\ *|amend!\\ *)
+    exit 0
+    ;;
+esac
+
+git_dir=$(git rev-parse --git-dir 2>/dev/null || true)
+if [ -n "$git_dir" ]; then
+  case "$1" in
+    "$git_dir/MERGE_MSG"|"$git_dir/SQUASH_MSG")
+      exit 0
+      ;;
+  esac
+  if [ -e "$git_dir/CHERRY_PICK_HEAD" ]; then
+    exit 0
+  fi
+fi
+
+if [ -n "$MB_BIN" ] && [ -x "$MB_BIN" ]; then
+  MB_CHECKPOINT="$MB_BIN"
+elif command -v mb >/dev/null 2>&1; then
+  MB_CHECKPOINT=$(command -v mb)
+else
   echo "Main Branch checkpoint hook could not find the mb CLI." >&2
   echo "Repair: install or update Main Branch, then run: mb doctor repair --apply" >&2
   exit 1
 fi
 
-if ! mb checkpoint --validate - < "$1"; then
+if ! "$MB_CHECKPOINT" checkpoint --validate - < "$1"; then
   echo "" >&2
   echo "Main Branch rejected this checkpoint because the message is not business-readable." >&2
   echo "Use a subject like: [updated] offer.md -- clarified guarantee" >&2
@@ -125,10 +167,10 @@ def _is_managed_hook(text: str) -> bool:
     return HOOK_BEGIN in text and HOOK_END in text
 
 
-def _hook_state_from_text(text: str) -> str:
+def _hook_state_from_text(text: str, expected: str) -> str:
     if not _is_managed_hook(text):
         return "blocked_existing_hook"
-    return "installed" if text == HOOK_BODY else "broken"
+    return "installed" if text == expected else "broken"
 
 
 def hook_status(repo: str | Path = ".") -> dict[str, Any]:
@@ -193,7 +235,7 @@ def hook_status(repo: str | Path = ".") -> dict[str, Any]:
             "repair_command": "mb doctor repair --plan",
             "errors": [str(exc)],
         }
-    state = _hook_state_from_text(text)
+    state = _hook_state_from_text(text, _hook_body(_resolved_mb_path()))
     managed = _is_managed_hook(text)
     installed = state == "installed"
     safe = state in {"installed", "broken"}
@@ -251,7 +293,8 @@ def install_commit_hook(repo: str | Path = ".") -> dict[str, Any]:
     try:
         hook.parent.mkdir(parents=True, exist_ok=True)
         previous = hook.read_text(encoding="utf-8") if hook.exists() else ""
-        hook.write_text(HOOK_BODY, encoding="utf-8")
+        hook_body = _hook_body(_resolved_mb_path())
+        hook.write_text(hook_body, encoding="utf-8")
         hook.chmod(0o755)
     except OSError as exc:
         return {
@@ -262,7 +305,7 @@ def install_commit_hook(repo: str | Path = ".") -> dict[str, Any]:
             "summary": f"could not install checkpoint hook: {exc}",
             "errors": [str(exc)],
         }
-    changed = previous != HOOK_BODY
+    changed = previous != hook_body
     return {
         **hook_status(status_report["repo"]),
         "ok": True,

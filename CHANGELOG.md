@@ -21,9 +21,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   to smoke next, plus the growth-automation playbook boundary for future
   comment-to-DM and resource-delivery add-ons. Refs #341.
 - Fresh business repos now install a repo-local Main Branch `commit-msg` hook
-  that validates manual git commits through `mb checkpoint --validate -`, with
-  checkpoint hook status, install, and uninstall controls on `mb checkpoint`.
-  Refs #302.
+  that validates manual git commits through `mb checkpoint --validate -`,
+  skips Git-generated merge/revert/fixup/squash/amend subjects, records the
+  active `mb` executable for minimal-PATH Git clients, and includes checkpoint
+  hook status, install, and uninstall controls on `mb checkpoint`. Refs #302.
 
 ### Changed
 

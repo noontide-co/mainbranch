@@ -6,7 +6,9 @@ import json
 import os
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 from typer.testing import CliRunner
 
@@ -18,18 +20,23 @@ from mb.init import run as init_run
 runner = CliRunner()
 
 
-def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
+def _git(
+    repo: Path,
+    *args: str,
+    env: Mapping[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["git", *args],
         cwd=repo,
+        env=env,
         text=True,
         capture_output=True,
         check=False,
     )
 
 
-def _business_repo(tmp_path: Path) -> Path:
-    _ensure_mb_shim(tmp_path)
+def _business_repo(tmp_path: Path, monkeypatch: Any) -> Path:
+    _install_mb_shim(tmp_path, monkeypatch)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
     _git(repo, "config", "user.email", "test@example.com")
@@ -39,7 +46,7 @@ def _business_repo(tmp_path: Path) -> Path:
     return repo
 
 
-def _ensure_mb_shim(tmp_path: Path) -> Path:
+def _install_mb_shim(tmp_path: Path, monkeypatch: Any) -> Path:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir(exist_ok=True)
     shim = bin_dir / "mb"
@@ -49,19 +56,41 @@ def _ensure_mb_shim(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     shim.chmod(0o755)
-    current = os.environ.get("PATH", "")
-    if str(bin_dir) not in current.split(os.pathsep):
-        os.environ["PATH"] = f"{bin_dir}{os.pathsep}{current}"
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
     return bin_dir
 
 
-def _install_mb_shim(tmp_path: Path, monkeypatch) -> None:
-    bin_dir = _ensure_mb_shim(tmp_path)
-    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+def _commit_file(repo: Path, relative_path: str, content: str, message: str) -> None:
+    target = repo / relative_path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content, encoding="utf-8")
+    result = _git(repo, "add", relative_path)
+    assert result.returncode == 0, result.stderr
+    result = _git(repo, "commit", "-m", message)
+    assert result.returncode == 0, result.stderr
 
 
-def test_checkpoint_plan_clean_repo_returns_clean(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_resolves_current_absolute_mb_entrypoint(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    current_bin = tmp_path / "venv" / "bin"
+    current_bin.mkdir(parents=True)
+    current_mb = current_bin / "mb"
+    current_mb.write_text("#!/bin/sh\n", encoding="utf-8")
+    current_mb.chmod(0o755)
+    older_bin = tmp_path / "global" / "bin"
+    older_bin.mkdir(parents=True)
+    older_mb = older_bin / "mb"
+    older_mb.write_text("#!/bin/sh\n", encoding="utf-8")
+    older_mb.chmod(0o755)
+    monkeypatch.setattr(sys, "argv", [str(current_mb), "checkpoint", "--install-hook"])
+    monkeypatch.setenv("PATH", f"{older_bin}{os.pathsep}{os.environ.get('PATH', '')}")
+
+    assert checkpoint_mod._resolved_mb_path() == str(current_mb.resolve())
+
+
+def test_checkpoint_plan_clean_repo_returns_clean(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
 
     report = checkpoint_mod.plan(repo)
 
@@ -92,8 +121,8 @@ def test_checkpoint_verb_registry_matches_operator_contract() -> None:
     assert registry["connected"].channel_hint == "ops"
 
 
-def test_checkpoint_plan_classifies_dirty_business_files(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_plan_classifies_dirty_business_files(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
     (repo / "core" / "offer.md").write_text("# Offer\n", encoding="utf-8")
     (repo / "decisions" / "2026-05-05-test.md").write_text("# Decision\n", encoding="utf-8")
     (repo / "pushes" / "paid.md").write_text("# Push\n", encoding="utf-8")
@@ -120,8 +149,8 @@ def test_checkpoint_plan_classifies_dirty_business_files(tmp_path: Path) -> None
     }
 
 
-def test_checkpoint_cli_json_contract(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_cli_json_contract(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
     (repo / "research" / "market.md").write_text("# Market\n", encoding="utf-8")
 
     result = runner.invoke(app, ["checkpoint", "--repo", str(repo), "--plan", "--json"])
@@ -246,9 +275,8 @@ def test_checkpoint_hook_skips_engine_repo(tmp_path: Path) -> None:
     assert not (repo / ".git" / "hooks" / "commit-msg").exists()
 
 
-def test_checkpoint_hook_rejects_vague_raw_git_commit(tmp_path: Path, monkeypatch) -> None:
-    _install_mb_shim(tmp_path, monkeypatch)
-    repo = _business_repo(tmp_path)
+def test_checkpoint_hook_rejects_vague_raw_git_commit(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
     (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
     _git(repo, "add", "core/offer.md")
 
@@ -259,9 +287,8 @@ def test_checkpoint_hook_rejects_vague_raw_git_commit(tmp_path: Path, monkeypatc
     assert _git(repo, "status", "--porcelain").stdout
 
 
-def test_checkpoint_hook_accepts_business_raw_git_commit(tmp_path: Path, monkeypatch) -> None:
-    _install_mb_shim(tmp_path, monkeypatch)
-    repo = _business_repo(tmp_path)
+def test_checkpoint_hook_accepts_business_raw_git_commit(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
     (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
     _git(repo, "add", "core/offer.md")
 
@@ -273,8 +300,82 @@ def test_checkpoint_hook_accepts_business_raw_git_commit(tmp_path: Path, monkeyp
     )
 
 
-def test_checkpoint_blocks_env_and_secret_like_content(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_hook_uses_installed_mb_when_runtime_path_is_minimal(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    bin_dir = _install_mb_shim(tmp_path, monkeypatch)
+    repo = _business_repo(tmp_path, monkeypatch)
+    hook = (repo / ".git" / "hooks" / "commit-msg").read_text(encoding="utf-8")
+    assert f"MB_BIN={bin_dir / 'mb'}" in hook
+    (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
+    _git(repo, "add", "core/offer.md")
+
+    result = _git(
+        repo,
+        "commit",
+        "-m",
+        "[updated] offer.md -- clarified guarantee",
+        env={**os.environ, "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"},
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_checkpoint_hook_allows_no_ff_merge_auto_message(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
+    _commit_file(repo, "core/offer.md", "# Offer\nMain\n", "[updated] offer.md")
+    result = _git(repo, "checkout", "-b", "feature")
+    assert result.returncode == 0, result.stderr
+    _commit_file(repo, "research/feature.md", "# Feature\n", "[added] feature.md")
+    result = _git(repo, "checkout", "main")
+    assert result.returncode == 0, result.stderr
+    _commit_file(repo, "research/main.md", "# Main\n", "[added] main.md")
+
+    result = _git(repo, "merge", "--no-ff", "feature")
+
+    assert result.returncode == 0, result.stderr
+    assert _git(repo, "log", "-1", "--pretty=%s").stdout.startswith("Merge ")
+
+
+def test_checkpoint_hook_allows_revert_auto_message(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
+    _commit_file(repo, "core/offer.md", "# Offer\nBefore\n", "[updated] offer.md")
+    _commit_file(
+        repo,
+        "core/offer.md",
+        "# Offer\nAfter\n",
+        "[updated] offer.md -- changed for revert",
+    )
+
+    result = _git(repo, "revert", "HEAD", "--no-edit")
+
+    assert result.returncode == 0, result.stderr
+    assert _git(repo, "log", "-1", "--pretty=%s").stdout.startswith("Revert ")
+
+
+def test_checkpoint_hook_allows_rebase_helper_subjects(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
+
+    for index, subject in enumerate(
+        [
+            "fixup! [updated] offer.md",
+            "squash! [updated] offer.md",
+            "amend! [updated] offer.md",
+        ],
+        start=1,
+    ):
+        _commit_file(
+            repo,
+            "research/rebase-helper.md",
+            f"# Helper\n{index}\n",
+            subject,
+        )
+
+    assert "amend! [updated] offer.md" in _git(repo, "log", "-1", "--pretty=%s").stdout
+
+
+def test_checkpoint_blocks_env_and_secret_like_content(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
     (repo / ".env").write_text("API_KEY=super-secret\n", encoding="utf-8")
     (repo / "core" / "credentials.md").write_text(
         "Authorization: Bearer abcdefghijklmnop\n",
@@ -292,8 +393,8 @@ def test_checkpoint_blocks_env_and_secret_like_content(tmp_path: Path) -> None:
     assert report["proposal"] is None
 
 
-def test_checkpoint_blocks_service_account_json(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_blocks_service_account_json(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
     (repo / "core" / "service-account.json").write_text(
         '{"type":"service_account","private_key":"-----BEGIN PRIVATE KEY-----"}',
         encoding="utf-8",
@@ -305,8 +406,8 @@ def test_checkpoint_blocks_service_account_json(tmp_path: Path) -> None:
     assert report["safety"]["blocks"][0]["code"] == "service_account_json"
 
 
-def test_checkpoint_blocks_forced_local_bridge_files(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_blocks_forced_local_bridge_files(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
     _git(repo, "add", "-f", ".claude/settings.local.json")
 
     report = checkpoint_mod.plan(repo)
@@ -316,8 +417,8 @@ def test_checkpoint_blocks_forced_local_bridge_files(tmp_path: Path) -> None:
     assert report["safety"]["blocks"][0]["code"] == "local_bridge_file"
 
 
-def test_checkpoint_blocks_forced_claude_code_worktrees(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_blocks_forced_claude_code_worktrees(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
     worktree_state = repo / ".claude" / "worktrees" / "session" / "state.json"
     worktree_state.parent.mkdir(parents=True)
     worktree_state.write_text("{}", encoding="utf-8")
@@ -345,8 +446,8 @@ def test_checkpoint_blocks_engine_repo(tmp_path: Path) -> None:
     assert report["safety"]["blocks"][0]["code"] == "engine_repo"
 
 
-def test_checkpoint_rejects_invalid_mode(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_rejects_invalid_mode(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
 
     result = runner.invoke(app, ["checkpoint", "--repo", str(repo), "--mode", "auto", "--json"])
 
@@ -356,8 +457,8 @@ def test_checkpoint_rejects_invalid_mode(tmp_path: Path) -> None:
     assert "mode must be beginner or concern" in payload["errors"][0]
 
 
-def test_checkpoint_commit_requires_yes_after_plan_review(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_commit_requires_yes_after_plan_review(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
     (repo / "core" / "offer.md").write_text("# Offer\n", encoding="utf-8")
 
     result = runner.invoke(
@@ -379,8 +480,8 @@ def test_checkpoint_commit_requires_yes_after_plan_review(tmp_path: Path) -> Non
     assert "pass --yes" in payload["errors"][0]
 
 
-def test_checkpoint_commit_saves_readable_checkpoint(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_commit_saves_readable_checkpoint(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
     (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
 
     result = runner.invoke(
@@ -409,8 +510,10 @@ def test_checkpoint_commit_saves_readable_checkpoint(tmp_path: Path) -> None:
     assert "Changed:\n- core/offer.md" in log
 
 
-def test_checkpoint_commit_rejects_invalid_business_message(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_commit_rejects_invalid_business_message(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
     (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
 
     result = runner.invoke(
@@ -434,8 +537,10 @@ def test_checkpoint_commit_rejects_invalid_business_message(tmp_path: Path) -> N
     assert _git(repo, "status", "--porcelain").stdout
 
 
-def test_checkpoint_commit_refuses_blocked_plan_without_commit(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_commit_refuses_blocked_plan_without_commit(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
     (repo / ".env").write_text("API_KEY=super-secret\n", encoding="utf-8")
     _git(repo, "add", "-f", ".env")
 
@@ -459,8 +564,8 @@ def test_checkpoint_commit_refuses_blocked_plan_without_commit(tmp_path: Path) -
     assert _git(repo, "log", "--oneline").stdout.count("\n") == 1
 
 
-def test_checkpoint_commit_clean_repo_is_noop(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_commit_clean_repo_is_noop(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
 
     result = runner.invoke(
         app,
@@ -481,8 +586,10 @@ def test_checkpoint_commit_clean_repo_is_noop(tmp_path: Path) -> None:
     assert payload["committed"] is False
 
 
-def test_checkpoint_status_reports_recent_checkpoint_and_pending_work(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_status_reports_recent_checkpoint_and_pending_work(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
     (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
     checkpoint_mod.commit(
         repo,
@@ -504,8 +611,10 @@ def test_checkpoint_status_reports_recent_checkpoint_and_pending_work(tmp_path: 
     assert payload["pending"]["summary"]["surfaces"] == {"research": 1}
 
 
-def test_checkpoint_status_preserves_legacy_checkpoint_subjects(tmp_path: Path) -> None:
-    repo = _business_repo(tmp_path)
+def test_checkpoint_status_preserves_legacy_checkpoint_subjects(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
     (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
     _git(repo, "add", "core/offer.md")
     _git(repo, "commit", "--no-verify", "-m", "[checkpoint] Update offer")

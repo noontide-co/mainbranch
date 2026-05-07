@@ -230,7 +230,9 @@ def test_doctor_repair_apply_installs_checkpoint_hook(tmp_path: Path) -> None:
     applied = {action["id"]: action for action in payload["applied_actions"]}
     assert "checkpoint-hook-install" in applied
     assert hook.exists()
-    assert "mb checkpoint --validate -" in hook.read_text(encoding="utf-8")
+    hook_text = hook.read_text(encoding="utf-8")
+    assert "MB_BIN=" in hook_text
+    assert '"$MB_CHECKPOINT" checkpoint --validate -' in hook_text
 
 
 def test_doctor_repair_preserves_existing_checkpoint_hook(tmp_path: Path) -> None:
