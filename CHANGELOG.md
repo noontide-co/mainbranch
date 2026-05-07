@@ -11,6 +11,32 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-05-07
+
+v0.3.6 makes Main Branch more disciplined about how business work gets saved,
+remembered, and resumed. Checkpoint verbs are now business-readable, fresh
+business repos install commit-message validation, `mb status` includes a
+provisional git journal, and growth research guidance is broader without
+pretending untested provider automation is shipped.
+
+### What this means for you (plain English)
+
+- **Your commits read like business progress.** Main Branch now accepts
+  checkpoint subjects such as `[added] market.md` and blocks vague raw commit
+  messages in business repos.
+- **`mb status` can remember what happened.** Status and start output now
+  include recent business-readable commit history so Claude can answer "what
+  changed since last time?" from repo facts.
+- **Growth research has a stronger path.** `/mb-think` now has winning-ad
+  research guidance for customer language, competitor gaps, review mining,
+  script teardown, and social comment mining.
+- **Provider boundaries stay honest.** Postiz, X/Grok, Apify, and
+  comment-to-DM/resource-delivery ideas are framed as researched or candidate
+  rails until smoke evidence proves support.
+- **The public framing is cleaner.** README, roadmap, architecture, ethos, and
+  contributor docs now describe Main Branch as durable operating memory for a
+  business, not just a growth-file scaffold.
+
 ### Added
 
 - `mb checkpoint` now uses the accepted business-readable checkpoint verb
@@ -29,6 +55,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   that groups business-readable commits by operator loop, preserves legacy
   `[checkpoint]` history, and parses `Refs:` links to bets, pushes, decisions,
   legacy campaigns, and GitHub issues. Refs #303.
+- README, roadmap, architecture, ethos, dependency choices, support, security,
+  and contributor docs now frame Main Branch around durable operating memory,
+  current Claude Code support, optional rails, and lower-maintenance roadmap
+  buckets instead of issue-by-issue release lists. Refs #340, #346.
 
 ### Changed
 
@@ -46,6 +76,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - `/mb-start` and `/mb-status` now treat status journal facts as the source of
   truth for "what happened since last time?" instead of re-probing raw git logs.
   Refs #303.
+- Legacy campaign paths are now described as compatibility aliases while the
+  current working-folder model keeps `pushes/` as the active growth work home.
+  Refs #345.
 
 ## [0.3.5] - 2026-05-06
 
