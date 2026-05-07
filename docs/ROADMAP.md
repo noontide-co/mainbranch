@@ -41,6 +41,23 @@ business repo, start Claude Code, ask `/mb-start`, see what matters, repair what
 is stale, ship the next piece of work, and save a readable checkpoint before
 moving on.
 
+In one pass, the loop is:
+
+1. **Start grounded.** `/mb-start`, generated repo instructions, or `mb start`
+   should make the agent read deterministic `mb` facts before making claims.
+2. **Route the thought dump.** A messy operator update should become a business
+   primitive: bet, research, decision, push, playbook, outcome, log entry, or
+   checkpoint.
+3. **Use the right layer.** Claude Code skills handle judgment, synthesis,
+   writing, review, and routing. `mb` handles enforcement: repo shape, graph
+   links, status health, provider readiness, updates, repairs, validation, and
+   guarded commits.
+4. **Hide the plumbing, preserve the memory.** Issues, branches, pull requests,
+   commits, graph links, and provider refs exist so the business can inspect
+   what happened later. The user-facing language should stay business-readable.
+5. **Close the loop.** `/mb-end` and checkpoint guidance turn the session into
+   durable git-backed memory before the next day starts.
+
 The work clusters into a few durable buckets:
 
 - **Start and status.** `/mb-start`, `/mb-status`, and `mb status` should read
@@ -65,6 +82,12 @@ The work clusters into a few durable buckets:
 - **Issue and friction capture.** Confusing errors, missing workflows, and
   repeated repair steps should turn into privacy-safe issue drafts so real use
   improves the public engine.
+
+Current public implementation anchors are GitHub issues, not promises in this
+roadmap. As of 2026-05-07, check the active issues for the Claude runtime
+dogfood harness (#364), generated business `CLAUDE.md` CLI-first bootstrap
+(#353), graph/status relationship health (#357 and #358), and push playbook
+schema (#350). Verify their state on GitHub before using them as current scope.
 
 Anti-scope for v0.3.x:
 
@@ -93,6 +116,11 @@ Planned scope:
   explicit `log/` files instead of treating raw chat as source of truth;
 - finance/legal warnings and access-boundary views that make sensitive repos
   obvious without pulling private raw data into shared business memory.
+
+Candidate directions stay candidates until a decision, adapter, and smoke
+evidence promote them. That includes dashboard write surfaces, broader provider
+mutation, social scheduling rails, growth automation execution, and non-Claude
+runtime adapters.
 
 Anti-scope:
 

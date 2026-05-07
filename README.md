@@ -75,6 +75,25 @@ briefing in the terminal without opening Claude Code. If you want `mb` to check
 handoff readiness and open Claude Code for you, run `mb start --launch` from
 the business repo.
 
+The normal day should feel like business work, not GitHub administration:
+
+1. Start in the business repo.
+2. Let `/mb-start` ground Claude in `mb` facts: repo health, status, updates,
+   graph links, provider readiness, and recent activity.
+3. Dump thoughts or pick a next action. Claude should route that input into the
+   right Main Branch primitive: a bet, research note, decision, push, playbook,
+   outcome, log entry, or checkpoint.
+4. Use the skills for judgment-heavy work and `mb` for deterministic checks,
+   repair, validation, graph/status facts, provider readiness, and commits.
+5. Close with `/mb-end` or `mb checkpoint` guidance so the lesson, decision,
+   artifact, or saved work lands in git before the next session.
+
+Under the hood, Main Branch uses issues, branches, pull requests, commits,
+graph links, provider refs, and local connection state to preserve and inspect
+progress. You can inspect those details when you want them, but the default
+language stays closer to the business: bets, goals, offers, pushes, playbooks,
+outcomes, and checkpoints.
+
 You'll need a Claude Pro ($20/mo) or Max subscription. Install Claude Code itself from [claude.ai](https://claude.ai) — see [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md) for a step-by-step.
 
 Tested on macOS and Linux. Windows is experimental and not part of the CI
@@ -122,6 +141,11 @@ Main Branch has three layers:
 - **Skills are the judgment layer.** Claude Code reads repo truth, asks the
   operator questions, drafts work, reviews it, and routes artifacts back into
   files.
+
+The CLI and skills are meant to work together. Skills should call `mb` for
+facts instead of guessing at repo health, provider setup, or update state. The
+CLI should stay deterministic and scriptable instead of becoming a chat client
+or model host.
 
 You create a separate folder for YOUR business. That's where your offer,
 audience, voice, proof, operations, research, decisions, bets, pushes, logs, and
@@ -317,7 +341,7 @@ The engine v0.1.0 decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.
 
 ## Roadmap
 
-The current package is the CLI + Claude Code first-run foundation plus the first daily operating surfaces: `mb status`, `/mb-status`, next-action ranking, bets, pushes, checkpoints, provider readiness, site checks, and privacy-safe issue drafting. Next work keeps tightening those loops, expands the curated provider rails, and prepares the future dashboard as a map over repo truth rather than a replacement for it. See [docs/ROADMAP.md](docs/ROADMAP.md) for the public roadmap. Direction, not promises.
+The current package is the CLI + Claude Code first-run foundation plus the first daily operating surfaces: `mb status`, `/mb-status`, next-action ranking, bets, pushes, checkpoints, provider readiness, site checks, and privacy-safe issue drafting. Next work keeps tightening those loops, expands the curated provider rails, and prepares the future dashboard as a map over repo truth rather than a replacement for it. See [docs/ROADMAP.md](docs/ROADMAP.md) for the public roadmap and the current GitHub issue anchors. Direction, not promises.
 
 The proposed long-range product direction is captured in
 [`decisions/2026-05-02-github-native-business-os.md`](decisions/2026-05-02-github-native-business-os.md):

@@ -31,6 +31,30 @@ The cycle isn't strictly linear. Real workflows chain loops — for example,
 Reflect → Sense (a retro updates `core/offer.md` so the next time you Sense,
 you see the new offer). See "Loops chain together" below.
 
+## The daily loop in loop terms
+
+The normal Main Branch day is a compact Sense -> Decide -> Ship -> Reflect
+chain:
+
+- **Sense:** `/mb-start`, `/mb-status`, or `mb status --json --peek` reads
+  repo health, graph links, provider readiness, recent activity, update state,
+  and GitHub/task signals.
+- **Decide:** the agent and operator choose the next business move: a bet to
+  frame, a piece of research to run, a decision to codify, a push to advance, a
+  playbook to draft, or a repair to approve.
+- **Ship:** the skill creates or updates the artifact, while `mb` supplies
+  deterministic checks, repair commands, validation, provider readiness, and
+  checkpoint/commit plans.
+- **Reflect:** `/mb-end`, bet close/narrate behavior, push review notes, or
+  checkpoint guidance records what changed and what the next Sense pass should
+  know.
+
+The user-facing nouns are business nouns: bets, goals, offers, pushes,
+playbooks, outcomes, and checkpoints. The technical nouns underneath are still
+part of the architecture, but they serve the loop: issues are tasks, pull
+requests are proposals/reviews, commits are saved checkpoints, graph links are
+relationship memory, and provider refs are safe handles to external systems.
+
 ## 1. Sense
 
 **Question:** What's true right now — about the business, the market, the
