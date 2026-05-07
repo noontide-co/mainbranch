@@ -8,8 +8,8 @@ When a user launches Claude in their business repo and skills aren't showing, th
 
 This runs in two places:
 
-1. **Bootstrap path:** business repo `CLAUDE.md` points here when `/mb-start` is missing.
-2. **Main `/mb-start` path:** when `/mb-start` is invoked from vip, it resolves a selected business repo and runs this repair against that repo.
+1. **Bootstrap path:** a user or support agent can read this when `/mb-start` is missing.
+2. **Main `/mb-start` path:** when `/mb-start` is invoked from Main Branch, it resolves a selected business repo and runs this repair against that repo.
 
 ---
 
@@ -146,7 +146,7 @@ If HEAL_FAILED:
 
 ## Why this is needed
 
-`additionalDirectories` in `settings.local.json` grants file access to Main Branch but doesn't reliably trigger skill discovery in Claude Code v2.1.39. Bridge links (symlinks from `.claude/skills/[name]` to Main Branch skill directories) make Claude discover skills as if they're local. This is a compatibility layer — if Anthropic fixes discovery from additional directories, these links become redundant but harmless.
+`additionalDirectories` in `settings.local.json` grants file access to Main Branch but does not reliably trigger slash-command discovery in Claude Code. Runtime smoke on Claude Code 2.1.126 returned `Unknown command: /mb-start` after the project-local `.claude/skills/mb-start` bridge was removed while `additionalDirectories` still pointed at the engine. Bridge links (symlinks from `.claude/skills/[name]` to Main Branch skill directories) make Claude discover skills as if they're local.
 
 ---
 

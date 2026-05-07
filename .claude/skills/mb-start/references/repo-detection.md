@@ -127,7 +127,7 @@ user:
 
 ---
 
-## Verify Main Branch Is Loaded (Config + Compatibility Links)
+## Verify Main Branch Is Loaded (Config + Skill Bridge Links)
 
 After detecting the business repo, confirm Main Branch is accessible and `/mb-start` bridge exists in the selected repo (`REPO_PATH`):
 
@@ -156,4 +156,4 @@ Tell the user: "Repaired missing Main Branch bridge links in **[repo-name]**. Lo
 
 **Why both are needed:**
 - `additionalDirectories` = file access (read reference files, compliance docs)
-- Bridge links = compatibility fallback for skill discovery in environments where settings-based discovery is inconsistent
+- Bridge links = slash-command discovery for Main Branch skills

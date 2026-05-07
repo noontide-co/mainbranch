@@ -13,6 +13,7 @@ mb doctor
 If Claude Code does not see `/mb-start`, run this from your business repo:
 
 ```bash
+mb skill repair --repo .
 mb skill link --repo .
 ```
 
@@ -24,6 +25,8 @@ Then restart Claude Code and run:
 
 For step-by-step setup, read [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md).
 For platform support, read [docs/compatibility.md](docs/compatibility.md).
+For the supported Claude Code slash-command behavior, read
+[docs/claude-code-invocation-contract.md](docs/claude-code-invocation-contract.md).
 
 ## Where to ask
 

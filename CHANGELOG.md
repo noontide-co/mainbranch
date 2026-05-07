@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Documented the proven Claude Code invocation contract for `/mb-start`,
+  including extra-text behavior, natural-language routing, the required
+  project-local `.claude/skills/mb-*` bridge links, and the repair path when
+  Claude Code reports `Unknown command: /mb-start`. Refs #354.
 - `mb checkpoint` now uses the accepted business-readable checkpoint verb
   contract, proposes subjects such as `[added] market.md`, validates checkpoint
   messages with `--validate` or stdin, and exposes parsed verb/loop/channel
