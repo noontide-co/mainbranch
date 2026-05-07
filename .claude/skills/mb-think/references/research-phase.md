@@ -128,9 +128,12 @@ only concise excerpts needed to support the synthesis.
 
 ### Provider Routing
 
-- Use Apify only as optional read-only enrichment when configured.
-- Use Grok/xAI or web search for X/social sentiment when configured; otherwise
-  ask for screenshots, public embeds, or manual exports.
+- Use Apify only as optional read-only enrichment when configured: YouTube
+  transcripts, Instagram mining, public web scraping, and public X
+  profile/post/reply samples when actor metadata and a small smoke run support
+  the source.
+- Use Grok/xAI or web search for topic-level X/social sentiment when
+  configured; otherwise ask for screenshots, public embeds, or manual exports.
 - Treat Postiz as scheduling/publishing support only where current docs and
   smoke evidence exist.
 - Do not recommend comment/DM automation through X API, Postiz, or
@@ -240,7 +243,9 @@ When user wants to know what people are saying about a topic in real-time.
 - "what's trending in..."
 - "social proof research"
 
-**How to use:** Grok X Insights MCP provides `grok_search_posts`, `grok_analyze_topic`, `grok_get_trends`.
+**How to use:** prefer the xAI Python SDK path in
+[grok-social.md](grok-social.md). A Grok X Insights MCP may work if configured,
+but test that it returns actual X data before relying on it.
 
 **Setup:** See [grok-setup.md](grok-setup.md)
 **Full workflow:** See [grok-social.md](grok-social.md)
@@ -256,6 +261,52 @@ User: "What are people saying about Skool communities?"
 ```
 
 **Fallback:** If no Grok MCP, use web search or ask user to share X screenshots manually.
+
+---
+
+## Public X Post/Profile Mining
+
+When the user provides a specific public X/Twitter post or profile and asks
+what the post, comments, or nearby profile pattern is doing, use Apify as
+optional read-only enrichment when configured.
+
+**Trigger phrases:**
+- "mine this X post"
+- "what are the replies saying"
+- "what is this Twitter strategy"
+- "look at this profile and nearby posts"
+- "is this comment-to-DM or full-value"
+
+**How to use:**
+
+1. Search Apify actors by source and task, for example `X post replies`,
+   `Twitter profile posts`, `tweet scraper`, or `quote posts`.
+2. Fetch actor details and inspect input/output shape. Treat actor names as
+   examples, not a stable Main Branch adapter contract.
+3. Run the smallest useful public scrape:
+   - one post URL, `resultsLimit` 20-100, include original post when available;
+   - one profile URL, `resultsLimit` 20-50 for nearby post context;
+   - quote posts or nested threads only if the research question needs them.
+4. Fetch only necessary dataset fields when output is large.
+5. Synthesize immediately. Save the pattern, not the raw scrape.
+
+**Synthesize:**
+- funnel mechanic;
+- proof pattern;
+- CTA pattern;
+- reply quality split between keyword comments and substantive audience
+  language;
+- source limitations and conversion claims that public data cannot prove.
+
+**Limits:**
+- Do not assume complete reply-tree coverage, ordering, hidden replies, quote
+  posts, retweets, or conversion data.
+- Do not treat public comments as buyer proof. Keyword comments can prove the
+  mechanic, but they are weak audience language unless replies are substantive.
+- Do not claim Apify can access DMs, private analytics, protected accounts, or
+  account mutation.
+- Durable outputs go to `research/YYYY-MM-DD-[topic]-x-public-mining.md` or
+  into synthesized strategy files; raw scrape dumps stay out of committed repos.
 
 ---
 

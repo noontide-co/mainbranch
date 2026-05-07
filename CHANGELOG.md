@@ -23,7 +23,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added `/mb-think` winning-ad research guidance for customer language,
   competitor gap maps, review mining, script teardown, and social comment
   mining, with `/mb-ads` routing pointers and provider-boundary notes for
-  Apify, X/Grok, Postiz, X API, and ManyChat-style automation. Refs #341.
+  Apify, X/Grok, Postiz, X API, and ManyChat-style automation. Follow-up
+  guidance now distinguishes Apify public X post/profile/reply mining from
+  Grok topic sentiment, and clarifies that DM/comment-keyword CTAs are draft
+  strategy, not supported automation. Refs #341.
 
 ## [0.3.5] - 2026-05-06
 

@@ -123,6 +123,11 @@ Organic comments are not buyer proof. Treat them as language and demand
 signals, then decide what belongs in `core/audience.md`,
 `core/content-strategy.md`, or `core/proof/angles/`.
 
+When comments are mostly keyword replies to a giveaway, treat them as evidence
+of the funnel mechanic and visible participation, not deep audience language.
+Separate keyword participation from substantive objections, pain language,
+tool mentions, or false beliefs.
+
 ## Social Strategy Read
 
 When analyzing a public social-growth example, classify the strategy:
@@ -141,14 +146,31 @@ enough value publicly to earn trust and GitHub attention, then offer an
 operator-approved next step. Do not recommend automated comment/DM execution
 without an accepted provider path and smoke evidence.
 
+### DM And Comment Automation Model
+
+- **Drafting the CTA is allowed:** `/mb-organic` can draft "comment keyword" or
+  "DM keyword" CTAs as content strategy.
+- **Manual/operator-approved follow-up is allowed:** the operator can fulfill,
+  reply, or DM outside Main Branch, or explicitly approve a one-off action in a
+  supported provider.
+- **Automation is not supported today:** Main Branch should not execute
+  comment-to-DM, auto-reply, auto-follow, or private inbox workflows through
+  Postiz, X API, ManyChat-style tools, or Apify.
+- **Future support requires a real provider path:** official authority where
+  possible, consent/platform constraints, approval gates, privacy-safe logs,
+  rate-limit handling, tests, docs, and runtime smoke evidence.
+
 ## Provider Boundaries
 
 - **Apify:** optional read-only enrichment for public scraping/comment exports
   when configured. Useful for TikTok comments, YouTube comments/transcripts,
-  Instagram mining, and some public X/profile/post research depending on actor
-  reliability. Missing Apify never blocks the workflow.
-- **Grok/xAI or web search:** optional X/social sentiment path when configured;
-  otherwise use web search, public embeds, screenshots, or manual exports.
+  Instagram mining, and bounded public X profile/post/reply samples depending
+  on actor reliability. It is not an official X integration and does not prove
+  full reply-tree coverage, DM delivery, private analytics, or conversion.
+  Missing Apify never blocks the workflow.
+- **Grok/xAI or web search:** optional X/social sentiment path when configured,
+  best for topic-level "what are people saying now?" research; otherwise use
+  web search, public embeds, screenshots, or manual exports.
 - **Postiz:** planned optional scheduling/publishing rail. Treat it as draft,
   schedule, thread, cross-post, and analytics support only where docs/smoke
   evidence exist. Do not treat it as Main Branch-supported DM automation.

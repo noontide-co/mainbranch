@@ -359,6 +359,10 @@ The caption and image should complement, not compete:
 
 Choose ONE CTA per post. Multiple asks = no action.
 
+DM and comment-keyword CTAs are draft strategy only. Main Branch does not
+automate replies, DMs, follows, or comment-to-DM fulfillment unless a future
+provider path has explicit operator approval, docs, and smoke evidence.
+
 ---
 
 ## Hashtag Strategy

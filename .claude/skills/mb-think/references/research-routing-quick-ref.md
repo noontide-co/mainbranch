@@ -10,6 +10,7 @@ Fast lookup table for routing research requests in /mb-think skill.
 |-----------|----------|----------|----------|
 | YouTube URL, "transcribe video" | Apify YouTube | `mcp__apify__*` | Ask for manual transcript |
 | "what are people saying", "X sentiment" | Grok X search | `XAI_API_KEY` + `xai_sdk` package | WebSearch site:x.com |
+| X profile/post URL, "mine replies", "what is this post doing" | Apify public X mining | `mcp__apify__*` | Screenshots or manual export |
 | Quick research, fact-checking | Gemini Flash (Tier 1) | `GOOGLE_API_KEY` | WebSearch + synthesis |
 | "deep dive", "comprehensive research" | Gemini Deep (Tier 2) | `GOOGLE_API_KEY` | Tier 1 or WebSearch |
 | Local file path, "transcribe recording" | whisper-mcp | `mcp__whisper__*` | CLI fallback |
@@ -28,7 +29,7 @@ Fast lookup table for routing research requests in /mb-think skill.
 **Run once per session, cache results:**
 
 ```bash
-# Check for Apify (YouTube, Instagram)
+# Check for Apify (YouTube, Instagram, public X post/profile/comment mining)
 if mcp__apify__* exists: APIFY=true
 
 # Check for Grok (X/Twitter) — requires Python SDK, not just API key
@@ -49,6 +50,7 @@ if mcp__whisper__* exists: WHISPER=true
 |--------|------|---------|
 | `-yt-mining.md` | Apify YouTube | `2026-01-26-hormozi-pricing-yt-mining.md` |
 | `-x-social.md` | Grok X/Twitter | `2026-01-26-skool-sentiment-x-social.md` |
+| `-x-public-mining.md` | Apify public X scrape | `2026-01-26-launch-post-x-public-mining.md` |
 | `-flash.md` | Gemini Flash (Tier 1) | `2026-01-26-quick-research-flash.md` |
 | `-gemini-deep.md` | Gemini Deep (Tier 2) | `2026-01-26-guarantee-psychology-gemini-deep.md` |
 | `-ig-mining.md` | Apify Instagram | `2026-01-26-competitor-content-ig-mining.md` |
@@ -67,6 +69,7 @@ if mcp__whisper__* exists: WHISPER=true
 | YouTube (long) | 60-min video | ~10-15k | $0.005 |
 | Grok X search | 20 posts | ~5-7k | $0.002 |
 | Grok X search | 50 posts | ~10-15k | $0.005 |
+| Apify public X replies | 20-100 replies | ~3-15k | Actor-dependent |
 | Instagram quick | 5 posts | ~3-5k | $0.01 |
 | Instagram deep | 20 posts | ~10-15k | $0.04 |
 | Gemini Flash (Tier 1) | Quick query | ~5-10k | ~$0.01-0.05 |
@@ -94,11 +97,13 @@ if mcp__whisper__* exists: WHISPER=true
 ```
 1. Check for explicit URL/file
    ├─> YouTube URL → route_youtube()
+   ├─> X/Twitter post or profile URL → route_x_public_mining()
    ├─> Instagram URL → route_instagram()
    └─> Local file → route_local_transcription()
 
 2. Check for social triggers
-   ├─> X/Twitter mention → route_x_social()
+   ├─> X/Twitter topic sentiment → route_x_social()
+   ├─> X/Twitter post/profile teardown → route_x_public_mining()
    └─> Instagram handle → route_instagram()
 
 3. Check complexity

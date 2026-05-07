@@ -439,6 +439,11 @@ Organic content uses soft CTAs that prioritize engagement over conversion:
 
 **Exception:** If the user's voice file shows they successfully use harder CTAs, match their style.
 
+Comment-keyword and DM-keyword CTAs can be drafted as strategy, but Main Branch
+does not execute comment-to-DM, auto-reply, follow, or inbox automation through
+organic generation. Fulfillment stays manual or inside a separately approved
+provider path.
+
 ---
 
 ## Platform-Specific Notes
