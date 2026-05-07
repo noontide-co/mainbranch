@@ -17,7 +17,7 @@ from mb import migrations
 from mb.migrations.base import MigrationInfo, MigrationPlan, PlannedChange
 
 ENVELOPE_SCHEMA = "mb.migrate"
-ENVELOPE_SCHEMA_VERSION = 1
+ENVELOPE_SCHEMA_VERSION = 2
 LATEST_SCHEMA_VERSION = "0.2"
 SCHEMA_MARKER = ".mb/schema_version"
 BACKUPS_GITIGNORE_ENTRY = ".mb/backups/"

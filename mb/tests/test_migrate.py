@@ -79,7 +79,7 @@ def test_migrate_status_reports_pending_legacy_schema(tmp_path: Path) -> None:
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert payload["schema"] == "mb.migrate"
-    assert payload["schema_version"] == 1
+    assert payload["schema_version"] == 2
     assert payload["current_version"] == "0.1"
     assert payload["latest_version"] == "0.2"
     assert payload["pending"][0]["name"] == "001_v01_to_v02_path_config"

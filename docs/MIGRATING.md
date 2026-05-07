@@ -388,6 +388,13 @@ files, moves legacy core files into `core/`, moves legacy offer files into
 contents, apply refuses before writing and tells you to reconcile the conflict
 through another dry-run.
 
+Repos migrated by an earlier Main Branch release may already have
+`.mb/schema_version` set and a legacy empty `campaigns/` compatibility folder.
+The schema marker intentionally prevents rerunning the old layout migration.
+Those repos should add `pushes/` with `mb doctor repair` or normal current
+scaffolding, and should preview any existing campaign records separately with
+`mb migrate campaigns --plan`.
+
 Those compatibility links exist so older readers keep working. Current skills
 and agents should treat `core/` and `core/offers/` as the write targets.
 

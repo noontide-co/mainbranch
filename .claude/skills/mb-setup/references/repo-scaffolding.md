@@ -181,21 +181,27 @@ EOF
 ```bash
 GITIGNORE="$REPO_PATH/.gitignore"
 
-if ! grep -q "MAIN BRANCH BRIDGE LINKS" "$GITIGNORE" 2>/dev/null; then
+ensure_gitignore_entry() {
+  entry="$1"
+  grep -qxF "$entry" "$GITIGNORE" 2>/dev/null || echo "$entry" >> "$GITIGNORE"
+}
+
+if ! grep -q "MAIN BRANCH MACHINE-LOCAL" "$GITIGNORE" 2>/dev/null; then
   cat >> "$GITIGNORE" << 'GITIGNORE_BLOCK'
 
-# === MAIN BRANCH BRIDGE LINKS (machine-local, do not commit) ===
-.claude/settings.local.json
-.claude/worktrees/
+# === MAIN BRANCH MACHINE-LOCAL (do not commit) ===
 GITIGNORE_BLOCK
-
-  # Add each Main Branch skill symlink individually (preserves custom skill tracking)
-  for d in "$ENGINE_PATH"/.claude/skills/*/; do
-    [ -d "$d" ] || continue
-    n=$(basename "$d")
-    echo ".claude/skills/$n" >> "$GITIGNORE"
-  done
 fi
+
+ensure_gitignore_entry ".claude/settings.local.json"
+ensure_gitignore_entry ".claude/worktrees/"
+
+# Add each Main Branch skill symlink individually (preserves custom skill tracking)
+for d in "$ENGINE_PATH"/.claude/skills/*/; do
+  [ -d "$d" ] || continue
+  n=$(basename "$d")
+  ensure_gitignore_entry ".claude/skills/$n"
+done
 ```
 
 **Why `.claude/settings.local.json` is git-ignored:** Claude Code auto-ignores this file, but we add it explicitly for safety. It contains machine-specific absolute paths to Main Branch (`additionalDirectories`) that differ per computer.
