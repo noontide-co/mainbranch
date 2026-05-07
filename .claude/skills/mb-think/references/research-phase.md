@@ -52,6 +52,10 @@ Check `.vip/local.yaml` for `current_offer` before starting research. If `core/o
 | `-x-social.md` | X/Twitter social research (Grok MCP) |
 | `-yt-mining.md` | YouTube transcript mining (Apify) |
 | `-ig-mining.md` | Instagram mining (Apify or manual) |
+| `-customer-mining.md` | Customer calls, surveys, support, onboarding, cancellation language |
+| `-review-mining.md` | Public reviews and rating-backed customer language |
+| `-winning-ad-research.md` | Competitor gap maps, ad/script teardown, winning blueprint research |
+| `-content-comment-mining.md` | TikTok, YouTube, Instagram, or X comment language mining |
 | `-local-mining.md` | Local video/audio transcription |
 | `-voice-mining.md` | Voice memo transcription |
 | `-competitor-mining.md` | Competitor site mining |
@@ -91,6 +95,49 @@ If `content-strategy.md` does not exist, the research output should recommend cr
 
 ---
 
+## Winning-Ad Research Routing
+
+When the research topic involves ad creative, customer language, competitor
+ads, reviews, scripts, or comments, load
+[winning-ad-research.md](winning-ad-research.md) and choose the smallest useful
+bundle:
+
+1. **Customer language mining** — sales calls, surveys, support tickets,
+   onboarding forms, cancellation notes.
+2. **Competitor gap map** — competitor ads, landing pages, product pages,
+   pricing, reviews, and mechanism stories.
+3. **Review mining** — public reviews with platform, rating, date, and source
+   link where possible.
+4. **Winning script teardown** — own winners or inferred competitor winners
+   with transcripts.
+5. **Content/comment mining** — TikTok, YouTube, Instagram, or X comments and
+   replies.
+
+Do not skip from mined data straight to ad generation. The loop is:
+
+```
+Mine sources -> synthesize -> codify reference -> generate with /mb-ads or /mb-organic
+```
+
+### Source Handling
+
+Use public or operator-provided evidence only. Raw prompt libraries, scraped
+comment dumps, customer records, full tweet threads, and copyrighted page
+copies do not belong in committed research files. Cite source URLs and keep
+only concise excerpts needed to support the synthesis.
+
+### Provider Routing
+
+- Use Apify only as optional read-only enrichment when configured.
+- Use Grok/xAI or web search for X/social sentiment when configured; otherwise
+  ask for screenshots, public embeds, or manual exports.
+- Treat Postiz as scheduling/publishing support only where current docs and
+  smoke evidence exist.
+- Do not recommend comment/DM automation through X API, Postiz, or
+  ManyChat-style providers as a supported Main Branch path.
+
+---
+
 ## Sources to Check
 
 1. **Codebase** — Existing reference files, past decisions, research
@@ -99,6 +146,8 @@ If `content-strategy.md` does not exist, the research output should recommend cr
 4. **User input** — "What else do you know about this?"
 5. **YouTube transcripts** — When researching topics with video content (see below)
 6. **Local video/audio** — User's own recordings, voice memos, Loom exports (see [local-transcription.md](local-transcription.md))
+7. **Customer/review/comment evidence** — When researching ad or organic angles,
+   use [winning-ad-research.md](winning-ad-research.md)
 
 ---
 
@@ -319,6 +368,9 @@ In multi-offer mode, use offer-qualified paths:
 | `core/offers/community/offer.md` | Add tier structure, update pricing |
 | `core/offer.md` | Update brand-level positioning |
 | `core/audience.md` | Segment by tier |
+| `core/proof/angles/` | Add durable emotional or competitive angles |
+| `core/proof/typicality.md` | Add aggregate outcome and average-case context |
+| `core/content-strategy.md` | Add hooks, frameworks, platform strategy, comment insights |
 | `core/product-ladder.md` | Update ascension logic |
 
 In single-offer mode, paths stay standard:
@@ -327,6 +379,9 @@ In single-offer mode, paths stay standard:
 |------|------------------|
 | `core/offer.md` | Add tier structure, update pricing |
 | `core/audience.md` | Segment by tier |
+| `core/proof/angles/` | Add durable emotional or competitive angles |
+| `core/proof/typicality.md` | Add aggregate outcome and average-case context |
+| `core/content-strategy.md` | Add hooks, frameworks, platform strategy, comment insights |
 
 **Bad:** "Update offer.md"
 **Good:** "Update core/offers/community/offer.md — Add three-tier pricing with benefits per tier"

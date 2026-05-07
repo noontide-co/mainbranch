@@ -125,6 +125,7 @@ Detect mode from user's natural language:
 | "figure out", "explore", "I'm trying to..." | Full Flow | - |
 | "research", "investigate", "what do we know about" | Research | [research-phase.md](references/research-phase.md) |
 | "what are people saying", "sentiment", "X/Twitter", "trending" | Research (Grok) | [grok-social.md](references/grok-social.md) |
+| "winning ads", "review mining", "customer language", "competitor ads", "comment mining" | Research | [winning-ad-research.md](references/winning-ad-research.md) |
 | "decide", "we chose", "document decision" | Decide | [decide-phase.md](references/decide-phase.md) |
 | "codify", "apply", "update reference files" | Codify | [codify-phase.md](references/codify-phase.md) |
 | "add context", "enrich", "I have new info" | Codify | [codify-phase.md](references/codify-phase.md) |
@@ -148,6 +149,7 @@ When routing to research mode, detect research TYPE from user intent:
 | Local transcription | Local file path (.mp4, .m4a), "transcribe my recording" | whisper | CLI mlx_whisper or whisper-cli |
 | Instagram mining | Instagram handle, "mine [handle]", "competitor posts" | Apify | Manual screenshots |
 | Ad account research | "ad performance", "what's working", "check CPA", "audit my ads" | Verified Meta ad account context | Manual Ads Manager check |
+| Winning-ad research | "customer language", "competitor ads", "review mining", "script teardown", "comment mining" | WebSearch + Apify/Grok when configured | Manual exports, screenshots, pasted transcripts |
 | General research | Default, "research [topic]", "what do we know" | WebSearch + codebase | Always available |
 
 **Multiple types needed at once?** Spawn them as parallel Task agents in a single message. Example: user says "research what [creator] says on YouTube and what people think on X" — spawn one agent for YouTube transcript mining and another for X/Twitter sentiment simultaneously. Each saves its own research file; main conversation synthesizes when both return.
@@ -185,6 +187,11 @@ When routing to research mode, detect research TYPE from user intent:
 > 1. Run `mb connect plan`
 > 2. Check Ads Manager manually and paste what you find
 > 3. Skip account data, research from reference files only"
+
+**Winning-ad research without optional tools:**
+> "Winning-ad research can still run from manual exports, screenshots, pasted
+> reviews, or transcripts. Apify/Grok can speed up public comment and X research
+> when configured, but they are optional."
 
 ### Key Principle
 
@@ -317,7 +324,7 @@ See [decide-phase.md](references/decide-phase.md) for format details.
 
 Apply changes described in `## What Changes` to reference files. Mark decision as codified.
 
-**Codify targets include:** `core/*.md`, `core/voice.md` (named enemies section — each content pillar fights a named concept enemy), `core/offers/[active]/offer.md`, `core/offers/[active]/audience.md` (when multi-offer), `core/proof/angles/*.md` (evolving library — new angles add, never replace), `core/proof/testimonials.md`, **`core/content-strategy.md`** (pillars, hooks library, framework library, metrics — saves are #1 purchase intent signal), `core/operations/funnel/skool-surfaces.md` (live Skool copy — update when about page or pricing changes), `core/product-ladder.md` (when multi-offer, cross-offer decisions).
+**Codify targets include:** `core/*.md`, `core/voice.md` (named enemies section — each content pillar fights a named concept enemy), `core/offers/[active]/offer.md`, `core/offers/[active]/audience.md` (when multi-offer), `core/proof/angles/*.md` (evolving library — new angles add, never replace), `core/proof/testimonials.md`, `core/proof/typicality.md` (aggregate outcome and average-case context), **`core/content-strategy.md`** (pillars, hooks library, framework library, metrics — saves are #1 purchase intent signal), `core/operations/funnel/skool-surfaces.md` (live Skool copy — update when about page or pricing changes), `core/product-ladder.md` (when multi-offer, cross-offer decisions).
 
 ---
 
@@ -330,6 +337,10 @@ Apply changes described in `## What Changes` to reference files. Mark decision a
 Output: `research/YYYY-MM-DD-topic-claude-code.md`
 
 See [references/research-phase.md](references/research-phase.md) for full workflow.
+
+For ad, customer, review, competitor, and social-comment mining, use
+[references/winning-ad-research.md](references/winning-ad-research.md) to keep
+the research structured before handing off to `/mb-ads` or `/mb-organic`.
 
 ---
 

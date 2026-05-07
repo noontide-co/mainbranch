@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from mb import checkpoint_verbs
 from mb.freshness import looks_like_business_repo
 
 SURFACE_ORDER = [
@@ -284,16 +285,70 @@ def _surface_phrase(surfaces: list[str]) -> str:
     return ", ".join(named[:-1]) + f", and {named[-1]}"
 
 
+def _object_from_single_change(change: dict[str, Any]) -> str:
+    path = str(change["path"])
+    surface = str(change["surface"])
+    path_obj = Path(path)
+    if surface == "bets":
+        stem = path_obj.stem if path_obj.suffix else path_obj.name
+        return f"bet {stem}"
+    if surface == "pushes":
+        return f"push {path_obj.parent.name}" if path_obj.name == "push.md" else path_obj.stem
+    if surface == "campaigns":
+        return (
+            f"campaign {path_obj.parent.name}" if path_obj.name == "campaign.md" else path_obj.stem
+        )
+    if surface == "decisions":
+        stem = path_obj.stem
+        return stem[11:] if re.match(r"^\d{4}-\d{2}-\d{2}-", stem) else stem
+    if surface in {"core", "research", "log", "documents"}:
+        return path_obj.name
+    if surface == "config":
+        return "setup"
+    return path_obj.stem or path_obj.name or path
+
+
+def _proposal_verb(changes: list[dict[str, Any]], surfaces: list[str]) -> tuple[str, str]:
+    if not changes:
+        return "updated", "default checkpoint action"
+    if "bets" in surfaces and all(change.get("untracked") for change in changes):
+        return "opened", "new bet files are being saved"
+    if surfaces == ["decisions"]:
+        return "decided", "decision files changed"
+    if surfaces and set(surfaces).issubset({"pushes", "campaigns", "outputs", "site"}):
+        if all(change.get("untracked") for change in changes):
+            return "drafted", "new reviewable artifact files were created"
+        return "updated", "existing shipped-work files changed"
+    if surfaces and set(surfaces).issubset({"config"}):
+        return "fixed", "setup or wiring files changed"
+    if all(change.get("untracked") for change in changes):
+        return "added", "new durable business context was created"
+    return "updated", "existing durable business context changed"
+
+
 def _proposal(changes: list[dict[str, Any]], blocks: list[dict[str, str]]) -> dict[str, Any] | None:
     if not changes or blocks:
         return None
     counts = _surface_counts(changes)
     surfaces = [surface for surface in SURFACE_ORDER if surface in counts]
-    phrase = _surface_phrase(surfaces)
+    verb, reason = _proposal_verb(changes, surfaces)
+    if len(changes) == 1:
+        phrase = _object_from_single_change(changes[0])
+    else:
+        phrase = _surface_phrase(surfaces)
     changed_paths = [str(change["path"]) for change in changes]
+    message = f"[{verb}] {phrase}"
+    parsed = checkpoint_verbs.parse_subject(message)
+    validation = checkpoint_verbs.validate_subject(message)
     return {
         "mode": "beginner",
-        "message": f"[checkpoint] Update {phrase}",
+        "message": message,
+        "verb": verb,
+        "loop": parsed.get("loop"),
+        "loops": parsed.get("loops", []),
+        "channel_hint": parsed.get("channel_hint"),
+        "reason": f"Chosen because {reason}.",
+        "validation": validation,
         "body": {
             "changed": changed_paths,
             "why": "Save meaningful business progress before moving on.",
@@ -340,7 +395,7 @@ def recent(repo: str | Path = ".", *, limit: int = 5) -> dict[str, Any]:
         [
             "log",
             f"--max-count={limit}",
-            "--grep=^\\[checkpoint\\]",
+            f"--grep={checkpoint_verbs.accepted_prefix_pattern()}",
             "--extended-regexp",
             "--format=%H%x1f%ct%x1f%s",
         ],
@@ -358,11 +413,23 @@ def recent(repo: str | Path = ".", *, limit: int = 5) -> dict[str, Any]:
         if len(parts) != 3:
             continue
         sha, timestamp, subject = parts
+        parsed = checkpoint_verbs.parse_subject(subject)
+        legacy_checkpoint = subject.startswith("[checkpoint]")
         commits.append(
             {
                 "sha": sha,
                 "timestamp": int(timestamp) if timestamp.isdigit() else 0,
                 "subject": subject,
+                "recognized_as": "legacy_checkpoint"
+                if legacy_checkpoint
+                else "business_verb"
+                if parsed.get("recognized")
+                else "unknown",
+                "verb": parsed.get("verb"),
+                "loop": parsed.get("loop"),
+                "loops": parsed.get("loops", []),
+                "channel_hint": parsed.get("channel_hint"),
+                "parsed": parsed,
             }
         )
     return {"ok": True, "repo": str(root), "commits": commits, "errors": []}
@@ -526,6 +593,17 @@ def commit(
 
     repo_path = Path(str(planned["repo"]))
     commit_message = message.strip() or str(proposal["message"])
+    validation = checkpoint_verbs.validate_subject(commit_message)
+    if not validation["ok"]:
+        return {
+            "ok": False,
+            "status": "invalid_message",
+            "repo": str(repo_path),
+            "committed": False,
+            "validation": validation,
+            "plan": planned,
+            "errors": ["checkpoint message is not business-readable"],
+        }
     paths = [str(change["path"]) for change in planned.get("changes", [])]
     if not paths:
         return {
@@ -574,11 +652,49 @@ def commit(
     }
 
 
+def validate_message(message: str) -> dict[str, Any]:
+    """Validate a proposed checkpoint message."""
+    validation = checkpoint_verbs.validate_subject(message)
+    return {
+        "ok": validation["ok"],
+        "status": "valid" if validation["ok"] else "invalid",
+        "validation": validation,
+        "verbs": {
+            verb: {
+                "prefix": entry.prefix,
+                "loops": list(entry.loops),
+                "loop": entry.default_loop,
+                "channel_hint": entry.channel_hint,
+                "use_when": entry.use_when,
+            }
+            for verb, entry in checkpoint_verbs.registry().items()
+        },
+        "errors": [problem["message"] for problem in validation.get("errors", [])],
+    }
+
+
 def render_human(result: dict[str, Any]) -> None:
     """Render a checkpoint plan for operators."""
     status = result.get("status")
     print("mb checkpoint")
-    print(f"repo: {result.get('repo')}")
+    if result.get("repo"):
+        print(f"repo: {result.get('repo')}")
+    if "validation" in result and status in {"valid", "invalid"}:
+        validation = result.get("validation", {})
+        subject = validation.get("subject", "") if isinstance(validation, dict) else ""
+        print(f"message: {subject}")
+        if status == "valid":
+            parsed = validation.get("parsed", {}) if isinstance(validation, dict) else {}
+            loop = parsed.get("loop") if isinstance(parsed, dict) else None
+            print("valid business checkpoint message.")
+            if loop:
+                print(f"loop: {loop}")
+            return
+        print("invalid checkpoint message.")
+        for error in validation.get("errors", []) if isinstance(validation, dict) else []:
+            print(f"  - {error['message']}")
+            print(f"    fix: {error['guidance']}")
+        return
     if status == "committed":
         commit_info = result.get("commit", {})
         sha = commit_info.get("sha", "") if isinstance(commit_info, dict) else ""
@@ -597,6 +713,13 @@ def render_human(result: dict[str, Any]) -> None:
     if status == "error":
         for error in result.get("errors", []):
             print(f"error: {error}")
+        return
+    if status == "invalid_message":
+        print("checkpoint message is not business-readable.")
+        validation = result.get("validation", {})
+        for error in validation.get("errors", []) if isinstance(validation, dict) else []:
+            print(f"  - {error['message']}")
+            print(f"    fix: {error['guidance']}")
         return
 
     summary = result.get("summary", {})
@@ -621,5 +744,7 @@ def render_human(result: dict[str, Any]) -> None:
         print("")
         print("suggested checkpoint:")
         print(f"  {proposal['message']}")
+        if proposal.get("reason"):
+            print(f"  {proposal['reason']}")
         print("")
         print("This is a plan only. Rerun with --message and --yes to save it.")

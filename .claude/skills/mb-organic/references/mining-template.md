@@ -251,11 +251,13 @@ The path is: Mining → Human Synthesis → Reference Update → THEN Content Ge
 
 ## Raw Data (Optional)
 
-If extracted via Apify or other tools, include raw JSON or CSV here for reference.
+If extracted via Apify or other tools, keep raw JSON/CSV in OS temp,
+`.context/`, or another private scratch location when needed for the current
+run. Do not commit raw scraped data, full comment dumps, private customer data,
+or long copied source material into public research files.
 
-```json
-[Raw data if available]
-```
+In the committed research file, include only source URLs, collection notes,
+short supporting excerpts, and synthesized findings.
 ```
 
 ---

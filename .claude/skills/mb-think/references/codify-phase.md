@@ -94,6 +94,7 @@ When `current_offer` is set (multi-offer mode), audit offer-specific files first
 | core/audience.md (brand-level) | Good | - |
 | core/voice.md | Empty | Needs everything |
 | proof/testimonials.md | Thin | Only 1 testimonial |
+| proof/typicality.md | Empty | No aggregate outcome context |
 | proof/angles/ | Empty | No angles documented |
 
 When in single-offer mode (no `offers/` folder), use the standard table:
@@ -104,6 +105,7 @@ When in single-offer mode (no `offers/` folder), use the standard table:
 | core/audience.md | Thin | Missing objections |
 | core/voice.md | Empty | Needs everything |
 | proof/testimonials.md | Thin | Only 1 testimonial |
+| proof/typicality.md | Empty | No aggregate outcome context |
 | proof/angles/ | Empty | No angles documented |
 
 **Status icons:**
@@ -119,6 +121,7 @@ When in single-offer mode (no `offers/` folder), use the standard table:
 | audience.md | Who + 3 pains + 3 desires + 2 objections |
 | voice.md | Tone + 5 phrases + personality |
 | testimonials.md | 3 testimonials with specific outcomes |
+| typicality.md | Average-case outcomes, timelines, caveats, and common failure context |
 | angles/ | 2-3 documented angles |
 
 ---
@@ -202,6 +205,31 @@ Mining: Competitor content analysis
 ```
 
 If `content-strategy.md` does not exist and the user is codifying content-related decisions, suggest creating it: "This looks like content strategy work. Want to create `core/content-strategy.md` to store this?" See `mb-setup/references/templates.md` for the template, and `mb-help/references/content-strategy-help.md` for user-facing FAQ.
+
+---
+
+## Winning-Ad Research Codification
+
+When codifying customer, review, competitor, script, or comment mining, keep the
+research source and the evergreen reference separate. Raw extracts stay in
+`research/`; only durable conclusions move into `core/`.
+
+| Research Finding | Codify Target |
+|------------------|---------------|
+| Repeated customer phrases, pains, objections | `core/audience.md` or offer-specific `audience.md` |
+| Identity language, named enemies, phrases to use/avoid | `core/voice.md` |
+| New emotional entry point or competitor gap | `core/proof/angles/*.md` |
+| Permissioned individual testimonial with context | `core/proof/testimonials.md` |
+| Average outcomes, typical timelines, caveats, common failures | `core/proof/typicality.md` |
+| Hook pattern, content framework, platform cue, comment insight | `core/content-strategy.md` |
+| Mechanism story, pricing/distribution vulnerability | `core/offer.md` or offer-specific `offer.md` |
+
+Do not turn organic comments into proof claims. Comments are demand language
+and content signal unless the operator has verified customer outcome evidence.
+
+Do not paste full review exports, call transcripts, scraped comment dumps, or
+private customer details into reference files. Use concise source-backed
+synthesis and point back to the research file.
 
 ---
 

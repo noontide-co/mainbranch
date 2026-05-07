@@ -205,6 +205,7 @@ Detect what the user wants from natural language. Route internally to the right 
 | "video scripts", "ad scripts", "spoken word" | Video Scripts | Spoken-word script pipeline |
 | "I'm repurposing a video", "I shot a video" | Video Repurpose | Transcribe + extract hooks + copy variants |
 | "I want ideas for an ad", "brainstorm" | Ideation | Account check (if available) + concept generation |
+| "research winning ads", "mine reviews", "analyze competitors first" | Research / Mining | Route to `/mb-think` winning-ad research before generation |
 | "Check my ad performance", "what's working" | Account Check | Read-only Meta Ads context if `mb connect` and runtime tools are ready |
 | "Give me 5 variations of this winning ad" | Performance Iteration | Pull winner + generate variants if account context is ready |
 | "What's working before we create?" | Pre-Gen Account Check | Account overview + creative audit if account context is ready |
@@ -213,6 +214,12 @@ Detect what the user wants from natural language. Route internally to the right 
 **Also accepts:** "static", "static ads", "video", "video scripts", "one-liners", "review" -- these route to the same pipelines.
 
 **If unclear,** ask: "What do you have and what do you need? (e.g., 'I have images, just need copy' or 'full from scratch')"
+
+**If research/mining is requested before generation:** Route to `/mb-think` and
+load `mb-think/references/winning-ad-research.md`. Customer language, review
+mining, competitor gap maps, comment mining, and winning script teardown should
+save to `research/` and codify into `core/` before this skill generates ads.
+Do not paste raw review/comment dumps or copied prompt libraries into ad output.
 
 ### Proactive Account Awareness
 

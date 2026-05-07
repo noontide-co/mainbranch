@@ -222,7 +222,7 @@ def test_start_surfaces_recent_checkpoint_history(tmp_path: Path, monkeypatch) -
             "--repo",
             str(repo),
             "--message",
-            "[checkpoint] Update offer",
+            "[updated] offer.md",
             "--yes",
             "--json",
         ],
@@ -234,7 +234,8 @@ def test_start_surfaces_recent_checkpoint_history(tmp_path: Path, monkeypatch) -
 
     assert result.exit_code == 0
     report = json.loads(result.stdout)
-    assert report["checkpoint"]["recent"][0]["subject"] == "[checkpoint] Update offer"
+    assert report["checkpoint"]["recent"][0]["subject"] == "[updated] offer.md"
+    assert report["checkpoint"]["recent"][0]["verb"] == "updated"
     assert report["checkpoint"]["pending"]["status"] == "ready"
 
 

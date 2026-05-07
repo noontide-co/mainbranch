@@ -36,7 +36,7 @@ Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running a loca
 
 The repo is the operating memory: offer, audience, voice, research, decisions, bets, pushes, logs, documents, meeting summaries, fulfillment notes, safe finance summaries, and provider refs. The CLI is the deterministic control plane: setup, status, validation, graph, provider readiness, updates, checkpoints, and repair. The skills are the judgment layer: research, decide, write, review, ship, and reflect.
 
-Main Branch is opinionated about rails. The point is not to connect every SaaS tool a business has accumulated. The point is to choose boring, inspectable paths — GitHub for tasks/proposals/history, Cloudflare for sites and DNS, Google/Workspace and official ad-provider paths where smoke-tested, planned optional rails such as Postiz for social scheduling and Beancount-style plain-text finance, optional sidecars for enrichment — and wrap those paths in deterministic commands agents can call without wasting tokens guessing provider setup.
+Main Branch is opinionated about rails. The point is not to connect every SaaS tool a business has accumulated. The point is to choose boring, inspectable paths: GitHub for tasks/proposals/history, Cloudflare for sites and DNS, provider paths such as Google/Workspace and official ads only where smoke-tested, planned optional rails such as Postiz for social scheduling and Beancount-style plain-text finance, and optional sidecars for enrichment. Those paths should be wrapped in deterministic commands agents can call without wasting tokens guessing provider setup.
 
 Read the product frame in [docs/ETHOS.md](docs/ETHOS.md), the four operator loops (Sense → Decide → Ship → Reflect) and the four channels (Paid, Organic, Pages, Ops) in [docs/OPERATOR-LOOPS.md](docs/OPERATOR-LOOPS.md), and the release direction in [docs/ROADMAP.md](docs/ROADMAP.md).
 Workspace, repo, dashboard, finance/legal, and team-log boundaries are defined
@@ -157,6 +157,8 @@ my-business/
 ```
 
 You fill in the durable business files inside `core/`. Claude reads them when generating.
+Old repos may still have `campaigns/`; `mb` reads it for compatibility, but
+new coordinated work belongs in `pushes/`.
 
 As a business grows, related work can graduate into child repos: sites,
 products/offers, client fulfillment repos, private finance repos, or ops repos.
@@ -217,8 +219,9 @@ Full list: `mb --help`.
 
 ### Provider Connections
 
-`mb connect` is the local-first foundation for integrations such as Google,
-Meta, Cloudflare, Postiz, Apify, Beancount, and transcription providers.
+`mb connect` is the local-first foundation for supported, planned, and optional
+provider rails such as GitHub, Cloudflare, Google, Meta, Postiz, Apify,
+Beancount, and transcription providers.
 Use `mb connect plan` when you are not sure what to connect first; it explains
 GitHub, Cloudflare, Google/Workspace, Meta Ads, and Apify as numbered business
 choices with the current readiness state and exact next command.

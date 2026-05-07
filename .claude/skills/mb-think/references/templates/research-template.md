@@ -18,6 +18,10 @@ research/YYYY-MM-DD-topic-[source].md
 - `-x-social.md` — X/Twitter social research (Grok MCP)
 - `-yt-mining.md` — YouTube transcript mining (Apify)
 - `-ig-mining.md` — Instagram mining (Apify or manual)
+- `-customer-mining.md` — Customer calls, surveys, support, onboarding, cancellation language
+- `-review-mining.md` — Public reviews and rating-backed customer language
+- `-winning-ad-research.md` — Competitor gap maps, ad/script teardown, winning blueprint research
+- `-content-comment-mining.md` — TikTok, YouTube, Instagram, or X comment language mining
 - `-local-mining.md` — Local video/audio transcription
 - `-voice-mining.md` — Voice memo transcription
 - `-competitor-mining.md` — Competitor site mining
@@ -64,6 +68,18 @@ linked_decisions: []
 
 ---
 
+## Source Excerpts Used
+
+Keep excerpts short and only include what supports the analysis. Do not paste
+full prompt libraries, full articles, raw comment dumps, private customer data,
+or long tweet threads into committed research files.
+
+| Source | Concise Excerpt | Why It Matters |
+|--------|-----------------|----------------|
+| [Source 1] | "[Short excerpt]" | [Evidence role] |
+
+---
+
 ## Raw Findings
 
 ### [Finding Area 1]
@@ -101,6 +117,8 @@ linked_decisions: []
 | `core/offer.md` | [What might change] |
 | `core/audience.md` | [What might change] |
 | `core/proof/angles/` | [What might change] |
+| `core/proof/typicality.md` | [Aggregate outcome/average-case context] |
+| `core/content-strategy.md` | [Hooks, frameworks, platform strategy] |
 
 ### Open Questions
 
