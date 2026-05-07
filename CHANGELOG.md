@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- `mb checkpoint` now uses the accepted business-readable checkpoint verb
+  contract, proposes subjects such as `[added] market.md`, validates checkpoint
+  messages with `--validate` or stdin, and exposes parsed verb/loop/channel
+  metadata for future status and timeline consumers. Refs #301.
+
 ## [0.3.5] - 2026-05-06
 
 v0.3.5 tightens the Cloudflare account-token repair from v0.3.4. Main Branch

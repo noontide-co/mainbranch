@@ -1006,6 +1006,11 @@ def checkpoint_cmd(
         help="Show recent checkpoint commits plus pending checkpoint state.",
     ),
     message: str = typer.Option("", "--message", "-m", help="Commit message for --yes."),
+    validate: str = typer.Option(
+        "",
+        "--validate",
+        help="Validate a checkpoint message. Pass '-' to read the message from stdin.",
+    ),
     yes: bool = typer.Option(False, "--yes", help="Save the checkpoint after safety gates pass."),
     mode: str = typer.Option(
         "beginner",
@@ -1015,7 +1020,10 @@ def checkpoint_cmd(
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Plan or save a git checkpoint."""
-    if yes or message:
+    if validate:
+        validation_message = sys.stdin.read() if validate == "-" else validate
+        result = checkpoint_mod.validate_message(validation_message)
+    elif yes or message:
         result = checkpoint_mod.commit(repo=repo, message=message, mode=mode, yes=yes)
     elif status_check:
         result = checkpoint_mod.status(repo=repo, mode=mode)

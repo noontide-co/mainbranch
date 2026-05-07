@@ -1,0 +1,61 @@
+verbs:
+  - verb: added
+    prefix: "[added]"
+    loops: [sense, ship]
+    default_loop: sense
+    channel_hint: path-derived
+    use_when: New durable context, state, or reviewable artifact exists.
+  - verb: updated
+    prefix: "[updated]"
+    loops: [sense, ship]
+    default_loop: sense
+    channel_hint: path-derived
+    use_when: Existing durable context or artifact changed.
+  - verb: decided
+    prefix: "[decided]"
+    loops: [decide]
+    default_loop: decide
+    channel_hint: null
+    use_when: A choice and its rationale were accepted.
+  - verb: opened
+    prefix: "[opened]"
+    loops: [decide]
+    default_loop: decide
+    channel_hint: null
+    use_when: A bet or public issue became active.
+  - verb: closed
+    prefix: "[closed]"
+    loops: [reflect]
+    default_loop: reflect
+    channel_hint: null
+    use_when: A bet or public issue got a verdict.
+  - verb: drafted
+    prefix: "[drafted]"
+    loops: [ship]
+    default_loop: ship
+    channel_hint: path-derived
+    use_when: A reviewable artifact was produced, whether or not public yet.
+  - verb: shipped
+    prefix: "[shipped]"
+    loops: [ship]
+    default_loop: ship
+    channel_hint: path-derived
+    use_when: Work reached a recipient, deploy target, or public surface.
+  - verb: connected
+    prefix: "[connected]"
+    loops: [ship]
+    default_loop: ship
+    channel_hint: ops
+    use_when: A provider or local integration became usable.
+  - verb: ran
+    prefix: "[ran]"
+    loops: [ship]
+    default_loop: ship
+    channel_hint: ops
+    use_when: A maintenance, update, migration, validation, or import ran.
+  - verb: fixed
+    prefix: "[fixed]"
+    loops: [ship]
+    default_loop: ship
+    channel_hint: path-derived
+    use_when: A broken workflow, file, link, provider, or setup path was repaired.
