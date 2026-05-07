@@ -26,7 +26,7 @@ CURRENT_DIRS = (
     "decisions",
     "bets",
     "log",
-    "campaigns",
+    "pushes",
     "documents",
 )
 LEGACY_TREE_MOVES = (
@@ -140,7 +140,10 @@ def _plan_move_tree(
                     PlannedChange(kind="delete_file", path=source_path, source=source_path)
                 )
                 continue
-            plan.errors.append(f"{target_path} already exists with different contents")
+            plan.errors.append(
+                f"{target_path} already exists with different contents "
+                f"(from {source_path}); manual reconciliation required"
+            )
             continue
         plan.changes.append(
             PlannedChange(
@@ -180,7 +183,10 @@ def _plan_move_file(repo: Path, plan: MigrationPlan, source_rel: str, target_rel
                 PlannedChange(kind="delete_file", path=source_rel, source=source_rel)
             )
             return
-        plan.errors.append(f"{target_rel} already exists with different contents")
+        plan.errors.append(
+            f"{target_rel} already exists with different contents "
+            f"(from {source_rel}); manual reconciliation required"
+        )
         return
     plan.changes.append(
         PlannedChange(kind="move_file", path=target_rel, source=source_rel, target=target_rel)
