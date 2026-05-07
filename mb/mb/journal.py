@@ -13,7 +13,7 @@ FIELD_SEP = "\x1f"
 JOURNAL_SCHEMA_VERSION = "0.current"
 DEFAULT_LIMIT = 12
 VALID_LOOPS = {"sense", "decide", "ship", "reflect"}
-SECTION_RE = re.compile(r"^[A-Z][A-Za-z /_-]*:\s*$")
+SECTION_RE = re.compile(r"^\S[^:]*:\s*$")
 GITHUB_ISSUE_RE = re.compile(r"(?:https?://github\.com/([^/\s]+)/([^/\s]+)/issues/(\d+)|#(\d+))")
 
 
@@ -167,7 +167,7 @@ def parse_refs(body: str) -> list[dict[str, Any]]:
         else:
             path = ref
 
-        key_value = url or path or f"#{number}" if number else ref
+        key_value = (url or path or f"#{number}") if number else ref
         key = (kind, str(key_value))
         if key in seen:
             continue

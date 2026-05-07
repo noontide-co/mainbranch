@@ -73,6 +73,14 @@ def test_parse_refs_supports_business_objects_and_github_issues() -> None:
     assert refs[4]["number"] == 303
 
 
+def test_parse_refs_stops_at_lowercase_body_header() -> None:
+    refs = journal_mod.parse_refs("Refs:\n- pushes/workshop/push.md\nnotes:\n- not a ref\n")
+
+    assert len(refs) == 1
+    assert refs[0]["kind"] == "push"
+    assert refs[0]["path"] == "pushes/workshop/push.md"
+
+
 def test_collect_groups_business_commits_and_preserves_legacy_checkpoints(tmp_path: Path) -> None:
     repo = _business_repo(tmp_path)
     _commit(
