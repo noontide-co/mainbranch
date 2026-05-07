@@ -17,6 +17,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   harness that creates a sanitized fixture business repo, runs deterministic
   CLI/runtime-handoff checks, captures public-safe evidence artifacts, and can
   optionally run a labeled `claude -p` print-mode proxy smoke. Refs #364.
+- Added a release simulation suite manifest, prompt fixtures, expected-behavior
+  rubrics, transcript-review categories, and release-tier documentation for
+  PR smoke, pre-release candidate, and release acceptance evidence. Refs #368.
 - Added a public Claude Code runtime dogfood runbook for release-bearing manual
   smoke evidence, including sanitized fixture setup, read-only CLI checks,
   `/mb-start`, `/mb-think`, `/mb-organic`, checkpoint behavior, repo-boundary

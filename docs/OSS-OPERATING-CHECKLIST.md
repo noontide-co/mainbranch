@@ -108,6 +108,10 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
   `scripts/claude-runtime-dogfood.py` for deterministic fixture, CLI,
   repo-boundary, and evidence-template collection, with print-mode evidence
   labeled as a proxy when used.
+- [ ] Runtime or release-validation changes choose the appropriate
+  [release simulation tier](release-simulations.md) and route transcript
+  findings to skill prose, generated `CLAUDE.md`, CLI, docs, harness, runtime,
+  or user-education follow-ups.
 - [ ] Bundled `templates/` and the fixture business-repo flow stay in sync with
   `.mb/` schema, skill-discovery, and onboarding changes.
 - [ ] `CHANGELOG.md` is updated for user-visible CLI, skill, packaging,

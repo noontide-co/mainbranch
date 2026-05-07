@@ -68,7 +68,9 @@ scripts/claude-runtime-dogfood.py --install-mode editable
 
 Add `--run-claude-print --max-budget-usd 0.25` when Claude Code print mode is
 available and you want proxy transcript/rubric evidence. Interactive Claude
-Code smoke is still required for release-bearing runtime claims.
+Code smoke is still required for release-bearing runtime claims. Use the
+[release simulation matrix](docs/release-simulations.md) to choose PR smoke,
+pre-release candidate, or release acceptance evidence.
 
 For Go tools (Phase 2):
 
