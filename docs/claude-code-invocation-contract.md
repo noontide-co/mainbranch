@@ -63,13 +63,19 @@ If `/mb-start` is missing or returns `Unknown command`, run these from the
 business repo:
 
 ```bash
-mb skill repair --repo .
 mb skill link --repo .
 ```
 
 Then restart Claude Code from the business repo and type `/mb-start` again.
 Claude Code loads skill discovery at session start, so relinking usually
 requires a restart before the slash command appears.
+
+`mb skill link --repo .` creates the project-local bridge links and also moves
+known stale or broken Main Branch personal-skill shadows to backups. If
+`/mb-start` is still missing afterward, run `mb skill repair --repo .` to
+inspect unresolved personal-skill conflicts. Use
+`mb skill repair --repo . --apply` only when you intentionally want the
+standalone repair command to move repairable shadows.
 
 `mb start --json` and `mb doctor` perform static checks for this wiring. Static
 checks prove the files are present and not shadowed by known personal skill

@@ -13,7 +13,6 @@ mb doctor
 If Claude Code does not see `/mb-start`, run this from your business repo:
 
 ```bash
-mb skill repair --repo .
 mb skill link --repo .
 ```
 
