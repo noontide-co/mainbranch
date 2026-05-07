@@ -92,7 +92,7 @@ The more you lean on big tech, the more you realize what you're trading. As AI s
 | Phase | What | You Learn |
 |-------|------|-----------|
 | **Terminal** | Claude Code + skills | How to think with AI |
-| **Personal Cloud** | Railway + Postiz | How to run infrastructure |
+| **Personal Cloud** | Hosted tools or a boring Docker-capable host | How to run infrastructure |
 | **Local** | Your own box | How to depend on no one |
 
 Main Branch is Phase 2. Not everyone goes all the way. The path exists for those who want it.
