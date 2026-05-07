@@ -10,7 +10,7 @@ Start local:
 mb doctor
 ```
 
-If Claude Code does not see `/start`, run this from your business repo:
+If Claude Code does not see `/mb-start`, run this from your business repo:
 
 ```bash
 mb skill link --repo .
@@ -19,7 +19,7 @@ mb skill link --repo .
 Then restart Claude Code and run:
 
 ```text
-/start
+/mb-start
 ```
 
 For step-by-step setup, read [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md).

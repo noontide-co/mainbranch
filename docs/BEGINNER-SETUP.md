@@ -41,7 +41,7 @@ Same flow as macOS — use `apt install pipx` (Debian/Ubuntu) or `dnf install pi
 
 ### Windows
 
-> **Windows is experimental.** It may work but isn't tested in CI; expect rough edges. See [compatibility](compatibility.md) and track [issue #137](https://github.com/noontide-co/mainbranch/issues/137) for status. Power users are welcome to try the steps below.
+> **Windows is experimental.** It may work but isn't tested in CI; expect rough edges. See [compatibility](compatibility.md). Power users should use WSL2 for the closest supported path.
 
 ```powershell
 # 1. Install Claude Code
@@ -102,7 +102,7 @@ Then in Claude Code:
 /mb-start
 ```
 
-`/mb-start` walks you through the rest — gathers your business context (offer, audience, voice), drafts the reference files, routes you to the right skill for what you want to do.
+`/mb-start` walks you through the rest. It reads the same status facts as `mb status`, checks for updates or repair needs, and routes you to setup, thinking, shipping, or closing work.
 
 That's it. From this point on:
 
@@ -220,7 +220,9 @@ starts, so repaired `/mb-start` links usually appear after restart.
 | Skill | What it does |
 |---|---|
 | `/mb-start` | Main entry point — figures out what you need and routes you. |
-| `/mb-think` | Research, decide, codify — turns thinking into reference files. |
+| `/mb-status` | Claude Code briefing over `mb status --json --peek`, including ranked next actions. |
+| `/mb-think` | Research, decide, codify — turns thinking into durable business files. |
+| `/mb-bet` | Open, update, close, list, and narrate business bets. |
 | `/mb-ads` | Generate ad copy and review for compliance. |
 | `/mb-vsl` | Write video sales letter scripts. |
 | `/mb-organic` | Generate organic content (Reels, TikTok, carousels). |
@@ -242,11 +244,14 @@ starts, so repaired `/mb-start` links usually appear after restart.
 | `mb status` | Show a terminal-only repo/runtime/GitHub briefing. `/mb-start` reads these facts internally. |
 | `mb start` | Check runtime handoff readiness and print or launch Claude Code with `--launch`. |
 | `mb connect plan` | Show numbered provider setup choices with readiness and exact next commands. |
+| `mb issue draft` | Draft a privacy-safe GitHub issue from a bug, confusing step, or feature gap. |
+| `mb checkpoint` | Plan or save a business-readable git checkpoint during long work. |
+| `mb similar-bets` | Find similar past bets and outcomes before starting a new one. |
 | `mb update` | Update Main Branch based on pipx vs clone install mode. |
 | `mb doctor` | Check that everything is set up correctly. Walks you through fixes. |
 | `mb skill link --repo .` | Repair Claude Code skill discovery if `/mb-start` doesn't show up. |
 | `mb skill repair --repo .` | Check for old personal Claude Code skills that can shadow Main Branch. |
-| `mb validate` | Check your reference files have correct frontmatter. |
+| `mb validate` | Check your business files have correct frontmatter. |
 | `mb graph` | Visualize or export the graph of files, links, wikilinks, and business entity tags. |
 | `mb skill list` | Show which skills your installed Main Branch ships. |
 
@@ -271,7 +276,7 @@ checks whether an old personal skill is taking precedence.
 
 **`mb` not found after install:** run `pipx ensurepath`, close your terminal completely, reopen it.
 
-**Output sounds generic:** add more detail to your reference files, especially `core/voice.md`. The richer those files, the more specific your outputs.
+**Output sounds generic:** add more detail to your core files, especially `core/voice.md`. The richer those files, the more specific your outputs.
 
 **You hit a 404:** the repo is public; no access request needed. Double-check the URL spelling.
 

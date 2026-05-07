@@ -104,7 +104,7 @@ Specifically:
 
 Any change to `.claude/skills/*/SKILL.md` or its `references/` should:
 
-1. Run `/skill-creator` review (or equivalent self-review against [the skill-creator guide](https://github.com/anthropics/claude-code/blob/main/docs/skills.md)).
+1. Review the skill against the bundled skill maintenance rules in [AGENTS.md](AGENTS.md) and the skill line-count/frontmatter gates.
 2. Run skill regression: `test-skills` skill (admin-only) verifies the skill-system invariants.
 3. Keep `SKILL.md` under 500 lines (CI gates this). If it grows past, split content into `references/<topic>.md`.
 4. Add or update frontmatter: `name:`, `tier:` (skill | playbook), `calls:` (list of tool/skill names invoked by this skill).
@@ -140,6 +140,4 @@ Codex, Claude Code, and other agents.
 
 The engine v0.1.0 decision is `decisions/2026-04-29-mb-vip-v0-1-0-master.md`. It locks the first public ship list and historical launch vocabulary.
 
-The companion business-side master plan is tracked in `noontide-co/projects#119`. Read it when a contribution touches product positioning, public launch sequencing, pricing, the agency arm, or the four CLI pillars.
-
-If you're considering a contribution, read it first.
+Historical business-side planning also exists in private Noontide repos. Public contributors should treat this repository's decisions, docs, issues, changelog, and releases as the durable product truth.

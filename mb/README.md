@@ -4,7 +4,7 @@ Engine umbrella for [Main Branch](https://github.com/noontide-co/mainbranch) —
 
 This package is the Python entry point. Workflows, playbooks, educational content, and consumer-repo templates ship as bundled package data. Today, the day-to-day "do work" surfaces are packaged as Claude Code skills (markdown), invoked from inside Claude Code. The `mb` CLI is runtime-agnostic by design: future adapters should let Codex, Cursor, OpenClaw, Hermes, and local runtimes operate against the same business-as-files repo.
 
-The source tree keeps the engine payload in one place: repo-root `.claude/`. During sdist/wheel builds, `setup.py` copies that tree into `mb/_engine/.claude/` inside the build artifact so installed wheels can resolve skills, playbooks, reference files, lenses, and educational prompts without a source checkout.
+The source tree keeps the engine payload in one place: repo-root `.claude/`. During sdist/wheel builds, `setup.py` copies that tree into `mb/_engine/.claude/` inside the build artifact so installed wheels can resolve skills, playbooks, reference materials, lenses, and educational prompts without a source checkout.
 
 ## Install
 
@@ -27,13 +27,19 @@ mb --version
 | `mb doctor` | Diagnostic. Checks Claude Code, gh auth, network, librsvg, runtime wiring, and package freshness. Warns on cloud-backed finance paths and offers educational triage. |
 | `mb status` | Daily briefing. Summarizes repo shape, install/runtime readiness, recent brain files, recent git activity, and GitHub tasks when `gh` is authenticated. Supports `--json`. |
 | `mb start` | Runtime handoff. Verifies the current business repo, git, Claude Code, and `/mb-start` skill wiring, then prints the exact `claude` command or launches it with `--launch`. Supports `--json`. |
-| `mb validate` | Frontmatter shape check across `decisions/`, `core/offers/`, `research/`, `bets/`, `log/`, `campaigns/`, `documents/`. Exit 1 on any fail. |
+| `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `bets/`, `log/`, `pushes/`, legacy `campaigns/`, and `documents/`. Exit 1 on any fail. |
 | `mb graph` | Walk linked_research / linked_decisions / supersedes; emit Graphviz DOT to stdout. `--open` shells to `dot` + `open`. |
+| `mb similar-bets` | Find similar past bets and offer outcomes from repo truth. |
+| `mb checkpoint` | Plan or save a business-readable git checkpoint. |
 | `mb update` | Refresh the Main Branch engine according to install mode (`pipx` upgrade or clone `git pull`) and repair skill links. `--check` dry-runs; `--json` emits an envelope. |
 | `mb migrate` | Inspect and apply numbered repo schema migrations. `status`, `--check`, and `--apply` support `--json`; `--check` prints privacy-safe summaries by default, with full diffs behind `--diff`. |
+| `mb connect` | Connect provider credentials without committing secrets, test provider health, and inspect repair-safe integration status. |
+| `mb site` | Inspect site readiness for launch-adjacent workflows. |
+| `mb issue` | Draft and open privacy-safe GitHub issues from local friction. |
 | `mb think <topic>` | Print the /mb-think workflow invocation hint for the currently supported runtime. |
-| `mb resolve <key>` | Resolve a reference path (checks free first, then paid). |
+| `mb resolve <key>` | Resolve a reference key from the curated library, local core files, or bundled stubs. |
 | `mb skill path <name>` | Print the on-disk path to a bundled skill. |
+| `mb skill validate <name>` | Validate bundled skill frontmatter, local references, and line-count gates. |
 | `mb skill link --repo <path>` | Wire or repair Claude Code skill discovery for a business repo. Future runtime adapters should get equivalent wiring commands. |
 | `mb skill repair --repo <path>` | Detect personal Claude Code skills that shadow Main Branch and safely back up stale Main Branch symlinks with `--apply`. |
 | `mb educational <topic>` | Print an educational triage file. Powers `mb doctor`'s "tell me more" prompts. |
