@@ -184,15 +184,18 @@ allowed to mutate local Claude wiring files under the fixture repo.
 
 ```bash
 cd "$DOGFOOD_REPO"
-"$MB" skill repair --repo .
-"$MB" skill link --repo .
+"$MB" skill repair --repo .   # inspect personal-skill shadows; no --apply yet
+"$MB" skill link --repo .     # rewrite project-local bridge links
 "$MB" doctor
 "$MB" start --json > "$DOGFOOD_ROOT/start-after-repair.json" || true
 ```
 
 Pass condition:
 
-- Repair output explains what changed.
+- `mb skill repair --repo .` reports shadow findings and the safe `--apply`
+  command without moving personal skills. If a real shadow must be cleared,
+  rerun with `--apply` only after reviewing the findings.
+- `mb skill link --repo .` explains any project-local bridge links it rewrote.
 - `.claude/skills/mb-start/SKILL.md` exists after repair.
 - `mb start --json` reports the clearest available next command.
 
