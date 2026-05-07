@@ -20,10 +20,10 @@
 
 ## Architecture In One Sentence
 
-Main Branch keeps canonical business memory in the business repo, uses `mb` as
-the deterministic control plane over that repo, and lets runtime skills perform
-judgment-heavy work while leaving provider data, secrets, caches, and dashboard
-state outside canonical memory.
+Main Branch keeps canonical business memory in repos the operator owns, uses
+`mb` as the deterministic control plane over those repos, and lets runtime
+skills perform judgment-heavy work while leaving provider data, secrets,
+caches, and dashboard state outside canonical memory.
 
 ```text
 Main Branch engine     +     business repo            +     optional systems
@@ -40,6 +40,12 @@ docs                         pushes/   (canonical)
 The engine is business-agnostic. The business repo is engine-readable but not
 engine-owned. Provider systems and dashboards are inputs or views; they do not
 replace the repo.
+
+Main Branch is not a marketing folder with extra files. Growth work is the
+first public wedge because ads, pages, content, launches, and bets make the
+memory problem obvious. The architecture is broader: meetings, fulfillment,
+bookkeeping summaries, provider setup, team updates, repo topology, and
+operating lessons use the same Sense -> Decide -> Ship -> Reflect model.
 
 ## Operating Loops
 
@@ -93,6 +99,29 @@ my-business/
 The canonical business brain is `core/`. The old committed business-repo
 `reference/` folder is compatibility-only for old repos, as defined in
 [decisions/2026-05-06-business-repo-folder-model-reference-deprecation.md](../decisions/2026-05-06-business-repo-folder-model-reference-deprecation.md).
+
+## Repo Topology
+
+A company can outgrow one repo without leaving the Main Branch model. The
+business repo stays the hub, and specialized repos become linked operating
+boundaries.
+
+Common repo roles:
+
+| Role | What it holds | Boundary |
+| --- | --- | --- |
+| `business` | Core operating memory, research, decisions, bets, pushes, logs, docs | Default team context |
+| `site` | Cloudflare Pages, landing page, minisite, website, or public bet feed | Public deployable surface |
+| `offer` | Graduated product, service, or internal tool that needs its own lifecycle | Linked back to the business repo |
+| `client` | Client-specific fulfillment context and deliverables | Separate when access or confidentiality differs |
+| `finance` | Beancount ledger, exports, tax docs, sensitive P&L sources | Private by default; share summaries intentionally |
+| `ops` | Private infrastructure, runbooks, provider setup, or team routines | Separate when operational authority differs |
+| `archive` | Inert imports, legacy projects, or cold storage | Read-only unless revived |
+
+Future dashboards should render this topology in business language: which repos
+exist, what role each plays, which pushes or bets created them, what is stale,
+and which access boundaries are intentional. GitHub alone does not express
+that hierarchy well enough for operators.
 
 ## Primitive Contracts
 
@@ -351,9 +380,12 @@ Use this routing rule when deciding where generated work belongs:
 | Landing-page launch record | `pushes/<push>/site.md` or child site repo |
 | Push review notes | `pushes/<push>/review-log.md` or `reviews/` |
 | Raw transcript or source capture | `documents/transcripts/...` |
+| Meeting summary or operator handoff | `log/YYYY-MM-DD.md` or `documents/meetings/...` |
 | Synthesized findings from source material | `research/YYYY-MM-DD-slug.md` |
 | Throwaway code, HTML, script, or image experiment | `documents/prototypes/...` |
 | Operational site, app, or offer repo | separate child repo with links back |
+| Fulfillment SOP, delivery note, or internal ops guide | `core/operations/...`, `documents/...`, or a client repo |
+| Finance source ledger | private finance repo or local sidecar; only safe summaries link back |
 | Session recovery or daily work record | `log/YYYY-MM-DD.md` |
 | Accepted architecture or product choice | `decisions/YYYY-MM-DD-slug.md` |
 | Engine coordination or review | GitHub issue or pull request |
@@ -393,6 +425,13 @@ In practice:
   intentionally chosen.
 - Reflection usually lands in a bet verdict, research note, decision update,
   push review log, or `log/` entry.
+- Meeting transcripts are source material until synthesized. The durable
+  artifact is the summary, decision, task, push, or core update that comes out
+  of the meeting.
+- Finance ledgers and legal files are higher-sensitivity sources. Main Branch
+  can link to them and store safe summaries, but raw ledgers should stay in
+  private repos or local sidecars unless an explicit boundary decision says
+  otherwise.
 
 ## State Boundaries
 
@@ -427,6 +466,35 @@ External or optional state:
 Secrets, bearer tokens, OAuth refresh tokens, service-account JSON, customer
 exports, raw member data, and sensitive finance/legal data do not belong in
 public examples or committed business repo files.
+
+## Curated Rails
+
+Main Branch should not become a "connect every SaaS" hub. The system earns
+trust by curating boring, inspectable rails and wrapping them in deterministic
+flows that agents can call cheaply.
+
+Preferred pattern:
+
+- official CLIs, APIs, or provider surfaces where they are stable and
+  smoke-testable;
+- `mb connect` for local credential metadata and repair-safe readiness checks;
+- deterministic commands before broad MCP schemas when a CLI can do the job;
+- provider-specific workflows only after the setup, failure states, and
+  operator approval gates are explicit;
+- graceful degradation when optional sidecars are missing.
+
+Examples of intended rails:
+
+- GitHub for issues, pull requests, reviews, repo history, and shipped-work
+  visibility;
+- Cloudflare for Pages, DNS, Workers-adjacent site workflows, and future
+  deterministic CMS/site operations;
+- Google/Workspace and Google Ads/GTM where official paths are smoke-tested;
+- Meta/Facebook Ads through the official path when detection and read-only
+  smoke exist;
+- Postiz for social scheduling when the provider path earns support;
+- Beancount/Fava-style plain-text finance as a private or sidecar-backed Ops
+  surface.
 
 ## `mb` Responsibilities
 
@@ -488,12 +556,38 @@ Incorrect pattern:
 push.md becomes a raw ads database
 dashboard database becomes the only place push truth exists
 .mb/cache is treated as business memory
+chat transcript is treated as the decision record
 ```
+
+## Dashboard And Team Communication
+
+The future dashboard is not the brain. It is the map: business repos, site
+repos, offer repos, private finance repos, pushes, bets, team work, agents,
+provider-safe summaries, finances, open decisions, and stale areas rendered
+from repo truth.
+
+Dashboard sources should be:
+
+- `mb status --json`;
+- `mb graph --json`;
+- git history and `mb checkpoint` records;
+- GitHub issues, pull requests, reviews, and releases;
+- repo topology metadata;
+- provider-safe summaries and optional sidecar outputs;
+- explicit `log/`, `decisions/`, `bets/`, and `pushes/` records.
+
+Chat can exist as an input surface, but it should not become the operating
+truth. A team chat replacement earns its place only when important conversation
+turns into durable artifacts: issues, proposals, decisions, pushes, logs, and
+commits. Raw chat history and meeting transcripts should be source material,
+not the final record.
 
 ## Graph And Status
 
 `mb graph` should index durable markdown relationships: linked decisions,
 research, bets, pushes (and legacy campaigns), offers, outcomes, and documents.
+The graph should remain friendly to GitHub links and Obsidian-style wikilinks so
+operators can inspect the same memory outside Main Branch.
 
 `mb status` should read those same durable relationships plus cheap local facts
 to answer:

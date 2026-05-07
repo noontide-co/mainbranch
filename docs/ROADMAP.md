@@ -4,6 +4,12 @@ This roadmap is direction, not a promise. GitHub issues and release notes are
 the detailed execution record. This file explains the product shape so users,
 contributors, and agents understand where Main Branch is going.
 
+Main Branch is not only a marketing-growth context folder. Growth is the first
+high-value wedge because ads, pages, content, and launches expose the memory
+problem quickly. The broader product is durable operating memory for
+AI-assisted businesses: meetings, fulfillment, bookkeeping summaries, provider
+refs, decisions, bets, pushes, logs, and lessons in repos the team owns.
+
 ## Shipped Foundation
 
 Main Branch already ships:
@@ -18,6 +24,7 @@ Main Branch already ships:
 - graph and status primitives for future dashboard and agent workflows;
 - privacy-safe GitHub issue drafting for user friction;
 - `bets/` and `/mb-bet` as the first Reflect primitive;
+- `mb checkpoint` as the first hidden GitOps save layer for long agent runs;
 - public contribution, support, security, compatibility, and agent guidance;
 - accepted workspace/repo/sensitive-data boundary guidance and
   GitHub/Obsidian-compatible markdown/link conventions for future dashboard,
@@ -83,16 +90,29 @@ Planned scope:
 - a small read-only local dashboard over existing JSON outputs;
 - visual multi-repo inventory for business repos, site repos, offer repos, and
   sensitive/private repos, with explicit access boundaries;
+- a dashboard map of repos, pushes, bets, commits, issues, PRs, checkpoints,
+  provider-safe summaries, and sidecar summaries;
 - sidecar enrichment contracts for optional tools such as public company
   context, analytics, bookkeeping, transcription, deployment helpers, and
   provider metrics;
+- team daily log surfaces built from commits, checkpoints, issues, PRs, and
+  explicit `log/` files instead of treating raw chat as source of truth;
 - follow-up implementation work from the workspace/repo boundary decision and
   markdown/link conventions, including dashboard spikes, team daily log
   surfaces, finance/legal warnings, and broader link repair where issues prove
   the need ([#274](https://github.com/noontide-co/mainbranch/issues/274),
   [#275](https://github.com/noontide-co/mainbranch/issues/275)).
 
-## Later: v0.4 - Launches Offers From Bets
+Anti-scope:
+
+- no dashboard database as canonical business memory;
+- no Slack replacement claim before repo truth, GitHub activity, team logs, and
+  permission boundaries are proven;
+- no finance/legal raw data in shared repos by default;
+- no "connect every SaaS" hub. Provider rails are curated, official where
+  possible, deterministic, smoke-tested, and optional.
+
+## Later: v0.4 - Bets And Pushes Become Operating Systems
 
 The next proof point after the daily decision loop is graduating real business
 bets into offers, pages, ads, fulfillment, and public Ship surfaces.
@@ -103,6 +123,8 @@ Planned scope:
 - public bets feed generated through site workflows;
 - offer launch workflow: keyword gate, lander, ads, and `/mb-start`
   orchestration ([#89](https://github.com/noontide-co/mainbranch/issues/89));
+- deterministic site/CMS rails over Cloudflare Pages, DNS, GitHub, and
+  operator-approved measurement checks;
 - decisions on Ops surfaces (books, P&L, compliance) and fulfillment scope;
 - bookkeeping/P&L primitives that respect finance-data privacy boundaries
   ([#128](https://github.com/noontide-co/mainbranch/issues/128)).
@@ -121,7 +143,10 @@ Likely directions:
 - structured data layer for metrics, ads, analytics, P&L, and ledgers, with
   explicit access boundaries before sensitive financial/legal data is surfaced;
 - richer sidecar ecosystem behind narrow JSON contracts;
-- deeper Paid, Organic, Pages, and Ops workflows under the four-pillar framing.
+- deeper Paid, Organic, Pages, and Ops workflows under the four-pillar framing;
+- optional chat or team-communication surfaces that convert important
+  conversation into durable artifacts: issues, proposals, decisions, pushes,
+  logs, and commits.
 
 ## Reading Order
 

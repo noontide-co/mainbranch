@@ -183,7 +183,7 @@ Good issue slices look like:
 - one command surface, such as `mb status`;
 - one repair loop, such as `mb update`;
 - one validator, such as cross-reference validation;
-- one runtime proof, such as Claude Code `/start` discovery from a fresh repo.
+- one runtime proof, such as Claude Code `/mb-start` discovery from a fresh repo.
 - one product loop, such as "turn user friction into a GitHub issue draft" or
   "surface the next three actions from status signals."
 
@@ -328,7 +328,7 @@ Level 5, runtime smoke:
 
 - create a fresh business repo;
 - launch the relevant runtime from that repo;
-- verify `/start` or the equivalent runtime entrypoint is discoverable;
+- verify `/mb-start` or the equivalent runtime entrypoint is discoverable;
 - verify the skill reads the business repo and does not write into the engine
   repo;
 - record the evidence in the PR.

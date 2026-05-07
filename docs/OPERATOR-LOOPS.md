@@ -6,6 +6,10 @@ agencies, course creators, productized services, indie SaaS, and small ecom
 teams. The taxonomy works for one person and for two-to-five people sharing
 a business repo.
 
+Growth work is the first visible wedge, but the loops are not marketing-only.
+The same model covers meetings, fulfillment, bookkeeping summaries, team
+updates, repo topology, provider setup, and internal operating pushes.
+
 The four loops:
 
 1. **Sense** — pull state in
@@ -49,14 +53,19 @@ reference-file reads sit here.
 - `mb connect status`
 - `core/`, `research/`, `decisions/`, `pushes/`, legacy `campaigns/`, `log/`, `documents/`
 - GitHub issues, pull requests, release history
+- linked business, site, offer, finance, ops, and client repos when the team
+  chooses separate operating boundaries
 
 **Next improvements**
 
-- Drift detection for stale context, broken wiring, expired credentials
-- Provider-readiness signals for GitHub, Cloudflare, Google, Meta, Apify
-- An optional local dashboard that visualizes existing repo / GitHub / provider
-  truth without becoming the source of truth
-- "Since last check" deltas so the daily briefing answers "what changed?"
+- richer repo-topology views across business, site, offer, finance, ops, and
+  client repos;
+- provider-readiness signals that become more specific as official paths are
+  smoke-tested;
+- an optional local dashboard that visualizes existing repo / GitHub / provider
+  truth without becoming the source of truth;
+- meeting, transcript, fulfillment, and bookkeeping summaries routed into the
+  right durable artifacts instead of staying in chat.
 
 ## 2. Decide
 
@@ -76,15 +85,15 @@ options. Discrete moments, not continuous activity.
 - `/mb-start`
 - `/mb-think`
 - GitHub issues and priorities
-- `mb status` (the next-action ranker, when present)
+- `mb status` ranked actions
 
 **Next improvements**
 
-- A deterministic next-action ranker
-- Top-three recommendations in `mb status` and `/mb-start`
 - Explicit pin, skip, and defer controls
 - Decision trees for provider choices, paid-SaaS exceptions, sensitive data,
   and workspace/repo boundaries
+- clearer repo-boundary choices: when a site, offer, client, finance, or ops
+  surface graduates into its own repo
 
 ## 3. Ship
 
@@ -117,7 +126,8 @@ operators ship creatives, SaaS founders ship features.
 - **Paid** — Meta ads, sponsored placements
 - **Organic** — Reels, threads, newsletter, YouTube, Skool posts
 - **Pages** — landers, minisites, websites
-- **Ops** — bookkeeping, P&L, compliance, operating health
+- **Ops** — bookkeeping, P&L, compliance, meetings, fulfillment, provider setup,
+  repo topology, team updates, and operating health
 
 A Ship event is `(loop, channel)`. Posting an ad = Ship through Paid.
 Sending the newsletter = Ship through Organic. Running `mb update` = Ship
@@ -128,8 +138,10 @@ through Ops.
 - Skills leaning more heavily on CLI facts instead of duplicate checks
 - Optional provider and sidecar contracts
 - Beginner-safe connector flows for GitHub, Cloudflare, Google, Meta, Apify
-- Richer Paid, Organic, Pages, and Ops surfaces (books, P&L, compliance)
-- Agent checkpoints that save meaningful work before context is lost
+- deterministic site/CMS rails over Cloudflare, GitHub, and operator-approved
+  measurement checks
+- richer Paid, Organic, Pages, and Ops surfaces (books, P&L, meetings,
+  fulfillment, compliance)
 
 ## 4. Reflect
 
@@ -252,8 +264,8 @@ Underneath Ship sit the four channels every operator can recognize:
 - **Organic** — owned audience content (Reels, TikTok, threads, YouTube,
   newsletter, Skool posts)
 - **Pages** — landers, minisites, websites, public bet pages, deployed assets
-- **Ops** — bookkeeping (Beancount), P&L, compliance, integrations, operating
-  health
+- **Ops** — bookkeeping (Beancount), P&L, compliance, integrations, meetings,
+  fulfillment, repo topology, team updates, and operating health
 
 Skills cluster by channel today (`/mb-ads` for Paid, `/mb-organic` and
 `/mb-vsl` for Organic, `/mb-site` for Pages, `mb books` planned for Ops).
