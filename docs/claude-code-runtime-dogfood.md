@@ -69,6 +69,19 @@ checks fixture and engine repo boundaries, and writes a public-safe evidence
 folder. The final output prints the evidence path and a paste-ready
 `evidence-template.md`.
 
+By default the temp root is kept so you can inspect evidence artifacts. Remove
+it after copying anything you need:
+
+```bash
+rm -rf /path/printed/by/the/harness
+```
+
+Use `--cleanup` for CI or local runs that only need the exit code. If you need
+artifacts and cleanup in the same run, pass `--evidence-dir` outside the temp
+root before adding `--cleanup`. Explicit `--root` directories are never removed,
+and reusing a `--root` requires deleting the existing `dogfood-studio/` fixture
+first.
+
 For a wheel smoke:
 
 ```bash

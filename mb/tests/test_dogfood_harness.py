@@ -95,6 +95,9 @@ def test_evidence_template_labels_print_mode_as_proxy(tmp_path: Path) -> None:
     assert "Print-mode evidence is not the same as interactive TUI evidence" in template
     assert "Session ID preserved: True" in template
     assert "Rubric: 6/7 heuristic checks" in template
+    assert f"Evidence folder: {state.evidence_dir}" not in template
+    assert str(tmp_path / "transcript.md") not in template
+    assert "Transcript excerpts: local artifact; see harness output and summary.json" in template
     assert "`mb start --json`: follow-up /mb-start" in template
 
 
@@ -172,6 +175,7 @@ def test_run_harness_returns_failure_for_missing_skill_and_engine_write(
         pypi_version="",
         run_claude_print=False,
         max_budget_usd="0.25",
+        cleanup=False,
     )
 
     exit_code = harness.run_harness(args)
@@ -181,3 +185,59 @@ def test_run_harness_returns_failure_for_missing_skill_and_engine_write(
     assert summary["ok"] is False
     assert any("missing .claude/skills" in failure for failure in summary["failures"])
     assert any("engine repo git status changed" in failure for failure in summary["failures"])
+
+
+def test_cleanup_removes_auto_temp_root_on_success(tmp_path: Path, monkeypatch: Any) -> None:
+    created_root = tmp_path / "auto-root"
+
+    def fake_mkdtemp(prefix: str) -> str:
+        assert prefix == "mainbranch-dogfood-"
+        created_root.mkdir()
+        return str(created_root)
+
+    def fake_install_mb(**_: Any) -> Path:
+        return created_root / "bin" / "mb"
+
+    def fake_mb_version(state: harness.HarnessState) -> str:
+        return "mb test"
+
+    def fake_setup_fixture(state: harness.HarnessState) -> None:
+        state.fixture_repo.mkdir(parents=True)
+        skill = state.fixture_repo / ".claude" / "skills" / "mb-start" / "SKILL.md"
+        skill.parent.mkdir(parents=True)
+        skill.write_text("# skill\n", encoding="utf-8")
+
+    def fake_run_cli_checks(state: harness.HarnessState) -> None:
+        state.parsed_json["status_peek"] = {
+            "schema_version": "1.0",
+            "runtime": {"skill_wiring": {"ok": True}},
+        }
+        state.parsed_json["start"] = {
+            "handoff_ready": True,
+            "command": {"follow_up": "/mb-start"},
+            "runtime": {"skill_wiring": {"ok": True}},
+        }
+
+    monkeypatch.setattr("mb.dogfood_harness.tempfile.mkdtemp", fake_mkdtemp)
+    monkeypatch.setattr(harness, "install_mb", fake_install_mb)
+    monkeypatch.setattr(harness, "mb_version", fake_mb_version)
+    monkeypatch.setattr(harness, "setup_fixture", fake_setup_fixture)
+    monkeypatch.setattr(harness, "run_cli_checks", fake_run_cli_checks)
+    monkeypatch.setattr(harness, "git_text", lambda *_args: "")
+
+    args = Namespace(
+        engine_repo=str(tmp_path / "engine"),
+        root="",
+        evidence_dir="",
+        install_mode="editable",
+        wheel="",
+        pypi_version="",
+        run_claude_print=False,
+        max_budget_usd="0.25",
+        cleanup=True,
+    )
+
+    exit_code = harness.run_harness(args)
+
+    assert exit_code == 0
+    assert not created_root.exists()

@@ -737,9 +737,9 @@ def evidence_template(state: HarnessState, *, install_mode: str, mb_version: str
     claude_ran = claude.get("ran", False) if isinstance(claude, dict) else False
     claude_notice = claude.get("proxy_notice", "") if isinstance(claude, dict) else ""
     claude_session = bool(claude.get("session_id")) if isinstance(claude, dict) else False
-    claude_transcript = (
-        claude.get("transcript_excerpts", "not run") if isinstance(claude, dict) else "not run"
-    )
+    claude_transcript = "local artifact; see harness output and summary.json"
+    if not (isinstance(claude, dict) and claude.get("transcript_excerpts")):
+        claude_transcript = "not run"
 
     return f"""## Claude Code Runtime Dogfood Evidence
 
@@ -749,7 +749,7 @@ Install mode: {install_mode}
 Claude Code version: {claude_version()}
 OS: {sys.platform}
 Fixture repo path: disposable temp path, no private data
-Evidence folder: {state.evidence_dir}
+Evidence folder: local artifact; see harness output and summary.json
 
 ### CLI Fixture Setup
 
@@ -846,6 +846,7 @@ def mb_version(state: HarnessState) -> str:
 
 def run_harness(args: argparse.Namespace) -> int:
     engine_repo = Path(args.engine_repo).resolve()
+    created_temp_root = not bool(args.root)
     root = (
         Path(args.root).resolve()
         if args.root
@@ -855,6 +856,11 @@ def run_harness(args: argparse.Namespace) -> int:
     evidence_dir = Path(args.evidence_dir).resolve() if args.evidence_dir else root / "evidence"
     evidence_dir.mkdir(parents=True, exist_ok=True)
     fixture_repo = root / DEFAULT_FIXTURE_SLUG
+    if fixture_repo.exists():
+        raise ValueError(
+            f"fixture repo already exists at {fixture_repo}; "
+            "remove that directory or choose a fresh --root"
+        )
 
     mb_path = install_mb(
         mode=args.install_mode,
@@ -879,6 +885,7 @@ def run_harness(args: argparse.Namespace) -> int:
     )
 
     version = mb_version(state)
+    exit_code = 0
     try:
         setup_fixture(state)
         run_cli_checks(state)
@@ -894,12 +901,20 @@ def run_harness(args: argparse.Namespace) -> int:
         print("Failures:", file=sys.stderr)
         for failure in state.failures:
             print(f"  - {failure}", file=sys.stderr)
-        return 1
+        exit_code = 1
     if state.warnings:
         print("Warnings:")
         for warning in state.warnings:
             print(f"  - {warning}")
-    return 0
+    if args.cleanup and exit_code == 0:
+        if created_temp_root:
+            shutil.rmtree(root, ignore_errors=True)
+            print(f"Cleaned up temp root: {root}")
+        else:
+            print(
+                f"--cleanup only removes auto-created temp roots; explicit --root remains: {root}"
+            )
+    return exit_code
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -924,6 +939,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pypi-version", default="", help="Version for --install-mode pypi.")
     parser.add_argument("--root", default="", help="Optional temp root to reuse or inspect.")
     parser.add_argument("--evidence-dir", default="", help="Optional evidence output directory.")
+    parser.add_argument(
+        "--cleanup",
+        action="store_true",
+        help=(
+            "Remove the auto-created temp root after a successful run. Explicit "
+            "--root directories are never deleted."
+        ),
+    )
     parser.add_argument(
         "--run-claude-print",
         action="store_true",
