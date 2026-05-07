@@ -136,7 +136,7 @@ object gives a stronger signal, but it should start here.
 as `[fixed] checkout copy -- clarified guarantee`. For grouping, tooling should
 prefer stronger path signals over the row default. Path and body signals
 should reclassify by default: `core/` and `research/` usually map to Sense,
-accepted `decisions/` and opened `bets/` map to Decide, `campaigns/` and
+accepted `decisions/` and opened `bets/` map to Decide, `pushes/` and
 published artifacts map to Ship, and bet verdicts, retros, superseded
 decisions, and lessons map to Reflect.
 
@@ -150,7 +150,7 @@ Preferred body sections:
 ```text
 Changed:
 - core/offers/workshop.md
-- campaigns/workshop-waitlist/ads.md
+- pushes/2026-05-06-workshop-waitlist/ads.md
 
 Why:
 - Captures the next paid-traffic test before site generation starts.

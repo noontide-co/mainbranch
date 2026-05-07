@@ -71,7 +71,7 @@ Each entry point assembles different components. Components are modular -- they 
 
 | Component | What It Does | Reference |
 |-----------|-------------|-----------|
-| **Pre-flight** | Score reference files, check readiness | [preflight-algorithm.md](preflight-algorithm.md) |
+| **Pre-flight** | Score core files, check readiness | [preflight-algorithm.md](preflight-algorithm.md) |
 | **Account Check** | Pull live account data when `mb connect` and runtime tools are verified | [meta-ads-integration.md](meta-ads-integration.md) |
 | **Copy Engine** | Generate primaries, headlines, hooks | SKILL.md (Static Ads section) |
 | **Hook Library** | Generate N creative variations (also called "one-liners") | [one-liner-methodology.md](one-liner-methodology.md) |

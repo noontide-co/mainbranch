@@ -68,24 +68,16 @@ If empty: `settings.local.json` is missing or doesn't point to Main Branch. Tell
 
 ---
 
-## Step 2: Create bridge links
+## Step 2: Create skill bridge links
 
 ```bash
-mkdir -p "$REPO_PATH/.claude/skills" "$REPO_PATH/.claude/lenses" "$REPO_PATH/.claude/reference"
+mkdir -p "$REPO_PATH/.claude/skills"
 
 # Per-skill symlinks (preserves local custom skills)
 for d in "$ENGINE_PATH"/.claude/skills/*/; do
   [ -d "$d" ] || continue
   n=$(basename "$d")
   [ -e "$REPO_PATH/.claude/skills/$n" ] || ln -s "$d" "$REPO_PATH/.claude/skills/$n"
-done
-
-# Per-entry lenses and reference
-for p in "$ENGINE_PATH"/.claude/lenses/* "$ENGINE_PATH"/.claude/reference/*; do
-  [ -e "$p" ] || continue
-  base=$(basename "$p")
-  parent=$(basename "$(dirname "$p")")
-  [ -e "$REPO_PATH/.claude/$parent/$base" ] || ln -s "$p" "$REPO_PATH/.claude/$parent/$base"
 done
 ```
 
@@ -103,8 +95,8 @@ if ! grep -q "MAIN BRANCH BRIDGE LINKS" "$GITIGNORE" 2>/dev/null; then
   cat >> "$GITIGNORE" << 'GITIGNORE_BLOCK'
 
 # === MAIN BRANCH BRIDGE LINKS (machine-local, do not commit) ===
-.claude/lenses/
-.claude/reference/
+.claude/settings.local.json
+.claude/worktrees/
 GITIGNORE_BLOCK
 
   # Add each Main Branch skill symlink individually (preserves custom skill tracking)

@@ -89,7 +89,7 @@ Use [`references/site-repo-workflow.md`](references/site-repo-workflow.md).
 - **Business repo mode:** CWD has `core/` or legacy `reference/core/`. Say: "I'm reading business context here and will create or select a site repo."
 - **Site repo mode:** CWD has `.mainbranch/source.json`. Say: "I'm editing the site here and reading business context from the linked business repo."
 
-Business repo mode plans, researches, drafts the brief, picks an offer, records campaign state, and creates or selects the site repo. Site repo mode edits code, reviews pages, previews, deploys, and runs `mb site check`.
+Business repo mode plans, researches, drafts the brief, picks an offer, records push/site state, and creates or selects the site repo. Site repo mode edits code, reviews pages, previews, deploys, and runs `mb site check`.
 
 ## Triage
 

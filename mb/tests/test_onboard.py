@@ -86,7 +86,7 @@ def test_onboard_connect_repairs_existing_initialized_repo(tmp_path: Path, monke
         team_size="solo",
         business_type="coaching",
         success_stage="working",
-        desired_outcome="usable core reference",
+        desired_outcome="usable core files",
     )
     settings = repo / ".claude" / "settings.local.json"
     settings.unlink()
@@ -174,7 +174,7 @@ def test_onboard_status_reports_partial_small_team_progress(tmp_path: Path, monk
         team_size="small-team",
         business_type="agency",
         success_stage="working",
-        desired_outcome="usable core reference",
+        desired_outcome="usable core files",
     )
     (repo / "core" / "offer.md").write_text("# Offer\n", encoding="utf-8")
 
@@ -202,7 +202,7 @@ def test_onboard_status_unknown_team_size_is_not_larger_team(tmp_path: Path, mon
         level="power",
         business_type="agency",
         success_stage="working",
-        desired_outcome="usable core reference",
+        desired_outcome="usable core files",
     )
 
     payload = onboard_mod.onboarding_status(repo)
@@ -234,7 +234,7 @@ def test_onboard_plan_updates_profile_without_raw_business_state(
             "--success-stage",
             "successful",
             "--desired-outcome",
-            "document the core reference",
+            "document the core files",
             "--json",
         ],
     )
@@ -288,7 +288,7 @@ def test_status_includes_onboarding_progress(tmp_path: Path, monkeypatch) -> Non
         team_size="solo",
         business_type="coaching",
         success_stage="working",
-        desired_outcome="usable core reference",
+        desired_outcome="usable core files",
     )
 
     report = status_mod.run(path=str(repo))

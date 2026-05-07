@@ -48,11 +48,12 @@ business-repo/.claude/
 │   ├── mb-start -> /path/to/mainbranch/.claude/skills/mb-start
 │   ├── mb-ads   -> /path/to/mainbranch/.claude/skills/mb-ads
 │   └── ... (only missing entries linked)
-├── lenses/                   # real local folder; missing Main Branch entries linked
-└── reference/                # real local folder; missing Main Branch entries linked
 ```
 
-Created by `mb skill link` and `/mb-setup`. `/mb-start` can auto-repair missing links.
+Created by `mb skill link` and `/mb-setup`. `/mb-start` can auto-repair missing
+links. Old clone-based repos may also have `.claude/lenses/` or
+`.claude/reference/` symlinks; those are legacy link dirs that `mb doctor
+repair` can move to backup when they point at stale engine clones.
 
 **Both are needed:**
 - `additionalDirectories` = file access (reading reference files across repos)

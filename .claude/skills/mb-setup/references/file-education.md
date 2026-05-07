@@ -58,7 +58,7 @@ For multi-offer setups, also explain:
 
 ## Visual Style Scaffolding
 
-After core reference is drafted, ask 3 quick questions to seed `visual-style.md`:
+After core files are drafted, ask 3 quick questions to seed `visual-style.md`:
 
 1. "What's your brand's visual mood?" (minimal/bold/editorial/playful/dark)
 2. "What are your brand colors?" (hex codes or descriptions)

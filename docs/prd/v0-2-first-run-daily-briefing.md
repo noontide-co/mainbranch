@@ -216,7 +216,7 @@ Required sections:
   - skill wiring found/missing;
   - suggested repair command.
 - Brain:
-  - counts for core, research, decisions, campaigns/log/documents;
+  - counts for core, research, decisions, pushes, legacy campaigns, log, and documents;
   - recent research;
   - recent decisions;
   - stale proposed/running decisions if detectable.

@@ -202,7 +202,14 @@ mb doctor
 ```
 
 For old `reference/core/` repos, read [MIGRATING.md](MIGRATING.md). You usually
-do not need to move files immediately.
+do not need to move files immediately. When you are ready, run the dry-run first:
+
+```bash
+mb migrate --check
+```
+
+Only run `mb migrate --apply` after the dry-run shows the old paths, move
+targets, backup location, and no conflicts.
 
 ### Already Using The Old Setup?
 
@@ -213,7 +220,9 @@ and paste:
 I want to migrate my existing Main Branch setup to the current pipx + /mb-start
 workflow. Please run read-only checks first, find my likely business repos,
 show me the exact commands you recommend, and ask before running anything that
-writes files. Use docs/MIGRATING.md as the source of truth.
+writes files. If an old `reference/` layout is present, run `mb migrate --check`
+first and do not run `mb migrate --apply` until I approve the dry-run. Use
+docs/MIGRATING.md as the source of truth.
 ```
 
 Claude may ask you to restart in a business repo after it repairs skill

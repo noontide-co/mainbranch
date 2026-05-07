@@ -90,25 +90,23 @@ mb skill repair --repo .
 mb doctor
 ```
 
-If the `mb` CLI is unavailable and you are repairing an old clone-based setup by hand, add compatibility links without replacing local folders. First resolve `$ENGINE_PATH` per **[vip-path-resolution.md](vip-path-resolution.md)**, then:
+If the `mb` CLI is unavailable and you are repairing an old clone-based setup by hand, add skill compatibility links without replacing local folders. First resolve `$ENGINE_PATH` per **[vip-path-resolution.md](vip-path-resolution.md)**, then:
 
 ```bash
 # Create bridge links only for missing entries
-mkdir -p .claude/skills .claude/lenses .claude/reference
+mkdir -p .claude/skills
 for d in "$ENGINE_PATH"/.claude/skills/*; do
   [ -d "$d" ] || continue
   n=$(basename "$d")
   [ -e ".claude/skills/$n" ] || ln -s "$d" ".claude/skills/$n"
 done
-for p in "$ENGINE_PATH"/.claude/lenses/* "$ENGINE_PATH"/.claude/reference/*; do
-  [ -e "$p" ] || continue
-  base=$(basename "$p")
-  parent=$(basename "$(dirname "$p")")
-  [ -e ".claude/$parent/$base" ] || ln -s "$p" ".claude/$parent/$base"
-done
 ```
 
 **Why this bridge?** It preserves project-local custom skills in `.claude/skills/` while adding missing Main Branch entries when discovery is inconsistent.
+
+Old clone-based repos may also have `.claude/lenses/` or `.claude/reference/`
+symlinks. Treat those as legacy link dirs; `mb doctor repair` can move stale
+ones into `.mb/backups/`.
 
 **Check 2: Is Main Branch loaded as an additional directory?**
 ```bash

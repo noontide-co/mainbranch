@@ -13,10 +13,10 @@ claude
 ```
 
 Use this mode to read business context, pick the offer, draft the site brief,
-create or select the site repo, and record campaign/site state.
+create or select the site repo, and record push/site state.
 
 The business repo keeps durable truth: offer, audience, voice, research,
-briefs, campaign records, measurement state, launch status, and manual approval
+briefs, push records, measurement state, launch status, and manual approval
 notes.
 
 ## Site Repo Mode
@@ -64,7 +64,8 @@ include:
 - site repo path or GitHub URL;
 - deployed URL and domain;
 - Cloudflare project and environment;
-- offer path and campaign path;
+- offer path and push path (the JSON key may still be `campaign_path` for
+  compatibility);
 - measurement state from `mb site check`;
 - launch status and next manual approval step.
 

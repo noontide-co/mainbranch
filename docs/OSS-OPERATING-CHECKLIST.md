@@ -48,7 +48,7 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
 ## 4. State Model
 
 - [ ] Canonical business truth stays in the business repo and git history:
-  reference files, research, decisions, plans, campaign artifacts, durable
+  core files, research, decisions, bets, pushes, logs, documents, durable
   summaries, and proposal changes.
 - [ ] `.mb/` is used only for explicit Main Branch operational state such as
   schema markers, repo-safe connection metadata, backups, indexes, or caches.
