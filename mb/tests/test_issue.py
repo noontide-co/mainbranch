@@ -141,7 +141,7 @@ def test_issue_draft_degrades_when_doctor_fails(tmp_path: Path, monkeypatch) -> 
     def fail_doctor(path: str) -> dict[str, object]:
         raise RuntimeError("failed at /Users/alex/business with token=secret")
 
-    monkeypatch.setattr(issue_mod.doctor_mod, "run", fail_doctor)
+    monkeypatch.setattr(issue_mod.doctor_mod, "run", fail_doctor)  # type: ignore[attr-defined]
 
     result = issue_mod.create_draft(
         repo=str(repo),
@@ -200,7 +200,7 @@ def test_issue_open_submits_with_gh_when_reviewed(tmp_path: Path, monkeypatch) -
             stderr="",
         )
 
-    monkeypatch.setattr(issue_mod.shutil, "which", lambda name: "/usr/bin/gh")
+    monkeypatch.setattr(issue_mod.shutil, "which", lambda name: "/usr/bin/gh")  # type: ignore[attr-defined]
 
     result = issue_mod.open_draft(draft["path"], yes=True, runner=fake_runner)
 
@@ -228,7 +228,7 @@ def test_issue_open_gh_create_failure_keeps_manual_fallback(tmp_path: Path, monk
             return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
         return subprocess.CompletedProcess(args, 1, stdout="", stderr="label not found")
 
-    monkeypatch.setattr(issue_mod.shutil, "which", lambda name: "/usr/bin/gh")
+    monkeypatch.setattr(issue_mod.shutil, "which", lambda name: "/usr/bin/gh")  # type: ignore[attr-defined]
 
     result = issue_mod.open_draft(draft["path"], yes=True, runner=fake_runner)
 

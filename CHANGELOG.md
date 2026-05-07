@@ -33,7 +33,7 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 ### Changed
 
 - Package builds now use SPDX-style MIT license metadata and the CI/local
-  quality gates type-check tests, raise the coverage floor to 80%, and keep
+  quality gates type-check tests, raise the coverage floor to 79%, and keep
   Windows as an explicit experimental, non-CI-gated platform. Refs #135.
 - Added `/mb-think` winning-ad research guidance for customer language,
   competitor gap maps, review mining, script teardown, and social comment

@@ -79,7 +79,11 @@ def test_update_pipx_runs_upgrade_then_relinks(monkeypatch: Any, tmp_path: Path)
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
-    monkeypatch.setattr(update_mod.shutil, "which", lambda name: "/opt/homebrew/bin/pipx")
+    monkeypatch.setattr(
+        update_mod.shutil,  # type: ignore[attr-defined]
+        "which",
+        lambda name: "/opt/homebrew/bin/pipx",
+    )
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
 
     repo = tmp_path / "biz"
@@ -220,7 +224,7 @@ def test_update_rejects_unknown_install_mode(monkeypatch: Any, tmp_path: Path) -
 def test_update_pipx_missing_binary_returns_error(monkeypatch: Any, tmp_path: Path) -> None:
     monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
-    monkeypatch.setattr(update_mod.shutil, "which", lambda name: None)
+    monkeypatch.setattr(update_mod.shutil, "which", lambda name: None)  # type: ignore[attr-defined]
 
     result = update_mod.run(repo=tmp_path / "biz")
 
@@ -238,7 +242,11 @@ def test_update_pipx_upgrade_failure_skips_relink(monkeypatch: Any, tmp_path: Pa
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
-    monkeypatch.setattr(update_mod.shutil, "which", lambda name: "/opt/homebrew/bin/pipx")
+    monkeypatch.setattr(
+        update_mod.shutil,  # type: ignore[attr-defined]
+        "which",
+        lambda name: "/opt/homebrew/bin/pipx",
+    )
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
 
     result = update_mod.run(repo=tmp_path / "biz")

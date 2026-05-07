@@ -743,7 +743,7 @@ def test_connect_doctor_includes_github_context_and_provider_repairs(
     repo = tmp_path / "biz"
     repo.mkdir()
     runner.invoke(app, ["connect", "cloudflare", "--repo", str(repo), "--json"])
-    monkeypatch.setattr(connect_mod.shutil, "which", lambda name: "")
+    monkeypatch.setattr(connect_mod.shutil, "which", lambda name: "")  # type: ignore[attr-defined]
 
     result = runner.invoke(app, ["connect", "doctor", "--repo", str(repo), "--json"])
 
@@ -758,7 +758,9 @@ def test_connect_doctor_includes_github_context_and_provider_repairs(
 
 def test_github_context_distinguishes_missing_remote(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(
-        connect_mod.shutil, "which", lambda name: "/usr/bin/gh" if name == "gh" else ""
+        connect_mod.shutil,  # type: ignore[attr-defined]
+        "which",
+        lambda name: "/usr/bin/gh" if name == "gh" else "",
     )
 
     def fake_run(args: list[str], cwd: Path | None = None, timeout: float = 5.0) -> dict[str, Any]:
@@ -847,7 +849,7 @@ def test_macos_keychain_backend_uses_security(monkeypatch) -> None:
 
         return Result()
 
-    monkeypatch.setattr(connect_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(connect_mod.subprocess, "run", fake_run)  # type: ignore[attr-defined]
 
     store = connect_mod.SecretStore("macos-keychain")
     store.set("mainbranch://test/cloudflare/api_token", "cf-token")
