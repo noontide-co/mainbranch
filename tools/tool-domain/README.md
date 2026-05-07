@@ -1,6 +1,6 @@
 # tool-domain
 
-Stub directory. The Go binary lands in v0.1.0 Phase 2 (the build week per the master decision).
+Stub directory. This Go binary never shipped in the public v0.3.x engine. Current domain/site work lives in `/mb-site` and the packaged Python site/Cloudflare readiness atoms. Treat this folder as historical design material unless a new decision revives it.
 
 ## Planned shape
 

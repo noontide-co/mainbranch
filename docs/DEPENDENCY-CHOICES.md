@@ -11,30 +11,34 @@ belong in accepted decisions, CLI tests, provider docs, or linked issues.
 
 ## Principles
 
-1. **Prefer official provider surfaces.** Use official CLIs, APIs, MCP servers,
+1. **Curate rails instead of connecting everything.** Main Branch should choose
+   a small set of boring, inspectable provider paths and make them easy to run
+   well. A user may have many SaaS tools; the product does not need to integrate
+   all of them.
+2. **Prefer official provider surfaces.** Use official CLIs, APIs, MCP servers,
    connectors, or adapter docs when they are stable, documented, and
    smoke-testable.
-2. **Prefer narrow deterministic CLIs over broad SDKs.** If the job is
+3. **Prefer narrow deterministic CLIs over broad SDKs.** If the job is
    inspectable, scriptable, exit-coded, and easy to test through a CLI, that is
    usually a better Main Branch surface than importing a large SDK into core.
-3. **Keep optional sidecars optional.** Specialized tools can enrich Sense and
+4. **Keep optional sidecars optional.** Specialized tools can enrich Sense and
    Ship workflows, but a missing sidecar must degrade gracefully instead of
    breaking the core install.
-4. **Add dependencies for user loops, not novelty.** A tool earns its place
+5. **Add dependencies for user loops, not novelty.** A tool earns its place
    when it makes Sense, Decide, Ship, or Reflect better for operators.
-5. **Remove redundant or fragile surfaces.** Decline or remove dependencies
+6. **Remove redundant or fragile surfaces.** Decline or remove dependencies
    that become redundant, unmaintained, private, fragile, confusing, or
    superseded by an official path.
-6. **Keep secrets out of repos.** Credentials belong in the OS keychain,
+7. **Keep secrets out of repos.** Credentials belong in the OS keychain,
    runtime-local config, environment variables, 1Password, or another explicit
    secret store. Repo files may hold only safe metadata.
-7. **Describe capabilities before vendors.** User-facing copy should say what
+8. **Describe capabilities before vendors.** User-facing copy should say what
    the operator can do. Name a vendor only when the vendor choice affects setup,
    support, credentials, cost, or a provider-specific workflow.
-8. **Do not claim support before evidence.** A path is supported only when the
+9. **Do not claim support before evidence.** A path is supported only when the
    adapter, docs, and smoke evidence exist. Until then, describe it as planned,
    experimental, or a target.
-9. **Leave an exit path.** Every dependency should have a plausible removal,
+10. **Leave an exit path.** Every dependency should have a plausible removal,
    replacement, or graceful-degradation story before it becomes product shape.
 
 ## Decision Rubric
@@ -76,10 +80,13 @@ why a tool disappeared.
 |---|---|---|---|---|---|---|
 | 2026-05-05 | Meta Ads account access | Pipeboard MCP/tools | Removed | A third-party connector should not remain a Main Branch dependency or fallback after the product direction moved to the official Meta path. Keeping it would preserve confusing setup, pricing, and tool-name assumptions. | Use provider-agnostic Meta account-access guidance now; evaluate Meta's official Ads CLI / Ads AI Connectors as the planned path after detection and read-only smoke are wired. | [#304](https://github.com/noontide-co/mainbranch/issues/304) |
 | 2026-05-05 | Meta Ads account access | Meta Ads CLI / Ads AI Connectors | Planned | Official provider surfaces are preferred, but Main Branch should not claim live support until setup, detection, and read-only smoke are verified. | Keep Meta readiness planned in `mb connect`; document exact supported commands only after smoke evidence exists. | [#304](https://github.com/noontide-co/mainbranch/issues/304) |
+| 2026-05-05 | Google Ads / GTM | Official Google Ads and Tag Manager surfaces | Planned | Paid traffic needs deterministic measurement and conversion checks before spend. Main Branch should prefer official Google paths and local site checks over broad browser automation. | Keep current `mb site check` readiness states; promote Google Ads/GTM automation only behind approval gates and smoke evidence. | [#286](https://github.com/noontide-co/mainbranch/issues/286) |
 | 2026-05-04 | Context enrichment | `companyctx` | Reference | Public company/domain context is useful across Sense and Ship workflows, but it should prove the sidecar contract without becoming a required core install. | Use the optional sidecar contract from [the sidecar enrichment decision](../decisions/2026-05-04-sidecar-enrichment-cli-contract.md). | [#265](https://github.com/noontide-co/mainbranch/issues/265) |
 | 2026-05-04 | Bookkeeping and P&L | Beancount | Optional future sidecar | Plain-text ledgers are useful, but real finance data has stricter privacy and access boundaries than normal business repo files. | Keep bookkeeping out of core until `mb books` scope is accepted; write approved summaries to shared repos and keep raw ledgers in private sources. | [#128](https://github.com/noontide-co/mainbranch/issues/128) |
 | 2026-05-04 | Research enrichment | Apify | Optional provider-readiness path | Scraping and research actors can enrich workflows, but they require explicit provider setup and should not make core install heavy. | Surface readiness through `mb connect plan` / `mb connect status`; promote only workflows with proven value and safe failure behavior. | [#273](https://github.com/noontide-co/mainbranch/issues/273) |
-| 2026-05-04 | Sites and DNS | Cloudflare CLI/API | Adopted where smoke-tested | Cloudflare is an official provider path for site and DNS work when a flow has a safe token boundary and validation evidence. | Keep credentials outside repos; expand only through explicit `mb connect` and site-readiness contracts. | [#89](https://github.com/noontide-co/mainbranch/issues/89) |
+| 2026-05-04 | Sites and DNS | Cloudflare CLI/API | Adopted where smoke-tested | Cloudflare is an official provider path for site, DNS, Pages, and future deterministic CMS/site operations when a flow has a safe token boundary and validation evidence. | Keep credentials outside repos; expand only through explicit `mb connect`, site-readiness contracts, GitHub-linked deploy flows, and operator approval gates. | [#89](https://github.com/noontide-co/mainbranch/issues/89) |
+| 2026-05-04 | Social scheduling | Postiz | Planned optional provider | Social scheduling is useful, but it should be a clear Ship rail rather than a hidden automation dependency. | Keep Postiz behind `mb connect` metadata until scheduling/publishing flows have docs and smoke evidence. | Follow-up issue needed |
+| 2026-05-04 | Workspace docs and sheets | Google Workspace | Planned optional provider | Many operators already have Docs, Sheets, and Drive source material. Main Branch should ingest or reference that material without making Google the canonical memory. | Treat Google Workspace as source/input and provider metadata; durable summaries and decisions flow back into the business repo. | Follow-up issue needed |
 | 2026-05-04 | GitHub-native task and release flow | GitHub CLI | Adopted core operational dependency | GitHub issues, pull requests, releases, and auth are central public primitives; `gh` is inspectable, scriptable, and already expected by contributor and issue-drafting flows. | Keep browser/manual fallbacks for user-facing issue submission where needed; use `gh` for GitHub truth and mutations in agent workflows. | [#264](https://github.com/noontide-co/mainbranch/issues/264) |
 
 ## Related Public Contracts

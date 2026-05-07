@@ -13,6 +13,8 @@ operating substrate:
 - pull requests are proposals and review conversations;
 - git history is the evolution story.
 - checkpoints make long agent runs durable before chat context is lost.
+- dashboards, Obsidian graphs, and future team surfaces are views over the same
+  files, not replacements for them.
 
 The promise is simple: own the work, rent only the rails.
 
@@ -25,10 +27,11 @@ Main Branch should help an operator move through four loops:
 2. **Decide** - choose what to wager next: the bet, the priority, the override.
    Plain English: pick what matters and commit.
 3. **Ship** - produce and release the work: pages, ads, organic content, VSLs,
-   provider connections, system updates, the commit itself. One verb covers
-   producing the artifact and putting it in the world.
+   provider connections, fulfillment work, bookkeeping summaries, system
+   updates, the commit itself. One verb covers producing the artifact and
+   putting it in the world.
 4. **Reflect** - extract the lesson, usually scheduled: bet verdicts, retros,
-   decisions superseded, reference files updated from what you learned. The
+   decisions superseded, core files updated from what you learned. The
    output of Reflect feeds back into Sense.
 
 Those loops are described in detail in [OPERATOR-LOOPS.md](OPERATOR-LOOPS.md),
@@ -39,10 +42,14 @@ and the full reasoning lives in
 
 ### 1. Files First
 
-Canonical business truth belongs in git: reference files, research, decisions,
-campaigns, plans, public artifacts, durable summaries, and proposal changes.
-Rebuildable indexes, local caches, credentials, runtime preferences, and live
-process state can exist outside git, but they must not replace the repo.
+Canonical business truth belongs in git: core files, research, decisions, bets,
+pushes, plans, public artifacts, meeting summaries, fulfillment notes, durable
+finance summaries, and proposal changes. Rebuildable indexes, local caches,
+credentials, runtime preferences, raw finance/legal sources, and live process
+state can exist outside git, but they must not replace the repo.
+
+GitHub, Obsidian, `mb graph`, and future dashboards should all read the same
+durable memory. If two views disagree, the repo wins.
 
 ### 2. Thin CLI, Fat Workflows
 
@@ -104,7 +111,16 @@ ads metrics, bookkeeping, transcription, analytics, or deployment helpers.
 Sidecars should be optional providers behind stable contracts, not hard
 dependencies of the core engine.
 
-### 8. Evidence Beats Hunches
+### 8. Curated Rails Beat SaaS Sprawl
+
+Main Branch should not connect every tool an operator has accumulated. The team
+should make opinionated, explainable choices: prefer official provider paths,
+boring CLIs, portable files, and local-first state. Cloudflare, GitHub,
+Google/Workspace, official ads paths, Postiz, Beancount, Apify, transcription,
+and future sidecars earn their place by improving a loop and by failing in ways
+`mb` can explain.
+
+### 9. Evidence Beats Hunches
 
 Do not ship runtime claims, migration paths, packaging changes, or first-run
 flows without evidence. Use the validation ladder in [AGENTS.md](../AGENTS.md):
@@ -114,7 +130,7 @@ when the behavior depends on a real runtime.
 The product should feel alive, but the substrate should stay boring enough to
 debug.
 
-### 9. Git Is The Hidden App
+### 10. Git Is The Hidden App
 
 Main Branch should use git as the invisible save system for business work.
 Operators should not need to understand branches, diffs, or commits to benefit
@@ -133,4 +149,6 @@ model host, vector database, scheduler, or marketplace today.
 
 Those may become useful surfaces later. They earn their way in by preserving
 the same source of truth: the business repo, GitHub, git history, deterministic
-CLI contracts, and explicit runtime adapters.
+CLI contracts, and explicit runtime adapters. A future dashboard may include
+team communication, but chat is source material; durable operating truth lands
+in issues, proposals, decisions, pushes, logs, commits, and core updates.

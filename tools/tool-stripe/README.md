@@ -1,6 +1,9 @@
 # tool-stripe
 
-Stub directory. The Go binary lands in v0.1.0 Phase 2 (the build week per the master decision).
+Stub directory. This Go binary never shipped in the public v0.3.x engine.
+Current provider/payment work should be revived only behind a fresh decision,
+explicit approval gates, and secret-safe connection checks. Treat this folder
+as historical design material unless a new decision revives it.
 
 ## Planned shape
 

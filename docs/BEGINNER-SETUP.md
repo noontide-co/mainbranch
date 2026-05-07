@@ -293,7 +293,10 @@ checks whether an old personal skill is taking precedence.
 
 ## You've Got This
 
-After the install, you're mostly just talking to Claude in your business repo and watching it produce outputs that sound like you. The terminal becomes background.
+After the install, you're mostly talking to Claude in your business repo. The
+important part is that the work does not disappear into chat: status, decisions,
+bets, pushes, logs, checkpoints, and outputs persist locally and in git. The
+terminal becomes background.
 
 You don't need to memorize anything. The daily flow is three lines:
 
