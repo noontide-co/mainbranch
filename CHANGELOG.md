@@ -18,6 +18,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   messages with `--validate` or stdin, and exposes parsed verb/loop/channel
   metadata for future status and timeline consumers. Refs #301.
 
+### Changed
+
+- Added `/mb-think` winning-ad research guidance for customer language,
+  competitor gap maps, review mining, script teardown, and social comment
+  mining, with `/mb-ads` routing pointers and provider-boundary notes for
+  Apify, X/Grok, Postiz, X API, and ManyChat-style automation. Refs #341.
+
 ## [0.3.5] - 2026-05-06
 
 v0.3.5 tightens the Cloudflare account-token repair from v0.3.4. Main Branch

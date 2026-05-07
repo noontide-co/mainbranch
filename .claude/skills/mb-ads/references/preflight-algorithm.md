@@ -130,6 +130,23 @@ When gaps are found, explain WHY each matters for ads:
 | **angles/ empty** | All ads will use the same entry point — Andromeda penalizes repetition |
 | **visual-style missing** | Image prompts will be freestyle only — no brand consistency option |
 
+### /mb-think Enrichment Targets
+
+When the score is YELLOW or RED and the user wants stronger ads before
+generating, route to `/mb-think` with the smallest useful target:
+
+| Gap | /mb-think Research Target |
+|-----|---------------------------|
+| Thin audience language | Customer language mining from calls, surveys, support, onboarding, cancellations |
+| Missing objections | Review mining and sales-call objection extraction |
+| Thin proof | Permissioned testimonial pass plus `core/proof/typicality.md` for average-case context |
+| Empty angles | Competitor gap map and review/comment mining for new emotional territories |
+| No hook variety | Winning script teardown and content/comment mining |
+| Weak mechanism | Competitor mechanism map and offer codification |
+
+Use `mb-think/references/winning-ad-research.md` for the workflow. Research
+must synthesize and codify before `/mb-ads` generates from it.
+
 ---
 
 ## Smart Recommendations
