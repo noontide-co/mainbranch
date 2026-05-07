@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from mb import checkpoint as checkpoint_mod
+from mb import journal as journal_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status
 from mb.status import _looks_like_mainbranch_repo, push_facts
@@ -235,6 +236,7 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
     wiring = link_status(repo_path)
     update = package_update_status(repo_path)
     checkpoint = checkpoint_mod.status(repo_path)
+    journal = journal_mod.collect(repo_path, limit=8, since="14 days ago")
     push_report = push_facts(repo_path)
     checks = _build_checks(repo_shape, git, claude_path, wiring, update)
     hard_failures = _hard_failures(checks)
@@ -267,6 +269,7 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
         "repo": {"path": str(repo_path), **repo_shape},
         "update": update,
         "checkpoint": checkpoint,
+        "journal": journal,
         "pushes": push_report["records"],
         "active_pushes": push_report["active"],
         "push_count": push_report["count"],
@@ -308,6 +311,7 @@ def render_human(report: dict[str, Any]) -> None:
     command = report["command"]
     launch = report["launch"]
     checkpoint = report.get("checkpoint", {})
+    journal = report.get("journal", {})
 
     console.print(f"\n[bold]mb start[/bold]  {repo['path']}\n")
     alert = format_update_alert(report.get("update", {}))
@@ -340,6 +344,12 @@ def render_human(report: dict[str, Any]) -> None:
         pending_status = pending.get("status") if isinstance(pending, dict) else "unknown"
         recent_label = recent[0]["subject"] if isinstance(recent, list) and recent else "none yet"
         console.print(f"[bold]Checkpoint[/bold]  pending={pending_status}  last={recent_label}")
+    if isinstance(journal, dict) and journal.get("events"):
+        latest = journal["events"][0]
+        console.print(
+            f"[bold]Journal[/bold]  {journal.get('summary', {}).get('events', 0)} event(s)  "
+            f"last={latest.get('summary')}"
+        )
 
     console.print("\n[bold]Command[/bold]")
     console.print(f"  {command['display']}")

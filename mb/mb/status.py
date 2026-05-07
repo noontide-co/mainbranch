@@ -14,6 +14,7 @@ import yaml
 
 from mb import __version__, github_activity
 from mb import connect as connect_mod
+from mb import journal as journal_mod
 from mb import onboard as onboard_mod
 from mb import pushes as pushes_mod
 from mb import ranker as ranker_mod
@@ -249,6 +250,48 @@ def _git_since_last_seen(
         "changed_files": changed_files[:20],
         "error": "",
     }
+
+
+def _empty_journal(repo: Path, *, available: bool) -> dict[str, Any]:
+    return {
+        "available": available,
+        "ok": True,
+        "repo": str(repo),
+        "schema_version": journal_mod.JOURNAL_SCHEMA_VERSION,
+        "events": [],
+        "groups": [],
+        "summary": {
+            "events": 0,
+            "groups": 0,
+            "recognized_events": 0,
+            "legacy_checkpoints": 0,
+            "unrecognized_events": 0,
+            "refs": 0,
+        },
+        "error": "",
+        "safe_to_share": True,
+    }
+
+
+def _journal_since_last_seen(
+    repo: Path,
+    git: dict[str, Any],
+    marker: dict[str, Any],
+) -> dict[str, Any]:
+    if not git.get("inside_work_tree"):
+        return _empty_journal(repo, available=False)
+
+    marker_git_raw = marker.get("git")
+    marker_git: dict[str, Any] = marker_git_raw if isinstance(marker_git_raw, dict) else {}
+    previous_commit = str(marker_git.get("commit") or "")
+    current_commit = str(git.get("commit") or "")
+    if previous_commit and current_commit and previous_commit != current_commit:
+        return journal_mod.collect(repo, limit=20, since=None, rev_range=f"{previous_commit}..HEAD")
+
+    previous_seen_at = _parse_timestamp(marker.get("seen_at"))
+    if previous_seen_at is None:
+        return _empty_journal(repo, available=True)
+    return journal_mod.collect(repo, limit=20, since=previous_seen_at.isoformat(), rev_range=None)
 
 
 def _read_frontmatter(path: Path) -> dict[str, Any]:
@@ -782,15 +825,23 @@ def _since_last_check(
             "error": "",
         }
     )
+    journal_since: dict[str, Any] = (
+        _journal_since_last_seen(repo, git, marker)
+        if marker_exists
+        else _empty_journal(repo, available=bool(git.get("inside_work_tree")))
+    )
     count_changes = _brain_count_changes(brain.get("counts") or {}, previous_counts)
     dirty_count = int(git.get("dirty_count") or 0)
     commits = git_since.get("commits") or []
     changed_files = git_since.get("changed_files") or []
+    journal_summary = journal_since.get("summary") or {}
     summary = {
         "commits": len(commits) if isinstance(commits, list) else 0,
         "files_changed": len(changed_files) if isinstance(changed_files, list) else 0,
         "dirty_files": dirty_count,
         "brain_count_changes": len(count_changes),
+        "journal_events": int(journal_summary.get("events") or 0),
+        "journal_groups": int(journal_summary.get("groups") or 0),
     }
     first_run = not marker_exists
     return {
@@ -802,6 +853,7 @@ def _since_last_check(
         "first_run": first_run,
         "summary": summary,
         "git": git_since,
+        "journal": journal_since,
         "brain_count_changes": count_changes,
         "error": str(marker.get("error") or ""),
         "safe_to_share": True,
@@ -1074,6 +1126,7 @@ def run(
         "runtime": _runtime(repo_path),
         "git": git,
         "git_activity": _git_recent_activity(repo_path, git),
+        "journal": journal_mod.collect(repo_path, limit=12, since="14 days ago"),
         "brain": brain,
         "pushes": push_report["records"],
         "active_pushes": push_report["active"],
@@ -1163,6 +1216,17 @@ def render_human(
         )
     if since.get("error"):
         console.print(f"  [yellow]degraded:[/yellow] {since['error']}")
+    since_journal = since.get("journal") or {}
+    since_groups = since_journal.get("groups") or []
+    if since_groups:
+        console.print("  journal:")
+        for group in since_groups[:3]:
+            console.print(f"  - {group.get('label', 'Activity')}: {group.get('count', 0)} event(s)")
+            if verbose:
+                for summary in (group.get("summaries") or [])[:3]:
+                    console.print(f"    - {summary}")
+    elif not since.get("first_run") and since_journal.get("available") is False:
+        console.print("  [yellow]journal unavailable[/yellow]")
 
     drift_summary = drift.get("summary") or {}
     if drift_summary.get("total", 0):
@@ -1277,6 +1341,16 @@ def render_human(
         if missing:
             console.print(f"  missing: {', '.join(missing[:5])}")
         console.print(f"  next: {onboarding_summary.get('next_recommended_action')}")
+
+    journal = report.get("journal") or {}
+    if verbose and journal.get("events"):
+        console.print("\n[bold]Business journal[/bold]")
+        for item in journal["events"][:5]:
+            refs = item.get("refs") or []
+            ref_label = f" refs {len(refs)}" if refs else ""
+            console.print(
+                f"  - {item.get('date')} {item.get('commit')}  {item.get('summary')}{ref_label}"
+            )
 
     if verbose and report["git_activity"]["items"]:
         console.print("\n[bold]Recent git activity[/bold]")

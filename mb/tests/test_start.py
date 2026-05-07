@@ -256,6 +256,8 @@ def test_start_surfaces_recent_checkpoint_history(tmp_path: Path, monkeypatch) -
     assert report["checkpoint"]["recent"][0]["subject"] == "[updated] offer.md"
     assert report["checkpoint"]["recent"][0]["verb"] == "updated"
     assert report["checkpoint"]["pending"]["status"] == "ready"
+    assert report["journal"]["events"][0]["summary"] == "Updated offer.md"
+    assert report["journal"]["events"][0]["loop"] == "sense"
 
 
 def test_start_asks_for_repo_when_path_is_not_business_repo(tmp_path: Path, monkeypatch) -> None:

@@ -20,8 +20,8 @@ mb status --json --peek
 ```
 
 3. Treat the JSON as the source of truth for setup, update, drift, GitHub,
-   onboarding, integrations, bets, since-last-check, readiness, and ranked
-   actions.
+   onboarding, integrations, bets, journal activity, since-last-check,
+   readiness, and ranked actions.
 4. Summarize the top `ranked_actions` first. For each one, include:
    - title
    - command or slash command
@@ -29,6 +29,9 @@ mb status --json --peek
    - cited signal summaries
 5. Then summarize only the sections that matter for the operator's question.
    Do not re-run shell probes that duplicate status facts.
+   For "what changed?" or "what happened since last time?", answer from
+   `since_last_check.journal` first, then top-level `journal` for recent
+   context.
 6. If provider readiness is the question, use `integrations.github` and
    `integrations.providers` from status first. If the operator needs choices or
    repair commands, run:

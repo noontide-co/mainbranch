@@ -26,6 +26,33 @@ def _without_github_or_claude(name: str) -> str:
     return shutil.which(name) or ""
 
 
+def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args],
+        cwd=repo,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def _configure_git_user(repo: Path) -> None:
+    assert _git(repo, "config", "user.email", "test@example.com").returncode == 0
+    assert _git(repo, "config", "user.name", "Test User").returncode == 0
+
+
+def _commit(repo: Path, relative_path: str, content: str, subject: str, body: str = "") -> None:
+    target = repo / relative_path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content, encoding="utf-8")
+    assert _git(repo, "add", relative_path).returncode == 0
+    args = ["commit", "--no-verify", "-m", subject]
+    if body:
+        args.extend(["-m", body])
+    result = _git(repo, *args)
+    assert result.returncode == 0, result.stderr
+
+
 def test_status_json_degrades_without_github(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     repo = tmp_path / "acme"
@@ -87,6 +114,7 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
                 "runtime",
                 "git",
                 "git_activity",
+                "journal",
                 "brain",
                 "onboarding",
                 "integrations",
@@ -200,6 +228,59 @@ def test_status_since_last_check_uses_repo_marker(tmp_path: Path, monkeypatch) -
         "after": 1,
         "delta": 1,
     } in second_payload["since_last_check"]["brain_count_changes"]
+
+
+def test_status_since_last_check_includes_grouped_journal(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _configure_git_user(repo)
+    assert _git(repo, "add", ".").returncode == 0
+    result = _git(repo, "commit", "--no-verify", "-m", "[added] business scaffold")
+    assert result.returncode == 0, result.stderr
+
+    first = runner.invoke(app, ["status", str(repo), "--json"])
+    assert first.exit_code == 0
+
+    _commit(
+        repo,
+        "pushes/workshop/push.md",
+        "# Workshop\n",
+        "[shipped] workshop lander",
+        "Refs:\n- pushes/workshop/push.md\n- https://github.com/noontide-co/mainbranch/issues/303",
+    )
+    second = runner.invoke(app, ["status", str(repo), "--json", "--peek"])
+
+    assert second.exit_code == 0
+    payload = json.loads(second.stdout)
+    journal = payload["since_last_check"]["journal"]
+    assert payload["since_last_check"]["summary"]["journal_events"] == 1
+    assert journal["schema_version"] == "0.current"
+    assert journal["events"][0]["verb"] == "shipped"
+    assert journal["events"][0]["loop"] == "ship"
+    assert journal["events"][0]["refs"][0]["kind"] == "push"
+    assert journal["events"][0]["refs"][1]["kind"] == "github_issue"
+    assert journal["groups"][0]["label"] == "Shipped work"
+
+
+def test_status_human_output_summarizes_since_last_journal(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _configure_git_user(repo)
+    assert _git(repo, "add", ".").returncode == 0
+    result = _git(repo, "commit", "--no-verify", "-m", "[added] business scaffold")
+    assert result.returncode == 0, result.stderr
+    first = runner.invoke(app, ["status", str(repo), "--json"])
+    assert first.exit_code == 0
+    _commit(repo, "bets/workshop.md", "# Bet\n", "[opened] bet workshop")
+
+    human = runner.invoke(app, ["status", str(repo), "--verbose", "--no-color", "--peek"])
+
+    assert human.exit_code == 0
+    assert "journal:" in human.stdout
+    assert "Made decisions: 1 event(s)" in human.stdout
+    assert "Opened bet workshop" in human.stdout
 
 
 def test_status_peek_does_not_update_seen_marker(tmp_path: Path, monkeypatch) -> None:

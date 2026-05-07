@@ -30,12 +30,12 @@ integrations, GitHub tasks/proposals, bets, dirty git, since-last-check, and
 `ranked_actions`. Do not duplicate those checks with ad hoc shell probes unless
 the status report says a section is unavailable.
 
-**Continuity facts:** Use `since_last_check`, dirty-git, recent GitHub/git
-activity, and the `checkpoint` section from status to explain "where we left
-off." If the operator asks to save progress, run `mb checkpoint --plan --json`,
-show the proposal/blockers, validate the message with `mb checkpoint --validate
-"..." --json`, then after approval run `mb checkpoint --message "..." --yes`.
-Explain this as saving a checkpoint, not raw git ceremony.
+**Continuity facts:** Use `since_last_check.journal`, top-level `journal`,
+dirty-git, GitHub activity, and `checkpoint` from status to explain "where we
+left off." Do not run raw `git log` unless status says journal facts are
+unavailable. If the operator asks to save progress, run `mb checkpoint --plan
+--json`, validate with `mb checkpoint --validate "..." --json`, then after
+approval run `mb checkpoint --message "..." --yes`.
 
 **Provider facts first:** When setup or routing depends on GitHub, Cloudflare,
 Google/Workspace, Meta Ads, or Apify, read the status `integrations` facts
@@ -185,9 +185,9 @@ Use this report before asking additional questions:
 - `drift.items` names stale or broken status signals and repair commands.
 - `onboarding.summary` and `onboarding.checklist` replace separate onboarding
   probes unless the status report is unavailable.
-- `integrations.github`, `integrations.providers`, `github.sections`,
-  `measurement`, `brain.bets`, and `since_last_check` supply the continuity
-  facts for routing and triage.
+- `journal`, `since_last_check.journal`, `integrations.github`,
+  `integrations.providers`, `github.sections`, `measurement`, and
+  `brain.bets` supply continuity facts for routing and triage.
 
 Only run a narrower fallback command such as `mb onboard status --json`,
 `mb doctor`, `mb validate --cross-refs`, or `mb connect doctor --json` when status
@@ -332,7 +332,7 @@ See [readiness-assessment.md](references/readiness-assessment.md) for complete s
 ### Quick summary:
 
 1. **Score reference files** (soul, offer, audience, voice, testimonials, angles) on 0-3 scale each. Composite max = 18. Multi-offer: score active offer's files, not just core.
-2. **Check session state** — recent commits, open decisions, uncodified research. Surface what's in progress.
+2. **Check session state** — status journal activity, open decisions, uncodified research. Surface what's in progress.
 3. **Soul health check** — for returning users (last commit >3 days ago), read soul.md and ask: "Is your current work feeling like pull or push?" Skip for active or first-time users.
 4. **Gate routing** based on composite score:
 

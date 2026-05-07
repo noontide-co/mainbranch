@@ -16,6 +16,7 @@
     "github",
     "install",
     "integrations",
+    "journal",
     "marker_update",
     "measurement",
     "ok",
@@ -73,6 +74,17 @@
       "available",
       "error",
       "items"
+    ],
+    "journal": [
+      "available",
+      "error",
+      "events",
+      "groups",
+      "ok",
+      "repo",
+      "safe_to_share",
+      "schema_version",
+      "summary"
     ],
     "brain": [
       "bets",
@@ -133,6 +145,7 @@
       "error",
       "first_run",
       "git",
+      "journal",
       "marker_gitignore",
       "marker_path",
       "ok",

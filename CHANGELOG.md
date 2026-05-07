@@ -25,6 +25,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   skips Git-generated merge/revert/fixup/squash/amend subjects, records the
   active `mb` executable for minimal-PATH Git clients, and includes checkpoint
   hook status, install, and uninstall controls on `mb checkpoint`. Refs #302.
+- `mb status` and `mb start` now expose a provisional git `journal` timeline
+  that groups business-readable commits by operator loop, preserves legacy
+  `[checkpoint]` history, and parses `Refs:` links to bets, pushes, decisions,
+  legacy campaigns, and GitHub issues. Refs #303.
 
 ### Changed
 
@@ -39,6 +43,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   business checkpoint hook wiring, and shipped skills use approved
   `mb checkpoint` planning/validation/save calls instead of raw git commit
   instructions. Refs #302.
+- `/mb-start` and `/mb-status` now treat status journal facts as the source of
+  truth for "what happened since last time?" instead of re-probing raw git logs.
+  Refs #303.
 
 ## [0.3.5] - 2026-05-06
 

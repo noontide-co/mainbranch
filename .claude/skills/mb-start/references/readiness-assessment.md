@@ -78,14 +78,15 @@ Surface what happened recently so the user sees continuity, not a blank slate.
 
 ### Recent Activity
 
-```bash
-# What happened in the last few sessions?
-git log --since="7 days ago" --oneline --no-merges 2>/dev/null | head -10
-```
+Prefer `since_last_check.journal` and top-level `journal` from
+`mb status --json --peek`. Summarize the newest grouped event in one line:
+"Last session: [journal summary]".
 
-If commits exist, summarize in one line: "Last session: [topic from most recent commit message]"
+Only run `git log --since="7 days ago" --oneline --no-merges` as a fallback
+when status says the journal section is unavailable or degraded.
 
-If no commits in 7+ days, note the gap -- this feeds into the soul health check (Section 3).
+If status reports no journal events in 7+ days, note the gap -- this feeds into
+the soul health check (Section 3).
 
 ### Open Decisions
 
@@ -152,11 +153,10 @@ Flag any file that scored 3/3 structurally but has `status: draft` in frontmatte
 
 ### Check B: Staleness Detection (1 call)
 
-```bash
-git log --format="%ai" -1 -- [repo-path]/core/soul.md [repo-path]/core/offer.md [repo-path]/core/audience.md [repo-path]/core/voice.md
-```
+Use `journal.events[].files` from status first. Fall back to:
+`git log --format="%ai" -1 -- [repo-path]/core/soul.md [repo-path]/core/offer.md [repo-path]/core/audience.md [repo-path]/core/voice.md`
 
-Flag any core file not modified in 30+ days. Not a score penalty — an observation.
+Flag any core file not modified in 30+ days. Not a score penalty -- an observation.
 
 **Flag:** `! stale (Xd)` (inline next to file)
 
@@ -259,7 +259,7 @@ Modeled on /mb-end's crystallize pattern. For returning users, reconnection at s
 
 **Trigger conditions (ALL must be true):**
 1. `core/soul.md` exists and has substance (score 2+)
-2. Last commit was >3 days ago (returning after absence)
+2. Last journal event or commit was >3 days ago (returning after absence)
 3. This is not the user's first session ever (config exists with `user.name`)
 
 **Skip conditions (ANY skips this check):**
@@ -270,10 +270,8 @@ Modeled on /mb-end's crystallize pattern. For returning users, reconnection at s
 
 ### How to Check
 
-```bash
-# Days since last commit
-git log -1 --format="%ar" 2>/dev/null
-```
+Use the newest status journal event date. If journal facts are unavailable,
+fall back to `git log -1 --format="%ar"`.
 
 ### The Ask
 

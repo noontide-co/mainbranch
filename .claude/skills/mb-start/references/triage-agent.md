@@ -52,12 +52,12 @@ Spawn three agents in a single message using the Task tool. Each gets a focused 
 
 ### Reuse Readiness Data (Token Efficiency)
 
-The triage agents receive the readiness assessment results (scores, gaps, session state, recent commits) as input context. They do NOT re-scan these. The readiness assessment (Step 6) already ran git log, scored files, detected open decisions, and checked for uncodified research. Triage agents go DEEPER -- reading file contents, checking section quality, analyzing patterns across files, and connecting dots between soul alignment and tactical work.
+The triage agents receive the readiness assessment results (scores, gaps, session state, journal summary) as input context. They do NOT re-scan these. The readiness assessment (Step 6) already read status journal facts, scored files, detected open decisions, and checked for uncodified research. Triage agents go DEEPER -- reading file contents, checking section quality, analyzing patterns across files, and connecting dots between soul alignment and tactical work.
 
 **What readiness already computed (pass as context, do not recompute):**
 - Per-file scores (soul, offer, audience, voice, testimonials, angles)
 - Composite score and status tier (EMPTY/MINIMAL/THIN/GOOD/FULL)
-- Recent commits summary
+- Recent journal summary
 - Open decision count and topics
 - Uncodified research count
 - Session gaps and last activity date
@@ -77,8 +77,8 @@ Gather these in main and pass as structured text in each agent's prompt:
 |---------|-----|------|-----------|
 | Readiness scores (from Step 6) | Already computed | ~20 lines | All 3 agents |
 | Absolute repo path | From Step 2 | 1 line | All 3 agents (agents use this to Read files themselves) |
-| Git log (30 days) | `git log --since="30 days ago" --oneline --no-merges` | ~30 lines | Agent 2 |
-| Core file change list (30 days) | `git log --since="30 days ago" --name-only -- core/` | ~20 lines | Agent 1, 3 |
+| Journal groups (30 days) | `journal.groups` from `mb status --json --peek`; fallback to `git log` only if degraded | ~30 lines | Agent 2 |
+| Core file change list (30 days) | `journal.events[].files` from status; fallback to `git log --since="30 days ago" --name-only -- core/` only if degraded | ~20 lines | Agent 1, 3 |
 | Open decision file names | `grep -rl "status: proposed\|status: accepted" decisions/ 2>/dev/null` | ~10 lines | Agent 2 |
 | Unlinked research count | `grep -rl "linked_decisions: \[\]" research/ 2>/dev/null \| wc -l` | 1 line | Agent 2 |
 | Past triage file names | `ls research/*-start-triage.md 2>/dev/null` | ~5 lines | Agent 3 |
@@ -256,7 +256,7 @@ Return:
 - Highest-value pending work item with reasoning
 ```
 
-**Token budget:** ~20-40K (reads git logs, scans file frontmatter, analyzes patterns)
+**Token budget:** ~20-40K (reads journal facts, scans file frontmatter, analyzes patterns)
 
 ---
 
