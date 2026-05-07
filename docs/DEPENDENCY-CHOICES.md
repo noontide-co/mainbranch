@@ -41,6 +41,30 @@ belong in accepted decisions, CLI tests, provider docs, or linked issues.
 10. **Leave an exit path.** Every dependency should have a plausible removal,
    replacement, or graceful-degradation story before it becomes product shape.
 
+## Build, Buy, Or Wrap
+
+Main Branch should not absorb every useful tool into the core CLI. The default
+choice is:
+
+- **Use an official provider surface** when the provider already has a stable
+  CLI, API, MCP server, or connector that can be smoke-tested and explained.
+- **Wrap with `mb`** when operators need deterministic readiness checks,
+  business-language routing, repair guidance, approval gates, or safe metadata
+  around that provider.
+- **Use an optional sidecar** when the work needs specialized data capture,
+  scraping, analytics, bookkeeping, media generation, or scheduling that would
+  make the core package heavy or provider-specific.
+- **Build inside `mb`** only when the behavior is part of the common control
+  plane: repo shape, validation, graph/status facts, update/repair paths,
+  runtime wiring, provider readiness, issue drafting, or guarded checkpoints.
+- **Defer** when the path would require unsupported runtime claims, untested
+  account mutation, committed secrets, broad browser automation, or a hosted
+  state model that has not been accepted.
+
+This keeps the daily loop coherent. Users think in bets, pushes, playbooks,
+outcomes, and checkpoints. `mb` checks whether the rails are ready. Provider
+tools and sidecars do narrow jobs behind explicit contracts.
+
 ## Decision Rubric
 
 Use this rubric before adding, promoting, replacing, or removing a dependency.

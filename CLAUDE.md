@@ -15,6 +15,19 @@ metadata.
 It is not a user's business repo. Business data belongs in the repo created by
 `mb onboard` or `mb init`, not in this engine checkout.
 
+## Product Loop To Preserve
+
+Main Branch's current daily loop is: open a business repo, start Claude Code,
+run `/mb-start` or follow generated repo instructions, ground the agent in
+`mb` facts, route business input into primitives such as bets, research,
+decisions, pushes, playbooks, outcomes, and checkpoints, then close with
+`/mb-end` or checkpoint guidance so the durable memory lands in git.
+
+`mb` is the deterministic control and enforcement plane. Claude Code skills are
+the judgment-heavy execution layer. Keep user-facing guidance in business
+language first, and treat issues, branches, pull requests, commits, graph links,
+and provider state as the technical memory layer underneath the business loop.
+
 ## How to Work Here
 
 - Follow `AGENTS.md` for product shape, scope, public/private boundaries, branch

@@ -25,6 +25,34 @@ The public product frame lives in `docs/ETHOS.md`, the operator loop taxonomy
 lives in `docs/OPERATOR-LOOPS.md`, and release direction lives in
 `docs/ROADMAP.md`.
 
+## Daily Operating Loop
+
+The current product center is the daily owner loop:
+
+1. The operator opens the business repo and starts Claude Code.
+2. `/mb-start` or the generated repo instructions ground the agent in
+   deterministic `mb` facts before advice.
+3. The agent routes thought dumps and requests into business primitives:
+   bets, goals, offers, research, decisions, pushes, playbooks, outcomes, and
+   checkpoints.
+4. `mb` enforces the substrate: repo shape, status health, graph links,
+   provider readiness, runtime wiring, update/repair paths, validation, and
+   guarded commits.
+5. `/mb-end` and `mb checkpoint` reconcile what changed so durable business
+   memory stays in git.
+
+Normal users should not have to manage git plumbing directly. Issues, branches,
+pull requests, commits, graph links, and provider state are the hidden technical
+memory layer that preserves and inspects business progress. Describe those
+primitives in business language first: tasks, proposals, saved checkpoints,
+relationship health, provider readiness, and outcomes.
+
+When working on this loop, check the current GitHub issues instead of copying a
+stale plan into docs. As of 2026-05-07, the public coordination anchors are the
+runtime dogfood harness (#364), generated business `CLAUDE.md` CLI-first
+bootstrap (#353), graph/status relationship health (#357 and #358), and push
+playbook schema (#350). Verify issue state before treating any anchor as active.
+
 ## Quick Start
 
 For normal repo validation:
@@ -383,10 +411,11 @@ Rules:
 - Only the four canonical loop slugs are valid (`sense`, `decide`, `ship`,
   `reflect`). Channels (Paid, Organic, Pages, Ops) are not loops and do not
   belong in this field.
-- The convention is forward-looking: no bundled skill declares `loops:` yet
-  and no `mb` code parses it today. As `mb status` loop grouping, the future
-  dashboard, and the bets feed land, they will read this field. Declare it
-  on new skills so the tooling has clean inputs to consume when it ships.
+- The convention is forward-looking tooling even though some bundled skills
+  already declare `loops:`. `mb` does not parse the field for product behavior
+  yet. As `mb status` loop grouping, the future dashboard, and the bets feed
+  land, they will read this field. Declare it on new skills so the tooling has
+  clean inputs to consume when it ships.
 
 ## State Model
 

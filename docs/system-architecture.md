@@ -63,6 +63,30 @@ Main Branch architecture follows the four operator loops in
 Files are not categories for their own sake. They are durable stations in those
 loops.
 
+## Daily Operating Loop
+
+The current product architecture is optimized for one repeatable day:
+
+1. The operator starts in a business repo and opens Claude Code.
+2. `/mb-start` or generated business repo instructions make the agent read
+   deterministic `mb` facts before it gives advice.
+3. The agent routes the operator's thought dump or request into the right
+   primitive: bet, research, decision, push, playbook, outcome, log entry, or
+   checkpoint.
+4. `mb` enforces the mechanical layer: repo shape, validation, graph links,
+   status health, provider readiness, update/repair paths, runtime wiring, and
+   guarded commits.
+5. `/mb-end` and `mb checkpoint` reconcile the session so the next Sense pass
+   can recover what changed from files and git history.
+
+The operator should mostly see business language: goals, offers, bets, pushes,
+playbooks, outcomes, and checkpoints. The technical memory layer is still real,
+but it exists underneath that loop. GitHub issues preserve tasks and friction,
+branches isolate proposed work, pull requests hold review conversations,
+commits form the saved business timeline, graph links explain relationships,
+and provider refs preserve safe handles to external systems without copying
+secrets or raw account data into the repo.
+
 ## Business Repo Shape
 
 A current Main Branch business repo uses this shape:
