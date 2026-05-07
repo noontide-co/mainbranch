@@ -21,6 +21,18 @@ def _tool_path(name: str) -> str:
     return ""
 
 
+def _assert_onboard_claude_md_cli_first_contract(text: str) -> None:
+    assert "## Claude operating contract" in text
+    assert "Main Branch CLI facts are the source of truth" in text
+    assert "mb status --json --peek" in text
+    assert "mb start --json" in text
+    assert "mb doctor repair --plan" in text
+    assert "Read-only commands can be run without asking first" in text
+    assert "require explicit operator approval before applying" in text
+    assert "If `/mb-start` is not discoverable" in text
+    assert "business-owner language" in text
+
+
 def test_onboard_yes_creates_repo_and_reports_next_steps(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(onboard_mod, "_which", _tool_path)
     repo = tmp_path / "acme"
@@ -36,6 +48,8 @@ def test_onboard_yes_creates_repo_and_reports_next_steps(tmp_path: Path, monkeyp
     assert result["action"] == "created"
     assert result["level"] == "beginner"
     assert (repo / "CLAUDE.md").exists()
+    claude_md = (repo / "CLAUDE.md").read_text(encoding="utf-8")
+    _assert_onboard_claude_md_cli_first_contract(claude_md)
     assert (repo / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
     assert (repo / ".git" / "hooks" / "commit-msg").exists()
     assert result["checkpoint_hook"]["state"] == "installed"

@@ -24,6 +24,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Fresh business repo `CLAUDE.md` files now make the bootstrap CLI-first:
+  Claude Code is told to read `mb` status/start/doctor facts before setup or
+  repair advice, separate read-only checks from write/apply repairs, and return
+  technical repair results in business-owner language. Refs #353.
 - Documented the public build-vs-wrap-vs-sidecar boundary for provider CLIs,
   MCP servers, hosted workflows, and future sidecars, with concrete guidance
   for Cloudflare, Postiz, Apify/X research, Vercel-style platforms,
