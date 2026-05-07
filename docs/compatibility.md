@@ -49,6 +49,9 @@ discovery rules, install/update behavior, generated-file and state rules,
 `mb doctor` / `mb status` / `mb start` expectations, and fresh-repo runtime
 smoke evidence. Claude Code is the reference adapter today.
 
+For release-bearing Claude Code smoke evidence, use the
+[Claude Code runtime dogfood runbook](claude-code-runtime-dogfood.md).
+
 For the exact supported Claude Code slash-command behavior, including
 `/mb-start`, extra text after the slash command, natural-language routing, and
 skill-link repair, see

@@ -74,6 +74,8 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
 - [ ] No PR claims runtime support based only on product intent or local hopes.
 - [ ] Runtime smoke evidence is included when discovery, invocation, skill
   packaging, or first-run handoff changes.
+- [ ] Claude Code release-bearing runtime evidence follows the
+  [Claude Code runtime dogfood runbook](claude-code-runtime-dogfood.md).
 
 ## 6. Skill-to-CLI Contract
 
@@ -100,6 +102,8 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
   or validation changes include fixture business-repo smoke evidence.
 - [ ] Runtime discovery, invocation, or skill behavior changes include runtime
   smoke evidence, or the PR states exactly why it could not be run.
+- [ ] Release validation that depends on Claude Code behavior uses the
+  [Claude Code runtime dogfood runbook](claude-code-runtime-dogfood.md).
 - [ ] Bundled `templates/` and the fixture business-repo flow stay in sync with
   `.mb/` schema, skill-discovery, and onboarding changes.
 - [ ] `CHANGELOG.md` is updated for user-visible CLI, skill, packaging,

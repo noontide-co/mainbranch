@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added a public Claude Code runtime dogfood runbook for release-bearing manual
+  smoke evidence, including sanitized fixture setup, read-only CLI checks,
+  `/mb-start`, `/mb-think`, `/mb-organic`, checkpoint behavior, repo-boundary
+  checks, and a paste-back evidence template. Refs #355.
+
 ## [0.3.6] - 2026-05-07
 
 v0.3.6 makes Main Branch more disciplined about how business work gets saved,

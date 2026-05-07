@@ -58,6 +58,8 @@ the same working directories CI uses. Do not replace it with root-level
 When a change touches packaging, entrypoints, bundled data, first-run flows, or
 runtime wiring, add the relevant smoke from [AGENTS.md](AGENTS.md): package
 install, fixture repo, pipx/update, or runtime discovery.
+For release-bearing Claude Code runtime validation, use the
+[Claude Code runtime dogfood runbook](docs/claude-code-runtime-dogfood.md).
 
 For Go tools (Phase 2):
 

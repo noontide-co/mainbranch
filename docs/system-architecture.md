@@ -615,6 +615,8 @@ prove the surface you changed.
 - First-run or repo-shape changes need fixture repo smoke.
 - Runtime discovery or LLM-facing workflow changes need runtime smoke, or an
   explicit blocker note.
+- Claude Code release-bearing runtime evidence should follow the
+  [Claude Code runtime dogfood runbook](claude-code-runtime-dogfood.md).
 
 Migration should preserve user-authored content, distinguish compatibility
 bridges from split truth, and leave ambiguous legacy `outputs/` artifacts for

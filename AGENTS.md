@@ -333,6 +333,9 @@ Level 5, runtime smoke:
   repo;
 - record the evidence in the PR.
 
+For Claude Code release-bearing runtime evidence, follow the
+[Claude Code runtime dogfood runbook](docs/claude-code-runtime-dogfood.md).
+
 If a runtime cannot be launched because of auth or UI constraints, say that
 explicitly and describe the closest verified fallback. Do not pretend CLI tests
 cover runtime discovery.
