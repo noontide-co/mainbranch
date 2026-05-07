@@ -152,6 +152,7 @@ my-business/
 ├── bets/
 ├── log/
 ├── pushes/
+├── campaigns/                 # legacy compatibility read only
 └── documents/
 ```
 
