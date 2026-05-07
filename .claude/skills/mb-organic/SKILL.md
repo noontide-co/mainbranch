@@ -253,7 +253,7 @@ Before saving: show file paths.
 4. **Adapt to brand** — Map concept to user's offer, audience, voice
 5. **Generate scripts** — Use appropriate framework (video/carousel/static)
 6. **Save output** — Scripts to `pushes/YYYY-MM-DD-organic-{slug}/` (canonical). Never `campaigns/`; that folder is legacy compatibility only.
-7. **Commit prompt** — "Saved to [path]. Want me to commit this to git?"
+7. **Checkpoint prompt** — run `mb checkpoint --plan --json`, show the proposed checkpoint and blockers, validate the chosen message with `mb checkpoint --validate "..." --json`, then after operator approval save with `mb checkpoint --message "..." --yes`.
 
 **Mining lives in `/mb-think` now.** If user needs to mine competitors, route them there first.
 

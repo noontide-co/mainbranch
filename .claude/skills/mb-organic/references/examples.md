@@ -39,7 +39,7 @@ Claude: [Generates script using story framework]
 [Saves to pushes/2026-01-26-organic-morning-routine/organic-batch-001.md]
 
 Saved to pushes/2026-01-26-organic-morning-routine/organic-batch-001.md
-Want me to commit this to git?
+Want me to save this as a checkpoint?
 ```
 
 ## Example 3: Mining Redirect

@@ -24,9 +24,11 @@ Something came your way — a video, a voice memo, a vague feeling, a problem to
 
 **Save progress at natural boundaries.** After a research batch, accepted
 decision, codify pass, or major reference-file update, ask whether to save a
-checkpoint before moving to the next phase. Use the current repo's git workflow
-with explicit operator approval. When the v0.3.x checkpoint contract ships,
-this step should move to deterministic checkpoint plan/status facts.
+checkpoint before moving to the next phase. Run `mb checkpoint --plan --json`,
+show the proposed message, changed files, and blockers, then ask whether to save
+it. Validate the final message with `mb checkpoint --validate "..." --json`;
+after operator approval, run `mb checkpoint --message "..." --yes`. Do not save
+hidden checkpoints.
 
 ---
 

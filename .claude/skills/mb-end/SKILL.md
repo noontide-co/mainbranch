@@ -1,6 +1,6 @@
 ---
 name: mb-end
-description: "Session-closing skill that helps users wrap up intentionally. Use when: user says done, wrapping up, end my day, closing out, call it a day, goodnight, that's it for today, checkpoint, pause. Bookend to /mb-start. Scans git activity, surfaces what happened, spawns a crystallize agent for deep analysis, commits uncommitted work, and closes with a brief summary. Works for end-of-day, end-of-research-batch, end-of-decision-sprint, or mid-work checkpoints."
+description: "Session-closing skill that helps users wrap up intentionally. Use when: user says done, wrapping up, end my day, closing out, call it a day, goodnight, that's it for today, checkpoint, pause. Bookend to /mb-start. Scans git activity, surfaces what happened, spawns a crystallize agent for deep analysis, offers to save an approved checkpoint, and closes with a brief summary. Works for end-of-day, end-of-research-batch, end-of-decision-sprint, or mid-work checkpoints."
 loops: [reflect, ship]
 ---
 
@@ -44,7 +44,7 @@ This is not an audit. It is a thoughtful friend helping you close the session.
    5d. Present output to user as-is
    5e. If user engages: stay with it (engagement protocol)
    5f. Always save crystallize output as research file
-6. Commit & close
+6. Checkpoint & close
 ```
 
 Step 4 is optional. **Step 5 is NOT optional** -- if meaningful activity happened (decisions, research, core changes), you MUST spawn the crystallize agent. Do not try to do the crystallize analysis inline. Do not skip it. The subagent gets a fresh context window and spends real tokens reading the day's files. That depth is the whole point.
@@ -145,7 +145,7 @@ Ask once:
 
 **If the user shares something:**
 
-- If it is brief (a sentence or two), acknowledge it and note it in the commit message or suggest adding it to an existing research file.
+- If it is brief (a sentence or two), acknowledge it and include it in the checkpoint summary or suggest adding it to an existing research file.
 - If it is substantial (a paragraph or more), offer to save it: "Want me to save that as a quick research note? `research/YYYY-MM-DD-end-of-day-thoughts.md`"
 - Use today's date. Source suffix: `-end-of-day.md`
 
@@ -275,8 +275,8 @@ If an insight was substantial enough to update reference directly (soul.md, offe
 
 ## Step 6: Checkpoint & Close
 
-Use the current repo git workflow with explicit operator approval. The
-checkpoint CLI is future v0.3.x work; do not ask current PyPI users to run it.
+Run `mb checkpoint --plan --json` from the business repo. Summarize the changed
+surfaces/files, proposed message, and any blockers.
 
 **If there are unsaved changes:**
 
@@ -287,15 +287,16 @@ checkpoint CLI is future v0.3.x work; do not ask current PyPI users to run it.
 > Want me to save a checkpoint before we close?"
 
 If yes:
-- Stage only the intended business-repo files.
-- Commit with a readable operator subject.
+- Validate the intended subject with `mb checkpoint --validate "..." --json`.
+- After approval, save with `mb checkpoint --message "..." --yes`.
 - Use beginner-safe language: "saved checkpoint," not "ran git commit."
 - Include the crystallize research file in the checkpoint if one was created.
+Do not run raw `git add` or `git commit`.
 
 If no: Leave the work unchanged. Some people prefer to checkpoint at the start
 of next session.
 
-If safety is unclear, do not stage or commit. Explain the block and leave the
+If safety is unclear, do not save a checkpoint. Explain the block and leave the
 work unchanged.
 
 ### The Close
@@ -334,11 +335,13 @@ End with a brief, warm close. Not a performance review -- a goodbye.
 
 > "You have work in progress -- [describe what's open]. Want to finish that first, or close out and pick it up next time?"
 
-If they want to close: commit what exists, note the state in the commit message.
+If they want to close: run `mb checkpoint --plan --json`, summarize what exists,
+and save only after operator approval.
 
 ### Context window is nearly full
 
-Keep it ultra-brief. Scan, commit if needed, close. Skip Steps 4 and 5.
+Keep it ultra-brief. Scan, offer a checkpoint if needed, close. Skip Steps 4 and
+5.
 
 ### Multiple repos in session
 

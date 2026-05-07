@@ -30,9 +30,12 @@ integrations, GitHub tasks/proposals, bets, dirty git, since-last-check, and
 `ranked_actions`. Do not duplicate those checks with ad hoc shell probes unless
 the status report says a section is unavailable.
 
-**Continuity facts:** Use `since_last_check`, dirty-git, and recent GitHub/git
-activity from status to explain "where we left off." The checkpoint CLI is
-future v0.3.x work; do not ask current PyPI users to run it.
+**Continuity facts:** Use `since_last_check`, dirty-git, recent GitHub/git
+activity, and the `checkpoint` section from status to explain "where we left
+off." If the operator asks to save progress, run `mb checkpoint --plan --json`,
+show the proposal/blockers, validate the message with `mb checkpoint --validate
+"..." --json`, then after approval run `mb checkpoint --message "..." --yes`.
+Explain this as saving a checkpoint, not raw git ceremony.
 
 **Provider facts first:** When setup or routing depends on GitHub, Cloudflare,
 Google/Workspace, Meta Ads, or Apify, read the status `integrations` facts

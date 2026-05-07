@@ -2,14 +2,17 @@
 
 **Every generation mode (Static, One-Liner, Video) runs this pipeline automatically after saving output.** Do not ask the user whether to run compliance review -- it is automatic.
 
-## Step 1: Git Commit Pre-Review
+## Step 1: Checkpoint Pre-Review
 
 ```bash
-git add pushes/YYYY-MM-DD-*
-git commit -m "[output] {type} batch pre-review"
+mb checkpoint --plan --json
+mb checkpoint --validate "[drafted] {type} ad batch" --json
+mb checkpoint --message "[drafted] {type} ad batch" --yes
 ```
 
-This preserves the original before any fixes. The user can always `git diff HEAD~1` to see what changed.
+Run the plan first, show the proposed files/message and any blockers, then save
+only after operator approval. This preserves the original before any fixes. The
+user can always `git diff HEAD~1` to see what changed.
 
 ## Step 2: Select Lens Tier
 
@@ -128,17 +131,21 @@ Pipeline complete:
     [|- image-index.md]
     [|- images/ (N files)]
 
-  Commit reviewed copy [+ images]? (y/n)
+  Save reviewed copy [+ images] as a checkpoint? (y/n)
 ```
 
-## Step 7: Git Commit Post-Review
+## Step 7: Checkpoint Post-Review
 
 If user approves:
 
 ```bash
-git add pushes/YYYY-MM-DD-*
-git commit -m "[review] {type} batch - N fixes applied"
+mb checkpoint --plan --json
+mb checkpoint --validate "[updated] {type} ad batch after review" --json
+mb checkpoint --message "[updated] {type} ad batch after review" --yes
 ```
+
+Do not run raw `git add` or `git commit`; the checkpoint command stages only
+after its safety plan passes and the operator approves.
 
 ## Pipeline Timing
 

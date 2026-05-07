@@ -20,7 +20,7 @@ Review ads through 6 compliance and quality lenses before shipping.
 ## Review Process
 
 1. Gather input (single ad, batch, or component)
-2. Git commit current state (preserves original): `[output] {type} batch pre-review`
+2. Run `mb checkpoint --plan --json`, validate a subject such as `[drafted] {type} ad batch`, and save the pre-review checkpoint only after operator approval.
 3. Spawn 6 parallel Task agents — one per lens. Use `subagent_type: "general-purpose"`. Each agent:
    - Reads the ad batch/copy being reviewed
    - Reads its assigned lens file from `.claude/lenses/`
@@ -33,7 +33,7 @@ Review ads through 6 compliance and quality lenses before shipping.
 7. Ask: "Apply these compliance copy changes? (y/n)"
 8. Only if approved, rerun the gate with `--approve --review-log ...`
 9. Tell user whether the source copy changed or was left unchanged
-10. If approved, ask whether to commit: `[review] {type} batch - N fixes applied`
+10. If approved, ask whether to save a post-review checkpoint with a subject such as `[updated] {type} ad batch after review`.
 
 ---
 

@@ -1,15 +1,18 @@
 # Ad Review Workflow
 
-## Phase 0: Pre-Review Git Commit
+## Phase 0: Pre-Review Checkpoint
 
-Before reviewing, commit current state to preserve the original:
+Before reviewing, run the checkpoint plan to preserve the original after
+operator approval:
 
 ```bash
-git add pushes/YYYY-MM-DD-{type}-{campaign}/
-git commit -m "[output] {type} batch pre-review"
+mb checkpoint --plan --json
+mb checkpoint --validate "[drafted] {type} ad batch" --json
+mb checkpoint --message "[drafted] {type} ad batch" --yes
 ```
 
-This ensures the original version is preserved in git history.
+Show the planned files/message and any blockers before saving. This ensures the
+original version is preserved in git history without raw git ceremony.
 
 ## Phase 1: Gather Input
 
@@ -157,13 +160,14 @@ For P1 issues:
 - Document in the unified report and keep source copy unchanged until the user gives a specific fix approval
 - Status: BLOCKED until P1s resolved
 
-## Phase 5: Post-Review Git Commit
+## Phase 5: Post-Review Checkpoint
 
 After fixes are approved and applied:
 
 ```bash
-git add pushes/YYYY-MM-DD-{type}-{campaign}/
-git commit -m "[review] {type} batch - N fixes applied"
+mb checkpoint --plan --json
+mb checkpoint --validate "[updated] {type} ad batch after review" --json
+mb checkpoint --message "[updated] {type} ad batch after review" --yes
 ```
 
 **To see what review changed:** `git diff HEAD~1`

@@ -235,7 +235,7 @@ For a typical ad campaign with 5 angles (15 images):
 
 ```
 1. Copy saved to output file
-2. Git commit pre-review (preserves original)
+2. Approved checkpoint pre-review (preserves original)
 3. Main conversation writes prompts.json to disk (keyed by target filename)
 4. PARALLEL (all agents spawned in a single message):
    a. Compliance agents (5-6 lenses, read-only) → findings report
@@ -249,7 +249,7 @@ For a typical ad campaign with 5 angles (15 images):
 5. Synthesize: collect all image agent results, retry any failures,
    surface P1s, show the P2/P3 proposed diff, apply copy fixes only after
    explicit approval, write review-log.md if approved, and write image-index.md
-6. Git commit post-review (user confirms)
+6. Approved checkpoint post-review (user confirms)
 ```
 
 ---

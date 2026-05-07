@@ -362,9 +362,9 @@ See **[references/mode-review.md](references/mode-review.md)** for the full lens
 
 **Every generation entry point (Full Pipeline, Copy Only, Hook Library, Video Scripts) runs this pipeline automatically after saving output.** Do not ask the user whether to run compliance review -- it is automatic.
 
-See **[references/post-generation-pipeline.md](references/post-generation-pipeline.md)** for the complete pipeline: git commit pre-review, lens tier selection, Nano Banana check, parallel agent spawning (compliance + image), synthesis, proposed-change approval gate, unified report, and post-review commit.
+See **[references/post-generation-pipeline.md](references/post-generation-pipeline.md)** for the complete pipeline: checkpoint pre-review, lens tier selection, Nano Banana check, parallel agent spawning (compliance + image), synthesis, proposed-change approval gate, unified report, and post-review checkpoint.
 
-**Quick summary:** Commit pre-review state, spawn 5-6 compliance agents + optional image agents in parallel, synthesize P1/P2/P3 findings, surface P1 to user, show proposed P2/P3 copy edits as a dry-run diff, apply copy edits only after explicit approval, present unified report, commit post-review.
+**Quick summary:** Save a checkpoint for the pre-review state after operator approval, spawn 5-6 compliance agents + optional image agents in parallel, synthesize P1/P2/P3 findings, surface P1 to user, show proposed P2/P3 copy edits as a dry-run diff, apply copy edits only after explicit approval, present unified report, and offer a post-review checkpoint.
 
 **"While You Wait" pattern:** When spawning parallel agents that take >30 seconds, show a brief note so the user knows what's happening:
 > "Running compliance review across 6 lenses + generating images in parallel. This takes about 2-3 minutes. These run as sub-agents so they won't eat into your session context."

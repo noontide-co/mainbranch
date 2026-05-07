@@ -211,8 +211,13 @@ internal retrospective instead.
 
 ## Exit
 
-Tell the operator what changed, which files were linked, whether validation
-passed, and the exact next command:
+Tell the operator what changed, which files were linked, and whether validation
+passed. If bet files or linked repo truth changed, run `mb checkpoint --plan
+--json`, show the proposed checkpoint and any blockers, validate the chosen
+message with `mb checkpoint --validate "..." --json`, and save with
+`mb checkpoint --message "..." --yes` only after operator approval.
+
+End with the exact next command:
 
 ```bash
 mb status

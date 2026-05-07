@@ -53,7 +53,7 @@ Every variation **MUST** include at least one specific element:
 3. Create folder: `pushes/YYYY-MM-DD-creative-variations-[offer]-{campaign}/` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
 4. Save full generation context + creative variations to: `creative-variations-batch-001.md`
 5. Tell user: "Saved {N} creative variations. Running automatic post-generation pipeline..."
-6. Run the **Automatic Post-Generation Pipeline** (see SKILL.md). This handles git commit, compliance review, and image generation automatically.
+6. Run the **Automatic Post-Generation Pipeline** (see SKILL.md). This handles approved checkpoints, compliance review, and image generation.
 
 **creative-variations-batch-001.md format:**
 
