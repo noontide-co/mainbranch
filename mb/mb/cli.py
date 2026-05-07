@@ -224,6 +224,7 @@ def _render_onboard_human(result: dict[str, Any]) -> None:
 
     tools = result["tools"]
     skill_wiring = result["skill_wiring"]
+    checkpoint_hook = result.get("checkpoint_hook") or {}
     git = tools["git"]
     github = tools["github_cli"]
     claude = tools["claude_code"]
@@ -233,6 +234,8 @@ def _render_onboard_human(result: dict[str, Any]) -> None:
     console.print(f"  {github_state}  GitHub CLI")
     console.print(f"  {'ok' if claude['found'] else 'warn'}  Claude Code")
     console.print(f"  {'ok' if skill_wiring['ok'] else 'fail'}  Claude Code skill discovery")
+    if checkpoint_hook:
+        console.print(f"  {'ok' if checkpoint_hook.get('ok') else 'warn'}  checkpoint save hook")
 
     warnings = result["warnings"]
     errors = result["errors"]
@@ -1011,6 +1014,21 @@ def checkpoint_cmd(
         "--validate",
         help="Validate a checkpoint message. Pass '-' to read the message from stdin.",
     ),
+    hook_status: bool = typer.Option(
+        False,
+        "--hook-status",
+        help="Inspect the repo-local checkpoint commit-message hook.",
+    ),
+    install_hook: bool = typer.Option(
+        False,
+        "--install-hook",
+        help="Install or repair the repo-local checkpoint commit-message hook.",
+    ),
+    uninstall_hook: bool = typer.Option(
+        False,
+        "--uninstall-hook",
+        help="Remove the Main Branch checkpoint commit-message hook.",
+    ),
     yes: bool = typer.Option(False, "--yes", help="Save the checkpoint after safety gates pass."),
     mode: str = typer.Option(
         "beginner",
@@ -1020,7 +1038,20 @@ def checkpoint_cmd(
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Plan or save a git checkpoint."""
-    if validate:
+    hook_operations = sum(1 for item in (hook_status, install_hook, uninstall_hook) if item)
+    if hook_operations > 1:
+        typer.echo("mb checkpoint: choose only one hook operation", err=True)
+        raise typer.Exit(2)
+    if validate and hook_operations:
+        typer.echo("mb checkpoint: --validate cannot be combined with hook operations", err=True)
+        raise typer.Exit(2)
+    if install_hook:
+        result = checkpoint_mod.install_commit_hook(repo=repo)
+    elif uninstall_hook:
+        result = checkpoint_mod.uninstall_commit_hook(repo=repo)
+    elif hook_status:
+        result = checkpoint_mod.hook_status(repo=repo)
+    elif validate:
         validation_message = sys.stdin.read() if validate == "-" else validate
         result = checkpoint_mod.validate_message(validation_message)
     elif yes or message:

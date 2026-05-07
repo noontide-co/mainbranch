@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from mb import checkpoint as checkpoint_mod
 from mb import init as init_mod
 from mb.engine import link_skills, link_status
 
@@ -454,6 +455,7 @@ def _checklist(repo: Path, state: dict[str, Any], markers: dict[str, bool]) -> l
     core_inputs = _core_inputs(repo)
     missing_core = [key for key, ok in core_inputs.items() if not ok]
     wiring = link_status(repo)
+    checkpoint_hook = checkpoint_mod.hook_status(repo)
     return [
         _step(
             step_id="repo_scaffold",
@@ -492,6 +494,17 @@ def _checklist(repo: Path, state: dict[str, Any], markers: dict[str, bool]) -> l
             missing_inputs=[] if wiring["ok"] else ["Claude Code skill wiring"],
             next_action="Run `mb skill link --repo .`, then `mb start --json`.",
             owner="mb",
+        ),
+        _step(
+            step_id="checkpoint_hook",
+            title="Checkpoint save hook",
+            complete=bool(checkpoint_hook["ok"]),
+            missing_inputs=[]
+            if checkpoint_hook["ok"]
+            else ["business-readable checkpoint commit hook"],
+            next_action=("Run `mb doctor repair --plan`, then `mb doctor repair --apply`."),
+            owner="mb",
+            required=False,
         ),
     ]
 
@@ -593,6 +606,15 @@ def run(
         warnings.append(str(tools["claude_code"]["repair"]))
     if not wiring["ok"]:
         warnings.append("Claude Code skill discovery is not wired. Run `mb doctor` for details.")
+    checkpoint_hook = (
+        init_result.get("checkpoint_hook")
+        if init_result
+        else checkpoint_mod.hook_status(target)
+        if target.exists()
+        else None
+    )
+    if isinstance(checkpoint_hook, dict) and not checkpoint_hook.get("ok"):
+        warnings.append(str(checkpoint_hook.get("summary") or "Checkpoint hook needs repair."))
 
     ok = not errors and wiring["ok"] and after["claude_md"]
     progress = (
@@ -626,6 +648,7 @@ def run(
         "warnings": [warning for warning in warnings if warning],
         "errors": errors,
         "doctor_command": f"mb doctor {target}",
+        "checkpoint_hook": checkpoint_hook,
         "onboarding": progress,
         "next_steps": _next_steps(target),
         "init": init_result,

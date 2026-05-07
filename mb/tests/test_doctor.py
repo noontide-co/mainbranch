@@ -79,6 +79,8 @@ def test_doctor_skill_wiring_passes_after_init(tmp_path: Path) -> None:
     report = run(path=str(repo))
     wiring = next(c for c in report["checks"] if c["name"] == "skill-wiring")
     assert wiring["ok"] is True
+    checkpoint_hook = next(c for c in report["checks"] if c["name"] == "checkpoint-hook")
+    assert checkpoint_hook["ok"] is True
 
 
 def test_repo_layout_warns_on_legacy_reference_core(tmp_path: Path) -> None:
@@ -198,6 +200,52 @@ def test_doctor_repair_adds_connect_yaml_to_gitignore(tmp_path: Path) -> None:
 
     assert result.exit_code in {0, 1}
     assert ".mb/connect.yaml" in gitignore.read_text(encoding="utf-8")
+
+
+def test_doctor_repair_plan_reports_missing_checkpoint_hook(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    (repo / ".git" / "hooks" / "commit-msg").unlink()
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "checkpoint-hook")
+    assert section["state"] == "warn"
+    actions = {action["id"]: action for action in payload["actions"]}
+    assert actions["checkpoint-hook-install"]["safe_to_apply"] is True
+
+
+def test_doctor_repair_apply_installs_checkpoint_hook(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    hook = repo / ".git" / "hooks" / "commit-msg"
+    hook.unlink()
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    applied = {action["id"]: action for action in payload["applied_actions"]}
+    assert "checkpoint-hook-install" in applied
+    assert hook.exists()
+    assert "mb checkpoint --validate -" in hook.read_text(encoding="utf-8")
+
+
+def test_doctor_repair_preserves_existing_checkpoint_hook(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    hook = repo / ".git" / "hooks" / "commit-msg"
+    hook.write_text("#!/bin/sh\necho user hook\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    actions = {action["id"]: action for action in payload["actions"]}
+    assert actions["checkpoint-hook-existing"]["safe_to_apply"] is False
+    assert hook.read_text(encoding="utf-8") == "#!/bin/sh\necho user hook\n"
 
 
 def test_doctor_repair_untracks_existing_connect_yaml(tmp_path: Path) -> None:

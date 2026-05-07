@@ -20,6 +20,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Accepted decisions now capture Postiz as the candidate social scheduling rail
   to smoke next, plus the growth-automation playbook boundary for future
   comment-to-DM and resource-delivery add-ons. Refs #341.
+- Fresh business repos now install a repo-local Main Branch `commit-msg` hook
+  that validates manual git commits through `mb checkpoint --validate -`, with
+  checkpoint hook status, install, and uninstall controls on `mb checkpoint`.
+  Refs #302.
 
 ### Changed
 
@@ -30,6 +34,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   guidance now distinguishes Apify public X post/profile/reply mining from
   Grok topic sentiment, and clarifies that DM/comment-keyword CTAs are draft
   strategy, not supported automation. Refs #341.
+- `mb doctor` and `mb doctor repair` now report, repair, and preserve
+  business checkpoint hook wiring, and shipped skills use approved
+  `mb checkpoint` planning/validation/save calls instead of raw git commit
+  instructions. Refs #302.
 
 ## [0.3.5] - 2026-05-06
 

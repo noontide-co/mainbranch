@@ -35,6 +35,10 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert (target / ".mb" / "schema_version").read_text(encoding="utf-8") == "0.2\n"
     assert (target / ".claude" / "settings.local.json").exists()
     assert (target / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
+    assert (target / ".git" / "hooks" / "commit-msg").exists()
+    hook = (target / ".git" / "hooks" / "commit-msg").read_text(encoding="utf-8")
+    assert "mb checkpoint --validate -" in hook
+    assert result["checkpoint_hook"]["state"] == "installed"
 
     settings = json.loads((target / ".claude" / "settings.local.json").read_text())
     dirs = settings["permissions"]["additionalDirectories"]
@@ -71,6 +75,7 @@ def test_init_idempotent(tmp_path: Path) -> None:
     second = run(path=str(target), name="Acme")
     assert first["status"] == "ok"
     assert second["status"] == "already-initialized"
+    assert second["checkpoint_hook"]["state"] == "installed"
 
 
 def test_init_requires_name(tmp_path: Path, monkeypatch) -> None:

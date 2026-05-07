@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import sys
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -27,13 +29,35 @@ def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
 
 
 def _business_repo(tmp_path: Path) -> Path:
+    _ensure_mb_shim(tmp_path)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
     _git(repo, "config", "user.email", "test@example.com")
     _git(repo, "config", "user.name", "Test User")
     _git(repo, "add", ".")
-    _git(repo, "commit", "-m", "initial")
+    _git(repo, "commit", "-m", "[added] business scaffold")
     return repo
+
+
+def _ensure_mb_shim(tmp_path: Path) -> Path:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir(exist_ok=True)
+    shim = bin_dir / "mb"
+    package_root = Path(__file__).resolve().parents[1]
+    shim.write_text(
+        f'#!/bin/sh\nPYTHONPATH="{package_root}" exec "{sys.executable}" -m mb "$@"\n',
+        encoding="utf-8",
+    )
+    shim.chmod(0o755)
+    current = os.environ.get("PATH", "")
+    if str(bin_dir) not in current.split(os.pathsep):
+        os.environ["PATH"] = f"{bin_dir}{os.pathsep}{current}"
+    return bin_dir
+
+
+def _install_mb_shim(tmp_path: Path, monkeypatch) -> None:
+    bin_dir = _ensure_mb_shim(tmp_path)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
 
 
 def test_checkpoint_plan_clean_repo_returns_clean(tmp_path: Path) -> None:
@@ -172,6 +196,81 @@ def test_checkpoint_validate_reads_stdin() -> None:
     payload = json.loads(result.stdout)
     assert payload["validation"]["parsed"]["verb"] == "ran"
     assert payload["validation"]["parsed"]["channel_hint"] == "ops"
+
+
+def test_checkpoint_hook_status_install_and_uninstall(tmp_path: Path) -> None:
+    repo = tmp_path / "manual"
+    repo.mkdir()
+    _git(repo, "init", "-q", "-b", "main")
+
+    missing = checkpoint_mod.hook_status(repo)
+    assert missing["state"] == "missing"
+    assert missing["safe_to_install"] is True
+
+    installed = checkpoint_mod.install_commit_hook(repo)
+    assert installed["ok"] is True
+    assert installed["state"] == "installed"
+    assert Path(installed["hook"]).exists()
+
+    uninstalled = checkpoint_mod.uninstall_commit_hook(repo)
+    assert uninstalled["ok"] is True
+    assert uninstalled["changed"] is True
+    assert not Path(installed["hook"]).exists()
+
+
+def test_checkpoint_hook_preserves_existing_user_hook(tmp_path: Path) -> None:
+    repo = tmp_path / "manual"
+    repo.mkdir()
+    _git(repo, "init", "-q", "-b", "main")
+    hook = repo / ".git" / "hooks" / "commit-msg"
+    hook.write_text("#!/bin/sh\necho user hook\n", encoding="utf-8")
+
+    result = checkpoint_mod.install_commit_hook(repo)
+
+    assert result["ok"] is False
+    assert result["state"] == "blocked_existing_hook"
+    assert hook.read_text(encoding="utf-8") == "#!/bin/sh\necho user hook\n"
+
+
+def test_checkpoint_hook_skips_engine_repo(tmp_path: Path) -> None:
+    repo = tmp_path / "engine"
+    (repo / "mb" / "mb").mkdir(parents=True)
+    (repo / "mb" / "pyproject.toml").write_text("[project]\nname='mainbranch'\n")
+    (repo / "mb" / "mb" / "cli.py").write_text("# cli\n")
+    _git(repo, "init", "-q", "-b", "main")
+
+    result = checkpoint_mod.install_commit_hook(repo)
+
+    assert result["ok"] is True
+    assert result["state"] == "engine_repo"
+    assert not (repo / ".git" / "hooks" / "commit-msg").exists()
+
+
+def test_checkpoint_hook_rejects_vague_raw_git_commit(tmp_path: Path, monkeypatch) -> None:
+    _install_mb_shim(tmp_path, monkeypatch)
+    repo = _business_repo(tmp_path)
+    (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
+    _git(repo, "add", "core/offer.md")
+
+    result = _git(repo, "commit", "-m", "WIP")
+
+    assert result.returncode != 0
+    assert "not business-readable" in result.stderr
+    assert _git(repo, "status", "--porcelain").stdout
+
+
+def test_checkpoint_hook_accepts_business_raw_git_commit(tmp_path: Path, monkeypatch) -> None:
+    _install_mb_shim(tmp_path, monkeypatch)
+    repo = _business_repo(tmp_path)
+    (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
+    _git(repo, "add", "core/offer.md")
+
+    result = _git(repo, "commit", "-m", "[updated] offer.md -- clarified guarantee")
+
+    assert result.returncode == 0
+    assert (
+        "[updated] offer.md -- clarified guarantee" in _git(repo, "log", "-1", "--pretty=%s").stdout
+    )
 
 
 def test_checkpoint_blocks_env_and_secret_like_content(tmp_path: Path) -> None:
@@ -409,7 +508,7 @@ def test_checkpoint_status_preserves_legacy_checkpoint_subjects(tmp_path: Path) 
     repo = _business_repo(tmp_path)
     (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
     _git(repo, "add", "core/offer.md")
-    _git(repo, "commit", "-m", "[checkpoint] Update offer")
+    _git(repo, "commit", "--no-verify", "-m", "[checkpoint] Update offer")
 
     payload = checkpoint_mod.status(repo)
 

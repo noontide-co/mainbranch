@@ -33,15 +33,53 @@ SECRET_RE = re.compile(
     r")"
 )
 
+HOOK_NAME = "commit-msg"
+HOOK_BEGIN = "# >>> mainbranch checkpoint hook >>>"
+HOOK_END = "# <<< mainbranch checkpoint hook <<<"
+HOOK_BODY = f"""\
+#!/bin/sh
+{HOOK_BEGIN}
+# Main Branch business repos use readable checkpoint subjects.
+# This hook validates only the commit subject through the installed mb CLI.
+
+if [ "$#" -lt 1 ]; then
+  exit 0
+fi
+
+if ! command -v mb >/dev/null 2>&1; then
+  echo "Main Branch checkpoint hook could not find the mb CLI." >&2
+  echo "Repair: install or update Main Branch, then run: mb doctor repair --apply" >&2
+  exit 1
+fi
+
+if ! mb checkpoint --validate - < "$1"; then
+  echo "" >&2
+  echo "Main Branch rejected this checkpoint because the message is not business-readable." >&2
+  echo "Use a subject like: [updated] offer.md -- clarified guarantee" >&2
+  echo "For a suggested checkpoint, run: mb checkpoint --plan --json" >&2
+  echo "If the hook itself is damaged, run: mb doctor repair --apply" >&2
+  exit 1
+fi
+{HOOK_END}
+"""
+
 
 def _run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", *args],
-        cwd=str(repo),
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+    try:
+        return subprocess.run(
+            ["git", *args],
+            cwd=str(repo),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        return subprocess.CompletedProcess(
+            ["git", *args],
+            127,
+            "",
+            str(exc),
+        )
 
 
 def _git_error(label: str, result: subprocess.CompletedProcess[str]) -> str:
@@ -67,10 +105,221 @@ def _git_dir(repo: Path) -> Path | None:
     return path.resolve()
 
 
+def _hook_path(repo: Path) -> tuple[Path | None, str | None, Path | None]:
+    root, root_error = _git_root(repo)
+    if root is None:
+        return None, root_error or "not a git repo", None
+    git_dir = _git_dir(root)
+    if git_dir is None:
+        return root, "could not resolve .git directory", None
+    return root, None, git_dir / "hooks" / HOOK_NAME
+
+
 def _is_engine_repo(repo: Path) -> bool:
     pyproject = repo / "mb" / "pyproject.toml"
     cli = repo / "mb" / "mb" / "cli.py"
     return pyproject.is_file() and cli.is_file()
+
+
+def _is_managed_hook(text: str) -> bool:
+    return HOOK_BEGIN in text and HOOK_END in text
+
+
+def _hook_state_from_text(text: str) -> str:
+    if not _is_managed_hook(text):
+        return "blocked_existing_hook"
+    return "installed" if text == HOOK_BODY else "broken"
+
+
+def hook_status(repo: str | Path = ".") -> dict[str, Any]:
+    """Inspect the repo-local checkpoint commit-message hook."""
+    target = Path(repo).expanduser().resolve()
+    root, root_error, hook = _hook_path(target)
+    if root is None or hook is None:
+        return {
+            "ok": False,
+            "state": "error",
+            "repo": str(target),
+            "installed": False,
+            "hook": "",
+            "managed": False,
+            "safe_to_install": False,
+            "safe_to_uninstall": False,
+            "summary": root_error or "could not inspect git hook",
+            "repair_command": "git init",
+            "errors": [root_error or "could not inspect git hook"],
+        }
+    if _is_engine_repo(root):
+        return {
+            "ok": True,
+            "state": "engine_repo",
+            "repo": str(root),
+            "installed": False,
+            "hook": str(hook),
+            "managed": False,
+            "safe_to_install": False,
+            "safe_to_uninstall": False,
+            "summary": "engine repo is not governed by business checkpoint hook rules",
+            "repair_command": "",
+            "errors": [],
+        }
+    if not hook.exists():
+        return {
+            "ok": False,
+            "state": "missing",
+            "repo": str(root),
+            "installed": False,
+            "hook": str(hook),
+            "managed": False,
+            "safe_to_install": True,
+            "safe_to_uninstall": False,
+            "summary": "Main Branch checkpoint commit-message hook is not installed",
+            "repair_command": "mb checkpoint --install-hook",
+            "errors": [],
+        }
+    try:
+        text = hook.read_text(encoding="utf-8")
+    except OSError as exc:
+        return {
+            "ok": False,
+            "state": "error",
+            "repo": str(root),
+            "installed": False,
+            "hook": str(hook),
+            "managed": False,
+            "safe_to_install": False,
+            "safe_to_uninstall": False,
+            "summary": f"could not read checkpoint hook: {exc}",
+            "repair_command": "mb doctor repair --plan",
+            "errors": [str(exc)],
+        }
+    state = _hook_state_from_text(text)
+    managed = _is_managed_hook(text)
+    installed = state == "installed"
+    safe = state in {"installed", "broken"}
+    summary = {
+        "installed": "Main Branch checkpoint commit-message hook is installed",
+        "broken": "Main Branch checkpoint hook is present but differs from the current template",
+        "blocked_existing_hook": (
+            "an existing commit-msg hook is present; Main Branch will not overwrite it"
+        ),
+    }[state]
+    return {
+        "ok": installed,
+        "state": state,
+        "repo": str(root),
+        "installed": installed,
+        "hook": str(hook),
+        "managed": managed,
+        "safe_to_install": safe,
+        "safe_to_uninstall": safe,
+        "summary": summary,
+        "repair_command": "mb checkpoint --install-hook"
+        if safe
+        else "review .git/hooks/commit-msg, then run mb checkpoint --install-hook",
+        "errors": [],
+    }
+
+
+def install_commit_hook(repo: str | Path = ".") -> dict[str, Any]:
+    """Install or repair the repo-local Main Branch checkpoint hook."""
+    status_report = hook_status(repo)
+    state = str(status_report["state"])
+    if state == "engine_repo":
+        return {
+            **status_report,
+            "ok": True,
+            "installed": False,
+            "changed": False,
+            "summary": "skipped engine repo; business checkpoint hook not installed",
+        }
+    if state == "blocked_existing_hook":
+        return {
+            **status_report,
+            "ok": False,
+            "changed": False,
+            "errors": [
+                (
+                    "existing .git/hooks/commit-msg is not managed by Main Branch; "
+                    "review or move it before installing the checkpoint hook"
+                )
+            ],
+        }
+    if state == "error":
+        return {**status_report, "changed": False}
+    hook = Path(str(status_report["hook"]))
+    try:
+        hook.parent.mkdir(parents=True, exist_ok=True)
+        previous = hook.read_text(encoding="utf-8") if hook.exists() else ""
+        hook.write_text(HOOK_BODY, encoding="utf-8")
+        hook.chmod(0o755)
+    except OSError as exc:
+        return {
+            **status_report,
+            "ok": False,
+            "state": "error",
+            "changed": False,
+            "summary": f"could not install checkpoint hook: {exc}",
+            "errors": [str(exc)],
+        }
+    changed = previous != HOOK_BODY
+    return {
+        **hook_status(status_report["repo"]),
+        "ok": True,
+        "changed": changed,
+        "summary": (
+            "installed Main Branch checkpoint commit-message hook"
+            if changed
+            else "Main Branch checkpoint commit-message hook already installed"
+        ),
+        "errors": [],
+    }
+
+
+def uninstall_commit_hook(repo: str | Path = ".") -> dict[str, Any]:
+    """Remove only the Main Branch-managed checkpoint hook."""
+    status_report = hook_status(repo)
+    state = str(status_report["state"])
+    if state == "missing":
+        return {
+            **status_report,
+            "ok": True,
+            "changed": False,
+            "summary": "Main Branch checkpoint commit-message hook is already absent",
+            "errors": [],
+        }
+    if state == "engine_repo":
+        return {**status_report, "ok": True, "changed": False, "errors": []}
+    if state == "blocked_existing_hook":
+        return {
+            **status_report,
+            "ok": False,
+            "changed": False,
+            "errors": [
+                "existing commit-msg hook is not managed by Main Branch; leaving it in place"
+            ],
+        }
+    if state == "error":
+        return {**status_report, "changed": False}
+    hook = Path(str(status_report["hook"]))
+    try:
+        hook.unlink()
+    except OSError as exc:
+        return {
+            **status_report,
+            "ok": False,
+            "state": "error",
+            "changed": False,
+            "summary": f"could not uninstall checkpoint hook: {exc}",
+            "errors": [str(exc)],
+        }
+    return {
+        **hook_status(status_report["repo"]),
+        "ok": True,
+        "changed": True,
+        "summary": "removed Main Branch checkpoint commit-message hook",
+        "errors": [],
+    }
 
 
 def _status_records(repo: Path) -> tuple[list[dict[str, Any]], str | None]:
@@ -679,6 +928,17 @@ def render_human(result: dict[str, Any]) -> None:
     print("mb checkpoint")
     if result.get("repo"):
         print(f"repo: {result.get('repo')}")
+    if "hook" in result and status not in {"valid", "invalid"}:
+        hook_state = result.get("state", status)
+        print(f"hook: {result.get('hook')}")
+        print(f"state: {hook_state}")
+        if result.get("summary"):
+            print(str(result["summary"]))
+        if result.get("repair_command"):
+            print(f"repair: {result['repair_command']}")
+        for error in result.get("errors", []):
+            print(f"error: {error}")
+        return
     if "validation" in result and status in {"valid", "invalid"}:
         validation = result.get("validation", {})
         subject = validation.get("subject", "") if isinstance(validation, dict) else ""

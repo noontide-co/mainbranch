@@ -14,6 +14,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
+from mb import checkpoint as checkpoint_mod
 from mb.engine import link_skills
 from mb.migrate import LATEST_SCHEMA_VERSION, SCHEMA_MARKER
 
@@ -107,6 +108,7 @@ def run(path: str, name: str) -> dict[str, Any]:
             "path": str(target),
             "created": link_result["created"],
             "skill_link": link_result,
+            "checkpoint_hook": checkpoint_mod.hook_status(target),
         }
 
     business_name = name.strip() or os.environ.get("MB_BUSINESS_NAME", "").strip()
@@ -178,12 +180,21 @@ def run(path: str, name: str) -> dict[str, Any]:
             # git init failure is not fatal for scaffolding
             pass
 
+    checkpoint_hook = (
+        checkpoint_mod.install_commit_hook(target)
+        if (target / ".git").exists()
+        else checkpoint_mod.hook_status(target)
+    )
+    if checkpoint_hook.get("changed"):
+        created.append(".git/hooks/commit-msg")
+
     return {
         "status": "ok",
         "path": str(target),
         "created": created,
         "business_name": business_name,
         "skill_link": link_result,
+        "checkpoint_hook": checkpoint_hook,
     }
 
 

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import shutil
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +18,19 @@ from mb.cli import app
 from mb.init import run as init_run
 
 runner = CliRunner()
+
+
+def _install_mb_shim(tmp_path: Path, monkeypatch) -> None:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir(exist_ok=True)
+    shim = bin_dir / "mb"
+    package_root = Path(__file__).resolve().parents[1]
+    shim.write_text(
+        f'#!/bin/sh\nPYTHONPATH="{package_root}" exec "{sys.executable}" -m mb "$@"\n',
+        encoding="utf-8",
+    )
+    shim.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
 
 
 def _with_claude(name: str) -> str:
@@ -199,6 +214,7 @@ def test_start_does_not_run_full_status_pipeline(tmp_path: Path, monkeypatch) ->
 
 def test_start_surfaces_recent_checkpoint_history(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(start_mod, "_which", _with_claude)
+    _install_mb_shim(tmp_path, monkeypatch)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
     subprocess_result = start_mod._run_command(
@@ -212,7 +228,10 @@ def test_start_surfaces_recent_checkpoint_history(tmp_path: Path, monkeypatch) -
     assert subprocess_result["ok"] is True
     subprocess_result = start_mod._run_command(["git", "add", "."], cwd=repo)
     assert subprocess_result["ok"] is True
-    subprocess_result = start_mod._run_command(["git", "commit", "-m", "initial"], cwd=repo)
+    subprocess_result = start_mod._run_command(
+        ["git", "commit", "-m", "[added] business scaffold"],
+        cwd=repo,
+    )
     assert subprocess_result["ok"] is True
     (repo / "core" / "offer.md").write_text("# Offer\n", encoding="utf-8")
     commit = runner.invoke(

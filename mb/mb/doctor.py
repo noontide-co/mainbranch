@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from mb import checkpoint as checkpoint_mod
 from mb import connect as connect_mod
 from mb import engine as engine_mod
 from mb import graph as graph_mod
@@ -843,6 +844,24 @@ def run(path: str) -> dict[str, Any]:
     checks.append(_repo_layout_check(repo))
     checks.append(_schema_version_check(repo))
     checks.append(_legacy_campaigns_check(repo))
+    checkpoint_hook = checkpoint_mod.hook_status(repo)
+    hook_state = str(checkpoint_hook.get("state"))
+    checks.append(
+        {
+            "name": "checkpoint-hook",
+            "ok": bool(checkpoint_hook["ok"]),
+            "detail": str(checkpoint_hook["summary"]),
+            "severity": "ok"
+            if checkpoint_hook["ok"]
+            else "info"
+            if hook_state == "engine_repo"
+            else "warn",
+            "state": hook_state,
+            "repair": str(checkpoint_hook.get("summary") or ""),
+            "repair_command": str(checkpoint_hook.get("repair_command") or ""),
+            "safe_to_share": True,
+        }
+    )
     checks.append(connect_mod.doctor_check(repo, status=integration_status))
     onboarding = onboard_mod.onboarding_status(repo)
     onboarding_summary = onboarding["summary"]
@@ -1076,6 +1095,69 @@ def repair_plan(
                 for entry in LOCAL_GITIGNORE_ENTRIES
             ],
             actions=gitignore_actions,
+        )
+    )
+
+    checkpoint_hook = checkpoint_mod.hook_status(target)
+    checkpoint_state = str(checkpoint_hook.get("state"))
+    hook_check_state = (
+        "ok"
+        if checkpoint_hook.get("ok")
+        else "info"
+        if checkpoint_state == "engine_repo"
+        else "warn"
+        if checkpoint_state in {"missing", "broken", "blocked_existing_hook"}
+        else "error"
+    )
+    hook_actions: list[dict[str, Any]] = []
+    if checkpoint_state in {"missing", "broken"}:
+        action = _action(
+            id="checkpoint-hook-install",
+            title="Install business checkpoint commit-message hook",
+            state="warn",
+            mode="write",
+            command="mb checkpoint --install-hook",
+            safe_to_apply=True,
+            reason=(
+                "the repo-local commit-msg hook validates manual git commits "
+                "against the same business-readable checkpoint contract"
+            ),
+            writes=[".git/hooks/commit-msg"],
+        )
+        actions.append(action)
+        hook_actions.append(action)
+    elif checkpoint_state == "blocked_existing_hook":
+        action = _action(
+            id="checkpoint-hook-existing",
+            title="Review existing commit-message hook before installing checkpoint validation",
+            state="warn",
+            mode="manual",
+            command="review .git/hooks/commit-msg, then run mb checkpoint --install-hook",
+            safe_to_apply=False,
+            reason=(
+                "Main Branch will not overwrite an existing user hook; preserve or "
+                "compose it intentionally before installing checkpoint validation"
+            ),
+            writes=[".git/hooks/commit-msg"],
+        )
+        actions.append(action)
+        hook_actions.append(action)
+    sections.append(
+        _section(
+            "checkpoint-hook",
+            "Checkpoint Commit Hook",
+            hook_check_state,
+            str(checkpoint_hook.get("summary") or "checkpoint hook status unavailable"),
+            checks=[
+                {
+                    "name": "commit-msg",
+                    "state": hook_check_state,
+                    "summary": str(checkpoint_hook.get("summary") or ""),
+                    "hook": str(checkpoint_hook.get("hook") or ""),
+                    "repair_command": str(checkpoint_hook.get("repair_command") or ""),
+                }
+            ],
+            actions=hook_actions,
         )
     )
 
@@ -1353,6 +1435,24 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
                 writes=tracked_local_state,
                 applied=any(item["ok"] for item in results),
                 result={"untracked": results},
+            )
+        )
+
+    checkpoint_hook = checkpoint_mod.hook_status(target)
+    if checkpoint_hook.get("state") in {"missing", "broken"}:
+        installed = checkpoint_mod.install_commit_hook(target)
+        applied.append(
+            _action(
+                id="checkpoint-hook-install",
+                title="Installed business checkpoint commit-message hook",
+                state="ok" if installed["ok"] else "error",
+                mode="write",
+                command="mb checkpoint --install-hook",
+                safe_to_apply=True,
+                reason="installed repo-local validation for business-readable checkpoint subjects",
+                writes=[".git/hooks/commit-msg"],
+                applied=bool(installed.get("changed")),
+                result=installed,
             )
         )
 

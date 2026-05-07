@@ -37,6 +37,8 @@ def test_onboard_yes_creates_repo_and_reports_next_steps(tmp_path: Path, monkeyp
     assert result["level"] == "beginner"
     assert (repo / "CLAUDE.md").exists()
     assert (repo / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
+    assert (repo / ".git" / "hooks" / "commit-msg").exists()
+    assert result["checkpoint_hook"]["state"] == "installed"
     assert result["skill_wiring"]["ok"] is True
     assert result["next_steps"] == [f"cd {repo.resolve()}", "claude", "/mb-start"]
     assert any("Claude Code" in warning for warning in result["warnings"])
