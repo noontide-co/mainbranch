@@ -5,7 +5,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from mb.init import DATA_FOLDERS, run
+from mb.init import _DEFAULT_CLAUDE, DATA_FOLDERS, _read_template, run
+
+
+def _section(text: str, start: str, end: str) -> str:
+    start_index = text.index(start)
+    end_index = text.index(end, start_index)
+    return text[start_index:end_index]
 
 
 def _assert_claude_md_cli_first_contract(text: str) -> None:
@@ -33,6 +39,15 @@ def _assert_claude_md_cli_first_contract(text: str) -> None:
     assert "Claude Desktop" not in text
     for unsupported_runtime in ("Codex", "Cursor", "OpenClaw", "Hermes"):
         assert unsupported_runtime not in text
+
+
+def test_default_claude_operating_contract_matches_template() -> None:
+    template = _read_template("CLAUDE.md.tmpl")
+    template_contract = _section(template, "## Claude operating contract", "## Folders")
+    fallback_contract = _section(_DEFAULT_CLAUDE, "## Claude operating contract", "## Folders")
+
+    assert fallback_contract == template_contract
+    _assert_claude_md_cli_first_contract(_DEFAULT_CLAUDE)
 
 
 def test_init_scaffolds_folders(tmp_path: Path) -> None:
