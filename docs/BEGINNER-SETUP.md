@@ -104,6 +104,13 @@ Then in Claude Code:
 
 `/mb-start` walks you through the rest. It reads the same status facts as `mb status`, checks for updates or repair needs, and routes you to setup, thinking, shipping, or closing work.
 
+Plain `/mb-start` is the reliable beginner path. Extra text after `/mb-start`
+is treated as normal instruction, not as a project-command argument API.
+Natural-language requests can route into the skill, but setup docs teach the
+explicit slash command because it is easier to recognize and repair. See the
+[Claude Code invocation contract](claude-code-invocation-contract.md) for the
+runtime details.
+
 That's it. From this point on:
 
 ```bash
@@ -265,11 +272,23 @@ For the full list: `mb --help`.
 
 ```bash
 mb skill link --repo .
-mb skill repair --repo .
 ```
 
 Then restart Claude. This re-wires skill discovery in your business repo and
-checks whether an old personal skill is taking precedence.
+clears known stale Main Branch personal-skill shadows.
+
+The project-local `.claude/skills/mb-start` bridge link is required for
+reliable slash-command discovery; `.claude/settings.local.json` alone is not
+enough.
+
+If `/mb-start` is still missing after relinking and restarting, run:
+
+```bash
+mb skill repair --repo .
+```
+
+That inspect-only command reports unresolved personal-skill conflicts so you can
+decide whether to move them with `mb skill repair --repo . --apply`.
 
 **I only see `.mb/`, not `.mb-vip/`:** good. `.mb/` is the current folder.
 `.mb-vip/` was old setup language and is not required.

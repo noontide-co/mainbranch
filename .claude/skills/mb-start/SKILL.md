@@ -8,7 +8,7 @@ loops: [sense, decide]
 
 Single entry point for Main Branch. Detect user state, context level, experience — route to the right skill.
 
-**Recommended workflow:** Start Claude in your business repo, run `/mb-start`. It handles everything. Main Branch is loaded through `additionalDirectories`, with bridge links as a compatibility fallback for skill discovery.
+**Recommended workflow:** Start Claude in your business repo, run `/mb-start`. It handles everything. Claude Code discovers Main Branch through project-local `.claude/skills/mb-*` bridge links; `additionalDirectories` grants file access to the engine.
 
 ## Output destinations and operator vocabulary
 

@@ -8,7 +8,7 @@ Four-file system: Main Branch engine linkage, personal settings, team settings, 
 
 | File | Location | Purpose | Git-tracked? |
 |------|----------|---------|--------------|
-| `settings.local.json` | `[repo]/.claude/` | Links the active Main Branch engine as additionalDirectory | No (auto git-ignored by Claude Code) |
+| `settings.local.json` | `[repo]/.claude/` | Grants Claude Code file access to the active Main Branch engine | No (auto git-ignored by Claude Code) |
 | `local.yaml` | `~/.config/vip/` | Legacy machine-local file for user identity, engine path, and default repo | No |
 | `env.sh` | `~/.config/vip/` | API keys for optional research tools | No |
 | `config.yaml` | `[repo]/.vip/` | Team/business settings, MCP requirements | Yes |
@@ -33,9 +33,13 @@ Created by `mb skill link` and `/mb-setup`. Tells Claude Code to load Main Branc
 
 **Auto git-ignored** by Claude Code (like `.claude/settings.local.json` is always local). Contains machine-specific absolute paths — never commit this.
 
-### .claude/ bridge links (compatibility fallback)
+### .claude/ bridge links (slash-command discovery)
 
-`additionalDirectories` is the canonical config for loading Main Branch. In some environments/versions, skill discovery can still be inconsistent. Compatibility links in local `.claude/` provide a fallback without changing user workflow.
+`additionalDirectories` grants file access to Main Branch, but project-local
+`.claude/skills/mb-*` bridge links are the supported slash-command discovery
+surface. Runtime smoke on Claude Code 2.1.126 returned `Unknown command:
+/mb-start` when the project-local `.claude/skills/mb-start` bridge was missing,
+even though `settings.local.json` still pointed at the engine.
 
 ```
 business-repo/.claude/
@@ -48,11 +52,11 @@ business-repo/.claude/
 └── reference/                # real local folder; missing Main Branch entries linked
 ```
 
-Created by `mb skill link` and `/mb-setup` as a compatibility layer. `/mb-start` can auto-repair missing links.
+Created by `mb skill link` and `/mb-setup`. `/mb-start` can auto-repair missing links.
 
 **Both are needed:**
 - `additionalDirectories` = file access (reading reference files across repos)
-- Bridge links = compatibility fallback for skill discovery in affected environments
+- Bridge links = slash-command discovery for Main Branch skills
 
 ---
 
