@@ -18,6 +18,10 @@ This page is the public compatibility contract for that surface.
 
 **Windows tip — try WSL2.** If you're on Windows and want a working setup today, use [Windows Subsystem for Linux 2 (WSL2)](https://learn.microsoft.com/en-us/windows/wsl/install). Inside WSL2, follow the supported Linux flow. The pipx install path works there.
 
+Main Branch intentionally does not run a `windows-latest` CI gate while Windows
+is experimental. Windows bugs are useful signal, but release quality is gated on
+the supported macOS/Linux path and the Linux Python CI matrix.
+
 ## What "supported" means
 
 Supported means:

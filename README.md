@@ -77,7 +77,9 @@ the business repo.
 
 You'll need a Claude Pro ($20/mo) or Max subscription. Install Claude Code itself from [claude.ai](https://claude.ai) — see [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md) for a step-by-step.
 
-Tested on macOS and Linux. Windows is experimental; see [docs/compatibility.md](docs/compatibility.md). Power users on Windows should use WSL2 for the closest supported path.
+Tested on macOS and Linux. Windows is experimental and not part of the CI
+release gate; see [docs/compatibility.md](docs/compatibility.md). Power users
+on Windows should use WSL2 for the closest supported path.
 
 **New to Claude Code, git, or terminal?** Read [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md) — it covers everything step-by-step, including common errors.
 
