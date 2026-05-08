@@ -21,6 +21,27 @@ Recommended setup order:
 The primary conversion should exist before campaign publish. Otherwise
 Maximize Conversions launches without a primary conversion to optimize against.
 
+## Measurement Gotchas
+
+Validate the measurement chain before treating a campaign as launchable:
+
+- Enhanced measurement may see form starts but miss real form submits when the
+  lander prevents the default submit event, sends an async request, or redirects
+  after success. Prefer an explicit success event pushed after validation
+  passes.
+- Separate the lander event name from the GA4 event name when useful. For
+  example, the lander can push a success-specific dataLayer event that GTM maps
+  into a cleaner GA4 `form_submit` event.
+- Use GTM Preview mode before publishing. A one-character mismatch between the
+  lander event and the GTM custom-event trigger can leave the tag in "not
+  fired" state while the rest of the setup looks correct.
+- GA4 Realtime can show an event before the Admin events table is ready. If the
+  UI allows it, register the key event by exact name instead of waiting for the
+  table to populate.
+- Google Ads import paths vary by account UI. If the normal new-conversion flow
+  does not show the expected GA4 import tile, check the linked GA4 data source,
+  app-and-web metrics import setting, and the conversion data-source editor.
+
 ## Campaign Config Defaults
 
 For a first validation run:
@@ -74,6 +95,9 @@ Check these before diagnosing strategy:
 - "Could not find the entity" at publish can come from stale URL options:
   mobile URL, tracking template, final URL suffix, or custom parameters. Open
   that panel and clear all four.
+- A conversion can be imported but still show inactive until real traffic
+  produces events. Do not confuse inactive status before traffic with a broken
+  campaign when GTM Preview and GA4 Realtime already proved the event chain.
 - Search Partners and Final URL Expansion can re-enable after edits. Verify at
   final review.
 - Description copy has a 90-character hard cap. Count before paste.
@@ -112,4 +136,3 @@ Keep these human-approved:
 - campaign publish;
 - budget changes after launch;
 - audience, geography, network, AI Max, or URL-expansion changes after launch.
-

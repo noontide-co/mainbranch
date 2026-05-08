@@ -54,6 +54,8 @@ linked_outcomes: []
 - GA4 data stream:
 - GTM container:
 - GTM snippet installed:
+- GTM Preview verified:
+- Lander success event:
 - GA4 key event:
 - Ads imported primary conversion:
 
@@ -91,6 +93,10 @@ linked_outcomes: []
 
 ## UI Review Gotchas
 
+- [ ] Form-submit tracking uses an explicit success event when auto-detection is unreliable
+- [ ] GTM Preview shows the conversion tag firing on the expected event
+- [ ] GA4 Realtime or key-event registration confirms the event name
+- [ ] Ads imported conversion is selected as primary, even if inactive before traffic
 - [ ] Headlines entered one per row or via bulk-add
 - [ ] Ad URL options cleared if publish errors appear
 - [ ] Search Partners still off

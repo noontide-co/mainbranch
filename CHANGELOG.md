@@ -54,6 +54,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   playbook, covering GA4/GTM/Ads import order, Search-only campaign defaults,
   UI gotchas, negative-keyword categories, manual gates, and validation-window
   calibration. Refs #422.
+- Expanded the Google Ads Search launch playbook with measurement-chain gotchas
+  from the related operator repo launch notes: explicit form-success events,
+  GTM Preview verification, GA4 Realtime/admin lag, and Google Ads conversion
+  import UI variants. Refs #414, #422.
 
 ### Changed
 
