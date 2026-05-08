@@ -155,10 +155,12 @@ Before any future write operation exists, Main Branch needs:
 
 1. wired `mb connect` detection for `meta auth status`;
 2. read-only smoke from a fresh business repo;
-3. explicit preview of every account change;
-4. explicit operator approval in chat;
-5. PAUSED-by-default campaign/ad/ad-set creation preserved;
-6. no budget changes without a separate approval gate.
+3. a `pushes/<push>/playbooks/<playbook>.md` plan with preview, approval
+   state, safe provider state, validation evidence, and outcome links;
+4. explicit preview of every account change;
+5. explicit operator approval in chat;
+6. PAUSED-by-default campaign/ad/ad-set creation preserved;
+7. no budget changes without a separate approval gate.
 
 Until those conditions are met, write operations are roadmap only.
 

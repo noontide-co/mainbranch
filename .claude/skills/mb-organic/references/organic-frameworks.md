@@ -446,7 +446,10 @@ provider path.
 
 For X/Twitter, prefer public resource delivery: put the resource in the post,
 thread, repo link, landing page, or a manual public reply/link playbook. Do not
-frame "comment for the DM" as a Main Branch-executable workflow.
+frame "comment for the DM" as a Main Branch-executable workflow. If the plan
+needs to persist, save it as `pushes/<push>/playbooks/<playbook>.md` with
+`type: playbook`; the file is an approval record and setup recipe, not an
+automation run.
 
 ---
 

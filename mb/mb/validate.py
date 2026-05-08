@@ -34,6 +34,37 @@ BET_STATUS = {"open", "paused", "closed", "canceled"}
 CAMPAIGN_STATUS = pushes_mod.PUSH_STATUS
 PUSH_KIND = pushes_mod.PUSH_KIND
 PUSH_HEALTH = pushes_mod.PUSH_HEALTH
+PLAYBOOK_STATUS = {
+    "draft",
+    "planned",
+    "approved",
+    "active",
+    "paused",
+    "completed",
+    "canceled",
+    "retired",
+}
+PLAYBOOK_PROVIDER_BOUNDARY = {
+    "plan-only",
+    "external-manual",
+    "candidate-adapter",
+    "accepted-adapter",
+}
+PLAYBOOK_APPROVAL_STATUS = {"not-required", "needed", "approved", "rejected"}
+PLAYBOOK_RESOURCE_KIND = {"url", "file", "repo", "document", "manual", "none"}
+PLAYBOOK_ACCEPTED_MUTATION_PROVIDERS: set[str] = set()
+PLAYBOOK_PROVIDER_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+SECRET_KEY_RE = re.compile(
+    r"(api[_-]?key|access[_-]?token|refresh[_-]?token|bearer|credential|"
+    r"client[_-]?secret|password|private[_-]?key|session|cookie|secret)",
+    re.IGNORECASE,
+)
+SECRET_VALUE_RE = re.compile(
+    r"(-----BEGIN [A-Z ]*PRIVATE KEY-----|bearer\s+[A-Za-z0-9._~+/=-]{10,}|"
+    r"gh[pousr]_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{10,}|"
+    r"xox[baprs]-[A-Za-z0-9-]{10,}|api[_-]?key\s*[:=])",
+    re.IGNORECASE,
+)
 
 LINK_FIELDS = relationships.RELATIONSHIP_FIELDS
 
@@ -133,6 +164,28 @@ SCHEMAS: dict[str, dict[str, Any]] = {
         "enums": {"kind": PUSH_KIND, "status": CAMPAIGN_STATUS, "health": PUSH_HEALTH},
         "primitive": "push",
     },
+    "push-playbooks": {
+        "glob": "pushes/*/playbooks/*.md",
+        "required": [
+            "type",
+            "status",
+            "push",
+            "platform",
+            "provider",
+            "provider_boundary",
+            "trigger",
+            "resource",
+            "approval",
+            "state",
+            "validation",
+            "linked_outcomes",
+        ],
+        "enums": {
+            "status": PLAYBOOK_STATUS,
+            "provider_boundary": PLAYBOOK_PROVIDER_BOUNDARY,
+        },
+        "primitive": "playbook",
+    },
     "documents": {
         "glob": "documents/*.md",
         "required": ["title"],
@@ -178,6 +231,8 @@ def _check_one(path: Path, schema: dict[str, Any]) -> dict[str, Any]:
     primitive = schema.get("primitive")
     if primitive == "push":
         _check_push_frontmatter(path, fm, errors)
+    elif primitive == "playbook":
+        _check_playbook_frontmatter(path, fm, errors)
     elif primitive == "legacy-campaign":
         _check_legacy_campaign_frontmatter(fm, errors)
     _check_provider_refs_shape(fm, errors)
@@ -227,6 +282,148 @@ def _check_push_frontmatter(path: Path, fm: dict[str, Any], errors: list[str]) -
     by = _scalar_as_string(goal.get("by"))
     if by and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", by):
         errors.append("goal.by must be YYYY-MM-DD")
+
+
+def _require_mapping(fm: dict[str, Any], key: str, errors: list[str]) -> dict[str, Any] | None:
+    if key not in fm:
+        return None
+    value = fm.get(key)
+    if not isinstance(value, dict):
+        errors.append(f"{key} must be a mapping")
+        return None
+    return value
+
+
+def _mapping_value_as_string(mapping: dict[str, Any], key: str) -> str:
+    value = mapping.get(key)
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _require_mapping_string(
+    mapping: dict[str, Any],
+    key: str,
+    errors: list[str],
+    *,
+    prefix: str,
+) -> str:
+    value = _mapping_value_as_string(mapping, key)
+    if not value:
+        errors.append(f"{prefix}.{key} must be a non-empty string")
+    return value
+
+
+def _check_playbook_push_link(path: Path, fm: dict[str, Any], errors: list[str]) -> None:
+    push_folder = path.parent.parent
+    if path.parent.name != "playbooks" or push_folder.parent.name != "pushes":
+        errors.append("playbook files must live under pushes/<YYYY-MM-DD-slug>/playbooks/")
+        return
+    if not pushes_mod.PUSH_FOLDER_RE.fullmatch(push_folder.name):
+        errors.append("playbook push folder must match YYYY-MM-DD-slug")
+    raw_push = fm.get("push")
+    if not isinstance(raw_push, str) or not raw_push.strip():
+        if "push" in fm:
+            errors.append("push must link to the containing push.md")
+        return
+    clean_push = relationships.clean_ref(raw_push)
+    if not clean_push:
+        errors.append("push must link to the containing push.md")
+        return
+    repo = push_folder.parent.parent
+    if clean_push.startswith("pushes/"):
+        target = (repo / clean_push).resolve()
+    else:
+        target = (path.parent / clean_push).resolve()
+    expected = (push_folder / "push.md").resolve()
+    if target != expected:
+        errors.append("push must link to the containing push.md")
+    if not expected.exists():
+        errors.append("push target does not exist")
+
+
+def _iter_secret_paths(value: Any, prefix: str = "") -> list[str]:
+    findings: list[str] = []
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            key_text = str(key)
+            path = f"{prefix}.{key_text}" if prefix else key_text
+            if SECRET_KEY_RE.search(key_text):
+                findings.append(path)
+            findings.extend(_iter_secret_paths(nested, path))
+    elif isinstance(value, list):
+        for index, nested in enumerate(value):
+            path = f"{prefix}[{index}]" if prefix else f"[{index}]"
+            findings.extend(_iter_secret_paths(nested, path))
+    elif isinstance(value, str) and SECRET_VALUE_RE.search(value):
+        findings.append(prefix or "<value>")
+    return findings
+
+
+def _check_playbook_frontmatter(path: Path, fm: dict[str, Any], errors: list[str]) -> None:
+    _check_playbook_push_link(path, fm, errors)
+    if fm.get("type") != "playbook":
+        errors.append("type must be 'playbook'")
+    for key in ("platform", "provider", "provider_boundary"):
+        _require_non_empty_string(fm, key, errors)
+
+    provider = fm.get("provider")
+    if isinstance(provider, str) and provider.strip():
+        provider_id = provider.strip()
+        if not PLAYBOOK_PROVIDER_RE.fullmatch(provider_id):
+            errors.append("provider must be a lowercase hyphenated provider id")
+        if (
+            fm.get("provider_boundary") == "accepted-adapter"
+            and provider_id not in PLAYBOOK_ACCEPTED_MUTATION_PROVIDERS
+        ):
+            errors.append(
+                "provider_boundary=accepted-adapter requires a tested Main Branch provider adapter"
+            )
+
+    trigger = _require_mapping(fm, "trigger", errors)
+    if trigger is not None:
+        trigger_kind = _require_mapping_string(trigger, "kind", errors, prefix="trigger")
+        if trigger_kind in {"comment_keyword", "dm_keyword"}:
+            _require_mapping_string(trigger, "keyword", errors, prefix="trigger")
+
+    resource = _require_mapping(fm, "resource", errors)
+    if resource is not None:
+        resource_kind = _require_mapping_string(resource, "kind", errors, prefix="resource")
+        if resource_kind and resource_kind not in PLAYBOOK_RESOURCE_KIND:
+            errors.append(
+                f"resource.kind={resource_kind!r} not in {sorted(PLAYBOOK_RESOURCE_KIND)}"
+            )
+        if resource_kind != "none":
+            _require_mapping_string(resource, "value", errors, prefix="resource")
+
+    approval = _require_mapping(fm, "approval", errors)
+    if approval is not None:
+        if not isinstance(approval.get("required"), bool):
+            errors.append("approval.required must be true or false")
+        status = _require_mapping_string(approval, "status", errors, prefix="approval")
+        if status and status not in PLAYBOOK_APPROVAL_STATUS:
+            errors.append(f"approval.status={status!r} not in {sorted(PLAYBOOK_APPROVAL_STATUS)}")
+
+    state = _require_mapping(fm, "state", errors)
+    if state is not None and "provider_refs" in state:
+        provider_refs = state.get("provider_refs")
+        if not isinstance(provider_refs, dict | list) and provider_refs is not None:
+            errors.append("state.provider_refs must be a mapping, list, or null")
+
+    validation = _require_mapping(fm, "validation", errors)
+    if validation is not None:
+        if "dry_run" not in validation:
+            errors.append("validation.dry_run must be recorded")
+        if "smoke_evidence" not in validation:
+            errors.append("validation.smoke_evidence must be recorded")
+
+    refs, valid_refs = _coerce_refs(fm.get("linked_outcomes"))
+    if "linked_outcomes" in fm and not valid_refs:
+        errors.append("linked_outcomes must be a string or list of strings")
+    if any(ref.strip().lower().startswith(("http://", "https://")) for ref in refs):
+        errors.append("linked_outcomes should point to repo outcome/log files, not external URLs")
+
+    secret_paths = sorted(set(_iter_secret_paths(fm)))
+    if secret_paths:
+        errors.append("playbook frontmatter must not contain secrets: " + ", ".join(secret_paths))
 
 
 def _check_legacy_campaign_frontmatter(fm: dict[str, Any], errors: list[str]) -> None:

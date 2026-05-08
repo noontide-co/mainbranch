@@ -11,6 +11,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added `mb status` relationship-health JSON and human briefing signals for
+  disconnected bets, pushes, offers, and outcomes so daily status can surface
+  business-loop gaps from graph facts. Refs #358.
+- Added v1 `type: playbook` validation for
+  `pushes/<push>/playbooks/<playbook>.md`, including required push linkage,
+  provider-boundary, trigger, resource, approval, safe state, validation, and
+  outcome-link fields, plus bundled skill guidance that treats playbooks as
+  plans and approval records rather than provider execution. Refs #350.
+
 ### Changed
 
 - Added a shared additive v1 JSON result envelope to high-value `mb --json`
@@ -20,6 +31,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `result_schema`, `mb_command`, `ok`, `result_status`, `errors`, `warnings`,
   and `actions`) gives skills, harnesses, and future dashboards one
   failure-handling convention. Refs #297.
+- Documented the packaged `mb` invocation contract, runtime repo-path discovery
+  rules, and adapter/readiness map for Codex, Cursor, OpenClaw, Hermes,
+  Paperclip-adjacent orchestration, and local runtimes without claiming
+  non-Claude runtime support. Refs #129.
 
 ## [0.3.8] - 2026-05-08
 

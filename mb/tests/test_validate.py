@@ -629,6 +629,49 @@ def _push(
     )
 
 
+def _playbook(
+    status: str = "draft",
+    *,
+    provider: str = "manual",
+    provider_boundary: str = "plan-only",
+    push: str = "../push.md",
+) -> str:
+    return (
+        "---\n"
+        "type: playbook\n"
+        f"status: {status}\n"
+        f"push: {push}\n"
+        "platform: instagram\n"
+        f"provider: {provider}\n"
+        f"provider_boundary: {provider_boundary}\n"
+        "trigger:\n"
+        "  kind: comment_keyword\n"
+        "  keyword: TEMPLATE\n"
+        "resource:\n"
+        "  kind: url\n"
+        "  value: https://example.com/resource\n"
+        "copy:\n"
+        "  public_cta: Comment TEMPLATE for the resource.\n"
+        "  reply: Thanks. The resource is linked in the post.\n"
+        "approval:\n"
+        "  required: true\n"
+        "  status: needed\n"
+        "  approved_by:\n"
+        "  approved_at:\n"
+        "state:\n"
+        "  provider_refs: []\n"
+        "  activated_at:\n"
+        "  retired_at:\n"
+        "validation:\n"
+        "  dry_run: not-run\n"
+        "  smoke_evidence: []\n"
+        "  notes: Draft only; no provider mutation.\n"
+        "linked_outcomes: []\n"
+        "---\n"
+        "# Comment keyword playbook\n"
+    )
+
+
 def test_validate_accepts_push_lifecycle_statuses(tmp_path: Path) -> None:
     for status in ("draft", "planned", "active", "paused", "completed", "canceled", "archived"):
         path = tmp_path / "pushes" / f"2026-05-06-{status}-push" / "push.md"
@@ -773,6 +816,167 @@ def test_validate_rejects_unknown_push_kind_even_when_vocabulary_renames_it(
     assert report["ok"] is False
     bad = [file for file in report["files"] if file["path"].endswith("push.md")][0]
     assert any("kind=" in error for error in bad["errors"])
+
+
+def test_validate_accepts_push_playbook_schema(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target"),
+    )
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "playbooks" / "resource.md",
+        _playbook(),
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is True, report
+    playbook = [file for file in report["files"] if file["path"].endswith("playbooks/resource.md")][
+        0
+    ]
+    assert playbook["schema"] == "push-playbooks"
+    assert playbook["ok"] is True
+
+
+def test_validate_accepts_sanitized_push_playbook_fixture() -> None:
+    fixture_root = Path(__file__).parent / "fixtures"
+
+    report = run(path=str(fixture_root))
+
+    assert report["ok"] is True, report
+    assert any(
+        file["path"] == "pushes/2026-05-06-resource-delivery/playbooks/valid-resource-delivery.md"
+        and file["schema"] == "push-playbooks"
+        and file["ok"]
+        for file in report["files"]
+    )
+
+
+def test_validate_requires_push_playbook_shape(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target"),
+    )
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "playbooks" / "incomplete.md",
+        "---\ntype: playbook\nstatus: draft\n---\n# Incomplete\n",
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is False
+    bad = [file for file in report["files"] if file["path"].endswith("playbooks/incomplete.md")][0]
+    assert "missing key: push" in bad["errors"]
+    assert "missing key: provider_boundary" in bad["errors"]
+    assert "missing key: resource" in bad["errors"]
+    assert "missing key: approval" in bad["errors"]
+    assert "missing key: linked_outcomes" in bad["errors"]
+
+
+def test_validate_rejects_playbook_missing_linked_push(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "playbooks" / "resource.md",
+        _playbook(),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["path"].endswith("playbooks/resource.md")][0]
+    assert report["ok"] is False
+    assert "push target does not exist" in bad["errors"]
+
+
+def test_validate_rejects_playbook_wrong_push_link(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target"),
+    )
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "playbooks" / "resource.md",
+        _playbook(push="pushes/2026-05-06-other/push.md"),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["path"].endswith("playbooks/resource.md")][0]
+    assert report["ok"] is False
+    assert "push must link to the containing push.md" in bad["errors"]
+
+
+def test_validate_rejects_unknown_playbook_status(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target"),
+    )
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "playbooks" / "resource.md",
+        _playbook(status="live"),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["path"].endswith("playbooks/resource.md")][0]
+    assert report["ok"] is False
+    assert any("status=" in error for error in bad["errors"])
+
+
+def test_validate_rejects_playbook_supported_provider_claim_without_adapter(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target"),
+    )
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "playbooks" / "resource.md",
+        _playbook(provider="postiz", provider_boundary="accepted-adapter"),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["path"].endswith("playbooks/resource.md")][0]
+    assert report["ok"] is False
+    assert any("tested Main Branch provider adapter" in error for error in bad["errors"])
+
+
+def test_validate_rejects_playbook_secret_frontmatter_value(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target"),
+    )
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "playbooks" / "resource.md",
+        _playbook().replace(
+            "  notes: Draft only; no provider mutation.\n",
+            "  notes: ghp_123456789012345678901234567890123456\n",
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["path"].endswith("playbooks/resource.md")][0]
+    assert report["ok"] is False
+    assert any("validation.notes" in error for error in bad["errors"])
+
+
+def test_validate_rejects_playbook_secret_frontmatter(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target"),
+    )
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "playbooks" / "resource.md",
+        _playbook().replace(
+            "  provider_refs: []\n",
+            "  access_token: ghp_123456789012345678901234567890123456\n",
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["path"].endswith("playbooks/resource.md")][0]
+    assert report["ok"] is False
+    assert any("state.access_token" in error for error in bad["errors"])
 
 
 def test_cross_refs_resolve_linked_pushes_field(tmp_path: Path) -> None:

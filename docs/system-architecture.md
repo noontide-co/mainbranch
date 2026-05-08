@@ -257,6 +257,7 @@ pushes/
     ads.md
     emails.md
     posts.md
+    playbooks/
     site.md
     review-log.md
     assets/
@@ -276,6 +277,7 @@ pushes/2026-05-06-workshop-waitlist/
   ads/
   emails/
   posts/
+  playbooks/
   site/
   reviews/
   assets/
@@ -350,6 +352,68 @@ Push status maps to operator loops:
 `internal`, but the canonical schema does not fail a push when a business needs
 a more specific channel.
 
+#### Push Playbooks
+
+Reusable growth or operations commitments that belong to a push live under:
+
+```text
+pushes/<YYYY-MM-DD-slug>/playbooks/<playbook>.md
+```
+
+A playbook is a plan, approval record, setup recipe, and outcome hook. It is
+not proof that Main Branch can mutate a provider account. `provider` records
+where execution would happen; `provider_boundary` records whether execution is
+manual, external, candidate, or backed by an accepted adapter. Provider ids are
+lowercase hyphenated slugs, such as `manual`, `meta-ads`, `postiz`, or `x-api`;
+use hyphens rather than underscores or dots.
+
+Required v1 playbook frontmatter:
+
+```yaml
+---
+type: playbook
+status: draft
+push: ../push.md
+platform: instagram
+provider: manual
+provider_boundary: plan-only
+trigger:
+  kind: comment_keyword
+  keyword: TEMPLATE
+resource:
+  kind: url
+  value: https://example.com/resource
+copy:
+  public_cta: Comment TEMPLATE for the resource.
+  reply: Thanks. The resource is linked in the post.
+approval:
+  required: true
+  status: needed
+  approved_by:
+  approved_at:
+state:
+  provider_refs: []
+  activated_at:
+  retired_at:
+validation:
+  dry_run: not-run
+  smoke_evidence: []
+  notes: Draft only; no provider mutation.
+linked_outcomes: []
+---
+```
+
+Valid playbook statuses are `draft`, `planned`, `approved`, `active`,
+`paused`, `completed`, `canceled`, and `retired`. Valid provider boundaries are
+`plan-only`, `external-manual`, `candidate-adapter`, and `accepted-adapter`.
+Until a separate provider issue accepts an adapter with approval gates, docs,
+tests, and smoke evidence, `mb validate` rejects `accepted-adapter` claims.
+
+Playbook frontmatter must not contain tokens, API keys, private account
+exports, raw DMs, customer records, cookies, or session secrets. Safe provider
+state means stable public-safe ids, timestamps, validation notes, links to
+repo outcome/log files, and smoke evidence references.
+
 #### Legacy `campaigns/` shape (compatibility read)
 
 Repos created before the push primitive decision have the equivalent shape
@@ -401,6 +465,7 @@ Use this routing rule when deciding where generated work belongs:
 | Paid ad batch tied to a named push | `pushes/<push>/ads/...` |
 | Organic sequence tied to a named push | `pushes/<push>/posts/...` |
 | Email or newsletter launch sequence | `pushes/<push>/emails/...` |
+| Resource delivery, provider setup, or automation approval plan tied to a push | `pushes/<push>/playbooks/...` |
 | Landing-page launch record | `pushes/<push>/site.md` or child site repo |
 | Push review notes | `pushes/<push>/review-log.md` or `reviews/` |
 | Raw transcript or source capture | `documents/transcripts/...` |

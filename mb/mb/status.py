@@ -12,8 +12,9 @@ from typing import Any
 
 import yaml
 
-from mb import __version__, github_activity
+from mb import __version__, github_activity, relationships
 from mb import connect as connect_mod
+from mb import graph as graph_mod
 from mb import journal as journal_mod
 from mb import onboard as onboard_mod
 from mb import pushes as pushes_mod
@@ -39,6 +40,10 @@ LAST_STATUS_SEEN_GITIGNORE_ENTRY = ".mb/last-status-seen.json"
 STALE_DECISION_DAYS = 14
 STALE_RESEARCH_DAYS = 45
 ACTIVE_BET_STATUSES = {"open", "paused"}
+ACTIVE_PUSH_STATUSES = {"planned", "active", "paused"}
+COMPLETED_PUSH_STATUSES = {"completed"}
+LIVE_OFFER_STATUSES = {"accepted", "graduated", "running", "scaling"}
+STALE_PUSH_DAYS = 14
 
 
 def _utc_now() -> datetime:
@@ -501,6 +506,296 @@ def _bets(repo: Path) -> dict[str, Any]:
     }
 
 
+def _file_path_from_graph_id(value: Any) -> str:
+    if not isinstance(value, str) or not value.startswith("file:"):
+        return ""
+    return value[len("file:") :]
+
+
+def _relationship_adjacency(edges: list[dict[str, Any]]) -> dict[str, dict[str, set[str]]]:
+    adjacency: dict[str, dict[str, set[str]]] = {}
+    for edge in edges:
+        rel_type = str(edge.get("rel_type") or edge.get("type") or "")
+        source = _file_path_from_graph_id(edge.get("source"))
+        target = _file_path_from_graph_id(edge.get("target"))
+        if not rel_type or not source or not target:
+            continue
+        adjacency.setdefault(source, {}).setdefault(rel_type, set()).add(target)
+        adjacency.setdefault(target, {}).setdefault(rel_type, set()).add(source)
+    return adjacency
+
+
+def _linked_paths(
+    adjacency: dict[str, dict[str, set[str]]],
+    path: str,
+    rel_type: str,
+) -> set[str]:
+    return adjacency.get(path, {}).get(rel_type, set())
+
+
+def _offer_summaries(repo: Path) -> list[dict[str, Any]]:
+    paths: list[Path] = []
+    for folder in ("core/offers", "reference/core/offers"):
+        paths.extend(
+            path for path in _relative_markdown_files(repo, folder) if path.name == "offer.md"
+        )
+    for rel in ("core/offer.md", "reference/core/offer.md"):
+        path = repo / rel
+        if path.is_file():
+            paths.append(path)
+    unique_paths = sorted(set(paths), key=lambda path: path.stat().st_mtime, reverse=True)
+    return [_file_summary(repo, path, _read_frontmatter(path)) for path in unique_paths]
+
+
+def _gap(
+    *,
+    gap_id: str,
+    severity: str,
+    summary: str,
+    records: list[dict[str, Any]],
+    repair: str,
+) -> dict[str, Any]:
+    return {
+        "id": gap_id,
+        "severity": severity,
+        "summary": summary,
+        "count": len(records),
+        "evidence": [str(item.get("path") or item.get("source") or "") for item in records[:5]],
+        "records": records[:5],
+        "repair": repair,
+        "safe_to_share": True,
+    }
+
+
+def _is_push_stale(record: dict[str, Any], today: date) -> tuple[bool, int]:
+    review_on = _parse_explicit_date(record.get("review_on"))
+    if review_on is not None and review_on < today:
+        return True, (today - review_on).days
+    for key in ("started", "date"):
+        item_date = _parse_explicit_date(record.get(key))
+        if item_date is not None:
+            age_days = (today - item_date).days
+            if age_days > STALE_PUSH_DAYS:
+                return True, age_days
+            return False, age_days
+    return False, 0
+
+
+def _relationship_health(
+    repo: Path,
+    *,
+    brain: dict[str, Any],
+    today: date,
+) -> dict[str, Any]:
+    graph_index = graph_mod.build_index(str(repo))
+    edges = [edge for edge in graph_index.get("edges", []) if isinstance(edge, dict)]
+    adjacency = _relationship_adjacency(edges)
+    all_bets = [_bet_summary(repo, path) for path in _relative_markdown_files(repo, "bets")]
+    active_bets = [
+        item for item in all_bets if str(item.get("status", "")).lower() in ACTIVE_BET_STATUSES
+    ]
+    closed_bets = [item for item in all_bets if str(item.get("status", "")).lower() == "closed"]
+    push_report = brain.get("pushes") or {}
+    pushes = [item for item in push_report.get("records", []) if isinstance(item, dict)]
+    offers = _offer_summaries(repo)
+    current_push_paths = {
+        str(item.get("path") or "")
+        for item in pushes
+        if str(item.get("status", "")).lower() in ACTIVE_PUSH_STATUSES
+    }
+
+    active_bets_without_push = [
+        item for item in active_bets if not _linked_paths(adjacency, str(item["path"]), "push")
+    ]
+    closed_bets_without_outcome = [
+        item for item in closed_bets if not _linked_paths(adjacency, str(item["path"]), "outcome")
+    ]
+    active_pushes_without_offer = [
+        item
+        for item in pushes
+        if str(item.get("status", "")).lower() in ACTIVE_PUSH_STATUSES
+        and not _linked_paths(adjacency, str(item.get("path") or ""), "offer")
+    ]
+    completed_pushes_without_outcome = [
+        item
+        for item in pushes
+        if str(item.get("status", "")).lower() in COMPLETED_PUSH_STATUSES
+        and not _linked_paths(adjacency, str(item.get("path") or ""), "outcome")
+    ]
+    stale_pushes_without_outcome: list[dict[str, Any]] = []
+    for item in pushes:
+        if str(item.get("status", "")).lower() not in ACTIVE_PUSH_STATUSES:
+            continue
+        if _linked_paths(adjacency, str(item.get("path") or ""), "outcome"):
+            continue
+        stale, age_days = _is_push_stale(item, today)
+        if stale:
+            stale_item = dict(item)
+            stale_item["age_days"] = age_days
+            stale_pushes_without_outcome.append(stale_item)
+
+    offers_without_current_push_or_playbook: list[dict[str, Any]] = []
+    for item in offers:
+        status = str(item.get("status") or "").lower()
+        if status not in LIVE_OFFER_STATUSES:
+            continue
+        path = str(item.get("path") or "")
+        offer_pushes = _linked_paths(adjacency, path, "offer")
+        linked_pushes = _linked_paths(adjacency, path, "push")
+        has_current_push = bool((offer_pushes | linked_pushes) & current_push_paths)
+        has_playbook = bool(_linked_paths(adjacency, path, "playbook"))
+        if not has_current_push and not has_playbook:
+            offers_without_current_push_or_playbook.append(item)
+
+    relationship_types = {
+        relationship.canonical_type for relationship in relationships.RELATIONSHIPS
+    }
+    graph_nodes = {
+        str(node.get("id") or ""): node
+        for node in graph_index.get("nodes", [])
+        if isinstance(node, dict)
+    }
+    missing_relationship_targets: list[dict[str, Any]] = []
+    for edge in edges:
+        rel_type = str(edge.get("rel_type") or "")
+        target = str(edge.get("target") or "")
+        if rel_type not in relationship_types or not target.startswith("missing:"):
+            continue
+        raw_evidence = edge.get("evidence")
+        evidence: dict[str, Any] = raw_evidence if isinstance(raw_evidence, dict) else {}
+        target_node: dict[str, Any] = graph_nodes.get(target) or {}
+        missing_relationship_targets.append(
+            {
+                "source": str(evidence.get("path") or _file_path_from_graph_id(edge.get("source"))),
+                "relationship": rel_type,
+                "field": str(edge.get("original_field") or evidence.get("field") or ""),
+                "target": str(target_node.get("label") or target.removeprefix("missing:")),
+            }
+        )
+
+    outcome_edges = [edge for edge in edges if str(edge.get("rel_type") or "") == "outcome"]
+    gaps = [
+        _gap(
+            gap_id="active_bets_without_push",
+            severity="warn",
+            summary=f"{len(active_bets_without_push)} active bet(s) need a linked push.",
+            records=active_bets_without_push,
+            repair="Link each active bet to the push or playbook that supports it.",
+        )
+        if active_bets_without_push
+        else None,
+        _gap(
+            gap_id="closed_bets_without_outcome",
+            severity="warn",
+            summary=(
+                f"{len(closed_bets_without_outcome)} closed bet(s) need a result or outcome link."
+            ),
+            records=closed_bets_without_outcome,
+            repair="Record the bet result and link the outcome artifact.",
+        )
+        if closed_bets_without_outcome
+        else None,
+        _gap(
+            gap_id="active_pushes_without_offer",
+            severity="warn",
+            summary=(
+                f"{len(active_pushes_without_offer)} active/planned push(es) need an offer link."
+            ),
+            records=active_pushes_without_offer,
+            repair="Set the push `offer:` field to the repo-relative offer file.",
+        )
+        if active_pushes_without_offer
+        else None,
+        _gap(
+            gap_id="completed_pushes_without_outcome",
+            severity="warn",
+            summary=(
+                f"{len(completed_pushes_without_outcome)} completed push(es) need review/outcome."
+            ),
+            records=completed_pushes_without_outcome,
+            repair="Add `linked_outcomes` to the completed push after review.",
+        )
+        if completed_pushes_without_outcome
+        else None,
+        _gap(
+            gap_id="stale_pushes_without_outcome",
+            severity="warn",
+            summary=f"{len(stale_pushes_without_outcome)} stale push(es) have not closed the loop.",
+            records=stale_pushes_without_outcome,
+            repair="Review stale pushes, capture the outcome, or update the review date.",
+        )
+        if stale_pushes_without_outcome
+        else None,
+        _gap(
+            gap_id="offers_without_current_push_or_playbook",
+            severity="info",
+            summary=(
+                f"{len(offers_without_current_push_or_playbook)} offer(s) have no current push "
+                "or linked playbook."
+            ),
+            records=offers_without_current_push_or_playbook,
+            repair="Connect each live offer to a current push or reusable playbook.",
+        )
+        if offers_without_current_push_or_playbook
+        else None,
+        _gap(
+            gap_id="missing_relationship_targets",
+            severity="warn",
+            summary=(
+                f"{len(missing_relationship_targets)} relationship link(s) point at missing files."
+            ),
+            records=missing_relationship_targets,
+            repair="Run `mb validate --cross-refs` for exact missing-link warnings.",
+        )
+        if missing_relationship_targets
+        else None,
+    ]
+    active_gaps = [gap_item for gap_item in gaps if gap_item is not None]
+    return {
+        "ok": not active_gaps,
+        "source": "mb graph",
+        "registry_version": relationships.REGISTRY_VERSION,
+        "summary": {
+            "gaps": len(active_gaps),
+            "warnings": len([item for item in active_gaps if item["severity"] == "warn"]),
+            "info": len([item for item in active_gaps if item["severity"] == "info"]),
+            "active_bets_without_push": len(active_bets_without_push),
+            "closed_bets_without_outcome": len(closed_bets_without_outcome),
+            "active_pushes_without_offer": len(active_pushes_without_offer),
+            "completed_pushes_without_outcome": len(completed_pushes_without_outcome),
+            "stale_pushes_without_outcome": len(stale_pushes_without_outcome),
+            "offers_without_current_push_or_playbook": len(offers_without_current_push_or_playbook),
+            "missing_relationship_targets": len(missing_relationship_targets),
+        },
+        "gaps": active_gaps,
+        "sections": {
+            "bets": {
+                "active": len(active_bets),
+                "closed": len(
+                    [item for item in all_bets if str(item.get("status") or "").lower() == "closed"]
+                ),
+                "active_without_push": active_bets_without_push[:5],
+                "closed_without_outcome": closed_bets_without_outcome[:5],
+            },
+            "pushes": {
+                "records": len(pushes),
+                "active_without_offer": active_pushes_without_offer[:5],
+                "completed_without_outcome": completed_pushes_without_outcome[:5],
+                "stale_without_outcome": stale_pushes_without_outcome[:5],
+            },
+            "offers": {
+                "records": len(offers),
+                "without_current_push_or_playbook": offers_without_current_push_or_playbook[:5],
+            },
+            "outcomes": {
+                "linked_count": len(outcome_edges),
+                "missing_targets": missing_relationship_targets[:5],
+            },
+        },
+        "safe_to_share": True,
+    }
+
+
 def _repo_full_name(remote: str) -> str:
     return github_activity.repo_full_name(remote)
 
@@ -932,6 +1227,29 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
                 "safe_to_share": True,
             }
         )
+    relationship_health = report.get("relationship_health") or {}
+    relationship_summary = relationship_health.get("summary") or {}
+    if relationship_summary.get("gaps", 0):
+        top_gap = (relationship_health.get("gaps") or [{}])[0]
+        items.append(
+            {
+                "id": "relationship_health_gaps",
+                "severity": "warn" if relationship_summary.get("warnings", 0) else "info",
+                "summary": (
+                    f"{relationship_summary.get('gaps', 0)} business relationship gap(s) "
+                    "need review."
+                ),
+                "evidence": [
+                    str(item.get("id") or "")
+                    for item in (relationship_health.get("gaps") or [])[:5]
+                ],
+                "repair": str(
+                    top_gap.get("repair")
+                    or "Run `mb status --verbose --peek` to inspect relationship gaps."
+                ),
+                "safe_to_share": True,
+            }
+        )
     onboarding_summary = (report.get("onboarding") or {}).get("summary") or {}
     if onboarding_summary.get("status") == "in_progress":
         items.append(
@@ -1056,6 +1374,16 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
         next_actions.append("Close or update overdue active bets in `bets/`.")
     elif bets.get("due_soon"):
         next_actions.append("Review active bets with deadlines in the next 7 days.")
+    relationship_health = report.get("relationship_health") or {}
+    relationship_gaps = relationship_health.get("gaps") or []
+    if relationship_gaps:
+        first_gap = relationship_gaps[0]
+        next_actions.append(
+            str(
+                first_gap.get("repair")
+                or "Review relationship gaps with `mb status --verbose --peek`."
+            )
+        )
     onboarding_summary = (report.get("onboarding") or {}).get("summary") or {}
     if onboarding_summary.get("status") == "in_progress":
         next_actions.append(
@@ -1107,7 +1435,8 @@ def run(
 ) -> dict[str, Any]:
     """Build a deterministic daily briefing report."""
     repo_path = Path(path).resolve()
-    generated_at = _format_timestamp(now or _utc_now())
+    current_time = now or _utc_now()
+    generated_at = _format_timestamp(current_time)
     repo_shape = _looks_like_mainbranch_repo(repo_path)
     git = _git_info(repo_path)
     update = package_update_status(repo_path)
@@ -1142,6 +1471,11 @@ def run(
         "measurement": _measurement(repo_path),
         "github": github,
     }
+    report["relationship_health"] = _relationship_health(
+        repo_path,
+        brain=brain,
+        today=current_time.date(),
+    )
     report["since_last_check"] = _since_last_check(
         repo_path,
         marker=marker,
@@ -1189,6 +1523,10 @@ def render_human(
     readiness = report["readiness"]
     since = report.get("since_last_check") or {}
     drift = report.get("drift") or {"summary": {"total": 0}, "items": []}
+    relationship_health = report.get("relationship_health") or {
+        "summary": {"gaps": 0},
+        "gaps": [],
+    }
 
     console.print(f"\n[bold]mb status[/bold]  {repo['path']}")
     alert = format_update_alert(report.get("update", {}))
@@ -1242,6 +1580,20 @@ def render_human(
                 console.print(f"    next: {item['repair']}")
     else:
         console.print("[bold]Drift[/bold] no stale or broken status signals detected")
+
+    relationship_summary = relationship_health.get("summary") or {}
+    if relationship_summary.get("gaps", 0):
+        console.print(
+            "[bold]Relationship health[/bold] "
+            f"{relationship_summary.get('warnings', 0)} warning(s), "
+            f"{relationship_summary.get('info', 0)} info"
+        )
+        for gap in (relationship_health.get("gaps") or [])[:3]:
+            console.print(f"  - {gap['summary']}")
+            if verbose and gap.get("repair"):
+                console.print(f"    next: {gap['repair']}")
+    else:
+        console.print("[bold]Relationship health[/bold] no actionable business-link gaps detected")
 
     repo_mark = (
         "[green]yes[/green]" if repo["looks_like_mainbranch_repo"] else "[yellow]no[/yellow]"

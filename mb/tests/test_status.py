@@ -123,6 +123,7 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
                 "since_last_check",
                 "drift",
                 "readiness",
+                "relationship_health",
                 "ranked_actions",
                 "marker_update",
             ]
@@ -184,6 +185,242 @@ def test_status_json_exposes_push_and_legacy_campaign_facts(tmp_path: Path, monk
         "pushes/2026-05-06-workshop/push.md",
         "campaigns/2026-05-legacy/campaign.md",
     }
+
+
+def test_status_relationship_health_flags_active_bet_and_offer_gaps(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    offer = repo / "core" / "offers" / "coaching"
+    offer.mkdir(parents=True)
+    (offer / "offer.md").write_text(
+        "---\nslug: coaching\nstatus: running\n---\n\n# Coaching\n",
+        encoding="utf-8",
+    )
+    (repo / "bets" / "2026-05-01-launch.md").write_text(
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-01\n"
+            "deadline: 2026-05-31\n"
+            "appetite: 2 weeks\n"
+            "hypothesis: A launch push will create calls.\n"
+            "metric: calls\n"
+            "target: 5 calls\n"
+            "result: ''\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_pushes: []\n"
+            "linked_campaigns: []\n"
+            "linked_outcomes: []\n"
+            "public: true\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n\n"
+            "# Launch bet\n"
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["status", str(repo), "--json", "--peek"])
+
+    assert result.exit_code == 0
+    report = json.loads(result.stdout)
+    health = report["relationship_health"]
+    assert health["ok"] is False
+    assert health["summary"]["active_bets_without_push"] == 1
+    assert health["summary"]["offers_without_current_push_or_playbook"] == 1
+    assert health["sections"]["bets"]["active_without_push"][0]["path"] == (
+        "bets/2026-05-01-launch.md"
+    )
+    assert any(item["id"] == "relationship_health_gaps" for item in report["drift"]["items"])
+    assert any(action["id"] == "review_relationship_health" for action in report["ranked_actions"])
+
+    human = runner.invoke(app, ["status", str(repo), "--no-color", "--peek"])
+
+    assert human.exit_code == 0
+    assert "Relationship health" in human.stdout
+    assert "active bet(s) need a linked push" in human.stdout
+
+
+def test_status_relationship_health_flags_completed_and_stale_pushes(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    offer = repo / "core" / "offers" / "coaching"
+    offer.mkdir(parents=True)
+    (offer / "offer.md").write_text(
+        "---\nslug: coaching\nstatus: running\n---\n\n# Coaching\n",
+        encoding="utf-8",
+    )
+    completed = repo / "pushes" / "2026-05-01-completed"
+    completed.mkdir(parents=True)
+    (completed / "push.md").write_text(
+        (
+            "---\n"
+            "type: push\n"
+            "slug: completed\n"
+            "kind: launch\n"
+            "status: completed\n"
+            "health: on-track\n"
+            "goal: booked calls\n"
+            "owner: Devon\n"
+            "audience: founders\n"
+            "offer: core/offers/coaching/offer.md\n"
+            "started: 2026-05-01\n"
+            "review_on: 2026-05-07\n"
+            "---\n\n"
+            "# Completed push\n"
+        ),
+        encoding="utf-8",
+    )
+    stale = repo / "pushes" / "2026-04-01-stale"
+    stale.mkdir(parents=True)
+    (stale / "push.md").write_text(
+        (
+            "---\n"
+            "type: push\n"
+            "slug: stale\n"
+            "kind: launch\n"
+            "status: active\n"
+            "health: at-risk\n"
+            "goal: booked calls\n"
+            "owner: Devon\n"
+            "audience: founders\n"
+            "offer: core/offers/coaching/offer.md\n"
+            "started: 2026-04-01\n"
+            "review_on: 2026-04-15\n"
+            "---\n\n"
+            "# Stale push\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(
+        path=str(repo),
+        now=datetime(2026, 5, 8, 12, 0, tzinfo=timezone.utc),
+        update_marker=False,
+    )
+
+    summary = report["relationship_health"]["summary"]
+    assert summary["completed_pushes_without_outcome"] == 1
+    assert summary["stale_pushes_without_outcome"] == 1
+    assert summary["offers_without_current_push_or_playbook"] == 0
+    assert (
+        report["relationship_health"]["sections"]["pushes"]["stale_without_outcome"][0]["path"]
+        == "pushes/2026-04-01-stale/push.md"
+    )
+
+
+def test_status_relationship_health_accepts_offer_side_push_links(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    offer = repo / "core" / "offers" / "coaching"
+    offer.mkdir(parents=True)
+    (offer / "offer.md").write_text(
+        (
+            "---\n"
+            "slug: coaching\n"
+            "status: running\n"
+            "linked_pushes:\n"
+            "  - pushes/2026-05-01-launch/push.md\n"
+            "---\n\n"
+            "# Coaching\n"
+        ),
+        encoding="utf-8",
+    )
+    push = repo / "pushes" / "2026-05-01-launch"
+    push.mkdir(parents=True)
+    (push / "push.md").write_text(
+        (
+            "---\n"
+            "type: push\n"
+            "slug: launch\n"
+            "kind: launch\n"
+            "status: active\n"
+            "health: on-track\n"
+            "goal: booked calls\n"
+            "owner: Devon\n"
+            "audience: founders\n"
+            "offer: ''\n"
+            "started: 2026-05-01\n"
+            "review_on: 2026-05-20\n"
+            "---\n\n"
+            "# Launch\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(
+        path=str(repo),
+        now=datetime(2026, 5, 8, 12, 0, tzinfo=timezone.utc),
+        update_marker=False,
+    )
+
+    assert report["relationship_health"]["summary"]["offers_without_current_push_or_playbook"] == 0
+
+
+def test_status_relationship_health_ignores_non_live_offer_stubs(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core" / "offer.md").write_text(
+        "---\ntype: offer\nstatus: stub\n---\n\n# Offer stub\n",
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    assert report["relationship_health"]["summary"]["offers_without_current_push_or_playbook"] == 0
+
+
+def test_status_relationship_health_flags_closed_bet_without_outcome(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "bets" / "2026-05-01-closed.md").write_text(
+        (
+            "---\n"
+            "status: closed\n"
+            "opened: 2026-05-01\n"
+            "deadline: 2026-05-07\n"
+            "appetite: 1 week\n"
+            "hypothesis: A follow-up push will create calls.\n"
+            "metric: calls\n"
+            "target: 5 calls\n"
+            "result: win\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_pushes: []\n"
+            "linked_campaigns: []\n"
+            "linked_outcomes: []\n"
+            "public: false\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n\n"
+            "# Closed bet\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    assert report["relationship_health"]["summary"]["closed_bets_without_outcome"] == 1
+    assert (
+        report["relationship_health"]["sections"]["bets"]["closed_without_outcome"][0]["path"]
+        == "bets/2026-05-01-closed.md"
+    )
 
 
 def test_status_human_output_mentions_core_sections(tmp_path: Path, monkeypatch) -> None:

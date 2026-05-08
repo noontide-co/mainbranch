@@ -47,6 +47,14 @@ promise: ""
 ---
 ```
 
+When an ad-adjacent workflow needs a resource-delivery plan, provider setup
+recipe, launch checklist, or external automation approval record, draft it as
+`pushes/<YYYY-MM-DD-slug>/playbooks/<playbook>.md` with `type: playbook`.
+Treat playbooks as plans and approval records only. Do not publish, schedule,
+DM, reply, mutate ad accounts, or claim a provider is supported unless `mb`
+and a shipped provider adapter prove that path with docs, tests, approval
+gates, and smoke evidence.
+
 ## Step 0: Pre-Flight Readiness
 
 **Before triage, find the business repo, read deterministic Main Branch facts,
