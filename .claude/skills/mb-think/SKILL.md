@@ -30,6 +30,13 @@ it. Validate the final message with `mb checkpoint --validate "..." --json`;
 after operator approval, run `mb checkpoint --message "..." --yes`. Do not save
 hidden checkpoints.
 
+When research identifies a reusable growth mechanic such as a comment-keyword,
+DM-keyword, public reply/link, resource delivery, provider setup recipe, or
+approval gate, route the durable plan into
+`pushes/<YYYY-MM-DD-slug>/playbooks/<playbook>.md` with `type: playbook`.
+Playbooks are plans, approval records, safe provider-state notes, validation
+evidence, and outcome hooks. They are not provider execution.
+
 ---
 
 ## Two Modes of Work

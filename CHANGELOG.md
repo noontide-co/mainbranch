@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added v1 `type: playbook` validation for
+  `pushes/<push>/playbooks/<playbook>.md`, including required push linkage,
+  provider-boundary, trigger, resource, approval, safe state, validation, and
+  outcome-link fields, plus bundled skill guidance that treats playbooks as
+  plans and approval records rather than provider execution. Refs #350.
+
 ## [0.3.8] - 2026-05-08
 
 v0.3.8 tightens the daily operating loop after the 0.3.7 release discipline

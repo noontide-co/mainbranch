@@ -169,6 +169,10 @@ comment/DM execution without an accepted provider path and smoke evidence.
 - **Future support requires a real provider path:** official authority where
   possible, consent/platform constraints, approval gates, privacy-safe logs,
   rate-limit handling, tests, docs, and runtime smoke evidence.
+- **Durable plans become push playbooks:** save reusable resource-delivery or
+  provider setup plans under `pushes/<push>/playbooks/<playbook>.md` with
+  `type: playbook`. The file records the plan, approval state, safe provider
+  state, validation evidence, and outcomes; it is not automation execution.
 
 ## Provider Boundaries
 
