@@ -55,11 +55,11 @@ Test time:
 
 | Check | Result | Public-safe evidence |
 |---|---|---|
-| REST API route reachable without auth | Pass | Unauthenticated integrations request returned HTTP 401 with an API-key error, proving the route reached Postiz rather than the login UI. |
+| Route reachable (unauthenticated probe) | Pass | Unauthenticated integrations request returned HTTP 401 with an API-key error, proving the route reached Postiz rather than the login UI. |
 | Private API key available outside repo | Pass | Key presence was checked only as present/missing; the value was not printed. |
 | Auth accepted | Pass | `GET /api/public/v1/is-connected` returned HTTP 200. |
 | Connected integrations listed | Pass, empty | `GET /api/public/v1/integrations` returned HTTP 200 with count `0`. |
-| Draft/scheduled test post created | Blocked | Postiz rejected an empty draft request with HTTP 400 because `posts` must contain at least one item. A connected integration is required for a meaningful post smoke. |
+| Draft/scheduled test post created | Blocked | The integration list returned zero connected channels, so there was no safe channel id to use for a meaningful post payload. A deliberately empty draft request was also rejected with HTTP 400 because `posts` must contain at least one item. |
 | Draft/scheduled item visible in Postiz list | Blocked | `GET /api/public/v1/posts` returned HTTP 200 with count `0`. |
 | Cleanup needed | No | No test post was created. |
 
