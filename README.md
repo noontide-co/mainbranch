@@ -245,9 +245,9 @@ Full list: `mb --help`.
 
 Machine-readable command output follows the additive
 [JSON output contract](docs/json-output-contract.md): high-value `--json`
-surfaces expose shared `schema_version`, `mb_command`, `ok`, `status`, `errors`,
-`warnings`, and `actions` metadata while preserving their command-specific
-payload keys.
+surfaces expose shared `result_envelope_version`, `result_schema`,
+`mb_command`, `ok`, `result_status`, `errors`, `warnings`, and `actions`
+metadata while preserving their command-specific payload keys.
 
 ### Provider Connections
 

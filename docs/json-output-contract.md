@@ -9,11 +9,11 @@ metadata:
 
 ```json
 {
-  "schema_version": "1.0",
-  "schema": {"name": "mainbranch.status", "version": "1.0"},
+  "result_envelope_version": "1.0",
+  "result_schema": {"name": "mainbranch.status", "version": "1.0"},
   "mb_command": "mb status",
   "ok": true,
-  "status": "ok",
+  "result_status": "ok",
   "errors": [],
   "warnings": [],
   "actions": []
@@ -22,16 +22,17 @@ metadata:
 
 ## Shared Fields
 
-- `schema_version`: shared result-envelope version. Existing command-specific
-  schema versions are preserved where they already existed.
-- `schema`: command-specific schema identifier. Older command payloads that
-  already used a string schema keep that value for compatibility.
+- `result_envelope_version`: shared result-envelope version. This is separate
+  from any command-specific `schema_version` field.
+- `result_schema`: shared result-envelope schema identifier for the command
+  surface. This is separate from any command-specific `schema` field.
 - `mb_command`: the `mb` command surface that emitted the JSON. The field is
   prefixed so commands can keep existing domain keys such as `command`.
 - `ok`: boolean success flag suitable for automation.
-- `status`: concise machine-readable state. When a command already had a
-  domain `status` such as `ready`, `valid`, or `committed`, that value is
-  preserved.
+- `result_status`: concise machine-readable envelope state, currently `ok` or
+  `error`. Commands may still expose their own domain `status` field with
+  command-specific values such as `ready`, `valid`, `committed`, or structured
+  provider state.
 - `errors`: top-level list of failure messages or objects. Empty when there are
   no shared top-level errors.
 - `warnings`: top-level list of warnings. Empty when there are no shared
@@ -39,6 +40,16 @@ metadata:
 - `actions`: top-level list of recommended or repair actions when the command
   already exposes them. Empty for commands whose actions live in
   command-specific sections such as `ranked_actions` or `next_actions`.
+
+## Command-Specific Fields
+
+Existing command payload keys remain top-level and keep their command-specific
+meaning. In particular, `schema`, `schema_version`, `status`, and `command`
+are not shared envelope fields in v1. For example, `mb status --json` keeps its
+status schema object, `mb doctor repair --json` keeps
+`schema: "mb.doctor.repair"` and `schema_version: 1`, and `mb checkpoint --json`
+can keep a domain `status` such as `ready` while the envelope reports
+`result_status: "ok"`.
 
 ## First Migrated Surfaces
 

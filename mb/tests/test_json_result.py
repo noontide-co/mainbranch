@@ -15,7 +15,7 @@ from mb import start as start_mod
 from mb import status as status_mod
 from mb.cli import app
 from mb.init import run as init_run
-from mb.json_result import JSON_RESULT_SCHEMA_VERSION
+from mb.json_result import JSON_RESULT_ENVELOPE_VERSION
 
 runner = CliRunner()
 
@@ -59,12 +59,19 @@ def _assert_envelope(
     payload: dict[str, Any],
     *,
     command: str,
-    expected_status: str | None = None,
+    expected_result_status: str | None = None,
+    schema_name: str | None = None,
 ) -> None:
-    assert payload["schema_version"] == JSON_RESULT_SCHEMA_VERSION
+    assert payload["result_envelope_version"] == JSON_RESULT_ENVELOPE_VERSION
+    assert payload["result_schema"] == {
+        "name": schema_name or f"{command.replace(' ', '.')}.result",
+        "version": JSON_RESULT_ENVELOPE_VERSION,
+    }
     assert payload["mb_command"] == command
     assert isinstance(payload["ok"], bool)
-    assert payload["status"] == (expected_status or ("ok" if payload["ok"] else "error"))
+    assert payload["result_status"] == (
+        expected_result_status or ("ok" if payload["ok"] else "error")
+    )
     assert isinstance(payload["errors"], list)
     assert isinstance(payload["warnings"], list)
     assert isinstance(payload["actions"], list)
@@ -79,7 +86,7 @@ def test_status_json_uses_shared_result_envelope(tmp_path: Path, monkeypatch: An
 
     assert result.exit_code == 0
     payload = _load_json(result)
-    _assert_envelope(payload, command="mb status")
+    _assert_envelope(payload, command="mb status", schema_name="mainbranch.status")
     assert payload["schema"]["name"] == "mainbranch.status"
     assert payload["repo"]["looks_like_mainbranch_repo"] is True
     assert "ranked_actions" in payload
@@ -94,9 +101,34 @@ def test_start_json_uses_shared_result_envelope(tmp_path: Path, monkeypatch: Any
 
     assert result.exit_code == 0
     payload = _load_json(result)
-    _assert_envelope(payload, command="mb start")
+    _assert_envelope(payload, command="mb start", schema_name="mainbranch.start.result")
     assert payload["handoff_ready"] is True
     assert payload["runtime"]["skill_wiring"]["ok"] is True
+
+
+def test_start_json_launch_conflict_preserves_error_envelope(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    monkeypatch.setattr(start_mod, "_which", _with_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--json", "--launch"])
+
+    assert result.exit_code == 2
+    payload = _load_json(result)
+    _assert_envelope(
+        payload,
+        command="mb start",
+        expected_result_status="error",
+        schema_name="mainbranch.start.result",
+    )
+    assert payload["ok"] is False
+    assert payload["errors"] == [
+        "`--json` cannot be combined with `--launch`; run without `--json` to launch."
+    ]
+    assert payload["launch"]["requested"] is True
+    assert payload["launch"]["blocked_reason"] == payload["errors"][0]
 
 
 def test_checkpoint_json_uses_shared_result_envelope(tmp_path: Path) -> None:
@@ -110,7 +142,12 @@ def test_checkpoint_json_uses_shared_result_envelope(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     payload = _load_json(result)
-    _assert_envelope(payload, command="mb checkpoint", expected_status="ready")
+    _assert_envelope(
+        payload,
+        command="mb checkpoint",
+        schema_name="mainbranch.checkpoint.result",
+    )
+    assert payload["status"] == "ready"
     assert payload["summary"]["surfaces"] == {"research": 1}
     assert payload["proposal"]["message"] == "[added] market.md"
 
@@ -142,7 +179,7 @@ def test_issue_draft_json_uses_shared_result_envelope(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     payload = _load_json(result)
-    _assert_envelope(payload, command="mb issue draft")
+    _assert_envelope(payload, command="mb issue draft", schema_name="mainbranch.issue.draft.result")
     assert payload["privacy"]["requires_operator_review"] is True
     assert payload["next_command"].startswith("mb issue open .mb/issue-drafts/")
 
@@ -152,10 +189,24 @@ def test_doctor_json_uses_shared_result_envelope(tmp_path: Path) -> None:
 
     assert result.exit_code in {0, 1}
     payload = _load_json(result)
-    _assert_envelope(payload, command="mb doctor")
-    assert payload["schema"]["name"] == "mainbranch.doctor.result"
+    _assert_envelope(payload, command="mb doctor", schema_name="mainbranch.doctor.result")
     assert payload["repo"] == str(tmp_path.resolve())
     assert "checks" in payload
+
+
+def test_doctor_repair_json_preserves_domain_schema_shape(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(tmp_path), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = _load_json(result)
+    _assert_envelope(
+        payload,
+        command="mb doctor repair",
+        schema_name="mainbranch.doctor.repair.result",
+    )
+    assert payload["schema"] == "mb.doctor.repair"
+    assert payload["schema_version"] == 1
+    assert payload["mode"] == "plan"
 
 
 def test_onboard_json_uses_shared_result_envelope(tmp_path: Path, monkeypatch: Any) -> None:
@@ -170,7 +221,13 @@ def test_onboard_json_uses_shared_result_envelope(tmp_path: Path, monkeypatch: A
 
     assert result.exit_code == 0
     payload = _load_json(result)
-    _assert_envelope(payload, command="mb onboard", expected_status="ok")
+    _assert_envelope(
+        payload,
+        command="mb onboard",
+        expected_result_status="ok",
+        schema_name="mainbranch.onboard.result",
+    )
+    assert payload["status"] == "ok"
     assert payload["path"] == str(repo.resolve())
     assert payload["onboarding"]["summary"]["status"] == "in_progress"
 
@@ -199,20 +256,46 @@ def test_issue_open_json_fallback_uses_shared_result_envelope(tmp_path: Path) ->
 
     assert result.exit_code == 0
     payload = _load_json(result)
-    _assert_envelope(payload, command="mb issue open")
+    _assert_envelope(payload, command="mb issue open", schema_name="mainbranch.issue.open.result")
     assert payload["submitted"] is False
     assert payload["fallback"] is True
 
 
-def test_json_result_helper_preserves_existing_domain_schema() -> None:
+def test_json_result_helper_preserves_existing_domain_schema_and_status() -> None:
     from mb.json_result import envelope
 
     payload = envelope(
-        {"ok": True, "schema": "mb.doctor.repair", "schema_version": 1},
+        {
+            "ok": True,
+            "schema": "mb.doctor.repair",
+            "schema_version": 1,
+            "status": {"state": "connected"},
+        },
         command="mb doctor repair",
         schema_name="mainbranch.doctor.repair.result",
     )
 
     assert payload["schema"] == "mb.doctor.repair"
     assert payload["schema_version"] == 1
+    assert payload["status"] == {"state": "connected"}
+    assert payload["result_envelope_version"] == JSON_RESULT_ENVELOPE_VERSION
+    assert payload["result_schema"] == {
+        "name": "mainbranch.doctor.repair.result",
+        "version": JSON_RESULT_ENVELOPE_VERSION,
+    }
     assert payload["mb_command"] == "mb doctor repair"
+    assert payload["result_status"] == "ok"
+
+
+def test_json_result_helper_collapses_falsy_lists() -> None:
+    from mb.json_result import envelope
+
+    payload = envelope(
+        {"errors": False, "warnings": 0, "actions": ""},
+        command="mb status",
+        schema_name="mainbranch.status",
+    )
+
+    assert payload["errors"] == []
+    assert payload["warnings"] == []
+    assert payload["actions"] == []
