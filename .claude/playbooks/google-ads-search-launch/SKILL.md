@@ -1,8 +1,8 @@
 ---
 name: google-ads-search-launch
 tier: playbook
-calls: [mb-start, mb-think, mb-site, mb-ads, mb-end]
-status: draft
+calls: [start, think, site, ads, end]
+status: skeleton
 description: "Reusable Noontide playbook for validating an offer with a tightly scoped Google Ads Search launch, a paid-traffic lander, explicit approval gates, and a capped review window."
 ---
 
@@ -29,7 +29,7 @@ future accepted adapter ships with approval gates and smoke evidence.
 This file is the reusable Noontide recipe. The run belongs in the business repo:
 
 ```text
-pushes/<push>/playbooks/google-ads-search-launch.md
+pushes/<push>/playbooks/google-ads-launch-plan.md
 ```
 
 Create or update that run file from
