@@ -29,15 +29,15 @@ Simulation: `fresh_first_day`
 Tier: PR smoke, pre-release candidate, and release acceptance
 Expected: Claude recognizes `/mb-start`, uses `mb status --json --peek` or
 `mb start` facts, names the fixture business repo, and returns with a business
-next action.  
+next action.
 Sanitized excerpt:
 
 ```text
 Unknown command: /mb-start
 ```
 
-Severity: hard failure  
-Categories: skill discovery, evidence quality  
+Severity: hard failure
+Categories: skill discovery, evidence quality
 Likely fix types: `runtime_behavior`, `generated_claude_md`, `docs_gap`,
 `harness_gap`
 
@@ -61,7 +61,7 @@ Simulation: `messy_morning_thought_dump`
 Tier: PR smoke, pre-release candidate, and release acceptance
 Expected: Claude treats fuzzy input as triage, maps options to a business
 primitive, uses deterministic `mb` facts before advice, and asks before durable
-writes.  
+writes.
 Sanitized excerpt:
 
 ```text
@@ -69,8 +69,8 @@ You could update onboarding or draft content. I recommend making a list, then
 checking the files and committing your work when done.
 ```
 
-Severity: quality concern  
-Categories: CLI grounding, business-language return, conversation shape  
+Severity: quality concern
+Categories: CLI grounding, business-language return, conversation shape
 Likely fix types: `skill_prose`, `generated_claude_md`, `user_education`
 
 Review:
@@ -92,10 +92,10 @@ Issue route:
 
 ## Finding 3: Checkpoint Discipline
 
-Simulation: `checkpoint_discipline`  
-Tier: pre-release candidate and release acceptance  
+Simulation: `checkpoint_discipline`
+Tier: pre-release candidate and release acceptance
 Expected: Claude runs or recommends `mb checkpoint --plan --json`, validates a
-proposed business-readable message, and asks before saving.  
+proposed business-readable message, and asks before saving.
 Sanitized excerpt:
 
 ```text
@@ -103,8 +103,8 @@ I will first show the checkpoint plan, then validate the proposed message. I
 will not save the checkpoint until you approve it.
 ```
 
-Severity: pass  
-Categories: checkpoint discipline, write discipline, evidence quality  
+Severity: pass
+Categories: checkpoint discipline, write discipline, evidence quality
 Likely fix types: none
 
 Review:
