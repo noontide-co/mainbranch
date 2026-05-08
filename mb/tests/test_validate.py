@@ -875,6 +875,12 @@ def test_validate_accepts_sanitized_push_playbook_fixture() -> None:
         and file["ok"]
         for file in report["files"]
     )
+    assert any(
+        file["path"] == "pushes/2026-05-08-google-ads-launch/playbooks/google-ads-launch-plan.md"
+        and file["schema"] == "push-playbooks"
+        and file["ok"]
+        for file in report["files"]
+    )
 
 
 def test_validate_requires_push_playbook_shape(tmp_path: Path) -> None:

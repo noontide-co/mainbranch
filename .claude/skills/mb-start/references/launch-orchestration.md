@@ -33,9 +33,17 @@ cited repair command.
    stops the default path unless the operator explicitly overrides.
 4. **Lander plan/build.** Route to `/mb-site` lander mode. If paid traffic is in
    scope, require the site measurement checks from `/mb-site` before ads work.
-5. **Ad launch plan/check.** Route to `/mb-ads` launch-plan or check mode. This
-   prepares copy, keyword targets, negatives, policy findings, budget notes, and
-   manual provider steps. It does not mutate Google Ads/GTM/Meta accounts.
+5. **Ad launch plan/check.** Route to `/mb-ads` launch-plan or check mode. For
+   Google Ads, the skill should load the Google Ads campaign-plan reference,
+   decide whether `/mb-think` policy/keyword research is needed, reuse useful
+   account history when the operator provides it or an approved read-only
+   provider tool exists, check whether an existing campaign should be rescued
+   instead of rebuilt, and prepare copy, keyword targets, negatives, policy
+   findings, budget notes, manual provider steps, approval gates, and
+   review-window criteria. Use `mb connect` and `mb site check` for readiness
+   facts, but do not treat them as proof that Google Ads campaign creation is
+   supported from the terminal. It does not mutate Google Ads/GTM/Meta
+   accounts.
 6. **Checkpoint.** After each accepted artifact or approval record, run
    `mb checkpoint --plan --json`, validate the message, and save only after
    operator approval.

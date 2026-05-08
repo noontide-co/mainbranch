@@ -42,6 +42,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   durable business truth, active bets, execution work, proof, legacy
   compatibility files, and linked operating-boundary repos before routing or
   spawning agents. Refs #410.
+- Added Google Ads campaign-plan guidance for `/mb-ads`, including
+  offer/policy-fit routing, existing-campaign rescue decisions, account-history
+  inputs, `mb connect`/provider-tool boundary checks, keyword and negative-list
+  planning, site/conversion readiness, approval gates, and a sanitized
+  plan-only push playbook fixture. Refs #414.
 
 ### Changed
 

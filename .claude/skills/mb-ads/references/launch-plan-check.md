@@ -1,7 +1,9 @@
 # Launch Plan And Check Modes
 
 Use this when the operator asks to launch/check paid traffic, especially Google
-Ads traffic for a lander or minisite.
+Ads traffic for a lander or minisite. For Google Ads campaign structure,
+account-history, keyword, negative-list, policy-fit, and approval sequencing,
+load [`google-ads-campaign-plan.md`](google-ads-campaign-plan.md).
 
 This mode prepares a reviewable plan and checks recorded readiness. It does not
 mutate Google Ads, GTM, Meta Ads, Stripe, or analytics providers unless a future
@@ -15,6 +17,9 @@ From the business repo:
 - the launch push at `pushes/<push>/push.md`;
 - keyword-gate research, especially ready-to-buy terms and negative seeds;
 - site record or linked site repo;
+- existing ad account/campaign exports or read-only Google Ads facts when the
+  operator explicitly provides them, or when an approved runtime tool, sidecar,
+  MCP server, or future `mb` adapter proves read-only access for this business;
 - `docs/google-ads-gtm-conversion-rubric.md`;
 - `mb status --json --peek`;
 - `mb connect plan` or `mb connect doctor --json`;
@@ -52,6 +57,7 @@ Sections:
 - `## Readiness`
 - `## Budget And Review Window`
 - `## Campaign Structure`
+- `## Existing Account/Campaign Decision`
 - `## Keyword Targets`
 - `## Negative Seeds`
 - `## Headlines`
@@ -73,9 +79,23 @@ Before preparing launch copy:
 - run the normal ad compliance review flow;
 - check for regulated verticals: medical, finance, credit, employment,
   housing, legal, social issues/politics;
+- decide whether the request needs `/mb-think` first for offer/policy research,
+  keyword-gate work, competitor mapping, or a separate-product decision;
 - compare claims against offer proof and Skool/site surfaces when present;
 - stop on unsupported guarantees, "cures/treats/heals" claims, impossible
   outcomes, or provider-specific disallowed phrases.
+
+## Existing Campaign Guidance
+
+When account history exists, do not default to a new campaign. Prefer keeping an
+existing campaign when the same offer, conversion event, goal, budget structure,
+and useful search/negative history still apply. In that case, plan to pause bad
+or disapproved assets, add clean assets inside the existing campaign or ad
+group, keep the campaign paused until review approval, and record the old
+assets as audit context.
+
+Recommend a new campaign only when the goal, offer/service line, conversion
+event, budget model, geography, or campaign settings materially change.
 
 ## Check Mode
 
@@ -88,8 +108,8 @@ default, use one of these sources:
 1. `mb status --json --peek` and relationship/outcome health.
 2. Existing push outcome/review files.
 3. Operator-provided Ads/GTM/Stripe screenshots or CSV exports.
-4. Read-only provider context only when `mb connect` and the current runtime
-   prove it is ready.
+4. Read-only provider context only when an approved runtime tool, sidecar, MCP
+   server, or future `mb` adapter proves it can inspect that provider account.
 
 Output a concise continue/change/stop recommendation and write findings to the
 push review or outcome file when the operator approves.
