@@ -48,10 +48,12 @@ primitives in business language first: tasks, proposals, saved checkpoints,
 relationship health, provider readiness, and outcomes.
 
 When working on this loop, check the current GitHub issues instead of copying a
-stale plan into docs. As of 2026-05-07, the public coordination anchors are the
-runtime dogfood harness (#364), generated business `CLAUDE.md` CLI-first
-bootstrap (#353), graph/status relationship health (#357 and #358), and push
-playbook schema (#350). Verify issue state before treating any anchor as active.
+stale plan into docs. Issue anchors change quickly. For daily-loop guardrail
+work, verify the live issue state around generated repo guidance, migration
+lint, topology/status/graph facts, child repo descriptors, reusable playbooks,
+runtime dogfood, and provider readiness before treating any anchor as active.
+If docs need examples, describe the topic and link the active issue only after
+checking GitHub.
 
 ## Quick Start
 

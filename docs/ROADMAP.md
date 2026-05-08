@@ -84,10 +84,11 @@ The work clusters into a few durable buckets:
   improves the public engine.
 
 Current public implementation anchors are GitHub issues, not promises in this
-roadmap. As of 2026-05-07, check the active issues for the Claude runtime
-dogfood harness (#364), generated business `CLAUDE.md` CLI-first bootstrap
-(#353), graph/status relationship health (#357 and #358), and push playbook
-schema (#350). Verify their state on GitHub before using them as current scope.
+roadmap. Check live issues before using any anchor as current scope. For this
+phase, the durable topic cluster is generated repo guidance, migration lint,
+topology/status/graph facts, child repo descriptors, reusable playbooks,
+runtime dogfood, provider readiness, and issue/friction capture. Link specific
+issue numbers only after verifying their state on GitHub.
 
 Anti-scope for v0.3.x:
 

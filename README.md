@@ -248,6 +248,11 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 
 Full list: `mb --help`.
 
+Use `mb validate` for file and frontmatter contract checks. Use `mb doctor`
+and `mb doctor repair --plan` for repo-shape, migration, runtime wiring,
+settings, and stale-guidance drift that should be repaired without treating
+every legacy compatibility file as a hard schema failure.
+
 Machine-readable command output follows the additive
 [JSON output contract](docs/json-output-contract.md): high-value `--json`
 surfaces expose shared `result_envelope_version`, `result_schema`,
