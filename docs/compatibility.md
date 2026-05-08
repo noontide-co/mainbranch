@@ -178,6 +178,11 @@ document:
 That evidence should prove the runtime reads the business repo and does not
 write runtime state, credentials, or raw account data into tracked files.
 
+For the proposed Codex staging plan, see
+[Codex Adapter Plan](../decisions/2026-05-08-codex-adapter-plan.md). It does
+not change Codex's roadmap status; it names the evidence required before any
+experimental or supported claim.
+
 ## Recommended setup
 
 For most users:
