@@ -11,6 +11,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Added a shared additive v1 JSON result envelope to high-value `mb --json`
+  surfaces: `mb status`, `mb start`, `mb checkpoint`, `mb issue`, `mb doctor`,
+  and `mb onboard`. Existing command-specific payload keys remain top-level for
+  compatibility while shared metadata (`schema_version`, `mb_command`, `ok`,
+  `status`, `errors`, `warnings`, and `actions`) gives skills, harnesses, and
+  future dashboards one failure-handling convention. Refs #297.
+
 ## [0.3.8] - 2026-05-08
 
 v0.3.8 tightens the daily operating loop after the 0.3.7 release discipline

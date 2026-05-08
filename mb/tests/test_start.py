@@ -67,7 +67,7 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     assert report["push_compatibility"]["legacy_campaigns_read"] is True
     assert "update" in report
     assert "ranked_actions" not in report
-    assert "status" not in report
+    assert report["status"] == "ok"
 
 
 def test_start_json_exposes_push_and_legacy_campaign_facts(tmp_path: Path, monkeypatch) -> None:

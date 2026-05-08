@@ -35,6 +35,7 @@ from mb import think as think_mod
 from mb import update as update_mod
 from mb import validate as validate_mod
 from mb.freshness import format_update_alert, looks_like_business_repo, package_update_status
+from mb.json_result import envelope
 
 app = typer.Typer(
     name="mb",
@@ -96,6 +97,10 @@ def _version_callback(value: bool) -> None:
     if value:
         typer.echo(f"mb {__version__}")
         raise typer.Exit()
+
+
+def _json_payload(payload: dict[str, Any], *, command: str, schema_name: str) -> str:
+    return json.dumps(envelope(payload, command=command, schema_name=schema_name), indent=2)
 
 
 def _is_interactive_terminal() -> bool:
@@ -350,7 +355,9 @@ def onboard_cmd(
         typer.echo(f"mb onboard: {exc}", err=True)
         raise typer.Exit(2) from exc
     if json_out:
-        typer.echo(json.dumps(result, indent=2))
+        typer.echo(
+            _json_payload(result, command="mb onboard", schema_name="mainbranch.onboard.result")
+        )
     else:
         _render_onboard_human(result)
     raise typer.Exit(0 if result["ok"] else 1)
@@ -394,7 +401,13 @@ def onboard_status_cmd(
     """Show saved onboarding progress and inferred missing core inputs."""
     result = onboard_mod.onboarding_status(repo)
     if json_out:
-        typer.echo(json.dumps(result, indent=2))
+        typer.echo(
+            _json_payload(
+                result,
+                command="mb onboard status",
+                schema_name="mainbranch.onboard.status.result",
+            )
+        )
     else:
         _render_onboard_status_human(result)
     raise typer.Exit(0 if result["ok"] else 1)
@@ -432,7 +445,13 @@ def onboard_plan_cmd(
         typer.echo(f"mb onboard plan: {exc}", err=True)
         raise typer.Exit(2) from exc
     if json_out:
-        typer.echo(json.dumps(result, indent=2))
+        typer.echo(
+            _json_payload(
+                result,
+                command="mb onboard plan",
+                schema_name="mainbranch.onboard.plan.result",
+            )
+        )
     else:
         _render_onboard_status_human(result)
     raise typer.Exit(0 if result["ok"] else 1)
@@ -487,7 +506,13 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
         report = doctor_mod.repair_plan(repo=repo)
 
     if local_json:
-        typer.echo(json.dumps(report, indent=2))
+        typer.echo(
+            _json_payload(
+                report,
+                command="mb doctor repair",
+                schema_name="mainbranch.doctor.repair.result",
+            )
+        )
     else:
         doctor_mod.render_repair(report)
     raise typer.Exit(0 if report["ok"] else 1)
@@ -534,7 +559,9 @@ def doctor_cmd(
         raise typer.Exit(2)
     report = doctor_mod.run(path=path)
     if json_out:
-        typer.echo(json.dumps(report, indent=2))
+        typer.echo(
+            _json_payload(report, command="mb doctor", schema_name="mainbranch.doctor.result")
+        )
     else:
         doctor_mod.render_human(report)
         if not report["ok"]:
@@ -618,7 +645,13 @@ def issue_draft_cmd(
         typer.echo(f"mb issue draft: {exc}", err=True)
         raise typer.Exit(2) from exc
     if json_out:
-        typer.echo(json.dumps(result, indent=2))
+        typer.echo(
+            _json_payload(
+                result,
+                command="mb issue draft",
+                schema_name="mainbranch.issue.draft.result",
+            )
+        )
     else:
         typer.echo(f"drafted {result['kind']} issue: {result['relative_path']}")
         typer.echo("review it before submitting; drafts are local and gitignored by default.")
@@ -646,7 +679,13 @@ def issue_open_cmd(
         typer.echo(f"mb issue open: {exc}", err=True)
         raise typer.Exit(2) from exc
     if json_out:
-        typer.echo(json.dumps(result, indent=2))
+        typer.echo(
+            _json_payload(
+                result,
+                command="mb issue open",
+                schema_name="mainbranch.issue.open.result",
+            )
+        )
     elif result.get("submitted"):
         typer.echo(f"opened issue: {result['url']}")
     else:
@@ -820,7 +859,7 @@ def status_cmd(
     """Show a cheap daily briefing for a Main Branch repo."""
     report = status_mod.run(path=path, update_marker=not peek)
     if json_out:
-        typer.echo(json.dumps(report, indent=2))
+        typer.echo(_json_payload(report, command="mb status", schema_name="mainbranch.status"))
     else:
         status_mod.render_human(report, verbose=verbose, no_color=no_color)
 
@@ -849,12 +888,12 @@ def start_cmd(
         report["launch"]["safe"] = False
         report["launch"]["attempted"] = False
         report["launch"]["blocked_reason"] = message
-        typer.echo(json.dumps(report, indent=2))
+        typer.echo(_json_payload(report, command="mb start", schema_name="mainbranch.start.result"))
         raise typer.Exit(2)
 
     report = start_mod.run(repo=repo, launch=launch)
     if json_out:
-        typer.echo(json.dumps(report, indent=2))
+        typer.echo(_json_payload(report, command="mb start", schema_name="mainbranch.start.result"))
     else:
         start_mod.render_human(report)
     raise typer.Exit(0 if report["ok"] else 1)
@@ -1062,7 +1101,13 @@ def checkpoint_cmd(
         _ = plan
         result = checkpoint_mod.plan(repo=repo, mode=mode)
     if json_out:
-        typer.echo(json.dumps(result, indent=2))
+        typer.echo(
+            _json_payload(
+                result,
+                command="mb checkpoint",
+                schema_name="mainbranch.checkpoint.result",
+            )
+        )
     else:
         checkpoint_mod.render_human(result)
     raise typer.Exit(0 if result["ok"] else 1)
