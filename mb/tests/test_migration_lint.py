@@ -78,6 +78,24 @@ def test_migration_lint_reports_stale_generated_guidance_without_file_body(
     assert "Private customer detail" not in json.dumps(report)
 
 
+def test_migration_lint_does_not_flag_negated_reference_write_guidance(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "CLAUDE.md",
+        (
+            "# Business\n\n"
+            "Do not write to reference/core; it is a compatibility path. "
+            "New truth belongs in core/.\n"
+        ),
+    )
+
+    report = migration_lint.run(tmp_path)
+
+    codes = {finding["code"] for finding in report["findings"]}
+    assert "stale-claude-reference-core-guidance" not in codes
+
+
 def test_migration_lint_reports_stale_claude_settings_engine_path(
     tmp_path: Path,
 ) -> None:
@@ -91,3 +109,32 @@ def test_migration_lint_reports_stale_claude_settings_engine_path(
 
     codes = {finding["code"] for finding in report["findings"]}
     assert "stale-claude-settings-engine-path" in codes
+
+
+def test_migration_lint_reuses_push_frontmatter_reads(tmp_path: Path, monkeypatch) -> None:
+    wrong_push = tmp_path / "pushes" / "spring" / "push.md"
+    wrong_playbook = tmp_path / "pushes" / "2026-05-08-launch" / "run.md"
+    _write(
+        wrong_push,
+        "---\ntype: push\nslug: spring\n---\n# Private push body\n",
+    )
+    _write(
+        wrong_playbook,
+        "---\ntype: playbook\n---\n# Private playbook body\n",
+    )
+    original = migration_lint._read_frontmatter
+    calls: dict[Path, int] = {}
+
+    def counted(path: Path) -> dict[str, object]:
+        calls[path] = calls.get(path, 0) + 1
+        return original(path)
+
+    monkeypatch.setattr(migration_lint, "_read_frontmatter", counted)
+
+    report = migration_lint.run(tmp_path)
+
+    codes = {finding["code"] for finding in report["findings"]}
+    assert "push-record-wrong-shape" in codes
+    assert "playbook-run-wrong-path" in codes
+    assert calls[wrong_push] == 1
+    assert calls[wrong_playbook] == 1

@@ -125,8 +125,16 @@ def test_validate_keeps_legacy_bet_campaign_links_readable(tmp_path: Path) -> No
     assert any("linked_campaigns" in warning for warning in bet["warnings"])
 
 
-def test_validate_ignores_research_readme_folder_docs(tmp_path: Path) -> None:
+def test_validate_ignores_folder_readme_docs(tmp_path: Path) -> None:
     _write(tmp_path / "research" / "README.md", "# Research\n\nFolder docs without frontmatter.\n")
+    _write(tmp_path / "decisions" / "README.md", "# Decisions\n\nFolder docs.\n")
+    _write(tmp_path / "bets" / "README.md", "# Bets\n\nFolder docs.\n")
+    _write(tmp_path / "log" / "README.md", "# Log\n\nFolder docs.\n")
+    _write(tmp_path / "documents" / "README.md", "# Documents\n\nFolder docs.\n")
+    _write(
+        tmp_path / "pushes" / "2026-05-08-launch" / "playbooks" / "README.md",
+        "# Playbooks\n\nFolder docs.\n",
+    )
     _write(
         tmp_path / "research" / "2026-05-08-topic-source.md",
         "---\ndate: 2026-05-08\ntopic: topic\nsource: source\n---\n# Research\n",
@@ -137,6 +145,11 @@ def test_validate_ignores_research_readme_folder_docs(tmp_path: Path) -> None:
     assert report["ok"] is True
     paths = {file["path"] for file in report["files"]}
     assert "research/README.md" not in paths
+    assert "decisions/README.md" not in paths
+    assert "bets/README.md" not in paths
+    assert "log/README.md" not in paths
+    assert "documents/README.md" not in paths
+    assert "pushes/2026-05-08-launch/playbooks/README.md" not in paths
 
 
 def test_keyword_gate_documented_frontmatter_validates(tmp_path: Path) -> None:

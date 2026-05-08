@@ -124,6 +124,12 @@ def _read_frontmatter(path: Path) -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {}
 
 
+def _cached_frontmatter(path: Path, cache: dict[Path, dict[str, Any]]) -> dict[str, Any]:
+    if path not in cache:
+        cache[path] = _read_frontmatter(path)
+    return cache[path]
+
+
 def _iter_markdown_files(root: Path) -> list[Path]:
     if not root.is_dir():
         return []
@@ -228,13 +234,18 @@ def _lint_vip(repo: Path, findings: list[dict[str, Any]]) -> None:
     )
 
 
-def _lint_push_shapes(repo: Path, findings: list[dict[str, Any]]) -> None:
+def _lint_push_shapes(
+    repo: Path,
+    findings: list[dict[str, Any]],
+    frontmatter_cache: dict[Path, dict[str, Any]],
+) -> None:
     pushes = repo / "pushes"
     if not pushes.is_dir():
         return
     for md in _iter_markdown_files(pushes):
         rel = md.relative_to(repo).as_posix()
         parts = md.relative_to(repo).parts
+        fm = _cached_frontmatter(md, frontmatter_cache)
         if parts[-1] == "push.md":
             if len(parts) != 3 or not pushes_mod.PUSH_FOLDER_RE.fullmatch(parts[1]):
                 findings.append(
@@ -247,7 +258,7 @@ def _lint_push_shapes(repo: Path, findings: list[dict[str, Any]]) -> None:
                     )
                 )
             continue
-        if _read_frontmatter(md).get("type") == "push":
+        if fm.get("type") == "push":
             findings.append(
                 _finding(
                     code="push-frontmatter-wrong-path",
@@ -259,9 +270,7 @@ def _lint_push_shapes(repo: Path, findings: list[dict[str, Any]]) -> None:
                     repair_command="mb doctor repair --plan --json",
                 )
             )
-        if _read_frontmatter(md).get("type") == "playbook" and (
-            len(parts) < 4 or parts[2] != "playbooks"
-        ):
+        if fm.get("type") == "playbook" and (len(parts) < 4 or parts[2] != "playbooks"):
             findings.append(
                 _finding(
                     code="playbook-run-wrong-path",
@@ -273,7 +282,11 @@ def _lint_push_shapes(repo: Path, findings: list[dict[str, Any]]) -> None:
             )
 
 
-def _lint_frontmatter(repo: Path, findings: list[dict[str, Any]]) -> None:
+def _lint_frontmatter(
+    repo: Path,
+    findings: list[dict[str, Any]],
+    frontmatter_cache: dict[Path, dict[str, Any]],
+) -> None:
     for bet in _iter_markdown_files(repo / "bets"):
         fm = _read_frontmatter(bet)
         if not fm:
@@ -293,7 +306,7 @@ def _lint_frontmatter(repo: Path, findings: list[dict[str, Any]]) -> None:
                 )
             )
     for push in _iter_markdown_files(repo / "pushes"):
-        fm = _read_frontmatter(push)
+        fm = _cached_frontmatter(push, frontmatter_cache)
         if fm and push.name == "push.md" and fm.get("type") not in {None, "push"}:
             findings.append(
                 _finding(
@@ -315,7 +328,21 @@ def _lint_claude_guidance(repo: Path, findings: list[dict[str, Any]]) -> None:
     except OSError:
         return
     for code, concept, pattern, message in STALE_CLAUDE_PATTERNS:
-        if not pattern.search(text):
+        match = pattern.search(text)
+        if match is None:
+            continue
+        context = text[max(0, match.start() - 24) : match.end() + 24].lower()
+        if (code.endswith("write-guidance") or code.endswith("core-guidance")) and any(
+            phrase in context
+            for phrase in (
+                "do not write",
+                "don't write",
+                "never write",
+                "not write",
+                "compatibility fallback",
+                "compatibility path",
+            )
+        ):
             continue
         findings.append(
             _finding(
@@ -368,12 +395,13 @@ def _lint_settings(repo: Path, findings: list[dict[str, Any]]) -> None:
 def run(repo: str | Path) -> dict[str, Any]:
     target = Path(repo).expanduser().resolve()
     findings: list[dict[str, Any]] = []
+    frontmatter_cache: dict[Path, dict[str, Any]] = {}
     _lint_reference(target, findings)
     _lint_campaigns(target, findings)
     _lint_top_level_folders(target, findings)
     _lint_vip(target, findings)
-    _lint_push_shapes(target, findings)
-    _lint_frontmatter(target, findings)
+    _lint_push_shapes(target, findings, frontmatter_cache)
+    _lint_frontmatter(target, findings, frontmatter_cache)
     _lint_claude_guidance(target, findings)
     _lint_settings(target, findings)
     categories = sorted({str(item["category"]) for item in findings})

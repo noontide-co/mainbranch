@@ -8,6 +8,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from mb import doctor as doctor_mod
+from mb import migration_lint
 from mb.cli import app
 from mb.doctor import _detect_cloud_paths, _repo_layout_check, run
 from mb.init import run as init_run
@@ -483,6 +484,31 @@ def test_doctor_repair_plan_reports_migration_shape_drift(tmp_path: Path) -> Non
     assert "legacy-campaigns-active-content" in codes
     assert "legacy-vip-config" in codes
     assert "push-record-wrong-shape" in codes
+
+
+def test_doctor_repair_plan_reuses_migration_drift_report(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo = tmp_path / "reuse-drift"
+    init_run(path=str(repo), name="Acme")
+    calls = 0
+
+    def fake_lint(path: Path) -> dict[str, object]:
+        nonlocal calls
+        calls += 1
+        return {
+            "ok": True,
+            "repo": str(path),
+            "findings": [],
+            "summary": {"warnings": 0, "categories": []},
+        }
+
+    monkeypatch.setattr(migration_lint, "run", fake_lint)
+
+    doctor_mod.repair_plan(repo)
+
+    assert calls == 1
 
 
 def test_doctor_repair_plan_exposes_reference_split_truth(tmp_path: Path) -> None:

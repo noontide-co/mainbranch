@@ -1098,9 +1098,41 @@ def _repair_legacy_claude_symlinks(repo: Path, findings: list[dict[str, Any]]) -
     }
 
 
-def _validation_summary(repo: Path) -> dict[str, Any]:
+def _migration_drift_from_checks(
+    checks: list[dict[str, Any]],
+    repo: Path,
+) -> dict[str, Any] | None:
+    check = next((item for item in checks if item.get("name") == "migration-drift"), None)
+    if check is None:
+        return None
+    findings = check.get("findings", [])
+    if not isinstance(findings, list):
+        findings = []
+    summary = check.get("summary")
+    if not isinstance(summary, dict):
+        summary = {
+            "warnings": len(findings),
+            "categories": sorted({str(item.get("category")) for item in findings}),
+        }
+    return {
+        "ok": not findings,
+        "repo": str(repo),
+        "findings": findings,
+        "summary": summary,
+    }
+
+
+def _validation_summary(
+    repo: Path,
+    *,
+    migration_drift_report: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     try:
-        report = validate_mod.run(str(repo), cross_refs=True)
+        report = validate_mod.run(
+            str(repo),
+            cross_refs=True,
+            migration_drift_report=migration_drift_report,
+        )
     except Exception as exc:  # pragma: no cover - defensive CLI boundary
         return {
             "ok": False,
@@ -1278,6 +1310,7 @@ def run(path: str) -> dict[str, Any]:
             ),
             "severity": "ok" if drift["ok"] else "warn",
             "findings": drift["findings"],
+            "summary": drift["summary"],
             "safe_to_share": True,
         }
     )
@@ -1407,7 +1440,9 @@ def repair_plan(
     )
 
     migration = migrate_mod.check(target, include_diff=False)
-    migration_drift = migration_lint.run(target)
+    migration_drift = _migration_drift_from_checks(
+        doctor_report["checks"], target
+    ) or migration_lint.run(target)
     reference_state = _legacy_reference_state(target)
     offer_topology = _offer_topology_state(target)
     legacy_vip = _legacy_vip_audit_state(target)
@@ -1819,7 +1854,7 @@ def repair_plan(
         )
     )
 
-    validation = _validation_summary(target)
+    validation = _validation_summary(target, migration_drift_report=migration_drift)
     if validation["state"] != "ok":
         actions.append(
             _action(

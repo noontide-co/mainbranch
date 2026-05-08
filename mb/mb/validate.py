@@ -1279,11 +1279,23 @@ def _legacy_frontmatter_repair(repo: Path, error_count: int) -> dict[str, Any] |
     }
 
 
+def _is_folder_doc(path: Path, schema_name: str) -> bool:
+    return schema_name in {
+        "research",
+        "decisions",
+        "bets",
+        "log",
+        "documents",
+        "push-playbooks",
+    } and (path.name == "README.md")
+
+
 def run(
     path: str,
     verbose: bool = False,
     cross_refs: bool = False,
     strict: bool = False,
+    migration_drift_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run validation across all known schemas. Verbose adds key dumps."""
     repo = Path(path).resolve()
@@ -1291,14 +1303,15 @@ def run(
     for schema_name, schema in SCHEMAS.items():
         glob = schema["glob"]
         for f in sorted(repo.glob(glob)):
-            if schema_name == "research" and f.name == "README.md":
+            if _is_folder_doc(f, schema_name):
                 continue
             r = _check_one(f, schema)
             r["schema"] = schema_name
             r["path"] = str(f.relative_to(repo))
             files_by_path[r["path"]] = r
 
-    migration_drift_report = migration_lint.run(repo)
+    if migration_drift_report is None:
+        migration_drift_report = migration_lint.run(repo)
     _add_migration_lint_warnings(files_by_path, migration_drift_report)
 
     cross_ref_report = {"enabled": False, "checked_fields": [], "warnings": [], "orphan_offers": []}
