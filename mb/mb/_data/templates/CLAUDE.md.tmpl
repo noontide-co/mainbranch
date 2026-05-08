@@ -85,11 +85,16 @@ When deciding where an idea belongs, use business meaning first:
 - Bet: a time-boxed wager with appetite, target, evidence, and verdict.
 - Push: coordinated work that ships something to an audience.
 - Reusable playbook: an engine recipe for running a repeatable operating
-  workflow.
+  workflow. Treat its defaults as attributed method, not universal law.
 - Push playbook: this push's approval, provider-boundary, check, manual-step,
-  evidence, and outcome record.
+  evidence, fork, and outcome record.
 - Proof: evidence that a claim is true.
 - Decision: rationale for changing durable truth.
+
+Reusable playbooks can encode official platform rules, Main Branch guidance,
+and author opinion. Push playbooks record which defaults were used or forked
+for this run and why. See `docs/playbooks.md` in the Main Branch engine for
+the full model.
 
 In a single-offer repo, `core/offer.md` is the durable offer truth. In a
 multi-offer repo, `core/offer.md` is the portfolio thesis and

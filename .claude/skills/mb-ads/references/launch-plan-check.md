@@ -56,13 +56,17 @@ Sections:
 
 - `## Readiness`
 - `## Budget And Review Window`
+- `## Market Intent Research`
 - `## Campaign Structure`
+- `## Campaign Settings And Forks`
 - `## Existing Account/Campaign Decision`
 - `## Keyword Targets`
 - `## Negative Seeds`
-- `## Headlines`
-- `## Descriptions`
+- `## RSA Assets`
 - `## Sitelinks`
+- `## Callouts`
+- `## Structured Snippets`
+- `## Skipped Assets And URL Options`
 - `## Policy Preflight`
 - `## Measurement Checklist`
 - `## Manual Provider Steps`

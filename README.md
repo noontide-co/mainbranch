@@ -39,6 +39,8 @@ The repo is the operating memory: offer, audience, voice, research, decisions, b
 Main Branch is opinionated about rails. The point is not to connect every SaaS tool a business has accumulated. The point is to choose boring, inspectable paths: GitHub for durable work threads, proposals, and shipped history; Cloudflare for sites and DNS; provider paths such as Google/Workspace and official ads only where smoke-tested; planned optional rails such as Postiz for social scheduling and Beancount-style plain-text finance; and optional sidecars for enrichment. Those paths should be wrapped in deterministic commands agents can call without wasting tokens guessing provider setup.
 
 Read the product frame in [docs/ETHOS.md](docs/ETHOS.md), the four operator loops (Sense → Decide → Ship → Reflect) and the four channels (Paid, Organic, Pages, Ops) in [docs/OPERATOR-LOOPS.md](docs/OPERATOR-LOOPS.md), and the release direction in [docs/ROADMAP.md](docs/ROADMAP.md).
+Reusable operating recipes and per-push run records are described in
+[docs/playbooks.md](docs/playbooks.md).
 Workspace, repo, dashboard, finance/legal, and team-log boundaries are defined
 in
 [decisions/2026-05-04-workspace-repo-sensitive-data-boundaries.md](decisions/2026-05-04-workspace-repo-sensitive-data-boundaries.md).

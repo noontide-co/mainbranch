@@ -93,6 +93,16 @@ interactive TUI slash-command proof.
   from the related operator repo launch notes: explicit form-success events,
   GTM Preview verification, GA4 Realtime/admin lag, and Google Ads conversion
   import UI variants. Refs #414, #422.
+- Added a playbook concept guide that separates official platform rules,
+  global platform guidance, attributed playbook opinion, fork points, and
+  per-push run records. Refs #427.
+- Added playbook memory guidance so paid-search discoveries can become durable
+  `research/`, `core/`, proof, strategy, or decision updates instead of staying
+  trapped inside one campaign run record. Refs #427.
+- Added Google Ads campaign-settings and asset research rails for
+  `/mb-ads launch-plan`, including market-intent research, geography and
+  conversion-path choices, RSA rationale, sitelinks, callouts, structured
+  snippets, skipped assets, URL options, and playbook fork records. Refs #427.
 
 ### Changed
 
