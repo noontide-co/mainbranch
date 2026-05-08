@@ -164,18 +164,22 @@ def contains_observed_unknown_command_failure(text: str) -> bool:
         normalized = _normalize_unknown_command_line(line)
         if "unknown command" not in normalized:
             continue
-        if _is_observed_unknown_command_line(normalized):
+        if _is_raw_unknown_command_output(normalized):
             return True
         if index + 1 < len(raw_lines):
             next_line = _normalize_unknown_command_line(raw_lines[index + 1].strip())
             if next_line.startswith("/"):
                 combined = _normalize_unknown_command_line(f"{line} {raw_lines[index + 1]}")
-                if _is_observed_unknown_command_line(combined):
+                if _is_raw_unknown_command_output(combined):
                     return True
                 if _is_unknown_command_contextual_guidance(combined):
                     continue
+                if _is_observed_unknown_command_line(combined):
+                    return True
         if _is_unknown_command_contextual_guidance(normalized):
             continue
+        if _is_observed_unknown_command_line(normalized):
+            return True
     return False
 
 
@@ -263,9 +267,13 @@ def _is_unknown_command_contextual_guidance(line: str) -> bool:
     )
 
 
+def _is_raw_unknown_command_output(line: str) -> bool:
+    return (
+        re.fullmatch(r"(error:\s*)?unknown command:?\s*/[a-z0-9-]+(?:[.!?].*)?", line) is not None
+    )
+
+
 def _is_observed_unknown_command_line(line: str) -> bool:
-    if re.fullmatch(r"(error:\s*)?unknown command:?\s*/[a-z0-9-]+(?:[.!?].*)?", line):
-        return True
     if any(
         marker in line
         for marker in (

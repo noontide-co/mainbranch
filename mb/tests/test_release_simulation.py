@@ -148,3 +148,16 @@ def test_score_transcript_allows_unknown_command_repair_guidance() -> None:
     assert release_simulation.contains_observed_unknown_command_failure(transcript) is False
     assert score["checks"]["skill_discovery"]["ok"] is True
     assert score["checks"]["supported_repair_path"]["ok"] is True
+
+
+def test_score_transcript_allows_single_line_conditional_unknown_command_marker() -> None:
+    transcript = """
+    /mb-start was discovered. If Claude reports Unknown command: /mb-start,
+    that's a slash command discovery failure - run mb skill repair.
+    """
+
+    score = release_simulation.score_transcript(transcript)
+
+    assert release_simulation.contains_observed_unknown_command_failure(transcript) is False
+    assert score["checks"]["skill_discovery"]["ok"] is True
+    assert score["checks"]["supported_repair_path"]["ok"] is True
