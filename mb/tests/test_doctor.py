@@ -437,7 +437,9 @@ def test_doctor_repair_plan_reports_stale_vip_local_state(tmp_path: Path) -> Non
     vip_check = next(check for check in section["checks"] if check["name"] == ".vip/local.yaml")
     assert vip_check["state"] == "warn"
     assert vip_check["kind"] == "legacy-vip-local-state"
-    assert vip_check["current_offer"] == "community"
+    assert vip_check["current_offer_present"] is True
+    assert vip_check["value_included"] is False
+    assert "community" not in json.dumps(vip_check)
     actions = {action["id"]: action for action in payload["actions"]}
     assert actions["offer-topology-review"]["mode"] == "manual"
     assert actions["offer-topology-review"]["safe_to_apply"] is False
@@ -508,6 +510,151 @@ def test_doctor_repair_plan_flags_multi_offer_session_disagreement(tmp_path: Pat
     assert "multi-offer-review" in kinds
     assert "brand-offer-slug-overlap" in kinds
     assert section["state"] == "warn"
+
+
+def test_doctor_repair_plan_audits_mixed_vip_yaml_without_values(tmp_path: Path) -> None:
+    repo = tmp_path / "legacy-vip-audit"
+    init_run(path=str(repo), name="Acme")
+    (repo / ".vip").mkdir()
+    (repo / ".vip" / "local.yaml").write_text(
+        "\n".join(
+            [
+                "current_offer: community",
+                "user:",
+                "  name: Example Operator",
+                "session:",
+                "  show_context_tips: true",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (repo / ".vip" / "config.yaml").write_text(
+        "\n".join(
+            [
+                "business_name: Example Business",
+                "business_type: community",
+                "offer_structure: multi",
+                "tools:",
+                "  apify:",
+                "    status: installed",
+                "mcps:",
+                "  google_drive:",
+                "    required_for: docs",
+                "infrastructure:",
+                "  site:",
+                "    provider: cloudflare",
+                "content:",
+                "  default_channel: newsletter",
+                "skills:",
+                "  ads:",
+                "    default_count: 5",
+                "client_repos:",
+                "  example_client: /private/path/redacted",
+                "reference_structure:",
+                "  core: reference/core",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    before_local = (repo / ".vip" / "local.yaml").read_text(encoding="utf-8")
+    before_config = (repo / ".vip" / "config.yaml").read_text(encoding="utf-8")
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    assert (repo / ".vip" / "local.yaml").read_text(encoding="utf-8") == before_local
+    assert (repo / ".vip" / "config.yaml").read_text(encoding="utf-8") == before_config
+    payload = json.loads(result.stdout)
+    assert payload["read_only"] is True
+    section = next(section for section in payload["sections"] if section["id"] == "legacy-vip")
+    assert section["state"] == "warn"
+    by_name = {check["name"]: check for check in section["checks"]}
+    local_entries = {entry["key"]: entry for entry in by_name[".vip/local.yaml"]["entries"]}
+    config_entries = {entry["key"]: entry for entry in by_name[".vip/config.yaml"]["entries"]}
+
+    assert local_entries["current_offer"]["classification"] == "local-session-state"
+    assert local_entries["user.name"]["classification"] == "machine-local-preference"
+    assert local_entries["session.show_context_tips"]["classification"] == (
+        "machine-local-session-state"
+    )
+    assert config_entries["business_name"]["classification"] == "durable-business-truth"
+    assert config_entries["tools.apify.status"]["classification"] == "stale-runtime-snapshot"
+    assert config_entries["mcps.google_drive.required_for"]["classification"] == (
+        "provider-readiness-hint"
+    )
+    assert config_entries["infrastructure.site.provider"]["classification"] == (
+        "provider-or-infra-hint"
+    )
+    assert config_entries["content.default_channel"]["classification"] == "legacy-skill-default"
+    assert config_entries["skills.ads.default_count"]["classification"] == "legacy-skill-default"
+    assert config_entries["client_repos.example_client"]["classification"] == "repo-topology-hint"
+    assert config_entries["reference_structure.core"]["classification"] == "stale-legacy-layout"
+    assert all(entry["value_included"] is False for entry in local_entries.values())
+    assert all(entry["value_included"] is False for entry in config_entries.values())
+    assert "Example Operator" not in result.stdout
+    assert "/private/path" not in result.stdout
+    actions = {action["id"]: action for action in payload["actions"]}
+    assert actions["legacy-vip-audit"]["mode"] == "manual"
+    assert actions["legacy-vip-audit"]["safe_to_apply"] is False
+
+
+def test_doctor_repair_plan_handles_malformed_vip_yaml(tmp_path: Path) -> None:
+    repo = tmp_path / "bad-vip"
+    init_run(path=str(repo), name="Acme")
+    (repo / ".vip").mkdir()
+    (repo / ".vip" / "config.yaml").write_text("tools: [unterminated\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "legacy-vip")
+    check = next(check for check in section["checks"] if check["name"] == ".vip/config.yaml")
+    assert check["state"] == "warn"
+    assert check["parse_error"]
+    assert check["deletion"]["safe"] is False
+
+
+def test_doctor_repair_plan_handles_non_mapping_vip_yaml(tmp_path: Path) -> None:
+    repo = tmp_path / "list-vip"
+    init_run(path=str(repo), name="Acme")
+    (repo / ".vip").mkdir()
+    (repo / ".vip" / "config.yaml").write_text("- one\n- two\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "legacy-vip")
+    check = next(check for check in section["checks"] if check["name"] == ".vip/config.yaml")
+    assert check["state"] == "warn"
+    assert check["entries"] == []
+    assert check["deletion"]["safe"] is False
+
+
+def test_doctor_repair_plan_flags_vip_yaml_symlink_without_reading(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "symlink-vip"
+    init_run(path=str(repo), name="Acme")
+    private = tmp_path / "private-config.yaml"
+    private.write_text("business_name: Private Business\n", encoding="utf-8")
+    (repo / ".vip").mkdir()
+    (repo / ".vip" / "config.yaml").symlink_to(private)
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    assert "Private Business" not in result.stdout
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "legacy-vip")
+    check = next(check for check in section["checks"] if check["name"] == ".vip/config.yaml")
+    assert check["state"] == "warn"
+    assert check["entries"] == []
+    assert check["deletion"]["safe"] is False
+    assert "symlink" in check["summary"]
 
 
 def test_doctor_repair_plan_distinguishes_read_and_write_actions(tmp_path: Path) -> None:

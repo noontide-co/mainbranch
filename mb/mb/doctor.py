@@ -63,6 +63,7 @@ LOCAL_STATE_PATHS = (
 )
 DURABLE_MB_PATHS = (".mb/schema_version",)
 LEGACY_VIP_LOCAL_STATE_PATHS = (".vip/local.yaml",)
+LEGACY_VIP_AUDIT_PATHS = (".vip/local.yaml", ".vip/config.yaml")
 LEGACY_CLAUDE_LINK_DIRS = (".claude/lenses", ".claude/reference")
 REFERENCE_COMPAT_LINKS = {
     "reference/core": "../core",
@@ -616,10 +617,267 @@ def _read_markdown_frontmatter(path: Path) -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {}
 
 
+def _flatten_yaml_keys(data: dict[str, Any], *, prefix: str = "") -> list[str]:
+    keys: list[str] = []
+    for key, value in data.items():
+        key_text = str(key)
+        path = f"{prefix}.{key_text}" if prefix else key_text
+        if isinstance(value, dict) and value:
+            keys.extend(_flatten_yaml_keys(value, prefix=path))
+        else:
+            keys.append(path)
+    return keys
+
+
+def _legacy_vip_key_classification(key: str) -> dict[str, str]:
+    parts = key.split(".")
+    root = parts[0] if parts else key
+
+    if key == "current_offer":
+        return {
+            "family": "current_offer",
+            "classification": "local-session-state",
+            "destination": (
+                "Use an explicit per-run offer choice, status/start routing, or a future "
+                "Main Branch session-state contract; do not treat `.vip/local.yaml` as canonical."
+            ),
+            "action": "manual_review",
+        }
+    if root in {"default_repo", "recent_repos", "user", "media", "last_seen_version", "vip_path"}:
+        return {
+            "family": f"{root}.*" if len(parts) > 1 else root,
+            "classification": "machine-local-preference",
+            "destination": (
+                "Keep only in machine-local runtime config if still useful; never move into "
+                "tracked business files."
+            ),
+            "action": "keep_local_or_delete",
+        }
+    if root == "session":
+        return {
+            "family": "session.*",
+            "classification": "machine-local-session-state",
+            "destination": "Keep as runtime-local preference/session state if retained.",
+            "action": "keep_local_or_delete",
+        }
+    if root in {"business_type", "business_name", "offer_structure", "skool_url"} or root.endswith(
+        "_url"
+    ):
+        return {
+            "family": root,
+            "classification": "durable-business-truth",
+            "destination": (
+                "Review manually and move still-current, non-private facts into `core/`, "
+                "`core/operations/`, or onboarding state."
+            ),
+            "action": "manual_move_if_current",
+        }
+    if root == "tools":
+        return {
+            "family": "tools.*",
+            "classification": "stale-runtime-snapshot",
+            "destination": "Prefer current `mb connect`, `mb status`, and runtime facts.",
+            "action": "delete_after_review",
+        }
+    if root == "mcps":
+        return {
+            "family": "mcps.*",
+            "classification": "provider-readiness-hint",
+            "destination": (
+                "Move only durable, non-secret requirements to generated `CLAUDE.md`, "
+                "`core/operations/`, or provider docs; keep credentials local."
+            ),
+            "action": "manual_review",
+        }
+    if root == "infrastructure":
+        return {
+            "family": "infrastructure.*",
+            "classification": "provider-or-infra-hint",
+            "destination": (
+                "Classify manually. Non-secret provider identifiers may belong in operation "
+                "or provider notes; secrets and account-private details stay local."
+            ),
+            "action": "manual_review",
+        }
+    if root in {"content", "skills"}:
+        return {
+            "family": f"{root}.*",
+            "classification": "legacy-skill-default",
+            "destination": "Use explicit skill inputs or documented workflow defaults, not `.vip`.",
+            "action": "manual_review",
+        }
+    if root in {"clients", "client_repos", "child_repos", "repos"}:
+        return {
+            "family": f"{root}.*",
+            "classification": "repo-topology-hint",
+            "destination": (
+                "Review manually before moving to topology docs, graph links, or provider-safe "
+                "notes; sanitize client/private paths."
+            ),
+            "action": "manual_review",
+        }
+    if root == "reference_structure":
+        return {
+            "family": "reference_structure.*",
+            "classification": "stale-legacy-layout",
+            "destination": (
+                "Use `mb doctor`, `mb migrate --check`, and current `core/` layout facts."
+            ),
+            "action": "delete_after_review",
+        }
+    if root in {"paths", "path_config"}:
+        return {
+            "family": f"{root}.*",
+            "classification": "legacy-compatibility-fallback",
+            "destination": "Prefer current repo layout and `mb` path resolution.",
+            "action": "manual_review",
+        }
+    return {
+        "family": f"{root}.*" if len(parts) > 1 else root,
+        "classification": "manual-review",
+        "destination": (
+            "Inspect manually. Do not move raw values into durable files until privacy and "
+            "current relevance are clear."
+        ),
+        "action": "manual_review",
+    }
+
+
+def _legacy_vip_audit_state(repo: Path) -> dict[str, Any]:
+    checks: list[dict[str, Any]] = []
+    for rel in LEGACY_VIP_AUDIT_PATHS:
+        path = repo / rel
+        if not path.exists() and not path.is_symlink():
+            checks.append(
+                {
+                    "name": rel,
+                    "state": "ok",
+                    "summary": "absent",
+                    "kind": "absent",
+                    "entries": [],
+                    "deletion": {
+                        "safe": False,
+                        "reason": "file is absent",
+                    },
+                }
+            )
+            continue
+        if path.is_symlink():
+            checks.append(
+                {
+                    "name": rel,
+                    "state": "warn",
+                    "summary": "legacy `.vip` YAML is a symlink; manual review required",
+                    "kind": "legacy-vip-yaml",
+                    "entries": [],
+                    "deletion": {
+                        "safe": False,
+                        "reason": "symlink target may be machine-local or private",
+                    },
+                }
+            )
+            continue
+        try:
+            raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError) as exc:
+            checks.append(
+                {
+                    "name": rel,
+                    "state": "warn",
+                    "summary": "legacy `.vip` YAML exists but could not be parsed",
+                    "kind": "legacy-vip-yaml",
+                    "parse_error": type(exc).__name__,
+                    "entries": [],
+                    "deletion": {
+                        "safe": False,
+                        "reason": "parse before deleting or migrating",
+                    },
+                }
+            )
+            continue
+        if not isinstance(raw, dict):
+            checks.append(
+                {
+                    "name": rel,
+                    "state": "warn",
+                    "summary": "legacy `.vip` YAML is not a mapping; manual review required",
+                    "kind": "legacy-vip-yaml",
+                    "entries": [],
+                    "deletion": {
+                        "safe": False,
+                        "reason": "unexpected YAML shape",
+                    },
+                }
+            )
+            continue
+
+        entries = [
+            {
+                "key": key,
+                **_legacy_vip_key_classification(key),
+                "value_included": False,
+            }
+            for key in sorted(_flatten_yaml_keys(raw))
+        ]
+        actions = {str(entry["action"]) for entry in entries}
+        manual_count = sum(1 for entry in entries if str(entry["action"]).startswith("manual"))
+        local_count = sum(
+            1 for entry in entries if str(entry["classification"]).startswith("machine-local")
+        )
+        stale_count = sum(1 for entry in entries if entry["action"] == "delete_after_review")
+        safe_to_delete = bool(entries) and not any(
+            action in actions for action in {"manual_review", "manual_move_if_current"}
+        )
+        if not entries:
+            deletion = {
+                "safe": True,
+                "reason": "file has no keys; delete after confirming no runtime still expects it",
+            }
+        elif safe_to_delete:
+            deletion = {
+                "safe": True,
+                "reason": (
+                    "only local/session/stale fallback keys were found; delete after reviewing "
+                    "that no active runtime depends on them"
+                ),
+            }
+        else:
+            deletion = {
+                "safe": False,
+                "reason": (
+                    "manual-review or durable-business keys remain; classify and move only "
+                    "still-current, non-private facts first"
+                ),
+            }
+        checks.append(
+            {
+                "name": rel,
+                "state": "warn",
+                "summary": (
+                    f"{len(entries)} legacy key(s): {manual_count} manual review, "
+                    f"{local_count} local/session, {stale_count} stale/delete"
+                ),
+                "kind": "legacy-vip-yaml",
+                "entries": entries,
+                "deletion": deletion,
+            }
+        )
+    return {
+        "state": _max_state([str(item["state"]) for item in checks]),
+        "summary": (
+            "legacy `.vip` config/state needs review"
+            if any(item["state"] != "ok" for item in checks)
+            else "no legacy `.vip` config/state files found"
+        ),
+        "checks": checks,
+    }
+
+
 def _offer_topology_state(repo: Path) -> dict[str, Any]:
     """Return migration guidance for active-offer state and multi-offer drift."""
     checks: list[dict[str, Any]] = []
     offer_records: list[dict[str, Any]] = []
+    active_offers: list[str] = []
 
     for rel in LEGACY_VIP_LOCAL_STATE_PATHS:
         path = repo / rel
@@ -634,7 +892,10 @@ def _offer_topology_state(repo: Path) -> dict[str, Any]:
             )
             continue
         data = _read_yaml_mapping(path)
-        current_offer = data.get("current_offer")
+        current_offer = str(data.get("current_offer") or "").strip()
+        current_offer_present = bool(current_offer and current_offer != "null")
+        if current_offer_present:
+            active_offers.append(current_offer)
         checks.append(
             {
                 "name": rel,
@@ -644,7 +905,8 @@ def _offer_topology_state(repo: Path) -> dict[str, Any]:
                     "but do not let skills write it silently"
                 ),
                 "kind": "legacy-vip-local-state",
-                "current_offer": current_offer,
+                "current_offer_present": current_offer_present,
+                "value_included": False,
             }
         )
 
@@ -675,13 +937,6 @@ def _offer_topology_state(repo: Path) -> dict[str, Any]:
                     }
                 )
 
-    active_offers = []
-    for check in checks:
-        if check.get("kind") != "legacy-vip-local-state":
-            continue
-        current_offer = str(check.get("current_offer") or "").strip()
-        if current_offer and current_offer != "null":
-            active_offers.append(current_offer)
     existing_folders = {str(record["folder_slug"]) for record in offer_records}
     for active_offer in active_offers:
         if active_offer not in existing_folders:
@@ -690,11 +945,11 @@ def _offer_topology_state(repo: Path) -> dict[str, Any]:
                     "name": "active-offer-target",
                     "state": "warn",
                     "summary": (
-                        f"legacy active offer `{active_offer}` has no matching "
-                        f"core/offers/{active_offer}/offer.md"
+                        "legacy active-offer state has no matching per-offer file "
+                        "under core/offers/"
                     ),
                     "kind": "missing-active-offer",
-                    "current_offer": active_offer,
+                    "value_included": False,
                 }
             )
 
@@ -712,7 +967,8 @@ def _offer_topology_state(repo: Path) -> dict[str, Any]:
                     "files; confirm brand-level vs offer-specific scope before writing"
                 ),
                 "kind": "multi-offer-review",
-                "current_offer": active_offers[0],
+                "current_offer_present": True,
+                "value_included": False,
                 "brand_offer": "core/offer.md",
                 "offers": [record["path"] for record in offer_records],
             }
@@ -1133,6 +1389,7 @@ def repair_plan(
     migration = migrate_mod.check(target, include_diff=False)
     reference_state = _legacy_reference_state(target)
     offer_topology = _offer_topology_state(target)
+    legacy_vip = _legacy_vip_audit_state(target)
     legacy_campaigns_check = next(
         (check for check in doctor_report["checks"] if check["name"] == "legacy-campaigns"),
         None,
@@ -1235,6 +1492,34 @@ def repair_plan(
             ),
             checks=offer_topology["checks"],
             actions=offer_actions,
+        )
+    )
+
+    legacy_vip_actions: list[dict[str, Any]] = []
+    if legacy_vip["state"] != "ok":
+        action = _action(
+            id="legacy-vip-audit",
+            title="Review legacy .vip YAML config/state",
+            state=legacy_vip["state"],
+            mode="manual",
+            command="mb doctor repair --plan --json",
+            safe_to_apply=False,
+            reason=(
+                ".vip YAML can contain private paths, provider notes, client context, "
+                "or stale runtime snapshots; doctor classifies keys but does not copy "
+                "raw values or migrate content automatically"
+            ),
+        )
+        actions.append(action)
+        legacy_vip_actions.append(action)
+    sections.append(
+        _section(
+            "legacy-vip",
+            "Legacy .vip Config And State",
+            legacy_vip["state"],
+            legacy_vip["summary"],
+            checks=legacy_vip["checks"],
+            actions=legacy_vip_actions,
         )
     )
 
@@ -1580,6 +1865,7 @@ def repair_plan(
             "migration": migration,
             "legacy_reference": reference_state,
             "offer_topology": offer_topology,
+            "legacy_vip": legacy_vip,
             "legacy_claude_links": legacy_links,
             "validation": validation.get("report", {}),
             "graph": graph.get("report", {}),

@@ -130,16 +130,26 @@ A company can outgrow one repo without leaving the Main Branch model. The
 business repo stays the hub, and specialized repos become linked operating
 boundaries.
 
+The durable topology model lives in
+[decisions/2026-05-08-business-repo-topology-map.md](../decisions/2026-05-08-business-repo-topology-map.md).
+That decision defines role slugs, relationship types, lifecycle language,
+GitHub/local naming conventions, metadata placement, and the public/private
+boundary for finance, legal, workspace, and dashboard views.
+
 Common repo roles:
 
 | Role | What it holds | Boundary |
 | --- | --- | --- |
 | `business` | Core operating memory, research, decisions, bets, pushes, logs, docs | Default team context |
 | `site` | Cloudflare Pages, landing page, minisite, website, or public bet feed | Public deployable surface |
-| `offer` | Graduated product, service, or internal tool that needs its own lifecycle | Linked back to the business repo |
+| `offer` | Graduated offer or productized service that needs its own lifecycle | Linked back to the business repo |
+| `product` | Software product, tool, course, template, or product surface | Separate when execution has its own lifecycle |
 | `client` | Client-specific fulfillment context and deliverables | Separate when access or confidentiality differs |
 | `finance` | Beancount ledger, exports, tax docs, sensitive P&L sources | Private by default; share summaries intentionally |
+| `legal` | Contracts, entity docs, disputes, or legal reviews | Private by default; share summaries intentionally |
 | `ops` | Private infrastructure, runbooks, provider setup, or team routines | Separate when operational authority differs |
+| `integration_sidecar` | Helper repo/tool for provider, analytics, enrichment, deployment data, raw caches, metrics databases, or connector glue | Optional and contract-backed |
+| `experiment` | Exploratory work that may graduate, pause, or die | Not core truth until decided |
 | `archive` | Inert imports, legacy projects, or cold storage | Read-only unless revived |
 
 Future dashboards should render this topology in business language: which repos

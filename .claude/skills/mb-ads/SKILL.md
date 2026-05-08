@@ -299,7 +299,16 @@ These patterns that work in standard ads will get rejected in Employment:
 ## Offer Context Resolution
 
 Before loading reference files, resolve active offer context with
-`.claude/reference/business-primitives/offer-bet-push-proof.md`.
+`.claude/reference/business-primitives/offer-bet-push-proof.md`:
+
+1. If a future `mb` JSON field exposes active offer state, use it.
+2. Do not treat `.vip/local.yaml` as canonical active-offer state. If legacy
+   state exists, confirm the offer with the user instead of silently routing.
+3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
+4. If no offer is selected AND `core/offers/` exists: ask which offer.
+5. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
+6. Legacy fallback: if the repo does not have `core/`, read the old
+   `reference/core/` and `reference/offers/` paths.
 
 In current repos, `reference/core` and `reference/offers` are compatibility
 bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
@@ -314,7 +323,7 @@ matching files under `core/offers/[active]/proof/`. Read older offer
 testimonial files as compatibility context only.
 
 **Offer argument:** `/mb-ads [mode] [offer] [campaign]` — e.g., `/mb-ads static community january-launch`
-If offer is specified, it sets the session offer context for this run.
+If offer specified, it selects the offer for this run only.
 
 ---
 
@@ -431,7 +440,7 @@ Before saving any batch, verify:
 
 If context was compacted mid-task, check:
 
-1. **Which offer?** Use the shared active-offer contract to restore or ask for offer context
+1. **Which offer?** Use a future `mb` JSON active-offer field if present; otherwise ask the user to restore offer context. Do not silently route from `.vip/local.yaml`.
 2. **What entry point?** Full pipeline, copy only, hook library, video scripts, review, account check
 3. **What stage?** Planning angles, writing hooks, generating prompts, reviewing, pulling account data
 4. **What's done?** Check `pushes/` (and legacy `campaigns/` on unmigrated repos) for partial work

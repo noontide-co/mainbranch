@@ -1,6 +1,8 @@
-# Config System
+# Legacy Config Cleanup
 
-Four-file system: Main Branch engine linkage, personal settings, team settings, and API keys — each in the right place.
+Main Branch now treats `.vip/*.yaml` as legacy cleanup/audit input. Runtime
+skills should prefer CWD-first repo detection, `mb status --json --peek`,
+`mb connect`, `mb onboard`, and current repo files over `.vip` YAML.
 
 ---
 
@@ -9,15 +11,18 @@ Four-file system: Main Branch engine linkage, personal settings, team settings, 
 | File | Location | Purpose | Git-tracked? |
 |------|----------|---------|--------------|
 | `settings.local.json` | `[repo]/.claude/` | Grants Claude Code file access to the active Main Branch engine | No (auto git-ignored by Claude Code) |
-| `local.yaml` | `~/.config/vip/` | Legacy machine-local file for user identity, engine path, and default repo | No |
+| `local.yaml` | `~/.config/vip/` | Legacy machine-local fallback for user identity, engine path, and default repo | No |
 | `env.sh` | `~/.config/vip/` | API keys for optional research tools | No |
-| `config.yaml` | `[repo]/.vip/` | Team/business settings, MCP requirements | Yes |
+| `config.yaml` | `[repo]/.vip/` | Legacy mixed repo config that must be audited before reuse | Maybe old repos tracked it |
 
 **Key split:**
 - **Settings** = "Where is Main Branch?" (per-repo, per-machine — `.claude/settings.local.json`)
-- **Local** = "Who am I? What repo do I want?" (per-person, per-machine)
+- **Local** = "Who am I? What repo do I want?" legacy fallback (per-person, per-machine)
 - **Env** = "What API keys do I have?" (per-person, sourced by shell)
-- **Repo** = "How does this business/team operate?" (shared)
+- **Repo** = current business truth in `core/`, `research/`, `decisions/`,
+  `bets/`, `pushes/`, `log/`, `documents/`, `.mb/connect.yaml`, and generated
+  repo instructions. Do not use `.vip/config.yaml` as the current shared
+  settings surface.
 
 ### .claude/settings.local.json (Main Branch linkage)
 
@@ -157,21 +162,21 @@ last_seen_version: "0.1.0"
 
 ---
 
-## Business Repo Config (Team Settings)
+## Legacy Business Repo Config Audit
 
 ```bash
-cat [repo]/.vip/config.yaml 2>/dev/null
+mb doctor repair --plan --json
 ```
 
-Key fields:
-- `session.auto_load_reference` → Load core/ automatically
-- `session.show_context_tips` → Team default for tips
-- `mcps` → Required MCP servers for this business
-- `tools` → Cached tool status (`status`, `notes`, `last_checked`) for self-healing detection in `/mb-start` and `/mb-think`
-- `infrastructure` → Shared team resources (Postiz, hosted tools, self-hosted services, etc.)
-- `skills` → Team defaults for skill behavior
+Older repos may have `[repo]/.vip/config.yaml` with mixed key families:
+business facts, MCP requirements, tool snapshots, infrastructure refs, content
+defaults, skill defaults, client repo pointers, and old reference-structure
+notes.
 
-**Note:** `user.name` and `user.experience` are NOT here — they're in local.yaml.
+Do not load it as current truth. The doctor repair plan classifies keys without
+printing raw values so private paths, provider notes, client context, and
+credentials are not copied into chat or durable files. Move only still-current,
+non-private facts into the appropriate current surface after operator review.
 
 ---
 
@@ -191,14 +196,12 @@ cat ~/.claude/settings.json 2>/dev/null | grep business_repo_path
 
 ---
 
-## Creating Missing Config
+## Missing Legacy Config
 
 If repo has `core/` or legacy `reference/core/` but no `.vip/config.yaml`:
 
-> "Your repo exists but doesn't have VIP config. Create it?
-> Benefits: faster startups, synced preferences, MCP tracking."
-
-If yes → Create `.vip/config.yaml` with defaults from `/mb-setup`.
+Do not create it. Use `mb status --json --peek`, `mb onboard status --json`,
+`mb connect plan`, and current repo files instead.
 
 ---
 
@@ -217,10 +220,9 @@ If yes → Create `.vip/config.yaml` with defaults from `/mb-setup`.
 
 | Skill | Reads | Purpose |
 |-------|-------|---------|
-| `/mb-start` | local.yaml | Find default repo, get user experience level |
-| `/mb-start` | repo config | Check MCP requirements, session preferences |
-| `/mb-help` | local.yaml | Adjust verbosity based on experience |
-| Any skill | repo config `skills.*` | Get skill-specific preferences |
+| `/mb-start` | legacy local.yaml only when CWD/config discovery fails | Find default/recent repos as fallback |
+| `/mb-start` | `mb status --json --peek`, `mb connect`, `mb onboard` | Check readiness, repairs, onboarding, provider state |
+| `/mb-help` | legacy local.yaml only as optional fallback | Adjust verbosity based on experience |
 | `/mb-ads`, `/mb-think` | local.yaml `media.*` | Resolve where non-markdown outputs go |
 
 ---
@@ -229,11 +231,11 @@ If yes → Create `.vip/config.yaml` with defaults from `/mb-setup`.
 
 | Trigger | What's Written | Where |
 |---------|----------------|-------|
-| `/mb-setup` first run | Full local.yaml + repo config | Both files |
-| User selects repo in `/mb-start` | `default_repo`, `recent_repos` | local.yaml |
+| `/mb-setup` first run | Current repo files, `.claude/settings.local.json`, skill links, `.mb/` state | Business repo |
+| User selects repo in `/mb-start` | `default_repo`, `recent_repos` only if legacy fallback is still being used and user confirms | local.yaml |
 | User says "I'm advanced" | `user.experience` | local.yaml |
-| User says "save as default" | Skill preference | repo config `skills.*` |
-| User connects infrastructure | `infrastructure.*` | repo config |
+| User says "save as default" | Prefer current skill/workflow inputs; do not write `.vip/config.yaml` | n/a (no write) |
+| User connects infrastructure | Provider metadata through `mb connect`; secrets stay local | `.mb/connect.yaml` and local secret stores |
 | User configures media path | `media.root` or `media.{type}` | local.yaml |
 
 **Rule:** Never write silently. Confirm changes that affect future sessions.
@@ -263,7 +265,7 @@ Config is always optional. Skills work without it.
 
 ```
 1. Try local.yaml → missing? → discovery
-2. Try repo config → missing? → use defaults
+2. Use `mb status --json --peek`, `mb connect`, and repo files for current facts
 3. Path invalid? → attempt recovery, then clear and rediscover
 4. Parse error? → warn, clear, rediscover
 ```

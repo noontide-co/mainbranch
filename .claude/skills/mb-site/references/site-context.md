@@ -34,11 +34,17 @@ to pass. Porkbun skipped is fine for the Cloudflare-registered path.
 
 ## Active Offer Resolution
 
-Before loading business context, resolve the active offer with the shared
-active-offer contract: use CLI/status facts first, ask when `core/offers/`
-exists and no current fact resolves the offer, treat the answer as
-session-scoped unless the operator approves saving local state, and read
-`.vip/local.yaml` only as a legacy clue.
+Before loading business context, resolve the active offer:
+
+1. If a future `mb` JSON field exposes active offer state, use it.
+2. Do not treat `.vip/local.yaml` as canonical active-offer state. If legacy
+   state exists, confirm the offer with the user instead of silently routing.
+3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
+4. If no offer is selected and `core/offers/` exists, ask which offer this site is for.
+5. If no `core/offers/` folder exists, use `core/offer.md` for a single-offer repo.
+
+Follow the shared active-offer contract in
+`.claude/reference/business-primitives/offer-bet-push-proof.md`.
 
 Always-core files, never per-offer: `soul.md`, `voice.md`, `content-strategy.md`.
 

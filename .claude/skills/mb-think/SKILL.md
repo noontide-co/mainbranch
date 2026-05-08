@@ -100,7 +100,16 @@ For self-healing semantics (stale false handling, status-change messaging, true-
 ## Offer Context Resolution
 
 Before loading reference files, resolve the active offer and target file type
-with `.claude/reference/business-primitives/offer-bet-push-proof.md`.
+with `.claude/reference/business-primitives/offer-bet-push-proof.md`:
+
+1. If a future `mb` JSON field exposes active offer state, use it.
+2. Do not treat `.vip/local.yaml` as canonical active-offer state. If legacy
+   state exists, confirm the offer with the user instead of silently routing.
+3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
+4. If no offer is selected AND `core/offers/` exists: ask which offer.
+5. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
+6. Legacy fallback: if the repo does not have `core/`, read the old
+   `reference/core/` and `reference/offers/` paths.
 
 In current repos, `reference/core` and `reference/offers` are compatibility
 bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
@@ -247,7 +256,7 @@ ls core/content-strategy.md 2>/dev/null
 | content-strategy.md exists but empty/thin | "Your content strategy file is a skeleton. Want to fill it in? We can derive pillars from your soul.md + offer.md + audience.md." |
 | content-strategy.md missing (community biz) | "You don't have a content strategy yet. Want to build one? It'll define your pillars, platforms, and cadence." |
 | skool-surfaces.md missing (community biz with live Skool) | "Your Skool about page and pricing card copy aren't in reference yet. Want to add them? Skills check this for congruence." |
-| `core/offers/` exists | Multi-offer repo. Use the shared active-offer contract. If CLI facts do not resolve the offer, ask which offer this research/decision is about or whether it is brand-level work. |
+| `core/offers/` exists | Multi-offer repo. Use a future `mb` JSON active-offer field if present. Otherwise ask which offer this research/decision is about; do not silently route from `.vip/local.yaml`. |
 | Nothing in progress | "What are you trying to figure out?" |
 
 **The goal is reference files.** Research and decisions are waypoints. Keep asking: "What needs to happen to get this into reference?"

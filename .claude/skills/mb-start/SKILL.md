@@ -100,7 +100,10 @@ Ask before renaming, deleting, merging, or moving offer folders.
 - CWD has `core/` or legacy `reference/core/` — user chose their repo by cd'ing into it
 - User explicitly ran `/mb-start [repo-name]` with a specific path
 
-**After user selects a repo:** If the selected repo is not the current `default_repo`, ask: "Want me to save [repo-name] as your default? (faster startup next time)" If yes, update `default_repo` in `~/.config/vip/local.yaml`.
+**After user selects a repo from legacy fallback config:** If the selected repo
+is not the current `default_repo`, ask: "Want me to save [repo-name] as your
+default? (faster startup next time)" If yes, merge-update `default_repo` in
+`~/.config/vip/local.yaml`. Do not create or update `.vip/config.yaml`.
 
 ---
 
@@ -196,7 +199,8 @@ The user starts Claude in their business repo. Check CWD first before falling ba
 ```
 1. test -d "core" || test -d "reference/core"  → THIS IS the business repo. Skip to config.
 2. test -f ".claude/skills/mb-start/SKILL.md"  → user is in the engine repo; migrate.
-3. Otherwise → fall back to ~/.config/vip/local.yaml.
+3. Otherwise → fall back to `~/.config/vip/local.yaml` only as legacy
+   machine-local repo memory.
 ```
 
 See **[references/repo-detection.md](references/repo-detection.md)** for the full flow: CWD detection, migration guidance for users in the engine repo, config loading, multi-repo selection, the discovery algorithm when no config exists, the canonical `REPO_PATH` variable, and the Main Branch wiring verification block.
@@ -342,7 +346,8 @@ files already exist, read enough of those files to avoid asking for facts the
 repo already contains. Keep this bounded: summarize the existing facts and ask
 only for confirmation or missing profile fields.
 
-**Multi-offer context:** If Step 8 resolves an offer for this session, note it for routing. Don't load the offer file — the selected skill will.
+**Multi-offer context:** If CLI facts or the current session identify an
+active offer, note it for routing; the selected skill loads the offer file.
 
 ---
 
@@ -355,24 +360,38 @@ Use the active-offer resolution contract in
 find "$REPO_PATH/core/offers" -mindepth 2 -maxdepth 2 -name "offer.md" 2>/dev/null
 ```
 
-If `core/offers` is absent but legacy `reference/offers` exists and `core/` is
-also absent, use `reference/offers` as the fallback. In current repos,
-`reference/offers` is a bridge to `core/offers`, not a separate offer tree.
+If `core/offers` is absent and `core/` is also absent, legacy
+`reference/offers` is fallback only. In current repos it bridges to
+`core/offers`.
 
-If no offers folder exists, use single-offer mode: `core/offer.md` is the
-durable offer truth. If offers exist, ask by slug/name unless CLI facts already
-resolved the context. Include `all` for brand-level portfolio work. Treat the
-choice as session-scoped unless the operator explicitly approves saving local
-state. Read `.vip/local.yaml` only as a legacy clue, confirm before using it,
-and never write it without approval.
+**If no offers/ folder:** Single-offer mode. Skip to Step 2. Everything reads from `core/`.
 
-**Shortcut:** `/mb-start [offer-name]` selects that offer for the current
-session after validating the folder exists. It does not silently persist
-session state. Ask before saving it as the future active offer.
+**If offers/ found:** Multi-offer mode.
+1. Check current CLI status facts first. If a future `mb` JSON field exposes
+   active-offer local state, prefer that. Do not silently route from
+   `.vip/local.yaml`.
+2. If legacy active-offer state is present, do not treat it as canonical. Say:
+   "This repo has old active-offer session state. Continue with that offer,
+   work brand-level, or switch?" Avoid echoing raw `.vip` values unless the
+   user asks to inspect the file.
+3. If no active offer is set, present offers by slug/name, not numbers when
+   ranked actions or routes are already numbered:
+   - `community` — paid community
+   - `newsletter` — newsletter
+   - `all` — brand-level work from `core/`
+4. Treat the user's selection as session-scoped until they explicitly confirm
+   persistence. Say what will happen before writing local state:
+   "For this session I'll use **[offer]**. Save that as the active offer for
+   future sessions too?"
+5. Keep the selection session-scoped. Do not write `.vip/local.yaml` as the
+   active-offer mechanism. If a future `mb` command exposes an explicit
+   session-state contract, use that only after confirmation.
 
-**"all" selection:** When user picks "all" or "brand-level work", use brand
-level `core/` context for this session. Ask before persisting any local state
-that clears an active offer.
+**Shortcut:** `/mb-start [offer-name]` selects that offer for this session after
+validating the folder exists. Ask before saving future active-offer state.
+
+**"all" selection:** Use brand-level `core/` context for this session. Ask
+before persisting any future local state that clears an active offer.
 
 ---
 
@@ -398,7 +417,7 @@ to `/mb-think`.
 
 **Respect readiness gates from Step 6.** If status is MINIMAL or EMPTY, do not offer output skills. If THIN, warn. See [readiness-assessment.md](references/readiness-assessment.md) for skill-specific requirements.
 
-**Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[selected offer or 'single']**"
+**Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[active offer or 'single']**"
 
 **Surface unread CHANGELOG entries before the menu**, present the triage route
 without reusing a number from recommendations or offers, and use the "while you
@@ -414,19 +433,18 @@ skip triage.
 
 "Help" or confused → route to `/mb-help`. Give quick overview first:
 
-> "1. **Main Branch** = engine (skills + frameworks, linked via setup). 2. **Your repo** = data (offer, audience, voice).
-> Daily: `cd your-business-repo && claude` then `/mb-start`.
-> For detailed help: `/mb-help` + your question."
+> "1. **Main Branch** = engine. 2. **Your repo** = business data. Daily:
+> `cd your-business-repo && claude` then `/mb-start`. Details: `/mb-help`."
 
 ---
 
 ## Context And Experience
 
 Fresh context gets a fuller load; working context routes directly; heavy context
-gets a brief warning; critical context routes to `/mb-end`. Read
-`user.experience` from `~/.config/vip/local.yaml`: beginner explains more,
-returning confirms quickly, expert routes fast. If the user asks for a faster
-mode, offer to update local experience.
+gets a brief warning; critical context routes to `/mb-end`. If legacy
+`~/.config/vip/local.yaml` has `user.experience`, use it as a machine-local
+fallback: beginner explains more, returning confirms quickly, expert routes
+fast. If the user asks for a faster mode, offer to update local experience.
 
 ---
 
@@ -457,10 +475,9 @@ Auto-detect user intent and route. Skills: `/mb-update`, `/mb-help`, `/mb-setup`
 
 ## Recovering from Compaction
 
-If re-invoked after compaction: re-read `~/.config/vip/local.yaml` for repo +
-identity, then use status/CLI facts for offer context if available. Read
-business-repo `.vip/local.yaml` only as a legacy clue. Confirm the restored
-context, but do not write local state without explicit approval.
+If re-invoked after compaction: use CWD and `mb status --json --peek` first;
+read `~/.config/vip/local.yaml` only as legacy fallback for repo + identity;
+treat business `.vip/local.yaml` as audit input only, and do not write it.
 
 ---
 
@@ -476,8 +493,6 @@ context, but do not write local state without explicit approval.
 - [references/tool-status-audit.md](references/tool-status-audit.md) — Step 5 provider/readiness audit
 - [references/triage-agent.md](references/triage-agent.md) — Triage agent prompts and synthesis
 - [references/launch-orchestration.md](references/launch-orchestration.md) — guided offer-launch path
-
----
 
 ## Remember
 

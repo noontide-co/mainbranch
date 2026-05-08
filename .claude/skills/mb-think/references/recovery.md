@@ -95,15 +95,16 @@ User can say any of these after compaction:
 
 Use the shared active-offer contract in
 `.claude/reference/business-primitives/offer-bet-push-proof.md` to restore
-which offer was being worked on.
+which offer was being worked on. Use a future `mb` JSON active-offer field if
+present. Otherwise infer from recent work or ask the user; do not silently
+restore offer context from `.vip/local.yaml`.
 
-If CLI facts or legacy clues do not resolve an offer, check recent `research/`
-and `decisions/` files for offer-specific prefixes (e.g.,
-`research/2026-02-04-community-pricing-analysis.md`).
+Check recent `research/` and `decisions/` files for offer-specific prefixes
+(e.g., `research/2026-02-04-community-pricing-analysis.md`).
 
 Confirm with user: "Were you working on [offer]?"
 
-If the repo has `core/offers/` but no offer is recoverable, ask before
+If the repo has `core/offers/` but no active offer is clear, ask before
 proceeding: "Which offer are you working on?" Use legacy `reference/offers/`
 only when `core/` is absent.
 

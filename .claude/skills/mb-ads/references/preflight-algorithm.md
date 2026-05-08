@@ -41,9 +41,17 @@ Score each file 0-3 based on line count + section presence.
 
 Use the shared offer-resolution rules in
 `.claude/reference/business-primitives/offer-bet-push-proof.md` before scoring
-offer and audience files. In multi-offer mode, ask which offer this ad work is
-for when CLI facts do not resolve it. Legacy `reference/` paths are
-compatibility bridges only when `core/` is absent.
+offer and audience files:
+
+1. If a future `mb` JSON field exposes active offer state, use it. Otherwise
+   ask the user which offer this work is for; do not silently route from
+   `.vip/local.yaml`.
+2. If an offer is selected and `core/offers/{offer}/offer.md` exists, score that file
+3. Otherwise fall back to `core/offer.md`
+4. Same resolution for `audience.md`
+5. Legacy fallback: if `core/` is absent, read old `reference/core/` and
+   `reference/offers/` paths. In current repos, those are compatibility bridges
+   to canonical `core/` paths, not duplicate files.
 
 See `docs/system-architecture.md` (Canonical Path Resolution) for the full algorithm.
 

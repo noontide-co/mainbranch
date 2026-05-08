@@ -19,6 +19,21 @@ def test_resolve_local_override(tmp_path: Path) -> None:
     assert out["is_stub"] is False
 
 
+def test_resolve_ignores_legacy_vip_path_overrides(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    (repo / ".vip").mkdir(parents=True)
+    (repo / ".vip" / "config.yaml").write_text(
+        "paths:\n  core: legacy-core\n",
+        encoding="utf-8",
+    )
+    (repo / "legacy-core").mkdir()
+    (repo / "legacy-core" / "voice.md").write_text("# Legacy voice\n", encoding="utf-8")
+
+    out = run(key="voice", repo=str(repo))
+
+    assert out["tier"] != "local"
+
+
 def test_resolve_unknown_key_returns_unresolved_or_stub(tmp_path: Path) -> None:
     repo = tmp_path / "biz"
     repo.mkdir()

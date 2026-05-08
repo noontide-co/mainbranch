@@ -108,7 +108,16 @@ For the full mining methodology (Visual/Audible/Emotional framework, AI capabili
 ## Offer Context Resolution
 
 Before loading reference files, resolve active offer context with
-`.claude/reference/business-primitives/offer-bet-push-proof.md`.
+`.claude/reference/business-primitives/offer-bet-push-proof.md`:
+
+1. If a future `mb` JSON field exposes active offer state, use it.
+2. Do not treat `.vip/local.yaml` as canonical active-offer state. If legacy
+   state exists, confirm the offer with the user instead of silently routing.
+3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
+4. If no offer is selected AND `core/offers/` exists: ask which offer.
+5. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
+6. Legacy fallback: if the repo does not have `core/`, read the old
+   `reference/core/` and `reference/offers/` paths.
 
 In current repos, `reference/core` and `reference/offers` are compatibility
 bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
@@ -123,7 +132,7 @@ matching files under `core/offers/[active]/proof/`. Read older offer
 testimonial files as compatibility context only.
 
 **Offer argument:** `/mb-organic video [offer] "concept"` — e.g., `/mb-organic video community "morning routine"`
-If offer is specified, it sets the session offer context for this run.
+If offer specified, it selects the offer for this run only.
 
 ---
 
