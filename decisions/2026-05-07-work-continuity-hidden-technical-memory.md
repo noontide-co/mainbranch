@@ -200,9 +200,9 @@ is deterministic, safe, and already supported by `mb update`. The operator
 surface should say plainly that Main Branch updated itself or that an update
 needs attention. It should not force the operator to reason about package
 managers, branches, or install modes unless the update fails or asks for help.
-Operators may opt out of automatic Main Branch tool updates through explicit
-configuration when they need pinned versions for a cohort, agency, or release
-window.
+Operators should be able to opt out of automatic Main Branch tool updates
+through explicit configuration when they need pinned versions for a cohort,
+agency, or release window.
 
 `/mb-start` may also help the business repo start from the latest saved
 work, but the operator-facing language should not say "behind remote,"
@@ -327,6 +327,8 @@ already belongs to `mb` and supported provider rails.
 - Keep future dashboards as views over repo, git, GitHub, graph, connectors,
   sidecars, provider facts, and checkpoints. They must not become the canonical
   task database.
+- Add an explicit opt-out config for automatic Main Branch tool updates before
+  making auto-update behavior the default daily-start path.
 - Decide any future "checks" primitive or daily-focus regeneration UI in a
   separate issue so this decision does not smuggle in a new surface.
 
