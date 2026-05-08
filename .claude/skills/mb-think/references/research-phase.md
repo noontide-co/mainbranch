@@ -130,14 +130,16 @@ only concise excerpts needed to support the synthesis.
 
 - Use Apify only as optional read-only enrichment when configured: YouTube
   transcripts, Instagram mining, public web scraping, and public X
-  profile/post/reply samples when actor metadata and a small smoke run support
-  the source.
+  profile/post/reply samples when actor metadata, operator-accepted terms, and
+  a small smoke run support the source. Treat public X actors as sidecar
+  research, not an official X integration.
 - Use Grok/xAI or web search for topic-level X/social sentiment when
   configured; otherwise ask for screenshots, public embeds, or manual exports.
 - Treat Postiz as scheduling/publishing support only where current docs and
   smoke evidence exist.
-- Do not recommend comment/DM automation through X API, Postiz, or
-  ManyChat-style providers as a supported Main Branch path.
+- Do not recommend comment/DM automation through X API, Postiz, Typefully,
+  Apify, browser automation, or ManyChat-style providers as a supported Main
+  Branch path.
 
 ---
 
@@ -268,7 +270,9 @@ User: "What are people saying about Skool communities?"
 
 When the user provides a specific public X/Twitter post or profile and asks
 what the post, comments, or nearby profile pattern is doing, use Apify as
-optional read-only enrichment when configured.
+optional read-only enrichment only when configured and when the operator
+accepts the source, terms, cost, and reliability tradeoffs. Otherwise use
+Grok/xAI, web search, public embeds, screenshots, or manual exports.
 
 **Trigger phrases:**
 - "mine this X post"
@@ -305,6 +309,8 @@ optional read-only enrichment when configured.
   mechanic, but they are weak audience language unless replies are substantive.
 - Do not claim Apify can access DMs, private analytics, protected accounts, or
   account mutation.
+- Do not ask for X session cookies or use browser automation as product
+  guidance. Those belong outside Main Branch-supported X workflows.
 - Durable outputs go to `research/YYYY-MM-DD-[topic]-x-public-mining.md` or
   into synthesized strategy files; raw scrape dumps stay out of committed repos.
 

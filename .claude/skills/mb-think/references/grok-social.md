@@ -50,8 +50,10 @@ Real-time social intelligence from X/Twitter using xAI's Grok API.
 - Content that lives in articles/blogs (use web search)
 - Private DMs, account analytics, protected accounts, or account-private data
 - Posting, replying, liking, following, DMing, or other X account mutation
-- Guaranteed full reply-tree/comment scraping for a specific post; use Apify
-  public X mining as a read-only sample path when that is the actual question
+- Guaranteed full reply-tree/comment scraping for a specific post; use optional
+  public X mining only as a read-only sample path when that is the actual
+  question and the operator accepts the source, terms, cost, and reliability
+  tradeoffs
 
 ---
 

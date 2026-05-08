@@ -444,6 +444,10 @@ does not execute comment-to-DM, auto-reply, follow, or inbox automation through
 organic generation. Fulfillment stays manual or inside a separately approved
 provider path.
 
+For X/Twitter, prefer public resource delivery: put the resource in the post,
+thread, repo link, landing page, or a manual public reply/link playbook. Do not
+frame "comment for the DM" as a Main Branch-executable workflow.
+
 ---
 
 ## Platform-Specific Notes
