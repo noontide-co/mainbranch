@@ -64,7 +64,7 @@ That's it. `mb onboard` guides the human setup, creates or connects your busines
 After the first session, the daily flow is:
 
 ```bash
-cd ~/Documents/GitHub/my-business
+cd /path/to/my-business
 claude
 /mb-start
 ```
@@ -320,6 +320,7 @@ repo understandable, current, and safe to operate from.
 
 - **Built for Claude Code today.** `mb` is runtime-agnostic by design, but Claude Code is the only first-class runtime currently supported end to end.
 - **The terminal front door is live.** Bare `mb`, `mb onboard`, `mb status`, `mb start`, and `mb update` are in the public package.
+- **Packaged callers can use the CLI directly.** Paperclip-style routines, local scripts, and future adapters should invoke deterministic `mb` commands against an explicit business repo path and read JSON/exit codes. See [docs/compatibility.md](docs/compatibility.md).
 - **Growth is the strongest shipped wedge.** Ads, organic, VSLs, sites, bets, pushes, status, and checkpoints are the most developed public workflows.
 - **Ops is the expansion path.** Meetings, fulfillment, bookkeeping/P&L, team daily logs, repo topology, and dashboard views use the same memory model, but they are less shipped than the growth surfaces.
 - **Provider automation is curated and gated.** GitHub and Cloudflare paths are the most concrete today. Google/Workspace, Meta Ads, Google Ads/GTM, Postiz, Apify, Beancount, and transcription are wired as planned or optional provider/sidecar surfaces until each path has matching smoke evidence for the claimed surface.
@@ -332,8 +333,14 @@ repo understandable, current, and safe to operate from.
 | Codex | Roadmap | Target runtime; no public adapter support claim yet. |
 | Cursor | Roadmap | Target runtime; no public adapter support claim yet. |
 | OpenClaw | Roadmap | First-tier compatibility target because users operate there; no adapter support claim yet. |
-| Hermes / Paperclip-adjacent orchestration | Roadmap | Target orchestration layer; must consume stable repo and JSON contracts. |
+| Hermes | Roadmap | Target runtime/memory surface; no public adapter support claim yet. |
+| Paperclip-adjacent orchestration | Roadmap | Target orchestration layer; should supervise shipped `mb` CLI/JSON commands without assuming Claude Code skills are present. |
 | Local runtimes | Roadmap | Long-range endpoint once adapter contracts are proven. |
+
+For the package/runtime caller contract, repo-path discovery rules, and the
+adapter/readiness map across invocation, workflow discovery, routing,
+automation, observability, and packaging, see
+[docs/compatibility.md](docs/compatibility.md).
 
 The engine v0.1.0 decision lives at [`decisions/2026-04-29-mb-vip-v0-1-0-master.md`](decisions/2026-04-29-mb-vip-v0-1-0-master.md). Some historical planning happened in private Noontide repos; public product truth now lives in this repository's decisions, docs, issues, changelog, and releases.
 
