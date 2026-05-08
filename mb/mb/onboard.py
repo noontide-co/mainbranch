@@ -33,7 +33,7 @@ BOUNDARIES = {
         "full finances or ledgers",
         "raw customer/member exports",
         "credentials, tokens, and private account secrets",
-        "exhaustive operations documentation outside the core reference",
+        "exhaustive operations documentation outside the core files",
     ],
 }
 
@@ -479,7 +479,7 @@ def _checklist(repo: Path, state: dict[str, Any], markers: dict[str, bool]) -> l
         ),
         _step(
             step_id="core_reference",
-            title="Core reference",
+            title="Core files",
             complete=not missing_core,
             missing_inputs=missing_core,
             next_action=(

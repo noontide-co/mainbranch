@@ -48,7 +48,7 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
 ## 4. State Model
 
 - [ ] Canonical business truth stays in the business repo and git history:
-  reference files, research, decisions, plans, campaign artifacts, durable
+  core files, research, decisions, bets, pushes, logs, documents, durable
   summaries, and proposal changes.
 - [ ] `.mb/` is used only for explicit Main Branch operational state such as
   schema markers, repo-safe connection metadata, backups, indexes, or caches.
@@ -108,6 +108,10 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
   `scripts/claude-runtime-dogfood.py` for deterministic fixture, CLI,
   repo-boundary, and evidence-template collection, with print-mode evidence
   labeled as a proxy when used.
+- [ ] Runtime or release-validation changes choose the appropriate
+  [release simulation tier](release-simulations.md) and route transcript
+  findings to skill prose, generated `CLAUDE.md`, CLI, docs, harness, runtime,
+  or user-education follow-ups.
 - [ ] Bundled `templates/` and the fixture business-repo flow stay in sync with
   `.mb/` schema, skill-discovery, and onboarding changes.
 - [ ] `CHANGELOG.md` is updated for user-visible CLI, skill, packaging,

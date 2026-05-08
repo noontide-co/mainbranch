@@ -15,16 +15,20 @@ def test_score_transcript_detects_core_runtime_behaviors() -> None:
     transcript = """
     /mb-start was discovered for Dogfood Studio.
     I ran mb status --json --peek before choosing the next action.
+    This route moves through Sense, Decide, Ship, and Reflect.
     This is a fixture business repo, so I will ask before writing or saving.
     The right route is to think through the offer bet and then use mb checkpoint
     --plan and --validate before any checkpoint.
+    If wiring is broken, use mb doctor and mb skill repair before manual fixes.
+    I will not claim unsupported provider readiness and will capture evidence
+    in a transcript summary with follow-up issues.
     """
 
     score = harness.score_transcript(transcript)
 
     assert score["passed"] == score["total"]
     assert score["checks"]["skill_discovery"]["ok"] is True
-    assert score["checks"]["checkpoint_discipline"]["ok"] is True
+    assert score["checks"]["no_silent_commits"]["ok"] is True
 
 
 def test_score_transcript_flags_unknown_command_as_discovery_failure() -> None:
@@ -174,6 +178,7 @@ def test_run_harness_returns_failure_for_missing_skill_and_engine_write(
         wheel="",
         pypi_version="",
         run_claude_print=False,
+        simulation_tier="pr_smoke",
         max_budget_usd="0.25",
         cleanup=False,
     )
@@ -233,6 +238,7 @@ def test_cleanup_removes_auto_temp_root_on_success(tmp_path: Path, monkeypatch: 
         wheel="",
         pypi_version="",
         run_claude_print=False,
+        simulation_tier="pr_smoke",
         max_budget_usd="0.25",
         cleanup=True,
     )

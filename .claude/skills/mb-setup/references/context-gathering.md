@@ -124,6 +124,6 @@ Only say "we have enough" when you can fill:
 | domain/ | Business-type specific structure |
 
 After each batch of content, assess gaps:
-> "Got it. I still need [X, Y, Z] to complete your reference files. Can you share those?"
+> "Got it. I still need [X, Y, Z] to complete your core files. Can you share those?"
 
 Keep asking until YOU determine completeness. Users will provide in batches — that's normal.

@@ -60,7 +60,11 @@ The git repo remains the source of truth:
 - `core/` for evergreen reference;
 - `research/` for investigations;
 - `decisions/` for choices and rationale;
-- `campaigns/`, `log/`, `documents/`, and finance files for operating history.
+- `bets/`, `pushes/`, `log/`, `documents/`, and finance files for operating
+  history.
+
+Legacy `campaigns/` records are compatibility reads after the push primitive
+decision; new coordinated work belongs under `pushes/`.
 
 Markdown stays human-readable. Git history stays inspectable. No database
 replaces the files.

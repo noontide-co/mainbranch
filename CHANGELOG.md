@@ -17,6 +17,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   harness that creates a sanitized fixture business repo, runs deterministic
   CLI/runtime-handoff checks, captures public-safe evidence artifacts, and can
   optionally run a labeled `claude -p` print-mode proxy smoke. Refs #364.
+- Added a release simulation suite manifest, prompt fixtures, expected-behavior
+  rubrics, transcript-review categories, and release-tier documentation for
+  PR smoke, pre-release candidate, and release acceptance evidence. Refs #368.
 - Added a public Claude Code runtime dogfood runbook for release-bearing manual
   smoke evidence, including sanitized fixture setup, read-only CLI checks,
   `/mb-start`, `/mb-think`, `/mb-organic`, checkpoint behavior, repo-boundary
@@ -24,6 +27,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Fresh business repo `CLAUDE.md` files now make the bootstrap CLI-first:
+  Claude Code is told to read `mb` status/start/doctor facts before setup or
+  repair advice, separate read-only checks from write/apply repairs, and return
+  technical repair results in business-owner language. Refs #353.
+- Hardened old-layout migration output so dry-runs show safe next commands,
+  planned backup location, and source-to-target conflict context before apply;
+  bumped the migration JSON envelope schema to v2 for the new per-action
+  `backup` and `next` fields; refreshed docs and bundled skill guidance away
+  from current `reference/` and `campaigns/` write targets. Refs #284.
 - Documented the public build-vs-wrap-vs-sidecar boundary for provider CLIs,
   MCP servers, hosted workflows, and future sidecars, with concrete guidance
   for Cloudflare, Postiz, Apify/X research, Vercel-style platforms,

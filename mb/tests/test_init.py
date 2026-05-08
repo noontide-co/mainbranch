@@ -5,7 +5,49 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from mb.init import DATA_FOLDERS, run
+from mb.init import _DEFAULT_CLAUDE, DATA_FOLDERS, _read_template, run
+
+
+def _section(text: str, start: str, end: str) -> str:
+    start_index = text.index(start)
+    end_index = text.index(end, start_index)
+    return text[start_index:end_index]
+
+
+def _assert_claude_md_cli_first_contract(text: str) -> None:
+    assert "## Claude operating contract" in text
+    assert "Main Branch CLI facts are the source of truth" in text
+    assert "run `claude`" in text
+    assert "`/mb-start` inside Claude Code" in text
+    assert "mb start --launch" in text
+    assert "mb --version" in text
+    assert "mb status --json --peek" in text
+    assert "mb start --json" in text
+    assert "mb doctor repair --plan" in text
+    assert "Do not replace those facts with ad hoc shell inspection" in text
+    assert "Read-only commands can be run without asking first" in text
+    assert "require explicit operator approval before applying" in text
+    assert "mb skill repair --repo ." in text
+    assert "mb skill link --repo .          # writes project-local Claude skill wiring" in text
+    assert "mb skill repair --repo . --apply" in text
+    assert "mb doctor repair --apply" in text
+    assert "If `/mb-start` is not discoverable" in text
+    assert "restart Claude Code from this repo and try" in text
+    assert "business-owner language" in text
+    assert "bets, goals, offers, pushes" in text
+    assert "playbooks, outcomes" in text
+    assert "Claude Desktop" not in text
+    for unsupported_runtime in ("Codex", "Cursor", "OpenClaw", "Hermes"):
+        assert unsupported_runtime not in text
+
+
+def test_default_claude_operating_contract_matches_template() -> None:
+    template = _read_template("CLAUDE.md.tmpl")
+    template_contract = _section(template, "## Claude operating contract", "## Folders")
+    fallback_contract = _section(_DEFAULT_CLAUDE, "## Claude operating contract", "## Folders")
+
+    assert fallback_contract == template_contract
+    _assert_claude_md_cli_first_contract(_DEFAULT_CLAUDE)
 
 
 def test_init_scaffolds_folders(tmp_path: Path) -> None:
@@ -68,6 +110,7 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "`pushes/`" in claude_md
     assert "core/vocabulary.md" in claude_md
     assert "legacy `campaigns/`" in claude_md
+    _assert_claude_md_cli_first_contract(claude_md)
 
 
 def test_init_idempotent(tmp_path: Path) -> None:

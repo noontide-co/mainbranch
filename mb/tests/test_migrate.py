@@ -79,7 +79,7 @@ def test_migrate_status_reports_pending_legacy_schema(tmp_path: Path) -> None:
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert payload["schema"] == "mb.migrate"
-    assert payload["schema_version"] == 1
+    assert payload["schema_version"] == 2
     assert payload["current_version"] == "0.1"
     assert payload["latest_version"] == "0.2"
     assert payload["pending"][0]["name"] == "001_v01_to_v02_path_config"
@@ -119,6 +119,7 @@ def test_migrate_check_diff_is_explicit(tmp_path: Path) -> None:
     assert "+++ b/core/content-strategy.md" in result.stdout
     assert "+++ b/core/product-ladder.md" in result.stdout
     assert "+++ b/core/operations/funnel/skool-surfaces.md" in result.stdout
+    assert "+++ b/campaigns/.gitkeep" not in result.stdout
     assert "+++ b/.gitignore" in result.stdout
     assert "+.mb/backups/" in result.stdout
     assert "+++ b/.mb/schema_version" in result.stdout
@@ -138,6 +139,14 @@ def test_migrate_check_json_exposes_same_plan(tmp_path: Path) -> None:
     assert payload["plan"]["diff"] == ""
     assert "Full file diffs are hidden by default" in payload["plan"]["privacy_note"]
     assert payload["plan"]["migrations"][0]["migration"]["id"] == "001"
+    changes = payload["plan"]["migrations"][0]["changes"]
+    assert {"kind": "mkdir", "path": "pushes", "source": "", "target": ""} in changes
+    assert not any(change["path"] == "campaigns" for change in changes)
+    assert payload["backup"]["will_create"] is True
+    assert payload["backup"]["directory"] == ".mb/backups/"
+    assert payload["next"] == (
+        "Review this dry-run. If it matches the move you want, run `mb migrate --apply`."
+    )
 
 
 def test_migrate_check_json_diff_is_explicit(tmp_path: Path) -> None:
@@ -199,6 +208,8 @@ def test_migrate_apply_moves_files_backs_up_and_is_idempotent(tmp_path: Path) ->
     assert (repo / "core" / "content-strategy.md").exists()
     assert (repo / "core" / "product-ladder.md").exists()
     assert (repo / "core" / "operations" / "funnel" / "skool-surfaces.md").exists()
+    assert (repo / "pushes" / ".gitkeep").exists()
+    assert not (repo / "campaigns").exists()
     assert (repo / "reference" / "core").is_symlink()
     assert (repo / "reference" / "offers").is_symlink()
     assert not (repo / "reference" / "proof").exists()
@@ -265,9 +276,32 @@ def test_migrate_apply_aborts_before_writes_on_conflict(tmp_path: Path) -> None:
     assert result.exit_code == 1
     payload = json.loads(result.stdout)
     assert payload["ok"] is False
-    assert "core/offer.md already exists with different contents" in payload["errors"]
+    assert any(
+        "core/offer.md already exists with different contents" in error
+        for error in payload["errors"]
+    )
+    assert any("from reference/core/offer.md" in error for error in payload["errors"])
+    assert "rerun `mb migrate --check`" in payload["next"]
     assert not (repo / ".mb" / "backups").exists()
     assert (repo / "reference" / "core" / "offer.md").exists()
+
+
+def test_migrate_check_conflict_renders_plan_and_safe_next_command(tmp_path: Path) -> None:
+    repo = _legacy_repo(tmp_path)
+    (repo / "core").mkdir()
+    (repo / "core" / "offer.md").write_text("# Different\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["migrate", "--repo", str(repo), "--check"])
+
+    assert result.exit_code == 1
+    assert "migration blocked; no files changed." in result.stdout
+    assert (
+        "error: core/offer.md already exists with different contents "
+        "(from reference/core/offer.md); manual reconciliation required"
+    ) in result.stdout
+    assert "pending migration changes:" in result.stdout
+    assert "move_file: reference/core/audience.md -> core/audience.md" in result.stdout
+    assert "next: Do not apply yet." in result.stdout
 
 
 def test_migrate_apply_reports_structured_error_when_legacy_dir_is_not_empty(

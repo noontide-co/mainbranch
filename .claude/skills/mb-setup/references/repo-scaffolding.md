@@ -181,25 +181,31 @@ EOF
 ```bash
 GITIGNORE="$REPO_PATH/.gitignore"
 
-if ! grep -q "MAIN BRANCH BRIDGE LINKS" "$GITIGNORE" 2>/dev/null; then
+ensure_gitignore_entry() {
+  entry="$1"
+  grep -qxF "$entry" "$GITIGNORE" 2>/dev/null || echo "$entry" >> "$GITIGNORE"
+}
+
+if ! grep -q "MAIN BRANCH MACHINE-LOCAL" "$GITIGNORE" 2>/dev/null; then
   cat >> "$GITIGNORE" << 'GITIGNORE_BLOCK'
 
-# === MAIN BRANCH BRIDGE LINKS (machine-local, do not commit) ===
-.claude/lenses/
-.claude/reference/
+# === MAIN BRANCH MACHINE-LOCAL (do not commit) ===
 GITIGNORE_BLOCK
-
-  # Add each Main Branch skill symlink individually (preserves custom skill tracking)
-  for d in "$ENGINE_PATH"/.claude/skills/*/; do
-    [ -d "$d" ] || continue
-    n=$(basename "$d")
-    echo ".claude/skills/$n" >> "$GITIGNORE"
-  done
 fi
+
+ensure_gitignore_entry ".claude/settings.local.json"
+ensure_gitignore_entry ".claude/worktrees/"
+
+# Add each Main Branch skill symlink individually (preserves custom skill tracking)
+for d in "$ENGINE_PATH"/.claude/skills/*/; do
+  [ -d "$d" ] || continue
+  n=$(basename "$d")
+  ensure_gitignore_entry ".claude/skills/$n"
+done
 ```
 
 **Why `.claude/settings.local.json` is git-ignored:** Claude Code auto-ignores this file, but we add it explicitly for safety. It contains machine-specific absolute paths to Main Branch (`additionalDirectories`) that differ per computer.
 
-**Why per-skill entries (not `.claude/skills/`):** Users have custom skills (deck, pr-review, etc.) that ARE tracked in git. Ignoring the whole folder would hide those. We only ignore the Main Branch-linked symlinks. `.claude/lenses/` and `.claude/reference/` are blanket-ignored because they're 100% Main Branch content; no user files live there.
+**Why per-skill entries (not `.claude/skills/`):** Users have custom skills (deck, pr-review, etc.) that ARE tracked in git. Ignoring the whole folder would hide those. We only ignore the Main Branch-linked symlinks. Old clone-based `.claude/lenses/` and `.claude/reference/` dirs are legacy link dirs; repair them with `mb doctor repair` instead of teaching them as current setup.
 
 **Why `.vip/local.yaml` is git-ignored:** It stores session state like `current_offer` -- which offer you're working on right now. This is per-machine, per-session. The git-tracked `.vip/config.yaml` holds team/business settings that should be shared.

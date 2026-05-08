@@ -215,9 +215,9 @@ Check for a common stuck state:
 
 ```
 if decisions/ has 3+ files with status: accepted
-AND reference/ has gaps (composite < 12)
+AND core/ has gaps (composite < 12)
 THEN surface:
-  "You have accepted decisions that haven't been applied to reference.
+  "You have accepted decisions that haven't been applied to core files.
    Want to run parallel agents to codify them?"
 ```
 

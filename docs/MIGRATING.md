@@ -2,8 +2,9 @@
 
 Main Branch has two repo shapes in the wild:
 
-- **Legacy shape:** `reference/core/`, `reference/domain/`,
-  `reference/proof/`, `reference/visual-identity/`, and `outputs/`.
+- **Legacy shape:** old clone-era folders such as `reference/core/`,
+  `reference/domain/`, `reference/proof/`, `reference/visual-identity/`, and
+  generated `outputs/`.
 - **Current shape:** `core/`, `research/`, `decisions/`, `bets/`, `log/`,
   `pushes/`, and `documents/`. `reference/` is compatibility-only for old
   repos and old readers; `campaigns/` is also compatibility-only and
@@ -334,7 +335,7 @@ mb migrate --repo /path/to/your-business status
 mb migrate status --repo /path/to/your-business
 ```
 
-Preview the filesystem changes:
+Preview the filesystem changes before any layout write:
 
 ```bash
 mb migrate --check
@@ -344,28 +345,55 @@ mb migrate --check --json
 By default, `--check` is privacy-safe: it prints path/action summaries and JSON
 counts without embedding full file bodies from your legacy reference files.
 Those files can contain private strategy, proof, offer details, or customer
-language. Only print the full unified diff when it will stay local:
+language. It also tells you:
+
+- which old paths were found;
+- where each file would move;
+- whether a current-path file already exists with different contents;
+- whether manual reconciliation is required before apply;
+- that apply will create a timestamped backup under `.mb/backups/`;
+- the exact next command that is safe to run.
+
+If `--check` reports a conflict, stop. Do not run `--apply`. Open the current
+path and the old `reference/` source, decide which content should win, make that
+edit intentionally, and rerun:
+
+```bash
+mb migrate --check
+```
+
+Only print the full unified diff when it will stay local:
 
 ```bash
 mb migrate --check --diff
 mb migrate --check --diff --json
 ```
 
-`--check` exits non-zero when migrations are pending so scripts and agents can
-detect drift without writing files. The path migration ignores local OS metadata
-such as `.DS_Store`, `Thumbs.db`, `Desktop.ini`, and AppleDouble `._*` files.
+`--check` exits non-zero when migrations are pending or blocked so scripts and
+agents can detect drift without writing files. The path migration ignores local
+OS metadata such as `.DS_Store`, `Thumbs.db`, `Desktop.ini`, and AppleDouble
+`._*` files.
 
-Apply only after reading the diff:
+Apply only after reading the dry-run and confirming it is the move you want:
 
 ```bash
 mb migrate --apply
 ```
 
-`--apply` creates a repo-local backup under `.mb/backups/` before changing files,
-moves legacy core files into `core/`, moves legacy offer files into
+`--apply` creates a repo-local backup under `.mb/backups/` before changing
+files, moves legacy core files into `core/`, moves legacy offer files into
 `core/offers/`, leaves compatibility links under `reference/`, updates stale
 `CLAUDE.md` path references, writes a migration decision artifact, and stamps
-`.mb/schema_version`.
+`.mb/schema_version`. If a current-path file already exists with different
+contents, apply refuses before writing and tells you to reconcile the conflict
+through another dry-run.
+
+Repos migrated by an earlier Main Branch release may already have
+`.mb/schema_version` set and a legacy empty `campaigns/` compatibility folder.
+The schema marker intentionally prevents rerunning the old layout migration.
+Those repos should add `pushes/` with `mb doctor repair` or normal current
+scaffolding, and should preview any existing campaign records separately with
+`mb migrate campaigns --plan`.
 
 Those compatibility links exist so older readers keep working. Current skills
 and agents should treat `core/` and `core/offers/` as the write targets.
@@ -390,8 +418,10 @@ skill behavior, write paths, or runtime discovery.
 
 ## Manual Layout Migration
 
-The automated command above is preferred. Keep this manual process only as a
-fallback when you need to inspect or repair a repo by hand.
+The automated command above is preferred because it reports conflicts and
+creates backups before mutation. Keep this manual process only as a power-user
+fallback when `mb migrate --check` cannot model the repo and you need to inspect
+or repair a copy by hand.
 
 Only do this on a clean branch with everything committed:
 
@@ -401,23 +431,60 @@ git status --short
 git switch -c migrate-mainbranch-layout
 ```
 
-For repos with `reference/core/`, move the core files to the current root
-`core/` folder and leave a compatibility link behind:
+Create your own backup first. Do not delete or overwrite current-path files
+while doing a manual migration:
+
+```bash
+mkdir -p .mb/backups
+cp -a reference ".mb/backups/manual-reference-$(date +%Y%m%d-%H%M%S)"
+```
+
+For repos with old `reference/core/`, inspect the move first:
+
+```bash
+find reference/core -maxdepth 1 -type f -print
+find core -maxdepth 1 -type f -print 2>/dev/null || true
+```
+
+If a destination file already exists, reconcile it manually before moving the
+old source. Only move files when the target path is empty or you have already
+merged the content:
 
 ```bash
 mkdir -p core
-git mv reference/core/* core/
-rmdir reference/core
-ln -s ../core reference/core
+for file in reference/core/*; do
+  [ -e "$file" ] || continue
+  target="core/$(basename "$file")"
+  if [ -e "$target" ]; then
+    echo "conflict: $file -> $target"
+  else
+    git mv "$file" "$target"
+  fi
+done
 ```
 
-For repos with `reference/offers/`, do the same for offer-specific files:
+For repos with old `reference/offers/`, do the same for offer-specific files:
 
 ```bash
 mkdir -p core/offers
-git mv reference/offers/* core/offers/
-rmdir reference/offers
-ln -s ../core/offers reference/offers
+for file in reference/offers/*; do
+  [ -e "$file" ] || continue
+  target="core/offers/$(basename "$file")"
+  if [ -e "$target" ]; then
+    echo "conflict: $file -> $target"
+  else
+    git mv "$file" "$target"
+  fi
+done
+```
+
+After every conflict is resolved and the old folders are empty, leave
+compatibility links behind:
+
+```bash
+rmdir reference/core reference/offers 2>/dev/null || true
+[ -e reference/core ] || ln -s ../core reference/core
+[ -e reference/offers ] || ln -s ../core/offers reference/offers
 ```
 
 Then add the current empty working folders:

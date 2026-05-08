@@ -17,7 +17,7 @@ from mb import migrations
 from mb.migrations.base import MigrationInfo, MigrationPlan, PlannedChange
 
 ENVELOPE_SCHEMA = "mb.migrate"
-ENVELOPE_SCHEMA_VERSION = 1
+ENVELOPE_SCHEMA_VERSION = 2
 LATEST_SCHEMA_VERSION = "0.2"
 SCHEMA_MARKER = ".mb/schema_version"
 BACKUPS_GITIGNORE_ENTRY = ".mb/backups/"
@@ -180,9 +180,51 @@ def _plan_dict(plan: MigrationPlan) -> dict[str, Any]:
     }
 
 
+def _plan_has_changes(plans: list[MigrationPlan]) -> bool:
+    return any(plan.has_changes for plan in plans)
+
+
+def _backup_hint(plans: list[MigrationPlan]) -> dict[str, Any]:
+    return {
+        "will_create": bool(plans and _plan_has_changes(plans)),
+        "directory": ".mb/backups/",
+        "note": (
+            "`mb migrate --apply` creates a timestamped repo-local backup before changing files."
+        ),
+    }
+
+
+def _next_after_status(result: dict[str, Any]) -> str:
+    if result.get("pending"):
+        return "Run `mb migrate --check` to preview the migration before applying it."
+    return "No layout migration is pending."
+
+
+def _next_after_check(result: dict[str, Any]) -> str:
+    if result.get("errors"):
+        return (
+            "Do not apply yet. Reconcile the reported conflicts, then rerun `mb migrate --check`."
+        )
+    plan = result.get("plan") or {}
+    if plan.get("has_changes"):
+        return "Review this dry-run. If it matches the move you want, run `mb migrate --apply`."
+    return "No layout migration is pending."
+
+
+def _next_after_apply(result: dict[str, Any]) -> str:
+    if result.get("errors"):
+        return (
+            "No further migration writes are safe yet. Review the backup path if "
+            "one was created, reconcile the error, then rerun `mb migrate --check`."
+        )
+    if result.get("applied"):
+        return "Run `mb doctor`, `mb validate`, and `mb start --json` from the migrated repo."
+    return "No layout migration was applied."
+
+
 def _base_envelope(repo: Path, action: str) -> dict[str, Any]:
     pending = pending_migrations(repo)
-    return {
+    result = {
         "schema": ENVELOPE_SCHEMA,
         "schema_version": ENVELOPE_SCHEMA_VERSION,
         "ok": True,
@@ -195,7 +237,10 @@ def _base_envelope(repo: Path, action: str) -> dict[str, Any]:
         "applied": [],
         "backup": None,
         "errors": [],
+        "next": "",
     }
+    result["next"] = _next_after_status(result)
+    return result
 
 
 def status(repo: str | Path = ".") -> dict[str, Any]:
@@ -225,7 +270,9 @@ def check(repo: str | Path = ".", *, include_diff: bool = False) -> dict[str, An
         ),
         "errors": errors,
     }
+    result["backup"] = _backup_hint(plans)
     result["errors"] = errors
+    result["next"] = _next_after_check(result)
     return result
 
 
@@ -350,9 +397,11 @@ def apply(repo: str | Path = ".") -> dict[str, Any]:
     _ensure_gitignore_plan(target, plans)
     if result["errors"]:
         result["ok"] = False
+        result["next"] = _next_after_apply(result)
         return result
     if not plans:
         result["ok"] = True
+        result["next"] = _next_after_apply(result)
         return result
 
     backup_dir = _backup_path(target, [plan.migration.id for plan in plans])
@@ -371,6 +420,7 @@ def apply(repo: str | Path = ".") -> dict[str, Any]:
                 result["ok"] = False
                 result["errors"].append(str(exc))
                 result["backup"] = {"path": str(backup_dir), "copied": copied}
+                result["next"] = _next_after_apply(result)
                 return result
 
     marker = _marker_path(target)
@@ -382,6 +432,7 @@ def apply(repo: str | Path = ".") -> dict[str, Any]:
     result["pending"] = []
     result["applied"] = [_migration_dict(plan.migration) for plan in plans]
     result["backup"] = {"path": str(backup_dir), "copied": copied}
+    result["next"] = _next_after_apply(result)
     return result
 
 
@@ -394,39 +445,61 @@ def render_status(result: dict[str, Any]) -> None:
             print(f"  {item['id']} {item['name']} ({item['from_version']} -> {item['to_version']})")
     else:
         print("pending migrations: none")
+    if result.get("next"):
+        print(f"next: {result['next']}")
+
+
+def _render_plan_summary(plan: dict[str, Any]) -> None:
+    print("pending migration changes:")
+    for migration in plan.get("migrations", []):
+        info = migration["migration"]
+        print(f"  {info['id']} {info['name']} ({info['from_version']} -> {info['to_version']})")
+        for change in migration.get("changes", []):
+            detail = change.get("path") or change.get("target") or change.get("source")
+            if change.get("kind") == "move_file":
+                detail = f"{change.get('source')} -> {change.get('target')}"
+            print(f"    - {change.get('kind')}: {detail}")
 
 
 def render_check(result: dict[str, Any]) -> None:
     plan = result.get("plan") or {}
     errors = result.get("errors", [])
     if errors:
+        print("migration blocked; no files changed.")
         for error in errors:
             print(f"error: {error}")
+        if plan.get("has_changes"):
+            print()
+            _render_plan_summary(plan)
+        if result.get("next"):
+            print()
+            print(f"next: {result['next']}")
         return
     diff = str(plan.get("diff", ""))
     if diff:
         print(diff, end="")
     elif plan.get("has_changes"):
-        print("pending migration changes:")
-        for migration in plan.get("migrations", []):
-            info = migration["migration"]
-            print(f"  {info['id']} {info['name']} ({info['from_version']} -> {info['to_version']})")
-            for change in migration.get("changes", []):
-                detail = change.get("path") or change.get("target") or change.get("source")
-                if change.get("kind") == "move_file":
-                    detail = f"{change.get('source')} -> {change.get('target')}"
-                print(f"    - {change.get('kind')}: {detail}")
+        _render_plan_summary(plan)
         print()
         print(plan.get("privacy_note", "Full diffs are hidden by default."))
         print("Run `mb migrate --check --diff` to print the full unified diff locally.")
+        backup = result.get("backup") or {}
+        if backup.get("will_create"):
+            print(f"Backup on apply: {backup['directory']}")
+        if result.get("next"):
+            print(f"next: {result['next']}")
     else:
         print("no migrations pending")
+        if result.get("next"):
+            print(f"next: {result['next']}")
 
 
 def render_apply(result: dict[str, Any]) -> None:
     if result.get("errors"):
         for error in result["errors"]:
             print(f"error: {error}")
+        if result.get("next"):
+            print(f"next: {result['next']}")
         return
     applied = result.get("applied", [])
     if not applied:
@@ -437,6 +510,8 @@ def render_apply(result: dict[str, Any]) -> None:
     if backup.get("path"):
         print(f"backup: {backup['path']}")
     print(f"schema version: {result['current_version']}")
+    if result.get("next"):
+        print(f"next: {result['next']}")
 
 
 # ---------------------------------------------------------------------------

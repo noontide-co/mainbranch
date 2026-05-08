@@ -132,7 +132,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 ├── Pull business repo updates ───────→ (your repo, silently)
 │
 ├── Onboarding progress check ────────→ Use status onboarding facts
-│   ├── missing core reference? ──────→ collect only current missing inputs
+│   ├── missing core files? ──────────→ collect only current missing inputs
 │   └── complete? ───────────────────→ continue to readiness/menu
 │
 ├── Offer detection ──────────────────→ (multi-offer only, see Step 8)
@@ -256,7 +256,7 @@ Use the JSON envelope as the source of truth for onboarding progress:
 
 If `core_reference` is pending, collect only enough to draft the missing core
 files. Do not ask for full finances, credentials, raw customer/member exports,
-or exhaustive operations details before the core reference exists.
+or exhaustive operations details before the core files exist.
 
 If the user's team size or current success stage is missing, ask briefly and
 update the plan:
@@ -331,7 +331,7 @@ See [readiness-assessment.md](references/readiness-assessment.md) for complete s
 
 ### Quick summary:
 
-1. **Score reference files** (soul, offer, audience, voice, testimonials, angles) on 0-3 scale each. Composite max = 18. Multi-offer: score active offer's files, not just core.
+1. **Score core files** (soul, offer, audience, voice, testimonials, angles) on 0-3 scale each. Composite max = 18. Multi-offer: score active offer's files, not just core.
 2. **Check session state** — status journal activity, open decisions, uncodified research. Surface what's in progress.
 3. **Soul health check** — for returning users (last commit >3 days ago), read soul.md and ask: "Is your current work feeling like pull or push?" Skip for active or first-time users.
 4. **Gate routing** based on composite score:
@@ -356,7 +356,7 @@ Adapt display to `user.experience` level (beginner = full breakdown, advanced = 
 
 **What main knows after Step 6:** Readiness scores, which files exist, composite score, gaps. That's enough to present the menu and gate routing.
 
-**Exception:** Read `[repo]/CLAUDE.md` (the business brain) — it's small and needed for personality/routing awareness. Skip the 4 core reference files.
+**Exception:** Read `[repo]/CLAUDE.md` (the business brain) — it's small and needed for personality/routing awareness. Skip the 4 full core files.
 
 **Multi-offer context:** If `current_offer` is set (see Step 8), note the active offer for routing. Don't load the offer file — the selected skill will.
 

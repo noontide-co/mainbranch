@@ -102,11 +102,22 @@ preserves the returned session id when Claude Code emits one:
 scripts/claude-runtime-dogfood.py --install-mode editable --run-claude-print --max-budget-usd 0.25
 ```
 
+The print-mode prompt set comes from the packaged
+[release simulation manifest](release-simulations.md). Use
+`--simulation-tier pr_smoke` for cheap PR signal,
+`--simulation-tier prerelease_candidate` for the full prompt suite before a
+release, and `--simulation-tier release_acceptance` for selected proxy checks
+around a fresh PyPI install.
+
 Print-mode evidence is a proxy. It is useful for repeatable regression signal,
 budget/auth failures, transcript excerpts, and rubric scoring, but it is not
 the same as interactive Claude Code TUI evidence. Release-bearing runtime
 claims still need the manual interactive phase below unless the PR explicitly
 documents why the runtime could not be launched.
+
+For the tier matrix, prompt fixtures, expected-observation rubrics, transcript
+review categories, fix-type routing, and public evidence rules, see
+[Release Simulations](release-simulations.md).
 
 ## Phase 1: Fresh Fixture Setup
 
@@ -384,6 +395,7 @@ GitHub issue / PR:
 
 ### Claude Runtime Transcript Summary
 
+- Simulation tier:
 - `/mb-start` discovered:
 - `/mb-start` used business repo and status facts:
 - `/mb-start` spoke in operator language:
@@ -407,6 +419,12 @@ GitHub issue / PR:
 - Minimal reproduction:
 - Proposed GitHub issue title:
 ```
+
+When reviewing transcripts, classify failures with the categories in
+[Release Simulations](release-simulations.md): grounding, wrong layer, tool
+gap, business language, write boundary, repo boundary, provider overclaim,
+repair loop, discovery, or conversation shape. Tag the likely fix type so the
+failure routes to a focused follow-up instead of becoming vague release notes.
 
 ## Failure Triage
 

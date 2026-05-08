@@ -588,7 +588,7 @@ It uses [Main Branch](https://github.com/noontide-co/mainbranch) as the **engine
 
 ```
 ENGINE (mainbranch)     +     DATA (this repo)     =     OUTPUT
-├── Skills                             ├── reference/            ├── Ads
+├── Skills                             ├── core/                 ├── Ads
 ├── Lenses                             ├── research/             ├── Emails
 └── Pull updates, don't edit           └── You own this          └── Content
 ```

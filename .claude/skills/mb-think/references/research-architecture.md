@@ -307,7 +307,7 @@ Always available (no external dependencies)
 
 1. Search research/ for topic
 2. Search decisions/ for related choices
-3. Search reference/ for current state
+3. Search core/ for current evergreen business state
 4. Synthesize findings
 5. Save to: research/YYYY-MM-DD-topic-claude-code.md
 ```

@@ -41,7 +41,7 @@ core/
 research/
 decisions/
 bets/
-campaigns/
+pushes/
 log/
 documents/
 ```
@@ -80,10 +80,11 @@ review. Automated migration can safely move general operating context under
 `core/operations/`; offer-specific promotion remains a human/agent judgment.
 
 `outputs/` is also legacy product language for generated work. Current
-campaign and production artifacts should live under `campaigns/` when they are
-campaign work, or under a more specific durable folder when another surface
+coordinated production artifacts should live under `pushes/` when they belong
+to a named push, or under a more specific durable folder when another surface
 owns the artifact. Old `outputs/` content should be read as historical work,
-not as the default write target for new skills.
+not as the default write target for new skills. Legacy `campaigns/` records
+remain compatibility reads under the later push primitive decision.
 
 ## Compatibility
 

@@ -33,7 +33,7 @@ choices: pillars, platforms, cadence, hooks, and metrics. It is not an
 operations file. Use `core/operations/` for delivery systems like classroom,
 membership, funnel, and fulfillment.
 
-You still need enough core reference before a content strategy makes sense.
+You still need enough core file context before a content strategy makes sense.
 The file usually emerges through `/mb-think` cycles after the operator has
 some real content experience: what platforms they like, what topics land, and
 what hooks work.
@@ -144,8 +144,8 @@ Loop back to newsletter
 **Q: Do I need content-strategy.md to use /mb-organic?**
 No. `/mb-organic` works without it. But with it, your content is strategically aligned instead of ad hoc.
 
-**Q: Can I skip straight to content-strategy.md without core reference?**
-Not recommended. Your pillars derive from soul + offer + audience. Without those, your pillars will be generic. Build core reference first.
+**Q: Can I skip straight to content-strategy.md without core files?**
+Not recommended. Your pillars derive from soul + offer + audience. Without those, your pillars will be generic. Build core files first.
 
 **Q: How often should I update content-strategy.md?**
 - Hooks Library and Framework Library: weekly (as you discover what works)

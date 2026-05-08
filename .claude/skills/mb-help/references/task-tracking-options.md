@@ -106,7 +106,7 @@ gh issue close 123
 
 Single lightweight file showing current state.
 
-**Create:** `reference/focus.md`
+**Create:** `log/focus.md`
 
 ```markdown
 # Current Focus

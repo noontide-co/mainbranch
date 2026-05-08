@@ -1,6 +1,6 @@
 # First-Time Setup
 
-Before running `/mb-organic`, you need three core reference files. This guide helps you create minimal versions to get started.
+Before running `/mb-organic`, you need three core files. This guide helps you create minimal versions to get started.
 
 ---
 

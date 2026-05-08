@@ -205,6 +205,59 @@ _DEFAULT_CLAUDE = """\
 
 Your business as files. Claude reads these; you edit them; git remembers them.
 
+## Claude operating contract
+
+Main Branch CLI facts are the source of truth for repo health, setup, runtime
+wiring, updates, graph/status signals, provider readiness, and repair paths.
+The normal runtime path is: open a terminal in this repo, run `claude`, then
+type `/mb-start` inside Claude Code. From the terminal, `mb start --json`
+checks the handoff and `mb start --launch` can open Claude Code when available.
+Before giving setup, routing, migration, update, or repair advice, run the
+read-only checks that fit the situation from this business repo:
+
+```bash
+mb --version
+mb status --json --peek
+mb start --json
+mb doctor repair --plan
+```
+
+Use `mb status --json --peek` as the default daily briefing before routing the
+operator. It names readiness, drift, onboarding progress, update state, GitHub
+activity, provider signals, recent work, ranked actions, bets, pushes, and
+checkpoint state. Do not replace those facts with ad hoc shell inspection unless
+`mb` says a section is unavailable or the command itself is missing.
+
+Read-only commands can be run without asking first. Commands that write files,
+refresh local runtime wiring, move personal skill shadows, update packages,
+migrate business files, create checkpoints, publish, spend money, email, or
+mutate provider accounts require explicit operator approval before applying.
+Plan first, then apply only after approval:
+
+```bash
+mb doctor repair --plan
+mb skill repair --repo .
+mb skill link --repo .          # writes project-local Claude skill wiring
+mb skill repair --repo . --apply
+mb doctor repair --apply
+mb update
+```
+
+If `/mb-start` is not discoverable or Claude Code reports `Unknown command:
+/mb-start`, do not improvise from memory. From this business repo, check
+`mb --version`, run `mb start --json` and `mb status --json --peek`, inspect
+repair options with `mb doctor repair --plan`, then ask before running any
+write/apply command such as `mb skill link --repo .`, `mb skill repair --repo .
+--apply`, `mb doctor repair --apply`, or `mb update`. After repairing skill
+wiring, tell the operator to restart Claude Code from this repo and try
+`/mb-start` again.
+
+Do the technical work in technical commands, then translate the result back into
+business-owner language. Speak first in terms of bets, goals, offers, pushes,
+playbooks, outcomes, decisions, next actions, and saved checkpoints. Treat git,
+branches, pull requests, provider refs, and local wiring as the hidden memory
+layer unless the operator asks for the plumbing.
+
 ## Folders
 
 - `core/` — the business brain: offer, audience, voice, soul, proof, brand,

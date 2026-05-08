@@ -160,8 +160,9 @@ Lifecycle skills are the session and setup surface. They should be thin over
 Lifecycle skills should prioritize resumability. `/mb-start` and `/mb-setup`
 must use `mb onboard status --json` when onboarding may be incomplete. The
 progress file is operational state, not business truth; accepted business truth
-still belongs in `core/`, `research/`, `decisions/`, `campaigns/`, `log/`, or
-`documents/`.
+still belongs in `core/`, `research/`, `decisions/`, `bets/`, `pushes/`, `log/`,
+or `documents/`. Legacy `campaigns/` records remain compatibility reads, not
+the current write target for coordinated work.
 
 ## Production Skill Audit
 

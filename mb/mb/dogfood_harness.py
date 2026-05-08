@@ -19,6 +19,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
+from mb import release_simulation
+
 InstallMode = Literal["editable", "wheel", "pypi"]
 
 DEFAULT_BUSINESS_NAME = "Dogfood Studio"
@@ -61,80 +63,6 @@ offer, audience, proof, and current priority. The opportunity is to turn the
 business repo into the durable briefing layer.
 """,
 }
-
-CLAUDE_PROMPTS: tuple[tuple[str, str], ...] = (
-    ("mb-start", "/mb-start"),
-    (
-        "thought-dump",
-        (
-            "I am opening Dogfood Studio for a normal day. I have ten minutes, "
-            "feel fuzzy about whether to improve the onboarding sprint or draft "
-            "content, and need you to route me to the right Main Branch primitive "
-            "before writing anything durable."
-        ),
-    ),
-    (
-        "mb-think",
-        (
-            "/mb-think Should Dogfood Studio focus next week's offer angle on "
-            "async onboarding audits or live founder calls? Decide from the repo "
-            "context. Ask before writing any durable decision."
-        ),
-    ),
-    (
-        "writing-skill",
-        (
-            '/mb-organic video "Create three short-form scripts for founders who '
-            "keep losing offer context between AI sessions. Use the fixture voice "
-            'and ask before saving drafts."'
-        ),
-    ),
-    (
-        "checkpoint",
-        (
-            "Show the checkpoint plan for any approved changes, validate the "
-            "proposed message, and ask me before saving the checkpoint."
-        ),
-    ),
-)
-
-RUBRIC: tuple[tuple[str, str, tuple[str, ...]], ...] = (
-    (
-        "skill_discovery",
-        "Finds Main Branch skills instead of reporting an unknown command.",
-        ("mb-start",),
-    ),
-    (
-        "control_plane_usage",
-        "Uses deterministic mb facts before routing or writing.",
-        ("mb status", "mb start", "mb checkpoint", "mb validate"),
-    ),
-    (
-        "repo_boundary_safety",
-        "Stays grounded in the fixture business repo and does not target the engine repo.",
-        ("dogfood studio", "fixture", "business repo"),
-    ),
-    (
-        "ask_before_write",
-        "Asks before durable writes or saves.",
-        ("ask before", "before writing", "before saving", "approval"),
-    ),
-    (
-        "checkpoint_discipline",
-        "Plans and validates checkpoints before saving.",
-        ("mb checkpoint", "--plan", "--validate", "checkpoint"),
-    ),
-    (
-        "business_owner_language",
-        "Explains the work in business-owner terms.",
-        ("offer", "audience", "founder", "next action", "business"),
-    ),
-    (
-        "thought_dump_routing",
-        "Routes a broad thought dump toward triage, bet, think, or a next action.",
-        ("triage", "bet", "think", "next action", "decide"),
-    ),
-)
 
 
 @dataclass
@@ -589,28 +517,10 @@ def _text_from_list(values: list[Any]) -> list[str]:
 
 
 def score_transcript(text: str) -> dict[str, Any]:
-    normalized = text.lower()
-    checks: dict[str, dict[str, Any]] = {}
-    passed = 0
-    for key, description, keywords in RUBRIC:
-        ok = any(keyword in normalized for keyword in keywords)
-        if key == "skill_discovery" and "unknown command" in normalized:
-            ok = False
-        checks[key] = {
-            "ok": ok,
-            "description": description,
-            "keywords": list(keywords),
-        }
-        if ok:
-            passed += 1
-    return {
-        "passed": passed,
-        "total": len(RUBRIC),
-        "checks": checks,
-    }
+    return release_simulation.score_transcript(text)
 
 
-def run_claude_print(state: HarnessState, max_budget_usd: str) -> None:
+def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tier: str) -> None:
     if shutil.which("claude") is None:
         state.warn("Claude Code executable not found; skipped optional print-mode smoke")
         state.claude = {
@@ -618,13 +528,15 @@ def run_claude_print(state: HarnessState, max_budget_usd: str) -> None:
             "ran": False,
             "reason": "claude executable not found",
             "proxy_notice": "Print-mode evidence is not the same as interactive TUI evidence.",
+            "simulation_tier": simulation_tier,
         }
         return
 
     session_id = ""
     turns: list[dict[str, Any]] = []
     transcript_parts: list[str] = []
-    for label, prompt in CLAUDE_PROMPTS:
+    simulations = release_simulation.simulations_for_tier(simulation_tier)
+    for simulation in simulations:
         command = [
             "claude",
             "-p",
@@ -635,36 +547,43 @@ def run_claude_print(state: HarnessState, max_budget_usd: str) -> None:
         ]
         if session_id:
             command.extend(["--resume", session_id])
-        command.append(prompt)
+        command.append(simulation.prompt)
         result = run_command(
             state,
-            f"claude-print-{label}",
+            f"claude-print-{simulation.label}",
             command,
             cwd=state.fixture_repo,
             timeout=600,
         )
         payload, error = read_json(result.stdout, label=result.label)
         turn: dict[str, Any] = {
-            "label": label,
+            "label": simulation.label,
+            "simulation_id": simulation.id,
+            "title": simulation.title,
+            "expected_behaviors": list(simulation.expected_behaviors),
             "returncode": result.returncode,
             "stdout": str(result.stdout_path),
             "stderr": str(result.stderr_path),
             "parsed_json": error == "",
         }
         if payload is not None:
-            write_json(state.evidence_dir / "claude" / f"{safe_label(label)}.json", payload)
+            write_json(
+                state.evidence_dir / "claude" / f"{safe_label(simulation.label)}.json",
+                payload,
+            )
             new_session_id = extract_session_id(payload)
             if new_session_id:
                 session_id = new_session_id
             text = transcript_text_from_payload(payload)
             if text:
-                transcript_parts.append(f"## {label}\n\n{text.strip()}\n")
+                transcript_parts.append(f"## {simulation.label}\n\n{text.strip()}\n")
         else:
             turn["error"] = error
         turns.append(turn)
         if result.returncode != 0:
             state.warn(
-                f"Claude print-mode stopped at {label}; inspect stderr for auth/budget details"
+                f"Claude print-mode stopped at {simulation.label}; "
+                "inspect stderr for auth/budget details"
             )
             break
 
@@ -682,9 +601,22 @@ def run_claude_print(state: HarnessState, max_budget_usd: str) -> None:
         "mode": "print_proxy",
         "ran": True,
         "proxy_notice": "Print-mode evidence is not the same as interactive TUI evidence.",
+        "simulation_tier": simulation_tier,
         "max_budget_usd": max_budget_usd,
         "session_id": session_id,
         "turns": turns,
+        "simulations": [
+            {
+                "id": simulation.id,
+                "label": simulation.label,
+                "title": simulation.title,
+                "expected_route": list(simulation.expected_route),
+                "expected_behaviors": list(simulation.expected_behaviors),
+                "must_observe": list(simulation.must_observe),
+                "must_not": list(simulation.must_not),
+            }
+            for simulation in simulations
+        ],
         "transcript_excerpts": str(transcript_path),
         "rubric": rubric,
     }
@@ -736,6 +668,9 @@ def evidence_template(state: HarnessState, *, install_mode: str, mb_version: str
     start_handoff = start_payload.get("handoff_ready", "unknown")
     claude_ran = claude.get("ran", False) if isinstance(claude, dict) else False
     claude_notice = claude.get("proxy_notice", "") if isinstance(claude, dict) else ""
+    claude_tier = (
+        claude.get("simulation_tier", "not run") if isinstance(claude, dict) else "not run"
+    )
     claude_session = bool(claude.get("session_id")) if isinstance(claude, dict) else False
     claude_transcript = "local artifact; see harness output and summary.json"
     if not (isinstance(claude, dict) and claude.get("transcript_excerpts")):
@@ -769,6 +704,7 @@ Evidence folder: local artifact; see harness output and summary.json
 ### Claude Print-Mode Proxy
 
 - Ran: {claude_ran}
+- Simulation tier: {claude_tier}
 - Proxy notice: {claude_notice}
 - Session ID preserved: {claude_session}
 - Rubric: {rubric_summary}
@@ -890,7 +826,11 @@ def run_harness(args: argparse.Namespace) -> int:
         setup_fixture(state)
         run_cli_checks(state)
         if args.run_claude_print:
-            run_claude_print(state, max_budget_usd=args.max_budget_usd)
+            run_claude_print(
+                state,
+                max_budget_usd=args.max_budget_usd,
+                simulation_tier=args.simulation_tier,
+            )
     finally:
         collect_post_run_state(state)
         write_summary(state, install_mode=args.install_mode, mb_version=version)
@@ -951,6 +891,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--run-claude-print",
         action="store_true",
         help="Run optional chained claude -p print-mode proxy smoke.",
+    )
+    parser.add_argument(
+        "--simulation-tier",
+        choices=("pr_smoke", "prerelease_candidate", "release_acceptance"),
+        default="pr_smoke",
+        help=(
+            "Release simulation prompt tier for --run-claude-print. "
+            "PR smoke is intentionally short; release tiers remain proxy evidence."
+        ),
     )
     parser.add_argument(
         "--max-budget-usd",

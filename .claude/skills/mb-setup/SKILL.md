@@ -123,7 +123,7 @@ This check is simple and non-intrusive. If they say yes, note it and move on —
 
 ### 3. Gather Bounded Context
 
-Your job is to collect enough to create a useful core reference, not every fact
+Your job is to collect enough to create useful core files, not every fact
 possible. Users provide context in batches. Keep the first pass bounded by
 `mb onboard status --json` and its missing inputs.
 
@@ -149,7 +149,7 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 - Completeness criteria
 
 **Opening prompt:**
-> Share the essentials for the core reference: what you sell, who it helps, why
+> Share the essentials for the core files: what you sell, who it helps, why
 > it works, proof you can share, and a few voice samples.
 >
 > **Pro tip:** You can drag screenshots directly into this terminal window and I'll read them. If you have a Skool community, screenshot your about page, classroom, pricing — drag them all in. Fastest way to get me up to speed.
@@ -157,7 +157,7 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 > Paste text, share file paths, give me URLs to fetch, or drag in images. I'll sort it all into the right files.
 
 **After each batch, assess gaps:**
-> "Got it. I still need [X, Y, Z] to complete your reference files. Can you share those?"
+> "Got it. I still need [X, Y, Z] to complete your core files. Can you share those?"
 
 **Only say "we have enough" when you can fill:**
 - offer.md (price, mechanism, deliverables, guarantee)
@@ -172,7 +172,7 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 # Always create:
 mkdir -p .vip
 mkdir -p core core/offers core/finance core/brand core/proof/angles core/operations
-mkdir -p research decisions bets log campaigns documents
+mkdir -p research decisions bets log pushes documents
 ```
 
 Do not create a canonical `reference/` folder in new repos. If an old repo
@@ -234,8 +234,8 @@ Full structure (single-offer):
 │
 ├── log/                   # Running activity log
 │
-└── campaigns/             # Campaign work and generated campaign artifacts
-    └── YYYY-MM-DD-batch-name/
+└── pushes/                # Coordinated pushes and their artifacts
+    └── YYYY-MM-DD-push-name/
 ```
 
 Full structure (multi-offer — adds offer folders and `product-ladder.md`):
@@ -265,7 +265,7 @@ Run these steps in order: create env.sh, add shell source line, create config.ya
 
 ### 5. Sort Content into Files
 
-**The repo is a precision instrument, not a dumping ground.** Not everything the user provides makes it into reference files. Filter for what helps LLMs produce great outputs.
+**The repo is a precision instrument, not a dumping ground.** Not everything the user provides makes it into core files. Filter for what helps LLMs produce great outputs.
 
 Use templates from `references/templates.md`.
 
@@ -404,13 +404,13 @@ Once setup is complete, tell the user:
 >
 > **Key skills to try:**
 > - `/mb-think` — Research topics, make decisions, update reference
-> - `/mb-think` — Build your content strategy (pillars, platforms, cadence) — start here after core reference is solid
+> - `/mb-think` — Build your content strategy (pillars, platforms, cadence) — start here after core files are solid
 > - `/mb-ads` — Generate image ads, video scripts, or review for compliance
 > - `/mb-vsl` — Write video sales letters (Skool or B2B)
 > - `/mb-organic` — Create social content aligned to your content pillars
 > - `/mb-help` — Get answers anytime you're stuck
 >
-> **The core loop:** Use `/mb-think` regularly. Research → Decide → Codify. This is how your reference files get smarter over time.
+> **The core loop:** Use `/mb-think` regularly. Research → Decide → Codify. This is how your core files get smarter over time.
 >
 > **Remember:** Type `/mb-help` + your question anytime. It has comprehensive answers about Terminal basics, the two-repo model, skills, troubleshooting, and more."
 

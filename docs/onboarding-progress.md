@@ -53,7 +53,7 @@ mb onboard plan \
   --team-size solo \
   --business-type coaching \
   --success-stage working \
-  --desired-outcome "usable core reference"
+  --desired-outcome "usable core files"
 ```
 
 `mb onboard` also writes the initial plan when it creates or connects a repo.
@@ -78,11 +78,11 @@ surface.
 Manual runtime smoke for onboarding resume:
 
 1. create a fresh repo with `mb onboard --yes --name "Smoke Business" --path /tmp/mainbranch-onboard-smoke`;
-2. run `mb onboard plan --repo /tmp/mainbranch-onboard-smoke --team-size small-team --business-type agency --success-stage working --desired-outcome "usable core reference"`;
+2. run `mb onboard plan --repo /tmp/mainbranch-onboard-smoke --team-size small-team --business-type agency --success-stage working --desired-outcome "usable core files"`;
 3. `cd /tmp/mainbranch-onboard-smoke`;
 4. run `mb onboard status --json` and confirm missing core inputs are reported;
 5. launch `claude`;
 6. run `/mb-start`;
 7. verify `/mb-start` uses `mb onboard status --json` to resume and does not ask
    for full finances, credentials, or exhaustive operations details before the
-   core reference exists.
+   core files exist.
