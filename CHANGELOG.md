@@ -64,7 +64,7 @@ evidence plus manual transcript review.
   grounding commands or fell back because of permissions. Refs #394.
 - Reduced `mb status` relationship-health work on large repos by reusing graph
   relationship facts instead of reparsing the same file bodies repeatedly.
-  Refs #358.
+  Refs #358, #396.
 
 ## [0.3.9] - 2026-05-08
 

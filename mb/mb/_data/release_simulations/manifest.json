@@ -34,6 +34,7 @@
         "messy_morning_thought_dump",
         "ask_before_writing_decision",
         "writing_skill_without_silent_saves",
+        "offer_launch_orchestration",
         "checkpoint_discipline",
         "broken_runtime_wiring_shadow_repair",
         "private_data_refusal",
@@ -511,6 +512,7 @@
       "label": "launch-offer",
       "title": "Guided offer-launch orchestration",
       "tiers": [
+        "prerelease_candidate",
         "release_acceptance"
       ],
       "operator_moment": "The operator asks /mb-start to launch a specific offer and expects safe orchestration across research, push, lander, ads plan, and checkpoint steps.",

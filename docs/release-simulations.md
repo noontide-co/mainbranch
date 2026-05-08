@@ -190,6 +190,9 @@ naturally does the right thing? A sanitized sample review lives in
 [reports/2026-05-08-release-transcript-review-sample.md](reports/2026-05-08-release-transcript-review-sample.md),
 and the v0.3.9 post-release lesson is captured in
 [reports/2026-05-08-v0-3-9-post-release-transcript-review.md](reports/2026-05-08-v0-3-9-post-release-transcript-review.md).
+The v0.3.10 release-candidate review shows the pre-tag shape, including a
+release-specific launch-offer simulation:
+[reports/2026-05-08-v0-3-10-release-transcript-review.md](reports/2026-05-08-v0-3-10-release-transcript-review.md).
 
 ## Evidence Rules
 
