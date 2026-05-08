@@ -307,7 +307,7 @@ sensitive strategy, or private launch language in public repo names.
 
 ### Local Folder Names
 
-Local folders should mirror GitHub handles by default:
+For a small number of repos, local folders may mirror GitHub handles directly:
 
 ```text
 ~/Documents/GitHub/<github-owner>/<repo-name>
@@ -319,8 +319,25 @@ or another operator-chosen root with the same owner/repo nesting:
 ~/src/<github-owner>/<repo-name>
 ```
 
+For operators with many repos, keep the owner folder and add stable grouping
+folders under it. The group folder may change as the topology gets clearer; the
+repo folder should still mirror the GitHub repo name:
+
+```text
+~/Documents/GitHub/<github-owner>/
+  hubs/<business-repo>
+  products/<product-or-offer-repo>
+  sites/<site-repo>
+  private/<finance-legal-or-admin-repo>
+  clients/<client-delivery-repo>
+  sidecars/<integration-sidecar-repo>
+  experiments/<experiment-repo>
+  archive/<archive-repo>
+```
+
 Owner nesting prevents ambiguity when one machine has repos from multiple
-businesses, clients, personal accounts, and OSS orgs. If an operator uses a flat
+businesses, clients, personal accounts, and OSS orgs. Grouping folders prevent a
+large owner namespace from becoming a flat pile. If an operator uses a flat
 clone folder, the local folder may include the owner for clarity:
 
 ```text
@@ -331,6 +348,12 @@ Do not commit local absolute paths to the topology registry. `mb status` and a
 dashboard may display a local path from local workspace state, but the durable
 repo record should store GitHub handles, safe display names, and business
 relationships.
+
+Repos and folders will sometimes move or rename. Main Branch should treat the
+GitHub owner/repo handle as the durable technical handle and the local path as a
+repairable checkout location. Future doctor/status repair should help reconnect
+a moved checkout, a renamed repo, or a repo moved between local grouping folders
+without treating the old local path as canonical truth.
 
 ### What Status And Dashboards Should Display
 
