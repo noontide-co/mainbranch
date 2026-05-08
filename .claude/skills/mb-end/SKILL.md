@@ -114,7 +114,7 @@ For the full bash (vip script resolution + fallback strict status counter), expe
 
 Present a brief, warm summary. Not a report -- a reflection.
 
-**Offer context:** If `.vip/local.yaml` has `current_offer`, include in summary:
+**Offer context:** If status JSON facts or legacy `.vip/local.yaml` identify an active offer, include in summary:
 "Worked on: **[offer]**"
 
 **Format (adapt to what actually happened):**
@@ -217,7 +217,7 @@ Task(
 
 **Agent prompt construction:** Build a structured prompt containing all gathered content from 5b, plus the agent instructions. See [references/crystallize-agent.md](references/crystallize-agent.md) for the complete agent prompt template, analysis process, anti-patterns, and question design criteria.
 
-**Pass to crystallize agent:** Include `current_offer` from `.vip/local.yaml` so the agent can analyze offer-specific core changes and ask offer-relevant questions.
+**Pass to crystallize agent:** Include active offer from status JSON facts, with `.vip/local.yaml` only as a legacy fallback, so the agent can analyze offer-specific core changes and ask offer-relevant questions.
 
 **The agent is read-only.** It reads files and returns findings. It does not write files. The main conversation handles all file writes.
 

@@ -36,12 +36,9 @@ If `core/offer.md` exists and no `offers/` folder: this is a migration.
    mkdir -p core/operations
    # (product-ladder.md will be written below)
 
-   # Create session state
-   mkdir -p .vip
-   echo "current_offer: [existing-name]" > .vip/local.yaml
-
-   # Ensure .vip/local.yaml is git-ignored
-   grep -q ".vip/local.yaml" .gitignore 2>/dev/null || echo ".vip/local.yaml" >> .gitignore
+   # Active offer starts as session-scoped. Ask before persisting local state.
+   # If the operator approves and no CLI command exists yet, merge-write the
+   # legacy .vip/local.yaml fallback without overwriting unrelated keys.
    ```
 
 5. **Write new brand-level `core/offer.md`:**
@@ -63,7 +60,7 @@ If `core/offer.md` exists and no `offers/` folder: this is a migration.
    - Created brand-level core/offer.md
    - Added offers/[new-name]/
    - Created product-ladder.md
-   - Added .vip/local.yaml for session offer tracking
+   - Selected an active offer for this session; local persistence requires approval
 
    Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
    ```

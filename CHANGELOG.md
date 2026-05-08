@@ -11,6 +11,28 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added a release-simulation fixture for the `/mb-start` ambiguous-choice
+  failure where an operator replies `1` for the top recommendation in a rich
+  multi-offer repo, so release review checks that offer selection cannot
+  silently win over onboarding or recommendation routing. Refs #410.
+- Added a rich-migration `/mb-start` triage fixture that requires agents to map
+  durable business truth, active bets, execution work, proof, legacy
+  compatibility files, and linked operating-boundary repos before routing or
+  spawning agents. Refs #410.
+
+### Changed
+
+- Expanded `mb doctor repair --plan --json` migration guidance with an
+  offer-topology section that surfaces legacy `.vip/local.yaml` active-offer
+  state, offer folder/frontmatter slug drift, and multi-offer review needs
+  without auto-renaming or rewriting strategy files. Refs #410.
+- Tightened `/mb-start` and multi-offer skill guidance so one prompt cannot
+  reuse the same number for recommendations, offers, and routes; offer choices
+  are session-scoped unless the operator explicitly confirms saving local
+  active-offer state. Refs #410.
+
 ## [0.3.10] - 2026-05-08
 
 v0.3.10 makes the release process prove itself while adding new owner-facing

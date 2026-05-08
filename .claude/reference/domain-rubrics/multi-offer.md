@@ -78,7 +78,10 @@ offer-specific. Otherwise, brand-level `core/proof/testimonials.md` suffices.
 
 ## File Resolution Rules
 
-Skills resolve context files using a cascading lookup. The active offer is determined by `.vip/local.yaml`.
+Skills resolve context files using a cascading lookup. Active offer state is
+repo-local operational state. Prefer deterministic status JSON facts when they
+expose that state; `.vip/local.yaml` is a legacy fallback only and should not be
+written silently.
 
 ### Always Core (Never Per-Offer)
 
@@ -116,7 +119,7 @@ resolve_context(file_type):
     return core/content-strategy.md
 
   # Offer-aware -- check active offer first
-  current_offer = read .vip/local.yaml -> current_offer
+  current_offer = read status JSON facts, with .vip/local.yaml as legacy fallback
 
   if current_offer AND exists core/offers/{current_offer}/{file_type}.md:
     return core/offers/{current_offer}/{file_type}.md
@@ -127,22 +130,30 @@ resolve_context(file_type):
 
 ---
 
-## Session Offer Context (.vip/local.yaml)
+## Session Offer Context
+
+Current repos should treat offer choice as session-scoped until the operator
+confirms persistence. If a deterministic `mb` command or status JSON field
+exposes active offer state, use that. Existing repos may still have legacy
+`.vip/local.yaml`:
 
 ```yaml
-current_offer: community    # Active offer for this session
+current_offer: community    # Legacy active offer fallback
 ```
 
-**Location:** `.vip/local.yaml` in the business repo root.
-
 **Rules:**
-- Git-ignored (session state, not shared between machines or collaborators)
-- Written by `/mb-start` when user selects an offer
-- Read by all skills that need offer context
-- If file is missing or `current_offer` is null: single-offer mode (everything reads from `core/`)
-- Skills should never fail because `.vip/local.yaml` is missing -- they fall back to single-offer behavior
+- Repo-local session state is local operational state, not durable business
+  truth.
+- `/mb-start` may read `.vip/local.yaml` as a legacy fallback, but must ask
+  before writing or changing it.
+- If active offer state is missing or null: brand-level mode reads from
+  `core/`.
+- Skills should never fail because active offer state is missing. They fall
+  back to brand-level behavior or ask which offer the current work targets.
 
-**The .vip/ folder** is for local session state only. Never commit it. Add `.vip/` to `.gitignore` during `/mb-setup`.
+**The `.vip/` folder** is legacy local state/config. Never commit session state.
+Current doctor guidance surfaces stale `.vip/local.yaml` so the operator can
+review it instead of letting skills silently update it.
 
 ---
 
@@ -207,7 +218,7 @@ This is an atomic operation performed by `/mb-setup` when a user adds their seco
 2. Current offer details move to `core/offers/[name]/offer.md`
 3. `core/offers/` folder is created
 4. `core/product-ladder.md` is created
-5. `.vip/local.yaml` is created (and `.vip/` added to `.gitignore`)
+5. Active offer is selected for the session; ask before persisting local state
 6. `core/audience.md` stays in place (shared baseline)
 7. If the new offer targets a different audience segment, `core/offers/[name]/audience.md` is created
 
@@ -257,7 +268,7 @@ reverse atomic operation.
 
 | Skill | How It Uses Multi-Offer |
 |-------|-------------------------|
-| `/mb-start` | Detects `core/offers/` folder, prompts for offer selection, writes `.vip/local.yaml` |
+| `/mb-start` | Detects `core/offers/`, prompts for offer selection, asks before persisting active-offer state |
 | `/mb-setup` | Creates `core/offers/` structure, handles single-to-multi migration |
 | `/mb-think` | Reads active offer context; decisions may affect specific offers |
 | `/mb-ads` | Generates ads for active offer using resolved offer.md + audience.md |

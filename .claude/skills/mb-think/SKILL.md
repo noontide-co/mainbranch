@@ -101,7 +101,7 @@ For self-healing semantics (stale false handling, status-change messaging, true-
 
 Before loading reference files, resolve the active offer:
 
-1. Check `.vip/local.yaml` for `current_offer`
+1. Check status JSON facts for active offer state; use `.vip/local.yaml` only as a legacy fallback
 2. If set: load `core/offers/[current_offer]/offer.md` as the active offer
 3. If not set AND `core/offers/` exists: ask which offer
 4. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
@@ -246,7 +246,7 @@ ls core/content-strategy.md 2>/dev/null
 | content-strategy.md exists but empty/thin | "Your content strategy file is a skeleton. Want to fill it in? We can derive pillars from your soul.md + offer.md + audience.md." |
 | content-strategy.md missing (community biz) | "You don't have a content strategy yet. Want to build one? It'll define your pillars, platforms, and cadence." |
 | skool-surfaces.md missing (community biz with live Skool) | "Your Skool about page and pricing card copy aren't in reference yet. Want to add them? Skills check this for congruence." |
-| `core/offers/` exists | Multi-offer repo. Check `.vip/local.yaml` for `current_offer`. If not set, ask which offer this research/decision is about. |
+| `core/offers/` exists | Multi-offer repo. Check active offer from status JSON facts, with `.vip/local.yaml` only as a legacy fallback. If not set, ask which offer this research/decision is about. |
 | Nothing in progress | "What are you trying to figure out?" |
 
 **The goal is reference files.** Research and decisions are waypoints. Keep asking: "What needs to happen to get this into reference?"

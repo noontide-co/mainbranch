@@ -358,6 +358,102 @@ def test_doctor_repair_plan_exposes_legacy_campaigns_to_pushes_action(tmp_path: 
     assert item["mode"] == "read"
     assert item["safe_to_apply"] is True
     assert item["command"] == "mb migrate campaigns --plan"
+    repo_shape = next(section for section in payload["sections"] if section["id"] == "repo-shape")
+    legacy_check = next(
+        check for check in repo_shape["checks"] if check["name"] == "legacy-campaigns"
+    )
+    assert legacy_check["state"] == "warn"
+
+
+def test_doctor_repair_plan_exposes_reference_split_truth(tmp_path: Path) -> None:
+    repo = tmp_path / "split-truth"
+    (repo / "core").mkdir(parents=True)
+    (repo / "reference" / "core").mkdir(parents=True)
+    (repo / "core" / "offer.md").write_text("# Current offer\n", encoding="utf-8")
+    (repo / "reference" / "core" / "offer.md").write_text("# Legacy offer\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "repo-shape")
+    reference_check = next(
+        check for check in section["checks"] if check["name"] == "reference/core"
+    )
+    assert reference_check["state"] == "warn"
+    assert reference_check["kind"] == "split-truth"
+    assert "split truth" in reference_check["summary"]
+
+
+def test_doctor_repair_plan_reports_stale_vip_local_state(tmp_path: Path) -> None:
+    repo = tmp_path / "legacy-vip"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core" / "offers" / "community").mkdir(parents=True)
+    (repo / "core" / "offers" / "community" / "offer.md").write_text(
+        "---\nslug: community\nstatus: running\n---\n# Community\n",
+        encoding="utf-8",
+    )
+    (repo / ".vip").mkdir()
+    (repo / ".vip" / "local.yaml").write_text("current_offer: community\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "offer-topology")
+    vip_check = next(check for check in section["checks"] if check["name"] == ".vip/local.yaml")
+    assert vip_check["state"] == "warn"
+    assert vip_check["kind"] == "legacy-vip-local-state"
+    assert vip_check["current_offer"] == "community"
+    actions = {action["id"]: action for action in payload["actions"]}
+    assert actions["offer-topology-review"]["mode"] == "manual"
+    assert actions["offer-topology-review"]["safe_to_apply"] is False
+
+
+def test_doctor_repair_plan_flags_offer_slug_folder_drift(tmp_path: Path) -> None:
+    repo = tmp_path / "offer-drift"
+    init_run(path=str(repo), name="Acme")
+    offer = repo / "core" / "offers" / "community" / "offer.md"
+    offer.parent.mkdir(parents=True)
+    offer.write_text(
+        "---\nslug: noontide-community\nstatus: running\n---\n# Community\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "offer-topology")
+    drift = next(check for check in section["checks"] if check["kind"] == "offer-slug-drift")
+    assert drift["state"] == "warn"
+    assert drift["folder_slug"] == "community"
+    assert drift["declared_slug"] == "noontide-community"
+
+
+def test_doctor_repair_plan_flags_multi_offer_session_disagreement(tmp_path: Path) -> None:
+    repo = tmp_path / "multi-offer"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core" / "offer.md").write_text(
+        "---\nslug: community\nstatus: running\n---\n# Brand thesis\n",
+        encoding="utf-8",
+    )
+    for slug in ("community", "agency"):
+        offer = repo / "core" / "offers" / slug / "offer.md"
+        offer.parent.mkdir(parents=True)
+        offer.write_text(f"---\nslug: {slug}\nstatus: running\n---\n# {slug}\n", encoding="utf-8")
+    (repo / ".vip").mkdir()
+    (repo / ".vip" / "local.yaml").write_text("current_offer: community\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "offer-topology")
+    kinds = {check["kind"] for check in section["checks"]}
+    assert "multi-offer-review" in kinds
+    assert "brand-offer-slug-overlap" in kinds
+    assert section["state"] == "warn"
 
 
 def test_doctor_repair_plan_distinguishes_read_and_write_actions(tmp_path: Path) -> None:

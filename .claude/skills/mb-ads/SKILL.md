@@ -298,7 +298,7 @@ These patterns that work in standard ads will get rejected in Employment:
 
 Before loading reference files, resolve the active offer:
 
-1. Check `.vip/local.yaml` for `current_offer`
+1. Check status JSON facts for active offer state; use `.vip/local.yaml` only as a legacy fallback
 2. If set: load `core/offers/[current_offer]/offer.md` as the active offer
 3. If not set AND `core/offers/` exists: ask which offer
 4. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
@@ -431,7 +431,7 @@ Before saving any batch, verify:
 
 If context was compacted mid-task, check:
 
-1. **Which offer?** Read `.vip/local.yaml` for `current_offer` to restore offer context
+1. **Which offer?** Use status JSON facts first, with `.vip/local.yaml` only as a legacy fallback, to restore offer context
 2. **What entry point?** Full pipeline, copy only, hook library, video scripts, review, account check
 3. **What stage?** Planning angles, writing hooks, generating prompts, reviewing, pulling account data
 4. **What's done?** Check `pushes/` (and legacy `campaigns/` on unmigrated repos) for partial work

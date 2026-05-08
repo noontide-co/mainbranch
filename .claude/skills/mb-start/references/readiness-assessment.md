@@ -49,7 +49,7 @@ When checking section markers, search for these headings (case-insensitive). The
 
 ### Multi-Offer Scoring
 
-When `.vip/local.yaml` has `current_offer` set:
+When status JSON facts or legacy `.vip/local.yaml` have `current_offer` set:
 
 1. Score `core/soul.md` and `core/voice.md` from core (these are always brand-level).
 2. For offer and audience, resolve using the canonical path algorithm:
