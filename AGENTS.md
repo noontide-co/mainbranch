@@ -421,11 +421,10 @@ Rules:
 - Only the four canonical loop slugs are valid (`sense`, `decide`, `ship`,
   `reflect`). Channels (Paid, Organic, Pages, Ops) are not loops and do not
   belong in this field.
-- The convention is forward-looking tooling even though some bundled skills
-  already declare `loops:`. `mb` does not parse the field for product behavior
-  yet. As `mb status` loop grouping, the future dashboard, and the bets feed
-  land, they will read this field. Declare it on new skills so the tooling has
-  clean inputs to consume when it ships.
+- All bundled skills must declare `loops:` and `mb skill validate` enforces the
+  field and canonical slugs. Runtime/status grouping does not consume the field
+  for product behavior yet; as `mb status` loop grouping, the future dashboard,
+  and the bets feed land, they will read it.
 
 ## State Model
 

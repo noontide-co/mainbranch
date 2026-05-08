@@ -309,7 +309,7 @@ repo understandable, current, and safe to operate from.
 | `/mb-organic` | Generate organic content — Reels, TikTok, carousels |
 | `/mb-site` | Generate and deploy landing pages from your core files and research |
 | `/mb-wiki` | Personal wiki with atomic notes |
-| `/mb-end` | Close session — summary, crystallize, commit |
+| `/mb-end` | Close session — summary, crystallize, approved checkpoint guidance |
 | `/mb-help` | Get answers, troubleshoot, learn the system |
 | `/mb-update` | Update Main Branch — delegates install-mode refresh to `mb update` and summarizes what's new |
 | `/mb-pull` | Legacy alias for `/mb-update` |

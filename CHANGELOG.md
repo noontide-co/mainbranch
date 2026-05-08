@@ -22,6 +22,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   and auth path worked, but the tested setup had no connected channels, so
   Postiz remains a candidate rail rather than supported scheduling behavior.
   Refs #352.
+- Expanded Claude release simulation transcript review guidance with a
+  severity rubric, public-safe sample review, and harness evidence-template
+  pointer so release reviewers distinguish heuristic scoring from manual
+  production-behavior review. Refs #379.
+- Removed ghost runtime routes from bundled skill and public docs language:
+  newsletter/email intent now routes to `/mb-think` and `/mb-organic`, the
+  unshipped `/mb-start launch <offer>` form is labeled as future/deferred, and
+  `mb skill validate` now fails obvious references to unbundled Main Branch
+  slash commands. Refs #356.
 
 ## [0.3.7] - 2026-05-07
 
