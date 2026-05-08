@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Documented the packaged `mb` invocation contract, runtime repo-path discovery
+  rules, and adapter/readiness map for Codex, Cursor, OpenClaw, Hermes,
+  Paperclip-adjacent orchestration, and local runtimes without claiming
+  non-Claude runtime support. Refs #129.
+
 ## [0.3.8] - 2026-05-08
 
 v0.3.8 tightens the daily operating loop after the 0.3.7 release discipline
