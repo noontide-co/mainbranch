@@ -29,6 +29,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   absolute paths, secrets, raw provider caches, finance/legal source data, or
   permission claims in repo descriptors. Refs #417.
 
+- Refreshed reusable playbook skeletons against the current push topology:
+  `ship-bet` and `weekly-review` now route concrete run evidence to
+  `pushes/<push>/playbooks/`, outcomes, logs, and checkpoints instead of legacy
+  `campaigns/`, and the Google Ads Search launch playbook is labeled as a
+  usable draft recipe rather than a non-executable skeleton. Refs #425.
+
 ## [0.3.12] - 2026-05-08
 
 v0.3.12 is a quick follow-up release for the Google Ads launch playbook rails

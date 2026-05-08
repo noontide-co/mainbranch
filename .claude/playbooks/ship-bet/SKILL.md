@@ -1,52 +1,90 @@
 ---
 name: ship-bet
 tier: playbook
-calls: [skill-brief-draft, skill-concept, skill-review, site, ads]
+calls: [start, think, skill-brief-draft, skill-concept, skill-review, site, ads, end]
 status: skeleton
-description: "Skeleton playbook (v0.1). Walks the operator from a half-formed bet to a shipped landing page + first ad creative. v0.2 implementation lands real orchestration."
+description: "Reusable skeleton playbook. Walks the operator from a proposed bet or offer to a launch push, landing page, first ad creative, review evidence, and checkpoint. Not yet a single executable orchestrator."
 ---
 
 # ship-bet (skeleton)
 
-A playbook that takes one bet from `core/offers/<slug>/offer.md` (status: `proposed`) to a published landing page + first ad creative inside one flow.
+This is a reusable operating recipe, not a one-off run file. Use it when the
+operator wants to turn one proposed bet or offer into a launch push with a
+landing page, first ad creative, review evidence, and a saved checkpoint.
 
-**v0.1 status: skeleton.** This file documents the intended depth-3 chain. Real orchestration (single progress surface, retry on stage failure, cross-skill data passing) lands in v0.2.
+**Current status: skeleton.** This file documents the intended chain and
+artifact routing. It is not yet executable as one coherent workflow with a
+single progress surface, retry-on-failure, or cross-skill data passing. Run each
+step through the named skills and `mb` commands today.
 
-## Intended flow (v0.2 implementation)
+## Playbook Versus Run
+
+This file is the reusable engine recipe under `.claude/playbooks/ship-bet/`.
+The concrete run belongs in the business repo:
+
+```text
+pushes/<YYYY-MM-DD-slug>/push.md
+pushes/<YYYY-MM-DD-slug>/playbooks/ship-bet.md
+```
+
+Create or select the push first. Use a push playbook run record when the run
+needs approval state, provider readiness, forks from the recipe, manual steps,
+review evidence, or outcome links. Do not write new work under `campaigns/`;
+that folder is legacy compatibility read only.
+
+## Intended Flow
 
 ```
-1. /mb-think codify    — confirm offer is named in core/offers/<slug>/
-2. skill-brief-draft  — draft minisite brief from offer + audience + voice
-3. skill-review     — Seven Sweeps + Expert Panel against the brief
-4. /mb-site build      — generate, deploy to Cloudflare Pages
-5. skill-concept    — N variations on localhost, operator picks one
-6. /mb-site publish    — push picked concept; auto-deploy
-7. /mb-ads generate    — first ad creative from the brief
-8. /mb-ads review      — compliance + lens check
-9. log/             — write playbook-run summary
+1. /mb-start          — read repo health, active bets, pushes, provider state
+2. /mb-think codify   — confirm bet, offer, audience, proof, and success bar
+3. pushes/            — create or select the launch push record
+4. skill-brief-draft  — draft minisite brief from offer + audience + voice
+5. skill-review       — Seven Sweeps + Expert Panel against the brief
+6. /mb-site build     — generate or update the landing page/site record
+7. skill-concept      — N variations on localhost, operator picks one
+8. /mb-site publish   — publish only after operator approval and readiness
+9. /mb-ads generate   — first ad creative from the brief
+10. /mb-ads review    — compliance + lens check
+11. push playbook     — record forks, approvals, review evidence, outcomes
+12. /mb-end           — checkpoint accepted artifacts
 ```
 
 ## Inputs
 
-- An offer slug with `status: proposed` in `core/offers/<slug>/`
-- A `dial` pick (convert | story | brand)
+- A bet or proposed offer to ship.
+- `core/offers/<slug>/offer.md` or the operator's approval to create/update it.
+- Audience, proof, voice, and conversion-path context.
+- A launch push, or permission to create one.
+- A `dial` pick when the creative path needs one: `convert`, `story`, or
+  `brand`.
+- Provider and site readiness facts from `mb status --json --peek`,
+  `mb connect plan`, and `mb site check` when a site repo exists.
 
 ## Outputs
 
-- A published Cloudflare Pages site
-- A first ad creative draft in `campaigns/<slug>/`
-- A playbook-run entry in `log/YYYY-MM-DD-shipbet-<slug>.md`
+- A launch push at `pushes/<YYYY-MM-DD-slug>/push.md`.
+- Optional run record at `pushes/<YYYY-MM-DD-slug>/playbooks/ship-bet.md`.
+- A site record under the push or a linked child site repo update.
+- First ad creative under `pushes/<YYYY-MM-DD-slug>/ads/`.
+- Review notes, outcome links, or a weekly/session log entry when the operator
+  approves them.
+- A checkpoint plan and operator-approved checkpoint for accepted artifacts.
 
-## v0.1 caveats
+## Skeleton Caveats
 
-- Each step runs as its own /command today; no single progress surface
-- No retry-on-failure; operator restarts the failed step
-- Data passing between steps is via files in the consumer repo
+- Each step runs as its own command today.
+- No retry-on-failure exists; the operator restarts the failed step.
+- Data passing between steps is via files in the business repo.
+- Provider mutation remains manual or provider-native unless a future accepted
+  adapter ships with approval gates and smoke evidence.
 
 ## Cross-references
 
+- [start/SKILL.md](../../skills/mb-start/SKILL.md)
+- [think/SKILL.md](../../skills/mb-think/SKILL.md)
 - [skill-brief-draft/SKILL.md](../../skills/mb-skill-brief-draft/SKILL.md)
 - [skill-concept/SKILL.md](../../skills/mb-skill-concept/SKILL.md)
 - [skill-review/SKILL.md](../../skills/mb-skill-review/SKILL.md)
 - [site/SKILL.md](../../skills/mb-site/SKILL.md)
 - [ads/SKILL.md](../../skills/mb-ads/SKILL.md)
+- [end/SKILL.md](../../skills/mb-end/SKILL.md)

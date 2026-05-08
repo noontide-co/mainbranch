@@ -35,7 +35,7 @@ back into the business repo's durable memory:
 
 If the operator has not approved a core edit yet, the run record should include
 a proposed-core-updates section with target files, proposed changes, evidence,
-and approval status. The push playbook remains the campaign audit trail; core
+and approval status. The push playbook remains the run audit trail; core
 remains the reusable business truth that future playbooks and skills read.
 
 ## Authority Layers

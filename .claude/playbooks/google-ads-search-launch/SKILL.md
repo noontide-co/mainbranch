@@ -2,15 +2,20 @@
 name: google-ads-search-launch
 tier: playbook
 calls: [start, think, site, ads, end]
-status: skeleton
-description: "Reusable Noontide playbook for validating an offer with a tightly scoped Google Ads Search launch, a paid-traffic lander, explicit approval gates, and a capped review window."
+status: draft
+description: "Reusable Noontide draft playbook for validating an offer with a tightly scoped Google Ads Search launch, a paid-traffic lander, explicit approval gates, and a capped review window."
 ---
 
 # google-ads-search-launch
 
-This is a reusable operating playbook, not a one-off ad checklist. Use it when
-the operator wants to test whether a real offer can turn paid search intent into
-leads, calls, bookings, deposits, trials, or another concrete business outcome.
+This is a reusable draft operating playbook, not a one-off ad checklist. Use it
+with manual operator judgment when the operator wants to test whether a real
+offer can turn paid search intent into leads, calls, bookings, deposits, trials,
+or another concrete business outcome.
+
+It is usable today as a manual recipe and run-record template. It is not a
+single executable orchestrator, does not automate Google Ads/GTM, and is still
+collecting evidence from operator runs.
 
 The playbook's job is to turn one offer into one paid-search proof run:
 
