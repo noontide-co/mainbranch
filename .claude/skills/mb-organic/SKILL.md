@@ -19,6 +19,12 @@ links). One-off scripts and source captures route to `documents/transcripts/`
 or `documents/prototypes/` per the artifact-routing rules in the system
 architecture doc; they don't need a push wrapper.
 
+If a content push uses a comment-keyword, DM-keyword, reply/link, resource
+delivery, or external provider setup plan, write the durable plan to
+`pushes/<YYYY-MM-DD-slug>/playbooks/<playbook>.md` with `type: playbook`.
+The playbook records the plan, approval state, safe provider state, validation
+evidence, and outcomes. It does not execute provider mutation.
+
 If `core/vocabulary.md` defines display words (e.g. `terms.push.singular: drop`),
 speak the operator's word in conversation while still writing canonical files.
 If the repo still has legacy `campaigns/` records, recommend `mb doctor` and

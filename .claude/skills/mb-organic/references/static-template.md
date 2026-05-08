@@ -363,7 +363,9 @@ DM and comment-keyword CTAs are draft strategy only. Main Branch does not
 automate replies, DMs, follows, or comment-to-DM fulfillment unless a future
 provider path has explicit operator approval, docs, and smoke evidence.
 For X/Twitter, prefer a public resource link, repo link, landing page, or manual
-reply/link playbook over "comment for the DM" execution.
+reply/link playbook over "comment for the DM" execution. Save durable resource
+delivery plans under `pushes/<push>/playbooks/` as `type: playbook`; do not
+treat the file as provider execution.
 
 ---
 
