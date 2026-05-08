@@ -33,14 +33,16 @@ The adapter should preserve the existing boundary:
   CLI-callable compatibility, experimental runtime workflow support, and
   supported parity.
 
-The canonical workflow-source strategy should be **one Agent Skills-compatible
-workflow source plus generated runtime wiring**, not one hand-maintained Claude
-tree and a second hand-maintained Codex tree. Main Branch's current bundled
-skills already use `SKILL.md` with `references/`, `scripts/`, and frontmatter.
-Codex supports a compatible `SKILL.md` directory shape, so the migration target
-should be to make those sources more runtime-neutral and generate or link
-runtime-specific discovery surfaces from them. Compatible format does not mean
-identical runtime behavior.
+The canonical workflow-source strategy should be **one workflow corpus with
+runtime-neutral core instructions plus generated runtime discovery**, not one
+hand-maintained Claude tree and a second hand-maintained Codex tree. Main
+Branch's current bundled skills already use `SKILL.md` with `references/`,
+`scripts/`, and frontmatter, but they live under `.claude/skills` and still
+carry Claude-specific assumptions. Stage 2 should prove whether that tree can
+remain the canonical source or whether the durable source should move to a
+runtime-neutral `skills/` corpus that generates Claude and Codex adapters.
+Codex supports a compatible `SKILL.md` directory shape, but compatible format
+does not mean identical runtime behavior.
 
 ## Current Facts
 
@@ -99,7 +101,7 @@ Use these terms in public docs and implementation PRs.
 | Level | Meaning | Allowed public claim | Required evidence |
 |---|---|---|---|
 | CLI-callable compatibility | Codex can run packaged `mb` commands when launched in or pointed at a business repo. | "Codex can call deterministic `mb` JSON facts manually." | Existing package install plus local command evidence. This is not runtime support. |
-| Experimental CLI-first adapter | `mb` can generate or repair Codex-facing repo instructions and handoff metadata, and Codex can ground a fresh business repo in `mb status --json --peek`. No skill parity claim. | "Experimental Codex CLI-first adapter for power users." | Fresh `mb onboard` repo, generated `AGENTS.md`, `codex -C "$repo" debug prompt-input`, read-only `codex exec`, no tracked secret/runtime state, no business write without approval. |
+| Experimental CLI-first adapter | `mb` can generate or repair Codex-facing repo instructions and handoff metadata, and Codex can ground a fresh business repo in `mb status --json --peek`. No skill parity claim. | "Experimental Codex CLI-first adapter for power users." | Fresh `mb onboard` repo, generated `AGENTS.md`, read-only `codex exec --json --ephemeral --sandbox read-only -C "$repo"`, no tracked secret/runtime state, no business write without approval. |
 | Experimental workflow adapter | Codex can discover selected Main Branch Agent Skills from one canonical source through `.agents/skills` or a Codex plugin package. | "Selected Main Branch workflows are experimental in Codex." | Stage 1 evidence plus selected skill invocation, repo-boundary checks, generated-file rules, and known gaps. |
 | Supported parity | Codex covers the daily `/mb-start`-equivalent loop and selected production workflows with release-simulation evidence comparable to Claude Code. | "Codex is a supported Main Branch runtime." | Full adapter contract, install/update/repair docs, fixture repo smoke, runtime transcript review, and release gate. |
 
@@ -165,6 +167,11 @@ Implementation shape:
   are durable repo instructions. Local Codex preferences, credentials, caches,
   and plugin installs stay outside the business repo or in gitignored local
   files.
+- Treat generated business `AGENTS.md` as tracked durable repo instruction,
+  owned by `mb init` / `mb onboard` and repairable through the relevant
+  runtime-wiring repair command. Treat Codex plugin installs, `.agents/skills`
+  bridge links, caches, and local runtime preferences as rebuildable runtime
+  wiring unless a later adapter decision explicitly marks a file tracked.
 - Keep `AGENTS.md` small enough to be always-on bootstrap guidance. It should
   teach the operator contract and the `mb` fact sources, not inline every
   Main Branch workflow. Workflow detail belongs in Agent Skills or referenced
@@ -190,8 +197,7 @@ cd "$tmpdir/codex-business"
 mb doctor
 mb status --json --peek
 mb start --json
-codex -C "$PWD" debug prompt-input "List active instruction sources only."
-codex exec -C "$PWD" --sandbox read-only --ask-for-approval never \
+codex exec --json --ephemeral --sandbox read-only --ask-for-approval never -C "$PWD" \
   "Start this Main Branch business day. Run only read-only mb checks and do not edit files."
 git status --short
 ```
@@ -205,6 +211,9 @@ Pass condition:
 - Any write, repair, update, migration, checkpoint, provider mutation,
   publishing, spending, or customer contact path requires explicit operator
   approval.
+- Optional local diagnostics may use `codex debug prompt-input` to inspect
+  loaded instructions, but debug output is helper evidence, not the public smoke
+  gate.
 
 Maintenance cost: low to medium. Expect one generated template, one handoff or
 runtime module, focused `init`/`start`/`status` tests, and one Codex smoke path.
@@ -308,18 +317,19 @@ Do not maintain two divergent copies of every skill.
 
 Preferred path:
 
-1. Keep the current `mb-*` Agent Skills directories as the canonical near-term
-   source.
-2. Normalize skill prose so shared instructions are runtime-neutral.
-3. Isolate runtime-specific invocation details into small adapter sections or
+1. Use the current `.claude/skills/mb-*` directories as the near-term workflow
+   corpus only while Stage 2 proves whether they can be made runtime-neutral
+   enough.
+2. If Stage 2 shows the Claude path is too load-bearing, move the canonical
+   corpus to a runtime-neutral `skills/mb-*` tree and generate both
+   `.claude/skills` and Codex discovery from it.
+3. Normalize skill prose so shared instructions are runtime-neutral.
+4. Isolate runtime-specific invocation details into small adapter sections or
    generated wrappers.
-4. Generate runtime discovery:
+5. Generate runtime discovery:
    - Claude Code: existing `.claude/skills/mb-*` bridge links.
    - Codex: future `.agents/skills/mb-*` bridge links and/or Codex plugin
      package.
-5. Move to a more explicitly runtime-neutral source directory only if the
-   generator becomes simpler than continuing to treat `.claude/skills` as the
-   source.
 
 Rejected paths:
 
@@ -386,7 +396,7 @@ Never claim:
 
 ## Comparable Project Lessons
 
-The broad pattern across current agent tools is:
+Primary-source-backed lessons:
 
 - Codex, OpenHands, Cursor/Cline-style tools, and similar repo agents all make
   repo instruction files useful. Lesson: generate `AGENTS.md` for Codex.
@@ -409,6 +419,16 @@ The broad pattern across current agent tools is:
   variance, and feature matrices where hooks, agents, slash commands, and
   auto-start differ. Lesson: generate and validate adapter outputs if copying
   is unavoidable.
+
+Pattern observations from local/public package inspection:
+
+- Some cross-runtime plugin packages keep one shared `skills/` directory and
+  add thin `.codex-plugin`, `.claude-plugin`, and marketplace manifests. This
+  is the cleanest Stage 2 packaging model if Main Branch wants plugin
+  distribution.
+- Some broader multi-runtime packages copy skills into runtime-specific
+  folders and patch path text during sync. This can move quickly, but it
+  creates exactly the drift risk MAIN-276 is meant to avoid.
 
 ## Source Review
 
@@ -449,16 +469,18 @@ Additional research considered but not adopted as claims:
   for a future implementation workspace, but it should not change the public
   support level or skip adapter evidence. Treat `/goal` as a contributor
   productivity path, not a product claim.
-- `codex exec` is useful proxy evidence, but interactive runtime discovery or
-  plugin installation still needs interactive evidence when the support claim
-  depends on it.
+- `codex exec --json --ephemeral --sandbox read-only -C "$repo"` is the durable
+  proxy evidence for Stage 1. `codex debug prompt-input` remains useful local
+  diagnostic evidence, but interactive runtime discovery or plugin installation
+  still needs interactive evidence when the support claim depends on it.
 
 ## Acceptance Checklist
 
 - Distinguishes CLI-callable compatibility from runtime workflow support:
   covered in "What Codex Support Means."
-- Explains how to avoid divergent skill copies: one Agent Skills-compatible
-  source plus generated runtime wiring, with hand-copying rejected.
+- Explains how to avoid divergent skill copies: one workflow corpus with
+  runtime-neutral core instructions plus generated runtime discovery, with
+  hand-copying rejected.
 - Names the minimum viable Codex smoke: Stage 1 fresh-repo smoke commands and
   pass conditions.
 - Includes maintenance-cost estimates: each stage names implementation,
@@ -474,8 +496,8 @@ Additional research considered but not adopted as claims:
 1. **Implement experimental Codex CLI-first adapter.**
    - Generate business-repo `AGENTS.md` or shared runtime instructions.
    - Add Codex handoff metadata and readiness checks.
-   - Add smoke evidence using `codex debug prompt-input` and read-only
-     `codex exec`.
+   - Add smoke evidence using read-only
+     `codex exec --json --ephemeral --sandbox read-only -C "$repo"`.
 
 2. **Make lifecycle skills runtime-neutral enough for Codex discovery.**
    - Start with `mb-start` and `mb-status`.
