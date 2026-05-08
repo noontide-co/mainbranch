@@ -234,7 +234,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb checkpoint` | Plan or save a business-readable git checkpoint during long agent runs. |
 | `mb think <topic>` | Print the `/mb-think` invocation hint. Run inside Claude Code for the full flow. |
 | `mb resolve <key>` | Resolve a reference key from the curated library, local core files, or bundled stubs. |
-| `mb educational <topic>` | Print a beginner education topic such as `daily-owner-loop`, `why-mainbranch-not-saas`, `github-vs-gdocs`, `provider-readiness`, `cloudflare-pages`, or `stripe`. |
+| `mb educational <topic>` | Print a beginner education topic such as `daily-owner-loop`, `why-mainbranch-not-saas`, `github-vs-gdocs`, `provider-readiness`, `cloudflare-pages`, or `stripe`; also powers longer "tell me more" context from setup and doctor prompts. |
 | `mb skill list` | List the skills bundled with this engine. |
 | `mb skill path <name>` | Print the on-disk path to a bundled skill. |
 | `mb skill validate <name>` | Validate one bundled skill's frontmatter, local references, and 500-line gate. Use `--all --json` for CI. |
@@ -272,6 +272,8 @@ mb educational stripe
 mb educational forgejo
 mb educational cursor
 ```
+
+Common provider-readiness commands:
 
 ```bash
 mb connect plan

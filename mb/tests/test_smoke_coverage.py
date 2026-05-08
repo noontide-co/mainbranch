@@ -63,31 +63,14 @@ def test_educational_provider_readiness_exists() -> None:
 
 
 def test_educational_beginner_catalog_exists() -> None:
-    from mb.educational import load, topics
+    from mb.educational import BEGINNER_CATALOG_TOPICS, load, topics
 
-    expected = {
-        "anti-cloud-backup",
-        "beancount",
-        "cal-com",
-        "cli-vs-dashboard",
-        "cloudflare-pages",
-        "cloudflare-vs-vercel",
-        "cursor",
-        "daily-owner-loop",
-        "forgejo",
-        "git-history-vs-cloud-sync",
-        "github-vs-gdocs",
-        "markdown-vs-notion",
-        "provider-readiness",
-        "stripe",
-        "upgrading-mainbranch",
-        "why-mainbranch-not-saas",
-    }
-
-    assert expected.issubset(set(topics()))
-    for topic in expected:
+    assert set(BEGINNER_CATALOG_TOPICS).issubset(set(topics()))
+    for topic in BEGINNER_CATALOG_TOPICS:
         result = load(topic)
         assert result is not None
+        # Every beginner topic must explicitly fence runtime/provider support
+        # claims so education copy does not drift into unsupported promises.
         assert "What Main Branch does not claim" in result
 
 
