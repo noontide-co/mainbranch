@@ -516,7 +516,7 @@
         "release_acceptance"
       ],
       "operator_moment": "The operator asks /mb-start to launch a specific offer and expects safe orchestration across research, push, lander, ads plan, and checkpoint steps.",
-      "fixture_profile": "fresh_sanitized_business_repo",
+      "fixture_profile": "launch_readiness_fixture",
       "prompt": "/mb-start launch operating-memory setup sprint",
       "expected_route": [
         "sense",
@@ -570,7 +570,7 @@
         "release_acceptance"
       ],
       "operator_moment": "The operator asks how the session would be saved after approved work.",
-      "fixture_profile": "fresh_sanitized_business_repo",
+      "fixture_profile": "dirty_checkpoint_fixture",
       "prompt": "Show the checkpoint plan for any approved changes, validate the proposed message, and ask me before saving the checkpoint.",
       "expected_route": [
         "ship",
@@ -611,7 +611,7 @@
       ],
       "operator_moment": "The runtime cannot find the project-local Main Branch skills or a personal skill shadow is suspected.",
       "fixture_profile": "broken_skill_wiring_fixture",
-      "prompt": "/mb-start is not showing up. Diagnose the Main Branch runtime wiring from this business repo and tell me the safest repair path before applying anything.",
+      "prompt": "The `/mb-start` command is not showing up. Diagnose the Main Branch runtime wiring from this business repo and tell me the safest repair path before applying anything.",
       "expected_route": [
         "sense",
         "ship"

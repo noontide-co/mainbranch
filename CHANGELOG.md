@@ -11,6 +11,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added materialized release-simulation fixture profiles to the Claude runtime
+  dogfood harness. Print-mode simulations now run from per-simulation fixture
+  repos for launch-readiness gaps, dirty checkpoint planning, broken skill
+  wiring, synthetic private-data refusal, and legacy drift, with evidence for
+  applied mutations, read-only `mb` facts, permission denials, and grounding
+  verdicts. Refs #402.
+
 ## [0.3.10] - 2026-05-08
 
 v0.3.10 makes the release process prove itself while adding new owner-facing

@@ -69,6 +69,12 @@ checks fixture and engine repo boundaries, and writes a public-safe evidence
 folder. The final output prints the evidence path and a paste-ready
 `evidence-template.md`.
 
+When `--run-claude-print` is enabled, each release simulation runs from a
+per-simulation copy of the healthy fixture repo. The harness materializes the
+manifest's `fixture_profile` in that copy, captures read-only `mb` facts for the
+profile, and records the applied mutations and grounding verdict in the
+evidence folder.
+
 By default the temp root is kept so you can inspect evidence artifacts. Remove
 it after copying anything you need:
 
@@ -117,7 +123,9 @@ and `mb checkpoint --plan`. It does not use permission-bypass mode and does not
 allowlist write/edit tools, checkpoint saves, repair applies, migrations, or git
 commits. Transcript review still has to answer whether Claude actually ran/read
 the `mb` facts, whether permissions distorted the run, and which deterministic
-CLI artifacts are only fallback evidence.
+CLI artifacts are only fallback evidence. The harness labels permission-denied
+grounding as proxy evidence; when profile `mb` facts are available, it records
+that as deterministic fallback rather than an interactive TUI pass.
 
 Print-mode evidence is a proxy. It is useful for repeatable regression signal,
 budget/auth failures, transcript excerpts, and rubric scoring, but it is not

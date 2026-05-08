@@ -91,6 +91,16 @@ first six are ready for automated or manual prompt runs; the private-data and
 legacy-drift risk sims are specified so release reviewers can inspect them even
 when the first implementation only automates part of the suite.
 
+The harness materializes each simulation's `fixture_profile` before a
+print-mode run by copying the healthy disposable business repo into a
+per-simulation fixture repo and applying the profile mutation there. Current
+profiles include the healthy first-day repo, broken project-local skill wiring,
+synthetic private-data refusal material, legacy campaigns/schema drift, launch
+readiness gaps, and dirty approved business files for checkpoint planning.
+Evidence records the profile name, mutations applied, relevant read-only `mb`
+command facts, post-run git state, permission-denial count, and grounding
+verdict.
+
 ## Running The Suite
 
 For normal PR runtime smoke:
@@ -126,9 +136,9 @@ scripts/claude-runtime-dogfood.py --install-mode wheel --wheel mb/dist/mainbranc
 ```
 
 The harness writes `summary.json`, command artifacts, transcript excerpts when
-print mode runs, rubric JSON, and `evidence-template.md`. Paste the concise
-template into the PR or release checklist. Keep raw local paths and long
-transcripts out of public comments.
+print mode runs, fixture-profile artifacts, grounding verdict JSON, rubric JSON,
+and `evidence-template.md`. Paste the concise template into the PR or release
+checklist. Keep raw local paths and long transcripts out of public comments.
 
 Print-mode runs intentionally prepend the harness venv's `mb` executable to
 `PATH` and pass Claude Code a read-only allowlist for deterministic `mb`
@@ -138,6 +148,9 @@ does not allowlist write/edit tools, checkpoint saves, repair applies,
 migrations, or git commits. If a transcript still shows read-only `mb` commands
 were denied, classify the run as permission-distorted proxy evidence and record
 the fallback rather than treating the heuristic rubric as a full pass.
+When deterministic fixture facts were captured for the same scenario, the
+harness labels that as partial proxy evidence with deterministic fallback,
+still not as interactive TUI proof.
 
 ## Transcript Review
 

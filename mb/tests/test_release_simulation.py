@@ -14,6 +14,16 @@ def test_packaged_release_simulation_manifest_is_valid() -> None:
     assert release_simulation.validate_manifest(manifest) == []
 
 
+def test_release_simulation_exposes_known_fixture_profiles() -> None:
+    simulations = release_simulation.simulations()
+    profiles = {sim.fixture_profile for sim in simulations}
+
+    assert "broken_skill_wiring_fixture" in profiles
+    assert "legacy_drift_fixture" in profiles
+    assert "dirty_checkpoint_fixture" in profiles
+    assert profiles <= release_simulation.KNOWN_FIXTURE_PROFILES
+
+
 def test_release_simulation_tiers_have_expected_prompt_coverage() -> None:
     pr_smoke = release_simulation.simulations_for_tier("pr_smoke")
     prerelease = release_simulation.simulations_for_tier("prerelease_candidate")

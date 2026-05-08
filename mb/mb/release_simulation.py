@@ -10,6 +10,17 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
+KNOWN_FIXTURE_PROFILES = frozenset(
+    {
+        "fresh_sanitized_business_repo",
+        "broken_skill_wiring_fixture",
+        "public_safe_refusal_fixture",
+        "legacy_drift_fixture",
+        "dirty_checkpoint_fixture",
+        "launch_readiness_fixture",
+    }
+)
+
 
 @dataclass(frozen=True)
 class BehaviorCheck:
@@ -33,6 +44,7 @@ class Simulation:
     expected_behaviors: tuple[str, ...]
     must_observe: tuple[str, ...]
     must_not: tuple[str, ...]
+    fixture_profile: str = "fresh_sanitized_business_repo"
 
 
 def _default_manifest_path() -> Any:
@@ -93,6 +105,7 @@ def simulations(manifest: dict[str, Any] | None = None) -> tuple[Simulation, ...
                 expected_behaviors=tuple(_str_list(item, "expected_behaviors")),
                 must_observe=tuple(_str_list(item, "must_observe")),
                 must_not=tuple(_str_list(item, "must_not")),
+                fixture_profile=_required_str(item, "fixture_profile"),
             )
         )
     return tuple(sims)
@@ -200,6 +213,8 @@ def validate_manifest(manifest: dict[str, Any] | None = None) -> list[str]:
         for check_id in sim.expected_behaviors:
             if check_id not in check_ids:
                 errors.append(f"{sim.id} references unknown behavior check {check_id}")
+        if sim.fixture_profile not in KNOWN_FIXTURE_PROFILES:
+            errors.append(f"{sim.id} references unknown fixture_profile {sim.fixture_profile}")
         if not sim.prompt.strip():
             errors.append(f"{sim.id} has empty prompt")
         if not sim.must_observe:

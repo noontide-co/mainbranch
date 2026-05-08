@@ -223,6 +223,98 @@ def test_run_claude_print_allows_readonly_mb_and_denies_write_tools(
     assert state.claude["permission_denials"] == []
 
 
+def test_run_claude_print_retries_when_resume_session_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state = harness.HarnessState(
+        engine_repo=tmp_path / "engine",
+        root=tmp_path,
+        evidence_dir=tmp_path / "evidence",
+        fixture_repo=tmp_path / "fixture",
+        mb_path=tmp_path / "venv" / "bin" / "mb",
+    )
+    state.fixture_repo.mkdir(parents=True)
+    calls: list[list[str]] = []
+
+    simulations = (
+        release_simulation.Simulation(
+            id="one",
+            label="one",
+            title="One",
+            tiers=("pr_smoke",),
+            prompt="one",
+            expected_route=("sense",),
+            expected_behaviors=("control_plane_usage",),
+            must_observe=("mb status",),
+            must_not=(),
+        ),
+        release_simulation.Simulation(
+            id="two",
+            label="two",
+            title="Two",
+            tiers=("pr_smoke",),
+            prompt="two",
+            expected_route=("sense",),
+            expected_behaviors=("control_plane_usage",),
+            must_observe=("mb status",),
+            must_not=(),
+        ),
+    )
+
+    def fake_run_command(
+        state: harness.HarnessState,
+        label: str,
+        command: list[str],
+        *,
+        cwd: Path,
+        env: dict[str, str] | None = None,
+        timeout: int | None = None,
+    ) -> harness.CommandResult:
+        del state, cwd, env, timeout
+        calls.append(command)
+        stdout_path = tmp_path / f"{label}.stdout"
+        stderr_path = tmp_path / f"{label}.stderr"
+        metadata_path = tmp_path / f"{label}.json"
+        if "--resume" in command:
+            stdout = ""
+            stderr = "No conversation found with session ID: missing\n"
+            returncode = 1
+        else:
+            stdout = json.dumps(
+                {
+                    "session_id": "session-1",
+                    "result": {"content": [{"text": "/mb-start ran mb status."}]},
+                }
+            )
+            stderr = ""
+            returncode = 0
+        stdout_path.write_text(stdout, encoding="utf-8")
+        stderr_path.write_text(stderr, encoding="utf-8")
+        metadata_path.write_text("{}", encoding="utf-8")
+        return harness.CommandResult(
+            label=label,
+            command=command,
+            cwd=tmp_path,
+            returncode=returncode,
+            stdout=stdout,
+            stderr=stderr,
+            stdout_path=stdout_path,
+            stderr_path=stderr_path,
+            metadata_path=metadata_path,
+        )
+
+    monkeypatch.setattr(shutil, "which", lambda _: "/usr/local/bin/claude")
+    monkeypatch.setattr(release_simulation, "simulations_for_tier", lambda _: simulations)
+    monkeypatch.setattr(harness, "run_command", fake_run_command)
+
+    harness.run_claude_print(state, max_budget_usd="0.01", simulation_tier="pr_smoke")
+
+    assert any("--resume" in command for command in calls)
+    assert any("retried as a fresh print-mode session" in warning for warning in state.warnings)
+    assert [turn["simulation_id"] for turn in state.claude["turns"]] == ["one", "two"]
+    assert state.claude["turns"][1]["returncode"] == 0
+
+
 def test_read_json_rejects_non_object_payload() -> None:
     payload, error = harness.read_json("[]", label="demo")
 
@@ -292,6 +384,121 @@ def test_evidence_template_labels_print_mode_as_proxy(tmp_path: Path) -> None:
     assert str(tmp_path / "transcript.md") not in template
     assert "Transcript excerpts: local artifact; see harness output and summary.json" in template
     assert "`mb start --json`: follow-up /mb-start" in template
+
+
+def test_materialize_fixture_profiles_create_observable_repo_states(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state = harness.HarnessState(
+        engine_repo=tmp_path / "engine",
+        root=tmp_path,
+        evidence_dir=tmp_path / "evidence",
+        fixture_repo=tmp_path / "fixture",
+        mb_path=tmp_path / "venv" / "bin" / "mb",
+    )
+    state.fixture_repo.mkdir(parents=True)
+    skill = state.fixture_repo / ".claude" / "skills" / "mb-start" / "SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("# skill\n", encoding="utf-8")
+    (state.fixture_repo / ".mb").mkdir()
+    (state.fixture_repo / ".mb" / "schema_version").write_text("0.2\n", encoding="utf-8")
+    (state.fixture_repo / "core").mkdir()
+    (state.fixture_repo / "core" / "offer.md").write_text("# Offer\n", encoding="utf-8")
+    (state.fixture_repo / "research").mkdir()
+
+    monkeypatch.setattr(harness, "_commit_profile_baseline", lambda *_args: None)
+    monkeypatch.setattr(
+        harness,
+        "_capture_profile_mb_facts",
+        lambda _state, _repo, _simulation, record: record.__setitem__(
+            "mb_command_facts", {"facts_available": True}
+        ),
+    )
+
+    broken = release_simulation.Simulation(
+        id="broken",
+        label="broken",
+        title="Broken",
+        tiers=("pr_smoke",),
+        prompt="/mb-start",
+        expected_route=("sense",),
+        expected_behaviors=("supported_repair_path",),
+        must_observe=("repair",),
+        must_not=(),
+        fixture_profile="broken_skill_wiring_fixture",
+    )
+    legacy = release_simulation.Simulation(
+        id="legacy",
+        label="legacy",
+        title="Legacy",
+        tiers=("pr_smoke",),
+        prompt="legacy",
+        expected_route=("sense",),
+        expected_behaviors=("supported_repair_path",),
+        must_observe=("migrate",),
+        must_not=(),
+        fixture_profile="legacy_drift_fixture",
+    )
+    dirty = release_simulation.Simulation(
+        id="dirty",
+        label="dirty",
+        title="Dirty",
+        tiers=("pr_smoke",),
+        prompt="checkpoint",
+        expected_route=("ship",),
+        expected_behaviors=("no_silent_commits",),
+        must_observe=("checkpoint",),
+        must_not=(),
+        fixture_profile="dirty_checkpoint_fixture",
+    )
+
+    broken_record = harness.materialize_fixture_profile(state, broken)
+    legacy_record = harness.materialize_fixture_profile(state, legacy)
+    dirty_record = harness.materialize_fixture_profile(state, dirty)
+
+    broken_repo = Path(broken_record["repo"])
+    legacy_repo = Path(legacy_record["repo"])
+    dirty_repo = Path(dirty_record["repo"])
+
+    assert not (broken_repo / ".claude" / "skills" / "mb-start").exists()
+    assert (legacy_repo / "campaigns" / "2026-04-15-spring-launch" / "campaign.md").exists()
+    assert (legacy_repo / ".mb" / "schema_version").read_text(encoding="utf-8") == "0.1\n"
+    assert "Approved Draft Update" in (dirty_repo / "core" / "offer.md").read_text(encoding="utf-8")
+    assert dirty_record["baseline_committed"] is False
+    assert {record["fixture_profile"] for record in state.fixture_profiles} == {
+        "broken_skill_wiring_fixture",
+        "legacy_drift_fixture",
+        "dirty_checkpoint_fixture",
+    }
+
+
+def test_print_grounding_classifies_permission_denial_without_fallback_as_proxy() -> None:
+    verdict = harness.classify_print_grounding(
+        permission_denials=[{"tool": "Bash(mb status --json --peek)"}],
+        fixture_profiles=[{"fixture_profile": "fresh", "mb_command_facts": {}}],
+        rubric={"checks": {"control_plane_usage": {"ok": True}}},
+        turns=[{"simulation_id": "fresh_first_day", "returncode": 0}],
+    )
+
+    assert verdict["verdict"] == "permission_distorted_proxy"
+    assert verdict["clean_pass"] is False
+
+
+def test_print_grounding_classifies_permission_denial_with_fixture_facts_as_partial() -> None:
+    verdict = harness.classify_print_grounding(
+        permission_denials=[{"tool": "Bash(mb status --json --peek)"}],
+        fixture_profiles=[
+            {
+                "fixture_profile": "fresh",
+                "mb_command_facts": {"facts_available": True},
+            }
+        ],
+        rubric={"checks": {"control_plane_usage": {"ok": True}}},
+        turns=[{"simulation_id": "fresh_first_day", "returncode": 0}],
+    )
+
+    assert verdict["verdict"] == "partial_proxy_with_deterministic_fallback"
+    assert verdict["clean_pass"] is False
 
 
 def test_run_command_captures_artifacts_and_parses_json(tmp_path: Path) -> None:
