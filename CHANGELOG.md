@@ -18,6 +18,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   threads when needed, `/mb-start` regenerates the current view from facts, and
   `/mb-end` remains closure/checkpointing rather than tomorrow planning. Refs
   #377.
+- Recorded a public-safe partial Postiz scheduling smoke: the REST API endpoint
+  and auth path worked, but the tested setup had no connected channels, so
+  Postiz remains a candidate rail rather than supported scheduling behavior.
+  Refs #352.
 
 ## [0.3.7] - 2026-05-07
 

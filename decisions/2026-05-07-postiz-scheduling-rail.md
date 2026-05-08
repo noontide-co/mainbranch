@@ -7,7 +7,8 @@ linked_decisions:
   - decisions/2026-05-01-mb-cli-vs-agent-workflows-boundary.md
   - decisions/2026-05-04-sidecar-enrichment-cli-contract.md
   - decisions/2026-05-04-workspace-repo-sensitive-data-boundaries.md
-linked_issues: []
+linked_issues:
+  - https://github.com/noontide-co/mainbranch/issues/352
 participants: [Devon, Codex]
 tags: [v0-3, integrations, social, postiz, onboarding, self-hosting]
 ---
@@ -139,6 +140,11 @@ Before public docs call Postiz a supported scheduling rail, run a focused smoke:
 
 If this passes, update `docs/DEPENDENCY-CHOICES.md` from planned optional
 provider to supported scheduling rail for the tested surface only.
+
+The first smoke on 2026-05-07 America/Los_Angeles proved REST endpoint
+reachability and auth, but did not promote Postiz to supported because the
+tested organization had no connected channels. See
+[the public-safe smoke report](../docs/reports/2026-05-07-postiz-scheduling-smoke.md).
 
 ## Sources
 

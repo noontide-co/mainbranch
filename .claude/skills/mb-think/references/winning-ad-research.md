@@ -172,8 +172,10 @@ without an accepted provider path and smoke evidence.
   best for topic-level "what are people saying now?" research; otherwise use
   web search, public embeds, screenshots, or manual exports.
 - **Postiz:** planned optional scheduling/publishing rail. Treat it as draft,
-  schedule, thread, cross-post, and analytics support only where docs/smoke
-  evidence exist. Do not treat it as Main Branch-supported DM automation.
+  schedule, thread, cross-post, and analytics support only where docs and
+  connected-channel smoke evidence exist. The 2026-05-07 API smoke proved
+  reachability/auth only, not supported draft or scheduling behavior. Do not
+  treat it as Main Branch-supported DM automation.
 - **X API:** official mutation path for posts, replies, and DMs requires
   developer approval, OAuth user tokens, and explicit operator authority. Main
   Branch does not support this automation today.
