@@ -11,6 +11,26 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.10] - 2026-05-08
+
+v0.3.10 makes the release process prove itself while adding new owner-facing
+daily-loop paths: richer launch orchestration, beginner education, cheaper
+large-repo status checks, and the first release gate that requires simulation
+evidence plus manual transcript review.
+
+### What this means for you (plain English)
+
+- **Launch work has a clearer path.** `/mb-start` can now route an offer launch
+  through research, push, lander, ads-plan, approval, and checkpoint steps
+  without pretending Main Branch mutates provider accounts for you.
+- **Beginner education is easier to find.** `mb educational` now has a catalog
+  for common setup, ownership, provider, and tool-choice topics.
+- **Status scales better.** Relationship-health checks are cheaper on larger
+  business repos.
+- **Releases have stronger proof.** Package-visible releases now run release
+  simulations and require manual transcript review before release claims are
+  treated as evidence.
+
 ### Added
 
 - Added bundled skill guidance for a guided offer-launch path: `/mb-start`
@@ -26,6 +46,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   reusable eight-category research reference, downstream guidance for
   `/mb-ads`, `/mb-site`, `/mb-organic`, and push-playbook use, plus a
   public-safe example brief. Refs #147.
+- Added release-acceptance simulation coverage for the `/mb-start launch
+  <offer>` path so release reviewers can check keyword-gate, push, lander,
+  ads-plan, approval, and checkpoint routing before treating the release as
+  ready. Refs #400.
 
 ### Changed
 
@@ -38,6 +62,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   feasible, require manual transcript review beyond heuristic rubrics, and
   record whether Claude Code print-mode actually executed read-only `mb`
   grounding commands or fell back because of permissions. Refs #394.
+- Reduced `mb status` relationship-health work on large repos by reusing graph
+  relationship facts instead of reparsing the same file bodies repeatedly.
+  Refs #358, #396.
 
 ## [0.3.9] - 2026-05-08
 
