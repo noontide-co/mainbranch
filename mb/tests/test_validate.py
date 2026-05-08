@@ -838,6 +838,20 @@ def test_validate_accepts_push_playbook_schema(tmp_path: Path) -> None:
     assert playbook["ok"] is True
 
 
+def test_validate_accepts_sanitized_push_playbook_fixture() -> None:
+    fixture_root = Path(__file__).parent / "fixtures"
+
+    report = run(path=str(fixture_root))
+
+    assert report["ok"] is True, report
+    assert any(
+        file["path"] == "pushes/2026-05-06-resource-delivery/playbooks/valid-resource-delivery.md"
+        and file["schema"] == "push-playbooks"
+        and file["ok"]
+        for file in report["files"]
+    )
+
+
 def test_validate_requires_push_playbook_shape(tmp_path: Path) -> None:
     _write(
         tmp_path / "pushes" / "2026-05-06-target" / "push.md",
@@ -923,6 +937,26 @@ def test_validate_rejects_playbook_supported_provider_claim_without_adapter(
     bad = [file for file in report["files"] if file["path"].endswith("playbooks/resource.md")][0]
     assert report["ok"] is False
     assert any("tested Main Branch provider adapter" in error for error in bad["errors"])
+
+
+def test_validate_rejects_playbook_secret_frontmatter_value(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target"),
+    )
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "playbooks" / "resource.md",
+        _playbook().replace(
+            "  notes: Draft only; no provider mutation.\n",
+            "  notes: ghp_123456789012345678901234567890123456\n",
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["path"].endswith("playbooks/resource.md")][0]
+    assert report["ok"] is False
+    assert any("validation.notes" in error for error in bad["errors"])
 
 
 def test_validate_rejects_playbook_secret_frontmatter(tmp_path: Path) -> None:

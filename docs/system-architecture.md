@@ -363,7 +363,9 @@ pushes/<YYYY-MM-DD-slug>/playbooks/<playbook>.md
 A playbook is a plan, approval record, setup recipe, and outcome hook. It is
 not proof that Main Branch can mutate a provider account. `provider` records
 where execution would happen; `provider_boundary` records whether execution is
-manual, external, candidate, or backed by an accepted adapter.
+manual, external, candidate, or backed by an accepted adapter. Provider ids are
+lowercase hyphenated slugs, such as `manual`, `meta-ads`, `postiz`, or `x-api`;
+use hyphens rather than underscores or dots.
 
 Required v1 playbook frontmatter:
 

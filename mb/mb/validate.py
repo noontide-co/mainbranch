@@ -369,7 +369,7 @@ def _check_playbook_frontmatter(path: Path, fm: dict[str, Any], errors: list[str
     if isinstance(provider, str) and provider.strip():
         provider_id = provider.strip()
         if not PLAYBOOK_PROVIDER_RE.fullmatch(provider_id):
-            errors.append("provider must be a lowercase provider id")
+            errors.append("provider must be a lowercase hyphenated provider id")
         if (
             fm.get("provider_boundary") == "accepted-adapter"
             and provider_id not in PLAYBOOK_ACCEPTED_MUTATION_PROVIDERS
