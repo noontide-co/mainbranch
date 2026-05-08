@@ -17,6 +17,7 @@ from urllib.parse import urlparse
 import yaml
 
 from mb import pushes as pushes_mod
+from mb import relationships
 
 DECISION_STATUS = {"proposed", "accepted", "rejected", "superseded", "running"}
 OFFER_STATUS = {
@@ -35,21 +36,10 @@ CAMPAIGN_STATUS = pushes_mod.PUSH_STATUS
 PUSH_KIND = pushes_mod.PUSH_KIND
 PUSH_HEALTH = pushes_mod.PUSH_HEALTH
 
-LINK_FIELDS = (
-    "linked_bets",
-    "linked_research",
-    "linked_decision",
-    "linked_decisions",
-    "linked_pushes",
-    "linked_campaigns",
-    "linked_outcomes",
-    "linked_prd",
-    "linked_prds",
-    "related_prds",
-    "supersedes",
-)
+LINK_FIELDS = relationships.RELATIONSHIP_FIELDS
 
 WIKILINK_RE = re.compile(r"(?<!!)\[\[([^\]\n]+)\]\]")
+MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[([^\]\n]+)\]\(([^)\n]+)\)")
 INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
 
 LOCAL_REF_ROOTS = {
@@ -209,6 +199,7 @@ def _check_one(path: Path, schema: dict[str, Any]) -> dict[str, Any]:
         _check_push_frontmatter(path, fm, errors)
     elif primitive == "legacy-campaign":
         _check_legacy_campaign_frontmatter(fm, errors)
+    _check_provider_refs_shape(fm, errors)
     return {"path": str(path), "ok": not errors, "errors": errors, "warnings": []}
 
 
@@ -261,6 +252,28 @@ def _check_legacy_campaign_frontmatter(fm: dict[str, Any], errors: list[str]) ->
     record_type = fm.get("type")
     if record_type is not None and record_type not in {"campaign", "push"}:
         errors.append("type must be 'campaign' or 'push' for legacy campaign records")
+
+
+def _check_provider_refs_shape(fm: dict[str, Any], errors: list[str]) -> None:
+    if "provider_refs" not in fm:
+        return
+    provider_refs = fm.get("provider_refs")
+    if not isinstance(provider_refs, dict):
+        errors.append("provider_refs must be a mapping of provider names to non-secret refs")
+        return
+    for provider, refs in provider_refs.items():
+        if not isinstance(provider, str) or not provider.strip():
+            errors.append("provider_refs provider names must be non-empty strings")
+            continue
+        if refs is None:
+            continue
+        if isinstance(refs, dict):
+            if not all(isinstance(key, str) and key.strip() for key in refs):
+                errors.append(f"provider_refs.{provider} ref names must be non-empty strings")
+            continue
+        if isinstance(refs, list) and all(isinstance(item, dict) for item in refs):
+            continue
+        errors.append(f"provider_refs.{provider} must be a mapping or list of mappings")
 
 
 def _is_hidden_or_generated(path: Path, repo: Path) -> bool:
@@ -348,6 +361,45 @@ def _wikilink_target(raw_target: str) -> str:
     target = raw_target.split("|", 1)[0].strip()
     target = target.split("#", 1)[0].strip()
     return target
+
+
+def _markdown_link_target(raw_target: str) -> str:
+    target = raw_target.strip()
+    target = target.split(None, 1)[0].strip()
+    if (target.startswith('"') and target.endswith('"')) or (
+        target.startswith("'") and target.endswith("'")
+    ):
+        target = target[1:-1]
+    return _clean_ref(target)
+
+
+def _is_local_markdown_ref(ref: str) -> bool:
+    clean_ref = _markdown_link_target(ref)
+    if not clean_ref or _is_external_ref(clean_ref):
+        return False
+    suffix = Path(clean_ref).suffix
+    return suffix in {"", ".md"}
+
+
+def _resolve_markdown_link(repo: Path, source: Path, ref: str) -> Path | None:
+    clean_ref = _markdown_link_target(ref)
+    if not clean_ref:
+        return None
+    if clean_ref.startswith("/"):
+        candidates = [repo / clean_ref.lstrip("/")]
+    else:
+        candidates = [source.parent / clean_ref, repo / clean_ref]
+    if not clean_ref.endswith(".md"):
+        candidates.extend(candidate.with_suffix(".md") for candidate in list(candidates))
+    for candidate in candidates:
+        target = candidate.resolve()
+        try:
+            target.relative_to(repo)
+        except ValueError:
+            continue
+        if target.is_file() and target.suffix == ".md":
+            return target
+    return None
 
 
 def _resolve_wikilink(
@@ -575,7 +627,8 @@ def _check_cross_refs(
         fm, err = _read_frontmatter(source)
         if err is not None or fm is None:
             continue
-        for field in LINK_FIELDS:
+        source_rel = source.relative_to(repo).as_posix()
+        for field in relationships.relationship_fields_for_source(source_rel):
             if field not in fm:
                 continue
             refs, valid_type = _coerce_refs(fm.get(field))
@@ -649,7 +702,8 @@ def _check_cross_refs(
         body = _read_markdown_body(source)
         if body is None:
             continue
-        for match in WIKILINK_RE.finditer(_strip_markdown_code(body)):
+        body_without_code = _strip_markdown_code(body)
+        for match in WIKILINK_RE.finditer(body_without_code):
             raw_target = match.group(1)
             clean_target = _wikilink_target(raw_target)
             if not clean_target:
@@ -676,6 +730,27 @@ def _check_cross_refs(
                     field="wikilink",
                     target=raw_target,
                     message=message,
+                )
+            )
+        for match in MARKDOWN_LINK_RE.finditer(body_without_code):
+            raw_target = match.group(2)
+            clean_target = _markdown_link_target(raw_target)
+            if not clean_target or _is_external_ref(clean_target):
+                continue
+            if not _is_local_markdown_ref(clean_target):
+                continue
+            if _resolve_markdown_link(repo, source, clean_target) is not None:
+                continue
+            findings.append(
+                _finding(
+                    code="missing-markdown-link-target",
+                    source=source,
+                    repo=repo,
+                    field="markdown_link",
+                    target=clean_target,
+                    message=(
+                        f"markdown link target {clean_target!r} does not resolve to a markdown file"
+                    ),
                 )
             )
 
@@ -719,6 +794,7 @@ def _check_cross_refs(
     return {
         "enabled": True,
         "checked_fields": list(LINK_FIELDS),
+        "registry": relationships.registry_payload(),
         "warnings": findings + orphan_offers,
         "orphan_offers": orphan_offers,
     }

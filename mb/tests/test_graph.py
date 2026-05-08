@@ -73,11 +73,17 @@ def test_bet_links_become_edges(tmp_path: Path) -> None:
     assert "linked_bets" in edge_types
 
 
-def test_graph_exposes_push_facts_and_ignores_provider_refs(tmp_path: Path) -> None:
+def test_graph_exposes_push_offer_and_provider_refs_without_raw_values(tmp_path: Path) -> None:
     pushes = tmp_path / "pushes" / "2026-05-06-workshop"
     decisions = tmp_path / "decisions"
+    offer = tmp_path / "core" / "offers" / "workshop"
     pushes.mkdir(parents=True)
     decisions.mkdir()
+    offer.mkdir(parents=True)
+    (offer / "offer.md").write_text(
+        "---\nslug: workshop\nstatus: running\n---\n# Workshop offer\n",
+        encoding="utf-8",
+    )
     (pushes / "push.md").write_text(
         "---\n"
         "type: push\n"
@@ -120,8 +126,24 @@ def test_graph_exposes_push_facts_and_ignores_provider_refs(tmp_path: Path) -> N
     assert index["push_compatibility"]["legacy_campaign_keys_deprecated"] is True
     edge_targets = {edge["target"] for edge in index["edges"]}
     assert "file:decisions/2026-05-06-workshop.md" in edge_targets
+    assert "file:core/offers/workshop/offer.md" in edge_targets
+    assert any(
+        edge["source"] == "file:pushes/2026-05-06-workshop/push.md"
+        and edge["target"] == "file:core/offers/workshop/offer.md"
+        and edge["type"] == "offer"
+        and edge["rel_type"] == "offer"
+        for edge in index["edges"]
+    )
+    assert any(
+        edge["source"] == "file:pushes/2026-05-06-workshop/push.md"
+        and edge["target"] == "provider:meta-ads"
+        and edge["type"] == "provider_refs"
+        and edge["rel_type"] == "provider"
+        for edge in index["edges"]
+    )
     assert not any("123" in target for target in edge_targets)
     assert not any("sidecars" in target for target in edge_targets)
+    assert not any("123" in json.dumps(node) for node in index["nodes"])
 
 
 def test_graph_keeps_legacy_campaign_facts_during_compatibility(tmp_path: Path) -> None:
@@ -180,6 +202,86 @@ def test_build_index_includes_frontmatter_links_wikilinks_and_entities(tmp_path:
     assert "wikilink" in edge_types
     assert "mentions" in edge_types
     assert index["summary"]["entities"]["person"] == 1
+
+
+def test_build_index_normalizes_relationship_registry_fields(tmp_path: Path) -> None:
+    bets = tmp_path / "bets"
+    campaigns = tmp_path / "campaigns" / "spring"
+    bets.mkdir()
+    campaigns.mkdir(parents=True)
+    (campaigns / "campaign.md").write_text(
+        "---\nslug: spring\nstatus: active\n---\n# Spring\n",
+        encoding="utf-8",
+    )
+    (bets / "spring.md").write_text(
+        "---\n"
+        "status: open\n"
+        "opened: 2026-05-04\n"
+        "deadline: 2026-05-11\n"
+        "appetite: 1 week\n"
+        "hypothesis: Spring push creates calls.\n"
+        "metric: calls\n"
+        "target: 5 calls\n"
+        "result: ''\n"
+        "linked_decision: decisions/spring.md\n"
+        "linked_research: []\n"
+        "linked_campaigns:\n"
+        "  - campaigns/spring/campaign.md\n"
+        "linked_outcomes: []\n"
+        "public: true\n"
+        "channels: []\n"
+        "tags: []\n"
+        "---\n",
+        encoding="utf-8",
+    )
+
+    index = build_index(path=str(tmp_path))
+
+    assert index["registry"]["version"] == "0.1"
+    assert any(
+        edge["type"] == "linked_decision"
+        and edge["rel_type"] == "decision"
+        and edge["original_field"] == "linked_decision"
+        for edge in index["edges"]
+    )
+    assert any(
+        edge["type"] == "linked_campaigns"
+        and edge["rel_type"] == "push"
+        and edge["original_field"] == "linked_campaigns"
+        for edge in index["edges"]
+    )
+
+
+def test_build_index_parses_safe_markdown_links(tmp_path: Path) -> None:
+    docs = tmp_path / "docs"
+    research = tmp_path / "research"
+    docs.mkdir()
+    research.mkdir()
+    (research / "audience.md").write_text(
+        "---\ndate: 2026-05-07\ntopic: audience\nsource: manual\n---\n# Audience\n",
+        encoding="utf-8",
+    )
+    (docs / "brief.md").write_text(
+        "---\ntitle: Brief\n---\n"
+        "See [Audience](../research/audience.md) and [external](https://example.com/path).\n"
+        "![Chart](../research/chart.png)\n"
+        "Use `[Missing](../research/missing.md)` as an example.\n"
+        "```md\n[Missing](../research/missing.md)\n```\n",
+        encoding="utf-8",
+    )
+
+    index = build_index(path=str(tmp_path))
+
+    assert any(
+        edge["source"] == "file:docs/brief.md"
+        and edge["target"] == "file:research/audience.md"
+        and edge["type"] == "markdown_link"
+        and edge["rel_type"] == "reference"
+        for edge in index["edges"]
+    )
+    assert any(node["id"] == "external:https-example-com-path" for node in index["nodes"])
+    assert not any("chart" in edge["target"] for edge in index["edges"])
+    assert not any("missing" in edge["target"] for edge in index["edges"])
 
 
 def test_graph_json_cli_emits_machine_readable_index(tmp_path: Path) -> None:

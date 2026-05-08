@@ -14,23 +14,12 @@ from urllib.parse import urlparse
 import yaml
 
 from mb import pushes as pushes_mod
+from mb import relationships
 
 INDEX_VERSION = 1
 EdgeKey = tuple[str, str, str, tuple[tuple[str, str], ...]]
 
-LINK_FIELDS = (
-    "linked_bets",
-    "linked_research",
-    "linked_decision",
-    "linked_decisions",
-    "linked_pushes",
-    "linked_campaigns",
-    "linked_outcomes",
-    "linked_prd",
-    "linked_prds",
-    "related_prds",
-    "supersedes",
-)
+LINK_FIELDS = relationships.RELATIONSHIP_FIELDS
 
 ENTITY_FIELDS = {
     "people": "person",
@@ -77,6 +66,8 @@ LOCAL_REF_ROOTS = {
 }
 
 WIKILINK_RE = re.compile(r"(?<!!)\[\[([^\]\n]+)\]\]")
+MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[([^\]\n]+)\]\(([^)\n]+)\)")
+INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
 ENTITY_HASHTAG_RE = re.compile(
     r"(?<![\w/])#("
     + "|".join(sorted(ENTITY_TAG_TYPES))
@@ -139,6 +130,23 @@ def _coerce_strings(value: Any) -> list[str]:
     if isinstance(value, list):
         return [item for item in value if isinstance(item, str)]
     return []
+
+
+def _strip_fenced_code_blocks(markdown: str) -> str:
+    lines: list[str] = []
+    in_fence = False
+    for line in markdown.splitlines(keepends=True):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            lines.append("\n")
+            continue
+        if not in_fence:
+            lines.append(line)
+    return "".join(lines)
+
+
+def _strip_markdown_code(markdown: str) -> str:
+    return INLINE_CODE_RE.sub("", _strip_fenced_code_blocks(markdown))
 
 
 def _is_external_ref(ref: str) -> bool:
@@ -209,10 +217,18 @@ def _add_edge(
     if key in seen_edges:
         return
     seen_edges.add(key)
+    original_field = evidence.get("field") or evidence.get("kind") or edge_type
+    source_path = evidence.get("path")
     edge = {
         "source": source,
         "target": target,
         "type": edge_type,
+        "rel_type": relationships.normalize_relationship(
+            original_field,
+            source_path=source_path,
+            fallback=edge_type,
+        ),
+        "original_field": original_field,
         "evidence": evidence,
     }
     edges.append(edge)
@@ -258,6 +274,45 @@ def _resolve_repo_ref(repo: Path, ref: str) -> Path | None:
     except ValueError:
         return None
     return target
+
+
+def _markdown_link_target(raw_target: str) -> str:
+    target = raw_target.strip()
+    target = target.split(None, 1)[0].strip()
+    if (target.startswith('"') and target.endswith('"')) or (
+        target.startswith("'") and target.endswith("'")
+    ):
+        target = target[1:-1]
+    return _clean_ref(target)
+
+
+def _is_local_markdown_ref(ref: str) -> bool:
+    clean_ref = _markdown_link_target(ref)
+    if not clean_ref or _is_external_ref(clean_ref):
+        return False
+    suffix = Path(clean_ref).suffix
+    return suffix in {"", ".md"}
+
+
+def _resolve_markdown_link(repo: Path, source: Path, ref: str) -> Path | None:
+    clean_ref = _markdown_link_target(ref)
+    if not clean_ref:
+        return None
+    if clean_ref.startswith("/"):
+        candidates = [repo / clean_ref.lstrip("/")]
+    else:
+        candidates = [source.parent / clean_ref, repo / clean_ref]
+    if not clean_ref.endswith(".md"):
+        candidates.extend(candidate.with_suffix(".md") for candidate in list(candidates))
+    for candidate in candidates:
+        target = candidate.resolve()
+        try:
+            target.relative_to(repo)
+        except ValueError:
+            continue
+        if target.is_file() and target.suffix == ".md":
+            return target
+    return None
 
 
 def _wikilink_target(raw_target: str) -> str:
@@ -369,6 +424,25 @@ def _iter_entity_values(frontmatter: dict[str, Any], body: str) -> list[tuple[st
     return found
 
 
+def _iter_provider_refs(frontmatter: dict[str, Any]) -> list[tuple[str, list[str]]]:
+    provider_refs = frontmatter.get("provider_refs")
+    if not isinstance(provider_refs, dict):
+        return []
+    found: list[tuple[str, list[str]]] = []
+    for provider, refs in provider_refs.items():
+        if not isinstance(provider, str) or not provider.strip():
+            continue
+        ref_kinds: list[str] = []
+        if isinstance(refs, dict):
+            ref_kinds = sorted(str(key) for key in refs if isinstance(key, str))
+        elif isinstance(refs, list):
+            for item in refs:
+                if isinstance(item, dict):
+                    ref_kinds.extend(str(key) for key in item if isinstance(key, str))
+        found.append((provider, sorted(set(ref_kinds))))
+    return found
+
+
 def build_index(path: str) -> dict[str, Any]:
     """Build the machine-readable repo graph index."""
     repo = Path(path).resolve()
@@ -411,7 +485,7 @@ def build_index(path: str) -> dict[str, Any]:
         source_id = _file_id(file_path, repo)
         source_rel = file_path.relative_to(repo).as_posix()
 
-        for field in LINK_FIELDS:
+        for field in relationships.relationship_fields_for_source(source_rel):
             for ref in _coerce_strings(frontmatter.get(field)):
                 _add_reference_edge(
                     repo=repo,
@@ -424,7 +498,9 @@ def build_index(path: str) -> dict[str, Any]:
                     evidence={"kind": "frontmatter", "field": field, "path": source_rel},
                 )
 
-        for match in WIKILINK_RE.finditer(body):
+        body_without_code = _strip_markdown_code(body)
+
+        for match in WIKILINK_RE.finditer(body_without_code):
             raw_target = match.group(1)
             resolved = _resolve_wikilink(
                 repo=repo,
@@ -455,7 +531,79 @@ def build_index(path: str) -> dict[str, Any]:
                 evidence={"kind": "wikilink", "target": raw_target, "path": source_rel},
             )
 
-        for entity_type, value, source in _iter_entity_values(frontmatter, body):
+        for match in MARKDOWN_LINK_RE.finditer(body_without_code):
+            raw_target = match.group(2)
+            clean_target = _markdown_link_target(raw_target)
+            if not clean_target:
+                continue
+            if _is_external_ref(clean_target):
+                target_id = _external_id(clean_target)
+                _add_node(
+                    nodes,
+                    {
+                        "id": target_id,
+                        "type": "external",
+                        "label": clean_target,
+                        "metadata": {"ref": clean_target},
+                    },
+                )
+            elif _is_local_markdown_ref(clean_target):
+                resolved = _resolve_markdown_link(repo, file_path, clean_target)
+                if resolved is None:
+                    target_id = f"missing:{_slug(clean_target)}"
+                    _add_node(
+                        nodes,
+                        {
+                            "id": target_id,
+                            "type": "missing",
+                            "label": clean_target,
+                            "metadata": {"ref": clean_target},
+                        },
+                    )
+                else:
+                    target_id = _file_id(resolved, repo)
+            else:
+                continue
+            _add_edge(
+                edges,
+                seen_edges,
+                source=source_id,
+                target=target_id,
+                edge_type="markdown_link",
+                evidence={"kind": "markdown_link", "target": clean_target, "path": source_rel},
+            )
+
+        for provider, ref_kinds in _iter_provider_refs(frontmatter):
+            target_id = f"provider:{_slug(provider)}"
+            _add_node(
+                nodes,
+                {
+                    "id": target_id,
+                    "type": "provider",
+                    "label": _label_from_value(provider),
+                    "metadata": {
+                        "provider": provider,
+                        "ref_kinds": ref_kinds,
+                        "exposes_raw_values": False,
+                    },
+                },
+            )
+            _add_edge(
+                edges,
+                seen_edges,
+                source=source_id,
+                target=target_id,
+                edge_type="provider_refs",
+                evidence={
+                    "kind": "frontmatter",
+                    "field": "provider_refs",
+                    "path": source_rel,
+                    "provider": provider,
+                    "ref_kinds": ",".join(ref_kinds),
+                },
+            )
+
+        for entity_type, value, source in _iter_entity_values(frontmatter, body_without_code):
             target_id = _entity_id(entity_type, value)
             _add_node(
                 nodes,
@@ -484,6 +632,7 @@ def build_index(path: str) -> dict[str, Any]:
     }
     return {
         "version": INDEX_VERSION,
+        "registry": relationships.registry_payload(),
         "repo": str(repo),
         "nodes": sorted_nodes,
         "edges": sorted_edges,

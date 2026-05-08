@@ -119,6 +119,7 @@ def test_cross_refs_pass_when_targets_exist(tmp_path: Path) -> None:
 
     assert report["ok"] is True
     assert report["cross_refs"]["enabled"] is True
+    assert report["cross_refs"]["registry"]["version"] == "0.1"
     assert report["summary"]["warnings"] == 0
 
 
@@ -350,6 +351,44 @@ def test_cross_refs_ignore_wikilink_like_syntax_inside_inline_code(tmp_path: Pat
 
     assert report["ok"] is True
     assert report["summary"]["warnings"] == 0
+
+
+def test_cross_refs_resolve_standard_markdown_links_and_skip_safe_non_refs(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "research" / "audience.md",
+        "---\ndate: 2026-05-07\ntopic: audience\nsource: manual\n---\n# Audience\n",
+    )
+    _write(
+        tmp_path / "docs" / "brief.md",
+        "---\ntitle: Brief\n---\n"
+        "See [Audience](../research/audience.md), [root](research/audience.md), "
+        "and [external](https://example.com/path).\n"
+        "![Chart](../research/chart.png)\n"
+        "Use `[Missing](../research/missing.md)` as an example.\n"
+        "```md\n[Missing](../research/missing.md)\n```\n",
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True, strict=True)
+
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 0
+
+
+def test_cross_refs_warn_on_missing_standard_markdown_link_target(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "docs" / "brief.md",
+        "---\ntitle: Brief\n---\nSee [Missing](../research/missing.md).\n",
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    assert report["summary"]["warnings"] == 1
+    finding = report["cross_refs"]["warnings"][0]
+    assert finding["code"] == "missing-markdown-link-target"
+    assert finding["field"] == "markdown_link"
+    assert finding["target"] == "../research/missing.md"
 
 
 def test_cross_refs_flag_status_transition_regressions(tmp_path: Path) -> None:
@@ -730,6 +769,10 @@ def test_validate_rejects_unknown_push_kind_even_when_vocabulary_renames_it(
 def test_cross_refs_resolve_linked_pushes_field(tmp_path: Path) -> None:
     """linked_pushes is recognized as a graph link field and must resolve."""
     _write(
+        tmp_path / "core" / "offers" / "workshop" / "offer.md",
+        "---\nslug: workshop\nstatus: running\n---\n# Workshop\n",
+    )
+    _write(
         tmp_path / "pushes" / "2026-05-06-target" / "push.md",
         _push("active", slug="target"),
     )
@@ -750,6 +793,67 @@ def test_cross_refs_resolve_linked_pushes_field(tmp_path: Path) -> None:
 
     assert report["ok"] is True
     assert report["summary"]["warnings"] == 0
+
+
+def test_cross_refs_validate_push_offer_relationship(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "core" / "offers" / "workshop" / "offer.md",
+        "---\nslug: workshop\nstatus: running\n---\n# Workshop\n",
+    )
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target"),
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True, strict=True)
+
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 0
+
+
+def test_cross_refs_warn_on_missing_push_offer_relationship(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target"),
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    assert report["summary"]["warnings"] == 1
+    finding = report["cross_refs"]["warnings"][0]
+    assert finding["code"] == "missing-target"
+    assert finding["field"] == "offer"
+    assert finding["target"] == "core/offers/workshop/offer.md"
+
+
+def test_validate_accepts_provider_refs_mapping_shape(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target").replace(
+            "---\n# target\n",
+            "provider_refs:\n  meta_ads:\n    campaign_id: '123'\n---\n# target\n",
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is True
+
+
+def test_validate_rejects_provider_refs_scalar_shape(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target").replace(
+            "---\n# target\n",
+            "provider_refs: meta_ads:123\n---\n# target\n",
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["path"].endswith("push.md")][0]
+    assert report["ok"] is False
+    assert "provider_refs must be a mapping of provider names to non-secret refs" in bad["errors"]
 
 
 def test_cross_refs_warn_on_missing_linked_pushes_target(tmp_path: Path) -> None:
