@@ -463,16 +463,30 @@ def test_materialize_fixture_profiles_create_observable_repo_states(
         must_not=(),
         fixture_profile="launch_readiness_fixture",
     )
+    rich = release_simulation.Simulation(
+        id="rich",
+        label="rich",
+        title="Rich",
+        tiers=("pr_smoke",),
+        prompt="rich",
+        expected_route=("sense", "decide"),
+        expected_behaviors=("control_plane_usage",),
+        must_observe=("multi-offer",),
+        must_not=(),
+        fixture_profile="rich_multi_offer_migration_repo",
+    )
 
     broken_record = harness.materialize_fixture_profile(state, broken)
     legacy_record = harness.materialize_fixture_profile(state, legacy)
     dirty_record = harness.materialize_fixture_profile(state, dirty)
     launch_record = harness.materialize_fixture_profile(state, launch)
+    rich_record = harness.materialize_fixture_profile(state, rich)
 
     broken_repo = Path(broken_record["repo"])
     legacy_repo = Path(legacy_record["repo"])
     dirty_repo = Path(dirty_record["repo"])
     launch_repo = Path(launch_record["repo"])
+    rich_repo = Path(rich_record["repo"])
 
     assert not (broken_repo / ".claude" / "skills" / "mb-start").exists()
     assert (legacy_repo / "campaigns" / "2026-04-15-spring-launch" / "campaign.md").exists()
@@ -484,12 +498,17 @@ def test_materialize_fixture_profiles_create_observable_repo_states(
     assert "core/offers/operating-memory-setup-sprint/offer.md" in launch_push.read_text(
         encoding="utf-8"
     )
+    assert (rich_repo / "core" / "offers" / "community" / "offer.md").exists()
+    assert (rich_repo / "core" / "offers" / "hvac-proof" / "offer.md").exists()
+    assert (rich_repo / ".vip" / "local.yaml").exists()
+    assert (rich_repo / "campaigns" / "2026-04-30-hvac-proof" / "campaign.md").exists()
     assert dirty_record["baseline_committed"] is False
     assert {record["fixture_profile"] for record in state.fixture_profiles} == {
         "broken_skill_wiring_fixture",
         "legacy_drift_fixture",
         "dirty_checkpoint_fixture",
         "launch_readiness_fixture",
+        "rich_multi_offer_migration_repo",
     }
 
 

@@ -19,6 +19,34 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   wiring, synthetic private-data refusal, and legacy drift, with evidence for
   applied mutations, read-only `mb` facts, permission denials, and grounding
   verdicts. Refs #402.
+- Added a `mb doctor repair --plan --json` audit section for legacy
+  `.vip/local.yaml` and `.vip/config.yaml` YAML state. The plan classifies key
+  families without printing raw values, separates local/session state from
+  durable business/provider facts, and keeps deletion/migration manual. Refs
+  #413.
+- Added a release-simulation fixture for the `/mb-start` ambiguous-choice
+  failure where an operator replies `1` for the top recommendation in a rich
+  multi-offer repo, so release review checks that offer selection cannot
+  silently win over onboarding or recommendation routing. Refs #410.
+- Added a rich-migration `/mb-start` triage fixture that requires agents to map
+  durable business truth, active bets, execution work, proof, legacy
+  compatibility files, and linked operating-boundary repos before routing or
+  spawning agents. Refs #410.
+
+### Changed
+
+- Retired `.vip/config.yaml` as active path/provider/tool config in current
+  CLI and skill guidance. New setup no longer creates it, and offer-aware
+  skills ask for explicit session context instead of silently routing from
+  `.vip/local.yaml`. Refs #413.
+- Expanded `mb doctor repair --plan --json` migration guidance with an
+  offer-topology section that surfaces legacy `.vip/local.yaml` active-offer
+  state, offer folder/frontmatter slug drift, and multi-offer review needs
+  without auto-renaming or rewriting strategy files. Refs #410.
+- Tightened `/mb-start` and multi-offer skill guidance so one prompt cannot
+  reuse the same number for recommendations, offers, and routes; offer choices
+  are session-scoped unless the operator explicitly confirms saving local
+  active-offer state. Refs #410.
 
 ## [0.3.10] - 2026-05-08
 

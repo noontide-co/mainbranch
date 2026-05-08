@@ -42,9 +42,9 @@ Every touched entry must include:
 Do not hide state flips:
 
 - `false → true`:
-  - "Found [tool] installed and working — updated `.vip/config.yaml`."
+  - "Found [tool] installed and working. `mb connect doctor --json` has the current provider repair path if account readiness is still missing."
 - `true → false`:
-  - "Warning: [tool] was previously available but is not detected now. I updated `.vip/config.yaml` so this doesn't fail silently."
+  - "Warning: [tool] was previously available but is not detected now. Treat old `.vip/config.yaml` tool status as stale and use current `mb connect`/runtime checks."
 
 If status does not change, use normal experience-level reporting.
 
@@ -56,8 +56,8 @@ If a runtime-local tool marked `status: true` fails at use time (missing command
 or missing MCP tool):
 
 1. Re-probe that tool immediately
-2. Update config to `status: false`, set `last_checked: [today]`, add explanatory notes
-3. Warn the user in the same turn
+2. Warn the user in the same turn
+3. If the failure is provider auth/readiness, report the `mb connect doctor --json` repair command
 
 Never let a previously-true runtime-local tool fail silently. If the failure is
 provider auth/readiness, report the `mb connect doctor --json` repair command

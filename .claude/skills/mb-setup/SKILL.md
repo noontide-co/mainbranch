@@ -170,7 +170,6 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 
 ```bash
 # Always create:
-mkdir -p .vip
 mkdir -p core core/offers core/finance core/brand core/proof/angles core/operations
 mkdir -p research decisions bets log pushes documents
 ```
@@ -188,11 +187,10 @@ for offer in [offer-names]; do
   mkdir -p "core/offers/$offer"
 done
 
-# Write initial current_offer
-echo "current_offer: [first-offer]" > .vip/local.yaml
-
-# Ensure .vip/local.yaml is git-ignored (session state, not shared)
-grep -q ".vip/local.yaml" .gitignore 2>/dev/null || echo ".vip/local.yaml" >> .gitignore
+# Ask before persisting active-offer state. Offer choice can stay session-scoped.
+# Do not write .vip/local.yaml as the active-offer mechanism.
+# Keep the choice session-scoped unless a future mb command exposes an explicit
+# session-state contract and the operator confirms persistence.
 
 # Create product-ladder.md placeholder at core/product-ladder.md
 touch core/product-ladder.md
@@ -205,9 +203,6 @@ Full structure (single-offer):
 ├── README.md              # Human-readable overview
 ├── .env                   # Secrets (gitignored)
 ├── .gitignore             # Include .env
-│
-├── .vip/                  # VIP configuration (git-tracked)
-│   └── config.yaml        # User preferences, infrastructure refs
 │
 ├── core/                  # Evergreen business brain
 │   ├── soul.md            # Why you exist
@@ -249,19 +244,18 @@ Full structure (multi-offer — adds offer folders and `product-ladder.md`):
 │       │   └── offer.md   # Offer-specific details
 │       └── course/
 │           └── offer.md
-└── .vip/
-    ├── config.yaml        # Git-tracked team settings
-    └── local.yaml         # Git-IGNORED session state (current_offer)
 ```
 
 ### 4a. API Key Environment, Config, and .gitignore
 
 See **[references/repo-scaffolding.md](references/repo-scaffolding.md)** for:
 - API key environment setup (`~/.config/vip/env.sh`)
-- Initial `.vip/config.yaml` template (includes `mcps:` section for MCP server tracking)
+- Legacy `.vip` cleanup guidance
 - `.gitignore` creation
 
-Run these steps in order: create env.sh, add shell source line, create config.yaml, create .gitignore.
+Run these steps in order: create env.sh when needed, add shell source line when
+approved, and create `.gitignore`. Do not create `.vip/config.yaml` for new
+repos.
 
 ### 5. Sort Content into Files
 
@@ -338,7 +332,7 @@ EOF
 |------|--------|
 | core/offers/[name]/offer.md | [OK] Complete / [WARN] Thin (< 20 lines) / [FAIL] Missing |
 | core/product-ladder.md | [OK] Complete / [WARN] Placeholder |
-| .vip/local.yaml | [OK] Set to [offer] / [FAIL] Missing |
+| active offer | [OK] Selected for session / [INFO] Not persisted |
 
 Ask user for missing pieces or note for later.
 

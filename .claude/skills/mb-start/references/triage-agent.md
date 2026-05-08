@@ -1,6 +1,8 @@
 # Triage Agent Reference
 
-Complete reference for the smart triage system in `/mb-start`. Runs when the user selects **option 1** ("What should I focus on?") from the /mb-start menu. Contains agent prompts, pre-gathering, gating, synthesis format, anti-patterns, and save behavior.
+Complete reference for the smart triage system in `/mb-start`. Runs when the
+user selects the triage route from the /mb-start menu. Contains agent prompts,
+pre-gathering, gating, synthesis format, anti-patterns, and save behavior.
 
 Modeled on `/mb-end`'s crystallize agent pattern. Where crystallize asks "what did today mean?", triage asks "what should happen next?" Where crystallize is a mirror, triage is a compass.
 
@@ -8,13 +10,16 @@ Modeled on `/mb-end`'s crystallize agent pattern. Where crystallize asks "what d
 
 ## When to Run
 
-**Triage runs when the user chooses it.** It's option 1 on the /mb-start menu — the recommended default most sessions. But the user can always skip it and pick a skill directly.
+**Triage runs when the user chooses it.** It can be the first item on the main
+/mb-start route menu, but only when no ranked recommendation or offer list is
+using the same number in that response. The user can always skip it and pick a
+skill directly.
 
 **Why not always-on:** Three parallel agents burn 50-80K tokens. Running them every session means the user hits 60%+ context before doing any actual work. /mb-end gates crystallize behind meaningful activity — /mb-start gates triage behind user choice. Agents eat the heavy context in their own windows, keeping main lean for whatever comes next.
 
-**Auto-suggest option 1 when:**
+**Auto-suggest triage when:**
 - Returning user (last commit >3 days ago) and no stated intent
-- Readiness is THIN (8-11) — "Option 1 can help you figure out the highest-leverage gap"
+- Readiness is THIN (8-11) — "Triage can help you figure out the highest-leverage gap"
 - User says "what should I work on", "help me prioritize", "what to do next"
 
 **Skip triage entirely when:**
@@ -77,6 +82,11 @@ work.
 
 **The goal is to pass COMPACT data to agents, not load everything into main.** Main gathers lightweight metadata (scores, file lists, git summaries). Agents do the heavy reading (full file contents, cross-file analysis) in their own context windows.
 
+Before routing or spawning agents, build a concrete primitive map from repo
+truth. This is not optional in rich or migrating repos; it prevents Claude from
+confusing parent truth, offer truth, live bets, execution artifacts, and child
+repos.
+
 Gather these in main and pass as structured text in each agent's prompt:
 
 | Content | How | Size | Passed To |
@@ -89,15 +99,42 @@ Gather these in main and pass as structured text in each agent's prompt:
 | Unlinked research count | `grep -rl "linked_decisions: \[\]" research/ 2>/dev/null \| wc -l` | 1 line | Agent 2 |
 | Past triage file names | `ls research/*-start-triage.md 2>/dev/null` | ~5 lines | Agent 3 |
 | Past crystallize file names | `ls research/*-end-of-day-crystallize.md 2>/dev/null` | ~5 lines | Agent 3 |
-| `current_offer` | From `.vip/local.yaml` | 1 line | All 3 agents |
+| active offer | From a future `mb` JSON active-offer field if present, otherwise explicit session/user selection | 1 line | All 3 agents |
 | Push lifecycle listing | `grep -rl "status: draft\|status: planned\|status: active" pushes/ campaigns/ 2>/dev/null` | ~10 lines | Agent 2 |
+| Primitive map | File lists grouped by the map below | ~40 lines | All 3 agents |
 
-**What agents read themselves (in their own context, NOT in main):**
-- soul.md, offer.md, audience.md, voice.md — Agent 1 reads all, Agent 3 reads soul
-- content-strategy.md — Agent 2, 3
-- Full decision files (agents pick which ones to read based on file names)
-- Full past triage/crystallize outputs (agents pick based on file names)
-- testimonials.md, angles/* — Agent 1
+**What agents may read themselves (in their own context, NOT in main):**
+
+Read only the subset needed for the assigned triage question. Start from status
+facts, file lists, and filenames; do not recursively scan the whole repo or
+linked repos. Never open raw exports, secrets, credentials, customer/member
+records, or private local-state files unless the operator explicitly points to a
+sanitized file for the current task.
+
+- Brand truth: `core/soul.md`, `core/voice.md`, `core/audience.md`,
+  `core/offer.md`, `core/strategy/`, `core/operations/`, `core/brand/`.
+- Offer truth: `core/offers/<slug>/offer.md`, optional
+  `core/offers/<slug>/audience.md`, and offer-specific proof or angles.
+- Bet truth: `bets/*.md`, especially status, deadline, metric, target,
+  linked files, result, and verdict.
+- Execution truth: `pushes/<slug>/push.md` and artifacts. Read `campaigns/`
+  only as legacy compatibility and name it that way.
+- Evidence: `research/`, `decisions/`, `core/proof/`, offer proof, `log/`,
+  and `documents/`.
+- Relationship checks: `mb status --json --peek`; add `mb graph`,
+  `mb validate --cross-refs`, and `mb doctor repair --plan --json` when
+  migration drift, stale links, or topology confusion is suspected.
+
+**Classification language agents must use:**
+
+- "Durable business truth" for `core/` and approved evergreen docs.
+- "Live wager" for active/open `bets/*.md`.
+- "Execution work" for pushes and current artifacts.
+- "Proof/evidence" for research, decisions, proof, logs, and documents.
+- "Legacy compatibility" for `campaigns/` and old `reference/` paths.
+- "Linked operating boundary" when a site, offer, client, finance, ops, or
+  archive repo holds its own lifecycle. The parent business repo stays the hub
+  for company-level strategy, decisions, bets, and links.
 
 **This keeps main at ~5K tokens of pre-gathering** while agents spend 20-50K each reading full files.
 
@@ -127,7 +164,14 @@ testimonials X/3, angles X/3. Composite X/18.]
 
 === CURRENT OFFER ===
 
-[current_offer from .vip/local.yaml, or "single-offer mode"]
+[active offer from future mb JSON field, explicit session selection, or "single-offer mode"]
+
+=== PRIMITIVE MAP ===
+
+[Grouped map of durable business truth, offer truth, live bets, execution work,
+proof/evidence, legacy compatibility, and linked operating boundaries. Use
+exact paths. If a requested move belongs in a site/offer/client/finance/ops repo,
+say so; keep parent strategy and bet truth in the business repo.]
 
 === CORE FILES ===
 
@@ -221,6 +265,11 @@ Use: grep -rl "status: draft" pushes/ campaigns/ 2>/dev/null
 or "No pushes with lifecycle status" if none have status field.
 Also list most recent 5 items in pushes/ (or campaigns/ on legacy repos).]
 
+=== PRIMITIVE MAP ===
+
+[Grouped map of durable business truth, live bets, execution work,
+proof/evidence, legacy compatibility, and linked operating boundaries.]
+
 === CONTENT STRATEGY ===
 
 [Full text of content-strategy.md, or "Not yet created."]
@@ -296,6 +345,11 @@ You are NOT a therapist or coach. You are a strategic compass.
 
 [Contents of research/*-start-triage.md, if any.
 If none: "First triage session. No prior outputs."]
+
+=== PRIMITIVE MAP ===
+
+[Grouped map of durable business truth, offer truth, live bets, execution work,
+proof/evidence, legacy compatibility, and linked operating boundaries.]
 
 === PAST CRYSTALLIZE OUTPUTS ===
 
@@ -385,7 +439,7 @@ Each agent is **read-only**. Each reads files in its own context window. Main co
 
 ### After Spawning: Wait for Agents
 
-**The user already chose triage (option 1). They're waiting for results.** Show a brief message: "Analyzing your business state..." while agents work.
+**The user already chose triage. They're waiting for results.** Show a brief message: "Analyzing your business state..." while agents work.
 
 ### When Agents Return: Present the Synthesis
 
@@ -599,6 +653,6 @@ status: complete
 
 ## See Also
 
-- [../SKILL.md](../SKILL.md) -- The /mb-start flow where triage is option 1 on the menu
+- [../SKILL.md](../SKILL.md) -- The /mb-start flow where triage is an explicit route
 - [readiness-assessment.md](readiness-assessment.md) -- Scoring rubric and display format (runs before triage, provides scores to agents)
 - `/mb-end` crystallize-agent pattern -- The model for this agent's gating, tiering, and token budget

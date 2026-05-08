@@ -383,6 +383,8 @@ def _apply_fixture_profile(repo: Path, profile: str) -> list[str]:
         return _apply_dirty_checkpoint_fixture(repo)
     if profile == "launch_readiness_fixture":
         return _apply_launch_readiness_fixture(repo)
+    if profile == "rich_multi_offer_migration_repo":
+        return _apply_rich_multi_offer_migration_repo(repo)
     raise ValueError(f"unknown fixture profile: {profile}")
 
 
@@ -527,6 +529,110 @@ approval, and checkpoint plan are still missing.
     return ["added launch-readiness offer, research, and planned push with gaps"]
 
 
+def _apply_rich_multi_offer_migration_repo(repo: Path) -> list[str]:
+    (repo / "core" / "offer.md").write_text(
+        """---
+type: offer
+slug: community
+status: running
+---
+
+# Noontide Operating Memory
+
+Brand-level offer thesis for a multi-offer business. This intentionally overlaps
+one per-offer slug so migration review has something concrete to inspect.
+""",
+        encoding="utf-8",
+    )
+    product_ladder = repo / "core" / "product-ladder.md"
+    product_ladder.write_text(
+        """# Product Ladder
+
+- Community membership: recurring owner operating room.
+- Agency sprint: done-with-you implementation.
+- HVAC proof: narrow search-launch proof run.
+""",
+        encoding="utf-8",
+    )
+    offers = {
+        "community": "Recurring operating room for solo founders.",
+        "agency": "Implementation sprint for founders who need hands-on help.",
+        "hvac-proof": "Public-safe HVAC offer proof run for search demand.",
+    }
+    for slug, summary in offers.items():
+        offer = repo / "core" / "offers" / slug / "offer.md"
+        offer.parent.mkdir(parents=True, exist_ok=True)
+        offer.write_text(
+            f"""---
+type: offer
+slug: {slug}
+status: running
+---
+
+# {slug.replace("-", " ").title()}
+
+{summary}
+""",
+            encoding="utf-8",
+        )
+    (repo / ".vip").mkdir(exist_ok=True)
+    (repo / ".vip" / "local.yaml").write_text(
+        "current_offer: community\nsession_note: synthetic fixture only\n",
+        encoding="utf-8",
+    )
+    campaign = repo / "campaigns" / "2026-04-30-hvac-proof"
+    campaign.mkdir(parents=True, exist_ok=True)
+    (campaign / "campaign.md").write_text(
+        """---
+type: campaign
+slug: hvac-proof
+status: active
+date: 2026-04-30
+---
+
+# HVAC Proof Campaign
+
+Legacy campaigns-era execution record retained for migration triage.
+""",
+        encoding="utf-8",
+    )
+    bet = repo / "bets" / "2026-05-08-hvac-search-proof.md"
+    bet.parent.mkdir(parents=True, exist_ok=True)
+    bet.write_text(
+        """---
+type: bet
+status: active
+date: 2026-05-08
+linked_offers:
+  - core/offers/hvac-proof/offer.md
+---
+
+# HVAC Search Proof
+
+Test whether search intent can produce qualified calls for the HVAC proof offer.
+""",
+        encoding="utf-8",
+    )
+    boundary = repo / "documents" / "linked-operating-boundaries.md"
+    boundary.parent.mkdir(parents=True, exist_ok=True)
+    boundary.write_text(
+        """# Linked Operating Boundaries
+
+- `../hvac-offer-sidecar` is a synthetic linked execution repo placeholder.
+- Parent repo remains canonical for offer, bet, push, and outcome truth.
+- Raw provider exports, customer records, and secrets stay outside committed
+  business memory.
+""",
+        encoding="utf-8",
+    )
+    return [
+        "added multi-offer core/offers topology",
+        "added legacy .vip/local.yaml active-offer state",
+        "added campaigns-era HVAC proof record",
+        "added linked operating-boundary note",
+    ]
+
+
 def _commit_profile_baseline(
     state: HarnessState, repo: Path, profile: str, record: dict[str, Any]
 ) -> None:
@@ -593,7 +699,7 @@ def _capture_profile_mb_facts(
             [str(state.mb_path), "checkpoint", "--repo", str(repo), "--plan", "--json"],
         ),
     ]
-    if simulation.fixture_profile == "legacy_drift_fixture":
+    if simulation.fixture_profile in {"legacy_drift_fixture", "rich_multi_offer_migration_repo"}:
         commands.append(
             (
                 "migrate_campaigns_plan",

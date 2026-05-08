@@ -33,11 +33,44 @@ def test_release_simulation_tiers_have_expected_prompt_coverage() -> None:
         "fresh_first_day",
         "messy_morning_thought_dump",
     ]
+    assert "ambiguous_mb_start_offer_choice" in {sim.id for sim in prerelease}
+    assert "ambiguous_mb_start_offer_choice" in {sim.id for sim in release}
+    assert "rich_migration_triage_map" in {sim.id for sim in prerelease}
+    assert "rich_migration_triage_map" in {sim.id for sim in release}
     assert len(prerelease) >= 8
     assert len(release) >= 7
     assert sum(1 for sim in prerelease if sim.prompt.strip()) >= 6
     assert all(sim.expected_behaviors for sim in prerelease)
     assert all(sim.must_observe for sim in prerelease)
+
+
+def test_release_simulation_covers_ambiguous_mb_start_offer_choice() -> None:
+    simulations = {
+        sim.id: sim for sim in release_simulation.simulations_for_tier("prerelease_candidate")
+    }
+
+    sim = simulations["ambiguous_mb_start_offer_choice"]
+
+    assert sim.label == "ambiguous-choice"
+    assert "1" in sim.prompt
+    assert any("duplicate numeric" in item.lower() for item in sim.must_observe)
+    assert any(".vip/local.yaml" in item for item in sim.must_not)
+    assert "ask_before_write" in sim.expected_behaviors
+
+
+def test_release_simulation_covers_rich_migration_triage_map() -> None:
+    simulations = {
+        sim.id: sim for sim in release_simulation.simulations_for_tier("prerelease_candidate")
+    }
+
+    sim = simulations["rich_migration_triage_map"]
+
+    assert sim.label == "migration-triage"
+    assert "primitive map" in " ".join(sim.must_observe).lower()
+    assert "linked operating boundaries" in " ".join(sim.must_observe)
+    assert any("vaguely scan the repo" in item for item in sim.must_not)
+    assert any("private local-state" in item for item in sim.must_not)
+    assert "repo_boundary_safety" in sim.expected_behaviors
 
 
 def test_release_simulation_parser_exposes_expected_tier_choices() -> None:

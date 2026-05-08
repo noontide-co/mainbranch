@@ -18,6 +18,7 @@ KNOWN_FIXTURE_PROFILES = frozenset(
         "legacy_drift_fixture",
         "dirty_checkpoint_fixture",
         "launch_readiness_fixture",
+        "rich_multi_offer_migration_repo",
     }
 )
 

@@ -163,6 +163,7 @@ def test_onboard_cli_yes_json_smoke(tmp_path: Path, monkeypatch) -> None:
     assert (repo / ".mb" / "onboarding.json").exists()
     assert payload["onboarding"]["summary"]["status"] == "in_progress"
     assert ".mb/onboarding.json" in (repo / ".gitignore").read_text(encoding="utf-8")
+    assert ".vip/local.yaml" in (repo / ".gitignore").read_text(encoding="utf-8")
 
     graph = graph_mod.build_index(str(repo))
     validate = validate_mod.run(str(repo), cross_refs=True)

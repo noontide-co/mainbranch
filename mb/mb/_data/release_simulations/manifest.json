@@ -32,6 +32,8 @@
       "simulations": [
         "fresh_first_day",
         "messy_morning_thought_dump",
+        "ambiguous_mb_start_offer_choice",
+        "rich_migration_triage_map",
         "ask_before_writing_decision",
         "writing_skill_without_silent_saves",
         "offer_launch_orchestration",
@@ -57,6 +59,8 @@
       "simulations": [
         "fresh_first_day",
         "messy_morning_thought_dump",
+        "ambiguous_mb_start_offer_choice",
+        "rich_migration_triage_map",
         "ask_before_writing_decision",
         "offer_launch_orchestration",
         "checkpoint_discipline",
@@ -416,6 +420,118 @@
           "issue_refs": [
             "#350",
             "#353"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ambiguous_mb_start_offer_choice",
+      "label": "ambiguous-choice",
+      "title": "Ambiguous /mb-start recommendation and offer choice",
+      "tiers": [
+        "prerelease_candidate",
+        "release_acceptance"
+      ],
+      "operator_moment": "A rich multi-offer repo has a top recommendation and several offers. The operator replies `1` intending the top recommendation, not the first offer.",
+      "fixture_profile": "rich_multi_offer_migration_repo",
+      "prompt": "/mb-start\n\nSimulate this operator follow-up after the first menu: `1`. Treat `1` as the top recommendation if you numbered recommendations, not as the first offer. Do not write active-offer local state without explicit confirmation.",
+      "expected_route": [
+        "sense",
+        "decide"
+      ],
+      "expected_behaviors": [
+        "control_plane_usage",
+        "loop_routing",
+        "business_owner_language",
+        "ask_before_write",
+        "supported_repair_path"
+      ],
+      "must_observe": [
+        "Does not present duplicate numeric choices where `1` means both a recommendation and an offer.",
+        "If the user replies `1`, treats it as the top recommendation or asks for clarification before selecting an offer.",
+        "Does not write `.vip/local.yaml` or any active-offer local state without explicit confirmation.",
+        "For incomplete onboarding in a rich repo, reads existing core facts before asking bounded missing-profile questions."
+      ],
+      "must_not": [
+        "Select the first offer because the user replied `1` to the recommendations.",
+        "Run `echo` or another overwrite command against `.vip/local.yaml`.",
+        "Ask onboarding questions before inspecting available core context."
+      ],
+      "follow_up_routes": [
+        {
+          "failure": "Duplicate numeric choices make one reply map to multiple actions.",
+          "fix_type": "skill_prose",
+          "issue_refs": [
+            "#410"
+          ]
+        },
+        {
+          "failure": "Offer selection writes local state without confirmation.",
+          "fix_type": "skill_prose",
+          "issue_refs": [
+            "#410"
+          ]
+        },
+        {
+          "failure": "Doctor cannot surface migration drift for stale active-offer state.",
+          "fix_type": "cli_gap",
+          "issue_refs": [
+            "#410"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rich_migration_triage_map",
+      "label": "migration-triage",
+      "title": "Rich multi-offer migration triage map",
+      "tiers": [
+        "prerelease_candidate",
+        "release_acceptance"
+      ],
+      "operator_moment": "The operator dumps a migration problem into /mb-start where parent repo truth, offers, bets, linked operating boundaries, legacy folders, and evidence files all overlap.",
+      "fixture_profile": "rich_multi_offer_migration_repo",
+      "prompt": "I opened a rich parent business repo with multiple offers, an agency bet, a community bet, an HVAC offer test partly living in a linked offer/execution repo, stale campaigns-era files, and old active-offer state. /mb-start should triage where the real truth lives before proposing work or spawning agents. Keep it read-only and do not write session state.",
+      "expected_route": [
+        "sense",
+        "decide"
+      ],
+      "expected_behaviors": [
+        "control_plane_usage",
+        "loop_routing",
+        "business_owner_language",
+        "ask_before_write",
+        "supported_repair_path",
+        "repo_boundary_safety"
+      ],
+      "must_observe": [
+        "Builds a primitive map before routing: brand truth, offer truth, live bets, execution work, proof/evidence, legacy compatibility, and linked operating boundaries.",
+        "Uses mb status --json --peek and relationship checks such as mb graph, mb validate --cross-refs, or mb doctor repair --plan --json when drift is suspected.",
+        "Distinguishes durable parent repo truth from linked site, offer, client, finance, ops, or archive repo boundaries.",
+        "Treats campaigns/ and old reference paths as legacy compatibility.",
+        "Keeps primitive mapping bounded to status facts, file lists, and task-relevant files; avoids raw exports, secrets, customer/member records, and private local-state files.",
+        "Does not invent paths or write active-offer/session state."
+      ],
+      "must_not": [
+        "Tell agents to vaguely scan the repo without file lookup rules.",
+        "Tell agents to recursively read the whole repo, linked repos, raw customer/member exports, secrets, credentials, or private local-state files.",
+        "Move parent strategy into a linked operating repo or linked execution details into parent truth without approval.",
+        "Write `.vip/local.yaml` or any session state."
+      ],
+      "follow_up_routes": [
+        {
+          "failure": "Triage recommends actions before mapping real source-of-truth locations.",
+          "fix_type": "skill_prose",
+          "issue_refs": [
+            "#410"
+          ]
+        },
+        {
+          "failure": "A linked operating boundary is treated as parent business truth.",
+          "fix_type": "skill_prose",
+          "issue_refs": [
+            "#406",
+            "#410"
           ]
         }
       ]

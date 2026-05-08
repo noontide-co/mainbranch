@@ -30,11 +30,18 @@ Update `last_seen_version` in `~/.config/vip/local.yaml` via the safe-write patt
 
 ## The Menu
 
-If user is ready to work, ask or infer intent. **Use numbered options:**
+If user is ready to work, ask or infer intent. Use numbered options only when
+this is the single active choice list in the response. If ranked actions were
+already numbered or offers are also being shown, use a named route such as
+`triage` instead of reusing `1`.
 
-### Triage (Option 1 — User-Initiated)
+### Triage (User-Initiated)
 
-**Triage is option 1 on the menu.** It runs when the user selects it or when intent keywords match. It does NOT run automatically every session. This keeps /mb-start fast and preserves context for actual work.
+**Triage is option 1 only on the main route menu.** It runs when the user
+selects that route or when intent keywords match. It does NOT run automatically
+every session. This keeps /mb-start fast and preserves context for actual work.
+Never make `1` mean triage if `1` already means a ranked recommendation or an
+offer selection in the same turn.
 
 **Why not always-on:** Three parallel agents burn 50-80K tokens. Running them every session means the user starts at 60%+ context before doing anything. /mb-end gates crystallize behind meaningful activity — /mb-start gates triage behind user choice.
 
@@ -54,7 +61,9 @@ If user is ready to work, ask or infer intent. **Use numbered options:**
 >
 > (hit a number, or just tell me what you need)"
 
-**When user picks option 1:** Spawn triage agents. See [triage-agent.md](triage-agent.md) for gating, tiered spawning, agent prompts, and synthesis format.
+**When user picks the triage route:** Spawn triage agents. See
+[triage-agent.md](triage-agent.md) for gating, tiered spawning, agent prompts,
+and synthesis format.
 
 ---
 
@@ -78,9 +87,9 @@ Set expectations, then give them something to chew on:
 
 ## When to Auto-Suggest / Skip Triage
 
-**Auto-suggest option 1 when:**
+**Auto-suggest triage when:**
 - Returning user (last commit >3 days ago) and no stated intent
-- Readiness is THIN (8-11) — "Option 1 can help you figure out the highest-leverage gap"
+- Readiness is THIN (8-11) — "Triage can help you figure out the highest-leverage gap"
 - User says "what should I work on", "help me prioritize", "what to do next"
 
 **Skip triage entirely when:**
