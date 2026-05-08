@@ -200,9 +200,8 @@ is deterministic, safe, and already supported by `mb update`. The operator
 surface should say plainly that Main Branch updated itself or that an update
 needs attention. It should not force the operator to reason about package
 managers, branches, or install modes unless the update fails or asks for help.
-Operators should be able to opt out of automatic Main Branch tool updates
-through explicit configuration when they need pinned versions for a cohort,
-agency, or release window.
+Operators should be able to turn automatic Main Branch tool updates off when
+they need Main Branch to stay on a specific version.
 
 `/mb-start` may also help the business repo start from the latest saved
 work, but the operator-facing language should not say "behind remote,"
