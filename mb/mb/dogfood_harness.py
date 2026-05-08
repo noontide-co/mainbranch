@@ -438,7 +438,9 @@ Legacy campaigns-era launch plan retained for migration review.
         "# Review Notes\n\nAmbiguous generated material that should not move silently.\n",
         encoding="utf-8",
     )
-    (repo / ".mb" / "schema_version").write_text("0.1\n", encoding="utf-8")
+    schema_marker = repo / ".mb" / "schema_version"
+    schema_marker.parent.mkdir(parents=True, exist_ok=True)
+    schema_marker.write_text("0.1\n", encoding="utf-8")
     return [
         "added legacy campaigns/ record with ambiguous child note",
         "downgraded .mb/schema_version to 0.1",
@@ -471,7 +473,7 @@ Approved research note waiting for checkpoint planning and message validation.
 
 
 def _apply_launch_readiness_fixture(repo: Path) -> list[str]:
-    offer = repo / "core" / "offers" / "operating-memory-setup-sprint.md"
+    offer = repo / "core" / "offers" / "operating-memory-setup-sprint" / "offer.md"
     offer.parent.mkdir(parents=True, exist_ok=True)
     offer.write_text(
         """---
@@ -508,7 +510,8 @@ recorded yet.
 type: push
 status: planned
 date: 2026-05-08
-linked_offers: []
+linked_offers:
+  - core/offers/operating-memory-setup-sprint/offer.md
 linked_research:
   - research/2026-05-08-keyword-gate.md
 provider_refs: []

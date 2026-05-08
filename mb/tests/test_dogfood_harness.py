@@ -451,24 +451,45 @@ def test_materialize_fixture_profiles_create_observable_repo_states(
         must_not=(),
         fixture_profile="dirty_checkpoint_fixture",
     )
+    launch = release_simulation.Simulation(
+        id="launch",
+        label="launch",
+        title="Launch",
+        tiers=("pr_smoke",),
+        prompt="launch",
+        expected_route=("sense", "decide", "ship"),
+        expected_behaviors=("control_plane_usage",),
+        must_observe=("offer",),
+        must_not=(),
+        fixture_profile="launch_readiness_fixture",
+    )
 
     broken_record = harness.materialize_fixture_profile(state, broken)
     legacy_record = harness.materialize_fixture_profile(state, legacy)
     dirty_record = harness.materialize_fixture_profile(state, dirty)
+    launch_record = harness.materialize_fixture_profile(state, launch)
 
     broken_repo = Path(broken_record["repo"])
     legacy_repo = Path(legacy_record["repo"])
     dirty_repo = Path(dirty_record["repo"])
+    launch_repo = Path(launch_record["repo"])
 
     assert not (broken_repo / ".claude" / "skills" / "mb-start").exists()
     assert (legacy_repo / "campaigns" / "2026-04-15-spring-launch" / "campaign.md").exists()
     assert (legacy_repo / ".mb" / "schema_version").read_text(encoding="utf-8") == "0.1\n"
     assert "Approved Draft Update" in (dirty_repo / "core" / "offer.md").read_text(encoding="utf-8")
+    launch_offer = launch_repo / "core" / "offers" / "operating-memory-setup-sprint" / "offer.md"
+    launch_push = launch_repo / "pushes" / "2026-05-08-operating-memory-setup" / "push.md"
+    assert launch_offer.exists()
+    assert "core/offers/operating-memory-setup-sprint/offer.md" in launch_push.read_text(
+        encoding="utf-8"
+    )
     assert dirty_record["baseline_committed"] is False
     assert {record["fixture_profile"] for record in state.fixture_profiles} == {
         "broken_skill_wiring_fixture",
         "legacy_drift_fixture",
         "dirty_checkpoint_fixture",
+        "launch_readiness_fixture",
     }
 
 
