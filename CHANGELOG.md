@@ -13,6 +13,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added a `mb doctor repair --plan --json` audit section for legacy
+  `.vip/local.yaml` and `.vip/config.yaml` YAML state. The plan classifies key
+  families without printing raw values, separates local/session state from
+  durable business/provider facts, and keeps deletion/migration manual. Refs
+  #413.
 - Added an accepted business repo topology decision that defines hub and child
   repo roles, relationship types, GitHub owner/repo and local-folder naming,
   lifecycle language, reusable-vs-run playbook boundaries, safe metadata
@@ -30,6 +35,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Retired `.vip/config.yaml` as active path/provider/tool config in current
+  CLI and skill guidance. New setup no longer creates it, and offer-aware
+  skills ask for explicit session context instead of silently routing from
+  `.vip/local.yaml`. Refs #413.
 - Expanded `mb doctor repair --plan --json` migration guidance with an
   offer-topology section that surfaces legacy `.vip/local.yaml` active-offer
   state, offer folder/frontmatter slug drift, and multi-offer review needs

@@ -514,16 +514,27 @@ If anything looks wrong, stop and keep the legacy layout.
 
 ## What About `.vip/config.yaml` and `~/.config/vip/local.yaml`?
 
-Keep them for now.
+Treat them as legacy cleanup surfaces, not current Main Branch truth.
 
 - `~/.config/vip/local.yaml` is machine-local memory: default repo, recent
-  repos, experience level, and last-seen changelog version.
-- `.vip/config.yaml` is repo-local configuration used by older skills and
-  future path/config work.
+  repos, experience level, and last-seen changelog version. Current repo
+  detection is CWD-first and should use this only as a legacy fallback.
+- `.vip/config.yaml` is repo-local configuration used by older skills. It may
+  contain mixed durable facts, provider hints, stale tool snapshots, private
+  paths, or client context. Do not copy values out blindly.
 
-Do not delete either file as part of a layout migration. `mb skill link` writes
-Claude Code discovery into `.claude/settings.local.json`; it does not replace
-the old config files yet.
+Preview legacy `.vip` cleanup with:
+
+```bash
+mb doctor repair --plan --json
+```
+
+That plan classifies `.vip` key families without printing raw values. Delete or
+migrate old `.vip` files only after reviewing the audit and moving any
+still-current, non-private facts to the right current surface such as `core/`,
+`core/operations/`, provider notes, or machine-local config. `mb doctor repair
+--apply` may protect `.vip/local.yaml` in `.gitignore` and untrack it, but it
+does not delete or rewrite `.vip` YAML files.
 
 ## Current Recommendation
 

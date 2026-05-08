@@ -99,7 +99,7 @@ Gather these in main and pass as structured text in each agent's prompt:
 | Unlinked research count | `grep -rl "linked_decisions: \[\]" research/ 2>/dev/null \| wc -l` | 1 line | Agent 2 |
 | Past triage file names | `ls research/*-start-triage.md 2>/dev/null` | ~5 lines | Agent 3 |
 | Past crystallize file names | `ls research/*-end-of-day-crystallize.md 2>/dev/null` | ~5 lines | Agent 3 |
-| `current_offer` | From a future `mb` JSON active-offer field if present, with `.vip/local.yaml` as legacy fallback | 1 line | All 3 agents |
+| active offer | From a future `mb` JSON active-offer field if present, otherwise explicit session/user selection | 1 line | All 3 agents |
 | Push lifecycle listing | `grep -rl "status: draft\|status: planned\|status: active" pushes/ campaigns/ 2>/dev/null` | ~10 lines | Agent 2 |
 | Primitive map | File lists grouped by the map below | ~40 lines | All 3 agents |
 
@@ -164,7 +164,7 @@ testimonials X/3, angles X/3. Composite X/18.]
 
 === CURRENT OFFER ===
 
-[current_offer from future mb JSON field, legacy fallback, or "single-offer mode"]
+[active offer from future mb JSON field, explicit session selection, or "single-offer mode"]
 
 === PRIMITIVE MAP ===
 

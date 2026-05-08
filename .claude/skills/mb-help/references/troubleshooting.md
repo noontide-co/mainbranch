@@ -278,9 +278,9 @@ user:
   experience: intermediate  # beginner | intermediate | advanced
 ```
 
-**Check repo config (team settings):**
+**Audit legacy repo config/state if present:**
 ```bash
-cat /path/to/your/repo/.vip/config.yaml
+mb doctor repair --repo /path/to/your/repo --plan --json
 ```
 
 **Common fixes:**
@@ -290,7 +290,7 @@ cat /path/to/your/repo/.vip/config.yaml
 | No `~/.config/vip/local.yaml` | Run `/mb-start` — it will discover your repo and can save the path |
 | Path is wrong | Run `/mb-start` and select your repo when prompted, say "yes" to save |
 | Folder was moved | Delete `~/.config/vip/local.yaml` and run `/mb-start` again |
-| No `.vip/config.yaml` in repo | Run `/mb-start` — it will offer to create config for faster startups |
+| `.vip/config.yaml` exists | Audit it with `mb doctor repair --plan --json`; do not treat it as current team settings |
 
 **Migration from old system:**
 If you have an old `~/.claude/settings.json` with `business_repo_path`, run `mb skill link --repo .`, then `mb start --json`. The current architecture uses `.claude/settings.local.json` in your business repo to load the active Main Branch engine as an additional directory.
@@ -299,19 +299,20 @@ If you have an old `~/.claude/settings.json` with `business_repo_path`, run `mb 
 
 ## Config System Explained
 
-See `mb-start/references/config-system.md` for the full canonical reference on the config system.
+See `mb-start/references/config-system.md` for the current legacy-config cleanup guidance.
 
-**Two files, different purposes:**
+**Legacy files, different purposes:**
 
 | File | Location | What's In It | Git-tracked? |
 |------|----------|--------------|--------------|
 | `local.yaml` | `~/.config/vip/` | Default repo, your name, your experience level | No (personal) |
-| `config.yaml` | `[repo]/.vip/` | Team settings, MCP requirements, skill defaults | Yes (shared) |
+| `config.yaml` | `[repo]/.vip/` | Old mixed config/state that needs audit before reuse | Maybe old repos tracked it |
 
 **Why the split?**
 - Multiple people can work on the same business repo
 - Alice can be "advanced" while Bob is "beginner"
-- Team settings (infrastructure, MCPs) travel with the repo
+- Current provider/readiness metadata should come from `mb connect`, generated
+  repo instructions, and durable business files, not `.vip/config.yaml`
 - Personal settings stay on your machine
 
 **To reset everything:**

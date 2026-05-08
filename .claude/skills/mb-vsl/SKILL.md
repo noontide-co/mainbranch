@@ -84,11 +84,13 @@ If unclear, ask: "Is this for a Skool/membership community ($47-$497/month) or a
 
 Before loading reference files, resolve the active offer:
 
-1. If a future `mb` JSON field exposes active offer state, use it; otherwise read `.vip/local.yaml` only as a legacy fallback
-2. If set: load `core/offers/[current_offer]/offer.md` as the active offer
-3. If not set AND `core/offers/` exists: ask which offer
-4. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
-5. Legacy fallback: if the repo does not have `core/`, read the old
+1. If a future `mb` JSON field exposes active offer state, use it.
+2. Do not treat `.vip/local.yaml` as canonical active-offer state. If legacy
+   state exists, confirm the offer with the user instead of silently routing.
+3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
+4. If no offer is selected AND `core/offers/` exists: ask which offer.
+5. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
+6. Legacy fallback: if the repo does not have `core/`, read the old
    `reference/core/` and `reference/offers/` paths.
 
 In current repos, `reference/core` and `reference/offers` are compatibility
@@ -100,7 +102,7 @@ files, and write once to the canonical `core/` path.
 **Accumulate files** (load both): `testimonials.md` (offer-specific + brand-level)
 
 **Offer argument:** `/mb-vsl [framework] [offer]` — e.g., `/mb-vsl skool community`
-If offer specified, overrides session `current_offer` for this run. If the active offer type is known (community/membership offer), default to Skool framework; if B2B/high-ticket, default to B2B Haynes.
+If offer specified, it selects the offer for this run only. If the active offer type is known (community/membership offer), default to Skool framework; if B2B/high-ticket, default to B2B Haynes.
 
 ---
 
@@ -212,7 +214,7 @@ Just say `/mb-vsl` again and describe where you were:
 
 ### For Claude
 
-1. **Restore offer context:** Use a future `mb` JSON active-offer field if present; otherwise read `.vip/local.yaml` only as a legacy fallback. Confirm with user if multi-offer repo.
+1. **Restore offer context:** Use a future `mb` JSON active-offer field if present; otherwise ask the user to restore offer context. Do not silently route from `.vip/local.yaml`.
 
 2. **Check for in-progress scripts:**
 

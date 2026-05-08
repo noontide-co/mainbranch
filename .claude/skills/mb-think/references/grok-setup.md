@@ -6,13 +6,15 @@ Setup guide for real-time X/Twitter data using xAI's Grok API.
 
 ## Auto-Detection
 
-Tool detection is handled automatically by `/mb-think` via `.vip/config.yaml` -- see SKILL.md for details.
+Start with `mb status --json --peek` and `mb connect doctor --json` for
+provider readiness. Treat any old `.vip/config.yaml` tool status as a legacy
+snapshot, not current truth.
 
 ### Claude Code Env Var Caveat
 
 Claude Code sessions may not inherit env vars from your shell profile (`~/.zshrc`, `~/.bashrc`). If `XAI_API_KEY` isn't in the environment, the skill checks for and sources `~/.config/vip/env.sh` before giving up. If you store API keys in a different location, update the detection script in SKILL.md or export the key in `~/.config/vip/env.sh`.
 
-See `mb-start/references/config-system.md` for the full config file layout (local.yaml, env.sh, config.yaml).
+See `mb-start/references/config-system.md` for legacy config cleanup guidance.
 
 ---
 

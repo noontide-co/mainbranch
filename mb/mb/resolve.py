@@ -8,10 +8,9 @@ Resolution order for a key like ``voice``:
 If only the stub matches, ``is_stub=True`` and the caller knows to
 display the upgrade banner.
 
-``v0.1`` shipped with canonical folder names locked. Per the
-master decision, path-config flexibility is a v0.2 unlock; this module
-reads ``.vip/config.yaml``'s ``paths:`` block defensively but defaults
-to the lock.
+Legacy repos may still have ``.vip/config.yaml`` path hints, but those files
+are not canonical Main Branch state. ``mb resolve`` uses the current locked
+repo layout and leaves old ``.vip`` values to the doctor repair audit.
 """
 
 from __future__ import annotations
@@ -19,8 +18,6 @@ from __future__ import annotations
 from importlib import resources
 from pathlib import Path
 from typing import Any
-
-import yaml
 
 from mb.engine import bundled_skills as _bundled_skills
 from mb.engine import skill_path as _skill_path
@@ -41,22 +38,11 @@ def _curated_root() -> Path:
 
 
 def _read_paths_block(repo: Path) -> dict[str, str]:
-    """v0.2 unlock entry point. v0.1 returns the canonical lock."""
-    cfg = repo / ".vip" / "config.yaml"
-    if not cfg.exists():
-        return CANONICAL_PATHS
-    try:
-        data = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
-    except yaml.YAMLError:
-        return CANONICAL_PATHS
-    block = data.get("paths") if isinstance(data, dict) else None
-    if isinstance(block, dict):
-        # v0.2: honor the override. v0.1: still lock.
-        merged = dict(CANONICAL_PATHS)
-        for k, v in block.items():
-            if isinstance(v, str):
-                merged[k] = v
-        return merged
+    """Return the current canonical path lock.
+
+    ``repo`` is accepted for API compatibility with older callers.
+    """
+    _ = repo
     return CANONICAL_PATHS
 
 

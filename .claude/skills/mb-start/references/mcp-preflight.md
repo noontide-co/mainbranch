@@ -50,15 +50,13 @@ Required provider choices for the setup/provider loop:
 Only continue to MCP/tool presence checks when the selected skill needs runtime
 tools that `mb connect` cannot inspect directly.
 
-### 2. Read expected MCPs from config
+### 2. Treat legacy MCP config as audit input only
 
-```yaml
-# From .vip/config.yaml
-mcps:
-  apify:
-    required_for: [organic, think]  # Handles web scraping AND YouTube transcripts
-    setup_guide: ".claude/skills/mb-organic/references/apify-setup.md"
-```
+Older repos may have `mcps.*` under `.vip/config.yaml`. Do not treat that file
+as current shared team settings. If it exists, `mb doctor repair --plan --json`
+classifies the keys as provider-readiness hints without printing raw values.
+Use `mb connect plan`, `mb connect doctor --json`, and generated repo
+instructions for current provider readiness.
 
 ### 3. Check if MCP tools are available
 
@@ -148,7 +146,9 @@ which whisper-cli >/dev/null 2>&1 && echo "whisper-cli available"
 
 | What | Where | Portable? |
 |------|-------|-----------|
-| "What this business needs" | `.vip/config.yaml` | Yes (git) |
+| "What this business needs" | `mb connect` provider metadata, generated repo instructions, and durable operations notes | Yes, when non-secret and intentionally committed |
 | "What this machine has" | `~/.claude.json` | No (local) |
 
-Config documents requirements. Installation state is Claude Code's domain. See [config-system.md](config-system.md) for the full config file layout.
+Current provider metadata documents requirements. Installation state is Claude
+Code's domain. See [config-system.md](config-system.md) for legacy config
+cleanup guidance.
