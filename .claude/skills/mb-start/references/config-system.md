@@ -234,7 +234,7 @@ Do not create it. Use `mb status --json --peek`, `mb onboard status --json`,
 | `/mb-setup` first run | Current repo files, `.claude/settings.local.json`, skill links, `.mb/` state | Business repo |
 | User selects repo in `/mb-start` | `default_repo`, `recent_repos` only if legacy fallback is still being used and user confirms | local.yaml |
 | User says "I'm advanced" | `user.experience` | local.yaml |
-| User says "save as default" | Prefer current skill/workflow inputs; do not write `.vip/config.yaml` |
+| User says "save as default" | Prefer current skill/workflow inputs; do not write `.vip/config.yaml` | n/a (no write) |
 | User connects infrastructure | Provider metadata through `mb connect`; secrets stay local | `.mb/connect.yaml` and local secret stores |
 | User configures media path | `media.root` or `media.{type}` | local.yaml |
 
