@@ -168,6 +168,39 @@ finance boundaries.
 Evergreen files do not usually carry dates in the filename. They represent the
 current best version of the business, not a point-in-time snapshot.
 
+### Offers
+
+An offer is what the business sells or may sell repeatedly.
+
+In a single-offer repo, `core/offer.md` is the durable offer truth: promise,
+pricing, mechanism, deliverables, qualification, objections, guarantee, and
+delivery assumptions.
+
+In a multi-offer repo, `core/offer.md` is the portfolio thesis: what the
+business sells overall and how the offers relate. Per-offer truth lives in
+`core/offers/<slug>/offer.md`; optional per-offer audience context lives in
+`core/offers/<slug>/audience.md`.
+
+A new or uncertain offer idea should usually start as a bet. Create or update
+offer files only when the operator wants durable sellable truth. Do not rename,
+delete, merge, split, or move offer folders without an accepted decision,
+approved migration plan, or explicit operator instruction.
+
+### Proof
+
+Proof is reusable evidence that a claim is true. Company-wide proof belongs in
+`core/proof/`: testimonials, typicality notes, case summaries, approved proof
+angles, and outcome context that applies across the business.
+
+Offer-specific proof belongs in `core/offers/<slug>/proof/`. Older repos may
+have offer-level testimonial files in other locations; those are compatibility
+context, not the preferred new write target.
+
+The proof folders are canonical, but common proof types still have standard
+file targets: `testimonials.md` for individual permissioned testimonials,
+`typicality.md` for average-case outcome context, and `angles/` for durable
+messaging angles.
+
 ### `research/`
 
 `research/` contains point-in-time findings from when the operator went
@@ -362,7 +395,22 @@ Push status maps to operator loops:
 `internal`, but the canonical schema does not fail a push when a business needs
 a more specific channel.
 
-#### Push Playbooks
+#### Playbooks
+
+Main Branch has two playbook layers:
+
+- A **reusable playbook** is an engine-packaged operating recipe under
+  `.claude/playbooks/<name>/`. It is public, sanitized, opinionated, and can be
+  run by many businesses.
+- A **push playbook** is a per-run business repo record under
+  `pushes/<push>/playbooks/<playbook>.md`.
+
+Reusable playbooks can instantiate push playbook run records. A push playbook
+does not prove that Main Branch can mutate a provider account; provider
+mutation still requires a shipped adapter, readiness checks, approval gates,
+and smoke evidence.
+
+#### Push Playbook Shape
 
 Reusable growth or operations commitments that belong to a push live under:
 
@@ -513,7 +561,8 @@ In practice:
 
 - Strategy lives in `core/content-strategy.md` or additional `core/strategy/...`
   files.
-- Offers live in `core/offer.md` and `core/offers/...`.
+- Offers live in `core/offer.md` for single-offer truth or multi-offer
+  portfolio thesis, and in `core/offers/<slug>/offer.md` for per-offer truth.
 - Bets live in `bets/...` and can link to one or more pushes.
 - Pushes link back to bets, offers, decisions, research, and strategy.
 - Provider refs identify external provider campaign/account objects (e.g.

@@ -41,6 +41,28 @@ def _assert_claude_md_cli_first_contract(text: str) -> None:
         assert unsupported_runtime not in text
 
 
+def _assert_claude_md_primitive_routing_contract(text: str) -> None:
+    assert "## Business primitive routing" in text
+    assert "Offer: what the business sells or may sell repeatedly" in text
+    assert "Bet: a time-boxed wager" in text
+    assert "Push: coordinated work" in text
+    assert "Reusable playbook: an engine recipe" in text
+    assert "Push playbook: this push's approval" in text
+    assert "Proof: evidence that a claim is true" in text
+    assert "single-offer repo, `core/offer.md` is the durable offer truth" in text
+    assert "multi-offer repo, `core/offer.md` is the portfolio thesis" in text
+    assert "`core/offers/<slug>/offer.md` holds per-offer truth" in text
+    assert "Company-wide proof belongs" in text
+    assert "`core/proof/`" in text
+    assert "offer-specific proof belongs in `core/offers/<slug>/proof/`" in text
+    assert "Use standard proof files such as `testimonials.md`" in text
+    assert "`typicality.md`" in text
+    assert "`angles/`" in text
+    assert "A live idea can be both a bet and an offer candidate" in text
+    assert "Do not rename, delete, merge, split, or move offer folders" in text
+    assert "domain rubric" not in text.lower()
+
+
 def test_default_claude_operating_contract_matches_template() -> None:
     template = _read_template("CLAUDE.md.tmpl")
     template_contract = _section(template, "## Claude operating contract", "## Folders")
@@ -48,6 +70,7 @@ def test_default_claude_operating_contract_matches_template() -> None:
 
     assert fallback_contract == template_contract
     _assert_claude_md_cli_first_contract(_DEFAULT_CLAUDE)
+    _assert_claude_md_primitive_routing_contract(_DEFAULT_CLAUDE)
 
 
 def test_init_scaffolds_folders(tmp_path: Path) -> None:
@@ -112,6 +135,7 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "core/vocabulary.md" in claude_md
     assert "legacy `campaigns/`" in claude_md
     _assert_claude_md_cli_first_contract(claude_md)
+    _assert_claude_md_primitive_routing_contract(claude_md)
 
 
 def test_init_idempotent(tmp_path: Path) -> None:

@@ -509,6 +509,9 @@
         "Uses mb status --json --peek and relationship checks such as mb graph, mb validate --cross-refs, or mb doctor repair --plan --json when drift is suspected.",
         "Distinguishes durable parent repo truth from linked site, offer, client, finance, ops, or archive repo boundaries.",
         "Treats campaigns/ and old reference paths as legacy compatibility.",
+        "Answers whether the HVAC direction is a live bet, durable offer candidate, push, proof update, or decision before proposing file edits.",
+        "Places company-wide proof in core/proof/ and offer-specific proof in core/offers/<slug>/proof/.",
+        "Asks before renaming, deleting, merging, splitting, or moving offer folders.",
         "Keeps primitive mapping bounded to status facts, file lists, and task-relevant files; avoids raw exports, secrets, customer/member records, and private local-state files.",
         "Does not invent paths or write active-offer/session state."
       ],

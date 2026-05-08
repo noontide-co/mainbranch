@@ -417,14 +417,24 @@ surfaces as a banner the next time you run `/mb-start`.
 No. You invoke skills with slash prompts and answer questions.
 
 **What if I have multiple products under one brand?**
-Use one repo with an `offers/` folder when the products share the same brand,
-team, voice, and access boundary. Each offer gets its own `offer.md`. If an
-offer graduates into its own team, provider accounts, site, finance boundary,
-or operating history, move it into its own repo and keep the company repo as a
-hub.
+Use one repo with `core/offers/` when the products share the same brand, team,
+voice, and access boundary. In a single-offer repo, `core/offer.md` is the
+offer truth. In a multi-offer repo, `core/offer.md` is the portfolio thesis and
+each offer gets `core/offers/<slug>/offer.md`. If an offer graduates into its
+own team, provider accounts, site, finance boundary, or operating history, move
+it into its own repo and keep the company repo as a hub.
 
 **What's a bet vs. an offer?**
-A bet is a time-boxed operating hypothesis: what you'll try, why, by when, and how you'll know if it worked. An offer is a durable thing you sell. A good bet can graduate into an offer, push, workflow, content pillar, or decision; a bad bet gets closed with learning.
+A bet is a time-boxed operating hypothesis: what you'll try, why, by when, and
+how you'll know if it worked. An offer is a durable thing you sell or may sell
+repeatedly. A live idea can be both: test it in `bets/`, then update
+`core/offer.md` or `core/offers/<slug>/offer.md` only when you want durable
+sellable truth. Company-wide proof belongs in `core/proof/`; offer-specific
+proof belongs in `core/offers/<slug>/proof/`. Use standard proof files such as
+`testimonials.md`, `typicality.md`, and `angles/` inside those proof folders.
+A good bet can graduate into an offer, push, workflow, content pillar, child
+repo, or decision; a bad bet gets closed with learning instead of quietly
+deleting history.
 
 **What if I have multiple separate businesses?**
 Create a separate repo for each brand, legal entity, provider-account boundary,

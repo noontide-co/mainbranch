@@ -99,7 +99,8 @@ For self-healing semantics (stale false handling, status-change messaging, true-
 
 ## Offer Context Resolution
 
-Before loading reference files, resolve the active offer:
+Before loading reference files, resolve the active offer and target file type
+with `.claude/reference/business-primitives/offer-bet-push-proof.md`:
 
 1. If a future `mb` JSON field exposes active offer state, use it.
 2. Do not treat `.vip/local.yaml` as canonical active-offer state. If legacy
@@ -115,9 +116,16 @@ bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
 files: write once to the canonical `core/` path and never ask the user to edit
 both.
 
-**Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
-**Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
-**Accumulate files** (load both): `testimonials.md` (offer-specific + brand-level)
+**Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
+**Offer-aware files:** `offer.md`, `audience.md`
+**Proof files:** company-wide proof uses `core/proof/testimonials.md`,
+`core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof
+uses matching files under `core/offers/<slug>/proof/`.
+
+For a live idea, ask whether it is something to keep selling or something to
+test before deciding. Use `bets/` for the time-boxed wager, offer files for
+durable sellable truth, `pushes/` for coordinated execution, and `decisions/`
+for accepted rationale that changes durable truth.
 
 ---
 
@@ -352,7 +360,7 @@ See [decide-phase.md](references/decide-phase.md) for format details.
 
 Apply changes described in `## What Changes` to reference files. Mark decision as codified.
 
-**Codify targets include:** `core/*.md`, `core/voice.md` (named enemies section — each content pillar fights a named concept enemy), `core/offers/[active]/offer.md`, `core/offers/[active]/audience.md` (when multi-offer), `core/proof/angles/*.md` (evolving library — new angles add, never replace), `core/proof/testimonials.md`, `core/proof/typicality.md` (aggregate outcome and average-case context), **`core/content-strategy.md`** (pillars, hooks library, framework library, metrics — saves are #1 purchase intent signal), `core/operations/funnel/skool-surfaces.md` (live Skool copy — update when about page or pricing changes), `core/product-ladder.md` (when multi-offer, cross-offer decisions).
+**Codify targets include:** `core/*.md`, `core/voice.md` (named enemies section — each content pillar fights a named concept enemy), `core/offers/[active]/offer.md`, `core/offers/[active]/audience.md` (when multi-offer), `core/proof/angles/*.md` (evolving library — new angles add, never replace), `core/proof/testimonials.md`, `core/proof/typicality.md` (aggregate outcome and average-case context), `core/offers/[active]/proof/` (offer-specific proof), **`core/content-strategy.md`** (pillars, hooks library, framework library, metrics — saves are #1 purchase intent signal), `core/operations/funnel/skool-surfaces.md` (live Skool copy — update when about page or pricing changes), `core/product-ladder.md` (when multi-offer, cross-offer decisions), and `bets/` only when updating the live wager or verdict.
 
 ---
 

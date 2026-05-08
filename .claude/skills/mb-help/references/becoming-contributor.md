@@ -11,7 +11,7 @@ Contributors help improve the Main Branch engine for everyone:
 - **Skills** - Build new skills or improve existing ones
 - **Frameworks** - Add compliance frameworks, review lenses
 - **Documentation** - Improve help content, fix gaps
-- **Domain Rubrics** - Add templates for new business types
+- **Business setup patterns** - Add templates for new business types
 - **Testing** - Try things, report what works and what breaks
 
 ---
@@ -80,7 +80,7 @@ Share your work for feedback. Iterate based on input. Merge when ready.
 - Platform-specific guides (Windows, different shells)
 - Video script companions
 
-### Domain Rubrics to Add
+### Business Setup Patterns to Add
 - New business types (real estate, healthcare, etc.)
 - Industry-specific reference structures
 - Compliance requirements by vertical

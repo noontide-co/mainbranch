@@ -28,7 +28,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Two repos, engine, data model, data model | [two-repos.md](references/two-repos.md) |
 | Philosophy, why, compound, passive memory | [philosophy.md](references/philosophy.md) |
 | /mb-think, research, decide, codify | [the-think-cycle.md](references/the-think-cycle.md) |
-| /mb-bet, bet, hypothesis, deadline, public narration | [skills-guide.md](references/skills-guide.md) |
+| /mb-bet, bet, hypothesis, deadline, public narration, bet vs offer | [skills-guide.md](references/skills-guide.md) |
 | Work continuity, where left off, GitHub issues | [work-continuity.md](references/work-continuity.md) |
 | Error, command not found, MCP, Apify setup, GitHub issue | [troubleshooting.md](references/troubleshooting.md) |
 | Provider readiness, GitHub setup, Cloudflare, Google Workspace, Meta Ads, Apify | [provider-readiness.md](references/provider-readiness.md) |
@@ -64,6 +64,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 
 | Question | Answer |
 |----------|--------|
+| Is this a bet or an offer? | If you're testing whether a direction should continue, it is a bet in `bets/`. If it is something the business sells or may sell repeatedly, it is an offer. A live idea can be both: open the bet first, then create or update the offer only when the operator wants durable sellable truth. |
 | Start Claude in a folder? | `cd ~/Documents/GitHub/[your-business] && claude` — Claude sees files in that folder. Main Branch is linked via `settings.local.json`, with bridge links as a compatibility fallback for skill discovery. |
 | I see `.mb/`, not `.mb-vip/`. Is that wrong? | You're good. `.mb/` is the current repo-local Main Branch state folder. `.mb-vip/` was old clone-based setup language and is not required. If slash commands are missing, use `/mb-update` or run `mb update --repo .`, then repair skill links and restart Claude. |
 | Do I start Claude in the business repo or site repo? | Start in the business repo for planning and creating a site. Switch to the site repo after it exists for edits, review, deploy, and `mb site check`; the site repo should have `.mainbranch/source.json` pointing back to the business repo. |
@@ -79,8 +80,10 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | How do I close a session? | Run `/mb-end`. It summarizes what happened, asks if you have final thoughts, offers a crystallize moment if you made decisions, and guides an approved checkpoint instead of raw git commits. Bookend to `/mb-start`. |
 | What is multi-offer? | Multiple products under one brand, one repo. Each offer gets its own `core/offers/[name]/offer.md`. Soul and voice stay in `core/` because they're brand-level. Use when you sell multiple things (community + newsletter + done-for-you). If you have no `core/offers/` folder, you're in single-offer mode — everything reads from `core/` and nothing changes. |
 | How do I switch offers? | Say `/mb-start [offer-name]` or answer when /mb-start prompts. The choice is session-scoped unless you explicitly approve saving it as local active-offer state. |
-| Where do offer files go? | `core/offers/[name]/offer.md` for offer-specific details. `core/offer.md` stays as the brand-level thesis. Legacy `reference/offers` and `reference/core` may point at those folders as compatibility bridges; do not edit both. |
+| Where do offer files go? | In a single-offer repo, `core/offer.md` is the durable offer truth. In a multi-offer repo, `core/offer.md` is the portfolio thesis and `core/offers/[name]/offer.md` holds offer-specific details. Legacy `reference/offers` and `reference/core` may point at those folders as compatibility bridges; do not edit both. |
 | What stays in core with multiple offers? | `soul.md` (always), `voice.md` (always), `audience.md` (base, with optional per-offer overrides), `content-strategy.md` (brand-level distribution). |
+| Where does proof go? | Company-wide testimonials go in `core/proof/testimonials.md`, average-case context in `core/proof/typicality.md`, and angles in `core/proof/angles/`. Offer-specific proof uses matching files under `core/offers/[name]/proof/`. |
+| Can I delete or rename an old offer folder? | Ask first. Offer folders are durable business history. Rename, delete, merge, or move them only after an accepted decision, approved migration plan, or explicit operator instruction. |
 | How do I add another offer? | Run `/mb-setup` -- it detects your existing setup and offers a migration path. Or use `/mb-think` to plan the new offer first. |
 | Do I need separate repos for separate businesses? | If they share `soul.md` and `voice.md`, same repo with `offers/`. If they have different identities, different repos. The test: shared soul = shared repo. |
 | Do my files disappear when context compacts? | No. Compaction compresses Claude's conversation memory, not your files. Everything in `core/`, `research/`, and `decisions/` is on your hard drive, version controlled with git. If it's in a file, it's permanent. |

@@ -1,6 +1,6 @@
 # Site Context
 
-Load this when `/mb-site` needs prerequisites, active offer resolution, required business context, or section mapping.
+Load this when `/mb-site` needs prerequisites, active offer resolution, required business context, or section mapping. Use the shared primitive reference at `.claude/reference/business-primitives/offer-bet-push-proof.md` for offer/bet/push/proof routing.
 
 ## Prerequisites
 
@@ -43,11 +43,17 @@ Before loading business context, resolve the active offer:
 4. If no offer is selected and `core/offers/` exists, ask which offer this site is for.
 5. If no `core/offers/` folder exists, use `core/offer.md` for a single-offer repo.
 
+Follow the shared active-offer contract in
+`.claude/reference/business-primitives/offer-bet-push-proof.md`.
+
 Always-core files, never per-offer: `soul.md`, `voice.md`, `content-strategy.md`.
 
 Offer-aware files, check `core/offers/` first and fall back to `core/`: `offer.md`, `audience.md`.
 
-Accumulate files: testimonials and proof can come from both offer-specific context and brand-level `core/proof/`.
+Accumulate proof: company-wide proof comes from `core/proof/testimonials.md`,
+`core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof
+comes from matching files under `core/offers/[active]/proof/`. Older offer
+testimonial files can be read as compatibility context.
 
 ## Required Business Context
 

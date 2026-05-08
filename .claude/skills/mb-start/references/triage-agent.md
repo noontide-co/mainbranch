@@ -53,7 +53,7 @@ Not every session needs 3 agents. Match agent count to context:
 
 ## Architecture: 3 Parallel Read-Only Agents
 
-Spawn three agents in a single message using the Task tool. Each gets a focused analysis domain. All three are **read-only** -- they return findings to the main conversation, which synthesizes and presents.
+Spawn three agents in a single message using the Task tool. Each gets a focused analysis lane. All three are **read-only** -- they return findings to the main conversation, which synthesizes and presents.
 
 ### Reuse Readiness Data (Token Efficiency)
 
@@ -74,7 +74,7 @@ work.
 - Session gaps and last activity date
 
 **What triage agents add (their unique value):**
-- Agent 1: Section-level analysis of file contents, cross-file consistency, domain rubric compliance
+- Agent 1: Section-level analysis of file contents, cross-file consistency, and business setup pattern fit
 - Agent 2: Work pattern analysis, velocity assessment, pipeline bottlenecks
 - Agent 3: Soul-strategy alignment, unresolved threads, temporal patterns
 
@@ -162,7 +162,7 @@ You are NOT an auditor. You are identifying the highest-leverage gaps.
 [Scores from Step 6: soul X/3, offer X/3, audience X/3, voice X/3,
 testimonials X/3, angles X/3. Composite X/18.]
 
-=== CURRENT OFFER ===
+=== OFFER CONTEXT ===
 
 [active offer from future mb JSON field, explicit session selection, or "single-offer mode"]
 
@@ -179,10 +179,12 @@ say so; keep parent strategy and bet truth in the business repo.]
 core/proof/testimonials.md, core/proof/angles/*.md, core/content-strategy.md,
 core/product-ladder.md if multi-offer, core/operations/funnel/skool-surfaces.md if exists]
 
-=== DOMAIN RUBRIC ===
+=== BUSINESS PRIMITIVE GUIDANCE ===
 
-[The relevant domain rubric from vip: community.md, ecommerce.md, or multi-offer.md.
-Determine which by checking core/operations/ contents.]
+[Include `.claude/reference/business-primitives/offer-bet-push-proof.md` and,
+when setup shape matters, `.claude/reference/business-primitives/setup-patterns.md`.
+Use offers, bets, pushes, proof, strategy, operations, repo topology, provider
+readiness, and operator loops as the language.]
 
 === CORE FILE CHANGE HISTORY (30 DAYS) ===
 
@@ -201,7 +203,7 @@ Determine which by checking core/operations/ contents.]
    - Does offer.md mechanism match what testimonials describe?
    - Do voice.md guardrails align with actual output tone?
 
-4. Check domain rubric compliance: what domain-specific files are missing?
+4. Check business setup pattern fit: what useful operating files are missing?
    (e.g., community business without skool-surfaces.md, e-commerce without products/)
 
 5. Check staleness: which files haven't been updated in 30+ days?
@@ -219,7 +221,7 @@ Return a RANKED list of reference improvements. Rank by compound impact
 - Effort estimate (quick = ~5 min, moderate = ~15 min, deep = needs /mb-think)
 ```
 
-**Token budget:** ~30-50K (reads all reference files, domain rubric, produces structured analysis)
+**Token budget:** ~30-50K (reads task-relevant files and primitive guidance, produces structured analysis)
 
 ---
 
@@ -411,7 +413,7 @@ Return:
 Task(
   subagent_type: "general-purpose",
   description: "Reference Health Analyst: read all reference files at [repo-path],
-    analyze section-level quality, cross-file consistency, domain rubric compliance,
+    analyze section-level quality, cross-file consistency, business setup pattern fit,
     staleness detection. Return ranked gap list with effort estimates.",
   prompt: "[Pre-gathered metadata + Agent 1 prompt template + absolute repo path]"
 )

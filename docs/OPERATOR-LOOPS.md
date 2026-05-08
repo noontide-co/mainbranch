@@ -146,7 +146,7 @@ operators ship creatives, SaaS founders ship features.
 - `mb checkpoint`
 - `mb update`
 
-**Execution domains (channels — the four pillars)**
+**Channels — the four pillars**
 
 - **Paid** — Meta ads, sponsored placements
 - **Organic** — Reels, threads, newsletter, YouTube, Skool posts
@@ -210,8 +210,10 @@ actually do it. Naming Reflect is the intervention.
 
 The cycle is not strictly linear. Real workflows chain loops:
 
-- **Reflect → Sense.** A retro updates `core/offer.md`. The next time you
-  Sense, you see the new offer.
+- **Reflect → Sense.** A retro updates `core/offer.md` in a single-offer repo,
+  the portfolio thesis in a multi-offer repo, or
+  `core/offers/<slug>/offer.md` for a specific offer. The next time you Sense,
+  you see the updated truth.
 - **Decide → Ship.** Most bets go straight from decided to shipped within
   a session.
 - **Ship → Reflect → Ship.** Ship the lander, reflect on conversion data

@@ -57,7 +57,13 @@ selects an offer:
    - Check `core/offers/[offer]/offer.md` first. If it exists, score it.
    - If it does not exist, score `core/offer.md`.
    - Same for `audience.md`.
-3. Testimonials and angles: check both `core/proof/` (brand-level) and `core/offers/[offer]/` if offer-specific proof exists.
+3. Testimonials and angles: check both `core/proof/` (brand-level) and
+   `core/offers/[offer]/proof/` if offer-specific proof exists.
+
+Use `.claude/reference/business-primitives/offer-bet-push-proof.md` for the
+shared active-offer contract. If CLI/status facts do not resolve the offer, ask
+which offer the current work is about or score brand-level context for routing
+only. Do not silently route from `.vip/local.yaml`; treat it as audit input.
 
 Legacy fallback: if the repo has no `core/`, read `reference/core/` and
 `reference/offers/`. In current repos those paths are compatibility bridges to

@@ -19,6 +19,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   wiring, synthetic private-data refusal, and legacy drift, with evidence for
   applied mutations, read-only `mb` facts, permission denials, and grounding
   verdicts. Refs #402.
+- Added a shared business-primitives reference for offers, bets, pushes,
+  reusable playbooks, push playbooks, proof, and decisions, including
+  live-validation, graduation, proof-placement, and ask-before-destructive-offer
+  rules. Refs #411.
 - Added a `mb doctor repair --plan --json` audit section for legacy
   `.vip/local.yaml` and `.vip/config.yaml` YAML state. The plan classifies key
   families without printing raw values, separates local/session state from
@@ -41,6 +45,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Aligned bundled skill guidance, generated business `CLAUDE.md`, and public
+  architecture docs around the bet-vs-offer rubric, `core/offer.md` as
+  single-offer truth or multi-offer portfolio thesis, and
+  `core/offers/<slug>/proof/` for offer-specific proof. Refs #411.
+- Retired LLM-facing "domain rubric" setup language in favor of business
+  primitives and setup patterns, carried forward the operational community,
+  e-commerce, and multi-offer setup guidance, and added skill validation
+  warnings for new uses of the old phrase outside historical compatibility
+  notes. Refs #411.
 - Retired `.vip/config.yaml` as active path/provider/tool config in current
   CLI and skill guidance. New setup no longer creates it, and offer-aware
   skills ask for explicit session context instead of silently routing from

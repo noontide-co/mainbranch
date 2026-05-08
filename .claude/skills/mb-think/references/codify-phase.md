@@ -84,7 +84,9 @@ Or naturally: "/mb-think apply the pricing decision to reference files"
 
 When user wants to enrich existing files, audit completeness first.
 
-When `current_offer` is set (multi-offer mode), audit offer-specific files first, then core files:
+Use `.claude/reference/business-primitives/offer-bet-push-proof.md` to decide
+whether new context updates a bet, offer, push, proof file, or decision. In
+multi-offer mode, audit offer-specific files first, then core files:
 
 | File | Status | Gaps |
 |------|--------|------|
@@ -93,9 +95,10 @@ When `current_offer` is set (multi-offer mode), audit offer-specific files first
 | core/offer.md (brand-level) | Good | - |
 | core/audience.md (brand-level) | Good | - |
 | core/voice.md | Empty | Needs everything |
-| proof/testimonials.md | Thin | Only 1 testimonial |
-| proof/typicality.md | Empty | No aggregate outcome context |
-| proof/angles/ | Empty | No angles documented |
+| core/proof/testimonials.md | Thin | Only 1 testimonial |
+| core/proof/typicality.md | Empty | No aggregate outcome context |
+| core/proof/angles/ | Empty | No angles documented |
+| core/offers/[active]/proof/ | Empty | No offer-specific proof |
 
 When in single-offer mode (no `offers/` folder), use the standard table:
 
@@ -104,9 +107,9 @@ When in single-offer mode (no `offers/` folder), use the standard table:
 | core/offer.md | Good | - |
 | core/audience.md | Thin | Missing objections |
 | core/voice.md | Empty | Needs everything |
-| proof/testimonials.md | Thin | Only 1 testimonial |
-| proof/typicality.md | Empty | No aggregate outcome context |
-| proof/angles/ | Empty | No angles documented |
+| core/proof/testimonials.md | Thin | Only 1 testimonial |
+| core/proof/typicality.md | Empty | No aggregate outcome context |
+| core/proof/angles/ | Empty | No angles documented |
 
 **Status icons:**
 - Good — Meets minimum
@@ -156,12 +159,17 @@ After codifying, show summary. Use offer-qualified paths when in multi-offer mod
 | core/offers/community/offer.md | Added three-tier pricing section |
 | core/offer.md | Updated brand thesis to reflect multi-tier positioning |
 | core/voice.md | Added 5 phrases, 3 personality markers |
-| proof/testimonials.md | Added 3 new testimonials |
+| core/proof/testimonials.md | Added 3 new testimonials |
 
 **Still missing:** [anything not addressed]
 ```
 
-**Target resolution:** When `current_offer` is set, offer-specific changes go to `core/offers/[active]/`. Brand-level changes go to `core/`. If unsure whether a change is offer-specific or brand-level, ask the user.
+**Target resolution:** Offer-specific sellable truth goes to
+`core/offers/[active]/`. Brand-level truth goes to `core/`. Company-wide proof
+uses `core/proof/testimonials.md`, `core/proof/typicality.md`, and
+`core/proof/angles/`; offer-specific proof uses matching files under
+`core/offers/[active]/proof/`. If the change is still being tested, update or
+open a bet instead of rewriting durable offer truth. If unsure, ask the user.
 
 **Compatibility bridges:** In current repos, `reference/core` points at
 `core/` and `reference/offers` points at `core/offers/`. These are aliases for
@@ -186,7 +194,7 @@ When codifying decisions about content pillars, platform selection, cadence, or 
 | Cadence changed | **Weekly Cadence** — update day-by-day plan |
 | Named enemy articulated | **Voice.md (Named Enemies section)** — add enemy concept with pillar mapping |
 | Saves insight discovered | **Metrics** — weight saves as #1 purchase intent signal above shares/comments |
-| New angle or emotional territory found | **proof/angles/** — create new angle file. Angles are additive. Check README.md for consistency |
+| New angle or emotional territory found | **core/proof/angles/** — create new angle file. Angles are additive. Check README.md for consistency |
 
 **How /mb-think cycles update content-strategy.md:**
 
@@ -221,8 +229,10 @@ research source and the evergreen reference separate. Raw extracts stay in
 | New emotional entry point or competitor gap | `core/proof/angles/*.md` |
 | Permissioned individual testimonial with context | `core/proof/testimonials.md` |
 | Average outcomes, typical timelines, caveats, common failures | `core/proof/typicality.md` |
+| Proof that applies only to one offer | `core/offers/<slug>/proof/` |
 | Hook pattern, content framework, platform cue, comment insight | `core/content-strategy.md` |
 | Mechanism story, pricing/distribution vulnerability | `core/offer.md` or offer-specific `offer.md` |
+| Live hypothesis, deadline, target, evidence, or verdict | `bets/YYYY-MM-DD-slug.md` |
 
 Do not turn organic comments into proof claims. Comments are demand language
 and content signal unless the operator has verified customer outcome evidence.

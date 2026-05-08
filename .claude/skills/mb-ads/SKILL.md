@@ -94,7 +94,9 @@ depth when status is unavailable or lacks the needed ad-specific detail.
 
 **NEVER spawn Explore or Task agents for pre-flight.** Read files directly at the known repo path. Pre-flight should complete in under 10 seconds.
 
-At the repo path, resolve offer context first (see Offer Context Resolution above), then check these files and count lines:
+At the repo path, resolve offer context first with
+`.claude/reference/business-primitives/offer-bet-push-proof.md`, then check
+these files and count lines:
 
 ```
 [resolved offer.md]          → 0 (missing), 1 (<20 lines), 2 (20-80), 3 (80+)
@@ -296,7 +298,8 @@ These patterns that work in standard ads will get rejected in Employment:
 
 ## Offer Context Resolution
 
-Before loading reference files, resolve the active offer:
+Before loading reference files, resolve active offer context with
+`.claude/reference/business-primitives/offer-bet-push-proof.md`:
 
 1. If a future `mb` JSON field exposes active offer state, use it.
 2. Do not treat `.vip/local.yaml` as canonical active-offer state. If legacy
@@ -312,9 +315,12 @@ bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
 files: read through them only as fallback, and never ask the user to update both
 paths.
 
-**Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
-**Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
-**Accumulate files** (load both): `testimonials.md` (offer-specific + brand-level)
+**Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
+**Offer-aware files:** `offer.md`, `audience.md`
+**Proof files:** company-wide proof in `core/proof/testimonials.md`,
+`core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof in
+matching files under `core/offers/[active]/proof/`. Read older offer
+testimonial files as compatibility context only.
 
 **Offer argument:** `/mb-ads [mode] [offer] [campaign]` — e.g., `/mb-ads static community january-launch`
 If offer specified, it selects the offer for this run only.
@@ -330,7 +336,8 @@ Before creating ads, the business repo must have:
 | Offer | `core/offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | Yes |
 | Audience | `core/offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Yes |
 | Voice | `core/voice.md` (always core) | Yes |
-| Testimonials | `core/proof/testimonials.md` + `core/offers/[active]/testimonials.md` (accumulate) | Yes |
+| Testimonials/proof | `core/proof/testimonials.md` + `core/offers/[active]/proof/testimonials.md` when present | Yes |
+| Typicality | `core/proof/typicality.md` + offer-specific typicality when present | Recommended |
 | Angles | `core/proof/angles/*.md` | Yes (at least 1) |
 | Visual Style | `core/brand/visual-style.md` | Optional (affects image gen) |
 | Content Strategy | `core/content-strategy.md` (always brand-level) | Optional (improves topic selection) |

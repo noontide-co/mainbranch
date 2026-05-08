@@ -93,9 +93,11 @@ User can say any of these after compaction:
 
 ## Offer Context Recovery
 
-Use a future `mb` JSON active-offer field if present. Otherwise infer from
-recent work or ask the user; do not silently restore offer context from
-`.vip/local.yaml`.
+Use the shared active-offer contract in
+`.claude/reference/business-primitives/offer-bet-push-proof.md` to restore
+which offer was being worked on. Use a future `mb` JSON active-offer field if
+present. Otherwise infer from recent work or ask the user; do not silently
+restore offer context from `.vip/local.yaml`.
 
 Check recent `research/` and `decisions/` files for offer-specific prefixes
 (e.g., `research/2026-02-04-community-pricing-analysis.md`).

@@ -82,7 +82,8 @@ If unclear, ask: "Is this for a Skool/membership community ($47-$497/month) or a
 
 ## Offer Context Resolution
 
-Before loading reference files, resolve the active offer:
+Before loading reference files, resolve active offer context with
+`.claude/reference/business-primitives/offer-bet-push-proof.md`:
 
 1. If a future `mb` JSON field exposes active offer state, use it.
 2. Do not treat `.vip/local.yaml` as canonical active-offer state. If legacy
@@ -97,9 +98,12 @@ In current repos, `reference/core` and `reference/offers` are compatibility
 bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
 files, and write once to the canonical `core/` path.
 
-**Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
-**Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
-**Accumulate files** (load both): `testimonials.md` (offer-specific + brand-level)
+**Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
+**Offer-aware files:** `offer.md`, `audience.md`
+**Proof files:** company-wide proof in `core/proof/testimonials.md`,
+`core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof in
+matching files under `core/offers/[active]/proof/`. Read older offer
+testimonial files as compatibility context only.
 
 **Offer argument:** `/mb-vsl [framework] [offer]` — e.g., `/mb-vsl skool community`
 If offer specified, it selects the offer for this run only. If the active offer type is known (community/membership offer), default to Skool framework; if B2B/high-ticket, default to B2B Haynes.
@@ -112,7 +116,8 @@ If offer specified, it selects the offer for this run only. If the active offer 
 |------|------|---------|
 | Offer | `core/offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | What you sell, price, inclusions, guarantee |
 | Audience | `core/offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Who buys, their pains, objections |
-| Testimonials | `core/proof/testimonials.md` + `core/offers/[active]/testimonials.md` (accumulate) | Success stories with specifics |
+| Testimonials/proof | `core/proof/testimonials.md` + `core/offers/[active]/proof/testimonials.md` when present | Success stories with specifics |
+| Typicality | `core/proof/typicality.md` + offer-specific typicality when present | Average-case outcome context |
 | Skool Surfaces | `core/operations/funnel/skool-surfaces.md` | Live Skool about page + pricing copy (congruence) |
 
 **If missing:** Ask user to provide or run `/mb-think` first.

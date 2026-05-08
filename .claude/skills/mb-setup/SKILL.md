@@ -1,6 +1,6 @@
 ---
 name: mb-setup
-description: "Bootstrap a new business repo with Main Branch structure, or migrate an existing single-offer repo to multi-offer. Use when: (1) New user needs Claude Code environment configured (2) User says \"set up\", \"get started\", \"initialize\", \"bootstrap\", \"create my repo\", \"new business\" (3) User is new to Main Branch and needs full onboarding (4) Migrating existing business context into the Main Branch structure (5) User wants to add a second offer to an existing repo. Creates Chrome extension setup, two-repo model, business repo with full structure. Gathers context aggressively until complete. Applies domain rubrics by business type. Teaches concepts during setup."
+description: "Bootstrap a new business repo with Main Branch structure, or migrate an existing single-offer repo to multi-offer. Use when: (1) New user needs Claude Code environment configured (2) User says \"set up\", \"get started\", \"initialize\", \"bootstrap\", \"create my repo\", \"new business\" (3) User is new to Main Branch and needs full onboarding (4) Migrating existing business context into the Main Branch structure (5) User wants to add a second offer to an existing repo. Creates Chrome extension setup, two-repo model, business repo with full structure. Gathers bounded context until core files are useful. Applies business setup patterns. Teaches concepts during setup."
 loops: [sense, decide, ship]
 ---
 
@@ -90,17 +90,18 @@ Don't block setup on this. Continue and mention it at the end.
 
 > What type of business is this?
 
-| Type | Domain Rubric |
+| Type | Setup Pattern |
 |------|---------------|
 | **Community/Skool** | Classroom, membership, funnel |
 | **E-commerce** | Products, fulfillment, materials |
 | **Coaching/Services** | Offers, delivery, packages |
 | **Agency** | Services, clients, processes |
-| **Other** | Core only, no domain-specific |
+| **Other** | Core only, no extra operating folders |
 
 **IMPORTANT:** If user has a Skool community, choose **Community/Skool** even if they also do coaching, courses, or services outside Skool. The community is the hub — other offerings feed into it.
 
-Read the appropriate rubric from `.claude/reference/domain-rubrics/` in the Main Branch engine.
+Read `.claude/reference/business-primitives/setup-patterns.md` in the Main
+Branch engine for the current setup patterns.
 
 ### 2.5: Offer Structure
 
@@ -114,7 +115,9 @@ After business type, determine offer structure:
 - Ask: "What should we call each offer? Short slugs work best (e.g., 'community', 'newsletter', 'done-for-you')"
 - Ask: "How do these relate? Is there a natural progression — like a free tier that feeds into a paid one?" (This builds `product-ladder.md`)
 - Store offer names for Step 4 folder creation
-- Note: The multi-offer rubric lives at `.claude/reference/domain-rubrics/multi-offer.md` in the Main Branch engine; read it if the user has multiple offers
+- Note: The multi-offer rules live at
+  `.claude/reference/business-primitives/offer-bet-push-proof.md` in the Main
+  Branch engine; read it if the user has multiple offers
 
 **Multi-business check (brief, not interrogating):**
 > "Are any other business repos relevant right now? If you run completely separate brands, they each get their own repo. We're setting up this one."
@@ -267,14 +270,17 @@ Use templates from `references/templates.md`.
 
 See **[references/file-education.md](references/file-education.md)** for the educational blurbs to present before writing each core file (soul, offer, audience, voice, multi-offer additions), the priority order, and the visual style scaffolding questions.
 
-### 6. Apply Domain Rubric
+### 6. Apply Business Setup Pattern
 
-Based on business type, create domain-specific folders:
+Based on business type, create useful operating folders:
 
 **E-commerce:** `core/operations/products/`, `core/operations/fulfillment/`
 **Community:** `core/operations/classroom/`, `core/operations/membership/`, `core/operations/funnel/`, `core/content-strategy.md`, `core/operations/funnel/skool-surfaces.md`
 
-See `.claude/reference/domain-rubrics/` in the Main Branch engine for full specifications.
+See `.claude/reference/business-primitives/setup-patterns.md` in the Main
+Branch engine for current setup patterns. Historical engine builds may still
+contain older compatibility notes under paths that use the word "domain"; treat
+those as migration notes only, not the current product model.
 
 ### 7. Draft CLAUDE.md
 
@@ -306,7 +312,7 @@ git commit -m "$(cat <<'EOF'
 - Created core/ (soul, offer, audience, voice)
 - Created core/offers/ (per-offer specifics)
 - Created core/proof/ (testimonials, angles)
-- Created core/operations/ ([domain-type] specific)
+- Created core/operations/ ([business-type] specific)
 - Drafted CLAUDE.md and README.md
 
 Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
@@ -322,8 +328,8 @@ EOF
 | core/offer.md | [OK] Complete / [WARN] Missing [X] |
 | core/audience.md | [OK] Complete / [WARN] Missing [X] |
 | core/voice.md | [OK] Complete / [WARN] Missing [X] |
-| proof/testimonials.md | [OK] Has content / [FAIL] Empty |
-| proof/angles/ | [OK] [N] angles / [WARN] None yet |
+| core/proof/testimonials.md | [OK] Has content / [FAIL] Empty |
+| core/proof/angles/ | [OK] [N] angles / [WARN] None yet |
 | core/operations/ | [OK] Populated / [WARN] Needs [X] |
 
 **Multi-offer additional checks (if applicable):**

@@ -1,8 +1,8 @@
-# Pre-Flight Readiness Algorithm
+# Ad Creative Readiness
 
 Read deterministic status first, then score ad-specific reference depth before
 generating ads when status lacks the needed creative detail. This prevents thin
-reference from producing generic output without duplicating repo-health,
+context from producing generic output without duplicating repo-health,
 provider, drift, or setup checks.
 
 ---
@@ -10,7 +10,8 @@ provider, drift, or setup checks.
 ## When to Run
 
 - **`/mb-ads` Step 0** — After `mb status --json --peek`, before triage menu appears
-- **`/mb-start`** — Only as fallback/detail after status `readiness`
+- **`/mb-start`** — Only as fallback/detail after status `readiness`; do not
+  treat this as a shared CLI readiness contract
 
 ---
 
@@ -38,7 +39,9 @@ Score each file 0-3 based on line count + section presence.
 
 ### Files Scored
 
-Use canonical path resolution for offer and audience files (multi-offer aware):
+Use the shared offer-resolution rules in
+`.claude/reference/business-primitives/offer-bet-push-proof.md` before scoring
+offer and audience files:
 
 1. If a future `mb` JSON field exposes active offer state, use it. Otherwise
    ask the user which offer this work is for; do not silently route from
@@ -57,14 +60,16 @@ See `docs/system-architecture.md` (Canonical Path Resolution) for the full algor
 | `offer.md` (resolved) | Price, mechanism, benefits, guarantee | Required |
 | `audience.md` (resolved) | Pains, desires, demographics, psychographics | Required |
 | `core/voice.md` | Tone, phrases, personality, don'ts | Required |
-| `core/proof/testimonials.md` | Named testimonials with outcomes | Required |
+| `core/proof/testimonials.md` + offer testimonials | Named testimonials with outcomes | Required |
+| `core/proof/typicality.md` + offer typicality | Average-case outcome context | Recommended |
 | `core/proof/angles/` | At least 1 angle file beyond README | Required |
 | `core/brand/visual-style.md` | Colors, typography, mood, prompt fragments | Optional (affects image gen) |
 
 ### Scoring Logic
 
 ```
-Resolve offer.md and audience.md paths first (see above).
+Resolve offer.md and audience.md paths first using the shared primitive
+contract.
 
 For each file:
   if not exists → 0
@@ -234,4 +239,5 @@ THEN surface:
 
 ---
 
-*Shared algorithm used by /mb-ads (Step 0) and /mb-start (gap scan).*
+*Ad creative-depth algorithm used by /mb-ads (Step 0). /mb-start may use this
+only as fallback interpretation after deterministic status facts.*

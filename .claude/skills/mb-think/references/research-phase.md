@@ -13,11 +13,12 @@ When researching an offer-specific topic, load:
 - `core/offer.md` for brand-level context
 - Both may be relevant — offer-specific for details, core for brand positioning
 
-If a future `mb` JSON field exposes active offer state, use it before starting
-research. Otherwise, if `core/offers/` exists but no active offer is selected,
-ask which offer this research relates to; do not silently route from
-`.vip/local.yaml`. Use legacy
-`reference/offers/` only when `core/` is absent.
+Use `.claude/reference/business-primitives/offer-bet-push-proof.md` before
+starting research. If a future `mb` JSON field exposes active offer state, use
+it. Otherwise, if `core/offers/` exists but no active offer is selected, ask
+which offer this research relates to or whether it is brand-level work; do not
+silently route from `.vip/local.yaml`. Use legacy `reference/offers/` only when
+`core/` is absent.
 
 ---
 

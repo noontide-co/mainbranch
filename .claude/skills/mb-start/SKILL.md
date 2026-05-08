@@ -61,6 +61,14 @@ The path is skill orchestration: keyword-gate with `/mb-think`, create/select a
 canonical launch push, build/check the lander with `/mb-site`, prepare or check
 ads with `/mb-ads`, and checkpoint approved artifacts.
 
+**Primitive routing:** When an operator brings a live idea and it is unclear
+whether it is a bet, offer, push, proof, or decision, load
+`.claude/reference/business-primitives/offer-bet-push-proof.md` from the engine
+and route by business meaning before suggesting file moves. In short: offers
+are what the business may keep selling, bets are time-boxed wagers, pushes are
+coordinated execution, proof is evidence, and decisions explain durable changes.
+Ask before renaming, deleting, merging, or moving offer folders.
+
 ---
 
 ## CRITICAL: Repo Selection Rules
@@ -338,23 +346,23 @@ files already exist, read enough of those files to avoid asking for facts the
 repo already contains. Keep this bounded: summarize the existing facts and ask
 only for confirmation or missing profile fields.
 
-**Multi-offer context:** If an active offer is explicit in CLI facts or the
-current session (see Step 8), note it for routing. Don't load the offer file —
-the selected skill will.
+**Multi-offer context:** If CLI facts or the current session identify an
+active offer, note it for routing; the selected skill loads the offer file.
 
 ---
 
 ## Step 8: Offer Detection (Multi-Offer Only)
 
-After loading core context, check for multi-offer:
+Use the active-offer resolution contract in
+`.claude/reference/business-primitives/offer-bet-push-proof.md`.
 
 ```bash
 find "$REPO_PATH/core/offers" -mindepth 2 -maxdepth 2 -name "offer.md" 2>/dev/null
 ```
 
-If `core/offers` is absent but legacy `reference/offers` exists and `core/` is
-also absent, use `reference/offers` as the fallback. In current repos,
-`reference/offers` is a bridge to `core/offers`, not a separate offer tree.
+If `core/offers` is absent and `core/` is also absent, legacy
+`reference/offers` is fallback only. In current repos it bridges to
+`core/offers`.
 
 **If no offers/ folder:** Single-offer mode. Skip to Step 2. Everything reads from `core/`.
 
@@ -379,13 +387,11 @@ also absent, use `reference/offers` as the fallback. In current repos,
    active-offer mechanism. If a future `mb` command exposes an explicit
    session-state contract, use that only after confirmation.
 
-**Shortcut:** `/mb-start [offer-name]` selects that offer for the current
-session after validating the folder exists. It does not silently persist
-session state. Ask before saving it as the future active offer.
+**Shortcut:** `/mb-start [offer-name]` selects that offer for this session after
+validating the folder exists. Ask before saving future active-offer state.
 
-**"all" selection:** When user picks "all" or "brand-level work", use brand
-level `core/` context for this session. Ask before persisting any future local
-state that clears an active offer.
+**"all" selection:** Use brand-level `core/` context for this session. Ask
+before persisting any future local state that clears an active offer.
 
 ---
 
@@ -427,9 +433,8 @@ skip triage.
 
 "Help" or confused → route to `/mb-help`. Give quick overview first:
 
-> "1. **Main Branch** = engine (skills + frameworks, linked via setup). 2. **Your repo** = data (offer, audience, voice).
-> Daily: `cd your-business-repo && claude` then `/mb-start`.
-> For detailed help: `/mb-help` + your question."
+> "1. **Main Branch** = engine. 2. **Your repo** = business data. Daily:
+> `cd your-business-repo && claude` then `/mb-start`. Details: `/mb-help`."
 
 ---
 
@@ -470,10 +475,9 @@ Auto-detect user intent and route. Skills: `/mb-update`, `/mb-help`, `/mb-setup`
 
 ## Recovering from Compaction
 
-If re-invoked after compaction: use CWD and `mb status --json --peek` first.
-Read `~/.config/vip/local.yaml` only as legacy fallback for repo + identity.
-Treat business-repo `.vip/local.yaml` as audit input only; confirm offer
-context from the user or current CLI facts, and do not write `.vip` state.
+If re-invoked after compaction: use CWD and `mb status --json --peek` first;
+read `~/.config/vip/local.yaml` only as legacy fallback for repo + identity;
+treat business `.vip/local.yaml` as audit input only, and do not write it.
 
 ---
 
@@ -489,8 +493,6 @@ context from the user or current CLI facts, and do not write `.vip` state.
 - [references/tool-status-audit.md](references/tool-status-audit.md) — Step 5 provider/readiness audit
 - [references/triage-agent.md](references/triage-agent.md) — Triage agent prompts and synthesis
 - [references/launch-orchestration.md](references/launch-orchestration.md) — guided offer-launch path
-
----
 
 ## Remember
 

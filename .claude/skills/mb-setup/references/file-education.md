@@ -29,6 +29,9 @@ For multi-offer setups, also explain:
 ### offer.md (brand-level)
 > "This is your brand-level offer.md — the umbrella story. It covers what your brand stands for across all offers. Each specific offer gets its own file in `core/offers/[name]/offer.md` with pricing, mechanism, and details."
 
+### proof placement
+> "Proof goes where it can be reused safely. Company-wide testimonials go in `core/proof/testimonials.md`, average-case context in `core/proof/typicality.md`, and angles in `core/proof/angles/`. Proof that only supports one specific offer uses matching files under `core/offers/[name]/proof/`."
+
 ### product-ladder.md
 > "product-ladder.md maps how your offers relate. Which one do people discover first? Where do they go next? This helps us create content and ads that guide people through your world."
 
@@ -50,7 +53,8 @@ For multi-offer setups, also explain:
 
 10. `core/offers/[name]/offer.md` — Offer-specific details for each offer
 11. `core/offers/[name]/audience.md` — Only if this offer targets a different segment
-12. `core/product-ladder.md` — How offers relate to each other
+12. `core/offers/[name]/proof/` — Only if proof applies to one specific offer
+13. `core/product-ladder.md` — How offers relate to each other
 
 > **Note:** content-strategy.md and visual-style.md start as templates and get filled through `/mb-think` cycles. Not required at setup — scaffolded with placeholder sections.
 

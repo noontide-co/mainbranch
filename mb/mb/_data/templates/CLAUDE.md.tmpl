@@ -58,7 +58,7 @@ layer unless the operator asks for the plumbing.
 ## Folders
 
 - `core/` — the business brain: offer, audience, voice, soul, proof, brand, strategy, operations, finance
-- `core/offers/` — per-offer specifics
+- `core/offers/` — per-offer specifics when this is a multi-offer repo
 - `core/proof/` — testimonials, typicality, and reusable proof
 - `core/brand/` — visual identity, voice guardrails, and brand systems
 - `core/strategy/` — strategic context that should remain evergreen
@@ -76,6 +76,34 @@ If your repo has a legacy `campaigns/` folder from before the push primitive
 decision, `mb` continues to read it. New coordinated work should land in
 `pushes/`. Run `mb doctor` to see whether your repo is on the canonical shape
 and `mb migrate campaigns --plan` to preview a safe move.
+
+## Business primitive routing
+
+When deciding where an idea belongs, use business meaning first:
+
+- Offer: what the business sells or may sell repeatedly.
+- Bet: a time-boxed wager with appetite, target, evidence, and verdict.
+- Push: coordinated work that ships something to an audience.
+- Reusable playbook: an engine recipe for running a repeatable operating
+  workflow.
+- Push playbook: this push's approval, provider-boundary, check, manual-step,
+  evidence, and outcome record.
+- Proof: evidence that a claim is true.
+- Decision: rationale for changing durable truth.
+
+In a single-offer repo, `core/offer.md` is the durable offer truth. In a
+multi-offer repo, `core/offer.md` is the portfolio thesis and
+`core/offers/<slug>/offer.md` holds per-offer truth. Company-wide proof belongs
+in `core/proof/`; offer-specific proof belongs in `core/offers/<slug>/proof/`.
+Use standard proof files such as `testimonials.md`, `typicality.md`, and
+`angles/` inside those proof folders.
+A live idea can be both a bet and an offer candidate: open the bet first, then
+create or update the offer only when the operator wants durable sellable truth.
+
+Do not rename, delete, merge, split, or move offer folders until an accepted
+decision, approved migration plan, or explicit operator instruction exists.
+Paused, dead, superseded, or graduated offers should remain inspectable until
+the operator decides what happens to them.
 
 ## Operator vocabulary (optional)
 
