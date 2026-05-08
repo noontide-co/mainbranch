@@ -11,8 +11,43 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.11] - 2026-05-08
+
+v0.3.11 tightens the daily-loop substrate after v0.3.10: startup and
+migration guidance is less ambiguous, legacy `.vip` YAML state is audit-only,
+business primitives and repo topology are clearer, release simulations run from
+materialized fixtures, and Google Ads Search launch work has a plan-only
+playbook path.
+
+This release also records a Codex adapter plan, but it does not promote Codex
+or any other non-Claude runtime to supported status. Claude Code remains the
+supported runtime; print-mode simulations remain proxy evidence rather than
+interactive TUI slash-command proof.
+
+### What this means for you (plain English)
+
+- **Startup should make fewer bad guesses.** `/mb-start` now avoids reusing the
+  same menu numbers for different choices and treats active-offer picks as
+  session context unless you explicitly save state.
+- **Old `.vip` YAML is no longer treated as current truth.** `mb doctor repair
+  --plan --json` can classify legacy `.vip/local.yaml` and `.vip/config.yaml`
+  without printing raw values, but it does not delete or migrate them for you.
+- **Offers, bets, proof, pushes, and child repos are easier to reason about.**
+  Skills and generated instructions now share clearer business primitives and
+  topology language.
+- **Google Ads launch planning has safer rails.** The new Search playbook helps
+  build reviewable plans and run records without claiming Main Branch can
+  publish campaigns or mutate ad accounts.
+- **Release evidence is more concrete.** Print-mode simulations now run from
+  materialized fixture repos and label permission-distorted runs as proxy
+  evidence with deterministic fallback facts.
+
 ### Added
 
+- Added a proposed Codex adapter plan that preserves Claude Code as the
+  supported runtime today, defines staged support levels, and names the first
+  smoke-gated implementation slices without claiming Codex runtime support.
+  Refs #401.
 - Added materialized release-simulation fixture profiles to the Claude runtime
   dogfood harness. Print-mode simulations now run from per-simulation fixture
   repos for launch-readiness gaps, dirty checkpoint planning, broken skill
