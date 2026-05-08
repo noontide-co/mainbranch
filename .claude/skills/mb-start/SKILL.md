@@ -154,7 +154,7 @@ Apply to: business repo selection, skill routing, any multiple choice.
 │   ├── "ads" / "copy" ───────────────→ /mb-ads (triages to static/video/review)
 │   ├── "vsl" / "sales video" ────────→ /mb-vsl (triages to skool/b2b)
 │   ├── "content" / "organic" ────────→ /mb-organic
-│   ├── "newsletter" / "email" ───────→ /newsletter (coming soon — route to /mb-think for now)
+│   ├── "newsletter" / "email" ───────→ /mb-think for strategy, /mb-organic for social repurposing
 │   ├── "content strategy" / "pillars"→ /mb-think
 │   ├── "wiki" / "notes" ─────────────→ /mb-wiki
 │   ├── "help" / questions ───────────→ /mb-help
@@ -464,11 +464,11 @@ Auto-detect user intent and route. Skills: `/mb-update`, `/mb-help`, `/mb-setup`
 | "research", "decide", "figure out", "explore", "mine", "mining", "competitors", "transcribe" | `/mb-think` |
 | "content strategy", "pillars", "platforms", "cadence", "content plan", "distribution" | `/mb-think` |
 | "soul check", "is this still right", "feeling obligated", "pull or push" | `/mb-think codify` (soul.md review) |
-| "newsletter", "email", "beehiiv", "weekly email" | `/newsletter` (coming soon — route to `/mb-think` for now) |
+| "newsletter", "email", "beehiiv", "weekly email" | `/mb-think` for content strategy, then `/mb-organic` for social repurposing |
 | "ads", "copy", "static", "image ads", "video ads", "review", "compliance" | `/mb-ads` |
 | "vsl", "sales video", "about page video", "b2b video" | `/mb-vsl` |
 | "content", "reels", "tiktok", "organic", "carousel" | `/mb-organic` |
-| "site", "landing page", "lander", "minisite", "website", "one-pager", "spin up a site", "deploy site", "put this online", "I need a site", "publish site", "graduate my site", "add a CMS to my site", "/mb-start launch" | `/mb-site` (or `/mb-start launch <offer>` for the speedrun orchestration) |
+| "site", "landing page", "lander", "minisite", "website", "one-pager", "spin up a site", "deploy site", "put this online", "I need a site", "publish site", "graduate my site", "add a CMS to my site", "launch offer" | `/mb-site`; `/mb-start launch <offer>` is not a shipped structured mode |
 | "wiki", "notes", "atomic", "wikilinks", "publish wiki" | `/mb-wiki` |
 | "pull", "update Main Branch", "get latest" | `/mb-update` |
 | "done", "wrapping up", "end my day", "closing out", "call it a day", "that's it" | `/mb-end` |

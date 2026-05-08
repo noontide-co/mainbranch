@@ -94,7 +94,7 @@ You do not need all 9 sections filled to start creating content. Pillars + Platf
 |-------|----------------------------------|
 | `/mb-organic` | Suggests topics aligned to defined pillars. Uses platform format from Platform Strategy. Pulls hooks from Hooks Library. |
 | `/mb-ads` | Uses pillars to inform angle selection. Uses metrics to identify top organic performers for paid amplification. |
-| `/newsletter` | Uses pillars for topic selection. Uses Repurposing Flow to map newsletter to derivative content. (Coming soon.) |
+| Planned newsletter workflow | Would use pillars for topic selection and the Repurposing Flow to map the email to derivative content. Today, use `/mb-think` to plan it and `/mb-organic` to repurpose it. |
 | `/mb-think` | Writes to content-strategy.md during the codify phase. This is the primary tool for building and updating the file. |
 
 If content-strategy.md does not exist, all skills work exactly as they did before. The integration is additive -- it improves output quality but is never required. See `organic/SKILL.md` for how `/mb-organic` reads content-strategy.md during script generation.
@@ -107,18 +107,18 @@ Main Branch delivers two kinds of value:
 
 1. **Ads that convert** -- immediate ROI through `/mb-ads` and `/mb-vsl`. Reference files make ads specific, compliant, and high-converting.
 
-2. **Content that runs itself** -- long game through content strategy, `/mb-organic`, and eventually `/newsletter`. One keystone piece (newsletter) gets adapted across platforms automatically.
+2. **Content that runs itself** -- long game through content strategy, `/mb-organic`, and planned newsletter workflows. One keystone piece gets adapted across platforms automatically.
 
 Both pillars are powered by the same reference files. The better your reference, the better both your ads and your content.
 
 ---
 
-## What is the newsletter-first waterfall?
+## What is the keystone-first waterfall?
 
 The content pipeline flows from one keystone piece to many derivatives:
 
 ```
-Newsletter (keystone, weekly)
+Keystone piece (email, article, or long-form note)
     |
     v
 /mb-organic --> Platform-adapted social content
@@ -130,12 +130,17 @@ Newsletter (keystone, weekly)
 /mb-think --> Performance analysis, strategy updates
     |       (what worked? update hooks library, metrics)
     v
-Loop back to newsletter
+Loop back to the next keystone piece
 ```
 
-**Why newsletter-first?** Writing one thoughtful piece per week is sustainable. AI adapts it for every platform. You never open a social media app to post -- the system handles distribution.
+**Why keystone-first?** Writing one thoughtful piece per week is sustainable.
+AI adapts it for every platform. You never open a social media app to post --
+the system handles distribution.
 
-**What if I do not have a newsletter yet?** You can still use `/mb-organic` to create standalone content. The newsletter is the ideal keystone, but it is not required. Use `/mb-think` to build your content strategy now; add the newsletter when you are ready.
+**What if I do not have an email list yet?** You can still use `/mb-organic`
+to create standalone content. An email or newsletter can become the keystone
+later, but it is not required. Use `/mb-think` to build your content strategy
+now.
 
 ---
 
@@ -156,5 +161,7 @@ Not recommended. Your pillars derive from soul + offer + audience. Without those
 **Q: What if I only do ads, not content?**
 Content-strategy.md is optional. If you only use `/mb-ads` and `/mb-vsl`, you do not need it. It becomes valuable when you start doing organic content or a newsletter.
 
-**Q: Is /newsletter available yet?**
-Not yet. It is coming soon and requires newsletter infrastructure (Beehiiv or similar). For now, use `/mb-think` to build your content strategy and `/mb-organic` to create social content. When `/newsletter` launches, your content-strategy.md will already be ready for it.
+**Q: Is there a bundled newsletter skill yet?**
+Not yet. Newsletter infrastructure such as Beehiiv is a future workflow. For
+now, use `/mb-think` to build your content strategy and `/mb-organic` to create
+social content.

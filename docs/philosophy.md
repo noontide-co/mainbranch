@@ -29,7 +29,7 @@ The core insight — from Tony Robbins' interview with Alex Hormozi — is that 
 | Magic passive memory | Active management |
 | Start fresh every chat | `/mb-start` loads your context |
 | Generic outputs | Business-specific |
-| Content treadmill | Newsletter-first, AI-adapted distribution |
+| Content treadmill | Keystone-first, AI-adapted distribution |
 | Rent infrastructure | Own it (portable files) |
 
 ---

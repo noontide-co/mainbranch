@@ -135,8 +135,9 @@ only concise excerpts needed to support the synthesis.
   research, not an official X integration.
 - Use Grok/xAI or web search for topic-level X/social sentiment when
   configured; otherwise ask for screenshots, public embeds, or manual exports.
-- Treat Postiz as scheduling/publishing support only where current docs and
-  smoke evidence exist.
+- Treat Postiz as planned scheduling/publishing support only where current docs
+  and connected-channel smoke evidence exist. The 2026-05-07 API smoke proved
+  reachability/auth, but not draft or scheduling support.
 - Do not recommend comment/DM automation through X API, Postiz, Typefully,
   Apify, browser automation, or ManyChat-style providers as a supported Main
   Branch path.

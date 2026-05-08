@@ -94,7 +94,7 @@ The site is infrastructure, not recurring content. It is the destination the con
      |
 /mb-site -> site conversion endpoint
      |
-/mb-ads, /mb-organic, newsletter -> traffic to site
+/mb-ads, /mb-organic, email/newsletter content -> traffic to site
 ```
 
 When core business files change significantly, such as new offer or pricing, consider re-running build:
