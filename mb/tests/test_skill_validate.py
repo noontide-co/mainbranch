@@ -241,6 +241,41 @@ def test_skill_validate_warns_on_retired_reference_subfolders(
     assert "legacy business-repo reference/* path" in report["files"][0]["warnings"][0]
 
 
+def test_skill_validate_warns_on_retired_domain_rubric_language(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(
+        tmp_path,
+        "mb-alpha",
+        body="Load the domain rubric before setup.\n",
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-alpha")
+
+    assert report is not None
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 1
+    assert "retired LLM-facing 'domain rubric' language" in report["files"][0]["warnings"][0]
+
+
+def test_skill_validate_allows_historical_domain_rubric_migration_note(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(
+        tmp_path,
+        "mb-alpha",
+        body="Historical migration notes may mention old domain-rubrics paths.\n",
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-alpha")
+
+    assert report is not None
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 0
+
+
 def test_skill_validate_flags_unbundled_slash_command_routes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

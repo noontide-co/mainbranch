@@ -1,6 +1,6 @@
 # Site Context
 
-Load this when `/mb-site` needs prerequisites, active offer resolution, required business context, or section mapping.
+Load this when `/mb-site` needs prerequisites, active offer resolution, required business context, or section mapping. Use the shared primitive reference at `.claude/reference/business-primitives/offer-bet-push-proof.md` for offer/bet/push/proof routing.
 
 ## Prerequisites
 
@@ -34,18 +34,19 @@ to pass. Porkbun skipped is fine for the Cloudflare-registered path.
 
 ## Active Offer Resolution
 
-Before loading business context, resolve the active offer:
-
-1. If a future `mb` JSON field exposes active offer state, use it; otherwise read `.vip/local.yaml` only as a legacy fallback.
-2. If set, load `core/offers/[current_offer]/offer.md` as the active offer.
-3. If not set and `core/offers/` exists, ask which offer this site is for.
-4. If no `core/offers/` folder exists, use `core/offer.md` for a single-offer repo.
+Before loading business context, resolve the active offer with the shared
+active-offer contract: use CLI/status facts first, ask when `core/offers/`
+exists and no current fact resolves the offer, treat the answer as
+session-scoped unless the operator approves saving local state, and read
+`.vip/local.yaml` only as a legacy clue.
 
 Always-core files, never per-offer: `soul.md`, `voice.md`, `content-strategy.md`.
 
 Offer-aware files, check `core/offers/` first and fall back to `core/`: `offer.md`, `audience.md`.
 
-Accumulate files: testimonials and proof can come from both offer-specific context and brand-level `core/proof/`.
+Accumulate proof: company-wide proof comes from `core/proof/`; offer-specific
+proof comes from `core/offers/[active]/proof/`. Older offer testimonial files
+can be read as compatibility context.
 
 ## Required Business Context
 

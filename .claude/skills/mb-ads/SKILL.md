@@ -94,7 +94,9 @@ depth when status is unavailable or lacks the needed ad-specific detail.
 
 **NEVER spawn Explore or Task agents for pre-flight.** Read files directly at the known repo path. Pre-flight should complete in under 10 seconds.
 
-At the repo path, resolve offer context first (see Offer Context Resolution above), then check these files and count lines:
+At the repo path, resolve offer context first with
+`.claude/reference/business-primitives/offer-bet-push-proof.md`, then check
+these files and count lines:
 
 ```
 [resolved offer.md]          → 0 (missing), 1 (<20 lines), 2 (20-80), 3 (80+)
@@ -296,26 +298,22 @@ These patterns that work in standard ads will get rejected in Employment:
 
 ## Offer Context Resolution
 
-Before loading reference files, resolve the active offer:
-
-1. If a future `mb` JSON field exposes active offer state, use it; otherwise read `.vip/local.yaml` only as a legacy fallback
-2. If set: load `core/offers/[current_offer]/offer.md` as the active offer
-3. If not set AND `core/offers/` exists: ask which offer
-4. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
-5. Legacy fallback: if the repo does not have `core/`, read the old
-   `reference/core/` and `reference/offers/` paths.
+Before loading reference files, resolve active offer context with
+`.claude/reference/business-primitives/offer-bet-push-proof.md`.
 
 In current repos, `reference/core` and `reference/offers` are compatibility
 bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
 files: read through them only as fallback, and never ask the user to update both
 paths.
 
-**Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
-**Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
-**Accumulate files** (load both): `testimonials.md` (offer-specific + brand-level)
+**Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
+**Offer-aware files:** `offer.md`, `audience.md`
+**Proof files:** company-wide proof in `core/proof/`; offer-specific proof in
+`core/offers/[active]/proof/`. Read older offer testimonial files as
+compatibility context only.
 
 **Offer argument:** `/mb-ads [mode] [offer] [campaign]` — e.g., `/mb-ads static community january-launch`
-If offer specified, overrides session `current_offer` for this run.
+If offer is specified, it sets the session offer context for this run.
 
 ---
 
@@ -328,7 +326,7 @@ Before creating ads, the business repo must have:
 | Offer | `core/offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | Yes |
 | Audience | `core/offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Yes |
 | Voice | `core/voice.md` (always core) | Yes |
-| Testimonials | `core/proof/testimonials.md` + `core/offers/[active]/testimonials.md` (accumulate) | Yes |
+| Testimonials/proof | `core/proof/` + `core/offers/[active]/proof/` (accumulate) | Yes |
 | Angles | `core/proof/angles/*.md` | Yes (at least 1) |
 | Visual Style | `core/brand/visual-style.md` | Optional (affects image gen) |
 | Content Strategy | `core/content-strategy.md` (always brand-level) | Optional (improves topic selection) |
@@ -431,7 +429,7 @@ Before saving any batch, verify:
 
 If context was compacted mid-task, check:
 
-1. **Which offer?** Use a future `mb` JSON active-offer field if present; otherwise read `.vip/local.yaml` only as a legacy fallback, to restore offer context
+1. **Which offer?** Use the shared active-offer contract to restore or ask for offer context
 2. **What entry point?** Full pipeline, copy only, hook library, video scripts, review, account check
 3. **What stage?** Planning angles, writing hooks, generating prompts, reviewing, pulling account data
 4. **What's done?** Check `pushes/` (and legacy `campaigns/` on unmigrated repos) for partial work

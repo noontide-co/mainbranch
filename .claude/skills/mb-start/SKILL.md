@@ -61,6 +61,14 @@ The path is skill orchestration: keyword-gate with `/mb-think`, create/select a
 canonical launch push, build/check the lander with `/mb-site`, prepare or check
 ads with `/mb-ads`, and checkpoint approved artifacts.
 
+**Primitive routing:** When an operator brings a live idea and it is unclear
+whether it is a bet, offer, push, proof, or decision, load
+`.claude/reference/business-primitives/offer-bet-push-proof.md` from the engine
+and route by business meaning before suggesting file moves. In short: offers
+are what the business may keep selling, bets are time-boxed wagers, pushes are
+coordinated execution, proof is evidence, and decisions explain durable changes.
+Ask before renaming, deleting, merging, or moving offer folders.
+
 ---
 
 ## CRITICAL: Repo Selection Rules
@@ -334,13 +342,14 @@ files already exist, read enough of those files to avoid asking for facts the
 repo already contains. Keep this bounded: summarize the existing facts and ask
 only for confirmation or missing profile fields.
 
-**Multi-offer context:** If `current_offer` is set (see Step 8), note the active offer for routing. Don't load the offer file — the selected skill will.
+**Multi-offer context:** If Step 8 resolves an offer for this session, note it for routing. Don't load the offer file — the selected skill will.
 
 ---
 
 ## Step 8: Offer Detection (Multi-Offer Only)
 
-After loading core context, check for multi-offer:
+Use the active-offer resolution contract in
+`.claude/reference/business-primitives/offer-bet-push-proof.md`.
 
 ```bash
 find "$REPO_PATH/core/offers" -mindepth 2 -maxdepth 2 -name "offer.md" 2>/dev/null
@@ -350,28 +359,12 @@ If `core/offers` is absent but legacy `reference/offers` exists and `core/` is
 also absent, use `reference/offers` as the fallback. In current repos,
 `reference/offers` is a bridge to `core/offers`, not a separate offer tree.
 
-**If no offers/ folder:** Single-offer mode. Skip to Step 2. Everything reads from `core/`.
-
-**If offers/ found:** Multi-offer mode.
-1. Check current CLI status facts first. If a future `mb` JSON field exposes
-   active-offer local state, prefer that. If not, read `.vip/local.yaml` only as
-   a legacy fallback.
-2. If a legacy active offer is set, confirm in plain language:
-   "I see legacy session state for **[offer]**. Continue with that offer, work
-   brand-level, or switch?"
-3. If no active offer is set, present offers by slug/name, not numbers when
-   ranked actions or routes are already numbered:
-   - `community` — paid community
-   - `newsletter` — newsletter
-   - `all` — brand-level work from `core/`
-4. Treat the user's selection as session-scoped until they explicitly confirm
-   persistence. Say what will happen before writing local state:
-   "For this session I'll use **[offer]**. Save that as the active offer for
-   future sessions too?"
-5. Only after explicit confirmation, persist with the current supported
-   repo-local state path. If no CLI command exists yet, `.vip/local.yaml` is a
-   legacy fallback; merge-write it without overwriting unrelated keys. Do not
-   use `echo > .vip/local.yaml`.
+If no offers folder exists, use single-offer mode: `core/offer.md` is the
+durable offer truth. If offers exist, ask by slug/name unless CLI facts already
+resolved the context. Include `all` for brand-level portfolio work. Treat the
+choice as session-scoped unless the operator explicitly approves saving local
+state. Read `.vip/local.yaml` only as a legacy clue, confirm before using it,
+and never write it without approval.
 
 **Shortcut:** `/mb-start [offer-name]` selects that offer for the current
 session after validating the folder exists. It does not silently persist
@@ -405,7 +398,7 @@ to `/mb-think`.
 
 **Respect readiness gates from Step 6.** If status is MINIMAL or EMPTY, do not offer output skills. If THIN, warn. See [readiness-assessment.md](references/readiness-assessment.md) for skill-specific requirements.
 
-**Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[current_offer or 'single']**"
+**Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[selected offer or 'single']**"
 
 **Surface unread CHANGELOG entries before the menu**, present the triage route
 without reusing a number from recommendations or offers, and use the "while you
@@ -465,10 +458,9 @@ Auto-detect user intent and route. Skills: `/mb-update`, `/mb-help`, `/mb-setup`
 ## Recovering from Compaction
 
 If re-invoked after compaction: re-read `~/.config/vip/local.yaml` for repo +
-identity, then use status/CLI facts for active offer if available. Read
-`.vip/local.yaml` in the business repo only as a legacy fallback for
-`current_offer`. Confirm the restored context, but do not write local state
-without explicit approval.
+identity, then use status/CLI facts for offer context if available. Read
+business-repo `.vip/local.yaml` only as a legacy clue. Confirm the restored
+context, but do not write local state without explicit approval.
 
 ---
 

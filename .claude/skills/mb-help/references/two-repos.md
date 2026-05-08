@@ -10,7 +10,7 @@ The shared system everyone uses. Contains:
 - Skills (`/mb-ads`, `/mb-think`, `/mb-setup`, `/mb-vsl`, etc.)
 - Templates and frameworks
 - Compliance resources
-- Domain rubrics
+- Business setup patterns and primitive guidance
 
 **You download updates from this. You never edit it.**
 

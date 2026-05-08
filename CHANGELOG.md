@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added a shared business-primitives reference for offers, bets, pushes,
+  reusable playbooks, push playbooks, proof, and decisions, including
+  live-validation, graduation, proof-placement, and ask-before-destructive-offer
+  rules. Refs #411.
 - Added a release-simulation fixture for the `/mb-start` ambiguous-choice
   failure where an operator replies `1` for the top recommendation in a rich
   multi-offer repo, so release review checks that offer selection cannot
@@ -24,6 +28,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Aligned bundled skill guidance, generated business `CLAUDE.md`, and public
+  architecture docs around the bet-vs-offer rubric, `core/offer.md` as
+  single-offer truth or multi-offer portfolio thesis, and
+  `core/offers/<slug>/proof/` for offer-specific proof. Refs #411.
+- Retired LLM-facing "domain rubric" setup language in favor of business
+  primitives and setup patterns, and added skill validation warnings for new
+  uses of the old phrase outside historical compatibility notes. Refs #411.
 - Expanded `mb doctor repair --plan --json` migration guidance with an
   offer-topology section that surfaces legacy `.vip/local.yaml` active-offer
   state, offer folder/frontmatter slug drift, and multi-offer review needs

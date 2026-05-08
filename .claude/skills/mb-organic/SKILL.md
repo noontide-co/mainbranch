@@ -107,26 +107,22 @@ For the full mining methodology (Visual/Audible/Emotional framework, AI capabili
 
 ## Offer Context Resolution
 
-Before loading reference files, resolve the active offer:
-
-1. If a future `mb` JSON field exposes active offer state, use it; otherwise read `.vip/local.yaml` only as a legacy fallback
-2. If set: load `core/offers/[current_offer]/offer.md` as the active offer
-3. If not set AND `core/offers/` exists: ask which offer
-4. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
-5. Legacy fallback: if the repo does not have `core/`, read the old
-   `reference/core/` and `reference/offers/` paths.
+Before loading reference files, resolve active offer context with
+`.claude/reference/business-primitives/offer-bet-push-proof.md`.
 
 In current repos, `reference/core` and `reference/offers` are compatibility
 bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
 files. Read through them only as fallback, and write once to the canonical
 `core/` path when reference updates are needed.
 
-**Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
-**Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
-**Accumulate files** (load both): `testimonials.md` (offer-specific + brand-level)
+**Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
+**Offer-aware files:** `offer.md`, `audience.md`
+**Proof files:** company-wide proof in `core/proof/`; offer-specific proof in
+`core/offers/[active]/proof/`. Read older offer testimonial files as
+compatibility context only.
 
 **Offer argument:** `/mb-organic video [offer] "concept"` — e.g., `/mb-organic video community "morning routine"`
-If offer specified, overrides session `current_offer` for this run.
+If offer is specified, it sets the session offer context for this run.
 
 ---
 

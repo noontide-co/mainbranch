@@ -58,10 +58,16 @@ See [the-think-cycle.md](the-think-cycle.md) for deep dive.
 ### /mb-bet - Business Bets
 **Use when:** Opening, updating, closing, listing, or narrating an operating bet.
 
+A bet is the test; an offer is what the business may keep selling. A live idea
+can be both, but do not turn a bet into durable offer truth until the operator
+accepts that change.
+
 **What it does:**
 - Creates `bets/YYYY-MM-DD-slug.md` with hypothesis, appetite, metric, target, and deadline
-- Links bets to decisions, research, campaigns, and outcomes
+- Links bets to decisions, research, pushes, and outcomes
 - Captures verdicts and learning when a bet closes
+- Explains whether graduation should update an offer, create a push/playbook,
+  update proof, or create a follow-up decision
 - Drafts public-safe narration without publishing automatically
 
 **Modes:**

@@ -50,6 +50,14 @@ _LEGACY_REFERENCE_ALLOW_TERMS = (
     "read fallback",
     "temporary",
 )
+_RETIRED_PRIMITIVE_LANGUAGE_RE = re.compile(r"domain[- ]rubrics?|domain rubric", re.I)
+_RETIRED_PRIMITIVE_ALLOW_TERMS = (
+    "historical",
+    "compatibility",
+    "migration",
+    "older",
+    "old ",
+)
 _KNOWN_UNPREFIXED_SKILL_ROUTES = {
     "ads",
     "bet",
@@ -199,6 +207,27 @@ def _check_legacy_reference_guidance(text: str) -> list[str]:
     return warnings
 
 
+def _check_retired_primitive_language(text: str) -> list[str]:
+    warnings: list[str] = []
+    in_fence = False
+    lines = text.splitlines()
+    for line_number, line in enumerate(lines, start=1):
+        if line.lstrip().startswith(("```", "~~~")):
+            in_fence = not in_fence
+            continue
+        if in_fence or not _RETIRED_PRIMITIVE_LANGUAGE_RE.search(line):
+            continue
+        context = " ".join(lines[max(0, line_number - 2) : min(len(lines), line_number + 1)])
+        normalized = context.lower()
+        if any(term in normalized for term in _RETIRED_PRIMITIVE_ALLOW_TERMS):
+            continue
+        warnings.append(
+            f"line {line_number}: retired LLM-facing 'domain rubric' language; "
+            "use business primitives, setup patterns, operator loops, and channels"
+        )
+    return warnings
+
+
 def _check_slash_command_references(
     text: str,
     *,
@@ -300,6 +329,7 @@ def _validate_skill_at(name: str, skill_root: Path) -> dict[str, Any]:
         _check_slash_command_references(text, available_commands=available_commands)
     )
     skill_warnings.extend(_check_legacy_reference_guidance(text))
+    skill_warnings.extend(_check_retired_primitive_language(text))
     all_warnings.extend(skill_warnings)
     all_errors.extend(skill_errors)
 
@@ -326,6 +356,7 @@ def _validate_skill_at(name: str, skill_root: Path) -> dict[str, Any]:
             )
         )
         reference_warnings = _check_legacy_reference_guidance(referenced_text)
+        reference_warnings.extend(_check_retired_primitive_language(referenced_text))
         rel_path = str(referenced_file.relative_to(skill_root))
         all_errors.extend(f"{rel_path}: {error}" for error in reference_errors)
         files.append(

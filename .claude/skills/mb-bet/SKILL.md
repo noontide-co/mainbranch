@@ -7,12 +7,16 @@ loops: [decide, reflect, ship]
 # Bet
 
 Business bets are hub nodes in `bets/`. They connect decisions, research,
-campaigns, logs, documents, and outcomes without replacing any of them.
+pushes, logs, documents, and outcomes without replacing any of them. Legacy
+`campaigns/` records may still be linked for old repos, but new coordinated
+work uses `pushes/`.
 
 A bet is not an offer. An offer is a durable thing the business sells. A bet is
 a time-boxed operating hypothesis with appetite, target, deadline, evidence,
 and a verdict. A successful bet may graduate into an offer, workflow, content
-pillar, campaign, or decision; a failed bet should be closed with learning.
+pillar, push, or decision; a failed bet should be closed with learning.
+For the full offer/bet/push/proof routing rubric, use
+`.claude/reference/business-primitives/offer-bet-push-proof.md`.
 
 Use `/mb-bet` for five modes:
 
@@ -99,11 +103,15 @@ Use when the operator says they want to try, launch, test, prove, or make a bet.
 
 1. Ask only for missing essentials: hypothesis, appetite, deadline, metric,
    target, public/private posture, channels, and any known linked files.
-2. Create `bets/YYYY-MM-DD-slug.md`.
-3. Add reverse `linked_bets` frontmatter to linked decisions, research,
+2. If the idea also sounds like a new offer, ask whether it is only a wager for
+   now or whether the operator wants to preserve a durable offer candidate too.
+   Do not create, rename, delete, or move `core/offers/` folders without an
+   accepted decision, approved migration plan, or explicit instruction.
+3. Create `bets/YYYY-MM-DD-slug.md`.
+4. Add reverse `linked_bets` frontmatter to linked decisions, research,
    pushes (or legacy campaigns), and outcome files when those files already
    exist and the edit is clearly safe.
-4. End with the file path, deadline, target, and next action.
+5. End with the file path, deadline, target, and next action.
 
 Body template:
 
@@ -155,7 +163,13 @@ Use when the deadline passed, the target is hit, or the operator decides to stop
 3. Fill `result` with the measured outcome and verdict.
 4. Add a `## Learning` section or update it if present.
 5. Link outcome files and add reverse `linked_bets` fields.
-6. Suggest follow-up decisions or issues only when the next step is concrete.
+6. If the bet changes durable offer truth, suggest a follow-up decision before
+   editing `core/offer.md` or `core/offers/<slug>/offer.md`.
+7. Graduation options: update an existing offer, create a new offer candidate,
+   create a push/playbook, update proof, or justify a linked child repo. Keep
+   the closed bet as history.
+8. For paused, dead, superseded, or canceled offer ideas, preserve the record
+   and mark status/verdict; do not delete offer folders as cleanup.
 
 ## Mode: list
 

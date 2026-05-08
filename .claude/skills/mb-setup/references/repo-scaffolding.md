@@ -209,6 +209,6 @@ done
 **Why per-skill entries (not `.claude/skills/`):** Users have custom skills (deck, pr-review, etc.) that ARE tracked in git. Ignoring the whole folder would hide those. We only ignore the Main Branch-linked symlinks. Old clone-based `.claude/lenses/` and `.claude/reference/` dirs are legacy link dirs; repair them with `mb doctor repair` instead of teaching them as current setup.
 
 **Why legacy `.vip/local.yaml` is git-ignored:** Older repos may have stored
-session state like `current_offer` there. Treat it as local fallback state, not
+selected-offer session state there. Treat it as local fallback state, not
 durable business truth, and ask before writing it. The git-tracked
 `.vip/config.yaml` holds team/business settings that should be shared.

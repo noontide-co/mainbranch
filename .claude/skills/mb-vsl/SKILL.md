@@ -82,25 +82,21 @@ If unclear, ask: "Is this for a Skool/membership community ($47-$497/month) or a
 
 ## Offer Context Resolution
 
-Before loading reference files, resolve the active offer:
-
-1. If a future `mb` JSON field exposes active offer state, use it; otherwise read `.vip/local.yaml` only as a legacy fallback
-2. If set: load `core/offers/[current_offer]/offer.md` as the active offer
-3. If not set AND `core/offers/` exists: ask which offer
-4. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
-5. Legacy fallback: if the repo does not have `core/`, read the old
-   `reference/core/` and `reference/offers/` paths.
+Before loading reference files, resolve active offer context with
+`.claude/reference/business-primitives/offer-bet-push-proof.md`.
 
 In current repos, `reference/core` and `reference/offers` are compatibility
 bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
 files, and write once to the canonical `core/` path.
 
-**Always-core files** (never per-offer): `soul.md`, `voice.md`, `content-strategy.md`
-**Offer-aware files** (check offers/ first, fall back to core/): `offer.md`, `audience.md`
-**Accumulate files** (load both): `testimonials.md` (offer-specific + brand-level)
+**Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
+**Offer-aware files:** `offer.md`, `audience.md`
+**Proof files:** company-wide proof in `core/proof/`; offer-specific proof in
+`core/offers/[active]/proof/`. Read older offer testimonial files as
+compatibility context only.
 
 **Offer argument:** `/mb-vsl [framework] [offer]` — e.g., `/mb-vsl skool community`
-If offer specified, overrides session `current_offer` for this run. If the active offer type is known (community/membership offer), default to Skool framework; if B2B/high-ticket, default to B2B Haynes.
+If offer is specified, it sets the session offer context for this run. If the active offer type is known (community/membership offer), default to Skool framework; if B2B/high-ticket, default to B2B Haynes.
 
 ---
 
@@ -110,7 +106,7 @@ If offer specified, overrides session `current_offer` for this run. If the activ
 |------|------|---------|
 | Offer | `core/offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | What you sell, price, inclusions, guarantee |
 | Audience | `core/offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Who buys, their pains, objections |
-| Testimonials | `core/proof/testimonials.md` + `core/offers/[active]/testimonials.md` (accumulate) | Success stories with specifics |
+| Testimonials/proof | `core/proof/` + `core/offers/[active]/proof/` (accumulate) | Success stories with specifics |
 | Skool Surfaces | `core/operations/funnel/skool-surfaces.md` | Live Skool about page + pricing copy (congruence) |
 
 **If missing:** Ask user to provide or run `/mb-think` first.
@@ -212,7 +208,7 @@ Just say `/mb-vsl` again and describe where you were:
 
 ### For Claude
 
-1. **Restore offer context:** Use a future `mb` JSON active-offer field if present; otherwise read `.vip/local.yaml` only as a legacy fallback. Confirm with user if multi-offer repo.
+1. **Restore offer context:** Use the shared active-offer contract. Confirm with user if multi-offer repo.
 
 2. **Check for in-progress scripts:**
 
