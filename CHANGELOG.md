@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added privacy-safe business repo migration drift warnings through
+  `mb validate`, `mb doctor`, and `mb doctor repair --plan --json` for stale
+  generated guidance, legacy active-write folders, stale Claude settings,
+  wrong push/playbook paths, and legacy bet campaign links. Refs #432, #436.
 - Added the role-neutral `.mainbranch/repo.json` child repo descriptor contract
   for site, offer, product, client, finance, legal, ops, integration sidecar,
   experiment, and archive repos, while keeping existing site
@@ -24,6 +28,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- `mb validate` now accepts current bets that use `linked_pushes` without
+  requiring legacy `linked_campaigns`, keeps `linked_campaigns` compatible for
+  old bets, and treats `research/README.md` as folder documentation instead of
+  a research artifact. Refs #432.
 - Updated generated business `CLAUDE.md`, `/mb-site`, and `/mb-help` guidance
   so agents distinguish hub work from child-repo work and avoid committed
   absolute paths, secrets, raw provider caches, finance/legal source data, or

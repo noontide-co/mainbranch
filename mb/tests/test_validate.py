@@ -58,6 +58,87 @@ def test_validate_passes_well_formed(tmp_path: Path) -> None:
     assert all(f["ok"] for f in report["files"])
 
 
+def test_validate_accepts_canonical_bet_linked_pushes_without_legacy_campaigns(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "bets" / "2026-05-08-launch.md",
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-08\n"
+            "deadline: 2026-05-22\n"
+            "appetite: 2 weeks\n"
+            "hypothesis: If we ship the push, qualified calls will increase.\n"
+            "metric: qualified calls\n"
+            "target: 10 qualified calls\n"
+            "result: ''\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_pushes: []\n"
+            "linked_outcomes: []\n"
+            "public: false\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n"
+            "# Launch bet\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is True
+    bet = next(file for file in report["files"] if file["schema"] == "bets")
+    assert bet["errors"] == []
+
+
+def test_validate_keeps_legacy_bet_campaign_links_readable(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "bets" / "2026-05-08-legacy.md",
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-08\n"
+            "deadline: 2026-05-22\n"
+            "appetite: 2 weeks\n"
+            "hypothesis: If the legacy campaign lands, calls will increase.\n"
+            "metric: qualified calls\n"
+            "target: 10 qualified calls\n"
+            "result: ''\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_campaigns: []\n"
+            "linked_outcomes: []\n"
+            "public: false\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n"
+            "# Legacy bet\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is True
+    bet = next(file for file in report["files"] if file["schema"] == "bets")
+    assert bet["errors"] == []
+    assert any("linked_campaigns" in warning for warning in bet["warnings"])
+
+
+def test_validate_ignores_research_readme_folder_docs(tmp_path: Path) -> None:
+    _write(tmp_path / "research" / "README.md", "# Research\n\nFolder docs without frontmatter.\n")
+    _write(
+        tmp_path / "research" / "2026-05-08-topic-source.md",
+        "---\ndate: 2026-05-08\ntopic: topic\nsource: source\n---\n# Research\n",
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is True
+    paths = {file["path"] for file in report["files"]}
+    assert "research/README.md" not in paths
+
+
 def test_keyword_gate_documented_frontmatter_validates(tmp_path: Path) -> None:
     guide = REPO_ROOT / ".claude" / "skills" / "mb-think" / "references" / "keyword-gate.md"
     text = guide.read_text(encoding="utf-8")
@@ -483,7 +564,7 @@ def test_cross_refs_warn_when_bet_link_lacks_reverse_link(tmp_path: Path) -> Non
             "linked_decisions:\n"
             "  - decisions/2026-05-04-demo.md\n"
             "linked_research: []\n"
-            "linked_campaigns: []\n"
+            "linked_pushes: []\n"
             "linked_outcomes: []\n"
             "public: true\n"
             "channels:\n"
@@ -524,7 +605,7 @@ def test_cross_refs_pass_when_bet_links_are_bidirectional(tmp_path: Path) -> Non
             "linked_decisions:\n"
             "  - decisions/2026-05-04-demo.md\n"
             "linked_research: []\n"
-            "linked_campaigns: []\n"
+            "linked_pushes: []\n"
             "linked_outcomes: []\n"
             "public: true\n"
             "channels:\n"

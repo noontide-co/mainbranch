@@ -499,6 +499,22 @@ versions, leave it in place — `mb` reads it as compatibility. Run
 `mb doctor` and `mb migrate campaigns --plan` to preview the move to
 `pushes/` when you're ready.
 
+Current `mb validate` and `mb doctor repair --plan --json` also report
+non-destructive migration drift warnings. These warnings name stale paths and
+categories without printing file bodies:
+
+- generated `CLAUDE.md` guidance that still teaches `reference/` or
+  `campaigns/` as active write targets;
+- legacy active-looking folders such as `reference/`, `campaigns/`, `.vip/`,
+  `ops/`, `skills/`, `briefs/`, `content/`, or `staging/`;
+- push records that are not shaped as `pushes/<YYYY-MM-DD-slug>/push.md`;
+- bet frontmatter that still only links legacy `campaigns/` records.
+
+These are warnings, not destructive repairs. Use them to decide what to move,
+rewrite, or leave as compatibility. Folder docs such as `research/README.md`
+are not treated as research reports and do not need research-record
+frontmatter.
+
 Validate before merging the branch:
 
 ```bash

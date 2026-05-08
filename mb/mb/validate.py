@@ -15,7 +15,7 @@ from typing import Any
 
 import yaml
 
-from mb import github_activity, relationships
+from mb import github_activity, migration_lint, relationships
 from mb import pushes as pushes_mod
 
 DECISION_STATUS = {"proposed", "accepted", "rejected", "superseded", "running"}
@@ -176,10 +176,9 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "bets": {
         "glob": "bets/*.md",
-        # `linked_campaigns` stays required for backward compatibility with
-        # every committed bet. New bet writes also include `linked_pushes`
-        # (canonical, recognized in LINK_FIELDS). A follow-up PR can drop
-        # `linked_campaigns` from required once the migration apply lands.
+        # Current bets use `linked_pushes`; legacy bets may still have only
+        # `linked_campaigns`. _check_bet_frontmatter enforces that at least one
+        # campaign/push link field exists without requiring the legacy field.
         "required": [
             "status",
             "opened",
@@ -191,13 +190,13 @@ SCHEMAS: dict[str, dict[str, Any]] = {
             "result",
             "linked_decisions",
             "linked_research",
-            "linked_campaigns",
             "linked_outcomes",
             "public",
             "channels",
             "tags",
         ],
         "enums": {"status": BET_STATUS},
+        "primitive": "bet",
     },
     "log": {
         "glob": "log/*.md",
@@ -301,6 +300,8 @@ def _check_one(path: Path, schema: dict[str, Any]) -> dict[str, Any]:
     primitive = schema.get("primitive")
     if primitive == "push":
         _check_push_frontmatter(path, fm, errors)
+    elif primitive == "bet":
+        _check_bet_frontmatter(fm, errors)
     elif primitive == "playbook":
         _check_playbook_frontmatter(path, fm, errors)
     elif primitive == "legacy-campaign":
@@ -309,6 +310,11 @@ def _check_one(path: Path, schema: dict[str, Any]) -> dict[str, Any]:
         _check_repo_topology_frontmatter(path, fm, errors, warnings)
     _check_provider_refs_shape(fm, errors)
     return {"path": str(path), "ok": not errors, "errors": errors, "warnings": warnings}
+
+
+def _check_bet_frontmatter(fm: dict[str, Any], errors: list[str]) -> None:
+    if "linked_pushes" not in fm and "linked_campaigns" not in fm:
+        errors.append("missing key: linked_pushes or linked_campaigns")
 
 
 def _require_non_empty_string(fm: dict[str, Any], key: str, errors: list[str]) -> None:
@@ -907,6 +913,29 @@ def _add_file_warning(
     files_by_path[rel].setdefault("warnings", []).append(message)
 
 
+def _add_migration_lint_warnings(
+    files_by_path: dict[str, dict[str, Any]],
+    report: dict[str, Any],
+) -> None:
+    for finding in report.get("findings", []):
+        raw_path = str(finding.get("path") or "migration-drift")
+        rel = raw_path.rstrip("/") or raw_path
+        message = str(finding.get("message") or "")
+        if not message:
+            continue
+        files_by_path.setdefault(
+            rel,
+            {
+                "path": rel,
+                "ok": True,
+                "errors": [],
+                "warnings": [],
+                "schema": "migration-drift",
+            },
+        )
+        files_by_path[rel].setdefault("warnings", []).append(message)
+
+
 def _check_status_transition(
     *,
     source: Path,
@@ -1262,10 +1291,15 @@ def run(
     for schema_name, schema in SCHEMAS.items():
         glob = schema["glob"]
         for f in sorted(repo.glob(glob)):
+            if schema_name == "research" and f.name == "README.md":
+                continue
             r = _check_one(f, schema)
             r["schema"] = schema_name
             r["path"] = str(f.relative_to(repo))
             files_by_path[r["path"]] = r
+
+    migration_drift_report = migration_lint.run(repo)
+    _add_migration_lint_warnings(files_by_path, migration_drift_report)
 
     cross_ref_report = {"enabled": False, "checked_fields": [], "warnings": [], "orphan_offers": []}
     if cross_refs:
@@ -1286,6 +1320,7 @@ def run(
         "strict": strict,
         "cross_refs": cross_ref_report,
         "legacy_repair": _legacy_frontmatter_repair(repo, error_count),
+        "migration_drift": migration_drift_report,
         "summary": {"errors": error_count, "warnings": warning_count},
     }
 
