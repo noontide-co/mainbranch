@@ -134,17 +134,26 @@ When analyzing a public social-growth example, classify the strategy:
 
 - **Gated comment giveaway:** public post drives keyword comments, then DM or
   link delivery converts attention into leads.
+- **Resource-in-post:** the post, thread, repo link, landing page, or document
+  carries the useful resource directly in public.
+- **Public reply/link playbook:** public replies point interested users to a
+  resource or opt-in path, with execution handled manually or by a tested
+  provider outside Main Branch.
 - **Full-value public post:** the post itself teaches enough to earn trust,
   saves, shares, follows, stars, or profile visits.
 - **Build-in-public:** public process, metrics, decisions, and lessons create
   proof and audience memory.
+- **Build-cool-stuff-publicly:** useful artifacts shipped in public create
+  proof first, then invite opt-in follow-up through a visible link or repo.
 - **Hybrid:** full-value public artifact plus optional opt-in for templates,
   repo links, or deeper implementation.
 
 For Main Branch, prefer a hybrid unless a decision says otherwise: publish
 enough value publicly to earn trust and GitHub attention, then offer an
-operator-approved next step. Do not recommend automated comment/DM execution
-without an accepted provider path and smoke evidence.
+operator-approved next step. For X/Twitter specifically, prefer
+resource-in-post, build-in-public, build-cool-stuff-publicly, and manual public
+reply/link playbooks over comment-to-DM. Do not recommend automated
+comment/DM execution without an accepted provider path and smoke evidence.
 
 ### DM And Comment Automation Model
 
@@ -153,9 +162,10 @@ without an accepted provider path and smoke evidence.
 - **Manual/operator-approved follow-up is allowed:** the operator can fulfill,
   reply, or DM outside Main Branch, or explicitly approve a one-off action in a
   supported provider.
-- **Automation is not supported today:** Main Branch should not execute
-  comment-to-DM, auto-reply, auto-follow, or private inbox workflows through
-  Postiz, X API, ManyChat-style tools, or Apify.
+- **X interaction-triggered execution is refused today:** Main Branch should
+  not execute comment-to-DM, keyword DM, auto-reply, auto-like, auto-follow,
+  bulk DM, follower-gated giveaway, or private inbox workflows through Postiz,
+  Typefully, X API, ManyChat-style tools, Apify, or browser automation.
 - **Future support requires a real provider path:** official authority where
   possible, consent/platform constraints, approval gates, privacy-safe logs,
   rate-limit handling, tests, docs, and runtime smoke evidence.
@@ -165,18 +175,22 @@ without an accepted provider path and smoke evidence.
 - **Apify:** optional read-only enrichment for public scraping/comment exports
   when configured. Useful for TikTok comments, YouTube comments/transcripts,
   Instagram mining, and bounded public X profile/post/reply samples depending
-  on actor reliability. It is not an official X integration and does not prove
-  full reply-tree coverage, DM delivery, private analytics, or conversion.
-  Missing Apify never blocks the workflow.
+  on actor reliability and operator-accepted terms. It is not an official X
+  integration and does not prove full reply-tree coverage, DM delivery, private
+  analytics, or conversion. Never ask for X session cookies or raw private
+  account exports. Missing Apify never blocks the workflow.
 - **Grok/xAI or web search:** optional X/social sentiment path when configured,
   best for topic-level "what are people saying now?" research; otherwise use
   web search, public embeds, screenshots, or manual exports.
 - **Postiz:** planned optional scheduling/publishing rail. Treat it as draft,
-  schedule, thread, cross-post, and analytics support only where docs/smoke
-  evidence exist. Do not treat it as Main Branch-supported DM automation.
+  schedule, thread, cross-post, and analytics support only where docs and
+  connected-channel smoke evidence exist. The 2026-05-07 API smoke proved
+  reachability/auth only, not supported draft or scheduling behavior. Do not
+  treat it as Main Branch-supported DM automation.
 - **X API:** official mutation path for posts, replies, and DMs requires
-  developer approval, OAuth user tokens, and explicit operator authority. Main
-  Branch does not support this automation today.
+  developer approval, OAuth user tokens, explicit operator authority, billing
+  and rate-limit handling, tests, docs, and smoke evidence. Main Branch does
+  not support this automation today.
 - **ManyChat-style tools:** comment-to-DM automation may be valid for platforms
   such as Instagram when configured directly in that provider, but it is not a
   Main Branch-supported provider path yet.

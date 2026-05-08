@@ -397,12 +397,15 @@ Beyond the composite score, some skills have specific requirements. Check these 
 
 **If voice thin:** "Landing page copy needs strong voice direction. `/mb-site` walks brief→site as one flow and will pull from your `voice.md` — but if it's thin, the output will be too. You can keep going (`/mb-site` has its own brief phase) or strengthen voice first via `/mb-think`."
 
-### /newsletter
+### Newsletter planning
 
 | Requirement | Minimum | Why |
 |-------------|---------|-----|
 | content-strategy.md | Exists | Newsletter needs pillar framework |
 | voice.md | Score 2+ | Long-form writing needs strong voice |
+
+No bundled newsletter skill ships today. Route newsletter strategy or email
+planning to `/mb-think`; route derivative social output to `/mb-organic`.
 
 ---
 

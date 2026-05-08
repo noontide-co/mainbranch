@@ -50,6 +50,29 @@ _LEGACY_REFERENCE_ALLOW_TERMS = (
     "read fallback",
     "temporary",
 )
+_KNOWN_UNPREFIXED_SKILL_ROUTES = {
+    "ads",
+    "bet",
+    "end",
+    "help",
+    "newsletter",
+    "organic",
+    "pull",
+    "setup",
+    "site",
+    "start",
+    "status",
+    "think",
+    "update",
+    "vsl",
+    "wiki",
+}
+_MAIN_BRANCH_SLASH_COMMAND_RE = re.compile(
+    r"(?<![\w/.\->])/"
+    r"(?P<name>mb-[a-z0-9-]+|"
+    + "|".join(sorted(_KNOWN_UNPREFIXED_SKILL_ROUTES))
+    + r")(?=$|[`<\s,).:;])"
+)
 
 
 def _clean_reference(raw: str) -> str | None:
@@ -176,6 +199,21 @@ def _check_legacy_reference_guidance(text: str) -> list[str]:
     return warnings
 
 
+def _check_slash_command_references(
+    text: str,
+    *,
+    available_commands: set[str],
+) -> list[str]:
+    errors: list[str] = []
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        for match in _MAIN_BRANCH_SLASH_COMMAND_RE.finditer(line):
+            command_name = match.group("name")
+            if command_name in available_commands:
+                continue
+            errors.append(f"line {line_number}: /{command_name} is not a bundled Main Branch skill")
+    return errors
+
+
 def _iter_referenced_markdown(skill_root: Path) -> list[Path]:
     roots = [skill_root / "references", skill_root / "examples"]
     return [
@@ -194,6 +232,7 @@ def _validate_skill_at(name: str, skill_root: Path) -> dict[str, Any]:
     skill_warnings: list[str] = []
     all_warnings: list[str] = []
     line_count = 0
+    available_commands = set(engine.bundled_skills())
 
     if not skill_file.is_file():
         skill_errors.append("missing SKILL.md")
@@ -257,6 +296,9 @@ def _validate_skill_at(name: str, skill_root: Path) -> dict[str, Any]:
         skill_errors.append(f"SKILL.md has {line_count} lines; limit is {MAX_SKILL_LINES}")
 
     skill_errors.extend(_check_references(skill_root, skill_file, text))
+    skill_errors.extend(
+        _check_slash_command_references(text, available_commands=available_commands)
+    )
     skill_warnings.extend(_check_legacy_reference_guidance(text))
     all_warnings.extend(skill_warnings)
     all_errors.extend(skill_errors)
@@ -276,6 +318,12 @@ def _validate_skill_at(name: str, skill_root: Path) -> dict[str, Any]:
             skill_root,
             referenced_file,
             referenced_text,
+        )
+        reference_errors.extend(
+            _check_slash_command_references(
+                referenced_text,
+                available_commands=available_commands,
+            )
         )
         reference_warnings = _check_legacy_reference_guidance(referenced_text)
         rel_path = str(referenced_file.relative_to(skill_root))

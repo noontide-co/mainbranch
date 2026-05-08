@@ -163,7 +163,9 @@ core/
 
 ### content-strategy.md
 
-**Purpose:** Strategic backbone for all content creation. Defines pillars, platforms, cadence, and metrics. Consumed by `/mb-organic`, `/mb-ads`, and `/newsletter` (coming soon).
+**Purpose:** Strategic backbone for all content creation. Defines pillars,
+platforms, cadence, and metrics. Consumed by `/mb-organic`, `/mb-ads`, and
+future newsletter workflows.
 
 **Required sections:**
 - Content Pillars (3-5 themes with sub-topics)
@@ -267,7 +269,7 @@ When running `/mb-think` to analyze Skool performance:
 | `/mb-think` | Writes to `content-strategy.md` during codify phase |
 | `/mb-organic` | `content-strategy.md` for pillar alignment, platform format |
 | `/mb-ads` | `content-strategy.md` for topic selection, funnel mapping |
-| `/newsletter` | `content-strategy.md` for pillar topics, repurposing flow (coming soon) |
+| Planned newsletter workflow | `content-strategy.md` for pillar topics and repurposing flow; today route planning to `/mb-think` and derivatives to `/mb-organic` |
 | `/mb-vsl skool` | `funnel/stages.md`, `membership/benefits.md` |
 | `/mb-ads` (congruence) | `funnel/skool-surfaces.md` for ad-to-landing alignment |
 | `/mb-organic` (congruence) | `funnel/skool-surfaces.md` for content-to-landing alignment |

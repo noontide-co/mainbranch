@@ -10,7 +10,7 @@ Fast lookup table for routing research requests in /mb-think skill.
 |-----------|----------|----------|----------|
 | YouTube URL, "transcribe video" | Apify YouTube | `mcp__apify__*` | Ask for manual transcript |
 | "what are people saying", "X sentiment" | Grok X search | `XAI_API_KEY` + `xai_sdk` package | WebSearch site:x.com |
-| X profile/post URL, "mine replies", "what is this post doing" | Apify public X mining | `mcp__apify__*` | Screenshots or manual export |
+| X profile/post URL, "mine replies", "what is this post doing" | Optional public X mining | `mcp__apify__*` + operator-accepted terms | Grok, WebSearch, screenshots, or manual export |
 | Quick research, fact-checking | Gemini Flash (Tier 1) | `GOOGLE_API_KEY` | WebSearch + synthesis |
 | "deep dive", "comprehensive research" | Gemini Deep (Tier 2) | `GOOGLE_API_KEY` | Tier 1 or WebSearch |
 | Local file path, "transcribe recording" | whisper-mcp | `mcp__whisper__*` | CLI fallback |
@@ -29,7 +29,7 @@ Fast lookup table for routing research requests in /mb-think skill.
 **Run once per session, cache results:**
 
 ```bash
-# Check for Apify (YouTube, Instagram, public X post/profile/comment mining)
+# Check for Apify (YouTube, Instagram, optional public X post/profile/comment mining)
 if mcp__apify__* exists: APIFY=true
 
 # Check for Grok (X/Twitter) — requires Python SDK, not just API key
@@ -117,6 +117,10 @@ if mcp__whisper__* exists: WHISPER=true
 - Tier 1: Quick questions, fact-checking (30-60s, ~$0.01-0.05)
 - Tier 2: Competitive analysis, industry research, multi-source synthesis (5-20min, ~$2-5)
 ```
+
+`route_x_public_mining()` is optional read-only sidecar research, not an
+official X integration. Use it only when configured and when the operator
+accepts the source, terms, cost, and reliability tradeoffs.
 
 ---
 

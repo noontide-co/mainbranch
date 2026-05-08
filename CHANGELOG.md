@@ -18,6 +18,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   threads when needed, `/mb-start` regenerates the current view from facts, and
   `/mb-end` remains closure/checkpointing rather than tomorrow planning. Refs
   #377.
+- Accepted the X resource-delivery boundary: Main Branch may draft public
+  resource/link playbooks and future scheduling/provider smoke, but refuses
+  comment-to-DM, keyword DM, auto-reply, auto-like, auto-follow, bulk DM, and
+  browser-automation execution on X until a later decision accepts an official
+  tested provider path. Refs #351.
+- Recorded a public-safe partial Postiz scheduling smoke: the REST API endpoint
+  and auth path worked, but the tested setup had no connected channels, so
+  Postiz remains a candidate rail rather than supported scheduling behavior.
+  Refs #352.
 - Expanded Claude release simulation transcript review guidance with a
   severity rubric, public-safe sample review, and harness evidence-template
   pointer so release reviewers distinguish heuristic scoring from manual
@@ -26,6 +35,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `mb validate --cross-refs`, including normalized relationship types, safe
   Markdown body-link parsing, push-to-offer checks, and provider-ref graph nodes
   that expose provider/ref kinds without raw account values. Refs #357.
+- Removed ghost runtime routes from bundled skill and public docs language:
+  newsletter/email intent now routes to `/mb-think` and `/mb-organic`, the
+  unshipped `/mb-start launch <offer>` form is labeled as future/deferred, and
+  `mb skill validate` now fails obvious references to unbundled Main Branch
+  slash commands. Refs #356.
 
 ## [0.3.7] - 2026-05-07
 

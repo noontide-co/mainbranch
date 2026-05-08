@@ -309,7 +309,7 @@ repo understandable, current, and safe to operate from.
 | `/mb-organic` | Generate organic content — Reels, TikTok, carousels |
 | `/mb-site` | Generate and deploy landing pages from your core files and research |
 | `/mb-wiki` | Personal wiki with atomic notes |
-| `/mb-end` | Close session — summary, crystallize, commit |
+| `/mb-end` | Close session — summary, crystallize, approved checkpoint guidance |
 | `/mb-help` | Get answers, troubleshoot, learn the system |
 | `/mb-update` | Update Main Branch — delegates install-mode refresh to `mb update` and summarizes what's new |
 | `/mb-pull` | Legacy alias for `/mb-update` |
@@ -322,7 +322,7 @@ repo understandable, current, and safe to operate from.
 - **The terminal front door is live.** Bare `mb`, `mb onboard`, `mb status`, `mb start`, and `mb update` are in the public package.
 - **Growth is the strongest shipped wedge.** Ads, organic, VSLs, sites, bets, pushes, status, and checkpoints are the most developed public workflows.
 - **Ops is the expansion path.** Meetings, fulfillment, bookkeeping/P&L, team daily logs, repo topology, and dashboard views use the same memory model, but they are less shipped than the growth surfaces.
-- **Provider automation is curated and gated.** GitHub and Cloudflare paths are the most concrete today. Google/Workspace, Meta Ads, Google Ads/GTM, Postiz, Apify, Beancount, and transcription are wired as planned or optional provider/sidecar surfaces until each path has smoke evidence.
+- **Provider automation is curated and gated.** GitHub and Cloudflare paths are the most concrete today. Google/Workspace, Meta Ads, Google Ads/GTM, Postiz, Apify, Beancount, and transcription are wired as planned or optional provider/sidecar surfaces until each path has matching smoke evidence for the claimed surface.
 - **Schema is v1; will evolve.** Frontmatter shapes covered by `mb validate` are stable for the current major; breaking changes bump the major.
 - **Runtime compatibility is still ahead.** Codex, Cursor, OpenClaw, Hermes, and local LLMs are roadmap targets, not supported adapters yet.
 
