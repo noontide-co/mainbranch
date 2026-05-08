@@ -41,6 +41,7 @@ dashboard work should implement.
 | GitHub metadata | Discoverability hints: repo name, description, topics, visibility, issues, PRs, permissions, archive state | Full business meaning, sensitive context, or access decisions beyond GitHub's own permissions |
 | Local workspace state | Operator grouping, recent repos, local paths, caches, dashboard indexes, credentials, private operator preferences | Canonical business truth or team-visible policy |
 | Provider systems | Actual spending, publishing, billing, deployment, analytics, email, bank, legal, and customer permissions | Main Branch repo access or business topology truth |
+| Engine/package | Reusable skills, reusable playbook blueprints, templates, and public operating recipes | A specific business's canonical memory or provider account state |
 
 `mb` may read all of these layers, but the public topology record belongs in
 the hub business repo when it is safe for that repo's audience. Private or
@@ -61,7 +62,7 @@ in operator copy.
 | `finance` | Finance repo | Ledgers, bookkeeping exports, tax docs, payroll, or sensitive P&L sources require private access. |
 | `legal` | Legal repo | Contracts, disputes, entity docs, or legal reviews require private access. |
 | `ops` | Ops repo | Infrastructure, runbooks, internal routines, or provider setup has a separate authority boundary. |
-| `integration_sidecar` | Integration sidecar | A helper repo/tool produces structured provider, analytics, enrichment, or deployment data. |
+| `integration_sidecar` | Integration sidecar | A helper repo/tool produces structured provider, analytics, enrichment, deployment data, raw provider caches, metrics databases, connector glue, or large exports. |
 | `experiment` | Experiment repo | Work is exploratory and may graduate, pause, or die without becoming core truth. |
 | `archive` | Archive repo | Inert imports, retired projects, or historical material are kept for reference only. |
 
@@ -361,6 +362,8 @@ Topology should not blur existing primitives:
 | "What are we trying to learn?" | `bets/YYYY-MM-DD-slug.md` |
 | "What do we sell repeatedly?" | `core/offer.md` or `core/offers/<slug>/offer.md` |
 | "What coordinated work is shipping?" | `pushes/YYYY-MM-DD-slug/push.md` |
+| "Which reusable recipe should we run?" | Engine/package playbook blueprint, such as a future `.claude/playbooks/<playbook>/` |
+| "What happened in this run?" | `pushes/<push>/playbooks/<playbook>.md` |
 | "What did we decide?" | `decisions/YYYY-MM-DD-slug.md` |
 | "What did we learn or observe?" | `research/`, `log/`, or `documents/` depending on shape |
 | "Where does this repo fit?" | `core/operations/repo-topology.md` in the hub, plus a child repo descriptor when needed |
@@ -373,6 +376,14 @@ Successful bets may graduate into offers, pushes, playbooks, decisions, or
 child repos; unsuccessful bets close with a lesson and should not disappear.
 Dead, paused, placeholder, superseded, or graduated offer records should be
 labeled and linked before anyone considers deleting or renaming them.
+
+Reusable playbooks and push playbook run records are different boundaries. A
+reusable playbook is public engine/package capability: an opinionated operating
+recipe that many businesses can run. A push playbook is a business repo record:
+the approvals, provider boundary, checks, manual steps, evidence, and review
+criteria for this specific run. The hub repo should own the run record and
+outcome links; the engine/package should own the reusable recipe; sidecar repos
+or provider systems may own raw metrics, caches, connector code, and exports.
 
 ## Slug Rubric
 
@@ -469,6 +480,21 @@ issues, PRs, provider accounts, or deploy history, it graduates into a child
 repo. The old bet remains closed with links to the offer, repo, push, outcome,
 or decision that explains the graduation.
 
+### Provider Sidecar And Playbook Run
+
+```text
+github.com/example-co/example           # role: business
+github.com/example-co/example-site      # role: site
+github.com/example-co/example-ads-data  # role: integration_sidecar, restricted
+```
+
+The business repo stores the offer, bet, push, playbook run record, approval
+notes, public-safe provider refs, and outcome summary. The reusable playbook
+blueprint lives in the engine/package. The sidecar repo or provider system may
+store daily metrics, account caches, connector glue, large exports, or raw
+provider data under the appropriate access boundary. Public examples use
+placeholders and sanitized fixtures.
+
 ## Private Finance And Legal Representation
 
 Finance and legal repos may be important topology nodes, but they are sensitive
@@ -519,7 +545,8 @@ the business hub" rather than "source descriptor detected."
 
 - `owns`, `links_to`, `graduated_from`, `supersedes`, `source_for`,
   `reports_to`, and `uses_provider`;
-- edges from bets to offers, pushes, child repos, and outcomes;
+- edges from bets to offers, pushes, push playbook run records, child repos,
+  sidecars, and outcomes;
 - role and lifecycle attributes on repo nodes.
 
 Graph output remains an index over repo truth and safe metadata. It should not
@@ -556,8 +583,8 @@ The dashboard should render the topology as a map over existing truth:
 
 - hub repo in the center;
 - child repos grouped by role and lifecycle;
-- active bets, pushes, offers, decisions, issues, PRs, checkpoints, and provider
-  readiness attached to the relevant boundary;
+- active bets, pushes, playbook runs, offers, decisions, issues, PRs,
+  checkpoints, and provider readiness attached to the relevant boundary;
 - private finance/legal nodes clearly marked as restricted without exposing raw
   data;
 - local workspace grouping labeled as local state, not committed truth.

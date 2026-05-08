@@ -148,7 +148,7 @@ Common repo roles:
 | `finance` | Beancount ledger, exports, tax docs, sensitive P&L sources | Private by default; share summaries intentionally |
 | `legal` | Contracts, entity docs, disputes, or legal reviews | Private by default; share summaries intentionally |
 | `ops` | Private infrastructure, runbooks, provider setup, or team routines | Separate when operational authority differs |
-| `integration_sidecar` | Helper repo/tool for provider, analytics, enrichment, or deployment data | Optional and contract-backed |
+| `integration_sidecar` | Helper repo/tool for provider, analytics, enrichment, deployment data, raw caches, metrics databases, or connector glue | Optional and contract-backed |
 | `experiment` | Exploratory work that may graduate, pause, or die | Not core truth until decided |
 | `archive` | Inert imports, legacy projects, or cold storage | Read-only unless revived |
 
