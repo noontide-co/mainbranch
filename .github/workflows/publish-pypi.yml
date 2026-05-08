@@ -8,7 +8,9 @@ name: publish-pypi
 # OIDC claim must match the pending publisher:
 #   owner=noontide-co, repo=mainbranch, workflow=publish-pypi.yml, env=pypi.
 #
-# Publish release: tag `oe-vMAJOR.MINOR.PATCH` and use the Releases UI.
+# Publish release: tag `oe-vMAJOR.MINOR.PATCH` and use the Releases UI only
+# after the package-visible release gate in docs/release-simulations.md has
+# recorded release simulation and transcript-review evidence.
 #
 # Release notes: the `extract-changelog` job parses CHANGELOG.md for the
 # section matching the release tag and updates the GitHub Release body

@@ -107,7 +107,17 @@ The print-mode prompt set comes from the packaged
 `--simulation-tier pr_smoke` for cheap PR signal,
 `--simulation-tier prerelease_candidate` for the full prompt suite before a
 release, and `--simulation-tier release_acceptance` for selected proxy checks
-around a fresh PyPI install.
+around a release candidate artifact before tagging or a fresh PyPI install
+after publication.
+
+When print mode runs, the harness prepends the temp venv `mb` executable to
+`PATH` and passes Claude Code a read-only tool allowlist for deterministic
+grounding commands such as `mb status`, `mb start`, `mb doctor`, `mb validate`,
+and `mb checkpoint --plan`. It does not use permission-bypass mode and does not
+allowlist write/edit tools, checkpoint saves, repair applies, migrations, or git
+commits. Transcript review still has to answer whether Claude actually ran/read
+the `mb` facts, whether permissions distorted the run, and which deterministic
+CLI artifacts are only fallback evidence.
 
 Print-mode evidence is a proxy. It is useful for repeatable regression signal,
 budget/auth failures, transcript excerpts, and rubric scoring, but it is not
@@ -397,6 +407,8 @@ GitHub issue / PR:
 
 - Transcript review rubric: [Release Simulations](release-simulations.md#transcript-review)
 - Simulation tier:
+- Print-mode permission policy:
+- Read-only `mb` commands executed, denied, or fallback-only:
 - `/mb-start` discovered:
 - `/mb-start` used business repo and status facts:
 - `/mb-start` spoke in operator language:

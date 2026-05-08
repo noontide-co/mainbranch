@@ -40,6 +40,7 @@ scripts/check.sh
 - [ ] Wheel install smoke (if packaging touched)
 - [ ] SKILL.md ≤500 lines (if any skill touched)
 - [ ] Claude runtime dogfood harness / simulation-tier / manual smoke evidence (if runtime, first-run, skill discovery, or release validation touched)
+- [ ] Package-visible release gate evidence before tag/publish (if preparing a release)
 
 ## CHANGELOG
 

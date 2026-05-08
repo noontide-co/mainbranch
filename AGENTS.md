@@ -369,7 +369,11 @@ collection. Choose the PR smoke, pre-release candidate, or release acceptance
 prompt tier from [docs/release-simulations.md](docs/release-simulations.md)
 when release validation needs operator-moment simulations. The optional
 `--run-claude-print` path is proxy evidence only; it does not replace
-interactive Claude Code TUI smoke for release-bearing runtime claims.
+interactive Claude Code TUI smoke for release-bearing runtime claims. For
+package-visible releases, answer the pre-simulation prompt checkpoint, run the
+release candidate and release acceptance tiers before tagging whenever
+feasible, and manually review transcript excerpts for whether Claude actually
+used `mb` facts or only produced a permission-distorted fallback.
 
 If a runtime cannot be launched because of auth or UI constraints, say that
 explicitly and describe the closest verified fallback. Do not pretend CLI tests
@@ -455,6 +459,8 @@ workflow changes. Skip it only for invisible maintenance.
 Do not describe a version as shipped until the release surfaces agree:
 
 - `CHANGELOG.md` has the version section;
+- package-visible release candidates have release simulation and transcript
+  review evidence before tagging whenever feasible;
 - the matching `oe-vX.Y.Z` GitHub Release exists;
 - PyPI shows `mainbranch X.Y.Z` when the change is package-visible;
 - release notes, README copy, and roadmap language match those facts.

@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Tightened release simulation guidance so package-visible releases run
+  pre-tag release candidate and release acceptance simulations whenever
+  feasible, require manual transcript review beyond heuristic rubrics, and
+  record whether Claude Code print-mode actually executed read-only `mb`
+  grounding commands or fell back because of permissions. Refs #394.
+
 ## [0.3.9] - 2026-05-08
 
 v0.3.9 makes the daily operating loop more inspectable. Main Branch now exposes

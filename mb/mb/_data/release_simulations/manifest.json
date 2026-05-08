@@ -43,12 +43,13 @@
     {
       "id": "release_acceptance",
       "name": "Release acceptance",
-      "when": "Final release acceptance after the package is available to users.",
-      "install_target": "Fresh PyPI install of the version under acceptance.",
+      "when": "Package-visible release gate before tagging whenever feasible, then fresh-install verification after publish.",
+      "install_target": "Best available release candidate artifact before tag; fresh PyPI install after publish.",
       "evidence_required": [
-        "fresh_pypi_install",
+        "release_candidate_or_fresh_pypi_install",
         "deterministic_cli_harness",
         "selected_claude_print_proxy_sims",
+        "manual_transcript_review",
         "manual_claude_code_tui_evidence",
         "public_safe_release_evidence_summary"
       ],
