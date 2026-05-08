@@ -208,7 +208,12 @@ def test_run_claude_print_allows_readonly_mb_and_denies_write_tools(
     assert "--dangerously-skip-permissions" not in command
     assert "--permission-mode" not in command
     assert command[-1] == simulation.prompt
+    assert "Bash(mb status)" in allowed
     assert "Bash(mb status *)" in allowed
+    assert "Bash(mb start)" in allowed
+    assert "Bash(mb start --json --repo *)" in allowed
+    assert "Bash(mb doctor repair --plan)" in allowed
+    assert "Bash(mb checkpoint --plan)" in allowed
     assert "Bash(mb checkpoint --plan *)" in allowed
     assert "Bash(mb checkpoint --message *)" in disallowed
     assert "Bash(git commit *)" in disallowed
