@@ -25,8 +25,8 @@ not a private Claude transcript and does not claim interactive TUI smoke.
 
 ## Finding 1: Fresh First Day
 
-Simulation: `fresh_first_day`  
-Tier: PR smoke and release acceptance  
+Simulation: `fresh_first_day`
+Tier: PR smoke, pre-release candidate, and release acceptance
 Expected: Claude recognizes `/mb-start`, uses `mb status --json --peek` or
 `mb start` facts, names the fixture business repo, and returns with a business
 next action.  
@@ -57,8 +57,8 @@ Issue route:
 
 ## Finding 2: Messy Morning Thought Dump
 
-Simulation: `messy_morning_thought_dump`  
-Tier: PR smoke and release acceptance  
+Simulation: `messy_morning_thought_dump`
+Tier: PR smoke, pre-release candidate, and release acceptance
 Expected: Claude treats fuzzy input as triage, maps options to a business
 primitive, uses deterministic `mb` facts before advice, and asks before durable
 writes.  
