@@ -80,11 +80,30 @@ linked_outcomes: []
 
 -
 
-## Lander And Conversion Readiness
+## Existing Account/Campaign Decision
 
 -
 
-## Measurement Chain
+## Readiness
+
+- Lander:
+- Conversion endpoint:
+- Sitelink destinations:
+- Measurement readiness:
+- Provider readiness:
+
+## Budget And Review Window
+
+- Budget cap:
+- Review window:
+- Expected click range:
+- Extension/widening rule:
+
+## Lander And Sitelinks
+
+-
+
+## Measurement Checklist
 
 - GA4 data stream:
 - GTM container:
@@ -116,10 +135,15 @@ linked_outcomes: []
   - Approval status:
 - Decisions needed:
 
-## Campaign Settings And Structure
+## Campaign Structure
 
 - Goal:
 - Type:
+- Ad groups:
+- Structure rationale:
+
+## Campaign Settings And Forks
+
 - Bidding:
 - Networks:
 - Geography:
@@ -132,8 +156,12 @@ linked_outcomes: []
 - Search Partners:
 - Display Network:
 - URL options:
-- Ad groups:
 - Settings rationale:
+- Forks from playbook defaults:
+  - Default:
+  - Fork:
+  - Rationale:
+  - Approved by:
 
 ## Keyword Targets
 
@@ -164,7 +192,10 @@ linked_outcomes: []
 
 ## Sitelinks
 
-- Text:
+- Repeat one block per sitelink.
+
+- Sitelink:
+  Text:
   Description 1:
   Description 2:
   Final URL:
@@ -173,17 +204,23 @@ linked_outcomes: []
 
 ## Callouts
 
-- Text:
+- Repeat one block per callout.
+
+- Callout:
+  Text:
   Rationale:
   Claim source:
 
 ## Structured Snippets
 
-- Header:
+- Repeat one block per structured snippet header.
+
+- Structured snippet:
+  Header:
   Values:
   Rationale:
 
-## Other Assets And URL Options
+## Skipped Assets And URL Options
 
 - Logo/business name:
 - Image assets:
@@ -234,14 +271,7 @@ linked_outcomes: []
 - [ ] Network, geo, AI Max, and Final URL Expansion reviewed
 - [ ] Launch/unpause approved
 
-## Budget And Review Window
-
-- Budget cap:
-- Review window:
-- Expected click range:
-- Extension/widening rule:
-
-## Review Decision
+## Review Loop
 
 - Continue/change/stop:
 - Outcome/log link:

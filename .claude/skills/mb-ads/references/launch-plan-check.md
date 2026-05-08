@@ -54,23 +54,27 @@ pushes/<YYYY-MM-DD-slug>/ads.md
 
 Sections:
 
+- `## Source Facts`
+- `## Offer And Policy Fit`
+- `## Existing Account/Campaign Decision`
 - `## Readiness`
 - `## Budget And Review Window`
 - `## Market Intent Research`
+- `## Core Updates From Research`
 - `## Campaign Structure`
 - `## Campaign Settings And Forks`
-- `## Existing Account/Campaign Decision`
 - `## Keyword Targets`
-- `## Negative Seeds`
+- `## Negative Strategy`
 - `## RSA Assets`
 - `## Sitelinks`
 - `## Callouts`
 - `## Structured Snippets`
 - `## Skipped Assets And URL Options`
-- `## Policy Preflight`
+- `## Lander And Sitelinks`
 - `## Measurement Checklist`
 - `## Manual Provider Steps`
-- `## Approval`
+- `## Approval Gates`
+- `## Review Loop`
 
 If the work includes repeatable provider setup, resource delivery, or approval
 state, draft a `type: playbook` file under `pushes/<push>/playbooks/` instead
