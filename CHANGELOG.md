@@ -47,6 +47,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   inputs, `mb connect`/provider-tool boundary checks, keyword and negative-list
   planning, site/conversion readiness, approval gates, and a sanitized
   plan-only push playbook fixture. Refs #414.
+- Added the first reusable Google Ads Search launch playbook skeleton under
+  `.claude/playbooks/`, with Noontide's paid-search proof-run approach and a
+  push-playbook run template. Refs #414.
+- Added B2B local-services Google Ads field notes to the reusable Search launch
+  playbook, covering GA4/GTM/Ads import order, Search-only campaign defaults,
+  UI gotchas, negative-keyword categories, manual gates, and validation-window
+  calibration. Refs #422.
 
 ### Changed
 

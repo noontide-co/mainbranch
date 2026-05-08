@@ -70,7 +70,11 @@ Sections:
 
 If the work includes repeatable provider setup, resource delivery, or approval
 state, draft a `type: playbook` file under `pushes/<push>/playbooks/` instead
-of hiding the plan in prose.
+of hiding the plan in prose. For a reusable Noontide Google Ads Search proof
+run, route through the `.claude/playbooks/google-ads-search-launch/` playbook
+and instantiate its push-playbook template.
+For B2B local-services lead-form campaigns, apply that playbook's field notes
+before launch review.
 
 ## Policy Preflight
 
