@@ -24,6 +24,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   families without printing raw values, separates local/session state from
   durable business/provider facts, and keeps deletion/migration manual. Refs
   #413.
+- Added an accepted business repo topology decision that defines hub and child
+  repo roles, relationship types, GitHub owner/repo and local-folder naming,
+  lifecycle language, reusable-vs-run playbook boundaries, safe metadata
+  placement, finance/legal boundaries, slug rules, and follow-up surfaces for
+  status, graph, doctor, generated instructions, and future dashboard maps.
+  Refs #406.
 - Added a release-simulation fixture for the `/mb-start` ambiguous-choice
   failure where an operator replies `1` for the top recommendation in a rich
   multi-offer repo, so release review checks that offer selection cannot
