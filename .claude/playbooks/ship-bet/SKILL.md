@@ -1,7 +1,7 @@
 ---
 name: ship-bet
 tier: playbook
-calls: [skill-brief-draft, skill-concept, skill-review, site, ads]
+calls: [start, think, skill-brief-draft, skill-concept, skill-review, site, ads, end]
 status: skeleton
 description: "Reusable skeleton playbook. Walks the operator from a proposed bet or offer to a launch push, landing page, first ad creative, review evidence, and checkpoint. Not yet a single executable orchestrator."
 ---
@@ -80,8 +80,11 @@ that folder is legacy compatibility read only.
 
 ## Cross-references
 
+- [start/SKILL.md](../../skills/mb-start/SKILL.md)
+- [think/SKILL.md](../../skills/mb-think/SKILL.md)
 - [skill-brief-draft/SKILL.md](../../skills/mb-skill-brief-draft/SKILL.md)
 - [skill-concept/SKILL.md](../../skills/mb-skill-concept/SKILL.md)
 - [skill-review/SKILL.md](../../skills/mb-skill-review/SKILL.md)
 - [site/SKILL.md](../../skills/mb-site/SKILL.md)
 - [ads/SKILL.md](../../skills/mb-ads/SKILL.md)
+- [end/SKILL.md](../../skills/mb-end/SKILL.md)

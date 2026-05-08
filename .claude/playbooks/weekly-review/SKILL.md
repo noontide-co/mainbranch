@@ -1,7 +1,7 @@
 ---
 name: weekly-review
 tier: playbook
-calls: [think, end]
+calls: [start, think, end]
 status: skeleton
 description: "Reusable skeleton playbook. Walks the operator through a weekly review across bets, offers, pushes, playbook runs, outcomes, decisions, logs, and checkpoints. Not yet a single executable orchestrator."
 ---
@@ -108,5 +108,6 @@ read only.
 
 ## Cross-references
 
+- [start/SKILL.md](../../skills/mb-start/SKILL.md)
 - [think/SKILL.md](../../skills/mb-think/SKILL.md)
 - [end/SKILL.md](../../skills/mb-end/SKILL.md)
