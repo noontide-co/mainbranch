@@ -93,8 +93,9 @@ User can say any of these after compaction:
 
 ## Offer Context Recovery
 
-Use status JSON facts first, with `.vip/local.yaml` only as a legacy fallback,
-to restore which offer was being worked on.
+Use a future `mb` JSON active-offer field if present; otherwise read
+`.vip/local.yaml` only as a legacy fallback to restore which offer was being
+worked on.
 
 If the file doesn't exist or `current_offer` is not set, check recent `research/` and `decisions/` files for offer-specific prefixes (e.g., `research/2026-02-04-community-pricing-analysis.md`).
 

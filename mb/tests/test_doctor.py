@@ -206,6 +206,39 @@ def test_doctor_repair_adds_connect_yaml_to_gitignore(tmp_path: Path) -> None:
     assert ".mb/connect.yaml" in gitignore.read_text(encoding="utf-8")
 
 
+def test_doctor_repair_protects_legacy_vip_local_state(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    gitignore = repo / ".gitignore"
+    gitignore.write_text(
+        gitignore.read_text(encoding="utf-8").replace(".vip/local.yaml\n", ""),
+        encoding="utf-8",
+    )
+    vip_local = repo / ".vip" / "local.yaml"
+    vip_local.parent.mkdir()
+    vip_local.write_text("current_offer: community\n", encoding="utf-8")
+    doctor_mod._run_git(repo, ["add", "-f", ".vip/local.yaml"])
+
+    plan = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert plan.exit_code in {0, 1}
+    plan_payload = json.loads(plan.stdout)
+    checks = {
+        check["name"]: check
+        for section in plan_payload["sections"]
+        if section["id"] == "gitignore"
+        for check in section["checks"]
+    }
+    assert checks[".vip/local.yaml"]["summary"] == "tracked; repair will untrack"
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"])
+
+    assert result.exit_code in {0, 1}
+    assert ".vip/local.yaml" in gitignore.read_text(encoding="utf-8")
+    assert vip_local.exists()
+    assert not doctor_mod._run_git(repo, ["ls-files", "--error-unmatch", ".vip/local.yaml"])["ok"]
+
+
 def test_doctor_repair_plan_reports_missing_checkpoint_hook(tmp_path: Path) -> None:
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")

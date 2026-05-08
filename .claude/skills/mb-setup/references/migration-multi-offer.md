@@ -39,6 +39,7 @@ If `core/offer.md` exists and no `offers/` folder: this is a migration.
    # Active offer starts as session-scoped. Ask before persisting local state.
    # If the operator approves and no CLI command exists yet, merge-write the
    # legacy .vip/local.yaml fallback without overwriting unrelated keys.
+   # Ensure .vip/local.yaml is gitignored before any fallback write.
    ```
 
 5. **Write new brand-level `core/offer.md`:**

@@ -109,7 +109,7 @@ For the full mining methodology (Visual/Audible/Emotional framework, AI capabili
 
 Before loading reference files, resolve the active offer:
 
-1. Check status JSON facts for active offer state; use `.vip/local.yaml` only as a legacy fallback
+1. If a future `mb` JSON field exposes active offer state, use it; otherwise read `.vip/local.yaml` only as a legacy fallback
 2. If set: load `core/offers/[current_offer]/offer.md` as the active offer
 3. If not set AND `core/offers/` exists: ask which offer
 4. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)

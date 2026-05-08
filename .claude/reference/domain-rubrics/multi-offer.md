@@ -79,8 +79,8 @@ offer-specific. Otherwise, brand-level `core/proof/testimonials.md` suffices.
 ## File Resolution Rules
 
 Skills resolve context files using a cascading lookup. Active offer state is
-repo-local operational state. Prefer deterministic status JSON facts when they
-expose that state; `.vip/local.yaml` is a legacy fallback only and should not be
+repo-local operational state. If a future `mb` JSON field exposes active offer
+state, prefer it; `.vip/local.yaml` is a legacy fallback only and should not be
 written silently.
 
 ### Always Core (Never Per-Offer)
@@ -119,7 +119,7 @@ resolve_context(file_type):
     return core/content-strategy.md
 
   # Offer-aware -- check active offer first
-  current_offer = read status JSON facts, with .vip/local.yaml as legacy fallback
+  current_offer = read a future mb JSON active-offer field if present, otherwise .vip/local.yaml as legacy fallback
 
   if current_offer AND exists core/offers/{current_offer}/{file_type}.md:
     return core/offers/{current_offer}/{file_type}.md

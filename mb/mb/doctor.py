@@ -51,6 +51,7 @@ LOCAL_GITIGNORE_ENTRIES = (
     ".mb/onboarding.json",
     ".mb/last-status-seen.json",
     ".mb/issue-drafts/",
+    ".vip/local.yaml",
 )
 LOCAL_STATE_PATHS = (
     ".mb/backups",
@@ -58,6 +59,7 @@ LOCAL_STATE_PATHS = (
     ".mb/onboarding.json",
     ".mb/last-status-seen.json",
     ".mb/issue-drafts",
+    ".vip/local.yaml",
 )
 DURABLE_MB_PATHS = (".mb/schema_version",)
 LEGACY_VIP_LOCAL_STATE_PATHS = (".vip/local.yaml",)
@@ -454,15 +456,13 @@ def _schema_version_check(repo: Path) -> dict[str, Any]:
 
 def _missing_gitignore_entries(repo: Path) -> list[str]:
     entries = _read_gitignore_entries(repo)
-    if ".mb/" in entries:
-        mb_entries = {entry for entry in LOCAL_GITIGNORE_ENTRIES if entry.startswith(".mb/")}
-    else:
-        mb_entries = set()
-    return [
-        entry
-        for entry in LOCAL_GITIGNORE_ENTRIES
-        if entry not in entries and entry not in mb_entries
-    ]
+
+    def covered(entry: str) -> bool:
+        if entry in entries:
+            return True
+        return any(parent.endswith("/") and entry.startswith(parent) for parent in entries)
+
+    return [entry for entry in LOCAL_GITIGNORE_ENTRIES if not covered(entry)]
 
 
 def _tracked_local_state_paths(repo: Path) -> list[str]:
@@ -504,11 +504,11 @@ def _local_state_summary(repo: Path) -> dict[str, Any]:
     return {
         "state": "warn" if missing_gitignore or tracked else "ok",
         "summary": (
-            f"{len(missing_gitignore)} local .mb path(s) need gitignore coverage"
+            f"{len(missing_gitignore)} local state path(s) need gitignore coverage"
             if missing_gitignore
-            else f"{len(tracked)} local .mb path(s) are still tracked"
+            else f"{len(tracked)} local state path(s) are still tracked"
             if tracked
-            else ".mb local operational state is separated from durable markers"
+            else "local operational state is separated from durable markers"
         ),
         "local": local,
         "durable": durable,
