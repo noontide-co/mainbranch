@@ -228,6 +228,12 @@ load `mb-think/references/winning-ad-research.md`. Customer language, review
 mining, competitor gap maps, comment mining, and winning script teardown should
 save to `research/` and codify into `core/` before this skill generates ads.
 Do not paste raw review/comment dumps or copied prompt libraries into ad output.
+If the selected research file has `brief_format: grok-8`, use its downstream
+handoff first: business/offering for the promise, ICP for hooks, journey for
+funnel stage, competitive landscape for differentiation, brand story for voice,
+content/assets for proof and creative inputs, and metrics/constraints for the
+review bar. If the brief names a resource-delivery or provider workflow, draft
+or update a push playbook as a plan only; do not execute provider mutation.
 
 ### Proactive Account Awareness
 
