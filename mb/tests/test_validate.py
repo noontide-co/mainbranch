@@ -1116,6 +1116,143 @@ def test_validate_rejects_provider_refs_list_with_empty_ref_name(tmp_path: Path)
     assert "provider_refs.meta_ads ref names must be non-empty strings" in bad["errors"]
 
 
+def _repo_topology(extra_repo_fields: str = "") -> str:
+    return (
+        "---\n"
+        "type: repo_topology\n"
+        "status: active\n"
+        "schema: mb.repo_topology.v0\n"
+        "home: github:example-co/example\n"
+        'business_display_name: "Example Business"\n'
+        "repos:\n"
+        "  - slug: example\n"
+        '    display_name: "Example Business"\n'
+        "    role: business\n"
+        "    lifecycle: active\n"
+        "    github_owner: example-co\n"
+        "    repo_name: example\n"
+        "    remote: github:example-co/example\n"
+        "    visibility: team_private\n"
+        "    relationship: hub_for\n"
+        "  - slug: workshop-site\n"
+        '    display_name: "Workshop site"\n'
+        "    role: site\n"
+        "    lifecycle: active\n"
+        "    relationship: execution_vehicle_for\n"
+        "    parent: example\n"
+        "    github_owner: example-co\n"
+        "    repo_name: workshop-site\n"
+        "    remote: https://github.com/example-co/workshop-site.git\n"
+        "    visibility: public\n"
+        "    domain: workshop.example.com\n"
+        "    linked_offers:\n"
+        "      - core/offers/workshop/offer.md\n"
+        "    linked_pushes:\n"
+        "      - pushes/2026-05-06-target/push.md\n"
+        "    linked_playbook_runs:\n"
+        "      - pushes/2026-05-06-target/playbooks/resource.md\n"
+        f"{extra_repo_fields}"
+        "  - slug: finance\n"
+        '    display_name: "Finance source"\n'
+        "    role: finance\n"
+        "    lifecycle: active\n"
+        "    visibility: restricted\n"
+        "    relationship: reports_to\n"
+        "    parent: example\n"
+        "    purpose: Private bookkeeping source; hub stores approved summaries only.\n"
+        "---\n"
+        "# Repo Topology\n"
+    )
+
+
+def test_validate_accepts_repo_topology_schema_and_links(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "core" / "offers" / "workshop" / "offer.md",
+        "---\nslug: workshop\nstatus: running\n---\n# Workshop\n",
+    )
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target"),
+    )
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "playbooks" / "resource.md",
+        _playbook(),
+    )
+    _write(tmp_path / "core" / "operations" / "repo-topology.md", _repo_topology())
+
+    report = run(path=str(tmp_path), strict=True)
+
+    assert report["ok"] is True, report
+    topology = [
+        file for file in report["files"] if file["path"] == "core/operations/repo-topology.md"
+    ][0]
+    assert topology["schema"] == "repo-topology"
+    assert topology["warnings"] == []
+
+
+def test_validate_rejects_unknown_repo_topology_values(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "core" / "operations" / "repo-topology.md",
+        _repo_topology()
+        .replace("role: site", "role: website")
+        .replace("lifecycle: active", "lifecycle: graduated", 1)
+        .replace("visibility: public", "visibility: secret"),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["schema"] == "repo-topology"][0]
+    assert report["ok"] is False
+    assert any("role='website'" in error for error in bad["errors"])
+    assert any("lifecycle='graduated'" in error for error in bad["errors"])
+    assert any("visibility='secret'" in error for error in bad["errors"])
+
+
+def test_validate_repo_topology_status_uses_topology_lifecycle(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "core" / "operations" / "repo-topology.md",
+        _repo_topology().replace("status: active", "status: running"),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["schema"] == "repo-topology"][0]
+    assert report["ok"] is False
+    assert any("topology status='running'" in error for error in bad["errors"])
+
+
+def test_validate_repo_topology_warns_on_sensitive_boundary_metadata(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "core" / "operations" / "repo-topology.md",
+        _repo_topology(
+            "    raw_ledger_path: /Users/alex/private/books.ledger\n"
+            "    provider_cache: raw exports live here\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path), strict=False)
+
+    topology = [file for file in report["files"] if file["schema"] == "repo-topology"][0]
+    assert report["ok"] is True
+    assert any("raw_ledger_path" in warning for warning in topology["warnings"])
+    assert any("local absolute path" in warning for warning in topology["warnings"])
+    assert any("provider_cache" in warning for warning in topology["warnings"])
+
+    strict_report = run(path=str(tmp_path), strict=True)
+    assert strict_report["ok"] is False
+
+
+def test_validate_repo_topology_warns_on_missing_safe_links(tmp_path: Path) -> None:
+    _write(tmp_path / "core" / "operations" / "repo-topology.md", _repo_topology())
+
+    report = run(path=str(tmp_path))
+
+    topology = [file for file in report["files"] if file["schema"] == "repo-topology"][0]
+    assert report["ok"] is True
+    assert any("linked_offers" in warning for warning in topology["warnings"])
+    assert any("linked_playbook_runs" in warning for warning in topology["warnings"])
+
+
 def test_cross_refs_warn_on_missing_linked_pushes_target(tmp_path: Path) -> None:
     _write(
         tmp_path / "decisions" / "2026-05-06-broken.md",

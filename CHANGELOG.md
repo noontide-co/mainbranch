@@ -17,6 +17,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   for site, offer, product, client, finance, legal, ops, integration sidecar,
   experiment, and archive repos, while keeping existing site
   `.mainbranch/source.json` behavior compatible. Refs #417.
+- Added `mb validate` coverage for `core/operations/repo-topology.md`
+  `type: repo_topology` records, including topology role/lifecycle/visibility
+  vocabularies, safe repo-link checks, and finance/legal/provider-boundary
+  warnings. Refs #416.
 
 ### Changed
 

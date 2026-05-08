@@ -15,8 +15,8 @@ from typing import Any
 
 import yaml
 
+from mb import github_activity, relationships
 from mb import pushes as pushes_mod
-from mb import relationships
 
 DECISION_STATUS = {"proposed", "accepted", "rejected", "superseded", "running"}
 OFFER_STATUS = {
@@ -54,6 +54,69 @@ PLAYBOOK_APPROVAL_STATUS = {"not-required", "needed", "approved", "rejected"}
 PLAYBOOK_RESOURCE_KIND = {"url", "file", "repo", "document", "manual", "none"}
 PLAYBOOK_ACCEPTED_MUTATION_PROVIDERS: set[str] = set()
 PLAYBOOK_PROVIDER_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+TOPOLOGY_SCHEMA = {"mb.repo_topology.v0"}
+TOPOLOGY_STATUS = {"proposed", "active", "paused", "superseded", "archived"}
+TOPOLOGY_ROLE = {
+    "business",
+    "site",
+    "offer",
+    "product",
+    "client",
+    "finance",
+    "legal",
+    "ops",
+    "integration_sidecar",
+    "experiment",
+    "archive",
+}
+TOPOLOGY_VISIBILITY = {"public", "team_private", "restricted", "local_only"}
+TOPOLOGY_RELATIONSHIP = {
+    "hub_for",
+    "child_of",
+    "execution_vehicle_for",
+    "graduated_from",
+    "supersedes",
+    "archived_from",
+    "source_for",
+    "reports_to",
+    "uses_provider",
+}
+TOPOLOGY_LOCAL_LINK_FIELDS = {
+    "linked_bets",
+    "linked_decisions",
+    "linked_documents",
+    "linked_docs",
+    "linked_logs",
+    "linked_offers",
+    "linked_outcomes",
+    "linked_playbook_runs",
+    "linked_pushes",
+    "linked_research",
+}
+TOPOLOGY_LINK_PREFIXES = {
+    "linked_bets": ("bets/",),
+    "linked_decisions": ("decisions/",),
+    "linked_documents": ("documents/",),
+    "linked_docs": ("documents/",),
+    "linked_logs": ("log/",),
+    "linked_offers": ("core/offers/",),
+    "linked_playbook_runs": ("pushes/",),
+    "linked_pushes": ("pushes/",),
+    "linked_research": ("research/",),
+}
+TOPOLOGY_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+GITHUB_OWNER_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
+GITHUB_REPO_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+DOMAIN_RE = re.compile(
+    r"^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,}$"
+)
+LOCAL_ABSOLUTE_PATH_RE = re.compile(r"^(?:/|~[/\\]|[A-Za-z]:[/\\])")
+TOPOLOGY_UNSAFE_KEY_RE = re.compile(
+    r"(ledger|bank|payroll|tax|contract|legal[_-]?advice|dispute|customer|member|"
+    r"account[_-]?number|raw[_-]?(?:data|export|cache|metric)|provider[_-]?cache|"
+    r"local[_-]?path|path)",
+    re.IGNORECASE,
+)
 SECRET_KEY_RE = re.compile(
     r"(api[_-]?key|access[_-]?token|refresh[_-]?token|bearer|credential|"
     r"client[_-]?secret|password|private[_-]?key|session|cookie|secret)",
@@ -186,6 +249,12 @@ SCHEMAS: dict[str, dict[str, Any]] = {
         },
         "primitive": "playbook",
     },
+    "repo-topology": {
+        "glob": "core/operations/repo-topology.md",
+        "required": ["type", "schema", "business_display_name", "repos"],
+        "enums": {"type": {"repo_topology"}, "schema": TOPOLOGY_SCHEMA},
+        "primitive": "repo-topology",
+    },
     "documents": {
         "glob": "documents/*.md",
         "required": ["title"],
@@ -222,6 +291,7 @@ def _check_one(path: Path, schema: dict[str, Any]) -> dict[str, Any]:
         return {"path": str(path), "ok": False, "errors": [err], "warnings": []}
     assert fm is not None
     errors: list[str] = []
+    warnings: list[str] = []
     for k in schema["required"]:
         if k not in fm:
             errors.append(f"missing key: {k}")
@@ -235,8 +305,10 @@ def _check_one(path: Path, schema: dict[str, Any]) -> dict[str, Any]:
         _check_playbook_frontmatter(path, fm, errors)
     elif primitive == "legacy-campaign":
         _check_legacy_campaign_frontmatter(fm, errors)
+    elif primitive == "repo-topology":
+        _check_repo_topology_frontmatter(path, fm, errors, warnings)
     _check_provider_refs_shape(fm, errors)
-    return {"path": str(path), "ok": not errors, "errors": errors, "warnings": []}
+    return {"path": str(path), "ok": not errors, "errors": errors, "warnings": warnings}
 
 
 def _require_non_empty_string(fm: dict[str, Any], key: str, errors: list[str]) -> None:
@@ -460,6 +532,252 @@ def _check_provider_refs_shape(fm: dict[str, Any], errors: list[str]) -> None:
                 errors.append(f"provider_refs.{provider} ref names must be non-empty strings")
             continue
         errors.append(f"provider_refs.{provider} must be a mapping or list of mappings")
+
+
+def _topology_repo_root(path: Path) -> Path:
+    # core/operations/repo-topology.md -> repo root
+    return path.parent.parent.parent
+
+
+def _github_ref_full_name(value: Any) -> str:
+    if not isinstance(value, str):
+        return ""
+    ref = value.strip()
+    if ref.startswith("github:"):
+        full_name = ref.removeprefix("github:").strip()
+        return full_name if _valid_github_full_name(full_name) else ""
+    return github_activity.repo_full_name(ref)
+
+
+def _valid_github_full_name(value: str) -> bool:
+    parts = value.split("/", 1)
+    if len(parts) != 2:
+        return False
+    owner, repo = parts
+    return bool(GITHUB_OWNER_RE.fullmatch(owner) and GITHUB_REPO_RE.fullmatch(repo))
+
+
+def _require_topology_repo_string(
+    repo_entry: dict[str, Any],
+    key: str,
+    errors: list[str],
+    *,
+    prefix: str,
+) -> str:
+    value = repo_entry.get(key)
+    if not isinstance(value, str) or not value.strip():
+        errors.append(f"{prefix}.{key} must be a non-empty string")
+        return ""
+    return value.strip()
+
+
+def _topology_refs(value: Any, errors: list[str], *, field: str, prefix: str) -> list[str]:
+    refs, valid_type = _coerce_refs(value)
+    if not valid_type:
+        errors.append(f"{prefix}.{field} must be a string or list of strings")
+        return []
+    return [ref.strip() for ref in refs if ref.strip()]
+
+
+def _warn_topology_unsafe_paths(value: Any, warnings: list[str], prefix: str = "") -> None:
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            key_text = str(key)
+            path = f"{prefix}.{key_text}" if prefix else key_text
+            if SECRET_KEY_RE.search(key_text) or TOPOLOGY_UNSAFE_KEY_RE.search(key_text):
+                warnings.append(
+                    f"{path} looks like sensitive or local-only metadata; keep raw finance, "
+                    "legal, customer, provider-cache, credential, and local-path details out "
+                    "of repo topology"
+                )
+            _warn_topology_unsafe_paths(nested, warnings, path)
+    elif isinstance(value, list):
+        for index, nested in enumerate(value):
+            path = f"{prefix}[{index}]" if prefix else f"[{index}]"
+            _warn_topology_unsafe_paths(nested, warnings, path)
+    elif isinstance(value, str) and LOCAL_ABSOLUTE_PATH_RE.search(value.strip()):
+        warnings.append(
+            f"{prefix or '<value>'} looks like a local absolute path; keep durable topology "
+            "on GitHub handles and business relationships, not machine-specific paths"
+        )
+
+
+def _check_topology_local_link(
+    *,
+    repo: Path,
+    source: Path,
+    field: str,
+    ref: str,
+    errors: list[str],
+    warnings: list[str],
+    prefix: str,
+) -> None:
+    if relationships.is_external_ref(ref):
+        return
+    clean_ref = relationships.clean_ref(ref)
+    if not clean_ref:
+        return
+    if field == "linked_playbook_runs" and not re.fullmatch(
+        r"pushes/[^/]+/playbooks/[^/]+\.md", clean_ref
+    ):
+        errors.append(f"{prefix}.{field} must point to pushes/<push>/playbooks/<playbook>.md")
+    allowed_prefixes = TOPOLOGY_LINK_PREFIXES.get(field)
+    if allowed_prefixes and not clean_ref.startswith(allowed_prefixes):
+        errors.append(f"{prefix}.{field} target {ref!r} must live under {allowed_prefixes}")
+        return
+    if not relationships.is_local_markdown_ref(clean_ref):
+        warnings.append(
+            f"{prefix}.{field} target {ref!r} is not a local markdown file Main Branch can check"
+        )
+        return
+    target = relationships.resolve_markdown_link(repo, source, clean_ref)
+    if target is None:
+        warnings.append(f"{prefix}.{field} target {ref!r} does not resolve to a markdown file")
+
+
+def _check_repo_topology_frontmatter(
+    path: Path,
+    fm: dict[str, Any],
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    if fm.get("type") != "repo_topology":
+        errors.append("type must be 'repo_topology'")
+    _require_non_empty_string(fm, "business_display_name", errors)
+
+    if "status" in fm and fm.get("status") not in TOPOLOGY_STATUS:
+        errors.append(f"topology status={fm.get('status')!r} not in {sorted(TOPOLOGY_STATUS)}")
+
+    home = fm.get("home")
+    if home is not None and (not isinstance(home, str) or not _github_ref_full_name(home)):
+        errors.append("home must be a GitHub handle such as github:owner/repo")
+
+    repos = fm.get("repos")
+    if not isinstance(repos, list) or not repos:
+        errors.append("repos must be a non-empty list of repo mappings")
+        return
+    if not all(isinstance(repo_entry, dict) for repo_entry in repos):
+        errors.append("repos must contain only mappings")
+        return
+
+    slugs: set[str] = {
+        str(repo_entry.get("slug")).strip()
+        for repo_entry in repos
+        if isinstance(repo_entry.get("slug"), str) and repo_entry.get("slug").strip()
+    }
+    if len(slugs) != sum(
+        1
+        for repo_entry in repos
+        if isinstance(repo_entry.get("slug"), str) and repo_entry.get("slug").strip()
+    ):
+        errors.append("repos.slug values must be unique")
+
+    repo_root = _topology_repo_root(path)
+    for index, repo_entry in enumerate(repos):
+        prefix = f"repos[{index}]"
+        slug = _require_topology_repo_string(repo_entry, "slug", errors, prefix=prefix)
+        if slug and not TOPOLOGY_SLUG_RE.fullmatch(slug):
+            errors.append(f"{prefix}.slug must be lowercase hyphenated")
+        _require_topology_repo_string(repo_entry, "display_name", errors, prefix=prefix)
+
+        role = _require_topology_repo_string(repo_entry, "role", errors, prefix=prefix)
+        if role and role not in TOPOLOGY_ROLE:
+            errors.append(f"{prefix}.role={role!r} not in {sorted(TOPOLOGY_ROLE)}")
+
+        lifecycle = _require_topology_repo_string(repo_entry, "lifecycle", errors, prefix=prefix)
+        if lifecycle and lifecycle not in TOPOLOGY_STATUS:
+            errors.append(f"{prefix}.lifecycle={lifecycle!r} not in {sorted(TOPOLOGY_STATUS)}")
+        if lifecycle == "graduated":
+            errors.append(f"{prefix}.lifecycle must not be 'graduated'; use a relationship instead")
+
+        visibility = _require_topology_repo_string(repo_entry, "visibility", errors, prefix=prefix)
+        if visibility and visibility not in TOPOLOGY_VISIBILITY:
+            errors.append(
+                f"{prefix}.visibility={visibility!r} not in {sorted(TOPOLOGY_VISIBILITY)}"
+            )
+
+        relationship_value = repo_entry.get("relationship")
+        for relationship in _topology_refs(
+            relationship_value, errors, field="relationship", prefix=prefix
+        ):
+            if relationship not in TOPOLOGY_RELATIONSHIP:
+                errors.append(
+                    f"{prefix}.relationship={relationship!r} not in {sorted(TOPOLOGY_RELATIONSHIP)}"
+                )
+
+        parent = repo_entry.get("parent")
+        if parent is not None:
+            if not isinstance(parent, str) or not parent.strip():
+                errors.append(f"{prefix}.parent must be a non-empty repo topology slug")
+            elif parent.strip() not in slugs:
+                warnings.append(f"{prefix}.parent={parent!r} does not match a repo slug in repos")
+
+        github_owner = repo_entry.get("github_owner")
+        repo_name = repo_entry.get("repo_name")
+        if github_owner is not None and (
+            not isinstance(github_owner, str) or not GITHUB_OWNER_RE.fullmatch(github_owner)
+        ):
+            errors.append(f"{prefix}.github_owner must be a GitHub owner/org slug")
+        if repo_name is not None and (
+            not isinstance(repo_name, str) or not GITHUB_REPO_RE.fullmatch(repo_name)
+        ):
+            errors.append(f"{prefix}.repo_name must be a GitHub repo name")
+        if (github_owner is None) != (repo_name is None):
+            errors.append(f"{prefix}.github_owner and {prefix}.repo_name must be recorded together")
+
+        remote_full_name = _github_ref_full_name(repo_entry.get("remote"))
+        if repo_entry.get("remote") is not None and not remote_full_name:
+            errors.append(f"{prefix}.remote must be a GitHub handle or github.com URL when present")
+        if (
+            remote_full_name
+            and isinstance(github_owner, str)
+            and isinstance(repo_name, str)
+            and remote_full_name != f"{github_owner}/{repo_name}"
+        ):
+            errors.append(
+                f"{prefix}.remote must match github_owner/repo_name ({github_owner}/{repo_name})"
+            )
+
+        domain = repo_entry.get("domain")
+        if domain is not None and (
+            not isinstance(domain, str) or not DOMAIN_RE.fullmatch(domain.strip())
+        ):
+            errors.append(f"{prefix}.domain must be a bare domain such as example.com")
+
+        if role in {"finance", "legal"} and visibility not in {"restricted", "local_only"}:
+            warnings.append(
+                f"{prefix} has role {role!r}; finance/legal topology should usually use "
+                "restricted or local_only visibility and link only approved summaries"
+            )
+        if role == "archive" and lifecycle not in {"archived", "superseded"}:
+            warnings.append(f"{prefix} uses role 'archive' but lifecycle is {lifecycle!r}")
+
+        for field in sorted(TOPOLOGY_LOCAL_LINK_FIELDS):
+            if field not in repo_entry:
+                continue
+            for ref in _topology_refs(repo_entry.get(field), errors, field=field, prefix=prefix):
+                _check_topology_local_link(
+                    repo=repo_root,
+                    source=path,
+                    field=field,
+                    ref=ref,
+                    errors=errors,
+                    warnings=warnings,
+                    prefix=prefix,
+                )
+
+        if "linked_playbooks" in repo_entry:
+            warnings.append(
+                f"{prefix}.linked_playbooks looks like a reusable playbook reference; "
+                "topology should link business repo run records with linked_playbook_runs"
+            )
+
+    secret_paths = sorted(set(_iter_secret_paths(fm)))
+    if secret_paths:
+        errors.append(
+            "repo topology frontmatter must not contain secrets: " + ", ".join(secret_paths)
+        )
+    _warn_topology_unsafe_paths(fm, warnings)
 
 
 def _is_hidden_or_generated(path: Path, repo: Path) -> bool:
