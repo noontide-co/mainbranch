@@ -16,10 +16,8 @@ GUIDED_ORCHESTRATION_FORMS = ("/mb-start launch",)
 GUIDED_ORCHESTRATION_CONTEXT_MARKERS = (
     "guided",
     "orchestration",
-    "route",
-    "routing",
-    "walk",
-    "skill",
+    "skill orchestration",
+    "guided skill",
     "follows the same contract",
 )
 

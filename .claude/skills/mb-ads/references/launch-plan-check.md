@@ -26,8 +26,10 @@ mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json
 
 ## Readiness States
 
-Use `mb site check` exactly:
+Use the returned `mb site check` state:
 
+- `missing`: measurement setup has not been declared; draft strategy only and
+  route setup through `/mb-site` or the measurement rubric before traffic.
 - `blocked`: stop launch planning after listing blockers and next commands.
 - `ready_for_preview`: draft ads only; operator still needs GTM Preview/Tag
   Assistant and provider metadata.

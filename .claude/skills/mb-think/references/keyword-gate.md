@@ -89,6 +89,9 @@ Frontmatter:
 ```yaml
 ---
 type: research
+date: YYYY-MM-DD
+topic: keyword gate for offer-slug
+source: claude-code
 status: completed
 entities: [offer-slug]
 linked_pushes: []

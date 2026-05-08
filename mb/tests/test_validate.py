@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -12,6 +13,7 @@ from mb.cli import app
 from mb.validate import run
 
 runner = CliRunner()
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _write(p: Path, body: str) -> None:
@@ -54,6 +56,29 @@ def test_validate_passes_well_formed(tmp_path: Path) -> None:
     report = run(path=str(tmp_path))
     assert report["ok"] is True
     assert all(f["ok"] for f in report["files"])
+
+
+def test_keyword_gate_documented_frontmatter_validates(tmp_path: Path) -> None:
+    guide = REPO_ROOT / ".claude" / "skills" / "mb-think" / "references" / "keyword-gate.md"
+    text = guide.read_text(encoding="utf-8")
+    match = re.search(r"Frontmatter:\n\n```yaml\n(?P<frontmatter>---\n.*?\n---)\n```", text, re.S)
+    assert match is not None
+
+    frontmatter = (
+        match.group("frontmatter")
+        .replace("YYYY-MM-DD", "2026-05-08")
+        .replace("offer-slug", "workshop")
+        .replace("core/offers/<offer>/offer.md", "core/offers/workshop/offer.md")
+    )
+    _write(
+        tmp_path / "research" / "2026-05-08-keyword-gate-workshop.md",
+        f"{frontmatter}\n\n# Keyword Gate\n",
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is True
+    assert all(file["ok"] for file in report["files"])
 
 
 def test_validate_flags_missing_status(tmp_path: Path) -> None:
