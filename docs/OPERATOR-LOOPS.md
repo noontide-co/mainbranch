@@ -38,7 +38,7 @@ chain:
 
 - **Sense:** `/mb-start`, `/mb-status`, or `mb status --json --peek` reads
   repo health, graph links, provider readiness, recent activity, update state,
-  and GitHub/task signals.
+  and GitHub work-thread signals.
 - **Decide:** the agent and operator choose the next business move: a bet to
   frame, a piece of research to run, a decision to codify, a push to advance, a
   playbook to draft, or a repair to approve.
@@ -51,9 +51,10 @@ chain:
 
 The user-facing nouns are business nouns: bets, goals, offers, pushes,
 playbooks, outcomes, and checkpoints. The technical nouns underneath are still
-part of the architecture, but they serve the loop: issues are tasks, pull
-requests are proposals/reviews, commits are saved checkpoints, graph links are
-relationship memory, and provider refs are safe handles to external systems.
+part of the architecture, but they serve the loop: issues are durable work
+threads, pull requests are proposals/reviews, commits are saved checkpoints,
+graph links are relationship memory, and provider refs are safe handles to
+external systems.
 
 ## 1. Sense
 

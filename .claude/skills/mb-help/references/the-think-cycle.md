@@ -1,6 +1,7 @@
 # The /mb-think Cycle
 
-The heart of Main Branch. Research, decisions, and reference files ARE your project management.
+The heart of Main Branch. Research, decisions, and reference files preserve the
+business reasoning that future sessions need.
 
 ---
 
@@ -149,7 +150,7 @@ If you can't summarize it, you don't understand it yet.
 
 ---
 
-## Decisions as Task Anchors
+## Decisions as Rationale Anchors
 
 For substantial work, **create a decision file early** — even before you've fully decided.
 
@@ -157,44 +158,48 @@ For substantial work, **create a decision file early** — even before you've fu
 
 | Status | Meaning |
 |--------|---------|
-| `proposed` | I'm working on this, exploring options |
-| `accepted` | Decision made, now executing |
-| `codified` | Done — reference files updated |
+| `proposed` | Direction drafted, still being evaluated |
+| `accepted` | Operator chose the direction |
+| `codified` | Rationale integrated into durable business or engine truth |
 
-**The decision file tracks what changes:**
+**The decision file records what changes:**
 - `## What Changes` = Which reference files are affected and how
 - `## Review Date` = When to revisit (optional)
 
 **Example workflow:**
 
-1. Start a big project → Create `decisions/2026-01-21-new-pricing-strategy.md` with `status: proposed`
-2. Research, think, iterate → Update the file as you learn
-3. Make the call → Change to `status: accepted`, describe what changes
-4. Codify → Apply changes to reference files
-5. Finish → Change to `status: codified`
+1. Draft a direction -> Create `decisions/2026-01-21-new-pricing-strategy.md` with `status: proposed`
+2. Research, think, iterate -> Update the file as you learn
+3. Make the call -> Change to `status: accepted`, describe what changes
+4. Codify rationale -> Apply approved changes to durable business truth
+5. Mark integrated -> Change to `status: codified`
 
 **Why this works:**
-- Progress is visible in the file itself
+- Rationale maturity is visible in the file itself
 - Rationale is captured as you go
-- Next session, check your `decisions/` folder — you know exactly where you left off
-- No separate task manager needed
+- Next session, `/mb-start` can recover the current view from files, git,
+  GitHub facts, graph links, and checkpoints
+- Follow-up work routes into a push, playbook, log, checkpoint, or GitHub issue
+  when it needs a durable thread
 
-**For smaller tasks:** Just do them. Decision files are for substantial work where the "why" matters.
+**For smaller work:** Just do it. Decision files are for substantial choices
+where the "why" matters.
 
 ---
 
-## Task Tracking Options
+## Work Continuity
 
-Different people prefer different approaches. See [task-tracking-options.md](task-tracking-options.md) for the full spectrum:
+Main Branch does not ask operators to pick a task system. See
+[task-tracking-options.md](task-tracking-options.md) for the work-continuity
+model:
 
-| Approach | Best For |
+| Primitive | Use For |
 |----------|----------|
-| **decisions/** as anchors | People who think in choices |
-| **GitHub Issues** | Developers, CLI-native users |
-| **focus.md** file | People who want one status file |
-| **External tools** | Teams, complex workflows |
-
-Pick one and commit. The system adapts.
+| **decisions/** | Choices and rationale |
+| **pushes/** | Coordinated launches, drops, promos, or operating pushes |
+| **bets/** | Wagers, success metrics, verdicts, and lessons |
+| **GitHub issues** | Durable work threads that need visibility |
+| **checkpoints** | Saved business progress at meaningful boundaries |
 
 ---
 

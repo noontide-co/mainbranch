@@ -26,7 +26,7 @@ routing the operator into a skill that creates new push work.
 **Status facts first:** Once the business repo path is known, run
 `mb status --json --peek` before asking setup or routing questions. Treat that
 JSON as the source of truth for update severity, readiness, drift, onboarding,
-integrations, GitHub tasks/proposals, bets, dirty git, since-last-check, and
+integrations, GitHub issue/proposal facts, bets, dirty git, since-last-check, and
 `ranked_actions`. Do not duplicate those checks with ad hoc shell probes unless
 the status report says a section is unavailable.
 
@@ -178,9 +178,9 @@ mb status --json --peek
 
 Use this report before asking additional questions:
 
-- `ranked_actions` is the deterministic top-three next-action list. Surface
-  the first action as the recommendation, including its reason and cited signal
-  summaries.
+- `ranked_actions` is the deterministic list of one to three business moves.
+  Surface the first action as the recommendation, including its reason and
+  cited signal summaries.
 - `readiness` gates whether setup/repair work must happen before output skills.
 - `drift.items` names stale or broken status signals and repair commands.
 - `onboarding.summary` and `onboarding.checklist` replace separate onboarding
@@ -332,7 +332,7 @@ See [readiness-assessment.md](references/readiness-assessment.md) for complete s
 ### Quick summary:
 
 1. **Score core files** (soul, offer, audience, voice, testimonials, angles) on 0-3 scale each. Composite max = 18. Multi-offer: score active offer's files, not just core.
-2. **Check session state** — status journal activity, open decisions, uncodified research. Surface what's in progress.
+2. **Check continuity state** -- status journal activity, active decisions, uncodified research, and saved/unsaved work.
 3. **Soul health check** — for returning users (last commit >3 days ago), read soul.md and ask: "Is your current work feeling like pull or push?" Skip for active or first-time users.
 4. **Gate routing** based on composite score:
 

@@ -91,8 +91,8 @@ silently. If you find adjacent work, open or comment on a follow-up issue.
 
 Main Branch is a GitHub-native business operating system. `mb` is the
 deterministic control plane. Agent-runtime skills are the judgment layer. GitHub
-issues are tasks. PRs are proposals/conversations. The repo is the durable
-business brain.
+issues are durable work threads. PRs are proposals/conversations. The repo is
+the durable business brain.
 
 ## Scope
 

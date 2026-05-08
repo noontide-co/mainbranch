@@ -81,11 +81,11 @@ The current product architecture is optimized for one repeatable day:
 
 The operator should mostly see business language: goals, offers, bets, pushes,
 playbooks, outcomes, and checkpoints. The technical memory layer is still real,
-but it exists underneath that loop. GitHub issues preserve tasks and friction,
-branches isolate proposed work, pull requests hold review conversations,
-commits form the saved business timeline, graph links explain relationships,
-and provider refs preserve safe handles to external systems without copying
-secrets or raw account data into the repo.
+but it exists underneath that loop. GitHub issues preserve durable work threads
+and friction, branches isolate proposed work, pull requests hold review
+conversations, commits form the saved business timeline, graph links explain
+relationships, and provider refs preserve safe handles to external systems
+without copying secrets or raw account data into the repo.
 
 ## Business Repo Shape
 
@@ -587,7 +587,7 @@ chat transcript is treated as the decision record
 
 The future dashboard is not the brain. It is the map: business repos, site
 repos, offer repos, private finance repos, pushes, bets, team work, agents,
-provider-safe summaries, finances, open decisions, and stale areas rendered
+provider-safe summaries, finances, active decisions, and stale areas rendered
 from repo truth.
 
 Dashboard sources should be:

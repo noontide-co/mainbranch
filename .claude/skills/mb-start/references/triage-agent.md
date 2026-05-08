@@ -52,7 +52,13 @@ Spawn three agents in a single message using the Task tool. Each gets a focused 
 
 ### Reuse Readiness Data (Token Efficiency)
 
-The triage agents receive the readiness assessment results (scores, gaps, session state, journal summary) as input context. They do NOT re-scan these. The readiness assessment (Step 6) already read status journal facts, scored files, detected open decisions, and checked for uncodified research. Triage agents go DEEPER -- reading file contents, checking section quality, analyzing patterns across files, and connecting dots between soul alignment and tactical work.
+The triage agents receive the readiness assessment results (scores, gaps,
+session state, journal summary) as input context. They do NOT re-scan these.
+The readiness assessment (Step 6) already read status journal facts, scored
+files, detected active decisions, and checked for uncodified research. Triage
+agents go DEEPER -- reading file contents, checking section quality, analyzing
+patterns across files, and connecting dots between soul alignment and tactical
+work.
 
 **What readiness already computed (pass as context, do not recompute):**
 - Per-file scores (soul, offer, audience, voice, testimonials, angles)
@@ -79,7 +85,7 @@ Gather these in main and pass as structured text in each agent's prompt:
 | Absolute repo path | From Step 2 | 1 line | All 3 agents (agents use this to Read files themselves) |
 | Journal groups (30 days) | `journal.groups` from `mb status --json --peek`; fallback to `git log` only if degraded | ~30 lines | Agent 2 |
 | Core file change list (30 days) | `journal.events[].files` from status; fallback to `git log --since="30 days ago" --name-only -- core/` only if degraded | ~20 lines | Agent 1, 3 |
-| Open decision file names | `grep -rl "status: proposed\|status: accepted" decisions/ 2>/dev/null` | ~10 lines | Agent 2 |
+| Active decision file names | `grep -rl "status: proposed\|status: accepted" decisions/ 2>/dev/null` | ~10 lines | Agent 2 |
 | Unlinked research count | `grep -rl "linked_decisions: \[\]" research/ 2>/dev/null \| wc -l` | 1 line | Agent 2 |
 | Past triage file names | `ls research/*-start-triage.md 2>/dev/null` | ~5 lines | Agent 3 |
 | Past crystallize file names | `ls research/*-end-of-day-crystallize.md 2>/dev/null` | ~5 lines | Agent 3 |
@@ -181,8 +187,8 @@ Return a RANKED list of reference improvements. Rank by compound impact
 === PIPELINE & MOMENTUM ANALYST ===
 
 You analyze work patterns, pipeline health, and momentum. You look at what's
-been done, what's pending, and where energy is going. You identify bottlenecks
-and the highest-value pending work.
+been done, which rationale is still being evaluated or integrated, and where
+energy is going. You identify bottlenecks and the highest-value business move.
 
 You are NOT a task manager. You identify patterns and bottlenecks.
 
@@ -194,10 +200,11 @@ You are NOT a task manager. You identify patterns and bottlenecks.
 
 [Git log output -- commits, what changed, when]
 
-=== OPEN DECISIONS ===
+=== ACTIVE DECISIONS ===
 
-[List of decisions with status: proposed or accepted. Include frontmatter
-and first 10 lines of each.]
+[List of decisions with status: proposed or accepted. These are rationale
+maturity states, not proof that downstream work is unfinished. Include
+frontmatter and first 10 lines of each.]
 
 === UNLINKED RESEARCH ===
 
@@ -226,9 +233,9 @@ Also list most recent 5 items in pushes/ (or campaigns/ on legacy repos).]
 
 Analyze these dimensions:
 
-1. **Open decisions:** How many? What topics? How old? Decisions accumulating
-   without codification = the highest-value pending work. Research goes stale.
-   Decisions capture reasoning at a point in time.
+1. **Active decisions:** How many? What topics? How old? Decisions accumulating
+   without codification mean accepted rationale may not be integrated yet.
+   Research goes stale. Decisions capture reasoning at a point in time.
 
 2. **Unlinked research:** Research without linked_decisions. Note it gently --
    some research is exploratory. But research older than 14 days without a
@@ -253,7 +260,7 @@ Return:
 - Pipeline health summary (2-3 sentences)
 - Top 3 bottlenecks ranked by impact
 - Momentum assessment: "building", "stalled", "execution-heavy", or "enrichment-heavy"
-- Highest-value pending work item with reasoning
+- Highest-value business move with reasoning
 ```
 
 **Token budget:** ~20-40K (reads journal facts, scans file frontmatter, analyzes patterns)
@@ -357,7 +364,7 @@ Task(
 
 Task(
   subagent_type: "general-purpose",
-  description: "Pipeline & Momentum Analyst: analyze git patterns, open decisions,
+  description: "Pipeline & Momentum Analyst: analyze git patterns, active decisions,
     unlinked research, content pipeline state, velocity. Return bottleneck ranking
     and momentum assessment.",
   prompt: "[Pre-gathered metadata + Agent 2 prompt template + absolute repo path]"

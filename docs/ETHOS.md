@@ -9,7 +9,8 @@ operating substrate:
 - the business repo is the business brain;
 - `mb` is the deterministic control plane;
 - agent-runtime skills are the judgment-heavy execution layer;
-- GitHub issues are tasks and requests;
+- GitHub issues are durable work threads for tasks, requests, blockers, and
+  follow-ups when work needs shared visibility;
 - pull requests are proposals and review conversations;
 - git history is the evolution story.
 - checkpoints make long agent runs durable before chat context is lost.
@@ -75,9 +76,11 @@ future decision explicitly changes that boundary.
 ### 4. Beginner-Safe, Power-User-Honest
 
 The product is for non-developers, but it should not hide the real primitives.
-GitHub issues can be described as tasks. Pull requests can be described as
-proposals. Git history can be described as shipped work. The underlying terms
-should remain available when the user needs them.
+GitHub issues are durable work threads that can be described as tasks,
+blockers, requests, or follow-ups when the user loop needs that translation.
+Pull requests can be described as proposals. Git history can be described as
+shipped work. The underlying terms should remain available when the user needs
+them.
 
 Beginner flows should end with exact commands. Power users should always have a
 quiet, scriptable path.

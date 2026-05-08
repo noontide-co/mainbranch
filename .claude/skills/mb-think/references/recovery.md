@@ -27,7 +27,7 @@ When resuming a `/mb-think` session:
 ```
 TaskList
 ```
-Shows any in-progress tasks from this session.
+Shows local execution steps from this session.
 
 **Recent files in user's repo:**
 ```bash
@@ -38,7 +38,7 @@ ls -lt research/*.md 2>/dev/null | head -5
 grep -l "status: proposed\|status: accepted" decisions/*.md 2>/dev/null
 ```
 
-**GitHub issues (if using):**
+**GitHub issues (when durable work threads are needed):**
 ```bash
 gh issue list --assignee @me --state open --limit 5
 ```
@@ -48,8 +48,8 @@ gh issue list --assignee @me --state open --limit 5
 Once identified, read the file to restore context:
 
 - Research files show what was learned
-- Decision files with `status: proposed` show work in progress
-- Decision files with `status: accepted` may need codification
+- Decision files with `status: proposed` hold drafted rationale still being evaluated
+- Decision files with `status: accepted` hold chosen rationale that may need codification
 
 ### 3. Confirm with User
 
@@ -65,14 +65,14 @@ Pick up from the appropriate checkpoint:
 | Research `complete` | Move to decide phase |
 | Decision `proposed` | Continue options analysis |
 | Decision `accepted` | Offer to codify |
-| Decision `codified` | Work complete |
+| Decision `codified` | Rationale integrated into durable truth |
 
 ---
 
 ## Why Files Are Memory
 
 - **Chat is disposable** — Files persist
-- **Decision files track progress** — Status + checkboxes
+- **Decision files preserve rationale maturity** — proposed, accepted, codified
 - **Research files capture learning** — Synthesis survives compaction
 - **You're never starting from zero** — Always recoverable state
 

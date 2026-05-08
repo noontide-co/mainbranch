@@ -125,27 +125,36 @@ When documenting a decision, note which offer it affects:
 
 ---
 
-## Decisions as Task Anchors
+## Decisions as Rationale Anchors
 
-For substantial work, **create a decision file early** — even before you've fully decided. The decision file becomes your task tracker.
+For substantial choices, **create a decision file early** -- even before you've
+fully decided. The decision file keeps the rationale, options, trade-offs, and
+intended changes visible. It is not a generic task tracker.
 
 **How it works:**
 
-1. Start project -> Create `decisions/YYYY-MM-DD-topic.md` with `status: proposed`
+1. Draft direction -> Create `decisions/YYYY-MM-DD-topic.md` with `status: proposed`
 2. Research and iterate -> Update the file as you learn
 3. Make the call -> Change to `status: accepted`
-4. Codify -> Apply changes described in `## What Changes` to reference files
-5. Finish -> Change to `status: codified`
+4. Codify rationale -> Apply approved changes described in `## What Changes`
+   to durable business or engine truth
+5. Mark integrated -> Change to `status: codified`
 
 **Why this works:**
-- Progress is visible in the file (proposed -> accepted -> codified)
-- Rationale captured as you go
-- Next session: check `decisions/` to see where you left off
-- No separate task manager needed
+- Decision maturity is visible in the file (`proposed` -> `accepted` -> `codified`)
+- Rationale is captured as you go
+- Next session: `/mb-start` can recover the current view from files, git,
+  GitHub facts, graph links, and checkpoints
+- Follow-up work routes into a push, playbook, checkpoint, log entry, or
+  GitHub issue when it needs durability
 
-**Non-reference tasks** (set up Stripe, update sales page, etc.) go in `## What Changes` under "Outside reference."
+**Non-reference consequences** (set up Stripe, update sales page, etc.) can be
+named in `## What Changes` under "Outside reference." If they need a durable
+thread across sessions or people, suggest a GitHub issue instead of using the
+decision as a work board.
 
-**For smaller tasks:** Just do them. Decision files are for substantial work where the "why" matters.
+**For smaller work:** Just do it. Decision files are for substantial choices
+where the "why" matters.
 
 ---
 
@@ -153,9 +162,9 @@ For substantial work, **create a decision file early** — even before you've fu
 
 | Status | Meaning |
 |--------|---------|
-| `proposed` | Decision drafted, not yet accepted |
-| `accepted` | Decision made and committed to |
-| `codified` | Changes applied to reference files |
+| `proposed` | Direction drafted, still being evaluated |
+| `accepted` | Operator chose the direction |
+| `codified` | Rationale integrated into durable business or engine truth |
 
 ---
 

@@ -36,7 +36,7 @@ Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running a loca
 
 The repo is the operating memory: offer, audience, voice, research, decisions, bets, pushes, logs, documents, meeting summaries, fulfillment notes, safe finance summaries, and provider refs. The CLI is the deterministic control plane: setup, status, validation, graph, provider readiness, updates, checkpoints, and repair. The skills are the judgment layer: research, decide, write, review, ship, and reflect.
 
-Main Branch is opinionated about rails. The point is not to connect every SaaS tool a business has accumulated. The point is to choose boring, inspectable paths: GitHub for tasks/proposals/history, Cloudflare for sites and DNS, provider paths such as Google/Workspace and official ads only where smoke-tested, planned optional rails such as Postiz for social scheduling and Beancount-style plain-text finance, and optional sidecars for enrichment. Those paths should be wrapped in deterministic commands agents can call without wasting tokens guessing provider setup.
+Main Branch is opinionated about rails. The point is not to connect every SaaS tool a business has accumulated. The point is to choose boring, inspectable paths: GitHub for durable work threads, proposals, and shipped history; Cloudflare for sites and DNS; provider paths such as Google/Workspace and official ads only where smoke-tested; planned optional rails such as Postiz for social scheduling and Beancount-style plain-text finance; and optional sidecars for enrichment. Those paths should be wrapped in deterministic commands agents can call without wasting tokens guessing provider setup.
 
 Read the product frame in [docs/ETHOS.md](docs/ETHOS.md), the four operator loops (Sense → Decide → Ship → Reflect) and the four channels (Paid, Organic, Pages, Ops) in [docs/OPERATOR-LOOPS.md](docs/OPERATOR-LOOPS.md), and the release direction in [docs/ROADMAP.md](docs/ROADMAP.md).
 Workspace, repo, dashboard, finance/legal, and team-log boundaries are defined
@@ -190,7 +190,7 @@ As a business grows, related work can graduate into child repos: sites,
 products/offers, client fulfillment repos, private finance repos, or ops repos.
 The business repo stays the hub. Future dashboard work should map those repos
 and their pushes, bets, commits, issues, PRs, checkpoints, provider-safe
-summaries, and open decisions. The dashboard is the map, not the source of
+summaries, and active decisions. The dashboard is the map, not the source of
 truth.
 
 ### Connected accounts live with the business repo
@@ -222,7 +222,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb onboard` | Human setup flow: create or connect a business repo, explain the substrate, wire Claude Code skills, and show the next `/mb-start` step. |
 | `mb onboard status` | Show durable onboarding progress from `.mb/onboarding.json`, including missing core-reference inputs and the next recommended action. |
 | `mb init` | Set up a fresh business repo (business folders, CLAUDE.md, git init). |
-| `mb status` | Show the local-first briefing in the terminal without opening Claude Code: ranked next actions, since-last-check changes, drift, repo health, runtime wiring, recent decisions/research/bets/git activity, and GitHub tasks when `gh` is authenticated. Use `--json` for the v1 status schema, `--verbose` for detail, and `--peek` for non-mutating reads. |
+| `mb status` | Show the local-first briefing in the terminal without opening Claude Code: ranked next actions, since-last-check changes, drift, repo health, runtime wiring, recent decisions/research/bets/git activity, and GitHub durable work threads when `gh` is authenticated. Use `--json` for the v1 status schema, `--verbose` for detail, and `--peek` for non-mutating reads. |
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Use `mb doctor repair --plan` / `--apply` for guided repo reconciliation; add `--include-migration` only after reviewing the migration preview. |
 | `mb connect` | Register provider credentials, test provider health, and inspect repair-safe integration status without committing secrets. |
 | `mb site check` | Check local paid-traffic measurement readiness for a site repo: GTM installation, Main Branch dataLayer events, consent posture, Google Ads plan metadata, and operator-review gates. |

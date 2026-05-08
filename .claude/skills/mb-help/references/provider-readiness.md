@@ -34,8 +34,8 @@ GitHub.
 
 ## Decision Tree
 
-1. **GitHub** - tasks, proposals, reviews, and shipped history.
-   - Use when: issue drafts, PRs, review, team visibility, daily task tracking.
+1. **GitHub** - durable work threads, proposals, reviews, and shipped history.
+   - Use when: issue drafts, PRs, review, release coordination, or team visibility.
    - Check/fix: `mb connect doctor --json`.
 
 2. **Cloudflare** - sites, DNS, Pages, and future Workers.

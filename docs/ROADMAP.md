@@ -176,5 +176,5 @@ Likely directions:
   sidecar, CLI, MCP server, and provider-adapter judgment.
 - [compatibility.md](compatibility.md) for runtime support status.
 - [CHANGELOG.md](../CHANGELOG.md) for what actually shipped.
-- [GitHub issues](https://github.com/noontide-co/mainbranch/issues) for the
-  live task list.
+- [GitHub issues](https://github.com/noontide-co/mainbranch/issues) for
+  durable public work threads.

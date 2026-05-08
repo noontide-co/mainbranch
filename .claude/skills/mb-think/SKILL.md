@@ -208,7 +208,7 @@ When routing to research mode, detect research TYPE from user intent:
 On every `/mb-think` invocation, detect state and guide the next step:
 
 ```bash
-# Check for work in progress
+# Check for continuity and rationale state
 ls -lt research/*.md 2>/dev/null | head -3
 grep -l "status: proposed\|status: accepted" decisions/*.md 2>/dev/null
 # Also check content strategy state
@@ -370,17 +370,20 @@ See [references/codify-phase.md](references/codify-phase.md) for full workflow.
 
 ---
 
-## Task Tracking Layers
+## Work Continuity Layers
 
 | Layer | Scope | Use For |
 |-------|-------|---------|
-| **Claude tasks** | Session | Execution tracking, spinners |
-| **Decision files** | Forever | Rationale, anchor for work |
-| **GitHub issues** | Forever | Cross-session, team visibility |
+| **Claude tasks** | Session | Local execution steps and tool progress |
+| **Decision files** | Durable | Rationale, options, chosen direction, what changes |
+| **GitHub issues** | Durable | Work threads that need cross-session or team visibility |
 
-Decision files are the anchor — create early with `status: proposed`, update to `accepted`, then `codified`.
+Decision status is rationale maturity, not a general work-progress board:
+`proposed` means a direction is drafted, `accepted` means the operator chose
+it, and `codified` means the rationale has been integrated into durable
+business or engine truth.
 
-See [decide-phase.md](references/decide-phase.md) for task creation patterns.
+See [decide-phase.md](references/decide-phase.md) for decision lifecycle patterns.
 See [recovery.md](references/recovery.md) for resuming sessions.
 
 ---
@@ -394,13 +397,13 @@ If conversation compacted, check multiple sources:
 TaskList
 ```
 
-**2. Recent files:**
+**2. Recent files and rationale state:**
 ```bash
 ls -lt research/*.md 2>/dev/null | head -5
 grep -l "status: proposed\|status: accepted" decisions/*.md 2>/dev/null
 ```
 
-**3. GitHub issues (if using):**
+**3. GitHub issues (when durable work threads are needed):**
 ```bash
 gh issue list --assignee @me --state open
 ```

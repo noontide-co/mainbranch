@@ -1,212 +1,116 @@
-# Task Tracking Options
+# Work Continuity
 
-How to track ongoing work across sessions. Pick one approach and commit.
+Main Branch does not ask operators to pick a separate task tracker. The normal
+loop is work continuity: start from current facts, choose the next business
+move, ship or clarify it, and save enough durable memory for the next session
+to recover.
 
----
+If you feel the urge to "save the conversation," extract what mattered into the
+right Main Branch primitive instead:
 
-## The Core Insight
+| What mattered | Durable home |
+| --- | --- |
+| A wager, success metric, deadline, or lesson | `bets/` |
+| A coordinated launch, drop, challenge, promo, or operating push | `pushes/` |
+| A choice and its rationale | `decisions/` |
+| Evidence, synthesis, or open questions | `research/` |
+| A repeatable procedure | playbook |
+| A daily record, handoff, or event memory | `log/` |
+| Saved work at a meaningful boundary | `mb checkpoint` / git commit |
+| A durable work thread that needs visibility across sessions or people | GitHub issue |
 
-**If you need to "save the conversation," you didn't extract what mattered.**
-
-The system is designed so valuable outputs become files:
-- Insight? → `research/`
-- Decision? → `decisions/`
-- Truth changed? → `core/`
-
-When you do this, conversations become disposable. The value lives in files.
-
----
-
-## The Spectrum
-
-| Approach | Token Cost | Setup | Best For |
-|----------|------------|-------|----------|
-| **decisions/** as anchors | Lowest | None | People who think in choices |
-| **GitHub Issues** | Low | `gh` CLI | Developers, CLI-native |
-| **focus.md** file | Low | Create file | One status file preference |
-| **External (Linear/Notion)** | Highest | MCP setup | Teams, complex workflows |
-
-**Pick one.** Record your preference in CLAUDE.md so `/mb-start` knows.
+The conversation is scaffolding. The value should land in files, issues when
+needed, proposals, or saved checkpoints.
 
 ---
 
-## Option 1: Decisions as Task Anchors (Recommended)
+## How `/mb-start` Recovers Context
 
-Use decision files for substantial work. The file IS your task tracker.
+`/mb-start` regenerates the current view from facts. It should read
+`mb status --json --peek`, then use repo health, graph links, update state,
+provider readiness, recent saved work, GitHub activity, checkpoint state, and
+ranked actions to propose the next one to three meaningful moves.
 
-**How it works:**
+It is not reading a backlog. It is answering:
+
+1. What changed since last time?
+2. What business move looks important now?
+3. What needs repair, approval, or a saved checkpoint before we continue?
+
+Those moves should be at push or scope altitude, not atomic chore altitude.
+
+---
+
+## Decisions Are Rationale, Not Progress Boards
+
+Use decision files for choices where the "why" matters.
+
+Decision status describes rationale maturity:
+
+| Status | Meaning |
+| --- | --- |
+| `proposed` | A direction is drafted and still being evaluated. |
+| `accepted` | The operator chose the direction. |
+| `codified` | The rationale has been integrated into durable business or engine truth. |
+
+This does not mean downstream work is done. A codified decision can still have
+follow-up work. An accepted decision might already have shipped. If follow-up
+work needs durability, route it into a push, playbook, checkpoint, log entry, or
+GitHub issue instead of turning the decision into a generic work board.
+
+---
+
+## When Work Becomes a GitHub Issue
+
+Create or suggest a GitHub issue when work needs a durable thread:
+
+- it crosses sessions and would otherwise be forgotten;
+- it has an owner, blocker, dependency, deadline, or discussion;
+- it is public Main Branch engine work, support friction, or a reproducible bug;
+- it should connect to a branch, pull request, release, or review loop;
+- it needs team visibility;
+- it does not naturally belong in one bet, push, playbook, decision, or log.
+
+Do not create issues for raw thought dumps, quick one-session work, ordinary
+decision rationale, sensitive private context, or checklist steps inside an
+active push/playbook.
+
+Skills should usually draft or suggest an issue before creating one. Public
+issue creation is a shared-memory action that needs operator approval.
+
+---
+
+## What To Put In `CLAUDE.md`
+
+Do not record a task-tracking preference. Record the business primitives and
+continuity rules that help `/mb-start` route work:
 
 ```markdown
----
-type: decision
-status: proposed  # ← This is your progress indicator
----
+## Work Continuity
 
-# Decision: New Pricing Strategy
-
-## What Changes
-
-Reference files affected:
-- `core/offer.md` — update pricing section with new tier structure
-- `core/proof/angles/` — create new value-stack angle
-
-Outside reference:
-- Set up Stripe tiers
-- Update sales page
+- Active bets: `bets/`
+- Active pushes: `pushes/`
+- Decisions that explain direction: `decisions/`
+- Team handoffs and daily records: `log/`
+- Use GitHub issues only when work needs a durable thread across sessions,
+  proposals, releases, or team visibility.
 ```
 
-**Status progression:**
-- `proposed` → I'm working on this
-- `accepted` → Decision made, executing
-- `codified` → Done, reference updated
-
-**Why it works:**
-- No separate system to maintain
-- Rationale captured alongside tasks
-- Check `decisions/` folder to see where you left off
-- Natural audit trail
-
-**Best for:** Strategic work, anything where "why" matters.
+Keep this section short. The repo facts and `mb status` should do the heavy
+lifting.
 
 ---
 
-## Option 2: GitHub Issues
+## Quick Routing Guide
 
-Native task management in your repo. Claude can read/write via `gh` CLI.
+**"I have a strategic choice to make"** -> decision file or `/mb-think`.
 
-**Setup:**
-```bash
-# Check GitHub task readiness from the business repo
-mb connect doctor --json
-```
+**"I need to coordinate a launch/drop/challenge/promo"** -> push.
 
-**Usage:**
-```bash
-# Create issue
-gh issue create --title "Implement new pricing" --body "Tasks: ..."
+**"I need to remember what happened today"** -> log entry or checkpoint.
 
-# List open issues
-gh issue list
+**"This work crosses sessions, has blockers, or needs team visibility"** ->
+GitHub issue draft.
 
-# Close when done
-gh issue close 123
-```
-
-**Why it works:**
-- Native to repo (no external tool)
-- `gh` CLI uses minimal tokens
-- Labels, milestones, assignments
-- Works across devices via GitHub
-
-**Best for:** Developers, CLI-native users, detailed task breakdown.
-
----
-
-## Option 3: focus.md File
-
-Single lightweight file showing current state.
-
-**Create:** `log/focus.md`
-
-```markdown
-# Current Focus
-
-## Priority
-[One sentence: what you're trying to accomplish]
-
-## Next Actions
-- [ ] Action 1
-- [ ] Action 2
-- [ ] Action 3
-
-## Blockers
-- [Thing preventing progress]
-
-## Session Notes
-[Quick thoughts — delete after acting on them]
-
----
-*Last updated: 2026-01-21*
-```
-
-**Why it works:**
-- One file to check
-- Lightweight (~20 lines)
-- `/mb-start` can scan it quickly
-
-**Best for:** People who want a single "where am I?" file.
-
-**Warning:** Easy to let this go stale. Update it or delete it.
-
----
-
-## Option 4: External Tools (Linear, Notion, etc.)
-
-Full project management via MCP.
-
-**Setup:** Configure MCP server for your tool.
-
-**Token cost:** Highest — each query/update costs tokens.
-
-**Why use it:**
-- Team collaboration
-- Complex workflows
-- Visual boards, timelines
-- Integrations with other tools
-
-**Best for:** Teams, complex multi-person projects.
-
-**Trade-off:** More UX, more tokens. Only worth it if you need the features.
-
----
-
-## Recording Your Preference
-
-Add to your business repo's CLAUDE.md:
-
-```markdown
-## Workflow Preferences
-
-**Task tracking:** decisions/ as anchors
-```
-
-Or:
-```markdown
-## Workflow Preferences
-
-**Task tracking:** GitHub Issues
-```
-
-This tells `/mb-start` how to help you pick up where you left off.
-
----
-
-## What NOT to Do
-
-**Don't save entire conversations.**
-
-- Full of noise (tangents, corrections, false starts)
-- Not synthesized — Claude has to sift through it
-- Goes stale immediately
-- Eats tokens on context that isn't actionable
-- Doesn't scale
-
-**The fix:** When a conversation has value, extract it into the right file type. Let the conversation go.
-
----
-
-## Quick Decision Guide
-
-**"I have a big strategic choice to make"** → Decision file
-
-**"I have 10 small tasks"** → GitHub Issues or focus.md
-
-**"My team needs to see progress"** → External tool
-
-**"I just want to not forget where I was"** → focus.md or check recent `decisions/`
-
----
-
-## Next Step
-
-Pick one approach. Add your preference to CLAUDE.md. Use it consistently for a week. Adjust if needed.
+**"I just have a quick small thing"** -> do it, then checkpoint if the result
+matters.

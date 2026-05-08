@@ -41,7 +41,7 @@ Required provider choices for the setup/provider loop:
 
 | Provider | Business job | Check |
 |---|---|---|
-| GitHub | tasks, proposals, reviews, shipped history | `mb connect doctor --json` |
+| GitHub | durable work threads, proposals, reviews, shipped history | `mb connect doctor --json` |
 | Cloudflare | sites, DNS, Pages, Workers | `mb connect doctor --json` |
 | Google / Workspace | Drive, Docs, Sheets, Slides | `mb connect doctor --json` |
 | Meta Ads | planned: ad accounts, campaigns, pixels through the official Meta Ads CLI once wired | `mb connect doctor --json` |

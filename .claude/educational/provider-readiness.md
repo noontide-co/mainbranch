@@ -30,10 +30,10 @@ mb connect doctor --json
 
 ## The default order
 
-1. **GitHub** - tasks, proposals, reviews, and shipped history.
+1. **GitHub** - durable work threads, proposals, reviews, and shipped history.
    - Check: `mb connect doctor --json`
    - Common fix: `gh auth login`
-   - You can start local setup without it, but team/task loops are limited.
+   - You can start local setup without it, but shared work-thread and proposal loops are limited.
 
 2. **Cloudflare** - sites, DNS, Pages, and future Workers.
    - Check: `mb connect doctor --json`

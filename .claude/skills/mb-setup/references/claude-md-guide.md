@@ -130,11 +130,17 @@ This repo contains your **business data**. It's powered by **Main Branch** (the 
 
 ---
 
-## Workflow Preferences
+## Work Continuity
 
-**Task tracking:** [decisions/ | GitHub Issues | focus.md | External: ___]
+- Active bets: `bets/`
+- Active pushes: `pushes/`
+- Decisions that explain direction: `decisions/`
+- Team handoffs and daily records: `log/`
+- Use GitHub issues only when work needs a durable thread across sessions,
+  proposals, releases, or team visibility.
 
-This tells `/mb-start` how you prefer to track ongoing work.
+This gives `/mb-start` business-language routing hints without creating a
+separate work-management surface.
 ```
 
 ---
@@ -152,7 +158,7 @@ This tells `/mb-start` how you prefer to track ongoing work.
 
 ### Should Have (if exists)
 - Key decisions index
-- Workflow preferences (task tracking approach)
+- Work-continuity routing hints
 - Best sellers / top products
 - Current strategy
 - Known gaps

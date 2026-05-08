@@ -42,8 +42,9 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
 - [ ] TTY behavior, non-TTY behavior, exit codes, and `--json` behavior stay
   deliberate where the CLI exposes them.
 - [ ] GitHub language is translated into business terms when the user loop needs
-  it: issues are tasks, PRs are proposals or review conversations, and merge
-  history is shipped work.
+  it: issues are durable work threads for tasks, blockers, requests, or
+  follow-ups; PRs are proposals or review conversations; and merge history is
+  shipped work.
 
 ## 4. State Model
 

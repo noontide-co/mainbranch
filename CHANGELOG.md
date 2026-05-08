@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Aligned bundled skill and public docs language with the accepted work-continuity
+  model: decisions are rationale artifacts, GitHub issues are durable work
+  threads when needed, `/mb-start` regenerates the current view from facts, and
+  `/mb-end` remains closure/checkpointing rather than tomorrow planning. Refs
+  #377.
+
 ## [0.3.7] - 2026-05-07
 
 v0.3.7 turns the new release discipline into something Main Branch can

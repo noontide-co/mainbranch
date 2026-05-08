@@ -88,7 +88,7 @@ when status says the journal section is unavailable or degraded.
 If status reports no journal events in 7+ days, note the gap -- this feeds into
 the soul health check (Section 3).
 
-### Open Decisions
+### Active Decisions
 
 ```bash
 # Decisions with frontmatter status: proposed or accepted (anchored parse)
@@ -103,9 +103,11 @@ done 2>/dev/null
 
 For each found, read the frontmatter to extract the topic. Present as:
 
-> "You have [N] open decisions ready to codify: [topic 1], [topic 2]."
+> "You have [N] decisions still being evaluated or integrated: [topic 1], [topic 2]."
 
-**Why this matters:** Uncodified decisions are the highest-value pending work. Research goes stale. Decisions capture reasoning at a point in time. Codifying locks insights into reference before they decay.
+**Why this matters:** Decisions capture reasoning at a point in time. Codifying
+locks accepted rationale into durable truth before it decays. Treat this as a
+continuity signal, not proof that downstream work is unfinished.
 
 ### Uncodified Research
 
@@ -331,11 +333,13 @@ THIN (8-11) shows output skills in the list but adds a note:
 
 > "3. Create ads  /mb-ads (reference is thin -- results will improve with richer context)"
 
-### Open Decisions Override
+### Active Decisions Override
 
-If open decisions exist (status: proposed or accepted, not codified), surface them regardless of score:
+If active decisions exist (status: proposed or accepted, not codified), surface
+them regardless of score. These statuses describe rationale maturity, not a
+general work list:
 
-> "You have [N] decisions ready to codify. Codifying locks in insights before they go stale. Want to finish those first?"
+> "You have [N] decisions still being evaluated or integrated. Want to review whether any should be accepted, codified, or left as-is before we choose today's move?"
 
 This is a suggestion, not a gate. User can proceed to any available skill.
 
@@ -530,7 +534,7 @@ If session state items were found, append after the health display:
 
 > "**Since last session:**
 > - Last work: [topic from recent commit]
-> - [N] open decisions ready to codify
+> - [N] decisions still being evaluated or integrated
 > - [N] research files without decisions"
 
 Only show items that exist. Skip this section entirely if nothing to report.

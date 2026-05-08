@@ -95,7 +95,7 @@ The conversation is scaffolding. The building stands without it.
 
 **The test:** Feel the urge to save a conversation? Stop. Ask: "What actually mattered?" Put that in the right file. Let the rest go.
 
-**For tracking work across sessions:** See [task-tracking-options.md](task-tracking-options.md).
+**For recovering work across sessions:** See [task-tracking-options.md](task-tracking-options.md).
 
 ---
 
