@@ -685,10 +685,10 @@ def _check_repo_topology_frontmatter(
             errors.append(f"{prefix}.role={role!r} not in {sorted(TOPOLOGY_ROLE)}")
 
         lifecycle = _require_topology_repo_string(repo_entry, "lifecycle", errors, prefix=prefix)
-        if lifecycle and lifecycle not in TOPOLOGY_STATUS:
-            errors.append(f"{prefix}.lifecycle={lifecycle!r} not in {sorted(TOPOLOGY_STATUS)}")
         if lifecycle == "graduated":
             errors.append(f"{prefix}.lifecycle must not be 'graduated'; use a relationship instead")
+        elif lifecycle and lifecycle not in TOPOLOGY_STATUS:
+            errors.append(f"{prefix}.lifecycle={lifecycle!r} not in {sorted(TOPOLOGY_STATUS)}")
 
         visibility = _require_topology_repo_string(repo_entry, "visibility", errors, prefix=prefix)
         if visibility and visibility not in TOPOLOGY_VISIBILITY:

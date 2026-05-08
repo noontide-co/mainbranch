@@ -1204,7 +1204,10 @@ def test_validate_rejects_unknown_repo_topology_values(tmp_path: Path) -> None:
     bad = [file for file in report["files"] if file["schema"] == "repo-topology"][0]
     assert report["ok"] is False
     assert any("role='website'" in error for error in bad["errors"])
-    assert any("lifecycle='graduated'" in error for error in bad["errors"])
+    lifecycle_errors = [error for error in bad["errors"] if ".lifecycle" in error]
+    assert lifecycle_errors == [
+        "repos[0].lifecycle must not be 'graduated'; use a relationship instead"
+    ]
     assert any("visibility='secret'" in error for error in bad["errors"])
 
 
