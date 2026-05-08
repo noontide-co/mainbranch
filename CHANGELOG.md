@@ -11,6 +11,26 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-05-07
+
+v0.3.7 turns the new release discipline into something Main Branch can
+practice. Claude Code runtime dogfood now has an automated harness, release
+simulations turn real operator moments into reviewable evidence, generated
+business `CLAUDE.md` files push agents back through the CLI, and old-layout
+migration guidance is safer before it writes.
+
+### What this means for you (plain English)
+
+- **Claude gets stronger startup instructions.** Fresh business repos now tell
+  Claude Code to inspect `mb` facts before giving setup or repair advice.
+- **Releases have better evidence.** Main Branch can run a sanitized dogfood
+  harness and prompt simulation suite before claiming runtime behavior works.
+- **Migration is less surprising.** Old `reference/` and `campaigns/` guidance
+  has been swept toward the current folder model, and migration dry-runs now
+  show backups, conflicts, and safe next commands before apply.
+- **Provider choices are clearer.** The docs now explain when Main Branch
+  should wrap an existing CLI, call an MCP/server API, or build its own tool.
+
 ### Added
 
 - Added `scripts/claude-runtime-dogfood.py`, a repeatable Claude Code dogfood
