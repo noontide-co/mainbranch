@@ -35,7 +35,7 @@ this is the single active choice list in the response. If ranked actions were
 already numbered or offers are also being shown, use a named route such as
 `triage` instead of reusing `1`.
 
-### Triage (Option 1 — User-Initiated)
+### Triage (User-Initiated)
 
 **Triage is option 1 only on the main route menu.** It runs when the user
 selects that route or when intent keywords match. It does NOT run automatically
@@ -61,7 +61,9 @@ offer selection in the same turn.
 >
 > (hit a number, or just tell me what you need)"
 
-**When user picks option 1:** Spawn triage agents. See [triage-agent.md](triage-agent.md) for gating, tiered spawning, agent prompts, and synthesis format.
+**When user picks the triage route:** Spawn triage agents. See
+[triage-agent.md](triage-agent.md) for gating, tiered spawning, agent prompts,
+and synthesis format.
 
 ---
 

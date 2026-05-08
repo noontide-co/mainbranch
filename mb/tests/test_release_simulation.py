@@ -59,6 +59,7 @@ def test_release_simulation_covers_rich_migration_triage_map() -> None:
     assert "primitive map" in " ".join(sim.must_observe).lower()
     assert "linked operating boundaries" in " ".join(sim.must_observe)
     assert any("vaguely scan the repo" in item for item in sim.must_not)
+    assert any("private local-state" in item for item in sim.must_not)
     assert "repo_boundary_safety" in sim.expected_behaviors
 
 

@@ -431,6 +431,27 @@ def test_doctor_repair_plan_flags_offer_slug_folder_drift(tmp_path: Path) -> Non
     assert drift["declared_slug"] == "noontide-community"
 
 
+def test_doctor_repair_plan_keeps_normal_multi_offer_repo_quiet(tmp_path: Path) -> None:
+    repo = tmp_path / "normal-multi-offer"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core" / "offer.md").write_text("# Brand offer thesis\n", encoding="utf-8")
+    for slug in ("community", "agency"):
+        offer = repo / "core" / "offers" / slug / "offer.md"
+        offer.parent.mkdir(parents=True)
+        offer.write_text(f"---\nslug: {slug}\nstatus: running\n---\n# {slug}\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "offer-topology")
+    kinds = {check["kind"] for check in section["checks"]}
+    assert section["state"] == "ok"
+    assert "offer-slug-drift" not in kinds
+    assert "multi-offer-review" not in kinds
+    assert "brand-offer-slug-overlap" not in kinds
+
+
 def test_doctor_repair_plan_flags_multi_offer_session_disagreement(tmp_path: Path) -> None:
     repo = tmp_path / "multi-offer"
     init_run(path=str(repo), name="Acme")

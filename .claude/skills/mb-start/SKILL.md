@@ -407,7 +407,13 @@ to `/mb-think`.
 
 **Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[current_offer or 'single']**"
 
-**Surface unread CHANGELOG entries before the menu**, present option 1 (triage), and use the "while you wait" pattern when spawning agents. See **[references/triage-menu.md](references/triage-menu.md)** for the full menu, the CHANGELOG "what's new" banner format (diff'd against `last_seen_version`), the random "while you wait" filler lines, and rules for when to auto-suggest or skip triage.
+**Surface unread CHANGELOG entries before the menu**, present the triage route
+without reusing a number from recommendations or offers, and use the "while you
+wait" pattern when spawning agents. See
+**[references/triage-menu.md](references/triage-menu.md)** for the full menu,
+the CHANGELOG "what's new" banner format (diff'd against `last_seen_version`),
+the random "while you wait" filler lines, and rules for when to auto-suggest or
+skip triage.
 
 ---
 
@@ -437,7 +443,7 @@ Auto-detect user intent and route. Skills: `/mb-update`, `/mb-help`, `/mb-setup`
 
 | Keywords | Route To |
 |----------|----------|
-| "what should I work on", "help me prioritize", "what to do next", "figure out what to work on", "deep triage" | Option 1 → Triage (see [triage-agent.md](references/triage-agent.md)) |
+| "what should I work on", "help me prioritize", "what to do next", "figure out what to work on", "deep triage" | Triage route (see [triage-agent.md](references/triage-agent.md)) |
 | "help", "confused", "stuck", "don't understand", "how do I" | `/mb-help` |
 | "new", "first time", "get started", "set up" | `/mb-setup` |
 | "add", "update", "more context", "new testimonials", "enrich" | `/mb-think codify` |

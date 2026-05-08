@@ -248,7 +248,7 @@ Pattern-match filenames against `YYYY-MM-DD-slug.md`. Only flag if >20% violatio
 - File-level flags (A, B, C) appear inline next to the relevant file score
 - Pipeline flags (D, E) appear as a separate line below file scores
 - No "WARNING" or "ISSUE" language — factual observations only
-- If any flags exist, append: "Pick option 1 for deeper analysis"
+- If any flags exist, append: "Pick the triage route for deeper analysis"
 - Flags inform; they do NOT gate routing or change the structural score
 
 ---
@@ -487,7 +487,7 @@ Still show what would reach 18. **Beginner/intermediate get the gap display belo
 
 No structural gaps to show, but don't claim perfection — triage finds deeper issues:
 
-> "**Repo Health: FULL** (18/18). All reference files present and substantive. For deeper analysis (staleness, cross-file consistency, pipeline health), pick option 1."
+> "**Repo Health: FULL** (18/18). All reference files present and substantive. For deeper analysis (staleness, cross-file consistency, pipeline health), pick the triage route."
 
 **Do NOT say:** "locked", "mature", "production-ready", or "all set." 18/18 means structure is complete, not that content is perfect. Triage handles quality.
 
@@ -507,11 +507,11 @@ Health flags from Section 3 appear alongside structural scores. File-level flags
 > - Action needed: 2
 > - Stale/orphaned: 1
 >
-> Pick option 1 for deeper analysis."
+> Pick the triage route for deeper analysis."
 
 **Advanced — flags on one line:**
 
-> "**18/18** — flags: soul.md draft, audience.md stale (41d), 8 codified + 55 accepted, 4 need review, 2 action needed, 1 stale/orphaned. Option 1 for details."
+> "**18/18** — flags: soul.md draft, audience.md stale (41d), 8 codified + 55 accepted, 4 need review, 2 action needed, 1 stale/orphaned. Triage route for details."
 
 **When GOOD/FULL with both gaps AND flags:**
 
@@ -527,7 +527,7 @@ Health flags from Section 3 appear alongside structural scores. File-level flags
 > - Action needed: 1
 > - Stale/orphaned: 1
 >
-> Pick option 1 for deeper analysis."
+> Pick the triage route for deeper analysis."
 
 **When no flags fire:** Don't show the Flags section at all. No "Flags: none" or "0 flags" — just omit it.
 

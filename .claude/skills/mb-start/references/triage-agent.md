@@ -10,7 +10,7 @@ Modeled on `/mb-end`'s crystallize agent pattern. Where crystallize asks "what d
 
 ## When to Run
 
-**Triage runs when the user chooses it.** It can be option 1 on the main
+**Triage runs when the user chooses it.** It can be the first item on the main
 /mb-start route menu, but only when no ranked recommendation or offer list is
 using the same number in that response. The user can always skip it and pick a
 skill directly.
@@ -103,7 +103,14 @@ Gather these in main and pass as structured text in each agent's prompt:
 | Push lifecycle listing | `grep -rl "status: draft\|status: planned\|status: active" pushes/ campaigns/ 2>/dev/null` | ~10 lines | Agent 2 |
 | Primitive map | File lists grouped by the map below | ~40 lines | All 3 agents |
 
-**What agents read themselves (in their own context, NOT in main):**
+**What agents may read themselves (in their own context, NOT in main):**
+
+Read only the subset needed for the assigned triage question. Start from status
+facts, file lists, and filenames; do not recursively scan the whole repo or
+linked repos. Never open raw exports, secrets, credentials, customer/member
+records, or private local-state files unless the operator explicitly points to a
+sanitized file for the current task.
+
 - Brand truth: `core/soul.md`, `core/voice.md`, `core/audience.md`,
   `core/offer.md`, `core/strategy/`, `core/operations/`, `core/brand/`.
 - Offer truth: `core/offers/<slug>/offer.md`, optional
@@ -432,7 +439,7 @@ Each agent is **read-only**. Each reads files in its own context window. Main co
 
 ### After Spawning: Wait for Agents
 
-**The user already chose triage (option 1). They're waiting for results.** Show a brief message: "Analyzing your business state..." while agents work.
+**The user already chose triage. They're waiting for results.** Show a brief message: "Analyzing your business state..." while agents work.
 
 ### When Agents Return: Present the Synthesis
 
@@ -646,6 +653,6 @@ status: complete
 
 ## See Also
 
-- [../SKILL.md](../SKILL.md) -- The /mb-start flow where triage is option 1 on the menu
+- [../SKILL.md](../SKILL.md) -- The /mb-start flow where triage is an explicit route
 - [readiness-assessment.md](readiness-assessment.md) -- Scoring rubric and display format (runs before triage, provides scores to agents)
 - `/mb-end` crystallize-agent pattern -- The model for this agent's gating, tiering, and token budget
