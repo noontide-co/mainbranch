@@ -97,13 +97,13 @@ if mcp__whisper__* exists: WHISPER=true
 ```
 1. Check for explicit URL/file
    ├─> YouTube URL → route_youtube()
-   ├─> X/Twitter post or profile URL → route_x_public_mining() only as optional read-only sidecar research
+   ├─> X/Twitter post or profile URL → route_x_public_mining()
    ├─> Instagram URL → route_instagram()
    └─> Local file → route_local_transcription()
 
 2. Check for social triggers
    ├─> X/Twitter topic sentiment → route_x_social()
-   ├─> X/Twitter post/profile teardown → route_x_public_mining() only as optional read-only sidecar research
+   ├─> X/Twitter post/profile teardown → route_x_public_mining()
    └─> Instagram handle → route_instagram()
 
 3. Check complexity
@@ -117,6 +117,10 @@ if mcp__whisper__* exists: WHISPER=true
 - Tier 1: Quick questions, fact-checking (30-60s, ~$0.01-0.05)
 - Tier 2: Competitive analysis, industry research, multi-source synthesis (5-20min, ~$2-5)
 ```
+
+`route_x_public_mining()` is optional read-only sidecar research, not an
+official X integration. Use it only when configured and when the operator
+accepts the source, terms, cost, and reliability tradeoffs.
 
 ---
 

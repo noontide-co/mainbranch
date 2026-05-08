@@ -229,10 +229,12 @@ WebSearch: "AI coding assistants site:x.com"
 
 Still useful for finding popular/viral posts that have been indexed.
 
-For specific public X post/profile teardown, route to Apify public X mining
-when configured, then synthesize the post mechanic and comment quality. Grok is
-the better path for topic-level "what are people saying now?" research; Apify is
-the better optional path for bounded public profile/post/reply samples.
+For specific public X post/profile teardown, use optional public X mining only
+as read-only sidecar research when configured and when the operator accepts the
+source, terms, cost, and reliability tradeoffs. Then synthesize the post
+mechanic and comment quality. Grok is the better path for topic-level "what are
+people saying now?" research; optional public X mining is the better path for
+bounded public profile/post/reply samples.
 
 ---
 
