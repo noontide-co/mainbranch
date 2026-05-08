@@ -122,11 +122,12 @@ def score_transcript(text: str, checks: tuple[BehaviorCheck, ...] | None = None)
     """
     active_checks = behavior_checks() if checks is None else checks
     normalized = text.lower()
+    observed_unknown_command = contains_observed_unknown_command_failure(text)
     results: dict[str, dict[str, Any]] = {}
     passed = 0
     for check in active_checks:
         ok = any(_keyword_matches(normalized, keyword) for keyword in check.keywords)
-        if check.id == "skill_discovery" and "unknown command" in normalized:
+        if check.id == "skill_discovery" and observed_unknown_command:
             ok = False
         if check.id == "runtime_provider_honesty" and _contains_overclaim(normalized):
             ok = False
@@ -135,6 +136,8 @@ def score_transcript(text: str, checks: tuple[BehaviorCheck, ...] | None = None)
             "description": check.description,
             "keywords": list(check.keywords),
         }
+        if check.id == "skill_discovery":
+            results[check.id]["observed_unknown_command_failure"] = observed_unknown_command
         if ok:
             passed += 1
     return {
@@ -146,6 +149,25 @@ def score_transcript(text: str, checks: tuple[BehaviorCheck, ...] | None = None)
             "categories before release acceptance."
         ),
     }
+
+
+def contains_observed_unknown_command_failure(text: str) -> bool:
+    """Return true when a transcript appears to report an observed slash failure.
+
+    Claude may correctly mention ``Unknown command: /mb-start`` while triaging a
+    repair path. Release acceptance should fail on observed runtime output or a
+    final diagnosis, not quoted symptom options or conditional repair guidance.
+    """
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        normalized = _normalize_unknown_command_line(line)
+        if "unknown command" not in normalized:
+            continue
+        if _is_observed_unknown_command_line(normalized):
+            return True
+        if _is_unknown_command_contextual_guidance(normalized):
+            continue
+    return False
 
 
 def validate_manifest(manifest: dict[str, Any] | None = None) -> list[str]:
@@ -190,6 +212,89 @@ def _contains_overclaim(text: str) -> bool:
         "spent money for you",
     )
     return any(term in text for term in overclaim_terms)
+
+
+def _normalize_unknown_command_line(line: str) -> str:
+    normalized = line.lower().strip()
+    normalized = re.sub(r"^[>\-\*\s]+", "", normalized)
+    normalized = normalized.replace("`", "").replace('"', "").replace("'", "")
+    normalized = normalized.replace("\u2014", "-").replace("\u2013", "-")
+    normalized = re.sub(r"\s+", " ", normalized)
+    return normalized.strip()
+
+
+def _is_unknown_command_contextual_guidance(line: str) -> bool:
+    if "?" in line and any(
+        marker in line
+        for marker in (
+            "did you see",
+            "do you see",
+            "have you seen",
+            "saw",
+            "was it",
+            "whether",
+            "which symptom",
+            "what symptom",
+        )
+    ):
+        return True
+    if re.search(r"\bif\b.+\bunknown command\b", line):
+        return True
+    if re.search(r"\bunknown command\b.+\b(if|then|run|repair|fix|use)\b", line):
+        return True
+    return any(
+        marker in line
+        for marker in (
+            "diagnostic option",
+            "possible symptom",
+            "symptom option",
+            "quoted symptom",
+            "example symptom",
+        )
+    )
+
+
+def _is_observed_unknown_command_line(line: str) -> bool:
+    if re.fullmatch(r"(error:\s*)?unknown command:?\s*/?mb-start\.?", line):
+        return True
+    if any(
+        marker in line
+        for marker in (
+            "false positive",
+            "not a discovery failure",
+            "not an actual failure",
+            "not a skill discovery failure",
+        )
+    ):
+        return False
+    if any(
+        marker in line
+        for marker in (
+            "final diagnosis",
+            "actual failure",
+            "observed runtime",
+            "runtime output",
+            "discovery failure",
+            "skill discovery failure",
+            "symptom confirmed",
+        )
+    ):
+        return True
+    if re.search(
+        r"\b(claude|runtime|slash command|/mb-start|mb-start)\b"
+        r".{0,80}\b(reported|returned|emitted|showed|failed with)\b"
+        r".{0,40}\bunknown command\b",
+        line,
+    ):
+        return True
+    return (
+        re.search(
+            r"\bunknown command\b.{0,40}\b"
+            r"(reported|returned|emitted|showed|observed|confirmed)\b",
+            line,
+        )
+        is not None
+    )
 
 
 def _keyword_matches(text: str, keyword: str) -> bool:

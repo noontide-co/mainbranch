@@ -594,7 +594,9 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
     rubric = score_transcript(transcript_text)
     write_json(state.evidence_dir / "claude" / "rubric.json", rubric)
 
-    if transcript_text and "unknown command" in transcript_text.lower():
+    if transcript_text and release_simulation.contains_observed_unknown_command_failure(
+        transcript_text
+    ):
         state.fail("Claude print-mode transcript reported an unknown command")
 
     state.claude = {

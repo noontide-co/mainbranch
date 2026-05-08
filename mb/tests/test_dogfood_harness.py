@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from argparse import Namespace
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from mb import dogfood_harness as harness
+from mb import release_simulation
 
 
 def test_score_transcript_detects_core_runtime_behaviors() -> None:
@@ -35,6 +39,86 @@ def test_score_transcript_flags_unknown_command_as_discovery_failure() -> None:
     score = harness.score_transcript("Unknown command: /mb-start")
 
     assert score["checks"]["skill_discovery"]["ok"] is False
+
+
+def test_run_claude_print_allows_unknown_command_repair_guidance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state = harness.HarnessState(
+        engine_repo=tmp_path / "engine",
+        root=tmp_path,
+        evidence_dir=tmp_path / "evidence",
+        fixture_repo=tmp_path / "fixture",
+        mb_path=tmp_path / "venv" / "bin" / "mb",
+    )
+    state.fixture_repo.mkdir(parents=True)
+
+    simulation = release_simulation.Simulation(
+        id="repair",
+        label="repair",
+        title="Repair",
+        tiers=("pr_smoke",),
+        prompt="/mb-start",
+        expected_route=("sense",),
+        expected_behaviors=("skill_discovery",),
+        must_observe=("repair guidance",),
+        must_not=(),
+    )
+
+    def fake_run_command(
+        state: harness.HarnessState,
+        label: str,
+        command: list[str],
+        *,
+        cwd: Path,
+        timeout: int | None = None,
+    ) -> harness.CommandResult:
+        del state, command, cwd, timeout
+        stdout_path = tmp_path / f"{label}.stdout"
+        stderr_path = tmp_path / f"{label}.stderr"
+        metadata_path = tmp_path / f"{label}.json"
+        stdout = json.dumps(
+            {
+                "result": {
+                    "content": [
+                        {
+                            "text": (
+                                "/mb-start was discovered. If Claude reports "
+                                "`Unknown command: /mb-start`, run mb doctor "
+                                "and mb skill repair before manual fixes."
+                            )
+                        }
+                    ]
+                }
+            }
+        )
+        stdout_path.write_text(stdout, encoding="utf-8")
+        stderr_path.write_text("", encoding="utf-8")
+        metadata_path.write_text("{}", encoding="utf-8")
+        return harness.CommandResult(
+            label=label,
+            command=["claude", "-p"],
+            cwd=tmp_path,
+            returncode=0,
+            stdout=stdout,
+            stderr="",
+            stdout_path=stdout_path,
+            stderr_path=stderr_path,
+            metadata_path=metadata_path,
+        )
+
+    monkeypatch.setattr(shutil, "which", lambda _: "/usr/local/bin/claude")
+    monkeypatch.setattr(
+        release_simulation,
+        "simulations_for_tier",
+        lambda _: (simulation,),
+    )
+    monkeypatch.setattr(harness, "run_command", fake_run_command)
+
+    harness.run_claude_print(state, max_budget_usd="0.01", simulation_tier="pr_smoke")
+
+    assert "Claude print-mode transcript reported an unknown command" not in state.failures
+    assert state.claude["rubric"]["checks"]["skill_discovery"]["ok"] is True
 
 
 def test_read_json_rejects_non_object_payload() -> None:

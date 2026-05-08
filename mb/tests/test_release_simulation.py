@@ -99,3 +99,49 @@ def test_score_transcript_uses_tighter_discovery_and_loop_keywords() -> None:
     assert generic_score["checks"]["loop_routing"]["ok"] is False
     assert routed_score["checks"]["skill_discovery"]["ok"] is True
     assert routed_score["checks"]["loop_routing"]["ok"] is True
+
+
+@pytest.mark.parametrize(
+    "transcript",
+    [
+        "Unknown command: /mb-start",
+        "Claude runtime output: Unknown command: /mb-start",
+        "Final diagnosis: slash command discovery failure. Unknown command: /mb-start",
+    ],
+)
+def test_score_transcript_flags_observed_unknown_command_failures(transcript: str) -> None:
+    score = release_simulation.score_transcript(transcript)
+
+    assert release_simulation.contains_observed_unknown_command_failure(transcript) is True
+    assert score["checks"]["skill_discovery"]["ok"] is False
+    assert score["checks"]["skill_discovery"]["observed_unknown_command_failure"] is True
+
+
+def test_score_transcript_allows_unknown_command_diagnostic_wording() -> None:
+    transcript = """
+    /mb-start was discovered enough to route the repair conversation. When you
+    saw `/mb-start` "not showing up" - was it `Unknown command: /mb-start`, the
+    slash menu missing it, or something else?
+    This is a false positive, not a discovery failure: `Unknown command:
+    /mb-start` was quoted symptom language.
+    """
+
+    score = release_simulation.score_transcript(transcript)
+
+    assert release_simulation.contains_observed_unknown_command_failure(transcript) is False
+    assert score["checks"]["skill_discovery"]["ok"] is True
+    assert score["checks"]["skill_discovery"]["observed_unknown_command_failure"] is False
+
+
+def test_score_transcript_allows_unknown_command_repair_guidance() -> None:
+    transcript = """
+    /mb-start was discovered, and this is repair guidance. If Claude reports
+    `Unknown command: /mb-start`, run `mb start --json`, `mb doctor`, and
+    `mb skill repair --repo .` before manual fixes.
+    """
+
+    score = release_simulation.score_transcript(transcript)
+
+    assert release_simulation.contains_observed_unknown_command_failure(transcript) is False
+    assert score["checks"]["skill_discovery"]["ok"] is True
+    assert score["checks"]["supported_repair_path"]["ok"] is True
