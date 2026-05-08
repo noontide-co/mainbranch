@@ -1,85 +1,96 @@
 ---
 type: educational
 topic: github-vs-gdocs
-status: stub
-last-updated: 2026-04-29
+status: draft
+last-updated: 2026-05-08
 ---
 
-# Why your business reference belongs in git, not Google Docs
+# GitHub vs. Google Docs: why your business repo lives in files
 
-## Why we don't recommend Google Docs as the company brain
+Main Branch is not asking you to become a developer. It is asking you to put
+important business memory in a place that you, your team, and your agent can
+inspect later.
 
-Google Docs is the default place businesses put their thinking — meeting notes, briefs, SOPs, brand guidelines, decision logs. It works for a season and rots in three specific ways.
+Google Docs is good for live writing. GitHub plus markdown is better for
+durable operating memory.
 
-**Version history is opaque and losable.** Docs revision history exists, but it is not a forensic record. You cannot diff two arbitrary versions side-by-side as text. You cannot search "when did we change the pricing on the offer page" across the whole drive. You cannot revert a single paragraph from three months ago without manual copy-paste. And every Docs user has stories of revision history that quietly disappeared after a rename, a copy, or a long period of inactivity. Git's history is content-addressed, immutable, and forensic by default. Every change has an author, a timestamp, and a parent commit. This isn't a nice-to-have; it is the only honest way to know how your company's thinking evolved.
+## The beginner version
 
-**Search is shallow.** Google Drive search is keyword search across titles and visible content — it does not handle regex, does not respect word boundaries reliably, and silently truncates very large drives. Once your reference corpus passes ~200 docs, finding the one paragraph you remember writing six months ago becomes a project. With markdown in git, `rg "the exact phrase"` is instant and exact. Composability with the rest of your shell (`rg | xargs sed`, for example) means you can refactor terminology across 500 files in 30 seconds.
+Think of Google Docs as a whiteboard and GitHub as the business filing cabinet
+with a built-in change log.
 
-**Portability is a fiction.** "Export to .docx" or "Download all" produces a folder of files that lose the comments, the suggestion threads, the embedded images, and most of the formatting fidelity. Markdown is text. Markdown in git is text plus history. You own it forever, and every tool in your future stack will read it natively.
+When you run `mb onboard`, Main Branch creates a business folder on your
+computer. Inside it are plain markdown files for offers, audience notes,
+research, decisions, pushes, logs, documents, and outcomes. Git records how
+those files change over time. GitHub can back up and share that history.
 
-**Agent-friendliness.** Claude, Codex, Cursor, and every AI coding agent speak markdown-and-git natively. They can `git log --follow` a file, read its history, and reason about why it changed. They cannot reason about a Google Doc except by exporting it, parsing the export, and losing the threading. As "AI that knows your business" becomes the operating model, the substrate has to be one agents can read. Git is that substrate. Docs is not.
+You do not need to manage the plumbing every day. The normal loop is:
 
-**Lock-in.** Your company's thinking is in Google's database. Your account is one suspension away from being read-only. The TOS allows Google to terminate accounts at their discretion. Most businesses never hit this wall. The ones that do hit it discover that "export everything" is harder than they assumed.
+```bash
+cd /path/to/your-business
+claude
+/mb-start
+```
 
-## What we recommend instead
+`/mb-start` reads the files and the repo facts before it gives advice.
 
-A private GitHub (or Forgejo) repo with a CLAUDE.md at the root and a six-primitive folder structure: `core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`. Markdown for everything. Frontmatter for status. The repo is the company brain. Conductor or any AI agent reads it as the working substrate.
+## Why not just use Google Docs?
 
-The pitch in one sentence: **your business is a tree of files**. Once it is, every agent that can read files becomes a coworker.
+**Docs are easy to write in, but hard to operate from.** A business usually
+starts with scattered documents: a brand doc, an offer doc, research notes,
+meeting notes, maybe a spreadsheet. Six months later, nobody knows which doc is
+current or why the old decision changed.
 
-## Setup walkthrough
+**Git keeps the story.** A commit is a saved checkpoint. It says what changed,
+when it changed, and what the operator meant to preserve. That matters when an
+agent asks, "what did we decide last time?" or "what changed since this offer
+worked?"
 
-1. Create a private repo. From the GitHub UI: `New repository → Private → Initialize with README`. Name it something like `your-business` or `your-business-brain`.
+**Markdown is easy for agents to read.** Claude Code, future adapters, and
+power-user tools can read files directly. They do not need to export a Doc,
+guess at formatting, or lose comment context before reasoning about the
+business.
 
-2. Clone it locally:
-   ```bash
-   git clone git@github.com:yourname/your-business.git
-   cd your-business
-   ```
+**GitHub gives shared work threads.** Issues can be tasks, blockers, requests,
+or follow-ups. Pull requests can be proposals and review conversations. You can
+use friendlier words in the daily loop, but the durable layer remains
+inspectable.
 
-3. Add a `CLAUDE.md` at the root. This is the always-loaded context for any AI agent that opens the repo. A minimal first version:
-   ```markdown
-   # <Business Name>
+## What still belongs in Google Docs?
 
-   <One-sentence thesis: what this business is and who it serves.>
+Use Google Docs when live multiplayer editing is the job: a call agenda that
+three people are typing in at once, a client-facing collaborative draft, or a
+source doc someone already gave you in Workspace.
 
-   ## Folder structure
+When the doc becomes business truth, summarize or move the durable part into
+the repo:
 
-   - core/ — soul, offer, audience, voice, visual identity, finance
-   - research/ — dated investigations, never deleted
-   - decisions/ — dated choices with rationale, frontmatter status field
-   - log/ — daily/weekly notes, inbox-style dumps
-   - campaigns/ — outputs grouped by campaign
-   - documents/ — long-form artifacts (briefs, SOPs, contracts)
-   ```
+- a decision goes in `decisions/`;
+- research goes in `research/`;
+- an operating note goes in `log/`;
+- offer, audience, voice, proof, and strategy updates go in `core/`;
+- coordinated launches, drops, promos, or challenges go in `pushes/`.
 
-4. Set up the six-primitive folders:
-   ```bash
-   mkdir -p core/{soul,offer,audience,voice,visual-identity,finance} \
-            research decisions log campaigns documents
-   git add . && git commit -m "[init] six-primitive structure"
-   git push
-   ```
+## The safe setup path
 
-5. Connect to a Conductor workspace (or open the repo in Claude Code directly):
-   ```bash
-   # In Conductor: New Workspace -> point at the repo path
-   # Or: cd into the repo and run `claude` to start a Claude Code session.
-   ```
+Start with the shipped beginner command:
 
-6. Migrate one Google Doc as a forcing function. Pick the most important one — usually a brand brief or a strategy doc. Paste it into `core/offer/offer.md` (or wherever it belongs). Commit. Notice how much faster every subsequent edit, search, and agent read becomes. Migrate the next doc when the next decision needs it. Don't try to bulk-migrate everything; that's a project that never ships.
+```bash
+mb onboard --name "My Business" --path my-business
+cd my-business
+claude
+/mb-start
+```
 
-Cost: $0/month for private repos on GitHub (free tier covers it for individuals and small teams). Forgejo on your own hardware is also free.
+Do not start by hand-writing git commands. Let `mb onboard`, `mb status`,
+`mb doctor`, and `/mb-start` tell you what is ready and what needs repair.
 
-## Honest limitations
+## What Main Branch does not claim
 
-Markdown in git does not solve **real-time multiplayer editing**. If two people are typing in the same paragraph at the same time, Google Docs still wins. Most reference work isn't actually concurrent — it's "someone writes, others react" — but the few cases where it is concurrent (live meeting notes during a call, brainstorm with three people typing) are friction. We solve this by writing first in a scratch tool (Apple Notes, a shared scratchpad) and porting to git at the end of the session, but that's a workflow gap, not a no-op.
+Main Branch does not replace Google Workspace. It gives the business a durable
+operating repo. Google Docs, Sheets, and Drive can still be useful source
+material when a workflow needs them.
 
-It also has a higher learning curve. A non-technical collaborator who is fluent in Docs needs an afternoon to learn `git pull / git commit / git push`. GitHub Desktop or the GitHub web editor lowers the bar; some collaborators will still bounce. Whether the learning curve is worth the durability gain is a per-person judgment call.
-
-## Resources
-
-- GitHub markdown reference: https://docs.github.com/en/get-started/writing-on-github
-- GitHub Desktop (no-CLI git client): https://desktop.github.com/
-- Conductor workspace docs: https://conductor.build/docs
-- "Your business is a tree of files" (Main Branch positioning, internal): see `decisions/2026-04-29-mb-vip-v0-1-0-master.md`
+Main Branch also does not claim broad runtime support yet. Claude Code is the
+supported runtime today; other runtimes are roadmap targets until adapter code
+and smoke evidence exist.

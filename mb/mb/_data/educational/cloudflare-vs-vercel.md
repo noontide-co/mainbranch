@@ -1,66 +1,85 @@
 ---
 type: educational
 topic: cloudflare-vs-vercel
-status: stub
-last-updated: 2026-04-29
+status: draft
+last-updated: 2026-05-08
 ---
 
-# Why we ship sites on Cloudflare Pages, not Vercel or Netlify
+# Cloudflare vs. Vercel: why Main Branch defaults to boring site rails
 
-## Why we don't recommend Vercel or Netlify by default
+Main Branch uses Cloudflare for sites and DNS because most business operators
+need predictable publishing more than they need a fancy application platform.
 
-Vercel and Netlify are excellent products. The reason we don't pick them as the Main Branch default is not quality — it's pricing posture and lock-in.
+The beginner question is not "which platform is coolest?" The question is:
+"Can I publish the page, attach the domain, understand what changed, and avoid
+surprise infrastructure work?"
 
-**Pricing model risk.** Both Vercel and Netlify use a "free tier with metered overage" model. If your site goes viral, you pay for it after the fact, and the bill can be surprising. Vercel's bandwidth overages are billed at $40/TB after the included 100 GB on Hobby; Netlify's are $55/TB after 100 GB. We have seen Main Branch members hit $300 surprise bills from a single Reel that sent 500K visitors to a one-page site. Cloudflare's free Pages tier has unlimited bandwidth — that is not marketing copy, it is the actual policy as of 2026. The bill cannot surprise you because there is no meter.
+## The beginner version
 
-**Build minutes are a hidden meter.** Vercel includes 6,000 build-execution minutes per month on Pro; if you are deploying every commit on a busy week, you'll see throttling or upgrade prompts. Cloudflare Pages includes 500 builds per month on the free tier, then charges per build (not per minute). The pricing scales linearly and predictably.
+For Main Branch, a site should usually be:
 
-**Egress and image-optimization fees.** Vercel's image-optimization and edge-function minutes are separately metered. Each Next.js `<Image>` view counts. For a marketing site this is small, but for any site that grows organically over a year, it compounds. Cloudflare's image resizing and Workers requests are metered too, but the free tier ceiling is meaningfully higher and the per-unit cost is lower at every tier we have benchmarked.
+1. files in a repo;
+2. a GitHub-backed deploy;
+3. a Cloudflare Pages project;
+4. a domain connected through Cloudflare DNS;
+5. a clear provider-readiness check before publishing work depends on it.
 
-**Build-pipeline lock-in.** Vercel's build pipeline is tightly coupled to their platform. Their Next.js features (ISR, on-demand revalidation, edge middleware) work only on Vercel; the same code on a different host degrades. Cloudflare Pages is build-pipeline-agnostic — it accepts the static output of any framework, and the deploy is just a folder of files. This makes "leave Cloudflare" a one-day project. "Leave Vercel after writing Vercel-specific Next.js features" is a quarter-long project.
+That path keeps the site close to the same durable memory model as the business
+repo. A commit changes the site. Cloudflare publishes the result. The operator
+can inspect the repo, the deploy, and the domain.
 
-**Composability.** Cloudflare Pages, Workers, R2 (object storage), D1 (SQLite at the edge), Queues, and KV are one platform with one bill. The Main Branch stack uses Pages for the static site, Workers for any custom endpoint (e.g., the `mb claim` Skool-membership check), and R2 for ad-hoc artifact storage. On Vercel you'd reach for AWS or a third-party for the equivalents.
+## Why Cloudflare Pages is the default
 
-## What we recommend instead
+**It matches static marketing work.** Most Main Branch site work starts as a
+landing page, minisite, wiki, or offer page. Those surfaces should be easy to
+build, review, push, and roll back.
 
-Cloudflare Pages, deployed via `wrangler` from a GitHub repo, with a custom domain and SSL provisioned automatically. Builds run in Cloudflare's pipeline; deploys are atomic; rollbacks are one click. For any dynamic surface, Workers sit beside Pages in the same project.
+**DNS and publishing live together.** Domain setup is one of the places
+beginners get stuck. Cloudflare keeps DNS, Pages, SSL, and future Workers close
+enough that `mb` and skills can explain one rail instead of five disconnected
+vendor surfaces.
 
-## Setup walkthrough
+**It is git-friendly.** Git-connected Pages projects fit the Main Branch rule:
+files and commits are the source of truth, and the deploy is a view over that
+truth.
 
-1. Create a Cloudflare account at https://dash.cloudflare.com/sign-up. Free tier is enough.
+**It leaves room for simple dynamic edges.** If a future workflow needs a small
+endpoint, redirect, gate, or webhook, Cloudflare Workers sit near Pages without
+turning the whole site into a hosted SaaS app.
 
-2. Install `wrangler` (the Cloudflare CLI):
-   ```bash
-   npm install -g wrangler
-   wrangler login
-   ```
-   The login command opens a browser tab and authorizes the CLI.
+## When Vercel or Netlify can still be right
 
-3. Connect a GitHub repo as a Pages project. From the dashboard: `Workers & Pages → Create → Pages → Connect to Git`. Pick the repo, the branch (typically `main`), and the build settings. For a vanilla static site, set the build command to whatever your framework needs (e.g., `npm run build`) and the output directory to `dist/` or `public/`.
+Choose Vercel or Netlify when a project already depends on their platform
+features, when a team is already fluent there, or when a specific framework
+path is materially easier on that host.
 
-4. Set a custom domain. From the project page: `Custom domains → Set up a domain`. Cloudflare will provision an SSL cert automatically if your domain is on Cloudflare DNS. If it's elsewhere, you add a CNAME at your registrar.
+Main Branch's default is not a moral judgment. It is a bias toward boring,
+inspectable, low-surprise rails for business pages.
 
-5. Verify deploys. Push a commit to `main`. Within ~60 seconds Cloudflare builds and publishes. Open the project URL.
+## The safe setup path
 
-6. Optional but recommended: set up a `wrangler.toml` in the repo so you can `wrangler pages deploy` from your laptop without a GitHub round-trip:
-   ```toml
-   name = "your-site"
-   compatibility_date = "2026-04-29"
-   pages_build_output_dir = "dist"
-   ```
-   Then `wrangler pages deploy dist/` after a local build.
+Do not connect Cloudflare on day one unless a site job needs it. From the
+business repo, start with:
 
-Cost at typical Main Branch scale: $0/month for a marketing site under ~10K daily visitors. You start paying when you cross into Workers Paid ($5/month for 10M requests) or R2 storage above 10 GB.
+```bash
+mb connect plan
+```
 
-## Honest limitations
+When the next business action is publishing or attaching a domain, follow the
+Cloudflare step that `mb connect plan` prints. Use:
 
-Cloudflare Pages does not have first-class Next.js ISR or React Server Components support the way Vercel does. If you are building a heavy React app with dynamic SSR rendering and per-request edge logic, Vercel's developer experience is better and the lock-in cost may be worth it. For Main Branch sites — which are mostly static marketing surfaces with the occasional Worker for a form submit or a Skool gate — Pages is the right tool.
+```bash
+mb educational provider-readiness
+```
 
-The Cloudflare dashboard is also denser and less polished than Vercel's. First-time users will need 30 minutes to learn it. After that it's fine.
+for the plain-English version of what connected accounts mean.
 
-## Resources
+## What Main Branch does not claim
 
-- Cloudflare Pages docs: https://developers.cloudflare.com/pages/
-- Wrangler CLI: https://developers.cloudflare.com/workers/wrangler/
-- Pricing comparison (Cloudflare): https://developers.cloudflare.com/pages/platform/limits/
-- Vercel pricing (for comparison): https://vercel.com/pricing
+Main Branch does not claim every Cloudflare workflow is automated. Site and
+provider behavior should be trusted only where the CLI, bundled skills, and
+smoke evidence say that path is ready.
+
+Main Branch also does not require every business to leave an existing Vercel or
+Netlify site immediately. Migrate when the next business job benefits from the
+repo-backed Cloudflare path.

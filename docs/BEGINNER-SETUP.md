@@ -10,6 +10,22 @@ If this feels over your head, that's okay. Most of this is one-time setup. After
 
 You need a terminal because Main Branch creates real files on your machine. That's the magic — your business context lives in files Claude reads every session, instead of resetting to zero. Don't let the unfamiliarity stop you. One step at a time.
 
+If you want the "why" while you set up, Main Branch has short educational
+topics you can print from the terminal:
+
+```bash
+mb educational daily-owner-loop
+mb educational why-mainbranch-not-saas
+mb educational github-vs-gdocs
+mb educational cli-vs-dashboard
+mb educational markdown-vs-notion
+mb educational git-history-vs-cloud-sync
+```
+
+Start with `daily-owner-loop`. The other topics explain the tool philosophy
+behind that loop: local files, markdown, git history, GitHub work threads, `mb`
+readiness checks, and Claude Code skills.
+
 ---
 
 ## Required Accounts
@@ -161,6 +177,22 @@ For the longer plain-English explanation, run:
 
 ```bash
 mb educational provider-readiness
+```
+
+Provider-specific education is available when a job needs that rail:
+
+```bash
+mb educational cloudflare-pages
+mb educational cal-com
+mb educational stripe
+mb educational beancount
+mb educational forgejo
+```
+
+For runtime/editor boundaries, use:
+
+```bash
+mb educational cursor
 ```
 
 ---

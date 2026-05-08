@@ -62,6 +62,50 @@ def test_educational_provider_readiness_exists() -> None:
     assert "provider-readiness" in topics()
 
 
+def test_educational_beginner_catalog_exists() -> None:
+    from mb.educational import load, topics
+
+    expected = {
+        "anti-cloud-backup",
+        "beancount",
+        "cal-com",
+        "cli-vs-dashboard",
+        "cloudflare-pages",
+        "cloudflare-vs-vercel",
+        "cursor",
+        "daily-owner-loop",
+        "forgejo",
+        "git-history-vs-cloud-sync",
+        "github-vs-gdocs",
+        "markdown-vs-notion",
+        "provider-readiness",
+        "stripe",
+        "upgrading-mainbranch",
+        "why-mainbranch-not-saas",
+    }
+
+    assert expected.issubset(set(topics()))
+    for topic in expected:
+        result = load(topic)
+        assert result is not None
+        assert "What Main Branch does not claim" in result
+
+
+def test_educational_source_and_package_fallback_topics_stay_in_sync() -> None:
+    root = Path(__file__).resolve().parents[2]
+    source = root / ".claude" / "educational"
+    fallback = root / "mb" / "mb" / "_data" / "educational"
+
+    source_files = sorted(path.name for path in source.glob("*.md"))
+    fallback_files = sorted(path.name for path in fallback.glob("*.md"))
+
+    assert source_files == fallback_files
+    for name in source_files:
+        assert (source / name).read_text(encoding="utf-8") == (fallback / name).read_text(
+            encoding="utf-8"
+        )
+
+
 # ------------------------------------------------------------------------ think
 
 

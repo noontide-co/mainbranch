@@ -66,7 +66,8 @@ def run(topic: str) -> None:
     body = load(topic)
     if body is None:
         available = ", ".join(topics()) or (
-            "anti-cloud-backup, cloudflare-vs-vercel, github-vs-gdocs, upgrading-mainbranch"
+            "daily-owner-loop, why-mainbranch-not-saas, github-vs-gdocs, "
+            "provider-readiness, cloudflare-pages, upgrading-mainbranch"
         )
         print(
             f"educational topic not found: {topic}\nTry one of: {available}",

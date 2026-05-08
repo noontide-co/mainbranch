@@ -11,6 +11,20 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added a beginner education catalog for `mb educational`, including the
+  daily owner loop, Main Branch anti-SaaS why, CLI/dashboard, markdown/Notion,
+  git/cloud-sync, Cloudflare Pages, Cal.com, Beancount, Forgejo, Cursor, and
+  Stripe topics. Refs #144.
+
+### Changed
+
+- Refreshed the existing educational topics so setup, provider readiness,
+  updates, GitHub/Docs, Cloudflare/Vercel, and sensitive-data guidance teach
+  normal business owners through exact Main Branch commands without claiming
+  unshipped provider or runtime support. Refs #144.
+
 ## [0.3.9] - 2026-05-08
 
 v0.3.9 makes the daily operating loop more inspectable. Main Branch now exposes
