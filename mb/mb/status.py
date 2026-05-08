@@ -14,7 +14,6 @@ import yaml
 
 from mb import __version__, github_activity, relationships
 from mb import connect as connect_mod
-from mb import graph as graph_mod
 from mb import journal as journal_mod
 from mb import onboard as onboard_mod
 from mb import pushes as pushes_mod
@@ -301,15 +300,20 @@ def _journal_since_last_seen(
 
 def _read_frontmatter(path: Path) -> dict[str, Any]:
     try:
-        text = path.read_text(encoding="utf-8")
+        with path.open("r", encoding="utf-8") as handle:
+            first = handle.readline()
+            if first.strip() != "---":
+                return {}
+            lines: list[str] = []
+            for line in handle:
+                if line.strip() == "---":
+                    break
+                lines.append(line)
+            else:
+                return {}
     except OSError:
         return {}
-    if not text.startswith("---"):
-        return {}
-    end = text.find("\n---", 3)
-    if end == -1:
-        return {}
-    raw = text[3:end].strip()
+    raw = "".join(lines).strip()
     try:
         parsed = yaml.safe_load(raw) or {}
     except yaml.YAMLError:
@@ -380,10 +384,11 @@ def _file_summary(
 
 def _title_from_markdown(path: Path) -> str:
     try:
-        for line in path.read_text(encoding="utf-8").splitlines():
-            stripped = line.strip()
-            if stripped.startswith("# "):
-                return stripped[2:].strip()
+        with path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                stripped = line.strip()
+                if stripped.startswith("# "):
+                    return stripped[2:].strip()
     except OSError:
         pass
     return path.stem.replace("-", " ")
@@ -525,6 +530,105 @@ def _relationship_adjacency(edges: list[dict[str, Any]]) -> dict[str, dict[str, 
     return adjacency
 
 
+def _relationship_slug(value: str) -> str:
+    lowered = value.strip().lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", lowered).strip("-")
+    return slug or "unknown"
+
+
+def _coerce_relationship_refs(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, str)]
+    return []
+
+
+def _is_hidden_or_generated(path: Path, repo: Path) -> bool:
+    try:
+        rel_parts = path.relative_to(repo).parts
+    except ValueError:
+        return True
+    is_bundled_data = rel_parts[:2] == ("mb", "_data") or rel_parts[:1] == ("_data",)
+    return (
+        any(
+            part.startswith(".") or part in {"__pycache__", "node_modules", ".venv", "venv"}
+            for part in rel_parts
+        )
+        or is_bundled_data
+    )
+
+
+def _relationship_markdown_files(repo: Path) -> list[Path]:
+    return [
+        path
+        for path in sorted(repo.rglob("*.md"))
+        if path.is_file() and not _is_hidden_or_generated(path, repo)
+    ]
+
+
+def _resolve_relationship_ref(repo: Path, ref: str) -> Path | None:
+    clean_ref = relationships.clean_ref(ref)
+    if not clean_ref:
+        return None
+    target = (repo / clean_ref).resolve()
+    try:
+        target.relative_to(repo)
+    except ValueError:
+        return None
+    return target
+
+
+def _relationship_reference_edges(repo: Path) -> list[dict[str, Any]]:
+    edges: list[dict[str, Any]] = []
+    seen_edges: set[tuple[str, str, str, tuple[tuple[str, str], ...]]] = set()
+    if not repo.exists():
+        return edges
+
+    for file_path in _relationship_markdown_files(repo):
+        frontmatter = _read_frontmatter(file_path)
+        if not frontmatter:
+            continue
+        source_rel = file_path.relative_to(repo).as_posix()
+        source_id = f"file:{source_rel}"
+        for field in relationships.relationship_fields_for_source(source_rel):
+            rel_type = relationships.normalize_relationship(
+                field,
+                source_path=source_rel,
+                fallback=field,
+            )
+            for ref in _coerce_relationship_refs(frontmatter.get(field)):
+                clean_ref = relationships.clean_ref(ref)
+                if not clean_ref and not relationships.is_external_ref(ref):
+                    continue
+                target = _resolve_relationship_ref(repo, ref)
+                if target is not None and target.exists():
+                    target_id = f"file:{target.relative_to(repo).as_posix()}"
+                elif relationships.is_external_ref(ref):
+                    target_id = f"external:{_relationship_slug(ref)}"
+                else:
+                    target_id = f"missing:{_relationship_slug(ref)}"
+                evidence = {"kind": "frontmatter", "field": field, "path": source_rel}
+                key = (source_id, target_id, rel_type, tuple(sorted(evidence.items())))
+                if key in seen_edges:
+                    continue
+                seen_edges.add(key)
+                edges.append(
+                    {
+                        "source": source_id,
+                        "target": target_id,
+                        "type": field,
+                        "rel_type": rel_type,
+                        "original_field": field,
+                        "evidence": evidence,
+                        "target_ref": ref,
+                    }
+                )
+    return edges
+
+
 def _linked_paths(
     adjacency: dict[str, dict[str, set[str]]],
     path: str,
@@ -587,8 +691,7 @@ def _relationship_health(
     brain: dict[str, Any],
     today: date,
 ) -> dict[str, Any]:
-    graph_index = graph_mod.build_index(str(repo))
-    edges = [edge for edge in graph_index.get("edges", []) if isinstance(edge, dict)]
+    edges = _relationship_reference_edges(repo)
     adjacency = _relationship_adjacency(edges)
     all_bets = [_bet_summary(repo, path) for path in _relative_markdown_files(repo, "bets")]
     active_bets = [
@@ -650,11 +753,6 @@ def _relationship_health(
     relationship_types = {
         relationship.canonical_type for relationship in relationships.RELATIONSHIPS
     }
-    graph_nodes = {
-        str(node.get("id") or ""): node
-        for node in graph_index.get("nodes", [])
-        if isinstance(node, dict)
-    }
     missing_relationship_targets: list[dict[str, Any]] = []
     for edge in edges:
         rel_type = str(edge.get("rel_type") or "")
@@ -663,13 +761,12 @@ def _relationship_health(
             continue
         raw_evidence = edge.get("evidence")
         evidence: dict[str, Any] = raw_evidence if isinstance(raw_evidence, dict) else {}
-        target_node: dict[str, Any] = graph_nodes.get(target) or {}
         missing_relationship_targets.append(
             {
                 "source": str(evidence.get("path") or _file_path_from_graph_id(edge.get("source"))),
                 "relationship": rel_type,
                 "field": str(edge.get("original_field") or evidence.get("field") or ""),
-                "target": str(target_node.get("label") or target.removeprefix("missing:")),
+                "target": str(edge.get("target_ref") or target.removeprefix("missing:")),
             }
         )
 
@@ -753,7 +850,7 @@ def _relationship_health(
     active_gaps = [gap_item for gap_item in gaps if gap_item is not None]
     return {
         "ok": not active_gaps,
-        "source": "mb graph",
+        "source": "mb status relationship scan",
         "registry_version": relationships.REGISTRY_VERSION,
         "summary": {
             "gaps": len(active_gaps),

@@ -87,6 +87,15 @@ Parse user's natural language to determine research type:
 | "mine competitors", "what's [handle] posting" | Social mining | Apify Instagram Actor | Manual scraping guidance |
 | "research [specific question]" | General research | Codebase → Web → Ask user | Always works |
 
+### Format Selection
+
+The routing table chooses source tools. Output format is a separate decision.
+When the operator says "researched brief", "site brief", "launch brief", or
+passes `--brief-format=grok-8`, gather with the appropriate source route above,
+then write the synthesis using
+[grok-8-brief-format.md](grok-8-brief-format.md). If the broad format is not
+needed, use the standard research template.
+
 ### 3. Progressive Disclosure
 
 Research tools are surfaced based on user need, not dumped upfront.

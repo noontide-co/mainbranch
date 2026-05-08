@@ -1015,7 +1015,7 @@ def resolve_cmd(
 def educational_cmd(
     topic: str = typer.Argument(..., help="Educational topic slug."),
 ) -> None:
-    """Print an educational triage file. Powers doctor's 'tell me more' prompts."""
+    """Print a beginner education topic for Main Branch rails and defaults."""
     educational_mod.run(topic=topic)
 
 

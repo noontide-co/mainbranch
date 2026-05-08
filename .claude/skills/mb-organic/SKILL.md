@@ -94,6 +94,13 @@ Mining competitor content is research work. It belongs in `/mb-think` because:
 - A topic they want to turn into content
 - Inspiration from their own research
 
+If a selected research file has `brief_format: grok-8`, use its downstream
+handoff before generating: ICP and audience language for hooks, journey stage
+for format and CTA, competitive landscape for contrast, brand story for voice,
+content/assets for proof, and metrics/constraints for the success bar. If the
+brief names a resource-delivery mechanic, write or update a push playbook as a
+plan only; do not execute provider mutation.
+
 For the full mining methodology (Visual/Audible/Emotional framework, AI capabilities and limits, why mining flows into reference) see [references/mining-methodology.md](references/mining-methodology.md).
 
 ---

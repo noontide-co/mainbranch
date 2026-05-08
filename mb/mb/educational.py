@@ -14,6 +14,34 @@ from pathlib import Path
 
 from mb.engine import engine_root
 
+BEGINNER_CATALOG_TOPICS = (
+    "anti-cloud-backup",
+    "beancount",
+    "cal-com",
+    "cli-vs-dashboard",
+    "cloudflare-pages",
+    "cloudflare-vs-vercel",
+    "cursor",
+    "daily-owner-loop",
+    "forgejo",
+    "git-history-vs-cloud-sync",
+    "github-vs-gdocs",
+    "markdown-vs-notion",
+    "provider-readiness",
+    "stripe",
+    "upgrading-mainbranch",
+    "why-mainbranch-not-saas",
+)
+
+DEFAULT_TOPIC_HINTS = (
+    "daily-owner-loop",
+    "why-mainbranch-not-saas",
+    "github-vs-gdocs",
+    "provider-readiness",
+    "cloudflare-pages",
+    "upgrading-mainbranch",
+)
+
 
 def _engine_path() -> Path | None:
     """Return the active engine .claude/educational/ path."""
@@ -65,9 +93,7 @@ def run(topic: str) -> None:
     """Print the educational file or an honest error."""
     body = load(topic)
     if body is None:
-        available = ", ".join(topics()) or (
-            "anti-cloud-backup, cloudflare-vs-vercel, github-vs-gdocs, upgrading-mainbranch"
-        )
+        available = ", ".join(topics()) or ", ".join(DEFAULT_TOPIC_HINTS)
         print(
             f"educational topic not found: {topic}\nTry one of: {available}",
             file=sys.stderr,
