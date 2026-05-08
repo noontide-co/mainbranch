@@ -237,7 +237,9 @@ date: 2026-01-17
 source: claude-code
 model: opus-4.5
 status: complete
+brief_format: standard
 linked_decisions: []
+linked_pushes: []
 ---
 
 # Pricing Tier Strategy Research

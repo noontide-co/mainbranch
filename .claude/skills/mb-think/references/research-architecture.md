@@ -83,10 +83,18 @@ Parse user's natural language to determine research type:
 | "transcribe this video", "pull down this YouTube" | YouTube mining | Apify YouTube Actor | Ask for manual transcript |
 | "what are people saying about...", "sentiment on X" | Social sentiment | Grok X search | Web search for X posts |
 | "research [complex topic]", "deep dive on..." | Deep research | Gemini 2.5 | Web search + synthesis |
-| "researched brief", "site brief", "launch brief", "--brief-format=grok-8" | 8-category brief | Research bundle + `grok-8` format | Standard research template |
 | "transcribe this file", user shares .mp4/.m4a | Local transcription | whisper-mcp | ffmpeg + CLI fallback |
 | "mine competitors", "what's [handle] posting" | Social mining | Apify Instagram Actor | Manual scraping guidance |
 | "research [specific question]" | General research | Codebase → Web → Ask user | Always works |
+
+### Format Selection
+
+The routing table chooses source tools. Output format is a separate decision.
+When the operator says "researched brief", "site brief", "launch brief", or
+passes `--brief-format=grok-8`, gather with the appropriate source route above,
+then write the synthesis using
+[grok-8-brief-format.md](grok-8-brief-format.md). If the broad format is not
+needed, use the standard research template.
 
 ### 3. Progressive Disclosure
 
