@@ -11,6 +11,35 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.12] - 2026-05-08
+
+v0.3.12 is a quick follow-up release for the Google Ads launch playbook rails
+merged after v0.3.11. It moves the post-release playbook changelog entries out
+of the already-published v0.3.11 section and ships them as their own patch.
+
+### What this means for you (plain English)
+
+- **Google Ads Search launch plans get more reviewable.** `/mb-ads
+  launch-plan` now has clearer rails for researched campaign settings, assets,
+  skipped asset rationale, approval gates, and proposed durable `core/`
+  updates without mutating Google Ads.
+- **Reusable playbooks and per-push run records are easier to separate.** The
+  docs now distinguish platform rules, attributed playbook opinion, fork
+  points, and one-off push execution records.
+
+### Added
+
+- Added a playbook concept guide that separates official platform rules,
+  global platform guidance, attributed playbook opinion, fork points, and
+  per-push run records. Refs #427.
+- Added playbook memory guidance so paid-search discoveries can become durable
+  `research/`, `core/`, proof, strategy, or decision updates instead of staying
+  trapped inside one campaign run record. Refs #427.
+- Added Google Ads campaign-settings and asset research rails for
+  `/mb-ads launch-plan`, including market-intent research, geography and
+  conversion-path choices, RSA rationale, sitelinks, callouts, structured
+  snippets, skipped assets, URL options, and playbook fork records. Refs #427.
+
 ## [0.3.11] - 2026-05-08
 
 v0.3.11 tightens the daily-loop substrate after v0.3.10: startup and
@@ -93,16 +122,6 @@ interactive TUI slash-command proof.
   from the related operator repo launch notes: explicit form-success events,
   GTM Preview verification, GA4 Realtime/admin lag, and Google Ads conversion
   import UI variants. Refs #414, #422.
-- Added a playbook concept guide that separates official platform rules,
-  global platform guidance, attributed playbook opinion, fork points, and
-  per-push run records. Refs #427.
-- Added playbook memory guidance so paid-search discoveries can become durable
-  `research/`, `core/`, proof, strategy, or decision updates instead of staying
-  trapped inside one campaign run record. Refs #427.
-- Added Google Ads campaign-settings and asset research rails for
-  `/mb-ads launch-plan`, including market-intent research, geography and
-  conversion-path choices, RSA rationale, sitelinks, callouts, structured
-  snippets, skipped assets, URL options, and playbook fork records. Refs #427.
 
 ### Changed
 
