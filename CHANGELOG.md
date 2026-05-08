@@ -17,6 +17,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   daily owner loop, Main Branch anti-SaaS why, CLI/dashboard, markdown/Notion,
   git/cloud-sync, Cloudflare Pages, Cal.com, Beancount, Forgejo, Cursor, and
   Stripe topics. Refs #144.
+- Added an opt-in `grok-8` researched-brief format for `/mb-think`, including a
+  reusable eight-category research reference, downstream guidance for
+  `/mb-ads`, `/mb-site`, `/mb-organic`, and push-playbook use, plus a
+  public-safe example brief. Refs #147.
 
 ### Changed
 

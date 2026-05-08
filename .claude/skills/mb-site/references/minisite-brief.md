@@ -10,6 +10,9 @@ The brief is the locked source of truth for the minisite. Compose it from:
 - resolved `audience.md`: pain frame, language, objections;
 - `voice.md`: tone, register, named enemies, "never say";
 - persisted research files from [`minisite-research.md`](minisite-research.md);
+- any `brief_format: grok-8` researched brief that names the offer, audience,
+  journey, competitive gaps, brand story, requirements, assets, and success
+  constraints;
 - the conversion endpoint kind, once the operator picks it.
 
 Draft the brief into one markdown artifact in the business repo:

@@ -37,6 +37,19 @@ approval gate, route the durable plan into
 Playbooks are plans, approval records, safe provider-state notes, validation
 evidence, and outcome hooks. They are not provider execution.
 
+When the operator asks for a researched brief, site brief, launch brief, or
+research meant to feed `/mb-ads`, `/mb-site`, or push playbooks, support:
+
+```text
+/mb-think --brief-format=grok-8 <topic>
+```
+
+Load [references/grok-8-brief-format.md](references/grok-8-brief-format.md).
+This mode structures findings across eight categories: business/offering, ICP,
+journey, competitive landscape, brand story, technical requirements, content
+assets, and metrics/constraints. Use it as an opt-in format, not the default
+unless the operator chooses it.
+
 ---
 
 ## Two Modes of Work
@@ -133,6 +146,7 @@ Detect mode from user's natural language:
 |-----------|------|-----------|
 | "figure out", "explore", "I'm trying to..." | Full Flow | - |
 | "research", "investigate", "what do we know about" | Research | [research-phase.md](references/research-phase.md) |
+| "--brief-format=grok-8", "researched brief", "site brief", "launch brief" | Research Brief | [grok-8-brief-format.md](references/grok-8-brief-format.md) |
 | "what are people saying", "sentiment", "X/Twitter", "trending" | Research (Grok) | [grok-social.md](references/grok-social.md) |
 | "winning ads", "review mining", "customer language", "competitor ads", "comment mining" | Research | [winning-ad-research.md](references/winning-ad-research.md) |
 | "decide", "we chose", "document decision" | Decide | [decide-phase.md](references/decide-phase.md) |
@@ -350,6 +364,10 @@ See [references/research-phase.md](references/research-phase.md) for full workfl
 For ad, customer, review, competitor, and social-comment mining, use
 [references/winning-ad-research.md](references/winning-ad-research.md) to keep
 the research structured before handing off to `/mb-ads` or `/mb-organic`.
+For broad researched briefs that should feed ads, sites, organic content, or a
+push playbook, use
+[references/grok-8-brief-format.md](references/grok-8-brief-format.md) and set
+`brief_format: grok-8` in frontmatter.
 
 ---
 
@@ -424,6 +442,7 @@ See [references/recovery.md](references/recovery.md) for details.
 ## Templates
 
 - [references/templates/research-template.md](references/templates/research-template.md)
+- [references/grok-8-brief-format.md](references/grok-8-brief-format.md)
 - [references/templates/decision-template.md](references/templates/decision-template.md)
 
 ---

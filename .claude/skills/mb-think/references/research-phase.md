@@ -26,6 +26,11 @@ Check `.vip/local.yaml` for `current_offer` before starting research. If `core/o
 5. **Synthesize** (required) — Distill findings into actionable insight
 6. **Save** — Write to `research/YYYY-MM-DD-topic-[source].md`
 
+If the operator passes `--brief-format=grok-8`, asks for a researched brief,
+or wants research to feed a site, ads, organic content, or a push playbook,
+load [grok-8-brief-format.md](grok-8-brief-format.md) before gathering. Save
+the output with `brief_format: grok-8` and include all eight categories.
+
 ---
 
 ## Defining Good Questions

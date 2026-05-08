@@ -41,7 +41,9 @@ source: claude-code
 source_url:                    # Optional: Gemini/GPT share link for provenance
 model: opus-4.5
 status: draft
+brief_format: standard         # Use grok-8 for the 8-category researched brief
 linked_decisions: []
+linked_pushes: []
 ---
 
 # [Topic] Research
@@ -134,6 +136,55 @@ or long tweet threads into committed research files.
 - [Source 3]
 ```
 
+## Grok-8 Researched Brief Variant
+
+Use this variant when the operator passes `--brief-format=grok-8`, asks for a
+researched brief, or needs the research to feed `/mb-ads`, `/mb-site`, organic
+content, or a push playbook. See
+[../grok-8-brief-format.md](../grok-8-brief-format.md) for the full guidance.
+
+Add this frontmatter:
+
+```yaml
+brief_format: grok-8
+linked_pushes: []
+```
+
+After `## Source Excerpts Used`, add:
+
+```markdown
+## Grok-8 Researched Brief
+
+### 1. Business And Offering Deep Dive
+
+### 2. ICP And Deep Audience Insights
+
+### 3. Customer Journey And Story Mapping
+
+### 4. Competitive And Market Landscape
+
+### 5. Brand Archetype And Story Discovery
+
+### 6. Technical, Functional, And Experience Requirements
+
+### 7. Content And Asset Audit
+
+### 8. Success Metrics And Constraints
+```
+
+After `### Implications for Reference Files`, add:
+
+```markdown
+### Downstream Handoff
+
+| Next Surface | Ready Input | Missing Or Risky |
+|---|---|---|
+| `/mb-ads` | [Angles, objections, proof, audience language] | [Unknowns] |
+| `/mb-site` | [Offer, audience, story, requirements, assets, metrics] | [Unknowns] |
+| Push playbook | [Trigger, resource, approval gate, provider boundary] | [Unsupported/manual pieces] |
+| Reference files | [Specific files to update] | [What not to codify yet] |
+```
+
 ---
 
 ## Status Values
@@ -186,7 +237,9 @@ date: 2026-01-17
 source: claude-code
 model: opus-4.5
 status: complete
+brief_format: standard
 linked_decisions: []
+linked_pushes: []
 ---
 
 # Pricing Tier Strategy Research
