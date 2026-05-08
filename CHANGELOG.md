@@ -11,6 +11,27 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-05-08
+
+v0.3.9 makes the daily operating loop more inspectable. Main Branch now exposes
+business relationship gaps in `mb status`, validates push playbooks as durable
+business commitments, gives JSON consumers a shared result envelope, and
+documents the packaged runtime boundary for non-Claude callers.
+
+### What this means for you (plain English)
+
+- **Status can explain missing business links.** `mb status` can now surface
+  disconnected bets, pushes, offers, and outcomes instead of only reporting file
+  and repo health.
+- **Playbooks become checkable plans.** Push playbooks now have a v1 schema so
+  provider work, approval gates, resources, outcomes, and safe state can be
+  reviewed before anyone mutates an external account.
+- **Agents get steadier JSON.** High-value `mb --json` commands now share a
+  non-colliding result envelope while preserving their command-specific payloads.
+- **Runtime claims stay scoped.** Packaged callers can use deterministic `mb`
+  subprocess calls today, while non-Claude slash/runtime adapters remain roadmap
+  targets until they have their own evidence.
+
 ### Added
 
 - Added `mb status` relationship-health JSON and human briefing signals for
