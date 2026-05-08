@@ -308,9 +308,10 @@ paths.
 
 **Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
 **Offer-aware files:** `offer.md`, `audience.md`
-**Proof files:** company-wide proof in `core/proof/`; offer-specific proof in
-`core/offers/[active]/proof/`. Read older offer testimonial files as
-compatibility context only.
+**Proof files:** company-wide proof in `core/proof/testimonials.md`,
+`core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof in
+matching files under `core/offers/[active]/proof/`. Read older offer
+testimonial files as compatibility context only.
 
 **Offer argument:** `/mb-ads [mode] [offer] [campaign]` — e.g., `/mb-ads static community january-launch`
 If offer is specified, it sets the session offer context for this run.
@@ -326,7 +327,8 @@ Before creating ads, the business repo must have:
 | Offer | `core/offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | Yes |
 | Audience | `core/offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Yes |
 | Voice | `core/voice.md` (always core) | Yes |
-| Testimonials/proof | `core/proof/` + `core/offers/[active]/proof/` (accumulate) | Yes |
+| Testimonials/proof | `core/proof/testimonials.md` + `core/offers/[active]/proof/testimonials.md` when present | Yes |
+| Typicality | `core/proof/typicality.md` + offer-specific typicality when present | Recommended |
 | Angles | `core/proof/angles/*.md` | Yes (at least 1) |
 | Visual Style | `core/brand/visual-style.md` | Optional (affects image gen) |
 | Content Strategy | `core/content-strategy.md` (always brand-level) | Optional (improves topic selection) |

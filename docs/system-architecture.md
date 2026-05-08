@@ -186,6 +186,11 @@ Offer-specific proof belongs in `core/offers/<slug>/proof/`. Older repos may
 have offer-level testimonial files in other locations; those are compatibility
 context, not the preferred new write target.
 
+The proof folders are canonical, but common proof types still have standard
+file targets: `testimonials.md` for individual permissioned testimonials,
+`typicality.md` for average-case outcome context, and `angles/` for durable
+messaging angles.
+
 ### `research/`
 
 `research/` contains point-in-time findings from when the operator went

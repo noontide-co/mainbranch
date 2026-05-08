@@ -44,9 +44,10 @@ Always-core files, never per-offer: `soul.md`, `voice.md`, `content-strategy.md`
 
 Offer-aware files, check `core/offers/` first and fall back to `core/`: `offer.md`, `audience.md`.
 
-Accumulate proof: company-wide proof comes from `core/proof/`; offer-specific
-proof comes from `core/offers/[active]/proof/`. Older offer testimonial files
-can be read as compatibility context.
+Accumulate proof: company-wide proof comes from `core/proof/testimonials.md`,
+`core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof
+comes from matching files under `core/offers/[active]/proof/`. Older offer
+testimonial files can be read as compatibility context.
 
 ## Required Business Context
 

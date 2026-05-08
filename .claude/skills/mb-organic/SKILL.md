@@ -117,9 +117,10 @@ files. Read through them only as fallback, and write once to the canonical
 
 **Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
 **Offer-aware files:** `offer.md`, `audience.md`
-**Proof files:** company-wide proof in `core/proof/`; offer-specific proof in
-`core/offers/[active]/proof/`. Read older offer testimonial files as
-compatibility context only.
+**Proof files:** company-wide proof in `core/proof/testimonials.md`,
+`core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof in
+matching files under `core/offers/[active]/proof/`. Read older offer
+testimonial files as compatibility context only.
 
 **Offer argument:** `/mb-organic video [offer] "concept"` — e.g., `/mb-organic video community "morning routine"`
 If offer is specified, it sets the session offer context for this run.

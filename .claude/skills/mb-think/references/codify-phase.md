@@ -166,7 +166,8 @@ After codifying, show summary. Use offer-qualified paths when in multi-offer mod
 
 **Target resolution:** Offer-specific sellable truth goes to
 `core/offers/[active]/`. Brand-level truth goes to `core/`. Company-wide proof
-goes to `core/proof/`; offer-specific proof goes to
+uses `core/proof/testimonials.md`, `core/proof/typicality.md`, and
+`core/proof/angles/`; offer-specific proof uses matching files under
 `core/offers/[active]/proof/`. If the change is still being tested, update or
 open a bet instead of rewriting durable offer truth. If unsure, ask the user.
 

@@ -52,7 +52,8 @@ See `docs/system-architecture.md` (Canonical Path Resolution) for the full algor
 | `offer.md` (resolved) | Price, mechanism, benefits, guarantee | Required |
 | `audience.md` (resolved) | Pains, desires, demographics, psychographics | Required |
 | `core/voice.md` | Tone, phrases, personality, don'ts | Required |
-| `core/proof/` + offer proof | Named testimonials, outcome data, approved proof | Required |
+| `core/proof/testimonials.md` + offer testimonials | Named testimonials with outcomes | Required |
+| `core/proof/typicality.md` + offer typicality | Average-case outcome context | Recommended |
 | `core/proof/angles/` | At least 1 angle file beyond README | Required |
 | `core/brand/visual-style.md` | Colors, typography, mood, prompt fragments | Optional (affects image gen) |
 

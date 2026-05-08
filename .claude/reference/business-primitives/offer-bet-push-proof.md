@@ -32,8 +32,12 @@ Business-readable explanation:
 | Multi-offer portfolio thesis | `core/offer.md` |
 | Durable per-offer truth | `core/offers/<slug>/offer.md` |
 | Optional per-offer audience | `core/offers/<slug>/audience.md` |
-| Company-wide proof | `core/proof/` |
-| Offer-specific proof | `core/offers/<slug>/proof/` |
+| Company-wide proof folder | `core/proof/` |
+| Company-wide testimonial proof | `core/proof/testimonials.md` |
+| Company-wide typicality proof | `core/proof/typicality.md` |
+| Company-wide proof angles | `core/proof/angles/*.md` |
+| Offer-specific proof folder | `core/offers/<slug>/proof/` |
+| Offer-specific testimonial proof | `core/offers/<slug>/proof/testimonials.md` |
 | Time-boxed wager | `bets/YYYY-MM-DD-slug.md` |
 | Coordinated work | `pushes/<YYYY-MM-DD-slug>/push.md` |
 | Reusable operating recipe | `.claude/playbooks/<name>/` |
@@ -42,7 +46,18 @@ Business-readable explanation:
 
 Older repos may have `reference/` compatibility bridges or offer-specific files
 such as `core/offers/<slug>/testimonials.md`. Read those as legacy context, but
-write new proof to `core/proof/` or `core/offers/<slug>/proof/`.
+write new proof under `core/proof/` or `core/offers/<slug>/proof/`.
+
+File-canonical proof targets:
+
+- Individual permissioned testimonials go to `testimonials.md`.
+- Aggregate outcome context, average-case timelines, caveats, and typicality go
+  to `typicality.md`.
+- Durable emotional, competitive, or claims angles go under `angles/`.
+- Proof that only supports one offer uses the matching files under
+  `core/offers/<slug>/proof/`.
+- If the proof type is new, create a clearly named file inside the appropriate
+  proof folder instead of scattering proof beside offer files.
 
 ## Routing Rules
 

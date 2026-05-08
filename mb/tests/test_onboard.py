@@ -36,6 +36,7 @@ def _assert_onboard_claude_md_cli_first_contract(text: str) -> None:
     assert "## Business primitive routing" in text
     assert "multi-offer repo, `core/offer.md` is the portfolio thesis" in text
     assert "offer-specific proof belongs in `core/offers/<slug>/proof/`" in text
+    assert "Use standard proof files such as `testimonials.md`" in text
     assert "Do not rename, delete, merge, split, or move offer folders" in text
 
 

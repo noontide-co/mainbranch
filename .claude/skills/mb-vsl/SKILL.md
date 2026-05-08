@@ -91,9 +91,10 @@ files, and write once to the canonical `core/` path.
 
 **Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
 **Offer-aware files:** `offer.md`, `audience.md`
-**Proof files:** company-wide proof in `core/proof/`; offer-specific proof in
-`core/offers/[active]/proof/`. Read older offer testimonial files as
-compatibility context only.
+**Proof files:** company-wide proof in `core/proof/testimonials.md`,
+`core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof in
+matching files under `core/offers/[active]/proof/`. Read older offer
+testimonial files as compatibility context only.
 
 **Offer argument:** `/mb-vsl [framework] [offer]` — e.g., `/mb-vsl skool community`
 If offer is specified, it sets the session offer context for this run. If the active offer type is known (community/membership offer), default to Skool framework; if B2B/high-ticket, default to B2B Haynes.
@@ -106,7 +107,8 @@ If offer is specified, it sets the session offer context for this run. If the ac
 |------|------|---------|
 | Offer | `core/offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | What you sell, price, inclusions, guarantee |
 | Audience | `core/offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Who buys, their pains, objections |
-| Testimonials/proof | `core/proof/` + `core/offers/[active]/proof/` (accumulate) | Success stories with specifics |
+| Testimonials/proof | `core/proof/testimonials.md` + `core/offers/[active]/proof/testimonials.md` when present | Success stories with specifics |
+| Typicality | `core/proof/typicality.md` + offer-specific typicality when present | Average-case outcome context |
 | Skool Surfaces | `core/operations/funnel/skool-surfaces.md` | Live Skool about page + pricing copy (congruence) |
 
 **If missing:** Ask user to provide or run `/mb-think` first.

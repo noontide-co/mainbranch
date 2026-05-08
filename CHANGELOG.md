@@ -33,8 +33,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   single-offer truth or multi-offer portfolio thesis, and
   `core/offers/<slug>/proof/` for offer-specific proof. Refs #411.
 - Retired LLM-facing "domain rubric" setup language in favor of business
-  primitives and setup patterns, and added skill validation warnings for new
-  uses of the old phrase outside historical compatibility notes. Refs #411.
+  primitives and setup patterns, carried forward the operational community,
+  e-commerce, and multi-offer setup guidance, and added skill validation
+  warnings for new uses of the old phrase outside historical compatibility
+  notes. Refs #411.
 - Expanded `mb doctor repair --plan --json` migration guidance with an
   offer-topology section that surfaces legacy `.vip/local.yaml` active-offer
   state, offer folder/frontmatter slug drift, and multi-offer review needs

@@ -55,6 +55,9 @@ def _assert_claude_md_primitive_routing_contract(text: str) -> None:
     assert "Company-wide proof belongs" in text
     assert "`core/proof/`" in text
     assert "offer-specific proof belongs in `core/offers/<slug>/proof/`" in text
+    assert "Use standard proof files such as `testimonials.md`" in text
+    assert "`typicality.md`" in text
+    assert "`angles/`" in text
     assert "A live idea can be both a bet and an offer candidate" in text
     assert "Do not rename, delete, merge, split, or move offer folders" in text
     assert "domain rubric" not in text.lower()

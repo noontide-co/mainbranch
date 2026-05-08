@@ -298,6 +298,8 @@ In a single-offer repo, `core/offer.md` is the durable offer truth. In a
 multi-offer repo, `core/offer.md` is the portfolio thesis and
 `core/offers/<slug>/offer.md` holds per-offer truth. Company-wide proof belongs
 in `core/proof/`; offer-specific proof belongs in `core/offers/<slug>/proof/`.
+Use standard proof files such as `testimonials.md`, `typicality.md`, and
+`angles/` inside those proof folders.
 A live idea can be both a bet and an offer candidate: open the bet first, then
 create or update the offer only when the operator wants durable sellable truth.
 

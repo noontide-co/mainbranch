@@ -109,8 +109,9 @@ both.
 
 **Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
 **Offer-aware files:** `offer.md`, `audience.md`
-**Proof files:** company-wide proof goes in `core/proof/`; offer-specific proof
-goes in `core/offers/<slug>/proof/`.
+**Proof files:** company-wide proof uses `core/proof/testimonials.md`,
+`core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof
+uses matching files under `core/offers/<slug>/proof/`.
 
 For a live idea, ask whether it is something to keep selling or something to
 test before deciding. Use `bets/` for the time-boxed wager, offer files for
