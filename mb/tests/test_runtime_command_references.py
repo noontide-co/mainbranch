@@ -39,8 +39,17 @@ def _scan_paths() -> list[Path]:
         REPO_ROOT / "README.md",
         REPO_ROOT / "mb" / "mb" / "_data" / "templates" / "CLAUDE.md.tmpl",
     ]
-    docs.extend(sorted((REPO_ROOT / "docs").glob("*.md")))
+    docs.extend(
+        path
+        for path in sorted((REPO_ROOT / "docs").rglob("*.md"))
+        # Historical plans and dogfood reports can mention retired commands as
+        # evidence. Live guidance is scanned recursively.
+        if "prd" not in path.relative_to(REPO_ROOT / "docs").parts
+        and "reports" not in path.relative_to(REPO_ROOT / "docs").parts
+    )
     docs.extend(sorted((REPO_ROOT / "templates").rglob("*.md")))
+    docs.extend(sorted((REPO_ROOT / ".claude" / "playbooks").rglob("*.md")))
+    docs.extend(sorted((REPO_ROOT / ".claude" / "reference").rglob("*.md")))
     docs.extend(sorted((REPO_ROOT / ".claude" / "skills").rglob("*.md")))
     return [path for path in docs if path.is_file()]
 
