@@ -12,7 +12,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
 import yaml
 
@@ -37,24 +36,6 @@ PUSH_KIND = pushes_mod.PUSH_KIND
 PUSH_HEALTH = pushes_mod.PUSH_HEALTH
 
 LINK_FIELDS = relationships.RELATIONSHIP_FIELDS
-
-WIKILINK_RE = re.compile(r"(?<!!)\[\[([^\]\n]+)\]\]")
-MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[([^\]\n]+)\]\(([^)\n]+)\)")
-INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
-
-LOCAL_REF_ROOTS = {
-    "bets",
-    "campaigns",
-    "core",
-    "decisions",
-    "docs",
-    "documents",
-    "log",
-    "outputs",
-    "pushes",
-    "reference",
-    "research",
-}
 
 DECISION_STATUS_ORDER = {
     "proposed": 0,
@@ -271,7 +252,15 @@ def _check_provider_refs_shape(fm: dict[str, Any], errors: list[str]) -> None:
             if not all(isinstance(key, str) and key.strip() for key in refs):
                 errors.append(f"provider_refs.{provider} ref names must be non-empty strings")
             continue
-        if isinstance(refs, list) and all(isinstance(item, dict) for item in refs):
+        if isinstance(refs, list):
+            if not all(isinstance(item, dict) for item in refs):
+                errors.append(f"provider_refs.{provider} must be a mapping or list of mappings")
+                continue
+            invalid_keys = [
+                key for item in refs for key in item if not isinstance(key, str) or not key.strip()
+            ]
+            if invalid_keys:
+                errors.append(f"provider_refs.{provider} ref names must be non-empty strings")
             continue
         errors.append(f"provider_refs.{provider} must be a mapping or list of mappings")
 
@@ -308,24 +297,6 @@ def _coerce_refs(value: Any) -> tuple[list[str], bool]:
     return [], False
 
 
-def _is_external_ref(ref: str) -> bool:
-    parsed = urlparse(ref)
-    if bool(parsed.scheme) or ref.startswith("#"):
-        return True
-    parts = Path(_clean_ref(ref)).parts
-    return (
-        len(parts) > 1
-        and parts[0] not in {".", ".."}
-        and parts[0] not in LOCAL_REF_ROOTS
-        and parts[1] in LOCAL_REF_ROOTS
-    )
-
-
-def _clean_ref(ref: str) -> str:
-    without_anchor = ref.split("#", 1)[0]
-    return without_anchor.split("?", 1)[0].strip()
-
-
 def _read_markdown_body(path: Path) -> str | None:
     try:
         text = path.read_text(encoding="utf-8")
@@ -340,68 +311,6 @@ def _read_markdown_body(path: Path) -> str | None:
     return text[end + len("\n---") :]
 
 
-def _strip_fenced_code_blocks(markdown: str) -> str:
-    lines: list[str] = []
-    in_fence = False
-    for line in markdown.splitlines(keepends=True):
-        if line.lstrip().startswith("```"):
-            in_fence = not in_fence
-            lines.append("\n")
-            continue
-        if not in_fence:
-            lines.append(line)
-    return "".join(lines)
-
-
-def _strip_markdown_code(markdown: str) -> str:
-    return INLINE_CODE_RE.sub("", _strip_fenced_code_blocks(markdown))
-
-
-def _wikilink_target(raw_target: str) -> str:
-    target = raw_target.split("|", 1)[0].strip()
-    target = target.split("#", 1)[0].strip()
-    return target
-
-
-def _markdown_link_target(raw_target: str) -> str:
-    target = raw_target.strip()
-    target = target.split(None, 1)[0].strip()
-    if (target.startswith('"') and target.endswith('"')) or (
-        target.startswith("'") and target.endswith("'")
-    ):
-        target = target[1:-1]
-    return _clean_ref(target)
-
-
-def _is_local_markdown_ref(ref: str) -> bool:
-    clean_ref = _markdown_link_target(ref)
-    if not clean_ref or _is_external_ref(clean_ref):
-        return False
-    suffix = Path(clean_ref).suffix
-    return suffix in {"", ".md"}
-
-
-def _resolve_markdown_link(repo: Path, source: Path, ref: str) -> Path | None:
-    clean_ref = _markdown_link_target(ref)
-    if not clean_ref:
-        return None
-    if clean_ref.startswith("/"):
-        candidates = [repo / clean_ref.lstrip("/")]
-    else:
-        candidates = [source.parent / clean_ref, repo / clean_ref]
-    if not clean_ref.endswith(".md"):
-        candidates.extend(candidate.with_suffix(".md") for candidate in list(candidates))
-    for candidate in candidates:
-        target = candidate.resolve()
-        try:
-            target.relative_to(repo)
-        except ValueError:
-            continue
-        if target.is_file() and target.suffix == ".md":
-            return target
-    return None
-
-
 def _resolve_wikilink(
     *,
     repo: Path,
@@ -409,7 +318,7 @@ def _resolve_wikilink(
     files_by_stem: dict[str, list[Path]],
     files_by_rel: dict[str, Path],
 ) -> tuple[Path | None, bool]:
-    clean = _wikilink_target(target)
+    clean = relationships.wikilink_target(target)
     if not clean:
         return None, False
     is_bare_wikilink = len(Path(clean).parts) == 1
@@ -530,7 +439,7 @@ def _relative_ref(path: Path, repo: Path) -> str:
 
 def _ref_list_contains(value: Any, expected: str) -> bool:
     refs, valid_type = _coerce_refs(value)
-    return valid_type and expected in {_clean_ref(ref) for ref in refs}
+    return valid_type and expected in {relationships.clean_ref(ref) for ref in refs}
 
 
 def _reverse_bet_field(source: Path, repo: Path) -> str:
@@ -645,9 +554,9 @@ def _check_cross_refs(
                 )
                 continue
             for ref in refs:
-                if _is_external_ref(ref):
+                if relationships.is_external_ref(ref):
                     continue
-                clean_ref = _clean_ref(ref)
+                clean_ref = relationships.clean_ref(ref)
                 if not clean_ref:
                     continue
                 target = (repo / clean_ref).resolve()
@@ -702,10 +611,10 @@ def _check_cross_refs(
         body = _read_markdown_body(source)
         if body is None:
             continue
-        body_without_code = _strip_markdown_code(body)
-        for match in WIKILINK_RE.finditer(body_without_code):
+        body_without_code = relationships.strip_markdown_code(body)
+        for match in relationships.WIKILINK_RE.finditer(body_without_code):
             raw_target = match.group(1)
-            clean_target = _wikilink_target(raw_target)
+            clean_target = relationships.wikilink_target(raw_target)
             if not clean_target:
                 continue
             resolved, ambiguous = _resolve_wikilink(
@@ -732,14 +641,13 @@ def _check_cross_refs(
                     message=message,
                 )
             )
-        for match in MARKDOWN_LINK_RE.finditer(body_without_code):
-            raw_target = match.group(2)
-            clean_target = _markdown_link_target(raw_target)
-            if not clean_target or _is_external_ref(clean_target):
+        for _, raw_target in relationships.iter_markdown_links(body_without_code):
+            clean_target = relationships.markdown_link_target(raw_target)
+            if not clean_target or relationships.is_external_ref(clean_target):
                 continue
-            if not _is_local_markdown_ref(clean_target):
+            if not relationships.is_local_markdown_ref(clean_target):
                 continue
-            if _resolve_markdown_link(repo, source, clean_target) is not None:
+            if relationships.resolve_markdown_link(repo, source, clean_target) is not None:
                 continue
             findings.append(
                 _finding(

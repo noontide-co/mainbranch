@@ -263,7 +263,8 @@ def test_build_index_parses_safe_markdown_links(tmp_path: Path) -> None:
     )
     (docs / "brief.md").write_text(
         "---\ntitle: Brief\n---\n"
-        "See [Audience](../research/audience.md) and [external](https://example.com/path).\n"
+        "See [Audience](../research/audience.md) and "
+        "[external](https://en.wikipedia.org/wiki/Foo_(bar)).\n"
         "![Chart](../research/chart.png)\n"
         "Use `[Missing](../research/missing.md)` as an example.\n"
         "```md\n[Missing](../research/missing.md)\n```\n",
@@ -279,7 +280,11 @@ def test_build_index_parses_safe_markdown_links(tmp_path: Path) -> None:
         and edge["rel_type"] == "reference"
         for edge in index["edges"]
     )
-    assert any(node["id"] == "external:https-example-com-path" for node in index["nodes"])
+    assert any(
+        node["id"] == "external:https-en-wikipedia-org-wiki-foo-bar"
+        and node["metadata"]["ref"] == "https://en.wikipedia.org/wiki/Foo_(bar)"
+        for node in index["nodes"]
+    )
     assert not any("chart" in edge["target"] for edge in index["edges"])
     assert not any("missing" in edge["target"] for edge in index["edges"])
 

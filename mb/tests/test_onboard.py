@@ -8,8 +8,10 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from mb import graph as graph_mod
 from mb import onboard as onboard_mod
 from mb import status as status_mod
+from mb import validate as validate_mod
 from mb.cli import app
 
 runner = CliRunner()
@@ -161,6 +163,11 @@ def test_onboard_cli_yes_json_smoke(tmp_path: Path, monkeypatch) -> None:
     assert (repo / ".mb" / "onboarding.json").exists()
     assert payload["onboarding"]["summary"]["status"] == "in_progress"
     assert ".mb/onboarding.json" in (repo / ".gitignore").read_text(encoding="utf-8")
+
+    graph = graph_mod.build_index(str(repo))
+    validate = validate_mod.run(str(repo), cross_refs=True)
+    assert graph["registry"]["version"] == "0.1"
+    assert validate["cross_refs"]["registry"]["version"] == "0.1"
 
 
 def test_onboard_status_reports_partial_small_team_progress(tmp_path: Path, monkeypatch) -> None:

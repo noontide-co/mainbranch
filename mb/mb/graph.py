@@ -9,7 +9,6 @@ import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
 import yaml
 
@@ -51,23 +50,6 @@ ENTITY_TAG_TYPES = {
     "metrics": "metric",
 }
 
-LOCAL_REF_ROOTS = {
-    "bets",
-    "campaigns",
-    "core",
-    "decisions",
-    "docs",
-    "documents",
-    "log",
-    "outputs",
-    "pushes",
-    "reference",
-    "research",
-}
-
-WIKILINK_RE = re.compile(r"(?<!!)\[\[([^\]\n]+)\]\]")
-MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[([^\]\n]+)\]\(([^)\n]+)\)")
-INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
 ENTITY_HASHTAG_RE = re.compile(
     r"(?<![\w/])#("
     + "|".join(sorted(ENTITY_TAG_TYPES))
@@ -117,11 +99,6 @@ def _iter_markdown_files(repo: Path) -> list[Path]:
     ]
 
 
-def _clean_ref(ref: str) -> str:
-    without_anchor = ref.split("#", 1)[0]
-    return without_anchor.split("?", 1)[0].strip()
-
-
 def _coerce_strings(value: Any) -> list[str]:
     if value is None:
         return []
@@ -130,36 +107,6 @@ def _coerce_strings(value: Any) -> list[str]:
     if isinstance(value, list):
         return [item for item in value if isinstance(item, str)]
     return []
-
-
-def _strip_fenced_code_blocks(markdown: str) -> str:
-    lines: list[str] = []
-    in_fence = False
-    for line in markdown.splitlines(keepends=True):
-        if line.lstrip().startswith("```"):
-            in_fence = not in_fence
-            lines.append("\n")
-            continue
-        if not in_fence:
-            lines.append(line)
-    return "".join(lines)
-
-
-def _strip_markdown_code(markdown: str) -> str:
-    return INLINE_CODE_RE.sub("", _strip_fenced_code_blocks(markdown))
-
-
-def _is_external_ref(ref: str) -> bool:
-    parsed = urlparse(ref)
-    if bool(parsed.scheme) or ref.startswith("#"):
-        return True
-    parts = Path(_clean_ref(ref)).parts
-    return (
-        len(parts) > 1
-        and parts[0] not in {".", ".."}
-        and parts[0] not in LOCAL_REF_ROOTS
-        and parts[1] in LOCAL_REF_ROOTS
-    )
 
 
 def _file_id(path: Path, repo: Path) -> str:
@@ -265,7 +212,7 @@ def _label_for_file(path: Path, repo: Path, frontmatter: dict[str, Any]) -> str:
 
 
 def _resolve_repo_ref(repo: Path, ref: str) -> Path | None:
-    clean_ref = _clean_ref(ref)
+    clean_ref = relationships.clean_ref(ref)
     if not clean_ref:
         return None
     target = (repo / clean_ref).resolve()
@@ -276,51 +223,6 @@ def _resolve_repo_ref(repo: Path, ref: str) -> Path | None:
     return target
 
 
-def _markdown_link_target(raw_target: str) -> str:
-    target = raw_target.strip()
-    target = target.split(None, 1)[0].strip()
-    if (target.startswith('"') and target.endswith('"')) or (
-        target.startswith("'") and target.endswith("'")
-    ):
-        target = target[1:-1]
-    return _clean_ref(target)
-
-
-def _is_local_markdown_ref(ref: str) -> bool:
-    clean_ref = _markdown_link_target(ref)
-    if not clean_ref or _is_external_ref(clean_ref):
-        return False
-    suffix = Path(clean_ref).suffix
-    return suffix in {"", ".md"}
-
-
-def _resolve_markdown_link(repo: Path, source: Path, ref: str) -> Path | None:
-    clean_ref = _markdown_link_target(ref)
-    if not clean_ref:
-        return None
-    if clean_ref.startswith("/"):
-        candidates = [repo / clean_ref.lstrip("/")]
-    else:
-        candidates = [source.parent / clean_ref, repo / clean_ref]
-    if not clean_ref.endswith(".md"):
-        candidates.extend(candidate.with_suffix(".md") for candidate in list(candidates))
-    for candidate in candidates:
-        target = candidate.resolve()
-        try:
-            target.relative_to(repo)
-        except ValueError:
-            continue
-        if target.is_file() and target.suffix == ".md":
-            return target
-    return None
-
-
-def _wikilink_target(raw_target: str) -> str:
-    target = raw_target.split("|", 1)[0].strip()
-    target = target.split("#", 1)[0].strip()
-    return target
-
-
 def _resolve_wikilink(
     *,
     repo: Path,
@@ -328,7 +230,7 @@ def _resolve_wikilink(
     files_by_stem: dict[str, list[Path]],
     files_by_rel: dict[str, Path],
 ) -> Path | None:
-    clean = _wikilink_target(target)
+    clean = relationships.wikilink_target(target)
     if not clean:
         return None
     candidates = [clean]
@@ -373,7 +275,7 @@ def _add_reference_edge(
                     "metadata": {},
                 },
             )
-    elif _is_external_ref(ref):
+    elif relationships.is_external_ref(ref):
         target_id = _external_id(ref)
         _add_node(
             nodes,
@@ -498,9 +400,9 @@ def build_index(path: str) -> dict[str, Any]:
                     evidence={"kind": "frontmatter", "field": field, "path": source_rel},
                 )
 
-        body_without_code = _strip_markdown_code(body)
+        body_without_code = relationships.strip_markdown_code(body)
 
-        for match in WIKILINK_RE.finditer(body_without_code):
+        for match in relationships.WIKILINK_RE.finditer(body_without_code):
             raw_target = match.group(1)
             resolved = _resolve_wikilink(
                 repo=repo,
@@ -509,7 +411,7 @@ def build_index(path: str) -> dict[str, Any]:
                 files_by_rel=files_by_rel,
             )
             if resolved is None:
-                target_ref = _wikilink_target(raw_target)
+                target_ref = relationships.wikilink_target(raw_target)
                 target_id = f"wikilink:{_slug(target_ref)}"
                 _add_node(
                     nodes,
@@ -531,12 +433,11 @@ def build_index(path: str) -> dict[str, Any]:
                 evidence={"kind": "wikilink", "target": raw_target, "path": source_rel},
             )
 
-        for match in MARKDOWN_LINK_RE.finditer(body_without_code):
-            raw_target = match.group(2)
-            clean_target = _markdown_link_target(raw_target)
+        for _, raw_target in relationships.iter_markdown_links(body_without_code):
+            clean_target = relationships.markdown_link_target(raw_target)
             if not clean_target:
                 continue
-            if _is_external_ref(clean_target):
+            if relationships.is_external_ref(clean_target):
                 target_id = _external_id(clean_target)
                 _add_node(
                     nodes,
@@ -547,8 +448,8 @@ def build_index(path: str) -> dict[str, Any]:
                         "metadata": {"ref": clean_target},
                     },
                 )
-            elif _is_local_markdown_ref(clean_target):
-                resolved = _resolve_markdown_link(repo, file_path, clean_target)
+            elif relationships.is_local_markdown_ref(clean_target):
+                resolved = relationships.resolve_markdown_link(repo, file_path, clean_target)
                 if resolved is None:
                     target_id = f"missing:{_slug(clean_target)}"
                     _add_node(

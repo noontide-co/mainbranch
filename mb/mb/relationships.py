@@ -2,11 +2,31 @@
 
 from __future__ import annotations
 
+import re
+from collections.abc import Iterator
 from dataclasses import dataclass
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Any
+from urllib.parse import urlparse
 
 REGISTRY_VERSION = "0.1"
+
+LOCAL_REF_ROOTS = {
+    "bets",
+    "campaigns",
+    "core",
+    "decisions",
+    "docs",
+    "documents",
+    "log",
+    "outputs",
+    "pushes",
+    "reference",
+    "research",
+}
+
+WIKILINK_RE = re.compile(r"(?<!!)\[\[([^\]\n]+)\]\]")
+INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
 
 
 @dataclass(frozen=True)
@@ -115,8 +135,10 @@ def relationship_for_field(field: str, *, source_path: str | None = None) -> Rel
     relationship = FIELD_TO_RELATIONSHIP.get(field)
     if relationship is None:
         return None
-    if source_path is None or not relationship.source_globs:
+    if not relationship.source_globs:
         return relationship
+    if source_path is None:
+        return None
     path = PurePosixPath(source_path)
     if any(path.match(pattern) for pattern in relationship.source_globs):
         return relationship
@@ -146,6 +168,144 @@ def normalize_relationship(
     if relationship is None:
         return fallback
     return relationship.canonical_type
+
+
+def clean_ref(ref: str) -> str:
+    """Strip anchors and query strings from a path-like reference."""
+
+    without_anchor = ref.split("#", 1)[0]
+    return without_anchor.split("?", 1)[0].strip()
+
+
+def is_external_ref(ref: str) -> bool:
+    """Return true for URLs, anchors, and explicit cross-repo references."""
+
+    parsed = urlparse(ref)
+    if bool(parsed.scheme) or ref.startswith("#"):
+        return True
+    parts = Path(clean_ref(ref)).parts
+    return (
+        len(parts) > 1
+        and parts[0] not in {".", ".."}
+        and parts[0] not in LOCAL_REF_ROOTS
+        and parts[1] in LOCAL_REF_ROOTS
+    )
+
+
+def strip_fenced_code_blocks(markdown: str) -> str:
+    """Remove fenced code block contents while preserving line boundaries."""
+
+    lines: list[str] = []
+    in_fence = False
+    for line in markdown.splitlines(keepends=True):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            lines.append("\n")
+            continue
+        if not in_fence:
+            lines.append(line)
+    return "".join(lines)
+
+
+def strip_markdown_code(markdown: str) -> str:
+    """Remove fenced and inline code before relationship link parsing."""
+
+    return INLINE_CODE_RE.sub("", strip_fenced_code_blocks(markdown))
+
+
+def wikilink_target(raw_target: str) -> str:
+    """Return the path/title component from an Obsidian-style wikilink."""
+
+    target = raw_target.split("|", 1)[0].strip()
+    target = target.split("#", 1)[0].strip()
+    return target
+
+
+def markdown_link_target(raw_target: str) -> str:
+    """Return the target component from a standard Markdown link destination."""
+
+    target = raw_target.strip()
+    target = target.split(None, 1)[0].strip()
+    if (target.startswith('"') and target.endswith('"')) or (
+        target.startswith("'") and target.endswith("'")
+    ):
+        target = target[1:-1]
+    if target.startswith("<") and target.endswith(">"):
+        target = target[1:-1]
+    return clean_ref(target)
+
+
+def iter_markdown_links(markdown: str) -> Iterator[tuple[str, str]]:
+    """Yield standard Markdown links, preserving balanced parens in targets."""
+
+    index = 0
+    while index < len(markdown):
+        start = markdown.find("[", index)
+        if start == -1:
+            return
+        if start > 0 and markdown[start - 1] == "!":
+            index = start + 1
+            continue
+        label_end = markdown.find("]", start + 1)
+        if label_end == -1:
+            return
+        target_start = label_end + 1
+        if target_start >= len(markdown) or markdown[target_start] != "(":
+            index = label_end + 1
+            continue
+        pos = target_start + 1
+        depth = 0
+        target: list[str] = []
+        while pos < len(markdown):
+            char = markdown[pos]
+            if char == "(":
+                depth += 1
+                target.append(char)
+            elif char == ")":
+                if depth == 0:
+                    yield markdown[start + 1 : label_end], "".join(target).strip()
+                    index = pos + 1
+                    break
+                depth -= 1
+                target.append(char)
+            else:
+                target.append(char)
+            pos += 1
+        else:
+            index = label_end + 1
+
+
+def is_local_markdown_ref(ref: str) -> bool:
+    """Return true for local Markdown file references that should be validated."""
+
+    clean = markdown_link_target(ref)
+    if not clean or is_external_ref(clean):
+        return False
+    suffix = Path(clean).suffix
+    return suffix in {"", ".md"}
+
+
+def resolve_markdown_link(repo: Path, source: Path, ref: str) -> Path | None:
+    """Resolve a standard Markdown link relative to source, then repo root."""
+
+    clean = markdown_link_target(ref)
+    if not clean:
+        return None
+    if clean.startswith("/"):
+        candidates = [repo / clean.lstrip("/")]
+    else:
+        candidates = [source.parent / clean, repo / clean]
+    if not clean.endswith(".md"):
+        candidates.extend(candidate.with_suffix(".md") for candidate in list(candidates))
+    for candidate in candidates:
+        target = candidate.resolve()
+        try:
+            target.relative_to(repo)
+        except ValueError:
+            continue
+        if target.is_file() and target.suffix == ".md":
+            return target
+    return None
 
 
 def registry_payload() -> dict[str, Any]:

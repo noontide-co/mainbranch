@@ -7,6 +7,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from mb import relationships
 from mb.cli import app
 from mb.validate import run
 
@@ -121,6 +122,14 @@ def test_cross_refs_pass_when_targets_exist(tmp_path: Path) -> None:
     assert report["cross_refs"]["enabled"] is True
     assert report["cross_refs"]["registry"]["version"] == "0.1"
     assert report["summary"]["warnings"] == 0
+
+
+def test_source_scoped_offer_relationship_requires_source_path() -> None:
+    assert relationships.relationship_for_field("offer") is None
+    assert (
+        relationships.relationship_for_field("offer", source_path="pushes/2026-05-07-demo/push.md")
+        is not None
+    )
 
 
 def test_cross_refs_warn_on_missing_targets_without_strict(tmp_path: Path) -> None:
@@ -364,7 +373,7 @@ def test_cross_refs_resolve_standard_markdown_links_and_skip_safe_non_refs(
         tmp_path / "docs" / "brief.md",
         "---\ntitle: Brief\n---\n"
         "See [Audience](../research/audience.md), [root](research/audience.md), "
-        "and [external](https://example.com/path).\n"
+        "and [external](https://en.wikipedia.org/wiki/Foo_(bar)).\n"
         "![Chart](../research/chart.png)\n"
         "Use `[Missing](../research/missing.md)` as an example.\n"
         "```md\n[Missing](../research/missing.md)\n```\n",
@@ -854,6 +863,22 @@ def test_validate_rejects_provider_refs_scalar_shape(tmp_path: Path) -> None:
     bad = [file for file in report["files"] if file["path"].endswith("push.md")][0]
     assert report["ok"] is False
     assert "provider_refs must be a mapping of provider names to non-secret refs" in bad["errors"]
+
+
+def test_validate_rejects_provider_refs_list_with_empty_ref_name(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-target" / "push.md",
+        _push("active", slug="target").replace(
+            "---\n# target\n",
+            "provider_refs:\n  meta_ads:\n    - \"\": '123'\n---\n# target\n",
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["path"].endswith("push.md")][0]
+    assert report["ok"] is False
+    assert "provider_refs.meta_ads ref names must be non-empty strings" in bad["errors"]
 
 
 def test_cross_refs_warn_on_missing_linked_pushes_target(tmp_path: Path) -> None:
