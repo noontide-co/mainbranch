@@ -26,6 +26,58 @@ InstallMode = Literal["editable", "wheel", "pypi"]
 DEFAULT_BUSINESS_NAME = "Dogfood Studio"
 DEFAULT_FIXTURE_SLUG = "dogfood-studio"
 DEFAULT_CLAUDE_BUDGET = "0.25"
+CLAUDE_PRINT_READ_ONLY_TOOLS = (
+    "Read",
+    "Glob",
+    "Grep",
+    "Bash(pwd)",
+    "Bash(ls)",
+    "Bash(ls *)",
+    "Bash(git status *)",
+    "Bash(git log *)",
+    "Bash(git diff *)",
+    "Bash(mb --version)",
+    "Bash(mb doctor)",
+    "Bash(mb doctor --json)",
+    "Bash(mb doctor .)",
+    "Bash(mb doctor . --json)",
+    "Bash(mb doctor repair --plan)",
+    "Bash(mb doctor repair --plan *)",
+    "Bash(mb status)",
+    "Bash(mb status *)",
+    "Bash(mb start)",
+    "Bash(mb start --json)",
+    "Bash(mb start --repo * --json)",
+    "Bash(mb start --json --repo *)",
+    "Bash(mb validate)",
+    "Bash(mb validate *)",
+    "Bash(mb graph)",
+    "Bash(mb graph *)",
+    "Bash(mb connect status)",
+    "Bash(mb connect status *)",
+    "Bash(mb checkpoint --hook-status)",
+    "Bash(mb checkpoint --hook-status *)",
+    "Bash(mb checkpoint --status)",
+    "Bash(mb checkpoint --status *)",
+    "Bash(mb checkpoint --plan)",
+    "Bash(mb checkpoint --plan *)",
+    "Bash(mb checkpoint --validate *)",
+)
+CLAUDE_PRINT_WRITE_DENY_TOOLS = (
+    "Edit",
+    "Write",
+    "MultiEdit",
+    "Bash(mb doctor repair --apply *)",
+    "Bash(mb skill repair --apply *)",
+    "Bash(mb migrate --apply *)",
+    "Bash(mb checkpoint --message *)",
+    "Bash(mb checkpoint --yes *)",
+    "Bash(git add *)",
+    "Bash(git commit *)",
+    "Bash(git push *)",
+    "Bash(git reset *)",
+    "Bash(git checkout *)",
+)
 
 SAFE_FIXTURE_FILES: dict[str, str] = {
     "core/offer.md": """# Offer
@@ -520,6 +572,15 @@ def score_transcript(text: str) -> dict[str, Any]:
     return release_simulation.score_transcript(text)
 
 
+def claude_print_env(state: HarnessState) -> dict[str, str]:
+    env = os.environ.copy()
+    existing_path = env.get("PATH", "")
+    env["PATH"] = os.pathsep.join(
+        part for part in (str(state.mb_path.parent), existing_path) if part
+    )
+    return env
+
+
 def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tier: str) -> None:
     if shutil.which("claude") is None:
         state.warn("Claude Code executable not found; skipped optional print-mode smoke")
@@ -535,7 +596,20 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
     session_id = ""
     turns: list[dict[str, Any]] = []
     transcript_parts: list[str] = []
+    permission_denials: list[Any] = []
     simulations = release_simulation.simulations_for_tier(simulation_tier)
+    print_env = claude_print_env(state)
+    permission_policy = {
+        "mode": "read_only_mb_allowlist",
+        "mb_path_source": "temp venv bin prepended to PATH",
+        "allowed_tools": list(CLAUDE_PRINT_READ_ONLY_TOOLS),
+        "disallowed_tools": list(CLAUDE_PRINT_WRITE_DENY_TOOLS),
+        "bypass_permissions": False,
+        "write_boundary": (
+            "Write/edit tools, git commits, checkpoint saves, repair applies, "
+            "and migrations are not allowlisted for print-mode proxy runs."
+        ),
+    }
     for simulation in simulations:
         command = [
             "claude",
@@ -544,6 +618,8 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
             "json",
             "--max-budget-usd",
             max_budget_usd,
+            f"--allowedTools={','.join(CLAUDE_PRINT_READ_ONLY_TOOLS)}",
+            f"--disallowedTools={','.join(CLAUDE_PRINT_WRITE_DENY_TOOLS)}",
         ]
         if session_id:
             command.extend(["--resume", session_id])
@@ -553,6 +629,7 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
             f"claude-print-{simulation.label}",
             command,
             cwd=state.fixture_repo,
+            env=print_env,
             timeout=600,
         )
         payload, error = read_json(result.stdout, label=result.label)
@@ -571,6 +648,10 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
                 state.evidence_dir / "claude" / f"{safe_label(simulation.label)}.json",
                 payload,
             )
+            denials = payload.get("permission_denials")
+            if isinstance(denials, list):
+                permission_denials.extend(denials)
+                turn["permission_denials"] = len(denials)
             new_session_id = extract_session_id(payload)
             if new_session_id:
                 session_id = new_session_id
@@ -608,6 +689,8 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
         "simulation_tier": simulation_tier,
         "max_budget_usd": max_budget_usd,
         "session_id": session_id,
+        "permission_policy": permission_policy,
+        "permission_denials": permission_denials,
         "turns": turns,
         "simulations": [
             {
@@ -675,6 +758,21 @@ def evidence_template(state: HarnessState, *, install_mode: str, mb_version: str
     claude_tier = (
         claude.get("simulation_tier", "not run") if isinstance(claude, dict) else "not run"
     )
+    permission_policy = claude.get("permission_policy", {}) if isinstance(claude, dict) else {}
+    permission_mode = (
+        permission_policy.get("mode", "not run")
+        if isinstance(permission_policy, dict)
+        else "not run"
+    )
+    permission_boundary = (
+        permission_policy.get("write_boundary", "not run")
+        if isinstance(permission_policy, dict)
+        else "not run"
+    )
+    permission_denials = claude.get("permission_denials", []) if isinstance(claude, dict) else []
+    permission_denial_summary: str | int = "not run"
+    if isinstance(permission_denials, list):
+        permission_denial_summary = len(permission_denials)
     claude_session = bool(claude.get("session_id")) if isinstance(claude, dict) else False
     claude_transcript = "local artifact; see harness output and summary.json"
     if not (isinstance(claude, dict) and claude.get("transcript_excerpts")):
@@ -710,6 +808,9 @@ Evidence folder: local artifact; see harness output and summary.json
 - Ran: {claude_ran}
 - Simulation tier: {claude_tier}
 - Proxy notice: {claude_notice}
+- Permission policy: {permission_mode}
+- Permission denials: {permission_denial_summary}
+- Write boundary: {permission_boundary}
 - Session ID preserved: {claude_session}
 - Rubric: {rubric_summary}
 - Manual transcript review: docs/release-simulations.md#transcript-review

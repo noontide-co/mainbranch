@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import sys
 from argparse import Namespace
@@ -71,9 +72,10 @@ def test_run_claude_print_allows_unknown_command_repair_guidance(
         command: list[str],
         *,
         cwd: Path,
+        env: dict[str, str] | None = None,
         timeout: int | None = None,
     ) -> harness.CommandResult:
-        del state, command, cwd, timeout
+        del state, command, cwd, env, timeout
         stdout_path = tmp_path / f"{label}.stdout"
         stderr_path = tmp_path / f"{label}.stderr"
         metadata_path = tmp_path / f"{label}.json"
@@ -119,6 +121,106 @@ def test_run_claude_print_allows_unknown_command_repair_guidance(
 
     assert "Claude print-mode transcript reported an unknown command" not in state.failures
     assert state.claude["rubric"]["checks"]["skill_discovery"]["ok"] is True
+
+
+def test_run_claude_print_allows_readonly_mb_and_denies_write_tools(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state = harness.HarnessState(
+        engine_repo=tmp_path / "engine",
+        root=tmp_path,
+        evidence_dir=tmp_path / "evidence",
+        fixture_repo=tmp_path / "fixture",
+        mb_path=tmp_path / "venv" / "bin" / "mb",
+    )
+    state.fixture_repo.mkdir(parents=True)
+    state.mb_path.parent.mkdir(parents=True)
+    captured: dict[str, Any] = {}
+
+    simulation = release_simulation.Simulation(
+        id="status",
+        label="status",
+        title="Status",
+        tiers=("pr_smoke",),
+        prompt="/mb-start",
+        expected_route=("sense",),
+        expected_behaviors=("control_plane_usage",),
+        must_observe=("mb status",),
+        must_not=(),
+    )
+
+    def fake_run_command(
+        state: harness.HarnessState,
+        label: str,
+        command: list[str],
+        *,
+        cwd: Path,
+        env: dict[str, str] | None = None,
+        timeout: int | None = None,
+    ) -> harness.CommandResult:
+        del state, cwd, timeout
+        captured["command"] = command
+        captured["env"] = env
+        stdout_path = tmp_path / f"{label}.stdout"
+        stderr_path = tmp_path / f"{label}.stderr"
+        metadata_path = tmp_path / f"{label}.json"
+        stdout = json.dumps(
+            {
+                "session_id": "session-1",
+                "result": {"content": [{"text": "/mb-start ran mb status --json --peek."}]},
+            }
+        )
+        stdout_path.write_text(stdout, encoding="utf-8")
+        stderr_path.write_text("", encoding="utf-8")
+        metadata_path.write_text("{}", encoding="utf-8")
+        return harness.CommandResult(
+            label=label,
+            command=command,
+            cwd=tmp_path,
+            returncode=0,
+            stdout=stdout,
+            stderr="",
+            stdout_path=stdout_path,
+            stderr_path=stderr_path,
+            metadata_path=metadata_path,
+        )
+
+    monkeypatch.setattr(shutil, "which", lambda _: "/usr/local/bin/claude")
+    monkeypatch.setattr(
+        release_simulation,
+        "simulations_for_tier",
+        lambda _: (simulation,),
+    )
+    monkeypatch.setattr(harness, "run_command", fake_run_command)
+
+    harness.run_claude_print(state, max_budget_usd="0.01", simulation_tier="pr_smoke")
+
+    command = captured["command"]
+    allowed = next(
+        arg.removeprefix("--allowedTools=") for arg in command if arg.startswith("--allowedTools=")
+    )
+    disallowed = next(
+        arg.removeprefix("--disallowedTools=")
+        for arg in command
+        if arg.startswith("--disallowedTools=")
+    )
+
+    assert "--dangerously-skip-permissions" not in command
+    assert "--permission-mode" not in command
+    assert command[-1] == simulation.prompt
+    assert "Bash(mb status)" in allowed
+    assert "Bash(mb status *)" in allowed
+    assert "Bash(mb start)" in allowed
+    assert "Bash(mb start --json --repo *)" in allowed
+    assert "Bash(mb doctor repair --plan)" in allowed
+    assert "Bash(mb checkpoint --plan)" in allowed
+    assert "Bash(mb checkpoint --plan *)" in allowed
+    assert "Bash(mb checkpoint --message *)" in disallowed
+    assert "Bash(git commit *)" in disallowed
+    assert captured["env"]["PATH"].split(os.pathsep)[0] == str(state.mb_path.parent)
+    assert state.claude["permission_policy"]["bypass_permissions"] is False
+    assert state.claude["permission_policy"]["mode"] == "read_only_mb_allowlist"
+    assert state.claude["permission_denials"] == []
 
 
 def test_read_json_rejects_non_object_payload() -> None:
@@ -174,6 +276,7 @@ def test_evidence_template_labels_print_mode_as_proxy(tmp_path: Path) -> None:
         "ran": True,
         "proxy_notice": "Print-mode evidence is not the same as interactive TUI evidence.",
         "session_id": "session-1",
+        "permission_denials": [],
         "transcript_excerpts": str(tmp_path / "transcript.md"),
         "rubric": {"passed": 6, "total": 7},
     }
@@ -182,6 +285,7 @@ def test_evidence_template_labels_print_mode_as_proxy(tmp_path: Path) -> None:
 
     assert "Print-mode evidence is not the same as interactive TUI evidence" in template
     assert "Session ID preserved: True" in template
+    assert "Permission denials: 0" in template
     assert "Rubric: 6/7 heuristic checks" in template
     assert "Manual transcript review: docs/release-simulations.md#transcript-review" in template
     assert f"Evidence folder: {state.evidence_dir}" not in template

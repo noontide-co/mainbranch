@@ -234,7 +234,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 | `mb checkpoint` | Plan or save a business-readable git checkpoint during long agent runs. |
 | `mb think <topic>` | Print the `/mb-think` invocation hint. Run inside Claude Code for the full flow. |
 | `mb resolve <key>` | Resolve a reference key from the curated library, local core files, or bundled stubs. |
-| `mb educational <topic>` | Print an educational triage file (powers `mb doctor`'s "tell me more" prompts). |
+| `mb educational <topic>` | Print a beginner education topic such as `daily-owner-loop`, `why-mainbranch-not-saas`, `github-vs-gdocs`, `provider-readiness`, `cloudflare-pages`, or `stripe`; also powers longer "tell me more" context from setup and doctor prompts. |
 | `mb skill list` | List the skills bundled with this engine. |
 | `mb skill path <name>` | Print the on-disk path to a bundled skill. |
 | `mb skill validate <name>` | Validate one bundled skill's frontmatter, local references, and 500-line gate. Use `--all --json` for CI. |
@@ -257,6 +257,23 @@ Beancount, and transcription providers.
 Use `mb connect plan` when you are not sure what to connect first; it explains
 GitHub, Cloudflare, Google/Workspace, Meta Ads, and Apify as numbered business
 choices with the current readiness state and exact next command.
+
+Beginner education topics explain why these rails exist before asking you to
+configure them:
+
+```bash
+mb educational daily-owner-loop
+mb educational why-mainbranch-not-saas
+mb educational provider-readiness
+mb educational cloudflare-pages
+mb educational beancount
+mb educational cal-com
+mb educational stripe
+mb educational forgejo
+mb educational cursor
+```
+
+Common provider-readiness commands:
 
 ```bash
 mb connect plan

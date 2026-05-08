@@ -21,11 +21,55 @@ Claude Code TUI evidence for release-bearing slash-command behavior.
 |---|---|---|---|
 | PR smoke | Runtime, first-run, skill-discovery, release-process, generated-instruction, or release-validation PRs | Editable install or branch wheel | Deterministic CLI harness, one or two cheap `claude -p` proxy sims, paste-ready public-safe evidence |
 | Pre-release candidate | Release candidate branch or tag before public package release | Built wheel or editable install from the release candidate ref | Deterministic CLI harness, full prompt simulation suite, transcript review findings, follow-up issue routing |
-| Release acceptance | Final acceptance after the package is available to users | Fresh PyPI install | Fresh install evidence, deterministic CLI harness, selected `claude -p` proxy sims, manual Claude Code TUI evidence, public-safe release summary |
+| Release acceptance | Package-visible release gate before tagging whenever feasible, then fresh-install verification after publish | Best available release candidate artifact before tag; fresh PyPI install after publish | Deterministic CLI harness, selected `claude -p` proxy sims, transcript review findings, manual Claude Code TUI evidence when release claims depend on slash-command behavior, public-safe release summary |
 
 Use the lightest tier that proves the changed surface. A docs-only change can
 stop at `scripts/check.sh` unless it changes release process, runtime claims, or
 operator workflow. A first-run or skill-discovery change needs runtime evidence.
+
+## Package-Visible Release Gate
+
+Package-visible releases must pause before tagging or publishing and run release
+simulation evidence against the best available release candidate artifact. This
+is a release contract, not a per-PR rule.
+
+Before creating the `oe-vX.Y.Z` tag or GitHub Release for a package-visible
+release:
+
+1. Answer the pre-simulation prompt checkpoint below.
+2. Build the release candidate artifact and run the full pre-release candidate
+   suite.
+3. Run the `release_acceptance` tier before tagging whenever feasible. If the
+   final package is not on PyPI yet, use the best available release candidate
+   wheel or editable release ref and say which artifact was tested.
+4. Read the transcript excerpts manually. Do not rely on `rubric.json` alone.
+5. Block the tag for hard failures unless the release owner explicitly records
+   the waiver, fallback evidence, and follow-up issue route.
+
+After the package is available to users, repeat release acceptance against a
+fresh PyPI install as final install verification:
+
+```bash
+scripts/claude-runtime-dogfood.py --install-mode pypi --pypi-version X.Y.Z --run-claude-print --simulation-tier release_acceptance --max-budget-usd 0.75
+```
+
+If Claude Code auth, budget, or runtime availability prevents print-mode or
+interactive evidence, record the exact limitation and the closest deterministic
+fallback. Do not describe CLI-only evidence as runtime proof.
+
+## Pre-Simulation Prompt Checkpoint
+
+Before running a release candidate or release acceptance suite, write down:
+
+- What shipped in this release?
+- Which operator moments could regress because of those changes?
+- Do the standard prompts cover those risks, or does this release need one or
+  more feature-specific prompts in addition to the packaged suite?
+
+Feature-specific prompts should stay public-safe and fixture-based. Add them to
+the release evidence or a focused follow-up issue when they are one-off checks;
+promote them into the packaged manifest only when they should protect future
+releases too.
 
 ## Prompt Fixtures
 
@@ -74,10 +118,26 @@ TUI smoke from the fixture business repo:
 scripts/claude-runtime-dogfood.py --install-mode pypi --pypi-version X.Y.Z --run-claude-print --simulation-tier release_acceptance --max-budget-usd 0.75
 ```
 
+For a pre-tag release acceptance run against a release candidate wheel:
+
+```bash
+(cd mb && python -m build)
+scripts/claude-runtime-dogfood.py --install-mode wheel --wheel mb/dist/mainbranch-*.whl --run-claude-print --simulation-tier release_acceptance --max-budget-usd 0.75
+```
+
 The harness writes `summary.json`, command artifacts, transcript excerpts when
 print mode runs, rubric JSON, and `evidence-template.md`. Paste the concise
 template into the PR or release checklist. Keep raw local paths and long
 transcripts out of public comments.
+
+Print-mode runs intentionally prepend the harness venv's `mb` executable to
+`PATH` and pass Claude Code a read-only allowlist for deterministic `mb`
+grounding commands such as `mb status`, `mb start`, `mb doctor`, `mb validate`,
+and `mb checkpoint --plan`. The harness does not use permission-bypass mode and
+does not allowlist write/edit tools, checkpoint saves, repair applies,
+migrations, or git commits. If a transcript still shows read-only `mb` commands
+were denied, classify the run as permission-distorted proxy evidence and record
+the fallback rather than treating the heuristic rubric as a full pass.
 
 ## Transcript Review
 
@@ -101,7 +161,7 @@ Use these categories for every run:
 | Category | Hard failure examples | Quality concern or opportunity examples | Likely fix types |
 |---|---|---|---|
 | Skill discovery | `Unknown command: /mb-start`; answers from generic context instead of invoking or reading the intended skill. | Slash route works only with extra text; transcript does not prove which skill ran. | `runtime_behavior`, `generated_claude_md`, `docs_gap`, `harness_gap` |
-| CLI grounding | Advice before `mb status --json --peek`, `mb start --json`, `mb doctor`, `mb doctor repair --plan`, `mb checkpoint --plan`, or `mb validate` when the prompt calls for deterministic truth. | Mentions `mb status` but not the JSON/peek contract needed for the moment. | `skill_prose`, `generated_claude_md`, `cli_gap`, `harness_gap` |
+| CLI grounding | Advice before `mb status --json --peek`, `mb start --json`, `mb doctor`, `mb doctor repair --plan`, `mb checkpoint --plan`, or `mb validate` when the prompt calls for deterministic truth; read-only `mb` commands were denied and Claude treated the fallback as equivalent proof. | Mentions `mb status` but not the JSON/peek contract needed for the moment; transcript does not make clear whether Claude actually ran/read `mb` facts or only described them. | `skill_prose`, `generated_claude_md`, `cli_gap`, `harness_gap`, `runtime_behavior` |
 | Business-language return | Leaves the user in Git, package, path, or folder mechanics instead of translating state into bets, goals, offers, pushes, playbooks, outcomes, checkpoints, or next actions. | Correct facts, but too much internal narration before the business next step. | `skill_prose`, `generated_claude_md`, `user_education` |
 | Repair clarity | Gives generic terminal, package, git, or filesystem advice when a supported `mb` repair command exists. | Repair path is directionally right but omits `--plan`, `--repo .`, or approval boundaries. | `cli_gap`, `skill_prose`, `generated_claude_md`, `docs_gap` |
 | Write discipline | Saves, edits, migrates, repairs, commits, or mutates provider state before explicit operator approval. | Asks for approval but does not name the exact file, repair, or checkpoint command that would run. | `skill_prose`, `runtime_behavior`, `harness_gap` |
@@ -116,6 +176,8 @@ For each finding, capture:
 - simulation id and release tier;
 - evidence level: interactive TUI, print-mode proxy, deterministic CLI artifact,
   or sanitized fixture review;
+- whether read-only `mb` grounding commands executed, were denied by
+  permissions, or were replaced by fallback CLI artifacts;
 - short excerpt or paraphrase, never a long transcript dump;
 - expected behavior from the fixture;
 - actual behavior;
@@ -125,7 +187,9 @@ For each finding, capture:
 
 The core review question is: what should Main Branch change so the next run
 naturally does the right thing? A sanitized sample review lives in
-[reports/2026-05-08-release-transcript-review-sample.md](reports/2026-05-08-release-transcript-review-sample.md).
+[reports/2026-05-08-release-transcript-review-sample.md](reports/2026-05-08-release-transcript-review-sample.md),
+and the v0.3.9 post-release lesson is captured in
+[reports/2026-05-08-v0-3-9-post-release-transcript-review.md](reports/2026-05-08-v0-3-9-post-release-transcript-review.md).
 
 ## Evidence Rules
 

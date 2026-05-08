@@ -81,6 +81,11 @@ Four behaviors `/mb-site` uses on every run:
 4. **Publish-first, then iterate.** Commit the rawest durable brief and rawest working concept before iterating. Git history is the memory across context clears.
 
 When research subagents record findings, they follow the `/mb-think` research pattern: dated `research/YYYY-MM-DD-slug-claude-code.md` files with frontmatter and `linked_decisions: []`.
+When the operator needs a broad researched brief before the site brief, run or
+reuse `/mb-think --brief-format=grok-8`. Its eight categories feed the site
+flow directly: offering, ICP, journey, competitive landscape, brand story,
+technical requirements, assets, and metrics/constraints. Keep the `grok-8`
+brief in `research/`; the locked site brief still belongs in `decisions/`.
 
 ## Invocation Mode
 

@@ -18,6 +18,26 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   launch push, one-page lander, provider-safe ad launch plan/check, and
   checkpointed approval records without claiming live provider mutation. Refs
   #89.
+- Added a beginner education catalog for `mb educational`, including the
+  daily owner loop, Main Branch anti-SaaS why, CLI/dashboard, markdown/Notion,
+  git/cloud-sync, Cloudflare Pages, Cal.com, Beancount, Forgejo, Cursor, and
+  Stripe topics. Refs #144.
+- Added an opt-in `grok-8` researched-brief format for `/mb-think`, including a
+  reusable eight-category research reference, downstream guidance for
+  `/mb-ads`, `/mb-site`, `/mb-organic`, and push-playbook use, plus a
+  public-safe example brief. Refs #147.
+
+### Changed
+
+- Refreshed the existing educational topics so setup, provider readiness,
+  updates, GitHub/Docs, Cloudflare/Vercel, and sensitive-data guidance teach
+  normal business owners through exact Main Branch commands without claiming
+  unshipped provider or runtime support. Refs #144.
+- Tightened release simulation guidance so package-visible releases run
+  pre-tag release candidate and release acceptance simulations whenever
+  feasible, require manual transcript review beyond heuristic rubrics, and
+  record whether Claude Code print-mode actually executed read-only `mb`
+  grounding commands or fell back because of permissions. Refs #394.
 
 ## [0.3.9] - 2026-05-08
 

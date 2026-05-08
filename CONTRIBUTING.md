@@ -72,6 +72,13 @@ Code smoke is still required for release-bearing runtime claims. Use the
 [release simulation matrix](docs/release-simulations.md) to choose PR smoke,
 pre-release candidate, or release acceptance evidence.
 
+Full release simulations are not required for every PR. Package-visible
+releases are different: before tagging or publishing, answer the pre-simulation
+prompt checkpoint, run the pre-release candidate and `release_acceptance` tiers
+against the best available release artifact whenever feasible, and manually
+review the transcript for whether Claude actually used `mb` facts or only
+handled a permission-distorted fallback.
+
 For Go tools (Phase 2):
 
 ```bash
