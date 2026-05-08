@@ -158,13 +158,22 @@ def contains_observed_unknown_command_failure(text: str) -> bool:
     repair path. Release acceptance should fail on observed runtime output or a
     final diagnosis, not quoted symptom options or conditional repair guidance.
     """
-    for raw_line in text.splitlines():
+    raw_lines = text.splitlines()
+    for index, raw_line in enumerate(raw_lines):
         line = raw_line.strip()
         normalized = _normalize_unknown_command_line(line)
         if "unknown command" not in normalized:
             continue
         if _is_observed_unknown_command_line(normalized):
             return True
+        if index + 1 < len(raw_lines):
+            next_line = _normalize_unknown_command_line(raw_lines[index + 1].strip())
+            if next_line.startswith("/"):
+                combined = _normalize_unknown_command_line(f"{line} {raw_lines[index + 1]}")
+                if _is_observed_unknown_command_line(combined):
+                    return True
+                if _is_unknown_command_contextual_guidance(combined):
+                    continue
         if _is_unknown_command_contextual_guidance(normalized):
             continue
     return False
@@ -255,7 +264,7 @@ def _is_unknown_command_contextual_guidance(line: str) -> bool:
 
 
 def _is_observed_unknown_command_line(line: str) -> bool:
-    if re.fullmatch(r"(error:\s*)?unknown command:?\s*/?mb-start\.?", line):
+    if re.fullmatch(r"(error:\s*)?unknown command:?\s*/[a-z0-9-]+(?:[.!?].*)?", line):
         return True
     if any(
         marker in line

@@ -105,6 +105,9 @@ def test_score_transcript_uses_tighter_discovery_and_loop_keywords() -> None:
     "transcript",
     [
         "Unknown command: /mb-start",
+        "Unknown command: /mb-think",
+        "Unknown command: /mb-start. Run /help to see available commands.",
+        "Unknown command:\n/mb-start",
         "Claude runtime output: Unknown command: /mb-start",
         "Final diagnosis: slash command discovery failure. Unknown command: /mb-start",
     ],
