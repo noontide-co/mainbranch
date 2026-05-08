@@ -15,6 +15,7 @@ Fast lookup table for routing research requests in /mb-think skill.
 | "deep dive", "comprehensive research" | Gemini Deep (Tier 2) | `GOOGLE_API_KEY` | Tier 1 or WebSearch |
 | Local file path, "transcribe recording" | whisper-mcp | `mcp__whisper__*` | CLI fallback |
 | Instagram handle, "mine competitors" | Apify Instagram | `mcp__apify__*` | Manual guidance |
+| "keyword gate", "kill or build this offer", "search demand" | Keyword gate | Search/SERP sidecar or planner CSV | WebSearch + manual exports |
 | "what do we know", "check existing" | Codebase grep | Always available | N/A |
 | General question | WebSearch | Always available | N/A |
 
@@ -54,6 +55,7 @@ if mcp__whisper__* exists: WHISPER=true
 | `-flash.md` | Gemini Flash (Tier 1) | `2026-01-26-quick-research-flash.md` |
 | `-gemini-deep.md` | Gemini Deep (Tier 2) | `2026-01-26-guarantee-psychology-gemini-deep.md` |
 | `-ig-mining.md` | Apify Instagram | `2026-01-26-competitor-content-ig-mining.md` |
+| `-keyword-gate.md` | Keyword gate | `2026-01-26-workshop-keyword-gate.md` |
 | `-local-mining.md` | whisper-mcp | `2026-01-26-sales-call-local-mining.md` |
 | `-claude-code.md` | This session | `2026-01-26-pricing-strategy-claude-code.md` |
 | `-web.md` | WebSearch fallback | `2026-01-26-industry-trends-web.md` |
@@ -107,6 +109,7 @@ if mcp__whisper__* exists: WHISPER=true
    └─> Instagram handle → route_instagram()
 
 3. Check complexity
+   ├─> Keyword demand / kill-or-build language → route_keyword_gate()
    ├─> Simple question → route_gemini_tier1()
    └─> Complex multi-step → route_gemini_tier2()
 

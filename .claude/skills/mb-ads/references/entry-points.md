@@ -22,6 +22,8 @@ Real ad workflows don't fit neat categories. Someone might have images but need 
 | "Just need images for existing copy" | Image Only | Nano Banana image gen only | No |
 | "Full from scratch" | Full Pipeline | Copy + compliance + images (classic static flow) | Optional |
 | "Check my ad performance" | Account Check | Read-only account context -- insights, winners/losers | Required |
+| "Launch ads", "paid traffic plan", "Google Ads launch" | Launch Plan | Readiness, policy, keyword, budget, approval plan | Plan-only |
+| "Check launch", "continue or kill", "how are ads doing" | Launch Check | Status/outcomes/manual exports, continue/change/stop call | Read-only |
 | "Give me 50 creative variations" | Hook Library | Bulk generation (flexible quantity) | No |
 | "Give me 5 variations of this winning ad" | Performance Iteration | Pull winner + generate variants | Read-only |
 | "Make me video scripts" | Video Scripts | Full video script pipeline | No |
@@ -78,6 +80,7 @@ Each entry point assembles different components. Components are modular -- they 
 | **Video Scripts** | Generate spoken-word scripts | [video-templates-hooks.md](video-templates-hooks.md) |
 | **Image Gen** | Nano Banana image prompts + generation | [image-generation-workflow.md](image-generation-workflow.md) |
 | **Compliance Review** | 6-lens review pipeline | [review-workflow.md](review-workflow.md) |
+| **Launch Plan / Check** | Provider-safe paid-traffic plan and outcome check | [launch-plan-check.md](launch-plan-check.md) |
 | **Post-Gen Pipeline** | Git commit + compliance + image gen | [post-generation-pipeline.md](post-generation-pipeline.md) |
 | **Transcription** | Video/audio transcription (whisper or manual) | `/mb-think` references |
 
@@ -185,5 +188,6 @@ proof, verified tool names, and approval gates. See
 ## See Also
 
 - [meta-ads-integration.md](meta-ads-integration.md) -- Account access details
+- [launch-plan-check.md](launch-plan-check.md) -- Paid-traffic launch-plan and check boundary
 - [one-liner-methodology.md](one-liner-methodology.md) -- Hook library methodology (Joel's cold-traffic work preserved)
 - [preflight-algorithm.md](preflight-algorithm.md) -- Pre-flight scoring

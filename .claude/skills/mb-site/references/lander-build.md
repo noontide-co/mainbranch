@@ -1,30 +1,106 @@
-# Lander — Build Flow
+# Lander Build Flow
 
-The lander shape: 1 page, all-in-one. Hero + offer + proof + CTA + footer, all on `index.html`. Maximum focus, minimum nav.
+The lander shape is one static page for one offer and one launch push. It is
+for focused paid-traffic, retargeting, or direct-response tests where extra
+navigation would weaken the decision.
 
-**V1 status:** the per-offer lander generation system prompt is not yet written. For single-page-feel use cases in V1, use the **minisite** shape — the home page does the brand work and links straight to Stripe checkout. See [`minisite-build.md`](minisite-build.md).
+Use the minisite shape when the offer needs multiple proof/process/FAQ pages.
 
-When per-offer lander generation lands, this file gets the same shape as `minisite-build.md`:
+## Start
 
-- `setup (lander)` — tool chain (domain, dns, pages, custom-domain), single-file project repo, Cloudflare Pages git-connected
-- `build --one-shot (lander)` — generation subagent invoked with `lander-generation-system.md` (also future) + offer/audience/reference URLs; produces `index.html` + `_headers` + `og.svg` + `favicon.svg` (no per-section subdirectories)
-- Validation: footer presence, OG render, single-page Lighthouse score
-- What's NOT (no nav, no multi-page structure, no `/start/thanks/` separate page — thanks state shown inline or via Stripe's default thanks page)
+1. Resolve the business repo and active offer using the normal `/mb-site`
+   rules.
+2. Run `mb status --json --peek` and use readiness, relationship health,
+   legacy `campaigns/` drift, provider facts, and ranked actions before
+   continuing.
+3. Create or select the canonical launch push:
 
+```yaml
 ---
-
-## Why not ship a lander generation system in V1
-
-Three reasons:
-
-1. **The minisite covers the use case.** A ~4–6 page minisite where supporting pages link from the home hero gives the same psychological "single focused funnel" feel as a 1-page lander, without losing the room for proof + how-it-works + faq.
-2. **Vagueness at single-page is harder.** Less surface area for variance — the system prompt risks producing visually identical output across runs unless we're disciplined. Minisite has more room to surprise.
-3. **Conversion data lives at the minisite tier.** Devon's first V1 run is paid Google Ads → minisite → Stripe deposit. The lander shape becomes load-bearing only when there's a real reason to compress to one page (very specific offers, retargeting flows, etc.) — that signal hasn't surfaced yet.
-
-When it does, this file gets the full shape and `/mb-site` adds a `lander-generation-system.md` peer to `minisite-generation-system.md`.
-
+type: push
+slug: YYYY-MM-DD-slug
+kind: launch
+status: planned
+health: unknown
+goal: { metric: "", target: "", by: YYYY-MM-DD }
+owner: ""
+audience: ""
+offer: core/offers/<offer>/offer.md
+promise: ""
+channels: [site]
 ---
+```
 
-## Graduating up
+4. If keyword-gate research exists, load it. If paid traffic is intended and no
+   keyword gate exists, route back to `/mb-think` keyword-gate mode before
+   building.
 
-A successful lander often pulls traffic that wants more proof / more pages → graduate to **minisite**. See [`graduation.md`](graduation.md) for the path.
+## Setup
+
+Use [site-repo-workflow.md](site-repo-workflow.md) for business-repo vs site-repo
+mode. The business repo stores the push and site records; the site repo stores
+the HTML/CSS/SVG files.
+
+Before domain, DNS, Pages, or deploy work:
+
+```bash
+mb connect doctor --json
+```
+
+If Cloudflare is not ready, offer connect-now, read-only planning, or stop and
+record the blocker.
+
+## Build
+
+Load [lander-generation-system.md](lander-generation-system.md). Generate in
+Claude Code or a foreground subagent; do not call a model from a Python atom.
+
+Inputs:
+
+- active offer and audience;
+- keyword-gate file, if present;
+- voice, proof, testimonials, visual style, and named enemies;
+- selected push path;
+- conversion endpoint or hosted form/checkout/booking link;
+- optional reference URLs for taste only.
+
+Output in the site repo:
+
+```text
+index.html
+_headers
+og.svg
+favicon.svg
+README.md
+```
+
+Render `og.png` from `og.svg` when the render tool is available. Keep both files
+in the site repo when rendered.
+
+## Paid-Traffic Check
+
+When paid traffic, Google Ads, GTM, conversion tracking, or "ready to launch" is
+in scope, load [site-measurement.md](site-measurement.md) and run:
+
+```bash
+mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json
+```
+
+Report the exact readiness state. `ready` still means local checks passed, not
+permission to mutate ad accounts or spend money.
+
+## Publish
+
+Publishing is an explicit operator action. Before push/deploy:
+
+- show the changed files;
+- run any available static/site checks;
+- list provider or measurement blockers;
+- ask for approval;
+- after approval, checkpoint the business repo and commit/push the site repo
+  through the existing site workflow.
+
+## Graduation
+
+If the lander gets traffic but needs more proof, process detail, or SEO surface,
+recommend graduating to minisite. See [graduation.md](graduation.md).

@@ -1,6 +1,6 @@
 ---
 name: mb-think
-description: "Combined research, decision, and codification workflow. Use when: (1) Exploring a question before committing (2) Making a decision that needs documentation (3) User says research, decide, figure out, explore, codify, enrich, add context (4) Updating reference files based on decisions (5) User wants to add new testimonials, angles, or proof to existing files. Supports modes: full flow, research-only, decide-only, codify."
+description: "Combined research, decision, and codification workflow. Use when: (1) Exploring a question before committing (2) Making a decision that needs documentation (3) User says research, decide, figure out, explore, codify, enrich, add context, or keyword gate an offer (4) Updating reference files based on decisions (5) User wants to add new testimonials, angles, or proof to existing files. Supports modes: full flow, research-only, keyword-gate, decide-only, codify."
 loops: [sense, decide, ship]
 ---
 
@@ -135,6 +135,7 @@ Detect mode from user's natural language:
 | "research", "investigate", "what do we know about" | Research | [research-phase.md](references/research-phase.md) |
 | "what are people saying", "sentiment", "X/Twitter", "trending" | Research (Grok) | [grok-social.md](references/grok-social.md) |
 | "winning ads", "review mining", "customer language", "competitor ads", "comment mining" | Research | [winning-ad-research.md](references/winning-ad-research.md) |
+| "keyword gate", "kill or build this offer", "search demand", "buyer intent", "validate paid traffic demand" | Keyword Gate Research | [keyword-gate.md](references/keyword-gate.md) |
 | "decide", "we chose", "document decision" | Decide | [decide-phase.md](references/decide-phase.md) |
 | "codify", "apply", "update reference files" | Codify | [codify-phase.md](references/codify-phase.md) |
 | "add context", "enrich", "I have new info" | Codify | [codify-phase.md](references/codify-phase.md) |
@@ -159,6 +160,7 @@ When routing to research mode, detect research TYPE from user intent:
 | Instagram mining | Instagram handle, "mine [handle]", "competitor posts" | Apify | Manual screenshots |
 | Ad account research | "ad performance", "what's working", "check CPA", "audit my ads" | Verified Meta ad account context | Manual Ads Manager check |
 | Winning-ad research | "customer language", "competitor ads", "review mining", "script teardown", "comment mining" | WebSearch + Apify/Grok when configured | Manual exports, screenshots, pasted transcripts |
+| Keyword gate | "keyword gate", "kill or build", "search demand", "buyer intent", "paid traffic demand" | SERP/search sidecar + Keyword Planner CSV when available | WebSearch + operator-provided exports |
 | General research | Default, "research [topic]", "what do we know" | WebSearch + codebase | Always available |
 
 **Multiple types needed at once?** Spawn them as parallel Task agents in a single message. Example: user says "research what [creator] says on YouTube and what people think on X" — spawn one agent for YouTube transcript mining and another for X/Twitter sentiment simultaneously. Each saves its own research file; main conversation synthesizes when both return.
@@ -274,6 +276,7 @@ Gather from codebase, web, user input, local recordings.
 | Instagram mining | Apify or manual | `-ig-mining.md` |
 | Ad account data | Verified Meta Ads account context | `-ad-account.md` |
 | Competitor sites | Browser MCP or web fetch | `-competitor-mining.md` |
+| Keyword gate | SERP/search sidecar, planner CSV, or WebSearch | `-keyword-gate.md` |
 | Your own emails/DMs | Paste into conversation | `-internal-mining.md` |
 | Deep research | Build prompt → Gemini/GPT | `-gemini.md` or `-gpt.md` |
 | Codebase exploration | Grep, read, subagents | `-claude-code.md` |
@@ -350,6 +353,12 @@ See [references/research-phase.md](references/research-phase.md) for full workfl
 For ad, customer, review, competitor, and social-comment mining, use
 [references/winning-ad-research.md](references/winning-ad-research.md) to keep
 the research structured before handing off to `/mb-ads` or `/mb-organic`.
+
+For offer-launch demand validation, use
+[references/keyword-gate.md](references/keyword-gate.md). It writes a dated
+keyword-gate research file with a Build / Build with caution / Kill verdict,
+recommended lander cluster, ready-to-buy terms, and negative keyword seeds for
+`/mb-site` and `/mb-ads`.
 
 ---
 

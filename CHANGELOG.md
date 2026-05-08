@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added bundled skill guidance for a guided offer-launch path: `/mb-start`
+  can route an operator from active offer to keyword-gate research, canonical
+  launch push, one-page lander, provider-safe ad launch plan/check, and
+  checkpointed approval records without claiming live provider mutation. Refs
+  #89.
+
 ## [0.3.9] - 2026-05-08
 
 v0.3.9 makes the daily operating loop more inspectable. Main Branch now exposes

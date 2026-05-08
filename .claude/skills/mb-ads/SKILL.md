@@ -1,6 +1,6 @@
 ---
 name: mb-ads
-description: "Create and review Meta/Facebook/Instagram ads. Flexible entry points: full pipeline (copy + images), copy only, images only, creative variations (hook library), video scripts, video repurpose, compliance review, or optional Meta ad account check. Use when asked to create ads, ad copy, image prompts, video scripts, creative variations, or review ads. Say /mb-ads or describe what you need."
+description: "Create and review ads, and prepare provider-safe launch plans/checks. Flexible entry points: full pipeline (copy + images), copy only, images only, creative variations (hook library), video scripts, video repurpose, compliance review, launch-plan, check, or optional Meta ad account check. Use when asked to create ads, ad copy, image prompts, video scripts, creative variations, review ads, plan paid traffic, or check launch performance. Say /mb-ads or describe what you need."
 loops: [ship, reflect]
 ---
 
@@ -214,6 +214,8 @@ Detect what the user wants from natural language. Route internally to the right 
 | "I'm repurposing a video", "I shot a video" | Video Repurpose | Transcribe + extract hooks + copy variants |
 | "I want ideas for an ad", "brainstorm" | Ideation | Account check (if available) + concept generation |
 | "research winning ads", "mine reviews", "analyze competitors first" | Research / Mining | Route to `/mb-think` winning-ad research before generation |
+| "launch ads", "paid traffic plan", "Google Ads launch", "$X/day for Y days" | Launch Plan | Provider-safe plan/check mode, no account mutation |
+| "check launch", "how are ads doing", "continue or kill" | Launch Check | Read status/outcomes/operator exports, recommend continue/change/stop |
 | "Check my ad performance", "what's working" | Account Check | Read-only Meta Ads context if `mb connect` and runtime tools are ready |
 | "Give me 5 variations of this winning ad" | Performance Iteration | Pull winner + generate variants if account context is ready |
 | "What's working before we create?" | Pre-Gen Account Check | Account overview + creative audit if account context is ready |
@@ -228,6 +230,11 @@ load `mb-think/references/winning-ad-research.md`. Customer language, review
 mining, competitor gap maps, comment mining, and winning script teardown should
 save to `research/` and codify into `core/` before this skill generates ads.
 Do not paste raw review/comment dumps or copied prompt libraries into ad output.
+
+**If launch/check is requested for paid traffic:** Load
+[references/launch-plan-check.md](references/launch-plan-check.md). Prepare
+campaign materials, policy findings, measurement readiness, manual provider
+steps, and approval records; do not mutate ad accounts or start spend.
 
 ### Proactive Account Awareness
 
@@ -439,3 +446,4 @@ For review: Which lenses completed?
 **Video scripts:** 15-30 diverse scripts, spoken-word optimized
 **Review:** 6 lenses, P1/P2/P3 report, fix suggestions
 **Account check:** read-only Meta Ads context -- campaigns, performance, creative audit when `mb connect` and runtime tools are ready
+**Launch plan/check:** provider-safe Google Ads/GTM/paid-traffic plan or outcome check; no account mutation without a shipped adapter and explicit approval

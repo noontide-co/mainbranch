@@ -12,14 +12,15 @@ MAIN_BRANCH_COMMAND_RE = re.compile(
     r"(?P<name>mb-[a-z0-9-]+|newsletter|ads|bet|end|help|organic|pull|setup|site|start|status|think|update|vsl|wiki)"
     r"(?=$|[`<\s,).:;])"
 )
-UNSHIPPED_STRUCTURED_FORMS = ("/mb-start launch",)
-UNSHIPPED_CONTEXT_MARKERS = (
-    "not a shipped",
-    "not shipped",
-    "not currently shipped",
-    "future",
-    "candidate",
-    "planned",
+GUIDED_ORCHESTRATION_FORMS = ("/mb-start launch",)
+GUIDED_ORCHESTRATION_CONTEXT_MARKERS = (
+    "guided",
+    "orchestration",
+    "route",
+    "routing",
+    "walk",
+    "skill",
+    "follows the same contract",
 )
 
 
@@ -74,19 +75,20 @@ def test_runtime_docs_reference_only_bundled_main_branch_slash_commands() -> Non
     assert failures == []
 
 
-def test_runtime_docs_mark_mb_start_launch_as_unshipped_when_mentioned() -> None:
+def test_runtime_docs_mark_mb_start_launch_as_guided_skill_orchestration() -> None:
     failures: list[str] = []
 
     for path in _scan_paths():
         rel = path.relative_to(REPO_ROOT)
         lines = path.read_text(encoding="utf-8").splitlines()
         for index, line in enumerate(lines):
-            if not any(form in line for form in UNSHIPPED_STRUCTURED_FORMS):
+            if not any(form in line for form in GUIDED_ORCHESTRATION_FORMS):
                 continue
             context = _line_context(lines, index)
-            if not any(marker in context for marker in UNSHIPPED_CONTEXT_MARKERS):
+            if not any(marker in context for marker in GUIDED_ORCHESTRATION_CONTEXT_MARKERS):
                 failures.append(
-                    f"{rel}:{index + 1}: /mb-start launch must be marked unshipped/future"
+                    f"{rel}:{index + 1}: /mb-start launch must be framed as "
+                    "guided skill orchestration"
                 )
 
     assert failures == []

@@ -1,6 +1,6 @@
 ---
 name: mb-start
-description: "Main entry point for Main Branch. Detects state and routes to the right skill. Use when: user says start/help/begin, is new/returning/lost, opens Main Branch without a task, or needs triage. Routes to /mb-setup, /mb-think, /mb-bet, /mb-ads, /mb-vsl, /mb-organic, /mb-wiki, /mb-help."
+description: "Main entry point for Main Branch. Detects state and routes to the right skill. Use when: user says start/help/begin, is new/returning/lost, opens Main Branch without a task, needs triage, or wants to launch an offer. Routes to /mb-setup, /mb-think, /mb-bet, /mb-site, /mb-ads, /mb-vsl, /mb-organic, /mb-wiki, /mb-help."
 loops: [sense, decide]
 ---
 
@@ -55,6 +55,12 @@ tokens in prose. Do not invent `ready_for_launch`; the valid readiness states
 are `missing`, `blocked`, `ready_for_preview`, `ready_for_operator_review`, and
 `ready`.
 
+**Offer launch path:** When the operator asks to launch an offer, use
+[references/launch-orchestration.md](references/launch-orchestration.md).
+The path is skill orchestration: keyword-gate with `/mb-think`, create/select a
+canonical launch push, build/check the lander with `/mb-site`, prepare or check
+ads with `/mb-ads`, and checkpoint approved artifacts.
+
 ---
 
 ## CRITICAL: Repo Selection Rules
@@ -92,9 +98,8 @@ are `missing`, `blocked`, `ready_for_preview`, `ready_for_operator_review`, and
 
 ## Numbered Options Pattern
 
-Always use numbered lists for multi-choice. User replies with just a number.
-
-Apply to: business repo selection, skill routing, any multiple choice.
+Always use numbered lists for multi-choice: business repo selection, skill
+routing, launch blockers, and provider setup.
 
 ---
 
@@ -429,25 +434,13 @@ to `/mb-think`.
 
 ---
 
-## Context Awareness
+## Context And Experience
 
 Fresh context gets a fuller load; working context routes directly; heavy context
-gets a brief warning; critical context routes to `/mb-end`. Show percentage only
-when relevant.
-
----
-
-## Adapt to Experience
-
-Read `user.experience` from `~/.config/vip/local.yaml` (defaults to `beginner`
-if missing): beginner = explain more, intermediate = balanced, advanced = route
-fast.
-
-**First-time** (no config, thin reference): Be verbose, route to /mb-setup
-**Returning** (config exists): Quick confirmation, route by intent
-**Expert** (advanced experience, clear intent): Get out of the way, route fast
-
-**Updating experience:** If user says "I know what I'm doing" or similar, offer to update their experience level in local.yaml.
+gets a brief warning; critical context routes to `/mb-end`. Read
+`user.experience` from `~/.config/vip/local.yaml`: beginner explains more,
+returning confirms quickly, expert routes fast. If the user asks for a faster
+mode, offer to update local experience.
 
 ---
 
@@ -468,7 +461,8 @@ Auto-detect user intent and route. Skills: `/mb-update`, `/mb-help`, `/mb-setup`
 | "ads", "copy", "static", "image ads", "video ads", "review", "compliance" | `/mb-ads` |
 | "vsl", "sales video", "about page video", "b2b video" | `/mb-vsl` |
 | "content", "reels", "tiktok", "organic", "carousel" | `/mb-organic` |
-| "site", "landing page", "lander", "minisite", "website", "one-pager", "spin up a site", "deploy site", "put this online", "I need a site", "publish site", "graduate my site", "add a CMS to my site", "launch offer" | `/mb-site`; `/mb-start launch <offer>` is not a shipped structured mode |
+| "launch offer", "keyword gate then build", "offer launch", "/mb-start launch <offer>" | Use [references/launch-orchestration.md](references/launch-orchestration.md), then route to `/mb-think`, `/mb-site`, and `/mb-ads` as each step becomes current |
+| "site", "landing page", "lander", "minisite", "website", "one-pager", "spin up a site", "deploy site", "put this online", "I need a site", "publish site", "graduate my site", "add a CMS to my site" | `/mb-site` |
 | "wiki", "notes", "atomic", "wikilinks", "publish wiki" | `/mb-wiki` |
 | "pull", "update Main Branch", "get latest" | `/mb-update` |
 | "done", "wrapping up", "end my day", "closing out", "call it a day", "that's it" | `/mb-end` |
@@ -492,6 +486,7 @@ If re-invoked after compaction: re-read `~/.config/vip/local.yaml` for repo + id
 - [references/readiness-assessment.md](references/readiness-assessment.md) — Step 6 readiness scoring
 - [references/tool-status-audit.md](references/tool-status-audit.md) — Step 5 provider/readiness audit
 - [references/triage-agent.md](references/triage-agent.md) — Triage agent prompts and synthesis
+- [references/launch-orchestration.md](references/launch-orchestration.md) — guided offer-launch path
 
 ---
 

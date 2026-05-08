@@ -98,7 +98,7 @@ Ask the operator. Do not assume.
 > **What are you doing?**
 >
 > **A. New site from scratch.** Pick a shape.
-> - **Lander** (1 page, all-in-one). V1 stub; use minisite for single-page-feel use cases. Load [`references/lander-build.md`](references/lander-build.md).
+> - **Lander** (1 page, all-in-one). Use for focused one-off offer tests, retargeting, or paid-traffic landers. Load [`references/lander-build.md`](references/lander-build.md).
 > - **Minisite** (~4-6 pages, static HTML). V1 default for paid-ad lander tests, single-offer first deploys, payment, lead-form, and booking funnels. Load [`references/minisite-build.md`](references/minisite-build.md).
 > - **Website** (full site, usually with build step). Legacy Next.js templates work today. Load [`references/website-build.md`](references/website-build.md).
 >
@@ -152,6 +152,7 @@ If the operator cannot articulate the shape, ask: "What goal are you trying to h
 **Generation + design**
 
 - [`references/minisite-generation-system.md`](references/minisite-generation-system.md) - load-bearing system prompt for minisite generation.
+- [`references/lander-generation-system.md`](references/lander-generation-system.md) - one-page lander generation profile.
 - [`references/review.md`](references/review.md) - dial-gated quality gates.
 - [`references/anti-patterns.md`](references/anti-patterns.md) - AI tells and generation anti-patterns.
 - [`references/archetypes.md`](references/archetypes.md) - 9-archetype picker. Load picked detail lazily.

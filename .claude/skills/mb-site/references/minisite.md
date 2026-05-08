@@ -80,9 +80,9 @@ What goes on each page by default. The generation subagent has aesthetic freedom
 
 The conversion URL is the same one used everywhere on the site. Until the URL
 is wired, placeholder `https://CONVERSION-PLACEHOLDER` ships and the `/mb-site`
-walkthrough substitutes the real URL during the build phase. A future
-`/mb-start launch <offer>` orchestration would follow the same contract, but it
-is not a shipped structured mode today.
+walkthrough substitutes the real URL during the build phase. Guided
+`/mb-start launch <offer>` orchestration follows the same contract by routing
+the current step to `/mb-site`.
 
 ### How It Works (`/how-it-works/`)
 
@@ -302,8 +302,7 @@ Do not push email, phone, full name, address, CRM notes, booking notes, raw cust
 
 Current `/mb-site` walkthroughs and any future launch orchestration must verify
 these before money or state changes. Some gates branch on the chosen
-conversion-endpoint kind. `/mb-start launch <offer>` is not a shipped
-structured mode today.
+conversion-endpoint kind.
 
 ### Always-required gates
 
@@ -332,10 +331,10 @@ Failed gate = halt with a specific message and routing suggestion. No silent ski
 
 ## Candidate launch walkthrough
 
-Current shipped site work routes through `/mb-site`. A future
-`/mb-start launch <offer>` orchestration, if shipped, should walk the operator
-through six phases. Each phase has explicit Y/N gates on money-spending steps,
-resumability between phases, and clear exit criteria.
+Current shipped site work routes through `/mb-site`. Guided
+`/mb-start launch <offer>` orchestration walks the operator through the same
+phases by selecting the current skill step. Each phase has explicit Y/N gates on
+money-spending steps, resumability between phases, and clear exit criteria.
 
 ### Phase 1 — Pre-flight
 

@@ -85,6 +85,7 @@ Parse user's natural language to determine research type:
 | "research [complex topic]", "deep dive on..." | Deep research | Gemini 2.5 | Web search + synthesis |
 | "transcribe this file", user shares .mp4/.m4a | Local transcription | whisper-mcp | ffmpeg + CLI fallback |
 | "mine competitors", "what's [handle] posting" | Social mining | Apify Instagram Actor | Manual scraping guidance |
+| "keyword gate", "kill or build this offer", "search demand" | Keyword gate | Search/SERP sidecar or planner CSV | Web search + operator exports |
 | "research [specific question]" | General research | Codebase → Web → Ask user | Always works |
 
 ### 3. Progressive Disclosure
