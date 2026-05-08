@@ -302,11 +302,11 @@ def _read_frontmatter(path: Path) -> dict[str, Any]:
     try:
         with path.open("r", encoding="utf-8") as handle:
             first = handle.readline()
-            if first.rstrip("\n\r") != "---":
+            if first.strip() != "---":
                 return {}
             lines: list[str] = []
             for line in handle:
-                if line.rstrip("\n\r") == "---":
+                if line.strip() == "---":
                     break
                 lines.append(line)
             else:
@@ -850,7 +850,7 @@ def _relationship_health(
     active_gaps = [gap_item for gap_item in gaps if gap_item is not None]
     return {
         "ok": not active_gaps,
-        "source": "mb graph",
+        "source": "mb status relationship scan",
         "registry_version": relationships.REGISTRY_VERSION,
         "summary": {
             "gaps": len(active_gaps),

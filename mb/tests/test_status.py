@@ -427,12 +427,11 @@ def test_status_relationship_health_flags_closed_bet_without_outcome(
 def test_status_relationship_health_uses_lightweight_scan_on_large_repos(
     tmp_path: Path, monkeypatch
 ) -> None:
+    def fail_if_graph_builds(_path: str) -> None:
+        raise AssertionError("status built the full graph")
+
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
-    monkeypatch.setattr(
-        graph_mod,
-        "build_index",
-        lambda _path: (_ for _ in ()).throw(AssertionError("status built the full graph")),
-    )
+    monkeypatch.setattr(graph_mod, "build_index", fail_if_graph_builds)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
     documents = repo / "documents"
@@ -772,6 +771,13 @@ def test_status_brain_includes_active_bets(tmp_path: Path) -> None:
     assert brain["recent_research"][0]["title"] == "Market"
     assert brain["bets"]["active"][0]["title"] == "Launch bet"
     assert brain["bets"]["active"][0]["deadline"] == deadline.isoformat()
+
+
+def test_status_frontmatter_reader_accepts_delimiter_whitespace(tmp_path: Path) -> None:
+    path = tmp_path / "note.md"
+    path.write_text("--- \nstatus: open\n--- \n# Note\n", encoding="utf-8")
+
+    assert status_mod._read_frontmatter(path)["status"] == "open"
 
 
 def test_status_readiness_mentions_due_bets(tmp_path: Path) -> None:
