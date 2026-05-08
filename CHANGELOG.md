@@ -11,6 +11,27 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.8] - 2026-05-08
+
+v0.3.8 tightens the daily operating loop after the 0.3.7 release discipline
+landed. Main Branch now has a shared relationship registry for graph and
+cross-reference validation, safer runtime route checks, and clearer provider
+boundaries for Postiz and X-style resource delivery.
+
+### What this means for you (plain English)
+
+- **The business graph is more useful.** `mb graph --json` and
+  `mb validate --cross-refs` now agree on relationship fields, Markdown links,
+  push-to-offer links, and safe provider references.
+- **Claude gets fewer fake routes.** User-facing runtime guidance now points to
+  shipped Main Branch slash commands or clearly marks future commands as
+  unshipped.
+- **Provider claims stay honest.** Postiz remains a candidate scheduling rail
+  until connected-channel smoke exists, and Main Branch refuses X comment/DM
+  automation until an accepted provider path is proven.
+- **Release reviews are sharper.** Claude transcript reviews now have a public
+  rubric and sample so reviewers can turn simulation misses into product work.
+
 ### Changed
 
 - Aligned bundled skill and public docs language with the accepted work-continuity
