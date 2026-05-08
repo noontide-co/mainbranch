@@ -163,7 +163,7 @@ repos:
     role: site
     lifecycle: active
     relationship: execution_vehicle_for
-    parent: example-business
+    parent: example
     github_owner: example-co
     repo_name: workshop-site
     remote: github:example-co/workshop-site
@@ -179,7 +179,7 @@ repos:
     lifecycle: active
     visibility: restricted
     relationship: reports_to
-    parent: example-business
+    parent: example
     purpose: "Private bookkeeping source; hub stores approved summaries only."
 ---
 ```
@@ -610,11 +610,12 @@ Open or update follow-up issues for these slices:
    avoid destructive repo/offer moves. Coordinate the offer/bet parts with
    [#411](https://github.com/noontide-co/mainbranch/issues/411).
 5. **Doctor repair plan.** Add preview-first topology drift checks and unsafe
-   private-metadata warnings.
+   private-metadata warnings. This is untracked as a standalone follow-up until
+   the registry and descriptor contracts in #416 and #417 land.
 6. **Dashboard map.** Build only after status/graph expose enough deterministic
-   topology facts to keep the dashboard a view over truth. Coordinate this
-   with the durable dashboard thread,
-   [#189](https://github.com/noontide-co/mainbranch/issues/189).
+   topology facts to keep the dashboard a view over truth. This is intentionally
+   gated behind #418 rather than tracked as dashboard implementation in this
+   decision.
 
 ## Review Checklist
 
