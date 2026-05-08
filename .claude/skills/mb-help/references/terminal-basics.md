@@ -122,7 +122,7 @@ claude
 ```
 
 This is where Claude reads your offer, audience, voice, research, decisions,
-and campaign context. `/mb-site` will create or select a separate site repo.
+and push context. `/mb-site` will create or select a separate site repo.
 
 **2. Switch to the site repo for implementation once it exists.**
 
@@ -133,9 +133,10 @@ claude
 ```
 
 This is where Claude edits pages, reviews the site, deploys, and runs
-measurement checks. The site repo should have `.mainbranch/source.json` pointing
-back to the business repo so Claude can still read the offer and campaign
-context.
+measurement checks. The site repo should have `.mainbranch/repo.json` pointing
+back to the business hub so Claude can still read the offer and push context.
+Existing site repos may still use `.mainbranch/source.json` as a compatibility
+link.
 
 ---
 

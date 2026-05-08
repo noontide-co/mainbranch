@@ -192,8 +192,10 @@ they should keep the frontmatter shape stable when they use it.
 
 Child repos should identify their parent boundary without becoming the parent
 truth. Existing site repos already use `.mainbranch/source.json` to point back
-to the business repo. Future non-site child repos should get a generalized
-repo-local descriptor rather than overloading site-specific source metadata.
+to the business repo. New child repos should use the role-neutral
+`.mainbranch/repo.json` descriptor documented in
+[docs/child-repo-descriptors.md](../docs/child-repo-descriptors.md) rather
+than overloading site-specific source metadata.
 
 Repo-local descriptors may include:
 
@@ -206,6 +208,10 @@ Repo-local descriptors may include:
 
 They must not contain secrets, private local absolute paths, or permission
 claims that bypass GitHub or provider authority.
+
+The child descriptor is a signpost from the child repo back to the hub topology
+map. The hub registry in `core/operations/repo-topology.md` remains the durable
+business map when the two disagree.
 
 ### GitHub Metadata
 
@@ -622,9 +628,9 @@ Open or update follow-up issues for these slices:
    validation, safe visibility classes, role/lifecycle enums, and link checks.
    Tracked in [#416](https://github.com/noontide-co/mainbranch/issues/416).
 2. **General child repo descriptor.** Extend the existing site-repo
-   `.mainbranch/source.json` pattern into a role-neutral descriptor without
-   breaking site workflows. Tracked in
-   [#417](https://github.com/noontide-co/mainbranch/issues/417).
+   `.mainbranch/source.json` pattern into the role-neutral
+   `.mainbranch/repo.json` descriptor without breaking site workflows. Tracked
+   in [#417](https://github.com/noontide-co/mainbranch/issues/417).
 3. **Status and graph topology facts.** Add additive JSON sections for topology
    role, parent, child counts, stale descriptors, repo nodes, and safe edges.
    Tracked in [#418](https://github.com/noontide-co/mainbranch/issues/418).

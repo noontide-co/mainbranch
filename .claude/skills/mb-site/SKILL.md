@@ -24,10 +24,12 @@ and the site record is typically `pushes/<YYYY-MM-DD-slug>/site.md`. Site
 files themselves live in the linked site repo (Cloudflare Pages, etc.) and
 are not duplicated in the business repo.
 
-Reverse references from the site repo's `.mainbranch/source.json` use
-canonical push paths (`campaign_path: pushes/<...>/push.md`); on legacy
-repos that still have `campaigns/`, those references continue to resolve
-via compatibility read.
+Reverse references from the site repo should use the role-neutral
+`.mainbranch/repo.json` descriptor with canonical push paths
+(`linked.pushes: ["pushes/<...>/push.md"]`). Existing site repos may still use
+`.mainbranch/source.json`; its `campaign_path` compatibility key should point
+at the current push record when possible. Legacy repos that still have
+`campaigns/` continue to resolve via compatibility read.
 
 If `core/vocabulary.md` defines display words (e.g. `terms.push.singular:
 launch`), speak the operator's word in conversation while still writing
@@ -92,7 +94,7 @@ brief in `research/`; the locked site brief still belongs in `decisions/`.
 Use [`references/site-repo-workflow.md`](references/site-repo-workflow.md).
 
 - **Business repo mode:** CWD has `core/` or legacy `reference/core/`. Say: "I'm reading business context here and will create or select a site repo."
-- **Site repo mode:** CWD has `.mainbranch/source.json`. Say: "I'm editing the site here and reading business context from the linked business repo."
+- **Site repo mode:** CWD has `.mainbranch/repo.json` or legacy `.mainbranch/source.json`. Say: "I'm editing the site here and reading business context from the linked business repo."
 
 Business repo mode plans, researches, drafts the brief, picks an offer, records push/site state, and creates or selects the site repo. Site repo mode edits code, reviews pages, previews, deploys, and runs `mb site check`.
 

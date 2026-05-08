@@ -218,6 +218,197 @@ def test_site_check_uses_source_link_when_business_repo_is_omitted(
     assert any(item["kind"] == "site_source_link" for item in payload["evidence"])
 
 
+def test_site_check_uses_child_descriptor_relative_hub_when_source_link_is_omitted(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business = tmp_path / "business"
+    site = tmp_path / "site"
+    init_run(path=str(business), name="Acme")
+    site.mkdir()
+    (business / "core" / "offer.md").write_text(
+        (
+            "---\n"
+            "gtm_container_id: GTM-ABC1234\n"
+            "google_ads_customer_id: '0000000000'\n"
+            "consent_posture: standard_tag_consent_reviewed\n"
+            "privacy_policy_url: https://example.com/privacy\n"
+            "---\n\n"
+            "# Offer\n"
+        ),
+        encoding="utf-8",
+    )
+    _write_conversion(
+        site,
+        {
+            "kind": "lead_form",
+            "url": "https://tally.so/r/example",
+            "render": "link_out",
+            "primary_conversions": ["mb_lead_submit"],
+        },
+    )
+    (site / ".mainbranch" / "repo.json").write_text(
+        json.dumps(
+            {
+                "schema": "mb.child_repo.v0",
+                "role": "site",
+                "display_name": "Acme site",
+                "github_owner": "example-co",
+                "repo_name": "acme-site",
+                "safe_purpose": "Public paid-traffic site for Acme.",
+                "parent": {
+                    "display_name": "Acme",
+                    "github_owner": "example-co",
+                    "repo_name": "acme",
+                    "remote": "github:example-co/acme",
+                    "local_checkout": "../business",
+                },
+                "linked": {
+                    "offers": ["core/offer.md"],
+                    "pushes": ["pushes/2026-05-06-paid-minisite/push.md"],
+                    "bets": ["bets/2026-05-01-acme-offer.md"],
+                    "decisions": ["decisions/2026-05-01-site.md"],
+                },
+                "return_to_hub_command": "cd ../business",
+                "safe_to_share": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_html(site, events=["mb_cta_click", "mb_form_start", "mb_lead_submit"])
+
+    result = runner.invoke(app, ["site", "check", str(site), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["business_repo"] == str(business.resolve())
+    assert payload["source"] == {}
+    assert payload["child_descriptor"]["role"] == "site"
+    assert payload["child_descriptor"]["parent"]["resolved_local_checkout"] == str(
+        business.resolve()
+    )
+    assert payload["child_descriptor"]["linked"]["pushes"] == [
+        "pushes/2026-05-06-paid-minisite/push.md"
+    ]
+    evidence = {item["kind"]: item for item in payload["evidence"]}
+    assert evidence["site_source_link"]["state"] == "passed"
+    assert evidence["child_repo_descriptor"]["state"] == "passed"
+
+
+def test_site_check_blocks_child_descriptor_with_absolute_local_checkout(
+    tmp_path: Path,
+) -> None:
+    business = tmp_path / "business"
+    site = tmp_path / "site"
+    init_run(path=str(business), name="Acme")
+    site.mkdir()
+    _write_conversion(
+        site,
+        {
+            "kind": "lead_form",
+            "gtm_container_id": "GTM-ABC1234",
+            "google_ads_customer_id": "0000000000",
+            "primary_conversions": ["mb_lead_submit"],
+            "metadata": {
+                "consent_posture": "standard_tag_consent_reviewed",
+                "privacy_policy_url": "https://example.com/privacy",
+            },
+        },
+    )
+    (site / ".mainbranch" / "repo.json").write_text(
+        json.dumps(
+            {
+                "schema": "mb.child_repo.v0",
+                "role": "site",
+                "parent": {
+                    "github_owner": "example-co",
+                    "repo_name": "acme",
+                    "local_checkout": str(business),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_html(site, events=["mb_cta_click", "mb_form_start", "mb_lead_submit"])
+
+    result = runner.invoke(app, ["site", "check", str(site), "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["business_repo"] == ""
+    descriptor_evidence = next(
+        item for item in payload["evidence"] if item["kind"] == "child_repo_descriptor"
+    )
+    assert descriptor_evidence["state"] == "blocked"
+    assert "must be relative" in descriptor_evidence["summary"]
+
+
+def test_site_check_accepts_child_descriptor_with_explicit_business_repo(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business = tmp_path / "business"
+    site = tmp_path / "site"
+    init_run(path=str(business), name="Acme")
+    site.mkdir()
+    (business / "core" / "offer.md").write_text(
+        (
+            "---\n"
+            "gtm_container_id: GTM-ABC1234\n"
+            "google_ads_customer_id: '0000000000'\n"
+            "consent_posture: standard_tag_consent_reviewed\n"
+            "privacy_policy_url: https://example.com/privacy\n"
+            "---\n\n"
+            "# Offer\n"
+        ),
+        encoding="utf-8",
+    )
+    _write_conversion(
+        site,
+        {
+            "kind": "lead_form",
+            "url": "https://tally.so/r/example",
+            "render": "link_out",
+            "primary_conversions": ["mb_lead_submit"],
+        },
+    )
+    (site / ".mainbranch" / "repo.json").write_text(
+        json.dumps(
+            {
+                "schema": "mb.child_repo.v0",
+                "role": "site",
+                "display_name": "Acme site",
+                "github_owner": "example-co",
+                "repo_name": "acme-site",
+                "parent": {
+                    "display_name": "Acme",
+                    "github_owner": "example-co",
+                    "repo_name": "acme",
+                    "remote": "github:example-co/acme",
+                },
+                "linked": {"offers": ["core/offer.md"]},
+                "safe_to_share": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_html(site, events=["mb_cta_click", "mb_form_start", "mb_lead_submit"])
+
+    result = runner.invoke(
+        app,
+        ["site", "check", str(site), "--business-repo", str(business), "--json"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["business_repo"] == str(business.resolve())
+    evidence = {item["kind"]: item for item in payload["evidence"]}
+    assert evidence["site_source_link"]["state"] == "passed"
+    assert payload["child_descriptor"]["parent"]["remote"] == "github:example-co/acme"
+
+
 def test_site_check_blocks_missing_gtm_noscript_event_and_consent(tmp_path: Path) -> None:
     business = tmp_path / "business"
     site = tmp_path / "site"

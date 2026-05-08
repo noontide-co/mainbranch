@@ -12,7 +12,10 @@ After the site repo has `.mainbranch/conversion.json` and built HTML, run:
 mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json
 ```
 
-If running from a site repo with `.mainbranch/source.json`, `mb site check . --json` can infer the linked business repo.
+If running from a site repo with `.mainbranch/repo.json` or legacy
+`.mainbranch/source.json`, `mb site check . --json` can infer the linked
+business repo when a local checkout hint exists. If the descriptor only stores
+safe GitHub handles, pass `--business-repo "$BUSINESS_REPO"`.
 
 ## Readiness States
 

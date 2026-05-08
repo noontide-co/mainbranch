@@ -190,8 +190,11 @@ new coordinated work belongs in `pushes/`.
 
 As a business grows, related work can graduate into child repos: sites,
 products/offers, client fulfillment repos, private finance repos, or ops repos.
-The business repo stays the hub. Future dashboard work should map those repos
-and their pushes, bets, commits, issues, PRs, checkpoints, provider-safe
+The business repo stays the hub. Hub topology belongs in
+`core/operations/repo-topology.md` when present; child repos can point back with
+safe `.mainbranch/repo.json` descriptors while existing site repos keep
+`.mainbranch/source.json` compatibility. Future dashboard work should map those
+repos and their pushes, bets, commits, issues, PRs, checkpoints, provider-safe
 summaries, and active decisions. The dashboard is the map, not the source of
 truth.
 
@@ -424,7 +427,9 @@ voice, and access boundary. In a single-offer repo, `core/offer.md` is the
 offer truth. In a multi-offer repo, `core/offer.md` is the portfolio thesis and
 each offer gets `core/offers/<slug>/offer.md`. If an offer graduates into its
 own team, provider accounts, site, finance boundary, or operating history, move
-it into its own repo and keep the company repo as a hub.
+it into its own repo, keep the company repo as a hub, list the relationship in
+`core/operations/repo-topology.md` when useful, and give the child repo a safe
+`.mainbranch/repo.json` descriptor that points back to the hub.
 
 **What's a bet vs. an offer?**
 A bet is a time-boxed operating hypothesis: what you'll try, why, by when, and

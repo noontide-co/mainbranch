@@ -5,12 +5,12 @@ Load this after compaction, context loss, repo switching, or unclear site state.
 ## Recovery From Compaction
 
 1. Re-invoke `/mb-site` to reload skill context.
-2. Check invocation mode: business repo mode (`core/`) or site repo mode (`.mainbranch/source.json`).
-3. Load links: read `.mainbranch/source.json` in the site repo, or the campaign/site record in the business repo.
-4. Identify the site shape from the campaign/site record or existing files.
+2. Check invocation mode: business repo mode (`core/`) or site repo mode (`.mainbranch/repo.json` or legacy `.mainbranch/source.json`).
+3. Load links: read `.mainbranch/repo.json` or legacy `.mainbranch/source.json` in the site repo, or the push/site record in the business repo.
+4. Identify the site shape from the push/site record or existing files.
 5. Load only the corresponding build reference.
 6. Check continuity: use business-repo `mb status --json --peek` facts first, then site-repo git history only for site-code changes.
-7. Resume from the last completed step based on git history, source links, and campaign launch status.
+7. Resume from the last completed step based on git history, descriptor links, and push launch status.
 
 ## Scope Boundaries
 

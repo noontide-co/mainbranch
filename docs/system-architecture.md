@@ -135,6 +135,10 @@ The durable topology model lives in
 That decision defines role slugs, relationship types, lifecycle language,
 GitHub/local naming conventions, metadata placement, and the public/private
 boundary for finance, legal, workspace, and dashboard views.
+Role-neutral child repo descriptors live in
+[child-repo-descriptors.md](child-repo-descriptors.md). New child repos should
+use `.mainbranch/repo.json` as a local signpost back to the hub; existing site
+repo `.mainbranch/source.json` files remain compatibility links.
 
 Common repo roles:
 

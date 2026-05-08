@@ -13,6 +13,8 @@ from mb import connect as connect_mod
 
 CONVERSION_RELATIVE_PATH = Path(".mainbranch") / "conversion.json"
 SOURCE_RELATIVE_PATH = Path(".mainbranch") / "source.json"
+CHILD_REPO_RELATIVE_PATH = Path(".mainbranch") / "repo.json"
+CHILD_REPO_SCHEMA = "mb.child_repo.v0"
 HTML_EXCLUDED_DIRS = {
     ".git",
     ".hg",
@@ -63,6 +65,68 @@ def _resolve_source_path(site_repo: Path, value: Any) -> str:
     if not candidate.is_absolute():
         candidate = (site_repo / candidate).resolve()
     return str(candidate)
+
+
+def _resolve_relative_checkout(child_repo: Path, value: Any) -> tuple[str, str]:
+    if not isinstance(value, str) or not value.strip():
+        return "", ""
+    candidate = Path(value).expanduser()
+    if candidate.is_absolute():
+        return "", "parent.local_checkout must be relative, not absolute"
+    return str((child_repo / candidate).resolve()), ""
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _child_repo_descriptor(child_repo: Path) -> tuple[dict[str, Any], str]:
+    descriptor, error = _read_json(child_repo / CHILD_REPO_RELATIVE_PATH)
+    if error:
+        return {}, error
+
+    parent = descriptor.get("parent")
+    parent_data: dict[str, Any] = parent if isinstance(parent, dict) else {}
+    linked = descriptor.get("linked")
+    linked_data: dict[str, Any] = linked if isinstance(linked, dict) else {}
+    local_checkout, checkout_error = _resolve_relative_checkout(
+        child_repo, parent_data.get("local_checkout")
+    )
+    if checkout_error:
+        return {}, checkout_error
+
+    schema = str(descriptor.get("schema") or "")
+    if schema and schema != CHILD_REPO_SCHEMA:
+        return {}, f"unsupported schema {schema!r}"
+
+    normalized_parent = {
+        "display_name": str(parent_data.get("display_name") or ""),
+        "github_owner": str(parent_data.get("github_owner") or ""),
+        "repo_name": str(parent_data.get("repo_name") or ""),
+        "remote": str(parent_data.get("remote") or ""),
+        "local_checkout": str(parent_data.get("local_checkout") or ""),
+        "resolved_local_checkout": local_checkout,
+    }
+    normalized = {
+        "schema": schema or CHILD_REPO_SCHEMA,
+        "role": str(descriptor.get("role") or ""),
+        "display_name": str(descriptor.get("display_name") or ""),
+        "github_owner": str(descriptor.get("github_owner") or ""),
+        "repo_name": str(descriptor.get("repo_name") or ""),
+        "safe_purpose": str(descriptor.get("safe_purpose") or ""),
+        "parent": normalized_parent,
+        "linked": {
+            "offers": _string_list(linked_data.get("offers")),
+            "pushes": _string_list(linked_data.get("pushes")),
+            "bets": _string_list(linked_data.get("bets")),
+            "decisions": _string_list(linked_data.get("decisions")),
+        },
+        "return_to_hub_command": str(descriptor.get("return_to_hub_command") or ""),
+        "safe_to_share": bool(descriptor.get("safe_to_share", True)),
+    }
+    return normalized, ""
 
 
 def _site_source(site_repo: Path) -> tuple[dict[str, Any], str]:
@@ -427,8 +491,16 @@ def check(
 
     site = Path(site_repo).resolve()
     source, source_error = _site_source(site)
+    child_descriptor, child_descriptor_error = _child_repo_descriptor(site)
     raw_source_business = source.get("business_repo") if source else ""
     source_business = raw_source_business if isinstance(raw_source_business, str) else ""
+    if not source_business and child_descriptor:
+        parent = child_descriptor.get("parent")
+        parent_data = parent if isinstance(parent, dict) else {}
+        descriptor_business = parent_data.get("resolved_local_checkout")
+        if isinstance(descriptor_business, str):
+            source_business = descriptor_business
+    explicit_business_repo = bool(business_repo)
     business_value = business_repo or source_business
     business = Path(business_value).resolve() if business_value else None
     conversion, conversion_error = _read_json(site / CONVERSION_RELATIVE_PATH)
@@ -490,12 +562,49 @@ def check(
                 else "Site source link is missing business_repo.",
             }
         )
+    elif child_descriptor:
+        parent = child_descriptor.get("parent")
+        parent_data = parent if isinstance(parent, dict) else {}
+        source_state = (
+            "passed"
+            if parent_data.get("resolved_local_checkout") or explicit_business_repo
+            else "manual"
+        )
+        evidence.append(
+            {
+                "kind": "site_source_link",
+                "state": source_state,
+                "summary": "Site repo links back to business context through .mainbranch/repo.json."
+                if source_state == "passed"
+                else (
+                    "Child repo descriptor names the hub; pass --business-repo "
+                    "with the local hub checkout for local offer metadata."
+                ),
+            }
+        )
     else:
         evidence.append(
             {
                 "kind": "site_source_link",
                 "state": "missing",
                 "summary": f"{SOURCE_RELATIVE_PATH.as_posix()} is missing.",
+            }
+        )
+    if child_descriptor_error and child_descriptor_error != "missing":
+        evidence.append(
+            {
+                "kind": "child_repo_descriptor",
+                "state": "blocked",
+                "summary": f"{CHILD_REPO_RELATIVE_PATH.as_posix()} is {child_descriptor_error}.",
+            }
+        )
+    elif child_descriptor:
+        role = child_descriptor.get("role") or "unspecified"
+        evidence.append(
+            {
+                "kind": "child_repo_descriptor",
+                "state": "passed",
+                "summary": f"Child repo descriptor declares role {role}.",
             }
         )
 
@@ -634,6 +743,7 @@ def check(
         "site_repo": str(site),
         "business_repo": str(business) if business else "",
         "source": source,
+        "child_descriptor": child_descriptor,
         "state": state,
         "safe_to_share": True,
         "summary": summary,

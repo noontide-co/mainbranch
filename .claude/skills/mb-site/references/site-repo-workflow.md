@@ -39,7 +39,39 @@ skills into that repo so Claude can discover `/mb-site` there:
 mb skill link --repo ~/Documents/GitHub/my-offer-site
 ```
 
-The site repo must include `.mainbranch/source.json`:
+The site repo should include the role-neutral `.mainbranch/repo.json` child
+descriptor:
+
+```json
+{
+  "schema": "mb.child_repo.v0",
+  "role": "site",
+  "display_name": "Flagship site",
+  "github_owner": "example-co",
+  "repo_name": "flagship-site",
+  "safe_purpose": "Public site for the flagship offer.",
+  "parent": {
+    "display_name": "Example Business",
+    "github_owner": "example-co",
+    "repo_name": "example",
+    "remote": "github:example-co/example",
+    "local_checkout": "../example"
+  },
+  "linked": {
+    "offers": ["core/offers/flagship/offer.md"],
+    "pushes": ["pushes/2026-05-06-paid-minisite/push.md"]
+  },
+  "return_to_hub_command": "cd ../example && claude",
+  "safe_to_share": true
+}
+```
+
+Do not commit absolute local paths in the descriptor. `parent.local_checkout`
+is optional and must be a relative checkout hint. If the descriptor only has
+GitHub owner/repo handles, run `mb site check . --business-repo <hub-checkout>
+--json` when local offer metadata is needed.
+
+Existing site repos may still have `.mainbranch/source.json`:
 
 ```json
 {
@@ -50,9 +82,13 @@ The site repo must include `.mainbranch/source.json`:
 }
 ```
 
+Treat `source.json` as a compatibility file. The `campaign_path` key may point
+at a current `pushes/<slug>/push.md` record.
+
 The site repo also stores `.mainbranch/conversion.json` for the conversion
 endpoint and local measurement plan. `mb site check` reads these files and can
-infer the business repo from `source.json` when `--business-repo` is omitted.
+infer the business repo from `repo.json` or legacy `source.json` when a local
+checkout hint exists and `--business-repo` is omitted.
 
 ## Reverse Link
 

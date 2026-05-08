@@ -36,7 +36,7 @@ Coaching usually fits minisite."
 
 **User:** "/mb-site - update the hero on my existing minisite"
 
-**Claude:** Reads `.mainbranch/source.json`, the picked offer, and current site files.
+**Claude:** Reads `.mainbranch/repo.json` or legacy `.mainbranch/source.json`, the picked offer, and current site files.
 
 **Claude:** "Your minisite is at `<site_repo>`. Reading offer.md, audience.md, and voice.md.
 

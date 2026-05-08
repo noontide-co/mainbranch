@@ -93,18 +93,46 @@ Expect roughly 3-4 minutes. This path was live-tested end-to-end in PR #97.
 
 Prefer repo-local links over global config.
 
-Write `<site_repo>/.mainbranch/source.json`:
+Write `<site_repo>/.mainbranch/repo.json`:
 
 ```json
 {
-  "business_repo": "/absolute/path/to/my-business",
-  "offer_path": "core/offers/flagship/offer.md",
-  "campaign_path": "pushes/2026-05-06-paid-minisite/push.md",
+  "schema": "mb.child_repo.v0",
+  "role": "site",
+  "display_name": "Flagship site",
+  "github_owner": "example-co",
+  "repo_name": "flagship-site",
+  "safe_purpose": "Public paid-traffic site for the flagship offer.",
+  "parent": {
+    "display_name": "Example Business",
+    "github_owner": "example-co",
+    "repo_name": "example",
+    "remote": "github:example-co/example",
+    "local_checkout": "../example"
+  },
+  "linked": {
+    "offers": ["core/offers/flagship/offer.md"],
+    "pushes": ["pushes/2026-05-06-paid-minisite/push.md"]
+  },
+  "return_to_hub_command": "cd ../example && claude",
   "safe_to_share": true
 }
 ```
 
-The business repo should keep the reverse site record in the relevant `pushes/` record or offer note: site repo path or URL, domain, Cloudflare project, environment, measurement state, launch status, and the next manual approval step. The `campaign_path` key is a historical compatibility name; point it at the current push record.
+Use the real GitHub owner/repo, display names, linked offer path, linked push
+path, and optional relative `parent.local_checkout` for the operator's sibling
+checkout layout. Do not commit absolute local paths, secrets, raw provider
+caches, or permission claims.
+
+Existing site repos may still use `.mainbranch/source.json` with
+`business_repo`, `offer_path`, and `campaign_path`; treat that as compatibility.
+The `campaign_path` key is a historical name and should point at the current
+push record.
+
+The business repo should keep the reverse site record in the relevant `pushes/`
+record or offer note: site repo path or URL, domain, Cloudflare project,
+environment, measurement state, launch status, and the next manual approval
+step.
 
 Treat `~/.mainbranch/sites.json` as legacy fallback only when no repo-local link exists. If needed, write or extend:
 

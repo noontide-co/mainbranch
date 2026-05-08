@@ -4,7 +4,11 @@ Common issue fixes for `/mb-site`. Load this only when the operator is blocked o
 
 ## No Site Configured
 
-Run `/mb-site` and pick "new site from scratch." The skill walks setup, then writes repo-local `.mainbranch/source.json` in the site repo and a reverse site record in the business repo. Treat `~/.mainbranch/sites.json` as a legacy fallback.
+Run `/mb-site` and pick "new site from scratch." The skill walks setup, then
+writes repo-local `.mainbranch/repo.json` in the site repo and a reverse site
+record in the business repo. Existing site repos may still use
+`.mainbranch/source.json`; treat `~/.mainbranch/sites.json` as a legacy
+fallback.
 
 ## Cloudflare Pages `github_app_not_installed`
 
@@ -70,9 +74,15 @@ Website (Next.js): check `globals.css` for correct CSS variable names, `layout.t
 
 ## Business Context Not Found
 
-Check `.mainbranch/source.json` in the site repo or the reverse site record in `pushes/`. Inspect `campaigns/` only for legacy repos.
+Check `.mainbranch/repo.json` or legacy `.mainbranch/source.json` in the site
+repo, or the reverse site record in `pushes/`. Inspect `campaigns/` only for
+legacy repos.
 
-The `business_repo` path must point to a business repo with canonical `core/` files. Legacy `reference/core` and `reference/offers` paths are compatibility bridges only.
+If a legacy `source.json` has `business_repo`, that path must point to a
+business repo with canonical `core/` files. A new `.mainbranch/repo.json`
+descriptor should use safe GitHub handles and, at most, an optional relative
+`parent.local_checkout` hint. Legacy `reference/core` and `reference/offers`
+paths are compatibility bridges only.
 
 ## Site Looks Generic Or AI-Written
 

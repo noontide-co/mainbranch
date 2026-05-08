@@ -267,7 +267,7 @@ layer unless the operator asks for the plumbing.
 - `core/brand/` — visual identity, voice guardrails, and brand systems
 - `core/strategy/` — strategic context that should remain evergreen
 - `core/operations/` — operating context such as fulfillment, classroom, funnel, or membership notes
-- `core/finance/` — ledger and tax artifacts
+- `core/finance/` — approved finance summaries, policies, and safe provider refs
 - `research/` — dated notes from when you went looking
 - `decisions/` — dated choices, with rationale
 - `bets/` — operating bets with appetite, metric, target, and outcome
@@ -279,6 +279,28 @@ If your repo was created before the push primitive decision, you may also have
 a legacy `campaigns/` folder. `mb` continues to read it; new coordinated work
 should land in `pushes/`. Run `mb doctor` to see whether your repo is on the
 canonical shape and `mb migrate campaigns --plan` to preview a safe move.
+
+## Hub and child repos
+
+This repo is the hub for business strategy, bets, decisions, offers, pushes,
+logs, approved summaries, and routing. Child repos hold role-specific execution
+work when a site, offer, product, client, finance, legal, ops, integration
+sidecar, experiment, or archive surface needs its own lifecycle or access
+boundary.
+
+Use the hub for strategy, durable business truth, and checkpoint context. Switch
+to a child repo when editing that child repo's code, site, product files, client
+deliverables, sidecar code, or ops files. When you are in a child repo, read
+`.mainbranch/repo.json` if it exists; existing site repos may still use
+`.mainbranch/source.json` as a compatibility link. Return to this hub for
+business routing, decisions, and cross-repo topology questions.
+
+The hub topology registry, when present, lives at
+`core/operations/repo-topology.md`. It should use safe handles such as display
+names, roles, lifecycle, GitHub owner/repo, linked offers/pushes/bets/decisions,
+and private-boundary notes. Do not commit local absolute paths, secrets, raw
+provider caches, raw finance/legal/customer data, or permission claims in hub
+or child repo descriptors.
 
 ## Business primitive routing
 

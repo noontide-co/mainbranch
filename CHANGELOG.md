@@ -11,6 +11,20 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added the role-neutral `.mainbranch/repo.json` child repo descriptor contract
+  for site, offer, product, client, finance, legal, ops, integration sidecar,
+  experiment, and archive repos, while keeping existing site
+  `.mainbranch/source.json` behavior compatible. Refs #417.
+
+### Changed
+
+- Updated generated business `CLAUDE.md`, `/mb-site`, and `/mb-help` guidance
+  so agents distinguish hub work from child-repo work and avoid committed
+  absolute paths, secrets, raw provider caches, finance/legal source data, or
+  permission claims in repo descriptors. Refs #417.
+
 ## [0.3.12] - 2026-05-08
 
 v0.3.12 is a quick follow-up release for the Google Ads launch playbook rails
