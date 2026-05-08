@@ -12,6 +12,7 @@ from typing import Any
 from typer.testing import CliRunner
 
 from mb import connect as connect_mod
+from mb import graph as graph_mod
 from mb import status as status_mod
 from mb.cli import app
 from mb.init import run as init_run
@@ -421,6 +422,57 @@ def test_status_relationship_health_flags_closed_bet_without_outcome(
         report["relationship_health"]["sections"]["bets"]["closed_without_outcome"][0]["path"]
         == "bets/2026-05-01-closed.md"
     )
+
+
+def test_status_relationship_health_uses_lightweight_scan_on_large_repos(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setattr(
+        graph_mod,
+        "build_index",
+        lambda _path: (_ for _ in ()).throw(AssertionError("status built the full graph")),
+    )
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    documents = repo / "documents"
+    documents.mkdir(exist_ok=True)
+    large_body = "# Notes\n\n" + ("Relationship-free working note.\n" * 100)
+    for index in range(300):
+        (documents / f"2026-05-01-note-{index:03d}.md").write_text(
+            large_body,
+            encoding="utf-8",
+        )
+    (repo / "bets" / "2026-05-01-launch.md").write_text(
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-01\n"
+            "deadline: 2026-05-31\n"
+            "appetite: 2 weeks\n"
+            "hypothesis: A launch push will create calls.\n"
+            "metric: calls\n"
+            "target: 5 calls\n"
+            "linked_pushes:\n"
+            "  - pushes/missing-launch/push.md\n"
+            "---\n\n"
+            "# Launch bet\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    health = report["relationship_health"]
+    assert report["brain"]["counts"]["documents"] == 300
+    assert health["summary"]["active_bets_without_push"] == 1
+    assert health["summary"]["missing_relationship_targets"] == 1
+    assert health["sections"]["outcomes"]["missing_targets"][0] == {
+        "source": "bets/2026-05-01-launch.md",
+        "relationship": "push",
+        "field": "linked_pushes",
+        "target": "pushes/missing-launch/push.md",
+    }
 
 
 def test_status_human_output_mentions_core_sections(tmp_path: Path, monkeypatch) -> None:
