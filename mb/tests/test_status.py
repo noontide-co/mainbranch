@@ -316,6 +316,73 @@ def test_status_relationship_health_flags_completed_and_stale_pushes(
     )
 
 
+def test_status_relationship_health_accepts_offer_side_push_links(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    offer = repo / "core" / "offers" / "coaching"
+    offer.mkdir(parents=True)
+    (offer / "offer.md").write_text(
+        (
+            "---\n"
+            "slug: coaching\n"
+            "status: running\n"
+            "linked_pushes:\n"
+            "  - pushes/2026-05-01-launch/push.md\n"
+            "---\n\n"
+            "# Coaching\n"
+        ),
+        encoding="utf-8",
+    )
+    push = repo / "pushes" / "2026-05-01-launch"
+    push.mkdir(parents=True)
+    (push / "push.md").write_text(
+        (
+            "---\n"
+            "type: push\n"
+            "slug: launch\n"
+            "kind: launch\n"
+            "status: active\n"
+            "health: on-track\n"
+            "goal: booked calls\n"
+            "owner: Devon\n"
+            "audience: founders\n"
+            "offer: ''\n"
+            "started: 2026-05-01\n"
+            "review_on: 2026-05-20\n"
+            "---\n\n"
+            "# Launch\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(
+        path=str(repo),
+        now=datetime(2026, 5, 8, 12, 0, tzinfo=timezone.utc),
+        update_marker=False,
+    )
+
+    assert report["relationship_health"]["summary"]["offers_without_current_push_or_playbook"] == 0
+
+
+def test_status_relationship_health_ignores_non_live_offer_stubs(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core" / "offer.md").write_text(
+        "---\ntype: offer\nstatus: stub\n---\n\n# Offer stub\n",
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    assert report["relationship_health"]["summary"]["offers_without_current_push_or_playbook"] == 0
+
+
 def test_status_relationship_health_flags_closed_bet_without_outcome(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -332,7 +399,7 @@ def test_status_relationship_health_flags_closed_bet_without_outcome(
             "hypothesis: A follow-up push will create calls.\n"
             "metric: calls\n"
             "target: 5 calls\n"
-            "result: ''\n"
+            "result: win\n"
             "linked_decisions: []\n"
             "linked_research: []\n"
             "linked_pushes: []\n"

@@ -42,7 +42,7 @@ STALE_RESEARCH_DAYS = 45
 ACTIVE_BET_STATUSES = {"open", "paused"}
 ACTIVE_PUSH_STATUSES = {"planned", "active", "paused"}
 COMPLETED_PUSH_STATUSES = {"completed"}
-INACTIVE_OFFER_STATUSES = {"killed", "died", "rejected"}
+LIVE_OFFER_STATUSES = {"accepted", "graduated", "running", "scaling"}
 STALE_PUSH_DAYS = 14
 
 
@@ -594,11 +594,7 @@ def _relationship_health(
     active_bets = [
         item for item in all_bets if str(item.get("status", "")).lower() in ACTIVE_BET_STATUSES
     ]
-    closed_bets = [
-        item
-        for item in all_bets
-        if str(item.get("status", "")).lower() == "closed" and not str(item.get("result") or "")
-    ]
+    closed_bets = [item for item in all_bets if str(item.get("status", "")).lower() == "closed"]
     push_report = brain.get("pushes") or {}
     pushes = [item for item in push_report.get("records", []) if isinstance(item, dict)]
     offers = _offer_summaries(repo)
@@ -641,11 +637,12 @@ def _relationship_health(
     offers_without_current_push_or_playbook: list[dict[str, Any]] = []
     for item in offers:
         status = str(item.get("status") or "").lower()
-        if status in INACTIVE_OFFER_STATUSES:
+        if status not in LIVE_OFFER_STATUSES:
             continue
         path = str(item.get("path") or "")
         offer_pushes = _linked_paths(adjacency, path, "offer")
-        has_current_push = bool(offer_pushes & current_push_paths)
+        linked_pushes = _linked_paths(adjacency, path, "push")
+        has_current_push = bool((offer_pushes | linked_pushes) & current_push_paths)
         has_playbook = bool(_linked_paths(adjacency, path, "playbook"))
         if not has_current_push and not has_playbook:
             offers_without_current_push_or_playbook.append(item)
