@@ -89,9 +89,14 @@ technical memory.
 
 Decision status values such as `proposed`, `accepted`, and `codified` describe
 the maturity of the decision. They do not make decisions into task trackers.
-Follow-up sections are allowed in decisions, but follow-ups should either be
-codified directly, routed into a push/playbook, saved as a checkpoint, or
-promoted to a GitHub issue when they need durability.
+Maturity tracks the rationale's confidence and adoption: `proposed` means the
+direction is drafted, `accepted` means the operator has chosen it, and
+`codified` means the rationale has been integrated into durable business or
+engine truth. Maturity says nothing about whether downstream work is done. A
+codified decision can have unfinished downstream work; an accepted decision can
+already have shipped. Follow-up sections are allowed in decisions, but
+follow-ups should either be codified directly, routed into a push/playbook,
+saved as a checkpoint, or promoted to a GitHub issue when they need durability.
 
 ## When Work Becomes A GitHub Issue
 
@@ -114,6 +119,13 @@ Do not create issues for:
 - ordinary decision rationale;
 - checklist steps inside an active push or playbook;
 - work already represented clearly by a bet, push, decision, or checkpoint.
+
+Some durable items are facts about an external commitment rather than plans
+against a bet: a promised reply, renewal, meeting follow-up, compliance date,
+or provider deadline. These still need durable memory. The safe home depends on
+the privacy boundary: a GitHub issue, log entry, private repo note, provider
+record, or approved summary. Keep this surface narrow and operator-driven; it
+is not where ordinary work lands.
 
 Skills should prefer issue drafts or explicit suggestions over public issue
 creation. Public issue creation is a shared-memory action, not a hidden
@@ -169,26 +181,39 @@ It should:
 - use `gh`-backed GitHub facts through `mb status` when available;
 - inspect recent saved work and unsaved work through the status/checkpoint
   contract;
-- route thought dumps into business primitives;
+- route thought dumps into business primitives by proposing placement before
+  executing: candidate bets, decisions, research notes, push entries, log
+  items, playbook runs, or issue drafts. The operator confirms or redirects;
+  the dump is not silently filed;
 - propose the next one to three moves, not a comprehensive task list;
 - suggest issue creation only when work needs a durable thread;
 - speak in operator language by default.
+
+The next one to three moves should be at **push or scope altitude**, not atomic
+task altitude. A move is the next meaningful slice of business work, such as
+"advance the launch push," "decide the audience tightening question," or "ship
+the VSL draft for review." Atomic execution belongs inside the session, not in
+the regenerated view.
 
 `/mb-start` may proactively update the **Main Branch tool** when the update path
 is deterministic, safe, and already supported by `mb update`. The operator
 surface should say plainly that Main Branch updated itself or that an update
 needs attention. It should not force the operator to reason about package
 managers, branches, or install modes unless the update fails or asks for help.
+Operators may opt out of automatic Main Branch tool updates through explicit
+configuration when they need pinned versions for a cohort, agency, or release
+window.
 
-`/mb-start` may also help the business repo start from the latest saved team
+`/mb-start` may also help the business repo start from the latest saved
 work, but the operator-facing language should not say "behind remote,"
 "fast-forward," or similar git plumbing. It should say "I brought in the latest
-saved work" when the sync is clean, or "there is new team work to review before
-we start" when it needs attention. Automatic business-repo sync is acceptable
-only when `mb` can prove it is clean, conflict-free, and will not overwrite
-unsaved local work. If there is unsaved work, a divergent history, a merge
-conflict, or uncertainty about the safe path, `/mb-start` should pause and
-explain the business meaning before changing the repo.
+saved work" when the sync is clean, or "there is saved work from another
+workspace to review before we start" when it needs attention. Automatic
+business-repo sync is acceptable only when `mb` can prove it is clean,
+conflict-free, and will not overwrite unsaved local work. If there is unsaved
+work, a divergent history, a merge conflict, or uncertainty about the safe path,
+`/mb-start` should pause and explain the business meaning before changing the
+repo.
 
 `/mb-start` should not silently perform actions that change canonical business
 memory in a way that is not proven safe, public/shared coordination state,
@@ -206,7 +231,9 @@ It should:
 - inspect what changed;
 - summarize saved and unsaved business work;
 - reconcile decision lifecycle carefully;
-- crystallize what the session meant;
+- crystallize what the session meant: connect the day's work to the active
+  bet, push, decision, core truth, or unresolved tension so the lesson can feed
+  the next Sense pass;
 - propose or save approved checkpoints through `mb checkpoint`;
 - identify unresolved durable threads that may deserve attention next time.
 
@@ -225,7 +252,7 @@ safe read or safe self-maintenance path:
   checkpoint state;
 - read recent commits, issues, proposals, releases, and provider metadata;
 - update the Main Branch tool through a supported safe `mb update` path;
-- bring in latest saved team work for the business repo when the sync is
+- bring in latest saved work for the business repo when the sync is
   proven clean, conflict-free, and safe for unsaved local work;
 - repair local runtime wiring when the repair is explicitly safe,
   idempotent, and scoped to Main Branch-generated local wiring.
@@ -245,10 +272,10 @@ Requires an approval moment:
   a repo.
 
 When speaking to the operator, do not expose technical state as the default
-sentence. Say "I saved your work," "I found new team work," "Main Branch
-updated itself," "this needs your approval before it changes the business,"
-or "this provider is not ready." Command details remain available for
-inspection and repair.
+sentence. Say "I saved your work," "I found saved work from another workspace,"
+"Main Branch updated itself," "this needs your approval before it changes the
+business," or "this provider is not ready." Command details remain available
+for inspection and repair.
 
 ## Graph, Connectors, And Playbooks
 
@@ -256,7 +283,7 @@ The graph is not a task graph first. It is relationship memory across business
 primitives and technical memory:
 
 ```text
-strategy chooses where to push
+core strategy chooses where to push
 bet names what we are testing
 decision records why the direction changed
 research records what we learned
@@ -281,6 +308,11 @@ evidence. A playbook run may create research, pushes, decisions, checkpoints,
 provider refs, or GitHub issues, but the playbook itself is not a generic list
 of tasks.
 
+Deterministic checks may become a broader product surface, but this decision
+does not settle "checks" as a standalone primitive. Here, checks mean the
+provider readiness, validation, site, graph, status, and playbook evidence that
+already belongs to `mb` and supported provider rails.
+
 ## Consequences
 
 - Remove stale "pick a task tracker" guidance from bundled skills and setup
@@ -295,6 +327,8 @@ of tasks.
 - Keep future dashboards as views over repo, git, GitHub, graph, connectors,
   sidecars, provider facts, and checkpoints. They must not become the canonical
   task database.
+- Decide any future "checks" primitive or daily-focus regeneration UI in a
+  separate issue so this decision does not smuggle in a new surface.
 
 ## Refused
 
@@ -305,3 +339,6 @@ of tasks.
 - No dashboard database as canonical task truth.
 - No public issue creation from private thought dumps without an operator
   approval moment.
+- No agent-maintained task list as a hidden side effect. Agents should not
+  write durable "what I'm tracking" lists into `.context/`, `.mb/`, or any repo
+  location as a workaround for not having a task tracker.
