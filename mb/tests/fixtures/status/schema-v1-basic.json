@@ -26,6 +26,7 @@
     "pushes",
     "ranked_actions",
     "readiness",
+    "relationship_health",
     "repo",
     "runtime",
     "schema",
@@ -163,6 +164,15 @@
       "level",
       "next_actions",
       "score"
+    ],
+    "relationship_health": [
+      "gaps",
+      "ok",
+      "registry_version",
+      "safe_to_share",
+      "sections",
+      "source",
+      "summary"
     ],
     "marker_update": [
       "attempted",

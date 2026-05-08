@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added `mb status` relationship-health JSON and human briefing signals for
+  disconnected bets, pushes, offers, and outcomes so daily status can surface
+  business-loop gaps from graph facts. Refs #358.
+
 ## [0.3.8] - 2026-05-08
 
 v0.3.8 tightens the daily operating loop after the 0.3.7 release discipline
