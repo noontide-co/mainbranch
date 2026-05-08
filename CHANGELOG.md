@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added an opt-in `grok-8` researched-brief format for `/mb-think`, including a
+  reusable eight-category research reference, downstream guidance for
+  `/mb-ads`, `/mb-site`, `/mb-organic`, and push-playbook use, plus a
+  public-safe example brief. Refs #147.
+
 ## [0.3.9] - 2026-05-08
 
 v0.3.9 makes the daily operating loop more inspectable. Main Branch now exposes

@@ -40,6 +40,11 @@ status: complete
 
 Keep private raw customer/member data, credentials, and unapproved account exports out of public repos. Summarize safely or keep raw material outside the repo when it is not public-safe.
 
+For broad site or launch research, prefer the `/mb-think --brief-format=grok-8`
+shape. It covers business/offering, ICP, customer journey, competitive
+landscape, brand story, technical requirements, content/assets, and
+metrics/constraints before the brief is drafted.
+
 ## Exit Criteria
 
 Research is ready to feed the brief when:
