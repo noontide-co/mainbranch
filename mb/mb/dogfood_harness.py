@@ -712,6 +712,7 @@ Evidence folder: local artifact; see harness output and summary.json
 - Proxy notice: {claude_notice}
 - Session ID preserved: {claude_session}
 - Rubric: {rubric_summary}
+- Manual transcript review: docs/release-simulations.md#transcript-review
 - Transcript excerpts: {claude_transcript}
 
 ### Repo Boundary Check

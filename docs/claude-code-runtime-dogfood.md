@@ -395,6 +395,7 @@ GitHub issue / PR:
 
 ### Claude Runtime Transcript Summary
 
+- Transcript review rubric: [Release Simulations](release-simulations.md#transcript-review)
 - Simulation tier:
 - `/mb-start` discovered:
 - `/mb-start` used business repo and status facts:

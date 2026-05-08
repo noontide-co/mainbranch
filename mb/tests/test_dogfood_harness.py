@@ -183,6 +183,7 @@ def test_evidence_template_labels_print_mode_as_proxy(tmp_path: Path) -> None:
     assert "Print-mode evidence is not the same as interactive TUI evidence" in template
     assert "Session ID preserved: True" in template
     assert "Rubric: 6/7 heuristic checks" in template
+    assert "Manual transcript review: docs/release-simulations.md#transcript-review" in template
     assert f"Evidence folder: {state.evidence_dir}" not in template
     assert str(tmp_path / "transcript.md") not in template
     assert "Transcript excerpts: local artifact; see harness output and summary.json" in template

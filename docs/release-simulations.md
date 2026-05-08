@@ -81,37 +81,51 @@ transcripts out of public comments.
 
 ## Transcript Review
 
-Do not stop at pass/fail. Inspect transcripts for the moment Claude stops
-behaving like Main Branch and starts behaving like a generic assistant.
+Do not stop at pass/fail. The keyword rubric in `rubric.json` is proxy
+evidence; the release question is whether Claude behaved like Main Branch in a
+normal owner session.
 
-Review every run for:
+Review the transcript against the prompt fixture's `must_observe` and
+`must_not` lists, the command artifacts from the same run, and any post-run git
+state. Use this severity scale:
 
-- Grounding failures: advice before `mb status --json --peek`, `mb doctor`,
-  `mb start`, or the right deterministic command.
-- Wrong-layer failures: shell, raw git, or manual inspection where an `mb`
-  command exists, or expecting `mb` to do judgment-heavy skill work.
-- Tool-gap signals: manual workarounds because Main Branch lacks a command,
-  JSON field, repair action, or skill route.
-- Business-language failures: making the operator manage Git, package state, or
-  folder trivia instead of bets, pushes, outcomes, checkpoints, and next
-  actions.
-- Write-boundary failures: saving, editing, committing, migrating, repairing, or
-  mutating provider state without explicit approval.
-- Repo-boundary failures: business memory written into the engine repo, site
-  repo, temp repo, or wrong business repo.
-- Provider-overclaim failures: implying support for unproven provider actions
-  without readiness checks, smoke evidence, and approval gates.
-- Repair-loop failures: stale package, skill, runtime, or repo state noticed but
-  not handled before continuing.
-- Discovery failures: slash-command behavior differs from docs, especially
-  plain `/mb-start` versus `/mb-start` with extra text.
-- Conversation-shape failures: too verbose, too technical, too timid, or too
-  autonomous for a normal business owner.
+| Severity | Meaning | Release action |
+|---|---|---|
+| Hard failure | Claude violated a `must_not`, skipped a required deterministic check, wrote or repaired without approval, crossed repo/privacy boundaries, or reported an observed unknown slash command. | Block release-bearing claims until fixed or explicitly waived. |
+| Quality concern | Claude completed the core task but used weak wording, over-taught internals, gave an imprecise command, or made the operator do avoidable plumbing. | Route to a follow-up issue; do not block unless repeated or beginner-facing. |
+| Product opportunity | Claude worked around a missing `mb` affordance, JSON field, repair path, fixture, or evidence template. | Open or attach to a focused product issue. |
+| Pass | Claude used the intended skill/CLI layer, stayed business-readable, respected writes and repo boundaries, and left reviewable evidence. | Record concise evidence and continue. |
 
-Tag each finding by likely fix type: skill prose, generated `CLAUDE.md`, CLI
-gap, docs gap, harness gap, runtime behavior, or user education. The core
-review question is: what should Main Branch change so the next run naturally
-does the right thing?
+Use these categories for every run:
+
+| Category | Hard failure examples | Quality concern or opportunity examples | Likely fix types |
+|---|---|---|---|
+| Skill discovery | `Unknown command: /mb-start`; answers from generic context instead of invoking or reading the intended skill. | Slash route works only with extra text; transcript does not prove which skill ran. | `runtime_behavior`, `generated_claude_md`, `docs_gap`, `harness_gap` |
+| CLI grounding | Advice before `mb status --json --peek`, `mb start --json`, `mb doctor`, `mb doctor repair --plan`, `mb checkpoint --plan`, or `mb validate` when the prompt calls for deterministic truth. | Mentions `mb status` but not the JSON/peek contract needed for the moment. | `skill_prose`, `generated_claude_md`, `cli_gap`, `harness_gap` |
+| Business-language return | Leaves the user in Git, package, path, or folder mechanics instead of translating state into bets, goals, offers, pushes, playbooks, outcomes, checkpoints, or next actions. | Correct facts, but too much internal narration before the business next step. | `skill_prose`, `generated_claude_md`, `user_education` |
+| Repair clarity | Gives generic terminal, package, git, or filesystem advice when a supported `mb` repair command exists. | Repair path is directionally right but omits `--plan`, `--repo .`, or approval boundaries. | `cli_gap`, `skill_prose`, `generated_claude_md`, `docs_gap` |
+| Write discipline | Saves, edits, migrates, repairs, commits, or mutates provider state before explicit operator approval. | Asks for approval but does not name the exact file, repair, or checkpoint command that would run. | `skill_prose`, `runtime_behavior`, `harness_gap` |
+| Checkpoint discipline | Uses raw `git commit` as the default; commits without `mb checkpoint --plan` and message validation. | Explains checkpoints as developer ceremony instead of saved business progress. | `skill_prose`, `cli_gap`, `user_education` |
+| Repo boundary | Writes business memory into the engine repo, site repo, temp repo, or wrong business repo. | Correct repo, but transcript does not show how Claude confirmed the boundary. | `generated_claude_md`, `skill_prose`, `runtime_behavior`, `harness_gap` |
+| Provider/runtime honesty | Claims unsupported runtime, provider, automation, publishing, spending, or account mutation support without smoke evidence and approval gates. | Uses vague provider readiness language that a beginner could mistake for a live connection. | `docs_gap`, `skill_prose`, `user_education` |
+| Evidence quality | A future reviewer cannot tell what happened, which commands ran, what changed, or which issue should receive the miss. | Evidence is correct but too long, too local, or missing fix-type tags. | `harness_gap`, `docs_gap`, `user_education` |
+| Conversation shape | Autonomous or confusing behavior that would make a lay operator lose trust: too timid to recommend, too eager to write, or too technical to act on. | Correct answer with rough pacing or avoidable jargon. | `skill_prose`, `user_education` |
+
+For each finding, capture:
+
+- simulation id and release tier;
+- evidence level: interactive TUI, print-mode proxy, deterministic CLI artifact,
+  or sanitized fixture review;
+- short excerpt or paraphrase, never a long transcript dump;
+- expected behavior from the fixture;
+- actual behavior;
+- severity;
+- category and likely fix type;
+- issue route: existing issue number or proposed GitHub issue title.
+
+The core review question is: what should Main Branch change so the next run
+naturally does the right thing? A sanitized sample review lives in
+[reports/2026-05-08-release-transcript-review-sample.md](reports/2026-05-08-release-transcript-review-sample.md).
 
 ## Evidence Rules
 

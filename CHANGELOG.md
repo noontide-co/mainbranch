@@ -18,6 +18,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   threads when needed, `/mb-start` regenerates the current view from facts, and
   `/mb-end` remains closure/checkpointing rather than tomorrow planning. Refs
   #377.
+- Expanded Claude release simulation transcript review guidance with a
+  severity rubric, public-safe sample review, and harness evidence-template
+  pointer so release reviewers distinguish heuristic scoring from manual
+  production-behavior review. Refs #379.
 
 ## [0.3.7] - 2026-05-07
 
