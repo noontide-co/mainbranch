@@ -177,8 +177,8 @@ Suggested beginner flow:
 2. "Have you used GitHub before?"
 3. "Create new business repo or connect existing?"
 4. Business name and repo path.
-5. Short explanation: GitHub = durable work threads/proposals/history, repo =
-   business brain, Claude Code = first execution runtime.
+5. Short explanation: GitHub = tasks/proposals/history, repo = business
+   brain, Claude Code = first execution runtime.
 6. Scaffold/connect.
 7. Verify `gh`, `git`, `claude`, skill wiring.
 8. Show daily ritual.
@@ -338,7 +338,7 @@ Use business-first language, with raw terms in parentheses when helpful.
 
 Examples:
 
-- "durable work threads (GitHub issues)"
+- "tasks (GitHub issues)"
 - "proposals/conversations (pull requests)"
 - "what shipped (merged PRs)"
 - "business brain (your repo)"

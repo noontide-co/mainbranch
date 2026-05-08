@@ -190,7 +190,7 @@ where the "why" matters.
 ## Work Continuity
 
 Main Branch does not ask operators to pick a task system. See
-[task-tracking-options.md](task-tracking-options.md) for the work-continuity
+[work-continuity.md](work-continuity.md) for the work-continuity
 model:
 
 | Primitive | Use For |

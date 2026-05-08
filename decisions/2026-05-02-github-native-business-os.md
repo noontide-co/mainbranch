@@ -15,7 +15,7 @@ GitHub-native operating system for running a real business with AI.
 The core substrate stays the same:
 
 - the business lives in files in a git repo;
-- GitHub issues are durable work threads;
+- GitHub issues are work items;
 - pull requests are conversations and proposals;
 - git history is the evolution story;
 - agent runtimes execute against that source of truth.
@@ -73,8 +73,7 @@ replaces the files.
 
 GitHub is the team operating surface:
 
-- issues become durable work threads for tasks, blockers, requests, and
-  follow-ups;
+- issues become tasks, blockers, requests, and follow-ups;
 - pull requests become conversations around proposed changes;
 - review comments become durable discussion;
 - merge history becomes "what shipped";
@@ -83,9 +82,8 @@ GitHub is the team operating surface:
 
 For non-technical users, Main Branch should translate GitHub vocabulary by
 default. A PR can be presented as a proposal, review, or shipped change. An
-issue can be presented as a durable work thread, task, blocker, request, or
-follow-up depending on the business moment. Technical users should be able to
-see the raw GitHub terms.
+issue can be presented as a task. Technical users should be able to see the raw
+GitHub terms.
 
 No Slack is required for the core work loop.
 

@@ -25,7 +25,7 @@ mb --version
 | `mb onboard` | Human setup flow. Creates or connects a business repo, explains the local files/git/GitHub substrate, wires Claude Code skills, verifies discovery, and prints the next `/mb-start` step. Supports `--yes` and `--json` for smoke tests. |
 | `mb init` | Scaffold a new business repo (business folders, CLAUDE.md, CODEOWNERS, `git init`) and wire the bundled Claude Code skill adapter. One question only: business name. |
 | `mb doctor` | Diagnostic. Checks Claude Code, gh auth, network, librsvg, runtime wiring, and package freshness. Warns on cloud-backed finance paths and offers educational triage. |
-| `mb status` | Daily briefing. Summarizes repo shape, install/runtime readiness, recent brain files, recent git activity, and GitHub tasks when `gh` is authenticated. Supports `--json`. |
+| `mb status` | Daily briefing. Summarizes repo shape, install/runtime readiness, recent brain files, recent git activity, and GitHub tasks/proposals when `gh` is authenticated. Supports `--json`. |
 | `mb start` | Runtime handoff. Verifies the current business repo, git, Claude Code, and `/mb-start` skill wiring, then prints the exact `claude` command or launches it with `--launch`. Supports `--json`. |
 | `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `bets/`, `log/`, `pushes/`, legacy `campaigns/`, and `documents/`. Exit 1 on any fail. |
 | `mb graph` | Walk linked_research / linked_decisions / supersedes; emit Graphviz DOT to stdout. `--open` shells to `dot` + `open`. |

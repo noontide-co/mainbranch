@@ -38,7 +38,7 @@ chain:
 
 - **Sense:** `/mb-start`, `/mb-status`, or `mb status --json --peek` reads
   repo health, graph links, provider readiness, recent activity, update state,
-  and GitHub work-thread signals.
+  and GitHub task/proposal signals.
 - **Decide:** the agent and operator choose the next business move: a bet to
   frame, a piece of research to run, a decision to codify, a push to advance, a
   playbook to draft, or a repair to approve.

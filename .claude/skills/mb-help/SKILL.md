@@ -29,7 +29,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Philosophy, why, compound, passive memory | [philosophy.md](references/philosophy.md) |
 | /mb-think, research, decide, codify | [the-think-cycle.md](references/the-think-cycle.md) |
 | /mb-bet, bet, hypothesis, deadline, public narration | [skills-guide.md](references/skills-guide.md) |
-| Work continuity, where left off, GitHub issues | [task-tracking-options.md](references/task-tracking-options.md) |
+| Work continuity, where left off, GitHub issues | [work-continuity.md](references/work-continuity.md) |
 | Error, command not found, MCP, Apify setup, GitHub issue | [troubleshooting.md](references/troubleshooting.md) |
 | Provider readiness, GitHub setup, Cloudflare, Google Workspace, Meta Ads, Apify | [provider-readiness.md](references/provider-readiness.md) |
 | Getting started, setup | Route to `/mb-setup` or `/mb-start` |

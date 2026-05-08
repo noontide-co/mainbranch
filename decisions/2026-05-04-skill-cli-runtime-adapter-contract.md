@@ -109,7 +109,7 @@ distribution target is namespaced plugin packaging rather than global symlinks.
 Skills must call or trust `mb` for deterministic state:
 
 - repo shape and schema: `mb doctor`, `mb validate`, `mb migrate`;
-- daily readiness and GitHub work-thread context: `mb status --json`;
+- daily readiness and GitHub/task context: `mb status --json`;
 - runtime handoff readiness: `mb start --json`;
 - engine freshness and relinking: `mb update --json`;
 - onboarding progress: `mb onboard status --json`;
