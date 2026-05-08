@@ -2,7 +2,9 @@
 
 The canonical contract for what a minisite **is** in Main Branch. Implementation flows live elsewhere; this file is the source of truth for page list, content contracts, conversion endpoint, tracking, and walkthrough UX.
 
-When `/mb-site`, `/mb-start launch`, `stripe.py`, or any future skill ships behavior that touches a minisite, that behavior conforms to this spec. If the spec changes, update this file first; downstream code follows.
+When `/mb-site`, `stripe.py`, or any future launch orchestration ships behavior
+that touches a minisite, that behavior conforms to this spec. If the spec
+changes, update this file first; downstream code follows.
 
 ---
 
@@ -76,7 +78,11 @@ What goes on each page by default. The generation subagent has aesthetic freedom
 - **Secondary CTA:** repeat of primary, often with different copy ("ready when you are"), same conversion URL
 - **Footer:** Noontide footer (see below)
 
-The conversion URL is the same one used everywhere on the site. Until the URL is wired, placeholder `https://CONVERSION-PLACEHOLDER` ships and the `/mb-start launch` orchestration substitutes the real URL during the build phase.
+The conversion URL is the same one used everywhere on the site. Until the URL
+is wired, placeholder `https://CONVERSION-PLACEHOLDER` ships and the `/mb-site`
+walkthrough substitutes the real URL during the build phase. A future
+`/mb-start launch <offer>` orchestration would follow the same contract, but it
+is not a shipped structured mode today.
 
 ### How It Works (`/how-it-works/`)
 
@@ -292,9 +298,12 @@ Do not push email, phone, full name, address, CRM notes, booking notes, raw cust
 
 ---
 
-## Pre-flight gates (before `/mb-start launch` runs)
+## Pre-flight gates
 
-`/mb-start launch <offer>` must verify these before money or state changes. Some gates branch on the chosen conversion-endpoint kind.
+Current `/mb-site` walkthroughs and any future launch orchestration must verify
+these before money or state changes. Some gates branch on the chosen
+conversion-endpoint kind. `/mb-start launch <offer>` is not a shipped
+structured mode today.
 
 ### Always-required gates
 
@@ -321,9 +330,12 @@ Failed gate = halt with a specific message and routing suggestion. No silent ski
 
 ---
 
-## Walkthrough UX (`/mb-start launch <offer>`)
+## Candidate launch walkthrough
 
-The orchestration mode (lives in `/mb-start`, ships in #92) walks the operator through six phases. Each phase has explicit Y/N gates on money-spending steps, resumability between phases, and clear exit criteria.
+Current shipped site work routes through `/mb-site`. A future
+`/mb-start launch <offer>` orchestration, if shipped, should walk the operator
+through six phases. Each phase has explicit Y/N gates on money-spending steps,
+resumability between phases, and clear exit criteria.
 
 ### Phase 1 — Pre-flight
 
@@ -363,7 +375,8 @@ The conversion.json file is the single source the generation subagent reads to w
 
 ### Phase 6 — Ship
 
-- Operator commits + pushes (or `/mb-start launch` does on their Y)
+- Operator commits + pushes through the current checkpoint/git guidance; a
+  future launch orchestration may do this only after explicit approval.
 - Cloudflare auto-deploys
 - Verify `https://<domain>/` returns 200
 - Print summary: live URL, repo URL, total spend, time-to-ship

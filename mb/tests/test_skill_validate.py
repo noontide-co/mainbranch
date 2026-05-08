@@ -241,6 +241,51 @@ def test_skill_validate_warns_on_retired_reference_subfolders(
     assert "legacy business-repo reference/* path" in report["files"][0]["warnings"][0]
 
 
+def test_skill_validate_flags_unbundled_slash_command_routes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(tmp_path, "mb-alpha", body="Route email requests to /newsletter.\n")
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-alpha")
+
+    assert report is not None
+    assert report["ok"] is False
+    assert "/newsletter is not a bundled Main Branch skill" in report["files"][0]["errors"][0]
+
+
+def test_skill_validate_allows_bundled_slash_command_routes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(tmp_path, "mb-alpha", body="Route setup work to /mb-start.\n")
+    _skill(tmp_path, "mb-start")
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-alpha")
+
+    assert report is not None
+    assert report["ok"] is True
+
+
+def test_skill_validate_ignores_non_command_slash_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(
+        tmp_path,
+        "mb-alpha",
+        body=(
+            "Use `~/Documents/GitHub/mb-vip`, `.claude/skills/mb-start`, "
+            "`https://example.com/foo`, and `/start/thanks/` as path examples.\n"
+        ),
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-alpha")
+
+    assert report is not None
+    assert report["ok"] is True
+
+
 def test_skill_validate_ignores_reference_paths_inside_code_fences(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

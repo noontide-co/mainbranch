@@ -162,10 +162,10 @@ See [the-think-cycle.md](the-think-cycle.md) for deep dive.
 - Scans today's git activity (new files, changes)
 - Summarizes what happened this session
 - Offers a crystallize moment if decisions were made
-- Commits uncommitted work
+- Guides an approved checkpoint when there is work to save
 - Closes with a brief summary
 
-**Why it matters:** If you've ever closed a terminal and wondered "did that stick?", `/mb-end` is the answer. It reviews your git activity, surfaces anything that might need crystallizing into reference, and commits uncommitted work. Nothing falls through the cracks.
+**Why it matters:** If you've ever closed a terminal and wondered "did that stick?", `/mb-end` is the answer. It reviews your git activity, surfaces anything that might need crystallizing into reference, and points you through an approved `mb checkpoint` save when there is work to preserve. Nothing falls through the cracks.
 
 **Daily habit:** End sessions with `/mb-end` to close intentionally.
 
