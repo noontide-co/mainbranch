@@ -13,6 +13,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added a `mb doctor repair --plan --json` audit section for legacy
+  `.vip/local.yaml` and `.vip/config.yaml` YAML state. The plan classifies key
+  families without printing raw values, separates local/session state from
+  durable business/provider facts, and keeps deletion/migration manual. Refs
+  #413.
 - Added a release-simulation fixture for the `/mb-start` ambiguous-choice
   failure where an operator replies `1` for the top recommendation in a rich
   multi-offer repo, so release review checks that offer selection cannot
@@ -24,6 +29,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Retired `.vip/config.yaml` as active path/provider/tool config in current
+  CLI and skill guidance. New setup no longer creates it, and offer-aware
+  skills ask for explicit session context instead of silently routing from
+  `.vip/local.yaml`. Refs #413.
 - Expanded `mb doctor repair --plan --json` migration guidance with an
   offer-topology section that surfaces legacy `.vip/local.yaml` active-offer
   state, offer folder/frontmatter slug drift, and multi-offer review needs

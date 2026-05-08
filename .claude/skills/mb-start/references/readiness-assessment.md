@@ -49,14 +49,15 @@ When checking section markers, search for these headings (case-insensitive). The
 
 ### Multi-Offer Scoring
 
-When a future `mb` JSON active-offer field or legacy `.vip/local.yaml` has `current_offer` set:
+When a future `mb` JSON active-offer field or the operator's current session
+selects an offer:
 
 1. Score `core/soul.md` and `core/voice.md` from core (these are always brand-level).
 2. For offer and audience, resolve using the canonical path algorithm:
-   - Check `core/offers/[current_offer]/offer.md` first. If it exists, score it.
+   - Check `core/offers/[offer]/offer.md` first. If it exists, score it.
    - If it does not exist, score `core/offer.md`.
    - Same for `audience.md`.
-3. Testimonials and angles: check both `core/proof/` (brand-level) and `core/offers/[current_offer]/` if offer-specific proof exists.
+3. Testimonials and angles: check both `core/proof/` (brand-level) and `core/offers/[offer]/` if offer-specific proof exists.
 
 Legacy fallback: if the repo has no `core/`, read `reference/core/` and
 `reference/offers/`. In current repos those paths are compatibility bridges to

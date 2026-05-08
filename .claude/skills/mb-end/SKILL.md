@@ -55,7 +55,7 @@ A quick `/mb-end` (user says "just commit and close") can be steps 1-3 and 6. Bu
 
 ## Step 1: Find the Business Repo
 
-**CWD-first:** If `core/` or legacy `reference/core/` exists in CWD, you're already in the business repo — use it. Otherwise, read `~/.config/vip/local.yaml` for `default_repo` as fallback.
+**CWD-first:** If `core/` or legacy `reference/core/` exists in CWD, you're already in the business repo — use it. Otherwise, read `~/.config/vip/local.yaml` for `default_repo` only as a legacy machine-local fallback.
 
 **If no repo found:** Skip to a simple close. No business repo means no git activity to scan.
 
@@ -114,7 +114,7 @@ For the full bash (vip script resolution + fallback strict status counter), expe
 
 Present a brief, warm summary. Not a report -- a reflection.
 
-**Offer context:** If a future `mb` JSON active-offer field or legacy `.vip/local.yaml` identifies an active offer, include in summary:
+**Offer context:** If a future `mb` JSON active-offer field or explicit session context identifies an active offer, include in summary:
 "Worked on: **[offer]**"
 
 **Format (adapt to what actually happened):**
@@ -217,7 +217,7 @@ Task(
 
 **Agent prompt construction:** Build a structured prompt containing all gathered content from 5b, plus the agent instructions. See [references/crystallize-agent.md](references/crystallize-agent.md) for the complete agent prompt template, analysis process, anti-patterns, and question design criteria.
 
-**Pass to crystallize agent:** Include active offer from a future `mb` JSON field if present, with `.vip/local.yaml` only as a legacy fallback, so the agent can analyze offer-specific core changes and ask offer-relevant questions.
+**Pass to crystallize agent:** Include active offer from a future `mb` JSON field or explicit session context if present, so the agent can analyze offer-specific core changes and ask offer-relevant questions. Do not silently restore offer context from `.vip/local.yaml`.
 
 **The agent is read-only.** It reads files and returns findings. It does not write files. The main conversation handles all file writes.
 

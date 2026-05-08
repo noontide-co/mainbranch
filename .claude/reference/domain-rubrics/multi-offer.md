@@ -78,10 +78,9 @@ offer-specific. Otherwise, brand-level `core/proof/testimonials.md` suffices.
 
 ## File Resolution Rules
 
-Skills resolve context files using a cascading lookup. Active offer state is
-repo-local operational state. If a future `mb` JSON field exposes active offer
-state, prefer it; `.vip/local.yaml` is a legacy fallback only and should not be
-written silently.
+Skills resolve context files using a cascading lookup. Active offer choice is
+session-scoped unless a current `mb` JSON field exposes explicit active-offer
+state. `.vip/local.yaml` is legacy audit input, not canonical routing state.
 
 ### Always Core (Never Per-Offer)
 
@@ -118,8 +117,9 @@ resolve_context(file_type):
   if file_type in [content-strategy]:
     return core/content-strategy.md
 
-  # Offer-aware -- check active offer first
-  current_offer = read a future mb JSON active-offer field if present, otherwise .vip/local.yaml as legacy fallback
+  # Offer-aware -- check explicit active offer first
+  current_offer = read a future mb JSON active-offer field if present,
+                  otherwise ask the user/session
 
   if current_offer AND exists core/offers/{current_offer}/{file_type}.md:
     return core/offers/{current_offer}/{file_type}.md
@@ -132,28 +132,27 @@ resolve_context(file_type):
 
 ## Session Offer Context
 
-Current repos should treat offer choice as session-scoped until the operator
-confirms persistence. If a deterministic `mb` command or status JSON field
-exposes active offer state, use that. Existing repos may still have legacy
-`.vip/local.yaml`:
-
-```yaml
-current_offer: community    # Legacy active offer fallback
-```
+Current repos should treat offer choice as session-scoped until an explicit
+Main Branch session-state contract exists and the operator confirms
+persistence. If a deterministic `mb` command or status JSON field exposes active
+offer state, use that. Existing repos may still have legacy `.vip/local.yaml`,
+but skills should not silently route from it.
 
 **Rules:**
 - Repo-local session state is local operational state, not durable business
   truth.
-- `/mb-start` may read `.vip/local.yaml` as a legacy fallback, but must ask
-  before writing or changing it.
+- `/mb-start` should use `mb doctor repair --plan --json` to audit legacy
+  `.vip` files and ask the operator which offer to use when routing is unclear.
+- Skills must not write or change `.vip/local.yaml`.
 - If active offer state is missing or null: brand-level mode reads from
   `core/`.
 - Skills should never fail because active offer state is missing. They fall
   back to brand-level behavior or ask which offer the current work targets.
 
 **The `.vip/` folder** is legacy local state/config. Never commit session state.
-Current doctor guidance surfaces stale `.vip/local.yaml` so the operator can
-review it instead of letting skills silently update it.
+Current doctor guidance surfaces stale `.vip/local.yaml` and `.vip/config.yaml`
+so the operator can review key families instead of letting skills silently use
+or update them.
 
 ---
 

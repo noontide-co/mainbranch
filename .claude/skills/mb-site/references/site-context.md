@@ -36,10 +36,12 @@ to pass. Porkbun skipped is fine for the Cloudflare-registered path.
 
 Before loading business context, resolve the active offer:
 
-1. If a future `mb` JSON field exposes active offer state, use it; otherwise read `.vip/local.yaml` only as a legacy fallback.
-2. If set, load `core/offers/[current_offer]/offer.md` as the active offer.
-3. If not set and `core/offers/` exists, ask which offer this site is for.
-4. If no `core/offers/` folder exists, use `core/offer.md` for a single-offer repo.
+1. If a future `mb` JSON field exposes active offer state, use it.
+2. Do not treat `.vip/local.yaml` as canonical active-offer state. If legacy
+   state exists, confirm the offer with the user instead of silently routing.
+3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
+4. If no offer is selected and `core/offers/` exists, ask which offer this site is for.
+5. If no `core/offers/` folder exists, use `core/offer.md` for a single-offer repo.
 
 Always-core files, never per-offer: `soul.md`, `voice.md`, `content-strategy.md`.
 

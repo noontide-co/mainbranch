@@ -17,7 +17,7 @@ CWD-first detection of the business repo, with config fallback. The user starts 
    ├── YES → User is in the engine repo (old workflow). Trigger migration guidance.
    └── NO → Continue to step 3.
 
-3. Fall back to config:
+3. Fall back to legacy machine-local config:
    Read ~/.config/vip/local.yaml → default_repo + recent_repos
    ├── Found valid repo(s)? → Present options (see below)
    └── Nothing valid? → Discovery or /mb-setup
@@ -37,16 +37,17 @@ CWD-first detection of the business repo, with config fallback. The user starts 
 
 ## Config Loading
 
-Once business repo is identified (from CWD or config), load settings:
+Once business repo is identified (from CWD or legacy config), load current
+facts through `mb`:
 
 ```
-1. Read ~/.config/vip/local.yaml
-   ├── Found? → Get legacy engine path + default_repo + recent_repos + user identity
-   └── Missing? → Acceptable if CWD is the repo; config gets created by /mb-setup
+1. Run mb status --json --peek
+   ├── OK? → Use status facts for readiness, drift, providers, onboarding, and routing
+   └── Fails? → Use mb doctor repair --plan --json for repair guidance
 
-2. Read [repo]/.vip/config.yaml
-   ├── Found? → Get team settings, MCP requirements
-   └── Missing? → Use defaults, offer to create later
+2. If legacy .vip YAML exists
+   ├── Run mb doctor repair --plan --json to audit key families
+   └── Do not treat .vip/config.yaml as current team settings
 ```
 
 ---
@@ -124,6 +125,9 @@ user:
 ```
 
 **If user.name or user.experience missing:** Ask once, save for future sessions.
+
+Do not create or update `[repo]/.vip/config.yaml` during repo detection. Older
+repos may have it; audit it with `mb doctor repair --plan --json`.
 
 ---
 

@@ -170,7 +170,6 @@ See **[references/context-gathering.md](references/context-gathering.md)** for:
 
 ```bash
 # Always create:
-mkdir -p .vip
 mkdir -p core core/offers core/finance core/brand core/proof/angles core/operations
 mkdir -p research decisions bets log pushes documents
 ```
@@ -189,9 +188,9 @@ for offer in [offer-names]; do
 done
 
 # Ask before persisting active-offer state. Offer choice can stay session-scoped.
-# If the operator explicitly approves a saved active offer and no CLI command
-# exists yet, ensure .vip/local.yaml is gitignored, then merge-write the legacy
-# fallback without overwriting unrelated keys.
+# Do not write .vip/local.yaml as the active-offer mechanism.
+# Keep the choice session-scoped unless a future mb command exposes an explicit
+# session-state contract and the operator confirms persistence.
 
 # Create product-ladder.md placeholder at core/product-ladder.md
 touch core/product-ladder.md
@@ -204,9 +203,6 @@ Full structure (single-offer):
 ├── README.md              # Human-readable overview
 ├── .env                   # Secrets (gitignored)
 ├── .gitignore             # Include .env
-│
-├── .vip/                  # Legacy local config/state
-│   └── config.yaml        # User preferences, infrastructure refs
 │
 ├── core/                  # Evergreen business brain
 │   ├── soul.md            # Why you exist
@@ -248,19 +244,18 @@ Full structure (multi-offer — adds offer folders and `product-ladder.md`):
 │       │   └── offer.md   # Offer-specific details
 │       └── course/
 │           └── offer.md
-└── .vip/
-    ├── config.yaml        # Legacy team settings
-    └── local.yaml         # Git-IGNORED session state (current_offer)
 ```
 
 ### 4a. API Key Environment, Config, and .gitignore
 
 See **[references/repo-scaffolding.md](references/repo-scaffolding.md)** for:
 - API key environment setup (`~/.config/vip/env.sh`)
-- Legacy `.vip/config.yaml` template (includes `mcps:` section for older MCP tracking)
+- Legacy `.vip` cleanup guidance
 - `.gitignore` creation
 
-Run these steps in order: create env.sh, add shell source line, create config.yaml, create .gitignore.
+Run these steps in order: create env.sh when needed, add shell source line when
+approved, and create `.gitignore`. Do not create `.vip/config.yaml` for new
+repos.
 
 ### 5. Sort Content into Files
 

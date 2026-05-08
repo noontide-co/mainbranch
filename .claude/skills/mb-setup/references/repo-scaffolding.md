@@ -60,98 +60,21 @@ fi
 
 **Progressive disclosure:** Don't overwhelm beginners with API setup. The env.sh exists but stays empty until they need it.
 
-## Create Initial Config
+## Legacy .vip Config
 
-Create `.vip/config.yaml` with team/business settings:
+Do not create `.vip/config.yaml` for new repos. Older repos may already have it
+with mixed business facts, MCP requirements, tool snapshots, infrastructure
+refs, content defaults, skill defaults, private paths, or client context.
 
-```yaml
-# .vip/config.yaml
-# VIP configuration for this business
-# Git-tracked, shared by all collaborators
-# NOTE: User identity (name, experience) is in ~/.config/vip/local.yaml
+Audit old files with:
 
-version: 1
-
-# === SESSION (Team Defaults) ===
-session:
-  auto_load_reference: true
-  show_context_tips: true  # Context management tips for beginners
-  warn_at_context_pct: 75
-
-# === INFRASTRUCTURE ===
-# Populated when services are connected
-infrastructure:
-  railway:
-    project_id: null
-  postiz:
-    api_url: null
-    api_key_ref: null  # keychain:vip/postiz or env:POSTIZ_API_KEY
-  r2:
-    bucket: null
-    public_url: null
-
-# === MCP SERVERS ===
-# Track which MCPs this business needs
-# /mb-start verifies these are installed, prompts setup if missing
-mcps:
-  apify:
-    required_for: [organic, think]  # Handles web scraping AND YouTube transcripts
-    setup_guide: ".claude/skills/mb-organic/references/apify-setup.md"
-
-# === TOOL STATUS CACHE (self-healing) ===
-# /mb-start and /mb-think update these over time.
-# Rule: every tool entry keeps status + notes + last_checked.
-tools:
-  apify:
-    status: null
-    notes: "unknown"
-    last_checked: null
-  gemini:
-    status: null
-    notes: "unknown"
-    last_checked: null
-  grok:
-    status: null
-    notes: "unknown"
-    last_checked: null
-  whisper:
-    status: null
-    notes: "unknown"
-    last_checked: null
-  nanobanana:
-    status: null
-    notes: "unknown"
-    last_checked: null
-  markitdown:
-    status: null
-    notes: "unknown"
-    last_checked: null
-  pandoc:
-    status: null
-    notes: "unknown"
-    last_checked: null
-  marker:
-    status: null
-    notes: "unknown"
-    last_checked: null
-  meta_ads:
-    status: null
-    method: official_connector_pending
-    notes: "unknown"
-    last_checked: null
-
-# === CONTENT ===
-content:
-  default_channels: []
-  require_review: true
-
-# === SKILL PREFERENCES ===
-skills:
-  ads:
-    default_format: static
-  think:
-    auto_create_tasks: false
+```bash
+mb doctor repair --plan --json
 ```
+
+Move only still-current, non-private facts into current surfaces such as
+`core/`, `core/operations/`, generated repo instructions, or provider metadata
+managed through `mb connect`. Keep credentials and machine-specific paths local.
 
 ## Create .gitignore
 
@@ -209,6 +132,7 @@ done
 **Why per-skill entries (not `.claude/skills/`):** Users have custom skills (deck, pr-review, etc.) that ARE tracked in git. Ignoring the whole folder would hide those. We only ignore the Main Branch-linked symlinks. Old clone-based `.claude/lenses/` and `.claude/reference/` dirs are legacy link dirs; repair them with `mb doctor repair` instead of teaching them as current setup.
 
 **Why legacy `.vip/local.yaml` is git-ignored:** Older repos may have stored
-session state like `current_offer` there. Treat it as local fallback state, not
-durable business truth, and ask before writing it. The git-tracked
-`.vip/config.yaml` holds team/business settings that should be shared.
+session state like `current_offer` there. Treat it as audit input, not durable
+business truth, and do not write it as the active-offer mechanism. Older
+`.vip/config.yaml` files may have been tracked as shared settings; audit them
+with `mb doctor repair --plan --json` before reusing any values.

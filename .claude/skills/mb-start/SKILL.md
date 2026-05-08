@@ -92,7 +92,10 @@ ads with `/mb-ads`, and checkpoint approved artifacts.
 - CWD has `core/` or legacy `reference/core/` — user chose their repo by cd'ing into it
 - User explicitly ran `/mb-start [repo-name]` with a specific path
 
-**After user selects a repo:** If the selected repo is not the current `default_repo`, ask: "Want me to save [repo-name] as your default? (faster startup next time)" If yes, update `default_repo` in `~/.config/vip/local.yaml`.
+**After user selects a repo from legacy fallback config:** If the selected repo
+is not the current `default_repo`, ask: "Want me to save [repo-name] as your
+default? (faster startup next time)" If yes, merge-update `default_repo` in
+`~/.config/vip/local.yaml`. Do not create or update `.vip/config.yaml`.
 
 ---
 
@@ -188,7 +191,8 @@ The user starts Claude in their business repo. Check CWD first before falling ba
 ```
 1. test -d "core" || test -d "reference/core"  → THIS IS the business repo. Skip to config.
 2. test -f ".claude/skills/mb-start/SKILL.md"  → user is in the engine repo; migrate.
-3. Otherwise → fall back to ~/.config/vip/local.yaml.
+3. Otherwise → fall back to `~/.config/vip/local.yaml` only as legacy
+   machine-local repo memory.
 ```
 
 See **[references/repo-detection.md](references/repo-detection.md)** for the full flow: CWD detection, migration guidance for users in the engine repo, config loading, multi-repo selection, the discovery algorithm when no config exists, the canonical `REPO_PATH` variable, and the Main Branch wiring verification block.
@@ -334,7 +338,9 @@ files already exist, read enough of those files to avoid asking for facts the
 repo already contains. Keep this bounded: summarize the existing facts and ask
 only for confirmation or missing profile fields.
 
-**Multi-offer context:** If `current_offer` is set (see Step 8), note the active offer for routing. Don't load the offer file — the selected skill will.
+**Multi-offer context:** If an active offer is explicit in CLI facts or the
+current session (see Step 8), note it for routing. Don't load the offer file —
+the selected skill will.
 
 ---
 
@@ -354,11 +360,12 @@ also absent, use `reference/offers` as the fallback. In current repos,
 
 **If offers/ found:** Multi-offer mode.
 1. Check current CLI status facts first. If a future `mb` JSON field exposes
-   active-offer local state, prefer that. If not, read `.vip/local.yaml` only as
-   a legacy fallback.
-2. If a legacy active offer is set, confirm in plain language:
-   "I see legacy session state for **[offer]**. Continue with that offer, work
-   brand-level, or switch?"
+   active-offer local state, prefer that. Do not silently route from
+   `.vip/local.yaml`.
+2. If legacy active-offer state is present, do not treat it as canonical. Say:
+   "This repo has old active-offer session state. Continue with that offer,
+   work brand-level, or switch?" Avoid echoing raw `.vip` values unless the
+   user asks to inspect the file.
 3. If no active offer is set, present offers by slug/name, not numbers when
    ranked actions or routes are already numbered:
    - `community` — paid community
@@ -368,18 +375,17 @@ also absent, use `reference/offers` as the fallback. In current repos,
    persistence. Say what will happen before writing local state:
    "For this session I'll use **[offer]**. Save that as the active offer for
    future sessions too?"
-5. Only after explicit confirmation, persist with the current supported
-   repo-local state path. If no CLI command exists yet, `.vip/local.yaml` is a
-   legacy fallback; merge-write it without overwriting unrelated keys. Do not
-   use `echo > .vip/local.yaml`.
+5. Keep the selection session-scoped. Do not write `.vip/local.yaml` as the
+   active-offer mechanism. If a future `mb` command exposes an explicit
+   session-state contract, use that only after confirmation.
 
 **Shortcut:** `/mb-start [offer-name]` selects that offer for the current
 session after validating the folder exists. It does not silently persist
 session state. Ask before saving it as the future active offer.
 
 **"all" selection:** When user picks "all" or "brand-level work", use brand
-level `core/` context for this session. Ask before persisting any local state
-that clears an active offer.
+level `core/` context for this session. Ask before persisting any future local
+state that clears an active offer.
 
 ---
 
@@ -405,7 +411,7 @@ to `/mb-think`.
 
 **Respect readiness gates from Step 6.** If status is MINIMAL or EMPTY, do not offer output skills. If THIN, warn. See [readiness-assessment.md](references/readiness-assessment.md) for skill-specific requirements.
 
-**Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[current_offer or 'single']**"
+**Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[active offer or 'single']**"
 
 **Surface unread CHANGELOG entries before the menu**, present the triage route
 without reusing a number from recommendations or offers, and use the "while you
@@ -430,10 +436,10 @@ skip triage.
 ## Context And Experience
 
 Fresh context gets a fuller load; working context routes directly; heavy context
-gets a brief warning; critical context routes to `/mb-end`. Read
-`user.experience` from `~/.config/vip/local.yaml`: beginner explains more,
-returning confirms quickly, expert routes fast. If the user asks for a faster
-mode, offer to update local experience.
+gets a brief warning; critical context routes to `/mb-end`. If legacy
+`~/.config/vip/local.yaml` has `user.experience`, use it as a machine-local
+fallback: beginner explains more, returning confirms quickly, expert routes
+fast. If the user asks for a faster mode, offer to update local experience.
 
 ---
 
@@ -464,11 +470,10 @@ Auto-detect user intent and route. Skills: `/mb-update`, `/mb-help`, `/mb-setup`
 
 ## Recovering from Compaction
 
-If re-invoked after compaction: re-read `~/.config/vip/local.yaml` for repo +
-identity, then use status/CLI facts for active offer if available. Read
-`.vip/local.yaml` in the business repo only as a legacy fallback for
-`current_offer`. Confirm the restored context, but do not write local state
-without explicit approval.
+If re-invoked after compaction: use CWD and `mb status --json --peek` first.
+Read `~/.config/vip/local.yaml` only as legacy fallback for repo + identity.
+Treat business-repo `.vip/local.yaml` as audit input only; confirm offer
+context from the user or current CLI facts, and do not write `.vip` state.
 
 ---
 

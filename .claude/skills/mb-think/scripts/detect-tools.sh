@@ -5,17 +5,15 @@
 # Why: Claude can detect tools AND update config in one step using Read/Edit tools.
 # The bash script could only report — it couldn't reliably write YAML.
 #
-# New flow (in SKILL.md):
-# 1. Read .vip/config.yaml
-# 2. Check status values (true/false/null)
-# 3. Probe unknowns using bash or tool presence checks
-# 4. Update config with Edit tool (status + last_checked timestamp)
-# 5. Report once based on user experience level
+# New flow:
+# 1. Read `mb status --json --peek` and `mb connect doctor --json`.
+# 2. Probe runtime-local tools only when the selected workflow needs them.
+# 3. Report provider/readiness repair commands from mb instead of editing
+#    legacy .vip YAML.
 #
-# See: .claude/skills/mb-think/SKILL.md "Tool Detection (Config-First)" section
+# See: .claude/skills/mb-start/references/mcp-preflight.md
 
-echo "NOTE: detect-tools.sh is deprecated. Tool detection now happens inline in /mb-think."
-echo "The skill reads config, probes unknowns, and updates config directly."
+echo "NOTE: detect-tools.sh is deprecated. Tool detection now starts with mb connect/status facts."
 echo ""
 echo "For manual checking, here's what tools exist on this machine:"
 echo ""
@@ -90,4 +88,4 @@ which marker_single >/dev/null 2>&1 \
   || echo "  ✗ marker"
 
 echo ""
-echo "To update your config, edit .vip/config.yaml directly or let /mb-think handle it."
+echo "For provider readiness, run: mb connect doctor --json"

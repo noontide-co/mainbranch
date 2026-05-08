@@ -40,8 +40,10 @@ Score each file 0-3 based on line count + section presence.
 
 Use canonical path resolution for offer and audience files (multi-offer aware):
 
-1. If a future `mb` JSON field exposes active offer state, use it; otherwise read `.vip/local.yaml` only as a legacy fallback
-2. If `current_offer` is set and `core/offers/{current_offer}/offer.md` exists, score that file
+1. If a future `mb` JSON field exposes active offer state, use it. Otherwise
+   ask the user which offer this work is for; do not silently route from
+   `.vip/local.yaml`.
+2. If an offer is selected and `core/offers/{offer}/offer.md` exists, score that file
 3. Otherwise fall back to `core/offer.md`
 4. Same resolution for `audience.md`
 5. Legacy fallback: if `core/` is absent, read old `reference/core/` and
