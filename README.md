@@ -22,7 +22,7 @@
 
 Main Branch is a folder on your computer that holds your business — offer, audience, voice, decisions, research, bets, launches, meeting notes, fulfillment context, lessons. The agent reads that folder before it answers, so the work it gives you sounds like your business instead of generic AI output. The system saves itself between sessions, so you stop re-explaining who you are every time you open Claude.
 
-Open source. Lives on your machine. Twenty bucks a month for the agent. That's it.
+Open source. Lives on your machine. Bring your own Claude Code plan. That's it.
 
 |        | Step             | What happens                                                                 |
 | ------ | ---------------- | ---------------------------------------------------------------------------- |
@@ -70,7 +70,7 @@ Open source. Lives on your machine. Twenty bucks a month for the agent. That's i
 | Output sounds like every other AI.                      | Output sounds like you — because the agent reads your voice files first.          |
 | Important decisions live in chat that disappears.       | Decisions live as plain notes you can read on a Tuesday.                          |
 | You build the system yourself: prompts, files, glue.    | The rails are built. Your business folder plugs in.                               |
-| $30/mo subscription. Gets more expensive every year.    | $20/mo Claude + a folder you own forever. Your stuff still works without us.      |
+| Another rented subscription. Gets more expensive.       | Claude Code + a folder you own forever. Your stuff still works without us.        |
 
 ---
 
@@ -145,7 +145,7 @@ claude
 /mb-start
 ```
 
-You'll need a Claude Pro ($20/mo) or Max subscription. Install Claude Code from [claude.ai](https://claude.ai). Step-by-step beginner walkthrough: [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md).
+You'll need a Claude plan that includes Claude Code. Install Claude Code from [claude.ai](https://claude.ai). Step-by-step beginner walkthrough: [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md).
 
 Tested on macOS and Linux. Windows is experimental — use WSL2.
 
@@ -196,7 +196,7 @@ Hit a real problem? Ask the agent to draft a clean public issue for you. It scru
 ## Open source vs paid community
 
 - **Open-source (MIT)**: the `mb` CLI, bundled skills, schema, framework, docs, and any future local dashboard. Usable without joining the paid community.
-- **Paid community ([Skool](https://skool.com/main))**: Watch us build companies live with Main Branch. Free for 7 days, $19/mo after. Live narration, calls, support, and curated examples — not required for the engine.
+- **Community ([Skool](https://skool.com/main))**: Watch us build companies live with Main Branch. Live narration, calls, support, and curated examples — not required for the engine.
 
 Main Branch is usable on its own. The community is the live narration on top.
 
