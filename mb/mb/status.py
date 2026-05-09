@@ -765,6 +765,7 @@ def _playbook_health(
         item
         for item in playbooks
         if bool((item.get("approval") or {}).get("required"))
+        and str(item.get("status") or "").lower() not in {"canceled", "retired"}
         and str((item.get("approval") or {}).get("status") or "").lower()
         in PLAYBOOK_APPROVAL_STATUSES_NEEDING_ATTENTION
     ]

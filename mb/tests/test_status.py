@@ -358,6 +358,28 @@ def test_status_playbook_health_flags_pending_and_completed_without_outcome(
     )
 
 
+def test_status_playbook_health_ignores_retired_playbook_approval(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    push = _write_push(repo, "2026-05-06-launch")
+    _write_playbook(
+        push,
+        status="retired",
+        provider_boundary="plan-only",
+        approval_status="",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    health = report["playbook_health"]
+    assert health["summary"]["playbook_approval_needed"] == 0
+    assert health["summary"]["manual_provider_boundaries"] == 0
+    assert health["gaps"] == []
+
+
 def test_status_relationship_health_flags_active_bet_and_offer_gaps(
     tmp_path: Path, monkeypatch
 ) -> None:
