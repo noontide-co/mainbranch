@@ -17,10 +17,11 @@ markdown files in git.
 - A user's business repo is the durable business brain.
 - A user is not met with git speak but instead business speak.
 
-Claude Code is the first-class runtime today. Codex, Cursor, OpenClaw, Hermes,
-Paperclip-adjacent orchestration, and local runtimes are compatibility targets
-only when tested. Do not claim support before there is an adapter or smoke
-evidence.
+Claude Code is the first-class runtime today. Codex CLI has an experimental
+CLI-first adapter for power users; it is not slash-command or workflow parity.
+Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and local runtimes
+remain compatibility targets until tested. Do not claim support before there is
+an adapter and smoke evidence for the exact surface.
 
 The public product frame lives in `docs/ETHOS.md`, the operator loop taxonomy
 lives in `docs/OPERATOR-LOOPS.md`, and release direction lives in

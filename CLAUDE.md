@@ -66,5 +66,7 @@ Bundled Claude Code skills live in `.claude/skills/`. If you edit a skill:
 - avoid private member data, private launch strategy, or machine-specific paths
   in examples.
 
-Claude Code is first-class today. Other runtimes are roadmap targets until an
-adapter and smoke evidence exist, so do not overclaim compatibility in docs.
+Claude Code is first-class today. Codex CLI has an experimental CLI-first
+adapter for power users, but no slash-command or workflow parity claim. Other
+runtimes are roadmap targets until an adapter and smoke evidence exist, so do
+not overclaim compatibility in docs.

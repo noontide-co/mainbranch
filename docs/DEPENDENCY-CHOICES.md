@@ -76,7 +76,7 @@ Use this rubric before adding, promoting, replacing, or removing a dependency.
 | Can Main Branch test it? | Local tests, CI tests, read-only smoke, package smoke, fixture repo smoke, or runtime smoke as appropriate. |
 | Does it require paid access or hosted setup? | Document account requirements, OAuth/developer-app steps, billing assumptions, and no-account fallback behavior. |
 | Where do secrets live? | Credentials must stay outside tracked repos; repo metadata must be safe to share. |
-| Does it cross runtime boundaries? | Claude Code is first-class today; other runtimes need adapters and smoke evidence before support claims. |
+| Does it cross runtime boundaries? | Claude Code is first-class today; Codex CLI is experimental and CLI-first; other runtimes need adapters and smoke evidence before support claims. |
 | Can failures be explained? | `mb doctor`, `mb connect`, `mb status`, or provider docs should tell the user what failed and the next command. |
 | Does it mutate external accounts? | Spending, publishing, emailing, deploying, and customer/account mutation need explicit operator action and provider authority. |
 | What is the exit plan? | Record the replacement, fallback, deprecation path, or reason the dependency can stay optional. |

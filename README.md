@@ -109,7 +109,7 @@ The longer-arc operating-system model — where multiple business repos, GitHub 
 
 |                                  |                                                                                                |
 | -------------------------------- | ---------------------------------------------------------------------------------------------- |
-| **Not a chat app.**              | The chat surface is Claude Code. Main Branch gives the chat something durable to read from.    |
+| **Not a chat app.**              | The supported chat surface is Claude Code; Codex CLI is experimental. Main Branch gives agents durable context to read from. |
 | **Not a SaaS dashboard.**        | Your business doesn't live on our servers. It lives in your folder.                            |
 | **Not a connect-every-tool hub.**| We pick boring, inspectable rails: GitHub, Cloudflare, official ads paths. Curated, not sprawl.|
 | **Not a model host.**            | We don't run models. We hand the agent the right context so the model you already use is sharper.|
