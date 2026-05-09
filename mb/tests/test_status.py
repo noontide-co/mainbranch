@@ -1435,3 +1435,98 @@ def test_status_renderer_falls_back_to_readiness_actions_for_legacy_reports(caps
 
     output = capsys.readouterr().out
     assert "Run `claude` in this repo, then `/mb-start`." in output
+
+
+_VALID_TOPOLOGY_REGISTRY = """\
+---
+type: repo_topology
+status: active
+schema: mb.repo_topology.v0
+home: github:example-co/example
+business_display_name: Example Business
+repos:
+  - slug: example
+    display_name: Example Business
+    role: business
+    lifecycle: active
+    github_owner: example-co
+    repo_name: example
+    remote: github:example-co/example
+    visibility: team_private
+    relationship: hub_for
+    purpose: Hub repo for company strategy and decisions.
+  - slug: workshop-site
+    display_name: Workshop site
+    role: site
+    lifecycle: active
+    relationship: execution_vehicle_for
+    parent: example
+    github_owner: example-co
+    repo_name: workshop-site
+    remote: github:example-co/workshop-site
+    visibility: public
+---
+# Topology
+"""
+
+
+def test_status_exposes_topology_section_when_registry_missing(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    # Ensure no topology registry exists.
+    registry_path = repo / "core" / "operations" / "repo-topology.md"
+    if registry_path.exists():
+        registry_path.unlink()
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+    topology = report["topology"]
+
+    assert topology["schema"] == "mb.topology.view.v0"
+    assert topology["safe_to_share"] is True
+    assert topology["summary"]["registry_found"] is False
+    assert topology["summary"]["warnings"] == 0
+    assert topology["current_repo"]["matched"] is False
+    assert topology["registry"]["found"] is False
+    assert topology["registry"]["ok"] is False
+    assert topology["local"]["repo_path"] == str(repo.resolve())
+    assert topology["local"]["safe_to_share"] is False
+
+
+def test_status_exposes_topology_section_with_valid_registry(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    registry_path = repo / "core" / "operations" / "repo-topology.md"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(_VALID_TOPOLOGY_REGISTRY, encoding="utf-8")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+    topology = report["topology"]
+
+    assert topology["summary"]["registry_ok"] is True
+    assert topology["summary"]["child_repo_count"] >= 1
+    # The hub itself should match by github_owner/repo_name fall-through (no
+    # remote configured in tmp git), or fall through to descriptor. Either way
+    # the registry recorded the hub role for this owner/repo pair.
+    registry_repos = topology["registry"]["repos"]
+    business_entries = [entry for entry in registry_repos if entry.get("role") == "business"]
+    assert business_entries, "expected at least one business role entry"
+
+    public_payload = json.dumps({key: topology[key] for key in topology if key != "local"})
+    assert "/Users/" not in public_payload
+    assert str(repo.resolve()) not in public_payload
+
+
+def test_status_human_output_mentions_business_map(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    quiet = runner.invoke(app, ["status", str(repo)])
+    assert quiet.exit_code == 0
+    assert "Business map" in quiet.stdout
+
+    loud = runner.invoke(app, ["status", str(repo), "--verbose"])
+    assert loud.exit_code == 0
+    assert "Business map" in loud.stdout

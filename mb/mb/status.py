@@ -19,6 +19,7 @@ from mb import onboard as onboard_mod
 from mb import pushes as pushes_mod
 from mb import ranker as ranker_mod
 from mb import site as site_mod
+from mb import topology as topology_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status
 
@@ -1539,6 +1540,10 @@ def run(
     update = package_update_status(repo_path)
     github = _github(repo_path, git)
     brain = _brain(repo_path)
+    topology_payload = topology_mod.collect(
+        str(repo_path),
+        git_remote=str(git.get("remote") or ""),
+    )
     push_report = brain["pushes"]
     marker = _read_last_seen_marker(repo_path)
     report: dict[str, Any] = {
@@ -1581,6 +1586,21 @@ def run(
         generated_at=generated_at,
     )
     report["drift"] = _drift(report)
+    report["topology"] = {
+        "schema": topology_payload["schema"],
+        "safe_to_share": True,
+        "summary": topology_payload["summary"],
+        "registry": topology_payload["registry"],
+        "descriptor": topology_payload["descriptor"],
+        "current_repo": topology_payload["current_repo"],
+        "child_counts": topology_payload["child_counts"],
+        "restricted_repos": topology_payload["restricted_repos"],
+        "findings": topology_payload["findings"],
+        "local": {
+            "repo_path": str(repo_path),
+            "safe_to_share": False,
+        },
+    }
     report["readiness"] = _readiness(report)
     report["ranked_actions"] = ranker_mod.rank_status_report(report)
     report["ok"] = report["readiness"]["level"] != "not_ready"
@@ -1704,6 +1724,39 @@ def render_human(
         f"[bold]Repo[/bold] {repo_mark} Main Branch repo  branch: {branch}  state: {dirty}"
     )
     console.print(f"[bold]Install[/bold] {report['install']['detail']}")
+
+    topology = report.get("topology") or {}
+    topology_summary = topology.get("summary") or {}
+    topology_registry = topology.get("registry") or {}
+    topology_current = topology.get("current_repo") or {}
+    topology_counts = topology.get("child_counts") or {}
+    if not topology_summary.get("registry_found"):
+        console.print("[bold]Business map[/bold] no core/operations/repo-topology.md yet")
+    elif not topology_summary.get("registry_ok"):
+        console.print("[bold]Business map[/bold] [yellow]registry present but unparsable[/yellow]")
+    else:
+        display_name = topology_registry.get("business_display_name") or "(no display name)"
+        total_children = topology_counts.get("total", 0)
+        restricted = topology_summary.get("restricted_repo_count", 0)
+        suffix = f", restricted {restricted}" if restricted else ""
+        console.print(
+            f"[bold]Business map[/bold] {display_name} — {total_children} child repo(s){suffix}"
+        )
+    if topology_current.get("matched"):
+        identifier = topology_current.get("slug") or topology_current.get("remote_full_name") or "?"
+        role = topology_current.get("role") or "?"
+        console.print(f"  this repo: {role} ({identifier})")
+    if verbose:
+        topology_findings = topology.get("findings") or []
+        shown = 0
+        for finding in topology_findings:
+            severity = finding.get("severity", "")
+            if severity not in {"warn", "error"}:
+                continue
+            console.print(f"  - {severity}: {finding.get('summary', '')}")
+            shown += 1
+            if shown >= 3:
+                break
 
     claude = runtime["claude_code"]
     skills = runtime["skill_wiring"]
