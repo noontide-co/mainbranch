@@ -25,6 +25,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `type: repo_topology` records, including topology role/lifecycle/visibility
   vocabularies, safe repo-link checks, and finance/legal/provider-boundary
   warnings. Refs #416.
+- Exposed repo topology facts in `mb status --json`, `mb graph --json`, and
+  `mb doctor repair --plan --json` through a shared role-neutral
+  `mb.topology` reader. Status gains an additive `topology` section and a
+  business-readable "Business map" line; graph gains `repo` nodes and
+  deterministic hub/child relationship edges (with `linked_playbook_runs`
+  resolving to push playbook run files and `INDEX_VERSION` bumped to 2);
+  doctor gains a preview-only `topology-drift` section that warns on unsafe
+  metadata, descriptor/registry handle mismatch, descriptor/role mismatch,
+  or orphaned child descriptors without renaming, deleting, or rewriting
+  any repos. Public-safe topology payload and local-machine facts
+  (e.g. clone path) stay in separate fields. Refs #418.
 
 ### Changed
 
