@@ -11,6 +11,40 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.14] - 2026-05-09
+
+v0.3.14 ships the first experimental Codex CLI-first adapter slice and the
+push playbook health surface that landed after v0.3.13 as an installable
+patch release. Fresh business repos now get a tracked `AGENTS.md` Codex
+entrypoint; `mb status`, `mb start`, and `mb doctor repair` expose and
+refresh Codex readiness facts; and `mb status --json --peek` flags push
+playbook health gaps without rewriting your repo. Public philosophy and
+architecture docs were also realigned to the current v0.3 story so unshipped
+surfaces are not mistaken for current behavior. Claude Code remains the
+supported runtime; Codex support is experimental and gated by future dogfood
+work.
+
+### What this means for you (plain English)
+
+- **Codex gets a real first-run path.** New `mb onboard` repos include a
+  tracked `AGENTS.md` so Codex (and any other AGENTS.md-aware runtime) has a
+  documented entrypoint. `mb status --json` and `mb start --json` now expose
+  a Codex readiness section, and `mb doctor repair --plan` / `--apply` can
+  report and refresh stale Codex instructions. This is an experimental slice;
+  Claude Code is still the supported runtime.
+- **Push playbook health is visible in `mb status`.** `mb status --json
+  --peek` adds push playbook health facts plus concise human and
+  ranked-action signals when active pushes are missing run records, playbook
+  approval/status is pending, completed pushes lack outcome links, or
+  provider boundaries remain plan/manual work. Nothing is rewritten for you;
+  the gaps are surfaced so you can act.
+- **Public docs match what ships.** `docs/philosophy.md` and
+  `docs/system-architecture.md` were realigned to the v0.3 public story so
+  unshipped surfaces (mobile, team dashboard, finance/bookkeeping features,
+  provider mutation, hosted model invocation) cannot be mistaken for current
+  behavior. Durable contracts (repo shape, topology roles, push and playbook
+  frontmatter, artifact routing) are preserved.
+
 ### Added
 
 - Added the first experimental Codex CLI-first adapter slice: fresh business
@@ -23,6 +57,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   human and ranked-action signals when active pushes are missing run records,
   playbook approval/status is pending, completed pushes lack outcome links, or
   provider boundaries remain plan/manual work. Refs #446.
+
+### Changed
+
+- Realigned `docs/philosophy.md` and `docs/system-architecture.md` to the v0.3
+  public story: dropped speculative surface copy, collapsed sections that
+  duplicated `docs/ETHOS.md`, `docs/OPERATOR-LOOPS.md`, and `docs/ROADMAP.md`,
+  consolidated legacy/compatibility names under a single Superseded Names
+  section, and stated the no-provider-mutation invariant up front. Durable
+  contracts (business repo shape, repo topology role table, push and playbook
+  frontmatter, artifact routing, state boundaries) are preserved. Refs #444.
 
 ## [0.3.13] - 2026-05-08
 
