@@ -444,9 +444,15 @@ public examples or committed business repo files.
 
 ## Provider, Sidecar, and Dashboard Boundary
 
-Provider systems record live operational facts. Sidecars enrich Main Branch
-with structured data. Dashboards make repo and provider truth easier to see.
-All three remain optional and non-canonical.
+Provider systems record live operational facts. Sidecars can enrich Main
+Branch with structured data. A future local dashboard could render repo and
+provider truth without owning it. None of these replace canonical memory.
+
+Main Branch does not mutate provider accounts today. Provider mutation
+requires a shipped adapter with approval gates, readiness checks, and smoke
+evidence; until then, playbooks are plans and approvals, not execution. See
+[ROADMAP.md](ROADMAP.md) and [DEPENDENCY-CHOICES.md](DEPENDENCY-CHOICES.md)
+for direction.
 
 Correct pattern:
 
