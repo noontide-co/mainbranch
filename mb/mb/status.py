@@ -1533,10 +1533,24 @@ def _write_last_seen_marker(repo: Path, report: dict[str, Any]) -> dict[str, Any
     }
 
 
-def _validation_status(repo: Path) -> dict[str, Any]:
+def _safe_exception_message(exc: Exception) -> str:
+    message = str(exc) or exc.__class__.__name__
+    message = re.sub(
+        r"(?<![A-Za-z0-9:])(?:"
+        r"/(?:Users|home|private|tmp|var|Volumes|opt|usr/local)/[^\s\"'`<>),;]+"
+        r"|[A-Za-z]:\\[^\s\"'`<>),;]+"
+        r")",
+        "<local-path>",
+        message,
+    )
+    return message[:240] + ("..." if len(message) > 240 else "")
+
+
+def _validation_status(repo: Path, *, cross_refs: bool = True) -> dict[str, Any]:
     try:
-        report = validate_mod.run(str(repo), cross_refs=True)
+        report = validate_mod.run(str(repo), cross_refs=cross_refs)
     except Exception as exc:  # pragma: no cover - defensive status boundary
+        message = _safe_exception_message(exc)
         return {
             "ok": False,
             "state": "error",
@@ -1551,7 +1565,7 @@ def _validation_status(repo: Path) -> dict[str, Any]:
                         "count": 1,
                         "errors": 1,
                         "warnings": 0,
-                        "examples": [{"path": "", "message": str(exc)}],
+                        "examples": [{"path": "", "message": message}],
                         "repair": "Run `mb validate --cross-refs --json` for the exact failure.",
                     }
                 },
@@ -1880,6 +1894,7 @@ def run(
     path: str = ".",
     *,
     update_marker: bool = True,
+    validation_cross_refs: bool = True,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic daily briefing report."""
@@ -1937,7 +1952,7 @@ def run(
         brain=brain,
         generated_at=generated_at,
     )
-    report["validation"] = _validation_status(repo_path)
+    report["validation"] = _validation_status(repo_path, cross_refs=validation_cross_refs)
     report["drift"] = _drift(report)
     report["topology"] = {
         "schema": topology_payload["schema"],

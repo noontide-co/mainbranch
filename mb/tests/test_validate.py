@@ -830,14 +830,31 @@ def test_validate_requires_canonical_push_schema(tmp_path: Path) -> None:
     assert "missing key: type" in bad["errors"]
     assert "missing key: kind" in bad["errors"]
     assert "missing key: goal" in bad["errors"]
-    assert "goal must be a mapping with metric, target, and by" in bad["errors"]
+    assert "goal must be a mapping with metric, target, and by" not in bad["errors"]
     assert "missing key: owner" in bad["errors"]
     assert "missing key: audience" in bad["errors"]
     assert "missing key: offer" in bad["errors"]
     assert "missing key: promise" in bad["errors"]
     categories = report["validation_categories"]["by_category"]
     assert categories["missing_required_key"]["count"] >= 1
-    assert categories["schema_shape_error"]["count"] >= 1
+    assert "schema_shape_error" not in categories
+
+
+def test_validate_categorizes_malformed_push_goal_shape(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-bad-goal" / "push.md",
+        _push("active", slug="bad-goal").replace(
+            "goal:\n  metric: qualified calls\n  target: 10 qualified calls\n  by: 2026-05-20\n",
+            "goal: five calls\n",
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["path"].endswith("push.md")][0]
+    assert "missing key: goal" not in bad["errors"]
+    assert "goal must be a mapping with metric, target, and by" in bad["errors"]
+    assert report["validation_categories"]["by_category"]["schema_shape_error"]["count"] == 1
 
 
 def test_validate_categorizes_large_frontmatter_repairs(tmp_path: Path) -> None:
@@ -1342,6 +1359,7 @@ def test_validate_rejects_unknown_repo_topology_values(tmp_path: Path) -> None:
         "repos[0].lifecycle must not be 'graduated'; use a relationship instead"
     ]
     assert any("visibility='secret'" in error for error in bad["errors"])
+    assert report["validation_categories"]["by_category"]["enum_mismatch"]["count"] >= 2
 
 
 def test_validate_repo_topology_status_uses_topology_lifecycle(tmp_path: Path) -> None:

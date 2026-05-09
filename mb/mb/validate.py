@@ -366,7 +366,6 @@ def _check_push_frontmatter(path: Path, fm: dict[str, Any], errors: list[str]) -
         errors.append("promise must be 140 characters or fewer")
     goal = fm.get("goal")
     if "goal" not in fm:
-        errors.append("goal must be a mapping with metric, target, and by")
         return
     if not isinstance(goal, dict):
         errors.append("goal must be a mapping with metric, target, and by")
@@ -972,8 +971,9 @@ def _validation_category(message: str, *, severity: str, schema: str) -> str:
         return "no_frontmatter"
     if lowered.startswith("yaml error:"):
         return "yaml_error"
-    if re.match(r"^[a-z_]+=", message) and " not in " in message:
-        if message.startswith("status="):
+    enum_match = re.search(r"(?:^|[.\s\]])([a-z_]+)=", message)
+    if enum_match and " not in " in message:
+        if enum_match.group(1) == "status":
             return "status_enum_mismatch"
         return "enum_mismatch"
     if (

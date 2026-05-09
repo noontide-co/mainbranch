@@ -868,7 +868,7 @@ def status_cmd(
     ),
 ) -> None:
     """Show a cheap daily briefing for a Main Branch repo."""
-    report = status_mod.run(path=path, update_marker=not peek)
+    report = status_mod.run(path=path, update_marker=not peek, validation_cross_refs=not peek)
     if json_out:
         typer.echo(_json_payload(report, command="mb status", schema_name="mainbranch.status"))
     else:
