@@ -18,9 +18,17 @@ You're renting your business. Not just the dashboards — the operational memory
 
 The open-source gap closed in 2025. The tools to own your stack exist now. Almost nobody has carved time to migrate, because there is no coherent environment that ties it together.
 
-Main Branch is that environment. Your offer, audience, voice, decisions, research, bets, pushes (launches, drops, challenges, promos — whatever your business calls them), meeting notes, fulfillment context, and operating lessons live as markdown files in a git repo you own. The `mb` CLI scaffolds and checks it. The bundled skills read those files and help ship work from what your business already knows.
+Main Branch is that environment. Your offer, audience, voice, decisions, research, bets, pushes (launches, drops, challenges, promos — whatever your business calls them), meeting notes, fulfillment context, and operating lessons live as markdown files in a git repo you own. The `mb` CLI scaffolds, validates, repairs, graphs, and checkpoints it. The bundled skills read those files and help ship work from what your business already knows.
 
-The end state isn't sitting at a terminal all day. It's the opposite — eventually you dump thoughts from your phone, drafts get made, finance and fulfillment signals roll up, the team sees what is moving, you approve the risky actions, and the system executes the boring rails. We're not all the way there. The work is still real. But the substrate is the right one to build on.
+The unusual part today is the safety net underneath:
+
+- `mb doctor repair --plan` walks you through cleaning up a stale repo.
+- Drift checks in `mb validate` and `mb doctor` flag old folders, settings, and broken links from earlier setups.
+- `mb checkpoint` saves business-readable progress during long agent runs.
+- `mb issue draft` / `mb issue open` turn errors and confusing steps into privacy-safe GitHub issues.
+- Releases run against real fixture repos before they ship.
+
+**Direction, not promises.** Mobile thought capture, team views, finance/fulfillment roll-ups, broader Ops/bookkeeping surfaces, an optional local dashboard, and any future hosted or model-invocation surface are eventual targets in [docs/ROADMAP.md](docs/ROADMAP.md), not current behavior.
 
 Every bet you ship leaves a lesson. The lessons update your offer, your audience, your voice. Your business gets smarter every week — without you having to remember. The agent recommends; you make the call.
 
@@ -34,7 +42,7 @@ Own the work. Rent only the rails.
 
 Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running a local-first business operating repo. It's built for operators and small teams running real businesses: solo founders, small agencies, course creators, productized services, indie SaaS, and small ecom teams. Today the workflows ship for Claude Code. Codex, Cursor, OpenClaw, Hermes, and local runtimes are compatibility targets, not supported adapters yet.
 
-The repo is the operating memory: offer, audience, voice, research, decisions, bets, pushes, logs, documents, meeting summaries, fulfillment notes, safe finance summaries, and provider refs. The CLI is the deterministic control plane: setup, status, validation, graph, provider readiness, updates, checkpoints, and repair. The skills are the judgment layer: research, decide, write, review, ship, and reflect.
+The repo is the operating memory: offer, audience, voice, research, decisions, bets, pushes, logs, documents, meeting summaries, fulfillment notes, safe finance summaries, and provider refs. The CLI is the deterministic control plane: setup, status, validation, graph, provider readiness, updates, repair, drift detection, and checkpoints. The skills are the judgment layer: research, decide, write, review, ship, and reflect. Agent recommends; operator decides what gets shipped, spent, published, or saved.
 
 Main Branch is opinionated about rails. The point is not to connect every SaaS tool a business has accumulated. The point is to choose boring, inspectable paths: GitHub for durable work threads, proposals, and shipped history; Cloudflare for sites and DNS; provider paths such as Google/Workspace and official ads only where smoke-tested; planned optional rails such as Postiz for social scheduling and Beancount-style plain-text finance; and optional sidecars for enrichment. Those paths should be wrapped in deterministic commands agents can call without wasting tokens guessing provider setup.
 
@@ -118,6 +126,7 @@ Once set up, you can:
 
 - Research topics and document decisions
 - Open, update, close, and narrate business bets
+- Plan and run pushes (launches, drops, challenges, promos) with reusable playbooks and per-push run records
 - Generate batches of ad copy in your voice
 - Create video scripts for Meta ads
 - Generate organic content — Reels, TikTok, carousels — from your core files and research
@@ -125,21 +134,26 @@ Once set up, you can:
 - Review ads for compliance before you run them
 - Build and deploy Cloudflare-backed landing pages from your core files and research when the repo is connected and readiness checks pass
 - Capture meeting transcripts, source material, and fulfillment notes into durable docs, logs, research, or decisions
+- Save business-readable git checkpoints during long agent runs with `mb checkpoint`
+- Reconcile stale repo state with `mb doctor repair --plan` / `--apply`, including migration drift across legacy folders, frontmatter, and skill wiring
+- Turn errors and confusing steps into privacy-safe GitHub issues with `mb issue draft` / `mb issue open`
 - Close sessions intentionally with crystallize moments
 
-All of this happens through simple slash commands. No custom prompt engineering required for supported workflows.
+All of this happens through simple slash commands and `mb` subcommands. No custom prompt engineering required for supported workflows.
 
 ---
 
 ## How it works
 
-Main Branch has three layers:
+Main Branch v0.3 has three layers:
 
 - **Your repo is canonical memory.** It holds the durable business truth:
   core files, research, decisions, bets, pushes, logs, documents, and links to
   child repos.
 - **`mb` is the deterministic control plane.** It scaffolds, validates, graphs,
-  briefs, repairs, checkpoints, updates, and checks provider readiness.
+  briefs, repairs (including migration drift), checkpoints, updates, and
+  checks provider readiness — and exposes JSON contracts that skills and future
+  callers read instead of guessing.
 - **Skills are the judgment layer.** Claude Code reads repo truth, asks the
   operator questions, drafts work, reviews it, and routes artifacts back into
   files.
@@ -148,6 +162,11 @@ The CLI and skills are meant to work together. Skills should call `mb` for
 facts instead of guessing at repo health, provider setup, or update state. The
 CLI should stay deterministic and scriptable instead of becoming a chat client
 or model host.
+
+The longer-arc operating-system model — `mb` as control plane, GitHub as the
+team layer, graph/structured data as the intelligence layer, agent runtimes as
+execution — is direction, not the v0.3 shape. See
+[`decisions/2026-05-02-github-native-business-os.md`](decisions/2026-05-02-github-native-business-os.md).
 
 You create a separate folder for YOUR business. That's where your offer,
 audience, voice, proof, operations, research, decisions, bets, pushes, logs, and
@@ -224,7 +243,7 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 
 | Command | What it does |
 |---|---|
-| `mb onboard` | Human setup flow: create or connect a business repo, explain the substrate, wire Claude Code skills, and show the next `/mb-start` step. |
+| `mb onboard` | Human setup flow: create or connect a business repo, explain how the pieces fit together, wire Claude Code skills, and show the next `/mb-start` step. |
 | `mb onboard status` | Show durable onboarding progress from `.mb/onboarding.json`, including missing core-reference inputs and the next recommended action. |
 | `mb init` | Set up a fresh business repo (business folders, CLAUDE.md, git init). |
 | `mb status` | Show the local-first briefing in the terminal without opening Claude Code: ranked next actions, since-last-check changes, drift, repo health, runtime wiring, recent decisions/research/bets/git activity, and GitHub tasks/proposals when `gh` is authenticated. Use `--json` for the v1 status schema, `--verbose` for detail, and `--peek` for non-mutating reads. |
@@ -330,6 +349,8 @@ Some skills ship growth work. Others maintain operating memory. `/mb-start`,
 and `mb connect` are as important as the content skills because they keep the
 repo understandable, current, and safe to operate from.
 
+**Core daily loop**
+
 | Skill | What it does |
 |---|---|
 | `/mb-start` | Main entry point — figures out what you need and routes you there |
@@ -337,15 +358,27 @@ repo understandable, current, and safe to operate from.
 | `/mb-setup` | Set up your business repo (run this first if you're new) |
 | `/mb-think` | Research, make decisions, add context, transcribe local recordings, update durable business files |
 | `/mb-bet` | Open, update, close, list, and narrate business bets |
+| `/mb-end` | Close session — summary, crystallize, approved checkpoint guidance |
+| `/mb-help` | Get answers, troubleshoot, learn the system |
+| `/mb-update` | Update Main Branch — delegates install-mode refresh to `mb update` and summarizes what's new |
+
+**Channel skills (Paid, Organic, Pages)**
+
+| Skill | What it does |
+|---|---|
 | `/mb-ads` | Create ad copy (static or video) and review for compliance |
 | `/mb-vsl` | Write video sales letter scripts (Skool or B2B) |
 | `/mb-organic` | Generate organic content — Reels, TikTok, carousels |
 | `/mb-site` | Generate and deploy landing pages from your core files and research |
-| `/mb-wiki` | Personal wiki with atomic notes |
-| `/mb-end` | Close session — summary, crystallize, approved checkpoint guidance |
-| `/mb-help` | Get answers, troubleshoot, learn the system |
-| `/mb-update` | Update Main Branch — delegates install-mode refresh to `mb update` and summarizes what's new |
-| `/mb-pull` | Legacy alias for `/mb-update` |
+
+**Specialty**
+
+| Skill | What it does |
+|---|---|
+| `/mb-wiki` | Personal/atomic-notes wiki workflow — optional, not part of the core daily loop |
+
+`/mb-pull` is kept as a legacy alias for `/mb-update` so older muscle memory
+still works; new docs and the live rotation teach `/mb-update`.
 
 ---
 
@@ -353,6 +386,10 @@ repo understandable, current, and safe to operate from.
 
 - **Built for Claude Code today.** `mb` is runtime-agnostic by design, but Claude Code is the only first-class runtime currently supported end to end.
 - **The terminal front door is live.** Bare `mb`, `mb onboard`, `mb status`, `mb start`, and `mb update` are in the public package.
+- **Owner-safe repair is shipped.** `mb doctor repair --plan`, migration drift checks across `mb validate` and `mb doctor`, and skill-link/wiring repair handle stale repos, broken settings, and old layouts without asking a non-developer to reason through git plumbing.
+- **Business-readable git saves are shipped.** `mb checkpoint` plans and saves readable commits at meaningful boundaries during long agent runs. The repo also surfaces topology facts (`mb status --json`, `mb graph --json`, `mb doctor repair --plan --json`) for agents and future dashboards to read.
+- **Privacy-safe friction capture is shipped.** `mb issue draft` / `mb issue open` turn errors and confusing steps into reviewed, scrubbed GitHub issues without leaking business data.
+- **Releases run against fixture repos.** Package-visible releases run print-mode and runtime simulations against materialized fixture repos before they ship. See [docs/release-simulations.md](docs/release-simulations.md).
 - **Packaged callers can use the CLI directly.** Paperclip-style routines, local scripts, and future adapters should invoke deterministic `mb` commands against an explicit business repo path and read JSON/exit codes. See [docs/compatibility.md](docs/compatibility.md).
 - **Growth is the strongest shipped wedge.** Ads, organic, VSLs, sites, bets, pushes, status, and checkpoints are the most developed public workflows.
 - **Ops is the expansion path.** Meetings, fulfillment, bookkeeping/P&L, team daily logs, repo topology, and dashboard views use the same memory model, but they are less shipped than the growth surfaces.
