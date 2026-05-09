@@ -18,13 +18,24 @@ Main Branch already ships:
 - `mb onboard`, `mb init`, `mb status`, `mb start`, `mb update`, `mb doctor`,
   `mb graph`, `mb validate`, `mb migrate`, `mb connect`, and skill management
   commands;
+- `mb doctor repair --plan` / `--apply` and migration drift detection across
+  `mb validate` and `mb doctor` for stale generated guidance, legacy
+  active-write folders, stale Claude settings, wrong push/playbook paths, and
+  legacy bet campaign links;
 - Claude Code skill wiring with `mb-` prefixed bundled skills;
 - beginner setup, migration, repair, and update paths;
 - local-first provider metadata and secret-safe connection checks;
-- graph and status primitives for future dashboard and agent workflows;
-- privacy-safe GitHub issue drafting for user friction;
+- graph, status, and topology primitives (including repo-topology facts in
+  `mb status --json`, `mb graph --json`, and `mb doctor repair --plan --json`)
+  for future dashboard and agent workflows;
+- privacy-safe GitHub issue drafting and submission (`mb issue draft`,
+  `mb issue open`) for user friction;
+- push, reusable playbook, and per-push run-record vocabulary for coordinated
+  business work;
 - `bets/` and `/mb-bet` as the first Reflect primitive;
 - `mb checkpoint` as the first hidden GitOps save layer for long agent runs;
+- materialized release-simulation fixtures and the package-visible release
+  evidence ladder (PR smoke, pre-release candidate, release acceptance);
 - public contribution, support, security, compatibility, and agent guidance;
 - accepted workspace/repo/sensitive-data boundary guidance and
   GitHub/Obsidian-compatible markdown/link conventions for future dashboard,
