@@ -292,6 +292,35 @@ def test_doctor_repair_apply_refreshes_codex_agents_md(tmp_path: Path) -> None:
     assert "mb status --json --peek" in agents_text
 
 
+def test_doctor_repair_preserves_custom_codex_agents_md_when_contract_is_current(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    agents = repo / "AGENTS.md"
+    agents.write_text(
+        agents.read_text(encoding="utf-8")
+        + "\n## Local Notes\n\nKeep this operator-specific note.\n",
+        encoding="utf-8",
+    )
+
+    plan_result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+    assert plan_result.exit_code in {0, 1}
+    plan = json.loads(plan_result.stdout)
+    actions = {action["id"]: action for action in plan["actions"]}
+    assert "codex-agents-md" not in actions
+
+    apply_result = runner.invoke(
+        app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"]
+    )
+    assert apply_result.exit_code in {0, 1}
+    applied = {
+        action["id"]: action for action in json.loads(apply_result.stdout)["applied_actions"]
+    }
+    assert "codex-agents-md" not in applied
+    assert "Keep this operator-specific note." in agents.read_text(encoding="utf-8")
+
+
 def test_doctor_repair_apply_installs_checkpoint_hook(tmp_path: Path) -> None:
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")

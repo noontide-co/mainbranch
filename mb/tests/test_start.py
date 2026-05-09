@@ -52,6 +52,12 @@ def _with_codex(name: str) -> str:
     return shutil.which(name) or ""
 
 
+def _without_codex(name: str) -> str:
+    if name == "codex":
+        return ""
+    return shutil.which(name) or ""
+
+
 def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(start_mod, "_which", _with_claude)
     monkeypatch.setattr(codex_mod, "_which", _with_codex)
@@ -84,6 +90,25 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     assert "ranked_actions" not in report
     assert report["result_status"] == "ok"
     assert "status" not in report
+
+
+def test_start_json_omits_codex_command_when_codex_is_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(start_mod, "_which", _with_claude)
+    monkeypatch.setattr(codex_mod, "_which", _without_codex)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    report = json.loads(result.stdout)
+    codex = report["experimental_runtimes"]["codex_cli"]
+    assert codex["executable"]["found"] is False
+    assert "command" not in codex
+    assert "Install Codex CLI" not in report["next_actions"]
 
 
 def test_start_json_exposes_push_and_legacy_campaign_facts(tmp_path: Path, monkeypatch) -> None:

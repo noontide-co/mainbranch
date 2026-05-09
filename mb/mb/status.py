@@ -1617,8 +1617,9 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
             }
         )
     codex_cli = report["runtime"].get("codex_cli") or {}
+    codex_executable = codex_cli.get("executable") or {}
     codex_instructions = codex_cli.get("instructions") or {}
-    if not codex_instructions.get("ok"):
+    if codex_executable.get("found") and not codex_instructions.get("ok"):
         items.append(
             {
                 "id": "codex_instructions_not_ready",

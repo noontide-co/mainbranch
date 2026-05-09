@@ -11,6 +11,7 @@ from typing import Any
 
 from typer.testing import CliRunner
 
+from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import graph as graph_mod
 from mb import status as status_mod
@@ -23,6 +24,18 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 def _without_github_or_claude(name: str) -> str:
     if name in {"gh", "claude"}:
+        return ""
+    return shutil.which(name) or ""
+
+
+def _with_codex(name: str) -> str:
+    if name == "codex":
+        return "/usr/local/bin/codex"
+    return shutil.which(name) or ""
+
+
+def _without_codex(name: str) -> str:
+    if name == "codex":
         return ""
     return shutil.which(name) or ""
 
@@ -216,6 +229,28 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
     )
 
     assert actual == expected
+
+
+def test_status_drift_does_not_warn_for_codex_instructions_until_codex_is_present(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setattr(codex_mod, "_which", _without_codex)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "AGENTS.md").unlink()
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    assert not any(
+        item["id"] == "codex_instructions_not_ready" for item in report["drift"]["items"]
+    )
+
+    monkeypatch.setattr(codex_mod, "_which", _with_codex)
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    assert any(item["id"] == "codex_instructions_not_ready" for item in report["drift"]["items"])
 
 
 def test_status_json_exposes_push_and_legacy_campaign_facts(tmp_path: Path, monkeypatch) -> None:

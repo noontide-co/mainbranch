@@ -241,12 +241,14 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
     missing_commands = [command for command in REQUIRED_FACT_COMMANDS if command not in text]
     approval_ok = "explicit operator approval" in text
     slash_ok = "Do not pretend Claude" in text and "slash commands exist in Codex." in text
-    current = bool(exists and text == expected)
     fact_grounding_ok = bool(exists and not missing_commands and approval_ok and slash_ok)
+    template_match = bool(exists and text == expected)
+    current = fact_grounding_ok
     return {
-        "ok": bool(current and fact_grounding_ok),
+        "ok": fact_grounding_ok,
         "exists": exists,
         "current": current,
+        "template_match": template_match,
         "fact_grounding_ok": fact_grounding_ok,
         "path": AGENTS_RELATIVE_PATH,
         "absolute_path": str(path),
@@ -254,7 +256,7 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
         "approval_boundary_ok": approval_ok,
         "codex_native_ok": slash_ok,
         "repair": ""
-        if current and fact_grounding_ok
+        if fact_grounding_ok
         else "Run `mb doctor repair --plan`, review, then `mb doctor repair --apply`.",
         "repair_command": "mb doctor repair --apply",
         "read_error": read_error,

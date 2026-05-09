@@ -211,24 +211,24 @@ def _build_checks(
         )
     codex_executable = codex.get("executable") or {}
     codex_instructions = codex.get("instructions") or {}
+    codex_found = bool(codex_executable.get("found"))
     checks.extend(
         [
             {
                 "name": "codex_cli",
-                "ok": bool(codex_executable.get("found")),
+                "ok": codex_found,
                 "severity": "info",
                 "detail": codex_executable.get("path") or "codex not on PATH",
-                "repair": codex_executable.get("repair") or "",
+                "repair": "",
             },
             {
                 "name": "codex_agents_md",
                 "ok": bool(codex_instructions.get("ok")),
-                "severity": "warn",
+                "severity": "warn" if codex_found else "info",
                 "detail": "AGENTS.md is present and points Codex to mb facts"
                 if codex_instructions.get("ok")
                 else "AGENTS.md is missing, stale, or missing required mb fact commands",
-                "repair": codex_instructions.get("repair")
-                or "Run `mb doctor repair --plan`, then `mb doctor repair --apply`.",
+                "repair": codex_instructions.get("repair") if codex_found else "",
             },
         ]
     )
@@ -293,6 +293,19 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
     if launch:
         ok = bool(launch_report["attempted"] and launch_report["returncode"] == 0)
 
+    codex_runtime: dict[str, Any] = {**codex}
+    codex_executable = codex.get("executable") or {}
+    if codex_executable.get("found"):
+        codex_runtime["command"] = {
+            "cwd": str(repo_path),
+            "argv": ["codex", "-C", str(repo_path)],
+            "display": _codex_display_command(repo_path),
+            "startup_prompt": (
+                "Start this Main Branch business day. Run only read-only mb checks "
+                "before advice and ask before writes."
+            ),
+        }
+
     return {
         "ok": ok,
         "handoff_ready": handoff_ready,
@@ -318,20 +331,7 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "skill_wiring": wiring,
             "codex_cli": codex,
         },
-        "experimental_runtimes": {
-            "codex_cli": {
-                **codex,
-                "command": {
-                    "cwd": str(repo_path),
-                    "argv": ["codex", "-C", str(repo_path)],
-                    "display": _codex_display_command(repo_path),
-                    "startup_prompt": (
-                        "Start this Main Branch business day. Run only read-only mb checks "
-                        "before advice and ask before writes."
-                    ),
-                },
-            }
-        },
+        "experimental_runtimes": {"codex_cli": codex_runtime},
         "checks": checks,
         "command": {
             "cwd": str(repo_path),
