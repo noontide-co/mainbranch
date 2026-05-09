@@ -15,6 +15,7 @@ markdown files in git.
 - Pull requests are proposals and review conversations.
 - Git history is the evolution story.
 - A user's business repo is the durable business brain.
+- A user is not met with git speak but instead business speak.
 
 Claude Code is the first-class runtime today. Codex, Cursor, OpenClaw, Hermes,
 Paperclip-adjacent orchestration, and local runtimes are compatibility targets
