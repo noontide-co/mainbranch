@@ -1,105 +1,108 @@
 # Philosophy
 
-**Main Branch is not a tool. It's a philosophy about how to work with AI — and yourself.**
+Most operators don't lose to the market. They lose to dissociation.
+
+You execute brilliantly and feel nothing. The thousandth testimonial lands as
+"yeah, of course." The work continues. The connection is gone. That shows up in
+the output long before it shows up in the numbers.
+
+Main Branch is a reconnection mechanism. It just happens to look like a folder.
 
 ---
 
-## The Surface Layer
+## Reconnection
 
-"AI-native business operating system for creators and coaches. Build the system that runs your business."
+Tony Robbins interviewed Alex Hormozi. Two big boys in business sat down and
+said it plainly: operators get good, then get numb. The fix is not another
+dashboard. It is identity work.
 
-But that's marketing copy.
-
----
-
-## The Real Answer
-
-**Main Branch is a reconnection mechanism.**
-
-The core insight — from Tony Robbins' interview with Alex Hormozi — is that most business owners become *dissociated* from their work. They execute brilliantly but feel nothing. They get their thousandth testimonial and think "yeah, of course." The magic is gone.
-
-**Reference files are the solution.** Not documentation. Not "AI memory." They're identity work. The act of writing `soul.md`, updating `offer.md`, refining `voice.md` — this keeps you *associated* with WHY you do this.
+Your folder holds that work. `core/soul.md`, `core/offer.md`,
+`core/audience.md`, `core/voice.md` — the core files are not documentation and
+they are not "AI memory." They are the written form of who you are and what you
+are trying to do. Writing them keeps you associated with why the business
+exists. The agent reading them back is the side effect, not the point.
 
 ---
 
-## What Makes It Different
+## Curation
 
-| Others | Main Branch |
-|--------|-------------|
-| Magic passive memory | Active management |
-| Start fresh every chat | `/mb-start` loads your context |
-| Generic outputs | Business-specific |
-| Content treadmill | Keystone-first, AI-adapted distribution |
-| Rent infrastructure | Own it (portable files) |
+Your folder is not a dumping ground. It is a precision instrument.
 
----
+Research gets synthesized. Decisions get distilled. Only the sharpest context
+lands in the core. Quantity of context hurts. Quality of context carries every
+output downstream — every script, ad, page, plan.
 
-## The Curation Principle
-
-Your repo is not a dumping ground. It's a precision instrument — every file filtered to maximize the potential you have good outcomes with LLMs. Research gets synthesized. Decisions get distilled. Only the sharpest context makes it into reference. The better your reference files, the better every output downstream. Quantity of context hurts. Quality of context compounds.
+The discipline is subtractive. What stays in the folder is what survived honest
+editing.
 
 ---
 
-## The Two Modes
+## Two Modes
 
-| Mode | What Happens |
-|------|--------------|
-| **Enriching the core** | Research what interests you → extract → codify into reference → build content strategy |
-| **Creating for the world** | Generate content, ads, scripts — all informed by reference |
+The daily loop has two shapes:
 
-**The test:** If the think cycle feels like pushing, you have the wrong offer. If it feels like pull, you're in the right place.
+- **Enrich the core.** Research what pulls you. Extract. Codify into the core
+  files. Sharpen the folder.
+- **Create for the world.** Drafts, ads, scripts, pages — all written through
+  the folder you just sharpened.
+
+The test: if the think cycle feels like pushing, you have the wrong offer. If
+it feels like pull, you are in the right place.
 
 ---
 
-## The Test (From soul.md)
+## Three Questions
 
-Three questions to determine if you're in the right business:
+If you are not sure you are in the right business, answer these honestly:
 
-1. What do you research when no one's watching?
+1. What do you research when no one is watching?
 2. What intersections excite you when you find them?
-3. What decisions feel like discovery vs obligation?
+3. Which decisions feel like figuring something out, and which feel like homework?
 
-If your offer doesn't connect to these → you're pushing. You'll burn out or dissociate.
-
-If your offer DOES connect → the think cycle becomes self-sustaining. Pull, not push.
-
----
-
-## The Name Itself
-
-**"Main Branch" is a git metaphor.**
-
-Your reference files are the *main branch* from which all content branches. Research and decisions are feature branches that eventually merge back into reference. The main branch is the source of truth.
-
-But it's also about *staying on your main branch* — not getting lost in execution, not dissociating into "content creator" mode, not outsourcing your thinking.
+If your offer does not connect to these, you are pushing. You will burn out or
+dissociate. If your offer does connect, the loop becomes self-sustaining.
 
 ---
 
-## Reference Files as Reconnection
+## Why "Main Branch"
 
-When you're drifting into pure execution, re-read `soul.md`.
+The name is a git metaphor and an instruction.
 
-Testimonials aren't just social proof — they're reconnection fuel that makes you *feel* the impact.
+Your folder is the main branch — the source everything else branches from.
+Research and decisions are feature branches that merge back. Content is
+downstream of the core, never upstream of it.
 
-Your parts (The Builder and The Soul) need both — reference keeps them in dialogue. When your reference files produce a live landing page through `/mb-site`, the reconnection becomes public — your words on a real page, facing real people.
+It is also the instruction: stay on your main branch. Do not dissociate into
+"content creator" mode. Do not outsource the thinking that only you can do.
 
 ---
 
-## The Path
+## Builder and Soul
 
-The more you lean on big tech, the more you realize what you're trading. As AI scales, your data on their servers = their advantage.
+Two parts of the operator have to keep talking.
 
-| Phase | What | You Learn |
-|-------|------|-----------|
-| **Terminal** | Claude Code + skills | How to think with AI |
-| **Personal Cloud** | Hosted tools or a boring Docker-capable host | How to run infrastructure |
-| **Local** | Your own box | How to depend on no one |
+The Builder ships. The Soul knows why. Each one alone fails: pure Builder burns
+out, pure Soul never lands. The folder is where they stay in dialogue.
 
-Main Branch is Phase 2. Not everyone goes all the way. The path exists for those who want it.
+When you drift into pure execution, re-read `core/soul.md`. Testimonials are
+not proof for buyers — they are fuel for you. The folder is the room the two
+parts meet in.
+
+---
+
+## Ownership
+
+You own the folder. Plain markdown on a disk you control. If Main Branch
+disappears tomorrow, your business memory still opens in any text editor on any
+machine.
+
+That is the floor. Local dashboards, alternate runtimes, and other surfaces are
+direction, not philosophy. The philosophy is: own the work, rent the rails.
 
 ---
 
 ## See Also
 
-- `CLAUDE.md` — Operational reference (how the system works)
-- `docs/system-architecture.md` — Technical details
+- [`README.md`](../README.md) — what the system does and how to start
+- [`docs/ETHOS.md`](ETHOS.md) — product principles
+- [`docs/OPERATOR-LOOPS.md`](OPERATOR-LOOPS.md) — Sense → Decide → Ship → Reflect
