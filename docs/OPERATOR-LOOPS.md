@@ -72,19 +72,18 @@ reference-file reads sit here.
 
 **Current surfaces**
 
-- `mb status`
-- `mb doctor`
-- `mb graph`
+- `mb status` (with `--json` topology and "Business map" line)
+- `mb doctor` and `mb doctor repair --plan` (including migration drift and
+  topology-drift previews)
+- `mb graph` (with `repo` nodes and hub/child relationship edges)
 - `mb connect status`
 - `core/`, `research/`, `decisions/`, `pushes/`, legacy `campaigns/`, `log/`, `documents/`
 - GitHub issues, pull requests, release history
 - linked business, site, offer, finance, ops, and client repos when the team
-  chooses separate operating boundaries
+  chooses separate operating boundaries, surfaced through topology facts
 
-**Next improvements**
+**Direction**
 
-- richer repo-topology views across business, site, offer, finance, ops, and
-  client repos;
 - provider-readiness signals that become more specific as official paths are
   smoke-tested;
 - an optional local dashboard that visualizes existing repo / GitHub / provider
@@ -109,10 +108,12 @@ options. Discrete moments, not continuous activity.
 
 - `/mb-start`
 - `/mb-think`
-- GitHub issues and priorities
 - `mb status` ranked actions
+- GitHub issues and priorities
+- `mb issue draft` (frame friction or a feature gap clearly enough to commit
+  to acting on it)
 
-**Next improvements**
+**Direction**
 
 - Explicit pin, skip, and defer controls
 - Decision trees for provider choices, paid-SaaS exceptions, sensitive data,
@@ -141,10 +142,15 @@ operators ship creatives, SaaS founders ship features.
 - `/mb-vsl`
 - `/mb-organic`
 - `/mb-site`
-- `/mb-wiki`
 - `mb connect`
 - `mb checkpoint`
+- `mb doctor repair --plan` / `--apply` (Ship through Ops: cleaning up a stale
+  repo is the released artifact)
+- `mb issue open` (Ship through Ops: turning a reviewed draft into a public
+  GitHub issue)
 - `mb update`
+- `/mb-wiki` (specialty: personal/atomic-notes wiki, not part of the core daily
+  loop)
 
 **Channels — the four pillars**
 
@@ -158,13 +164,13 @@ A Ship event is `(loop, channel)`. Posting an ad = Ship through Paid.
 Sending the newsletter = Ship through Organic. Running `mb update` = Ship
 through Ops.
 
-**Next improvements**
+**Direction**
 
 - Skills leaning more heavily on CLI facts instead of duplicate checks
 - Optional provider and sidecar contracts
 - Beginner-safe connector flows for GitHub, Cloudflare, Google, Meta, Apify
-- deterministic site/CMS rails over Cloudflare, GitHub, and operator-approved
-  measurement checks
+- deeper site/CMS rails on top of `mb site check` over Cloudflare, GitHub, and
+  operator-approved measurement
 - richer Paid, Organic, Pages, and Ops surfaces (books, P&L, meetings,
   fulfillment, compliance)
 
@@ -190,9 +196,10 @@ of work.
 - `bets/` and the bet lifecycle (verdicts go here)
 - `decisions/` (when superseding a prior decision is itself a reflection)
 - `CHANGELOG.md` (release-as-retro)
-- `git` history — readable commits at meaningful boundaries
+- `mb checkpoint` and `git` history — business-readable commits at meaningful
+  boundaries
 
-**Next improvements**
+**Direction**
 
 - Bet-to-offer graduation rules
 - Status and dashboard visibility for active bets, deadlines, and outcomes
