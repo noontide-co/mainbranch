@@ -11,6 +11,39 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.13] - 2026-05-08
+
+v0.3.13 ships the repo-topology substrate that landed after v0.3.12 as an
+installable patch release. `mb status`, `mb graph`, and `mb doctor` now expose
+topology facts; `mb validate` enforces the new repo descriptor and topology
+record schemas; migration drift now surfaces as actionable warnings; and
+reusable playbooks plus agent-facing routing docs were refreshed to match the
+current push topology.
+
+### What this means for you (plain English)
+
+- **`mb` can now show you your repo topology.** `mb status --json` adds a
+  `topology` section and a business-readable "Business map" line so you can
+  see hub/child relationships without hand-tracing them. `mb graph --json`
+  gains `repo` nodes and deterministic hub/child edges with playbook-run
+  resolution.
+- **Migration drift gets named, not hidden.** `mb validate` and
+  `mb doctor repair --plan --json` warn on stale generated guidance, legacy
+  active-write folders, stale Claude settings, wrong push/playbook paths, and
+  legacy bet campaign links — without rewriting anything for you.
+- **Child repos get a real, role-neutral descriptor.** The new
+  `.mainbranch/repo.json` contract covers site, offer, product, client,
+  finance, legal, ops, integration sidecar, experiment, and archive repos,
+  while keeping existing `.mainbranch/source.json` site behavior compatible.
+- **Topology records are validated before they go stale.** `mb validate`
+  reads `core/operations/repo-topology.md` `type: repo_topology` entries with
+  topology vocabularies, safe repo-link checks, and finance/legal/provider
+  boundary warnings.
+- **Reusable playbooks and routing docs match the current push model.**
+  `ship-bet` and `weekly-review` route run evidence into
+  `pushes/<push>/playbooks/`, outcomes, logs, and checkpoints; agent-facing
+  routing docs and the public substrate story have been refreshed to match.
+
 ### Added
 
 - Added privacy-safe business repo migration drift warnings through
@@ -47,12 +80,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   so agents distinguish hub work from child-repo work and avoid committed
   absolute paths, secrets, raw provider caches, finance/legal source data, or
   permission claims in repo descriptors. Refs #417.
-
 - Refreshed reusable playbook skeletons against the current push topology:
   `ship-bet` and `weekly-review` now route concrete run evidence to
   `pushes/<push>/playbooks/`, outcomes, logs, and checkpoints instead of legacy
   `campaigns/`, and the Google Ads Search launch playbook is labeled as a
   usable draft recipe rather than a non-executable skeleton. Refs #425.
+- Refreshed agent-facing routing docs to match the current daily loop,
+  topology vocabulary, and migration guardrails. Refs #437.
+- Refreshed the public story around the shipped v0.3.12 substrate so README,
+  docs, and roadmap language match what users can install today. Refs #440.
 
 ## [0.3.12] - 2026-05-08
 
