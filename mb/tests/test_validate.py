@@ -676,6 +676,19 @@ def test_validate_cli_cross_refs_default_warns_strict_fails(tmp_path: Path) -> N
     assert payload["files"][0]["ok"] is False
 
 
+def test_validate_cli_accepts_repo_alias(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "decisions" / "2026-05-08-ok.md",
+        "---\ndate: 2026-05-08\nstatus: accepted\n---\n# Ok\n",
+    )
+
+    result = runner.invoke(app, ["validate", "--repo", str(tmp_path), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["repo"] == str(tmp_path.resolve())
+
+
 def _campaign(status: str) -> str:
     return f"---\nslug: workshop-waitlist\nstatus: {status}\n---\n# Workshop waitlist\n"
 
@@ -817,10 +830,36 @@ def test_validate_requires_canonical_push_schema(tmp_path: Path) -> None:
     assert "missing key: type" in bad["errors"]
     assert "missing key: kind" in bad["errors"]
     assert "missing key: goal" in bad["errors"]
+    assert "goal must be a mapping with metric, target, and by" in bad["errors"]
     assert "missing key: owner" in bad["errors"]
     assert "missing key: audience" in bad["errors"]
     assert "missing key: offer" in bad["errors"]
     assert "missing key: promise" in bad["errors"]
+    categories = report["validation_categories"]["by_category"]
+    assert categories["missing_required_key"]["count"] >= 1
+    assert categories["schema_shape_error"]["count"] >= 1
+
+
+def test_validate_categorizes_large_frontmatter_repairs(tmp_path: Path) -> None:
+    for index in range(3):
+        _write(
+            tmp_path / "core" / "offers" / f"offer-{index}" / "offer.md",
+            "---\nstatus: running\n---\n# Offer\n",
+        )
+    _write(
+        tmp_path / "decisions" / "2026-05-08-bad.md",
+        "---\ndate: 2026-05-08\nstatus: pending\n---\n# Bad\n",
+    )
+    _write(tmp_path / "research" / "2026-05-08-no-frontmatter.md", "# No frontmatter\n")
+
+    report = run(path=str(tmp_path))
+
+    categories = report["validation_categories"]
+    assert categories["top_category"] == "missing_slug"
+    assert categories["by_category"]["missing_slug"]["count"] == 3
+    assert categories["by_category"]["status_enum_mismatch"]["count"] == 1
+    assert categories["by_category"]["no_frontmatter"]["count"] == 1
+    assert report["summary"] == {"errors": 5, "warnings": 0}
 
 
 def test_validate_requires_canonical_push_folder_shape(tmp_path: Path) -> None:
@@ -1316,6 +1355,26 @@ def test_validate_repo_topology_status_uses_topology_lifecycle(tmp_path: Path) -
     bad = [file for file in report["files"] if file["schema"] == "repo-topology"][0]
     assert report["ok"] is False
     assert any("topology status='running'" in error for error in bad["errors"])
+
+
+def test_validate_allows_proposed_topology_rename_remote_mismatch(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "core" / "operations" / "repo-topology.md",
+        _repo_topology()
+        .replace(
+            "    lifecycle: active\n    relationship: execution_vehicle_for\n",
+            "    lifecycle: proposed\n    relationship: execution_vehicle_for\n",
+        )
+        .replace("    repo_name: workshop-site\n", "    repo_name: renamed-workshop-site\n"),
+    )
+
+    report = run(path=str(tmp_path))
+
+    topology = [file for file in report["files"] if file["schema"] == "repo-topology"][0]
+    assert not any("remote must match" in error for error in topology["errors"])
+    assert any("allowed for lifecycle 'proposed'" in warning for warning in topology["warnings"])
 
 
 def test_validate_repo_topology_warns_on_sensitive_boundary_metadata(tmp_path: Path) -> None:

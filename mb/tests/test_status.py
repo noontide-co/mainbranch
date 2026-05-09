@@ -218,6 +218,7 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
                 "readiness",
                 "relationship_health",
                 "playbook_health",
+                "validation",
                 "ranked_actions",
                 "marker_update",
             ]
@@ -471,6 +472,73 @@ def test_status_relationship_health_flags_active_bet_and_offer_gaps(
     assert human.exit_code == 0
     assert "Relationship health" in human.stdout
     assert "active bet(s) need a linked push" in human.stdout
+
+
+def test_status_relationship_health_accepts_push_side_bet_links(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "bets" / "2026-05-01-launch.md").write_text(
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-01\n"
+            "deadline: 2026-05-31\n"
+            "appetite: 2 weeks\n"
+            "hypothesis: A launch push will create calls.\n"
+            "metric: calls\n"
+            "target: 5 calls\n"
+            "result: ''\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_pushes: []\n"
+            "linked_campaigns: []\n"
+            "linked_outcomes: []\n"
+            "public: true\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n\n"
+            "# Launch bet\n"
+        ),
+        encoding="utf-8",
+    )
+    push = _write_push(repo, "2026-05-06-launch")
+    push_record = push / "push.md"
+    push_record.write_text(
+        push_record.read_text(encoding="utf-8").replace(
+            "---\n\n# Launch push\n",
+            "linked_bets:\n  - bets/2026-05-01-launch.md\n---\n\n# Launch push\n",
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    assert report["relationship_health"]["summary"]["active_bets_without_push"] == 0
+
+
+def test_status_surfaces_validation_category_counts(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    for slug in ("one", "two"):
+        offer = repo / "core" / "offers" / slug / "offer.md"
+        offer.parent.mkdir(parents=True)
+        offer.write_text("---\nstatus: running\n---\n# Offer\n", encoding="utf-8")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    assert report["validation"]["validation_categories"]["top_category"] == "missing_slug"
+    assert (
+        report["validation"]["validation_categories"]["by_category"]["missing_slug"]["count"] == 2
+    )
+    validation_drift = next(
+        item for item in report["drift"]["items"] if item["id"] == "validation_debt"
+    )
+    assert "top category: missing_slug" in validation_drift["summary"]
+    assert any(action["id"] == "repair_validation_debt" for action in report["ranked_actions"])
 
 
 def test_status_relationship_health_flags_completed_and_stale_pushes(

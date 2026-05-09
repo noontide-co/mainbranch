@@ -16,6 +16,7 @@ WEIGHTS: dict[str, int] = {
     "overdue_bets": 90,
     "unhealthy_integrations": 85,
     "github_context_repair": 80,
+    "validation_debt": 88,
     "dirty_git": 75,
     "attention_requests": 70,
     "assigned_tasks": 65,
@@ -232,6 +233,25 @@ def _add_drift_actions(actions: list[dict[str, Any]], report: dict[str, Any]) ->
                     severity="warn",
                     score=score,
                     reason=str(drift_item.get("summary") or "A declared integration needs repair."),
+                    signals=[_drift_signal(drift_item, weight=score)],
+                )
+            )
+        elif drift_id == "validation_debt":
+            severity = str(drift_item.get("severity") or "warn")
+            if severity != "error":
+                continue
+            score = WEIGHTS["validation_debt"]
+            actions.append(
+                _action(
+                    action_id="repair_validation_debt",
+                    title="Repair validation debt",
+                    command="mb validate --cross-refs --json",
+                    severity=severity,
+                    score=score + len(_list(drift_item.get("evidence"))),
+                    reason=str(
+                        drift_item.get("summary")
+                        or "Validation findings need to be grouped and repaired."
+                    ),
                     signals=[_drift_signal(drift_item, weight=score)],
                 )
             )

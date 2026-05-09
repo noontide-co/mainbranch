@@ -61,13 +61,17 @@ The path is skill orchestration: keyword-gate with `/mb-think`, create/select a
 canonical launch push, build/check the lander with `/mb-site`, prepare or check
 ads with `/mb-ads`, and checkpoint approved artifacts.
 
-**Primitive routing:** When an operator brings a live idea and it is unclear
-whether it is a bet, offer, push, proof, or decision, load
-`.claude/reference/business-primitives/offer-bet-push-proof.md` from the engine
-and route by business meaning before suggesting file moves. In short: offers
-are what the business may keep selling, bets are time-boxed wagers, pushes are
-coordinated execution, proof is evidence, and decisions explain durable changes.
-Ask before renaming, deleting, merging, or moving offer folders.
+**Primitive routing:** When a live idea could be a bet, offer, push, proof, or
+decision, load `.claude/reference/business-primitives/offer-bet-push-proof.md`
+and `.claude/reference/business-primitives/setup-patterns.md`; route by business
+meaning before suggesting file moves.
+
+**Slug/destructive-operation guardrails:** Load
+`.claude/reference/business-primitives/slug-conventions.md` before naming
+business objects or topology entries, and
+`.claude/reference/business-primitives/destructive-operations.md` before
+renaming, deleting, merging, archiving, migrating, publishing, mutating
+providers, spending money, changing topology, or creating checkpoints.
 
 ---
 
@@ -142,7 +146,7 @@ before taking action.
 
 ---
 
-## Step 0: Read Status Facts
+## Status Preamble: Read Status Facts
 
 After repo selection, run:
 
@@ -213,7 +217,7 @@ Once business repo is confirmed, pull its latest updates from `REPO_PATH`. See *
 
 ---
 
-## Step 3a: Resume Onboarding Progress
+## Onboarding Preamble: Resume Onboarding Progress
 
 Prefer the `onboarding` section from `mb status --json --peek`. If status is
 unavailable or the operator specifically asks for onboarding detail, run:
@@ -273,16 +277,11 @@ operator-facing pattern is:
 
 **Full research tool detection still happens in /mb-think** — deferred to when user actually needs research. This keeps /mb-start fast and avoids checking tools user might not use this session.
 
-**What /mb-start DOES check:**
-- Provider readiness from `mb status --json --peek` and `mb connect plan`
-- MCPs that a selected skill depends on when provider status says runtime tools are still unknown
-- Critical blockers (missing config, broken paths)
-
-**What /mb-start DOES NOT do here:**
-- Full research tool scan (Gemini, Grok, whisper, etc.) — /mb-think handles this
-- Full document tool scan (markitdown, pandoc, marker) — /mb-think handles this
-
-**Why defer:** Most sessions don't use all tools. Checking everything upfront wastes time and clutters the greeting. /mb-think detects tools when user's intent requires them and surfaces setup options at the right moment.
+**What /mb-start checks:** provider readiness from `mb status --json --peek`
+and `mb connect plan`, selected-skill MCPs when provider status says runtime
+tools are unknown, and critical blockers such as missing config or broken paths.
+Leave full research/document tool scans to `/mb-think`; most sessions do not
+need every tool checked upfront.
 
 If user's stated intent involves research, route to /mb-think. It will use
 `mb` provider facts first, then detect only the runtime tools needed for the
@@ -354,7 +353,9 @@ active offer, note it for routing; the selected skill loads the offer file.
 ## Step 8: Offer Detection (Multi-Offer Only)
 
 Use the active-offer resolution contract in
-`.claude/reference/business-primitives/offer-bet-push-proof.md`.
+`.claude/reference/business-primitives/offer-bet-push-proof.md`; load
+`setup-patterns.md` and `slug-conventions.md` from that same directory when
+setup shape or naming is unclear.
 
 ```bash
 find "$REPO_PATH/core/offers" -mindepth 2 -maxdepth 2 -name "offer.md" 2>/dev/null

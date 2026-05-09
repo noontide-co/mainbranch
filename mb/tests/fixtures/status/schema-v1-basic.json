@@ -34,7 +34,8 @@
     "schema_version",
     "since_last_check",
     "topology",
-    "update"
+    "update",
+    "validation"
   ],
   "section_keys": {
     "repo": [
@@ -184,6 +185,16 @@
       "sections",
       "source",
       "summary"
+    ],
+    "validation": [
+      "cross_refs",
+      "legacy_repair",
+      "migration_drift",
+      "ok",
+      "safe_to_share",
+      "state",
+      "summary",
+      "validation_categories"
     ],
     "marker_update": [
       "attempted",

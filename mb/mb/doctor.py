@@ -1232,13 +1232,19 @@ def _validation_summary(
     summary = report.get("summary", {})
     errors = int(summary.get("errors", 0) or 0)
     warnings = int(summary.get("warnings", 0) or 0)
+    categories = report.get("validation_categories") or {}
+    top_category = categories.get("top_category")
     state = "error" if errors else ("warn" if warnings else "ok")
     return {
         "ok": report["ok"],
         "state": state,
-        "summary": f"{errors} error(s), {warnings} warning(s)",
+        "summary": (
+            f"{errors} error(s), {warnings} warning(s)"
+            + (f"; top category: {top_category}" if top_category else "")
+        ),
         "report": {
             "summary": summary,
+            "validation_categories": report.get("validation_categories", {}),
             "files": len(report.get("files", [])),
             "legacy_repair": report.get("legacy_repair"),
             "cross_refs": {
