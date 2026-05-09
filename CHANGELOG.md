@@ -11,6 +11,28 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.15] - 2026-05-09
+
+v0.3.15 ships the migration and repair hardening that landed after v0.3.14 as
+an installable patch release. Large validation reports now group findings by
+repair category, `mb status` and `mb doctor repair --plan` surface the top
+repair cluster, legacy `outputs/` directories get archive-oriented migration
+guidance, and onboarding recognizes canonical `core/proof/` evidence without
+requiring compatibility shims.
+
+### What this means for you (plain English)
+
+- **Repair lists are easier to act on.** `mb validate`, `mb status`, and
+  `mb doctor repair --plan` now show validation categories and top repair
+  guidance so a messy migrated repo points at the biggest useful fix first.
+- **Migration advice is less destructive.** Old top-level `outputs/` folders
+  are treated as historical generated work that should be archived or reviewed
+  by hand, not bulk-promoted into pushes or legacy campaigns.
+- **Daily startup sees current repo shapes.** `mb onboard` recognizes populated
+  `core/proof/` directories, relationship health accepts push-side
+  `linked_bets`, and proposed topology rename records can exist without
+  weakening validation for live repo entries.
+
 ### Added
 
 - Added validation category summaries to `mb validate --json`, `mb status`,
