@@ -519,7 +519,11 @@ def current_repo_view(
                 break
 
     if matched_entry is None and registry.get("ok") and descriptor.get("found"):
-        owner = descriptor.get("github_owner") or descriptor.get("parent", {}).get("github_owner")
+        # Only match by descriptor handle when the descriptor itself names its
+        # owner/repo. Falling back to the parent's owner combined with the
+        # child's repo name would silently false-match unrelated registry
+        # entries when a child repo lives in a different GitHub org.
+        owner = descriptor.get("github_owner")
         repo_name = descriptor.get("repo_name")
         if owner and repo_name:
             target = f"{owner}/{repo_name}"

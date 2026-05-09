@@ -256,6 +256,37 @@ def test_current_repo_view_matches_by_remote(tmp_path: Path) -> None:
     assert view["is_hub"] is True
 
 
+def test_current_repo_view_does_not_false_match_across_github_orgs(
+    tmp_path: Path,
+) -> None:
+    """Descriptor without its own github_owner must not borrow the parent's
+    owner to compose a registry handle — a child in a different org would
+    otherwise silently match an unrelated registry entry.
+    """
+    _write_registry(tmp_path, _valid_registry())
+    _write_repo_json(
+        tmp_path,
+        {
+            "schema": topology.CHILD_REPO_SCHEMA,
+            "role": "site",
+            "display_name": "Cross-org site",
+            "repo_name": "workshop-site",
+            # descriptor's own github_owner deliberately omitted; the child
+            # really lives under a different GitHub org.
+            "parent": {
+                "github_owner": "example-co",
+                "repo_name": "example",
+                "remote": "github:example-co/example",
+            },
+        },
+    )
+    registry = topology.read_registry(tmp_path)
+    descriptor = topology.read_child_descriptor(tmp_path)
+    view = topology.current_repo_view(registry=registry, descriptor=descriptor, git_remote="")
+    assert view["matched"] is False
+    assert view["match_source"] == "descriptor"
+
+
 def test_current_repo_view_falls_back_to_descriptor(tmp_path: Path) -> None:
     _write_repo_json(
         tmp_path,

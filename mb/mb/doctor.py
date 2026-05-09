@@ -1157,19 +1157,21 @@ def _topology_drift_state(repo: Path) -> dict[str, Any]:
     warnings = int(summary.get("warnings", 0) or 0)
     errors = int(summary.get("errors", 0) or 0)
 
-    warn_codes = sorted(
-        {
-            str(finding.get("code") or "")
-            for finding in findings
-            if finding.get("severity") == "warn" and finding.get("code")
-        }
-    )
+    codes_by_severity: dict[str, list[str]] = {}
+    for finding in findings:
+        severity = str(finding.get("severity") or "info")
+        code = str(finding.get("code") or "")
+        if not code:
+            continue
+        codes_by_severity.setdefault(severity, []).append(code)
+    warn_codes = sorted(set(codes_by_severity.get("warn", [])))
+    error_codes = sorted(set(codes_by_severity.get("error", [])))
 
     if errors:
         state = "error"
         section_summary = (
-            f"{errors} topology drift error(s): {', '.join(warn_codes)}"
-            if warn_codes
+            f"{errors} topology drift error(s): {', '.join(error_codes)}"
+            if error_codes
             else f"{errors} topology drift error(s)"
         )
     elif warnings:
