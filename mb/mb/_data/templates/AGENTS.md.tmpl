@@ -1,0 +1,110 @@
+# {{BUSINESS_NAME}}
+
+Main Branch business repo instructions for Codex.
+
+## Codex Operating Contract
+
+Main Branch CLI facts are the source of truth for repo health, setup, runtime
+wiring, updates, graph/status signals, provider readiness, and repair paths.
+When the operator asks to start, begin, get oriented, triage the day, or decide
+what to do next, use this Codex-native start workflow. Do not pretend Claude
+Code slash commands exist in Codex.
+
+Start in this repo. Before setup, routing, migration, update, or repair advice,
+run the read-only checks that fit the situation:
+
+```bash
+mb --version
+mb status --json --peek
+mb start --json
+mb doctor repair --plan
+```
+
+Use `mb status --json --peek` as the default daily briefing before routing the
+operator. It names readiness, drift, onboarding progress, update state, GitHub
+activity, provider signals, recent work, ranked actions, bets, pushes, and
+checkpoint state. Do not replace those facts with ad hoc shell inspection unless
+`mb` says a section is unavailable or the command itself is missing.
+
+Read-only commands can be run without asking first. Commands that write files,
+refresh local runtime wiring, update packages, migrate business files, create
+checkpoints, publish, spend money, contact customers, email, or mutate provider
+accounts require explicit operator approval before applying.
+
+Do the technical work in technical commands, then translate the result back into
+business-owner language. Speak first in terms of bets, goals, offers, pushes,
+playbooks, outcomes, decisions, next actions, and saved checkpoints. Treat git,
+branches, pull requests, provider refs, and local wiring as the hidden memory
+layer unless the operator asks for the plumbing.
+
+## Codex Start Workflow
+
+This is the Codex-native port of `/mb-start`. It is a workflow, not a slash
+command.
+
+1. Run `mb status --json --peek` from the current working directory. Use the
+   repo markers in that JSON to confirm this is the business repo. If the
+   status report says this is not a Main Branch repo or the command is missing,
+   ask for the business repo path instead of guessing.
+2. Use the status JSON as the source of truth for
+   readiness, drift, onboarding, update severity, GitHub facts, provider
+   readiness, recent work, ranked actions, bets, pushes, and checkpoint state.
+3. Run `mb start --json` when you need runtime handoff, repo-boundary, or
+   adapter-readiness facts.
+4. Run `mb doctor repair --plan` before recommending setup or repair. Quote the
+   exact repair command from the plan. Ask before any write/apply command.
+5. If status says an update is required, route to the cited `mb update` command
+   and ask before running it. After an approved update, rerun
+   `mb status --json --peek`.
+6. Resume onboarding from status facts. In rich repos, read existing `core/`
+   files before asking bounded missing-profile questions.
+7. Present one clear business route: frame a bet, think through a decision,
+   advance a push, draft a playbook, repair the repo, review provider
+   readiness, save a checkpoint, or inspect a specific offer.
+
+Use numbered lists for operator choices, with one active choice namespace per
+turn. If the operator replies with an ambiguous number, ask what they meant
+before acting.
+
+## Routing Rules
+
+- If `ranked_actions` has entries, lead with the first action, its reason, and
+  the cited signal summaries.
+- If readiness is blocked or drift has errors, handle repair before output
+  work.
+- If onboarding is incomplete, use the `onboarding.summary` and checklist from
+  status instead of inventing a setup interview.
+- If legacy `campaigns/` records exist, surface the doctor warning and suggest
+  `mb migrate campaigns --plan` before creating new coordinated work.
+- If the operator asks for publishing, spend, provider mutation, customer
+  contact, migration, checkpoint creation, or file writes, plan first and ask
+  for explicit approval.
+- If the operator brings a live idea and it is unclear where it belongs, route
+  by business meaning: offers are what the business may keep selling; bets are
+  time-boxed wagers; pushes are coordinated execution; proof is evidence; and
+  decisions explain durable changes.
+
+## Business Folders
+
+- `core/` - the business brain: offer, audience, voice, soul, proof, brand,
+  strategy, operations, finance.
+- `core/offers/` - per-offer specifics when this is a multi-offer repo.
+- `core/proof/` - testimonials, typicality, and reusable proof.
+- `research/` - dated notes from when you went looking.
+- `decisions/` - dated choices, with rationale.
+- `bets/` - operating bets with appetite, metric, target, and outcome.
+- `pushes/` - coordinated pushes such as launches, drops, challenges, promos.
+- `log/` - running activity log.
+- `documents/` - anything that does not belong above.
+
+## Connected Accounts
+
+Never commit API keys, OAuth refresh tokens, service-account JSON, webhook
+secrets, MCP tokens, or bearer tokens. Keep secrets in the runtime's local
+config, an OS keychain, 1Password, `.env`, or another gitignored local file. If
+a tool can spend money, publish, email, or mutate a customer account, verify it
+is tethered to this repo and ask for approval before using it.
+
+## Repo Owner
+
+`@{{GH_USERNAME}}`

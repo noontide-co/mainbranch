@@ -33,7 +33,7 @@ Open source. Lives on your machine. Bring your own Claude Code plan. That's it.
 ---
 
 <div align="center">
-  <em>Works with</em> <strong>Claude Code today</strong>. Codex, Cursor, OpenClaw, Hermes, and local runtimes are compatibility targets, not supported yet — see <a href="docs/compatibility.md">compatibility</a>.
+  <em>Works with</em> <strong>Claude Code today</strong>. Codex CLI has an experimental CLI-first adapter for power users; Cursor, OpenClaw, Hermes, and local runtimes remain compatibility targets — see <a href="docs/compatibility.md">compatibility</a>.
 </div>
 
 ---

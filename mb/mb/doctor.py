@@ -22,6 +22,7 @@ from typing import Any
 import yaml
 
 from mb import checkpoint as checkpoint_mod
+from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import engine as engine_mod
 from mb import graph as graph_mod
@@ -1289,6 +1290,36 @@ def run(path: str) -> dict[str, Any]:
         }
     )
 
+    codex_readiness = codex_mod.readiness(repo)
+    codex_executable = codex_readiness["executable"]
+    codex_instructions = codex_readiness["instructions"]
+    checks.append(
+        {
+            "name": "codex-cli",
+            "ok": bool(codex_executable["found"]),
+            "detail": codex_executable["path"] or "codex not on PATH",
+            "severity": "info",
+            "repair": codex_executable["repair"],
+            "safe_to_share": True,
+        }
+    )
+    checks.append(
+        {
+            "name": "codex-agents-md",
+            "ok": bool(codex_instructions["ok"]),
+            "detail": "AGENTS.md is current and points Codex to mb facts"
+            if codex_instructions["ok"]
+            else (
+                "AGENTS.md is missing, stale, or missing required mb fact commands. "
+                "Run `mb doctor repair --plan`, review, then `mb doctor repair --apply`."
+            ),
+            "severity": "ok" if codex_instructions["ok"] else "warn",
+            "repair": codex_instructions["repair"],
+            "safe_to_share": True,
+            "status": codex_instructions,
+        }
+    )
+
     gh_context = connect_mod.github_context(repo)
     integration_status = connect_mod.status_all(repo, github=gh_context)
     checks.append(
@@ -1945,6 +1976,55 @@ def repair_plan(
         )
     )
 
+    codex_status = codex_mod.readiness(target)
+    codex_instruction_status = codex_status["instructions"]
+    codex_checks = [
+        {
+            "name": "codex-cli",
+            "state": "ok" if codex_status["executable"]["found"] else "info",
+            "summary": codex_status["executable"]["path"] or "codex not on PATH",
+        },
+        {
+            "name": "AGENTS.md",
+            "state": "ok" if codex_instruction_status["ok"] else "warn",
+            "summary": (
+                "Codex instructions are current and include mb fact grounding"
+                if codex_instruction_status["ok"]
+                else "Codex instructions are missing, stale, or missing mb fact grounding"
+            ),
+            "missing_fact_commands": codex_instruction_status["missing_fact_commands"],
+            "approval_boundary_ok": codex_instruction_status["approval_boundary_ok"],
+            "codex_native_ok": codex_instruction_status["codex_native_ok"],
+        },
+    ]
+    codex_actions: list[dict[str, Any]] = []
+    if not codex_instruction_status["ok"]:
+        action = _action(
+            id="codex-agents-md",
+            title="Refresh Codex AGENTS.md instructions",
+            state="warn",
+            mode="write",
+            command="mb doctor repair --apply",
+            safe_to_apply=True,
+            reason=(
+                "AGENTS.md is the tracked Codex entrypoint; repair writes the current "
+                "CLI-first start workflow and approval boundaries"
+            ),
+            writes=["AGENTS.md"],
+        )
+        actions.append(action)
+        codex_actions.append(action)
+    sections.append(
+        _section(
+            "codex-wiring",
+            "Codex CLI Adapter",
+            _max_state([str(item["state"]) for item in codex_checks]),
+            "Experimental CLI-first adapter instructions and executable readiness",
+            checks=codex_checks,
+            actions=codex_actions,
+        )
+    )
+
     local_state = _local_state_summary(target)
     sections.append(
         _section(
@@ -2069,7 +2149,9 @@ def repair_plan(
             "runtime_smoke_required": (
                 "Static repair does not prove Claude Code runtime behavior. "
                 "From the business repo, run `claude`, confirm `/mb-start` is discoverable, "
-                "and verify it reads repo context without writing into the engine repo."
+                "and verify it reads repo context without writing into the engine repo. "
+                "For Codex, run read-only `codex exec --json --ephemeral --sandbox read-only "
+                "-c 'approval_policy=\"never\"' -C <repo>` and verify the repo stays clean."
             ),
             "git_review": [
                 "git status --short",
@@ -2204,6 +2286,24 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
                 writes=[".claude/lenses/", ".claude/reference/", ".mb/backups/"],
                 applied=bool(repaired_links["moved"]),
                 result=repaired_links,
+            )
+        )
+
+    codex_instruction_status = codex_mod.instructions_status(target)
+    if not codex_instruction_status["ok"]:
+        agents = codex_mod.write_agents_md(target)
+        applied.append(
+            _action(
+                id="codex-agents-md",
+                title="Refreshed Codex AGENTS.md instructions",
+                state="ok" if agents["ok"] else "error",
+                mode="write",
+                command="mb doctor repair --apply",
+                safe_to_apply=True,
+                reason="wrote the current CLI-first Codex start workflow and approval boundaries",
+                writes=["AGENTS.md"],
+                applied=bool(agents["changed"]),
+                result=agents,
             )
         )
 

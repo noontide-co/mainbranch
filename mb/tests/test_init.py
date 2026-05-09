@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from mb import codex as codex_mod
 from mb.init import _DEFAULT_CLAUDE, DATA_FOLDERS, _read_template, run
 
 
@@ -63,6 +64,22 @@ def _assert_claude_md_primitive_routing_contract(text: str) -> None:
     assert "domain rubric" not in text.lower()
 
 
+def _assert_agents_md_codex_start_contract(text: str) -> None:
+    assert "## Codex Operating Contract" in text
+    assert "Do not pretend Claude" in text
+    assert "slash commands exist in Codex." in text
+    assert "## Codex Start Workflow" in text
+    assert "This is the Codex-native port of `/mb-start`" in text
+    assert "mb status --json --peek" in text
+    assert "mb start --json" in text
+    assert "mb doctor repair --plan" in text
+    assert "explicit operator approval" in text
+    assert "business-owner language" in text
+    assert "bets, goals, offers, pushes" in text
+    assert "If `ranked_actions` has entries" in text
+    assert "Do not pretend" in text
+
+
 def test_default_claude_operating_contract_matches_template() -> None:
     template = _read_template("CLAUDE.md.tmpl")
     template_contract = _section(template, "## Claude operating contract", "## Folders")
@@ -95,6 +112,7 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "terms:" in vocab
     assert "singular: push" in vocab
     assert (target / "CLAUDE.md").exists()
+    assert (target / "AGENTS.md").exists()
     assert (target / ".github" / "CODEOWNERS").exists()
     assert (target / ".gitignore").exists()
     assert (target / ".mb" / "schema_version").read_text(encoding="utf-8") == "0.2\n"
@@ -121,7 +139,9 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert ".mb/issue-drafts/" in gitignore
     assert ".vip/local.yaml" in gitignore
     claude_md = (target / "CLAUDE.md").read_text()
+    agents_md = (target / "AGENTS.md").read_text()
     assert "Acme Brewing" in claude_md
+    assert "Acme Brewing" in agents_md
     assert "## Connected accounts" in claude_md
     assert "Stripe account IDs" in claude_md
     assert "Google Ads customer IDs" in claude_md
@@ -136,6 +156,8 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "legacy `campaigns/`" in claude_md
     _assert_claude_md_cli_first_contract(claude_md)
     _assert_claude_md_primitive_routing_contract(claude_md)
+    _assert_agents_md_codex_start_contract(agents_md)
+    assert codex_mod.instructions_status(target)["ok"] is True
 
 
 def test_init_idempotent(tmp_path: Path) -> None:

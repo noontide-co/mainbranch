@@ -13,6 +13,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added the first experimental Codex CLI-first adapter slice: fresh business
+  repos now get a tracked `AGENTS.md` Codex entrypoint, `mb start --json` and
+  `mb status --json` expose Codex readiness facts, and
+  `mb doctor repair --plan` / `--apply` can report and refresh stale Codex
+  instructions. This does not claim Codex slash-command or workflow parity.
+  Refs #405.
 - Added push playbook health facts to `mb status --json --peek`, plus concise
   human and ranked-action signals when active pushes are missing run records,
   playbook approval/status is pending, completed pushes lack outcome links, or

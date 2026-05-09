@@ -14,7 +14,8 @@ This page is the public compatibility contract for that surface.
 | Install mode | `pipx install mainbranch` | Canonical public install path. |
 | Developer mode | Git clone | For contributors who want to edit the engine or skills. |
 | Agent runtime | Claude Code | First-class today. |
-| Codex, Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, local LLMs | Roadmap | `mb` is runtime-agnostic by design, but these adapters are not supported yet. |
+| Codex CLI | Experimental CLI-first adapter | Fresh business repos include `AGENTS.md`; `mb status`, `mb start`, and `mb doctor repair` expose Codex readiness. This is not slash-command parity. |
+| Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, local LLMs | Roadmap | `mb` is runtime-agnostic by design, but these adapters are not supported yet. |
 
 **Windows tip — try WSL2.** If you're on Windows and want a working setup today, use [Windows Subsystem for Linux 2 (WSL2)](https://learn.microsoft.com/en-us/windows/wsl/install). Inside WSL2, follow the supported Linux flow. The pipx install path works there.
 
@@ -143,7 +144,7 @@ smoke evidence exist.
 | Runtime surface | Status | Invocation | Skill/workflow discovery | Routing and automation | Observability and packaging |
 |---|---|---|---|---|---|
 | Claude Code | Supported | `mb start --repo "$repo"` prints the `claude` handoff; `mb start --launch` may launch after readiness checks. | `mb skill link --repo "$repo"` writes project-local `.claude/skills/mb-*` bridge links and `.claude/settings.local.json`. | Slash commands such as `/mb-start` and `/mb-think` own conversation and judgment; they call deterministic `mb` commands for facts. | `mb doctor`, `mb status --json`, `mb start --json`, `mb skill repair`, and runtime dogfood evidence gate release claims. Skills ship inside the Python package today. |
-| Codex | Roadmap | Can call deterministic `mb` commands as a subprocess when pointed at a business repo. | No supported Main Branch Codex adapter or workflow packaging yet. | No supported routing contract. Any use is manual or contributor experimentation. | Needs adapter docs, generated-file rules, and fresh-repo smoke before experimental/support status. |
+| Codex CLI | Experimental | Can call deterministic `mb` commands as a subprocess when pointed at a business repo. `AGENTS.md` gives Codex a CLI-first start workflow. | Fresh `mb onboard` repos include tracked `AGENTS.md`; `mb doctor repair --plan` / `--apply` can report and refresh it. No `.agents/skills` parity is claimed yet. | Codex should run `mb status --json --peek`, `mb start --json`, and `mb doctor repair --plan` before advice, translate facts into business language, and ask before writes. | `mb doctor`, `mb status --json`, and `mb start --json` expose Codex readiness. Support remains experimental until repeated fresh-repo smoke evidence covers selected workflows. |
 | Cursor | Roadmap | Can call deterministic `mb` commands from terminal/tasks when pointed at a business repo. | No supported Cursor rules/package adapter yet. | No supported Main Branch routing contract. | Needs adapter docs, install/update rules, conflict handling, and smoke evidence. |
 | OpenClaw | Roadmap | Target public runtime surface. It should call `mb` through stable CLI/JSON commands rather than clone-era paths. | No supported OpenClaw adapter yet. | Main Branch should coexist with OpenClaw as the business repo/GitHub memory layer, not replace it. | Needs explicit adapter shape, migration notes, generated-file rules, and smoke evidence. |
 | Hermes | Roadmap | Target runtime/memory surface. It may supervise or host workflows that call packaged `mb` commands. | No supported Hermes adapter yet. | Hermes-specific routing belongs in the Hermes adapter, while `mb` remains deterministic and non-conversational. | Docs may describe internal-package expectations generically, but not as the only blessed public path. Smoke evidence is required before support claims. |
@@ -158,8 +159,8 @@ support levels:
 | Surface | Claude Code | Other runtimes and orchestrators |
 |---|---|---|
 | Deterministic CLI facts (`mb status --json`, `mb validate --json`, `mb graph --json`, `mb connect status --json`) | Supported when `mb` is installed and pointed at a business repo. | Callable as packaged CLI subprocesses, but this does not make the hosting runtime supported. |
-| Runtime handoff (`mb start --json`, `mb start --launch`) | Supported for Claude Code handoff and launch readiness. | Roadmap. New adapters must define their own handoff metadata and smoke evidence. |
-| Lifecycle slash skills (`/mb-start`, `/mb-status`, `/mb-setup`, `/mb-update`, `/mb-end`, `/mb-help`) | Supported through Claude Code project-local skill discovery. | Roadmap. Markdown readability is not adapter support. |
+| Runtime handoff (`mb start --json`, `mb start --launch`) | Supported for Claude Code handoff and launch readiness. | Codex CLI handoff metadata is experimental and read-only: `mb start --json` reports Codex executable and `AGENTS.md` readiness. `mb` does not launch Codex. |
+| Lifecycle slash skills (`/mb-start`, `/mb-status`, `/mb-setup`, `/mb-update`, `/mb-end`, `/mb-help`) | Supported through Claude Code project-local skill discovery. | Codex has a generated `AGENTS.md` start workflow that ports `/mb-start` as instructions, not slash commands. Other lifecycle workflows remain roadmap. |
 | Production slash skills (`/mb-think`, `/mb-ads`, `/mb-vsl`, `/mb-organic`, `/mb-site`, `/mb-wiki`, `/mb-bet`) | Supported through Claude Code skills, subject to each skill's provider and workflow limits. | Roadmap. Cursor rules, Codex prompts, OpenClaw workflows, Hermes packages, Paperclip routines, or local-runtime prompts need their own adapter/package contract before public support claims. |
 | Automation routines | May call CLI commands before handing judgment work to Claude Code. | May call shipped deterministic CLI commands against an explicit repo path. Conversation, retries, routing, and model invocation belong to the runtime adapter, not `mb`. |
 
@@ -178,10 +179,11 @@ document:
 That evidence should prove the runtime reads the business repo and does not
 write runtime state, credentials, or raw account data into tracked files.
 
-For the proposed Codex staging plan, see
-[Codex Adapter Plan](../decisions/2026-05-08-codex-adapter-plan.md). It does
-not change Codex's roadmap status; it names the evidence required before any
-experimental or supported claim.
+For the Codex staging plan, see
+[Codex Adapter Plan](../decisions/2026-05-08-codex-adapter-plan.md). The current
+implementation is the first experimental CLI-first slice: generated
+`AGENTS.md`, deterministic readiness facts, and doctor repair coverage. It does
+not claim supported Codex parity.
 
 ## Recommended setup
 
@@ -245,6 +247,9 @@ mb doctor
 ## Known Limits
 
 - Claude Code is the only first-class agent runtime today.
+- Codex CLI support is experimental and CLI-first: generated `AGENTS.md` can
+  orient Codex to `mb` facts, but Main Branch does not claim Codex slash-command
+  or workflow parity.
 - Windows is experimental.
 - Skills are bundled into the installed Python package, so public users update
   skills by upgrading `mainbranch`.

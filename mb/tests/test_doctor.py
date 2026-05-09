@@ -85,6 +85,8 @@ def test_doctor_skill_wiring_passes_after_init(tmp_path: Path) -> None:
     report = run(path=str(repo))
     wiring = next(c for c in report["checks"] if c["name"] == "skill-wiring")
     assert wiring["ok"] is True
+    codex_agents = next(c for c in report["checks"] if c["name"] == "codex-agents-md")
+    assert codex_agents["ok"] is True
     checkpoint_hook = next(c for c in report["checks"] if c["name"] == "checkpoint-hook")
     assert checkpoint_hook["ok"] is True
 
@@ -254,6 +256,40 @@ def test_doctor_repair_plan_reports_missing_checkpoint_hook(tmp_path: Path) -> N
     assert section["state"] == "warn"
     actions = {action["id"]: action for action in payload["actions"]}
     assert actions["checkpoint-hook-install"]["safe_to_apply"] is True
+
+
+def test_doctor_repair_plan_reports_missing_codex_agents_md(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    (repo / "AGENTS.md").unlink()
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "codex-wiring")
+    assert section["state"] == "warn"
+    agents_check = next(check for check in section["checks"] if check["name"] == "AGENTS.md")
+    assert agents_check["state"] == "warn"
+    actions = {action["id"]: action for action in payload["actions"]}
+    assert actions["codex-agents-md"]["safe_to_apply"] is True
+    assert actions["codex-agents-md"]["writes"] == ["AGENTS.md"]
+
+
+def test_doctor_repair_apply_refreshes_codex_agents_md(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    (repo / "AGENTS.md").write_text("# stale\n\nNo facts here.\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    applied = {action["id"]: action for action in payload["applied_actions"]}
+    assert "codex-agents-md" in applied
+    agents_text = (repo / "AGENTS.md").read_text(encoding="utf-8")
+    assert "## Codex Start Workflow" in agents_text
+    assert "mb status --json --peek" in agents_text
 
 
 def test_doctor_repair_apply_installs_checkpoint_hook(tmp_path: Path) -> None:

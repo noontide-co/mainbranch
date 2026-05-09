@@ -13,6 +13,7 @@ from typing import Any
 import yaml
 
 from mb import __version__, github_activity, relationships
+from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import journal as journal_mod
 from mb import onboard as onboard_mod
@@ -106,6 +107,7 @@ def _run_command(args: list[str], cwd: Path | None = None, timeout: float = 3.0)
 
 def _looks_like_mainbranch_repo(repo: Path) -> dict[str, Any]:
     markers = {
+        "agents_md": (repo / "AGENTS.md").is_file(),
         "claude_md": (repo / "CLAUDE.md").is_file(),
         "core": (repo / "core").is_dir() or (repo / "reference" / "core").exists(),
         "research": (repo / "research").is_dir(),
@@ -1174,6 +1176,7 @@ def _summarize_pr(pr: dict[str, Any]) -> dict[str, Any]:
 def _runtime(repo: Path) -> dict[str, Any]:
     claude_path = _which("claude")
     wiring = link_status(repo)
+    codex = codex_mod.readiness(repo)
     return {
         "claude_code": {
             "found": bool(claude_path),
@@ -1186,6 +1189,7 @@ def _runtime(repo: Path) -> dict[str, Any]:
             if wiring["ok"]
             else "Run `mb skill repair --repo .`, then `mb skill link --repo .`.",
         },
+        "codex_cli": codex,
     }
 
 
@@ -1612,6 +1616,22 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
                 "safe_to_share": True,
             }
         )
+    codex_cli = report["runtime"].get("codex_cli") or {}
+    codex_instructions = codex_cli.get("instructions") or {}
+    if not codex_instructions.get("ok"):
+        items.append(
+            {
+                "id": "codex_instructions_not_ready",
+                "severity": "warn",
+                "summary": "Codex AGENTS.md instructions are missing or stale.",
+                "evidence": [str(codex_instructions.get("path") or "AGENTS.md")],
+                "repair": str(
+                    codex_instructions.get("repair")
+                    or "Run `mb doctor repair --plan`, then `mb doctor repair --apply`."
+                ),
+                "safe_to_share": True,
+            }
+        )
     broken_integrations = [
         item
         for item in (report.get("integrations") or {}).get("providers", [])
@@ -2020,9 +2040,14 @@ def render_human(
 
     claude = runtime["claude_code"]
     skills = runtime["skill_wiring"]
+    codex = runtime.get("codex_cli") or {}
     claude_mark = "[green]found[/green]" if claude["found"] else "[yellow]missing[/yellow]"
     skill_mark = "[green]wired[/green]" if skills["ok"] else "[yellow]missing[/yellow]"
-    console.print(f"[bold]Runtime[/bold] Claude Code: {claude_mark}  skills: {skill_mark}")
+    codex_mark = "[green]ready[/green]" if codex.get("ok") else "[blue]experimental[/blue]"
+    console.print(
+        f"[bold]Runtime[/bold] Claude Code: {claude_mark}  skills: {skill_mark}  "
+        f"Codex: {codex_mark}"
+    )
 
     integration_summary = integrations["summary"]
     if integration_summary["configured"]:

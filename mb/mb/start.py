@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from mb import checkpoint as checkpoint_mod
+from mb import codex as codex_mod
 from mb import journal as journal_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status
@@ -101,6 +102,10 @@ def _display_command(repo: Path) -> str:
     return f"cd {shlex.quote(str(repo))} && claude"
 
 
+def _codex_display_command(repo: Path) -> str:
+    return f"codex -C {shlex.quote(str(repo))}"
+
+
 def _launch_claude(repo: Path) -> int:
     try:
         return subprocess.call(["claude"], cwd=repo)
@@ -115,6 +120,7 @@ def _build_checks(
     git: dict[str, Any],
     claude_path: str,
     wiring: dict[str, Any],
+    codex: dict[str, Any],
     update: dict[str, Any],
 ) -> list[dict[str, Any]]:
     dirty_detail = (
@@ -203,6 +209,29 @@ def _build_checks(
                 "repair": "Run `mb skill repair --repo .` for details.",
             }
         )
+    codex_executable = codex.get("executable") or {}
+    codex_instructions = codex.get("instructions") or {}
+    checks.extend(
+        [
+            {
+                "name": "codex_cli",
+                "ok": bool(codex_executable.get("found")),
+                "severity": "info",
+                "detail": codex_executable.get("path") or "codex not on PATH",
+                "repair": codex_executable.get("repair") or "",
+            },
+            {
+                "name": "codex_agents_md",
+                "ok": bool(codex_instructions.get("ok")),
+                "severity": "warn",
+                "detail": "AGENTS.md is present and points Codex to mb facts"
+                if codex_instructions.get("ok")
+                else "AGENTS.md is missing, stale, or missing required mb fact commands",
+                "repair": codex_instructions.get("repair")
+                or "Run `mb doctor repair --plan`, then `mb doctor repair --apply`.",
+            },
+        ]
+    )
     return checks
 
 
@@ -234,11 +263,12 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
     git = _git_status(repo_path)
     claude_path = _which("claude")
     wiring = link_status(repo_path)
+    codex = codex_mod.readiness(repo_path)
     update = package_update_status(repo_path)
     checkpoint = checkpoint_mod.status(repo_path)
     journal = journal_mod.collect(repo_path, limit=8, since="14 days ago")
     push_report = push_facts(repo_path)
-    checks = _build_checks(repo_shape, git, claude_path, wiring, update)
+    checks = _build_checks(repo_shape, git, claude_path, wiring, codex, update)
     hard_failures = _hard_failures(checks)
     handoff_ready = not hard_failures
 
@@ -286,6 +316,21 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "found": bool(claude_path),
             "path": claude_path,
             "skill_wiring": wiring,
+            "codex_cli": codex,
+        },
+        "experimental_runtimes": {
+            "codex_cli": {
+                **codex,
+                "command": {
+                    "cwd": str(repo_path),
+                    "argv": ["codex", "-C", str(repo_path)],
+                    "display": _codex_display_command(repo_path),
+                    "startup_prompt": (
+                        "Start this Main Branch business day. Run only read-only mb checks "
+                        "before advice and ask before writes."
+                    ),
+                },
+            }
         },
         "checks": checks,
         "command": {
@@ -333,6 +378,11 @@ def render_human(report: dict[str, Any]) -> None:
     console.print(
         "[bold]Runtime[/bold]  Claude Code "
         + ("[green]found[/green]" if runtime["found"] else "[red]missing[/red]")
+    )
+    codex = runtime.get("codex_cli") or {}
+    console.print(
+        "[bold]Codex[/bold]  "
+        + ("[green]ready[/green]" if codex.get("ok") else "[blue]experimental[/blue]")
     )
     console.print(
         "[bold]Skills[/bold]  /mb-start "

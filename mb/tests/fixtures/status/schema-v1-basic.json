@@ -60,6 +60,7 @@
     ],
     "runtime": [
       "claude_code",
+      "codex_cli",
       "skill_wiring"
     ],
     "git": [

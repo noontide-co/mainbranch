@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from mb import checkpoint as checkpoint_mod
+from mb import codex as codex_mod
 from mb.engine import link_skills
 from mb.migrate import LATEST_SCHEMA_VERSION, SCHEMA_MARKER
 
@@ -145,6 +146,14 @@ def run(path: str, name: str) -> dict[str, Any]:
     claude_tmpl = _read_template("CLAUDE.md.tmpl") or _DEFAULT_CLAUDE
     (target / "CLAUDE.md").write_text(_render(claude_tmpl, mapping), encoding="utf-8")
     created.append("CLAUDE.md")
+
+    agents_result = codex_mod.write_agents_md(
+        target,
+        name=business_name,
+        gh_username=gh_user,
+    )
+    if agents_result["changed"]:
+        created.append("AGENTS.md")
 
     vocabulary_tmpl = _read_template("core_vocabulary.md.tmpl")
     if vocabulary_tmpl:

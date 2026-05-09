@@ -12,6 +12,7 @@ from typing import Any
 
 from typer.testing import CliRunner
 
+from mb import codex as codex_mod
 from mb import start as start_mod
 from mb import status as status_mod
 from mb.cli import app
@@ -45,8 +46,15 @@ def _without_claude(name: str) -> str:
     return shutil.which(name) or ""
 
 
+def _with_codex(name: str) -> str:
+    if name == "codex":
+        return "/usr/local/bin/codex"
+    return shutil.which(name) or ""
+
+
 def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(start_mod, "_which", _with_claude)
+    monkeypatch.setattr(codex_mod, "_which", _with_codex)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
 
@@ -57,6 +65,13 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     assert report["handoff_ready"] is True
     assert report["runtime"]["found"] is True
     assert report["runtime"]["skill_wiring"]["ok"] is True
+    assert report["runtime"]["codex_cli"]["ok"] is True
+    assert report["runtime"]["codex_cli"]["instructions"]["ok"] is True
+    assert report["experimental_runtimes"]["codex_cli"]["command"]["argv"] == [
+        "codex",
+        "-C",
+        str(repo.resolve()),
+    ]
     assert report["command"]["argv"] == ["claude"]
     assert report["command"]["display"].endswith(" && claude")
     assert report["command"]["follow_up"] == "/mb-start"
