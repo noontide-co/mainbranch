@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from typer.testing import CliRunner
 
@@ -855,3 +856,178 @@ def test_doctor_legacy_symlink_keeps_current_active_engine_root(
     assert result["repairable"] == 0
     assert result["findings"][0]["state"] == "info"
     assert result["findings"][0]["safe_to_repair"] is False
+
+
+# ---------------------------------------------------------------------------
+# Topology drift section (MAIN-289)
+# ---------------------------------------------------------------------------
+
+
+_VALID_TOPOLOGY_REGISTRY = """\
+---
+type: repo_topology
+status: active
+schema: mb.repo_topology.v0
+home: github:example-co/example
+business_display_name: Example Business
+repos:
+  - slug: example
+    display_name: Example Business
+    role: business
+    lifecycle: active
+    github_owner: example-co
+    repo_name: example
+    remote: github:example-co/example
+    visibility: team_private
+    relationship: hub_for
+  - slug: workshop-site
+    display_name: Workshop site
+    role: site
+    lifecycle: active
+    relationship: execution_vehicle_for
+    parent: example
+    github_owner: example-co
+    repo_name: workshop-site
+    remote: github:example-co/workshop-site
+    visibility: public
+---
+# Topology
+"""
+
+
+def _write_registry(repo: Path, body: str) -> None:
+    path = repo / "core" / "operations" / "repo-topology.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body, encoding="utf-8")
+
+
+def _write_child_descriptor(repo: Path, payload: dict[str, Any]) -> None:
+    path = repo / ".mainbranch" / "repo.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _topology_section(payload: dict[str, Any]) -> dict[str, Any]:
+    return next(section for section in payload["sections"] if section["id"] == "topology-drift")
+
+
+def test_doctor_topology_drift_section_info_when_no_registry(tmp_path: Path) -> None:
+    repo = tmp_path / "no-topology"
+    repo.mkdir()
+
+    payload = doctor_mod.repair_plan(repo=str(repo))
+
+    section = _topology_section(payload)
+    assert section["state"] == "info"
+    assert "optional" in section["summary"].lower() or "no topology" in section["summary"].lower()
+    action_ids = {action["id"] for action in payload["actions"]}
+    assert "topology-drift-review" not in action_ids
+
+
+def test_doctor_topology_drift_section_ok_when_registry_clean(tmp_path: Path) -> None:
+    repo = tmp_path / "clean-topology"
+    repo.mkdir()
+    _write_registry(repo, _VALID_TOPOLOGY_REGISTRY)
+
+    payload = doctor_mod.repair_plan(repo=str(repo))
+
+    section = _topology_section(payload)
+    assert section["state"] == "ok"
+    assert "no drift detected" in section["summary"].lower()
+    action_ids = {action["id"] for action in payload["actions"]}
+    assert "topology-drift-review" not in action_ids
+
+
+def test_doctor_topology_drift_section_warn_when_descriptor_orphan(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "orphan-descriptor"
+    repo.mkdir()
+    _write_child_descriptor(
+        repo,
+        {
+            "schema": "mb.child_repo.v0",
+            "role": "site",
+            "display_name": "Workshop site",
+            "github_owner": "example-co",
+            "repo_name": "workshop-site",
+            "parent": {
+                "display_name": "Example Business",
+                "github_owner": "example-co",
+                "repo_name": "example",
+                "remote": "github:example-co/example",
+            },
+        },
+    )
+
+    payload = doctor_mod.repair_plan(repo=str(repo))
+
+    section = _topology_section(payload)
+    assert section["state"] == "warn"
+    actions = {action["id"]: action for action in payload["actions"]}
+    assert "topology-drift-review" in actions
+    review = actions["topology-drift-review"]
+    assert review["mode"] == "manual"
+    assert review["safe_to_apply"] is False
+
+
+def test_doctor_topology_drift_section_warn_on_descriptor_role_mismatch(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "role-mismatch"
+    repo.mkdir()
+    _write_registry(repo, _VALID_TOPOLOGY_REGISTRY)
+    # Descriptor handle matches workshop-site (registry role: site) but
+    # claims role=product, triggering topology_descriptor_role_mismatch.
+    _write_child_descriptor(
+        repo,
+        {
+            "schema": "mb.child_repo.v0",
+            "role": "product",
+            "display_name": "Workshop site",
+            "github_owner": "example-co",
+            "repo_name": "workshop-site",
+            "parent": {
+                "display_name": "Example Business",
+                "github_owner": "example-co",
+                "repo_name": "example",
+                "remote": "github:example-co/example",
+            },
+        },
+    )
+
+    payload = doctor_mod.repair_plan(repo=str(repo))
+
+    section = _topology_section(payload)
+    assert section["state"] == "warn"
+    check_codes = {str(check.get("name")) for check in section.get("checks", [])}
+    assert "topology_descriptor_role_mismatch" in check_codes
+
+
+def test_doctor_topology_drift_preview_only(tmp_path: Path) -> None:
+    repo = tmp_path / "preview-only"
+    repo.mkdir()
+    _write_child_descriptor(
+        repo,
+        {
+            "schema": "mb.child_repo.v0",
+            "role": "site",
+            "display_name": "Workshop site",
+            "github_owner": "example-co",
+            "repo_name": "workshop-site",
+            "parent": {
+                "display_name": "Example Business",
+                "github_owner": "example-co",
+                "repo_name": "example",
+                "remote": "github:example-co/example",
+            },
+        },
+    )
+
+    payload = doctor_mod.repair_plan(repo=str(repo))
+
+    actions = {action["id"]: action for action in payload["actions"]}
+    review = actions["topology-drift-review"]
+    assert review["safe_to_apply"] is False
+    assert review["mode"] == "manual"
+    assert "does not rename" in review["reason"].lower()

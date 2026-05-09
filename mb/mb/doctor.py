@@ -28,6 +28,7 @@ from mb import graph as graph_mod
 from mb import migrate as migrate_mod
 from mb import migration_lint
 from mb import onboard as onboard_mod
+from mb import topology as topology_mod
 from mb import validate as validate_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status, version_key
@@ -1122,6 +1123,91 @@ def _migration_drift_from_checks(
     }
 
 
+def _topology_drift_state(repo: Path) -> dict[str, Any]:
+    """Surface repo topology drift evidence for ``mb doctor repair --plan``.
+
+    Reads the topology view via :func:`mb.topology.collect` and maps its
+    findings into the doctor section vocabulary (``ok``/``info``/``warn``/
+    ``error``). Preview-only: this helper never renames, deletes, or rewrites
+    topology files or descriptors.
+    """
+    payload = topology_mod.collect(str(repo))
+    findings = payload.get("findings") or []
+    summary = payload.get("summary") or {}
+
+    severity_to_state = {"info": "info", "warn": "warn", "error": "error"}
+    checks: list[dict[str, Any]] = []
+    for finding in findings:
+        severity = str(finding.get("severity") or "info")
+        checks.append(
+            {
+                "name": str(finding.get("code") or ""),
+                "state": severity_to_state.get(severity, "info"),
+                "summary": str(finding.get("summary") or ""),
+                "path": str(finding.get("path") or ""),
+                "detail": str(finding.get("detail") or ""),
+                "repair_command": str(finding.get("repair_command") or ""),
+                "safe_to_share": True,
+            }
+        )
+
+    registry_found = bool(summary.get("registry_found"))
+    registry_ok = bool(summary.get("registry_ok"))
+    descriptor_found = bool(summary.get("descriptor_found"))
+    warnings = int(summary.get("warnings", 0) or 0)
+    errors = int(summary.get("errors", 0) or 0)
+
+    warn_codes = sorted(
+        {
+            str(finding.get("code") or "")
+            for finding in findings
+            if finding.get("severity") == "warn" and finding.get("code")
+        }
+    )
+
+    if errors:
+        state = "error"
+        section_summary = (
+            f"{errors} topology drift error(s): {', '.join(warn_codes)}"
+            if warn_codes
+            else f"{errors} topology drift error(s)"
+        )
+    elif warnings:
+        state = "warn"
+        section_summary = (
+            f"{warnings} topology drift warning(s): {', '.join(warn_codes)}"
+            if warn_codes
+            else f"{warnings} topology drift warning(s)"
+        )
+    elif not registry_found and not descriptor_found:
+        state = "info"
+        section_summary = "no topology registry yet (optional)"
+    elif registry_found and registry_ok:
+        state = "ok"
+        section_summary = "topology registry parses; no drift detected"
+    else:
+        state = "info"
+        section_summary = "no topology registry yet (optional)"
+
+    return {
+        "state": state,
+        "summary": section_summary,
+        "checks": checks,
+        "findings": findings,
+        "child_repo_count": int(summary.get("child_repo_count", 0) or 0),
+        "restricted_repo_count": int(summary.get("restricted_repo_count", 0) or 0),
+        "summary_payload": {
+            "registry_found": registry_found,
+            "registry_ok": registry_ok,
+            "descriptor_found": descriptor_found,
+            "child_repo_count": int(summary.get("child_repo_count", 0) or 0),
+            "restricted_repo_count": int(summary.get("restricted_repo_count", 0) or 0),
+            "warnings": warnings,
+            "errors": errors,
+        },
+    }
+
+
 def _validation_summary(
     repo: Path,
     *,
@@ -1561,6 +1647,35 @@ def repair_plan(
                 for item in migration_drift["findings"]
             ],
             actions=drift_actions,
+        )
+    )
+
+    topology_drift = _topology_drift_state(target)
+    topology_actions: list[dict[str, Any]] = []
+    if topology_drift["state"] in {"warn", "error"}:
+        action = _action(
+            id="topology-drift-review",
+            title="Review repo topology drift",
+            state=topology_drift["state"],
+            mode="manual",
+            command="mb status --json --peek && mb validate --json",
+            safe_to_apply=False,
+            reason=(
+                "topology drift names hub/child mismatches, unsafe metadata, "
+                "or orphaned descriptors; doctor surfaces evidence but does "
+                "not rename, delete, or rewrite repos or descriptors"
+            ),
+        )
+        actions.append(action)
+        topology_actions.append(action)
+    sections.append(
+        _section(
+            "topology-drift",
+            "Repo Topology Drift",
+            topology_drift["state"],
+            topology_drift["summary"],
+            checks=topology_drift["checks"],
+            actions=topology_actions,
         )
     )
 
