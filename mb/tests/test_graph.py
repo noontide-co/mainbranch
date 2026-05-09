@@ -301,7 +301,7 @@ def test_graph_json_cli_emits_machine_readable_index(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     index = json.loads(result.stdout)
-    assert index["version"] == 1
+    assert index["version"] == 2
     assert index["summary"]["files"] == 1
     assert any(node["id"] == "company:acme" for node in index["nodes"])
 
@@ -355,3 +355,176 @@ def test_duplicate_entity_mentions_are_deduped(tmp_path: Path) -> None:
     ]
 
     assert len(channel_edges) == 1
+
+
+# ---------------------------------------------------------------------------
+# Topology integration (MAIN-289)
+# ---------------------------------------------------------------------------
+
+
+_TOPOLOGY_REGISTRY_BODY = """---
+type: repo_topology
+status: active
+schema: mb.repo_topology.v0
+home: github:example-co/example
+business_display_name: Example Business
+repos:
+  - slug: example
+    display_name: Example Business
+    role: business
+    lifecycle: active
+    github_owner: example-co
+    repo_name: example
+    remote: github:example-co/example
+    visibility: team_private
+    relationship: hub_for
+  - slug: workshop-site
+    display_name: Workshop site
+    role: site
+    lifecycle: active
+    relationship: execution_vehicle_for
+    parent: example
+    github_owner: example-co
+    repo_name: workshop-site
+    remote: github:example-co/workshop-site
+    visibility: public
+    linked_offers:
+      - core/offers/workshop/offer.md
+    linked_playbook_runs:
+      - pushes/2026-05-20-workshop-launch/playbooks/launch.md
+  - slug: finance
+    display_name: Finance source
+    role: finance
+    lifecycle: active
+    relationship: reports_to
+    parent: example
+    visibility: restricted
+---
+# Topology
+"""
+
+
+def _write_topology_registry(repo: Path, body: str = _TOPOLOGY_REGISTRY_BODY) -> Path:
+    operations = repo / "core" / "operations"
+    operations.mkdir(parents=True, exist_ok=True)
+    registry = operations / "repo-topology.md"
+    registry.write_text(body, encoding="utf-8")
+    return registry
+
+
+def test_graph_index_version_is_two(tmp_path: Path) -> None:
+    index = build_index(path=str(tmp_path))
+    assert index["version"] == 2
+
+
+def test_graph_includes_repo_nodes_from_topology(tmp_path: Path) -> None:
+    _write_topology_registry(tmp_path)
+
+    index = build_index(path=str(tmp_path))
+    nodes_by_id = {node["id"]: node for node in index["nodes"]}
+
+    for slug in ("example", "workshop-site", "finance"):
+        node = nodes_by_id.get(f"repo:{slug}")
+        assert node is not None, f"missing repo node for {slug}"
+        assert node["type"] == "repo"
+
+    assert nodes_by_id["repo:example"]["metadata"]["role"] == "business"
+    assert nodes_by_id["repo:example"]["metadata"]["visibility"] == "team_private"
+    assert nodes_by_id["repo:workshop-site"]["metadata"]["role"] == "site"
+    assert nodes_by_id["repo:workshop-site"]["metadata"]["visibility"] == "public"
+    assert nodes_by_id["repo:finance"]["metadata"]["role"] == "finance"
+    assert nodes_by_id["repo:finance"]["metadata"]["visibility"] == "restricted"
+
+    assert index["summary"]["repos"] == 3
+
+
+def test_graph_emits_deterministic_topology_edges(tmp_path: Path) -> None:
+    _write_topology_registry(tmp_path)
+    offer_path = tmp_path / "core" / "offers" / "workshop" / "offer.md"
+    offer_path.parent.mkdir(parents=True, exist_ok=True)
+    offer_path.write_text(
+        "---\ntitle: Workshop offer\n---\n",
+        encoding="utf-8",
+    )
+    playbook_path = tmp_path / "pushes" / "2026-05-20-workshop-launch" / "playbooks" / "launch.md"
+    playbook_path.parent.mkdir(parents=True, exist_ok=True)
+    playbook_path.write_text(
+        "---\ntitle: Launch playbook\n---\n",
+        encoding="utf-8",
+    )
+
+    index = build_index(path=str(tmp_path))
+    triples = {(edge["source"], edge["target"], edge["type"]) for edge in index["edges"]}
+
+    assert (
+        "repo:workshop-site",
+        "repo:example",
+        "execution_vehicle_for",
+    ) in triples
+    assert ("repo:finance", "repo:example", "reports_to") in triples
+    assert ("repo:example", "repo:workshop-site", "hub_for") in triples
+    assert ("repo:example", "repo:finance", "hub_for") in triples
+    assert (
+        "repo:workshop-site",
+        "file:core/offers/workshop/offer.md",
+        "linked_offers",
+    ) in triples
+    assert (
+        "repo:workshop-site",
+        "file:pushes/2026-05-20-workshop-launch/playbooks/launch.md",
+        "linked_playbook_run",
+    ) in triples
+
+    assert index["summary"]["repo_relationships"] >= 6
+
+
+def test_graph_resolves_missing_playbook_run_target(tmp_path: Path) -> None:
+    _write_topology_registry(tmp_path)
+    offer_path = tmp_path / "core" / "offers" / "workshop" / "offer.md"
+    offer_path.parent.mkdir(parents=True, exist_ok=True)
+    offer_path.write_text(
+        "---\ntitle: Workshop offer\n---\n",
+        encoding="utf-8",
+    )
+
+    index = build_index(path=str(tmp_path))
+    missing_edges = [
+        edge
+        for edge in index["edges"]
+        if edge["source"] == "repo:workshop-site"
+        and edge["type"] == "linked_playbook_run"
+        and str(edge["target"]).startswith("missing:")
+    ]
+    assert len(missing_edges) == 1
+
+
+def test_graph_skips_linked_playbooks_blueprint_field(tmp_path: Path) -> None:
+    body = """---
+type: repo_topology
+status: active
+schema: mb.repo_topology.v0
+home: github:example-co/example
+business_display_name: Example Business
+repos:
+  - slug: example
+    display_name: Example Business
+    role: business
+    lifecycle: active
+    github_owner: example-co
+    repo_name: example
+    remote: github:example-co/example
+    visibility: team_private
+    relationship: hub_for
+    linked_playbooks:
+      - core/playbooks/launch-checklist.md
+---
+# Topology
+"""
+    _write_topology_registry(tmp_path, body)
+
+    index = build_index(path=str(tmp_path))
+    node_ids = {node["id"] for node in index["nodes"]}
+    edge_types = {edge["type"] for edge in index["edges"]}
+
+    assert not any(node_id.startswith("engine_playbook:") for node_id in node_ids)
+    assert "linked_playbook" not in edge_types

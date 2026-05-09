@@ -14,8 +14,9 @@ import yaml
 
 from mb import pushes as pushes_mod
 from mb import relationships
+from mb import topology as topology_mod
 
-INDEX_VERSION = 1
+INDEX_VERSION = 2
 EdgeKey = tuple[str, str, str, tuple[tuple[str, str], ...]]
 
 LINK_FIELDS = relationships.RELATIONSHIP_FIELDS
@@ -119,6 +120,10 @@ def _external_id(ref: str) -> str:
 
 def _entity_id(entity_type: str, value: str) -> str:
     return f"{entity_type}:{_slug(value)}"
+
+
+def _repo_node_id(slug: str) -> str:
+    return f"repo:{_slug(slug)}"
 
 
 def _slug(value: str) -> str:
@@ -345,6 +350,227 @@ def _iter_provider_refs(frontmatter: dict[str, Any]) -> list[tuple[str, list[str
     return found
 
 
+_TOPOLOGY_REGISTRY_PATH = "core/operations/repo-topology.md"
+
+# Relationship values that semantically point from this entry back to its parent.
+_TOPOLOGY_PARENT_DIRECTED_RELATIONSHIPS: tuple[str, ...] = (
+    "execution_vehicle_for",
+    "graduated_from",
+    "supersedes",
+    "archived_from",
+    "source_for",
+    "reports_to",
+)
+
+_TOPOLOGY_LINKED_FIELD_EDGE_TYPES: dict[str, str] = {
+    "linked_offers": "linked_offers",
+    "linked_pushes": "linked_pushes",
+    "linked_bets": "linked_bets",
+    "linked_decisions": "linked_decisions",
+    "linked_research": "linked_research",
+    "linked_documents": "linked_documents",
+    "linked_docs": "linked_documents",
+    "linked_logs": "linked_logs",
+    "linked_outcomes": "linked_outcomes",
+    "linked_playbook_runs": "linked_playbook_run",
+}
+
+
+def _add_topology_pass(
+    *,
+    repo: Path,
+    nodes: dict[str, dict[str, Any]],
+    edges: list[dict[str, Any]],
+    seen_edges: set[EdgeKey],
+) -> None:
+    registry = topology_mod.read_registry(repo)
+    if not registry.get("ok"):
+        return
+    repos = registry.get("repos") or []
+    by_slug: dict[str, dict[str, Any]] = {}
+    for entry in repos:
+        slug = entry.get("slug") or ""
+        if slug:
+            by_slug[slug] = entry
+
+    # Add a repo node per entry.
+    for entry in repos:
+        slug = entry.get("slug") or ""
+        if not slug:
+            continue
+        node_id = _repo_node_id(slug)
+        label = (
+            entry.get("display_name")
+            or entry.get("slug")
+            or entry.get("remote_full_name")
+            or "(repo)"
+        )
+        _add_node(
+            nodes,
+            {
+                "id": node_id,
+                "type": "repo",
+                "label": label,
+                "metadata": {
+                    "slug": entry.get("slug", ""),
+                    "role": entry.get("role", ""),
+                    "lifecycle": entry.get("lifecycle", ""),
+                    "visibility": entry.get("visibility", ""),
+                    "github_owner": entry.get("github_owner", ""),
+                    "repo_name": entry.get("repo_name", ""),
+                    "remote_full_name": entry.get("remote_full_name", ""),
+                    "domain": entry.get("domain", ""),
+                    "is_hub": bool(entry.get("is_hub")),
+                    "safe_to_share": True,
+                },
+            },
+        )
+
+    # Edges between repo nodes based on relationship semantics.
+    for entry in repos:
+        slug = entry.get("slug") or ""
+        if not slug:
+            continue
+        relationships_list = list(entry.get("relationships") or [])
+        parent_slug = entry.get("parent") or ""
+        source_id = _repo_node_id(slug)
+
+        # child_of-style edge: explicit child_of relationship OR a non-empty
+        # parent slug that exists in the registry.
+        if ("child_of" in relationships_list or parent_slug) and parent_slug in by_slug:
+            _add_edge(
+                edges,
+                seen_edges,
+                source=source_id,
+                target=_repo_node_id(parent_slug),
+                edge_type="child_of",
+                evidence={
+                    "kind": "topology_registry",
+                    "field": "child_of",
+                    "path": _TOPOLOGY_REGISTRY_PATH,
+                },
+            )
+
+        # hub_for fan-out: hub points to each child whose parent == hub slug.
+        if "hub_for" in relationships_list:
+            for child_entry in repos:
+                child_slug = child_entry.get("slug") or ""
+                if not child_slug or child_slug == slug:
+                    continue
+                if (child_entry.get("parent") or "") != slug:
+                    continue
+                _add_edge(
+                    edges,
+                    seen_edges,
+                    source=source_id,
+                    target=_repo_node_id(child_slug),
+                    edge_type="hub_for",
+                    evidence={
+                        "kind": "topology_registry",
+                        "field": "hub_for",
+                        "path": _TOPOLOGY_REGISTRY_PATH,
+                    },
+                )
+
+        # Other parent-directed relationships emit an edge from this entry to
+        # its parent slug, typed by the relationship name.
+        for rel in relationships_list:
+            if rel not in _TOPOLOGY_PARENT_DIRECTED_RELATIONSHIPS:
+                continue
+            if not parent_slug or parent_slug not in by_slug:
+                continue
+            _add_edge(
+                edges,
+                seen_edges,
+                source=source_id,
+                target=_repo_node_id(parent_slug),
+                edge_type=rel,
+                evidence={
+                    "kind": "topology_registry",
+                    "field": rel,
+                    "path": _TOPOLOGY_REGISTRY_PATH,
+                },
+            )
+
+        # Linked-* fields → file or missing nodes.
+        registry_anchor = repo / "core" / "operations" / "repo-topology.md"
+        for field, edge_type in _TOPOLOGY_LINKED_FIELD_EDGE_TYPES.items():
+            for ref in entry.get(field) or []:
+                if not isinstance(ref, str) or not ref.strip():
+                    continue
+                clean_ref = ref.strip()
+                resolved: Path | None = None
+                if relationships.is_local_markdown_ref(clean_ref):
+                    resolved = relationships.resolve_markdown_link(repo, registry_anchor, clean_ref)
+                if resolved is not None and resolved.exists() and resolved.is_file():
+                    target_id = _file_id(resolved, repo)
+                    if target_id not in nodes:
+                        _add_node(
+                            nodes,
+                            {
+                                "id": target_id,
+                                "type": "file",
+                                "label": resolved.relative_to(repo).as_posix(),
+                                "path": resolved.relative_to(repo).as_posix(),
+                                "metadata": {},
+                            },
+                        )
+                else:
+                    target_id = f"missing:{_slug(clean_ref)}"
+                    _add_node(
+                        nodes,
+                        {
+                            "id": target_id,
+                            "type": "missing",
+                            "label": clean_ref,
+                            "metadata": {"ref": clean_ref},
+                        },
+                    )
+                _add_edge(
+                    edges,
+                    seen_edges,
+                    source=source_id,
+                    target=target_id,
+                    edge_type=edge_type,
+                    evidence={
+                        "kind": "topology_registry",
+                        "field": field,
+                        "path": _TOPOLOGY_REGISTRY_PATH,
+                    },
+                )
+
+        # uses_provider → provider nodes (no raw values).
+        for provider in entry.get("uses_provider") or []:
+            if not isinstance(provider, str) or not provider.strip():
+                continue
+            provider_id = f"provider:{_slug(provider)}"
+            _add_node(
+                nodes,
+                {
+                    "id": provider_id,
+                    "type": "provider",
+                    "label": _label_from_value(provider),
+                    "metadata": {
+                        "provider": provider,
+                        "ref_kinds": [],
+                        "exposes_raw_values": False,
+                    },
+                },
+            )
+            _add_edge(
+                edges,
+                seen_edges,
+                source=source_id,
+                target=provider_id,
+                edge_type="uses_provider",
+                evidence={
+                    "kind": "topology_registry",
+                    "field": "uses_provider",
+                    "path": _TOPOLOGY_REGISTRY_PATH,
+                },
+            )
+
+
 def build_index(path: str) -> dict[str, Any]:
     """Build the machine-readable repo graph index."""
     repo = Path(path).resolve()
@@ -524,6 +750,8 @@ def build_index(path: str) -> dict[str, Any]:
                 evidence={"kind": "entity", "field": source, "path": source_rel},
             )
 
+    _add_topology_pass(repo=repo, nodes=nodes, edges=edges, seen_edges=seen_edges)
+
     sorted_nodes = sorted(nodes.values(), key=_node_sort_key)
     sorted_edges = sorted(edges, key=_edge_sort_key)
     push_facts = pushes_mod.facts(repo)
@@ -545,6 +773,12 @@ def build_index(path: str) -> dict[str, Any]:
             "push_count": push_facts["count"],
             "canonical_push_count": push_facts["canonical_count"],
             "legacy_campaign_count": push_facts["legacy_campaign_count"],
+            "repos": sum(1 for node in sorted_nodes if node["type"] == "repo"),
+            "repo_relationships": sum(
+                1
+                for edge in sorted_edges
+                if edge.get("evidence", {}).get("kind") == "topology_registry"
+            ),
         },
         "pushes": push_facts["records"],
         "active_pushes": push_facts["active"],
