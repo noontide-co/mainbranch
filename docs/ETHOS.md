@@ -9,11 +9,13 @@ operating substrate:
 - the business repo is the business brain;
 - `mb` is the deterministic control plane;
 - agent-runtime skills are the judgment-heavy execution layer;
+- migration drift detection, `mb doctor repair`, `mb validate`, and `mb graph`
+  are the safety net that keeps the repo trustworthy as the engine evolves;
 - GitHub issues are durable work threads for tasks, requests, blockers, and
   follow-ups when work needs shared visibility;
 - pull requests are proposals and review conversations;
-- git history is the evolution story.
-- checkpoints make long agent runs durable before chat context is lost.
+- git history is the evolution story;
+- `mb checkpoint` makes long agent runs durable before chat context is lost;
 - dashboards, Obsidian graphs, and future team surfaces are views over the same
   files, not replacements for them.
 
@@ -103,7 +105,9 @@ operator usage becomes shared infrastructure.
 
 Issue drafting must be privacy-safe by default. Business context, customer
 data, tokens, local paths, and account details must not be sent without an
-explicit operator decision.
+explicit operator decision. `mb issue draft` and `mb issue open` are the
+shipped path: drafts land under `.mb/issue-drafts/` for review, the scrubber
+redacts common hazards, and submission is an explicit operator action.
 
 ### 7. Sidecars Are Optional
 
@@ -130,8 +134,10 @@ flows without evidence. Use the validation ladder in [AGENTS.md](../AGENTS.md):
 static checks, CLI tests, package smoke, fixture repo smoke, and runtime smoke
 when the behavior depends on a real runtime.
 
-The product should feel alive, but the substrate should stay boring enough to
-debug.
+Package-visible releases run simulations against fixture repos and review
+transcripts by hand. See [release-simulations.md](release-simulations.md).
+
+The product should feel alive; the parts underneath should stay boring.
 
 ### 10. Git Is The Hidden App
 
@@ -141,9 +147,10 @@ from them. Agents should checkpoint meaningful work throughout a run so future
 sessions can reconstruct what changed, what was decided, and what remains open
 from repo history.
 
-Checkpointing is not noisy autosave. It is durable business memory: readable
-commits at meaningful boundaries, with privacy and secret-safety gates before
-anything is recorded.
+`mb checkpoint` is the shipped surface for that loop: it plans or saves
+business-readable git commits at meaningful boundaries, with privacy and
+secret-safety gates before anything is recorded. Checkpointing is not noisy
+autosave; it is durable business memory.
 
 ## What We Are Not Building Yet
 
