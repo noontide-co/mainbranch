@@ -1,29 +1,20 @@
 # System Architecture
 
-> **Status:** Current architecture reference.
->
-> Main Branch is a CLI plus agent-runtime skill system for running a business
-> from markdown files in git. This document describes the current public repo
-> model after the `core/` folder decision, the campaign primitive decision,
-> and the push primitive and operator-vocabulary decision.
->
-> **Shipped vs accepted.** The accepted architecture below names `pushes/`
-> as the canonical primitive and `core/vocabulary.md` as the operator-owned
-> vocabulary file. Current `mb init` scaffolds those paths; validators, graph,
-> status, checkpoints, doctor, and the campaigns migration planner read
-> `pushes/` while preserving legacy `campaigns/` compatibility. The current
-> deterministic contract also validates the push schema (`kind`, health,
-> structured goal, owner, audience, offer, promise) and exposes canonical push
-> facts in status/start/graph JSON with explicit legacy campaign deprecation
-> markers. Existing `campaigns/` repos keep working, but new coordinated work
-> should land in `pushes/`.
+Current architecture reference. This document covers the durable shapes:
+business repo layout, primitives, schemas, artifact routing, and state
+boundaries. Product principles live in [ETHOS.md](ETHOS.md). Loop taxonomy
+lives in [OPERATOR-LOOPS.md](OPERATOR-LOOPS.md). Release direction lives in
+[ROADMAP.md](ROADMAP.md). The CLI surface lives in
+[the README](../README.md#for-contributors-and-power-users).
+
+Older folder names live in [Superseded Names](#superseded-names) at the
+bottom. The rest of this doc describes the current model.
 
 ## Architecture In One Sentence
 
-Main Branch keeps canonical business memory in repos the operator owns, uses
-`mb` as the deterministic control plane over those repos, and lets runtime
-skills perform judgment-heavy work while leaving provider data, secrets,
-caches, and dashboard state outside canonical memory.
+Business memory lives in repos the operator owns. `mb` is the deterministic
+control plane. Skills do the judgment work. Provider data, secrets, caches,
+and dashboards stay outside canonical memory.
 
 ```text
 Main Branch engine     +     business repo            +     optional systems
@@ -31,65 +22,16 @@ mb CLI                       core/                          provider APIs
 bundled skills               research/                      sidecar databases
 validators                   decisions/                     local caches
 templates                    bets/                          dashboard views
-docs                         pushes/   (canonical)
-                             campaigns/ (compatibility read)
+docs                         pushes/
                              log/
                              documents/
 ```
 
-The engine is business-agnostic. The business repo is engine-readable but not
-engine-owned. Provider systems and dashboards are inputs or views; they do not
-replace the repo.
-
-Main Branch is not a marketing folder with extra files. Growth work is the
-first public wedge because ads, pages, content, launches, and bets make the
-memory problem obvious. The architecture is broader: meetings, fulfillment,
-bookkeeping summaries, provider setup, team updates, repo topology, and
-operating lessons use the same Sense -> Decide -> Ship -> Reflect model.
-
-## Operating Loops
-
-Main Branch architecture follows the four operator loops in
-[OPERATOR-LOOPS.md](OPERATOR-LOOPS.md):
-
-- **Sense:** read current state from files, git, GitHub, provider metadata, and
-  deterministic `mb` reports.
-- **Decide:** choose a bet, priority, offer direction, or repair path.
-- **Ship:** produce and release work into the world or into the operating
-  system.
-- **Reflect:** extract lessons, close bets, update decisions, and improve the
-  next Sense pass.
-
-Files are not categories for their own sake. They are durable stations in those
-loops.
-
-## Daily Operating Loop
-
-The current product architecture is optimized for one repeatable day:
-
-1. The operator starts in a business repo and opens Claude Code.
-2. `/mb-start` or generated business repo instructions make the agent read
-   deterministic `mb` facts before it gives advice.
-3. The agent routes the operator's thought dump or request into the right
-   primitive: bet, research, decision, push, playbook, outcome, log entry, or
-   checkpoint.
-4. `mb` enforces the mechanical layer: repo shape, validation, graph links,
-   status health, provider readiness, update/repair paths, runtime wiring, and
-   guarded commits.
-5. `/mb-end` and `mb checkpoint` reconcile the session so the next Sense pass
-   can recover what changed from files and git history.
-
-The operator should mostly see business language: goals, offers, bets, pushes,
-playbooks, outcomes, and checkpoints. The technical memory layer is still real,
-but it exists underneath that loop. GitHub issues preserve durable work threads
-and friction, branches isolate proposed work, pull requests hold review
-conversations, commits form the saved business timeline, graph links explain
-relationships, and provider refs preserve safe handles to external systems
-without copying secrets or raw account data into the repo.
+The engine doesn't know your business. The business repo does. The engine
+reads it without owning it. Provider systems and dashboards are inputs or
+views; they do not replace the repo.
 
 ## Business Repo Shape
-
-A current Main Branch business repo uses this shape:
 
 ```text
 my-business/
@@ -114,33 +56,23 @@ my-business/
 ├── research/
 ├── decisions/
 ├── bets/
-├── pushes/                      # canonical coordinated pushes
-├── campaigns/                   # legacy compatibility read; new repos do not create this
+├── pushes/                      # launches, drops, challenges, promos, nurtures, outreach, events, announcements, rounds, waves
 ├── log/
 └── documents/
 ```
 
-The canonical business brain is `core/`. The old committed business-repo
-`reference/` folder is compatibility-only for old repos, as defined in
-[decisions/2026-05-06-business-repo-folder-model-reference-deprecation.md](../decisions/2026-05-06-business-repo-folder-model-reference-deprecation.md).
+The canonical business brain is `core/`.
 
 ## Repo Topology
 
 A company can outgrow one repo without leaving the Main Branch model. The
-business repo stays the hub, and specialized repos become linked operating
-boundaries.
-
-The durable topology model lives in
+business repo stays the hub; specialized repos become linked operating
+boundaries. The durable model lives in
 [decisions/2026-05-08-business-repo-topology-map.md](../decisions/2026-05-08-business-repo-topology-map.md).
-That decision defines role slugs, relationship types, lifecycle language,
-GitHub/local naming conventions, metadata placement, and the public/private
-boundary for finance, legal, workspace, and dashboard views.
 Role-neutral child repo descriptors live in
-[child-repo-descriptors.md](child-repo-descriptors.md). New child repos should
-use `.mainbranch/repo.json` as a local signpost back to the hub; existing site
+[child-repo-descriptors.md](child-repo-descriptors.md). New child repos use
+`.mainbranch/repo.json` as a local signpost back to the hub; existing site
 repo `.mainbranch/source.json` files remain compatibility links.
-
-Common repo roles:
 
 | Role | What it holds | Boundary |
 | --- | --- | --- |
@@ -156,62 +88,46 @@ Common repo roles:
 | `experiment` | Exploratory work that may graduate, pause, or die | Not core truth until decided |
 | `archive` | Inert imports, legacy projects, or cold storage | Read-only unless revived |
 
-Future dashboards should render this topology in business language: which repos
-exist, what role each plays, which pushes or bets created them, what is stale,
-and which access boundaries are intentional. GitHub alone does not express
-that hierarchy well enough for operators.
+`mb status --json`, `mb graph --json`, and `mb doctor repair --plan --json`
+expose topology facts today. A future dashboard rendering this topology in
+business language is direction, not current behavior; see
+[ROADMAP.md](ROADMAP.md).
 
 ## Primitive Contracts
 
 ### `core/`
 
-`core/` contains evergreen business truth that skills can read repeatedly:
-offer, audience, soul, voice, proof, brand systems, strategy, operations, and
-finance boundaries.
-
-Evergreen files do not usually carry dates in the filename. They represent the
-current best version of the business, not a point-in-time snapshot.
+Evergreen business truth: offer, audience, soul, voice, proof, brand systems,
+strategy, operations, and finance boundaries. Files do not carry dates.
+Current truth, not a snapshot.
 
 ### Offers
-
-An offer is what the business sells or may sell repeatedly.
 
 In a single-offer repo, `core/offer.md` is the durable offer truth: promise,
 pricing, mechanism, deliverables, qualification, objections, guarantee, and
 delivery assumptions.
 
-In a multi-offer repo, `core/offer.md` is the portfolio thesis: what the
-business sells overall and how the offers relate. Per-offer truth lives in
-`core/offers/<slug>/offer.md`; optional per-offer audience context lives in
-`core/offers/<slug>/audience.md`.
+In a multi-offer repo, `core/offer.md` is the portfolio thesis. Per-offer truth
+lives in `core/offers/<slug>/offer.md`; optional per-offer audience context
+lives in `core/offers/<slug>/audience.md`.
 
-A new or uncertain offer idea should usually start as a bet. Create or update
-offer files only when the operator wants durable sellable truth. Do not rename,
-delete, merge, split, or move offer folders without an accepted decision,
-approved migration plan, or explicit operator instruction.
+A new or uncertain offer idea usually starts as a bet. Do not rename, delete,
+merge, split, or move offer folders without an accepted decision, approved
+migration plan, or explicit operator instruction.
 
 ### Proof
 
-Proof is reusable evidence that a claim is true. Company-wide proof belongs in
-`core/proof/`: testimonials, typicality notes, case summaries, approved proof
-angles, and outcome context that applies across the business.
-
-Offer-specific proof belongs in `core/offers/<slug>/proof/`. Older repos may
-have offer-level testimonial files in other locations; those are compatibility
-context, not the preferred new write target.
-
-The proof folders are canonical, but common proof types still have standard
-file targets: `testimonials.md` for individual permissioned testimonials,
+Reusable evidence that a claim is true. Company-wide proof belongs in
+`core/proof/`. Offer-specific proof belongs in `core/offers/<slug>/proof/`.
+Standard filenames: `testimonials.md` for individual permissioned testimonials,
 `typicality.md` for average-case outcome context, and `angles/` for durable
 messaging angles.
 
 ### `research/`
 
-`research/` contains point-in-time findings from when the operator went
-looking. Research can cite source material, but it should synthesize what
-matters rather than becoming an indiscriminate capture folder.
-
-Typical files:
+Point-in-time findings from when the operator went looking. Research can cite
+sources, but it should synthesize what matters rather than become a capture
+folder.
 
 ```text
 research/2026-05-06-competitor-offer-analysis.md
@@ -220,82 +136,49 @@ research/2026-05-06-customer-language-review.md
 
 ### `decisions/`
 
-`decisions/` contains choices with rationale. A decision explains the situation,
-options, accepted direction, rejected alternatives, and what files or workflows
-change because of it.
-
-Decisions can be proposed before acceptance. Accepted decisions become durable
-product or business truth until superseded.
+Choices with rationale: situation, options, accepted direction, rejected
+alternatives, what changes because of it. Decisions can be proposed before
+acceptance. Accepted decisions become durable truth until superseded.
 
 ### `bets/`
 
-`bets/` contains time-boxed operating hypotheses: what the operator will try,
-why it might work, by when, and how success or failure will be judged.
+Time-boxed operating hypotheses: what the operator will try, why it might
+work, by when, and how success or failure will be judged. A bet is usually
+Decide → Ship → Reflect. It may lead to a push, an offer change, a workflow,
+a content pillar, a provider setup, or a decision.
 
-A bet is usually Decide -> Ship -> Reflect. It may lead to a push, an offer
-change, a workflow, a content pillar, a provider setup, or a decision.
+### `pushes/`
 
-### `pushes/` (canonical) and `campaigns/` (compatibility)
-
-The canonical engine primitive for coordinated pushes is `pushes/`.
-[decisions/2026-05-06-push-primitive-and-operator-vocabulary.md](../decisions/2026-05-06-push-primitive-and-operator-vocabulary.md)
-makes this the durable name: folder `pushes/<YYYY-MM-DD-slug>/push.md`,
-frontmatter `type: push`, link field `linked_pushes`, JSON keys
-push-shaped, and `kind:` as a bounded enum
+`pushes/` is the engine primitive for coordinated work. See
+[decisions/2026-05-06-push-primitive-and-operator-vocabulary.md](../decisions/2026-05-06-push-primitive-and-operator-vocabulary.md):
+folder `pushes/<YYYY-MM-DD-slug>/push.md`, frontmatter `type: push`, link
+field `linked_pushes`, JSON keys push-shaped, and `kind:` as a bounded enum
 (`launch | drop | challenge | promo | nurture | outreach | event |
 announcement | round | wave`).
 
-Existing `campaigns/<slug>/campaign.md` records remain compatibility
-reads. `mb validate`, `mb graph`, and `mb status` index them
-identically; `type: campaign` is a recognized alias on read; new writes
-go to `pushes/`. The relationship model, lifecycle, and definition of a
-coordinated push from
-[decisions/2026-05-06-campaign-primitive-and-architecture-model.md](../decisions/2026-05-06-campaign-primitive-and-architecture-model.md)
-are unchanged.
+The operator's preferred display word for a push (e.g. *drop*, *launch*,
+*challenge*) lives in `core/vocabulary.md` and never overrides `kind:` on
+disk.
 
-The operator's preferred word for a push (e.g. *drop*, *launch*,
-*challenge*, *campaign*) lives in `core/vocabulary.md` and is mirrored
-in operator-facing copy without changing canonical storage.
-
-A push is not a generic generated-artifact bucket.
-
-A push has:
+A push is not a generic generated-artifact bucket. A push has:
 
 - a named goal or outcome;
-- a recipient or audience, including internal stakeholders for Ops adoption
-  pushes;
+- a recipient or audience (including internal stakeholders for Ops adoption);
 - one or more distribution or adoption channels;
 - a bounded time window or review moment;
 - artifacts and actions that belong to the same push;
-- links to the bets, offers, strategy, decisions, research, logs, and provider
-  data that explain or measure it.
+- links to the bets, offers, strategy, decisions, research, logs, and
+  provider data that explain or measure it.
 
-Examples that qualify:
+Qualifying examples: paid ad push, organic content sequence, email/newsletter
+launch, site or landing-page launch, partner outreach push, product/offer
+announcement, internal adoption push with a clear goal and outcome.
 
-- paid ad push;
-- organic content sequence;
-- email or newsletter launch sequence;
-- site or landing-page launch;
-- community activation push;
-- partner or outreach push;
-- product, offer, waitlist, beta, or event announcement;
-- internal adoption or migration push with a clear goal, owner, timeline, and
-  outcome.
+Non-qualifying: raw transcripts, one-off code experiments, provider exports,
+loose session recovery notes, archived repo dumps, generated artifacts with
+no named push.
 
-Examples that do not qualify by themselves:
-
-- raw transcripts;
-- one-off code experiments;
-- provider exports;
-- raw analytics tables;
-- loose session recovery notes;
-- PR review notes for the engine;
-- archived repo dumps;
-- generated artifacts with no named push or outcome.
-
-#### Push Folder Shape (canonical)
-
-The canonical push shape is:
+#### Push Folder Shape
 
 ```text
 pushes/
@@ -311,10 +194,10 @@ pushes/
     source/
 ```
 
-The folder name gives humans chronological scanability and uses **day**
-precision (`YYYY-MM-DD-slug`) to match every other dated primitive in the
-repo. `push.md` is the record. Other files are push artifacts, source notes,
-operator review notes, or asset references for that same push.
+`push.md` is the record. Other files are push artifacts, source notes,
+operator review notes, or asset references for that same push. The folder
+name uses **day** precision (`YYYY-MM-DD-slug`) to match other dated
+primitives.
 
 For larger pushes, typed subfolders are acceptable:
 
@@ -332,9 +215,9 @@ pushes/2026-05-06-workshop-waitlist/
 ```
 
 Do not create a push folder just because a file was generated. If the work
-does not have a push goal, put it in the primitive that owns it.
+does not have a push goal, route it to the primitive that owns it.
 
-#### Push Record (canonical)
+#### Push Record
 
 Recommended `push.md` frontmatter:
 
@@ -373,14 +256,9 @@ metrics_sources:
 ---
 ```
 
-The current validator enforces the canonical record shape above: `type: push`,
-bounded `kind:`, lifecycle `status:`, separate `health:`, structured
-`goal: { metric, target, by }`, one `owner`, a named `audience`, a named
-`offer`, and a short `promise`. `kind:` is a canonical engine subtype
-(`launch | drop | challenge | promo | nurture | outreach | event |
-announcement | round | wave`); the operator's display word for a push
-(e.g. *drop*, *campaign*) lives in `core/vocabulary.md` and never overrides
-`kind:` on disk.
+`mb validate` enforces this shape: `type: push`, bounded `kind:`, lifecycle
+`status:`, separate `health:`, structured `goal: { metric, target, by }`, one
+`owner`, a named `audience`, a named `offer`, and a short `promise`.
 
 Push status maps to operator loops:
 
@@ -394,40 +272,25 @@ Push status maps to operator loops:
 | `canceled` | The push was intentionally stopped. |
 | `archived` | Historical record only. |
 
-`channels` is a loose list rather than a hard enum. Common slugs include
-`paid`, `organic`, `email`, `site`, `community`, `partner`, `outreach`, and
-`internal`, but the canonical schema does not fail a push when a business needs
-a more specific channel.
+`channels` is loose, not a hard enum. Common slugs: `paid`, `organic`,
+`email`, `site`, `community`, `partner`, `outreach`, `internal`.
 
 #### Playbooks
 
-Main Branch has two playbook layers:
+Two layers:
 
 - A **reusable playbook** is an engine-packaged operating recipe under
-  `.claude/playbooks/<name>/`. It is public, sanitized, opinionated, and can be
-  run by many businesses.
+  `.claude/playbooks/<name>/`. Public, sanitized, opinionated, runnable by
+  many businesses.
 - A **push playbook** is a per-run business repo record under
   `pushes/<push>/playbooks/<playbook>.md`.
 
-Reusable playbooks can instantiate push playbook run records. A push playbook
-does not prove that Main Branch can mutate a provider account; provider
-mutation still requires a shipped adapter, readiness checks, approval gates,
-and smoke evidence.
-
-#### Push Playbook Shape
-
-Reusable growth or operations commitments that belong to a push live under:
-
-```text
-pushes/<YYYY-MM-DD-slug>/playbooks/<playbook>.md
-```
-
-A playbook is a plan, approval record, setup recipe, and outcome hook. It is
-not proof that Main Branch can mutate a provider account. `provider` records
-where execution would happen; `provider_boundary` records whether execution is
-manual, external, candidate, or backed by an accepted adapter. Provider ids are
-lowercase hyphenated slugs, such as `manual`, `meta-ads`, `postiz`, or `x-api`;
-use hyphens rather than underscores or dots.
+A push playbook is a plan, approval record, setup recipe, and outcome hook.
+It is not proof that Main Branch can mutate a provider account. `provider`
+records where execution would happen; `provider_boundary` records whether
+execution is manual, external, candidate, or backed by an accepted adapter.
+Provider ids are lowercase hyphenated slugs (e.g. `manual`, `meta-ads`,
+`postiz`, `x-api`).
 
 Required v1 playbook frontmatter:
 
@@ -465,49 +328,28 @@ linked_outcomes: []
 ---
 ```
 
-Valid playbook statuses are `draft`, `planned`, `approved`, `active`,
-`paused`, `completed`, `canceled`, and `retired`. Valid provider boundaries are
-`plan-only`, `external-manual`, `candidate-adapter`, and `accepted-adapter`.
-Until a separate provider issue accepts an adapter with approval gates, docs,
-tests, and smoke evidence, `mb validate` rejects `accepted-adapter` claims.
+Valid playbook statuses: `draft`, `planned`, `approved`, `active`, `paused`,
+`completed`, `canceled`, `retired`. Valid provider boundaries: `plan-only`,
+`external-manual`, `candidate-adapter`, `accepted-adapter`. Until a separate
+provider issue accepts an adapter with approval gates, docs, tests, and smoke
+evidence, `mb validate` rejects `accepted-adapter` claims.
 
 Playbook frontmatter must not contain tokens, API keys, private account
-exports, raw DMs, customer records, cookies, or session secrets. Safe provider
-state means stable public-safe ids, timestamps, validation notes, links to
-repo outcome/log files, and smoke evidence references.
-
-#### Legacy `campaigns/` shape (compatibility read)
-
-Repos created before the push primitive decision have the equivalent shape
-under `campaigns/`:
-
-```text
-campaigns/
-  2026-05-workshop-waitlist/
-    campaign.md
-    ...
-```
-
-with `type: campaign`, `linked_campaigns`, and the campaign-shaped fields from
-the campaign primitive decision. `mb` reads these records identically to
-`pushes/`. New writes go to `pushes/`. There is no silent migration; see the
-push primitive decision for the migration policy.
+exports, raw DMs, customer records, cookies, or session secrets. Safe
+provider state means stable public-safe ids, timestamps, validation notes,
+links to repo outcome/log files, and smoke evidence references.
 
 ### `log/`
 
-`log/` contains what happened: daily records, session summaries, recovery notes,
-operator handoffs, and non-decision work records.
-
-Use `log/` when the durable value is chronology and recovery rather than a
-research finding, accepted decision, bet, or push artifact.
+What happened: daily records, session summaries, recovery notes, operator
+handoffs, non-decision work records. Use `log/` when the durable value is
+chronology and recovery rather than a research finding, decision, bet, or
+push artifact.
 
 ### `documents/`
 
-`documents/` contains supporting material that is durable enough to keep but
-not itself core truth, research synthesis, a decision, a bet, a push, or a
-log entry.
-
-Blessed conventional subfolders:
+Supporting material durable enough to keep but not itself core truth,
+research, decision, bet, push, or log entry.
 
 ```text
 documents/transcripts/   # raw or lightly cleaned source transcripts
@@ -519,8 +361,6 @@ Use separate repos when a prototype, site, app, offer, finance surface, or
 archive graduates into its own operating boundary.
 
 ## Artifact Routing
-
-Use this routing rule when deciding where generated work belongs:
 
 | Artifact | Canonical home |
 | --- | --- |
@@ -543,14 +383,10 @@ Use this routing rule when deciding where generated work belongs:
 | Inert legacy import | `documents/archive/...` or separate archive repo |
 | Local cruft | ignored or deleted, not migrated |
 
-Legacy `outputs/` content should not be bulk-moved into `pushes/` (or
-`campaigns/`). Ambiguous items need an operator review path through migration
-or doctor repair. Existing repos with `campaigns/<campaign>/...` paths keep
-working as compatibility reads; new writes go to `pushes/<push>/...`.
+Ambiguous artifacts get routed by the operator through migration or doctor
+repair. No silent bulk moves.
 
 ## Relationship Model
-
-The core relationship model is:
 
 ```text
 strategy decides where we should push
@@ -561,29 +397,16 @@ provider data records what happened
 research / decision / log captures what we learned or changed
 ```
 
-In practice:
-
-- Strategy lives in `core/content-strategy.md` or additional `core/strategy/...`
-  files.
-- Offers live in `core/offer.md` for single-offer truth or multi-offer
-  portfolio thesis, and in `core/offers/<slug>/offer.md` for per-offer truth.
+- Strategy lives in `core/content-strategy.md` or `core/strategy/...`.
+- Offers live in `core/offer.md` and `core/offers/<slug>/offer.md`.
 - Bets live in `bets/...` and can link to one or more pushes.
 - Pushes link back to bets, offers, decisions, research, and strategy.
-- Provider refs identify external provider campaign/account objects (e.g.
-  Meta Ads "campaigns" — the provider's term, not the engine primitive)
-  without copying raw provider data into the business repo.
-- Metrics sources point to provider APIs, local sidecars, `.mb/` caches,
-  private analytics stores, or exported files under a boundary the operator has
-  intentionally chosen.
-- Reflection usually lands in a bet verdict, research note, decision update,
-  push review log, or `log/` entry.
-- Meeting transcripts are source material until synthesized. The durable
-  artifact is the summary, decision, task, push, or core update that comes out
-  of the meeting.
-- Finance ledgers and legal files are higher-sensitivity sources. Main Branch
-  can link to them and store safe summaries, but raw ledgers should stay in
-  private repos or local sidecars unless an explicit boundary decision says
-  otherwise.
+- Provider refs identify external provider campaign/account objects without
+  copying raw provider data into the business repo.
+- Metrics sources point to provider APIs, local sidecars, `.mb/` caches, or
+  exported files under a boundary the operator chose.
+- Reflection lands in a bet verdict, research note, decision update, push
+  review log, or `log/` entry.
 
 ## State Boundaries
 
@@ -593,7 +416,7 @@ Canonical business state:
 - `research/`
 - `decisions/`
 - `bets/`
-- `pushes/` (canonical) and `campaigns/` (compatibility read)
+- `pushes/`
 - `log/`
 - `documents/`
 - git history
@@ -601,7 +424,7 @@ Canonical business state:
 
 Local operational state:
 
-- `.mb/` caches, indexes, schema markers, repair backups, and local connection
+- `.mb/` caches, indexes, schema markers, repair backups, local connection
   metadata;
 - `.claude/settings.local.json` and runtime wiring;
 - runtime-specific local files;
@@ -613,82 +436,23 @@ External or optional state:
 - local SQLite sidecars;
 - private analytics or finance repos;
 - exported CSVs in private storage;
-- future dashboard indexes.
+- future dashboard indexes (direction, not shipped).
 
 Secrets, bearer tokens, OAuth refresh tokens, service-account JSON, customer
 exports, raw member data, and sensitive finance/legal data do not belong in
 public examples or committed business repo files.
 
-## Curated Rails
+## Provider, Sidecar, and Dashboard Boundary
 
-Main Branch should not become a "connect every SaaS" hub. The system earns
-trust by curating boring, inspectable rails and wrapping them in deterministic
-flows that agents can call cheaply.
+Provider systems record live operational facts. Sidecars can enrich Main
+Branch with structured data. A future local dashboard could render repo and
+provider truth without owning it. None of these replace canonical memory.
 
-Preferred pattern:
-
-- official CLIs, APIs, or provider surfaces where they are stable and
-  smoke-testable;
-- `mb connect` for local credential metadata and repair-safe readiness checks;
-- deterministic commands before broad MCP schemas when a CLI can do the job;
-- provider-specific workflows only after the setup, failure states, and
-  operator approval gates are explicit;
-- graceful degradation when optional sidecars are missing.
-
-Examples of intended rails:
-
-- GitHub for issues, pull requests, reviews, repo history, and shipped-work
-  visibility;
-- Cloudflare for Pages, DNS, Workers-adjacent site workflows, and future
-  deterministic CMS/site operations;
-- Google/Workspace and Google Ads/GTM where official paths are smoke-tested;
-- Meta/Facebook Ads through the official path when detection and read-only
-  smoke exist;
-- Postiz for social scheduling when the provider path earns support;
-- Beancount/Fava-style plain-text finance as a private or sidecar-backed Ops
-  surface.
-
-## `mb` Responsibilities
-
-`mb` is the deterministic control plane. It owns:
-
-- repo scaffolding through `mb onboard` and `mb init`;
-- repo health through `mb doctor`;
-- safe reconciliation through `mb doctor repair`;
-- frontmatter and cross-reference checks through `mb validate`;
-- graph output through `mb graph`;
-- daily facts and next-action substrate through `mb status` and `mb start`;
-- provider metadata through `mb connect`;
-- update and migration paths through `mb update` and `mb migrate`;
-- skill discovery and repair through `mb skill`;
-- git checkpoint plans and guarded commits through `mb checkpoint`.
-
-`mb` should stay inspectable, scriptable, and exit-coded. It should expose JSON
-where skills, dashboards, or future adapters need stable facts.
-
-## Skill Responsibilities
-
-Runtime skills own judgment-heavy work:
-
-- asking the operator the right question;
-- interpreting business context;
-- drafting research, decisions, bets, push artifacts, and review notes;
-- routing generated work to the right primitive;
-- calling deterministic `mb` commands for facts instead of reimplementing repo
-  health probes in prose;
-- keeping runtime claims honest.
-
-Claude Code is the supported runtime today. Other runtimes are compatibility
-targets until adapter code and smoke evidence exist.
-
-## Provider, Sidecar, And Dashboard Boundaries
-
-Provider systems record live operational facts. Sidecars can enrich Main Branch
-with structured data. Dashboards can make repo and provider truth easier to
-see.
-
-They remain optional and non-canonical unless a future accepted decision says
-otherwise.
+Main Branch does not mutate provider accounts today. Provider mutation
+requires a shipped adapter with approval gates, readiness checks, and smoke
+evidence; until then, playbooks are plans and approvals, not execution. See
+[ROADMAP.md](ROADMAP.md) and [DEPENDENCY-CHOICES.md](DEPENDENCY-CHOICES.md)
+for direction.
 
 Correct pattern:
 
@@ -697,9 +461,8 @@ pushes/2026-05-06-workshop-waitlist/push.md
   provider_refs.meta_ads.campaign_id -> provider object
   metrics_sources[] -> sidecar/cache/private analytics source
 
-mb status / dashboard
+mb status / future dashboard
   reads push.md, graph, git, GitHub, and provider-safe summaries
-  displays facts and recommendations
 ```
 
 Incorrect pattern:
@@ -711,82 +474,58 @@ dashboard database becomes the only place push truth exists
 chat transcript is treated as the decision record
 ```
 
-## Dashboard And Team Communication
+## `mb` and Skills
 
-The future dashboard is not the brain. It is the map: business repos, site
-repos, offer repos, private finance repos, pushes, bets, team work, agents,
-provider-safe summaries, finances, active decisions, and stale areas rendered
-from repo truth.
+`mb` is the deterministic control plane: repo scaffolding, validation,
+graph, status, doctor/repair, connect, update, migrate, skill management,
+and checkpoint. The full surface lives in
+[the README](../README.md#for-contributors-and-power-users).
 
-Dashboard sources should be:
+Skills own judgment-heavy work — synthesis, writing, review, routing — and
+call `mb` for facts. Claude Code is the supported runtime today; other
+runtimes are compatibility targets until adapter code and smoke evidence
+exist. See [compatibility.md](compatibility.md).
 
-- `mb status --json`;
-- `mb graph --json`;
-- git history and `mb checkpoint` records;
-- GitHub issues, pull requests, reviews, and releases;
-- repo topology metadata;
-- provider-safe summaries and optional sidecar outputs;
-- explicit `log/`, `decisions/`, `bets/`, and `pushes/` records.
+Curated rails — GitHub, Cloudflare, Google/Workspace, official ads paths,
+Postiz, Beancount, transcription helpers — earn their place by improving a
+loop and by failing in ways `mb` can explain. See
+[ETHOS.md](ETHOS.md#8-curated-rails-beat-saas-sprawl) and
+[DEPENDENCY-CHOICES.md](DEPENDENCY-CHOICES.md).
 
-Chat can exist as an input surface, but it should not become the operating
-truth. A team chat replacement earns its place only when important conversation
-turns into durable artifacts: issues, proposals, decisions, pushes, logs, and
-commits. Raw chat history and meeting transcripts should be source material,
-not the final record.
+## Validation and Migration
 
-## Graph And Status
+The validation ladder is in [AGENTS.md](../AGENTS.md). Release evidence
+ladder is in [release-simulations.md](release-simulations.md). The short
+rule: prove the surface you changed.
 
-`mb graph` should index durable markdown relationships: linked decisions,
-research, bets, pushes (and legacy campaigns), offers, outcomes, and documents.
-The graph should remain friendly to GitHub links and Obsidian-style wikilinks so
-operators can inspect the same memory outside Main Branch.
+Migration preserves user-authored content and distinguishes compatibility
+bridges from split truth.
 
-`mb status` should read those same durable relationships plus cheap local facts
-to answer:
+## Superseded Names
 
-- what is stale;
-- what is active;
-- what changed since last check;
-- which pushes need Ship or Reflect attention;
-- which bets lack linked push work;
-- which provider or sidecar signals need operator review.
+This section is the only place older folder names belong. Treat the rest of
+the doc as describing the current model.
 
-The status and graph surfaces should consume the push primitive (and read
-legacy campaign records as compatibility) instead of inventing a separate
-push model. JSON output adds push keys alongside legacy campaign keys for at
-least one minor release per the push primitive decision.
+Older repos and historical decisions used:
 
-## Validation And Migration
+| Old | Current |
+| --- | --- |
+| `campaigns/<slug>/campaign.md` (`type: campaign`, `linked_campaigns`) | `pushes/<YYYY-MM-DD-slug>/push.md` (`type: push`, `linked_pushes`) |
+| business-repo `reference/` folder | `core/` (per [decisions/2026-05-06-business-repo-folder-model-reference-deprecation.md](../decisions/2026-05-06-business-repo-folder-model-reference-deprecation.md)) |
+| `domain/` | `core/` |
+| `.vip/local.yaml` / `.vip/config.yaml` | `.mb/` plus runtime-specific local files; legacy YAML is audit-only |
+| `outputs/` | `pushes/<push>/...` for coordinated work; `documents/` for supporting material |
 
-The validation ladder is in [AGENTS.md](../AGENTS.md). The short rule is:
-prove the surface you changed.
+Compatibility behavior:
 
-- Docs and decisions need public/private review and link sanity.
-- CLI behavior needs focused tests and exit-code/JSON coverage.
-- Packaging, templates, bundled data, or skill discovery need install smoke.
-- First-run or repo-shape changes need fixture repo smoke.
-- Runtime discovery or LLM-facing workflow changes need runtime smoke, or an
-  explicit blocker note.
-- Claude Code release-bearing runtime evidence should follow the
-  [Claude Code runtime dogfood runbook](claude-code-runtime-dogfood.md).
-
-Migration should preserve user-authored content, distinguish compatibility
-bridges from split truth, and leave ambiguous legacy `outputs/` artifacts for
-operator review rather than silently classifying them.
-
-## Superseded Model
-
-Older architecture notes used `reference/`, `domain/`, `.vip/local.yaml`, and
-`outputs/` as central concepts. Those names can still appear in compatibility
-code, migration guidance, or historical decisions, but current public
-architecture is:
-
-- `core/` for evergreen business truth (with optional `core/vocabulary.md`
-  for operator-owned display words);
-- `pushes/` for coordinated pushes (canonical), with `campaigns/` retained
-  as a compatibility read for repos created under the earlier campaign
-  primitive decision;
-- `documents/` for supporting/raw/prototype/archive material;
-- `.mb/` for explicit local Main Branch state;
-- provider/sidecar/dashboard state outside canonical memory unless explicitly
-  linked and bounded.
+- `campaigns/<slug>/campaign.md` records still read. `mb validate`,
+  `mb graph`, and `mb status` index them identically to `pushes/`;
+  `type: campaign` is a recognized alias on read; new writes go to
+  `pushes/`. Migration policy is in
+  [decisions/2026-05-06-push-primitive-and-operator-vocabulary.md](../decisions/2026-05-06-push-primitive-and-operator-vocabulary.md)
+  and the relationship model is unchanged from
+  [decisions/2026-05-06-campaign-primitive-and-architecture-model.md](../decisions/2026-05-06-campaign-primitive-and-architecture-model.md).
+- Existing site repo `.mainbranch/source.json` files remain compatibility
+  links; new child repos use `.mainbranch/repo.json`.
+- Ambiguous legacy artifacts go through operator review (`mb doctor
+  repair --plan` / migration), not silent bulk moves.
