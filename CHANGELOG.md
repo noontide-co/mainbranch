@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added push playbook health facts to `mb status --json --peek`, plus concise
+  human and ranked-action signals when active pushes are missing run records,
+  playbook approval/status is pending, completed pushes lack outcome links, or
+  provider boundaries remain plan/manual work. Refs #446.
+
 ## [0.3.13] - 2026-05-08
 
 v0.3.13 ships the repo-topology substrate that landed after v0.3.12 as an

@@ -54,6 +54,85 @@ def _commit(repo: Path, relative_path: str, content: str, subject: str, body: st
     assert result.returncode == 0, result.stderr
 
 
+def _write_push(
+    repo: Path,
+    slug: str,
+    *,
+    status: str = "active",
+    offer: str = "core/offers/coaching/offer.md",
+) -> Path:
+    push = repo / "pushes" / slug
+    push.mkdir(parents=True, exist_ok=True)
+    (push / "push.md").write_text(
+        (
+            "---\n"
+            "type: push\n"
+            f"slug: {slug[11:]}\n"
+            "kind: launch\n"
+            f"status: {status}\n"
+            "health: on-track\n"
+            "goal:\n"
+            "  metric: booked calls\n"
+            "  target: 5 booked calls\n"
+            "  by: 2026-05-20\n"
+            "owner: Operator\n"
+            "audience: founders\n"
+            f"offer: {offer}\n"
+            "promise: Ship a sanitized launch.\n"
+            "started: 2026-05-06\n"
+            "review_on: 2026-05-20\n"
+            "---\n\n"
+            "# Launch push\n"
+        ),
+        encoding="utf-8",
+    )
+    return push
+
+
+def _write_playbook(
+    push: Path,
+    *,
+    status: str = "active",
+    provider_boundary: str = "candidate-adapter",
+    approval_status: str = "approved",
+    linked_outcomes: str = "[]",
+) -> None:
+    playbooks = push / "playbooks"
+    playbooks.mkdir(parents=True, exist_ok=True)
+    (playbooks / "launch.md").write_text(
+        (
+            "---\n"
+            "type: playbook\n"
+            f"status: {status}\n"
+            "push: ../push.md\n"
+            "platform: email\n"
+            "provider: manual\n"
+            f"provider_boundary: {provider_boundary}\n"
+            "trigger:\n"
+            "  kind: operator_launch_request\n"
+            "resource:\n"
+            "  kind: document\n"
+            "  value: documents/launch.md\n"
+            "approval:\n"
+            "  required: true\n"
+            f"  status: {approval_status}\n"
+            "  approved_by: Operator\n"
+            "  approved_at: 2026-05-06\n"
+            "state:\n"
+            "  provider_refs: []\n"
+            "  activated_at:\n"
+            "  retired_at:\n"
+            "validation:\n"
+            "  dry_run: passed\n"
+            "  smoke_evidence: []\n"
+            f"linked_outcomes: {linked_outcomes}\n"
+            "---\n\n"
+            "# Launch playbook\n"
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_status_json_degrades_without_github(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     repo = tmp_path / "acme"
@@ -125,6 +204,7 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
                 "drift",
                 "readiness",
                 "relationship_health",
+                "playbook_health",
                 "ranked_actions",
                 "marker_update",
             ]
@@ -186,6 +266,96 @@ def test_status_json_exposes_push_and_legacy_campaign_facts(tmp_path: Path, monk
         "pushes/2026-05-06-workshop/push.md",
         "campaigns/2026-05-legacy/campaign.md",
     }
+
+
+def test_status_playbook_health_accepts_healthy_active_push_playbook(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    offer = repo / "core" / "offers" / "coaching"
+    offer.mkdir(parents=True)
+    (offer / "offer.md").write_text(
+        "---\nslug: coaching\nstatus: running\n---\n\n# Coaching\n",
+        encoding="utf-8",
+    )
+    push = _write_push(repo, "2026-05-06-launch")
+    _write_playbook(push, status="active", approval_status="approved")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    health = report["playbook_health"]
+    assert health["ok"] is True
+    assert health["summary"]["playbooks"] == 1
+    assert health["summary"]["pushes_without_playbook"] == 0
+    assert health["summary"]["pending_playbook_statuses"] == 0
+    assert health["summary"]["playbook_approval_needed"] == 0
+    assert health["gaps"] == []
+
+    human = runner.invoke(app, ["status", str(repo), "--no-color", "--peek"])
+    assert human.exit_code == 0
+    assert "Playbook health" not in human.stdout
+
+
+def test_status_playbook_health_flags_active_push_without_playbook(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    push = _write_push(repo, "2026-05-06-launch")
+
+    result = runner.invoke(app, ["status", str(repo), "--json", "--peek"])
+
+    assert result.exit_code == 0
+    report = json.loads(result.stdout)
+    health = report["playbook_health"]
+    assert health["ok"] is False
+    assert health["summary"]["pushes_without_playbook"] == 1
+    assert health["sections"]["pushes"]["without_playbook"][0]["path"] == (
+        "pushes/2026-05-06-launch/push.md"
+    )
+    assert any(item["id"] == "playbook_health_gaps" for item in report["drift"]["items"])
+    assert any(action["id"] == "review_playbook_health" for action in report["ranked_actions"])
+
+    human = runner.invoke(app, ["status", str(repo), "--no-color", "--peek"])
+
+    assert human.exit_code == 0
+    assert "Playbook health" in human.stdout
+    assert "active/planned push(es) need a playbook run" in human.stdout
+    assert push.is_dir()
+
+
+def test_status_playbook_health_flags_pending_and_completed_without_outcome(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    planned = _write_push(repo, "2026-05-06-planned", status="planned")
+    _write_playbook(
+        planned,
+        status="draft",
+        provider_boundary="plan-only",
+        approval_status="needed",
+    )
+    completed = _write_push(repo, "2026-05-07-completed", status="completed")
+    _write_playbook(completed, status="completed", approval_status="approved")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    health = report["playbook_health"]
+    assert health["summary"]["pending_playbook_statuses"] == 1
+    assert health["summary"]["playbook_approval_needed"] == 1
+    assert health["summary"]["completed_playbooks_without_outcome"] == 1
+    assert health["summary"]["manual_provider_boundaries"] == 1
+    assert health["sections"]["playbooks"]["pending_status"][0]["path"] == (
+        "pushes/2026-05-06-planned/playbooks/launch.md"
+    )
+    assert health["sections"]["playbooks"]["completed_without_outcome"][0]["path"] == (
+        "pushes/2026-05-07-completed/playbooks/launch.md"
+    )
 
 
 def test_status_relationship_health_flags_active_bet_and_offer_gaps(

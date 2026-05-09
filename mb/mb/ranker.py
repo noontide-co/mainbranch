@@ -20,6 +20,7 @@ WEIGHTS: dict[str, int] = {
     "attention_requests": 70,
     "assigned_tasks": 65,
     "blocked_or_stale_tasks": 60,
+    "playbook_health_gaps": 84,
     "relationship_health_gaps": 82,
     "due_bets": 58,
     "stale_decisions": 50,
@@ -50,6 +51,7 @@ def rank_status_report(
     actions: list[dict[str, Any]] = []
     _add_readiness_actions(actions, report)
     _add_drift_actions(actions, report)
+    _add_playbook_actions(actions, report)
     _add_relationship_actions(actions, report)
     _add_bet_actions(actions, report)
     _add_github_actions(actions, report)
@@ -370,6 +372,38 @@ def _add_relationship_actions(actions: list[dict[str, Any]], report: dict[str, A
                     summary="business graph has actionable relationship gaps",
                     evidence=[str(item.get("id") or "") for item in gaps[:5]],
                     weight=WEIGHTS["relationship_health_gaps"],
+                    safe_to_share=all(bool(item.get("safe_to_share", True)) for item in gaps),
+                )
+            ],
+        )
+    )
+
+
+def _add_playbook_actions(actions: list[dict[str, Any]], report: dict[str, Any]) -> None:
+    playbook_health = _dict(report.get("playbook_health"))
+    gaps = [_dict(item) for item in _list(playbook_health.get("gaps"))]
+    if not gaps:
+        return
+    warnings = [item for item in gaps if item.get("severity") == "warn"]
+    first_gap = gaps[0]
+    score = WEIGHTS["playbook_health_gaps"] + min(len(gaps) * 3, 18)
+    actions.append(
+        _action(
+            action_id="review_playbook_health",
+            title="Review push playbook health",
+            command="mb status --verbose --peek",
+            severity="warn" if warnings else "info",
+            score=score,
+            reason=str(
+                first_gap.get("summary") or f"{len(gaps)} push playbook signal(s) need review."
+            ),
+            signals=[
+                _signal(
+                    "playbook_health.gaps",
+                    severity="warn" if warnings else "info",
+                    summary="push playbook run records have actionable health signals",
+                    evidence=[str(item.get("id") or "") for item in gaps[:5]],
+                    weight=WEIGHTS["playbook_health_gaps"],
                     safe_to_share=all(bool(item.get("safe_to_share", True)) for item in gaps),
                 )
             ],

@@ -21,6 +21,7 @@
     "measurement",
     "ok",
     "onboarding",
+    "playbook_health",
     "push_compatibility",
     "push_count",
     "pushes",
@@ -170,6 +171,14 @@
       "gaps",
       "ok",
       "registry_version",
+      "safe_to_share",
+      "sections",
+      "source",
+      "summary"
+    ],
+    "playbook_health": [
+      "gaps",
+      "ok",
       "safe_to_share",
       "sections",
       "source",

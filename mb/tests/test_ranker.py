@@ -104,3 +104,23 @@ def test_ranker_uses_github_status_sections() -> None:
     assert actions[0]["id"] == "review_github_attention"
     assert actions[0]["signals"][0]["evidence"] == ["#12: Review proposal"]
     assert actions[0]["safe_to_share"] is False
+
+
+def test_ranker_surfaces_playbook_health() -> None:
+    report = _base_report()
+    report["playbook_health"] = {
+        "gaps": [
+            {
+                "id": "pushes_without_playbook",
+                "severity": "warn",
+                "summary": "1 active/planned push(es) need a playbook run.",
+                "safe_to_share": True,
+            }
+        ]
+    }
+
+    actions = ranker.rank_status_report(report)
+
+    assert actions[0]["id"] == "review_playbook_health"
+    assert actions[0]["signals"][0]["id"] == "playbook_health.gaps"
+    assert actions[0]["signals"][0]["evidence"] == ["pushes_without_playbook"]

@@ -44,6 +44,14 @@ ACTIVE_PUSH_STATUSES = {"planned", "active", "paused"}
 COMPLETED_PUSH_STATUSES = {"completed"}
 LIVE_OFFER_STATUSES = {"accepted", "graduated", "running", "scaling"}
 STALE_PUSH_DAYS = 14
+PUSH_STATUSES_EXPECTING_PLAYBOOK = {"planned", "active"}
+PLAYBOOK_STATUSES_NEEDING_ATTENTION = {"draft", "planned"}
+PLAYBOOK_APPROVAL_STATUSES_NEEDING_ATTENTION = {"needed", "rejected", ""}
+PLAYBOOK_PROVIDER_BOUNDARIES_NEEDING_ATTENTION = {
+    "plan-only",
+    "external-manual",
+    "manual-provider",
+}
 
 
 def _utc_now() -> datetime:
@@ -652,6 +660,58 @@ def _offer_summaries(repo: Path) -> list[dict[str, Any]]:
     return [_file_summary(repo, path, _read_frontmatter(path)) for path in unique_paths]
 
 
+def _coerce_string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value] if value.strip() else []
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, str) and item.strip()]
+    return []
+
+
+def _playbook_summary(repo: Path, path: Path) -> dict[str, Any]:
+    meta = _read_frontmatter(path)
+    try:
+        rel = path.relative_to(repo).as_posix()
+    except ValueError:
+        rel = str(path)
+    push_path = ""
+    if path.parent.name == "playbooks" and path.parent.parent.name:
+        push_path = f"pushes/{path.parent.parent.name}/push.md"
+    approval_raw = meta.get("approval")
+    approval: dict[str, Any] = approval_raw if isinstance(approval_raw, dict) else {}
+    state_raw = meta.get("state")
+    state: dict[str, Any] = state_raw if isinstance(state_raw, dict) else {}
+    return {
+        "path": rel,
+        "title": _title_from_markdown(path),
+        "status": str(meta.get("status", "") or ""),
+        "push": str(meta.get("push", "") or ""),
+        "resolved_push": push_path,
+        "platform": str(meta.get("platform", "") or ""),
+        "provider": str(meta.get("provider", "") or ""),
+        "provider_boundary": str(meta.get("provider_boundary", "") or ""),
+        "approval": {
+            "required": bool(approval.get("required")),
+            "status": str(approval.get("status", "") or ""),
+            "approved_by": str(approval.get("approved_by", "") or ""),
+            "approved_at": str(approval.get("approved_at", "") or ""),
+        },
+        "linked_outcomes": _coerce_string_list(meta.get("linked_outcomes")),
+        "provider_refs_recorded": bool(state.get("provider_refs")),
+        "updated_at": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
+    }
+
+
+def _playbook_summaries(repo: Path) -> list[dict[str, Any]]:
+    return [
+        _playbook_summary(repo, path)
+        for path in sorted(repo.glob("pushes/*/playbooks/*.md"))
+        if path.is_file()
+    ]
+
+
 def _gap(
     *,
     gap_id: str,
@@ -668,6 +728,157 @@ def _gap(
         "evidence": [str(item.get("path") or item.get("source") or "") for item in records[:5]],
         "records": records[:5],
         "repair": repair,
+        "safe_to_share": True,
+    }
+
+
+def _playbook_health(
+    repo: Path,
+    *,
+    brain: dict[str, Any],
+) -> dict[str, Any]:
+    push_report = brain.get("pushes") or {}
+    pushes = [
+        item
+        for item in push_report.get("records", [])
+        if isinstance(item, dict) and item.get("source") == "canonical"
+    ]
+    playbooks = _playbook_summaries(repo)
+    playbooks_by_push: dict[str, list[dict[str, Any]]] = {}
+    for playbook in playbooks:
+        push_path = str(playbook.get("resolved_push") or "")
+        if push_path:
+            playbooks_by_push.setdefault(push_path, []).append(playbook)
+
+    pushes_without_playbook = [
+        item
+        for item in pushes
+        if str(item.get("status") or "").lower() in PUSH_STATUSES_EXPECTING_PLAYBOOK
+        and not playbooks_by_push.get(str(item.get("path") or ""))
+    ]
+    pending_status = [
+        item
+        for item in playbooks
+        if str(item.get("status") or "").lower() in PLAYBOOK_STATUSES_NEEDING_ATTENTION
+    ]
+    approval_needed = [
+        item
+        for item in playbooks
+        if bool((item.get("approval") or {}).get("required"))
+        and str((item.get("approval") or {}).get("status") or "").lower()
+        in PLAYBOOK_APPROVAL_STATUSES_NEEDING_ATTENTION
+    ]
+    completed_without_outcome: list[dict[str, Any]] = []
+    for push in pushes:
+        if str(push.get("status") or "").lower() not in COMPLETED_PUSH_STATUSES:
+            continue
+        for playbook in playbooks_by_push.get(str(push.get("path") or ""), []):
+            if not playbook.get("linked_outcomes"):
+                item = dict(playbook)
+                item["push_status"] = str(push.get("status") or "")
+                completed_without_outcome.append(item)
+    provider_boundary_attention = [
+        item
+        for item in playbooks
+        if str(item.get("provider_boundary") or "").lower()
+        in PLAYBOOK_PROVIDER_BOUNDARIES_NEEDING_ATTENTION
+        and str(item.get("status") or "").lower() not in {"canceled", "retired"}
+    ]
+
+    gaps = [
+        _gap(
+            gap_id="pushes_without_playbook",
+            severity="warn",
+            summary=(
+                f"{len(pushes_without_playbook)} active/planned push(es) need a playbook run."
+            ),
+            records=pushes_without_playbook,
+            repair="Add a run record under `pushes/<push>/playbooks/` for each active push.",
+        )
+        if pushes_without_playbook
+        else None,
+        _gap(
+            gap_id="pending_playbook_statuses",
+            severity="warn",
+            summary=f"{len(pending_status)} playbook run(s) are still draft/planned.",
+            records=pending_status,
+            repair="Review each playbook run and move it toward approved, active, or completed.",
+        )
+        if pending_status
+        else None,
+        _gap(
+            gap_id="playbook_approval_needed",
+            severity="warn",
+            summary=f"{len(approval_needed)} playbook run(s) still need approval.",
+            records=approval_needed,
+            repair="Record approval status before publishing, spending, or mutating providers.",
+        )
+        if approval_needed
+        else None,
+        _gap(
+            gap_id="completed_playbooks_without_outcome",
+            severity="warn",
+            summary=(
+                f"{len(completed_without_outcome)} completed-push playbook run(s) "
+                "need an outcome link."
+            ),
+            records=completed_without_outcome,
+            repair="Add `linked_outcomes` to the playbook after the push is reviewed.",
+        )
+        if completed_without_outcome
+        else None,
+        _gap(
+            gap_id="manual_provider_boundaries",
+            severity="info",
+            summary=(
+                f"{len(provider_boundary_attention)} playbook run(s) are still "
+                "plan/manual provider work."
+            ),
+            records=provider_boundary_attention,
+            repair=(
+                "Confirm the operator expects manual provider steps before treating this "
+                "as automation."
+            ),
+        )
+        if provider_boundary_attention
+        else None,
+    ]
+    active_gaps = [gap_item for gap_item in gaps if gap_item is not None]
+    return {
+        "ok": not active_gaps,
+        "source": "mb status playbook scan",
+        "summary": {
+            "gaps": len(active_gaps),
+            "warnings": len([item for item in active_gaps if item["severity"] == "warn"]),
+            "info": len([item for item in active_gaps if item["severity"] == "info"]),
+            "playbooks": len(playbooks),
+            "pushes_without_playbook": len(pushes_without_playbook),
+            "pending_playbook_statuses": len(pending_status),
+            "playbook_approval_needed": len(approval_needed),
+            "completed_playbooks_without_outcome": len(completed_without_outcome),
+            "manual_provider_boundaries": len(provider_boundary_attention),
+        },
+        "gaps": active_gaps,
+        "sections": {
+            "pushes": {
+                "records": len(pushes),
+                "expecting_playbook": len(
+                    [
+                        item
+                        for item in pushes
+                        if str(item.get("status") or "").lower() in PUSH_STATUSES_EXPECTING_PLAYBOOK
+                    ]
+                ),
+                "without_playbook": pushes_without_playbook[:5],
+            },
+            "playbooks": {
+                "records": playbooks[:5],
+                "pending_status": pending_status[:5],
+                "approval_needed": approval_needed[:5],
+                "completed_without_outcome": completed_without_outcome[:5],
+                "provider_boundary_attention": provider_boundary_attention[:5],
+            },
+        },
         "safe_to_share": True,
     }
 
@@ -1348,6 +1559,27 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
                 "safe_to_share": True,
             }
         )
+    playbook_health = report.get("playbook_health") or {}
+    playbook_summary = playbook_health.get("summary") or {}
+    if playbook_summary.get("gaps", 0):
+        top_gap = (playbook_health.get("gaps") or [{}])[0]
+        items.append(
+            {
+                "id": "playbook_health_gaps",
+                "severity": "warn" if playbook_summary.get("warnings", 0) else "info",
+                "summary": (
+                    f"{playbook_summary.get('gaps', 0)} push playbook health signal(s) need review."
+                ),
+                "evidence": [
+                    str(item.get("id") or "") for item in (playbook_health.get("gaps") or [])[:5]
+                ],
+                "repair": str(
+                    top_gap.get("repair")
+                    or "Run `mb status --verbose --peek` to inspect playbook health."
+                ),
+                "safe_to_share": True,
+            }
+        )
     onboarding_summary = (report.get("onboarding") or {}).get("summary") or {}
     if onboarding_summary.get("status") == "in_progress":
         items.append(
@@ -1482,6 +1714,16 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
                 or "Review relationship gaps with `mb status --verbose --peek`."
             )
         )
+    playbook_health = report.get("playbook_health") or {}
+    playbook_gaps = playbook_health.get("gaps") or []
+    if playbook_gaps:
+        first_gap = playbook_gaps[0]
+        next_actions.append(
+            str(
+                first_gap.get("repair")
+                or "Review playbook health with `mb status --verbose --peek`."
+            )
+        )
     onboarding_summary = (report.get("onboarding") or {}).get("summary") or {}
     if onboarding_summary.get("status") == "in_progress":
         next_actions.append(
@@ -1578,6 +1820,7 @@ def run(
         brain=brain,
         today=current_time.date(),
     )
+    report["playbook_health"] = _playbook_health(repo_path, brain=brain)
     report["since_last_check"] = _since_last_check(
         repo_path,
         marker=marker,
@@ -1641,6 +1884,10 @@ def render_human(
     since = report.get("since_last_check") or {}
     drift = report.get("drift") or {"summary": {"total": 0}, "items": []}
     relationship_health = report.get("relationship_health") or {
+        "summary": {"gaps": 0},
+        "gaps": [],
+    }
+    playbook_health = report.get("playbook_health") or {
         "summary": {"gaps": 0},
         "gaps": [],
     }
@@ -1711,6 +1958,18 @@ def render_human(
                 console.print(f"    next: {gap['repair']}")
     else:
         console.print("[bold]Relationship health[/bold] no actionable business-link gaps detected")
+
+    playbook_summary = playbook_health.get("summary") or {}
+    if playbook_summary.get("gaps", 0):
+        console.print(
+            "[bold]Playbook health[/bold] "
+            f"{playbook_summary.get('warnings', 0)} warning(s), "
+            f"{playbook_summary.get('info', 0)} info"
+        )
+        for gap in (playbook_health.get("gaps") or [])[:3]:
+            console.print(f"  - {gap['summary']}")
+            if verbose and gap.get("repair"):
+                console.print(f"    next: {gap['repair']}")
 
     repo_mark = (
         "[green]yes[/green]" if repo["looks_like_mainbranch_repo"] else "[yellow]no[/yellow]"
