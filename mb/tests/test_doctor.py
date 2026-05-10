@@ -17,6 +17,11 @@ from mb.init import run as init_run
 runner = CliRunner()
 
 
+def _write_md(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
 def test_doctor_runs_on_empty_dir(tmp_path: Path) -> None:
     report = run(path=str(tmp_path))
     assert "checks" in report
@@ -568,6 +573,83 @@ def test_doctor_repair_plan_exposes_validation_top_category(tmp_path: Path) -> N
     check = section["checks"][0]
     assert "top category: missing_slug" in check["summary"]
     assert check["report"]["validation_categories"]["by_category"]["missing_slug"]["count"] == 2
+
+
+def test_doctor_repair_plan_reports_related_links_mirror_action(tmp_path: Path) -> None:
+    repo = tmp_path / "related-links-plan"
+    init_run(path=str(repo), name="Acme")
+    _write_md(
+        repo / "research" / "2026-05-10-audience.md",
+        "---\ndate: 2026-05-10\ntopic: audience\nsource: manual\n---\n# Audience\n",
+    )
+    _write_md(
+        repo / "decisions" / "2026-05-10-audience.md",
+        (
+            "---\n"
+            "date: 2026-05-10\n"
+            "status: accepted\n"
+            "linked_research:\n"
+            "  - research/2026-05-10-audience.md\n"
+            "---\n"
+            "# Audience decision\n"
+        ),
+    )
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "related-links")
+    assert section["state"] == "warn"
+    assert section["checks"][0]["name"] == "decisions/2026-05-10-audience.md"
+    actions = {action["id"]: action for action in payload["actions"]}
+    action = actions["related-links-mirror"]
+    assert action["safe_to_apply"] is True
+    assert action["writes"] == ["decisions/2026-05-10-audience.md"]
+    assert "validate-frontmatter" not in actions
+
+
+def test_doctor_repair_apply_adds_related_links_without_deleting_human_links(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "related-links-apply"
+    init_run(path=str(repo), name="Acme")
+    _write_md(
+        repo / "research" / "2026-05-10-audience.md",
+        "---\ndate: 2026-05-10\ntopic: audience\nsource: manual\n---\n# Audience Notes\n",
+    )
+    decision = repo / "decisions" / "2026-05-10-audience.md"
+    _write_md(
+        decision,
+        (
+            "---\n"
+            "date: 2026-05-10\n"
+            "status: accepted\n"
+            "linked_research:\n"
+            "  - research/2026-05-10-audience.md\n"
+            "---\n"
+            "# Audience decision\n"
+            "\n"
+            "## Related links\n"
+            "\n"
+            "- [Existing manual note](../documents/manual.md) - keep this prose.\n"
+            "\n"
+            "## Consequences\n"
+            "\n"
+            "Keep the rest of the file.\n"
+        ),
+    )
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    applied = {action["id"]: action for action in payload["applied_actions"]}
+    assert "related-links-mirror" in applied
+    text = decision.read_text(encoding="utf-8")
+    assert "- [Existing manual note](../documents/manual.md) - keep this prose." in text
+    assert "- [audience](../research/2026-05-10-audience.md)" in text
+    assert "## Consequences\n\nKeep the rest of the file." in text
 
 
 def test_doctor_repair_include_migration_requires_apply_guidance(tmp_path: Path) -> None:

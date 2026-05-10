@@ -228,6 +228,10 @@ def test_cross_refs_pass_when_targets_exist(tmp_path: Path) -> None:
             "  - research/2026-04-29-topic-source.md\n"
             "---\n"
             "# ok\n"
+            "\n"
+            "## Related links\n"
+            "\n"
+            "- [Topic](../research/2026-04-29-topic-source.md)\n"
         ),
     )
     _write(
@@ -249,6 +253,60 @@ def test_source_scoped_offer_relationship_requires_source_path() -> None:
         relationships.relationship_for_field("offer", source_path="pushes/2026-05-07-demo/push.md")
         is not None
     )
+
+
+def test_cross_refs_warn_when_frontmatter_link_missing_body_mirror(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "decisions" / "2026-04-29-missing-mirror.md",
+        (
+            "---\n"
+            "date: 2026-04-29\n"
+            "status: accepted\n"
+            "linked_research:\n"
+            "  - research/2026-04-29-topic-source.md\n"
+            "---\n"
+            "# Missing mirror\n"
+        ),
+    )
+    _write(
+        tmp_path / "research" / "2026-04-29-topic-source.md",
+        "---\ndate: 2026-04-29\ntopic: topic\nsource: source\n---\n# Topic\n",
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 1
+    finding = report["cross_refs"]["warnings"][0]
+    assert finding["code"] == "missing-related-link-mirror"
+    assert finding["field"] == "linked_research"
+    assert finding["target"] == "research/2026-04-29-topic-source.md"
+
+
+def test_body_only_markdown_links_do_not_replace_typed_frontmatter(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "research" / "2026-04-29-topic-source.md",
+        "---\ndate: 2026-04-29\ntopic: topic\nsource: source\n---\n# Topic\n",
+    )
+    _write(
+        tmp_path / "decisions" / "2026-04-29-body-only.md",
+        (
+            "---\n"
+            "date: 2026-04-29\n"
+            "status: accepted\n"
+            "---\n"
+            "# Body only\n"
+            "\n"
+            "## Related links\n"
+            "\n"
+            "- [Topic](../research/2026-04-29-topic-source.md)\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True, strict=True)
+
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 0
 
 
 def test_cross_refs_warn_on_missing_targets_without_strict(tmp_path: Path) -> None:
@@ -533,6 +591,10 @@ def test_cross_refs_flag_status_transition_regressions(tmp_path: Path) -> None:
             "supersedes: decisions/2026-04-28-old.md\n"
             "---\n"
             "# new\n"
+            "\n"
+            "## Related links\n"
+            "\n"
+            "- [Old](2026-04-28-old.md)\n"
         ),
     )
 
@@ -586,6 +648,10 @@ def test_cross_refs_warn_when_bet_link_lacks_reverse_link(tmp_path: Path) -> Non
             "  - channel:site\n"
             "---\n"
             "# Demo bet\n"
+            "\n"
+            "## Related links\n"
+            "\n"
+            "- [Demo](../decisions/2026-05-04-demo.md)\n"
         ),
     )
     _write(
@@ -626,6 +692,10 @@ def test_cross_refs_pass_when_bet_links_are_bidirectional(tmp_path: Path) -> Non
             "tags: []\n"
             "---\n"
             "# Demo bet\n"
+            "\n"
+            "## Related links\n"
+            "\n"
+            "- [Demo](../decisions/2026-05-04-demo.md)\n"
         ),
     )
     _write(
@@ -638,6 +708,10 @@ def test_cross_refs_pass_when_bet_links_are_bidirectional(tmp_path: Path) -> Non
             "  - bets/2026-05-04-demo.md\n"
             "---\n"
             "# Demo\n"
+            "\n"
+            "## Related links\n"
+            "\n"
+            "- [Demo bet](../bets/2026-05-04-demo.md)\n"
         ),
     )
 
@@ -996,7 +1070,8 @@ def test_validate_rejects_unknown_push_kind_even_when_vocabulary_renames_it(
 def test_validate_accepts_push_playbook_schema(tmp_path: Path) -> None:
     _write(
         tmp_path / "pushes" / "2026-05-06-target" / "push.md",
-        _push("active", slug="target"),
+        _push("active", slug="target")
+        + "\n## Related links\n\n- [Workshop](../../core/offers/workshop/offer.md)\n",
     )
     _write(
         tmp_path / "pushes" / "2026-05-06-target" / "playbooks" / "resource.md",
@@ -1036,7 +1111,8 @@ def test_validate_accepts_sanitized_push_playbook_fixture() -> None:
 def test_validate_requires_push_playbook_shape(tmp_path: Path) -> None:
     _write(
         tmp_path / "pushes" / "2026-05-06-target" / "push.md",
-        _push("active", slug="target"),
+        _push("active", slug="target")
+        + "\n## Related links\n\n- [Workshop](../../core/offers/workshop/offer.md)\n",
     )
     _write(
         tmp_path / "pushes" / "2026-05-06-target" / "playbooks" / "incomplete.md",
@@ -1070,7 +1146,8 @@ def test_validate_rejects_playbook_missing_linked_push(tmp_path: Path) -> None:
 def test_validate_rejects_playbook_wrong_push_link(tmp_path: Path) -> None:
     _write(
         tmp_path / "pushes" / "2026-05-06-target" / "push.md",
-        _push("active", slug="target"),
+        _push("active", slug="target")
+        + "\n## Related links\n\n- [Workshop](../../core/offers/workshop/offer.md)\n",
     )
     _write(
         tmp_path / "pushes" / "2026-05-06-target" / "playbooks" / "resource.md",
@@ -1087,7 +1164,8 @@ def test_validate_rejects_playbook_wrong_push_link(tmp_path: Path) -> None:
 def test_validate_rejects_unknown_playbook_status(tmp_path: Path) -> None:
     _write(
         tmp_path / "pushes" / "2026-05-06-target" / "push.md",
-        _push("active", slug="target"),
+        _push("active", slug="target")
+        + "\n## Related links\n\n- [Workshop](../../core/offers/workshop/offer.md)\n",
     )
     _write(
         tmp_path / "pushes" / "2026-05-06-target" / "playbooks" / "resource.md",
@@ -1168,7 +1246,8 @@ def test_cross_refs_resolve_linked_pushes_field(tmp_path: Path) -> None:
     )
     _write(
         tmp_path / "pushes" / "2026-05-06-target" / "push.md",
-        _push("active", slug="target"),
+        _push("active", slug="target")
+        + "\n## Related links\n\n- [Workshop](../../core/offers/workshop/offer.md)\n",
     )
     _write(
         tmp_path / "decisions" / "2026-05-06-with-link.md",
@@ -1180,6 +1259,10 @@ def test_cross_refs_resolve_linked_pushes_field(tmp_path: Path) -> None:
             "  - pushes/2026-05-06-target/push.md\n"
             "---\n"
             "# decision\n"
+            "\n"
+            "## Related links\n"
+            "\n"
+            "- [Target](../pushes/2026-05-06-target/push.md)\n"
         ),
     )
 
@@ -1196,7 +1279,8 @@ def test_cross_refs_validate_push_offer_relationship(tmp_path: Path) -> None:
     )
     _write(
         tmp_path / "pushes" / "2026-05-06-target" / "push.md",
-        _push("active", slug="target"),
+        _push("active", slug="target")
+        + "\n## Related links\n\n- [Workshop](../../core/offers/workshop/offer.md)\n",
     )
 
     report = run(path=str(tmp_path), cross_refs=True, strict=True)

@@ -15,7 +15,7 @@ from typing import Any
 
 import yaml
 
-from mb import github_activity, migration_lint, relationships
+from mb import github_activity, migration_lint, related_links, relationships
 from mb import pushes as pushes_mod
 
 DECISION_STATUS = {"proposed", "accepted", "rejected", "superseded", "running"}
@@ -140,6 +140,10 @@ VALIDATION_CATEGORY_REPAIR: dict[str, str] = {
     "yaml_error": "Fix malformed YAML before repairing schema fields.",
     "schema_shape_error": "Fix nested mappings and field shapes before rerunning validation.",
     "missing_cross_ref_target": "Repair, remove, or intentionally archive broken local links.",
+    "missing_related_link_mirror": (
+        "Run `mb doctor repair --plan`, review the Related links mirror action, "
+        "then `mb doctor repair --apply` after approval."
+    ),
     "missing_reverse_link": "Add the suggested reverse relationship field after operator approval.",
     "migration_drift": "Run `mb doctor repair --plan --json` and review stale layout guidance.",
     "other_error": "Review the validation message and repair the affected record.",
@@ -991,6 +995,8 @@ def _validation_category(message: str, *, severity: str, schema: str) -> str:
         return "schema_shape_error"
     if " target " in message and ("does not exist" in message or "does not resolve" in message):
         return "missing_cross_ref_target"
+    if " is not mirrored in ## Related links" in message:
+        return "missing_related_link_mirror"
     if " should include linked_" in message:
         return "missing_reverse_link"
     if schema == "migration-drift":
@@ -1189,6 +1195,21 @@ def _check_cross_refs(
         if err is not None or fm is None:
             continue
         source_rel = source.relative_to(repo).as_posix()
+        body = _read_markdown_body(source) or ""
+        for mirror_ref in related_links.missing_mirror_refs(repo, source, fm, body):
+            findings.append(
+                _finding(
+                    code="missing-related-link-mirror",
+                    source=source,
+                    repo=repo,
+                    field=mirror_ref.field,
+                    target=mirror_ref.key,
+                    message=(
+                        f"{mirror_ref.field} target {mirror_ref.key!r} "
+                        "is not mirrored in ## Related links"
+                    ),
+                )
+            )
         for field in relationships.relationship_fields_for_source(source_rel):
             if field not in fm:
                 continue
@@ -1260,10 +1281,10 @@ def _check_cross_refs(
                     )
 
     for source in markdown_files:
-        body = _read_markdown_body(source)
-        if body is None:
+        markdown_body = _read_markdown_body(source)
+        if markdown_body is None:
             continue
-        body_without_code = relationships.strip_markdown_code(body)
+        body_without_code = relationships.strip_markdown_code(markdown_body)
         for match in relationships.WIKILINK_RE.finditer(body_without_code):
             raw_target = match.group(1)
             clean_target = relationships.wikilink_target(raw_target)
