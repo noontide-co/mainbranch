@@ -104,11 +104,13 @@ Typed relationships live in frontmatter as repo-relative `.md` paths
 are the canonical edges `mb graph` and `mb validate --cross-refs` read.
 
 When a file declares typed edges in frontmatter, mirror them in a body
-`## Related` section using **Markdown relative links** so the same edges
-show up in Obsidian's Graph view and Backlinks pane for operators who
-open the repo as a vault. Keep mirror links note-level; do not link to
-section anchors, since GitHub and Obsidian disagree on heading-fragment
-syntax. See the engine doc
+`## Related links` section using **Markdown relative links** so the same
+edges show up in Obsidian's Graph view and Backlinks pane for operators
+who open the repo as a vault. The body mirror is a viewer aid, not a
+second source of truth — if frontmatter and the mirror disagree,
+frontmatter wins. Keep mirror links note-level; do not link to section
+anchors, since GitHub and Obsidian disagree on heading-fragment syntax.
+See the engine doc
 [`docs/markdown-link-conventions.md`](https://github.com/noontide-co/mainbranch/blob/main/docs/markdown-link-conventions.md)
 for the full rules.
 

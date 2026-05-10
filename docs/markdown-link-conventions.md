@@ -102,12 +102,18 @@ body section so Obsidian Graph and Backlinks pick them up. Use Markdown
 relative links at the note level:
 
 ```markdown
-## Related
+## Related links
 
 - [Pricing model decision](../decisions/2026-05-04-pricing-model.md)
 - [Audience notes](../research/2026-05-04-audience-notes.md)
 - [Spring launch push](../pushes/2026-05-04-spring-launch/push.md)
 ```
+
+Body mirrors are a viewer aid, not a second source of truth. Frontmatter
+typed edges remain canonical for `mb graph`, `mb validate --cross-refs`,
+and `mb status relationship_health`. If frontmatter and the body mirror
+disagree, frontmatter wins. Future doctor / validation tooling may warn
+when the mirror is missing canonical edges and offer to repair it.
 
 The body mirror creates one stable note-to-note edge per relationship.
 Obsidian's Backlinks pane covers Markdown links and wikilinks equally;
@@ -138,7 +144,7 @@ The body mirror still uses a note-level link, with prose naming the
 target section:
 
 ```markdown
-## Related
+## Related links
 - [Markdown link conventions](markdown-link-conventions.md) — see the
   "Body mirrors" section.
 ```

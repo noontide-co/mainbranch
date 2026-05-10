@@ -63,11 +63,14 @@ The relevant Obsidian behavior that makes this work:
   uses the heading text after `#`. Heading-fragment links are brittle
   cross-tool.
 
-These constraints decide the convention: typed edges stay canonical in
-frontmatter for `mb`, and a body-level "Related" section creates the
-note-level edges that Obsidian Graph and Backlinks render. See
-[Markdown link conventions](../docs/markdown-link-conventions.md) for
-the link-form rules.
+These constraints decide the convention. Typed edges in frontmatter
+remain canonical. A body `## Related links` section is a viewer mirror
+only — it exists so Obsidian, GitHub, and humans can browse
+relationships without `mb` changing its graph model. If frontmatter and
+body mirrors disagree, frontmatter wins; future validation or doctor
+tooling may warn when the mirror is out of date and offer to repair it.
+See [Markdown link conventions](../docs/markdown-link-conventions.md)
+for the link-form rules.
 
 ## What this is not
 
@@ -108,6 +111,10 @@ follow-up at most, never a requirement.
   Obsidian CLI) to propose candidate edges to the operator. That work
   sits adjacent to the existing graph-link authoring assistance ticket
   and stays optional.
+- Body mirrors are derived browsing aids, not authoritative graph data.
+  Future validation or doctor tooling may warn when canonical frontmatter
+  links are missing from a file's body mirror, but graph correctness
+  remains based on structured frontmatter.
 
 ## Validation
 
@@ -115,3 +122,7 @@ follow-up at most, never a requirement.
 - No CLI behavior changes; no new fixtures required.
 - `mb validate --cross-refs --strict` against the existing
   `mb/tests/fixtures/` continues to pass.
+- Manual smoke test: open a business repo root as an Obsidian vault and
+  confirm body-level `## Related links` entries appear as navigable
+  links and produce edges in the Graph view and entries in the
+  Backlinks pane. Not automated.
