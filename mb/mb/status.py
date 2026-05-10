@@ -21,6 +21,7 @@ from mb import pushes as pushes_mod
 from mb import ranker as ranker_mod
 from mb import site as site_mod
 from mb import topology as topology_mod
+from mb import validate as validate_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status
 
@@ -541,6 +542,16 @@ def _relationship_adjacency(edges: list[dict[str, Any]]) -> dict[str, dict[str, 
     return adjacency
 
 
+def _linked_push_paths_for_bet(
+    adjacency: dict[str, dict[str, set[str]]],
+    bet_path: str,
+    push_paths: set[str],
+) -> set[str]:
+    direct_pushes = _linked_paths(adjacency, bet_path, "push")
+    reverse_bet_links = _linked_paths(adjacency, bet_path, "bet") & push_paths
+    return direct_pushes | reverse_bet_links
+
+
 def _relationship_slug(value: str) -> str:
     lowered = value.strip().lower()
     slug = re.sub(r"[^a-z0-9]+", "-", lowered).strip("-")
@@ -916,6 +927,7 @@ def _relationship_health(
     push_report = brain.get("pushes") or {}
     pushes = [item for item in push_report.get("records", []) if isinstance(item, dict)]
     offers = _offer_summaries(repo)
+    push_paths = {str(item.get("path") or "") for item in pushes}
     current_push_paths = {
         str(item.get("path") or "")
         for item in pushes
@@ -923,7 +935,9 @@ def _relationship_health(
     }
 
     active_bets_without_push = [
-        item for item in active_bets if not _linked_paths(adjacency, str(item["path"]), "push")
+        item
+        for item in active_bets
+        if not _linked_push_paths_for_bet(adjacency, str(item["path"]), push_paths)
     ]
     closed_bets_without_outcome = [
         item for item in closed_bets if not _linked_paths(adjacency, str(item["path"]), "outcome")
@@ -992,7 +1006,10 @@ def _relationship_health(
             severity="warn",
             summary=f"{len(active_bets_without_push)} active bet(s) need a linked push.",
             records=active_bets_without_push,
-            repair="Link each active bet to the push or playbook that supports it.",
+            repair=(
+                "Link each active bet to the push that supports it, or add the reverse "
+                "`linked_bets` field on that push."
+            ),
         )
         if active_bets_without_push
         else None,
@@ -1046,7 +1063,11 @@ def _relationship_health(
                 "or linked playbook."
             ),
             records=offers_without_current_push_or_playbook,
-            repair="Connect each live offer to a current push or reusable playbook.",
+            repair=(
+                "Connect each live offer to a current push or reusable playbook. Either set "
+                "the push `offer:` to the repo-relative offer file or add `linked_pushes:` "
+                "on the offer."
+            ),
         )
         if offers_without_current_push_or_playbook
         else None,
@@ -1512,8 +1533,88 @@ def _write_last_seen_marker(repo: Path, report: dict[str, Any]) -> dict[str, Any
     }
 
 
+def _safe_exception_message(exc: Exception) -> str:
+    message = str(exc) or exc.__class__.__name__
+    message = re.sub(
+        r"(?<![A-Za-z0-9:])(?:"
+        r"/(?:Users|home|private|tmp|var|Volumes|opt|usr/local)/[^\s\"'`<>),;]+"
+        r"|[A-Za-z]:\\[^\s\"'`<>),;]+"
+        r")",
+        "<local-path>",
+        message,
+    )
+    return message[:240] + ("..." if len(message) > 240 else "")
+
+
+def _validation_status(repo: Path, *, cross_refs: bool = True) -> dict[str, Any]:
+    try:
+        report = validate_mod.run(str(repo), cross_refs=cross_refs)
+    except Exception as exc:  # pragma: no cover - defensive status boundary
+        message = _safe_exception_message(exc)
+        return {
+            "ok": False,
+            "state": "error",
+            "summary": {"errors": 1, "warnings": 0, "top_category": "validation_unavailable"},
+            "validation_categories": {
+                "schema_version": "1.0",
+                "total_categories": 1,
+                "top_category": "validation_unavailable",
+                "top_repair": "Run `mb validate --cross-refs --json` for the exact failure.",
+                "by_category": {
+                    "validation_unavailable": {
+                        "count": 1,
+                        "errors": 1,
+                        "warnings": 0,
+                        "examples": [{"path": "", "message": message}],
+                        "repair": "Run `mb validate --cross-refs --json` for the exact failure.",
+                    }
+                },
+                "safe_to_share": True,
+            },
+            "safe_to_share": True,
+        }
+    summary = report.get("summary") or {}
+    errors = int(summary.get("errors") or 0)
+    warnings = int(summary.get("warnings") or 0)
+    return {
+        "ok": bool(report.get("ok")),
+        "state": "error" if errors else ("warn" if warnings else "ok"),
+        "summary": summary,
+        "validation_categories": report.get("validation_categories") or {},
+        "legacy_repair": report.get("legacy_repair"),
+        "cross_refs": {
+            "enabled": bool((report.get("cross_refs") or {}).get("enabled")),
+            "warnings": len((report.get("cross_refs") or {}).get("warnings") or []),
+            "orphan_offers": len((report.get("cross_refs") or {}).get("orphan_offers") or []),
+        },
+        "migration_drift": (report.get("migration_drift") or {}).get("summary", {}),
+        "safe_to_share": True,
+    }
+
+
 def _drift(report: dict[str, Any]) -> dict[str, Any]:
     items: list[dict[str, Any]] = []
+    validation = report.get("validation") or {}
+    validation_state = str(validation.get("state") or "ok")
+    if validation_state != "ok":
+        categories = validation.get("validation_categories") or {}
+        top_category = str(categories.get("top_category") or "")
+        top_repair = str(categories.get("top_repair") or "Run `mb validate --cross-refs --json`.")
+        summary = validation.get("summary") or {}
+        items.append(
+            {
+                "id": "validation_debt",
+                "severity": "error" if validation_state == "error" else "warn",
+                "summary": (
+                    f"{summary.get('errors', 0)} validation error(s), "
+                    f"{summary.get('warnings', 0)} warning(s)"
+                    + (f"; top category: {top_category}" if top_category else "")
+                ),
+                "evidence": list((categories.get("by_category") or {}).keys())[:5],
+                "repair": top_repair,
+                "safe_to_share": True,
+            }
+        )
     stale_decisions = report["brain"].get("stale_decisions") or []
     if stale_decisions:
         items.append(
@@ -1793,6 +1894,7 @@ def run(
     path: str = ".",
     *,
     update_marker: bool = True,
+    validation_cross_refs: bool = True,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic daily briefing report."""
@@ -1850,6 +1952,7 @@ def run(
         brain=brain,
         generated_at=generated_at,
     )
+    report["validation"] = _validation_status(repo_path, cross_refs=validation_cross_refs)
     report["drift"] = _drift(report)
     report["topology"] = {
         "schema": topology_payload["schema"],

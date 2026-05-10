@@ -552,6 +552,34 @@ def test_doctor_repair_plan_reports_migration_shape_drift(tmp_path: Path) -> Non
     assert "push-record-wrong-shape" in codes
 
 
+def test_doctor_repair_plan_exposes_validation_top_category(tmp_path: Path) -> None:
+    repo = tmp_path / "validation-categories"
+    init_run(path=str(repo), name="Acme")
+    for slug in ("one", "two"):
+        offer = repo / "core" / "offers" / slug / "offer.md"
+        offer.parent.mkdir(parents=True)
+        offer.write_text("---\nstatus: running\n---\n# Offer\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "validation")
+    check = section["checks"][0]
+    assert "top category: missing_slug" in check["summary"]
+    assert check["report"]["validation_categories"]["by_category"]["missing_slug"]["count"] == 2
+
+
+def test_doctor_repair_include_migration_requires_apply_guidance(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["doctor", "repair", "--repo", str(tmp_path), "--include-migration", "--plan"],
+    )
+
+    assert result.exit_code == 2
+    assert "--apply --include-migration" in result.stderr
+
+
 def test_doctor_repair_plan_reuses_migration_drift_report(
     tmp_path: Path,
     monkeypatch,

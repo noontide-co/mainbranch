@@ -205,6 +205,36 @@ def test_onboard_status_reports_partial_small_team_progress(tmp_path: Path, monk
     assert team_step["required"] is True
 
 
+def test_onboard_status_accepts_canonical_core_proof_directory(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "proof"
+    onboard_mod.run(
+        path=str(repo),
+        name="Proof Co",
+        mode="new",
+        level="power",
+        team_size="solo",
+        business_type="coaching",
+        success_stage="working",
+        desired_outcome="usable core files",
+    )
+    (repo / "core" / "offer.md").write_text("# Offer\n", encoding="utf-8")
+    (repo / "core" / "audience.md").write_text("# Audience\n", encoding="utf-8")
+    (repo / "core" / "voice.md").write_text("# Voice\n", encoding="utf-8")
+    (repo / "core" / "soul.md").write_text("# Soul\n", encoding="utf-8")
+    if (repo / "core" / "proof").is_file():
+        (repo / "core" / "proof").unlink()
+    proof = repo / "core" / "proof" / "testimonials.md"
+    proof.parent.mkdir(parents=True, exist_ok=True)
+    proof.write_text("# Testimonials\n", encoding="utf-8")
+
+    payload = onboard_mod.onboarding_status(repo)
+
+    core_step = next(step for step in payload["checklist"] if step["id"] == "core_reference")
+    assert core_step["status"] == "complete"
+    assert "proof" not in payload["summary"]["missing_inputs"]
+
+
 def test_onboard_status_unknown_team_size_is_not_larger_team(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(onboard_mod, "_which", _tool_path)
     repo = tmp_path / "unknown-team"

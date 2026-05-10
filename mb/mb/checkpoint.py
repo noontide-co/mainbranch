@@ -311,9 +311,9 @@ def install_commit_hook(repo: str | Path = ".") -> dict[str, Any]:
         "ok": True,
         "changed": changed,
         "summary": (
-            "installed Main Branch checkpoint commit-message hook"
+            "installed Main Branch checkpoint commit-message hook (newly installed or repaired)"
             if changed
-            else "Main Branch checkpoint commit-message hook already installed"
+            else "verified Main Branch checkpoint commit-message hook (already installed)"
         ),
         "errors": [],
     }

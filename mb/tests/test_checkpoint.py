@@ -239,7 +239,13 @@ def test_checkpoint_hook_status_install_and_uninstall(tmp_path: Path) -> None:
     installed = checkpoint_mod.install_commit_hook(repo)
     assert installed["ok"] is True
     assert installed["state"] == "installed"
+    assert "newly installed" in installed["summary"]
     assert Path(installed["hook"]).exists()
+
+    verified = checkpoint_mod.install_commit_hook(repo)
+    assert verified["ok"] is True
+    assert verified["changed"] is False
+    assert "already installed" in verified["summary"]
 
     uninstalled = checkpoint_mod.uninstall_commit_hook(repo)
     assert uninstalled["ok"] is True

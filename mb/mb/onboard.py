@@ -367,6 +367,7 @@ def _core_inputs(repo: Path) -> dict[str, bool]:
         "soul": _has_any_file([core / "soul.md", reference_core / "soul.md"]),
         "proof": _has_any_file(
             [
+                core / "proof",
                 core / "proof.md",
                 core / "testimonials.md",
                 repo / "reference" / "proof",

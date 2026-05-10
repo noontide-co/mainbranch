@@ -15,6 +15,7 @@ from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import graph as graph_mod
 from mb import status as status_mod
+from mb import validate as validate_mod
 from mb.cli import app
 from mb.init import run as init_run
 
@@ -218,6 +219,7 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
                 "readiness",
                 "relationship_health",
                 "playbook_health",
+                "validation",
                 "ranked_actions",
                 "marker_update",
             ]
@@ -471,6 +473,144 @@ def test_status_relationship_health_flags_active_bet_and_offer_gaps(
     assert human.exit_code == 0
     assert "Relationship health" in human.stdout
     assert "active bet(s) need a linked push" in human.stdout
+
+
+def test_status_relationship_health_accepts_push_side_bet_links(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "bets" / "2026-05-01-launch.md").write_text(
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-01\n"
+            "deadline: 2026-05-31\n"
+            "appetite: 2 weeks\n"
+            "hypothesis: A launch push will create calls.\n"
+            "metric: calls\n"
+            "target: 5 calls\n"
+            "result: ''\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_pushes: []\n"
+            "linked_campaigns: []\n"
+            "linked_outcomes: []\n"
+            "public: true\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n\n"
+            "# Launch bet\n"
+        ),
+        encoding="utf-8",
+    )
+    push = _write_push(repo, "2026-05-06-launch")
+    push_record = push / "push.md"
+    push_record.write_text(
+        push_record.read_text(encoding="utf-8").replace(
+            "---\n\n# Launch push\n",
+            "linked_bets:\n  - bets/2026-05-01-launch.md\n---\n\n# Launch push\n",
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    assert report["relationship_health"]["summary"]["active_bets_without_push"] == 0
+
+
+def test_status_surfaces_validation_category_counts(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    for slug in ("one", "two"):
+        offer = repo / "core" / "offers" / slug / "offer.md"
+        offer.parent.mkdir(parents=True)
+        offer.write_text("---\nstatus: running\n---\n# Offer\n", encoding="utf-8")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    assert report["validation"]["validation_categories"]["top_category"] == "missing_slug"
+    assert (
+        report["validation"]["validation_categories"]["by_category"]["missing_slug"]["count"] == 2
+    )
+    validation_drift = next(
+        item for item in report["drift"]["items"] if item["id"] == "validation_debt"
+    )
+    assert "top category: missing_slug" in validation_drift["summary"]
+    assert any(action["id"] == "repair_validation_debt" for action in report["ranked_actions"])
+
+
+def test_status_peek_skips_validation_cross_refs(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    calls: list[bool] = []
+
+    def fake_validate(
+        path: str,
+        verbose: bool = False,
+        cross_refs: bool = False,
+        strict: bool = False,
+        migration_drift_report: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        calls.append(cross_refs)
+        return {
+            "ok": True,
+            "summary": {"errors": 0, "warnings": 0},
+            "cross_refs": {
+                "enabled": cross_refs,
+                "warnings": [],
+                "orphan_offers": [],
+            },
+            "files": [],
+            "legacy_repair": None,
+            "migration_drift": {"summary": {}},
+            "validation_categories": {
+                "schema_version": "1.0",
+                "total_categories": 0,
+                "top_category": "",
+                "top_repair": "",
+                "by_category": {},
+                "safe_to_share": True,
+            },
+        }
+
+    monkeypatch.setattr(validate_mod, "run", fake_validate)
+
+    result = runner.invoke(app, ["status", str(repo), "--json", "--peek"])
+
+    assert result.exit_code == 0, result.stdout
+    assert calls == [False]
+
+
+def test_status_validation_exception_scrubs_local_paths(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    private_path = tmp_path / "private" / "proof.md"
+
+    def fail_validate(
+        path: str,
+        verbose: bool = False,
+        cross_refs: bool = False,
+        strict: bool = False,
+        migration_drift_report: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        raise RuntimeError(f"failed while reading {private_path}")
+
+    monkeypatch.setattr(validate_mod, "run", fail_validate)
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    validation = report["validation"]
+    message = validation["validation_categories"]["by_category"]["validation_unavailable"][
+        "examples"
+    ][0]["message"]
+    assert str(private_path) not in message
+    assert "<local-path>" in message
+    assert validation["safe_to_share"] is True
 
 
 def test_status_relationship_health_flags_completed_and_stale_pushes(

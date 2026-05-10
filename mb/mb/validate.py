@@ -131,6 +131,23 @@ SECRET_VALUE_RE = re.compile(
 
 LINK_FIELDS = relationships.RELATIONSHIP_FIELDS
 
+VALIDATION_CATEGORY_REPAIR: dict[str, str] = {
+    "missing_slug": "Add stable kebab-case `slug:` values that name the thing sold or worked on.",
+    "missing_required_key": "Add the missing required frontmatter keys for this record type.",
+    "status_enum_mismatch": "Change `status:` to one of the allowed lifecycle values.",
+    "enum_mismatch": "Change the value to one of the allowed schema values.",
+    "no_frontmatter": "Add YAML frontmatter bounded by `---` at the top of the file.",
+    "yaml_error": "Fix malformed YAML before repairing schema fields.",
+    "schema_shape_error": "Fix nested mappings and field shapes before rerunning validation.",
+    "missing_cross_ref_target": "Repair, remove, or intentionally archive broken local links.",
+    "missing_reverse_link": "Add the suggested reverse relationship field after operator approval.",
+    "migration_drift": "Run `mb doctor repair --plan --json` and review stale layout guidance.",
+    "other_error": "Review the validation message and repair the affected record.",
+    "other_warning": (
+        "Review the warning and decide whether the relationship or file shape is intentional."
+    ),
+}
+
 DECISION_STATUS_ORDER = {
     "proposed": 0,
     "running": 1,
@@ -740,9 +757,17 @@ def _check_repo_topology_frontmatter(
             and isinstance(repo_name, str)
             and remote_full_name != f"{github_owner}/{repo_name}"
         ):
-            errors.append(
-                f"{prefix}.remote must match github_owner/repo_name ({github_owner}/{repo_name})"
-            )
+            if lifecycle == "proposed":
+                warnings.append(
+                    f"{prefix}.remote points to {remote_full_name!r} while "
+                    f"github_owner/repo_name is {github_owner}/{repo_name}; allowed for "
+                    "lifecycle 'proposed' rename planning, but accepted/live entries must match"
+                )
+            else:
+                errors.append(
+                    f"{prefix}.remote must match github_owner/repo_name "
+                    f"({github_owner}/{repo_name})"
+                )
 
         domain = repo_entry.get("domain")
         if domain is not None and (
@@ -934,6 +959,89 @@ def _add_migration_lint_warnings(
             },
         )
         files_by_path[rel].setdefault("warnings", []).append(message)
+
+
+def _validation_category(message: str, *, severity: str, schema: str) -> str:
+    lowered = message.lower()
+    if message == "missing key: slug":
+        return "missing_slug"
+    if message.startswith("missing key:"):
+        return "missing_required_key"
+    if lowered in {"no frontmatter", "unterminated frontmatter", "frontmatter not a mapping"}:
+        return "no_frontmatter"
+    if lowered.startswith("yaml error:"):
+        return "yaml_error"
+    enum_match = re.search(r"(?:^|[.\s\]])([a-z_]+)=", message)
+    if enum_match and " not in " in message:
+        if enum_match.group(1) == "status":
+            return "status_enum_mismatch"
+        return "enum_mismatch"
+    if (
+        " must be a mapping" in message
+        or " must be a non-empty string" in message
+        or " must be true or false" in message
+        or " must be recorded" in message
+        or " must point to " in message
+        or " must live under " in message
+        or " must match " in message
+        or " must contain " in message
+        or " must not contain " in message
+        or "frontmatter must" in message
+    ):
+        return "schema_shape_error"
+    if " target " in message and ("does not exist" in message or "does not resolve" in message):
+        return "missing_cross_ref_target"
+    if " should include linked_" in message:
+        return "missing_reverse_link"
+    if schema == "migration-drift":
+        return "migration_drift"
+    return "other_error" if severity == "error" else "other_warning"
+
+
+def _validation_categories(files: list[dict[str, Any]]) -> dict[str, Any]:
+    categories: dict[str, dict[str, Any]] = {}
+    for file_result in files:
+        path = str(file_result.get("path") or "")
+        schema = str(file_result.get("schema") or "")
+        for severity, messages in (
+            ("error", file_result.get("errors") or []),
+            ("warning", file_result.get("warnings") or []),
+        ):
+            for raw_message in messages:
+                message = str(raw_message)
+                category = _validation_category(message, severity=severity, schema=schema)
+                entry = categories.setdefault(
+                    category,
+                    {
+                        "count": 0,
+                        "errors": 0,
+                        "warnings": 0,
+                        "examples": [],
+                        "repair": VALIDATION_CATEGORY_REPAIR.get(
+                            category, VALIDATION_CATEGORY_REPAIR["other_error"]
+                        ),
+                    },
+                )
+                entry["count"] += 1
+                entry["errors" if severity == "error" else "warnings"] += 1
+                examples = entry["examples"]
+                if len(examples) < 5:
+                    examples.append({"path": path, "message": message})
+    ordered = dict(
+        sorted(
+            categories.items(),
+            key=lambda item: (-int(item[1]["count"]), item[0]),
+        )
+    )
+    top_category = next(iter(ordered), "")
+    return {
+        "schema_version": "1.0",
+        "total_categories": len(ordered),
+        "top_category": top_category,
+        "top_repair": ordered.get(top_category, {}).get("repair", ""),
+        "by_category": ordered,
+        "safe_to_share": True,
+    }
 
 
 def _check_status_transition(
@@ -1321,6 +1429,7 @@ def run(
     files = list(files_by_path.values())
     warning_count = sum(len(f.get("warnings", [])) for f in files)
     error_count = sum(len(f.get("errors", [])) for f in files)
+    categories = _validation_categories(files)
     ok = error_count == 0 and (warning_count == 0 or not strict)
     if strict:
         for file_result in files:
@@ -1334,6 +1443,8 @@ def run(
         "cross_refs": cross_ref_report,
         "legacy_repair": _legacy_frontmatter_repair(repo, error_count),
         "migration_drift": migration_drift_report,
+        "validation_categories": categories,
+        "by_category": categories["by_category"],
         "summary": {"errors": error_count, "warnings": warning_count},
     }
 
@@ -1365,6 +1476,18 @@ def render_human(report: dict[str, Any], verbose: bool = False) -> None:
                 for warning in f.get("warnings", []):
                     console.print(f"        - {warning}")
     legacy_repair = report.get("legacy_repair")
+    categories = report.get("validation_categories") or {}
+    by_category = categories.get("by_category") or {}
+    if by_category:
+        console.print("\n[bold yellow]Validation categories[/bold yellow]")
+        for name, item in list(by_category.items())[:6]:
+            console.print(
+                f"  - {name}: {item.get('count', 0)} "
+                f"({item.get('errors', 0)} error(s), {item.get('warnings', 0)} warning(s))"
+            )
+        top_repair = categories.get("top_repair")
+        if top_repair:
+            console.print(f"  next: {top_repair}")
     if legacy_repair:
         console.print("\n[bold yellow]Legacy frontmatter repair[/bold yellow]")
         console.print(f"  {legacy_repair['message']}")

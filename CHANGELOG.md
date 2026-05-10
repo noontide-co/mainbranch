@@ -26,6 +26,58 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   consistently. No CLI behavior, frontmatter contract, or fixture
   changes. Refs #455.
 
+## [0.3.15] - 2026-05-09
+
+v0.3.15 ships the migration and repair hardening that landed after v0.3.14 as
+an installable patch release. Large validation reports now group findings by
+repair category, `mb status` and `mb doctor repair --plan` surface the top
+repair cluster, legacy `outputs/` directories get archive-oriented migration
+guidance, and onboarding recognizes canonical `core/proof/` evidence without
+requiring compatibility shims.
+
+### What this means for you (plain English)
+
+- **Repair lists are easier to act on.** `mb validate`, `mb status`, and
+  `mb doctor repair --plan` now show validation categories and top repair
+  guidance so a messy migrated repo points at the biggest useful fix first.
+- **Migration advice is less destructive.** Old top-level `outputs/` folders
+  are treated as historical generated work that should be archived or reviewed
+  by hand, not bulk-promoted into pushes or legacy campaigns.
+- **Daily startup sees current repo shapes.** `mb onboard` recognizes populated
+  `core/proof/` directories, relationship health accepts push-side
+  `linked_bets`, and proposed topology rename records can exist without
+  weakening validation for live repo entries.
+
+### Added
+
+- Added validation category summaries to `mb validate --json`, `mb status`,
+  and `mb doctor repair --plan --json` so large repair reports identify the
+  highest-leverage debt cluster first. Refs #460.
+- Added migration drift coverage for legacy top-level `outputs/` with
+  archive-oriented guidance that avoids fabricating retroactive pushes or
+  campaigns. Refs #460.
+
+### Changed
+
+- `mb validate` now accepts `--repo PATH` as an alias for the positional path,
+  push schema failures surface the required `goal` mapping shape in the first
+  pass, and proposed topology rename entries can carry a pre-rename remote
+  mismatch without weakening validation for live entries. Refs #460.
+- Relationship health now treats push-side `linked_bets` as a valid active
+  bet-to-push relationship and gives clearer reverse-link guidance for
+  bet/push and offer/push gaps. Refs #460.
+- Onboarding progress now recognizes canonical `core/proof/` content as proof
+  instead of requiring legacy single-file proof shims. Refs #460.
+- Agent guidance now centralizes slug conventions and destructive-operation
+  approval rules for setup/start routing. Refs #460.
+
+### Fixed
+
+- `mb doctor repair --include-migration` errors and help now show the required
+  `--apply --include-migration` combination, and checkpoint hook install
+  summaries distinguish newly installed hooks from already-verified hooks.
+  Refs #460.
+
 ## [0.3.14] - 2026-05-09
 
 v0.3.14 ships the first experimental Codex CLI-first adapter slice and the

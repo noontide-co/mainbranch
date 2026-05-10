@@ -473,6 +473,11 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
             )
             typer.echo("")
             typer.echo("Plan or apply guided business-repo reconciliation repairs.")
+            typer.echo("")
+            typer.echo(
+                "Migration apply is opt-in: use `--include-migration` only with `--apply` "
+                "after reviewing the plan."
+            )
             raise typer.Exit(0)
         if arg == "--repo":
             idx += 1
@@ -497,7 +502,12 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
         typer.echo("mb doctor repair: choose only one of --plan or --apply", err=True)
         raise typer.Exit(2)
     if include_migration and not apply_changes:
-        typer.echo("mb doctor repair: --include-migration requires --apply", err=True)
+        typer.echo(
+            "mb doctor repair: --include-migration requires --apply. "
+            "First run `mb doctor repair --plan`; after review, rerun "
+            "`mb doctor repair --apply --include-migration`.",
+            err=True,
+        )
         raise typer.Exit(2)
 
     if apply_changes:
@@ -529,6 +539,7 @@ def _doctor_help() -> None:
     typer.echo("")
     typer.echo("Repair:")
     typer.echo("  mb doctor repair [--repo PATH] [--plan | --apply] [--include-migration] [--json]")
+    typer.echo("  Note: --include-migration is valid only with --apply after plan review.")
 
 
 @app.command(
@@ -857,7 +868,7 @@ def status_cmd(
     ),
 ) -> None:
     """Show a cheap daily briefing for a Main Branch repo."""
-    report = status_mod.run(path=path, update_marker=not peek)
+    report = status_mod.run(path=path, update_marker=not peek, validation_cross_refs=not peek)
     if json_out:
         typer.echo(_json_payload(report, command="mb status", schema_name="mainbranch.status"))
     else:
@@ -922,6 +933,11 @@ def site_check_cmd(
 @app.command("validate")
 def validate_cmd(
     path: str = typer.Argument(".", help="Repo to validate."),
+    repo: str | None = typer.Option(
+        None,
+        "--repo",
+        help="Repo to validate. Alias for the positional PATH used by older scripts.",
+    ),
     verbose: bool = typer.Option(False, "-v", "--verbose"),
     cross_refs: bool = typer.Option(
         False,
@@ -932,8 +948,9 @@ def validate_cmd(
     json_out: bool = typer.Option(False, "--json"),
 ) -> None:
     """Check frontmatter shape and optional cross-references."""
+    target = repo or path
     report = validate_mod.run(
-        path=path,
+        path=target,
         verbose=verbose,
         cross_refs=cross_refs,
         strict=strict,

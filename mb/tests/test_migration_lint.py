@@ -22,6 +22,7 @@ def test_migration_lint_reports_shape_and_frontmatter_drift_privately(
         "---\nslug: spring\nstatus: active\n---\n# Private campaign body\n",
     )
     _write(tmp_path / "ops" / "handoff.md", "# Private ops body\n")
+    _write(tmp_path / "outputs" / "old-vsl.md", "# Private generated work\n")
     _write(
         tmp_path / "pushes" / "spring" / "push.md",
         (
@@ -50,11 +51,17 @@ def test_migration_lint_reports_shape_and_frontmatter_drift_privately(
     assert "legacy-reference-active-content" in codes
     assert "legacy-campaigns-active-content" in codes
     assert "legacy-top-level-ops" in codes
+    assert "legacy-top-level-outputs" in codes
     assert "push-record-wrong-shape" in codes
     assert "playbook-run-wrong-path" in codes
     assert "bet-legacy-campaign-links-only" in codes
     assert all(finding["content_included"] is False for finding in report["findings"])
     assert "Private" not in json.dumps(report)
+    outputs = next(
+        finding for finding in report["findings"] if finding["code"] == "legacy-top-level-outputs"
+    )
+    assert "documents/archive/<name>/" in outputs["message"]
+    assert "do not bulk-promote" in outputs["message"]
 
 
 def test_migration_lint_reports_stale_generated_guidance_without_file_body(

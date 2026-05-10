@@ -101,7 +101,9 @@ Don't block setup on this. Continue and mention it at the end.
 **IMPORTANT:** If user has a Skool community, choose **Community/Skool** even if they also do coaching, courses, or services outside Skool. The community is the hub — other offerings feed into it.
 
 Read `.claude/reference/business-primitives/setup-patterns.md` in the Main
-Branch engine for the current setup patterns.
+Branch engine for the current setup patterns. Read
+`.claude/reference/business-primitives/slug-conventions.md` before naming
+offer folders, pushes, bets, or topology entries.
 
 ### 2.5: Offer Structure
 
@@ -112,7 +114,7 @@ After business type, determine offer structure:
 **If one:** "Single offer — clean and simple. All your details go in `core/`. Most people start here."
 
 **If multiple:** "Multiple offers under one brand. You share the same soul and voice, but each offer has its own specifics."
-- Ask: "What should we call each offer? Short slugs work best (e.g., 'community', 'newsletter', 'done-for-you')"
+- Ask: "What stable noun should name each offer? Use lowercase kebab-case slugs like `community`, `newsletter`, or `done-for-you`; do not rename later without a decision."
 - Ask: "How do these relate? Is there a natural progression — like a free tier that feeds into a paid one?" (This builds `product-ladder.md`)
 - Store offer names for Step 4 folder creation
 - Note: The multi-offer rules live at

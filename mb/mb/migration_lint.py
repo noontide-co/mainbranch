@@ -35,6 +35,11 @@ STALE_TOP_LEVEL_FOLDERS = {
         "Use `pushes/<YYYY-MM-DD-slug>/` for coordinated work and `.mb/` or OS "
         "temp for local scratch."
     ),
+    "outputs": (
+        "`outputs/` is legacy generated-work language. Move historical content to "
+        "`documents/archive/<name>/` or classify it by hand; do not bulk-promote old "
+        "generated work into `pushes/` or legacy `campaigns/`."
+    ),
 }
 
 STALE_CLAUDE_PATTERNS = (
