@@ -131,17 +131,12 @@ when headings change or collide. Obsidian uses the heading text after `#`
 as the heading target. The two systems do not agree, and section-fragment
 links that look right in one tool will fail or drift in the other.
 
-Keep exact section identity in structured metadata when it matters:
-
-```yaml
-related:
-  - kind: related
-    path: docs/markdown-link-conventions.md
-    section: Body mirrors
-```
-
-The body mirror still uses a note-level link, with prose naming the
-target section:
+The canonical typed-edge fields (`linked_decisions`, `linked_research`,
+`linked_pushes`, `linked_outcomes`, `linked_docs`, `linked_issues`,
+`linked_bets`, `linked_playbooks`, etc.) point at files, not headings.
+That is intentional. If you need to point at a specific section of the
+target file, name the section in body prose rather than encoding it in
+a link fragment:
 
 ```markdown
 ## Related links

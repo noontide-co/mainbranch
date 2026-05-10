@@ -126,3 +126,9 @@ follow-up at most, never a requirement.
   confirm body-level `## Related links` entries appear as navigable
   links and produce edges in the Graph view and entries in the
   Backlinks pane. Not automated.
+
+## Related links
+
+- [Business repo topology map](2026-05-08-business-repo-topology-map.md) — prior decision this builds on.
+- [Main Branch operating spine](2026-05-06-main-branch-operating-spine.md) — durable operating model this decision sits inside.
+- [Markdown link conventions](../docs/markdown-link-conventions.md) — link-form rules this decision points operators at.
