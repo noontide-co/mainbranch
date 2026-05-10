@@ -97,6 +97,24 @@ before acting.
 - `log/` - running activity log.
 - `documents/` - anything that does not belong above.
 
+## Linking
+
+Typed relationships live in frontmatter as repo-relative `.md` paths
+(`linked_decisions:`, `linked_research:`, `linked_pushes:`, etc.). Those
+are the canonical edges `mb graph` and `mb validate --cross-refs` read.
+
+When a file declares typed edges in frontmatter, mirror them in a body
+`## Related` section using **Markdown relative links** so the same edges
+show up in Obsidian's Graph view and Backlinks pane for operators who
+open the repo as a vault. Keep mirror links note-level; do not link to
+section anchors, since GitHub and Obsidian disagree on heading-fragment
+syntax. See the engine doc
+[`docs/markdown-link-conventions.md`](https://github.com/noontide-co/mainbranch/blob/main/docs/markdown-link-conventions.md)
+for the full rules.
+
+Obsidian is an optional viewer over the same files `mb` validates. Do
+not depend on any Obsidian plugin for repo correctness.
+
 ## Connected Accounts
 
 Never commit API keys, OAuth refresh tokens, service-account JSON, webhook
