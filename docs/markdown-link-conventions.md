@@ -15,9 +15,9 @@ for the product stance.
    viewer-specific link strings. `mb graph`, `mb validate --cross-refs`,
    and `mb status relationship_health` read frontmatter as the source of
    truth.
-2. **Body mirrors exist only to create explicit note-level edges** for
-   Obsidian Graph and Backlinks. Mirrors do not replace structured
-   frontmatter; they sit alongside it.
+2. **Body mirrors are generated or repairable viewer output** that creates
+   explicit note-level edges for Obsidian Graph and Backlinks. Mirrors do
+   not replace structured frontmatter; they sit alongside it.
 3. **When interoperability matters, use Markdown relative links** for
    body-level mirrors. Both Obsidian and GitHub render Markdown relative
    links. Wikilinks are also valid in Obsidian-only contexts but are not
@@ -112,8 +112,10 @@ relative links at the note level:
 Body mirrors are a viewer aid, not a second source of truth. Frontmatter
 typed edges remain canonical for `mb graph`, `mb validate --cross-refs`,
 and `mb status relationship_health`. If frontmatter and the body mirror
-disagree, frontmatter wins. Future doctor / validation tooling may warn
-when the mirror is missing canonical edges and offer to repair it.
+disagree, frontmatter wins. `mb validate --cross-refs` warns when the
+mirror is missing canonical frontmatter edges, and `mb doctor repair
+--plan` / `mb doctor repair --apply` can add missing mirror links after
+operator approval.
 
 The body mirror creates one stable note-to-note edge per relationship.
 Obsidian's Backlinks pane covers Markdown links and wikilinks equally;
@@ -123,6 +125,37 @@ clickable in PR review and the file viewer.
 You may add a short prose description, including the name of the target
 section. Keep the link itself note-level; do not encode section identity
 in a heading fragment (see below).
+
+Do not manually invent relationships to fill this section. First add the
+typed `linked_*` frontmatter field from evidence, then let `mb doctor
+repair --plan` preview any missing body mirror links. The repair path adds
+missing Markdown links and preserves existing human descriptions; it does
+not delete stale body-only links or update frontmatter from body links.
+
+## Authoring Common Relationships
+
+Use the narrowest evidence-backed frontmatter field available:
+
+- Active bets should link to supporting pushes, playbooks, decisions,
+  research, and outcome/log artifacts through `linked_pushes`,
+  `linked_playbooks`, `linked_decisions`, `linked_research`, and
+  `linked_outcomes`.
+- Pushes should set `offer:` to the promoted offer file and use
+  `linked_bets`, `linked_decisions`, `linked_research`, or
+  `linked_outcomes` when the push is explicitly tied to those records.
+- Completed pushes should link outcome, review, or log artifacts through
+  `linked_outcomes`.
+- Decisions should link the bets, pushes, research, issues, docs, PRDs, or
+  superseded decisions they affect through the corresponding typed fields.
+- Research and proof files should link to the offer, bet, push, decision,
+  or outcome they support when that relationship is explicit.
+- Topology entries should link child repos to offers, pushes, playbook run
+  records, or operating boundaries only when the repo-topology record has
+  evidence for that boundary.
+
+If the evidence is weak, leave the canonical frontmatter link out and add a
+plain body reference only if it helps the reader. Body-only links stay
+generic references; they are not typed graph data.
 
 ### Do not link to section anchors across tools
 
@@ -238,9 +271,10 @@ mb validate --cross-refs
 ```
 
 This checks known frontmatter link fields and warns when important
-links are missing. It also warns when wikilinks point to missing
-markdown files or match multiple files by stem. Standard Markdown
-relative links are validated as body-link edges in the same pass.
+links are missing, when canonical frontmatter links are not mirrored in
+`## Related links`, and when wikilinks point to missing markdown files or
+match multiple files by stem. Standard Markdown relative links are
+validated as body-link edges in the same pass.
 
 Use strict mode in CI or branch cleanup when warnings should fail:
 

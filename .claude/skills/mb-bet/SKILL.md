@@ -97,6 +97,11 @@ linked_bets:
   - bets/YYYY-MM-DD-slug.md
 ```
 
+After adding or changing typed `linked_*` frontmatter, add or repair the
+body-level `## Related links` mirror with Markdown relative links. If the
+mirror is missing or stale, run `mb doctor repair --plan` and ask before
+`mb doctor repair --apply`; do not invent relationships from body links.
+
 ## Mode: new
 
 Use when the operator says they want to try, launch, test, prove, or make a bet.
@@ -141,6 +146,10 @@ Open.
 ## Narration Notes
 
 [Public-safe angles, claims to avoid, proof needed before sharing.]
+
+## Related links
+
+- [Existing linked file](../decisions/YYYY-MM-DD-example.md)
 ```
 
 ## Mode: update

@@ -48,6 +48,13 @@ promise: ""
 ---
 ```
 
+If the push is tied to a bet, decision, research file, playbook, or outcome,
+add the appropriate typed frontmatter link (`linked_bets`,
+`linked_decisions`, `linked_research`, `linked_playbooks`,
+`linked_outcomes`). Mirror canonical links in `## Related links` with
+Markdown relative links, or preview `mb doctor repair --plan` and ask before
+applying the repair. Do not infer frontmatter links from body-only references.
+
 ---
 
 ## Triage

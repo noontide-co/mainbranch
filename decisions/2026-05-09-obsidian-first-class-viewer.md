@@ -67,8 +67,10 @@ These constraints decide the convention. Typed edges in frontmatter
 remain canonical. A body `## Related links` section is a viewer mirror
 only — it exists so Obsidian, GitHub, and humans can browse
 relationships without `mb` changing its graph model. If frontmatter and
-body mirrors disagree, frontmatter wins; future validation or doctor
-tooling may warn when the mirror is out of date and offer to repair it.
+body mirrors disagree, frontmatter wins. `mb validate --cross-refs` can
+warn when the mirror is out of date, and `mb doctor repair` can preview and
+apply missing mirror links from canonical frontmatter after operator
+approval.
 See [Markdown link conventions](../docs/markdown-link-conventions.md)
 for the link-form rules.
 
@@ -112,9 +114,9 @@ follow-up at most, never a requirement.
   sits adjacent to the existing graph-link authoring assistance ticket
   and stays optional.
 - Body mirrors are derived browsing aids, not authoritative graph data.
-  Future validation or doctor tooling may warn when canonical frontmatter
-  links are missing from a file's body mirror, but graph correctness
-  remains based on structured frontmatter.
+  Validation and doctor repair may warn and add missing mirror links when
+  canonical frontmatter links are absent from `## Related links`, but graph
+  correctness remains based on structured frontmatter.
 
 ## Validation
 

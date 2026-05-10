@@ -102,6 +102,8 @@ before acting.
 Typed relationships live in frontmatter as repo-relative `.md` paths
 (`linked_decisions:`, `linked_research:`, `linked_pushes:`, etc.). Those
 are the canonical edges `mb graph` and `mb validate --cross-refs` read.
+Author them only from evidence in the repo or from explicit operator
+instruction; do not invent relationships to make the graph look fuller.
 
 When a file declares typed edges in frontmatter, mirror them in a body
 `## Related links` section using **Markdown relative links** so the same
@@ -110,6 +112,10 @@ who open the repo as a vault. The body mirror is a viewer aid, not a
 second source of truth — if frontmatter and the mirror disagree,
 frontmatter wins. Keep mirror links note-level; do not link to section
 anchors, since GitHub and Obsidian disagree on heading-fragment syntax.
+If the mirror is missing or stale, preview `mb doctor repair --plan`
+and ask before applying `mb doctor repair --apply`; repair adds missing
+body links from canonical frontmatter and does not update frontmatter
+from body-only links.
 See the engine doc
 [`docs/markdown-link-conventions.md`](https://github.com/noontide-co/mainbranch/blob/main/docs/markdown-link-conventions.md)
 for the full rules.

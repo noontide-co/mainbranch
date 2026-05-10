@@ -48,6 +48,11 @@ linked_pushes: []
 
 # [Topic] Research
 
+## Related links
+
+[Leave empty until `linked_decisions` or `linked_pushes` has evidence-backed
+targets, then mirror those frontmatter links with Markdown relative links.]
+
 ## Question
 
 [1-3 sentences: What you're trying to learn. Be specific.]

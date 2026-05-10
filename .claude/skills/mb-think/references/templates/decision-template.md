@@ -97,6 +97,10 @@ See: [linked research files]
 ## Review Date (Optional)
 
 [When to revisit — a date or trigger. Example: "Revisit after 100 new members"]
+
+## Related links
+
+- [Research title](../research/YYYY-MM-DD-topic-source.md)
 ```
 
 ---
@@ -122,6 +126,10 @@ linked_research:
 ```
 
 This creates an audit trail: decision -> research -> findings.
+Mirror those frontmatter links in `## Related links` with Markdown
+relative links. If the mirror is missing or stale, preview `mb doctor
+repair --plan` before applying repair; do not treat body-only links as
+typed graph data.
 
 ---
 
