@@ -47,9 +47,9 @@ constraints intersect; staying lowercase, hyphenated, and ASCII-safe
 keeps every renderer happy.
 
 If you also use Obsidian wikilinks anywhere, prefer unique filename stems.
-Obsidian's default "Shortest path when possible" setting will let
-`[[pricing-model]]` resolve to whichever stem-matched file Obsidian finds
-first, which can collide silently across folders.
+Bare-stem links like `[[pricing-model]]` depend on Obsidian's basename
+resolver and can become ambiguous when multiple folders contain the same
+stem. Path-form wikilinks avoid that ambiguity.
 
 ## Frontmatter Links
 
