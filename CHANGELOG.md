@@ -11,6 +11,21 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Decided that Obsidian is a first-class optional viewer over the same
+  markdown files `mb` validates, not a dependency or second source of
+  truth. `mb` keeps the typed business graph and validation; Obsidian
+  owns clickable browsing, Backlinks, and Graph view. `docs/markdown-link-conventions.md`
+  is restructured around three layered rules (canonical edges in
+  frontmatter; body mirrors are note-level only; Markdown relative links
+  for interop) and documents the cross-tool section-anchor trap and
+  authoring hazards. Generated business-repo agent guidance
+  (`CLAUDE.md.tmpl`, `AGENTS.md.tmpl`) gains a brief Linking section so
+  Claude Code and Codex agents emit the body-mirror + frontmatter pair
+  consistently. No CLI behavior, frontmatter contract, or fixture
+  changes. Refs #455.
+
 ## [0.3.14] - 2026-05-09
 
 v0.3.14 ships the first experimental Codex CLI-first adapter slice and the
