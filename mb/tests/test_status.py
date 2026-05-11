@@ -1970,7 +1970,10 @@ def test_build_git_summary_reads_in_business_language() -> None:
     assert "detached" in detached.lower()
 
 
-def test_git_info_exposes_workflow_on_solo_main(tmp_path: Path) -> None:
+def test_git_info_solo_on_main_without_remote(tmp_path: Path) -> None:
+    """Local repo on the default branch with no `origin` remote should still
+    classify as solo-on-main, leave ahead/behind null, and produce a clear
+    summary. Locks the contract for the most common existing-repo state."""
     repo = tmp_path / "solo"
     repo.mkdir()
     assert _git(repo, "init", "-b", "main").returncode == 0
@@ -1983,13 +1986,19 @@ def test_git_info_exposes_workflow_on_solo_main(tmp_path: Path) -> None:
     assert info["workflow_mode"] == "solo-on-main"
     assert info["default_branch"] == "main"
     assert info["dirty"] is False
-    assert info["summary"]
-    # No upstream configured; ahead/behind should be None.
+    assert info["remote"] == ""
+    assert info["upstream"] == ""
     assert info["ahead"] is None
     assert info["behind"] is None
+    assert info["summary"]
+    assert "main" in info["summary"]
+    assert "uncommitted" in info["summary"]
 
 
-def test_git_info_exposes_workflow_on_branch(tmp_path: Path) -> None:
+def test_git_info_branch_without_upstream(tmp_path: Path) -> None:
+    """Feature branch with no upstream should classify as branch, leave
+    ahead/behind null, and reference the branch name in the summary.
+    Common state when an operator starts work but hasn't pushed yet."""
     repo = tmp_path / "branched"
     repo.mkdir()
     assert _git(repo, "init", "-b", "main").returncode == 0
@@ -2001,6 +2010,9 @@ def test_git_info_exposes_workflow_on_branch(tmp_path: Path) -> None:
     assert info["branch"] == "feature/x"
     assert info["workflow_mode"] == "branch"
     assert info["default_branch"] == "main"
+    assert info["upstream"] == ""
+    assert info["ahead"] is None
+    assert info["behind"] is None
     assert "feature/x" in info["summary"]
 
 
