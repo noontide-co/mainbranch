@@ -132,7 +132,7 @@ def _detect_default_branch(repo: Path) -> str:
         cwd=repo,
     )
     if symbolic["ok"]:
-        raw = symbolic["stdout"].strip()
+        raw = str(symbolic["stdout"]).strip()
         if raw.startswith("origin/"):
             return raw[len("origin/") :]
         if raw:

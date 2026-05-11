@@ -185,7 +185,9 @@ VALIDATION_CATEGORY_OPERATOR_SUMMARY: dict[str, str] = {
     "no_frontmatter": "Add the YAML header at the top of the file.",
     "yaml_error": "Fix the YAML formatting at the top before anything else can be checked.",
     "schema_shape_error": "Reshape the YAML fields so they match the expected layout.",
-    "missing_cross_ref_target": "Fix the broken link, remove it, or mark it as intentionally archived.",
+    "missing_cross_ref_target": (
+        "Fix the broken link, remove it, or mark it as intentionally archived."
+    ),
     related_links.MISSING_RELATED_LINK_MIRROR_CATEGORY: (
         "Main Branch can repair this automatically — run `mb doctor repair --plan` then `--apply`."
     ),
@@ -1178,9 +1180,7 @@ def _validation_categories(files: list[dict[str, Any]]) -> dict[str, Any]:
                         "warnings": 0,
                         "examples": [],
                         "repair": repair_text,
-                        "audience": VALIDATION_CATEGORY_AUDIENCE.get(
-                            category, "operator_decision"
-                        ),
+                        "audience": VALIDATION_CATEGORY_AUDIENCE.get(category, "operator_decision"),
                         "operator_summary": VALIDATION_CATEGORY_OPERATOR_SUMMARY.get(
                             category, repair_text
                         ),

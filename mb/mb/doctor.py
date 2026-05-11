@@ -208,8 +208,8 @@ def _action(
     audience: str | None = None,
     operator_summary: str = "",
 ) -> dict[str, Any]:
-    resolved_audience = audience if audience in AUDIENCE_VALUES else _derive_audience(
-        mode, safe_to_apply
+    resolved_audience = (
+        audience if audience in AUDIENCE_VALUES else _derive_audience(mode, safe_to_apply)
     )
     return {
         "id": id,
