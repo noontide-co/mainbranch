@@ -11,6 +11,54 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.16] - 2026-05-11
+
+v0.3.16 lands the first concrete `mb books` command surface alongside the
+hledger + private books vault foundation, accepts the scheduled data sync
+pattern for business repos, exposes operator vocabulary facts in `mb status`
+and `mb start`, and locks the operator-facing GitOps primitives (`audience` /
+`operator_summary` on findings, workflow awareness on `mb status`). Several
+docs and conventions slices land in the same release: graph link authoring
+guidance, Related links mirror validation and repair, the `mb suggest links`
+command, the first record type in the data-source registry, the business
+connections decision, and a docs architecture / language cleanup pass.
+
+### What this means for you (plain English)
+
+- **First safe books surface.** `mb books check` inspects whether your
+  finance metadata is wired up, warns if ledger or statement files look like
+  they leaked into the team-visible repo, and (with `--fixture`) round-trips
+  a packaged fake hledger journal so you can confirm hledger works on your
+  machine without ever touching real numbers.
+- **Books storage is a clear contract.** hledger is the chosen engine, and
+  real books live in a private books vault — solo-local under
+  `.mb/private/books/` by default, or a separate team-private repo —
+  never in the team-visible business repo.
+- **Scheduled data sync has a documented pattern.** The accepted pattern is
+  operator-owned cron (or `launchd` / Task Scheduler) writing into the
+  existing `data/<provider>/` registry layout, with `mb status` and
+  `mb doctor` reporting freshness from the registry record. No CLI
+  behavior change yet — the foundation is named and follow-ups are tracked.
+- **`mb status` and `mb start` know more about your repo shape.** A
+  `vocabulary` block surfaces optional `core/vocabulary.md` display terms,
+  and the `git` block now carries `workflow_mode`, `default_branch`,
+  `upstream`, `ahead`, `behind`, `worktree_root`, and a one-liner
+  `summary`. Skills and agents can decide save-on-main vs branch-and-PR
+  vs worktree-aware flows without their own git wrappers.
+- **Findings tell you who acts on them.** `mb doctor`, `mb validate`, and
+  `mb status` actions now carry `audience`
+  (`mechanical` / `operator_decision` / `informational`) plus an
+  `operator_summary` so agents can route a fact into business-language
+  next steps. `mb validate` also exposes per-category summaries and a top
+  cluster so messy migrated repos point at the biggest useful fix first.
+- **Link conventions are clearer.** `mb suggest links <file>` ranks
+  candidate relationships with JSON reasons; `mb validate --cross-refs`
+  and `mb doctor repair --plan` keep `## Related links` body mirrors in
+  sync with frontmatter without making body links authoritative; the
+  `type: data_source` record at `data/<provider>/source.md` is the first
+  portable business-facts record and ships with a `linked_data_sources`
+  typed link.
+
 ### Added
 
 - Shipped the first `mb books` surface, `mb books check`, implementing the
