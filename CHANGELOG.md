@@ -13,6 +13,30 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added `audience` and `operator_summary` fields to findings emitted by
+  `mb doctor` (every repair action), `mb validate` (each validation category
+  in `validation_categories`, plus `top_audience` and `top_operator_summary`
+  at the root), and `mb status` ranked actions. `audience` classifies each
+  finding as `mechanical` (Main Branch can apply safely), `operator_decision`
+  (a human must decide), or `informational` (read-only signal). The existing
+  `safe_to_apply` boolean on doctor actions remains the safety gate;
+  `audience` is the routing signal skills and agents read to translate facts
+  into business-language next steps. Schemas are additive; no version bump
+  required. Refs MAIN-310, #463.
+- Added workflow awareness to `mb status`'s existing `git` block:
+  `workflow` (one of `solo-on-main`, `branch`, `worktree`, `detached`),
+  `default_branch` (detected from `origin/HEAD` with fallbacks to `main` and
+  `master`), `upstream`, `ahead`, `behind`, `worktree_root`, and an
+  operator-facing `summary` one-liner. Gives skills and agents a single
+  place to decide whether to recommend save-on-main, branch-and-PR, or
+  worktree-aware flows without their own git wrappers. Refs MAIN-310, #463.
+- Accepted decision
+  `decisions/2026-05-11-operator-facing-gitops-and-migration-planning.md`
+  locking the operator-facing GitOps contract: finding classification,
+  workflow awareness, the deferred `mb commit --plan` / `mb publish --plan`
+  primitives, a packaged `/mb-publish` skill, and `mb migrate plan`
+  non-standard folder scanning. Implementation lands in staged slices that
+  each cite this decision. Refs MAIN-310, #463.
 - Added `mb suggest links <file>` as a read-only command that ranks candidate
   frontmatter, inline Markdown, entity tag, data/report metadata, nearby
   context, and ignore decisions with JSON reasons for skills and future UI.
