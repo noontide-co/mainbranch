@@ -65,9 +65,12 @@ human approval over clever automation.
 - GitHub Actions are pinned to major-version tags
   (e.g. `actions/checkout@v6`, `pypa/gh-action-pypi-publish@release/v1`).
 - Dependabot's `github-actions` ecosystem opens weekly PRs when a pinned
-  major changes. The grouped review notes pattern in
-  [`.github/dependabot.yml`](../.github/dependabot.yml) keeps these PRs
-  reviewable.
+  major changes, with minor/patch updates grouped into a `github-actions-official`
+  PR (the `actions/*` family) and a `github-actions-release` PR (the
+  PyPA publisher and Linear release action). Major bumps still open as
+  individual PRs so the release-pipeline review is not hidden inside a
+  group diff. See
+  [`.github/dependabot.yml`](../.github/dependabot.yml).
 - Pinning to commit SHAs is preferred for higher-risk supply chains.
   Main Branch defers SHA pinning until the publish surface grows; it is
   tracked as a follow-up in

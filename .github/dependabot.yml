@@ -42,8 +42,13 @@ updates:
           - "typer"
           - "pyyaml"
           - "rich"
+        update-types:
+          - "patch"
+      python-extras:
+        patterns:
           - "cairosvg"
         update-types:
+          - "minor"
           - "patch"
 
   - package-ecosystem: "github-actions"
@@ -57,3 +62,24 @@ updates:
     cooldown:
       default-days: 7
       semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
+    groups:
+      # Official actions/* tend to ship together; grouping minor/patch
+      # updates keeps the supply-chain review surface to one PR per cycle.
+      github-actions-official:
+        patterns:
+          - "actions/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Third-party actions in the publish path (PyPA publisher, Linear
+      # release sync). Major bumps still open as individual PRs so the
+      # release-pipeline review is not hidden inside a group diff.
+      github-actions-release:
+        patterns:
+          - "pypa/gh-action-pypi-publish"
+          - "linear/linear-release-action"
+        update-types:
+          - "minor"
+          - "patch"
