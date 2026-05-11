@@ -245,11 +245,14 @@ what matters before changing frontmatter, inline links, tags, or metadata.
 
 Implementation follow-ups:
 
-- data-source registry: [#470](https://github.com/noontide-co/mainbranch/issues/470)
-- scheduled data sync pattern: [#471](https://github.com/noontide-co/mainbranch/issues/471)
+- data-source registry shape: see [`docs/data-source-registry.md`](data-source-registry.md)
+  and [#470](https://github.com/noontide-co/mainbranch/issues/470).
+- scheduled data sync pattern: [#471](https://github.com/noontide-co/mainbranch/issues/471).
 
 ## Related links
 
 - [How Main Branch connects notes, data, and history](../decisions/2026-05-11-connecting-notes-data-and-history.md)
+- [Data-source registry shape](data-source-registry.md)
+- [Data-source registry decision](../decisions/2026-05-11-data-source-registry.md)
 - [Markdown link conventions](markdown-link-conventions.md)
 - [Obsidian viewer decision](../decisions/2026-05-09-obsidian-first-class-viewer.md)

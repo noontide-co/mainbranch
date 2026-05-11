@@ -27,6 +27,19 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   Refs #468.
 - Opened follow-up implementation issues for data-source registry and scheduled
   data sync. Refs #470, #471.
+- Added the first record type in a future registry of portable business
+  facts: `type: data_source` records at `data/<provider>/source.md`.
+  `mb validate` recognizes the schema and checks provider id, owner,
+  privacy enum, cadence (warning), freshness date, storage mapping,
+  reports list, useful-query shape, and secret leakage. `mb graph` and
+  `mb validate --cross-refs` understand the new typed relationship
+  `linked_data_sources`. `mb suggest links` carries the typed field hint
+  when the candidate is a registry record. Documented in
+  `docs/data-source-registry.md` with an accepted decision and sanitized
+  Google Ads and Stripe fixture examples. The doc frames `data_source` as
+  the first record type and leaves room for sibling types
+  (`provider_config`, `secret_handle`, `integration_account`) without
+  binding them to SQL/storage assumptions. Refs #470.
 
 ### Changed
 
