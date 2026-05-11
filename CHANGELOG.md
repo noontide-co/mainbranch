@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added `mb suggest links <file>` as a read-only command that ranks candidate
+  frontmatter, inline Markdown, entity tag, data/report metadata, nearby
+  context, and ignore decisions with JSON reasons for skills and future UI.
+  Refs #469.
 - Added warning-only Related links mirror checks to `mb validate --cross-refs`
   and a safe `mb doctor repair --plan` / `--apply` path that creates or
   updates `## Related links` body mirrors from frontmatter `linked_*`
@@ -21,8 +25,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   when to use typed frontmatter links, inline Markdown links, entity tags,
   data/report references, GitHub history links, nearby context, or no link.
   Refs #468.
-- Opened follow-up implementation issues for `mb suggest links`, data-source
-  registry, and scheduled data sync. Refs #469, #470, #471.
+- Opened follow-up implementation issues for data-source registry and scheduled
+  data sync. Refs #470, #471.
 
 ### Changed
 

@@ -31,6 +31,7 @@ from mb import site as site_mod
 from mb import skill_validate as skill_validate_mod
 from mb import start as start_mod
 from mb import status as status_mod
+from mb import suggest as suggest_mod
 from mb import think as think_mod
 from mb import update as update_mod
 from mb import validate as validate_mod
@@ -84,6 +85,13 @@ site_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(site_app, name="site")
+
+suggest_app = typer.Typer(
+    name="suggest",
+    help="Suggest read-only business repo improvements.",
+    no_args_is_help=True,
+)
+app.add_typer(suggest_app, name="suggest")
 
 CONNECT_METADATA_OPTION = typer.Option(
     [],
@@ -980,6 +988,36 @@ def graph_cmd(
         graph_mod.open_dot(dot)
     else:
         typer.echo(dot)
+
+
+@suggest_app.command("links")
+def suggest_links_cmd(
+    file: str = typer.Argument(..., help="Markdown file to inspect."),
+    repo: str = typer.Option(".", "--repo", help="Business repo to query."),
+    limit: int = typer.Option(10, "--limit", min=0, help="Maximum suggestions to return."),
+    include_ignored: bool = typer.Option(
+        False,
+        "--include-ignored",
+        help="Include candidates classified as ignore.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Suggest likely business connections without editing files."""
+    try:
+        report = suggest_mod.suggest_links(
+            source_file=file,
+            repo=repo,
+            limit=limit,
+            include_ignored=include_ignored,
+        )
+    except ValueError as exc:
+        typer.echo(f"mb suggest links: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    if json_out:
+        typer.echo(json.dumps(report, indent=2))
+    else:
+        suggest_mod.render_human(report)
+    raise typer.Exit(0 if report["ok"] else 1)
 
 
 @app.command("similar-bets")

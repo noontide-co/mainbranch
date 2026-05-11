@@ -222,15 +222,16 @@ Main Branch should learn from that without making Obsidian required:
 - agents should show reasons before editing graph data;
 - local viewers should browse the same files `mb` validates.
 
-## Future CLI Shape
+## CLI Shape
 
-A future command should help agents choose connections:
+`mb suggest links` helps agents choose connections without editing files:
 
 ```bash
 mb suggest links decisions/2026-05-10-google-ads-first.md
 ```
 
-The output should rank suggestions with reasons and action types:
+Use `--json` for skills and future review UI. The output ranks suggestions with
+reasons and action types:
 
 - add typed frontmatter link;
 - add inline Markdown link;
@@ -239,12 +240,11 @@ The output should rank suggestions with reasons and action types:
 - leave as nearby context;
 - ignore.
 
-It should not silently invent relationships. The operator or agent should
-approve what matters.
+It does not silently invent relationships. The operator or agent should approve
+what matters before changing frontmatter, inline links, tags, or metadata.
 
 Implementation follow-ups:
 
-- `mb suggest links`: [#469](https://github.com/noontide-co/mainbranch/issues/469)
 - data-source registry: [#470](https://github.com/noontide-co/mainbranch/issues/470)
 - scheduled data sync pattern: [#471](https://github.com/noontide-co/mainbranch/issues/471)
 

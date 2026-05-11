@@ -249,6 +249,7 @@ The `mb` CLI is the deterministic control plane. The agent runs it for normal us
 | `mb issue draft` / `open`| Draft a privacy-scrubbed GitHub issue locally, review it, then submit through `gh`. |
 | `mb validate`            | Frontmatter shape check across `core/`, `research/`, `decisions/`, `bets/`, `log/`, `pushes/`, `documents/`. Pass/fail per file. |
 | `mb graph`               | Build a folder graph from frontmatter links, wikilinks, and entity tags. Graphviz DOT, JSON, and PNG outputs. |
+| `mb suggest links`       | Suggest likely frontmatter, inline, tag, data, and context connections for a file without editing it. |
 | `mb checkpoint`          | Plan or save a business-readable git checkpoint during long agent runs. |
 | `mb skill list` / `path` / `validate` / `link` / `repair` | Manage and repair the bundled Claude Code skills. |
 | `mb update`              | Update Main Branch in place. |
