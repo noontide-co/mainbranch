@@ -167,6 +167,36 @@ VALIDATION_CATEGORY_REPAIR: dict[str, str] = {
     ),
 }
 
+# Audience routing per category. See decision
+# decisions/2026-05-11-operator-facing-gitops-and-migration-planning.md.
+# Categories absent from this map default to "operator_decision".
+VALIDATION_CATEGORY_AUDIENCE: dict[str, str] = {
+    related_links.MISSING_RELATED_LINK_MIRROR_CATEGORY: "mechanical",
+    "migration_drift": "mechanical",
+}
+
+# Operator-facing summaries. Default to the existing repair string when no
+# separate plain-language framing exists.
+VALIDATION_CATEGORY_OPERATOR_SUMMARY: dict[str, str] = {
+    "missing_slug": "Name the thing this file is about so other notes can link to it.",
+    "missing_required_key": "Fill in the few required fields this kind of file expects.",
+    "status_enum_mismatch": "Pick a recognized status (for example open, accepted, shipped).",
+    "enum_mismatch": "Pick one of the allowed values for this field.",
+    "no_frontmatter": "Add the YAML header at the top of the file.",
+    "yaml_error": "Fix the YAML formatting at the top before anything else can be checked.",
+    "schema_shape_error": "Reshape the YAML fields so they match the expected layout.",
+    "missing_cross_ref_target": "Fix the broken link, remove it, or mark it as intentionally archived.",
+    related_links.MISSING_RELATED_LINK_MIRROR_CATEGORY: (
+        "Main Branch can repair this automatically — run `mb doctor repair --plan` then `--apply`."
+    ),
+    "missing_reverse_link": "Decide whether to add the reverse link the suggestion proposes.",
+    "migration_drift": (
+        "Main Branch can repair this automatically — run `mb doctor repair --plan` then `--apply`."
+    ),
+    "other_error": "Read the validation message and decide how to fix the file.",
+    "other_warning": "Decide whether the relationship or shape is intentional, or change it.",
+}
+
 DECISION_STATUS_ORDER = {
     "proposed": 0,
     "running": 1,
@@ -1137,6 +1167,9 @@ def _validation_categories(files: list[dict[str, Any]]) -> dict[str, Any]:
             for raw_message in messages:
                 message = str(raw_message)
                 category = _validation_category(message, severity=severity, schema=schema)
+                repair_text = VALIDATION_CATEGORY_REPAIR.get(
+                    category, VALIDATION_CATEGORY_REPAIR["other_error"]
+                )
                 entry = categories.setdefault(
                     category,
                     {
@@ -1144,8 +1177,12 @@ def _validation_categories(files: list[dict[str, Any]]) -> dict[str, Any]:
                         "errors": 0,
                         "warnings": 0,
                         "examples": [],
-                        "repair": VALIDATION_CATEGORY_REPAIR.get(
-                            category, VALIDATION_CATEGORY_REPAIR["other_error"]
+                        "repair": repair_text,
+                        "audience": VALIDATION_CATEGORY_AUDIENCE.get(
+                            category, "operator_decision"
+                        ),
+                        "operator_summary": VALIDATION_CATEGORY_OPERATOR_SUMMARY.get(
+                            category, repair_text
                         ),
                     },
                 )
@@ -1161,11 +1198,14 @@ def _validation_categories(files: list[dict[str, Any]]) -> dict[str, Any]:
         )
     )
     top_category = next(iter(ordered), "")
+    top_entry = ordered.get(top_category, {})
     return {
         "schema_version": "1.0",
         "total_categories": len(ordered),
         "top_category": top_category,
-        "top_repair": ordered.get(top_category, {}).get("repair", ""),
+        "top_repair": top_entry.get("repair", ""),
+        "top_audience": top_entry.get("audience", ""),
+        "top_operator_summary": top_entry.get("operator_summary", ""),
         "by_category": ordered,
         "safe_to_share": True,
     }

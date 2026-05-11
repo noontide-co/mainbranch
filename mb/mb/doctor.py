@@ -74,6 +74,21 @@ REFERENCE_COMPAT_LINKS = {
     "reference/offers": "../core/offers",
 }
 STATE_ORDER = {"ok": 0, "info": 1, "warn": 2, "error": 3}
+AUDIENCE_VALUES = frozenset({"mechanical", "operator_decision", "informational"})
+
+
+def _derive_audience(mode: str, safe_to_apply: bool) -> str:
+    """Classify a repair action for operator-facing routing.
+
+    See ``decisions/2026-05-11-operator-facing-gitops-and-migration-planning.md``
+    for the contract. ``audience`` is a routing signal; ``safe_to_apply`` is the
+    safety gate and stays authoritative.
+    """
+    if mode == "read":
+        return "informational"
+    if safe_to_apply:
+        return "mechanical"
+    return "operator_decision"
 
 
 def _which(name: str) -> str:
@@ -188,7 +203,12 @@ def _action(
     writes: list[str] | None = None,
     applied: bool = False,
     result: dict[str, Any] | None = None,
+    audience: str | None = None,
+    operator_summary: str = "",
 ) -> dict[str, Any]:
+    resolved_audience = audience if audience in AUDIENCE_VALUES else _derive_audience(
+        mode, safe_to_apply
+    )
     return {
         "id": id,
         "title": title,
@@ -197,6 +217,8 @@ def _action(
         "command": command,
         "safe_to_apply": safe_to_apply,
         "reason": reason,
+        "audience": resolved_audience,
+        "operator_summary": operator_summary or reason or title,
         "writes": writes or [],
         "applied": applied,
         "result": result or {},

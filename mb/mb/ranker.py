@@ -561,6 +561,8 @@ def _action(
     reason: str,
     signals: list[dict[str, Any]],
     confidence: str | None = None,
+    audience: str = "operator_decision",
+    operator_summary: str = "",
 ) -> dict[str, Any]:
     action_confidence = confidence or _confidence(score, signals)
     safe_to_share = all(bool(signal.get("safe_to_share")) for signal in signals)
@@ -573,6 +575,8 @@ def _action(
         "score": score,
         "confidence": action_confidence,
         "reason": reason,
+        "audience": audience,
+        "operator_summary": operator_summary or reason or title,
         "signals": signals,
         "safe_to_share": safe_to_share,
     }
