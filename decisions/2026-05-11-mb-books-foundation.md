@@ -31,12 +31,12 @@ engine when using `mb books`.
 CSV and SQLite can be import staging, source snapshots, caches, or
 report outputs. They are not the books.
 
-`mb books` is a planned command group whose first responsibility is to
-validate that a business repo carries **safe bookkeeping metadata**, not
-to read or write real ledgers. Main Branch owns the operator workflow
-and wraps hledger in plain-language commands. Real financial ledgers
-stay local and gitignored by default. The team-visible business repo
-commits only safe metadata, fake fixtures, and documentation.
+`mb books` is a command group whose first shipped surface validates that a
+business repo carries **safe bookkeeping metadata**, not real ledgers. Main
+Branch owns the operator workflow and wraps hledger in plain-language
+commands. Real financial ledgers stay local and gitignored by default. The
+team-visible business repo commits only safe metadata, fake fixtures, and
+documentation.
 
 The product stance:
 
@@ -52,9 +52,9 @@ The product stance:
 - nothing in this decision promises a QuickBooks, Xero, or bookkeeper
   replacement.
 
-This decision codifies the foundation and names the first `mb books`
-surface. It does not ship the command. Implementation lands in a
-follow-up issue that references this decision.
+This decision codifies the foundation and named the first `mb books`
+surface. `mb books check` shipped in the follow-up implementation issue
+(#486).
 
 ## Why hledger
 
@@ -135,10 +135,9 @@ Three layers, in this order of preference:
    core must not. The shell-out boundary is what keeps the licence
    and install profile clean.
 
-## Optional Extras Packaging (Planned, Not Shipped)
+## Optional Extras Packaging (Deferred)
 
-When `mb books check` ships, the implementation issue should consider
-exposing the deeper-validation paths as a small optional extra:
+Deeper-validation paths may later become a small optional extra:
 
 ```bash
 pip install "mainbranch[books]"

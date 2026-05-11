@@ -81,7 +81,7 @@ repo `.mainbranch/source.json` files remain compatibility links.
 | `offer` | Graduated offer or productized service that needs its own lifecycle | Linked back to the business repo |
 | `product` | Software product, tool, course, template, or product surface | Separate when execution has its own lifecycle |
 | `client` | Client-specific fulfillment context and deliverables | Separate when access or confidentiality differs |
-| `finance` | Beancount ledger, exports, tax docs, sensitive P&L sources | Private by default; share summaries intentionally |
+| `finance` | hledger journal, exports, tax docs, sensitive P&L sources | Private by default; share summaries intentionally |
 | `legal` | Contracts, entity docs, disputes, or legal reviews | Private by default; share summaries intentionally |
 | `ops` | Private infrastructure, runbooks, provider setup, or team routines | Separate when operational authority differs |
 | `integration_sidecar` | Helper repo/tool for provider, analytics, enrichment, deployment data, raw caches, metrics databases, or connector glue | Optional and contract-backed |
@@ -487,8 +487,8 @@ runtimes are compatibility targets until adapter code and smoke evidence
 exist. See [compatibility.md](compatibility.md).
 
 Curated rails — GitHub, Cloudflare, Google/Workspace, official ads paths,
-Postiz, Beancount, transcription helpers — earn their place by improving a
-loop and by failing in ways `mb` can explain. See
+Postiz, hledger, transcription helpers — earn their place by improving a loop
+and by failing in ways `mb` can explain. See
 [ethos.md](ethos.md#8-curated-rails-beat-saas-sprawl) and
 [dependency-choices.md](dependency-choices.md).
 

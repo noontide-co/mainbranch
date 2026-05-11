@@ -1,6 +1,6 @@
 # Books Examples
 
-Fake bookkeeping fixtures used to exercise the planned `mb books check`
+Fake bookkeeping fixtures used to exercise the shipped `mb books check`
 contract. Everything in this folder is intentionally fake.
 
 These files exist in this engine repo only. They are not copied into a

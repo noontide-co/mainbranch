@@ -123,9 +123,9 @@ dependencies of the core engine.
 Main Branch should not connect every tool an operator has accumulated. The team
 should make opinionated, explainable choices: prefer official provider paths,
 boring CLIs, portable files, and local-first state. Cloudflare, GitHub,
-Google/Workspace, official ads paths, Postiz, Beancount, Apify, transcription,
-and future sidecars earn their place by improving a loop and by failing in ways
-`mb` can explain.
+Google/Workspace, official ads paths, Postiz, hledger, Apify, transcription,
+and future sidecars earn their place by improving a loop and by failing in
+ways `mb` can explain.
 
 ### 9. Evidence Beats Hunches
 
