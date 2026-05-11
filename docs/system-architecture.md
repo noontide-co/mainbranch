@@ -14,7 +14,7 @@ bottom. The rest of this doc describes the current model.
 
 Business memory lives in repos the operator owns. `mb` is the deterministic
 control plane. Skills do the judgment work. Provider data, secrets, caches,
-and dashboards stay outside canonical memory.
+and dashboards stay outside the main business record.
 
 ```text
 Main Branch engine     +     business repo            +     optional systems
@@ -61,7 +61,7 @@ my-business/
 └── documents/
 ```
 
-The canonical business brain is `core/`.
+The main business brain is `core/`.
 
 ## Repo Topology
 
@@ -362,7 +362,7 @@ archive graduates into its own operating boundary.
 
 ## Artifact Routing
 
-| Artifact | Canonical home |
+| Artifact | Official home |
 | --- | --- |
 | Paid ad batch tied to a named push | `pushes/<push>/ads/...` |
 | Organic sequence tied to a named push | `pushes/<push>/posts/...` |
@@ -410,7 +410,7 @@ research / decision / log captures what we learned or changed
 
 ## State Boundaries
 
-Canonical business state:
+Business state:
 
 - `core/`
 - `research/`
@@ -446,7 +446,7 @@ public examples or committed business repo files.
 
 Provider systems record live operational facts. Sidecars can enrich Main
 Branch with structured data. A future local dashboard could render repo and
-provider truth without owning it. None of these replace canonical memory.
+provider truth without owning it. None of these replace the main business record.
 
 Main Branch does not mutate provider accounts today. Provider mutation
 requires a shipped adapter with approval gates, readiness checks, and smoke

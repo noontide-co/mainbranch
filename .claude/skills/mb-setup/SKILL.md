@@ -179,7 +179,7 @@ mkdir -p core core/offers core/finance core/brand core/proof/angles core/operati
 mkdir -p research decisions bets log pushes documents
 ```
 
-Do not create a canonical `reference/` folder in new repos. If an old repo
+Do not create a new `reference/` folder in new repos. If an old repo
 already has `reference/core` or `reference/offers`, treat those paths as legacy
 compatibility aliases and write user context once under `core/` or
 `core/offers/`.

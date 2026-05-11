@@ -59,7 +59,7 @@ who needs to be taught why git, GitHub, Claude Code, and local files matter.
 - Establish `mb status` as the reusable daily briefing primitive.
 - Make the Claude Code handoff explicit, diagnosable, and repairable.
 - Create terminal output that feels like a product, not a scaffolding script.
-- Keep all canonical business state in the repo.
+- Keep all business state in the repo.
 
 ## Non-Goals
 
@@ -166,7 +166,7 @@ Required capabilities:
   - power-user setup with advanced options and minimal copy.
 - Create a new repo through `mb init` or connect an existing repo.
 - Explain why GitHub is used as the team/business layer.
-- Explain where canonical business state lives.
+- Explain where business state lives.
 - Wire Claude Code skills through existing skill-link code.
 - Verify skill discovery and runtime readiness through doctor/status checks.
 - End with exact next commands.

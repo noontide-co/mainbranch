@@ -13,7 +13,7 @@ tags: [v0-2, cli, workflows, runtimes, product-boundary, decision]
 
 ## Decision
 
-`mb` is the deterministic, inspectable, scriptable substrate for a
+`mb` is the deterministic, inspectable, scriptable control layer for a
 business-as-files repo. It owns repo shape, validation, migration, status,
 updates, graphing, and runtime wiring.
 

@@ -11,10 +11,10 @@ Create ads, generate creative variations, review for compliance, and check ad ac
 ## Output destinations and operator vocabulary
 
 This skill writes new coordinated work to `pushes/<YYYY-MM-DD-slug>/` (the
-canonical engine primitive). Examples below say "push" for the wrapping
+engine primitive). Examples below say "push" for the wrapping
 record; this is the engine's word. If `core/vocabulary.md` defines a
 display word — for example `terms.push.singular: drop` — speak the
-operator's word ("drop") in conversation while still writing canonical
+operator's word ("drop") in conversation while still writing current
 files (`pushes/...`, `type: push`, `linked_pushes`). Never rename folders,
 frontmatter, link fields, JSON keys, or commands based on vocabulary.
 
@@ -52,7 +52,9 @@ add the appropriate typed frontmatter link (`linked_bets`,
 `linked_decisions`, `linked_research`, `linked_playbooks`,
 `linked_outcomes`). Mirror frontmatter links in `## Related links` with
 Markdown relative links, or preview `mb doctor repair --plan` and ask before
-applying the repair. Do not infer frontmatter links from body-only references.
+applying the repair. Use the connection decision matrix in
+docs/business-connections.md before adding typed links. Do not infer
+frontmatter links from body-only references.
 
 When an ad-adjacent workflow needs a resource-delivery plan, provider setup
 recipe, launch checklist, or external automation approval record, draft it as
@@ -309,7 +311,7 @@ Before loading reference files, resolve active offer context with
 `.claude/reference/business-primitives/offer-bet-push-proof.md`:
 
 1. If a future `mb` JSON field exposes active offer state, use it.
-2. Do not treat `.vip/local.yaml` as canonical active-offer state. If legacy
+2. Do not treat `.vip/local.yaml` as source of active-offer truth. If legacy
    state exists, confirm the offer with the user instead of silently routing.
 3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
 4. If no offer is selected AND `core/offers/` exists: ask which offer.

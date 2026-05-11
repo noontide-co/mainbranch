@@ -49,7 +49,7 @@ The technical memory layer underneath is still real:
   memory into business-readable facts.
 
 This refines the earlier GitHub-native decision without replacing it. GitHub
-remains the adopted durable coordination substrate. The change is product
+remains the adopted durable coordination layer. The change is product
 language and routing: issues are not the operator's default mental model.
 Issues are created or suggested when work needs a durable thread.
 

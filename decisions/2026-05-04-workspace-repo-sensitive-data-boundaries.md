@@ -177,7 +177,7 @@ check before a privileged action runs.
 
 ## GitHub, Self-Hosted Git, and Backups
 
-GitHub private repos are the default durable substrate because they give Main
+GitHub private repos are the default durable home because they give Main
 Branch portable git history, issues, pull requests, permissions, and a familiar
 team layer. That default is not a promise that all data belongs on GitHub.
 

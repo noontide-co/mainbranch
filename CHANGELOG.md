@@ -17,9 +17,19 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   and a safe `mb doctor repair --plan` / `--apply` path that creates or
   updates `## Related links` body mirrors from frontmatter `linked_*`
   frontmatter without making body links authoritative. Refs #454.
+- Added `docs/business-connections.md` and an accepted decision explaining
+  when to use typed frontmatter links, inline Markdown links, entity tags,
+  data/report references, GitHub history links, nearby context, or no link.
+  Refs #468.
+- Opened follow-up implementation issues for `mb suggest links`, data-source
+  registry, and scheduled data sync. Refs #469, #470, #471.
 
 ### Changed
 
+- Replaced off-brand infrastructure jargon across public docs and generated
+  guidance, and softened user-facing "canonical" language toward "source of
+  truth", "official", "current", or "the version `mb` trusts" where precision
+  allows. Refs #468.
 - Clarified graph-link authoring guidance across markdown conventions,
   generated business-repo instructions, and bundled authoring skills:
   frontmatter remains the source of truth, body mirrors are repairable viewer output,
@@ -28,7 +38,7 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   markdown files `mb` validates, not a dependency or second source of
   truth. `mb` keeps the typed business graph and validation; Obsidian
   owns clickable browsing, Backlinks, and Graph view. `docs/markdown-link-conventions.md`
-  is restructured around three layered rules (canonical edges in
+  is restructured around three layered rules (frontmatter edges in
   frontmatter; body mirrors are note-level only; Markdown relative links
   for interop) and documents the cross-tool section-anchor trap and
   authoring hazards. Generated business-repo agent guidance
@@ -148,7 +158,7 @@ work.
 
 ## [0.3.13] - 2026-05-08
 
-v0.3.13 ships the repo-topology substrate that landed after v0.3.12 as an
+v0.3.13 ships the repo-topology work that landed after v0.3.12 as an
 installable patch release. `mb status`, `mb graph`, and `mb doctor` now expose
 topology facts; `mb validate` enforces the new repo descriptor and topology
 record schemas; migration drift now surfaces as actionable warnings; and
@@ -177,7 +187,7 @@ current push topology.
 - **Reusable playbooks and routing docs match the current push model.**
   `ship-bet` and `weekly-review` route run evidence into
   `pushes/<push>/playbooks/`, outcomes, logs, and checkpoints; agent-facing
-  routing docs and the public substrate story have been refreshed to match.
+  routing docs and the public product story have been refreshed to match.
 
 ### Added
 
@@ -222,7 +232,7 @@ current push topology.
   usable draft recipe rather than a non-executable skeleton. Refs #425.
 - Refreshed agent-facing routing docs to match the current daily loop,
   topology vocabulary, and migration guardrails. Refs #437.
-- Refreshed the public story around the shipped v0.3.12 substrate so README,
+- Refreshed the public story around the shipped v0.3.12 work so README,
   docs, and roadmap language match what users can install today. Refs #440.
 
 ## [0.3.12] - 2026-05-08
@@ -256,7 +266,7 @@ of the already-published v0.3.11 section and ships them as their own patch.
 
 ## [0.3.11] - 2026-05-08
 
-v0.3.11 tightens the daily-loop substrate after v0.3.10: startup and
+v0.3.11 tightens the daily loop after v0.3.10: startup and
 migration guidance is less ambiguous, legacy `.vip` YAML state is audit-only,
 business primitives and repo topology are clearer, release simulations run from
 materialized fixtures, and Google Ads Search launch work has a plan-only
@@ -1369,7 +1379,7 @@ daily repo briefing, runtime handoff, and install-mode-aware updates.
   bare `mb` shows a short launch screen with the main trails: onboard, status,
   start, doctor, and full help.
 - **New users get a guided setup path.** `mb onboard` creates or connects a
-  business repo, explains the local files / git / GitHub substrate, wires the
+  business repo, explains the local files / git / GitHub model, wires the
   bundled Claude Code skills, and prints the next `/start` step.
 - **Daily work has a model-free briefing.** `mb status` summarizes repo shape,
   git state, runtime wiring, recent decisions/research, and GitHub task context
@@ -1407,7 +1417,7 @@ daily repo briefing, runtime handoff, and install-mode-aware updates.
 
 - Reframed the README around the operating thesis before the command list:
   Main Branch is a GitHub-native business operating system, with `mb` as the
-  deterministic CLI substrate and agent skills as the judgment layer.
+  deterministic CLI layer and agent skills as the judgment layer.
 - Updated `/pull` so the skill delegates mechanical update work to `mb update`
   and keeps ownership of the human-readable changelog summary.
 - Updated the v0.2 first-run PRD so the merged launch-loop issues are marked
@@ -1433,7 +1443,7 @@ match the accepted runtime-agnostic product boundary.
 - **Main Branch is not Claude-Code-only forever.** The public engine now
   states the intended runtime posture clearly: Claude Code first, with Codex,
   Cursor, OpenClaw, Hermes, and local runtimes targeted later.
-- **`mb` stays the stable substrate.** It owns repo shape, validation, status,
+- **`mb` stays the stable control layer.** It owns repo shape, validation, status,
   migration, updates, graphing, and runtime wiring. Agent runtimes own
   judgment-heavy workflows.
 

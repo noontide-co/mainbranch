@@ -11,14 +11,14 @@ Routes to the right framework based on your offer type.
 ## Output destinations and operator vocabulary
 
 VSL scripts that wrap a coordinated push (a launch, drop, challenge, etc.)
-land under `pushes/<YYYY-MM-DD-slug>/` (canonical engine primitive). The
+land under `pushes/<YYYY-MM-DD-slug>/` (engine primitive). The
 push record itself is `pushes/<YYYY-MM-DD-slug>/push.md` (`type: push`).
 A one-off VSL that isn't part of a coordinated push can sit under the
 relevant offer in `core/offers/<offer>/` instead.
 
 If `core/vocabulary.md` defines display words (e.g. `terms.push.singular:
 launch`), speak the operator's word in conversation while still writing
-canonical files. If the repo still has legacy `campaigns/` records,
+engine files. If the repo still has legacy `campaigns/` records,
 recommend `mb doctor` and `mb migrate campaigns --plan` before creating
 new push work.
 
@@ -45,13 +45,15 @@ add the appropriate typed frontmatter link (`linked_bets`,
 `linked_decisions`, `linked_research`, `linked_playbooks`,
 `linked_outcomes`). Mirror frontmatter links in `## Related links` with
 Markdown relative links, or preview `mb doctor repair --plan` and ask before
-applying the repair. Do not infer frontmatter links from body-only references.
+applying the repair. Use the connection decision matrix in
+docs/business-connections.md before adding typed links. Do not infer
+frontmatter links from body-only references.
 
 ---
 
 ## Pull Latest Updates
 
-For the canonical engine resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
+For the standard engine resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
 
 Then run `mb status --json --peek` from the business repo and use its
 `readiness`, `drift.items`, and `ranked_actions` facts before asking for missing
@@ -93,7 +95,7 @@ Before loading reference files, resolve active offer context with
 `.claude/reference/business-primitives/offer-bet-push-proof.md`:
 
 1. If a future `mb` JSON field exposes active offer state, use it.
-2. Do not treat `.vip/local.yaml` as canonical active-offer state. If legacy
+2. Do not treat `.vip/local.yaml` as source of active-offer truth. If legacy
    state exists, confirm the offer with the user instead of silently routing.
 3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
 4. If no offer is selected AND `core/offers/` exists: ask which offer.
@@ -103,7 +105,7 @@ Before loading reference files, resolve active offer context with
 
 In current repos, `reference/core` and `reference/offers` are compatibility
 bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
-files, and write once to the canonical `core/` path.
+files, and write once to the current `core/` path.
 
 **Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
 **Offer-aware files:** `offer.md`, `audience.md`

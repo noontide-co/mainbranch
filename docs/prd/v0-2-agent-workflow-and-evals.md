@@ -243,7 +243,7 @@ risks.
 
 ## State Model
 
-- Canonical state stays in git?
+- Business state stays in git?
 - Local operational state stays out of git?
 - Live process state is explicit?
 - Secrets are never committed?
@@ -390,7 +390,7 @@ OpenClaw, Hermes, or local LLM adapters:
 
 - runtime opens against the business repo;
 - skill/workflow discovery works;
-- the runtime can read canonical repo files;
+- the runtime can read the repo files that hold business truth;
 - output writes to the expected repo paths;
 - `mb` remains the deterministic setup/status layer.
 

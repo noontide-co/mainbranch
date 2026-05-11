@@ -81,7 +81,7 @@ Use repo-relative paths in link fields:
 
 - `linked_decisions`: `decisions/*.md`
 - `linked_research`: `research/*.md`
-- `linked_pushes` (canonical): `pushes/YYYY-MM-DD-slug/push.md` or push artifacts
+- `linked_pushes` (official): `pushes/YYYY-MM-DD-slug/push.md` or push artifacts
 - `linked_campaigns` (legacy compatibility, leave as `[]` for new bets):
   `campaigns/*/campaign.md` records on existing repos that have not yet
   migrated. New bets always include both fields with `linked_pushes`
@@ -100,7 +100,8 @@ linked_bets:
 After adding or changing typed `linked_*` frontmatter, add or repair the
 body-level `## Related links` mirror with Markdown relative links. If the
 mirror is missing or stale, run `mb doctor repair --plan` and ask before
-`mb doctor repair --apply`; do not invent relationships from body links.
+`mb doctor repair --apply`; use the connection decision matrix in
+docs/business-connections.md and do not invent relationships from body links.
 
 ## Mode: new
 

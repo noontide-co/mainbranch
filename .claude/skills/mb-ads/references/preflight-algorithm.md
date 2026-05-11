@@ -51,9 +51,9 @@ offer and audience files:
 4. Same resolution for `audience.md`
 5. Legacy fallback: if `core/` is absent, read old `reference/core/` and
    `reference/offers/` paths. In current repos, those are compatibility bridges
-   to canonical `core/` paths, not duplicate files.
+   to current `core/` paths, not duplicate files.
 
-See `docs/system-architecture.md` (Canonical Path Resolution) for the full algorithm.
+See `docs/system-architecture.md` (current path resolution) for the full algorithm.
 
 | File | Key Sections | Weight |
 |------|-------------|--------|

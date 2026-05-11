@@ -13,11 +13,11 @@ Single entry point for Main Branch. Detect user state, context level, experience
 ## Output destinations and operator vocabulary
 
 This skill routes to other skills; it does not write coordinated work itself.
-When summarizing repo state, count records under `pushes/` (canonical) and
+When summarizing repo state, count records under `pushes/` (current) and
 flag `campaigns/` separately as legacy compatibility — `mb status` and
 `mb doctor` already do this. If `core/vocabulary.md` defines display words
 (e.g. `terms.push.singular: drop`), speak the operator's word in
-conversation while still referring to canonical paths in any commands.
+conversation while still referring to engine paths in any commands.
 
 If the repo has legacy `campaigns/` records, surface the doctor warning
 and recommend `mb migrate campaigns --plan` as a triage option before
@@ -58,7 +58,7 @@ are `missing`, `blocked`, `ready_for_preview`, `ready_for_operator_review`, and
 **Offer launch path:** When the operator asks to launch an offer, use
 [references/launch-orchestration.md](references/launch-orchestration.md).
 The path is skill orchestration: keyword-gate with `/mb-think`, create/select a
-canonical launch push, build/check the lander with `/mb-site`, prepare or check
+launch push, build/check the lander with `/mb-site`, prepare or check
 ads with `/mb-ads`, and checkpoint approved artifacts.
 
 **Primitive routing:** When a live idea could be a bet, offer, push, proof, or
@@ -207,7 +207,7 @@ The user starts Claude in their business repo. Check CWD first before falling ba
    machine-local repo memory.
 ```
 
-See **[references/repo-detection.md](references/repo-detection.md)** for the full flow: CWD detection, migration guidance for users in the engine repo, config loading, multi-repo selection, the discovery algorithm when no config exists, the canonical `REPO_PATH` variable, and the Main Branch wiring verification block.
+See **[references/repo-detection.md](references/repo-detection.md)** for the full flow: CWD detection, migration guidance for users in the engine repo, config loading, multi-repo selection, the discovery algorithm when no config exists, the required `REPO_PATH` variable, and the Main Branch wiring verification block.
 
 ---
 
@@ -371,7 +371,7 @@ If `core/offers` is absent and `core/` is also absent, legacy
 1. Check current CLI status facts first. If a future `mb` JSON field exposes
    active-offer local state, prefer that. Do not silently route from
    `.vip/local.yaml`.
-2. If legacy active-offer state is present, do not treat it as canonical. Say:
+2. If legacy active-offer state is present, do not treat it as the source of truth. Say:
    "This repo has old active-offer session state. Continue with that offer,
    work brand-level, or switch?" Avoid echoing raw `.vip` values unless the
    user asks to inspect the file.

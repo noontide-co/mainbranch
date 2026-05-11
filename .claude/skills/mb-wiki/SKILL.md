@@ -22,7 +22,7 @@ Create and maintain personal wikis with atomic notes, WikiLinks, and auto-deploy
 
 ## Pull Latest Updates (Always)
 
-See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** for the canonical engine resolution + pull bash block. Run it at the start of every /mb-wiki invocation.
+See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** for the standard engine resolution + pull bash block. Run it at the start of every /mb-wiki invocation.
 
 ---
 
@@ -321,7 +321,7 @@ Live at: https://yourdomain.com
 
 ## References
 
-- [references/pull-engine-updates.md](references/pull-engine-updates.md) — Canonical engine resolution + pull bash block
+- [references/pull-engine-updates.md](references/pull-engine-updates.md) — Standard engine resolution + pull bash block
 - [references/setup-mode.md](references/setup-mode.md) — Full 12-step setup mode procedure (commands, Windows fixes, CF dashboard walkthrough, config save)
 - [references/cloudflare-pages-setup.md](references/cloudflare-pages-setup.md) — Dashboard walkthrough
 - [references/customization.md](references/customization.md) — Update avatar, name, social links after setup

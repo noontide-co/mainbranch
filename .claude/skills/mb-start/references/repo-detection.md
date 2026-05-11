@@ -84,7 +84,7 @@ Use fallbacks in order:
    ```
 3. **Ask the user** (if nothing found)
 
-**Verify with Read, not Glob:** Use `Read` on `[path]/core/soul.md` or legacy `[path]/reference/core/soul.md` to confirm it's a business repo. `soul.md` is always canonical in `core/` for current repos.
+**Verify with Read, not Glob:** Use `Read` on `[path]/core/soul.md` or legacy `[path]/reference/core/soul.md` to confirm it's a business repo. `soul.md` belongs in `core/` for current repos.
 
 **Skip the engine repo** - any path containing `.claude/skills/mb-start/SKILL.md` is the engine, not a business repo.
 
@@ -98,9 +98,9 @@ No repo selection needed. Confirm briefly and move on:
 
 ---
 
-## Canonical Repo Variable (Required)
+## Required Repo Variable
 
-After repo detection/selection, set one canonical variable and use it everywhere:
+After repo detection/selection, set one repo variable and use it everywhere:
 
 ```bash
 REPO_PATH="[absolute-path-to-selected-business-repo]"
@@ -152,7 +152,7 @@ test -e "$REPO_PATH/.claude/skills/mb-start" && echo "START_BRIDGE_OK"
 
 **If `additionalDirectories` missing:** run `mb skill link --repo "$REPO_PATH"`, then restart Claude.
 
-**If bridge links missing** (but `additionalDirectories` exists): run the canonical repair from [auto-heal.md](auto-heal.md), targeting `REPO_PATH`.
+**If bridge links missing** (but `additionalDirectories` exists): run the standard repair from [auto-heal.md](auto-heal.md), targeting `REPO_PATH`.
 
 Tell the user: "Repaired missing Main Branch bridge links in **[repo-name]**. Local custom skills are preserved."
 

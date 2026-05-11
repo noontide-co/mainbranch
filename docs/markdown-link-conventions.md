@@ -7,11 +7,13 @@ The repo is the durable source of truth. Markdown tools are views over that
 truth. `mb` is the validator and graph engine; Obsidian is an optional
 first-class viewer over the same files. See
 [the Obsidian viewer decision](../decisions/2026-05-09-obsidian-first-class-viewer.md)
-for the product stance.
+for the product stance, and [Business connections](business-connections.md)
+for the plain-language decision matrix on when to use frontmatter links,
+inline links, entity tags, data references, GitHub history, or no link.
 
 ## Three rules
 
-1. **Canonical relationship data lives in structured frontmatter**, not in
+1. **Official relationship data lives in structured frontmatter**, not in
    viewer-specific link strings. `mb graph`, `mb validate --cross-refs`,
    and `mb status relationship_health` read frontmatter as the source of
    truth.
@@ -35,7 +37,7 @@ pushes/2026-05-04-spring-launch/push.md
 core/offers/main-branch/offer.md
 ```
 
-These examples use the current v0.x canonical folders. If future user
+These examples use the current v0.x official folders. If future user
 research shows that folder names should change, that change should land
 through path-config and migration work, not ad hoc docs or skill examples
 that teach a different repo shape.
@@ -134,7 +136,10 @@ not delete stale body-only links or update frontmatter from body links.
 
 ## Authoring Common Relationships
 
-Use the narrowest evidence-backed frontmatter field available:
+Use the narrowest evidence-backed frontmatter field available. For the
+full decision matrix, including inline links, entity tags, data references,
+GitHub history, and no-link cases, see
+[Business connections](business-connections.md).
 
 - Active bets should link to supporting pushes, playbooks, decisions,
   research, and outcome/log artifacts through `linked_pushes`,
@@ -164,7 +169,7 @@ when headings change or collide. Obsidian uses the heading text after `#`
 as the heading target. The two systems do not agree, and section-fragment
 links that look right in one tool will fail or drift in the other.
 
-The canonical typed-edge fields (`linked_decisions`, `linked_research`,
+The typed-edge fields (`linked_decisions`, `linked_research`,
 `linked_pushes`, `linked_outcomes`, `linked_docs`, `linked_issues`,
 `linked_bets`, `linked_playbooks`, etc.) point at files, not headings.
 That is intentional. If you need to point at a specific section of the

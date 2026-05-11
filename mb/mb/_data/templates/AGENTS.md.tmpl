@@ -101,9 +101,11 @@ before acting.
 
 Typed relationships live in frontmatter as repo-relative `.md` paths
 (`linked_decisions:`, `linked_research:`, `linked_pushes:`, etc.). Those
-are the canonical edges `mb graph` and `mb validate --cross-refs` read.
+are the official relationships `mb graph` and `mb validate --cross-refs` read.
 Author them only from evidence in the repo or from explicit operator
 instruction; do not invent relationships to make the graph look fuller.
+Use the connection decision matrix before editing relationships:
+https://github.com/noontide-co/mainbranch/blob/main/docs/business-connections.md
 
 When a file declares typed edges in frontmatter, mirror them in a body
 `## Related links` section using **Markdown relative links** so the same

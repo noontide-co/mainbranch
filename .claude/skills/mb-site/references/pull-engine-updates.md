@@ -1,6 +1,6 @@
 # Pull Engine Updates
 
-Canonical command for pulling latest Main Branch updates at the start of any skill invocation. CWD is the business repo. **Do NOT silently swallow failures.** Users on stale code get broken features.
+Standard command for pulling latest Main Branch updates at the start of any skill invocation. CWD is the business repo. **Do NOT silently swallow failures.** Users on stale code get broken features.
 
 `mb update` owns the install-mode mechanics. It detects pipx vs clone installs, runs the correct update command, and refreshes skill links for the business repo.
 

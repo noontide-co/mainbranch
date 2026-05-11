@@ -13,7 +13,7 @@ Use the minisite shape when the offer needs multiple proof/process/FAQ pages.
 2. Run `mb status --json --peek` and use readiness, relationship health,
    legacy `campaigns/` drift, provider facts, and ranked actions before
    continuing.
-3. Create or select the canonical launch push:
+3. Create or select the launch push:
 
 ```yaml
 ---

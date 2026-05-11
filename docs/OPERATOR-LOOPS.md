@@ -179,14 +179,14 @@ through Ops.
 **Question:** What did we learn, and what changes because of it?
 
 The act of extracting the lesson — usually scheduled. Output that updates
-Sense substrate (offer, voice, audience, decisions) and feeds the next round
+Sense memory (offer, voice, audience, decisions) and feeds the next round
 of work.
 
 | Reflect looks like | Reflect doesn't look like |
 |---|---|
 | Extracting from past work | Producing new work |
 | Calendared (weekly review, end-of-bet, monthly retro) | Continuous |
-| Output that updates Sense substrate | Output for external audiences |
+| Output that updates Sense memory | Output for external audiences |
 | Verdict, lesson, change-of-mind | Status update |
 
 **Current surfaces**

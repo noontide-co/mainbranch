@@ -37,7 +37,7 @@ The current product center is the daily owner loop:
 3. The agent routes thought dumps and requests into business primitives:
    bets, goals, offers, research, decisions, pushes, playbooks, outcomes, and
    checkpoints.
-4. `mb` enforces the substrate: repo shape, status health, graph links,
+4. `mb` keeps the repo healthy: repo shape, status health, graph links,
    provider readiness, runtime wiring, update/repair paths, validation, and
    guarded commits.
 5. `/mb-end` and `mb checkpoint` reconcile what changed so durable business
@@ -436,7 +436,7 @@ Rules:
 
 ## State Model
 
-- Canonical business state stays in git.
+- Business state stays in git.
 - Local operational state stays out of git.
 - Secrets stay in the OS keychain, environment, or runtime-specific secret
   stores, never in repo files or frontmatter.

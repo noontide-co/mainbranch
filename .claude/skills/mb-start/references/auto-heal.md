@@ -153,7 +153,7 @@ If HEAL_FAILED:
 
 ```
 business-repo/.claude/
-├── settings.local.json                              # Real file (canonical)
+├── settings.local.json                              # Real file (used by Claude Code)
 ├── skills/                                          # Real directory
 │   ├── mb-start -> /path/to/mainbranch/.claude/skills/mb-start  # Symlink (bridge)
 │   ├── mb-ads -> /path/to/mainbranch/.claude/skills/mb-ads      # Symlink (bridge)

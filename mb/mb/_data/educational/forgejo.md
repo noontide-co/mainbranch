@@ -26,7 +26,7 @@ For most beginners, GitHub is still the right starting point.
 
 ## Why Forgejo fits the Main Branch philosophy
 
-**It keeps git as the substrate.** Main Branch wants durable files, git history,
+**It keeps git at the center.** Main Branch wants durable files, git history,
 and inspectable changes. Forgejo preserves that model.
 
 **It is self-hostable.** A team can run the forge on infrastructure it controls

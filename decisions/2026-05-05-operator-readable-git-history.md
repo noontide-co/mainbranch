@@ -317,7 +317,7 @@ For this decision slice:
 - Beginner checkpointing can be readable without being lax about safety.
 - Power users and CI can opt into stricter reference and prefix validation
   without making the first-run path feel like developer ceremony.
-- The verb contract becomes the substrate for the public bets feed:
+- The verb contract becomes the basis for the public bets feed:
   `[opened]` commits with `Refs: bets/<slug>.md` are Decide events, and
   `[closed]` commits with the same ref are Reflect events. Publishing those
   outcomes is a chained Ship event. Renaming or removing these verbs after

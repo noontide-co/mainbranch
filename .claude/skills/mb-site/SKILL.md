@@ -25,7 +25,7 @@ files themselves live in the linked site repo (Cloudflare Pages, etc.) and
 are not duplicated in the business repo.
 
 Reverse references from the site repo should use the role-neutral
-`.mainbranch/repo.json` descriptor with canonical push paths
+`.mainbranch/repo.json` descriptor with engine push paths
 (`linked.pushes: ["pushes/<...>/push.md"]`). Existing site repos may still use
 `.mainbranch/source.json`; its `campaign_path` compatibility key should point
 at the current push record when possible. Legacy repos that still have
@@ -33,7 +33,7 @@ at the current push record when possible. Legacy repos that still have
 
 If `core/vocabulary.md` defines display words (e.g. `terms.push.singular:
 launch`), speak the operator's word in conversation while still writing
-canonical files. If the repo still has legacy `campaigns/` records,
+engine files. If the repo still has legacy `campaigns/` records,
 recommend `mb doctor` and `mb migrate campaigns --plan` before creating
 new push work.
 
@@ -60,8 +60,9 @@ playbook, or outcome, add the appropriate typed frontmatter link
 (`linked_bets`, `linked_decisions`, `linked_research`,
 `linked_playbooks`, `linked_outcomes`). Mirror frontmatter links in
 `## Related links` with Markdown relative links, or preview
-`mb doctor repair --plan` and ask before applying the repair. Do not infer
-frontmatter links from body-only references.
+`mb doctor repair --plan` and ask before applying the repair. Use the
+connection decision matrix in docs/business-connections.md before adding
+typed links. Do not infer frontmatter links from body-only references.
 
 ## Re-Invoke Often
 
@@ -69,7 +70,7 @@ Say `/mb-site` again after compaction, context loss, or switching focus. It relo
 
 ## Start Every Run
 
-1. Load [`references/pull-engine-updates.md`](references/pull-engine-updates.md) and run the canonical update check.
+1. Load [`references/pull-engine-updates.md`](references/pull-engine-updates.md) and run the standard update check.
 2. Detect business repo mode vs site repo mode. Load [`references/site-repo-workflow.md`](references/site-repo-workflow.md) for repo boundaries, source links, and reverse site records.
 3. When a business repo is known, run `mb status --json --peek` and use its `readiness`, `drift.items`, `integrations`, `measurement`, and `ranked_actions` facts before inventing setup, provider, or launch-readiness checks in prose.
 4. Before any domain purchase, DNS, Cloudflare Pages project, custom-domain attach, or deploy work, run `mb connect doctor --json` from the business repo and check `provider:cloudflare`.

@@ -104,7 +104,7 @@ Some old setups still have `~/.config/vip/local.yaml` with `vip_path`,
 `default_repo`, and `recent_repos`. Treat that file as a compatibility fallback,
 not as the primary repair mechanism.
 
-If you must resolve it manually, use the canonical resolver in
+If you must resolve it manually, use the standard resolver in
 [`vip-path-resolution.md`](vip-path-resolution.md), then immediately route back
 to:
 

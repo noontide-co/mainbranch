@@ -85,7 +85,7 @@ The work clusters into a few durable buckets:
   timeline for status, handoff, retros, and future dashboards.
 - **Pushes and growth workflows.** Ads, organic content, VSLs, sites, research,
   bets, and coordinated pushes remain the strongest shipped wedge. `pushes/` is
-  the canonical folder for coordinated work; `campaigns/` remains a
+  the official folder for coordinated work; `campaigns/` remains a
   compatibility read for older repos.
 - **Provider rails.** Cloudflare, GitHub, Google/Workspace, ads providers,
   Apify, Postiz-style social scheduling, and future sidecars should enter
@@ -137,7 +137,7 @@ runtime adapters.
 
 Anti-scope:
 
-- no dashboard database as canonical business memory;
+- no dashboard database as the source of business memory;
 - no Slack replacement claim before repo truth, GitHub activity, team logs, and
   permission boundaries are proven;
 - no finance/legal raw data in shared repos by default;
@@ -163,7 +163,7 @@ Planned scope:
 
 ## Longer Range
 
-Longer-range work should preserve the same state model: canonical truth in git,
+Longer-range work should preserve the same state model: business truth in git,
 local operational state outside git, and live process state only when explicit.
 
 Likely directions:

@@ -51,7 +51,9 @@ linked_pushes: []
 ## Related links
 
 [Leave empty until `linked_decisions` or `linked_pushes` has evidence-backed
-targets, then mirror those frontmatter links with Markdown relative links.]
+targets, then mirror those frontmatter links with Markdown relative links.
+Use docs/business-connections.md when deciding whether a connection should be
+a typed frontmatter link, inline link, entity tag, data reference, or no link.]
 
 ## Question
 

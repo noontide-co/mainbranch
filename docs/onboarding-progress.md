@@ -20,7 +20,7 @@ agent/runtime session resume without rereading a long transcript.
 
 ## State Boundary
 
-Canonical business truth belongs in git as normal business files:
+Business truth belongs in git as normal business files:
 
 - accepted offer, audience, voice, proof, and finance summaries in `core/`;
 - research notes in `research/`;

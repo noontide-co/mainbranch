@@ -4,7 +4,7 @@ Main Branch is public open-source infrastructure for running a business from
 markdown files in git.
 
 The product is not another place to paste prompts. The product is a durable
-operating substrate:
+way to keep business memory usable:
 
 - the business repo is the business brain;
 - `mb` is the deterministic control plane;
@@ -45,7 +45,7 @@ and the full reasoning lives in
 
 ### 1. Files First
 
-Canonical business truth belongs in git: core files, research, decisions, bets,
+Business truth belongs in git: core files, research, decisions, bets,
 pushes, plans, public artifacts, meeting summaries, fulfillment notes, durable
 finance summaries, and proposal changes. Rebuildable indexes, local caches,
 credentials, runtime preferences, raw finance/legal sources, and live process

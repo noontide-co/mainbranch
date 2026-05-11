@@ -302,8 +302,8 @@ Current Main Branch commands understand that legacy shape:
 
 After migration, `reference/core` and `reference/offers` are compatibility
 links back to `core/` and `core/offers/`. They are not duplicate files. Agents
-should write once to the canonical `core/` or `core/offers/` path and should
-not ask users to edit both a canonical path and its `reference/` bridge.
+should write once to the current `core/` or `core/offers/` path and should
+not ask users to edit both a current path and its `reference/` bridge.
 
 The only thing legacy users usually need immediately is:
 

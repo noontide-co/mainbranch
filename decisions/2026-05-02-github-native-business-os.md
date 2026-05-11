@@ -12,7 +12,7 @@ tags: [product-direction, github, cli, integrations, graph, business-os]
 Main Branch should move from "CLI plus Claude Code skills" toward a
 GitHub-native operating system for running a real business with AI.
 
-The core substrate stays the same:
+The core shape stays the same:
 
 - the business lives in files in a git repo;
 - GitHub issues are work items;
@@ -21,7 +21,7 @@ The core substrate stays the same:
 - agent runtimes execute against that source of truth.
 
 The product shift is that `mb` becomes the control plane that makes this
-substrate usable for non-developers while preserving the real primitives for
+system usable for non-developers while preserving the real primitives for
 technical operators.
 
 ## Current Reality

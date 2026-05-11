@@ -1,6 +1,6 @@
 # Minisite — V1 Spec
 
-The canonical contract for what a minisite **is** in Main Branch. Implementation flows live elsewhere; this file is the source of truth for page list, content contracts, conversion endpoint, tracking, and walkthrough UX.
+The source-of-truth contract for what a minisite **is** in Main Branch. Implementation flows live elsewhere; this file is the source of truth for page list, content contracts, conversion endpoint, tracking, and walkthrough UX.
 
 When `/mb-site`, `stripe.py`, or any future launch orchestration ships behavior
 that touches a minisite, that behavior conforms to this spec. If the spec
@@ -258,7 +258,7 @@ For operators with their own form endpoint or advanced flow. The operator suppli
 
 Pixels and analytics are **opt-in per offer** via `offer.md` frontmatter. The generation subagent injects them into all pages when declared; skips injection entirely when not.
 
-For paid-traffic, Google Ads, GTM, conversion tracking, retargeting, or launch-readiness work, the canonical contract is `docs/google-ads-gtm-conversion-rubric.md`. Load that rubric and run `mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json` before saying the site is ready for paid launch. The check is local/read-only; it does not publish GTM or mutate Google Ads.
+For paid-traffic, Google Ads, GTM, conversion tracking, retargeting, or launch-readiness work, the source-of-truth contract is `docs/google-ads-gtm-conversion-rubric.md`. Load that rubric and run `mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json` before saying the site is ready for paid launch. The check is local/read-only; it does not publish GTM or mutate Google Ads.
 
 ### Supported tracking providers (V1)
 

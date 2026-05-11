@@ -29,7 +29,7 @@ See [`cloudflare-pages-link.md`](cloudflare-pages-link.md) for the full walkthro
 
 ## `verify_live.py` Fails
 
-First check the canonical Main Branch provider state:
+First check the Main Branch provider state:
 
 ```bash
 mb connect doctor --json
@@ -79,7 +79,7 @@ repo, or the reverse site record in `pushes/`. Inspect `campaigns/` only for
 legacy repos.
 
 If a legacy `source.json` has `business_repo`, that path must point to a
-business repo with canonical `core/` files. A new `.mainbranch/repo.json`
+business repo with current `core/` files. A new `.mainbranch/repo.json`
 descriptor should use safe GitHub handles and, at most, an optional relative
 `parent.local_checkout` hint. Legacy `reference/core` and `reference/offers`
 paths are compatibility bridges only.

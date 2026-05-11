@@ -95,7 +95,7 @@ You don't run any of these commands yourself. You ask the agent. It runs them.
 
 Main Branch v0.3 has three layers:
 
-- **Your folder is canonical memory.** Offer, audience, voice, decisions, research, bets, launches, logs, documents, links to other repos. Plain markdown files you can read on any computer.
+- **Your folder is the source of truth.** Offer, audience, voice, decisions, research, bets, launches, logs, documents, links to other repos. Plain markdown files you can read on any computer.
 - **The CLI is the safety net.** Scaffolds the folder, validates the shape, draws the relationship graph, briefs you on what's changed, walks through repairs, saves readable checkpoints, and checks that connected providers (GitHub, Cloudflare, ads accounts) are wired up safely. The agent runs it. You don't have to learn it.
 - **The skills are the judgment layer.** The agent reads your folder, asks you the right questions, drafts work, reviews it, and routes the artifacts back into files.
 
@@ -279,6 +279,7 @@ Full list: `mb --help`. JSON output contract: [docs/json-output-contract.md](doc
 - [CONTRIBUTING.md](CONTRIBUTING.md) — branch / commit / validation discipline
 - [docs/ETHOS.md](docs/ETHOS.md) — product principles
 - [docs/OPERATOR-LOOPS.md](docs/OPERATOR-LOOPS.md) — Sense → Decide → Ship → Reflect taxonomy
+- [docs/business-connections.md](docs/business-connections.md) — how to connect notes, reports, data, and GitHub history without noisy links
 - [docs/ROADMAP.md](docs/ROADMAP.md) — release direction
 - [docs/compatibility.md](docs/compatibility.md) — runtime support matrix
 - [docs/release-simulations.md](docs/release-simulations.md) — release evidence ladder

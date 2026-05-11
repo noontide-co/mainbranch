@@ -53,7 +53,7 @@ When a future `mb` JSON active-offer field or the operator's current session
 selects an offer:
 
 1. Score `core/soul.md` and `core/voice.md` from core (these are always brand-level).
-2. For offer and audience, resolve using the canonical path algorithm:
+2. For offer and audience, resolve using the current path algorithm:
    - Check `core/offers/[offer]/offer.md` first. If it exists, score it.
    - If it does not exist, score `core/offer.md`.
    - Same for `audience.md`.
@@ -67,7 +67,7 @@ only. Do not silently route from `.vip/local.yaml`; treat it as audit input.
 
 Legacy fallback: if the repo has no `core/`, read `reference/core/` and
 `reference/offers/`. In current repos those paths are compatibility bridges to
-canonical `core/` paths. Do not score or report them as duplicate files.
+current `core/` paths. Do not score or report them as duplicate files.
 
 ### Composite Score
 

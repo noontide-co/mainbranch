@@ -173,7 +173,7 @@ open a bet instead of rewriting durable offer truth. If unsure, ask the user.
 
 **Compatibility bridges:** In current repos, `reference/core` points at
 `core/` and `reference/offers` points at `core/offers/`. These are aliases for
-older skill paths, not duplicate files. Write once to the canonical `core/` or
+older skill paths, not duplicate files. Write once to the current `core/` or
 `core/offers/` target. Only use `reference/core/` or `reference/offers/` as a
 legacy fallback when `core/` is absent.
 

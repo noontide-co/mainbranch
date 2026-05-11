@@ -26,7 +26,7 @@ The playbook records the plan, approval state, safe provider state, validation
 evidence, and outcomes. It does not execute provider mutation.
 
 If `core/vocabulary.md` defines display words (e.g. `terms.push.singular: drop`),
-speak the operator's word in conversation while still writing canonical files.
+speak the operator's word in conversation while still writing engine files.
 If the repo still has legacy `campaigns/` records, recommend `mb doctor` and
 `mb migrate campaigns --plan` before creating new push work.
 
@@ -53,7 +53,9 @@ add the appropriate typed frontmatter link (`linked_bets`,
 `linked_decisions`, `linked_research`, `linked_playbooks`,
 `linked_outcomes`). Mirror frontmatter links in `## Related links` with
 Markdown relative links, or preview `mb doctor repair --plan` and ask before
-applying the repair. Do not infer frontmatter links from body-only references.
+applying the repair. Use the connection decision matrix in
+docs/business-connections.md before adding typed links. Do not infer
+frontmatter links from body-only references.
 
 ---
 
@@ -77,7 +79,7 @@ Detect if user is in the right place:
 
 ## Pull Latest Updates
 
-For the canonical engine resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
+For the standard engine resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
 
 Then run `mb status --json --peek` from the business repo and use its
 `readiness`, `drift.items`, and `ranked_actions` facts before asking setup or
@@ -118,7 +120,7 @@ Before loading reference files, resolve active offer context with
 `.claude/reference/business-primitives/offer-bet-push-proof.md`:
 
 1. If a future `mb` JSON field exposes active offer state, use it.
-2. Do not treat `.vip/local.yaml` as canonical active-offer state. If legacy
+2. Do not treat `.vip/local.yaml` as source of active-offer truth. If legacy
    state exists, confirm the offer with the user instead of silently routing.
 3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
 4. If no offer is selected AND `core/offers/` exists: ask which offer.
@@ -128,7 +130,7 @@ Before loading reference files, resolve active offer context with
 
 In current repos, `reference/core` and `reference/offers` are compatibility
 bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
-files. Read through them only as fallback, and write once to the canonical
+files. Read through them only as fallback, and write once to the current
 `core/` path when reference updates are needed.
 
 **Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
@@ -278,7 +280,7 @@ Before saving: show file paths.
 3. **Select concept** — User picks from mined concepts or provides their own
 4. **Adapt to brand** — Map concept to user's offer, audience, voice
 5. **Generate scripts** — Use appropriate framework (video/carousel/static)
-6. **Save output** — Scripts to `pushes/YYYY-MM-DD-organic-{slug}/` (canonical). Never `campaigns/`; that folder is legacy compatibility only.
+6. **Save output** — Scripts to `pushes/YYYY-MM-DD-organic-{slug}/` (current). Never `campaigns/`; that folder is legacy compatibility only.
 7. **Checkpoint prompt** — run `mb checkpoint --plan --json`, show the proposed checkpoint and blockers, validate the chosen message with `mb checkpoint --validate "..." --json`, then after operator approval save with `mb checkpoint --message "..." --yes`.
 
 **Mining lives in `/mb-think` now.** If user needs to mine competitors, route them there first.

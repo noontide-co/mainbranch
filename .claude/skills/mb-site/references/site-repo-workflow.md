@@ -93,7 +93,7 @@ checkout hint exists and `--business-repo` is omitted.
 ## Reverse Link
 
 The business repo should keep a reverse site record in `pushes/<YYYY-MM-DD-slug>/`
-(canonical) or the relevant offer note. Legacy repos may still have the
+(current) or the relevant offer note. Legacy repos may still have the
 record under `campaigns/<slug>/`; `mb` reads both. The reverse record can
 include:
 

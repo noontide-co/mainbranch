@@ -11,7 +11,7 @@ This page is the public compatibility contract for that surface.
 | Linux | Supported for `mb`; supported when Claude Code is installed | CI runs the Python package on Linux. Claude Code must be installed separately. |
 | Windows | Experimental | Not tested in CI. Use WSL2 for the closest supported path. |
 | Python | 3.10, 3.11, 3.12 | CI gates all three versions. |
-| Install mode | `pipx install mainbranch` | Canonical public install path. |
+| Install mode | `pipx install mainbranch` | Official public install path. |
 | Developer mode | Git clone | For contributors who want to edit the engine or skills. |
 | Agent runtime | Claude Code | First-class today. |
 | Codex CLI | Experimental CLI-first adapter | Fresh business repos include `AGENTS.md`; `mb status`, `mb start`, and `mb doctor repair` expose Codex readiness. This is not slash-command parity. |
@@ -132,7 +132,7 @@ directory paths. If a sample needs a path, use placeholders like
 
 Runtime config may point at a business repo, an engine install, and optional
 provider tools. Credentials, OAuth tokens, API keys, raw exports, and local
-machine preferences must stay outside tracked business files. Canonical
+machine preferences must stay outside tracked business files. Business
 business memory remains in the repo's tracked `core/`, `research/`,
 `decisions/`, `bets/`, `pushes/`, `log/`, and `documents/` files.
 

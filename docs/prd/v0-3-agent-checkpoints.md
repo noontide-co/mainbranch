@@ -63,7 +63,7 @@ checkpoints should feel like "saved progress," not developer ceremony.
 - Make meaningful work durable before context is lost.
 - Let `/mb-start` reconstruct recent work from commits, diffs, status, and
   repo files.
-- Let `/mb-end` use the same checkpoint substrate instead of owning all
+- Let `/mb-end` use the same checkpoint flow instead of owning all
   checkpoint behavior itself.
 - Give agents deterministic rules for when to checkpoint.
 - Keep commit history readable and business-shaped.
@@ -282,7 +282,7 @@ At next start:
 
 ## State Model
 
-Canonical checkpoint truth is normal git history. Main Branch should not create
+Checkpoint truth is normal git history. Main Branch should not create
 a second source of truth for commits.
 
 Optional local state may live under `.mb/` only for rebuildable helper data,

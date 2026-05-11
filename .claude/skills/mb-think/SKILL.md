@@ -69,7 +69,7 @@ Both are work. Enriching the core levels up everything downstream.
 
 ## Pull Latest Updates
 
-See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** for the canonical engine resolution + pull bash block. Run it at the start of every /mb-think invocation.
+See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** for the standard engine resolution + pull bash block. Run it at the start of every /mb-think invocation.
 
 ---
 
@@ -103,7 +103,7 @@ Before loading reference files, resolve the active offer and target file type
 with `.claude/reference/business-primitives/offer-bet-push-proof.md`:
 
 1. If a future `mb` JSON field exposes active offer state, use it.
-2. Do not treat `.vip/local.yaml` as canonical active-offer state. If legacy
+2. Do not treat `.vip/local.yaml` as source of active-offer truth. If legacy
    state exists, confirm the offer with the user instead of silently routing.
 3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
 4. If no offer is selected AND `core/offers/` exists: ask which offer.
@@ -113,7 +113,7 @@ with `.claude/reference/business-primitives/offer-bet-push-proof.md`:
 
 In current repos, `reference/core` and `reference/offers` are compatibility
 bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
-files: write once to the canonical `core/` path and never ask the user to edit
+files: write once to the current `core/` path and never ask the user to edit
 both.
 
 **Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`

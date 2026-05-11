@@ -74,7 +74,7 @@ scratch files.
 ### Convergences across all eight agents
 
 1. **Rename Execute → Make/Ship.** Unanimous (8/8). "Execute" is corporate ("execute the plan") and implies top-down execution; operators and small teams do exploratory production. "Make" is honest; "Ship" is the indie-hacker idiom that captures production-and-release in one verb.
-2. **Collapse Know + See into Sense.** 3/4 round-1 agents converge; gbrain validates the substrate-vs-action split. Operators experience pulling state in as one act, not two.
+2. **Collapse Know + See into Sense.** 3/4 round-1 agents converge; gbrain validates the state-vs-action split. Operators experience pulling state in as one act, not two.
 3. **Reflect deserves a name.** The single most-skipped behavior across operator and small-team workflows is calendared review. GTD, EOS, gbrain Dream Cycle, AI-era safety arguments converge here. Naming Reflect is the intervention, not just description.
 4. **Ship as the production-and-release verb.** gstack `/ship` empirically collapses build + test + release. AI compresses Make+Show into one session. Marc Lou and Pieter Levels say "I shipped X" to mean "made and released X."
 
@@ -132,7 +132,7 @@ A note on gstack's "ship" baggage: Garry's `/ship` skill specifically means "rel
 |---|---|
 | Extracting from past work | Producing new work |
 | Calendared (weekly review, end-of-bet, monthly retro) | Continuous |
-| Output that updates Sense substrate | Output for external audiences |
+| Output that updates Sense memory | Output for external audiences |
 | Verdict, lesson, change-of-mind | Status update |
 
 Some Reflect output gets *published* through Ship — that's a chain, not a loop boundary blur. A bet's verdict (Reflect) might be tweeted (Ship the verdict to Twitter). The two loops chain; they're not the same loop because the artifact moves.
@@ -209,7 +209,7 @@ Audited against Hermes, OpenClaw, get-shit-done, gstack, gbrain.
 - **Zero name collisions** with Sense / Decide / Ship / Reflect.
 - **gstack uses `/ship`** for code-release specifically. Main Branch uses Ship for any "audience reach" event. Siblings, not collisions.
 - **get-shit-done has Discuss / Plan / Execute / Verify** as a workflow shape. No name overlap. GSD's "Execute" is what we'd call Ship; GSD's "Verify" is a gate inside our Ship.
-- **gbrain has DETECT → READ → RESPOND → WRITE → SYNC** for memory-agent loops. This is substrate for Sense (detect, read) and Ship (write, sync), not a peer taxonomy.
+- **gbrain has DETECT → READ → RESPOND → WRITE → SYNC** for memory-agent loops. This supports Sense (detect, read) and Ship (write, sync), not a peer taxonomy.
 
 The smallest plug-in surface Main Branch needs to expose: agentskills.io-compatible `SKILL.md` frontmatter that declares `loops:` and works in any runtime that respects the standard.
 

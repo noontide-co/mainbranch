@@ -128,8 +128,8 @@ linked_research:
 This creates an audit trail: decision -> research -> findings.
 Mirror those frontmatter links in `## Related links` with Markdown
 relative links. If the mirror is missing or stale, preview `mb doctor
-repair --plan` before applying repair; do not treat body-only links as
-typed graph data.
+repair --plan` before applying repair; use docs/business-connections.md for
+link choice, and do not treat body-only links as typed graph data.
 
 ---
 
