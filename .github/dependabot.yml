@@ -59,11 +59,10 @@ updates:
     labels:
       - "dependencies"
       - "supply-chain-review"
+    # Dependabot's github-actions cooldown schema only supports
+    # `default-days` (not the semver-*-days breakdown that pip supports).
     cooldown:
       default-days: 7
-      semver-major-days: 14
-      semver-minor-days: 7
-      semver-patch-days: 3
     groups:
       # Official actions/* tend to ship together; grouping minor/patch
       # updates keeps the supply-chain review surface to one PR per cycle.
