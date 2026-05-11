@@ -178,8 +178,12 @@ If the operator cannot articulate the shape, ask: "What goal are you trying to h
 
 **Visibility, hosting, and checks**
 
-- Repo visibility rubric: [`docs/repo-visibility-rubric.md`](../../../docs/repo-visibility-rubric.md) — site repos default private; ask one question before creating a public source repo.
-- Checks and review model: [`docs/checks-and-review-model.md`](../../../docs/checks-and-review-model.md) — local `mb` is the rule engine; Cloudflare is the deploy rail; GitHub Pages is not part of normal setup.
+- Site repos default to **private**. Before creating a public site repo,
+  ask one visibility question — see the engine docs
+  (repo-visibility-rubric) for the rule and exact wording.
+- Cloudflare is the deploy rail. GitHub Pages is not part of normal Main
+  Branch setup; the checks-and-review model in the engine docs explains
+  how local `mb` checks, GitHub Actions, and branch protection layer.
 
 **Setup, examples, help**
 

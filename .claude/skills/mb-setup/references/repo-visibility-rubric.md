@@ -1,9 +1,10 @@
 # Repo Visibility Rubric (Setup Skill Reference)
 
 Use this rubric when `/mb-setup` is creating, connecting, or migrating a
-business or site repo. The product contract lives in
-`../../../../docs/repo-visibility-rubric.md` and
-`../../../../decisions/2026-05-11-repo-setup-visibility-and-checks-model.md`.
+business or site repo. The engine ships the full product rubric
+(`repo-visibility-rubric`) and the underlying decision
+(`repo-setup-visibility-and-checks-model`); this file is the skill-local
+summary.
 
 ## Defaults
 
@@ -73,9 +74,3 @@ When `/mb-setup` or `/mb-site` shells out:
 
 Do not pass `--public` because the deployed site will be public. Those are
 different concepts.
-
-## Related links
-
-- Repo visibility rubric: `../../../../docs/repo-visibility-rubric.md`
-- Checks and review model: `../../../../docs/checks-and-review-model.md`
-- Setup-and-checks decision: `../../../../decisions/2026-05-11-repo-setup-visibility-and-checks-model.md`

@@ -28,8 +28,8 @@ content management; you handle deployment yourself.
 GitHub Pages in particular couples visibility and hosting in ways that the
 Main Branch visibility model deliberately separates — public output does
 not require public source. Use Cloudflare Pages so a public wiki can ship
-from a private repo when you want it to. See
-[`docs/repo-visibility-rubric.md`](../../../../docs/repo-visibility-rubric.md).
+from a private repo when you want it to. The engine docs ship the full
+rubric (`repo-visibility-rubric`).
 
 ## CLI Consideration
 

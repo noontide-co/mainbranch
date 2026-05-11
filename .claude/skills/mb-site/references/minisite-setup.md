@@ -68,8 +68,9 @@ Ask the operator one visibility question before creating the repo:
 > open-source tool, template, demo, or build-in-public project."
 
 Default to **private**. Only pass `--public` when the operator explicitly
-answers that the source is intentionally public. See
-[the repo visibility rubric](../../../../docs/repo-visibility-rubric.md).
+answers that the source is intentionally public. The engine docs ship the
+full rubric (`repo-visibility-rubric`) — refer to it if the operator wants
+more detail.
 
 ```bash
 # Default (private source, public deployed site):
