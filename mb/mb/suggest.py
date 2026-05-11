@@ -196,6 +196,8 @@ def _field_for_target(rel_path: str) -> str | None:
         return "linked_pushes"
     if root == "core" and len(parts) > 1 and parts[1] == "offers":
         return "linked_offers"
+    if root == "data" and len(parts) >= 3 and parts[-1] == "source.md":
+        return "linked_data_sources"
     if root == "decisions":
         return "linked_decisions"
     if root in {"docs", "documents"}:
@@ -207,6 +209,14 @@ def _field_for_target(rel_path: str) -> str | None:
     if root == "research":
         return "linked_research"
     return None
+
+
+def _is_data_source_record(rel_path: str, frontmatter: dict[str, Any]) -> bool:
+    parts = Path(rel_path).parts
+    if len(parts) >= 3 and parts[0] == "data" and parts[-1] == "source.md":
+        return True
+    item_type = frontmatter.get("type")
+    return isinstance(item_type, str) and item_type == "data_source"
 
 
 def _is_data_or_report(rel_path: str, frontmatter: dict[str, Any]) -> bool:
@@ -278,14 +288,29 @@ def _candidate_suggestion(
 
     if _is_data_or_report(rel_path, target_frontmatter) and (mentioned or len(shared_tokens) >= 2):
         score = 82 if mentioned else min(70, 50 + len(shared_tokens) * 4)
+        is_source = _is_data_source_record(rel_path, target_frontmatter)
+        target_payload = (
+            _target_payload(rel_path, title=title, field="linked_data_sources")
+            if is_source
+            else _target_payload(rel_path, title=title)
+        )
+        reasons = (
+            [
+                "The candidate is a data-source registry record.",
+                "Link it as evidence metadata or via `linked_data_sources` rather than "
+                "raw data files.",
+            ]
+            if is_source
+            else [
+                "The candidate looks like a report or data note.",
+                "Connect it as evidence metadata instead of making raw data frontmatter truth.",
+            ]
+        )
         return _suggestion(
             action=ACTION_DATA,
             score=score,
-            target=_target_payload(rel_path, title=title),
-            reasons=[
-                "The candidate looks like a report or data note.",
-                "Connect it as evidence metadata instead of making raw data frontmatter truth.",
-            ],
+            target=target_payload,
+            reasons=reasons,
             evidence=evidence,
         )
 

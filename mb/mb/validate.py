@@ -54,6 +54,21 @@ PLAYBOOK_APPROVAL_STATUS = {"not-required", "needed", "approved", "rejected"}
 PLAYBOOK_RESOURCE_KIND = {"url", "file", "repo", "document", "manual", "none"}
 PLAYBOOK_ACCEPTED_MUTATION_PROVIDERS: set[str] = set()
 PLAYBOOK_PROVIDER_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+DATA_SOURCE_TYPE = "data_source"
+DATA_SOURCE_PRIVACY = {"public", "team_private", "restricted", "local_only"}
+DATA_SOURCE_CADENCE = {
+    "realtime",
+    "hourly",
+    "daily",
+    "weekly",
+    "monthly",
+    "quarterly",
+    "ad_hoc",
+    "manual",
+}
+DATA_SOURCE_PROVIDER_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+DATA_SOURCE_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
 TOPOLOGY_SCHEMA = {"mb.repo_topology.v0"}
 TOPOLOGY_STATUS = {"proposed", "active", "paused", "superseded", "archived"}
 TOPOLOGY_ROLE = {
@@ -280,6 +295,12 @@ SCHEMAS: dict[str, dict[str, Any]] = {
         "required": ["title"],
         "enums": {},
     },
+    "data-sources": {
+        "glob": "data/*/source.md",
+        "required": ["type", "provider", "owner", "privacy"],
+        "enums": {"type": {DATA_SOURCE_TYPE}, "privacy": DATA_SOURCE_PRIVACY},
+        "primitive": "data-source",
+    },
 }
 
 
@@ -329,6 +350,8 @@ def _check_one(path: Path, schema: dict[str, Any]) -> dict[str, Any]:
         _check_legacy_campaign_frontmatter(fm, errors)
     elif primitive == "repo-topology":
         _check_repo_topology_frontmatter(path, fm, errors, warnings)
+    elif primitive == "data-source":
+        _check_data_source_frontmatter(path, fm, errors, warnings)
     _check_provider_refs_shape(fm, errors)
     return {"path": str(path), "ok": not errors, "errors": errors, "warnings": warnings}
 
@@ -529,6 +552,82 @@ def _check_legacy_campaign_frontmatter(fm: dict[str, Any], errors: list[str]) ->
     record_type = fm.get("type")
     if record_type is not None and record_type not in {"campaign", "push"}:
         errors.append("type must be 'campaign' or 'push' for legacy campaign records")
+
+
+def _check_data_source_frontmatter(
+    path: Path,
+    fm: dict[str, Any],
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    if fm.get("type") != DATA_SOURCE_TYPE:
+        errors.append(f"type must be {DATA_SOURCE_TYPE!r}")
+
+    provider = fm.get("provider")
+    if isinstance(provider, str) and provider.strip():
+        provider_id = provider.strip()
+        if not DATA_SOURCE_PROVIDER_RE.fullmatch(provider_id):
+            errors.append("provider must be a lowercase id using letters, digits, '-' or '_'")
+        else:
+            folder = path.parent.name
+            if folder != provider_id:
+                warnings.append(
+                    f"provider {provider_id!r} does not match the parent folder {folder!r}; "
+                    "data records are usually data/<provider>/source.md"
+                )
+
+    _require_non_empty_string(fm, "owner", errors)
+
+    cadence = fm.get("cadence")
+    if isinstance(cadence, str) and cadence.strip() and cadence.strip() not in DATA_SOURCE_CADENCE:
+        warnings.append(
+            f"cadence={cadence!r} is not one of the conventional values "
+            f"{sorted(DATA_SOURCE_CADENCE)}; agents may not interpret it consistently"
+        )
+
+    freshness = _scalar_as_string(fm.get("freshness"))
+    if "freshness" in fm and freshness and not DATA_SOURCE_DATE_RE.fullmatch(freshness):
+        errors.append("freshness must be a YYYY-MM-DD date")
+
+    if "storage" in fm:
+        storage = fm.get("storage")
+        if not isinstance(storage, dict):
+            errors.append("storage must be a mapping with 'primary' and optional 'snapshots'")
+        else:
+            primary = storage.get("primary")
+            if primary is not None and (not isinstance(primary, str) or not primary.strip()):
+                errors.append("storage.primary must be a non-empty path string when present")
+            snapshots = storage.get("snapshots")
+            if snapshots is not None and (
+                not isinstance(snapshots, list)
+                or not all(isinstance(item, str) and item.strip() for item in snapshots)
+            ):
+                errors.append("storage.snapshots must be a list of non-empty path strings")
+
+    for ref_field in ("reports", "useful_queries"):
+        if ref_field not in fm:
+            continue
+        value = fm.get(ref_field)
+        if ref_field == "reports":
+            if not isinstance(value, list) or not all(
+                isinstance(item, str) and item.strip() for item in value
+            ):
+                errors.append("reports must be a list of non-empty path strings")
+        else:
+            if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
+                errors.append("useful_queries must be a list of mappings")
+                continue
+            for index, item in enumerate(value):
+                if not isinstance(item.get("name"), str) or not item.get("name").strip():
+                    errors.append(f"useful_queries[{index}].name must be a non-empty string")
+                if not isinstance(item.get("query"), str) or not item.get("query").strip():
+                    errors.append(f"useful_queries[{index}].query must be a non-empty string")
+
+    secret_paths = sorted(set(_iter_secret_paths(fm)))
+    if secret_paths:
+        errors.append(
+            "data-source frontmatter must not contain secrets: " + ", ".join(secret_paths)
+        )
 
 
 def _check_provider_refs_shape(fm: dict[str, Any], errors: list[str]) -> None:

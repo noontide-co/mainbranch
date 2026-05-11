@@ -112,6 +112,14 @@ RELATIONSHIPS: tuple[Relationship, ...] = (
         legacy=True,
     ),
     Relationship(
+        canonical_type="data_source",
+        fields=("linked_data_sources",),
+        description=(
+            "Connects a file to a data-source record (data/<provider>/source.md) "
+            "that describes provider, owner, privacy, cadence, storage, and reports."
+        ),
+    ),
+    Relationship(
         canonical_type="supersedes",
         fields=("supersedes",),
         description="Connects a newer artifact to the prior artifact it replaces.",
