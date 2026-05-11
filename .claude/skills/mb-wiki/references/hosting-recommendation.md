@@ -22,7 +22,6 @@ Cloudflare Pages is free, fast, and we've done the work to make setup smooth. Ot
 Other static site hosts work fine:
 - **Vercel** — Good, 100GB/mo bandwidth limit
 - **Netlify** — Good, 100GB/mo bandwidth limit
-- **GitHub Pages** — Free but requires public repo (or Pro plan)
 - **Self-hosted** — Full control, more setup work
 
 If you prefer these, the `/mb-wiki` skill can still help with content management. You'll just handle deployment yourself.

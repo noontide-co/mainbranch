@@ -243,11 +243,12 @@ reasons and action types:
 It does not silently invent relationships. The operator or agent should approve
 what matters before changing frontmatter, inline links, tags, or metadata.
 
-Implementation follow-ups:
+The data-source record shape that decisions, pushes, and outcomes can link
+through `linked_data_sources` is documented in
+[`docs/data-source-registry.md`](data-source-registry.md).
 
-- data-source registry shape: see [`docs/data-source-registry.md`](data-source-registry.md)
-  and [#470](https://github.com/noontide-co/mainbranch/issues/470).
-- scheduled data sync pattern: [#471](https://github.com/noontide-co/mainbranch/issues/471).
+Scheduled provider data sync is still an open follow-up:
+[#471](https://github.com/noontide-co/mainbranch/issues/471).
 
 ## Related links
 

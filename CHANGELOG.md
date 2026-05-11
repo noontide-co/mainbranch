@@ -52,8 +52,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   when to use typed frontmatter links, inline Markdown links, entity tags,
   data/report references, GitHub history links, nearby context, or no link.
   Refs #468.
-- Opened follow-up implementation issues for data-source registry and scheduled
-  data sync. Refs #470, #471.
+- Opened a follow-up implementation issue for scheduled provider data sync.
+  Refs #471.
 - Added the first record type in a future registry of portable business
   facts: `type: data_source` records at `data/<provider>/source.md`.
   `mb validate` recognizes the schema and checks provider id, owner,
@@ -74,6 +74,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   guidance, and softened user-facing "canonical" language toward "source of
   truth", "official", "current", or "the version `mb` trusts" where precision
   allows. Refs #468.
+- Cleaned stale future-tense language across public docs and accepted
+  decisions so they describe `mb suggest links` (MAIN-313 / #473), the
+  `type: data_source` / `linked_data_sources` registry (MAIN-314 / #475),
+  and the operator-facing GitOps primitives `audience`, `operator_summary`,
+  and `mb status` workflow awareness (MAIN-310 / #476) as shipped, while
+  keeping scheduled provider data sync (#471) and the deferred
+  `mb commit --plan` / `mb publish --plan` / `/mb-publish` /
+  `mb migrate plan` surfaces as the remaining follow-ups. Also removed
+  GitHub Pages from a hosting comparison in the bundled `/mb-wiki` skill
+  reference so it does not read as a normal Main Branch fallback. Docs-only;
+  no CLI, validator, schema, or runtime behavior changes. Refs MAIN-318,
+  #478.
 - Clarified graph-link authoring guidance across markdown conventions,
   generated business-repo instructions, and bundled authoring skills:
   frontmatter remains the source of truth, body mirrors are repairable viewer output,

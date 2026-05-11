@@ -128,11 +128,12 @@ Main Branch should learn from that pattern:
   wikilinks, frontmatter links, and Related links repair.
 - Generated repo guidance and bundled skills should point agents at the matrix
   before they add relationships.
-- Future implementation work should add a command shaped like
-  `mb suggest links <file>` that returns ranked suggestions and reasons, but
-  this decision does not implement that command.
-- Follow-up issues track the implementation work: `mb suggest links` (#469),
-  data-source registry (#470), and scheduled data sync (#471).
+- `mb suggest links <file>` is the read-only command that returns ranked
+  suggestions and reasons; this decision does not implement it, but follow-up
+  work has shipped it (#469).
+- Implementation status of follow-ups named in this decision: `mb suggest
+  links` (#469) shipped; the data-source registry (#470) shipped; scheduled
+  data sync (#471) is still open.
 
 ## Related links
 

@@ -21,6 +21,12 @@ tags: [v0-3, gitops, migration, status, doctor, validate, checkpoint, publish]
 
 # Operator-Facing GitOps and Major Migration Planning
 
+> Implementation status (as of 2026-05-11): slice items 1–3 (`audience`
+> classification, `operator_summary`, and `mb status` workflow awareness)
+> shipped via MAIN-310 / PR #476. Items 4–6 (`mb commit --plan` /
+> `mb publish --plan`, packaged `/mb-publish` skill, `mb migrate plan`
+> non-standard folder scanner) remain open follow-ups and have not shipped.
+
 ## Decision
 
 Main Branch separates **deterministic facts** (CLI JSON) from **operator-facing
