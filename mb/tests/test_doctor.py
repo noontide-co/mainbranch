@@ -1269,3 +1269,21 @@ def test_doctor_action_accepts_audience_override() -> None:
     )
     assert override["audience"] == "informational"
     assert override["operator_summary"] == "Just a heads-up."
+
+
+def test_doctor_repair_plan_actions_always_carry_audience_and_summary(
+    tmp_path: Path,
+) -> None:
+    """Every action emitted by repair_plan must have a valid audience and a
+    non-empty operator_summary. Locks the contract agents read against."""
+    repo = tmp_path / "fresh"
+    repo.mkdir()
+
+    payload = doctor_mod.repair_plan(repo=str(repo))
+
+    assert payload["actions"], "expected at least one action on a fresh repo"
+    for action in payload["actions"]:
+        assert action["audience"] in doctor_mod.AUDIENCE_VALUES, (
+            f"action {action['id']} has invalid audience: {action['audience']!r}"
+        )
+        assert action["operator_summary"], f"action {action['id']} has empty operator_summary"

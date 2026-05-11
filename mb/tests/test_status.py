@@ -2023,6 +2023,32 @@ def test_git_info_handles_non_git_directory(tmp_path: Path) -> None:
     assert "workflow_mode" not in info or info.get("workflow_mode") in ("", None)
 
 
+def test_status_ranked_actions_always_carry_audience_and_summary(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Every ranked action emitted by `mb status` must have a valid audience
+    and a non-empty operator_summary, so skills can route on the field
+    without re-deriving from schema language."""
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "fresh"
+    init_run(path=str(repo), name="Fresh")
+
+    payload = status_mod.run(
+        path=str(repo),
+        now=datetime(2026, 5, 4, 12, 0, tzinfo=timezone.utc),
+        update_marker=False,
+    )
+
+    actions = payload["ranked_actions"]
+    assert actions, "expected at least one ranked action on a fresh repo"
+    valid_audiences = {"mechanical", "operator_decision", "informational"}
+    for action in actions:
+        assert action["audience"] in valid_audiences, (
+            f"action {action['id']} has invalid audience: {action['audience']!r}"
+        )
+        assert action["operator_summary"], f"action {action['id']} has empty operator_summary"
+
+
 def test_git_info_detects_linked_worktree(tmp_path: Path) -> None:
     """Conductor workspaces and `git worktree add` checkouts should report
     workflow_mode='worktree' and a populated worktree_root."""
