@@ -135,6 +135,18 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
   matching `oe-vX.Y.Z` GitHub Release, and PyPI package state agree.
 - [ ] Planned release copy uses "planned", "target", or "next" until release
   verification proves users can install it.
+- [ ] Supply-chain posture from [`supply-chain-policy.md`](supply-chain-policy.md)
+  holds: `id-token: write` is granted to exactly one job in
+  `publish-pypi.yml`; top-level `permissions: contents: read` is preserved on
+  every workflow; the `pypi` GitHub Environment still requires a human
+  reviewer; no new long-lived PyPI token has been added.
+- [ ] Release-time supply-chain checks from
+  [`supply-chain-policy.md`](supply-chain-policy.md) run before tagging an
+  `oe-v*` release (CHANGELOG section, dependency review, workflow permissions
+  scan, Dependabot state, environment-reviewer confirmation, fresh PyPI
+  install verification).
+- [ ] Dependency upgrades are reviewed in isolation, not bundled with feature
+  work; Dependabot security advisories land as expedited dedicated PRs.
 
 ## 8. Issue / PR Discipline
 

@@ -41,6 +41,7 @@ scripts/check.sh
 - [ ] SKILL.md ≤500 lines (if any skill touched)
 - [ ] Claude runtime dogfood harness / simulation-tier / manual smoke evidence (if runtime, first-run, skill discovery, or release validation touched)
 - [ ] Package-visible release gate evidence before tag/publish (if preparing a release)
+- [ ] Supply-chain review (if `.github/workflows/`, `.github/dependabot.yml`, `mb/pyproject.toml` deps, or `id-token`/`permissions` blocks touched — see [docs/supply-chain-policy.md](../docs/supply-chain-policy.md))
 
 ## CHANGELOG
 
