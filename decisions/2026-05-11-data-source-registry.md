@@ -51,6 +51,14 @@ local data because it is portable, queryable, and inspectable. CSV is the
 default for snapshots. The numbers stay in those structured files; markdown
 stays the meaning.
 
+The shape is portable and runtime-agnostic. The records are files in the
+repo, so they travel with Git regardless of host (local-only, personal
+GitHub, a free GitHub org, or a self-hosted Git server). The schema is a
+mechanical check, so `mb validate` runs it locally today and the same
+`scripts/check.sh` rule can run in CI when a repo opts into pre-merge
+automation. Agents read the validation output and explain mechanical fixes
+versus operator judgment; they do not own the rule.
+
 ## Future-safe framing
 
 `type: data_source` is the **first** record type in the registry, not the

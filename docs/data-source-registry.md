@@ -17,6 +17,28 @@ records**, not every future registry record.
 authoring matrix for choosing typed links, inline links, entity tags,
 data/report references, GitHub history, and nearby context.
 
+## Where this fits
+
+A data-source record is portable. The shape is `markdown frontmatter +
+structured files in the same folder`, so it travels with the Git history
+wherever the repo lives — local-only, personal GitHub, a free GitHub org,
+or a self-hosted Git server. The registry does not depend on a hosted
+service to be meaningful.
+
+The schema itself is a **mechanical check**: a deterministic rule that can
+run in three places without changing shape.
+
+| Surface | Job |
+| --- | --- |
+| `mb validate` locally | Fast feedback while the operator or agent is editing the record. |
+| CI / pre-merge automation | Same `scripts/check.sh` rule can gate merges on a collaborative repo. |
+| Agents (Claude Code, Codex) | Read the validation output and explain mechanical fixes vs operator judgment. |
+
+Business-judgment checks like "this data source is stale" or "this
+decision changed a key data source without explaining why" are deliberately
+not part of this slice. They are warnings or review prompts for a later
+follow-up.
+
 ## What is a data-source record
 
 A data-source record lives at:
