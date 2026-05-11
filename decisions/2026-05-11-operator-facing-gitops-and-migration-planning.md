@@ -124,16 +124,27 @@ These rules live in code, not docs. Skills and agents should read the
 
 `operator_summary` is a plain-language one-liner on top-level findings:
 
-- `mb doctor` repair sections grow an `operator_summary` per section.
+- `mb doctor` actions grow an `operator_summary` field. When no explicit
+  copy is supplied, it falls back to `reason` (or `title`) so the field is
+  always populated.
 - `mb validate` validation categories already carry a `repair` string;
   `operator_summary` is added alongside as the human-facing phrasing, and
   `repair` remains the action-oriented phrasing (the two can be the same
   string when no separate operator framing is useful).
-- `mb status` ranked actions grow an `operator_summary` field built from their
-  existing `reason` plus a verb prefix.
+- `mb status` ranked actions grow an `operator_summary` field built from
+  their existing `reason` (with `title` as the next fallback).
 
-The summary is in plain business language, never references schema field
-names, and never assumes the operator knows what Git or YAML is.
+The intent is plain business language with no schema field names or git
+jargon. This rollout is **progressive**: in this slice, validation
+categories carry the carefully written
+`VALIDATION_CATEGORY_OPERATOR_SUMMARY` copy, while doctor actions and
+status ranked actions fall back to the existing `reason`/`title` strings
+until each callsite is updated with explicit operator-facing copy. Skills
+should rely on the field being present and parseable today; they should
+not yet assume every value reads as plain business language. Follow-up
+work — and any future audit of doctor/ranker callsites — should pass
+explicit `operator_summary=` strings where the legacy `reason` still
+leaks schema or git terms.
 
 ## Workflow Awareness in `mb status`
 
@@ -165,8 +176,13 @@ This slice adds, in the same block, as additive optional fields:
 - **`worktree_root`** — absolute path of the worktree root when `workflow` is
   `worktree`; empty otherwise.
 - **`summary`** — short operator-facing one-liner describing the workflow
-  state ("On main with no pending changes", "On branch `<name>` with N
-  uncommitted files", "In a worktree off `main`, branch `<name>`").
+  state. The implementation emits forms like
+  `"On main with no uncommitted changes."`,
+  `"On branch \`feature/x\` with 3 uncommitted files ahead by 2."`,
+  `"In a worktree on \`feature/x\` with 1 uncommitted file."`,
+  and `"HEAD is detached. Check out a branch before saving."`. The exact
+  wording lives in `_build_git_summary` in `mb/mb/status.py`; this doc
+  describes the contract, not the surface phrasing.
 
 All additions are additive. `STATUS_SCHEMA_VERSION` stays at `"1.0"`. Consumers
 that do not read the new fields keep working.
