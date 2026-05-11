@@ -15,6 +15,7 @@ LOCAL_REF_ROOTS = {
     "bets",
     "campaigns",
     "core",
+    "data",
     "decisions",
     "docs",
     "documents",
@@ -22,6 +23,7 @@ LOCAL_REF_ROOTS = {
     "outputs",
     "pushes",
     "reference",
+    "reports",
     "research",
 }
 

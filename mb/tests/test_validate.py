@@ -1795,3 +1795,65 @@ def test_validate_cross_refs_resolve_linked_data_sources(tmp_path: Path) -> None
     )
     assert decision["warnings"] == []
     assert "linked_data_sources" in report["cross_refs"]["checked_fields"]
+
+
+def test_validate_cross_refs_flags_missing_linked_data_source_target(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "decisions" / "2026-05-11-google-ads-first.md",
+        (
+            "---\n"
+            "date: 2026-05-11\n"
+            "status: accepted\n"
+            "linked_data_sources:\n"
+            "  - data/google-ads/source.md\n"
+            "---\n"
+            "# Decision\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True, strict=True)
+
+    decision = next(
+        file for file in report["files"] if file["path"].endswith("google-ads-first.md")
+    )
+    assert decision["ok"] is False
+    assert any(
+        "linked_data_sources" in warning and "does not exist" in warning
+        for warning in decision["warnings"]
+    )
+    assert any(
+        finding["field"] == "linked_data_sources"
+        and finding["target"] == "data/google-ads/source.md"
+        for finding in report["cross_refs"]["warnings"]
+    )
+
+
+def test_validate_data_source_rejects_absolute_paths(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "data" / "google-ads" / "source.md",
+        (
+            "---\n"
+            "type: data_source\n"
+            "provider: google-ads\n"
+            "owner: growth\n"
+            "privacy: team_private\n"
+            "storage:\n"
+            "  primary: /Users/devon/Desktop/google-ads.sqlite\n"
+            "  snapshots:\n"
+            "    - ~/Downloads/2026-05-10.csv\n"
+            "reports:\n"
+            "  - C:\\\\Users\\\\devon\\\\report.md\n"
+            "---\n"
+            "# bad\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    record = next(file for file in report["files"] if file["schema"] == "data-sources")
+    assert report["ok"] is False
+    assert any("storage.primary must be a repo-relative path" in err for err in record["errors"])
+    assert any(
+        "storage.snapshots[0] must be a repo-relative path" in err for err in record["errors"]
+    )
+    assert any("reports[0] must be a repo-relative path" in err for err in record["errors"])

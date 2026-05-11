@@ -598,12 +598,26 @@ def _check_data_source_frontmatter(
             primary = storage.get("primary")
             if primary is not None and (not isinstance(primary, str) or not primary.strip()):
                 errors.append("storage.primary must be a non-empty path string when present")
+            elif isinstance(primary, str) and LOCAL_ABSOLUTE_PATH_RE.search(primary.strip()):
+                errors.append(
+                    "storage.primary must be a repo-relative path; "
+                    "machine-specific absolute paths are not portable"
+                )
             snapshots = storage.get("snapshots")
             if snapshots is not None and (
                 not isinstance(snapshots, list)
                 or not all(isinstance(item, str) and item.strip() for item in snapshots)
             ):
                 errors.append("storage.snapshots must be a list of non-empty path strings")
+            elif isinstance(snapshots, list):
+                for index, snapshot in enumerate(snapshots):
+                    if isinstance(snapshot, str) and LOCAL_ABSOLUTE_PATH_RE.search(
+                        snapshot.strip()
+                    ):
+                        errors.append(
+                            f"storage.snapshots[{index}] must be a repo-relative path; "
+                            "machine-specific absolute paths are not portable"
+                        )
 
     for ref_field in ("reports", "useful_queries"):
         if ref_field not in fm:
@@ -614,6 +628,13 @@ def _check_data_source_frontmatter(
                 isinstance(item, str) and item.strip() for item in value
             ):
                 errors.append("reports must be a list of non-empty path strings")
+            else:
+                for index, report in enumerate(value):
+                    if LOCAL_ABSOLUTE_PATH_RE.search(report.strip()):
+                        errors.append(
+                            f"reports[{index}] must be a repo-relative path; "
+                            "machine-specific absolute paths are not portable"
+                        )
         else:
             if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
                 errors.append("useful_queries must be a list of mappings")
