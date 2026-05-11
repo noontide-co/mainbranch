@@ -32,6 +32,15 @@ does not adopt caveman tone publicly. Internally we call this **tight
 operator style**, not "caveman mode." User-facing copy stays normal,
 business-casual, and trustworthy.
 
+The reference inspected when drafting this rubric was Julius Brussee's
+[`caveman`](https://github.com/JuliusBrussee/caveman) tool ("why use many
+token when few do trick"). What carried over: action-first phrasing,
+dropping filler and articles, replacing explanation paragraphs with
+short stacked statements, one-line bullets. What did not: caveman tone
+itself, dropped tense markers, and any user-facing stylization. Main
+Branch keeps full sentences and business-casual voice; only the
+compression discipline applies.
+
 ## Rubric
 
 1. Lead with the action or decision.

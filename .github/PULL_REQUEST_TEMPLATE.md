@@ -42,6 +42,7 @@ Cite each level you ran with the evidence-line shape from
 Say which levels were not required and why.
 
 - [ ] Level 1 static: `scripts/check.sh` passes
+- [ ] Level 2 CLI contract: focused Typer/CliRunner tests, exit codes, `--json` behavior, TTY vs non-TTY (if CLI behavior touched)
 - [ ] Level 3 package/install smoke (if packaging touched)
 - [ ] Level 4 fixture repo (if init/onboard/status/start/update touched)
 - [ ] Level 5 runtime smoke / dogfood harness / simulation-tier (if runtime, first-run, skill discovery, or release validation touched)

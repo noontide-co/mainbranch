@@ -47,24 +47,37 @@ switches.
 
 ### 2. Capture stdout, stderr, and exit code on the first run.
 
-Pattern:
+Pattern (wrapper-safe — propagates the underlying exit code):
 
 ```bash
-scripts/check.sh > .context/check.out 2>&1; echo $? > .context/check.exit
+scripts/check.sh > .context/check.out 2>&1; rc=$?; printf "%s\n" "$rc" > .context/check.exit; exit "$rc"
 ```
+
+The trailing `exit "$rc"` matters. Without it, the chain ends with
+`printf` (or `echo`), which succeeds, so a wrapper like Codex, CI, or a
+tool call sees exit `0` even when `scripts/check.sh` actually failed.
+Drop the `exit "$rc"` only when running the line interactively in
+your own shell (where you don't want to close the session).
+
+The variable name matters too. `status` is a read-only special variable
+in zsh (it mirrors `$?`), so `status=$?` fails with `read-only variable`
+on Devon's default macOS shell. `rc` is safe in both bash and zsh; so
+is `exit_code`, `check_rc`, or any other non-reserved name. Avoid `status`,
+`pipestatus`, `path`, `home`, and other zsh special variables in agent-
+facing shell snippets.
 
 Or, if live progress is useful (bash-specific; in zsh use
 `${pipestatus[1]}` — lowercase, 1-indexed):
 
 ```bash
 scripts/check.sh 2>&1 | tee .context/check.out
-status=${PIPESTATUS[0]}
-printf "%s\n" "$status" > .context/check.exit
-exit "$status"
+rc=${PIPESTATUS[0]}
+printf "%s\n" "$rc" > .context/check.exit
+exit "$rc"
 ```
 
 If the agent's runtime shell is unknown, prefer the first pattern
-(`> file 2>&1; echo $? > file`) which works in both bash and zsh.
+(redirect + `rc=$?; printf; exit`) which works in both bash and zsh.
 
 For release-bearing flows, the convention is to put logs under
 `.context/release-evidence/<version>/` so the directory is gitignored and
@@ -73,11 +86,15 @@ self-documenting:
 ```bash
 mkdir -p .context/release-evidence/0.3.17
 scripts/check.sh > .context/release-evidence/0.3.17/check.out 2>&1
-echo $? > .context/release-evidence/0.3.17/check.exit
+rc=$?
+printf "%s\n" "$rc" > .context/release-evidence/0.3.17/check.exit
+exit "$rc"
 ```
 
 For background invocations (the dogfood harness), redirect both streams to
-the log file and append the exit code line at the end:
+the log file and append the exit code line at the end. Capture the status
+in a variable first so the trailing `EXIT=` line and the wrapper exit
+both reflect the harness's real outcome:
 
 ```bash
 python3 scripts/claude-runtime-dogfood.py \
@@ -86,7 +103,9 @@ python3 scripts/claude-runtime-dogfood.py \
   --run-claude-print --simulation-tier release_acceptance \
   --max-budget-usd 0.75 \
   > .context/release-evidence/0.3.17/dogfood.log 2>&1
-echo "EXIT=$?" >> .context/release-evidence/0.3.17/dogfood.log
+rc=$?
+printf "EXIT=%s\n" "$rc" >> .context/release-evidence/0.3.17/dogfood.log
+exit "$rc"
 ```
 
 ### 3. Read the saved log. Do not re-run to recover evidence.

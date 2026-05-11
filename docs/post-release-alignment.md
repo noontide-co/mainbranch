@@ -116,10 +116,11 @@ not restate the product stance — link the decision file or the doc.
 
 ## 5. Conductor preferences alignment
 
-The Conductor preferences file (Devon's local
-`devon-homelab/conductor/preferences.md`) lives outside this engine repo.
-This playbook does *not* own that file. It owns the policy that governs
-what should and should not be there.
+The Conductor preferences file lives in the maintainer's **private** repo
+(`devon-homelab/conductor/preferences.md`), not in this engine repo. Naming
+the path here is a pointer, not a content leak — the repo's GitHub
+visibility is private. This playbook does *not* own that file. It owns
+the policy that governs what should and should not be there.
 
 Conductor preferences should:
 
