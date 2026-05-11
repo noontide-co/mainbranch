@@ -104,5 +104,5 @@ direction, not philosophy. The philosophy is: own the work, rent the rails.
 ## See Also
 
 - [`README.md`](../README.md) — what the system does and how to start
-- [`docs/ETHOS.md`](ETHOS.md) — product principles
-- [`docs/OPERATOR-LOOPS.md`](OPERATOR-LOOPS.md) — Sense → Decide → Ship → Reflect
+- [`docs/ethos.md`](ethos.md) — product principles
+- [`docs/operator-loops.md`](operator-loops.md) — Sense → Decide → Ship → Reflect

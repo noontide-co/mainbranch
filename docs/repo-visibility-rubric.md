@@ -141,6 +141,6 @@ This is normal. It is the default.
 
 - [Setup, visibility, and checks model decision](../decisions/2026-05-11-repo-setup-visibility-and-checks-model.md)
 - [Checks and review model](checks-and-review-model.md)
-- [Dependency choices](DEPENDENCY-CHOICES.md)
+- [Dependency choices](dependency-choices.md)
 - [Child repo descriptors](child-repo-descriptors.md)
 - [Workspace, repo, and sensitive-data boundaries](../decisions/2026-05-04-workspace-repo-sensitive-data-boundaries.md)

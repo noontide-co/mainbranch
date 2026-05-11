@@ -6,7 +6,7 @@ These rules are **tool-agnostic.** Conductor users, Codex users, Cursor users, a
 
 For changes that could affect public product shape, release discipline, runtime
 claims, contributor workflow, or public/private boundaries, use
-[docs/OSS-OPERATING-CHECKLIST.md](docs/OSS-OPERATING-CHECKLIST.md) during cold
+[docs/oss-operating-checklist.md](docs/oss-operating-checklist.md) during cold
 start and review.
 
 ---
@@ -151,7 +151,7 @@ PR reviews use this shape:
 - Verdict at end: APPROVE / REQUEST CHANGES (with must-fix count) / NEEDS DISCUSSION
 
 Reviewers should also apply the
-[Main Branch OSS operating checklist](docs/OSS-OPERATING-CHECKLIST.md) when a PR
+[Main Branch OSS operating checklist](docs/oss-operating-checklist.md) when a PR
 touches product boundaries, runtime claims, release readiness, state model,
 GitHub/Linear workflow, or public/private content.
 

@@ -6,9 +6,9 @@
 
 <p align="center">
   <a href="#quickstart"><strong>Quickstart</strong></a> &middot;
-  <a href="docs/ETHOS.md"><strong>Ethos</strong></a> &middot;
-  <a href="docs/ROADMAP.md"><strong>Roadmap</strong></a> &middot;
-  <a href="docs/BEGINNER-SETUP.md"><strong>Beginner setup</strong></a> &middot;
+  <a href="docs/ethos.md"><strong>Ethos</strong></a> &middot;
+  <a href="docs/roadmap.md"><strong>Roadmap</strong></a> &middot;
+  <a href="docs/beginner-setup.md"><strong>Beginner setup</strong></a> &middot;
   <a href="https://skool.com/main"><strong>Community</strong></a>
 </p>
 
@@ -121,7 +121,7 @@ The longer-arc operating-system model — where multiple business repos, GitHub 
 
 The current package is the daily operating loop: open the folder, ground the agent, get a ranked next action, ship the work, save a readable checkpoint. Next direction tightens the same loop, expands curated provider rails, and prepares an optional local dashboard that reads from your folder instead of replacing it.
 
-Mobile thought capture, team views, finance/fulfillment roll-ups, broader Ops/bookkeeping, an optional dashboard, and any future hosted/model-invocation surface are eventual targets in [docs/ROADMAP.md](docs/ROADMAP.md), not current behavior.
+Mobile thought capture, team views, finance/fulfillment roll-ups, broader Ops/bookkeeping, an optional dashboard, and any future hosted/model-invocation surface are eventual targets in [docs/roadmap.md](docs/roadmap.md), not current behavior.
 
 ---
 
@@ -145,7 +145,7 @@ claude
 /mb-start
 ```
 
-You'll need a Claude plan that includes Claude Code. Install Claude Code from [claude.ai](https://claude.ai). Step-by-step beginner walkthrough: [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md).
+You'll need a Claude plan that includes Claude Code. Install Claude Code from [claude.ai](https://claude.ai). Step-by-step beginner walkthrough: [docs/beginner-setup.md](docs/beginner-setup.md).
 
 ### Trying Codex CLI
 
@@ -195,7 +195,7 @@ Tested on macOS and Linux. Windows is experimental — use WSL2.
 
 **How do I update?** Type `/mb-update` in Claude. Power users can run `mb update` from the folder.
 
-**Can Claude migrate an old setup for me?** Yes. Start Claude Code anywhere and paste the prompt in [docs/MIGRATING.md](docs/MIGRATING.md#recommended-let-claude-walk-you-through-it).
+**Can Claude migrate an old setup for me?** Yes. Start Claude Code anywhere and paste the prompt in [docs/migrating.md](docs/migrating.md#recommended-let-claude-walk-you-through-it).
 
 **Can I edit the skills?** You can. You don't need to.
 
@@ -254,7 +254,7 @@ The `mb` CLI is the deterministic control plane. The agent runs it for normal us
 | `mb skill list` / `path` / `validate` / `link` / `repair` | Manage and repair the bundled Claude Code skills. |
 | `mb update`              | Update Main Branch in place. |
 
-Full list: `mb --help`. JSON output contract: [docs/json-output-contract.md](docs/json-output-contract.md). Provider readiness: [docs/DEPENDENCY-CHOICES.md](docs/DEPENDENCY-CHOICES.md).
+Full list: `mb --help`. JSON output contract: [docs/json-output-contract.md](docs/json-output-contract.md). Provider readiness: [docs/dependency-choices.md](docs/dependency-choices.md).
 
 **Skills:**
 
@@ -278,10 +278,10 @@ Full list: `mb --help`. JSON output contract: [docs/json-output-contract.md](doc
 - [AGENTS.md](AGENTS.md) — shared operating contract for Codex, Claude Code, and other agents
 - [CLAUDE.md](CLAUDE.md) — Claude Code-specific guidance
 - [CONTRIBUTING.md](CONTRIBUTING.md) — branch / commit / validation discipline
-- [docs/ETHOS.md](docs/ETHOS.md) — product principles
-- [docs/OPERATOR-LOOPS.md](docs/OPERATOR-LOOPS.md) — Sense → Decide → Ship → Reflect taxonomy
+- [docs/ethos.md](docs/ethos.md) — product principles
+- [docs/operator-loops.md](docs/operator-loops.md) — Sense → Decide → Ship → Reflect taxonomy
 - [docs/business-connections.md](docs/business-connections.md) — how to connect notes, reports, data, and GitHub history without noisy links
-- [docs/ROADMAP.md](docs/ROADMAP.md) — release direction
+- [docs/roadmap.md](docs/roadmap.md) — release direction
 - [docs/compatibility.md](docs/compatibility.md) — runtime support matrix
 - [docs/release-simulations.md](docs/release-simulations.md) — release evidence ladder
 

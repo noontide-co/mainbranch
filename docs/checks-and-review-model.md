@@ -177,4 +177,4 @@ in a skill or in an action is a workaround, not a check.
 - [Setup, visibility, and checks model decision](../decisions/2026-05-11-repo-setup-visibility-and-checks-model.md)
 - [Operator-facing GitOps and migration planning](../decisions/2026-05-11-operator-facing-gitops-and-migration-planning.md)
 - [Repo visibility rubric](repo-visibility-rubric.md)
-- [Dependency choices](DEPENDENCY-CHOICES.md)
+- [Dependency choices](dependency-choices.md)

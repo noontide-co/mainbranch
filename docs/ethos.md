@@ -37,7 +37,7 @@ Main Branch should help an operator move through four loops:
    decisions superseded, core files updated from what you learned. The
    output of Reflect feeds back into Sense.
 
-Those loops are described in detail in [OPERATOR-LOOPS.md](OPERATOR-LOOPS.md),
+Those loops are described in detail in [operator-loops.md](operator-loops.md),
 and the full reasoning lives in
 [decisions/2026-05-05-operator-loops-taxonomy.md](../decisions/2026-05-05-operator-loops-taxonomy.md).
 

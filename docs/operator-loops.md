@@ -309,5 +309,5 @@ CLIs adds new Ship channels, not new loops.
 ## See also
 
 - [decisions/2026-05-05-operator-loops-taxonomy.md](../decisions/2026-05-05-operator-loops-taxonomy.md) — full reasoning, alternatives considered, research record
-- [docs/ETHOS.md](ETHOS.md) — product principles
-- [docs/ROADMAP.md](ROADMAP.md) — release direction
+- [docs/ethos.md](ethos.md) — product principles
+- [docs/roadmap.md](roadmap.md) — release direction

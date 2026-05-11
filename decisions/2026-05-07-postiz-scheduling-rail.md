@@ -138,7 +138,7 @@ Before public docs call Postiz a supported scheduling rail, run a focused smoke:
 6. Confirm the draft/scheduled item appears in Postiz.
 7. Record public-safe evidence in a PR.
 
-If this passes, update `docs/DEPENDENCY-CHOICES.md` from planned optional
+If this passes, update `docs/dependency-choices.md` from planned optional
 provider to supported scheduling rail for the tested surface only.
 
 The first smoke on 2026-05-07 America/Los_Angeles proved REST endpoint

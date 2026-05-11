@@ -7,7 +7,7 @@ linked_decisions:
   - decisions/2026-05-02-github-native-business-os.md
   - decisions/2026-05-05-operator-loops-taxonomy.md
 linked_docs:
-  - docs/OPERATOR-LOOPS.md
+  - docs/operator-loops.md
 linked_issues:
   - https://github.com/noontide-co/mainbranch/issues/300
   - https://github.com/noontide-co/mainbranch/issues/306
@@ -52,7 +52,7 @@ operators to write loop or channel names into normal business commit subjects.
 ## Why Not Loop Tags
 
 The operator loops are product architecture, defined in
-[OPERATOR-LOOPS.md](../docs/OPERATOR-LOOPS.md) and locked by
+[operator-loops.md](../docs/operator-loops.md) and locked by
 [the operator-loop taxonomy decision](2026-05-05-operator-loops-taxonomy.md).
 They help Main Branch rank work, group status signals, and design workflows.
 They are not the language a business operator naturally uses to remember the

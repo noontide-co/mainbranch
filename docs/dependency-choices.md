@@ -181,9 +181,9 @@ why a tool disappeared.
 - [checks-and-review-model.md](checks-and-review-model.md) defines how
   local `mb` checks, agent review, GitHub Actions, branch protection,
   and dashboards layer on top of one rule engine.
-- [ETHOS.md](ETHOS.md) defines the product principles, state model, runtime
+- [ethos.md](ethos.md) defines the product principles, state model, runtime
   honesty, and optional-sidecar stance.
-- [OPERATOR-LOOPS.md](OPERATOR-LOOPS.md) defines Sense, Decide, Ship, Reflect,
+- [operator-loops.md](operator-loops.md) defines Sense, Decide, Ship, Reflect,
   and the Paid / Organic / Pages / Ops channels.
 - [compatibility.md](compatibility.md) defines supported, experimental, and
   roadmap runtime surfaces.

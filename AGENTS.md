@@ -23,9 +23,9 @@ Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and local runtimes
 remain compatibility targets until tested. Do not claim support before there is
 an adapter and smoke evidence for the exact surface.
 
-The public product frame lives in `docs/ETHOS.md`, the operator loop taxonomy
-lives in `docs/OPERATOR-LOOPS.md`, and release direction lives in
-`docs/ROADMAP.md`.
+The public product frame lives in `docs/ethos.md`, the operator loop taxonomy
+lives in `docs/operator-loops.md`, and release direction lives in
+`docs/roadmap.md`.
 
 ## Daily Operating Loop
 
@@ -108,7 +108,7 @@ Changes may affect one or more public surfaces:
 - packaged data under `mb/mb/_data/`;
 - bundled skills under `.claude/skills/`;
 - business-repo scaffolding under `templates/` and `mb/mb/init.py`;
-- user docs in `README.md`, `docs/BEGINNER-SETUP.md`, `docs/MIGRATING.md`,
+- user docs in `README.md`, `docs/beginner-setup.md`, `docs/migrating.md`,
   `SUPPORT.md`, and `docs/compatibility.md`;
 - contributor/agent docs in `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, and
   `.github/`;
@@ -151,15 +151,15 @@ Before editing:
 
 1. Read this file.
 2. Read `README.md`.
-3. Read `docs/ETHOS.md`.
+3. Read `docs/ethos.md`.
 4. Read the assigned GitHub/Linear issue and all comments.
 5. If the work touches public product shape, release discipline, runtime claims,
    contributor workflow, or public/private boundaries, apply
-   `docs/OSS-OPERATING-CHECKLIST.md`.
+   `docs/oss-operating-checklist.md`.
 6. If the work touches roadmap, priorities, workflow shape, or product framing,
    read:
-   - `docs/OPERATOR-LOOPS.md`
-   - `docs/ROADMAP.md`
+   - `docs/operator-loops.md`
+   - `docs/roadmap.md`
 7. If the work touches v0.2 product direction, read:
    - `decisions/2026-05-02-github-native-business-os.md`
    - `docs/prd/v0-2-first-run-daily-briefing.md`
@@ -208,7 +208,7 @@ find adjacent work, open or comment on a follow-up issue instead of burying it i
 the current PR.
 
 Name which operator loop the branch improves: Sense, Decide, Ship, or
-Reflect. Use `docs/OPERATOR-LOOPS.md` when the fit is unclear.
+Reflect. Use `docs/operator-loops.md` when the fit is unclear.
 
 Good issue slices look like:
 
@@ -407,7 +407,7 @@ workflow changed, include a runtime/manual validation note.
 ### SKILL.md frontmatter — `loops:` field
 
 Every `SKILL.md` should declare which operator loops it traverses. The
-operator-loop taxonomy lives in [docs/OPERATOR-LOOPS.md](docs/OPERATOR-LOOPS.md):
+operator-loop taxonomy lives in [docs/operator-loops.md](docs/operator-loops.md):
 `sense`, `decide`, `ship`, `reflect`. A skill is a journey across loops; loops
 are stations the skill passes through.
 
@@ -477,7 +477,7 @@ released, use "planned", "target", or "next" rather than "shipped".
 
 When reviewing, lead with findings:
 
-- public operating checklist in `docs/OSS-OPERATING-CHECKLIST.md`;
+- public operating checklist in `docs/oss-operating-checklist.md`;
 - public/private boundary;
 - product direction;
 - state model;

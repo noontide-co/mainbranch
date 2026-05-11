@@ -246,9 +246,9 @@ Notion-OS / dashboard convention. Topical buckets pre-assume a business shape; c
 What needs to change in the repo to land this taxonomy:
 
 1. This decision file (lands canonical record)
-2. Rewrite `docs/OPERATOR-LOOPS.md` to four loops with examples, anti-examples, loop-chains
-3. Update `docs/ETHOS.md` 5-loop list to 4
-4. Update `docs/ROADMAP.md` one-line loop reference
+2. Rewrite `docs/operator-loops.md` to four loops with examples, anti-examples, loop-chains
+3. Update `docs/ethos.md` 5-loop list to 4
+4. Update `docs/roadmap.md` one-line loop reference
 5. Update `CHANGELOG.md [Unreleased]` to note the loops decision
 6. Add `loops:` frontmatter convention to `AGENTS.md` SKILL.md schema documentation
 7. Skill SKILL.md updates handed to `devon/main-218-...` branch

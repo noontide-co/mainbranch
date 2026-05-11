@@ -182,10 +182,10 @@ Likely directions:
 
 ## Reading Order
 
-- [ETHOS.md](ETHOS.md) for the product principles.
-- [OPERATOR-LOOPS.md](OPERATOR-LOOPS.md) for the Sense -> Decide -> Ship ->
+- [ethos.md](ethos.md) for the product principles.
+- [operator-loops.md](operator-loops.md) for the Sense -> Decide -> Ship ->
   Reflect loop.
-- [DEPENDENCY-CHOICES.md](DEPENDENCY-CHOICES.md) for dependency, integration,
+- [dependency-choices.md](dependency-choices.md) for dependency, integration,
   sidecar, CLI, MCP server, and provider-adapter judgment.
 - [compatibility.md](compatibility.md) for runtime support status.
 - [CHANGELOG.md](../CHANGELOG.md) for what actually shipped.

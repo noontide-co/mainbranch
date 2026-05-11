@@ -2,9 +2,9 @@
 
 Current architecture reference. This document covers the durable shapes:
 business repo layout, primitives, schemas, artifact routing, and state
-boundaries. Product principles live in [ETHOS.md](ETHOS.md). Loop taxonomy
-lives in [OPERATOR-LOOPS.md](OPERATOR-LOOPS.md). Release direction lives in
-[ROADMAP.md](ROADMAP.md). The CLI surface lives in
+boundaries. Product principles live in [ethos.md](ethos.md). Loop taxonomy
+lives in [operator-loops.md](operator-loops.md). Release direction lives in
+[roadmap.md](roadmap.md). The CLI surface lives in
 [the README](../README.md#for-contributors-and-power-users).
 
 Older folder names live in [Superseded Names](#superseded-names) at the
@@ -91,7 +91,7 @@ repo `.mainbranch/source.json` files remain compatibility links.
 `mb status --json`, `mb graph --json`, and `mb doctor repair --plan --json`
 expose topology facts today. A future dashboard rendering this topology in
 business language is direction, not current behavior; see
-[ROADMAP.md](ROADMAP.md).
+[roadmap.md](roadmap.md).
 
 ## Primitive Contracts
 
@@ -451,7 +451,7 @@ provider truth without owning it. None of these replace the main business record
 Main Branch does not mutate provider accounts today. Provider mutation
 requires a shipped adapter with approval gates, readiness checks, and smoke
 evidence; until then, playbooks are plans and approvals, not execution. See
-[ROADMAP.md](ROADMAP.md) and [DEPENDENCY-CHOICES.md](DEPENDENCY-CHOICES.md)
+[roadmap.md](roadmap.md) and [dependency-choices.md](dependency-choices.md)
 for direction.
 
 Correct pattern:
@@ -489,8 +489,8 @@ exist. See [compatibility.md](compatibility.md).
 Curated rails — GitHub, Cloudflare, Google/Workspace, official ads paths,
 Postiz, Beancount, transcription helpers — earn their place by improving a
 loop and by failing in ways `mb` can explain. See
-[ETHOS.md](ETHOS.md#8-curated-rails-beat-saas-sprawl) and
-[DEPENDENCY-CHOICES.md](DEPENDENCY-CHOICES.md).
+[ethos.md](ethos.md#8-curated-rails-beat-saas-sprawl) and
+[dependency-choices.md](dependency-choices.md).
 
 ## Validation and Migration
 

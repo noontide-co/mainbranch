@@ -14,8 +14,8 @@ linked_decisions:
   - decisions/2026-05-08-business-repo-topology-map.md
 linked_docs:
   - AGENTS.md
-  - docs/OPERATOR-LOOPS.md
-  - docs/ROADMAP.md
+  - docs/operator-loops.md
+  - docs/roadmap.md
 tags: [v0-3, gitops, migration, status, doctor, validate, checkpoint, publish]
 ---
 
@@ -209,7 +209,7 @@ repo. It does **not** describe:
   and checks-model work, not here.
 - **Where the repo lives.** Local-only vs personal GitHub vs free GitHub org
   vs paid org vs self-hosted Git (Forgejo/Gitea) is a setup-rubric question
-  for `/mb-setup` and `docs/DEPENDENCY-CHOICES.md`. `workflow_mode` is read
+  for `/mb-setup` and `docs/dependency-choices.md`. `workflow_mode` is read
   from the repo that already exists; it does not recommend where the next
   repo should be created.
 - **Checks and review enforcement.** Whether a check is required, whether
@@ -284,7 +284,7 @@ does not try to resolve them inside the operator-facing GitOps surface.
 Where a business repo should live — local-only, personal GitHub, free
 GitHub organization, paid GitHub Team, or self-hosted Git such as
 Forgejo/Gitea — is a setup-rubric question. It belongs to `/mb-setup` and
-`docs/DEPENDENCY-CHOICES.md`, not here. GitHub organizations can be free;
+`docs/dependency-choices.md`, not here. GitHub organizations can be free;
 paid plans are optional and only needed for advanced team controls,
 support, or higher private-repo collaboration limits. Setup guidance
 should default to "personal GitHub or free GitHub org" and avoid
@@ -326,7 +326,7 @@ enforcement rules.
 - Per-session `.context/attachments/PR instructions` files become unnecessary
   once `/mb-publish` ships. Until then, they remain a maintainer-only
   workaround and should not be referenced from public docs.
-- `docs/ROADMAP.md` v0.3 line gains a sub-bullet for this work; the deferred
+- `docs/roadmap.md` v0.3 line gains a sub-bullet for this work; the deferred
   surfaces land under v0.3 or v0.4 depending on sequencing.
 
 ## Review Trigger

@@ -233,7 +233,7 @@ mb skill repair --repo .
 mb doctor
 ```
 
-For old `reference/core/` repos, read [MIGRATING.md](MIGRATING.md). You usually
+For old `reference/core/` repos, read [migrating.md](migrating.md). You usually
 do not need to move files immediately. When you are ready, run the dry-run first:
 
 ```bash
@@ -254,7 +254,7 @@ workflow. Please run read-only checks first, find my likely business repos,
 show me the exact commands you recommend, and ask before running anything that
 writes files. If an old `reference/` layout is present, run `mb migrate --check`
 first and do not run `mb migrate --apply` until I approve the dry-run. Use
-docs/MIGRATING.md as the source of truth.
+docs/migrating.md as the source of truth.
 ```
 
 Claude may ask you to restart in a business repo after it repairs skill

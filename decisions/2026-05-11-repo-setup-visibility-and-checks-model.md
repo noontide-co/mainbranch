@@ -11,7 +11,7 @@ linked_decisions:
   - decisions/2026-05-08-business-repo-topology-map.md
   - decisions/2026-05-11-operator-facing-gitops-and-migration-planning.md
 linked_docs:
-  - docs/DEPENDENCY-CHOICES.md
+  - docs/dependency-choices.md
   - docs/repo-visibility-rubric.md
   - docs/checks-and-review-model.md
 tags: [setup, visibility, checks, github, cloudflare, topology]
@@ -212,7 +212,7 @@ access does not get the same publish plan as the repo owner.
   platform during the normal flow.
 - `/mb-site` defaults `gh repo create` to `--private` and surfaces the
   visibility prompt before creating a public site repo.
-- `docs/DEPENDENCY-CHOICES.md` keeps Cloudflare as adopted and does not list
+- `docs/dependency-choices.md` keeps Cloudflare as adopted and does not list
   GitHub Pages as a fallback. The "public output does not require public
   source" rule is repeated where setup advice appears.
 - `mb-wiki/references/hosting-recommendation.md` reframes GitHub Pages as a
