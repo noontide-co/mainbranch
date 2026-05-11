@@ -1897,3 +1897,128 @@ def test_status_human_output_mentions_business_map(tmp_path: Path, monkeypatch) 
     loud = runner.invoke(app, ["status", str(repo), "--verbose"])
     assert loud.exit_code == 0
     assert "Business map" in loud.stdout
+
+
+def test_classify_workflow_covers_known_states() -> None:
+    assert (
+        status_mod._classify_workflow(
+            inside_worktree=False,
+            branch="anything",
+            is_linked_worktree=False,
+            default_branch="main",
+        )
+        == ""
+    )
+    assert (
+        status_mod._classify_workflow(
+            inside_worktree=True,
+            branch="",
+            is_linked_worktree=False,
+            default_branch="main",
+        )
+        == "detached"
+    )
+    assert (
+        status_mod._classify_workflow(
+            inside_worktree=True,
+            branch="main",
+            is_linked_worktree=False,
+            default_branch="main",
+        )
+        == "solo-on-main"
+    )
+    assert (
+        status_mod._classify_workflow(
+            inside_worktree=True,
+            branch="feature/x",
+            is_linked_worktree=False,
+            default_branch="main",
+        )
+        == "branch"
+    )
+    assert (
+        status_mod._classify_workflow(
+            inside_worktree=True,
+            branch="feature/x",
+            is_linked_worktree=True,
+            default_branch="main",
+        )
+        == "worktree"
+    )
+
+
+def test_build_git_summary_reads_in_business_language() -> None:
+    on_main = status_mod._build_git_summary(
+        workflow="solo-on-main",
+        branch="main",
+        default_branch="main",
+        dirty_count=0,
+        ahead=None,
+        behind=None,
+    )
+    assert "On main" in on_main
+    assert "no uncommitted changes" in on_main
+
+    on_branch = status_mod._build_git_summary(
+        workflow="branch",
+        branch="feature/x",
+        default_branch="main",
+        dirty_count=3,
+        ahead=2,
+        behind=1,
+    )
+    assert "On branch `feature/x`" in on_branch
+    assert "3 uncommitted files" in on_branch
+    assert "ahead by 2" in on_branch
+    assert "behind by 1" in on_branch
+
+    detached = status_mod._build_git_summary(
+        workflow="detached",
+        branch="",
+        default_branch="main",
+        dirty_count=0,
+        ahead=None,
+        behind=None,
+    )
+    assert "detached" in detached.lower()
+
+
+def test_git_info_exposes_workflow_on_solo_main(tmp_path: Path) -> None:
+    repo = tmp_path / "solo"
+    repo.mkdir()
+    assert _git(repo, "init", "-b", "main").returncode == 0
+    _configure_git_user(repo)
+    _commit(repo, "README.md", "hello\n", "[add] readme")
+
+    info = status_mod._git_info(repo)
+    assert info["inside_work_tree"] is True
+    assert info["branch"] == "main"
+    assert info["workflow"] == "solo-on-main"
+    assert info["default_branch"] == "main"
+    assert info["dirty"] is False
+    assert info["summary"]
+    # No upstream configured; ahead/behind should be None.
+    assert info["ahead"] is None
+    assert info["behind"] is None
+
+
+def test_git_info_exposes_workflow_on_branch(tmp_path: Path) -> None:
+    repo = tmp_path / "branched"
+    repo.mkdir()
+    assert _git(repo, "init", "-b", "main").returncode == 0
+    _configure_git_user(repo)
+    _commit(repo, "README.md", "hello\n", "[add] readme")
+    assert _git(repo, "checkout", "-b", "feature/x").returncode == 0
+
+    info = status_mod._git_info(repo)
+    assert info["branch"] == "feature/x"
+    assert info["workflow"] == "branch"
+    assert info["default_branch"] == "main"
+    assert "feature/x" in info["summary"]
+
+
+def test_git_info_handles_non_git_directory(tmp_path: Path) -> None:
+    info = status_mod._git_info(tmp_path)
+    # Either git is missing or this is not a work tree; either way no workflow.
+    assert info.get("inside_work_tree") in (False, None)
+    assert "workflow" not in info or info.get("workflow") in ("", None)

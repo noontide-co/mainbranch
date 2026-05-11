@@ -65,15 +65,22 @@
       "skill_wiring"
     ],
     "git": [
+      "ahead",
       "available",
+      "behind",
       "branch",
       "commit",
+      "default_branch",
       "dirty",
       "dirty_count",
       "dirty_files",
       "error",
       "inside_work_tree",
-      "remote"
+      "remote",
+      "summary",
+      "upstream",
+      "workflow",
+      "worktree_root"
     ],
     "git_activity": [
       "available",

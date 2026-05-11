@@ -1206,3 +1206,66 @@ def test_doctor_topology_drift_preview_only(tmp_path: Path) -> None:
     assert review["safe_to_apply"] is False
     assert review["mode"] == "manual"
     assert "does not rename" in review["reason"].lower()
+
+
+def test_derive_audience_maps_mode_and_safety() -> None:
+    assert doctor_mod._derive_audience("read", True) == "informational"
+    assert doctor_mod._derive_audience("read", False) == "informational"
+    assert doctor_mod._derive_audience("write", True) == "mechanical"
+    assert doctor_mod._derive_audience("write", False) == "operator_decision"
+    assert doctor_mod._derive_audience("manual", True) == "operator_decision"
+    assert doctor_mod._derive_audience("manual", False) == "operator_decision"
+
+
+def test_doctor_action_emits_audience_and_operator_summary() -> None:
+    safe_write = doctor_mod._action(
+        id="x",
+        title="Apply mirror",
+        state="warn",
+        mode="write",
+        command="mb doctor repair --apply",
+        safe_to_apply=True,
+        reason="Restores the Related links mirror.",
+    )
+    assert safe_write["audience"] == "mechanical"
+    assert safe_write["operator_summary"] == "Restores the Related links mirror."
+
+    read_only = doctor_mod._action(
+        id="y",
+        title="Inspect",
+        state="ok",
+        mode="read",
+        command="mb doctor",
+        safe_to_apply=True,
+        reason="",
+    )
+    assert read_only["audience"] == "informational"
+    # falls back to title when reason is empty
+    assert read_only["operator_summary"] == "Inspect"
+
+    manual = doctor_mod._action(
+        id="z",
+        title="Resolve cloud paths",
+        state="error",
+        mode="manual",
+        command="open core/finance",
+        safe_to_apply=False,
+        reason="Operator must move files out of iCloud.",
+    )
+    assert manual["audience"] == "operator_decision"
+
+
+def test_doctor_action_accepts_audience_override() -> None:
+    override = doctor_mod._action(
+        id="override",
+        title="Custom",
+        state="info",
+        mode="write",
+        command="mb x",
+        safe_to_apply=True,
+        reason="Default would be mechanical.",
+        audience="informational",
+        operator_summary="Just a heads-up.",
+    )
+    assert override["audience"] == "informational"
+    assert override["operator_summary"] == "Just a heads-up."

@@ -86,6 +86,8 @@ def _derive_audience(mode: str, safe_to_apply: bool) -> str:
     """
     if mode == "read":
         return "informational"
+    if mode == "manual":
+        return "operator_decision"
     if safe_to_apply:
         return "mechanical"
     return "operator_decision"

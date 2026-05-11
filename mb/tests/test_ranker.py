@@ -124,3 +124,31 @@ def test_ranker_surfaces_playbook_health() -> None:
     assert actions[0]["id"] == "review_playbook_health"
     assert actions[0]["signals"][0]["id"] == "playbook_health.gaps"
     assert actions[0]["signals"][0]["evidence"] == ["pushes_without_playbook"]
+
+
+def test_ranker_action_carries_audience_and_operator_summary() -> None:
+    action = ranker._action(
+        action_id="any.id",
+        title="Do the thing",
+        command="mb something",
+        severity="warn",
+        score=60,
+        reason="Three pushes need attention.",
+        signals=[],
+    )
+    assert action["audience"] == "operator_decision"
+    assert action["operator_summary"] == "Three pushes need attention."
+
+    overridden = ranker._action(
+        action_id="any.id",
+        title="Do the thing",
+        command="mb something",
+        severity="info",
+        score=10,
+        reason="Heads up.",
+        signals=[],
+        audience="informational",
+        operator_summary="Just a status note.",
+    )
+    assert overridden["audience"] == "informational"
+    assert overridden["operator_summary"] == "Just a status note."

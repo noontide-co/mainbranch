@@ -1857,3 +1857,24 @@ def test_validate_data_source_rejects_absolute_paths(tmp_path: Path) -> None:
         "storage.snapshots[0] must be a repo-relative path" in err for err in record["errors"]
     )
     assert any("reports[0] must be a repo-relative path" in err for err in record["errors"])
+
+
+def test_validation_categories_carry_audience_and_operator_summary(tmp_path: Path) -> None:
+    for index in range(2):
+        _write(
+            tmp_path / "core" / "offers" / f"offer-{index}" / "offer.md",
+            "---\nstatus: running\n---\n# Offer\n",
+        )
+
+    report = run(path=str(tmp_path))
+    categories = report["validation_categories"]
+
+    assert categories["top_category"] == "missing_slug"
+    assert categories["top_audience"] == "operator_decision"
+    assert categories["top_operator_summary"]
+    assert "schema" not in categories["top_operator_summary"].lower()
+
+    entry = categories["by_category"]["missing_slug"]
+    assert entry["audience"] == "operator_decision"
+    assert entry["operator_summary"]
+    assert entry["repair"]  # legacy field still present
