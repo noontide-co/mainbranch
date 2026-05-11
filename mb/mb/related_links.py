@@ -141,7 +141,7 @@ def markdown_index(repo: Path, files: Iterable[Path] | None = None) -> MarkdownI
     return MarkdownIndex(files=indexed_files, by_rel=by_rel, by_stem=by_stem)
 
 
-def _resolve_wikilink(
+def resolve_wikilink(
     target: str,
     *,
     repo: Path,
@@ -188,7 +188,7 @@ def related_section_targets(
         if resolved is not None:
             targets.add(resolved.relative_to(repo).as_posix())
     for match in relationships.WIKILINK_RE.finditer(section):
-        resolved = _resolve_wikilink(
+        resolved = resolve_wikilink(
             match.group(1),
             repo=repo,
             files_by_rel=lookup.by_rel,

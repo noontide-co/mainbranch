@@ -173,6 +173,15 @@ def _existing_body_targets(
         resolved = relationships.resolve_markdown_link(repo, source, clean)
         if resolved is not None:
             targets.add(resolved.relative_to(repo).as_posix())
+    for match in relationships.WIKILINK_RE.finditer(body_without_code):
+        resolved = related_links.resolve_wikilink(
+            match.group(1),
+            repo=repo,
+            files_by_rel=index.by_rel,
+            files_by_stem=index.by_stem,
+        )
+        if resolved is not None:
+            targets.add(resolved.relative_to(repo).as_posix())
     return targets
 
 
@@ -191,7 +200,7 @@ def _field_for_target(rel_path: str) -> str | None:
         return "linked_decisions"
     if root in {"docs", "documents"}:
         return "linked_docs"
-    if root in {"log", "outputs"} or "outcome" in rel_path:
+    if root in {"log", "outcomes", "outputs"}:
         return "linked_outcomes"
     if root == "pushes":
         return "linked_pushes"

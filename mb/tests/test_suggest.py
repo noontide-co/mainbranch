@@ -7,6 +7,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from mb import suggest
 from mb.cli import app
 
 runner = CliRunner()
@@ -247,3 +248,108 @@ def test_suggest_links_rejects_non_markdown_source(tmp_path: Path) -> None:
 
     assert result.exit_code == 2
     assert "is not a Markdown file" in result.stderr
+
+
+def test_suggest_links_does_not_misclassify_outcome_substring(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "research" / "voice-outcome-mapping.md",
+        "---\ntitle: Voice Outcome Mapping\n---\nMapping launch voice to expected outcomes.\n",
+    )
+    _write(
+        tmp_path / "decisions" / "2026-05-11-voice-pass.md",
+        "---\n"
+        "title: Voice Pass Decision\n"
+        "status: accepted\n"
+        "---\n"
+        "# Voice Pass Decision\n\n"
+        "We will incorporate the Voice Outcome Mapping research before the launch.\n",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "suggest",
+            "links",
+            "decisions/2026-05-11-voice-pass.md",
+            "--repo",
+            str(tmp_path),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    report = json.loads(result.stdout)
+    by_path = _actions_by_path(report)
+    research = by_path["research/voice-outcome-mapping.md"]
+    target = research["target"]
+    assert isinstance(target, dict)
+    assert target.get("field") == "linked_research"
+
+
+def test_suggest_links_skips_targets_already_wikilinked(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "research" / "google-ads-intent.md",
+        "---\ntitle: Google Ads Intent Research\n---\n"
+        "Search intent from founders comparing launch systems.\n",
+    )
+    _write(
+        tmp_path / "docs" / "ads-overview.md",
+        "---\ntitle: Ads Overview\n---\n"
+        "# Ads Overview\n\n"
+        "See [[google-ads-intent]] for the demand signal we used.\n",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "suggest",
+            "links",
+            "docs/ads-overview.md",
+            "--repo",
+            str(tmp_path),
+            "--include-ignored",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    report = json.loads(result.stdout)
+    by_path = _actions_by_path(report)
+    research = by_path["research/google-ads-intent.md"]
+    assert research["action"] == "ignore"
+    reasons = research["reasons"]
+    assert isinstance(reasons, list)
+    assert "already connected" in reasons[0]
+
+
+def test_suggest_links_render_human_prints_target_and_reasons(
+    tmp_path: Path, capsys: object
+) -> None:
+    report = {
+        "source": "decisions/sample.md",
+        "suggestions": [
+            {
+                "action": "add_typed_frontmatter_link",
+                "action_label": "add typed frontmatter link",
+                "score": 90,
+                "target": {
+                    "path": "research/example.md",
+                    "title": "Example Research",
+                    "field": "linked_research",
+                },
+                "reasons": ["The source directly names Example Research."],
+                "evidence": {},
+            }
+        ],
+        "matrix": {"doc": "docs/business-connections.md", "actions": []},
+    }
+
+    suggest.render_human(report)
+
+    captured = capsys.readouterr()  # type: ignore[attr-defined]
+    assert "mb suggest links" in captured.out
+    assert "decisions/sample.md" in captured.out
+    assert "research/example.md" in captured.out
+    assert "linked_research" in captured.out
+    assert "The source directly names Example Research." in captured.out
+    assert "docs/business-connections.md" in captured.out
