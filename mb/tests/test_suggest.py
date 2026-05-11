@@ -118,6 +118,125 @@ def test_suggest_links_can_include_ignored_candidates(tmp_path: Path) -> None:
     assert report["summary"]["ignored_candidates"] == 1
 
 
+def test_suggest_links_skips_targets_already_in_frontmatter(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "research" / "google-ads-intent.md",
+        "---\ntitle: Google Ads Intent Research\n---\n"
+        "Search intent from founders comparing launch systems.\n",
+    )
+    _write(
+        tmp_path / "decisions" / "2026-05-11-google-ads-first.md",
+        "---\n"
+        "title: Google Ads First Decision\n"
+        "status: accepted\n"
+        "linked_research:\n"
+        "  - research/google-ads-intent.md\n"
+        "---\n"
+        "# Google Ads First Decision\n\n"
+        "We weighed paid acquisition against organic for the new quarter.\n",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "suggest",
+            "links",
+            "decisions/2026-05-11-google-ads-first.md",
+            "--repo",
+            str(tmp_path),
+            "--include-ignored",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    report = json.loads(result.stdout)
+    by_path = _actions_by_path(report)
+    research = by_path["research/google-ads-intent.md"]
+    assert research["action"] == "ignore"
+    reasons = research["reasons"]
+    assert isinstance(reasons, list)
+    assert "already connected" in reasons[0]
+
+
+def test_suggest_links_skips_targets_already_inline_linked(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "research" / "google-ads-intent.md",
+        "---\ntitle: Google Ads Intent Research\n---\n"
+        "Search intent from founders comparing launch systems.\n",
+    )
+    _write(
+        tmp_path / "docs" / "ads-overview.md",
+        "---\ntitle: Ads Overview\n---\n"
+        "# Ads Overview\n\n"
+        "See [Google Ads Intent Research](../research/google-ads-intent.md) for "
+        "the demand signal we used.\n",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "suggest",
+            "links",
+            "docs/ads-overview.md",
+            "--repo",
+            str(tmp_path),
+            "--include-ignored",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    report = json.loads(result.stdout)
+    by_path = _actions_by_path(report)
+    research = by_path["research/google-ads-intent.md"]
+    assert research["action"] == "ignore"
+    reasons = research["reasons"]
+    assert isinstance(reasons, list)
+    assert "already connected" in reasons[0]
+
+
+def test_suggest_links_skips_report_already_linked(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "reports" / "google-ads-weekly.md",
+        "---\ntype: report\ntitle: Google Ads Weekly Report\n---\n"
+        "Weekly Google Ads spend and conversion notes.\n",
+    )
+    _write(
+        tmp_path / "decisions" / "2026-05-11-google-ads-first.md",
+        "---\n"
+        "title: Google Ads First Decision\n"
+        "status: accepted\n"
+        "---\n"
+        "# Google Ads First Decision\n\n"
+        "We chose Google Ads first; see "
+        "[Google Ads Weekly Report](../reports/google-ads-weekly.md) "
+        "for the spend and conversion trend.\n",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "suggest",
+            "links",
+            "decisions/2026-05-11-google-ads-first.md",
+            "--repo",
+            str(tmp_path),
+            "--include-ignored",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    report = json.loads(result.stdout)
+    by_path = _actions_by_path(report)
+    report_entry = by_path["reports/google-ads-weekly.md"]
+    assert report_entry["action"] == "ignore"
+    reasons = report_entry["reasons"]
+    assert isinstance(reasons, list)
+    assert "already connected" in reasons[0]
+
+
 def test_suggest_links_rejects_non_markdown_source(tmp_path: Path) -> None:
     _write(tmp_path / "notes.txt", "plain text\n")
 

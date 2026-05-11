@@ -236,7 +236,7 @@ def _suggestion(
 def _candidate_suggestion(
     *,
     repo: Path,
-    source_text: str,
+    source_mention_text: str,
     source_tokens: set[str],
     existing_frontmatter_targets: set[str],
     existing_body_targets: set[str],
@@ -246,7 +246,7 @@ def _candidate_suggestion(
     target_frontmatter, target_body = _read_markdown(target_path)
     title = _title(target_path, target_frontmatter, target_body)
     field = _field_for_target(rel_path)
-    mentioned = _mentioned(source_text, _phrase_variants(repo, target_path, title))
+    mentioned = _mentioned(source_mention_text, _phrase_variants(repo, target_path, title))
     shared_tokens = sorted(source_tokens & _tokens(f"{rel_path}\n{title}\n{target_body[:2000]}"))[
         :8
     ]
@@ -254,6 +254,18 @@ def _candidate_suggestion(
         "mentioned_by_name": mentioned,
         "shared_terms": shared_tokens,
     }
+
+    if rel_path in existing_frontmatter_targets or rel_path in existing_body_targets:
+        return _suggestion(
+            action=ACTION_IGNORE,
+            score=0,
+            target=_target_payload(rel_path, title=title, field=field),
+            reasons=[
+                "This target is already connected in frontmatter or the body.",
+                "Do not suggest duplicate links; use repair commands for missing mirrors.",
+            ],
+            evidence=evidence,
+        )
 
     if _is_data_or_report(rel_path, target_frontmatter) and (mentioned or len(shared_tokens) >= 2):
         score = 82 if mentioned else min(70, 50 + len(shared_tokens) * 4)
@@ -383,8 +395,9 @@ def suggest_links(
     index = related_links.markdown_index(root)
     source_frontmatter, source_body = _read_markdown(source)
     source_frontmatter_text = yaml.safe_dump(source_frontmatter, sort_keys=True)
-    source_text = f"{source_rel}\n{source_frontmatter_text}\n{source_body}"
-    source_tokens = _tokens(source_text)
+    source_index_text = f"{source_rel}\n{source_frontmatter_text}\n{source_body}"
+    source_mention_text = f"{source_rel}\n{source_body}"
+    source_tokens = _tokens(source_index_text)
     existing_frontmatter = _existing_frontmatter_targets(root, source, source_frontmatter)
     existing_body = _existing_body_targets(root, source, source_body, index)
 
@@ -395,7 +408,7 @@ def suggest_links(
             continue
         candidate = _candidate_suggestion(
             repo=root,
-            source_text=source_text,
+            source_mention_text=source_mention_text,
             source_tokens=source_tokens,
             existing_frontmatter_targets=existing_frontmatter,
             existing_body_targets=existing_body,
@@ -410,7 +423,7 @@ def suggest_links(
     suggestions.extend(
         _entity_suggestions(
             repo=root,
-            source_text=source_text,
+            source_text=source_mention_text,
             source_tokens=source_tokens,
             source_path=source,
             files=index.files,
