@@ -11,6 +11,23 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Security
+
+- Locked Main Branch's supply-chain posture in
+  [`decisions/2026-05-11-supply-chain-security-gates.md`](decisions/2026-05-11-supply-chain-security-gates.md)
+  and documented the durable rules in
+  [`docs/supply-chain-policy.md`](docs/supply-chain-policy.md): trusted-publishing
+  OIDC only, `id-token: write` scoped to one job in `publish-pypi.yml`, `pypi`
+  GitHub Environment with a human approver, single-build artifact reused at
+  publish, dependency review in isolation, release-time supply-chain checks,
+  and a public-safe post-compromise response path.
+- `.github/workflows/publish-pypi.yml` now carries a defensive `if:` guard so
+  the `publish` job only runs when the release tag matches `oe-v*`, on top of
+  the trusted-publishing binding and the `pypi` environment approval gate.
+- `.github/dependabot.yml` now groups pip + GitHub Actions updates, labels
+  them for supply-chain review, and applies a release-age `cooldown` so
+  freshly-published versions are not proposed the same hour they land.
+
 ## [0.3.16] - 2026-05-11
 
 v0.3.16 lands the first concrete `mb books` command surface alongside the

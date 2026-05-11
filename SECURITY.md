@@ -35,6 +35,20 @@ Include:
 - Expected impact
 - Any logs or screenshots that do not expose private business data
 
+## Supply chain
+
+Main Branch publishes to PyPI through a GitHub Actions workflow using trusted
+publishing (OIDC) gated by a GitHub Environment with a required reviewer. The
+durable policy — including the `id-token: write` boundary, dependency update
+posture, release-time supply-chain checks, and post-compromise response — is
+documented in [`docs/supply-chain-policy.md`](docs/supply-chain-policy.md) and
+locked in
+[`decisions/2026-05-11-supply-chain-security-gates.md`](decisions/2026-05-11-supply-chain-security-gates.md).
+
+If you suspect a Main Branch release, dependency update, or workflow has been
+compromised, follow the private report path below rather than opening a public
+issue.
+
 ## Scope
 
 In scope:
@@ -45,6 +59,8 @@ In scope:
   commands
 - Accidental exposure of private business data in generated files or logs
 - GitHub Actions, packaging, or release workflow issues that could affect users
+- Supply-chain issues in the published `mainbranch` package, the publish
+  workflow, or pinned GitHub Actions used by this repo
 
 Out of scope:
 

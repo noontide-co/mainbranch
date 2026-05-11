@@ -48,6 +48,7 @@ Pick the route that matches what you are doing.
 
 - [`oss-operating-checklist.md`](oss-operating-checklist.md) — public release / contributor checklist.
 - [`dependency-choices.md`](dependency-choices.md) — adopted rails and dependency policy.
+- [`supply-chain-policy.md`](supply-chain-policy.md) — PyPI publishing, GitHub Actions, dependency, and post-compromise rules.
 - [`claude-code-runtime-dogfood.md`](claude-code-runtime-dogfood.md) — manual runtime smoke runbook.
 - [`release-agent-contract.md`](release-agent-contract.md) — protocol for agents running release-bearing validation.
 - [`post-release-alignment.md`](post-release-alignment.md) — post-release sweep, parallel work lanes, AI review ritual.

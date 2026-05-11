@@ -1,5 +1,16 @@
 # Dependabot config — weekly sweep for Python deps and GitHub Actions.
-# pyproject.toml lives at /mb, so the pip ecosystem is rooted there.
+#
+# Policy lives in:
+#   - docs/supply-chain-policy.md
+#   - decisions/2026-05-11-supply-chain-security-gates.md
+#
+# pyproject.toml lives at /mb, so the pip ecosystem is rooted there. The
+# `cooldown` block delays freshly-published versions so Main Branch is not
+# the first consumer of a release in the short window before the ecosystem
+# detects malicious versions. It is not a guarantee — it is one layer.
+#
+# Dependency PRs are not bundled with feature work. Security updates land
+# expedited as their own PR ahead of the weekly cadence.
 version: 2
 updates:
   - package-ecosystem: "pip"
@@ -7,9 +18,67 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "supply-chain-review"
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
+    groups:
+      python-dev-tooling:
+        patterns:
+          - "ruff"
+          - "mypy"
+          - "pytest"
+          - "pytest-cov"
+          - "types-*"
+        update-types:
+          - "minor"
+          - "patch"
+      python-runtime:
+        patterns:
+          - "typer"
+          - "pyyaml"
+          - "rich"
+        update-types:
+          - "patch"
+      python-extras:
+        patterns:
+          - "cairosvg"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "supply-chain-review"
+    # Dependabot's github-actions cooldown schema only supports
+    # `default-days` (not the semver-*-days breakdown that pip supports).
+    cooldown:
+      default-days: 7
+    groups:
+      # Official actions/* tend to ship together; grouping minor/patch
+      # updates keeps the supply-chain review surface to one PR per cycle.
+      github-actions-official:
+        patterns:
+          - "actions/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Third-party actions in the publish path (PyPA publisher, Linear
+      # release sync). Major bumps still open as individual PRs so the
+      # release-pipeline review is not hidden inside a group diff.
+      github-actions-release:
+        patterns:
+          - "pypa/gh-action-pypi-publish"
+          - "linear/linear-release-action"
+        update-types:
+          - "minor"
+          - "patch"
