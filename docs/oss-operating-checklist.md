@@ -112,6 +112,13 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
 - [ ] Package-visible releases answer the pre-simulation prompt checkpoint and
   run the pre-release candidate plus `release_acceptance` simulation tiers
   before tagging whenever feasible.
+- [ ] Release-bearing validation follows the
+  [release-agent operating contract](release-agent-contract.md): single
+  documented runtime, stdout+stderr+exit captured on the first run, no
+  blind reruns to recover lost evidence.
+- [ ] After a package-visible release ships, run the
+  [post-release alignment sweep](post-release-alignment.md) before opening
+  the next parallel batch.
 - [ ] Runtime or release-validation changes choose the appropriate
   [release simulation tier](release-simulations.md) and route transcript
   findings to skill prose, generated `CLAUDE.md`, CLI, docs, harness, runtime,
