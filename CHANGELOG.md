@@ -13,6 +13,26 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Shipped the first `mb books` surface, `mb books check`, implementing the
+  contract from `decisions/2026-05-11-mb-books-foundation.md`. The command
+  is read-only and never reads real ledger contents. It detects whether
+  `core/finance/books.md` exists and parses its `storage_mode`, detects
+  whether `core/finance/chart-of-accounts.md` exists, verifies the
+  configured storage mode's ignore rule (`.mb/private/` for solo-local
+  mode), and flags tracked files with ledger-shaped extensions
+  (`.journal`, `.hledger`, `.ledger`, `.beancount`) or statement-shaped
+  extensions (`.csv`, `.ofx`, `.qfx`, `.qbo`, `.qif`) as likely Class B
+  leaks. Opt in with `--fixture` to validate a packaged fake hledger
+  fixture by shelling out to `hledger -f <fixture> check`; if hledger is
+  not installed, the check prints a clean informational finding and the
+  base install keeps working. `--json` emits the standard Main Branch
+  result envelope; every finding carries `audience` and
+  `operator_summary` per the operator-facing GitOps contract from
+  MAIN-310. Sibling `mb books status` and `mb books doctor` shapes
+  remain deferred. The fake fixture from
+  `docs/examples/books/acme-fixture.journal` is mirrored into
+  `mb/mb/_data/books/acme-fixture.journal` so it is reachable from the
+  installed wheel. Refs MAIN-321, #486.
 - Accepted decision
   `decisions/2026-05-11-mb-books-foundation.md` choosing **hledger** as
   the bookkeeping engine for `mb books`. The hledger journal is the

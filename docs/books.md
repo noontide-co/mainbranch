@@ -6,8 +6,9 @@ operator-facing companion to
 
 ## The Short Version
 
-- Main Branch will eventually have an `mb books` command group. The
-  first surface (`mb books check`) is planned, not shipped.
+- Main Branch ships `mb books check`, the first surface in the `mb books`
+  command group. It validates bookkeeping safety without reading any
+  real ledger contents.
 - **Main Branch uses hledger as the bookkeeping engine for `mb books`.**
   The hledger journal is the only authoritative ledger.
 - hledger is **optional** for base `mb` installs, but it is the chosen
@@ -184,8 +185,9 @@ Telling them apart should be easy:
   transactions, maybe one balance assertion);
 - a header comment names the file as a sample.
 
-When `mb books check` ships, it will treat anything that looks like a
-real ledger committed under `core/finance/` as a defect, not a feature.
+`mb books check` treats anything that looks like a real ledger or
+statement export committed in the business repo (including under
+`core/finance/`) as a defect, not a feature.
 
 ## Optional Local Viewer
 
@@ -196,24 +198,40 @@ There is no `mb` command for it.
 
 ## What `mb books` Does Today
 
-`mb books` is not a shipped command group yet. When the first surface
-lands, it will be `mb books check`, and it will:
+The shipped surface is:
 
-- detect whether `core/finance/books.md` exists and parses (including
-  the storage mode);
-- detect whether `core/finance/chart-of-accounts.md` exists and
-  follows the documented convention;
-- verify the configured storage mode's ignore rules are present (so
-  the vault stays out of the business repo's tracked history);
-- warn when files that look like real ledgers or statement exports
-  are committed in the business repo (likely Class B leak);
-- when an operator opts in and hledger is installed, validate a fake
-  `.journal` fixture by shelling out to `hledger ... -O json` and
-  reading the structured output;
-- print exact repair commands when something is off;
-- emit a JSON envelope with `--json` for scripts and skills.
+```bash
+mb books check [REPO] [--fixture] [--fixture-path PATH] [--json]
+```
 
-It will **not**:
+`mb books check` runs read-only checks against a business repo. It:
+
+- detects whether `core/finance/books.md` exists and parses (including
+  the `storage_mode` field);
+- detects whether `core/finance/chart-of-accounts.md` exists;
+- verifies the configured storage mode's ignore rule (`.mb/private/`
+  for `solo-local`) so the vault stays out of the business repo's
+  tracked history;
+- warns or errors when ledger-shaped files (`.journal`, `.hledger`,
+  `.ledger`, `.beancount`) or statement-shaped files (`.csv`,
+  `.ofx`, `.qfx`, `.qbo`, `.qif`) are tracked in the business repo
+  (likely Class B leak);
+- with `--fixture`, validates a fake hledger journal fixture by
+  shelling out to `hledger -f <fixture> check` — uses the bundled
+  fake fixture by default, or any path passed via `--fixture-path`;
+- if hledger is not installed, prints a clean informational finding
+  and does not break the rest of the check;
+- prints exact repair commands when something is off;
+- emits a JSON envelope with `--json` for scripts and skills, with
+  every finding carrying `audience` and `operator_summary` fields.
+
+Exit codes:
+
+- `0` — checks passed (info or warn states allowed);
+- `1` — at least one error finding (e.g. ledger file committed,
+  missing vault ignore rule with the vault already present).
+
+It does **not**:
 
 - run real imports, reconciliation, month-close, P&L, balance sheet,
   cash-flow, or tax claims;
@@ -222,11 +240,10 @@ It will **not**:
 - read the real ledger contents inside the vault;
 - mutate any file.
 
-Sibling commands planned alongside it: `mb books status` (shows the
-storage-mode summary in plain language, plus the GitHub-as-backup
-warning when appropriate) and `mb books doctor` (repairs missing
-ignore rules and missing vault scaffolding without touching real
-ledger contents).
+Sibling commands `mb books status` (storage-mode summary plus the
+GitHub-as-backup warning) and `mb books doctor` (mechanical repairs
+to ignore rules and vault scaffolding) are named in the foundation
+decision and not yet shipped.
 
 The full first-surface spec lives in
 [the mb books foundation decision](../decisions/2026-05-11-mb-books-foundation.md).
@@ -262,9 +279,10 @@ The setup path, when the time comes:
    journal contents in.
 5. Optionally add `core/finance/chart-of-accounts.md` describing your
    account-naming convention.
-6. When `mb books check` and friends ship, `mb` will create and
-   enforce the ignore rules for your storage mode, so the books vault
-   stays out of GitHub by default.
+6. Run `mb books check` to verify the policy parses and the
+   `.mb/private/` ignore rule is in place. When the sibling
+   `mb books doctor` ships, it will mechanically add missing ignore
+   rules for you.
 
 ## Related
 
