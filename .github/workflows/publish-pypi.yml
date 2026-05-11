@@ -10,7 +10,17 @@ name: publish-pypi
 #
 # Publish release: tag `oe-vMAJOR.MINOR.PATCH` and use the Releases UI only
 # after the package-visible release gate in docs/release-simulations.md has
-# recorded release simulation and transcript-review evidence.
+# recorded release simulation and transcript-review evidence, and the
+# release-time supply-chain checks in docs/supply-chain-policy.md have run.
+#
+# Supply-chain posture (see decisions/2026-05-11-supply-chain-security-gates.md):
+#   - id-token: write is granted to exactly one job: `publish`.
+#   - Top-level permissions are contents: read; jobs widen explicitly.
+#   - The release artifact is built once in `build` and republished by
+#     `publish`; no rebuild happens in the publish environment.
+#   - The publish job is double-gated: the `pypi` environment requires a
+#     human approver, and an `if:` guard requires the release tag to match
+#     `oe-v*` so a stray release on a non-Main-Branch tag cannot publish.
 #
 # Release notes: the `extract-changelog` job parses CHANGELOG.md for the
 # section matching the release tag and updates the GitHub Release body
@@ -105,6 +115,11 @@ jobs:
     name: Publish to PyPI
     needs: [build, release-notes]
     runs-on: ubuntu-latest
+    # Defense in depth: trusted publishing + `pypi` environment approval are
+    # the primary gates. This `if:` blocks any GitHub Release whose tag does
+    # not match the Main Branch release scheme (`oe-vMAJOR.MINOR.PATCH`)
+    # from claiming an OIDC token, even if the environment is approved.
+    if: startsWith(github.event.release.tag_name, 'oe-v')
     environment:
       name: pypi
       url: https://pypi.org/p/mainbranch
