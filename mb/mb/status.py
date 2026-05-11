@@ -224,11 +224,15 @@ def _git_info(repo: Path) -> dict[str, Any]:
 
     git_dir = _run_command(["git", "rev-parse", "--git-dir"], cwd=repo)
     common_dir = _run_command(["git", "rev-parse", "--git-common-dir"], cwd=repo)
-    is_linked_worktree = (
-        git_dir["ok"]
-        and common_dir["ok"]
-        and git_dir["stdout"].strip() != common_dir["stdout"].strip()
-    )
+    # Linked worktrees report git-dir under .git/worktrees/<name>/ while
+    # git-common-dir points at the shared .git directory. Git can emit either
+    # path as relative or absolute depending on context, so resolve both
+    # against `repo` before comparing instead of doing raw string inequality.
+    is_linked_worktree = False
+    if git_dir["ok"] and common_dir["ok"]:
+        git_dir_path = (repo / git_dir["stdout"].strip()).resolve()
+        common_dir_path = (repo / common_dir["stdout"].strip()).resolve()
+        is_linked_worktree = git_dir_path != common_dir_path
     worktree_root = ""
     if is_linked_worktree:
         toplevel = _run_command(["git", "rev-parse", "--show-toplevel"], cwd=repo)
