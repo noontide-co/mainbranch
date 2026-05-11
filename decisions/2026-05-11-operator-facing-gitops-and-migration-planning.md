@@ -171,6 +171,32 @@ This slice adds, in the same block, as additive optional fields:
 All additions are additive. `STATUS_SCHEMA_VERSION` stays at `"1.0"`. Consumers
 that do not read the new fields keep working.
 
+### Boundary: what `workflow` does and does not describe
+
+`workflow` describes the local git checkout shape for an **existing** repo.
+It does **not** describe:
+
+- **Pre-repo setup state.** `/mb-setup`, `mb init`, and `mb onboard` can run
+  before `.git` exists, before an `origin` remote is set, or before the
+  remote has established a default branch. Those states are not workflow
+  modes; they are setup states and live under the setup/onboard surface.
+- **Actor permissions.** An external contributor with no push access looks
+  identical to an owner working on a feature branch locally. `workflow` is
+  about the local git shape; the actor's GitHub permission role (owner,
+  member, contributor, viewer) is a separate axis and should be modeled
+  separately when publish-time concerns require it.
+
+Follow-up `mb publish --plan` work should treat `actor_role` and
+`publish_path` (for example `direct_push` vs `pull_request`) as distinct
+fields, not overloads of `workflow`. A repo can be `ahead: 3` and still
+fail to push because the user lacks write access. That check sits upstream
+of ahead/behind and should be modeled where it can be detected (via `gh`
+when available) and classified `operator_decision` because membership and
+permissions need a human or admin action.
+
+These boundaries are recorded here so the deferred surfaces below do not
+have to rediscover them.
+
 ## Deferred Surfaces (Contracts Locked Here, Implementation in Follow-Ups)
 
 ### `mb commit --plan` / `mb publish --plan`
@@ -184,6 +210,16 @@ A planned save and publish layer that reads `git.workflow` and routes:
   produces the commit groups plus a PR plan: title, body skeleton built from
   the branch's commit log, closing-issues parsed from commit messages, base
   branch, and the `gh pr create` command the operator can run.
+
+`mb publish --plan` must also surface a separate `actor_role` and
+`publish_path` axis so a `branch` workflow without push access falls back to
+"open a PR from a fork" rather than failing at push time. Permission checks
+should use `gh api user/memberships/orgs/<org>` and
+`gh repo view <owner>/<repo> --json viewerPermission` when `gh` is available,
+and classify failures as `operator_decision` (membership/permission requires
+a human or admin action). Pre-repo state (no `.git`, no `origin`, no default
+branch) is out of scope for `mb publish --plan`; it belongs to the
+setup/onboard surface.
 
 Both commands emit structured JSON with the same shape as `mb checkpoint
 --plan` today, plus a top-level `audience` and `operator_summary`. They write
