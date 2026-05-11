@@ -41,9 +41,15 @@ VAULT_RELATIVE = Path(".mb/private")
 VAULT_IGNORE_ENTRIES = (".mb/private/", ".mb/private")
 
 VALID_STORAGE_MODES = frozenset({"solo-local", "team-private-repo", "advanced-vault"})
+NON_LOCAL_STORAGE_MODES = frozenset({"team-private-repo", "advanced-vault"})
 
 BUNDLED_FIXTURE_NAME = "acme-fixture.journal"
 DOCS_BOOKS_PATH = "docs/books.md"
+
+# Fixture markers an operator can put in a sample journal/CSV to opt the
+# file out of unsafe-path detection. See the foundation decision.
+FIXTURE_MARKER_TOKENS = ("mb-fixture", "sample fixture", "not a real ledger")
+FIXTURE_MARKER_BYTES = 1024
 
 
 def _max_state(states: list[str]) -> str:
@@ -160,15 +166,25 @@ def _walk_files_fallback(repo: Path) -> list[str]:
     return out
 
 
-def _path_is_engine_fixture(rel_posix: str) -> bool:
-    """Skip the engine repo's own packaged + documented fixtures.
+def _has_fixture_marker(path: Path) -> bool:
+    """Return True when ``path`` carries an explicit fixture marker.
 
-    ``mb books check`` runs against business repos, not this engine
-    repo, but the gate must be conservative when an operator points it
-    at a checkout that happens to contain ``docs/examples/books/`` or
-    ``mb/mb/_data/books/``.
+    The foundation decision allows an escape hatch from unsafe-path
+    detection when a sample file is explicitly marked. Marker tokens
+    are matched case-insensitively in the first ``FIXTURE_MARKER_BYTES``
+    of the file. Operators can put them in a header comment so the
+    same fixture file can live anywhere in the business repo.
     """
-    return rel_posix.startswith(("docs/examples/books/", "mb/mb/_data/books/"))
+    try:
+        with path.open("rb") as handle:
+            head = handle.read(FIXTURE_MARKER_BYTES)
+    except OSError:
+        return False
+    try:
+        text = head.decode("utf-8", errors="ignore").lower()
+    except UnicodeDecodeError:
+        return False
+    return any(token in text for token in FIXTURE_MARKER_TOKENS)
 
 
 def _ignore_rule_present(entries: set[str]) -> bool:
@@ -245,12 +261,15 @@ def _detect_books_policy(repo: Path) -> tuple[dict[str, Any], list[dict[str, Any
                 state="warn",
                 detail=(
                     f"storage_mode={storage_mode!r} is not one of "
-                    "solo-local, team-private-repo, advanced-vault."
+                    "solo-local, team-private-repo, advanced-vault. "
+                    "Treating as solo-local for vault enforcement so a "
+                    "typo cannot silently allow a books leak."
                 ),
                 audience="operator_decision",
                 operator_summary=(
-                    f"Unknown storage_mode {storage_mode!r}. Use one of the "
-                    "three documented values."
+                    f"Unknown storage_mode {storage_mode!r}; assuming "
+                    "solo-local until corrected. Use one of the three "
+                    "documented values."
                 ),
                 repair=f"See {DOCS_BOOKS_PATH} for valid storage modes.",
             )
@@ -327,7 +346,13 @@ def _check_vault_ignore_rule(repo: Path, storage_mode: str) -> list[dict[str, An
     vault_path = repo / VAULT_RELATIVE
     vault_exists = vault_path.exists()
 
-    if storage_mode in ("", "solo-local"):
+    # Fail closed: only the two explicitly non-local modes skip the
+    # local vault ignore check. Anything else — empty, unknown,
+    # typo'd — gets solo-local enforcement so a misconfigured policy
+    # does not silently allow a leak.
+    treat_as_local = storage_mode not in NON_LOCAL_STORAGE_MODES
+
+    if treat_as_local:
         if ignored:
             findings.append(
                 _finding(
@@ -397,7 +422,14 @@ def _check_vault_ignore_rule(repo: Path, storage_mode: str) -> list[dict[str, An
 
 
 def _detect_unsafe_paths(repo: Path) -> list[dict[str, Any]]:
-    """Flag ledger or statement files committed to the business repo."""
+    """Flag ledger or statement files committed to the business repo.
+
+    Per the foundation decision this is a ``warn``, not a hard fail:
+    operators may legitimately commit non-finance CSVs (research
+    exports, audience data) and may ship sample fixtures. Files
+    carrying an explicit fixture marker (see ``FIXTURE_MARKER_TOKENS``)
+    are exempted.
+    """
     tracked, used_git = _tracked_files(repo)
     if used_git:
         candidates = tracked
@@ -407,43 +439,72 @@ def _detect_unsafe_paths(repo: Path) -> list[dict[str, Any]]:
         method = "filesystem walk"
 
     leaks: list[str] = []
+    fixtures: list[str] = []
     for rel in candidates:
         if not rel:
             continue
         if rel.startswith(".mb/private/"):
             continue
-        if _path_is_engine_fixture(rel):
-            continue
         suffix = Path(rel).suffix.lower()
-        if suffix in UNSAFE_EXTENSIONS:
-            leaks.append(rel)
+        if suffix not in UNSAFE_EXTENSIONS:
+            continue
+        absolute = repo / rel
+        if _has_fixture_marker(absolute):
+            fixtures.append(rel)
+            continue
+        leaks.append(rel)
+
+    findings: list[dict[str, Any]] = []
+    if fixtures:
+        findings.append(
+            _finding(
+                id="unsafe-paths-fixtures-detected",
+                title="Marked fixture files detected",
+                state="info",
+                detail=(
+                    "These files carry an explicit fixture marker and are "
+                    "exempted from the unsafe-path check."
+                ),
+                audience="informational",
+                operator_summary=(
+                    f"{len(fixtures)} file(s) marked as sample fixtures; "
+                    "skipping unsafe-path enforcement."
+                ),
+                evidence=fixtures[:20],
+            )
+        )
 
     if not leaks:
-        return [
+        findings.append(
             _finding(
                 id="unsafe-paths-clean",
                 title="No ledger or statement files tracked in the business repo",
                 state="ok",
-                detail=f"Checked via {method}; no ledger-shaped files found.",
+                detail=f"Checked via {method}; no unmarked ledger-shaped files found.",
                 audience="informational",
                 operator_summary=("No raw ledgers or statements committed to the business repo."),
             )
-        ]
+        )
+        return findings
 
-    return [
+    findings.append(
         _finding(
             id="unsafe-paths-detected",
             title="Ledger or statement files found in the business repo",
-            state="error",
+            state="warn",
             detail=(
                 "These files look like raw books or statement exports. "
                 "Real books belong in the private books vault, not the "
-                "team-visible business repo."
+                "team-visible business repo. If a flagged file is a sample, "
+                "add a fixture marker line (for example "
+                "'; MB-FIXTURE — sample, not a real ledger') in the first "
+                f"{FIXTURE_MARKER_BYTES} bytes."
             ),
             audience="operator_decision",
             operator_summary=(
                 f"{len(leaks)} ledger/statement-shaped file(s) committed; "
-                "move them into the private books vault."
+                "move them into the private books vault or mark them as "
+                "fixtures."
             ),
             repair=(
                 "Move each file into .mb/private/books/ (solo-local) or "
@@ -452,7 +513,8 @@ def _detect_unsafe_paths(repo: Path) -> list[dict[str, Any]]:
             ),
             evidence=leaks[:20],
         )
-    ]
+    )
+    return findings
 
 
 def _bundled_fixture_path() -> Path | None:
