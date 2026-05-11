@@ -24,12 +24,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   into business-language next steps. Schemas are additive; no version bump
   required. Refs MAIN-310, #463.
 - Added workflow awareness to `mb status`'s existing `git` block:
-  `workflow` (one of `solo-on-main`, `branch`, `worktree`, `detached`),
-  `default_branch` (detected from `origin/HEAD` with fallbacks to `main` and
-  `master`), `upstream`, `ahead`, `behind`, `worktree_root`, and an
-  operator-facing `summary` one-liner. Gives skills and agents a single
-  place to decide whether to recommend save-on-main, branch-and-PR, or
-  worktree-aware flows without their own git wrappers. Refs MAIN-310, #463.
+  `workflow_mode` (one of `solo-on-main`, `branch`, `worktree`,
+  `detached`), `default_branch` (detected from `origin/HEAD` with
+  fallbacks to `main` and `master`), `upstream`, `ahead`, `behind`,
+  `worktree_root`, and an operator-facing `summary` one-liner. Gives
+  skills and agents a single place to decide whether to recommend
+  save-on-main, branch-and-PR, or worktree-aware flows without their own
+  git wrappers. `workflow_mode` describes local git shape only — not
+  pre-repo setup state, actor permissions, or check-enforcement choices.
+  Refs MAIN-310, #463.
 - Accepted decision
   `decisions/2026-05-11-operator-facing-gitops-and-migration-planning.md`
   locking the operator-facing GitOps contract: finding classification,

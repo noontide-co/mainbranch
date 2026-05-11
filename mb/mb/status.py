@@ -280,7 +280,7 @@ def _git_info(repo: Path) -> dict[str, Any]:
         "dirty_count": len(dirty_lines),
         "dirty_files": dirty_lines[:10],
         "remote": remote["stdout"].strip() if remote["ok"] else "",
-        "workflow": workflow,
+        "workflow_mode": workflow,
         "default_branch": default_branch,
         "upstream": upstream_ref,
         "ahead": ahead,

@@ -146,7 +146,7 @@ git.dirty, git.dirty_count, git.dirty_files, git.remote, git.error
 
 This slice adds, in the same block, as additive optional fields:
 
-- **`workflow`** — string, one of:
+- **`workflow_mode`** — string, one of:
   - `solo-on-main` — current branch is the default branch and there is no
     branch-and-PR workflow expected today.
   - `branch` — current branch is not the default branch, and the repo is a
@@ -171,28 +171,29 @@ This slice adds, in the same block, as additive optional fields:
 All additions are additive. `STATUS_SCHEMA_VERSION` stays at `"1.0"`. Consumers
 that do not read the new fields keep working.
 
-### Boundary: what `workflow` does and does not describe
+### Boundary: what `workflow_mode` does and does not describe
 
-`workflow` describes the local git checkout shape for an **existing** repo.
-It does **not** describe:
+`workflow_mode` describes the local git checkout shape for an **existing**
+repo. It does **not** describe:
 
 - **Pre-repo setup state.** `/mb-setup`, `mb init`, and `mb onboard` can run
   before `.git` exists, before an `origin` remote is set, or before the
   remote has established a default branch. Those states are not workflow
   modes; they are setup states and live under the setup/onboard surface.
 - **Actor permissions.** An external contributor with no push access looks
-  identical to an owner working on a feature branch locally. `workflow` is
-  about the local git shape; the actor's GitHub permission role (owner,
-  member, contributor, viewer) is a separate axis and should be modeled
-  separately when publish-time concerns require it.
-
-Follow-up `mb publish --plan` work should treat `actor_role` and
-`publish_path` (for example `direct_push` vs `pull_request`) as distinct
-fields, not overloads of `workflow`. A repo can be `ahead: 3` and still
-fail to push because the user lacks write access. That check sits upstream
-of ahead/behind and should be modeled where it can be detected (via `gh`
-when available) and classified `operator_decision` because membership and
-permissions need a human or admin action.
+  identical to an owner working on a feature branch locally. `workflow_mode`
+  is about the local git shape; the actor's GitHub permission role (owner,
+  member, contributor, viewer) is a separate axis and belongs to publish
+  and checks-model work, not here.
+- **Where the repo lives.** Local-only vs personal GitHub vs free GitHub org
+  vs paid org vs self-hosted Git (Forgejo/Gitea) is a setup-rubric question
+  for `/mb-setup` and `docs/DEPENDENCY-CHOICES.md`. `workflow_mode` is read
+  from the repo that already exists; it does not recommend where the next
+  repo should be created.
+- **Checks and review enforcement.** Whether a check is required, whether
+  it runs in GitHub Actions, and whether branch protection gates merges are
+  questions for a separate checks-and-review-model decision. `workflow_mode`
+  is local shape only.
 
 These boundaries are recorded here so the deferred surfaces below do not
 have to rediscover them.
@@ -201,7 +202,7 @@ have to rediscover them.
 
 ### `mb commit --plan` / `mb publish --plan`
 
-A planned save and publish layer that reads `git.workflow` and routes:
+A planned save and publish layer that reads `git.workflow_mode` and routes:
 
 - `solo-on-main` and `worktree` → `mb commit --plan` produces concern-clustered
   commit groups (using `mb checkpoint --plan` machinery) and recommends
@@ -211,15 +212,13 @@ A planned save and publish layer that reads `git.workflow` and routes:
   the branch's commit log, closing-issues parsed from commit messages, base
   branch, and the `gh pr create` command the operator can run.
 
-`mb publish --plan` must also surface a separate `actor_role` and
-`publish_path` axis so a `branch` workflow without push access falls back to
-"open a PR from a fork" rather than failing at push time. Permission checks
-should use `gh api user/memberships/orgs/<org>` and
-`gh repo view <owner>/<repo> --json viewerPermission` when `gh` is available,
-and classify failures as `operator_decision` (membership/permission requires
-a human or admin action). Pre-repo state (no `.git`, no `origin`, no default
-branch) is out of scope for `mb publish --plan`; it belongs to the
-setup/onboard surface.
+`mb publish --plan` will surface `actor_role` and `publish_path` (for example
+`direct_push` vs `pull_request`) as distinct axes from `workflow_mode`, so a
+`branch` workflow without push access can plan a fork-and-PR path rather than
+failing at push time. The exact shape of those axes — including whether and
+how `mb publish --plan` reads required-status-check state, GitHub branch
+protection, or org membership — belongs to a separate decision on the
+checks-and-review model for business repos, not this one.
 
 Both commands emit structured JSON with the same shape as `mb checkpoint
 --plan` today, plus a top-level `audience` and `operator_summary`. They write
@@ -251,6 +250,46 @@ ambiguous moves without operator confirmation. Each move carries an
 
 Follow-up issue: track separately. Validation: fixture repo with at least one
 non-standard folder and a snapshot test of the plan output.
+
+## Out of Scope (Belongs to Other Decisions)
+
+Two adjacent product questions came up while scoping this work. They are
+explicitly **not** this decision's job. Naming them here so a future agent
+does not try to resolve them inside the operator-facing GitOps surface.
+
+### Repo home and GitHub org setup rubric
+
+Where a business repo should live — local-only, personal GitHub, free
+GitHub organization, paid GitHub Team, or self-hosted Git such as
+Forgejo/Gitea — is a setup-rubric question. It belongs to `/mb-setup` and
+`docs/DEPENDENCY-CHOICES.md`, not here. GitHub organizations can be free;
+paid plans are optional and only needed for advanced team controls,
+support, or higher private-repo collaboration limits. Setup guidance
+should default to "personal GitHub or free GitHub org" and avoid
+implying a paywall.
+
+`workflow_mode` reads the local git shape of a repo that already exists.
+It does not recommend where the next repo should be created.
+
+### Checks and review model for business repos
+
+What runs locally vs in GitHub Actions, which checks are required vs
+informational vs warnings, whether branch protection gates merges, and
+how `mb publish --plan` should read GitHub check or required-status-check
+state is a separate product decision. The split is roughly:
+
+- `mb` defines and runs the rules locally;
+- agents use `mb` output to explain and repair;
+- GitHub Actions can run the same rules on PRs when the repo lives on
+  GitHub;
+- GitHub branch protection is optional for solo users, recommended for
+  team/org repos;
+- dashboards and Obsidian display state, they do not own enforcement.
+
+That model deserves its own decision and is out of scope here. The
+`audience` taxonomy (`mechanical`, `operator_decision`, `informational`)
+is reusable by that future decision; this slice should not pre-bake the
+enforcement rules.
 
 ## Consequences
 

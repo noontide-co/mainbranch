@@ -79,7 +79,7 @@
       "remote",
       "summary",
       "upstream",
-      "workflow",
+      "workflow_mode",
       "worktree_root"
     ],
     "git_activity": [

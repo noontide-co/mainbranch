@@ -1993,7 +1993,7 @@ def test_git_info_exposes_workflow_on_solo_main(tmp_path: Path) -> None:
     info = status_mod._git_info(repo)
     assert info["inside_work_tree"] is True
     assert info["branch"] == "main"
-    assert info["workflow"] == "solo-on-main"
+    assert info["workflow_mode"] == "solo-on-main"
     assert info["default_branch"] == "main"
     assert info["dirty"] is False
     assert info["summary"]
@@ -2012,7 +2012,7 @@ def test_git_info_exposes_workflow_on_branch(tmp_path: Path) -> None:
 
     info = status_mod._git_info(repo)
     assert info["branch"] == "feature/x"
-    assert info["workflow"] == "branch"
+    assert info["workflow_mode"] == "branch"
     assert info["default_branch"] == "main"
     assert "feature/x" in info["summary"]
 
@@ -2021,4 +2021,4 @@ def test_git_info_handles_non_git_directory(tmp_path: Path) -> None:
     info = status_mod._git_info(tmp_path)
     # Either git is missing or this is not a work tree; either way no workflow.
     assert info.get("inside_work_tree") in (False, None)
-    assert "workflow" not in info or info.get("workflow") in ("", None)
+    assert "workflow_mode" not in info or info.get("workflow_mode") in ("", None)
