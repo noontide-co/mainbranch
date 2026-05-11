@@ -133,16 +133,22 @@ data/<provider>/
   snapshots/
     2026-05-10.csv                    # storage.snapshots entries
 
-.mb/private/sync/                     # local-only; ignored by the business repo
+.mb/private/sync/                     # local-only; should not be tracked
   <provider>.json                     # last-run summary
   logs/<provider>/2026-05-10.log      # raw provider/CLI output
 ```
 
-`.mb/private/sync/` follows the same ignore rule as
-`.mb/private/books/`: it lives inside the business repo's working tree
-but is never tracked. `mb` owns the ignore enforcement when a future
-`mb data` surface ships; until then, operators inherit the existing
-`.mb/private/` ignore from the books slice.
+`.mb/private/sync/` is intended to live inside the business repo's
+working tree but never be tracked. Today the default `mb onboard`
+gitignore template does **not** yet include `.mb/private/`: the
+[`mb books` foundation](2026-05-11-mb-books-foundation.md) named the
+template update as a deferred follow-up, and this slice does not change
+the template either. Until a follow-up patches
+`mb/mb/_data/templates/.gitignore.tmpl`, operators following this
+pattern must add `.mb/private/` to their business repo's `.gitignore`
+themselves. The planned `mb data` surface will own the ignore
+enforcement when it ships. Treat this gap as the first follow-up
+implementation issue for the pattern, not an inherited guarantee.
 
 The last-run summary is intentionally a small JSON shape so any wrapper
 language can write it:
@@ -195,8 +201,10 @@ The per-provider sync script is responsible for:
 1. Writing SQLite changes inside a transaction. SQLite's atomic commit
    keeps in-flight reads safe; readers do not need to coordinate.
 2. Writing CSV snapshots to a temp path in the same directory, then
-   `os.rename` into place. Atomic on POSIX and on NTFS for same-volume
-   renames.
+   `os.replace` into place. `os.replace` is atomic on POSIX and on
+   NTFS for same-volume replacements and, unlike `os.rename`, overwrites
+   an existing destination on Windows without raising
+   `FileExistsError` — important for the idempotent-retry rule below.
 3. Updating `data/<provider>/source.md` frontmatter so `freshness`
    matches the run date and `storage.snapshots` lists the new CSV.
    The script edits frontmatter only, never the body, and uses a
@@ -321,6 +329,12 @@ This decision is intentionally a foundation slice. It does **not**:
 
 When the pattern proves itself in real use, file separate issues for:
 
+- Patching `mb/mb/_data/templates/.gitignore.tmpl` to add
+  `.mb/private/` so new business repos ignore the sync state (and the
+  books vault) by default. The
+  [`mb books` foundation](2026-05-11-mb-books-foundation.md) already
+  named this as a deferred migration; sync is the second consumer that
+  needs it.
 - `mb data sync <provider>` / `mb data status` wrapper command pair.
 - `mb doctor` freshness check that reads `freshness`, `cadence`, and
   `.mb/private/sync/<provider>.json`.

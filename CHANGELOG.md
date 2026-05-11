@@ -48,8 +48,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   snapshots into the existing `data/<provider>/` data-source registry
   layout and updates `source.md` `freshness` and `storage.snapshots`.
   Operational state (last-run JSON summary, raw logs) lives under
-  `.mb/private/sync/`, inheriting the same ignore rule as the private
-  books vault, so the team-visible business repo never tracks run logs.
+  `.mb/private/sync/`, which the pattern requires operators to add to
+  `.gitignore` themselves until the deferred books follow-up patches
+  `mb/mb/_data/templates/.gitignore.tmpl`. The decision and the
+  operator doc state the gap explicitly so no one assumes Main Branch
+  already enforces the ignore.
   Credentials stay in the OS keychain, the runtime environment, or
   GitHub Actions secrets — never in repo files, frontmatter, or run
   logs. `mb status` / `mb doctor` surface staleness by reading

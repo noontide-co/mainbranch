@@ -34,7 +34,7 @@ data/<provider>/
   snapshots/
     2026-05-10.csv     # storage.snapshots; portable cuts the team can audit
 
-.mb/private/sync/      # ignored by the business repo
+.mb/private/sync/      # local-only; you must add `.mb/private/` to .gitignore today
   <provider>.json      # last-run summary (status, exit code, outputs, notes)
   logs/<provider>/
     2026-05-10.log     # raw output from the per-provider script
@@ -46,6 +46,13 @@ cron / launchd / Task Scheduler / .github/workflows/<provider>.yml
 `source.md` is already the readable record the rest of the business
 repo links through. The sync pattern just keeps its `freshness` and
 `storage.snapshots` fields honest.
+
+**Add `.mb/private/` to your `.gitignore` before you start syncing.**
+The default `mb onboard` gitignore template does not yet include it —
+the [`mb books` foundation](books.md) named the template update as a
+follow-up and the scheduled-sync slice did not change the template
+either. Until that follow-up lands, an operator who skips this step
+will commit run logs and the last-run JSON to their business repo.
 
 ## Pick A Schedule Shape
 
@@ -163,7 +170,10 @@ The script you run on a schedule is responsible for:
 1. **Atomic SQLite writes.** Wrap changes in a transaction. SQLite's
    atomic commit keeps concurrent readers safe.
 2. **Atomic CSV writes.** Write to `snapshots/.tmp-2026-05-10.csv`,
-   then `os.rename` into place.
+   then `os.replace` into place. `os.replace` is atomic on POSIX and
+   NTFS for same-volume replacements, and unlike `os.rename` it
+   overwrites an existing destination on Windows — which matters when
+   you re-run the same day's sync.
 3. **Frontmatter-only edits to `source.md`.** Use a round-trip YAML
    loader so the body, comments, and key order survive.
 4. **Last-run summary written last.** Write
