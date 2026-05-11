@@ -15,14 +15,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 - Added warning-only Related links mirror checks to `mb validate --cross-refs`
   and a safe `mb doctor repair --plan` / `--apply` path that creates or
-  updates `## Related links` body mirrors from canonical `linked_*`
+  updates `## Related links` body mirrors from frontmatter `linked_*`
   frontmatter without making body links authoritative. Refs #454.
 
 ### Changed
 
 - Clarified graph-link authoring guidance across markdown conventions,
   generated business-repo instructions, and bundled authoring skills:
-  frontmatter remains canonical, body mirrors are repairable viewer output,
+  frontmatter remains the source of truth, body mirrors are repairable viewer output,
   and agents should not invent relationships without evidence. Refs #454.
 - Decided that Obsidian is a first-class optional viewer over the same
   markdown files `mb` validates, not a dependency or second source of

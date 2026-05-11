@@ -282,6 +282,17 @@ def test_cross_refs_warn_when_frontmatter_link_missing_body_mirror(tmp_path: Pat
     assert finding["field"] == "linked_research"
     assert finding["target"] == "research/2026-04-29-topic-source.md"
 
+    strict_report = run(path=str(tmp_path), cross_refs=True, strict=True)
+    assert strict_report["ok"] is False
+    strict_finding = strict_report["cross_refs"]["warnings"][0]
+    assert strict_finding["code"] == "missing-related-link-mirror"
+    assert (
+        strict_report["validation_categories"]["by_category"]["missing_related_link_mirror"][
+            "count"
+        ]
+        == 1
+    )
+
 
 def test_body_only_markdown_links_do_not_replace_typed_frontmatter(tmp_path: Path) -> None:
     _write(
@@ -300,6 +311,34 @@ def test_body_only_markdown_links_do_not_replace_typed_frontmatter(tmp_path: Pat
             "## Related links\n"
             "\n"
             "- [Topic](../research/2026-04-29-topic-source.md)\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True, strict=True)
+
+    assert report["ok"] is True
+    assert report["summary"]["warnings"] == 0
+
+
+def test_related_links_wikilink_satisfies_frontmatter_mirror(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "research" / "2026-04-29-topic-source.md",
+        "---\ndate: 2026-04-29\ntopic: topic\nsource: source\n---\n# Topic\n",
+    )
+    _write(
+        tmp_path / "decisions" / "2026-04-29-wikilink-mirror.md",
+        (
+            "---\n"
+            "date: 2026-04-29\n"
+            "status: accepted\n"
+            "linked_research:\n"
+            "  - research/2026-04-29-topic-source.md\n"
+            "---\n"
+            "# Wikilink mirror\n"
+            "\n"
+            "## Related links\n"
+            "\n"
+            "- [[research/2026-04-29-topic-source|Topic]]\n"
         ),
     )
 

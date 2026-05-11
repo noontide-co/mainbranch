@@ -2064,7 +2064,7 @@ def repair_plan(
     if related_links["summary"]["missing_links"]:
         action = _action(
             id="related-links-mirror",
-            title="Mirror canonical frontmatter links into Related links",
+            title="Mirror frontmatter links into Related links",
             state="warn",
             mode="write",
             command="mb doctor repair --apply",
@@ -2080,7 +2080,9 @@ def repair_plan(
     validation_categories = (
         validation.get("report", {}).get("validation_categories", {}).get("by_category", {})
     )
-    only_related_link_warnings = set(validation_categories) == {"missing_related_link_mirror"}
+    only_related_link_warnings = set(validation_categories) == {
+        related_links_mod.MISSING_RELATED_LINK_MIRROR_CATEGORY
+    }
     if validation["state"] != "ok" and not only_related_link_warnings:
         actions.append(
             _action(
@@ -2109,10 +2111,10 @@ def repair_plan(
             "Related Links Mirrors",
             "warn" if related_links["summary"]["missing_links"] else "ok",
             (
-                f"{related_links['summary']['missing_links']} canonical link(s) missing "
+                f"{related_links['summary']['missing_links']} frontmatter link(s) missing "
                 f"from {related_links['summary']['files']} Related links section(s)"
                 if related_links["summary"]["missing_links"]
-                else "Related links mirrors match canonical frontmatter"
+                else "Related links mirrors match frontmatter"
             ),
             checks=[
                 {
@@ -2368,13 +2370,13 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
         applied.append(
             _action(
                 id="related-links-mirror",
-                title="Mirrored canonical frontmatter links into Related links",
+                title="Mirrored frontmatter links into Related links",
                 state="ok" if related_links_result["ok"] else "error",
                 mode="write",
                 command="mb doctor repair --apply",
                 safe_to_apply=True,
                 reason=(
-                    "added missing Markdown body links from canonical frontmatter; "
+                    "added missing Markdown body links from frontmatter; "
                     "frontmatter remains authoritative"
                 ),
                 writes=[str(item["path"]) for item in related_links_result["changed"]],

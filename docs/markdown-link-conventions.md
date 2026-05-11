@@ -110,10 +110,10 @@ relative links at the note level:
 ```
 
 Body mirrors are a viewer aid, not a second source of truth. Frontmatter
-typed edges remain canonical for `mb graph`, `mb validate --cross-refs`,
+typed edges remain the source of truth for `mb graph`, `mb validate --cross-refs`,
 and `mb status relationship_health`. If frontmatter and the body mirror
 disagree, frontmatter wins. `mb validate --cross-refs` warns when the
-mirror is missing canonical frontmatter edges, and `mb doctor repair
+mirror is missing frontmatter edges, and `mb doctor repair
 --plan` / `mb doctor repair --apply` can add missing mirror links after
 operator approval.
 
@@ -153,7 +153,7 @@ Use the narrowest evidence-backed frontmatter field available:
   records, or operating boundaries only when the repo-topology record has
   evidence for that boundary.
 
-If the evidence is weak, leave the canonical frontmatter link out and add a
+If the evidence is weak, leave the frontmatter link out and add a
 plain body reference only if it helps the reader. Body-only links stay
 generic references; they are not typed graph data.
 
@@ -271,7 +271,7 @@ mb validate --cross-refs
 ```
 
 This checks known frontmatter link fields and warns when important
-links are missing, when canonical frontmatter links are not mirrored in
+links are missing, when frontmatter links are not mirrored in
 `## Related links`, and when wikilinks point to missing markdown files or
 match multiple files by stem. Standard Markdown relative links are
 validated as body-link edges in the same pass.

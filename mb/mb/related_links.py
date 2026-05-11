@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import posixpath
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -14,18 +15,27 @@ from mb import relationships
 
 RELATED_HEADING_RE = re.compile(r"^##\s+Related links\s*$", re.IGNORECASE)
 SECTION_BOUNDARY_RE = re.compile(r"^#{1,2}\s+\S")
+MISSING_RELATED_LINK_MIRROR_CATEGORY = "missing_related_link_mirror"
 
 
 @dataclass(frozen=True)
 class MirrorRef:
-    """A canonical frontmatter relationship that can be mirrored in the body."""
+    """A frontmatter relationship that can be mirrored in the body."""
 
     field: str
     target: str
     key: str
     href: str
     label: str
-    external: bool = False
+
+
+@dataclass(frozen=True)
+class MarkdownIndex:
+    """Markdown lookup tables shared across one repo scan."""
+
+    files: tuple[Path, ...]
+    by_rel: dict[str, Path]
+    by_stem: dict[str, list[Path]]
 
 
 def _coerce_refs(value: Any) -> tuple[list[str], bool]:
@@ -70,12 +80,12 @@ def _is_hidden_or_generated(path: Path, repo: Path) -> bool:
     )
 
 
-def _markdown_files(repo: Path) -> list[Path]:
-    return [
+def _markdown_files(repo: Path) -> tuple[Path, ...]:
+    return tuple(
         path
         for path in sorted(repo.rglob("*.md"))
         if path.is_file() and not _is_hidden_or_generated(path, repo)
-    ]
+    )
 
 
 def _title_from_file(path: Path) -> str:
@@ -121,13 +131,14 @@ def _section_text(body: str) -> str:
     return "".join(body.splitlines(keepends=True)[start + 1 : end])
 
 
-def _files_by_rel_and_stem(repo: Path) -> tuple[dict[str, Path], dict[str, list[Path]]]:
+def markdown_index(repo: Path, files: Iterable[Path] | None = None) -> MarkdownIndex:
     by_rel: dict[str, Path] = {}
     by_stem: dict[str, list[Path]] = {}
-    for path in _markdown_files(repo):
+    indexed_files = tuple(files) if files is not None else _markdown_files(repo)
+    for path in indexed_files:
         by_rel[path.relative_to(repo).as_posix()] = path
         by_stem.setdefault(path.stem, []).append(path)
-    return by_rel, by_stem
+    return MarkdownIndex(files=indexed_files, by_rel=by_rel, by_stem=by_stem)
 
 
 def _resolve_wikilink(
@@ -152,14 +163,20 @@ def _resolve_wikilink(
     return matches[0] if len(matches) == 1 else None
 
 
-def related_section_targets(repo: Path, source: Path, body: str) -> set[str]:
-    """Return canonical target keys already mirrored in ``## Related links``."""
+def related_section_targets(
+    repo: Path,
+    source: Path,
+    body: str,
+    *,
+    index: MarkdownIndex | None = None,
+) -> set[str]:
+    """Return repo-relative target keys already mirrored in ``## Related links``."""
 
     section = relationships.strip_markdown_code(_section_text(body))
     if not section:
         return set()
     targets: set[str] = set()
-    files_by_rel, files_by_stem = _files_by_rel_and_stem(repo)
+    lookup = index or markdown_index(repo)
     for _, raw_target in relationships.iter_markdown_links(section):
         clean = relationships.markdown_link_target(raw_target)
         if not clean:
@@ -174,15 +191,15 @@ def related_section_targets(repo: Path, source: Path, body: str) -> set[str]:
         resolved = _resolve_wikilink(
             match.group(1),
             repo=repo,
-            files_by_rel=files_by_rel,
-            files_by_stem=files_by_stem,
+            files_by_rel=lookup.by_rel,
+            files_by_stem=lookup.by_stem,
         )
         if resolved is not None:
             targets.add(resolved.relative_to(repo).as_posix())
     return targets
 
 
-def canonical_mirror_refs(repo: Path, source: Path, fm: dict[str, Any]) -> list[MirrorRef]:
+def frontmatter_mirror_refs(repo: Path, source: Path, fm: dict[str, Any]) -> list[MirrorRef]:
     """Return frontmatter relationship refs that are safe to mirror in the body."""
 
     source_rel = source.relative_to(repo).as_posix()
@@ -223,22 +240,30 @@ def canonical_mirror_refs(repo: Path, source: Path, fm: dict[str, Any]) -> list[
     return refs
 
 
-def missing_mirror_refs(repo: Path, source: Path, fm: dict[str, Any], body: str) -> list[MirrorRef]:
-    mirrored = related_section_targets(repo, source, body)
-    return [ref for ref in canonical_mirror_refs(repo, source, fm) if ref.key not in mirrored]
+def missing_mirror_refs(
+    repo: Path,
+    source: Path,
+    fm: dict[str, Any],
+    body: str,
+    *,
+    index: MarkdownIndex | None = None,
+) -> list[MirrorRef]:
+    mirrored = related_section_targets(repo, source, body, index=index)
+    return [ref for ref in frontmatter_mirror_refs(repo, source, fm) if ref.key not in mirrored]
 
 
 def plan(repo: str | Path = ".") -> dict[str, Any]:
     """Plan Related links mirror repairs without writing files."""
 
     root = Path(repo).expanduser().resolve()
+    index = markdown_index(root)
     files: list[dict[str, Any]] = []
     total_missing = 0
-    for path in _markdown_files(root):
+    for path in index.files:
         fm, body = _read_frontmatter_and_body(path)
         if fm is None:
             continue
-        missing = missing_mirror_refs(root, path, fm, body)
+        missing = missing_mirror_refs(root, path, fm, body, index=index)
         if not missing:
             continue
         total_missing += len(missing)
@@ -251,7 +276,6 @@ def plan(repo: str | Path = ".") -> dict[str, Any]:
                         "target": ref.key,
                         "href": ref.href,
                         "label": ref.label,
-                        "external": ref.external,
                         "line": f"- [{ref.label}]({ref.href})",
                     }
                     for ref in missing
@@ -290,7 +314,7 @@ def _insert_missing_lines(body: str, lines_to_add: list[str]) -> str:
 
 
 def apply(repo: str | Path = ".") -> dict[str, Any]:
-    """Apply safe Related links mirror repairs from canonical frontmatter."""
+    """Apply safe Related links mirror repairs from frontmatter."""
 
     root = Path(repo).expanduser().resolve()
     repair_plan = plan(root)

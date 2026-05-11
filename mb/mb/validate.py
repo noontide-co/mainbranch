@@ -140,7 +140,7 @@ VALIDATION_CATEGORY_REPAIR: dict[str, str] = {
     "yaml_error": "Fix malformed YAML before repairing schema fields.",
     "schema_shape_error": "Fix nested mappings and field shapes before rerunning validation.",
     "missing_cross_ref_target": "Repair, remove, or intentionally archive broken local links.",
-    "missing_related_link_mirror": (
+    related_links.MISSING_RELATED_LINK_MIRROR_CATEGORY: (
         "Run `mb doctor repair --plan`, review the Related links mirror action, "
         "then `mb doctor repair --apply` after approval."
     ),
@@ -996,7 +996,7 @@ def _validation_category(message: str, *, severity: str, schema: str) -> str:
     if " target " in message and ("does not exist" in message or "does not resolve" in message):
         return "missing_cross_ref_target"
     if " is not mirrored in ## Related links" in message:
-        return "missing_related_link_mirror"
+        return related_links.MISSING_RELATED_LINK_MIRROR_CATEGORY
     if " should include linked_" in message:
         return "missing_reverse_link"
     if schema == "migration-drift":
@@ -1190,13 +1190,16 @@ def _check_cross_refs(
         files_by_rel[rel] = file_path
         files_by_stem.setdefault(file_path.stem, []).append(file_path)
 
+    related_index = related_links.markdown_index(repo, markdown_files)
     for source in markdown_files:
         fm, err = _read_frontmatter(source)
         if err is not None or fm is None:
             continue
         source_rel = source.relative_to(repo).as_posix()
         body = _read_markdown_body(source) or ""
-        for mirror_ref in related_links.missing_mirror_refs(repo, source, fm, body):
+        for mirror_ref in related_links.missing_mirror_refs(
+            repo, source, fm, body, index=related_index
+        ):
             findings.append(
                 _finding(
                     code="missing-related-link-mirror",
