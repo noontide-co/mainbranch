@@ -41,6 +41,35 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `mb/mb/_data/books/acme-fixture.journal` so it is reachable from the
   installed wheel. Refs MAIN-321, #486.
 - Accepted decision
+  `decisions/2026-05-11-scheduled-data-sync-pattern.md` defining the first
+  scheduled data sync pattern for business repos. The default shape is
+  **operator-owned cron** (or `launchd` / Task Scheduler) running a
+  one-shot per-provider script that writes SQLite plus dated CSV
+  snapshots into the existing `data/<provider>/` data-source registry
+  layout and updates `source.md` `freshness` and `storage.snapshots`.
+  Operational state (last-run JSON summary, raw logs) lives under
+  `.mb/private/sync/`, inheriting the same ignore rule as the private
+  books vault, so the team-visible business repo never tracks run logs.
+  Credentials stay in the OS keychain, the runtime environment, or
+  GitHub Actions secrets — never in repo files, frontmatter, or run
+  logs. `mb status` / `mb doctor` surface staleness by reading
+  `cadence`/`freshness` from the registry record and the optional
+  last-run JSON; Main Branch reports what is stale, it does not claim
+  to have run the sync. **GitHub Actions** is named as an explicit
+  alternative when the operator already trusts GitHub for secrets; a
+  local background service stays out of scope. The pattern reuses the
+  shipped `linked_data_sources` typed link plus inline snapshot links
+  so decisions, pushes, and outcomes still link the record (not the
+  log file). Marketing/ads/analytics/CRM/email data is fine to sync
+  into `data/<provider>/`; bank/processor/payroll/tax data remains
+  Class B per the `mb books` foundation and belongs in the private
+  books vault, not in the team-visible registry. Added
+  `docs/scheduled-data-sync.md` as the operator-facing companion.
+  No CLI behaviour change in this slice; `mb data sync`,
+  `mb data status`, a `mb doctor` freshness check, provider-specific
+  scripts, a sidecar envelope, and `mb books import` are named as
+  follow-up issues. Closes #471. Refs MAIN-315.
+- Accepted decision
   `decisions/2026-05-11-mb-books-foundation.md` choosing **hledger** as
   the bookkeeping engine for `mb books`. The hledger journal is the
   only authoritative ledger; CSV/SQLite stay as import staging,

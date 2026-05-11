@@ -132,8 +132,9 @@ Main Branch should learn from that pattern:
   suggestions and reasons; this decision does not implement it, but follow-up
   work has shipped it (#469).
 - Implementation status of follow-ups named in this decision: `mb suggest
-  links` (#469) shipped; the data-source registry (#470) shipped; scheduled
-  data sync (#471) is still open.
+  links` (#469) shipped; the data-source registry (#470) shipped; the
+  scheduled data sync pattern (#471) has an accepted decision and operator
+  doc — implementation of `mb data sync` / `mb data status` is still open.
 
 ## Related links
 

@@ -247,13 +247,14 @@ The data-source record shape that decisions, pushes, and outcomes can link
 through `linked_data_sources` is documented in
 [`docs/data-source-registry.md`](data-source-registry.md).
 
-Scheduled provider data sync is still an open follow-up:
-[#471](https://github.com/noontide-co/mainbranch/issues/471).
+The scheduled data sync pattern that keeps `data/<provider>/` fresh is
+documented in [`docs/scheduled-data-sync.md`](scheduled-data-sync.md).
 
 ## Related links
 
 - [How Main Branch connects notes, data, and history](../decisions/2026-05-11-connecting-notes-data-and-history.md)
 - [Data-source registry shape](data-source-registry.md)
 - [Data-source registry decision](../decisions/2026-05-11-data-source-registry.md)
+- [Scheduled data sync pattern](scheduled-data-sync.md)
 - [Markdown link conventions](markdown-link-conventions.md)
 - [Obsidian viewer decision](../decisions/2026-05-09-obsidian-first-class-viewer.md)

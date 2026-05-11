@@ -200,7 +200,9 @@ it the first time a sibling record type ships.
 
 This version is the metadata contract. It deliberately does not:
 
-- Schedule provider data sync (`MAIN-315`).
+- Schedule provider data sync. The pattern is defined in
+  [`docs/scheduled-data-sync.md`](scheduled-data-sync.md); this slice does not
+  implement it.
 - Run provider mutations or Google Ads automation (`MAIN-229`).
 - Add a `mb doctor` stale-record check. That check needs the contract to
   exist first and will land as a follow-up.
