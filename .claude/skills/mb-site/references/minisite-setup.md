@@ -59,11 +59,31 @@ python3 .claude/skills/mb-site/scripts/dns.py ensure <domain> --registrar cloudf
 
 ## 5e. GitHub Repo And Placeholder Push
 
+Ask the operator one visibility question before creating the repo:
+
+> "Should the source files and full change history be public? The deployed
+> Cloudflare site is public either way. Most people choose private here so
+> drafts, copy iterations, and revision history stay out of public view.
+> Choose public only when the source itself is meant to be public — an
+> open-source tool, template, demo, or build-in-public project."
+
+Default to **private**. Only pass `--public` when the operator explicitly
+answers that the source is intentionally public. See
+[the repo visibility rubric](../../../../docs/repo-visibility-rubric.md).
+
 ```bash
+# Default (private source, public deployed site):
+gh repo create <owner>/<name> --private --add-readme
+
+# Only when the operator explicitly chose public source:
 gh repo create <owner>/<name> --public --add-readme
+
 git clone https://github.com/<owner>/<name>.git ~/Documents/GitHub/<name>
 cd ~/Documents/GitHub/<name>
 ```
+
+Do not pass `--public` because the deployed site will be public. Visibility
+is about source/history; deploy is about Cloudflare.
 
 Create the placeholder with normal file-edit tooling, then:
 

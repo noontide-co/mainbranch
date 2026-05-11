@@ -74,6 +74,18 @@ If not a git repo:
 git init
 ```
 
+**Visibility default for business repos: private.** A business repo holds
+offer experiments, strategy, drafts, client work, screenshots, and
+operating notes. Default to a private repo and only switch to public when
+the source itself is intentionally public (open-source tool, template,
+demo, or build-in-public project). See
+[references/repo-visibility-rubric.md](references/repo-visibility-rubric.md).
+
+Where the repo lives — local-only, personal GitHub, free GitHub
+organization, or paid org — is a separate question from visibility. GitHub
+organizations can be free; do not imply that "org" means paid. Default to
+"personal GitHub or free GitHub organization" if the operator is unsure.
+
 ### 1a. Check Optional Tools (Inform, Don't Block)
 
 **Local transcription (for mining your own recordings):**
@@ -354,6 +366,7 @@ Format: `[type] Brief description` with Co-Authored-By line. Types: `[init]`, `[
 
 ## References
 
+- **Repo Visibility Rubric:** `references/repo-visibility-rubric.md` — Private-by-default, the one visibility question for site repos, and what visibility does not decide
 - **CWD Detection:** `references/cwd-detection.md` — Check engine updates + Case 1/2/3 flows for detecting where the user is
 - **File Education:** `references/file-education.md` — What to teach the user about each core file, priority order, visual style scaffolding
 - **Context Gathering:** `references/context-gathering.md` — Checklists by business type, completeness criteria

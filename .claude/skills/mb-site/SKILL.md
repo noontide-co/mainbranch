@@ -176,6 +176,11 @@ If the operator cannot articulate the shape, ask: "What goal are you trying to h
 - [`references/frontend-design.md`](references/frontend-design.md) - website typography, color, motion.
 - [`references/section-patterns.md`](references/section-patterns.md) - website section catalog.
 
+**Visibility, hosting, and checks**
+
+- Repo visibility rubric: [`docs/repo-visibility-rubric.md`](../../../docs/repo-visibility-rubric.md) — site repos default private; ask one question before creating a public source repo.
+- Checks and review model: [`docs/checks-and-review-model.md`](../../../docs/checks-and-review-model.md) — local `mb` is the rule engine; Cloudflare is the deploy rail; GitHub Pages is not part of normal setup.
+
 **Setup, examples, help**
 
 - [`references/naming-heuristic.md`](references/naming-heuristic.md) - domain naming playbook.

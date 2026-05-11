@@ -19,12 +19,17 @@ Cloudflare Pages is free, fast, and we've done the work to make setup smooth. Ot
 
 ## What About Other Hosts?
 
-Other static site hosts work fine:
-- **Vercel** — Good, 100GB/mo bandwidth limit
-- **Netlify** — Good, 100GB/mo bandwidth limit
-- **Self-hosted** — Full control, more setup work
+Cloudflare Pages is the Main Branch deploy rail. Other static hosts exist
+(Vercel, Netlify, GitHub Pages, self-hosted), but Main Branch does not
+maintain setup guidance or fallback instructions for them. If you
+deliberately pick another host, the `/mb-wiki` skill can still help with
+content management; you handle deployment yourself.
 
-If you prefer these, the `/mb-wiki` skill can still help with content management. You'll just handle deployment yourself.
+GitHub Pages in particular couples visibility and hosting in ways that the
+Main Branch visibility model deliberately separates — public output does
+not require public source. Use Cloudflare Pages so a public wiki can ship
+from a private repo when you want it to. See
+[`docs/repo-visibility-rubric.md`](../../../../docs/repo-visibility-rubric.md).
 
 ## CLI Consideration
 
