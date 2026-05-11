@@ -158,7 +158,7 @@ Examples:
 Obsidian can browse the reports, metadata, and links. It should not pretend to
 be the data warehouse.
 
-## GitHub And Git History
+## GitHub and Git History
 
 GitHub and git are part of the business memory:
 
@@ -172,7 +172,6 @@ Use GitHub links when they explain why work changed:
 ```yaml
 linked_issues:
   - https://github.com/noontide-co/mainbranch/issues/468
-linked_prs:
   - https://github.com/noontide-co/mainbranch/pull/467
 ```
 

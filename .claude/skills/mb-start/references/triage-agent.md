@@ -258,8 +258,8 @@ frontmatter and first 10 lines of each.]
 
 === PUSH LIFECYCLE STATE ===
 
-[Files in pushes/ (and legacy campaigns/) grouped by frontmatter
-frontmatter status: draft, planned, active, paused, completed,
+[Files in pushes/ (and legacy campaigns/) grouped by frontmatter status:
+draft, planned, active, paused, completed,
 canceled, archived. Stale legacy statuses like "scheduled" or
 "published" come from pre-push records and signal that the operator
 should run `mb migrate campaigns --plan`.

@@ -103,8 +103,9 @@ Before loading reference files, resolve the active offer and target file type
 with `.claude/reference/business-primitives/offer-bet-push-proof.md`:
 
 1. If a future `mb` JSON field exposes active offer state, use it.
-2. Do not treat `.vip/local.yaml` as source of active-offer truth. If legacy
-   state exists, confirm the offer with the user instead of silently routing.
+2. Do not treat `.vip/local.yaml` as the source of truth for active-offer
+   state. If legacy state exists, confirm the offer with the user instead of
+   silently routing.
 3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
 4. If no offer is selected AND `core/offers/` exists: ask which offer.
 5. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)

@@ -37,7 +37,7 @@ pushes/2026-05-04-spring-launch/push.md
 core/offers/main-branch/offer.md
 ```
 
-These examples use the current v0.x official folders. If future user
+These examples use the current v0.x folders. If future user
 research shows that folder names should change, that change should land
 through path-config and migration work, not ad hoc docs or skill examples
 that teach a different repo shape.
