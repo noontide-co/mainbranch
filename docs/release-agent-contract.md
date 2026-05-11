@@ -53,7 +53,8 @@ Pattern:
 scripts/check.sh > .context/check.out 2>&1; echo $? > .context/check.exit
 ```
 
-Or, if live progress is useful:
+Or, if live progress is useful (bash-specific; in zsh use
+`${pipestatus[1]}` — lowercase, 1-indexed):
 
 ```bash
 scripts/check.sh 2>&1 | tee .context/check.out
@@ -61,6 +62,9 @@ status=${PIPESTATUS[0]}
 printf "%s\n" "$status" > .context/check.exit
 exit "$status"
 ```
+
+If the agent's runtime shell is unknown, prefer the first pattern
+(`> file 2>&1; echo $? > file`) which works in both bash and zsh.
 
 For release-bearing flows, the convention is to put logs under
 `.context/release-evidence/<version>/` so the directory is gitignored and
