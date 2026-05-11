@@ -151,6 +151,24 @@ def test_status_json_degrades_without_github(tmp_path: Path, monkeypatch) -> Non
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
+    (repo / "core" / "vocabulary.md").write_text(
+        "---\n"
+        "type: vocabulary\n"
+        "status: active\n"
+        "terms:\n"
+        "  push:\n"
+        "    singular: drop\n"
+        "    plural: drops\n"
+        "  statuses:\n"
+        "    active: live\n"
+        "  channels:\n"
+        "    paid: paid traffic\n"
+        "  kinds:\n"
+        "    launch: launch\n"
+        "---\n"
+        "# Vocabulary\n",
+        encoding="utf-8",
+    )
     (repo / "decisions" / "2026-05-01-pricing.md").write_text(
         "---\ndate: 2026-05-01\nstatus: accepted\n---\n\n# Pricing\n",
         encoding="utf-8",
@@ -175,6 +193,12 @@ def test_status_json_degrades_without_github(tmp_path: Path, monkeypatch) -> Non
     assert report["brain"]["counts"]["decisions"] == 1
     assert report["brain"]["counts"]["bets"] == 0
     assert report["brain"]["recent_research"][0]["title"] == "Market"
+    assert report["vocabulary"]["ok"] is True
+    assert report["vocabulary"]["path"] == "core/vocabulary.md"
+    assert report["vocabulary"]["terms"]["push"] == {"singular": "drop", "plural": "drops"}
+    assert report["vocabulary"]["terms"]["statuses"]["active"] == "live"
+    assert report["vocabulary"]["terms"]["channels"]["paid"] == "paid traffic"
+    assert report["vocabulary"]["terms"]["kinds"]["launch"] == "launch"
     assert report["since_last_check"]["first_run"] is True
     assert report["marker_update"]["ok"] is True
     assert (repo / ".mb" / "last-status-seen.json").is_file()
@@ -210,6 +234,7 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
                 "git_activity",
                 "journal",
                 "brain",
+                "vocabulary",
                 "onboarding",
                 "integrations",
                 "measurement",
@@ -231,6 +256,58 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
     )
 
     assert actual == expected
+
+
+def test_status_vocabulary_falls_back_with_warnings_for_unknown_terms(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core" / "vocabulary.md").write_text(
+        "---\n"
+        "type: vocabulary\n"
+        "terms:\n"
+        "  push:\n"
+        "    singular: challenge\n"
+        "    plural: challenges\n"
+        "    folder: challenges\n"
+        "  paths:\n"
+        "    pushes: challenges\n"
+        "  statuses:\n"
+        "    active: running\n"
+        "    completed: wrapped\n"
+        "---\n"
+        "# Vocabulary\n",
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    vocabulary = report["vocabulary"]
+    assert vocabulary["ok"] is True
+    assert vocabulary["terms"]["push"] == {"singular": "challenge", "plural": "challenges"}
+    assert vocabulary["terms"]["statuses"] == {"active": "running", "completed": "wrapped"}
+    assert "paths" not in vocabulary["terms"]
+    assert any("terms.paths is not recognized" in warning for warning in vocabulary["warnings"])
+    assert any(
+        "terms.push.folder is not recognized" in warning for warning in vocabulary["warnings"]
+    )
+
+
+def test_status_vocabulary_reports_malformed_file(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core" / "vocabulary.md").write_text("# Vocabulary\n", encoding="utf-8")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    assert report["vocabulary"]["ok"] is False
+    assert report["vocabulary"]["exists"] is True
+    assert report["vocabulary"]["terms"]["push"] == {"singular": "push", "plural": "pushes"}
+    assert report["vocabulary"]["errors"] == ["missing YAML frontmatter"]
 
 
 def test_status_drift_does_not_warn_for_codex_instructions_until_codex_is_present(

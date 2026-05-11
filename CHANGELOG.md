@@ -49,6 +49,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   CLI refactor. No CLI behaviour change in this slice. Updated the
   bookkeeping row in `docs/dependency-choices.md` to reflect the
   hledger choice. Refs MAIN-320, #483, #128.
+- Added deterministic operator vocabulary facts from optional
+  `core/vocabulary.md` to `mb status --json --peek` and `mb start --json`.
+  The new `vocabulary` block exposes bounded display terms while keeping
+  canonical folders, frontmatter types, validators, JSON keys, and command
+  names unchanged. Refs MAIN-281, #407.
 - Added `audience` and `operator_summary` fields to findings emitted by
   `mb doctor` (every repair action), `mb validate` (each validation category
   in `validation_categories`, plus `top_audience` and `top_operator_summary`

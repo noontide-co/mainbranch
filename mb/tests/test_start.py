@@ -63,6 +63,20 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(codex_mod, "_which", _with_codex)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
+    (repo / "core" / "vocabulary.md").write_text(
+        "---\n"
+        "type: vocabulary\n"
+        "status: active\n"
+        "terms:\n"
+        "  push:\n"
+        "    singular: drop\n"
+        "    plural: drops\n"
+        "  statuses:\n"
+        "    active: live\n"
+        "---\n"
+        "# Vocabulary\n",
+        encoding="utf-8",
+    )
 
     result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
 
@@ -86,6 +100,9 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     assert report["push_count"] == 0
     assert report["deprecated_campaign_keys"] is True
     assert report["push_compatibility"]["legacy_campaigns_read"] is True
+    assert report["vocabulary"]["ok"] is True
+    assert report["vocabulary"]["terms"]["push"] == {"singular": "drop", "plural": "drops"}
+    assert report["vocabulary"]["terms"]["statuses"]["active"] == "live"
     assert "update" in report
     assert "ranked_actions" not in report
     assert report["result_status"] == "ok"

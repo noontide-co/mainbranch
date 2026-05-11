@@ -35,7 +35,8 @@
     "since_last_check",
     "topology",
     "update",
-    "validation"
+    "validation",
+    "vocabulary"
   ],
   "section_keys": {
     "repo": [
@@ -106,6 +107,18 @@
       "recent_research",
       "stale_decisions",
       "stale_research"
+    ],
+    "vocabulary": [
+      "errors",
+      "exists",
+      "ok",
+      "path",
+      "source",
+      "status",
+      "summary",
+      "terms",
+      "type",
+      "warnings"
     ],
     "onboarding": [
       "boundaries",

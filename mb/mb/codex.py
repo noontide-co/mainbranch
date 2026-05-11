@@ -61,6 +61,11 @@ playbooks, outcomes, decisions, next actions, and saved checkpoints. Treat git,
 branches, pull requests, provider refs, and local wiring as the hidden memory
 layer unless the operator asks for the plumbing.
 
+Use the `vocabulary` block from `mb status --json --peek` when present. If
+`core/vocabulary.md` says this business calls pushes drops, launches,
+challenges, or promos, use that word in operator-facing prose while preserving
+canonical paths, frontmatter, JSON keys, validator rules, and command names.
+
 ## Codex Start Workflow
 
 This is the Codex-native port of `/mb-start`. It is a workflow, not a slash
@@ -72,7 +77,8 @@ command.
    ask for the business repo path instead of guessing.
 2. Use the status JSON as the source of truth for
    readiness, drift, onboarding, update severity, GitHub facts, provider
-   readiness, recent work, ranked actions, bets, pushes, and checkpoint state.
+   readiness, recent work, ranked actions, bets, pushes, vocabulary, and
+   checkpoint state.
 3. Run `mb start --json` when you need runtime handoff, repo-boundary, or
    adapter-readiness facts.
 4. Run `mb doctor repair --plan` before recommending setup or repair. Quote the

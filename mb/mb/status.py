@@ -12,7 +12,7 @@ from typing import Any
 
 import yaml
 
-from mb import __version__, github_activity, relationships
+from mb import __version__, github_activity, relationships, vocabulary
 from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import journal as journal_mod
@@ -2071,6 +2071,7 @@ def run(
         "campaign_count": push_report["legacy_campaign_count"],
         "deprecated_campaign_keys": True,
         "push_compatibility": push_report["compatibility"],
+        "vocabulary": vocabulary.facts(repo_path),
         "onboarding": onboard_mod.onboarding_status(repo_path),
         "integrations": connect_mod.status_all(repo_path, github=github.get("context")),
         "measurement": _measurement(repo_path),
@@ -2313,9 +2314,12 @@ def render_human(
             console.print(f"  next: {measurement['repair']}")
 
     counts = brain["counts"]
+    vocabulary_terms = report.get("vocabulary", {}).get("terms", {})
+    push_terms = vocabulary_terms.get("push", {}) if isinstance(vocabulary_terms, dict) else {}
+    push_plural = str(push_terms.get("plural") or "pushes")
     pushes_count = counts.get("pushes", 0)
     campaigns_count = counts.get("campaigns", 0)
-    pushes_segment = f"pushes {pushes_count}"
+    pushes_segment = f"{push_plural} {pushes_count}"
     if campaigns_count:
         pushes_segment += f" (legacy campaigns {campaigns_count})"
     console.print(

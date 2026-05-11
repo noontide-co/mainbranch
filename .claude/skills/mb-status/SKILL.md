@@ -21,13 +21,16 @@ mb status --json --peek
 
 3. Treat the JSON as the source of truth for setup, update, drift, GitHub,
    onboarding, integrations, bets, journal activity, since-last-check,
-   readiness, and ranked actions.
+   readiness, vocabulary, and ranked actions.
 4. Summarize the top `ranked_actions` first. For each one, include:
    - title
    - command or slash command
    - reason
    - cited signal summaries
 5. Then summarize only the sections that matter for the operator's question.
+   If `vocabulary.terms.push` defines display words, use them in
+   operator-facing prose without changing canonical paths, frontmatter, JSON
+   keys, validator rules, or command names.
    Do not re-run shell probes that duplicate status facts.
    For "what changed?" or "what happened since last time?", answer from
    `since_last_check.journal` first, then top-level `journal` for recent
