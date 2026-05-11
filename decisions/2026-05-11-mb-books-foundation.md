@@ -517,10 +517,14 @@ out of scope for this foundation PR; a follow-up issue should sweep:
   legacy files). `.mb/private/` is the solo-default vault location
   and must never be tracked by the business repo;
 - `docs/ethos.md` running-rails sentence, `docs/system-architecture.md`
-  topology row, `docs/dependency-choices.md` running-choices log,
-  `docs/operator-loops.md`, and `docs/beginner-setup.md` — update
-  the descriptive copy from "Beancount" to "hledger" with one short
-  superseded note pointing at this decision.
+  topology row, `docs/operator-loops.md`, and `docs/beginner-setup.md`
+  — update the descriptive copy from "Beancount" to "hledger" with
+  one short superseded note pointing at this decision.
+
+The `docs/dependency-choices.md` running-choices log is already
+updated in this PR (the 2026-05-04 Beancount row is marked
+superseded and a 2026-05-11 hledger row points at this decision), so
+it is not in the follow-up list.
 
 This decision does the foundation-doc rewrite in this PR and
 explicitly leaves the engine code migration to a follow-up so a

@@ -40,11 +40,14 @@ decisions. Git is for history. `mb` is for checks and workflow.
 
 ## Primary Sources
 
-This report was written against local checkouts of both projects.
+This report was written against local clones of upstream hledger 1.99
+([github.com/simonmichael/hledger](https://github.com/simonmichael/hledger))
+and Beancount 3.2.2
+([github.com/beancount/beancount](https://github.com/beancount/beancount)).
+Citations name the in-tree paths so reviewers can resolve them against
+either upstream.
 
-### hledger
-
-Path: `/Users/devonmeadows/Documents/GitHub/hledger`.
+### hledger 1.99 (upstream `simonmichael/hledger`)
 
 - `hledger/package.yaml` — declares version `1.99` (pre-2.0 dev
   cycle); tested GHC versions 9.6–9.12; built as a Haskell package.
@@ -72,9 +75,7 @@ Path: `/Users/devonmeadows/Documents/GitHub/hledger`.
 - `hledger-web/` — built-in web viewer subproject at the same
   `1.99` version.
 
-### Beancount (for comparison)
-
-Path: `/Users/devonmeadows/Documents/GitHub/beancount`.
+### Beancount 3.2.2 (upstream `beancount/beancount`)
 
 - `beancount/VERSION` — `3.2.2` (tag `3.2.3` also present in
   the local clone); `master` tracks v3.
