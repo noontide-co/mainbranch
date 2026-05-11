@@ -149,13 +149,14 @@ def _detect_default_branch(repo: Path) -> str:
 
 def _classify_workflow(
     *,
-    inside_worktree: bool,
     branch: str,
     is_linked_worktree: bool,
     default_branch: str,
 ) -> str:
-    if not inside_worktree:
-        return ""
+    """Classify an in-worktree checkout. Callers must ensure they are inside a
+    git work tree before calling — `_git_info` short-circuits the non-worktree
+    case before reaching this helper.
+    """
     if not branch:
         return "detached"
     if is_linked_worktree:
@@ -236,7 +237,6 @@ def _git_info(repo: Path) -> dict[str, Any]:
 
     default_branch = _detect_default_branch(repo)
     workflow = _classify_workflow(
-        inside_worktree=True,
         branch=branch_name,
         is_linked_worktree=is_linked_worktree,
         default_branch=default_branch,

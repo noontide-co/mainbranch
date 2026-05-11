@@ -1902,16 +1902,6 @@ def test_status_human_output_mentions_business_map(tmp_path: Path, monkeypatch) 
 def test_classify_workflow_covers_known_states() -> None:
     assert (
         status_mod._classify_workflow(
-            inside_worktree=False,
-            branch="anything",
-            is_linked_worktree=False,
-            default_branch="main",
-        )
-        == ""
-    )
-    assert (
-        status_mod._classify_workflow(
-            inside_worktree=True,
             branch="",
             is_linked_worktree=False,
             default_branch="main",
@@ -1920,7 +1910,6 @@ def test_classify_workflow_covers_known_states() -> None:
     )
     assert (
         status_mod._classify_workflow(
-            inside_worktree=True,
             branch="main",
             is_linked_worktree=False,
             default_branch="main",
@@ -1929,7 +1918,6 @@ def test_classify_workflow_covers_known_states() -> None:
     )
     assert (
         status_mod._classify_workflow(
-            inside_worktree=True,
             branch="feature/x",
             is_linked_worktree=False,
             default_branch="main",
@@ -1938,7 +1926,6 @@ def test_classify_workflow_covers_known_states() -> None:
     )
     assert (
         status_mod._classify_workflow(
-            inside_worktree=True,
             branch="feature/x",
             is_linked_worktree=True,
             default_branch="main",
@@ -2022,3 +2009,25 @@ def test_git_info_handles_non_git_directory(tmp_path: Path) -> None:
     # Either git is missing or this is not a work tree; either way no workflow.
     assert info.get("inside_work_tree") in (False, None)
     assert "workflow_mode" not in info or info.get("workflow_mode") in ("", None)
+
+
+def test_git_info_detects_linked_worktree(tmp_path: Path) -> None:
+    """Conductor workspaces and `git worktree add` checkouts should report
+    workflow_mode='worktree' and a populated worktree_root."""
+    main_repo = tmp_path / "main"
+    main_repo.mkdir()
+    assert _git(main_repo, "init", "-b", "main").returncode == 0
+    _configure_git_user(main_repo)
+    _commit(main_repo, "README.md", "hello\n", "[add] readme")
+
+    worktree_path = tmp_path / "wt-feature"
+    add = _git(main_repo, "worktree", "add", "-b", "feature/x", str(worktree_path))
+    assert add.returncode == 0, add.stderr
+
+    info = status_mod._git_info(worktree_path)
+    assert info["inside_work_tree"] is True
+    assert info["workflow_mode"] == "worktree"
+    assert info["branch"] == "feature/x"
+    assert info["default_branch"] == "main"
+    assert info["worktree_root"] == str(worktree_path.resolve())
+    assert "worktree" in info["summary"].lower()
