@@ -19,12 +19,19 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `core/finance/books.md` exists and parses its `storage_mode`, detects
   whether `core/finance/chart-of-accounts.md` exists, verifies the
   configured storage mode's ignore rule (`.mb/private/` for solo-local
-  mode), and flags tracked files with ledger-shaped extensions
+  mode), and warns when tracked files with ledger-shaped extensions
   (`.journal`, `.hledger`, `.ledger`, `.beancount`) or statement-shaped
-  extensions (`.csv`, `.ofx`, `.qfx`, `.qbo`, `.qif`) as likely Class B
-  leaks. Opt in with `--fixture` to validate a packaged fake hledger
-  fixture by shelling out to `hledger -f <fixture> check`; if hledger is
-  not installed, the check prints a clean informational finding and the
+  extensions (`.csv`, `.ofx`, `.qfx`, `.qbo`, `.qif`) appear in the
+  business repo (likely Class B leak). The unsafe-path finding is
+  `warn`, not a hard fail, because non-finance CSVs are legitimate;
+  files carrying an explicit fixture marker (`MB-FIXTURE`,
+  `SAMPLE FIXTURE`, or `NOT A REAL LEDGER`, case-insensitive, in the
+  first 1024 bytes) are exempted. Unknown or typo'd `storage_mode`
+  values fail closed — they are treated as `solo-local` for vault
+  enforcement so a misconfigured policy cannot silently allow a leak.
+  Opt in with `--fixture` to validate a packaged fake hledger fixture
+  by shelling out to `hledger -f <fixture> check`; if hledger is not
+  installed, the check prints a clean informational finding and the
   base install keeps working. `--json` emits the standard Main Branch
   result envelope; every finding carries `audience` and
   `operator_summary` per the operator-facing GitOps contract from

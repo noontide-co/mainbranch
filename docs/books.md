@@ -211,11 +211,17 @@ mb books check [REPO] [--fixture] [--fixture-path PATH] [--json]
 - detects whether `core/finance/chart-of-accounts.md` exists;
 - verifies the configured storage mode's ignore rule (`.mb/private/`
   for `solo-local`) so the vault stays out of the business repo's
-  tracked history;
-- warns or errors when ledger-shaped files (`.journal`, `.hledger`,
+  tracked history. Unknown or typo'd `storage_mode` values fail
+  closed — they are treated as `solo-local` for vault enforcement so
+  a misconfigured policy cannot silently allow a leak;
+- warns when ledger-shaped files (`.journal`, `.hledger`,
   `.ledger`, `.beancount`) or statement-shaped files (`.csv`,
   `.ofx`, `.qfx`, `.qbo`, `.qif`) are tracked in the business repo
-  (likely Class B leak);
+  (likely Class B leak). This is `warn`, not a hard fail, because
+  non-finance CSVs (audience research, content exports) are
+  legitimate. Files carrying an explicit fixture marker in their
+  first 1024 bytes — `MB-FIXTURE`, `SAMPLE FIXTURE`, or
+  `NOT A REAL LEDGER`, case-insensitive — are exempted;
 - with `--fixture`, validates a fake hledger journal fixture by
   shelling out to `hledger -f <fixture> check` — uses the bundled
   fake fixture by default, or any path passed via `--fixture-path`;
@@ -227,9 +233,9 @@ mb books check [REPO] [--fixture] [--fixture-path PATH] [--json]
 
 Exit codes:
 
-- `0` — checks passed (info or warn states allowed);
-- `1` — at least one error finding (e.g. ledger file committed,
-  missing vault ignore rule with the vault already present).
+- `0` — no error findings (info or warn states allowed);
+- `1` — at least one error finding (e.g. broken policy frontmatter,
+  or `.mb/private/` exists without a matching ignore rule).
 
 It does **not**:
 
