@@ -100,7 +100,7 @@ def _summary(terms: dict[str, Any]) -> str:
     push = push_value if isinstance(push_value, dict) else {}
     singular = str(push.get("singular") or "push")
     plural = str(push.get("plural") or "pushes")
-    if singular == "push" and plural == "pushes":
+    if terms == DEFAULT_TERMS:
         return "Using default vocabulary: push/pushes."
     return f"Using operator vocabulary: {singular}/{plural}."
 

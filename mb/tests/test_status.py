@@ -310,6 +310,45 @@ def test_status_vocabulary_reports_malformed_file(tmp_path: Path, monkeypatch) -
     assert report["vocabulary"]["errors"] == ["missing YAML frontmatter"]
 
 
+def test_status_vocabulary_returns_defaults_when_file_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core" / "vocabulary.md").unlink()
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    vocabulary = report["vocabulary"]
+    assert vocabulary["exists"] is False
+    assert vocabulary["ok"] is True
+    assert vocabulary["source"] == "defaults"
+    assert vocabulary["terms"]["push"] == {"singular": "push", "plural": "pushes"}
+    assert vocabulary["summary"] == "Using default vocabulary: push/pushes."
+
+
+def test_status_vocabulary_summary_reflects_non_push_customizations(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core" / "vocabulary.md").write_text(
+        "---\ntype: vocabulary\nterms:\n  statuses:\n    active: live\n---\n# Vocabulary\n",
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    vocabulary = report["vocabulary"]
+    assert vocabulary["ok"] is True
+    assert vocabulary["terms"]["push"] == {"singular": "push", "plural": "pushes"}
+    assert vocabulary["summary"] == "Using operator vocabulary: push/pushes."
+
+
 def test_status_drift_does_not_warn_for_codex_instructions_until_codex_is_present(
     tmp_path: Path,
     monkeypatch,

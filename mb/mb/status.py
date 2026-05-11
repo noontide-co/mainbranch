@@ -2314,7 +2314,10 @@ def render_human(
             console.print(f"  next: {measurement['repair']}")
 
     counts = brain["counts"]
-    vocabulary_terms = report.get("vocabulary", {}).get("terms", {})
+    vocabulary_report = report.get("vocabulary") or {}
+    vocabulary_terms = (
+        vocabulary_report.get("terms", {}) if isinstance(vocabulary_report, dict) else {}
+    )
     push_terms = vocabulary_terms.get("push", {}) if isinstance(vocabulary_terms, dict) else {}
     push_plural = str(push_terms.get("plural") or "pushes")
     pushes_count = counts.get("pushes", 0)
@@ -2329,6 +2332,19 @@ def render_human(
         f"bets {counts['bets']}  {pushes_segment}  "
         f"log {counts['log']}  documents {counts['documents']}"
     )
+
+    if isinstance(vocabulary_report, dict):
+        vocabulary_errors = vocabulary_report.get("errors") or []
+        vocabulary_warnings = vocabulary_report.get("warnings") or []
+        if vocabulary_report.get("ok") is False or vocabulary_errors:
+            path = vocabulary_report.get("path") or "core/vocabulary.md"
+            detail = vocabulary_errors[0] if vocabulary_errors else "malformed"
+            console.print(
+                f"[yellow]Vocabulary[/yellow] {path}: {detail} (using default push/pushes)"
+            )
+        elif vocabulary_warnings:
+            path = vocabulary_report.get("path") or "core/vocabulary.md"
+            console.print(f"[yellow]Vocabulary[/yellow] {path}: {vocabulary_warnings[0]}")
 
     if verbose and brain["recent_decisions"]:
         console.print("\n[bold]Recent decisions[/bold]")
