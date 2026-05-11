@@ -16,6 +16,7 @@ from typing import Any
 import typer
 
 from mb import __version__
+from mb import books as books_mod
 from mb import checkpoint as checkpoint_mod
 from mb import connect as connect_mod
 from mb import doctor as doctor_mod
@@ -85,6 +86,13 @@ site_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(site_app, name="site")
+
+books_app = typer.Typer(
+    name="books",
+    help="Check bookkeeping safety and the private books vault contract.",
+    no_args_is_help=True,
+)
+app.add_typer(books_app, name="books")
 
 suggest_app = typer.Typer(
     name="suggest",
@@ -915,6 +923,43 @@ def start_cmd(
         typer.echo(_json_payload(report, command="mb start", schema_name="mainbranch.start.result"))
     else:
         start_mod.render_human(report)
+    raise typer.Exit(0 if report["ok"] else 1)
+
+
+@books_app.command("check")
+def books_check_cmd(
+    repo: str = typer.Argument(".", help="Business repo to check."),
+    validate_fixture: bool = typer.Option(
+        False,
+        "--fixture/--no-fixture",
+        help=(
+            "Validate a fake hledger journal fixture. Uses the bundled "
+            "sample unless --fixture-path is given."
+        ),
+    ),
+    fixture_path: str = typer.Option(
+        "",
+        "--fixture-path",
+        help="Path to a fake hledger journal fixture to validate.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Check books safety: policy file, vault ignore rules, unsafe paths."""
+    report = books_mod.run(
+        repo=repo,
+        validate_fixture=validate_fixture or bool(fixture_path),
+        fixture=fixture_path or None,
+    )
+    if json_out:
+        typer.echo(
+            _json_payload(
+                report,
+                command="mb books check",
+                schema_name="mainbranch.books.check.result",
+            )
+        )
+    else:
+        books_mod.render_human(report)
     raise typer.Exit(0 if report["ok"] else 1)
 
 

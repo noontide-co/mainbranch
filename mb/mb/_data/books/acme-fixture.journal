@@ -1,0 +1,42 @@
+; ----------------------------------------------------------------------
+; SAMPLE FIXTURE — NOT A REAL LEDGER
+; ----------------------------------------------------------------------
+; Fictional company: Acme Fixture Inc.
+; Purpose: exercise the planned `mb books check` contract.
+; Real ledgers never live in this engine repo. See docs/books.md.
+; ----------------------------------------------------------------------
+
+; Account type declarations (hledger account directive with type: tag)
+account assets:bank:checking          ; type:A
+account assets:bank:savings           ; type:A
+account liabilities:credit-card       ; type:L
+account equity:opening-balances       ; type:E
+account income:sales                  ; type:R
+account expenses:software             ; type:X
+account expenses:office:supplies      ; type:X
+
+; Opening balance
+
+2026-01-01 opening balance
+    assets:bank:checking      1000.00 USD
+    equity:opening-balances
+
+; Sample transactions (fictional)
+
+2026-01-15 acme fixture inc - sample customer payment
+    assets:bank:checking       250.00 USD
+    income:sales
+
+2026-01-20 sample SaaS subscription
+    expenses:software           49.00 USD
+    liabilities:credit-card
+
+2026-01-25 sample office supplies
+    expenses:office:supplies    18.50 USD
+    liabilities:credit-card
+
+; Balance assertion (illustrative)
+
+2026-02-01 month-end balance check
+    assets:bank:checking            0 USD = 1250.00 USD
+    equity:opening-balances
