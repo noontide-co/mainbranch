@@ -47,6 +47,7 @@ Say which levels were not required and why.
 - [ ] Level 5 runtime smoke / dogfood harness / simulation-tier (if runtime, first-run, skill discovery, or release validation touched)
 - [ ] SKILL.md ≤500 lines (if any skill touched)
 - [ ] Package-visible release gate evidence before tag/publish (if preparing a release)
+- [ ] Supply-chain review (if `.github/workflows/`, `.github/dependabot.yml`, `mb/pyproject.toml` deps, or `id-token`/`permissions` blocks touched — see [docs/supply-chain-policy.md](../docs/supply-chain-policy.md))
 
 ## Success metric
 
