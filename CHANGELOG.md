@@ -22,22 +22,30 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   but is the chosen engine when using `mb books`. `mb` core never
   imports hledger libraries; deeper validation shells out to
   `hledger ... -O json` and reads structured output, never scrapes
-  terminal text. The team-visible business repo commits only safe
+  terminal text. Defined a **private books vault** storage model with
+  three modes: solo local (default — real books live at
+  `.mb/private/books/` with their own local git history and no
+  GitHub remote), team private repo (separate restricted-access repo
+  for finance/admin users with PR review), and advanced
+  encrypted/off-platform vault. Operator-facing language is "private
+  books vault," not `.gitignore`; `mb` creates and enforces the
+  ignore rules. The team-visible business repo commits only safe
   metadata (`core/finance/books.md`,
-  `core/finance/chart-of-accounts.md`); real ledgers, statement
-  exports, payroll, tax, and account identifiers stay in a private
-  `finance` child repo, a private business repo, or local-only
-  storage. Named the first surface `mb books check` with explicit
-  must/must-not/exit semantics for the follow-up implementation.
-  Added `docs/books.md`,
+  `core/finance/chart-of-accounts.md`, optional
+  `core/finance/import-rules/` and `docs/reports/finance/` when free
+  of Class B data). A GitHub-as-backup warning is required whenever
+  real books are tracked on GitHub. Named the first surface
+  `mb books check` plus sibling `mb books status` and `mb books doctor`
+  shapes for the follow-up implementation. Added `docs/books.md`,
   `docs/reports/2026-05-11-hledger-vs-beancount-fit.md` (primary-source
   comparison; Beancount v3, Ledger CLI, and CSV/SQLite considered and
   not chosen), and `docs/examples/books/acme-fixture.journal` plus
   sample policy/chart-of-accounts files. Existing Beancount-flavoured
   surfaces (`mb connect` provider, educational doc, ethos /
   system-architecture / dependency-choices / operator-loops /
-  beginner-setup copy, gitignore template) are named in the decision
-  as migration follow-ups so the foundation PR does not also become a
+  beginner-setup copy, gitignore template — adding `*.journal`,
+  `*.hledger`, and `.mb/private/`) are named in the decision as
+  migration follow-ups so the foundation PR does not also become a
   CLI refactor. No CLI behaviour change in this slice. Updated the
   bookkeeping row in `docs/dependency-choices.md` to reflect the
   hledger choice. Refs MAIN-320, #483, #128.

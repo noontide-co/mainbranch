@@ -4,8 +4,10 @@ ledger: hledger
 operating_currency: USD
 fiscal_year_start: "01-01"
 reporting_cadence: monthly
-ledger_location: private-finance-repo
-ledger_pointer: "private (not committed)"
+storage_mode: solo-local
+vault_location: ".mb/private/books/"
+github_backup: false
+encrypted_backup: false
 class_b_data: true
 ---
 
@@ -16,31 +18,35 @@ class_b_data: true
 > [decisions/2026-05-11-mb-books-foundation.md](../../../decisions/2026-05-11-mb-books-foundation.md)
 > for the contract.
 
-This is what a real `core/finance/books.md` would look like in a business
-repo for a fictional company that keeps its ledger in a private finance
-child repo.
+This is what a real `core/finance/books.md` could look like in a
+business repo for a fictional company using the solo-local storage
+mode. The real books live in a private books vault inside the
+business repo's local working tree, ignored from the business repo's
+tracked content and never pushed to its remote.
 
-## Ledger Location
-
-The real hledger journal lives in a private finance child repo. This file
-points at that repo without copying its contents.
+## Storage
 
 - Engine: hledger
-- Authoritative file: `ledger/main.journal` in a private finance repo
+- Storage mode: solo-local
+- Vault location: `.mb/private/books/`
+- Authoritative file: `.mb/private/books/main.journal`
 - Operating currency: USD
 - Fiscal year: calendar year
 - Reporting cadence: monthly close, quarterly review
+- GitHub backup: not enabled
+- Encrypted backup: not configured
 
 ## Workflow
 
-1. Statements and exports land in the private finance repo's `imports/`.
-2. `hledger import` rules categorise rows into `ledger/main.journal`.
-3. Monthly close runs `hledger -f ledger/main.journal balance --tree`
-   and `hledger incomestatement` locally; findings are notes in the
-   private repo's `reconciliations/`.
-4. Approved monthly summaries (no row-level data) can be written back
-   to this business repo as research or log entries when the audience
-   is right.
+1. Statements and exports land in `.mb/private/books/imports/`.
+2. `hledger import` rules categorise rows into
+   `.mb/private/books/main.journal`.
+3. Monthly close runs `hledger -f .mb/private/books/main.journal
+   balance --tree` and `hledger incomestatement` locally; findings
+   are notes in `.mb/private/books/reports/`.
+4. Approved monthly summaries (no row-level data) may be written
+   back to this business repo as research, log entries, or files
+   under `docs/reports/finance/` when the audience is right.
 
 ## Class B Reminder
 
@@ -53,5 +59,5 @@ This repo is team-visible. It does not contain:
 - tax-return data;
 - customer/vendor payment history at row granularity.
 
-If any of those appear here, treat it as a leak and rotate the affected
-material per the operator's incident process.
+If any of those appear here, treat it as a leak and rotate the
+affected material per the operator's incident process.

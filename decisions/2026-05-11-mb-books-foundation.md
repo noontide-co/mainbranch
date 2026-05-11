@@ -152,6 +152,131 @@ helper code `mb` needs to shell out to `hledger` cleanly. The base
 report without it. Importers, deeper reports, and a viewer are not
 add-ons that this decision commits to ship.
 
+## Storage Model: Private Books Vault
+
+Git history for the books is valuable for auditability. GitHub-by-default
+is **not**. Git is the history engine; GitHub is a remote
+collaboration/backup service. For real books those are not the same
+thing.
+
+The user-facing term Main Branch uses is **private books vault**. `mb`
+creates and enforces the ignore rules. Operators do not need to learn
+`.gitignore` to keep their books out of GitHub.
+
+Three storage modes:
+
+### 1. Solo local (default)
+
+The real books live in a private books vault inside the business repo's
+local operational area, but are ignored by the business repo's tracked
+content and never pushed to its remote. The vault carries its own local
+git history.
+
+Default layout:
+
+```text
+.mb/private/books/                # private books vault (own local git history)
+  main.journal                    # real hledger journal (authoritative ledger)
+  imports/                        # raw bank/Stripe/PayPal exports
+  cache/                          # SQLite cache/staging
+  reports/                        # private detailed reports
+  attachments/                    # statements, receipts (optional, later)
+```
+
+Rules:
+
+- `.mb/private/` is added to the business repo's ignore rules so its
+  contents never enter the business repo's tracked history.
+- The vault carries its own local git history (operators can run
+  `git init`, `git add`, `git commit` inside the vault for
+  auditability) with no remote configured by default.
+- Encrypted local backup is recommended, not enforced.
+- No GitHub remote by default.
+
+### 2. Team private repo (team finance mode)
+
+When more than one person needs the books, the vault graduates to a
+separate private books repo with restricted access.
+
+```text
+private-books-repo/               # separate GitHub private repo, restricted access
+  books/main.journal              # real hledger journal (authoritative ledger)
+  books/rules/                    # real import rules
+  books/policies.md               # books policies
+  books/month-close.md            # close runbooks
+  books/reports/monthly-summary.md
+  books/imports/                  # usually ignored
+  books/cache/                    # usually ignored
+  books/attachments/              # usually ignored
+  books/reports/detailed/         # usually ignored
+```
+
+Rules:
+
+- The real hledger journal is committed in this repo. Raw imports,
+  cache, attachments, and detailed private reports stay ignored
+  unless the team explicitly decides otherwise.
+- Access is restricted to the finance/admin users who need it. The
+  main business repo's permissions do not apply here.
+- PR review by another finance/admin user is the expected workflow
+  for transaction changes.
+- The main business repo never contains the real books, even when
+  team mode is active.
+
+Why a separate repo and not a private folder: GitHub permissions are
+repo-level. If 20 people have access to the main repo, then a "private"
+folder inside it is not private. Real books for a team always live in
+their own repo with their own access control.
+
+### 3. Advanced encrypted / off-platform vault
+
+For teams that do not want real books on GitHub at all. `mb` points
+at an encrypted local volume, network drive, or off-platform store.
+This is a deliberate advanced choice, not a default; the setup path
+is the operator's responsibility.
+
+### GitHub-As-Backup Warning
+
+Whenever real books are tracked on GitHub (team mode or advanced
+choice), `mb books status` / `mb books doctor` must surface this
+warning:
+
+```text
+GitHub private repos are private, not financial vaults.
+Anyone with repo access can read the full ledger and history.
+Removing a transaction later does not remove it from history.
+```
+
+### Status Surface
+
+The first `mb books status` shape should describe the storage mode in
+plain language:
+
+```text
+Books engine:      hledger
+Real books:        Private books vault
+Git history:       local
+GitHub backup:     not enabled
+Encrypted backup:  not configured
+Last check:        passed
+```
+
+Team mode:
+
+```text
+Books engine:      hledger
+Books vault:       <repo-name>
+Storage mode:      team private repo
+Remote backup:     enabled
+Access:            restricted
+Real ledger:       tracked in books repo
+Raw imports:       ignored
+Last check:        passed
+```
+
+`mb books doctor` repair commands target the ignore rules, the vault
+layout, the storage-mode wiring, and the GitHub-as-backup warning.
+
 ## Safe Path Contract
 
 The team-visible business repo commits only safe metadata. Real ledger
@@ -160,38 +285,47 @@ files do not live here by default.
 Safe (committable, business repo):
 
 ```text
-core/finance/books.md             # bookkeeping policy and ledger-location pointer
-core/finance/chart-of-accounts.md # operator-friendly account-naming description
+core/finance/books.md              # bookkeeping policy and storage-mode pointer
+core/finance/chart-of-accounts.md  # operator-friendly account-naming description
+core/finance/import-rules/         # safe rule templates with no real account data
+docs/reports/finance/              # sanitized summaries only
 ```
 
-Both files are optional in the v0 contract. A business repo without
+All of these are optional in the v0 contract. A business repo without
 them is valid; `mb books check` reports their absence as a
-recommendation, not an error.
+recommendation, not an error. `core/finance/import-rules/` and
+`docs/reports/finance/` may exist only when their contents contain
+no Class B data; the check warns if real account identifiers, real
+amounts, or real counterparties appear.
 
-Real ledger material (private; not in the team-visible business repo):
+Real ledger material (private books vault; not in the team-visible
+business repo). Solo default layout:
 
 ```text
-ledger/main.journal               # operator's actual hledger journal
-ledger/                            # account, transaction, balance source files
-imports/                           # raw bank/credit-card/payment-processor exports + .rules
-statements/                        # PDF/CSV/OFX/QBO downloads
-reconciliations/                   # reconciliation working notes
-tax/                               # tax-year working files and exports
+.mb/private/books/main.journal     # real hledger journal (authoritative)
+.mb/private/books/imports/         # raw bank/credit-card/processor exports + .rules
+.mb/private/books/cache/           # SQLite cache/staging
+.mb/private/books/reports/         # private detailed reports
+.mb/private/books/attachments/     # statements, receipts, tax docs (optional)
 ```
 
-Real ledger material lives in:
+Team mode layout (in a separate private books repo):
 
-1. a **private `finance` child repo** (the topology role already named
-   in
-   [docs/system-architecture.md](../docs/system-architecture.md));
-2. a **local-only path outside any tracked repo**, with disk
-   encryption where appropriate;
-3. a **private business repo**, only when a solo operator has made an
-   explicit decision that team visibility never expands.
+```text
+books/main.journal                 # real hledger journal (authoritative)
+books/rules/                       # real import rules
+books/policies.md                  # books policies
+books/month-close.md               # close runbooks
+books/reports/monthly-summary.md   # finance-team summaries
+books/imports/                     # usually ignored
+books/cache/                       # usually ignored
+books/attachments/                 # usually ignored
+books/reports/detailed/            # usually ignored
+```
 
-`core/finance/books.md` points at whichever location the operator
-chose, without copying its contents into the business repo. A sample
-frontmatter shape (advisory, not yet enforced):
+`core/finance/books.md` declares which storage mode is in use and
+points at the vault without copying its contents into the business
+repo. A sample frontmatter shape (advisory, not yet enforced):
 
 ```yaml
 ---
@@ -200,14 +334,17 @@ ledger: hledger
 operating_currency: USD
 fiscal_year_start: "01-01"
 reporting_cadence: monthly
-ledger_location: private-finance-repo   # or: local-only, private-business-repo
-ledger_pointer: "private (not committed)"
+storage_mode: solo-local              # or: team-private-repo, advanced-vault
+vault_location: ".mb/private/books/"  # for solo-local; or repo name; or local path
+github_backup: false
+encrypted_backup: false
 class_b_data: true
 ---
 ```
 
-`ledger_pointer` is a human description, not a path that resolves on
-disk in this repo. `mb books check` should refuse to dereference it.
+`vault_location` is a human-readable pointer Main Branch uses to
+explain where the books live. `mb books check` should refuse to read
+the vault's actual contents.
 
 ## Class B Examples For Bookkeeping
 
@@ -276,14 +413,21 @@ mb books check [--json]
 What it must do:
 
 - detect whether `core/finance/books.md` exists and parses as expected
-  frontmatter (when present);
+  frontmatter (when present), including the `storage_mode` field;
 - detect whether `core/finance/chart-of-accounts.md` exists and
   follows the documented account-naming convention (when present);
+- detect whether `core/finance/import-rules/` and
+  `docs/reports/finance/` (if present) contain only safe templates
+  and sanitized summaries (no Class B data);
+- verify that the configured storage mode's ignore rules are present
+  and current (e.g., for `storage_mode: solo-local`, that
+  `.mb/private/` is ignored from the business repo's tracked
+  history);
 - warn when files with extensions `.journal`, `.hledger`, `.ledger`,
   `.beancount`, `.csv`, `.ofx`, `.qfx`, `.qbo`, `.qif`, or
-  statement-shaped PDFs are committed under `core/finance/` (likely
-  real data leak) unless the file is explicitly marked as a fixture
-  in frontmatter or a sibling sample manifest;
+  statement-shaped PDFs appear in the business repo's tracked
+  content (likely real data leak) unless the file is explicitly
+  marked as a fixture in frontmatter or a sibling sample manifest;
 - when an operator opts in and hledger is installed, validate a fake
   `.journal` fixture by shelling out to
   `hledger -f <fixture> check -O json` and reading the structured
@@ -292,6 +436,12 @@ What it must do:
   check fails;
 - emit an `mb` JSON envelope when `--json` is passed, matching the
   pattern used by `mb doctor` / `mb validate`.
+
+A sibling `mb books status` command (also deferred to the follow-up)
+prints the storage-mode summary shown above and the
+GitHub-as-backup warning when appropriate. A sibling `mb books doctor`
+repairs missing ignore rules and missing vault scaffolding without
+ever touching real ledger contents.
 
 What it must not do in the first surface:
 
@@ -360,10 +510,12 @@ out of scope for this foundation PR; a follow-up issue should sweep:
   `mb/mb/_data/educational/beancount.md` — rename to `hledger.md`
   and rewrite;
 - `mb/mb/init.py` and
-  `mb/mb/_data/templates/.gitignore.tmpl` — add `*.journal` and
-  `*.hledger` to the default gitignore in newly initialised business
-  repos alongside the existing `*.beancount` line (keep the old
-  line for defence in depth against legacy files);
+  `mb/mb/_data/templates/.gitignore.tmpl` — add `*.journal`,
+  `*.hledger`, and `.mb/private/` to the default ignore rules in
+  newly initialised business repos alongside the existing
+  `*.beancount` line (keep the old line for defence in depth against
+  legacy files). `.mb/private/` is the solo-default vault location
+  and must never be tracked by the business repo;
 - `docs/ethos.md` running-rails sentence, `docs/system-architecture.md`
   topology row, `docs/dependency-choices.md` running-choices log,
   `docs/operator-loops.md`, and `docs/beginner-setup.md` — update
