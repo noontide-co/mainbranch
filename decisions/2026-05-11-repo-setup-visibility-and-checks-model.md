@@ -173,9 +173,9 @@ GitOps decision; this decision does not invent new safety semantics.
 
 ## Topology And Permissions
 
-Topology records (`mb topology`, `.mainbranch/repo.json` child descriptors,
-and future publish/setup planning) should keep the following fields
-separable:
+Topology records (`.mainbranch/repo.json` child descriptors today, and a
+planned `mb topology` surface plus future publish/setup planning) should
+keep the following fields separable:
 
 - **business repo** versus **site repo** versus **data/source-record repo**
   versus **child repo** role;
