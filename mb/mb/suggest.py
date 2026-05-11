@@ -196,7 +196,7 @@ def _field_for_target(rel_path: str) -> str | None:
         return "linked_pushes"
     if root == "core" and len(parts) > 1 and parts[1] == "offers":
         return "linked_offers"
-    if root == "data" and len(parts) >= 3 and parts[-1] == "source.md":
+    if root == "data" and len(parts) == 3 and parts[-1] == "source.md":
         return "linked_data_sources"
     if root == "decisions":
         return "linked_decisions"
@@ -213,7 +213,7 @@ def _field_for_target(rel_path: str) -> str | None:
 
 def _is_data_source_record(rel_path: str, frontmatter: dict[str, Any]) -> bool:
     parts = Path(rel_path).parts
-    if len(parts) >= 3 and parts[0] == "data" and parts[-1] == "source.md":
+    if len(parts) == 3 and parts[0] == "data" and parts[-1] == "source.md":
         return True
     item_type = frontmatter.get("type")
     return isinstance(item_type, str) and item_type == "data_source"

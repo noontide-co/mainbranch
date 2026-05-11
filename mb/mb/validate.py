@@ -563,6 +563,7 @@ def _check_data_source_frontmatter(
     if fm.get("type") != DATA_SOURCE_TYPE:
         errors.append(f"type must be {DATA_SOURCE_TYPE!r}")
 
+    _require_non_empty_string(fm, "provider", errors)
     provider = fm.get("provider")
     if isinstance(provider, str) and provider.strip():
         provider_id = provider.strip()

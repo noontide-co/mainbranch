@@ -1662,6 +1662,27 @@ def test_validate_rejects_data_source_missing_required_keys(tmp_path: Path) -> N
     assert "missing key: privacy" in record["errors"]
 
 
+def test_validate_rejects_data_source_empty_provider(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "data" / "google-ads" / "source.md",
+        (
+            "---\n"
+            "type: data_source\n"
+            "provider: ''\n"
+            "owner: growth\n"
+            "privacy: team_private\n"
+            "---\n"
+            "# bad\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    record = next(file for file in report["files"] if file["schema"] == "data-sources")
+    assert report["ok"] is False
+    assert "provider must be a non-empty string" in record["errors"]
+
+
 def test_validate_rejects_data_source_bad_enums_and_dates(tmp_path: Path) -> None:
     _write(
         tmp_path / "data" / "google-ads" / "source.md",
