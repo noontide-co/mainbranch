@@ -52,7 +52,7 @@ Pick the route that matches what you are doing.
 - [`claude-code-runtime-dogfood.md`](claude-code-runtime-dogfood.md) — manual runtime smoke runbook.
 - [`release-agent-contract.md`](release-agent-contract.md) — protocol for agents running release-bearing validation.
 - [`post-release-alignment.md`](post-release-alignment.md) — post-release sweep, parallel work lanes, AI review ritual.
-- [`tight-operator-style.md`](tight-operator-style.md) — compression rubric for agent-facing docs and reviews.
+- [`agent-writing-style.md`](agent-writing-style.md) — writing rubric for agent-facing docs and reviews.
 - [`google-ads-gtm-conversion-rubric.md`](google-ads-gtm-conversion-rubric.md) — paid-traffic conversion rubric.
 - [`philosophy.md`](philosophy.md) — long-form product writing.
 

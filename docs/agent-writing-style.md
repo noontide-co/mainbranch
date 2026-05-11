@@ -1,4 +1,4 @@
-# Tight Operator Style
+# Agent Writing Style
 
 A short rubric for agent-facing docs, PR descriptions, review comments,
 issue bodies, and generated repo guidance. The goal is more signal per
@@ -16,8 +16,8 @@ Apply this rubric when writing for:
   guidance, bundled skill prose);
 - PR titles, bodies, and review comments;
 - GitHub issue bodies and comments synced from Linear;
-- Conductor preferences (which should be especially short — see
-  `docs/post-release-alignment.md` → Conductor preferences alignment).
+- local agent preferences (which should be especially short — see
+  `docs/post-release-alignment.md` -> Local Preferences Alignment).
 
 User-facing product copy (`README.md`, `docs/beginner-setup.md`, the
 `/mb-start` greeting, error messages an operator reads) keeps a warmer,
@@ -25,21 +25,16 @@ business-readable tone — it does not adopt this rubric verbatim. The
 rubric's compression discipline still helps there, but lead with
 plain-English clarity.
 
-## Not "caveman voice"
+## Style Boundary
 
-The discipline is borrowed from compression-style writing, but Main Branch
-does not adopt caveman tone publicly. Internally we call this **tight
-operator style**, not "caveman mode." User-facing copy stays normal,
-business-casual, and trustworthy.
+Main Branch keeps full sentences, clear tense, and a business-casual voice.
+The compression pattern is action-first writing: drop filler, keep one-line
+bullets tight, replace repeated background with links, and scale detail to
+the risk of the decision. User-facing copy stays warm and plain-spoken.
 
-The reference inspected when drafting this rubric was Julius Brussee's
-[`caveman`](https://github.com/JuliusBrussee/caveman) tool ("why use many
-token when few do trick"). What carried over: action-first phrasing,
-dropping filler and articles, replacing explanation paragraphs with
-short stacked statements, one-line bullets. What did not: caveman tone
-itself, dropped tense markers, and any user-facing stylization. Main
-Branch keeps full sentences and business-casual voice; only the
-compression discipline applies.
+A local compression-style writing reference was reviewed while drafting this
+rubric. The useful pattern was brevity with structure; the public rule is the
+rubric below.
 
 ## Rubric
 
@@ -73,16 +68,14 @@ For cold starts and PR reviews:
   Do not restate background.
 - Do not narrate your own thought process. State the conclusion.
 
-## What this is not
+## Guardrails
 
-- Not "be terse at the expense of judgment." Recommendations still earn
-  their reasoning when the reasoning is non-obvious or load-bearing.
-- Not a license to drop validation evidence or release evidence to save
-  words. See `docs/release-agent-contract.md`.
-- Not a tone change for user-facing product copy.
-- Not a directive to remove safety language. Public/private boundary
-  warnings, destructive-action callouts, and release-truth statements
-  stay.
+- Keep enough reasoning for non-obvious or load-bearing recommendations.
+- Keep validation evidence and release evidence. See
+  `docs/release-agent-contract.md`.
+- Keep user-facing product copy warm and plain-spoken.
+- Keep safety language when the risk is real. Public/private boundary
+  warnings, destructive-action callouts, and release-truth statements stay.
 
 ## Where it applies
 
@@ -92,7 +85,7 @@ For cold starts and PR reviews:
 - Generated `CLAUDE.md.tmpl` / `AGENTS.md.tmpl`: keep the generated
   business-repo instructions short and link back to engine docs for
   detail.
-- Conductor preferences: especially short. Protocol + read order, not a
+- Local agent preferences: especially short. Protocol + read order, not a
   parallel product spec.
 - PR bodies and review comments: see the validation-line evidence template
   in `docs/release-agent-contract.md`.

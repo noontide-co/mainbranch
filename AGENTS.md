@@ -483,7 +483,7 @@ released, use "planned", "target", or "next" rather than "shipped".
 After a release ships, run the alignment sweep in
 [`docs/post-release-alignment.md`](docs/post-release-alignment.md) before
 opening the next parallel batch. That doc owns the post-release sequence,
-parallel-work lane rules, AI code review ritual, Conductor preferences
+parallel-work lane rules, AI code review ritual, local agent preferences
 policy, and the current product stance checklist.
 
 ## Review Focus
@@ -507,8 +507,8 @@ Verdicts should be explicit: approve, request changes, or needs discussion.
 ## Writing Style
 
 Agent-facing docs (this file, `CLAUDE.md`, generated repo guidance, bundled
-skill prose) and PR descriptions follow the tight operator style rubric in
-[`docs/tight-operator-style.md`](docs/tight-operator-style.md): action-first,
+skill prose) and PR descriptions follow the agent writing style rubric in
+[`docs/agent-writing-style.md`](docs/agent-writing-style.md): action-first,
 link instead of restate, plain business language, no narration of internal
 thought process. User-facing product copy stays warmer and is not bound to
 the rubric verbatim.

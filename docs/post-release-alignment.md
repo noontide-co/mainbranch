@@ -28,8 +28,8 @@ next parallel batch:
    shipped via Linear release completion (not on merge).
 3. Align repo docs and decisions if anything shipped changed the product
    stance. Use the alignment sweep below.
-4. Align Conductor preferences if a new protocol, review habit, or
-   cold-start behavior was learned. Use the Conductor-prefs policy below.
+4. Align local agent preferences if a new protocol, review habit, or
+   cold-start behavior was learned. Use the local-preferences policy below.
 5. Start the next parallel batch.
 
 ## 2. Alignment sweep
@@ -114,15 +114,13 @@ When reviewing any PR, the reviewer (human or agent) checks:
 Quote only the changed behavior or the risky line in review comments. Do
 not restate the product stance — link the decision file or the doc.
 
-## 5. Conductor preferences alignment
+## 5. Local Preferences Alignment
 
-The Conductor preferences file lives in the maintainer's **private** repo
-(`devon-homelab/conductor/preferences.md`), not in this engine repo. Naming
-the path here is a pointer, not a content leak — the repo's GitHub
-visibility is private. This playbook does *not* own that file. It owns
-the policy that governs what should and should not be there.
+Local agent preferences live outside this public engine repo. This playbook
+does not own that private file. It owns the policy that governs what should
+and should not be there.
 
-Conductor preferences should:
+Local agent preferences should:
 
 - enforce working protocol (read AGENTS.md first; write
   `.context/cold-start.md`; name scope and non-scope before editing);
@@ -134,7 +132,7 @@ Conductor preferences should:
 - surface durable review habits learned from recent PRs (a sentence or two);
 - stay short enough to be read and followed.
 
-Conductor preferences should not:
+Local agent preferences should not:
 
 - duplicate detailed product facts that belong in `AGENTS.md`, `README.md`,
   or decision files;
@@ -147,14 +145,14 @@ Conductor preferences should not:
 After every release, ask:
 
 - Did the release teach us a new protocol, review habit, or cold-start
-  behavior that belongs in Conductor prefs? If yes, add it briefly.
+  behavior that belongs in local agent prefs? If yes, add it briefly.
   If no, leave prefs alone.
 - Did any existing preference duplicate repo docs or become stale? If yes,
   remove or compress it.
 
-If the Conductor preferences file lives in a separate repo
-(`devon-homelab` today), open a follow-up issue there for the change —
-do not block this engine's release on edits to a separate repo's file.
+If the local preferences file lives in a separate private repo, open a
+private follow-up there for the change. Do not block this engine's release on
+edits to a separate repo's file.
 
 ## 6. Current product stance checklist
 
@@ -181,7 +179,7 @@ truth lives in the linked doc or decision.
   and real links are accepted.
 - **Language**: plain business language first. Technical terms (canonical,
   schema, primitive) are fine in code comments and contributor docs, not in
-  user-facing copy. See `docs/tight-operator-style.md`.
+  user-facing copy. See `docs/agent-writing-style.md`.
 - **Runtime claims**: Claude Code is first-class. Codex CLI has an
   experimental CLI-first adapter. Other runtimes are compatibility targets
   until smoke evidence exists. See `docs/compatibility.md`.
