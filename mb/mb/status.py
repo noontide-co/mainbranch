@@ -168,21 +168,21 @@ def _classify_workflow(
 
 def _build_git_summary(
     *,
-    workflow: str,
+    workflow_mode: str,
     branch: str,
     default_branch: str,
     dirty_count: int,
     ahead: int | None,
     behind: int | None,
 ) -> str:
-    if workflow == "detached":
+    if workflow_mode == "detached":
         return "HEAD is detached. Check out a branch before saving."
-    if not workflow:
+    if not workflow_mode:
         return ""
 
-    if workflow == "solo-on-main":
+    if workflow_mode == "solo-on-main":
         label = f"On {branch or default_branch or 'main'}"
-    elif workflow == "worktree":
+    elif workflow_mode == "worktree":
         label = f"In a worktree on `{branch}`" if branch else "In a worktree"
     else:
         label = f"On branch `{branch}`"
@@ -236,7 +236,7 @@ def _git_info(repo: Path) -> dict[str, Any]:
             worktree_root = toplevel["stdout"].strip()
 
     default_branch = _detect_default_branch(repo)
-    workflow = _classify_workflow(
+    workflow_mode = _classify_workflow(
         branch=branch_name,
         is_linked_worktree=is_linked_worktree,
         default_branch=default_branch,
@@ -263,7 +263,7 @@ def _git_info(repo: Path) -> dict[str, Any]:
                     behind = int(parts[1])
 
     summary = _build_git_summary(
-        workflow=workflow,
+        workflow_mode=workflow_mode,
         branch=branch_name,
         default_branch=default_branch,
         dirty_count=len(dirty_lines),
@@ -280,7 +280,7 @@ def _git_info(repo: Path) -> dict[str, Any]:
         "dirty_count": len(dirty_lines),
         "dirty_files": dirty_lines[:10],
         "remote": remote["stdout"].strip() if remote["ok"] else "",
-        "workflow_mode": workflow,
+        "workflow_mode": workflow_mode,
         "default_branch": default_branch,
         "upstream": upstream_ref,
         "ahead": ahead,

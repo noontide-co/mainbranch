@@ -1936,7 +1936,7 @@ def test_classify_workflow_covers_known_states() -> None:
 
 def test_build_git_summary_reads_in_business_language() -> None:
     on_main = status_mod._build_git_summary(
-        workflow="solo-on-main",
+        workflow_mode="solo-on-main",
         branch="main",
         default_branch="main",
         dirty_count=0,
@@ -1947,7 +1947,7 @@ def test_build_git_summary_reads_in_business_language() -> None:
     assert "no uncommitted changes" in on_main
 
     on_branch = status_mod._build_git_summary(
-        workflow="branch",
+        workflow_mode="branch",
         branch="feature/x",
         default_branch="main",
         dirty_count=3,
@@ -1960,7 +1960,7 @@ def test_build_git_summary_reads_in_business_language() -> None:
     assert "behind by 1" in on_branch
 
     detached = status_mod._build_git_summary(
-        workflow="detached",
+        workflow_mode="detached",
         branch="",
         default_branch="main",
         dirty_count=0,
