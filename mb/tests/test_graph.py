@@ -528,3 +528,37 @@ repos:
 
     assert not any(node_id.startswith("engine_playbook:") for node_id in node_ids)
     assert "linked_playbook" not in edge_types
+
+
+def test_linked_data_sources_become_edges(tmp_path: Path) -> None:
+    data = tmp_path / "data" / "google-ads"
+    decisions = tmp_path / "decisions"
+    data.mkdir(parents=True)
+    decisions.mkdir()
+    (data / "source.md").write_text(
+        "---\n"
+        "type: data_source\n"
+        "provider: google-ads\n"
+        "owner: growth\n"
+        "privacy: team_private\n"
+        "---\n"
+        "# Google Ads data source\n",
+        encoding="utf-8",
+    )
+    (decisions / "2026-05-11-google-ads-first.md").write_text(
+        "---\n"
+        "date: 2026-05-11\n"
+        "status: accepted\n"
+        "linked_data_sources:\n"
+        "  - data/google-ads/source.md\n"
+        "---\n"
+        "# Decision\n",
+        encoding="utf-8",
+    )
+
+    index = build_index(path=str(tmp_path))
+    edge_types = {edge["type"] for edge in index["edges"]}
+
+    assert "linked_data_sources" in edge_types
+    registry = index["registry"]["relationships"]
+    assert any(entry["canonical_type"] == "data_source" for entry in registry)

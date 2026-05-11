@@ -1606,3 +1606,171 @@ def test_cross_refs_flag_campaign_status_transition_regressions(tmp_path: Path) 
     ]
     assert len(transition_warnings) == 1
     assert "move backward" in transition_warnings[0]["message"]
+
+
+def _data_source(
+    *,
+    provider: str = "google-ads",
+    owner: str = "growth",
+    privacy: str = "team_private",
+    cadence: str = "daily",
+    freshness: str = "2026-05-10",
+    extra: str = "",
+) -> str:
+    return (
+        "---\n"
+        "type: data_source\n"
+        f"provider: {provider}\n"
+        f"owner: {owner}\n"
+        f"privacy: {privacy}\n"
+        f"cadence: {cadence}\n"
+        f"freshness: {freshness}\n"
+        "storage:\n"
+        f"  primary: data/{provider}/daily.sqlite\n"
+        "  snapshots:\n"
+        f"    - data/{provider}/snapshots/{freshness}.csv\n"
+        "reports:\n"
+        f"  - reports/{freshness}-{provider}-weekly.md\n"
+        f"{extra}"
+        "---\n"
+        f"# {provider} data source\n"
+    )
+
+
+def test_validate_accepts_well_formed_data_source(tmp_path: Path) -> None:
+    _write(tmp_path / "data" / "google-ads" / "source.md", _data_source())
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is True, report
+    record = next(file for file in report["files"] if file["schema"] == "data-sources")
+    assert record["errors"] == []
+    assert record["warnings"] == []
+
+
+def test_validate_rejects_data_source_missing_required_keys(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "data" / "google-ads" / "source.md",
+        "---\ntype: data_source\nprovider: google-ads\n---\n# bad\n",
+    )
+
+    report = run(path=str(tmp_path))
+
+    record = next(file for file in report["files"] if file["schema"] == "data-sources")
+    assert report["ok"] is False
+    assert "missing key: owner" in record["errors"]
+    assert "missing key: privacy" in record["errors"]
+
+
+def test_validate_rejects_data_source_bad_enums_and_dates(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "data" / "google-ads" / "source.md",
+        (
+            "---\n"
+            "type: data_source\n"
+            "provider: google-ads\n"
+            "owner: growth\n"
+            "privacy: world_readable\n"
+            "freshness: 2026/05/10\n"
+            "---\n"
+            "# bad\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    record = next(file for file in report["files"] if file["schema"] == "data-sources")
+    assert report["ok"] is False
+    assert any("privacy=" in err for err in record["errors"])
+    assert "freshness must be a YYYY-MM-DD date" in record["errors"]
+
+
+def test_validate_warns_when_provider_folder_mismatches(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "data" / "googleads" / "source.md",
+        _data_source(provider="google-ads"),
+    )
+
+    report = run(path=str(tmp_path))
+
+    record = next(file for file in report["files"] if file["schema"] == "data-sources")
+    assert record["ok"] is True
+    assert any("does not match the parent folder" in w for w in record["warnings"])
+
+
+def test_validate_data_source_rejects_bad_storage_and_query_shape(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "data" / "google-ads" / "source.md",
+        (
+            "---\n"
+            "type: data_source\n"
+            "provider: google-ads\n"
+            "owner: growth\n"
+            "privacy: team_private\n"
+            "storage: data/google-ads/daily.sqlite\n"
+            "reports:\n"
+            "  - 42\n"
+            "useful_queries:\n"
+            "  - name: ''\n"
+            "    query: ''\n"
+            "---\n"
+            "# bad\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    record = next(file for file in report["files"] if file["schema"] == "data-sources")
+    assert report["ok"] is False
+    assert any("storage must be a mapping" in err for err in record["errors"])
+    assert any("reports must be a list" in err for err in record["errors"])
+    assert any("useful_queries[0].name" in err for err in record["errors"])
+    assert any("useful_queries[0].query" in err for err in record["errors"])
+
+
+def test_validate_data_source_blocks_secret_frontmatter(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "data" / "google-ads" / "source.md",
+        (
+            "---\n"
+            "type: data_source\n"
+            "provider: google-ads\n"
+            "owner: growth\n"
+            "privacy: team_private\n"
+            "api_key: not-a-real-key\n"
+            "---\n"
+            "# bad\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    record = next(file for file in report["files"] if file["schema"] == "data-sources")
+    assert report["ok"] is False
+    assert any("must not contain secrets" in err for err in record["errors"])
+
+
+def test_validate_cross_refs_resolve_linked_data_sources(tmp_path: Path) -> None:
+    _write(tmp_path / "data" / "google-ads" / "source.md", _data_source())
+    _write(
+        tmp_path / "decisions" / "2026-05-11-google-ads-first.md",
+        (
+            "---\n"
+            "date: 2026-05-11\n"
+            "status: accepted\n"
+            "linked_data_sources:\n"
+            "  - data/google-ads/source.md\n"
+            "---\n"
+            "# Decision\n"
+            "\n## Related links\n\n"
+            "- [Google Ads data source](../data/google-ads/source.md)\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    decision = next(
+        file for file in report["files"] if file["path"].endswith("google-ads-first.md")
+    )
+    assert decision["warnings"] == []
+    assert "linked_data_sources" in report["cross_refs"]["checked_fields"]

@@ -353,3 +353,53 @@ def test_suggest_links_render_human_prints_target_and_reasons(
     assert "linked_research" in captured.out
     assert "The source directly names Example Research." in captured.out
     assert "docs/business-connections.md" in captured.out
+
+
+def test_suggest_links_recognizes_data_source_registry(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "data" / "google-ads" / "source.md",
+        "---\n"
+        "type: data_source\n"
+        "provider: google-ads\n"
+        "owner: growth\n"
+        "privacy: team_private\n"
+        "cadence: daily\n"
+        "freshness: 2026-05-10\n"
+        "---\n"
+        "# Google Ads source\n"
+        "Local SQLite for Google Ads spend, impressions, clicks.\n",
+    )
+    _write(
+        tmp_path / "decisions" / "2026-05-11-google-ads-first.md",
+        "---\n"
+        "title: Google Ads First Decision\n"
+        "status: accepted\n"
+        "---\n"
+        "# Google Ads First Decision\n\n"
+        "We will run a Google Ads test; see data/google-ads/source.md for the "
+        "local Google Ads numbers we will trust.\n",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "suggest",
+            "links",
+            "decisions/2026-05-11-google-ads-first.md",
+            "--repo",
+            str(tmp_path),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    report = json.loads(result.stdout)
+    by_path = _actions_by_path(report)
+    source = by_path["data/google-ads/source.md"]
+    assert source["action"] == "link_report_or_data_metadata"
+    target = source["target"]
+    assert isinstance(target, dict)
+    assert target.get("field") == "linked_data_sources"
+    reasons = source["reasons"]
+    assert isinstance(reasons, list)
+    assert any("data-source registry record" in reason for reason in reasons)
