@@ -143,6 +143,46 @@ def test_link_skills_removes_legacy_project_symlink(tmp_path: Path) -> None:
     assert (repo / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
 
 
+def test_link_skills_removes_retired_project_symlinks_and_gitignore_entries(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo = tmp_path / "biz"
+    old_engine = tmp_path / "old-engine"
+    old_vsl = _write_skill(old_engine, "mb-vsl")
+    old_pull = _write_skill(old_engine, "mb-pull")
+    skills = repo / ".claude" / "skills"
+    skills.mkdir(parents=True)
+    (skills / "mb-vsl").symlink_to(old_vsl, target_is_directory=True)
+    (skills / "mb-pull").symlink_to(old_pull, target_is_directory=True)
+    (repo / ".gitignore").write_text(
+        "\n".join(
+            [
+                engine_mod.GITIGNORE_HEADER,
+                ".claude/settings.local.json",
+                ".claude/skills/mb-start",
+                ".claude/skills/mb-vsl",
+                ".claude/skills/mb-pull",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(engine_mod, "bundled_skills", lambda: ["mb-start"])
+
+    result = engine_mod.link_skills(repo)
+
+    assert result["ok"] is True
+    assert ".claude/skills/mb-vsl" in result["removed_legacy"]
+    assert ".claude/skills/mb-pull" in result["removed_legacy"]
+    assert not (skills / "mb-vsl").exists()
+    assert not (skills / "mb-pull").exists()
+    gitignore = (repo / ".gitignore").read_text(encoding="utf-8")
+    assert ".claude/skills/mb-start" in gitignore
+    assert ".claude/skills/mb-vsl" not in gitignore
+    assert ".claude/skills/mb-pull" not in gitignore
+
+
 def test_link_skills_ignores_claude_code_worktrees(tmp_path: Path, monkeypatch) -> None:
     repo = tmp_path / "biz"
 

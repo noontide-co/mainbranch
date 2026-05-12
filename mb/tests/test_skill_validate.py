@@ -359,6 +359,32 @@ def test_skill_validate_flags_raw_git_before_cli_first_contract(
         "raw git check appears before the CLI-first contract" in error
         for error in report["files"][0]["errors"]
     )
+    assert any(error.startswith("line 9:") for error in report["files"][0]["errors"])
+
+
+def test_skill_validate_does_not_allow_raw_git_because_context_says_not_optional(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(
+        tmp_path,
+        "mb-start",
+        body=(
+            "## CLI Facts First\n\n"
+            "Run `mb status --json --peek` before routing.\n"
+            "This is not optional.\n"
+            "Run `git status --short` next.\n"
+        ),
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-start")
+
+    assert report is not None
+    assert report["ok"] is False
+    assert any(
+        "raw git check appears before the CLI-first contract" in error
+        for error in report["files"][0]["errors"]
+    )
 
 
 def test_skill_validate_allows_raw_git_fallback_language(

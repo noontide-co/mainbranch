@@ -103,7 +103,6 @@ _RAW_GIT_ALLOW_TERMS = (
     "if no `mb`",
     "do not",
     "don't",
-    "not ",
     "site repo",
     "wiki repo",
     "technical detail",
@@ -285,13 +284,13 @@ def _check_slash_command_references(
     return errors
 
 
-def _body_without_frontmatter(text: str) -> str:
+def _body_lines_with_start_line(text: str) -> tuple[list[str], int]:
     lines = text.splitlines()
     if lines and lines[0].strip() == "---":
         for index, line in enumerate(lines[1:], start=1):
             if line.strip() == "---":
-                return "\n".join(lines[index + 1 :])
-    return text
+                return lines[index + 1 :], index + 2
+    return lines, 1
 
 
 def _check_cli_first_contract(name: str, text: str) -> list[str]:
@@ -300,7 +299,7 @@ def _check_cli_first_contract(name: str, text: str) -> list[str]:
         return []
 
     errors: list[str] = []
-    body_lines = _body_without_frontmatter(text).splitlines()
+    body_lines, body_start_line = _body_lines_with_start_line(text)
     window = "\n".join(body_lines[:_CLI_FIRST_WINDOW_LINES])
     normalized_window = window.lower()
 
@@ -317,14 +316,15 @@ def _check_cli_first_contract(name: str, text: str) -> list[str]:
                 f"{_CLI_FIRST_WINDOW_LINES} lines of SKILL.md"
             )
 
-    for line_number, line in enumerate(body_lines[:_CLI_FIRST_WINDOW_LINES], start=1):
+    for body_line_number, line in enumerate(body_lines[:_CLI_FIRST_WINDOW_LINES], start=1):
         if not _RAW_GIT_CHECK_RE.search(line):
             continue
         context = " ".join(
-            body_lines[max(0, line_number - 3) : min(len(body_lines), line_number + 2)]
+            body_lines[max(0, body_line_number - 3) : min(len(body_lines), body_line_number + 2)]
         ).lower()
         if any(term in context for term in _RAW_GIT_ALLOW_TERMS):
             continue
+        line_number = body_start_line + body_line_number - 1
         errors.append(
             f"line {line_number}: raw git check appears before the CLI-first "
             "contract; use `mb status` or `mb checkpoint` facts first"

@@ -41,6 +41,11 @@ LEGACY_SKILL_NAMES = (
     "think",
     "wiki",
 )
+RETIRED_PROJECT_SKILL_LINK_NAMES = (
+    "mb-pull",
+    "mb-vsl",
+    "vsl",
+)
 ENGINE_MARKER = Path(".claude") / "skills" / PRIMARY_SKILL / "SKILL.md"
 GITIGNORE_HEADER = "# Main Branch local Claude wiring"
 
@@ -216,6 +221,25 @@ def _append_unique_gitignore(repo: Path, entries: list[str]) -> bool:
     return True
 
 
+def _remove_gitignore_entries(repo: Path, entries: list[str]) -> bool:
+    gitignore = repo / ".gitignore"
+    if not gitignore.exists():
+        return False
+
+    existing_text = gitignore.read_text(encoding="utf-8")
+    remove = set(entries)
+    lines = existing_text.splitlines()
+    kept = [line for line in lines if line not in remove]
+    if kept == lines:
+        return False
+
+    rendered = "\n".join(kept)
+    if rendered:
+        rendered += "\n"
+    gitignore.write_text(rendered, encoding="utf-8")
+    return True
+
+
 def _link_or_copy(source: Path, dest: Path) -> str:
     if dest.is_symlink():
         try:
@@ -242,7 +266,8 @@ def _link_or_copy(source: Path, dest: Path) -> str:
 def _remove_legacy_project_links(skill_link_dir: Path) -> list[str]:
     """Remove old project-local bridge symlinks after the bundled rename."""
     removed: list[str] = []
-    for name in LEGACY_SKILL_NAMES:
+    removable_names = sorted(set(LEGACY_SKILL_NAMES) | set(RETIRED_PROJECT_SKILL_LINK_NAMES))
+    for name in removable_names:
         dest = skill_link_dir / name
         if dest.is_symlink():
             dest.unlink()
@@ -509,6 +534,13 @@ def link_skills(repo: str | Path) -> dict[str, Any]:
         ".claude/worktrees/",
         *[f".claude/skills/{name}" for name in bundled_skills()],
     ]
+    retired_gitignore_entries = [
+        f".claude/skills/{name}"
+        for name in sorted(set(LEGACY_SKILL_NAMES) | set(RETIRED_PROJECT_SKILL_LINK_NAMES))
+        if name not in bundled_skills()
+    ]
+    if _remove_gitignore_entries(target, retired_gitignore_entries):
+        created.append(".gitignore")
     if _append_unique_gitignore(target, gitignore_entries):
         created.append(".gitignore")
 
@@ -516,7 +548,7 @@ def link_skills(repo: str | Path) -> dict[str, Any]:
         "ok": True,
         "repo": str(target),
         "engine_root": str(root),
-        "created": created,
+        "created": list(dict.fromkeys(created)),
         "linked": linked,
         "copied": copied,
         "skipped": skipped,
