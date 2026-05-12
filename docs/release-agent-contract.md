@@ -50,7 +50,8 @@ switches.
 Pattern (wrapper-safe — propagates the underlying exit code):
 
 ```bash
-scripts/check.sh > .context/check.out 2>&1; rc=$?; printf "%s\n" "$rc" > .context/check.exit; exit "$rc"
+mkdir -p .agent
+scripts/check.sh > .agent/check.out 2>&1; rc=$?; printf "%s\n" "$rc" > .agent/check.exit; exit "$rc"
 ```
 
 The trailing `exit "$rc"` matters. Without it, the chain ends with
@@ -60,8 +61,8 @@ Drop the `exit "$rc"` only when running the line interactively in
 your own shell (where you don't want to close the session).
 
 The variable name matters too. `status` is a read-only special variable
-in zsh (it mirrors `$?`), so `status=$?` fails with `read-only variable`
-on Devon's default macOS shell. `rc` is safe in both bash and zsh; so
+in zsh (it mirrors `$?`), so `status=$?` fails with `read-only variable`.
+`rc` is safe in both bash and zsh; so
 is `exit_code`, `check_rc`, or any other non-reserved name. Avoid `status`,
 `pipestatus`, `path`, `home`, and other zsh special variables in agent-
 facing shell snippets.
@@ -70,9 +71,10 @@ Or, if live progress is useful (bash-specific; in zsh use
 `${pipestatus[1]}` — lowercase, 1-indexed):
 
 ```bash
-scripts/check.sh 2>&1 | tee .context/check.out
+mkdir -p .agent
+scripts/check.sh 2>&1 | tee .agent/check.out
 rc=${PIPESTATUS[0]}
-printf "%s\n" "$rc" > .context/check.exit
+printf "%s\n" "$rc" > .agent/check.exit
 exit "$rc"
 ```
 
@@ -80,14 +82,14 @@ If the agent's runtime shell is unknown, prefer the first pattern
 (redirect + `rc=$?; printf; exit`) which works in both bash and zsh.
 
 For release-bearing flows, the convention is to put logs under
-`.context/release-evidence/<version>/` so the directory is gitignored and
+`.agent/release-evidence/<version>/` so the directory is gitignored and
 self-documenting:
 
 ```bash
-mkdir -p .context/release-evidence/0.3.17
-scripts/check.sh > .context/release-evidence/0.3.17/check.out 2>&1
+mkdir -p .agent/release-evidence/0.3.17
+scripts/check.sh > .agent/release-evidence/0.3.17/check.out 2>&1
 rc=$?
-printf "%s\n" "$rc" > .context/release-evidence/0.3.17/check.exit
+printf "%s\n" "$rc" > .agent/release-evidence/0.3.17/check.exit
 exit "$rc"
 ```
 
@@ -99,12 +101,12 @@ both reflect the harness's real outcome:
 ```bash
 python3 scripts/claude-runtime-dogfood.py \
   --install-mode pypi --pypi-version 0.3.17 \
-  --evidence-dir .context/release-evidence/0.3.17 \
+  --evidence-dir .agent/release-evidence/0.3.17 \
   --run-claude-print --simulation-tier release_acceptance \
   --max-budget-usd 0.75 \
-  > .context/release-evidence/0.3.17/dogfood.log 2>&1
+  > .agent/release-evidence/0.3.17/dogfood.log 2>&1
 rc=$?
-printf "EXIT=%s\n" "$rc" >> .context/release-evidence/0.3.17/dogfood.log
+printf "EXIT=%s\n" "$rc" >> .agent/release-evidence/0.3.17/dogfood.log
 exit "$rc"
 ```
 
@@ -112,7 +114,7 @@ exit "$rc"
 
 Before re-running any long check, check in order:
 
-1. Shell exit code from the previous run (`cat .context/check.exit` or the
+1. Shell exit code from the previous run (`cat .agent/check.exit` or the
    trailing `EXIT=` line in the log).
 2. The saved log file.
 3. CI output for the same commit (`gh pr checks <N>`, `gh run view <id>`).
@@ -146,9 +148,9 @@ Each PR validation bullet should answer:
 Example:
 
 ```text
-- Level 1 static: scripts/check.sh — runtime: /usr/bin/python3 (3.13) — exit: 0 — log: .context/release-evidence/0.3.17/check.out (546 passed).
-- Level 3 package/install: (cd mb && python3 -m build) + venv install of mainbranch-0.3.17-py3-none-any.whl — runtime: /tmp/mb-pypi-smoke/bin/python3 — exit: 0 — log: .context/release-evidence/0.3.17/install.out (full validation contract returned result_status: ok).
-- Level 5 runtime: scripts/claude-runtime-dogfood.py --install-mode pypi --pypi-version 0.3.17 --run-claude-print --simulation-tier release_acceptance --max-budget-usd 0.75 — exit: 0 — evidence: .context/release-evidence/0.3.17/ (summary.json, rubric.json, transcript excerpts).
+- Level 1 static: scripts/check.sh — runtime: /usr/bin/python3 (3.13) — exit: 0 — log: .agent/release-evidence/0.3.17/check.out (546 passed).
+- Level 3 package/install: (cd mb && python3 -m build) + venv install of mainbranch-0.3.17-py3-none-any.whl — runtime: /tmp/mb-pypi-smoke/bin/python3 — exit: 0 — log: .agent/release-evidence/0.3.17/install.out (full validation contract returned result_status: ok).
+- Level 5 runtime: scripts/claude-runtime-dogfood.py --install-mode pypi --pypi-version 0.3.17 --run-claude-print --simulation-tier release_acceptance --max-budget-usd 0.75 — exit: 0 — evidence: .agent/release-evidence/0.3.17/ (summary.json, rubric.json, transcript excerpts).
 ```
 
 If a level was not run, say which one and why in one line. "Not required for

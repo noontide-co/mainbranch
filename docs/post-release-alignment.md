@@ -24,16 +24,20 @@ next parallel batch:
 1. Merge / release ships (tag, GitHub Release, PyPI publish, Linear release
    sync — see `docs/release-simulations.md`).
 2. Align Linear and GitHub issue state: close the release-prep issue, comment
-   release evidence on the issues whose work shipped, mark Linear issues
-   shipped via Linear release completion (not on merge).
+   release evidence on GitHub by default so the public thread and Linear mirror
+   agree, mark Linear issues shipped via Linear release completion (not on
+   merge).
 3. Audit release simulation transcripts when the release touched package,
    runtime, first-run, generated guidance, or operator workflow behavior. Use
    the transcript audit below.
 4. Align repo docs and decisions if anything shipped changed the product
    stance. Use the alignment sweep below.
-5. Align local agent preferences if a new protocol, review habit, or
-   cold-start behavior was learned. Use the local-preferences policy below.
-6. Start the next parallel batch.
+5. Audit agent cold-start guidance when the release taught a new protocol,
+   review habit, validation rule, or task-triggered read path. Use
+   `docs/agent-cold-start.md` as the public source of truth.
+6. Align local agent preferences only when a private local workflow reminder
+   changed. Use the local-preferences policy below.
+7. Start the next parallel batch.
 
 ## 2. Alignment sweep
 
@@ -55,6 +59,9 @@ operators, or contributors read:
 - Confirm CHANGELOG, README, and roadmap language matches the facts. A
   release is not done until the surfaces agree (see `AGENTS.md` →
   Release Truth).
+- Confirm `docs/agent-cold-start.md` still tells agents which docs are
+  always-read and which are task-triggered. Do not push release-specific
+  instructions into local preferences when they belong in public docs.
 
 Default to a small alignment PR labeled `[docs]`. If the sweep finds nothing
 worth changing, write that as a one-line comment on the release-prep issue
@@ -72,8 +79,8 @@ does the right thing?
 
 Use this sequence:
 
-1. Read the release simulation evidence under `.context/release-evidence/` or
-   the release-prep issue. Start from `summary.json`, `rubric.json`, transcript
+1. Read the local release simulation evidence or the release-prep issue. Start
+   from `summary.json`, `rubric.json`, transcript
    excerpts, and `evidence-template.md`; do not rerun simulations just to
    recover wording.
 2. Compare each run against `docs/release-simulations.md` transcript-review
@@ -86,7 +93,7 @@ Use this sequence:
 5. Keep private local runtime logs, raw transcripts, local machine details, and
    maintainer-only notes out of GitHub and public docs. If the synced Linear
    issue needs that context, add a Linear-only comment; otherwise keep it in
-   `.context/`.
+   private local scratch space.
 6. Update `docs/release-simulations.md`, the packaged simulation manifest, or
    the dogfood harness only when the audit finds a repeatable gap that should
    protect future releases.
@@ -126,7 +133,7 @@ Conflict rules:
   rebases on the first after merge.
 - Two branches updating the same `decisions/<date>-<name>.md` is a smell;
   one branch should own a decision file at a time.
-- Each branch writes `.context/cold-start.md` before editing, naming what it
+- Each branch writes a local cold-start note before editing, naming what it
   *will not* touch (the "Out" section). That is the parallel-lane contract.
 
 If a branch discovers it needs to touch a file owned by another in-flight
@@ -168,21 +175,25 @@ and should not be there.
 
 Local agent preferences should:
 
-- enforce working protocol (read AGENTS.md first; write
-  `.context/cold-start.md`; name scope and non-scope before editing);
-- tell agents what to read and in what order;
+- point agents to `docs/agent-cold-start.md` for the public read order and
+  progressive discovery contract;
+- enforce private working protocol that is local to the maintainer's
+  environment, such as workspace path, target branch, issue/branch workflow,
+  and local tool availability;
 - remind agents to check accepted decisions before reopening product choices;
 - remind agents during AI code review to check stale assumptions, docs and
-  changelog updates, Linear and GitHub issue hygiene, public/private
-  boundaries, and release impact;
-- surface durable review habits learned from recent PRs (a sentence or two);
+  changelog updates, issue hygiene, public/private boundaries, and release
+  impact;
+- surface durable private review habits learned from recent PRs in a sentence
+  or two;
 - stay short enough to be read and followed.
 
 Local agent preferences should not:
 
 - duplicate detailed product facts that belong in `AGENTS.md`, `README.md`,
-  or decision files;
-- repeat the whole product stance, folder map, or release model;
+  `docs/agent-cold-start.md`, or decision files;
+- repeat the whole product stance, folder map, release model, or validation
+  ladder;
 - carry stale specifics (old engine choices, outdated provider
   recommendations, old paths);
 - include implementation details that agents are already required to read
@@ -191,8 +202,9 @@ Local agent preferences should not:
 After every release, ask:
 
 - Did the release teach us a new protocol, review habit, or cold-start
-  behavior that belongs in local agent prefs? If yes, add it briefly.
-  If no, leave prefs alone.
+  behavior? If it helps all contributors, update public docs. If it is local
+  private workflow, add it briefly to local preferences. If neither, leave
+  preferences alone.
 - Did any existing preference duplicate repo docs or become stale? If yes,
   remove or compress it.
 

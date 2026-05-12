@@ -2,7 +2,9 @@
 
 Main Branch is a public repo. Anyone can read it; not everyone is wired in to the engine cadence. The contributor flow below documents how the work happens, what gates run, and what discipline rules apply.
 
-These rules are **tool-agnostic.** Conductor users, Codex users, Cursor users, and direct CLI contributors all follow the same shape — the rules describe the work, not the editor.
+These rules are **tool-agnostic.** Codex users, Cursor users, Claude Code
+users, hosted agents, and direct CLI contributors all follow the same shape:
+the rules describe the work, not the editor.
 
 For changes that could affect public product shape, release discipline, runtime
 claims, contributor workflow, or public/private boundaries, use

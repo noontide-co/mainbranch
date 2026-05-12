@@ -34,7 +34,7 @@ and provider state as the technical memory layer underneath the business loop.
   discipline, validation, and PR expectations.
 - Use `README.md`, `docs/`, `decisions/`, tests, and GitHub issues as durable
   context.
-- Keep `.context/` as local scratch only.
+- Keep local scratch files out of durable product docs and commits.
 - Run `scripts/check.sh` from the repo root before pushing code or docs that
   could affect packaged behavior.
 - If you change first-run, skill discovery, `mb init`, `mb onboard`,

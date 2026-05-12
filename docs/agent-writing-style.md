@@ -80,6 +80,8 @@ For cold starts and PR reviews:
 ## Where it applies
 
 - `AGENTS.md` and `CLAUDE.md`: contributor protocol, already aligned.
+- `docs/agent-cold-start.md`: public read order and progressive discovery
+  contract. Keep this as the source for what agents open first.
 - Bundled skill `SKILL.md` files: prefer linking `references/` over
   inlining long prose.
 - Generated `CLAUDE.md.tmpl` / `AGENTS.md.tmpl`: keep the generated

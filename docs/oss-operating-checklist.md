@@ -14,8 +14,8 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
   data, or private operating details are committed.
 - [ ] Examples and fixtures are sanitized and generic.
 - [ ] Private local preferences, agent-runner notes, launch plans, partner
-  strategy, and machine-specific paths stay in private repos or `.context/`,
-  not in durable public docs.
+  strategy, and machine-specific paths stay in private repos or local scratch
+  space, not in durable public docs.
 - [ ] If a note only makes sense to one maintainer, rewrite it generically or
   keep it private.
 
@@ -186,6 +186,7 @@ Before approval or handoff, answer these plainly:
 - Does the validation evidence match the surface that changed?
 - Is anything here private, overclaimed, or likely to mislead a future agent?
 
-Private local preferences should point to this checklist instead of duplicating
-public operating rules. Keep local workflow details private and keep durable
-product truth in this repository.
+Private local preferences should point to this checklist and
+[`agent-cold-start.md`](agent-cold-start.md) instead of duplicating public
+operating rules. Keep local workflow details private and keep durable product
+truth in this repository.

@@ -19,7 +19,8 @@ __pycache__/
 .coverage
 
 # Local operational state
-# .context/ is collaboration scratch and release-evidence; never durable truth.
+# Local scratch and release evidence; never durable truth.
 # .claude/*.lock is local Claude Code session state (pid, sessionId).
+.agent/
 .context/
 .claude/*.lock

@@ -84,7 +84,7 @@ Good attribution answers:
 Do not commit raw private transcripts, account data, customer details,
 credentials, screenshots, or exact partner/customer strategy to public
 playbooks. Summarize the reusable method and keep private source material in
-private repos or `.context/`.
+private repos or local scratch space.
 
 ## Forking A Playbook
 

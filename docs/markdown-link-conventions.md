@@ -246,7 +246,7 @@ Private finance source: finance-repo/core/finance/ledger/
 
 Do not commit private local machine paths. If a local-only path is
 needed for an operator, keep it in local config, a private repo, or
-`.context/` rather than public docs.
+local scratch space rather than public docs.
 
 ## Obsidian Setup
 

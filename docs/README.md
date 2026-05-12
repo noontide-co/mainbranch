@@ -47,6 +47,7 @@ Pick the route that matches what you are doing.
 
 ### Contributing to the engine
 
+- [`agent-cold-start.md`](agent-cold-start.md) — public read order and progressive discovery contract for agents.
 - [`oss-operating-checklist.md`](oss-operating-checklist.md) — public release / contributor checklist.
 - [`dependency-choices.md`](dependency-choices.md) — adopted rails and dependency policy.
 - [`supply-chain-policy.md`](supply-chain-policy.md) — PyPI publishing, GitHub Actions, dependency, and post-compromise rules.

@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Added `docs/agent-cold-start.md` as the public source for agent read order,
+  progressive discovery, release-doc boundaries, and the local preference split,
+  so maintainer-local preferences can stay short and private. Refs MAIN-330,
+  #507.
+
 ## [0.3.17] - 2026-05-12
 
 v0.3.17 is a release-tightening patch after the first `mb books` release. It

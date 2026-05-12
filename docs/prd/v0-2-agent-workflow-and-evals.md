@@ -96,7 +96,7 @@ the durable business brain.
 
 ## Scope
 
-Before editing, write a short scope note in `.context/cold-start.md`:
+Before editing, write a short local scope note:
 
 - issue / PR link;
 - intended release;
@@ -131,9 +131,8 @@ Preferred evidence order:
 
 ## Per-Branch Startup File
 
-Every substantial branch should create a gitignored note at
-`.context/cold-start.md` or an equivalent local scratch file. This is not the
-final artifact, but it keeps agents honest during the run.
+Every substantial branch should create a gitignored local scratch note. This is
+not the final artifact, but it keeps agents honest during the run.
 
 Suggested shape:
 
@@ -176,8 +175,8 @@ Out:
 - 
 ```
 
-The final PR should not rely on `.context/`. Anything durable belongs in docs,
-tests, decisions, or issue comments.
+The final PR should not rely on local scratch files. Anything durable belongs
+in docs, tests, decisions, or issue comments.
 
 ## PR Creation Template
 
