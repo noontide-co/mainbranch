@@ -20,6 +20,7 @@ def test_mb_start_delegates_router_detail_without_bloating_skill_body() -> None:
     assert len(start.splitlines()) <= 500
     assert "references/router-and-language.md" in start
     assert "bookkeeping setup runs `mb books check`" in start
+    assert "private admin repo" not in start.lower()
 
 
 def test_router_contract_covers_books_save_sync_and_updates() -> None:
@@ -30,13 +31,20 @@ def test_router_contract_covers_books_save_sync_and_updates() -> None:
         "unsaved local work",
         "catch up with the shared repo",
         "reconcile local saved work",
+        "proposal/review path",
+        "ad hoc PR-instruction attachments",
         "Update strongly recommended",
         'Run `mb books check --repo "$REPO_PATH" --json`',
         "`storage_mode`",
+        "hub registry",
+        "child descriptor `.mainbranch/repo.json`",
+        "topology role `finance` with visibility `restricted` or `local_only`",
         'generic "set up"',
     ]
     for phrase in required_phrases:
         assert phrase in router
+
+    assert "noontide-admin" not in router.lower()
 
 
 def test_start_router_no_longer_blindly_pulls_business_repo() -> None:

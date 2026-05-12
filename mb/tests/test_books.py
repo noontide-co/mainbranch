@@ -114,6 +114,7 @@ def test_books_check_flags_committed_ledger_file(tmp_path: Path) -> None:
     # usable.
     assert leak["state"] == "warn"
     assert leak["audience"] == "operator_decision"
+    assert "git rm --cached <file>" in leak["repair"]
     assert "core/finance/main.journal" in leak["evidence"]
     assert report["ok"] is True
     assert report["state"] == "warn"

@@ -2083,6 +2083,7 @@ def test_build_git_summary_reads_in_business_language() -> None:
         behind=None,
     )
     assert "detached" in detached.lower()
+    assert "Switch back to your main workspace" in detached
 
 
 def test_git_info_solo_on_main_without_remote(tmp_path: Path) -> None:
@@ -2184,4 +2185,4 @@ def test_git_info_detects_linked_worktree(tmp_path: Path) -> None:
     assert info["branch"] == "feature/x"
     assert info["default_branch"] == "main"
     assert info["worktree_root"] == str(worktree_path.resolve())
-    assert "separate workspace" in info["summary"]
+    assert "linked workspace" in info["summary"]

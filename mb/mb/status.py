@@ -176,14 +176,14 @@ def _build_git_summary(
     behind: int | None,
 ) -> str:
     if workflow_mode == "detached":
-        return "This workspace is detached. Check out a workspace before saving."
+        return "This workspace is detached. Switch back to your main workspace before saving."
     if not workflow_mode:
         return ""
 
     if workflow_mode == "solo-on-main":
         label = f"Working in the {branch or default_branch or 'main'} workspace"
     elif workflow_mode == "worktree":
-        label = "Working in a separate workspace"
+        label = "Working in a linked workspace"
     else:
         label = "Working in a separate workspace"
 

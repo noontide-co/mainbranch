@@ -508,8 +508,9 @@ def _detect_unsafe_paths(repo: Path) -> list[dict[str, Any]]:
             ),
             repair=(
                 "Move each file into .mb/private/books/ (solo-local) or "
-                "the private books repo, then remove it from shared tracking "
-                "and save a checkpoint. Rotate the data if it is sensitive."
+                "the private books repo, then run `git rm --cached <file>` for "
+                "each leaked file and save a checkpoint. Rotate the data if it "
+                "is sensitive."
             ),
             evidence=leaks[:20],
         )

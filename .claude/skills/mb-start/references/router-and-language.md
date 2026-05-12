@@ -107,10 +107,11 @@ business work.
 
 ## Intent Clusters
 
-### Save, checkpoint, wrap, sync
+### Save, checkpoint, wrap, sync, publish
 
 Signals: save, saved, checkpoint, wrap up, closing out, end my day, sync,
-publish my saved work, catch up, reconcile, shared repo, newer work.
+publish my saved work, share for review, pull request, PR, proposal, catch up,
+reconcile, shared repo, newer work.
 
 Route:
 
@@ -120,21 +121,30 @@ Route:
 - If local/shared repo state is involved, explain it with the save/sync
   vocabulary above. Do not prescribe a rebase in first response; say reconcile
   unless technical detail is needed.
+- If the user asks to publish, open a PR, or share work for review, use status
+  `git.workflow_mode`, `git.summary`, and GitHub facts to explain whether this
+  is a saved checkpoint, a sync, or a proposal/review path. The planned
+  `mb publish --plan` and packaged publish skill are not shipped yet;
+  do not pretend they exist or load ad hoc PR-instruction attachments.
 
 ### Bookkeeping, books, finance, accounting
 
 Signals: bookkeeping, books, finance, accounting, chart of accounts, P&L,
-ledger, bank statements, noontide-admin style private numbers, hledger,
-receipts, tax, payroll, revenue report.
+ledger, bank statements, restricted finance child repo, restricted repo topology,
+hledger, receipts, tax, payroll, revenue report.
 
 Route:
 
 - Run `mb books check --repo "$REPO_PATH" --json` before inventing structure.
 - Keep raw ledgers, statements, credentials, account numbers, payroll rows, tax
   IDs, and exact private numbers out of the public/team-safe business repo.
-- Use the books contract fields, especially `storage_mode`, to decide whether
-  private details belong in a separate admin repo and only safe summaries belong
-  in the hub repo.
+- Preserve public topology terms: hub repo, child repo, hub registry
+  `core/operations/repo-topology.md`, child descriptor `.mainbranch/repo.json`,
+  role `finance`, and visibility `restricted` or `local_only`.
+- Use the books contract fields, especially `storage_mode`, and the repo
+  topology role `finance` with visibility `restricted` or `local_only` to
+  decide where raw books belong. The hub repo should keep only safe summaries,
+  decisions, and links.
 - If the user is deciding tooling, route to `/mb-think` after the books check.
 - If the user is setting up the safe repo contract, draft or update the safe
   finance files named by the books check. Do not create generic finance files
