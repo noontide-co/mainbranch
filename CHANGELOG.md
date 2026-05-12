@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.17] - 2026-05-12
+
+v0.3.17 is a release-tightening patch after the first `mb books` release. It
+aligns the active bookkeeping surface on hledger, proves `mb books check`
+through an installed-package dogfood run, routes VSL knowledge through the
+broader conversion workflows, and hardens the release process with supply-chain
+gates plus post-release simulation-audit coverage.
+
 ### Changed
 
 - Replaced the active Beancount-era `mb connect` and `mb educational`
