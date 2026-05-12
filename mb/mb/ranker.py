@@ -23,6 +23,7 @@ WEIGHTS: dict[str, int] = {
     "blocked_or_stale_tasks": 60,
     "playbook_health_gaps": 84,
     "relationship_health_gaps": 82,
+    "money_path_gaps": 72,
     "due_bets": 58,
     "stale_decisions": 50,
     "stale_research": 35,
@@ -54,6 +55,7 @@ def rank_status_report(
     _add_drift_actions(actions, report)
     _add_playbook_actions(actions, report)
     _add_relationship_actions(actions, report)
+    _add_money_path_actions(actions, report)
     _add_bet_actions(actions, report)
     _add_github_actions(actions, report)
     _add_since_last_check_action(actions, report)
@@ -427,6 +429,40 @@ def _add_playbook_actions(actions: list[dict[str, Any]], report: dict[str, Any])
                     safe_to_share=all(bool(item.get("safe_to_share", True)) for item in gaps),
                 )
             ],
+        )
+    )
+
+
+def _add_money_path_actions(actions: list[dict[str, Any]], report: dict[str, Any]) -> None:
+    money_path = _dict(report.get("money_path"))
+    money_actions = [_dict(item) for item in _list(money_path.get("ranked_actions"))]
+    if not money_actions:
+        return
+    first = money_actions[0]
+    score = WEIGHTS["money_path_gaps"]
+    component = str(first.get("component") or "money_path")
+    missing = [str(item) for item in _list(first.get("missing"))]
+    actions.append(
+        _action(
+            action_id=f"review_money_path_{component}",
+            title=str(first.get("title") or "Review MoneyPath gap"),
+            command=str(first.get("route") or "/mb-think"),
+            severity="info",
+            score=score,
+            confidence=str(first.get("confidence") or "medium"),
+            reason=str(first.get("reason") or "MoneyPath found a business-path gap."),
+            signals=[
+                _signal(
+                    f"money_path.objects.{component}",
+                    severity="info",
+                    summary=str(first.get("reason") or "MoneyPath component needs review."),
+                    evidence=missing,
+                    weight=score,
+                    safe_to_share=bool(first.get("safe_to_share", True)),
+                )
+            ],
+            audience="operator_decision",
+            operator_summary=str(first.get("reason") or "MoneyPath found a business-path gap."),
         )
     )
 

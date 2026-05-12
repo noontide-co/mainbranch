@@ -19,6 +19,7 @@
     "journal",
     "marker_update",
     "measurement",
+    "money_path",
     "ok",
     "onboarding",
     "playbook_health",
@@ -162,6 +163,15 @@
       "review_requests",
       "sections",
       "source",
+      "summary"
+    ],
+    "money_path": [
+      "objects",
+      "overall_label",
+      "overall_level",
+      "ranked_actions",
+      "safe_to_share",
+      "schema_version",
       "summary"
     ],
     "since_last_check": [

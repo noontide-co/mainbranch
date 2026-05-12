@@ -54,6 +54,90 @@ PLAYBOOK_PROVIDER_BOUNDARIES_NEEDING_ATTENTION = {
     "external-manual",
     "manual-provider",
 }
+MONEY_PATH_SCHEMA_VERSION = "1.0"
+MONEY_PATH_LEVEL_LABELS = {
+    0: "missing",
+    1: "stated",
+    2: "structured",
+    3: "evidence-backed",
+    4: "field-tested",
+    5: "instrumented",
+}
+MONEY_PATH_COMPONENTS = (
+    "customer_progress",
+    "offer",
+    "audience",
+    "proof",
+    "product_ladder",
+    "cta_path",
+    "channel_strategy",
+    "active_push",
+    "playbook",
+    "page_readiness",
+    "outcome_feedback_loop",
+)
+OFFER_GUARDRAIL_KEYWORDS = {
+    "audience": ("audience", "who this is for", "who they are", "buyer", "customer"),
+    "transformation": ("transformation", "outcome", "before", "after", "result"),
+    "mechanism": ("mechanism", "method", "how it works", "process"),
+    "price_value": ("pricing", "price", "value", "$", "investment"),
+    "proof": ("proof", "testimonial", "case study", "typicality", "evidence"),
+    "risk_reversal": ("risk reversal", "guarantee", "refund", "trial", "pilot"),
+    "objections": ("objection", "concern", "blocker", "why not"),
+    "reason_to_act": ("urgency", "reason to act", "timing", "capacity", "deadline"),
+    "next_step": ("next step", "cta", "call", "apply", "buy", "checkout", "join", "book"),
+}
+AUDIENCE_SIGNAL_KEYWORDS = {
+    "customer_progress": ("progress", "job", "trying to", "desired outcome", "what they want"),
+    "buyer_language": ("what they say", "language", "phrases", "interviews", "reviews", "dms"),
+    "pain_or_gain": ("pain", "gain", "escaping", "status quo", "problem"),
+    "objections": ("objection", "concern", "trust", "time", "price", "fit"),
+}
+CUSTOMER_PROGRESS_KEYWORDS = {
+    "job_to_be_done": ("job", "trying to", "progress", "switching", "hire"),
+    "pain": ("pain", "problem", "stuck", "struggle", "escaping", "status quo"),
+    "gain": ("gain", "desired outcome", "result", "better", "wants"),
+    "language": ("what they say", "language", "phrases", "interviews", "reviews", "dms"),
+}
+CTA_KEYWORDS = (
+    "next step",
+    "cta",
+    "call to action",
+    "book",
+    "apply",
+    "buy",
+    "checkout",
+    "join",
+    "subscribe",
+    "download",
+    "waitlist",
+    "sign up",
+    "schedule",
+)
+PRODUCT_LADDER_KEYWORDS = (
+    "entry",
+    "first step",
+    "ascension",
+    "retention",
+    "cross-sell",
+    "upgrade",
+    "feeds from",
+    "feeds into",
+    "price",
+    "paid",
+)
+CHANNEL_KEYWORDS = (
+    "paid",
+    "organic",
+    "email",
+    "site",
+    "community",
+    "partner",
+    "outreach",
+    "content",
+    "ads",
+    "search",
+)
 
 
 def _utc_now() -> datetime:
@@ -472,6 +556,88 @@ def _read_frontmatter(path: Path) -> dict[str, Any]:
     except yaml.YAMLError:
         return {}
     return parsed if isinstance(parsed, dict) else {}
+
+
+def _read_markdown_text(path: Path, *, limit: int = 80_000) -> str:
+    try:
+        return path.read_text(encoding="utf-8")[:limit]
+    except OSError:
+        return ""
+
+
+def _relative_existing_paths(repo: Path, candidates: list[str]) -> list[str]:
+    return [rel for rel in candidates if (repo / rel).is_file()]
+
+
+def _money_path_label(level: int) -> str:
+    return MONEY_PATH_LEVEL_LABELS.get(level, "missing")
+
+
+def _money_path_evidence(
+    *,
+    kind: str,
+    path: str,
+    summary: str,
+    field: str = "",
+) -> dict[str, Any]:
+    return {
+        "kind": kind,
+        "path": path,
+        "field": field,
+        "summary": summary,
+    }
+
+
+def _money_path_object(
+    *,
+    level: int,
+    status: str,
+    summary: str,
+    paths: list[str],
+    missing: list[str],
+    evidence: list[dict[str, Any]] | None = None,
+    references: list[str] | None = None,
+    recommended_route: str = "/mb-think",
+    confidence: str = "high",
+) -> dict[str, Any]:
+    resolved_level = max(0, min(5, int(level)))
+    return {
+        "level": resolved_level,
+        "label": _money_path_label(resolved_level),
+        "status": status,
+        "summary": summary,
+        "paths": paths[:10],
+        "missing": missing[:10],
+        "evidence": (evidence or [])[:10],
+        "references": references or [],
+        "recommended_route": recommended_route,
+        "confidence": confidence,
+        "safe_to_share": True,
+    }
+
+
+def _keyword_hits(text: str, groups: dict[str, tuple[str, ...]]) -> list[str]:
+    lowered = text.lower()
+    return [
+        group
+        for group, keywords in groups.items()
+        if any(keyword in lowered for keyword in keywords)
+    ]
+
+
+def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in keywords)
+
+
+def _frontmatter_status(repo: Path, rel_path: str) -> str:
+    return str(_read_frontmatter(repo / rel_path).get("status") or "").lower()
+
+
+def _is_stub_content(repo: Path, rel_path: str) -> bool:
+    status = _frontmatter_status(repo, rel_path)
+    text = _read_markdown_text(repo / rel_path).lower()
+    return status == "stub" or "public stub" in text or "[from state]" in text
 
 
 def _parse_date(value: Any, fallback_path: Path) -> date | None:
@@ -1034,6 +1200,879 @@ def _playbook_health(
                 "provider_boundary_attention": provider_boundary_attention[:5],
             },
         },
+        "safe_to_share": True,
+    }
+
+
+def _money_path_offer(repo: Path, *, proof_paths: list[str]) -> dict[str, Any]:
+    per_offer_paths = sorted(
+        path.relative_to(repo).as_posix()
+        for path in repo.glob("core/offers/*/offer.md")
+        if path.is_file()
+    )
+    paths = per_offer_paths + _relative_existing_paths(
+        repo,
+        ["core/offer.md", "reference/core/offer.md"],
+    )
+    if not paths:
+        return _money_path_object(
+            level=0,
+            status="missing",
+            summary="No offer file was found.",
+            paths=["core/offer.md"],
+            missing=["offer"],
+            references=["docs/offer-sharpening.md"],
+        )
+
+    texts = [_read_markdown_text(repo / path) for path in paths]
+    combined = "\n".join(texts)
+    guardrails = _keyword_hits(combined, OFFER_GUARDRAIL_KEYWORDS)
+    missing = [key for key in OFFER_GUARDRAIL_KEYWORDS if key not in guardrails]
+    stubs = [path for path in paths if _is_stub_content(repo, path)]
+    evidence = [
+        _money_path_evidence(
+            kind="file",
+            path=path,
+            field="offer",
+            summary="Offer file exists.",
+        )
+        for path in paths[:5]
+    ]
+    evidence.extend(
+        _money_path_evidence(
+            kind="section",
+            path=paths[0],
+            field=field,
+            summary=f"{field.replace('_', ' ')} signal appears in offer text.",
+        )
+        for field in guardrails[:5]
+    )
+    live_offer_paths = [
+        path for path in per_offer_paths if _frontmatter_status(repo, path) in LIVE_OFFER_STATUSES
+    ]
+
+    level = 1
+    status = "stated"
+    summary = "Offer exists as durable repo text."
+    if len(guardrails) >= 4 and not stubs:
+        level = 2
+        status = "structured"
+        summary = "Offer has several expected guardrail signals."
+    if proof_paths and level >= 2:
+        level = 3
+        status = "evidence_backed"
+        summary = "Offer is structured and proof files exist."
+    if stubs:
+        missing = sorted(set(missing + ["replace_stub_offer"]))
+        summary = "Offer file is still a public stub."
+    if len(live_offer_paths) > 1:
+        level = min(level, 1)
+        status = "ambiguous_multi_offer"
+        missing = sorted(set(missing + ["active_offer_selection"]))
+        summary = (
+            "Multiple live offer files exist and no active offer selection is "
+            "available in status facts."
+        )
+
+    item = _money_path_object(
+        level=level,
+        status=status,
+        summary=summary,
+        paths=paths,
+        missing=missing,
+        evidence=evidence,
+        references=["docs/offer-sharpening.md"],
+        recommended_route="/mb-think",
+    )
+    item["guardrails"] = {
+        "answered": guardrails,
+        "missing": missing,
+        "reference": "docs/offer-sharpening.md",
+    }
+    return item
+
+
+def _money_path_audience(repo: Path) -> dict[str, Any]:
+    paths = sorted(
+        path.relative_to(repo).as_posix()
+        for path in repo.glob("core/offers/*/audience.md")
+        if path.is_file()
+    )
+    paths.extend(_relative_existing_paths(repo, ["core/audience.md", "reference/core/audience.md"]))
+    if not paths:
+        return _money_path_object(
+            level=0,
+            status="missing",
+            summary="No audience file was found.",
+            paths=["core/audience.md"],
+            missing=["audience", "customer_progress", "buyer_language"],
+            references=["docs/offer-sharpening.md"],
+        )
+
+    combined = "\n".join(_read_markdown_text(repo / path) for path in paths)
+    hits = _keyword_hits(combined, AUDIENCE_SIGNAL_KEYWORDS)
+    missing = [key for key in AUDIENCE_SIGNAL_KEYWORDS if key not in hits]
+    stubs = [path for path in paths if _is_stub_content(repo, path)]
+    level = 1
+    status = "stated"
+    summary = "Audience exists as durable repo text."
+    if len(hits) >= 2 and not stubs:
+        level = 2
+        status = "structured"
+        summary = "Audience includes buyer language, progress, pain, or objection signals."
+    if "buyer_language" in hits and "objections" in hits and not stubs:
+        level = 3
+        status = "evidence_backed"
+        summary = "Audience includes source-language and objection signals."
+    if stubs:
+        missing = sorted(set(missing + ["replace_stub_audience"]))
+        summary = "Audience file is still a public stub."
+
+    return _money_path_object(
+        level=level,
+        status=status,
+        summary=summary,
+        paths=paths,
+        missing=missing,
+        evidence=[
+            _money_path_evidence(
+                kind="file", path=path, field="audience", summary="Audience file exists."
+            )
+            for path in paths[:5]
+        ]
+        + [
+            _money_path_evidence(
+                kind="section",
+                path=paths[0],
+                field=field,
+                summary=f"{field.replace('_', ' ')} signal appears in audience text.",
+            )
+            for field in hits[:5]
+        ],
+        references=["docs/offer-sharpening.md"],
+        recommended_route="/mb-think",
+        confidence="medium" if level >= 2 else "high",
+    )
+
+
+def _money_path_customer_progress(repo: Path) -> dict[str, Any]:
+    paths = _relative_existing_paths(repo, ["core/audience.md", "reference/core/audience.md"])
+    paths.extend(
+        sorted(
+            path.relative_to(repo).as_posix()
+            for path in repo.glob("core/offers/*/audience.md")
+            if path.is_file()
+        )
+    )
+    research_paths = [
+        path.relative_to(repo).as_posix()
+        for path in _relative_markdown_files(repo, "research")[:8]
+        if _contains_any(
+            _read_markdown_text(path), tuple(sum(CUSTOMER_PROGRESS_KEYWORDS.values(), ()))
+        )
+    ]
+    paths.extend(research_paths[:5])
+    if not paths:
+        return _money_path_object(
+            level=0,
+            status="missing",
+            summary="No customer-progress, job, pain, gain, or buyer-language source was found.",
+            paths=["core/audience.md", "research/"],
+            missing=["customer_progress", "buyer_language"],
+            references=["docs/offer-sharpening.md"],
+            recommended_route="/mb-think",
+        )
+
+    combined = "\n".join(
+        _read_markdown_text(repo / path) for path in paths if (repo / path).is_file()
+    )
+    hits = _keyword_hits(combined, CUSTOMER_PROGRESS_KEYWORDS)
+    missing = [key for key in CUSTOMER_PROGRESS_KEYWORDS if key not in hits]
+    stubs = [path for path in paths if (repo / path).is_file() and _is_stub_content(repo, path)]
+    level = 1
+    status = "stated"
+    summary = "Customer progress exists as loose audience or research text."
+    if len(hits) >= 2 and not stubs:
+        level = 2
+        status = "structured"
+        summary = "Customer progress includes job, pain, gain, or language signals."
+    if "language" in hits and ("job_to_be_done" in hits or "pain" in hits) and not stubs:
+        level = 3
+        status = "evidence_backed"
+        summary = "Customer progress includes buyer language tied to a job, pain, or gain."
+    if stubs:
+        missing = sorted(set(missing + ["replace_stub_customer_progress"]))
+        summary = "Customer-progress source is still a public audience stub."
+
+    return _money_path_object(
+        level=level,
+        status=status,
+        summary=summary,
+        paths=sorted(set(paths)),
+        missing=missing,
+        evidence=[
+            _money_path_evidence(
+                kind="text",
+                path=paths[0],
+                field=field,
+                summary=f"{field.replace('_', ' ')} signal appears in repo text.",
+            )
+            for field in hits[:5]
+        ],
+        references=["docs/offer-sharpening.md"],
+        recommended_route="/mb-think",
+        confidence="medium" if level >= 2 else "high",
+    )
+
+
+def _money_path_proof(repo: Path) -> tuple[dict[str, Any], list[str]]:
+    proof_files = [
+        path
+        for root in [repo / "core" / "proof", *repo.glob("core/offers/*/proof")]
+        if root.exists()
+        for path in sorted(root.rglob("*.md"))
+        if path.is_file()
+    ]
+    legacy_proof = [
+        path
+        for path in repo.glob("core/offers/*/*.md")
+        if path.name in {"testimonials.md", "typicality.md"}
+    ]
+    proof_files.extend(legacy_proof)
+    paths = sorted({path.relative_to(repo).as_posix() for path in proof_files})
+    if not paths:
+        return (
+            _money_path_object(
+                level=0,
+                status="missing",
+                summary="No reusable proof files were found.",
+                paths=["core/proof/"],
+                missing=["testimonials", "typicality", "proof_angles"],
+                references=["docs/offer-sharpening.md"],
+                recommended_route="/mb-think",
+            ),
+            [],
+        )
+
+    has_testimonials = any(path.endswith("testimonials.md") for path in paths)
+    has_typicality = any(path.endswith("typicality.md") for path in paths)
+    has_angles = any("/angles/" in path for path in paths)
+    missing = [
+        name
+        for name, present in {
+            "testimonials": has_testimonials,
+            "typicality": has_typicality,
+            "proof_angles": has_angles,
+        }.items()
+        if not present
+    ]
+    level = 1
+    status = "stated"
+    summary = "Proof files exist."
+    if has_testimonials or has_typicality:
+        level = 2
+        status = "structured"
+        summary = "Proof includes standard testimonial or typicality files."
+    if has_testimonials and has_typicality:
+        level = 3
+        status = "evidence_backed"
+        summary = "Proof includes both testimonials and typicality context."
+    return (
+        _money_path_object(
+            level=level,
+            status=status,
+            summary=summary,
+            paths=paths,
+            missing=missing,
+            evidence=[
+                _money_path_evidence(
+                    kind="file", path=path, field="proof", summary="Proof file exists."
+                )
+                for path in paths[:5]
+            ],
+            references=["docs/offer-sharpening.md"],
+            recommended_route="/mb-think",
+        ),
+        paths,
+    )
+
+
+def _money_path_product_ladder(repo: Path, *, multi_offer: bool) -> dict[str, Any]:
+    paths = _relative_existing_paths(
+        repo, ["core/product-ladder.md", "reference/core/product-ladder.md"]
+    )
+    if not paths and not multi_offer:
+        return _money_path_object(
+            level=1,
+            status="single_offer_mode",
+            summary=(
+                "Single-offer repo; product ladder is optional until offers need "
+                "relationship logic."
+            ),
+            paths=["core/product-ladder.md"],
+            missing=[],
+            evidence=[],
+            references=[".claude/reference/business-primitives/setup-patterns.md"],
+            recommended_route="/mb-think",
+        )
+    if not paths:
+        return _money_path_object(
+            level=0,
+            status="missing",
+            summary="Multiple offer files exist, but no product ladder explains how they relate.",
+            paths=["core/product-ladder.md"],
+            missing=["entry_step", "ascension_path", "retention_offer"],
+            references=[".claude/reference/business-primitives/setup-patterns.md"],
+            recommended_route="/mb-think",
+        )
+    text = "\n".join(_read_markdown_text(repo / path) for path in paths)
+    hits = [keyword for keyword in PRODUCT_LADDER_KEYWORDS if keyword in text.lower()]
+    level = 2 if len(hits) >= 3 else 1
+    return _money_path_object(
+        level=level,
+        status="structured" if level >= 2 else "stated",
+        summary="Product ladder explains offer relationships."
+        if level >= 2
+        else "Product ladder exists as loose text.",
+        paths=paths,
+        missing=[
+            item
+            for item in ("entry_step", "ascension_path", "retention_offer")
+            if item.replace("_", " ") not in " ".join(hits)
+        ],
+        evidence=[
+            _money_path_evidence(
+                kind="file",
+                path=paths[0],
+                field="product_ladder",
+                summary="Product ladder file exists.",
+            )
+        ],
+        references=[".claude/reference/business-primitives/setup-patterns.md"],
+        recommended_route="/mb-think",
+    )
+
+
+def _money_path_cta(
+    repo: Path,
+    *,
+    offer_paths: list[str],
+    playbooks: list[dict[str, Any]],
+    pushes: list[dict[str, Any]],
+    measurement: dict[str, Any],
+) -> dict[str, Any]:
+    paths: list[str] = []
+    evidence: list[dict[str, Any]] = []
+    text_only_paths: list[str] = []
+    for rel in offer_paths:
+        if _contains_any(_read_markdown_text(repo / rel), CTA_KEYWORDS):
+            paths.append(rel)
+            text_only_paths.append(rel)
+            evidence.append(
+                _money_path_evidence(
+                    kind="text",
+                    path=rel,
+                    field="cta",
+                    summary="CTA or next-step language appears in offer text.",
+                )
+            )
+    push_goal_paths = [
+        str(push.get("path") or "") for push in pushes if push.get("path") and push.get("goal")
+    ]
+    if push_goal_paths:
+        paths.extend(push_goal_paths[:5])
+        evidence.append(
+            _money_path_evidence(
+                kind="frontmatter",
+                path=push_goal_paths[0],
+                field="goal",
+                summary="Push goal can anchor the entry or conversion step.",
+            )
+        )
+    playbook_paths = [str(item.get("path") or "") for item in playbooks if item.get("path")]
+    if playbook_paths:
+        paths.extend(playbook_paths[:5])
+        evidence.append(
+            _money_path_evidence(
+                kind="frontmatter",
+                path=playbook_paths[0],
+                field="resource",
+                summary="A playbook resource or trigger can carry the next step.",
+            )
+        )
+    if measurement.get("available"):
+        source = str(
+            measurement.get("source_record")
+            or measurement.get("site_repo")
+            or ".mainbranch/conversion.json"
+        )
+        paths.append(source)
+        evidence.append(
+            _money_path_evidence(
+                kind="measurement",
+                path=source,
+                field="conversion",
+                summary=str(measurement.get("summary") or "Conversion plan found."),
+            )
+        )
+
+    if not paths:
+        return _money_path_object(
+            level=0,
+            status="missing",
+            summary="No CTA path, resource handoff, or conversion endpoint was found.",
+            paths=["core/offer.md"],
+            missing=["next_step", "conversion_endpoint"],
+            references=["docs/offer-sharpening.md"],
+            recommended_route="/mb-think",
+        )
+    level = 2 if measurement.get("available") or playbook_paths or push_goal_paths else 1
+    return _money_path_object(
+        level=level,
+        status="structured" if level >= 2 else "stated",
+        summary=(
+            "CTA path is connected to a playbook, push goal, or conversion plan."
+            if level >= 2
+            else "CTA language exists, but no connected page, push goal, or playbook was found."
+        ),
+        paths=sorted(set(paths)),
+        missing=[] if level >= 2 else ["conversion_endpoint"],
+        evidence=evidence,
+        references=["docs/offer-sharpening.md"],
+        recommended_route="/mb-site" if level >= 1 else "/mb-think",
+        confidence="high" if level >= 2 else ("medium" if text_only_paths else "high"),
+    )
+
+
+def _money_path_channel_strategy(repo: Path, *, pushes: list[dict[str, Any]]) -> dict[str, Any]:
+    paths = _relative_existing_paths(
+        repo, ["core/content-strategy.md", "reference/core/content-strategy.md"]
+    )
+    active_channels = sorted(
+        {
+            str(channel)
+            for push in pushes
+            if str(push.get("status") or "").lower()
+            in ACTIVE_PUSH_STATUSES | COMPLETED_PUSH_STATUSES
+            for channel in (push.get("channels") or [])
+            if isinstance(channel, str) and channel.strip()
+        }
+    )
+    evidence = [
+        _money_path_evidence(
+            kind="file",
+            path=path,
+            field="channel_strategy",
+            summary="Content strategy file exists.",
+        )
+        for path in paths
+    ]
+    if active_channels and pushes:
+        evidence.append(
+            _money_path_evidence(
+                kind="frontmatter",
+                path=str(pushes[0].get("path") or "pushes/"),
+                field="channels",
+                summary=f"Push channel(s) recorded: {', '.join(active_channels[:5])}.",
+            )
+        )
+    if not paths and not active_channels:
+        return _money_path_object(
+            level=0,
+            status="missing",
+            summary="No channel strategy or push channels were found.",
+            paths=["core/content-strategy.md"],
+            missing=["active_channel", "distribution_strategy"],
+            references=["docs/operator-loops.md"],
+            recommended_route="/mb-think",
+        )
+    level = 2 if active_channels else 1
+    return _money_path_object(
+        level=level,
+        status="structured" if level >= 2 else "stated",
+        summary="Channel strategy has active channel facts."
+        if active_channels
+        else "Channel strategy exists as durable text.",
+        paths=paths + [str(push.get("path")) for push in pushes[:5] if push.get("path")],
+        missing=[] if active_channels else ["active_channel"],
+        evidence=evidence,
+        references=["docs/operator-loops.md"],
+        recommended_route="/mb-think",
+    )
+
+
+def _money_path_active_push(pushes: list[dict[str, Any]]) -> dict[str, Any]:
+    active = [
+        push for push in pushes if str(push.get("status") or "").lower() in ACTIVE_PUSH_STATUSES
+    ]
+    if not active:
+        return _money_path_object(
+            level=0,
+            status="missing",
+            summary="No active or planned push is moving the money path forward.",
+            paths=["pushes/"],
+            missing=["active_push"],
+            references=["docs/system-architecture.md"],
+            recommended_route="/mb-start",
+        )
+    first = active[0]
+    required = ("goal", "audience", "offer", "promise", "channels")
+    missing = [key for key in required if not first.get(key)]
+    level = 2 if not missing else 1
+    return _money_path_object(
+        level=level,
+        status="structured" if level >= 2 else "stated",
+        summary="Active push has goal, audience, offer, promise, and channels."
+        if level >= 2
+        else "Active push exists but is missing route fields.",
+        paths=[str(push.get("path") or "") for push in active[:5] if push.get("path")],
+        missing=missing,
+        evidence=[
+            _money_path_evidence(
+                kind="frontmatter",
+                path=str(first.get("path") or "pushes/"),
+                field="status",
+                summary=f"Push status is {first.get('status')}.",
+            )
+        ],
+        references=["docs/system-architecture.md"],
+        recommended_route="/mb-start",
+    )
+
+
+def _money_path_playbook(
+    playbooks: list[dict[str, Any]], playbook_health: dict[str, Any]
+) -> dict[str, Any]:
+    if not playbooks:
+        return _money_path_object(
+            level=0,
+            status="missing",
+            summary="No push playbook run record was found.",
+            paths=["pushes/<push>/playbooks/"],
+            missing=["playbook_run"],
+            references=["docs/playbooks.md"],
+            recommended_route="/mb-start",
+        )
+    approved = [
+        item
+        for item in playbooks
+        if str((item.get("approval") or {}).get("status") or "").lower() == "approved"
+    ]
+    active_or_completed = [
+        item
+        for item in playbooks
+        if str(item.get("status") or "").lower() in {"active", "completed"}
+    ]
+    missing = []
+    if not approved:
+        missing.append("approval")
+    if not active_or_completed:
+        missing.append("active_or_completed_run")
+    level = 1
+    if active_or_completed:
+        level = 2
+    if approved and active_or_completed and not (playbook_health.get("gaps") or []):
+        level = 3
+    first = playbooks[0]
+    return _money_path_object(
+        level=level,
+        status="evidence_backed" if level >= 3 else ("structured" if level >= 2 else "stated"),
+        summary="Push playbook is approved, active/completed, and has no status health gaps."
+        if level >= 3
+        else "Push playbook exists but still needs approval, activation, or review.",
+        paths=[str(item.get("path") or "") for item in playbooks[:5] if item.get("path")],
+        missing=missing,
+        evidence=[
+            _money_path_evidence(
+                kind="frontmatter",
+                path=str(first.get("path") or ""),
+                field="provider_boundary",
+                summary=f"Provider boundary is {first.get('provider_boundary') or 'unspecified'}.",
+            )
+        ],
+        references=["docs/playbooks.md"],
+        recommended_route="/mb-start",
+    )
+
+
+def _money_path_page_readiness(measurement: dict[str, Any]) -> dict[str, Any]:
+    if not measurement.get("available"):
+        return _money_path_object(
+            level=0,
+            status="missing",
+            summary="No paid-traffic site conversion plan was found.",
+            paths=[".mainbranch/conversion.json"],
+            missing=["page_or_lander", "conversion_plan"],
+            references=["docs/google-ads-gtm-conversion-rubric.md"],
+            recommended_route="/mb-site",
+        )
+    state = str(measurement.get("state") or "missing")
+    state_levels = {
+        "missing": 0,
+        "blocked": 1,
+        "ready_for_preview": 2,
+        "ready_for_operator_review": 3,
+        "ready": 5,
+    }
+    level = state_levels.get(state, 1)
+    source = str(
+        measurement.get("source_record")
+        or measurement.get("site_repo")
+        or ".mainbranch/conversion.json"
+    )
+    return _money_path_object(
+        level=level,
+        status=state,
+        summary=str(measurement.get("summary") or f"Site measurement state is {state}."),
+        paths=[source],
+        missing=[] if level >= 2 else ["conversion_plan_ready"],
+        evidence=[
+            _money_path_evidence(
+                kind="measurement",
+                path=source,
+                field="state",
+                summary=f"Site readiness state is {state}.",
+            )
+        ],
+        references=["docs/google-ads-gtm-conversion-rubric.md"],
+        recommended_route="/mb-site",
+    )
+
+
+def _money_path_outcome_feedback(
+    relationship_health: dict[str, Any],
+    playbook_health: dict[str, Any],
+    playbooks: list[dict[str, Any]],
+) -> dict[str, Any]:
+    relationship_outcomes = (relationship_health.get("sections") or {}).get("outcomes") or {}
+    linked_count = int(relationship_outcomes.get("linked_count") or 0)
+    playbooks_with_outcomes = [item for item in playbooks if item.get("linked_outcomes")]
+    playbook_summary = playbook_health.get("summary") or {}
+    missing_count = int(playbook_summary.get("completed_playbooks_without_outcome") or 0) + int(
+        (relationship_health.get("summary") or {}).get("completed_pushes_without_outcome") or 0
+    )
+    if linked_count or playbooks_with_outcomes:
+        evidence = (
+            [
+                _money_path_evidence(
+                    kind="relationship",
+                    path="",
+                    field="linked_outcomes",
+                    summary=f"{linked_count} linked outcome relationship(s) found.",
+                )
+            ]
+            if linked_count
+            else []
+        )
+        if playbooks_with_outcomes:
+            evidence.append(
+                _money_path_evidence(
+                    kind="frontmatter",
+                    path=str(playbooks_with_outcomes[0].get("path") or ""),
+                    field="linked_outcomes",
+                    summary=f"{len(playbooks_with_outcomes)} playbook(s) link outcomes.",
+                )
+            )
+        return _money_path_object(
+            level=3,
+            status="evidence_backed",
+            summary=("Outcome links feed learning back into the repo."),
+            paths=[
+                str(item.get("path") or "")
+                for item in playbooks_with_outcomes[:5]
+                if item.get("path")
+            ],
+            missing=[] if not missing_count else ["some_completed_runs_missing_outcomes"],
+            evidence=evidence,
+            references=["docs/business-connections.md"],
+            recommended_route="/mb-end",
+        )
+    return _money_path_object(
+        level=0,
+        status="missing",
+        summary="No outcome feedback link was found.",
+        paths=["pushes/", "bets/", "log/"],
+        missing=["linked_outcomes", "review_or_outcome_note"],
+        evidence=[],
+        references=["docs/business-connections.md"],
+        recommended_route="/mb-end",
+    )
+
+
+def _money_path_ranked_actions(
+    objects: dict[str, dict[str, Any]], overall_level: int
+) -> list[dict[str, Any]]:
+    candidates = [
+        (
+            "define-customer-progress",
+            "Define the customer progress",
+            "customer_progress",
+            (
+                "The money path needs the buyer's job, pain, gain, or language before "
+                "offer routing can be trusted."
+            ),
+            "/mb-think",
+        ),
+        (
+            "clarify-offer",
+            "Clarify the offer",
+            "offer",
+            "The money path needs a legible offer before downstream routing can help.",
+            "/mb-think",
+        ),
+        (
+            "define-audience-progress",
+            "Define the buyer progress",
+            "audience",
+            "The money path needs a clear audience and customer-progress signal.",
+            "/mb-think",
+        ),
+        (
+            "attach-proof",
+            "Attach proof to the promise",
+            "proof",
+            "The path needs proof, typicality, or evidence before scaling traffic.",
+            "/mb-think",
+        ),
+        (
+            "define-cta-path",
+            "Define the CTA path",
+            "cta_path",
+            "Offer and audience facts need a next step or conversion endpoint.",
+            "/mb-think",
+        ),
+        (
+            "connect-channel-strategy",
+            "Connect an active channel",
+            "channel_strategy",
+            "The path needs a demand source or distribution channel.",
+            "/mb-think",
+        ),
+        (
+            "open-or-select-push",
+            "Open or select the active push",
+            "active_push",
+            "The path needs coordinated work moving it forward.",
+            "/mb-start",
+        ),
+        (
+            "record-playbook-run",
+            "Record the push playbook",
+            "playbook",
+            "The path needs a run record for approval, provider boundary, and outcome hooks.",
+            "/mb-start",
+        ),
+        (
+            "prepare-page-readiness",
+            "Prepare page readiness",
+            "page_readiness",
+            "Demand needs somewhere measurable to land before launch advice is useful.",
+            "/mb-site",
+        ),
+        (
+            "close-outcome-loop",
+            "Close the outcome feedback loop",
+            "outcome_feedback_loop",
+            "Completed or active work needs outcome evidence feeding back into durable memory.",
+            "/mb-end",
+        ),
+    ]
+    actions: list[dict[str, Any]] = []
+    for action_id, title, key, fallback_reason, route in candidates:
+        component = objects.get(key) or {}
+        level = int(component.get("level") or 0)
+        missing = component.get("missing") or []
+        if level >= 2 and not (key == "outcome_feedback_loop" and overall_level >= 4):
+            continue
+        actions.append(
+            {
+                "id": action_id,
+                "title": title,
+                "reason": str(component.get("summary") or fallback_reason),
+                "route": route,
+                "source": f"money_path.objects.{key}",
+                "component": key,
+                "confidence": "high" if level == 0 else "medium",
+                "effort_hint": "medium",
+                "missing": [str(item) for item in missing[:5]],
+                "safe_to_share": True,
+            }
+        )
+    return actions[:5]
+
+
+def _money_path_overall_level(objects: dict[str, dict[str, Any]]) -> int:
+    customer_progress = int((objects.get("customer_progress") or {}).get("level") or 0)
+    offer = int((objects.get("offer") or {}).get("level") or 0)
+    audience = int((objects.get("audience") or {}).get("level") or 0)
+    proof = int((objects.get("proof") or {}).get("level") or 0)
+    cta = int((objects.get("cta_path") or {}).get("level") or 0)
+    channel = int((objects.get("channel_strategy") or {}).get("level") or 0)
+    active_push = int((objects.get("active_push") or {}).get("level") or 0)
+    playbook = int((objects.get("playbook") or {}).get("level") or 0)
+    page = int((objects.get("page_readiness") or {}).get("level") or 0)
+    outcome = int((objects.get("outcome_feedback_loop") or {}).get("level") or 0)
+    if offer == 0:
+        return 0
+    if customer_progress == 0 or audience == 0 or offer < 2 or audience < 2:
+        return 1
+    if proof == 0 or cta == 0:
+        return 2
+    if min(channel, active_push, playbook) == 0:
+        return 3
+    if outcome == 0:
+        return 4
+    if page >= 5 and outcome >= 3 and min(proof, cta, channel, active_push, playbook) >= 2:
+        return 5
+    return 4
+
+
+def _money_path(repo: Path, report: dict[str, Any]) -> dict[str, Any]:
+    brain = report.get("brain") or {}
+    push_report = brain.get("pushes") or {}
+    pushes = [item for item in push_report.get("records", []) if isinstance(item, dict)]
+    playbook_health = report.get("playbook_health") or {}
+    relationship_health = report.get("relationship_health") or {}
+    measurement = report.get("measurement") or {}
+    proof, proof_paths = _money_path_proof(repo)
+    offer = _money_path_offer(repo, proof_paths=proof_paths)
+    offer_paths = [str(path) for path in offer.get("paths") or [] if (repo / str(path)).is_file()]
+    playbooks = _playbook_summaries(repo)
+    multi_offer = bool(list(repo.glob("core/offers/*/offer.md")))
+    objects = {
+        "customer_progress": _money_path_customer_progress(repo),
+        "offer": offer,
+        "audience": _money_path_audience(repo),
+        "proof": proof,
+        "product_ladder": _money_path_product_ladder(repo, multi_offer=multi_offer),
+        "cta_path": _money_path_cta(
+            repo,
+            offer_paths=offer_paths,
+            playbooks=playbooks,
+            pushes=pushes,
+            measurement=measurement,
+        ),
+        "channel_strategy": _money_path_channel_strategy(repo, pushes=pushes),
+        "active_push": _money_path_active_push(pushes),
+        "playbook": _money_path_playbook(playbooks, playbook_health),
+        "page_readiness": _money_path_page_readiness(measurement),
+        "outcome_feedback_loop": _money_path_outcome_feedback(
+            relationship_health,
+            playbook_health,
+            playbooks,
+        ),
+    }
+    overall_level = _money_path_overall_level(objects)
+    return {
+        "schema_version": MONEY_PATH_SCHEMA_VERSION,
+        "overall_level": overall_level,
+        "overall_label": _money_path_label(overall_level),
+        "summary": (
+            "MoneyPath reports legibility, support, connection, and instrumentation "
+            "from repo facts."
+        ),
+        "objects": objects,
+        "ranked_actions": _money_path_ranked_actions(objects, overall_level),
         "safe_to_share": True,
     }
 
@@ -2087,6 +3126,7 @@ def run(
         today=current_time.date(),
     )
     report["playbook_health"] = _playbook_health(repo_path, brain=brain)
+    report["money_path"] = _money_path(repo_path, report)
     report["since_last_check"] = _since_last_check(
         repo_path,
         marker=marker,

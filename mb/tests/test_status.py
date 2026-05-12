@@ -93,6 +93,7 @@ def _write_push(
             "audience: founders\n"
             f"offer: {offer}\n"
             "promise: Ship a sanitized launch.\n"
+            "channels: [email]\n"
             "started: 2026-05-06\n"
             "review_on: 2026-05-20\n"
             "---\n\n"
@@ -144,6 +145,58 @@ def _write_playbook(
             "# Launch playbook\n"
         ),
         encoding="utf-8",
+    )
+
+
+def _write_money_path_core(repo: Path) -> None:
+    (repo / "core" / "offer.md").write_text(
+        (
+            "---\n"
+            "type: offer\n"
+            "status: active\n"
+            "---\n\n"
+            "# Offer\n\n"
+            "## Audience\n"
+            "Solo founders who keep losing launch context.\n\n"
+            "## Transformation\n"
+            "Scattered launch work becomes durable operating memory.\n\n"
+            "## Mechanism\n"
+            "A repo-backed workflow connects research, offer, proof, and pushes.\n\n"
+            "## Pricing\n"
+            "$500 setup sprint.\n\n"
+            "## Next step\n"
+            "Book a fit call for the setup sprint.\n"
+        ),
+        encoding="utf-8",
+    )
+    (repo / "core" / "audience.md").write_text(
+        (
+            "---\n"
+            "type: audience\n"
+            "status: active\n"
+            "---\n\n"
+            "# Audience\n\n"
+            "## Customer progress\n"
+            "They are trying to turn AI-assisted launch work into repeatable progress.\n\n"
+            "## Pain\n"
+            "They are stuck rebuilding context every session.\n\n"
+            "## What they say\n"
+            '"I know we learned something, but I cannot find where it went."\n\n'
+            "## Common objections\n"
+            "Time, trust, and switching cost.\n"
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_money_path_proof(repo: Path) -> None:
+    proof = repo / "core" / "proof"
+    proof.mkdir(parents=True, exist_ok=True)
+    (proof / "testimonials.md").write_text(
+        "# Testimonials\n\nA founder shipped faster.\n", encoding="utf-8"
+    )
+    (proof / "typicality.md").write_text(
+        "# Typicality\n\nMost users need setup help first.\n", encoding="utf-8"
     )
 
 
@@ -239,6 +292,7 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
                 "integrations",
                 "measurement",
                 "github",
+                "money_path",
                 "since_last_check",
                 "drift",
                 "readiness",
@@ -256,6 +310,152 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
     )
 
     assert actual == expected
+
+
+def test_status_money_path_default_repo_stays_low(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    money_path = report["money_path"]
+    assert money_path["schema_version"] == "1.0"
+    assert money_path["overall_level"] <= 1
+    assert "customer_progress" in money_path["objects"]
+    assert money_path["ranked_actions"]
+
+
+def test_status_money_path_single_offer_structured_caps_without_proof(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    money_path = report["money_path"]
+    assert money_path["objects"]["offer"]["level"] == 2
+    assert money_path["objects"]["proof"]["level"] == 0
+    assert money_path["overall_level"] == 2
+    assert money_path["ranked_actions"][0]["component"] == "proof"
+
+
+def test_status_money_path_detects_multi_offer_product_ladder(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+    offer = repo / "core" / "offers" / "community"
+    offer.mkdir(parents=True, exist_ok=True)
+    (offer / "offer.md").write_text(
+        (
+            "---\nslug: community\nstatus: running\n---\n\n"
+            "# Community\n\n"
+            "Audience, transformation, mechanism, pricing, next step.\n"
+        ),
+        encoding="utf-8",
+    )
+    (repo / "core" / "product-ladder.md").write_text(
+        (
+            "# Product ladder\n\n"
+            "Entry offer feeds into the paid community. Ascension moves into "
+            "retention and upgrade offers.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    ladder = report["money_path"]["objects"]["product_ladder"]
+    assert ladder["level"] >= 2
+    assert ladder["paths"] == ["core/product-ladder.md"]
+
+
+def test_status_money_path_flags_ambiguous_live_multi_offer(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+    for slug in ("community", "workshop"):
+        offer = repo / "core" / "offers" / slug
+        offer.mkdir(parents=True, exist_ok=True)
+        (offer / "offer.md").write_text(
+            (
+                f"---\nslug: {slug}\nstatus: running\n---\n\n"
+                f"# {slug}\n\nAudience, transformation, mechanism, pricing, next step.\n"
+            ),
+            encoding="utf-8",
+        )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    offer = report["money_path"]["objects"]["offer"]
+    assert offer["status"] == "ambiguous_multi_offer"
+    assert "active_offer_selection" in offer["missing"]
+    assert report["money_path"]["overall_level"] <= 1
+
+
+def test_status_money_path_push_playbook_without_outcome_cannot_reach_instrumented(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+    _write_money_path_proof(repo)
+    push = _write_push(repo, "2026-05-06-launch", offer="core/offer.md")
+    _write_playbook(push, status="active", approval_status="approved")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    money_path = report["money_path"]
+    assert money_path["objects"]["playbook"]["level"] >= 2
+    assert money_path["objects"]["outcome_feedback_loop"]["level"] == 0
+    assert money_path["overall_level"] == 4
+
+
+def test_status_money_path_fully_connected_path_can_reach_instrumented(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+    _write_money_path_proof(repo)
+    push = _write_push(repo, "2026-05-06-launch", offer="core/offer.md")
+    _write_playbook(
+        push,
+        status="active",
+        approval_status="approved",
+        linked_outcomes='["log/2026-05-20-launch-outcome.md"]',
+    )
+
+    def ready_measurement(_repo: Path) -> dict[str, Any]:
+        return {
+            "available": True,
+            "state": "ready",
+            "ok": True,
+            "summary": "Local readiness checks passed.",
+            "repair": "",
+            "repair_command": "mb site check",
+            "site_repo": "",
+            "business_repo": str(repo),
+            "facts": {"conversion_kind": "lead_form"},
+            "blocked_count": 0,
+            "manual_count": 0,
+            "safe_to_share": True,
+        }
+
+    monkeypatch.setattr(status_mod, "_measurement", ready_measurement)
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    assert report["money_path"]["objects"]["page_readiness"]["level"] == 5
+    assert report["money_path"]["objects"]["outcome_feedback_loop"]["level"] >= 3
+    assert report["money_path"]["overall_level"] == 5
 
 
 def test_status_vocabulary_falls_back_with_warnings_for_unknown_terms(

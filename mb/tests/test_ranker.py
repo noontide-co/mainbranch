@@ -126,6 +126,39 @@ def test_ranker_surfaces_playbook_health() -> None:
     assert actions[0]["signals"][0]["evidence"] == ["pushes_without_playbook"]
 
 
+def test_ranker_surfaces_money_path_below_repair_blockers() -> None:
+    report = _base_report()
+    report["update"] = {
+        "severity": "required",
+        "command": "pipx upgrade mainbranch",
+        "reason": "Installed version is below the supported floor.",
+        "installed": "0.1.0",
+        "latest": "0.2.6",
+    }
+    report["money_path"] = {
+        "ranked_actions": [
+            {
+                "id": "define-cta-path",
+                "title": "Define the CTA path",
+                "reason": "Offer and audience facts need a next step.",
+                "route": "/mb-think",
+                "component": "cta_path",
+                "confidence": "high",
+                "missing": ["conversion_endpoint"],
+                "safe_to_share": True,
+            }
+        ]
+    }
+
+    actions = ranker.rank_status_report(report)
+
+    assert actions[0]["id"] == "mainbranch_update_required"
+    money_path = next(action for action in actions if action["id"] == "review_money_path_cta_path")
+    assert money_path["command"] == "/mb-think"
+    assert money_path["signals"][0]["id"] == "money_path.objects.cta_path"
+    assert money_path["score"] < actions[0]["score"]
+
+
 def test_ranker_action_carries_audience_and_operator_summary() -> None:
     action = ranker._action(
         action_id="any.id",
