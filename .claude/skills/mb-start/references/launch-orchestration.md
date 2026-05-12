@@ -58,8 +58,8 @@ Show exactly one current step plus the next two steps:
 
 ```text
 Current step: sharpen the offer.
-Next: keyword gate the demand.
-After that: create/update the launch push, build the lander, and prepare ads.
+Next: create/update the launch push.
+After that: keyword gate the demand before lander and ads work.
 ```
 
 Use numbered choices when blocked:
