@@ -1848,15 +1848,17 @@ def _money_path_proof(
         level = 4
         status = "field_tested"
         summary = "Proof includes multiple specific, source or outcome-backed entries."
+    has_active_path = bool(instrumentation["active_push"]) or bool(instrumentation["playbook"])
     if (
         level >= 3
         and int(testimonial_quality["linked_to_offer"]) > 0
         and bool(typicality_quality["exists"])
-        and any(bool(value) for value in instrumentation.values())
+        and has_active_path
+        and bool(instrumentation["outcome_feedback"])
     ):
         level = 5
         status = "instrumented"
-        summary = "Proof is linked to an offer and connected to active path instrumentation."
+        summary = "Proof is linked to an offer and connected to outcome feedback."
     return (
         _money_path_object(
             level=level,
@@ -2364,6 +2366,43 @@ def _money_path_ranked_actions(
         if key == "outcome_feedback_loop":
             if level != 0:
                 continue
+        elif key == "proof" and level >= 2:
+            quality = component.get("quality") or {}
+            testimonial_quality = quality.get("testimonials") or {}
+            typicality_quality = quality.get("typicality") or {}
+            claim_links = quality.get("claim_links") or {}
+            instrumentation = quality.get("instrumentation") or {}
+            proof_quality_gaps: list[str] = []
+            if int(testimonial_quality.get("generic") or 0) > 0:
+                proof_quality_gaps.append("specific_testimonials")
+            if int(testimonial_quality.get("linked_to_offer") or 0) == 0:
+                proof_quality_gaps.append("offer_linked_proof")
+            if not bool(typicality_quality.get("exists")):
+                proof_quality_gaps.append("typicality")
+            if claim_links.get("unsupported_offer_claims"):
+                proof_quality_gaps.append("supported_offer_claims")
+            if not bool(instrumentation.get("outcome_feedback")):
+                proof_quality_gaps.append("outcome_feedback")
+            if not proof_quality_gaps:
+                continue
+            actions.append(
+                {
+                    "id": "strengthen-proof-quality",
+                    "title": "Strengthen proof quality",
+                    "reason": (
+                        "Proof exists, but testimonials are generic or not linked to an "
+                        "offer, outcome, typicality, or claim."
+                    ),
+                    "route": "/mb-think",
+                    "source": "money_path.objects.proof.quality",
+                    "component": "proof",
+                    "confidence": "medium",
+                    "effort_hint": "medium",
+                    "missing": proof_quality_gaps[:5],
+                    "safe_to_share": True,
+                }
+            )
+            continue
         elif level >= 2:
             continue
         actions.append(
