@@ -27,14 +27,14 @@ claude --version
 
 ## "Repository not found" / 404 Error
 
-Use the public Main Branch engine repo:
+Use the public Main Branch repo:
 
 **Fix:**
 1. Open `https://github.com/noontide-co/mainbranch` in your browser
 2. Confirm the URL is typed exactly in GitHub Desktop or terminal
 3. Try cloning again
 
-**Note:** The engine repo is public. A 404 usually means the old URL is being used or the URL was mistyped.
+**Note:** The repo is public. A 404 usually means the old URL is being used or the URL was mistyped.
 
 ---
 
@@ -42,9 +42,10 @@ Use the public Main Branch engine repo:
 
 This is expected behavior, not an error.
 
-**Main Branch is read-only for most users.** You can pull updates but cannot push changes.
+**Main Branch is read-only for most users.** You can install updates but cannot push changes.
 
-Your business data goes in YOUR OWN repo (created by `mb onboard` or `/mb-setup`). That repo you can push to.
+Your business files go in your own business folder (created by `mb onboard` or
+`/mb-setup`). That folder is where your saved work belongs.
 
 ---
 
@@ -90,30 +91,18 @@ mb skill repair --repo .
 mb doctor
 ```
 
-If the `mb` CLI is unavailable and you are repairing an old clone-based setup by hand, add skill compatibility links without replacing local folders. First resolve `$ENGINE_PATH` per **[engine-path-resolution.md](engine-path-resolution.md)**, then:
-
-```bash
-# Create bridge links only for missing entries
-mkdir -p .claude/skills
-for d in "$ENGINE_PATH"/.claude/skills/*; do
-  [ -d "$d" ] || continue
-  n=$(basename "$d")
-  [ -e ".claude/skills/$n" ] || ln -s "$d" ".claude/skills/$n"
-done
-```
-
-**Why this bridge?** It preserves project-local custom skills in `.claude/skills/` while adding missing Main Branch entries when discovery is inconsistent.
-
-Old clone-based repos may also have `.claude/lenses/` or `.claude/reference/`
-symlinks. Treat those as legacy link dirs; `mb doctor repair` can move stale
-ones into `.mb/backups/`.
+If the `mb` CLI is unavailable because this is an old clone-based setup, use
+`docs/migrating.md`. Current skills depend on `mb` CLI facts, so fix the
+reported migration and repair errors before treating the skills as fully ready.
+Do not hand-recreate the old link model in normal help.
 
 **Check 2: Is Main Branch loaded as an additional directory?**
 ```bash
 cat .claude/settings.local.json
 ```
 
-You should see the active Main Branch engine path listed under `permissions.additionalDirectories`. If not, run `mb skill link --repo .`.
+You should see the active Main Branch package or source-checkout path listed
+under `permissions.additionalDirectories`. If not, run `mb skill link --repo .`.
 
 **Check 3: Did you start in your business repo?**
 
@@ -138,7 +127,7 @@ Some workspace tools are isolated; Claude doesn't know where Main Branch is unle
 See [workspace-setup.md](workspace-setup.md) for the full script and setup walkthrough.
 
 **Quick version:**
-1. Find your Main Branch engine path
+1. Find your Main Branch package or source-checkout path
 2. Add the pre-start hook to your workspace tool if the CLI repair path is unavailable
 3. The script creates symlinks + settings, then exits
 4. Start the agent again — skills appear
@@ -262,24 +251,8 @@ This resumes your previous conversation with full context.
 
 If `/mb-start` doesn't load your business repo:
 
-**Check legacy machine-local config:**
 ```bash
-cat ~/.config/vip/local.yaml
-```
-
-Should show:
-```yaml
-vip_path: /Users/yourname/Documents/GitHub/mainbranch
-default_repo: /Users/yourname/Documents/GitHub/your-business
-recent_repos:
-  - /Users/yourname/Documents/GitHub/your-business
-user:
-  name: "Your Name"
-  experience: intermediate  # beginner | intermediate | advanced
-```
-
-**Audit legacy repo config/state if present:**
-```bash
+mb start --json
 mb doctor repair --repo /path/to/your/repo --plan --json
 ```
 
@@ -287,48 +260,22 @@ mb doctor repair --repo /path/to/your/repo --plan --json
 
 | Problem | Solution |
 |---------|----------|
-| No `~/.config/vip/local.yaml` | Run `/mb-start` — it will discover your repo and can save the path |
-| Path is wrong | Run `/mb-start` and select your repo when prompted, say "yes" to save |
-| Folder was moved | Delete `~/.config/vip/local.yaml` and run `/mb-start` again |
+| Current folder is not the business folder | `cd` into the business folder and restart Claude |
+| Skill links are stale | Run `/mb-update` or `mb update --repo .`, then restart Claude |
+| Folder was moved | Run `mb start --json`; if it cannot find the folder, choose the correct path in `/mb-start` |
 | `.vip/config.yaml` exists | Audit it with `mb doctor repair --plan --json`; do not treat it as current team settings |
 
 **Migration from old system:**
-If you have an old `~/.claude/settings.json` with `business_repo_path`, run `mb skill link --repo .`, then `mb start --json`. The current architecture uses `.claude/settings.local.json` in your business repo to load the active Main Branch engine as an additional directory.
-
----
-
-## Config System Explained
-
-See `mb-start/references/config-system.md` for the current legacy-config cleanup guidance.
-
-**Legacy files, different purposes:**
-
-| File | Location | What's In It | Git-tracked? |
-|------|----------|--------------|--------------|
-| `local.yaml` | `~/.config/vip/` | Default repo, your name, your experience level | No (personal) |
-| `config.yaml` | `[repo]/.vip/` | Old mixed config/state that needs audit before reuse | Maybe old repos tracked it |
-
-**Why the split?**
-- Multiple people can work on the same business repo
-- Alice can be "advanced" while Bob is "beginner"
-- Current provider/readiness metadata should come from `mb connect`, generated
-  repo instructions, and durable business files, not `.vip/config.yaml`
-- Personal settings stay on your machine
-
-**To reset everything:**
-```bash
-rm ~/.config/vip/local.yaml
-# Then run /mb-start — it will rediscover and let you reconfigure
-```
+Use `docs/migrating.md` for clone-era installs, old `reference/core/` layouts,
+or stale `~/.claude/settings.json` paths. Keep troubleshooting focused on the
+current business-folder flow.
 
 ---
 
 ## Git Conflicts in an Old Engine Clone
 
-Most users should update through `/mb-update` or `mb update`; raw package
-commands are only bootstrap fallbacks for old installs where `mb update` is not
-available. If you still have an old clone-based engine install, keep business
-work out of that clone.
+Most users should update through `/mb-update` or `mb update`. Raw package or
+source-checkout repair belongs in `docs/migrating.md`.
 
 From the business repo, prefer:
 
@@ -337,14 +284,3 @@ mb update --repo .
 mb skill link --repo .
 mb doctor
 ```
-
-If you deliberately maintain a clone-based engine install, resolve `$ENGINE_PATH` per **[engine-path-resolution.md](engine-path-resolution.md)** and inspect it manually before pulling:
-
-```bash
-if [ -n "$ENGINE_PATH" ] && [ -f "$ENGINE_PATH/.claude/skills/mb-start/SKILL.md" ]; then
-  git -C "$ENGINE_PATH" status --short
-  git -C "$ENGINE_PATH" pull origin main
-fi
-```
-
-If `git status --short` shows local changes, do not discard them blindly. Move business content to your business repo, or keep engine contribution work on its own branch.

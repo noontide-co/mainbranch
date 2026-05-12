@@ -8,7 +8,7 @@ loops: [sense, decide]
 
 Single entry point for Main Branch. Detect business state, current intent, save/sync posture, and the smallest useful next route.
 
-**Recommended workflow:** Start Claude in your business repo, run `/mb-start`. It handles everything. Claude Code discovers Main Branch through project-local `.claude/skills/mb-*` bridge links; `additionalDirectories` grants file access to the engine.
+**Recommended workflow:** Start Claude in your business repo, run `/mb-start`. It handles everything. Claude Code discovers Main Branch through project-local `.claude/skills/mb-*` bridge links; `additionalDirectories` grants file access to the installed package or source checkout.
 
 ## Router and language contract
 
@@ -25,7 +25,7 @@ or the exact command must be shown.
 When summarizing repo state, count records under `pushes/` (current) and flag
 `campaigns/` separately as legacy compatibility. If `core/vocabulary.md` defines
 display words, speak the operator's word in conversation while still using
-engine paths in commands.
+actual file paths in commands.
 
 **CLI facts first:** Once the business repo path is known, run
 `mb status --json --peek` before asking setup or routing questions. Treat that
@@ -155,8 +155,8 @@ before taking action.
    writing local state.
 7. Present one clear route set or infer intent: `/mb-think`, `/mb-bet`,
    `/mb-ads`, `/mb-organic`, `/mb-site`, `/mb-wiki`, `/mb-help`, or
-   `/mb-end`. Sales-video and VSL requests route through the owning workflow,
-   not a standalone VSL skill.
+   `/mb-end`. Conversion-script requests route through the owning workflow,
+   not a standalone skill.
 
 ---
 
@@ -185,7 +185,7 @@ Only run a narrower fallback command such as `mb onboard status --json`,
 `mb doctor`, `mb validate --cross-refs`, or `mb connect doctor --json` when status
 points at that section as unavailable, degraded, or needing repair.
 
-## Step 1: Pull Engine Updates
+## Step 1: Check Main Branch Updates
 
 Use the `update` section from `mb status --json --peek`. **Do NOT silently
 swallow required updates.** Users on stale code get broken features.
@@ -216,12 +216,12 @@ The user starts Claude in their business repo. Check CWD first before falling ba
 
 ```
 1. test -d "core" || test -d "reference/core"  → THIS IS the business repo. Skip to config.
-2. test -f ".claude/skills/mb-start/SKILL.md"  → user is in the engine repo; migrate.
+2. test -f ".claude/skills/mb-start/SKILL.md"  → user is in a Main Branch source checkout; migrate.
 3. Otherwise → fall back to `~/.config/vip/local.yaml` only as legacy
    machine-local repo memory.
 ```
 
-See **[references/repo-detection.md](references/repo-detection.md)** for the full flow: CWD detection, migration guidance for users in the engine repo, config loading, multi-repo selection, the discovery algorithm when no config exists, the required `REPO_PATH` variable, and the Main Branch wiring verification block.
+See **[references/repo-detection.md](references/repo-detection.md)** for the full flow: CWD detection, migration guidance for users in a source checkout, config loading, multi-repo selection, the discovery algorithm when no config exists, the required `REPO_PATH` variable, and the Main Branch wiring verification block.
 
 ---
 
@@ -439,8 +439,8 @@ when the user wants prioritization or deep triage.
 
 "Help" or confused → route to `/mb-help`. Give quick overview first:
 
-> "1. **Main Branch** = engine. 2. **Your repo** = business data. Daily:
-> `cd your-business-repo && claude` then `/mb-start`. Details: `/mb-help`."
+> "Open your business folder, start Claude, then run `/mb-start`. Main Branch
+> uses the `mb` CLI for facts and skills for judgment. Details: `/mb-help`."
 
 ---
 
@@ -479,7 +479,7 @@ treat business `.vip/local.yaml` as audit input only, and do not write it.
 ## References
 
 - [references/router-and-language.md](references/router-and-language.md) — business router, save/sync language, update posture, and intent clusters
-- [references/pull-engine-updates.md](references/pull-engine-updates.md) — Step 1 engine update handling
+- [references/pull-engine-updates.md](references/pull-engine-updates.md) — Step 1 Main Branch update handling
 - [references/repo-detection.md](references/repo-detection.md) — Step 2 full CWD detection, migration, multi-repo selection, REPO_PATH, Main Branch wiring verification
 - [references/triage-menu.md](references/triage-menu.md) — Step 10 CHANGELOG banner, menu, "while you wait" pattern, auto-suggest/skip rules
 - [references/auto-heal.md](references/auto-heal.md) — Bridge link recovery

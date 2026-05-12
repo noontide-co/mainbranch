@@ -35,7 +35,7 @@ def test_natural_sales_video_prompts_route_to_broader_skills(
 
     assert prompt.lower() in start or prompt.lower() in skill
     assert expected_route in start
-    assert "not a standalone vsl skill" in start
+    assert "not a standalone skill" in start
 
 
 def test_vsl_framework_references_are_shared_and_reachable_from_broader_skills() -> None:
@@ -65,7 +65,7 @@ def test_vsl_framework_references_are_shared_and_reachable_from_broader_skills()
 def test_operator_help_avoids_retired_data_repo_and_public_conductor_framing() -> None:
     scanned = [
         ".claude/skills/mb-help/SKILL.md",
-        ".claude/skills/mb-help/references/two-repos.md",
+        ".claude/skills/mb-help/references/system-model.md",
         ".claude/skills/mb-help/references/workspace-setup.md",
         ".claude/skills/mb-help/references/troubleshooting.md",
         ".claude/reference/engine-path-resolution.md",

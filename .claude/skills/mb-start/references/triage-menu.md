@@ -6,7 +6,7 @@ Detail for Step 3 of /mb-start: presenting the menu, surfacing unread CHANGELOG 
 
 ## Surfacing CHANGELOG Entries (Before the Menu)
 
-Resolve the Main Branch engine path with the shared engine path resolution
+Resolve the Main Branch path with the shared path resolution
 reference, then read `$ENGINE_PATH/CHANGELOG.md`. Read `last_seen_version` from
 current Main Branch local state when available; if only legacy
 `~/.config/vip/local.yaml` exists, use it as a read-only fallback. If the
@@ -60,7 +60,7 @@ offer selection in the same turn.
 > 1. **What should I focus on?** (triage — analyzes your full state) → see [triage-agent.md](triage-agent.md)
 > 2. Enrich the core (research, decide, codify) → `/mb-think`
 > 3. Create ads (image or video) → `/mb-ads`
-> 4. Build a conversion surface (site, sales video, or video ad) → `/mb-site` or `/mb-ads`
+> 4. Build a conversion surface (site or video ad) → `/mb-site` or `/mb-ads`
 > 5. Create organic content → `/mb-organic`
 > 6. Work on my wiki → `/mb-wiki`
 > 7. Build/update a site → `/mb-site`

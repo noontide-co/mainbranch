@@ -14,9 +14,9 @@ first before falling back to old local config.
    ├── YES → This IS the business repo. Use CWD. Skip to config loading.
    └── NO → Continue to step 2.
 
-2. Check CWD for Main Branch engine fingerprint (old workflow):
+2. Check CWD for Main Branch source-checkout fingerprint (old workflow):
    test -f ".claude/skills/mb-start/SKILL.md"
-   ├── YES → User is in the engine repo (old workflow). Trigger migration guidance.
+   ├── YES → User is in a Main Branch source checkout (old workflow). Trigger migration guidance.
    └── NO → Continue to step 3.
 
 3. Fall back to legacy machine-local config:
@@ -25,9 +25,9 @@ first before falling back to old local config.
    └── Nothing valid? → Discovery or /mb-setup
 ```
 
-### Migration Guidance (Step 2 - User Is in the Engine Repo)
+### Migration Guidance (Step 2 - User Is in Main Branch Source)
 
-> "It looks like you're running Claude inside the Main Branch engine folder. The recommended workflow is now to run Claude from your business repo instead.
+> "It looks like you're running Claude inside the Main Branch source folder. The recommended workflow is now to run Claude from your business folder instead.
 >
 > 1. **Quick switch:** Close this session, `cd [their-repo-path]` then `claude` then `/mb-start`
 > 2. **Need setup help?** `/mb-setup` will configure everything
@@ -94,7 +94,7 @@ Use fallbacks in order:
 
 **Verify with Read, not Glob:** Use `Read` on `[path]/core/soul.md` or legacy `[path]/reference/core/soul.md` to confirm it's a business repo. `soul.md` belongs in `core/` for current repos.
 
-**Skip the engine repo** - any path containing `.claude/skills/mb-start/SKILL.md` is the engine, not a business repo.
+**Skip the Main Branch source checkout** - any path containing `.claude/skills/mb-start/SKILL.md` is not the operator's business folder.
 
 ---
 
@@ -114,7 +114,7 @@ After repo detection/selection, set one repo variable and use it everywhere:
 REPO_PATH="[absolute-path-to-selected-business-repo]"
 ```
 
-**Rule:** All business-repo operations must target `REPO_PATH` (not implicit CWD). This is critical when `/mb-start` is invoked from the engine repo and the selected repo is elsewhere.
+**Rule:** All business-folder operations must target `REPO_PATH` (not implicit CWD). This is critical when `/mb-start` is invoked from a Main Branch source checkout and the selected business folder is elsewhere.
 
 Legacy `~/.config/vip/local.yaml` may name a default or recent repo. Treat it
 as a fallback suggestion only, not the current writable repo registry. If the
@@ -154,7 +154,7 @@ test -e "$REPO_PATH/.claude/skills/mb-start" && echo "START_BRIDGE_OK"
 
 Tell the user: "Repaired missing Main Branch bridge links in **[repo-name]**. Local custom skills are preserved."
 
-**If `/mb-start` was invoked from the engine repo:** always run this verification block for the selected `REPO_PATH` before routing. This is the migration safety net for existing users.
+**If `/mb-start` was invoked from a Main Branch source checkout:** always run this verification block for the selected `REPO_PATH` before routing. This is the migration safety net for existing users.
 
 **Why both are needed:**
 - `additionalDirectories` = file access (read reference files, compliance docs)

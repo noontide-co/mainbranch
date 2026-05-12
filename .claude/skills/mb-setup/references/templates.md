@@ -569,31 +569,27 @@ status: complete
 
 ## This Repo
 
-This is the **business repo** (operating memory) for [Business Name].
+This is the **business folder** (operating memory) for [Business Name].
 
-It uses [Main Branch](https://github.com/noontide-co/mainbranch) as the **engine** — skills, lenses, and frameworks that generate content from your business files.
+It uses [Main Branch](https://github.com/noontide-co/mainbranch): the `mb`
+CLI checks facts and the skills turn those facts into business work.
 
 ### Setup
 
-1. **Clone the engine** (if you haven't):
-   ```bash
-   git clone https://github.com/noontide-co/mainbranch.git
-   ```
+1. **Start Claude in this folder** (your business folder) and run `/mb-start`
 
-2. **Start Claude in this folder** (your business repo) and run `/mb-start`
-
-3. **Main Branch is linked** via `.claude/settings.local.json` (bridge links handle skill discovery fallback)
+2. **Main Branch is linked** via `.claude/settings.local.json` (bridge links handle skill discovery fallback)
 
 ### How It Works
 
 ```
-MAIN BRANCH ENGINE     +     BUSINESS REPO CONTEXT     =     BUSINESS OUTPUT
-├── Skills                         ├── core/                 ├── Ads
-├── Lenses                         ├── research/             ├── Emails
-└── Update through mb              └── You own this          └── Content
+BUSINESS FOLDER        +     MB CLI FACTS        +     SKILLS
+├── core/                    ├── status                 ├── route
+├── research/                ├── readiness              ├── write
+└── decisions/               └── repair                 └── review
 ```
 
-Skills from the engine read your `core/`, `research/`, and `decisions/` files
+Skills read your `core/`, `research/`, and `decisions/` files, use `mb` facts,
 and generate coordinated work under `pushes/`.
 
 ---

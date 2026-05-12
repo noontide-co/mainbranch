@@ -40,7 +40,7 @@ to choose, use lower-case, past-tense business verbs:
 - `[fixed]` for repaired wiring, links, or setup state.
 
 Avoid engine-contributor subjects such as `[add]`, `[update]`, `[fix]`, or
-`[refactor]` in business repos. Those are for this engine repository, not the
+`[refactor]` in business repos. Those are for this Main Branch repository, not the
 operator's business history.
 
 Do not add AI attribution trailers by default. Add an `Agent:` trailer only when

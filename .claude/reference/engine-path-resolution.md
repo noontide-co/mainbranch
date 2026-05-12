@@ -1,6 +1,6 @@
 # Engine Path Resolution
 
-Shared resolver for locating the Main Branch engine from a Claude Code session running inside a business repo. Used by `/mb-start`, `/mb-update`, legacy `/mb-pull`, `/mb-setup`, `/mb-help` (troubleshooting), and any reference file that needs to read or pull engine-side files.
+Shared resolver for locating the Main Branch package or source checkout from a Claude Code session running inside a business repo. Used by `/mb-start`, `/mb-update`, `/mb-setup`, `/mb-help` troubleshooting, and any reference file that needs to read installed Main Branch files.
 
 **Single source of truth.** Other reference files MUST link here rather than inline the snippet — the resolver semantics (and the order of fallbacks) need to stay in lockstep across the engine, and inline copies drift.
 
@@ -88,7 +88,6 @@ A reference file that inlines the resolver and *also* customises it should comme
 ## Callers that link to this file
 
 - `.claude/skills/mb-update/SKILL.md`
-- `.claude/skills/mb-pull/SKILL.md` (legacy alias)
 - `.claude/skills/mb-setup/references/cwd-detection.md`
 - `.claude/skills/mb-help/references/troubleshooting.md` (skills-not-working + git-conflicts sections)
 - `.claude/reference/pull-engine-updates.md`

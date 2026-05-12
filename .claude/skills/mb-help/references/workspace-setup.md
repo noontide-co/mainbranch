@@ -1,8 +1,8 @@
 # Workspace-Isolated Tool Setup
 
 Some workspace tools start Claude inside an isolated folder. When that happens,
-Claude may not see the Main Branch engine or bundled skills until the workspace
-has local bridge links and `settings.local.json` file access.
+Claude may not see the installed Main Branch skills until the workspace has
+local bridge links and `settings.local.json` file access.
 
 Prefer the CLI repair path from the business repo:
 
@@ -41,8 +41,9 @@ EOF
 exit
 ```
 
-Replace `/absolute/path/to/mainbranch` with the actual Main Branch engine path.
-Most users should not hand-write this; run `mb skill link --repo .` instead.
+Replace `/absolute/path/to/mainbranch` with the actual Main Branch package or
+source-checkout path. Most users should not hand-write this; run
+`mb skill link --repo .` instead.
 
 ## Troubleshooting
 
@@ -50,10 +51,10 @@ If skills still do not appear:
 
 1. Restart Claude from the business repo.
 2. Confirm `.claude/skills/mb-start/SKILL.md` exists in the workspace.
-3. Confirm the engine path exists and contains `.claude/skills/mb-start/SKILL.md`.
+3. Confirm the Main Branch path exists and contains `.claude/skills/mb-start/SKILL.md`.
 4. Run `mb doctor` and follow the repair command it prints.
 
 If the tool says it cannot edit files outside allowed directories, start the
 workspace at the repo you want to edit. Main Branch business files should live
-inside that workspace; engine files are read through `additionalDirectories`,
-not edited.
+inside that workspace; Main Branch files are read through
+`additionalDirectories`, not edited.

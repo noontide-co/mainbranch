@@ -224,29 +224,14 @@ The fallback command is:
 pipx upgrade mainbranch
 ```
 
-If you already had a business repo from the old setup, ask Claude to repair that
-repo afterward. The underlying repair commands are:
-
-```bash
-mb skill link --repo .
-mb skill repair --repo .
-mb doctor
-```
-
-For old `reference/core/` repos, read [migrating.md](migrating.md). You usually
-do not need to move files immediately. When you are ready, run the dry-run first:
-
-```bash
-mb migrate --check
-```
-
-Only run `mb migrate --apply` after the dry-run shows the old paths, move
-targets, backup location, and no conflicts.
-
 ### Already Using The Old Setup?
 
-You can let Claude walk you through the migration. Start Claude Code anywhere
-and paste:
+Read [migrating.md](migrating.md) before repairing old clone-era installs,
+`reference/core/` layouts, or stale skill links. You usually do not need to
+move files immediately; update Main Branch first, then let Claude run the
+confirmation-gated migration prompt from that doc.
+
+Start Claude Code anywhere and paste:
 
 ```text
 I want to migrate my existing Main Branch setup to the current pipx + /mb-start
@@ -257,8 +242,8 @@ first and do not run `mb migrate --apply` until I approve the dry-run. Use
 docs/migrating.md as the source of truth.
 ```
 
-Claude may ask you to restart in a business repo after it repairs skill
-discovery. That is normal — Claude Code loads slash commands when a session
+Claude may ask you to restart in a business folder after it repairs skill
+discovery. That is normal. Claude Code loads slash commands when a session
 starts, so repaired `/mb-start` links usually appear after restart.
 
 ---
@@ -278,7 +263,6 @@ starts, so repaired `/mb-start` links usually appear after restart.
 | `/mb-end` | Close session intentionally — summary, crystallize, checkpoint. |
 | `/mb-help` | Get answers, troubleshoot. |
 | `/mb-update` | Update Main Branch (figures out pipx vs clone). |
-| `/mb-pull` | Old name for `/mb-update`; still works for existing users. |
 
 ---
 

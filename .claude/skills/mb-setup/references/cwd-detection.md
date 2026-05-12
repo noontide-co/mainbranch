@@ -1,4 +1,4 @@
-# CWD Detection and Engine Wiring
+# CWD Detection and Main Branch Wiring
 
 Use this flow at the start of `/mb-setup`. The goal is to keep the user's
 business repo as the working directory and let the `mb` CLI own Claude Code
@@ -18,8 +18,8 @@ mb start --json
 ```
 
 `mb skill link` rewrites `.claude/settings.local.json` to the active Main
-Branch engine, refreshes `mb-` bridge links, removes old project-local legacy
-skill links, and cleans stale Main Branch engine paths from
+Branch path, refreshes `mb-` bridge links, removes old project-local legacy
+skill links, and cleans stale Main Branch paths from
 `permissions.additionalDirectories`.
 
 `mb skill repair` inspects personal `~/.claude/skills/` entries that can shadow
@@ -33,7 +33,7 @@ reported but not changed.
 
 ```bash
 test -d "core" -o -d "reference/core" && echo "IS_BUSINESS_REPO"
-test -f ".claude/skills/mb-setup/SKILL.md" && echo "IS_ENGINE_REPO"
+test -f ".claude/skills/mb-setup/SKILL.md" && echo "IS_MAINBRANCH_SOURCE"
 ```
 
 ### Case 1: CWD Is the Business Repo
@@ -54,12 +54,13 @@ pipx install mainbranch
 
 Then re-run the preferred repair path.
 
-### Case 2: CWD Is the Engine Repo
+### Case 2: CWD Is The Main Branch Source Checkout
 
 Say:
 
-> "You're in the Main Branch engine. The recommended workflow is to run Claude
-> from your business repo so all writes land in the business brain."
+> "You're in the Main Branch source checkout. The recommended workflow is to
+> run Claude from your business folder so all writes land in the business
+> brain."
 
 Find or ask for the business repo path. Then run:
 

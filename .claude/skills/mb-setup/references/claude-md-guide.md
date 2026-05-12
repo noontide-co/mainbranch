@@ -27,21 +27,22 @@ CLAUDE.md is the **always-loaded business brain**. Claude reads this file at the
 
 ---
 
-## Engine
+## Main Branch
 
-This repo contains your **business data**. It's powered by **Main Branch** (the engine).
+This folder contains your **business files**. Main Branch adds the `mb` CLI
+and skills around those files.
 
 **Setup:**
-1. Clone Main Branch: `git clone https://github.com/noontide-co/mainbranch.git`
-2. Start Claude in THIS folder (your business repo) and run `/mb-start`
-3. Main Branch is linked via `.claude/settings.local.json` (with bridge links as compatibility fallback)
+1. Start Claude in THIS folder (your business folder) and run `/mb-start`
+2. Main Branch is linked via `.claude/settings.local.json` (with bridge links as compatibility fallback)
 
 **How it works:**
-- Engine (Main Branch): Contains skills, lenses, frameworks. You pull updates but never edit.
-- Data (this repo): Contains your business context. You own and edit this.
-- Skills read from `core/`, `research/`, and `decisions/`, then write coordinated work to `pushes/`.
+- `mb` CLI: Checks setup, status, readiness, repairs, and updates.
+- Skills: Read `core/`, `research/`, and `decisions/`, then write coordinated work to `pushes/`.
+- This folder: Contains the business context you own and edit.
 
-**If `/mb-start` isn't available:** Skills may need bridge links. Find the Main Branch path from `.claude/settings.local.json` (the `additionalDirectories` array), then read `[engine-path]/.claude/skills/mb-start/references/auto-heal.md` and follow the repair steps. After repair, tell the user to restart Claude.
+**If `/mb-start` isn't available:** Run `mb skill link --repo .`, then restart
+Claude. For old clone-era installs, use `docs/migrating.md`.
 
 ---
 

@@ -1,5 +1,9 @@
 # Migrating Existing Main Branch Repos
 
+This doc owns old clone-era setup, legacy file-layout, and
+clone-to-pipx/source-checkout migration guidance. Beginner docs and skills
+should link here instead of restating migration procedures.
+
 Main Branch has two repo shapes in the wild:
 
 - **Legacy shape:** old clone-era folders such as `reference/core/`,
@@ -11,13 +15,35 @@ Main Branch has two repo shapes in the wild:
   detected by `mb doctor` with a preview path via
   `mb migrate campaigns --plan`.
 
-Existing repos do not need an urgent file move. The safe path is to update the
-engine first, repair skill discovery, and only migrate file layout on a clean
+Existing repos do not need an urgent file move. The safe path is to update Main
+Branch first, repair skill discovery, and only migrate file layout on a clean
 branch when you need the new shape.
 
 The update is urgent. Do not continue a migration against a stale Main Branch
-engine when a newer package is available. Update first, then repair repos. The
-update changes the installed Main Branch tool, not the user's business files.
+install when a newer package is available. Update first, then repair repos. The
+update changes the installed CLI and skills, not the user's business files.
+
+## Why This Matters Now
+
+Current skills depend on `mb` CLI facts before they write or advise. They expect
+the business folder, skill links, status output, provider readiness, graph
+links, and validation paths to line up with the current CLI contract.
+
+Old clone-era wiring can still make a slash command appear, but it may starve
+the skill of the facts it now relies on. Treat migration errors as product
+readiness errors, not cosmetic cleanup. If `mb doctor`, `mb status --peek`,
+`mb skill link`, `mb skill repair`, or `mb migrate --check` recommends a
+change, explain the reason and fix the error before asking the skills to do
+serious work.
+
+Use this framing with operators:
+
+```text
+The skills now use the `mb` CLI as their source of setup, status, update, and
+repair facts. This migration gets your folder aligned with that contract. We
+should fix the reported errors first so `/mb-start` and the other skills can
+use your business files to their full potential.
+```
 
 ## `.mb` Is The Current Folder
 
@@ -28,12 +54,12 @@ files.
 
 You do **not** need a `.mb-vip/` folder. That name belongs to old clone-based
 setup language and the former internal repo name. The current pipx setup does
-not require a local engine clone inside your business repo.
+not require a local Main Branch source checkout inside your business repo.
 
-Open Claude Code in the business repo folder, not in an engine clone. If slash
-commands are missing, ask Claude to repair the skill wiring instead of creating
-a `.mb-vip/` folder. These are the underlying commands Claude or a power user
-may run:
+Open Claude Code in the business repo folder, not in an old Main Branch clone.
+If slash commands are missing, ask Claude to repair the skill wiring instead of
+creating a `.mb-vip/` folder. These are the underlying commands Claude or a
+power user may run:
 
 ```bash
 mb update --repo .
@@ -55,6 +81,10 @@ workflow.
 
 Please go slowly, but treat the Main Branch update as required before repo
 repair. I may be new to Terminal, Git, branches, and GitHub.
+
+Main Branch skills now depend on current `mb` CLI facts. Frame migration as
+getting my business folder aligned with the CLI contract so the skills can work
+fully, not as optional cleanup.
 
 1. First run read-only checks only:
    - mb --version
@@ -80,16 +110,17 @@ repair. I may be new to Terminal, Git, branches, and GitHub.
    - mb status <repo> --json --peek
    - mb skill repair --repo <repo>
    - mb migrate --repo <repo> status
-5. Recommend one repo to repair first, not a whole multi-repo project plan.
-6. Show me the one next write action you recommend before running it.
-7. Do not delete real files. Only use Main Branch repair/apply commands after I
+5. Explain every recommended repair in terms of the skill behavior it restores.
+6. Recommend one repo to repair first, not a whole multi-repo project plan.
+7. Show me the one next write action you recommend before running it.
+8. Do not delete real files. Only use Main Branch repair/apply commands after I
    confirm.
-8. If you create or switch to a git branch, explain that it is a safe draft copy
+9. If you create or switch to a git branch, explain that it is a safe draft copy
    of the work. Do not merge, delete, or rename branches unless I explicitly
    confirm.
-9. If a command says I need to restart Claude, stop and tell me exactly which
+10. If a command says I need to restart Claude, stop and tell me exactly which
    folder to open next and which slash command to run.
-10. Do not end by giving me a list of internal mb commands to choose from. End
+11. Do not end by giving me a list of internal mb commands to choose from. End
    with the exact folder to open, the exact `claude` command, and `/mb-start`.
 ```
 
@@ -166,8 +197,8 @@ repo family, prefer a small runtime smoke before merge:
    - Full flow smoke: ask for a real research/decide/codify task and explicitly
      say to pause before writing files. Pass means the skill follows its normal
      workflow, writes only to the business repo after approval, and does not
-     write into the Main Branch engine.
-4. Confirm no skill writes into the engine repo.
+     write into the Main Branch source checkout.
+4. Confirm no skill writes into the Main Branch source checkout.
 5. Then summarize whether the branch is ready to push, review, or merge.
 
 If an interactive Claude Code runtime smoke is not possible from the current
@@ -180,7 +211,7 @@ clone-path symlinks outside the `mb-*` skill directories, especially
 `.claude/lenses/` and `.claude/reference/`. `mb skill link` and
 `mb skill repair` currently own Main Branch skill names; they may not repair
 older lens/reference symlinks from clone-based setups. If those symlinks still
-point at an old engine clone, report them as follow-up work and do not claim
+point at an old Main Branch source checkout, report them as follow-up work and do not claim
 the clone-to-pipx migration is fully complete until runtime behavior has been
 observed without relying on the clone.
 
@@ -216,7 +247,7 @@ Useful defaults:
 
 - `mb status` writes `.mb/last-status-seen.json`; use `mb status --peek` for
   read-only discovery.
-- `mb update` can update the installed engine and refresh repo-local skill
+- `mb update` can update the installed CLI and skills and refresh repo-local skill
   links; treat it as a write.
 - `mb skill link` writes Claude Code wiring and `.gitignore` repair entries;
   treat it as a write.
@@ -229,6 +260,10 @@ Useful defaults:
 
 Check command help before assuming flag shape. Some commands take a positional
 repo path, while others use `--repo`.
+
+Do not ignore errors because the old skill still appears in Claude Code. A
+visible slash command only proves discovery. It does not prove the skill can
+read current CLI facts, status sections, migration state, or provider readiness.
 
 ## If You Are On `mb 0.1.x`
 
@@ -251,7 +286,7 @@ or, from inside Claude Code:
 /mb-update
 ```
 
-`/mb-pull` still works as a legacy alias for existing users.
+Use `/mb-update` or `mb update --repo .` for current installs.
 
 ## Power User: Repair An Existing Business Repo
 
@@ -270,8 +305,8 @@ mb start
 `mb skill link --repo .` rewrites the local Claude Code wiring so `/mb-start`,
 `/mb-think`, `/mb-ads`, and the other bundled skills point at the installed
 Main Branch package instead of an old clone path. It also removes stale
-Main Branch engine paths from `.claude/settings.local.json` so Claude Code does
-not keep access to two engine copies after a clone-to-pipx migration. During
+Main Branch source-checkout paths from `.claude/settings.local.json` so Claude Code does
+not keep access to stale Main Branch paths after a clone-to-pipx migration. During
 that link step, Main Branch also moves provably stale or broken personal
 symlinks with Main Branch skill names into a timestamped backup.
 

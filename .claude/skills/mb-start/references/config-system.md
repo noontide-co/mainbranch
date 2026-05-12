@@ -10,7 +10,7 @@ skills should prefer CWD-first repo detection, `mb status --json --peek`,
 
 | File | Location | Purpose | Git-tracked? |
 |------|----------|---------|--------------|
-| `settings.local.json` | `[repo]/.claude/` | Grants Claude Code file access to the active Main Branch engine | No (auto git-ignored by Claude Code) |
+| `settings.local.json` | `[repo]/.claude/` | Grants Claude Code file access to the active Main Branch package or source checkout | No (auto git-ignored by Claude Code) |
 | `local.yaml` | `~/.config/vip/` | Legacy machine-local fallback for user identity, engine path, and default repo | No |
 | `env.sh` | `~/.config/vip/` | API keys for optional research tools | No |
 | `config.yaml` | `[repo]/.vip/` | Legacy mixed repo config that must be audited before reuse | Maybe old repos tracked it |
@@ -58,7 +58,7 @@ business-repo/.claude/
 Created by `mb skill link` and `/mb-setup`. `/mb-start` can auto-repair missing
 links. Old clone-based repos may also have `.claude/lenses/` or
 `.claude/reference/` symlinks; those are legacy link dirs that `mb doctor
-repair` can move to backup when they point at stale engine clones.
+repair` can move to backup when they point at stale source checkouts.
 
 **Both are needed:**
 - `additionalDirectories` = file access (reading reference files across repos)

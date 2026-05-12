@@ -68,4 +68,4 @@ After core files are drafted, ask 3 quick questions to seed `visual-style.md`:
 2. "What are your brand colors?" (hex codes or descriptions)
 3. "What photography style fits?" (lifestyle/product/abstract/editorial)
 
-Use answers + audience data to generate a starter `visual-style.md` from the template at `templates/modules/brand-style-template.md` in the Main Branch engine. This file is consumed by `/mb-ads` (image prompts), `/mb-site` (CSS/design tokens), and `/mb-organic` (visual consistency).
+Use answers + audience data to generate a starter `visual-style.md` from the template at `templates/modules/brand-style-template.md` in the Main Branch package. This file is consumed by `/mb-ads` (image prompts), `/mb-site` (CSS/design tokens), and `/mb-organic` (visual consistency).

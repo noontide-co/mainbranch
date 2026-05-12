@@ -1,6 +1,6 @@
 # Engine Path Resolution
 
-Standard resolver for locating the Main Branch engine repo from a Claude Code session running inside a business repo. Used by `/mb-start`, `/mb-update`, legacy `/mb-pull`, `/mb-setup`, `/mb-help` (troubleshooting), and any reference file that needs to read or pull engine-side files.
+Standard resolver for locating the Main Branch package or source checkout from a Claude Code session running inside a business repo. Used by `/mb-start`, `/mb-update`, `/mb-setup`, `/mb-help` troubleshooting, and any reference file that needs to read installed Main Branch files.
 
 **Single source of truth.** Other reference files MUST link here rather than inline the snippet — the resolver semantics (and the order of fallbacks) need to stay in lockstep across the engine, and inline copies drift.
 
@@ -43,7 +43,8 @@ except: print('')
 fi
 ```
 
-After this block, `$ENGINE_PATH` is either a valid path to the Main Branch engine or empty.
+After this block, `$ENGINE_PATH` is either a valid Main Branch package or
+source-checkout path, or empty.
 
 **Always validate before use:**
 
@@ -68,7 +69,7 @@ The order matters: `settings.local.json` is harness-authoritative, `local.yaml` 
 | Symptom | Likely cause | Recovery |
 |---|---|---|
 | `$ENGINE_PATH` is empty | Neither fallback resolved | Run `mb skill link --repo .`, then restart Claude. Use `~/.config/vip/local.yaml` only as a legacy fallback. |
-| `$ENGINE_PATH` set but `.claude/skills/mb-start/SKILL.md` missing | Stale config pointing at a deleted / renamed checkout | Run `mb skill link --repo .`; it rewrites `.claude/settings.local.json` to the active engine and removes stale Main Branch engine paths. |
+| `$ENGINE_PATH` set but `.claude/skills/mb-start/SKILL.md` missing | Stale config pointing at a deleted / renamed checkout | Run `mb skill link --repo .`; it rewrites `.claude/settings.local.json` to the active Main Branch path and removes stale Main Branch paths. |
 | `python3` not found | Minimal environment | Document as a setup prerequisite (every Main Branch user needs python3 in `$PATH`). |
 | `yaml` import fails (fallback path only) | PyYAML not installed | The fallback is best-effort. Surface the underlying message and fall through to "no engine found" recovery. |
 | Resolved path readable but `git pull` fails | Auth / network / locked-file | Surface the warning from `pull-engine-updates.md` ("Common fixes" — GitHub Desktop, Skool subscription, network). |
@@ -88,7 +89,6 @@ A reference file that inlines the resolver and *also* customises it should comme
 ## Callers that link to this file
 
 - `.claude/skills/mb-update/SKILL.md`
-- `.claude/skills/mb-pull/SKILL.md` (legacy alias)
 - `.claude/skills/mb-setup/references/cwd-detection.md`
 - `.claude/skills/mb-help/references/troubleshooting.md` (skills-not-working + git-conflicts sections)
 - `.claude/reference/pull-engine-updates.md`
