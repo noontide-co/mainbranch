@@ -159,7 +159,8 @@ Detect mode from user's natural language:
 | "research", "investigate", "what do we know about" | Research | [research-phase.md](references/research-phase.md) |
 | "--brief-format=grok-8", "researched brief", "site brief", "launch brief" | Research Brief | [grok-8-brief-format.md](references/grok-8-brief-format.md) |
 | "what are people saying", "sentiment", "X/Twitter", "trending" | Research (Grok) | [grok-social.md](references/grok-social.md) |
-| "winning ads", "review mining", "customer language", "competitor ads", "comment mining", "analyze this VSL", "extract the pitch", "script teardown", "objection mining" | Research | [sales-video-research.md](references/sales-video-research.md) or [winning-ad-research.md](references/winning-ad-research.md) |
+| "analyze this VSL", "extract the pitch", "script teardown", "objection mining" | Research | [sales-video-research.md](references/sales-video-research.md) |
+| "winning ads", "review mining", "customer language", "competitor ads", "comment mining" | Research | [winning-ad-research.md](references/winning-ad-research.md) |
 | "keyword gate", "kill or build this offer", "search demand", "buyer intent", "validate paid traffic demand" | Keyword Gate Research | [keyword-gate.md](references/keyword-gate.md) |
 | "decide", "we chose", "document decision" | Decide | [decide-phase.md](references/decide-phase.md) |
 | "codify", "apply", "update reference files" | Codify | [codify-phase.md](references/codify-phase.md) |

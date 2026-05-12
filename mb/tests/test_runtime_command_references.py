@@ -21,10 +21,8 @@ GUIDED_ORCHESTRATION_CONTEXT_MARKERS = (
     "follows the same contract",
 )
 MB_VSL_COMPATIBILITY_MARKERS = (
-    "compatibility",
-    "router",
-    "route to",
-    "routes existing users",
+    "compatibility router",
+    "compatibility routing",
 )
 
 

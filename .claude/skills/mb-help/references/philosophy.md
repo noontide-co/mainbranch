@@ -48,7 +48,7 @@ You're not hoping AI "gets" your business. You're teaching it explicitly.
 
 ## The Interface is the Commodity
 
-There's a million ways to interact with your data:
+There's a million ways to work with your business memory:
 - Claude Code (Terminal or IDE)
 - Claude on your phone
 - ChatGPT with GitHub connected

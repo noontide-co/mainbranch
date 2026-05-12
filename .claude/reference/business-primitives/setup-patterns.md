@@ -103,8 +103,8 @@ interest, consideration, conversion, onboarding, engagement, and retention.
 landing pages, email sequences, sales pages, checkout, and onboarding.
 
 `core/operations/funnel/skool-surfaces.md` stores live about-page and pricing
-card copy for congruence checks across `/mb-ads`, `/mb-organic`, `/mb-site`,
-and `/mb-site`. Update it when the live about page, pricing tiers, or major
+card copy for congruence checks across `/mb-ads`, `/mb-organic`, and `/mb-site`.
+Update it when the live about page, pricing tiers, or major
 claims change.
 
 `core/operations/membership/pricing.md` captures price points, billing
