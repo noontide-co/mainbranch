@@ -401,7 +401,7 @@ If conversation compacts mid-setup:
 
 When an existing user wants to add another offer (says "I want to add another offer", "I have a second product", or similar), follow the migration guide.
 
-See **[references/migration-multi-offer.md](references/migration-multi-offer.md)** for the complete migration flow: detection, naming, atomic execution, brand-level offer.md creation, product-ladder.md, and commit.
+See **[references/migration-multi-offer.md](references/migration-multi-offer.md)** for the complete migration flow: detection, naming, atomic execution, brand-level offer.md creation, product-ladder.md, and the saved checkpoint.
 
 ---
 

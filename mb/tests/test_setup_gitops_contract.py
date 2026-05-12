@@ -35,6 +35,7 @@ def test_mb_setup_uses_checkpoint_first_save_guidance() -> None:
         "The planned `mb publish --plan` command",
         "packaged publish",
         "not shipped yet",
+        "and the saved checkpoint",
     ]
     for phrase in required_phrases:
         assert phrase in text
@@ -49,6 +50,7 @@ def test_mb_setup_does_not_teach_stale_business_repo_save_style() -> None:
         "[type] Brief description",
         "[refactor] Migrate to multi-offer structure",
         "Always use HEREDOC",
+        "and commit",
     ]
     for phrase in stale_phrases:
         assert phrase not in text
