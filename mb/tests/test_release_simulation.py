@@ -39,6 +39,8 @@ def test_release_simulation_tiers_have_expected_prompt_coverage() -> None:
     assert "rich_migration_triage_map" in {sim.id for sim in release}
     assert "conversion_video_natural_prompt_routing" in {sim.id for sim in prerelease}
     assert "conversion_video_natural_prompt_routing" in {sim.id for sim in release}
+    assert "bookkeeping_safety_handoff" in {sim.id for sim in prerelease}
+    assert "bookkeeping_safety_handoff" in {sim.id for sim in release}
     assert len(prerelease) >= 8
     assert len(release) >= 7
     assert sum(1 for sim in prerelease if sim.prompt.strip()) >= 6
@@ -101,6 +103,28 @@ def test_release_simulation_covers_conversion_video_natural_prompts() -> None:
     assert "compatibility router" in observed
     assert "loop_routing" in sim.expected_behaviors
     assert "ask_before_write" in sim.expected_behaviors
+
+
+def test_release_simulation_covers_bookkeeping_safety_handoff() -> None:
+    simulations = {
+        sim.id: sim for sim in release_simulation.simulations_for_tier("prerelease_candidate")
+    }
+
+    sim = simulations["bookkeeping_safety_handoff"]
+
+    prompt = sim.prompt.lower()
+    assert "hledger" in prompt
+    assert "real finance" in prompt
+    observed = " ".join(sim.must_observe).lower()
+    blocked = " ".join(sim.must_not).lower()
+    assert "mb books check" in observed
+    assert "mb connect" in observed
+    assert "mb educational hledger" in observed
+    assert ".mb/private/" in observed
+    assert "beancount" in blocked
+    assert "raw finance data" in observed
+    assert "bookkeeping_safety" in sim.expected_behaviors
+    assert "runtime_provider_honesty" in sim.expected_behaviors
 
 
 def test_release_simulation_parser_exposes_expected_tier_choices() -> None:
@@ -172,6 +196,21 @@ def test_score_transcript_uses_tighter_discovery_and_loop_keywords() -> None:
     assert generic_score["checks"]["loop_routing"]["ok"] is False
     assert routed_score["checks"]["skill_discovery"]["ok"] is True
     assert routed_score["checks"]["loop_routing"]["ok"] is True
+
+
+def test_score_transcript_checks_bookkeeping_safety_language() -> None:
+    generic = "Finance looks fine. Put your books in the repo and continue."
+    grounded = """
+    I ran mb books check and mb connect status. hledger is the bookkeeping rail,
+    real ledgers stay in the private books vault, and the summary evidence is
+    public-safe.
+    """
+
+    generic_score = release_simulation.score_transcript(generic)
+    grounded_score = release_simulation.score_transcript(grounded)
+
+    assert generic_score["checks"]["bookkeeping_safety"]["ok"] is False
+    assert grounded_score["checks"]["bookkeeping_safety"]["ok"] is True
 
 
 @pytest.mark.parametrize(

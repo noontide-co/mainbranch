@@ -23,6 +23,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   [`docs/reports/2026-05-12-books-check-dogfood.md`](docs/reports/2026-05-12-books-check-dogfood.md),
   and updated bundled skill archetype examples that still used Beancount as an
   active bookkeeping example.
+- Tightened the post-release alignment playbook so release simulation
+  transcript audits are a named post-release step, clarified GitHub/Linear
+  evidence routing, and added a packaged release simulation for hledger-backed
+  bookkeeping safety handoffs. Refs MAIN-328, #502.
 - Repositioned VSLs as reusable conversion knowledge inside `/mb-think`,
   `/mb-site`, `/mb-ads`, and `/mb-organic` workflows instead of a standalone
   business primitive. `/mb-vsl` remains as a compatibility router for existing

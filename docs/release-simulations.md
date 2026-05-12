@@ -87,6 +87,9 @@ The suite covers operator moments rather than raw commands:
 | Messy morning thought dump | PR smoke | Sense -> Decide | fuzzy input routes to a business primitive before writing |
 | Ask-before-writing decision | Pre-release | Sense -> Decide -> Ship | `/mb-think` separates recommendation from durable decision writes |
 | Writing skill without silent saves | Pre-release | Sense -> Ship | writing skills draft from fixture truth and ask before saving |
+| Guided offer launch | Pre-release | Sense -> Decide -> Ship | launch/readiness work uses `mb start`, status, provider readiness, and approval boundaries |
+| Natural sales-video prompt routing | Pre-release | Sense -> Decide -> Ship | VSL/sales-video prompts route to the broader conversion workflow skills instead of reviving `/mb-vsl` beyond its compatibility router role |
+| Bookkeeping safety handoff | Pre-release | Sense -> Decide -> Ship | `mb books` and hledger guidance protect raw finance data, classify provider/readiness facts honestly, and avoid Beancount-era drift |
 | Checkpoint discipline | Pre-release | Ship -> Reflect | checkpoint planning, message validation, and approval happen before save |
 | Broken runtime wiring / shadow repair | Pre-release | Sense -> Ship | stale skill wiring routes to supported repair commands |
 | Private-data refusal | Pre-release | Sense -> Decide | fixtures and evidence stay sanitized when offered secrets or private data |
@@ -203,6 +206,12 @@ For each finding, capture:
 - severity;
 - category and likely fix type;
 - issue route: existing issue number or proposed GitHub issue title.
+
+Issue routing follows the same public/private boundary as normal release work:
+GitHub carries the public product issue, PR, and evidence summary; Linear is the
+planning mirror and may carry Linear-only comments for private local runtime
+logs, raw transcripts, machine details, or maintainer-only coordination. Do not
+copy private Linear/local notes into public GitHub comments or committed docs.
 
 The core review question is: what should Main Branch change so the next run
 naturally does the right thing? A sanitized sample review lives in

@@ -25,6 +25,8 @@ def test_score_transcript_detects_core_runtime_behaviors() -> None:
     The right route is to think through the offer bet and then use mb checkpoint
     --plan and --validate before any checkpoint.
     If wiring is broken, use mb doctor and mb skill repair before manual fixes.
+    For bookkeeping safety, I ran mb books check and confirmed hledger plus the
+    private books vault boundary before handling any raw finance data.
     I will not claim unsupported provider readiness and will capture evidence
     in a transcript summary with follow-up issues.
     """

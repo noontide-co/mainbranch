@@ -26,11 +26,14 @@ next parallel batch:
 2. Align Linear and GitHub issue state: close the release-prep issue, comment
    release evidence on the issues whose work shipped, mark Linear issues
    shipped via Linear release completion (not on merge).
-3. Align repo docs and decisions if anything shipped changed the product
+3. Audit release simulation transcripts when the release touched package,
+   runtime, first-run, generated guidance, or operator workflow behavior. Use
+   the transcript audit below.
+4. Align repo docs and decisions if anything shipped changed the product
    stance. Use the alignment sweep below.
-4. Align local agent preferences if a new protocol, review habit, or
+5. Align local agent preferences if a new protocol, review habit, or
    cold-start behavior was learned. Use the local-preferences policy below.
-5. Start the next parallel batch.
+6. Start the next parallel batch.
 
 ## 2. Alignment sweep
 
@@ -57,7 +60,50 @@ Default to a small alignment PR labeled `[docs]`. If the sweep finds nothing
 worth changing, write that as a one-line comment on the release-prep issue
 and move on.
 
-## 3. Parallel work lanes
+## 3. Release Simulation Transcript Audit
+
+Run this audit after package-visible releases and after any release whose
+changes touched runtime claims, first-run handoff, generated instructions,
+release validation, or a core operator workflow.
+
+The audit asks a product question: what did the simulations prove, what did
+they fail to prove, and what should change before the next release naturally
+does the right thing?
+
+Use this sequence:
+
+1. Read the release simulation evidence under `.context/release-evidence/` or
+   the release-prep issue. Start from `summary.json`, `rubric.json`, transcript
+   excerpts, and `evidence-template.md`; do not rerun simulations just to
+   recover wording.
+2. Compare each run against `docs/release-simulations.md` transcript-review
+   categories and the manifest's `must_observe` / `must_not` rubric.
+3. Classify each miss as hard failure, quality concern, or product opportunity.
+   Name the likely fix type: skill prose, generated repo guidance, CLI gap,
+   docs gap, harness gap, runtime behavior, or user education.
+4. Route public product gaps to GitHub issues. Use `Closes #N` only when a PR
+   fully resolves the public issue; use `Refs #N` for partial slices.
+5. Keep private local runtime logs, raw transcripts, local machine details, and
+   maintainer-only notes out of GitHub and public docs. If the synced Linear
+   issue needs that context, add a Linear-only comment; otherwise keep it in
+   `.context/`.
+6. Update `docs/release-simulations.md`, the packaged simulation manifest, or
+   the dogfood harness only when the audit finds a repeatable gap that should
+   protect future releases.
+
+Write the result as either:
+
+- a public-safe report under `docs/reports/` when the findings should guide
+  future reviewers;
+- a concise GitHub issue comment when the release passed and no durable doc
+  change is needed;
+- a focused GitHub issue when the gap is real but belongs to a later branch.
+
+Do not make print-mode proxy evidence stronger than it is. If a release claim
+depends on slash-command discovery, the audit must say whether interactive
+Claude Code TUI evidence exists or why it was unavailable.
+
+## 4. Parallel work lanes
 
 Lanes that can usually run concurrently without merge chaos:
 
@@ -87,7 +133,7 @@ If a branch discovers it needs to touch a file owned by another in-flight
 branch, comment on the other branch's PR before editing. Do not silently
 race.
 
-## 4. AI code review ritual
+## 5. AI code review ritual
 
 When reviewing any PR, the reviewer (human or agent) checks:
 
@@ -114,7 +160,7 @@ When reviewing any PR, the reviewer (human or agent) checks:
 Quote only the changed behavior or the risky line in review comments. Do
 not restate the product stance — link the decision file or the doc.
 
-## 5. Local Preferences Alignment
+## 6. Local Preferences Alignment
 
 Local agent preferences live outside this public engine repo. This playbook
 does not own that private file. It owns the policy that governs what should
@@ -154,7 +200,7 @@ If the local preferences file lives in a separate private repo, open a
 private follow-up there for the change. Do not block this engine's release on
 edits to a separate repo's file.
 
-## 6. Current product stance checklist
+## 7. Current product stance checklist
 
 Use this list as a quick decision-alignment scan during alignment sweeps and
 code review. Each line is intentionally a one-line pointer; the durable
