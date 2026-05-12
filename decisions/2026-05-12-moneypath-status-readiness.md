@@ -110,9 +110,9 @@ averaged:
 - `0 missing`: no file, section, relationship, or linked object exists.
 - `1 stated`: a claim or object exists as loose text.
 - `2 structured`: expected fields, sections, or frontmatter are present.
-- `3 evidence-backed`: proof, examples, research, testimonials, typicality,
+- `3 evidence_backed`: proof, examples, research, testimonials, typicality,
   decision records, or source-backed notes support the object.
-- `4 field-tested`: real-world signals, push outcomes, sales/customer language,
+- `4 field_tested`: real-world signals, push outcomes, sales/customer language,
   conversion notes, or reviewed run records are tied to the object.
 - `5 instrumented`: offer, proof, CTA/page, channel, push/playbook, metric or
   measurement, and outcome feedback form a connected loop.

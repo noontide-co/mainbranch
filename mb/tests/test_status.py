@@ -372,6 +372,36 @@ def test_status_money_path_detects_multi_offer_product_ladder(tmp_path: Path, mo
     ladder = report["money_path"]["objects"]["product_ladder"]
     assert ladder["level"] >= 2
     assert ladder["paths"] == ["core/product-ladder.md"]
+    assert ladder["missing"] == []
+
+
+def test_status_money_path_product_ladder_names_missing_requirements(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+    offer = repo / "core" / "offers" / "community"
+    offer.mkdir(parents=True, exist_ok=True)
+    (offer / "offer.md").write_text(
+        (
+            "---\nslug: community\nstatus: running\n---\n\n"
+            "# Community\n\n"
+            "Audience, transformation, mechanism, pricing, next step.\n"
+        ),
+        encoding="utf-8",
+    )
+    (repo / "core" / "product-ladder.md").write_text(
+        "# Product ladder\n\nEntry offer only.\n",
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    ladder = report["money_path"]["objects"]["product_ladder"]
+    assert ladder["level"] == 1
+    assert ladder["missing"] == ["ascension_path", "retention_offer"]
 
 
 def test_status_money_path_flags_ambiguous_live_multi_offer(tmp_path: Path, monkeypatch) -> None:
@@ -456,6 +486,9 @@ def test_status_money_path_fully_connected_path_can_reach_instrumented(
     assert report["money_path"]["objects"]["page_readiness"]["level"] == 5
     assert report["money_path"]["objects"]["outcome_feedback_loop"]["level"] >= 3
     assert report["money_path"]["overall_level"] == 5
+    assert all(
+        action["id"] != "close-outcome-loop" for action in report["money_path"]["ranked_actions"]
+    )
 
 
 def test_status_vocabulary_falls_back_with_warnings_for_unknown_terms(

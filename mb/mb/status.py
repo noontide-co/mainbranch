@@ -59,8 +59,8 @@ MONEY_PATH_LEVEL_LABELS = {
     0: "missing",
     1: "stated",
     2: "structured",
-    3: "evidence-backed",
-    4: "field-tested",
+    3: "evidence_backed",
+    4: "field_tested",
     5: "instrumented",
 }
 MONEY_PATH_COMPONENTS = (
@@ -114,18 +114,11 @@ CTA_KEYWORDS = (
     "sign up",
     "schedule",
 )
-PRODUCT_LADDER_KEYWORDS = (
-    "entry",
-    "first step",
-    "ascension",
-    "retention",
-    "cross-sell",
-    "upgrade",
-    "feeds from",
-    "feeds into",
-    "price",
-    "paid",
-)
+PRODUCT_LADDER_REQUIREMENTS = {
+    "entry_step": ("entry", "first step", "front end", "lead magnet"),
+    "ascension_path": ("ascension", "cross-sell", "upgrade", "feeds from", "feeds into"),
+    "retention_offer": ("retention", "renewal", "continuity", "membership", "community"),
+}
 CHANNEL_KEYWORDS = (
     "paid",
     "organic",
@@ -1526,7 +1519,7 @@ def _money_path_product_ladder(repo: Path, *, multi_offer: bool) -> dict[str, An
             recommended_route="/mb-think",
         )
     text = "\n".join(_read_markdown_text(repo / path) for path in paths)
-    hits = [keyword for keyword in PRODUCT_LADDER_KEYWORDS if keyword in text.lower()]
+    hits = _keyword_hits(text, PRODUCT_LADDER_REQUIREMENTS)
     level = 2 if len(hits) >= 3 else 1
     return _money_path_object(
         level=level,
@@ -1536,9 +1529,7 @@ def _money_path_product_ladder(repo: Path, *, multi_offer: bool) -> dict[str, An
         else "Product ladder exists as loose text.",
         paths=paths,
         missing=[
-            item
-            for item in ("entry_step", "ascension_path", "retention_offer")
-            if item.replace("_", " ") not in " ".join(hits)
+            item for item in ("entry_step", "ascension_path", "retention_offer") if item not in hits
         ],
         evidence=[
             _money_path_evidence(
@@ -1982,7 +1973,10 @@ def _money_path_ranked_actions(
         component = objects.get(key) or {}
         level = int(component.get("level") or 0)
         missing = component.get("missing") or []
-        if level >= 2 and not (key == "outcome_feedback_loop" and overall_level >= 4):
+        if key == "outcome_feedback_loop":
+            if level != 0:
+                continue
+        elif level >= 2:
             continue
         actions.append(
             {
@@ -2039,7 +2033,7 @@ def _money_path(repo: Path, report: dict[str, Any]) -> dict[str, Any]:
     offer_paths = [str(path) for path in offer.get("paths") or [] if (repo / str(path)).is_file()]
     playbooks = _playbook_summaries(repo)
     multi_offer = bool(list(repo.glob("core/offers/*/offer.md")))
-    objects = {
+    collected_objects = {
         "customer_progress": _money_path_customer_progress(repo),
         "offer": offer,
         "audience": _money_path_audience(repo),
@@ -2062,6 +2056,7 @@ def _money_path(repo: Path, report: dict[str, Any]) -> dict[str, Any]:
             playbooks,
         ),
     }
+    objects = {component: collected_objects[component] for component in MONEY_PATH_COMPONENTS}
     overall_level = _money_path_overall_level(objects)
     return {
         "schema_version": MONEY_PATH_SCHEMA_VERSION,
