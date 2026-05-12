@@ -24,21 +24,6 @@ __pycache__/
 .agent/
 .context/
 .claude/*.lock
-# Main Branch local Claude wiring
+# Claude local runtime state
 .claude/settings.local.json
 .claude/worktrees/
-.claude/skills/mb-ads
-.claude/skills/mb-bet
-.claude/skills/mb-end
-.claude/skills/mb-help
-.claude/skills/mb-organic
-.claude/skills/mb-setup
-.claude/skills/mb-site
-.claude/skills/mb-skill-brief-draft
-.claude/skills/mb-skill-concept
-.claude/skills/mb-skill-review
-.claude/skills/mb-start
-.claude/skills/mb-status
-.claude/skills/mb-think
-.claude/skills/mb-update
-.claude/skills/mb-wiki

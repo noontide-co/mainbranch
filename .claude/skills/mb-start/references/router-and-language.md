@@ -100,9 +100,8 @@ or skill fixes; do not invent exact release notes.
 Use direct, non-technical language:
 
 > "Update strongly recommended: mb 0.3.15 -> 0.3.17. You are two versions behind,
-> and Main Branch is in active transition right now. This is a stability boost
-> for routing, repairs, and skills. I recommend updating before we continue.
-> Want me to update it for you? It should only take a second."
+> and the update brings recent routing, repair, and skill improvements. I
+> recommend updating before we continue. Want me to update it for you?"
 
 If the update is required, run or route to the cited update command before
 business work.
