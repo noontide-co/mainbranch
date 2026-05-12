@@ -135,10 +135,14 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert ".claude/settings.local.json" in gitignore
     assert ".claude/worktrees/" in gitignore
     assert ".claude/skills/mb-start" in gitignore
+    assert ".mb/private/" in gitignore
     assert ".mb/backups/" in gitignore
     assert ".mb/connect.yaml" in gitignore
     assert ".mb/onboarding.json" in gitignore
     assert ".mb/issue-drafts/" in gitignore
+    assert "*.journal" in gitignore
+    assert "*.hledger" in gitignore
+    assert "*.beancount" in gitignore
     assert ".vip/local.yaml" in gitignore
     claude_md = (target / "CLAUDE.md").read_text()
     agents_md = (target / "AGENTS.md").read_text()

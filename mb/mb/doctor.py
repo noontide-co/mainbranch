@@ -50,6 +50,7 @@ REPAIR_SCHEMA_VERSION = 1
 LOCAL_GITIGNORE_ENTRIES = (
     ".claude/settings.local.json",
     ".claude/worktrees/",
+    ".mb/private/",
     ".mb/backups/",
     ".mb/connect.yaml",
     ".mb/onboarding.json",
@@ -58,6 +59,7 @@ LOCAL_GITIGNORE_ENTRIES = (
     ".vip/local.yaml",
 )
 LOCAL_STATE_PATHS = (
+    ".mb/private",
     ".mb/backups",
     ".mb/connect.yaml",
     ".mb/onboarding.json",

@@ -40,6 +40,8 @@ DEFAULT_GITIGNORE = """\
 # Main Branch defaults
 .env
 .env.*
+*.journal
+*.hledger
 *.beancount
 .DS_Store
 __pycache__/
@@ -49,6 +51,7 @@ __pycache__/
 node_modules/
 .venv/
 .claude/worktrees/
+.mb/private/
 .mb/backups/
 .mb/connect.yaml
 .mb/onboarding.json
