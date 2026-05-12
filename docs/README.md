@@ -28,6 +28,7 @@ Pick the route that matches what you are doing.
 ### Operating the daily loop
 
 - [`operator-loops.md`](operator-loops.md) — how operator work moves through Sense, Decide, Ship, Reflect.
+- [`content-strategy.md`](content-strategy.md) — layered content, distribution, channel, account, person, push, and results model.
 - [`playbooks.md`](playbooks.md) — reusable operating recipes and run records.
 - [`books.md`](books.md) — bookkeeping safety, hledger, and the private ledger vault model.
 - [`onboarding-progress.md`](onboarding-progress.md) — lifecycle skill resume surface.

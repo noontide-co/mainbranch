@@ -72,6 +72,12 @@ Use this order when an offer feels fuzzy:
 7. Write the page, ad, video, or content angle from that source truth.
 8. After traffic or sales calls, update the offer from evidence.
 
+Content strategy depends on this source truth. Before scaling blog, wiki,
+changelog, email, social, community, or partner distribution, make sure the
+content strategy can point back to a clear audience, offer, mechanism, proof,
+and next step. See [`content-strategy.md`](content-strategy.md) for the layered
+content, channel, account, person, push, and results model.
+
 ## Evidence Over Time
 
 Offer sharpening continues after launch. Useful signals include:

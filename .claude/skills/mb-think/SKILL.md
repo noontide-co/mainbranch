@@ -117,7 +117,7 @@ bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
 files: write once to the current `core/` path and never ask the user to edit
 both.
 
-**Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
+**Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`. See [codify-phase.md](references/codify-phase.md) for content strategy layers.
 **Offer-aware files:** `offer.md`, `audience.md`
 **Proof files:** company-wide proof uses `core/proof/testimonials.md`,
 `core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof
@@ -166,7 +166,7 @@ Detect mode from user's natural language:
 | "decide", "we chose", "document decision" | Decide | [decide-phase.md](references/decide-phase.md) |
 | "codify", "apply", "update reference files" | Codify | [codify-phase.md](references/codify-phase.md) |
 | "add context", "enrich", "I have new info" | Codify | [codify-phase.md](references/codify-phase.md) |
-| "content strategy", "pillars", "what platforms", "content plan", "cadence" | Full Flow (codify to content-strategy.md) | [codify-phase.md](references/codify-phase.md) |
+| "content strategy", "pillars", "what platforms", "content plan", "cadence", "channel strategy", "account strategy", "founder voice", "weekly content plan" | Full Flow (codify to the right content strategy layer) | [codify-phase.md](references/codify-phase.md) |
 | "where was I", "continue", "pick up" | Recovery | [recovery.md](references/recovery.md) |
 | "here's a PDF", "ingest this", "convert this document", file path (.pdf/.docx/.pptx) | Document Ingestion | [document-ingestion.md](references/document-ingestion.md) |
 
@@ -256,8 +256,8 @@ ls core/content-strategy.md 2>/dev/null
 | Recent research, no decision | "You have research on [topic]. Ready to make a decision?" |
 | Proposed decision | "Decision [topic] is proposed. Ready to accept it?" |
 | Accepted decision (not yet codified) | "Decision [topic] is accepted. Ready to codify the changes into reference files?" |
-| content-strategy.md exists but empty/thin | "Your content strategy file is a skeleton. Want to fill it in? We can derive pillars from your soul.md + offer.md + audience.md." |
-| content-strategy.md missing (community biz) | "You don't have a content strategy yet. Want to build one? It'll define your pillars, platforms, and cadence." |
+| content-strategy.md exists but empty/thin | "Your content strategy file is a skeleton. Want to fill it in? We can define the known-for target, pillars, asset jobs, and distribution links from your offer, audience, proof, and voice." |
+| content-strategy.md missing (community biz) | "You don't have a content strategy yet. Want to build one? It'll define what you want to be known for, your pillars, asset jobs, and distribution layers." |
 | skool-surfaces.md missing (community biz with live Skool) | "Your Skool about page and pricing card copy aren't in reference yet. Want to add them? Skills check this for congruence." |
 | `core/offers/` exists | Multi-offer repo. Use a future `mb` JSON active-offer field if present. Otherwise ask which offer this research/decision is about; do not silently route from `.vip/local.yaml`. |
 | Nothing in progress | "What are you trying to figure out?" |
@@ -363,7 +363,7 @@ See [decide-phase.md](references/decide-phase.md) for format details.
 
 Apply changes described in `## What Changes` to reference files. Mark decision as codified.
 
-**Codify targets include:** `core/*.md`, `core/voice.md` (named enemies section — each content pillar fights a named concept enemy), `core/offers/[active]/offer.md`, `core/offers/[active]/audience.md` (when multi-offer), `core/proof/angles/*.md` (evolving library — new angles add, never replace), `core/proof/testimonials.md`, `core/proof/typicality.md` (aggregate outcome and average-case context), `core/offers/[active]/proof/` (offer-specific proof), **`core/content-strategy.md`** (pillars, hooks library, framework library, metrics — saves are #1 purchase intent signal), `core/operations/funnel/skool-surfaces.md` (live Skool copy — update when about page or pricing changes), `core/product-ladder.md` (when multi-offer, cross-offer decisions), and `bets/` only when updating the live wager or verdict.
+**Codify targets include:** `core/*.md`, active offer/audience files, proof files, `core/content-strategy.md`, `core/marketing/...`, `core/people/...`, `core/operations/funnel/skool-surfaces.md`, `core/product-ladder.md`, and `bets/` only when updating the live wager or verdict. See [codify-phase.md](references/codify-phase.md) for layer-specific rules.
 
 ---
 

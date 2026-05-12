@@ -298,7 +298,10 @@ See **[references/file-education.md](references/file-education.md)** for the edu
 Based on business type, create useful operating folders:
 
 **E-commerce:** `core/operations/products/`, `core/operations/fulfillment/`
-**Community:** `core/operations/classroom/`, `core/operations/membership/`, `core/operations/funnel/`, `core/content-strategy.md`, `core/operations/funnel/skool-surfaces.md`
+**Community/content-led:** `core/operations/classroom/`,
+`core/operations/membership/`, `core/operations/funnel/`,
+`core/content-strategy.md`, optional `core/marketing/` and `core/people/`
+layers, `core/operations/funnel/skool-surfaces.md`
 
 See `.claude/reference/business-primitives/setup-patterns.md` in the Main
 Branch engine for current setup patterns. Historical engine builds may still
@@ -430,10 +433,10 @@ Once setup is complete, tell the user:
 >
 > **Key skills to try:**
 > - `/mb-think` — Research topics, make decisions, update reference
-> - `/mb-think` — Build your content strategy (pillars, platforms, cadence) — start here after core files are solid
+> - `/mb-think` — Build your content strategy (known-for target, pillars, channels, accounts, cadence) — start here after core files are solid
 > - `/mb-ads` — Generate image ads, video scripts, or review for compliance
 > - `/mb-site` — Build pages and owned-surface sales videos/VSLs
-> - `/mb-organic` — Create social content aligned to your content pillars
+> - `/mb-organic` — Create organic content aligned to your content strategy
 > - `/mb-help` — Get answers anytime you're stuck
 >
 > **The core loop:** Use `/mb-think` regularly. Research → Decide → Codify. This is how your core files get smarter over time.

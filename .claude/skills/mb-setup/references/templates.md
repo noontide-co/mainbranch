@@ -307,6 +307,26 @@ status: draft
 
 # Content Strategy
 
+Use this as the simple solo-operator strategy and index. If platform/account
+detail gets too crowded, split it into:
+
+- `core/marketing/distribution-strategy.md`
+- `core/marketing/channels/<channel>.md`
+- `core/marketing/accounts/<platform>-<account>.md`
+- `core/people/<person>.md`
+
+## Recognition Target
+
+- **What we want to be known/recommended for:**
+- **Primary audience:**
+- **Primary offer or category:**
+- **Do not publish:**
+
+## Asset Jobs
+
+Name the primary job before writing: rank, teach, prove, compare, convert,
+announce, or start a conversation.
+
 ## Content Pillars
 <!-- 3-5 pillars derived from soul.md + offer.md + audience.md -->
 <!-- Each pillar must pass the triple test:
@@ -461,6 +481,111 @@ status: draft
 
 ### Data Hooks
 <!-- e.g., "97% of people who try X never see results. Here's why." -->
+```
+
+---
+
+## core/marketing/distribution-strategy.md
+
+```markdown
+---
+type: distribution_strategy
+status: draft
+---
+
+# Distribution Strategy
+
+## How Channels Work Together
+
+## Cadence
+
+## What Gets Distributed Where
+
+## What Gets Logged
+```
+
+---
+
+## core/marketing/channels/[channel].md
+
+```markdown
+---
+type: channel_strategy
+status: draft
+channel: x
+last_reviewed:
+owner:
+update_trigger:
+source_links: []
+---
+
+# X Channel Strategy
+
+## What Works Here
+
+## Norms And Rules
+
+## Timing Notes
+
+## Good Fits
+
+## Never Do
+
+## Recent Learnings
+
+## What Changed Since Last Review
+```
+
+---
+
+## core/marketing/accounts/[platform]-[account].md
+
+```markdown
+---
+type: account_strategy
+status: draft
+platform: x
+account:
+voice_source: core/people/[person].md
+channel_strategy: core/marketing/channels/x.md
+---
+
+# [Platform] [Account] Strategy
+
+## Audience
+
+## Allowed Topics
+
+## Voice And Boundaries
+
+## Cadence And Content Mix
+
+## CTA Path
+
+## Offers Or Pages This Account Can Point To
+```
+
+---
+
+## core/people/[person].md
+
+```markdown
+---
+type: person
+status: draft
+---
+
+# [Person]
+
+## Voice
+
+## Beliefs
+
+## Stories And Experience
+
+## Proof This Person Can Draw From
+
+## Do Not Fabricate
 ```
 
 ---

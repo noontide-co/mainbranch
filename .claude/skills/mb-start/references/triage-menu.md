@@ -61,11 +61,12 @@ offer selection in the same turn.
 > 2. Enrich the core (research, decide, codify) → `/mb-think`
 > 3. Create ads (image or video) → `/mb-ads`
 > 4. Build a conversion surface (site or video ad) → `/mb-site` or `/mb-ads`
-> 5. Create organic content → `/mb-organic`
-> 6. Work on my wiki → `/mb-wiki`
-> 7. Build/update a site → `/mb-site`
-> 8. Add more context → `/mb-think codify`
-> 9. Get help → `/mb-help`
+> 5. Plan content strategy, channels, or weekly distribution → `/mb-think`
+> 6. Create organic content → `/mb-organic`
+> 7. Work on my wiki → `/mb-wiki`
+> 8. Build/update a site → `/mb-site`
+> 9. Add more context → `/mb-think codify`
+> 10. Get help → `/mb-help`
 >
 > (hit a number, or just tell me what you need)"
 

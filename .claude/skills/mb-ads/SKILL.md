@@ -336,6 +336,12 @@ files: read through them only as fallback, and never ask the user to update both
 paths.
 
 **Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
+**Content strategy layers:** when present, use
+`core/marketing/distribution-strategy.md`,
+`core/marketing/channels/<channel>.md`,
+`core/marketing/accounts/<platform>-<account>.md`, and
+`core/people/<person>.md` to understand where paid amplification fits after
+owned or organic assets have a clear job.
 **Offer-aware files:** `offer.md`, `audience.md`
 **Proof files:** company-wide proof in `core/proof/testimonials.md`,
 `core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof in
@@ -360,13 +366,17 @@ Before creating ads, the business repo must have:
 | Typicality | `core/proof/typicality.md` + offer-specific typicality when present | Recommended |
 | Angles | `core/proof/angles/*.md` | Yes (at least 1) |
 | Visual Style | `core/brand/visual-style.md` | Optional (affects image gen) |
-| Content Strategy | `core/content-strategy.md` (always brand-level) | Optional (improves topic selection) |
+| Content Strategy | `core/content-strategy.md` plus relevant `core/marketing/...` and `core/people/...` layers | Optional (improves topic and amplification fit) |
 | Skool Surfaces | `core/operations/funnel/skool-surfaces.md` | Optional (congruence check) |
 | Ad Account Access | `mb status --json --peek` + `mb connect doctor --json` | Optional (enables live performance data) |
 
 If required files are missing, Step 0 pre-flight catches this and routes appropriately.
 
-**Content funnel awareness:** Ads are the "immediate ROI" pillar of the two-pillar value prop (ads + content). In the content pipeline, ads drive newsletter signups, newsletter nurtures, Skool trial converts, revenue follows. If `content-strategy.md` exists, use content pillars to inform angle selection, metrics to understand what performs organically (ads amplify top-performing organic content), and funnel mapping to determine whether ads should target awareness, consideration, or conversion.
+**Content funnel awareness:** Ads are the immediate ROI pillar beside owned and
+organic content. If content strategy files exist, use the known-for target,
+pillars, asset jobs, channel/account strategy, and performance notes to decide
+whether paid work should create demand, amplify proven organic/owned assets, or
+drive a direct conversion path.
 
 **Skool surface congruence:** If `core/operations/funnel/skool-surfaces.md` exists, check it before finalizing any batch. Ad copy must not promise anything not visible on the Skool about page or pricing cards. Pricing mentioned in ads must match current tier structure. Language and framing should echo (not contradict) the about page positioning. The about page is the FIXED surface — ads are the VARIABLE surface.
 

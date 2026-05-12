@@ -16,6 +16,15 @@ Before using `/mb-organic`, you need three files in your business repo:
 
 **Don't have these?** Run `/mb-setup` first.
 
+Recommended when available:
+
+| File | What It Adds |
+|------|--------------|
+| `core/content-strategy.md` | Recognition target, pillars, asset jobs, and non-publishing rules |
+| `core/marketing/channels/<channel>.md` | Platform norms, timing, content fit, and update triggers |
+| `core/marketing/accounts/<platform>-<account>.md` | Account-specific audience, CTA path, cadence, and allowed topics |
+| `core/people/<person>.md` | Founder/person beliefs, stories, voice source material, and fabrication boundaries |
+
 **Want to mine competitors first?** Use `/mb-think` to research competitor content. Mining saves to `research/`, then `/mb-organic` generates from that research.
 
 ---
@@ -227,5 +236,5 @@ Or run `/mb-think research "content ideas for [your niche]"` to brainstorm.
 |-------|---------------------|
 | `/mb-ads video` | Paid video ads |
 | `/mb-ads static` | Paid image ads |
-| `/mb-think` | Researching content strategy |
+| `/mb-think` | Researching content, distribution, channel, account, or person voice strategy |
 | `/mb-think codify` | Adding more voice/context (see `mb-think/references/codify-phase.md`) |

@@ -146,6 +146,12 @@ files. Read through them only as fallback, and write once to the current
 `core/` path when reference updates are needed.
 
 **Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
+**Content strategy layers:** read `core/marketing/distribution-strategy.md`,
+`core/marketing/channels/<channel>.md`,
+`core/marketing/accounts/<platform>-<account>.md`, and
+`core/people/<person>.md` when the run names a channel, account, founder, or
+weekly content plan that depends on them. Do not copy person voice into every
+account file; reference it.
 **Offer-aware files:** `offer.md`, `audience.md`
 **Proof files:** company-wide proof in `core/proof/testimonials.md`,
 `core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof in
@@ -161,7 +167,12 @@ If offer specified, it selects the offer for this run only.
 
 Requires `core/voice.md` (always core), plus resolved `offer.md` and `audience.md` (offer-aware — checks `core/offers/[active]/` first, falls back to `core/`).
 
-**Optional but recommended:** `core/content-strategy.md` — If present, /mb-organic reads content pillars to align generated content and platform strategy for format selection. Note that `content-strategy.md` is brand-level, but content can be offer-specific. Works perfectly without it.
+**Optional but recommended:** `core/content-strategy.md` — If present,
+/mb-organic reads the recognition target, pillars, asset jobs, non-publishing
+rules, and strategy links. If the repo has
+`core/marketing/distribution-strategy.md`, channel files, account files, or
+`core/people/<person>.md`, read the relevant ones before drafting. Works
+perfectly without them.
 
 **Congruence check:** If `core/operations/funnel/skool-surfaces.md` exists, read it. Organic content should echo the same positioning and claims visible on the Skool about page and pricing cards. No contradictions between organic and the landing experience.
 
@@ -209,10 +220,10 @@ Which works better for you?
 Check for existing mined concepts, pick one, generate scripts.
 
 ```
-Check research/ -> Check content-strategy.md (if exists, suggest pillar-aligned topic) -> Select concept -> Generate -> Output
+Check research/ -> Check content-strategy.md and relevant strategy layers (if present) -> Select concept -> Generate -> Output
 ```
 
-If content-strategy.md exists and has pillars defined, suggest topics aligned to those pillars when the user has no specific concept in mind.
+If content-strategy.md exists and has pillars or asset jobs defined, suggest topics aligned to those pillars when the user has no specific concept in mind.
 
 If no mining exists, prompt: "No mined concepts found. Want to mine competitors first? That's `/mb-think` — should I switch you over?"
 
@@ -260,7 +271,8 @@ Campaign name is REQUIRED. Ask user if not provided. Examples: `january-hooks`, 
 2. Check `pushes/*-organic-*/` — What scripts exist? Treat `campaigns/` as a legacy fallback only.
 3. Don't suggest re-mining same handles from today
 4. Recommend generating from existing mining if concepts unused
-5. Check `core/content-strategy.md` — What pillars are defined? What platform is the target?
+5. Check `core/content-strategy.md` — What recognition target, pillars, asset jobs, and strategy links are defined?
+6. If the channel/account/person is named, check the matching `core/marketing/` and `core/people/` files before drafting.
 
 **Example context-aware response:**
 ```
@@ -353,13 +365,17 @@ To save winning angles: route to `/mb-think codify` → `core/proof/angles/`.
 If `core/content-strategy.md` exists, /mb-organic uses it to improve output:
 
 - **Pillar alignment:** Suggest topics from defined pillars when user has no specific concept
-- **Platform format:** Default to the format matching the target platform from platform strategy
+- **Asset job:** Identify whether the piece should rank, teach, prove, compare, convert, announce, or start a conversation
+- **Platform format:** Default to the format matching the target platform from channel or distribution strategy
+- **Account fit:** Use account strategy for allowed topics, CTA path, cadence, and content mix when present
+- **Person voice:** Use `core/people/<person>.md` for founder/person beliefs, stories, and fabrication boundaries when an account references it
 - **Content mix:** Track which pillar types have been generated recently to maintain ratio balance
 - **Hooks library:** Pull proven hooks from the hooks library section if populated
 - **Enemy-pillar mapping:** Each pillar fights a named enemy. Content should position against the enemy. Check voice.md for declared enemies.
 - **Saves-first metrics:** Weight save-ability highest when evaluating content concepts. Saveable = educational, actionable, reference-worthy.
 
-If content-strategy.md does not exist, /mb-organic works exactly as before -- from mined concepts or user-provided topics. No warnings, no degradation.
+If content strategy files do not exist, /mb-organic works exactly as before --
+from mined concepts or user-provided topics. No warnings, no degradation.
 
 ---
 
