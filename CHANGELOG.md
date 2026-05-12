@@ -11,6 +11,21 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added a Mermaid-powered Main Branch system map with source-of-truth tables
+  for architecture boundaries, provider rails, private data, validation, and
+  runtime stance. Refs MAIN-339, #519.
+- Added an offer-sharpening guide and shared conversion reference so `/mb-think`,
+  `/mb-site`, `/mb-ads`, `/mb-organic`, sales-video routing, and launch
+  orchestration use the same offer rubric, style spectrum, evidence boundary,
+  and stop conditions before scaling pages, ads, videos, or launch work. Refs
+  MAIN-336, #516.
+- Added a public-safe v0.3.18 post-release transcript review report that records
+  the PyPI release-acceptance evidence, print-mode proxy limits, and follow-up
+  harness gap, and linked it from the release simulation transcript-review
+  guidance. Refs MAIN-340, #521, #526.
+
 ## [0.3.18] - 2026-05-12
 
 v0.3.18 is a package-visible skill and operator-loop patch. It strengthens
@@ -21,9 +36,6 @@ aliases.
 
 ### Added
 
-- Added a Mermaid-powered Main Branch system map with source-of-truth tables
-  for architecture boundaries, provider rails, private data, validation, and
-  runtime stance. Refs MAIN-339, #519.
 - Added `docs/agent-cold-start.md` as the public source for agent read order,
   progressive discovery, release-doc boundaries, and the local preference split,
   so maintainer-local preferences can stay short and private. Refs MAIN-330,
@@ -32,11 +44,6 @@ aliases.
   intent routing, bookkeeping/books setup, provider setup, save/sync wording,
   stronger update posture, and the rule that generic "set up" must not override
   the user's specific business noun. Refs MAIN-333, #511.
-- Added an offer-sharpening guide and shared conversion reference so `/mb-think`,
-  `/mb-site`, `/mb-ads`, `/mb-organic`, sales-video routing, and launch
-  orchestration use the same offer rubric, style spectrum, evidence boundary,
-  and stop conditions before scaling pages, ads, videos, or launch work. Refs
-  MAIN-336, #516.
 
 ### Changed
 
