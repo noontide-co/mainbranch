@@ -2072,7 +2072,7 @@ def test_build_git_summary_reads_in_business_language() -> None:
     )
     assert "separate workspace" in on_branch
     assert "3 unsaved local files" in on_branch
-    assert "local and shared saved work to reconcile" in on_branch
+    assert "local and shared saved work need reconciliation" in on_branch
 
     detached = status_mod._build_git_summary(
         workflow_mode="detached",
@@ -2083,7 +2083,7 @@ def test_build_git_summary_reads_in_business_language() -> None:
         behind=None,
     )
     assert "detached" in detached.lower()
-    assert "Switch back to your main workspace" in detached
+    assert "Switch back to a named workspace" in detached
 
 
 def test_git_info_solo_on_main_without_remote(tmp_path: Path) -> None:

@@ -176,7 +176,7 @@ def _build_git_summary(
     behind: int | None,
 ) -> str:
     if workflow_mode == "detached":
-        return "This workspace is detached. Switch back to your main workspace before saving."
+        return "This workspace is detached. Switch back to a named workspace before saving."
     if not workflow_mode:
         return ""
 
@@ -194,7 +194,7 @@ def _build_git_summary(
     else:
         parts.append("with no unsaved local changes")
     if ahead and behind:
-        parts.append("with local and shared saved work to reconcile")
+        parts[-1] += "; local and shared saved work need reconciliation"
     elif ahead:
         plural = "" if ahead == 1 else "s"
         parts.append(f"with {ahead} saved checkpoint{plural} waiting to sync")
