@@ -157,7 +157,7 @@ jobs:
           echo "name=Main Branch $version" >> "$GITHUB_OUTPUT"
 
       - name: Sync issues into Linear release
-        uses: linear/linear-release-action@v0
+        uses: linear/linear-release-action@v0.10.0
         with:
           access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
           command: sync
@@ -165,7 +165,7 @@ jobs:
           version: ${{ steps.meta.outputs.tag }}
 
       - name: Mark Linear release as released
-        uses: linear/linear-release-action@v0
+        uses: linear/linear-release-action@v0.10.0
         with:
           access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
           command: complete
