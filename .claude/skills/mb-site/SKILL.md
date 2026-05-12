@@ -76,7 +76,7 @@ Say `/mb-site` again after compaction, context loss, or switching focus. It relo
 
 ## Start Every Run
 
-1. Load [`references/pull-engine-updates.md`](references/pull-engine-updates.md) and run the standard update check.
+1. Load [`references/pull-engine-updates.md`](references/pull-engine-updates.md) and run the standard Main Branch update check.
 2. Detect business repo mode vs site repo mode. Load [`references/site-repo-workflow.md`](references/site-repo-workflow.md) for repo boundaries, source links, and reverse site records.
 3. When a business repo is known, run `mb status --json --peek` and use its `readiness`, `drift.items`, `integrations`, `measurement`, and `ranked_actions` facts before inventing setup, provider, or launch-readiness checks in prose.
 4. Before any domain purchase, DNS, Cloudflare Pages project, custom-domain attach, or deploy work, run `mb connect doctor --json` from the business repo and check `provider:cloudflare`.

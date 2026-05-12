@@ -386,21 +386,21 @@ Beyond the composite score, some skills have specific requirements. Check these 
 
 **If content-strategy.md missing:** "Organic content works best with a content strategy. Want to build one through /mb-think? It defines your pillars, platforms, and cadence."
 
-### Sales video / VSL outputs
+### Conversion script outputs
 
 | Requirement | Minimum | Why |
 |-------------|---------|-----|
-| offer.md | Score 3 | Sales videos need pricing, mechanism, guarantee, full offer stack |
+| offer.md | Score 3 | Conversion scripts need pricing, mechanism, guarantee, full offer stack |
 | audience.md | Score 2+ | Needs psychographics for pain/desire framing |
 
 Route by surface after the readiness check:
 
-- Page, about-page, lander, or embedded sales video: `/mb-site`
+- Page, about-page, lander, or embedded conversion script: `/mb-site`
 - Paid long-form video ad or hook variants: `/mb-ads`
 - Teardown, pitch extraction, objection mining, or codification: `/mb-think`
 - Clips, excerpts, or short-form repurposing: `/mb-organic`
 
-**If offer thin:** "Sales video scripts need a complete offer -- pricing, mechanism, guarantee. Your offer.md needs more depth. Route to /mb-think to flesh it out?"
+**If offer thin:** "Conversion scripts need a complete offer -- pricing, mechanism, guarantee. Your offer.md needs more depth. Route to /mb-think to flesh it out?"
 
 ### /mb-site
 
@@ -494,7 +494,7 @@ Still show what would reach 18. **Beginner/intermediate get the gap display belo
 > "**Repo Health: FULL** (16/18)
 >
 > **Gaps:**
-> - **testimonials.md** (2/3): 7 testimonials. 10+ gives /mb-ads and sales-video outputs more proof options. Have any recent wins?
+> - **testimonials.md** (2/3): 7 testimonials. 10+ gives /mb-ads and conversion outputs more proof options. Have any recent wins?
 > - **angles/** (1/3): 1 angle file. 4+ lets you test different emotional entry points in ads. Want to build another?"
 
 ### When Score Is 18/18
@@ -575,10 +575,10 @@ Use these tables to determine the specific gap language for each file at each sc
 
 | Score | What's Missing | Actionable Gap | Question to Ask |
 |-------|---------------|----------------|-----------------|
-| 0 | File doesn't exist | "No offer.md. /mb-ads, /mb-site, and sales-video outputs can't generate without knowing what you sell." | "What do you sell? What transformation does the buyer get? What does it cost?" |
+| 0 | File doesn't exist | "No offer.md. /mb-ads, /mb-site, and conversion outputs can't generate without knowing what you sell." | "What do you sell? What transformation does the buyer get? What does it cost?" |
 | 1 | <20 lines | "offer.md exists but is missing: [check for Pricing, Mechanism, Guarantee, Value Stack sections]." | "Your offer mentions [what exists] but I don't see [missing section]. What's your guarantee? What makes your mechanism unique?" |
-| 2 | 20-80 lines, developing | "offer.md is developing. [Specific weak area: e.g., 'Mechanism section is one sentence -- this is what makes sales-video scripts compelling.']" | "Walk me through HOW your product/service actually works. What's the step-by-step transformation?" |
-| 3 | Strong | "offer.md is strong. Ready for /mb-ads, /mb-site, and sales-video outputs." | No question. Note if Price section hasn't been updated in 60+ days. |
+| 2 | 20-80 lines, developing | "offer.md is developing. [Specific weak area: e.g., 'Mechanism section is one sentence -- this is what makes conversion scripts compelling.']" | "Walk me through HOW your product/service actually works. What's the step-by-step transformation?" |
+| 3 | Strong | "offer.md is strong. Ready for /mb-ads, /mb-site, and conversion outputs." | No question. Note if Price section hasn't been updated in 60+ days. |
 
 ### audience.md
 
@@ -602,7 +602,7 @@ Use these tables to determine the specific gap language for each file at each sc
 
 | Score | What's Missing | Actionable Gap | Question to Ask |
 |-------|---------------|----------------|-----------------|
-| 0 | File doesn't exist | "No testimonials. /mb-ads and sales-video outputs are dramatically weaker without proof." | "Do you have any testimonials, screenshots, DMs, or reviews? Even 2-3 is a strong start." |
+| 0 | File doesn't exist | "No testimonials. /mb-ads and conversion outputs are dramatically weaker without proof." | "Do you have any testimonials, screenshots, DMs, or reviews? Even 2-3 is a strong start." |
 | 1 | <5 testimonials | "[N] testimonials. More variety = more angles for ads." | "Any testimonials that specifically mention [the transformation from offer.md]? Those are highest value." |
 | 2 | 5-10 testimonials | "Good proof base. Consider: are there testimonials that support each angle in proof/angles/?" | "Which of your testimonials surprises you most? Which one do people respond to when you share it?" |
 | 3 | Strong (10+) | "Strong proof base." | No question unless typicality.md is missing: "You have strong testimonials but no typicality data. For FTC-safe outcome claims, we'd need average results." |

@@ -1,12 +1,13 @@
 ---
 name: mb-update
-description: Update Main Branch. Use when the user says update, upgrade, pull latest, get latest Main Branch, asks whether they are current, or after Devon announces a new release. Preferred over legacy /mb-pull.
+description: Update Main Branch. Use when the user says update, upgrade, pull latest, get latest Main Branch, asks whether they are current, or after Devon announces a new release.
 loops: [ship]
 ---
 
 # Update
 
-Update the Main Branch engine and refresh this business repo's skill links.
+Update the installed Main Branch CLI and skills, then refresh this business
+folder's Claude Code links.
 
 Use this instead of asking the user to remember whether they installed with
 pipx or an old clone. The CLI owns the mechanics. Do not suggest raw package
@@ -14,14 +15,14 @@ commands such as `pipx upgrade mainbranch` as the first update path; only use
 that as the bootstrap fallback when `mb update` is unavailable or the installed
 version is `0.1.x`.
 
-**CLI facts first:** Run `mb update --repo . --json` from the business repo and
-use its result before giving install-mode advice.
+**CLI facts first:** Run `mb update --repo . --json` from the business folder
+and use its result before giving install-mode advice.
 
 ---
 
 ## Step 1: Update Main Branch
 
-Run from the business repo:
+Run from the business folder:
 
 ```bash
 mb update --repo . --json 2>&1

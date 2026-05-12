@@ -6,7 +6,7 @@ Main Branch is built by its community. If you want to contribute back, here's ho
 
 ## What Contributors Do
 
-Contributors help improve the Main Branch engine for everyone:
+Contributors help improve Main Branch for everyone:
 
 - **Skills** - Build new skills or improve existing ones
 - **Frameworks** - Add compliance frameworks, review lenses

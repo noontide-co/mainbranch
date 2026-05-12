@@ -80,30 +80,15 @@ accepts that change.
 ---
 
 ### /mb-ads - Ad Generation and Review
-**Use when:** Need copy for static ads, video ad scripts, paid sales videos, long-form conversion video creative, or compliance review.
+**Use when:** Need copy for static ads, video scripts, long-form conversion creative, or compliance review.
 
 **Modes:**
 - `/mb-ads` or `/mb-ads static` - Image ad copy (primaries, headlines, image prompts)
 - `/mb-ads video` - Video ad scripts (15-60 seconds, UGC style)
-- `/mb-ads` with "video ad script" or "paid sales video" - Long-form conversion video creative
+- `/mb-ads` with "video ad script" - Long-form conversion video creative
 - `/mb-ads review` - Multi-lens compliance check (FTC, Meta policy, copy quality)
 
 **Output:** Multiple concepts with variations.
-
----
-
-### Sales Videos / VSLs - Conversion Output
-**Use when:** Need a sales video, VSL, about-page video, paid video ad script, teardown, or short-form clips.
-
-VSL is reusable conversion knowledge, not its own durable primitive:
-
-- Page, about-page, lander, or embedded sales video -> `/mb-site`
-- Paid video ad script or long-form conversion creative -> `/mb-ads`
-- Analyze a VSL, extract the pitch, mine objections, codify mechanism -> `/mb-think`
-- Short clips or creator-style excerpts from a sales video -> `/mb-organic`
-- Sales-video and VSL prompts route by surface: `/mb-site` for owned pages,
-  `/mb-ads` for paid video ads, `/mb-think` for teardown/research, and
-  `/mb-organic` for clips or excerpts.
 
 ---
 
@@ -214,9 +199,6 @@ What do you need?
 ├── Create ad copy? (paid)
 │   └── /mb-ads (static, video, or review mode)
 │
-├── Write a sales video / VSL?
-│   └── /mb-site for pages, /mb-ads for paid, /mb-think for teardown, /mb-organic for clips
-│
 ├── Create organic content? (free reach)
 │   └── /mb-organic (Reels, TikTok, carousels)
 │
@@ -315,7 +297,7 @@ When the same skill name exists in multiple locations, Claude uses this priority
 
 1. **Project `.claude/skills/`** (highest priority)
 2. **User `~/.claude/skills/`** (global)
-3. **Main Branch `.claude/skills/`** (shared engine)
+3. **Main Branch `.claude/skills/`** (installed package or source checkout)
 
 This means you can override Main Branch skills with your own version if needed.
 

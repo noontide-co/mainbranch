@@ -66,7 +66,7 @@ Create or suggest a GitHub issue when work needs a durable thread:
 
 - it crosses sessions and would otherwise be forgotten;
 - it has an owner, blocker, dependency, deadline, or discussion;
-- it is public Main Branch engine work, support friction, or a reproducible bug;
+- it is public Main Branch product work, support friction, or a reproducible bug;
 - it should connect to a branch, pull request, release, or review loop;
 - it needs team visibility;
 - it does not naturally belong in one bet, push, playbook, decision, or log.

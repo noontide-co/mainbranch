@@ -1,10 +1,12 @@
-# Engine Updates
+# Main Branch Update Check
 
-Standard command for checking or applying Main Branch engine updates at the
-start of a skill invocation. CWD is the business repo. **Do NOT silently swallow
+Standard command for checking or applying Main Branch updates at the start of a
+skill invocation. CWD is the business folder. **Do not silently swallow
 failures.** Users on stale code get broken features.
 
-`mb update` owns the install-mode mechanics. It detects pipx vs clone installs, runs the correct update command, and refreshes skill links for the business repo.
+`mb update` owns the install-mode mechanics. It detects pipx vs source
+checkouts, runs the correct update command, and refreshes skill links for the
+business folder.
 
 ```bash
 mb update --repo . --json 2>&1

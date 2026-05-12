@@ -1,8 +1,12 @@
-# Pull Engine Updates
+# Main Branch Update Check
 
-Standard command for pulling latest Main Branch updates at the start of any skill invocation. CWD is the business repo. **Do NOT silently swallow failures.** Users on stale code get broken features.
+Standard command for checking or applying Main Branch updates at the start of
+any skill invocation. CWD is the business folder. **Do not silently swallow
+failures.** Users on stale code get broken features.
 
-`mb update` owns the install-mode mechanics. It detects pipx vs clone installs, runs the correct update command, and refreshes skill links for the business repo.
+`mb update` owns the install-mode mechanics. It detects pipx vs source
+checkouts, runs the correct update command, and refreshes skill links for the
+business folder.
 
 ```bash
 mb update --repo . --json 2>&1
@@ -17,9 +21,9 @@ mb update --repo . --json 2>&1
 | Invalid JSON or missing engine root | "Couldn't find Main Branch. Run `mb skill link --repo .`, then restart Claude." |
 | JSON `"ok": false` or command failure | Show the warning below |
 
-## If Pull Fails — Show This Warning
+## If Update Fails - Show This Warning
 
-> "I wasn't able to pull the latest Main Branch updates. This means you may be running on an old version and missing new features.
+> "I wasn't able to update Main Branch. This means you may be running on an old version and missing new features.
 >
 > Common fixes:
 > 1. Run `mb update --check --repo .` to see which install path Main Branch detects
@@ -32,9 +36,10 @@ mb update --repo . --json 2>&1
 
 ---
 
-## Pull Business Repo Updates (start skill only)
+## Business Folder Remote Check (start skill only)
 
-Once business repo is confirmed, pull its latest updates from `REPO_PATH`:
+Once the business folder is confirmed, check whether it has remote updates from
+`REPO_PATH`:
 
 ```bash
 if git -C "$REPO_PATH" remote get-url origin >/dev/null 2>&1; then
@@ -49,17 +54,17 @@ fi
 | Result | What to say |
 |--------|-------------|
 | "Already up to date." | Say nothing |
-| "Updating..." / files changed | "Pulled latest updates for [repo-name]." |
+| "Updating..." / files changed | "Updated local business files from GitHub for [folder-name]." |
 | "NO_REMOTE" | Say nothing — local-only repo, no remote configured |
 | Any other error | Show the warning below |
 
-### If Pull Fails (and Repo Has a Remote)
+### If The Remote Check Fails
 
-> "Couldn't pull updates for [repo-name]. You may be working on older reference files.
+> "Couldn't check GitHub updates for [folder-name]. You may be working on older reference files.
 >
-> Try: Open GitHub Desktop → select [repo-name] → click 'Fetch origin'"
+> Try: Open GitHub Desktop -> select [folder-name] -> click 'Fetch origin'"
 
-### Why Both Repos
+### Why This Check Exists
 
-- Main Branch engine → new skills, playbooks, compliance frameworks
-- Business repo → your reference files, decisions, research
+- `mb update` keeps the installed CLI and skills current.
+- The business folder remote check keeps the operator's own business files current.

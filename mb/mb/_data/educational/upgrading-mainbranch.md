@@ -67,7 +67,7 @@ the engine repo.
 
 Main Branch keeps those roles separate:
 
-- `mb` updates the engine;
+- `mb` updates the installed CLI and skills;
 - the business repo stores your durable memory;
 - `/mb-start` and `/mb-update` explain what to do next in business-owner
   language.

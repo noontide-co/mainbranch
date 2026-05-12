@@ -84,7 +84,7 @@ Detect if user is in the right place:
 
 ## Pull Latest Updates
 
-For the standard engine resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
+For the standard Main Branch update check and failure warning, see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
 
 Then run `mb status --json --peek` from the business repo and use its
 `readiness`, `drift.items`, and `ranked_actions` facts before asking setup or

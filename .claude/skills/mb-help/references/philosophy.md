@@ -74,7 +74,7 @@ The conversation is temporary. The files are permanent.
 
 ## One Engine, Many Businesses
 
-The same Main Branch engine powers your main business, client accounts, side projects, even personal life.
+The same Main Branch CLI and skills can support your main business, client accounts, side projects, even personal life.
 
 Each gets its own repo. Same skills, different data, different outputs.
 

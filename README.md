@@ -79,7 +79,7 @@ Open source. Lives on your machine. Bring your own Claude Code plan. That's it.
 - Research a topic and turn it into a decision the system remembers
 - Open, run, close, and narrate business bets so the lessons stick around
 - Plan and run launches, drops, challenges, and promos as repeatable playbooks
-- Generate ad copy, video scripts, sales videos/VSLs, organic content (Reels, TikTok, carousels), and page copy in your voice
+- Generate ad copy, video scripts, organic content (Reels, TikTok, carousels), and page copy in your voice
 - Draft and ship landing pages on Cloudflare from your core files and research
 - Capture meeting transcripts, source material, and fulfillment notes into durable docs
 - Save readable progress points during long agent runs so the next session starts where this one stopped
@@ -219,7 +219,7 @@ For platform support and security reporting, see [SUPPORT.md](SUPPORT.md), [SECU
 - "Claude doesn't see my files" — make sure you started Claude in your business folder and ran `/mb-start`.
 - "Skills aren't working" — ask Claude to repair the wiring, or run `/mb-setup`.
 - "Output sounds generic" — add more detail to your core files, especially `core/voice.md`.
-- "I edited Main Branch but can't push" — that's expected. Main Branch is the shared engine. Your business data goes in YOUR folder.
+- "I edited Main Branch but can't push" — that's expected. Main Branch itself is read-only for most users. Your business files go in your business folder.
 
 Hit a real problem? Ask the agent to draft a clean public issue for you. It scrubs private context before submitting.
 
@@ -228,7 +228,7 @@ Hit a real problem? Ask the agent to draft a clean public issue for you. It scru
 ## Open source vs paid community
 
 - **Open-source (MIT)**: the `mb` CLI, bundled skills, schema, framework, docs, and any future local dashboard. Usable without joining the paid community.
-- **Community ([Skool](https://skool.com/main))**: Watch us build companies live with Main Branch. Live narration, calls, support, and curated examples — not required for the engine.
+- **Community ([Skool](https://skool.com/main))**: Watch us build companies live with Main Branch. Live narration, calls, support, and curated examples — not required to use the CLI or skills.
 
 Main Branch is usable on its own. The community is the live narration on top.
 
@@ -268,10 +268,8 @@ Full list: `mb --help`. JSON output contract: [docs/json-output-contract.md](doc
 | `/mb-end` | Close the session — summary, crystallize, checkpoint guidance |
 | `/mb-help` | Get answers, troubleshoot, learn the system |
 | `/mb-update` | Update Main Branch (delegates to `mb update`) |
-| `/mb-ads` `/mb-organic` `/mb-site` | Channel skills (Paid / Organic / Pages). Sales videos/VSLs route through the relevant workflow. |
+| `/mb-ads` `/mb-organic` `/mb-site` | Channel skills (Paid / Organic / Pages). |
 | `/mb-wiki` | Specialty: personal/atomic-notes wiki, not part of the core daily loop |
-
-`/mb-pull` is preserved as a legacy alias for `/mb-update`.
 
 **Reading order:**
 
