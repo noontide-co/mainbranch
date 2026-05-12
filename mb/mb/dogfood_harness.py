@@ -1374,6 +1374,8 @@ def is_shell_wrapped_command(command: str) -> bool:
 
 def is_read_only_mb_command(command: str) -> bool:
     """Return whether a denied mb command starts from a known read-only surface."""
+    # Keep this list command-specific. If a future read command grows a write
+    # flag, add an explicit negative guard before treating it as grounding.
     read_only_prefixes = (
         "mb --version",
         "mb doctor",

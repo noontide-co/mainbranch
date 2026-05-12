@@ -558,6 +558,29 @@ def test_print_grounding_classifies_permission_denial_with_fixture_facts_as_part
     assert verdict["clean_pass"] is False
 
 
+def test_print_grounding_keeps_non_grounding_denials_as_manual_review() -> None:
+    verdict = harness.classify_print_grounding(
+        permission_denials=[
+            {
+                "tool_name": "AskUserQuestion",
+                "tool_input": {"questions": [{"question": "Choose?"}]},
+            },
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": "mb checkpoint --message '[added] demo' --yes"},
+            },
+        ],
+        fixture_profiles=[{"fixture_profile": "fresh", "mb_command_facts": {}}],
+        rubric={"checks": {"control_plane_usage": {"ok": True}}},
+        turns=[{"simulation_id": "fresh_first_day", "returncode": 0}],
+    )
+
+    assert verdict["verdict"] == "print_proxy_manual_review_required"
+    assert verdict["permission_denial_count"] == 2
+    assert verdict["read_only_mb_grounding_denial_count"] == 0
+    assert verdict["clean_pass"] is True
+
+
 def test_permission_denial_summary_separates_grounding_from_other_denials() -> None:
     summary = harness.summarize_permission_denials(
         [
