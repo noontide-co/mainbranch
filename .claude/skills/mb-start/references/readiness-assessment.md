@@ -2,9 +2,14 @@
 
 Complete fallback reference for readiness assessment when `/mb-start` needs
 detail that `mb status --json --peek` does not expose. Use status `readiness`,
-`drift.items`, `onboarding`, `since_last_check`, and `ranked_actions` first.
-Only use the checks below for section-level detail or when status reports that
-a section is unavailable/degraded.
+`drift.items`, `onboarding`, `since_last_check`, `money_path`, and
+`ranked_actions` first. Only use the checks below for section-level detail or
+when status reports that a section is unavailable/degraded.
+
+Do not mix this fallback 0-3 file score with MoneyPath's 0-5 path scale.
+MoneyPath reports whether customer progress, offer, proof, CTA, channel, push,
+playbook, page readiness, and outcome feedback are legible, supported,
+connected, and instrumented.
 
 ---
 
@@ -578,7 +583,7 @@ Use these tables to determine the specific gap language for each file at each sc
 | 0 | File doesn't exist | "No offer.md. /mb-ads, /mb-site, and conversion outputs can't generate without knowing what you sell." | "What do you sell? What transformation does the buyer get? What does it cost?" |
 | 1 | <20 lines | "offer.md exists but is missing: [check for Pricing, Mechanism, Guarantee, Value Stack sections]." | "Your offer mentions [what exists] but I don't see [missing section]. What's your guarantee? What makes your mechanism unique?" |
 | 2 | 20-80 lines, developing | "offer.md is developing. [Specific weak area: e.g., 'Mechanism section is one sentence -- this is what makes conversion scripts compelling.']" | "Walk me through HOW your product/service actually works. What's the step-by-step transformation?" |
-| 3 | Strong | "offer.md is strong. Ready for /mb-ads, /mb-site, and conversion outputs." | No question. Note if Price section hasn't been updated in 60+ days. |
+| 3 | Strong | "offer.md has enough structure for `/mb-ads`, `/mb-site`, and conversion workflows to use as source context." | No question. Note if Price section hasn't been updated in 60+ days. |
 
 ### audience.md
 

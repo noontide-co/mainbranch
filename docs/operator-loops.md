@@ -38,7 +38,9 @@ chain:
 
 - **Sense:** `/mb-start`, `/mb-status`, or `mb status --json --peek` reads
   repo health, graph links, provider readiness, recent activity, update state,
-  and GitHub task/proposal signals.
+  GitHub task/proposal signals, and MoneyPath readiness for the path from
+  customer progress to offer, proof, CTA, channel, push, playbook, page, and
+  outcome feedback.
 - **Decide:** the agent and operator choose the next business move: a bet to
   frame, a piece of research to run, a decision to codify, a push to advance, a
   playbook to draft, or a repair to approve.
@@ -72,7 +74,8 @@ reference-file reads sit here.
 
 **Current surfaces**
 
-- `mb status` (with `--json` topology and "Business map" line)
+- `mb status` (with `--json` topology, "Business map" line, and MoneyPath
+  readiness)
 - `mb doctor` and `mb doctor repair --plan` (including migration drift and
   topology-drift previews)
 - `mb graph` (with `repo` nodes and hub/child relationship edges)
@@ -108,7 +111,7 @@ options. Discrete moments, not continuous activity.
 
 - `/mb-start`
 - `/mb-think`
-- `mb status` ranked actions
+- `mb status` ranked actions and MoneyPath blockers
 - GitHub issues and priorities
 - `mb issue draft` (frame friction or a feature gap clearly enough to commit
   to acting on it)

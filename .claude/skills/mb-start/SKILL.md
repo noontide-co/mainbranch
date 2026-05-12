@@ -31,8 +31,8 @@ actual file paths in commands.
 `mb status --json --peek` before asking setup or routing questions. Treat that
 JSON as the source of truth for update severity, readiness, drift, onboarding,
 integrations, GitHub issue/proposal facts, bets, dirty git, since-last-check, and
-`ranked_actions`. Do not duplicate those checks with ad hoc shell probes unless
-the status report says a section is unavailable.
+`money_path` / `ranked_actions`. Do not duplicate those checks with ad hoc
+shell probes unless the status report says a section is unavailable.
 
 **Continuity facts:** Use `since_last_check.journal`, top-level `journal`,
 GitHub activity, and `checkpoint` from status to explain "where we left off."
@@ -173,6 +173,9 @@ Use this report before asking additional questions:
 - `ranked_actions` is the deterministic list of one to three business moves.
   Surface the first action as the recommendation, including its reason and
   cited signal summaries.
+- `money_path` maps customer progress, offer, proof, CTA, channel, push,
+  playbook, page readiness, and outcome feedback. Use levels, objects, and
+  ranked actions as evidence; do not call the offer "good" or "will convert."
 - `readiness` gates whether setup/repair work must happen before output skills.
 - `drift.items` names stale or broken status signals and repair commands.
 - `onboarding.summary` and `onboarding.checklist` replace separate onboarding
@@ -324,9 +327,9 @@ See [tool-status-audit.md](references/tool-status-audit.md) for the full procedu
 
 ## Step 6: Readiness Assessment
 
-Use `readiness` and `ranked_actions` from `mb status --json --peek` before
-routing. The reference below is fallback detail for gaps that status does not
-expose yet.
+Use `readiness`, `money_path`, and `ranked_actions` from
+`mb status --json --peek` before routing. The reference below is fallback detail
+for gaps that status does not expose yet.
 
 See [readiness-assessment.md](references/readiness-assessment.md) for complete scoring rubric, session state checks, soul health check, skill-specific requirements, and display format.
 
@@ -404,9 +407,9 @@ before persisting any future local state that clears an active offer.
 
 ## Step 9: Detect State and Assess Completeness
 
-Use `readiness`, `onboarding`, `drift.items`, and `ranked_actions` from
-`mb status --json --peek` first. If those sections are unavailable, use this
-fallback check.
+Use `readiness`, `onboarding`, `drift.items`, `money_path`, and `ranked_actions`
+from status first. Prefer `money_path.ranked_actions` for path gaps unless the
+top-level ranked action already incorporates it.
 
 Fallback: check `core/*.md`, then legacy `reference/core/*.md` only when
 `core/` is absent. No folder → `/mb-setup`. If two or more
@@ -428,10 +431,10 @@ to `/mb-think`.
 
 If the user stated intent, route directly using
 [references/router-and-language.md](references/router-and-language.md). If the
-session is open-ended, surface the top ranked action, the strongest update
-recommendation, or the compact route menu without reusing numbers from offers or
-recommendations. Use [references/triage-menu.md](references/triage-menu.md) only
-when the user wants prioritization or deep triage.
+session is open-ended, surface the top ranked action, update recommendation, top
+non-duplicated MoneyPath action, or compact route menu. Use
+[references/triage-menu.md](references/triage-menu.md) only for prioritization
+or deep triage.
 
 ---
 

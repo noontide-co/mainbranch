@@ -21,6 +21,12 @@ If status reports relationship-health gaps, legacy `campaigns/` drift, missing
 provider readiness, or update/repair blockers, surface those first and use the
 cited repair command.
 
+Also read `status.money_path` before launch routing. If MoneyPath reports
+missing customer progress, offer, proof, CTA path, channel strategy, active
+push, playbook, page readiness, or outcome feedback, use those facts as launch
+prerequisites. The CLI names legibility and connection gaps; offer judgment
+still belongs in offer sharpening and the downstream skills.
+
 ## Sequence
 
 1. **Resolve the offer.** Use the normal active-offer rules. If no offer exists,

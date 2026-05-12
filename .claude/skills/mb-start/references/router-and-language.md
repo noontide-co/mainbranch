@@ -24,7 +24,7 @@ first.
    operation.
 3. Use status facts as evidence: `ranked_actions`, `update`, `readiness`,
    `onboarding`, `drift`, `integrations`, `github`, `brain`, `checkpoint`,
-   `since_last_check`, and `journal`.
+   `since_last_check`, `journal`, and `money_path`.
 4. Choose the smallest useful next workflow. Do not present the full route menu
    when a clear intent maps to one route.
 5. If two routes are plausible, ask one business question that separates them.

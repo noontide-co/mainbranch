@@ -34,6 +34,12 @@ Every offer should answer these ten questions:
 
 If one of those is weak, sharpen the offer before scaling traffic or content.
 
+`mb status --json --peek` exposes these inputs through `money_path` as
+deterministic readiness facts. Treat that section as evidence about whether the
+offer path is legible, supported, connected, and instrumented. It does not
+replace strategic judgment about positioning, demand, copy quality, or market
+strength.
+
 ## Style Spectrum
 
 Use style to fit the operator and buyer. Do not use style to skip the rubric.

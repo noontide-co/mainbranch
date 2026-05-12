@@ -51,6 +51,13 @@ status schema object, `mb doctor repair --json` keeps
 can keep a domain `status` such as `ready` while the envelope reports
 `result_status: "ok"`.
 
+`mb status --json` includes a `money_path` section for read-only business-path
+readiness. It reports gated component objects for customer progress, offer,
+audience, proof, product ladder, CTA path, channel strategy, active push,
+playbook, page readiness, and outcome feedback. These facts describe whether
+the path is legible, supported, connected, and instrumented; they do not infer
+conversion quality, market strength, or strategic correctness.
+
 ## First Migrated Surfaces
 
 The v1 envelope is present on:

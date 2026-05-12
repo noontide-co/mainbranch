@@ -125,6 +125,18 @@ Standard filenames: `testimonials.md` for individual permissioned testimonials,
 `typicality.md` for average-case outcome context, and `angles/` for durable
 messaging angles.
 
+### MoneyPath Status
+
+MoneyPath is a read-only `mb status` view over existing primitives, not a new
+business file or replacement for offer truth. It checks whether customer
+progress, offer, audience, proof, product ladder, CTA, channel, active push,
+playbook, page readiness, and outcome feedback are legible and connected.
+
+The score is gated. A missing CTA path, ambiguous active offer, or missing
+outcome feedback caps the overall level even when other files are rich. The CLI
+reports deterministic readiness facts; skills and operators still own offer
+strategy, conversion quality, and market judgment.
+
 ### `research/`
 
 Point-in-time findings from when the operator went looking. Research can cite

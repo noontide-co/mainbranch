@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added MoneyPath readiness facts to `mb status --json --peek`, giving skills
+  and scripts a read-only, gated view of customer progress, offer, audience,
+  proof, product ladder, CTA, channel, push, playbook, page readiness, and
+  outcome feedback. Refs MAIN-343, #528.
 - Added a Mermaid-powered Main Branch system map with source-of-truth tables
   for architecture boundaries, provider rails, private data, validation, and
   runtime stance. Refs MAIN-339, #519.

@@ -46,9 +46,10 @@ mb doctor repair --plan
 
 Use `mb status --json --peek` as the default daily briefing before routing the
 operator. It names readiness, drift, onboarding progress, update state, GitHub
-activity, provider signals, recent work, ranked actions, bets, pushes, and
-checkpoint state. Do not replace those facts with ad hoc shell inspection unless
-`mb` says a section is unavailable or the command itself is missing.
+activity, provider signals, recent work, MoneyPath, ranked actions, bets,
+pushes, and checkpoint state. Do not replace those facts with ad hoc shell
+inspection unless `mb` says a section is unavailable or the command itself is
+missing.
 
 Read-only commands can be run without asking first. Commands that write files,
 refresh local runtime wiring, update packages, migrate business files, create
@@ -77,8 +78,8 @@ command.
    ask for the business repo path instead of guessing.
 2. Use the status JSON as the source of truth for
    readiness, drift, onboarding, update severity, GitHub facts, provider
-   readiness, recent work, ranked actions, bets, pushes, vocabulary, and
-   checkpoint state.
+   readiness, recent work, MoneyPath, ranked actions, bets, pushes,
+   vocabulary, and checkpoint state.
 3. Run `mb start --json` when you need runtime handoff, repo-boundary, or
    adapter-readiness facts.
 4. Run `mb doctor repair --plan` before recommending setup or repair. Quote the
@@ -100,6 +101,10 @@ before acting.
 
 - If `ranked_actions` has entries, lead with the first action, its reason, and
   the cited signal summaries.
+- Use `money_path` when the next move depends on customer progress, offer,
+  proof, CTA, channel, push, playbook, page readiness, or outcome feedback.
+  Keep the language evidence-based: legible, supported, connected,
+  instrumented.
 - If readiness is blocked or drift has errors, handle repair before output
   work.
 - If onboarding is incomplete, use the `onboarding.summary` and checklist from

@@ -240,8 +240,8 @@ Sources: [Data-source registry](../data-source-registry.md),
 
 | Loop | Main Branch surfaces | External rails and views |
 | --- | --- | --- |
-| Sense | `mb status`, `mb start`, `mb doctor`, `mb graph`, `mb connect status`, core files, data-source records, GitHub activity. | Provider APIs, scheduled sync, Obsidian, future dashboard. |
-| Decide | `/mb-start`, `/mb-think`, ranked actions, decisions, bets, GitHub issues. | Linear board, provider readiness signals, roadmap lanes. |
+| Sense | `mb status`, `mb start`, `mb doctor`, `mb graph`, `mb connect status`, core files, MoneyPath readiness, data-source records, GitHub activity. | Provider APIs, scheduled sync, Obsidian, future dashboard. |
+| Decide | `/mb-start`, `/mb-think`, ranked actions, MoneyPath blockers, decisions, bets, GitHub issues. | Linear board, provider readiness signals, roadmap lanes. |
 | Ship | `/mb-site`, `/mb-ads`, `/mb-organic`, `mb connect`, `mb update`, `mb issue open`, `mb checkpoint`, pushes, playbooks. | Cloudflare Pages/DNS, GitHub PRs/checks, provider dashboards, scheduling rails. |
 | Reflect | `/mb-end`, bet close/narrate, retros, CHANGELOG, release notes, checkpoint history. | GitHub Releases, PyPI verification, Linear releases, dashboard/history views. |
 

@@ -242,7 +242,7 @@ The `mb` CLI is the deterministic control plane. The agent runs it for normal us
 |---|---|
 | `mb onboard`             | Human setup flow: create or connect a business folder, wire Claude Code skills, show next steps. |
 | `mb init`                | Quiet scriptable primitive underneath `mb onboard`. |
-| `mb status`              | Local-first daily briefing: ranked next actions, since-last-check changes, drift, repo health, runtime wiring, recent activity, GitHub tasks/proposals. `--json` and `--peek` for callers. |
+| `mb status`              | Local-first daily briefing: ranked next actions, MoneyPath readiness, since-last-check changes, drift, repo health, runtime wiring, recent activity, GitHub tasks/proposals. `--json` and `--peek` for callers. |
 | `mb doctor`              | Check environment, repo shape, frontmatter, settings. `mb doctor repair --plan` / `--apply` walks through guided reconciliation, including migration drift. |
 | `mb connect`             | Register provider credentials, test provider health, inspect repair-safe integration status without committing secrets. |
 | `mb site check`          | Local paid-traffic measurement readiness for a site folder: GTM install, dataLayer events, consent posture, Google Ads metadata, operator-review gates. |

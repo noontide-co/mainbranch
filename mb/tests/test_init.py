@@ -23,9 +23,11 @@ def _assert_claude_md_cli_first_contract(text: str) -> None:
     assert "mb start --launch" in text
     assert "mb --version" in text
     assert "mb status --json --peek" in text
+    assert "MoneyPath" in text
     assert "mb start --json" in text
     assert "mb doctor repair --plan" in text
-    assert "Do not replace those facts with ad hoc shell inspection" in text
+    assert "Do not replace those facts with ad hoc shell" in text
+    assert "inspection unless `mb` says a section is unavailable" in text
     assert "Read-only commands can be run without asking first" in text
     assert "require explicit operator approval before applying" in text
     assert "mb skill repair --repo ." in text
@@ -50,6 +52,10 @@ def _assert_claude_md_primitive_routing_contract(text: str) -> None:
     assert "Reusable playbook: an engine recipe" in text
     assert "Push playbook: this push's approval" in text
     assert "Proof: evidence that a claim is true" in text
+    assert "Use MoneyPath from" in text
+    assert "`mb status --json --peek` for routing" in text
+    assert "legible," in text
+    assert "supported, connected, and instrumented" in text
     assert "single-offer repo, `core/offer.md` is the durable offer truth" in text
     assert "multi-offer repo, `core/offer.md` is the portfolio thesis" in text
     assert "`core/offers/<slug>/offer.md` holds per-offer truth" in text
@@ -77,6 +83,8 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     assert "business-owner language" in text
     assert "bets, goals, offers, pushes" in text
     assert "`vocabulary` block from `mb status --json --peek`" in text
+    assert "MoneyPath" in text
+    assert "Use `money_path` when the next move depends on customer progress" in text
     assert "current paths, frontmatter, JSON keys" in text
     assert "If `ranked_actions` has entries" in text
     assert "Do not pretend" in text

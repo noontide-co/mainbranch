@@ -24,13 +24,18 @@ mb status --json --peek
 
 3. Treat the JSON as the source of truth for setup, update, drift, GitHub,
    onboarding, integrations, bets, journal activity, since-last-check,
-   readiness, vocabulary, and ranked actions.
+   readiness, vocabulary, money_path, and ranked actions.
 4. Summarize the top `ranked_actions` first. For each one, include:
    - title
    - command or slash command
    - reason
    - cited signal summaries
 5. Then summarize only the sections that matter for the operator's question.
+   Use `money_path` when the question is about the path from customer progress
+   to offer, proof, CTA, channel, push, playbook, page readiness, or outcome
+   feedback. Keep the language evidence-based: legible, supported, connected,
+   instrumented. Do not say the offer is good, bad, likely to convert, or ready
+   to win.
    If `vocabulary.terms.push` defines display words, use them in
    operator-facing prose without changing current paths, frontmatter, JSON
    keys, validator rules, or command names.

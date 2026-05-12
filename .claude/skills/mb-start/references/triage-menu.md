@@ -40,8 +40,8 @@ write path, treat the banner as session-scoped.
 
 If user is ready to work, ask or infer intent. Use numbered options only when
 this is the single active choice list in the response. If ranked actions were
-already numbered or offers are also being shown, use a named route such as
-`triage` instead of reusing `1`.
+already numbered, MoneyPath recommendations were numbered, or offers are also
+being shown, use a named route such as `triage` instead of reusing `1`.
 
 ### Triage (User-Initiated)
 

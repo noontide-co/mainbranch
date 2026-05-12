@@ -21,9 +21,10 @@ mb doctor repair --plan
 
 Use `mb status --json --peek` as the default daily briefing before routing the
 operator. It names readiness, drift, onboarding progress, update state, GitHub
-activity, provider signals, recent work, ranked actions, bets, pushes, and
-checkpoint state. Do not replace those facts with ad hoc shell inspection unless
-`mb` says a section is unavailable or the command itself is missing.
+activity, provider signals, recent work, MoneyPath, ranked actions, bets,
+pushes, and checkpoint state. Do not replace those facts with ad hoc shell
+inspection unless `mb` says a section is unavailable or the command itself is
+missing.
 
 Read-only commands can be run without asking first. Commands that write files,
 refresh local runtime wiring, move personal skill shadows, update packages,
@@ -124,6 +125,12 @@ multi-offer repo, `core/offer.md` is the portfolio thesis and
 in `core/proof/`; offer-specific proof belongs in `core/offers/<slug>/proof/`.
 Use standard proof files such as `testimonials.md`, `typicality.md`, and
 `angles/` inside those proof folders.
+`mb status --json --peek` also emits `money_path`, a read-only map of whether
+customer progress, offer, proof, CTA, channel, push, playbook, page readiness,
+and outcome feedback are legible and connected. Use MoneyPath from
+`mb status --json --peek` for routing when the path needs to be legible,
+supported, connected, and instrumented, but do not claim the offer is good,
+bad, or likely to convert.
 A live idea can be both a bet and an offer candidate: open the bet first, then
 create or update the offer only when the operator wants durable sellable truth.
 

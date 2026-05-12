@@ -28,6 +28,10 @@ Main Branch already ships:
 - graph, status, and topology primitives (including repo-topology facts in
   `mb status --json`, `mb graph --json`, and `mb doctor repair --plan --json`)
   for future dashboard and agent workflows;
+- MoneyPath readiness in `mb status --json --peek`, so daily status can show
+  whether customer progress, offer, proof, CTA, channel, push, playbook, page,
+  and outcome feedback are legible and connected without turning CLI output
+  into strategic judgment;
 - privacy-safe GitHub issue drafting and submission (`mb issue draft`,
   `mb issue open`) for user friction;
 - push, reusable playbook, and per-push run-record vocabulary for coordinated
@@ -75,7 +79,7 @@ The work clusters into a few durable buckets:
 - **Start and status.** `/mb-start`, `/mb-status`, and `mb status` should read
   the same facts: since-last-check changes, ranked next actions, drift,
   onboarding progress, update severity, provider readiness, GitHub
-  tasks/proposals, and recent business activity.
+  tasks/proposals, MoneyPath readiness, and recent business activity.
 - **Repair and migration.** `mb doctor`, `mb doctor repair`, `mb update`, and
   `mb migrate` should make stale installs, old repo layouts, broken skill
   wiring, ignored local state, and provider setup problems visible and
