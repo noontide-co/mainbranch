@@ -17,6 +17,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   under `money_path.objects.offer` and `money_path.objects.proof`, including
   generic vs. specific testimonials, offer-linked proof, typicality signals,
   and proof boundary warnings. Refs MAIN-341, #523.
+- Added layered content strategy validation and normalized `content_strategy`
+  status facts for simple, layered, disconnected, orphaned, and stale strategy
+  files, so future dashboard views can read CLI facts instead of parsing
+  markdown. Refs MAIN-346, #536.
 - Added a layered content strategy model for business repos covering
   business-level content strategy, distribution strategy, channel strategy,
   account strategy, founder/person voice files, content playbook freshness,

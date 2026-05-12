@@ -127,7 +127,7 @@ or long tweet threads into committed research files.
 | `core/audience.md` | [What might change] |
 | `core/proof/angles/` | [What might change] |
 | `core/proof/typicality.md` | [Aggregate outcome/average-case context] |
-| `core/content-strategy.md` | [Hooks, frameworks, platform strategy] |
+| `core/content-strategy.md` / `core/marketing/...` / `core/people/...` | [Hooks, frameworks, platform strategy, or layer links] |
 
 ### Open Questions
 

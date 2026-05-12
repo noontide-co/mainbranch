@@ -33,7 +33,9 @@ If none exist, write: "First crystallize session. No prior outputs."]
 
 === CONTENT STRATEGY ===
 
-[Full text of core/content-strategy.md, or "Not yet created."]
+[`content_strategy` health facts from `mb status --json --peek`, then full text
+of core/content-strategy.md and indexed core/marketing/ or core/people/ layers
+only when present and relevant.]
 
 === TODAY'S GIT ACTIVITY ===
 

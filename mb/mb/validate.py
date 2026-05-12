@@ -15,7 +15,7 @@ from typing import Any
 
 import yaml
 
-from mb import github_activity, migration_lint, related_links, relationships
+from mb import content_strategy, github_activity, migration_lint, related_links, relationships
 from mb import pushes as pushes_mod
 
 DECISION_STATUS = {"proposed", "accepted", "rejected", "superseded", "running"}
@@ -1602,6 +1602,7 @@ def run(
             r["schema"] = schema_name
             r["path"] = str(f.relative_to(repo))
             files_by_path[r["path"]] = r
+    files_by_path.update(content_strategy.validation_results(repo))
 
     if migration_drift_report is None:
         migration_drift_report = migration_lint.run(repo)

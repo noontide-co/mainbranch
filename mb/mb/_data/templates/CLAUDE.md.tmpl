@@ -21,10 +21,9 @@ mb doctor repair --plan
 
 Use `mb status --json --peek` as the default daily briefing before routing the
 operator. It names readiness, drift, onboarding progress, update state, GitHub
-activity, provider signals, recent work, MoneyPath, ranked actions, bets,
-pushes, and checkpoint state. Do not replace those facts with ad hoc shell
-inspection unless `mb` says a section is unavailable or the command itself is
-missing.
+activity, provider signals, recent work, content strategy health, MoneyPath,
+ranked actions, bets, pushes, and checkpoint state.
+Do not replace those facts with ad hoc shell inspection unless `mb` says a section is unavailable.
 
 Read-only commands can be run without asking first. Commands that write files,
 refresh local runtime wiring, move personal skill shadows, update packages,
@@ -150,6 +149,9 @@ the rest of the model. When the operator needs more detail, use
 `core/marketing/accounts/<platform>-<account>.md`, and
 `core/people/<person>.md`. Weekly content planning should read those files by
 reference, then write concrete execution to `pushes/` and results to `log/`.
+`mb validate` checks their frontmatter shape and relationships;
+`mb status --json --peek` exposes normalized `content_strategy` health for
+agents and future read-only dashboard views.
 `mb status --json --peek` also emits `money_path`, a read-only map of whether
 customer progress, offer, proof, CTA, channel, push, playbook, page readiness,
 and outcome feedback are legible and connected. Use MoneyPath from

@@ -292,6 +292,7 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
                 "integrations",
                 "measurement",
                 "github",
+                "content_strategy",
                 "money_path",
                 "since_last_check",
                 "drift",
@@ -391,6 +392,135 @@ def test_status_money_path_reads_distribution_strategy_only(tmp_path: Path, monk
     channel_strategy = report["money_path"]["objects"]["channel_strategy"]
     assert channel_strategy["level"] == 1
     assert channel_strategy["paths"] == ["core/marketing/distribution-strategy.md"]
+
+
+def test_status_content_strategy_simple_entry_point_is_healthy(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core" / "content-strategy.md").write_text(
+        (
+            "---\n"
+            "type: content_strategy\n"
+            "status: active\n"
+            "---\n\n"
+            "# Content Strategy\n\n"
+            "## Known-for target\n"
+            "Be known for durable business memory that agents can read.\n\n"
+            "## Pillars\n"
+            "Repo truth, operator loops, practical AI-assisted shipping, and proof.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    content = report["content_strategy"]
+    assert content["overall_state"] == "healthy"
+    assert content["simple_entry_point"]["exists"] is True
+    assert content["simple_entry_point"]["health_state"] == "healthy"
+    assert content["counts"]["layers"] == 0
+
+
+def test_status_content_strategy_reports_disconnected_account_layers(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core" / "content-strategy.md").write_text(
+        (
+            "---\n"
+            "type: content_strategy\n"
+            "status: active\n"
+            "linked_strategy_layers:\n"
+            "  - core/marketing/accounts/x-founder.md\n"
+            "---\n\n"
+            "# Content Strategy\n\n"
+            "The account layer should resolve its channel and person references.\n"
+        ),
+        encoding="utf-8",
+    )
+    account = repo / "core" / "marketing" / "accounts" / "x-founder.md"
+    account.parent.mkdir(parents=True, exist_ok=True)
+    account.write_text(
+        (
+            "---\n"
+            "type: account_strategy\n"
+            "status: active\n"
+            "platform: x\n"
+            "account: founder\n"
+            "channel_strategy: core/marketing/channels/x.md\n"
+            "voice_source: core/people/founder.md\n"
+            "owner: Operator\n"
+            "last_reviewed: 2026-05-12\n"
+            "update_trigger: Platform norms changed.\n"
+            "source_links: []\n"
+            "---\n\n"
+            "# X Founder Account\n\n"
+            "Audience, allowed topics, voice, cadence, content mix, and CTA path.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    content = report["content_strategy"]
+    account_facts = content["layers"]["accounts"][0]
+    assert content["overall_state"] == "disconnected"
+    assert account_facts["health_state"] == "disconnected"
+    assert account_facts["channel_connected"] is False
+    assert account_facts["person_connected"] is False
+
+
+def test_status_content_strategy_reports_stale_indexed_channel(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core" / "content-strategy.md").write_text(
+        (
+            "---\n"
+            "type: content_strategy\n"
+            "status: active\n"
+            "linked_strategy_layers:\n"
+            "  - core/marketing/channels/reddit.md\n"
+            "---\n\n"
+            "# Content Strategy\n\n"
+            "Reddit is the current community channel for durable public answers.\n"
+        ),
+        encoding="utf-8",
+    )
+    channel = repo / "core" / "marketing" / "channels" / "reddit.md"
+    channel.parent.mkdir(parents=True, exist_ok=True)
+    channel.write_text(
+        (
+            "---\n"
+            "type: channel_strategy\n"
+            "status: active\n"
+            "channel: reddit\n"
+            "owner: Operator\n"
+            "last_reviewed: 2025-01-01\n"
+            "update_trigger: Platform norms changed.\n"
+            "source_links: []\n"
+            "---\n\n"
+            "# Reddit Channel Strategy\n\n"
+            "Community norms, timing, content types, anti-spam rules, and review triggers.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(
+        path=str(repo),
+        update_marker=False,
+        now=datetime(2026, 5, 12, tzinfo=timezone.utc),
+    )
+
+    content = report["content_strategy"]
+    channel_facts = content["layers"]["channels"][0]
+    assert content["overall_state"] == "stale"
+    assert channel_facts["health_state"] == "stale"
+    assert channel_facts["indexed_from_content_strategy"] is True
+    assert channel_facts["stale"] is True
 
 
 def test_status_money_path_offer_exposes_guardrail_detail(tmp_path: Path, monkeypatch) -> None:

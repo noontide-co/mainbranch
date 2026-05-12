@@ -185,6 +185,11 @@ record platform norms and update triggers. Account files record account-specific
 audience, voice reference, cadence, content mix, CTA path, and allowed topics.
 Person files hold founder/person voice source material, beliefs, stories, proof,
 and fabrication boundaries. `core/voice.md` remains the brand voice contract.
+`mb validate` enforces layered file shape, account-to-channel/person
+relationships, freshness metadata for fast-changing platform layers, and orphan
+layers that are not indexed from `core/content-strategy.md`. `mb status --json`
+normalizes that into `content_strategy` health facts for `/mb-start` and future
+read-only dashboard views.
 
 Specific execution still belongs in `pushes/<YYYY-MM-DD-slug>/`, and results
 or lessons land in `log/`, a push review log, research, decisions, or core

@@ -8,6 +8,7 @@
     "campaign_count",
     "campaigns",
     "canonical_push_count",
+    "content_strategy",
     "deprecated_campaign_keys",
     "drift",
     "generated_at",
@@ -163,6 +164,17 @@
       "review_requests",
       "sections",
       "source",
+      "summary"
+    ],
+    "content_strategy": [
+      "counts",
+      "findings",
+      "index",
+      "layers",
+      "overall_state",
+      "safe_to_share",
+      "schema_version",
+      "simple_entry_point",
       "summary"
     ],
     "money_path": [

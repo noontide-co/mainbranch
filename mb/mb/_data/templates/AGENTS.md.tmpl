@@ -22,10 +22,9 @@ mb doctor repair --plan
 
 Use `mb status --json --peek` as the default daily briefing before routing the
 operator. It names readiness, drift, onboarding progress, update state, GitHub
-activity, provider signals, recent work, MoneyPath, ranked actions, bets,
-pushes, and checkpoint state. Do not replace those facts with ad hoc shell
-inspection unless `mb` says a section is unavailable or the command itself is
-missing.
+activity, provider signals, recent work, content strategy health, MoneyPath,
+ranked actions, bets, pushes, and checkpoint state.
+Do not replace those facts with ad hoc shell inspection unless `mb` says a section is unavailable.
 
 Read-only commands can be run without asking first. Commands that write files,
 refresh local runtime wiring, update packages, migrate business files, create
@@ -86,6 +85,8 @@ before acting.
   proof, CTA, channel, push, playbook, page readiness, or outcome feedback.
   Keep the language evidence-based: legible, supported, connected,
   instrumented.
+- Use `content_strategy` when routing content strategy repair, stale
+  channel/account platform-rule review, or disconnected layered files.
 - If readiness is blocked or drift has errors, handle repair before output
   work.
 - If onboarding is incomplete, use the `onboarding.summary` and checklist from
@@ -126,6 +127,9 @@ When the business needs more layers, read or write
 `core/marketing/accounts/<platform>-<account>.md`, and
 `core/people/<person>.md`. Weekly content planning should reference those files,
 then put specific execution in `pushes/` and results in `log/`.
+`mb validate` checks their frontmatter shape and relationships;
+`mb status --json --peek` exposes normalized `content_strategy` health for
+agents and future read-only dashboard views.
 
 ## Linking
 

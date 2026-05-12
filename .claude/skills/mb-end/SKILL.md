@@ -204,7 +204,8 @@ Before spawning the agent, read and collect:
 | Today's research files (full text) | Read each file detected in 5a | Always |
 | Core file diffs | `git diff HEAD@{6am}..HEAD -- core/` | If core changed |
 | `core/soul.md` | Read full file | Always |
-| `core/content-strategy.md` | Read full file | If it exists |
+| `content_strategy` from `mb status --json --peek` | Use health state and findings | Always |
+| `core/content-strategy.md` and indexed `core/marketing/` / `core/people/` layers | Read full files | If status says they changed, are stale, or are relevant |
 | Past crystallize outputs | Read `research/*-end-of-day-crystallize.md` | If any exist |
 
 **Heavy-day adaptation:** If more than 5 research files exist for today, pass commit messages + file names for all research, but full text only for the 3-5 most recent or most connected to today's decisions.

@@ -30,9 +30,9 @@ actual file paths in commands.
 **CLI facts first:** Once the business repo path is known, run
 `mb status --json --peek` before asking setup or routing questions. Treat that
 JSON as the source of truth for update severity, readiness, drift, onboarding,
-integrations, GitHub issue/proposal facts, bets, dirty git, since-last-check, and
-`money_path` / `ranked_actions`. Do not duplicate those checks with ad hoc
-shell probes unless the status report says a section is unavailable.
+integrations, GitHub, bets, dirty git, since-last-check, `content_strategy`,
+`money_path`, and `ranked_actions`. Do not duplicate those checks with ad hoc
+shell probes unless status says a section is unavailable.
 
 **Continuity facts:** Use `since_last_check.journal`, top-level `journal`,
 GitHub activity, and `checkpoint` from status to explain "where we left off."
@@ -178,6 +178,9 @@ Use this report before asking additional questions:
   ranked actions as evidence; do not call the offer "good" or "will convert."
   For proof, cite `money_path.objects.proof.quality` facts such as generic
   testimonials, outcomes, offer linkage, typicality, and outcome feedback.
+- `content_strategy` maps the simple file and optional layers into health
+  states. Use it before parsing markdown for strategy repair or stale,
+  disconnected account/channel/person references.
 - `readiness` gates whether setup/repair work must happen before output skills.
 - `drift.items` names stale or broken status signals and repair commands.
 - `onboarding.summary` and `onboarding.checklist` replace separate onboarding

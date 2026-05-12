@@ -235,7 +235,9 @@ Full structure (single-offer):
 │   ├── offer.md           # What you sell / brand thesis
 │   ├── audience.md        # Who buys
 │   ├── voice.md           # How you sound
-│   ├── content-strategy.md # Content pillars, platforms, cadence
+│   ├── content-strategy.md # Business-level content strategy and layer index
+│   ├── marketing/          # Optional distribution, channel, account layers
+│   ├── people/             # Optional founder/person voice source material
 │   ├── proof/
 │   │   ├── testimonials.md
 │   │   └── angles/        # Proven messaging entry points

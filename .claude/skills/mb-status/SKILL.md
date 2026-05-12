@@ -24,7 +24,7 @@ mb status --json --peek
 
 3. Treat the JSON as the source of truth for setup, update, drift, GitHub,
    onboarding, integrations, bets, journal activity, since-last-check,
-   readiness, vocabulary, money_path, and ranked actions.
+   readiness, vocabulary, content_strategy, money_path, and ranked actions.
 4. Summarize the top `ranked_actions` first. For each one, include:
    - title
    - command or slash command
@@ -36,6 +36,10 @@ mb status --json --peek
    feedback. Keep the language evidence-based: legible, supported, connected,
    instrumented. Do not say the offer is good, bad, likely to convert, or ready
    to win.
+   Use `content_strategy` when the question is about content strategy health,
+   layered channel/account/person files, stale platform rules, or disconnected
+   content layers. Do not infer that health by parsing markdown yourself unless
+   status says the section is unavailable.
    If `vocabulary.terms.push` defines display words, use them in
    operator-facing prose without changing current paths, frontmatter, JSON
    keys, validator rules, or command names.

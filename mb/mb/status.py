@@ -15,6 +15,7 @@ import yaml
 from mb import __version__, github_activity, relationships, vocabulary
 from mb import codex as codex_mod
 from mb import connect as connect_mod
+from mb import content_strategy as content_strategy_mod
 from mb import journal as journal_mod
 from mb import onboard as onboard_mod
 from mb import pushes as pushes_mod
@@ -3686,6 +3687,10 @@ def run(
         "measurement": _measurement(repo_path),
         "github": github,
     }
+    report["content_strategy"] = content_strategy_mod.facts(
+        repo_path,
+        today=current_time.date(),
+    )
     report["relationship_health"] = _relationship_health(
         repo_path,
         brain=brain,

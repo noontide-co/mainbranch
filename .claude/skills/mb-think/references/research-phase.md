@@ -92,10 +92,11 @@ This is optional — standard naming without the offer prefix works fine. Use th
 
 When the user's research topic involves content pillars, platform selection,
 content cadence, account strategy, founder/person voice, distribution, channel
-rules, or content performance, check `core/content-strategy.md` first. If it
-exists, read it to understand current strategy before researching. Then read
-the relevant `core/marketing/` or `core/people/` files when the question names
-a channel, account, or person.
+rules, or content performance, start from `mb status --json --peek` and use
+`content_strategy` to see whether the simple file and optional layers are
+healthy, stale, disconnected, or missing. Then read `core/content-strategy.md`
+and the relevant `core/marketing/` or `core/people/` files when the question
+names a channel, account, or person.
 
 **Trigger topics:** content pillars, recognition target, which platforms,
 content plan, cadence, content mix, repurposing, hooks, content frameworks,
@@ -103,13 +104,14 @@ content metrics, newsletter strategy, channel strategy, account strategy,
 founder voice, weekly content plan
 
 **Research flow for content strategy topics:**
-1. Read existing `core/content-strategy.md` (if present) to understand current state
+1. Read `content_strategy` facts from status, then read existing
+   `core/content-strategy.md` when present
 2. Read `core/soul.md` + resolved `offer.md` + resolved `audience.md` for pillar derivation context
 3. Conduct research (web, mining, competitor analysis)
 4. Synthesize into a research file as usual
 5. In the **Implications for Reference Files** section, note which sections of
-   `content-strategy.md`, `core/marketing/...`, or `core/people/...` should be
-   updated
+   `core/content-strategy.md`, `core/marketing/...`, or `core/people/...`
+   should be updated, and whether `linked_strategy_layers` needs repair
 
 If `content-strategy.md` does not exist, the research output should recommend
 creating it as an action item. See `mb-setup/references/templates.md` for the
@@ -451,7 +453,7 @@ In multi-offer mode, use offer-qualified paths:
 | `core/audience.md` | Segment by tier |
 | `core/proof/angles/` | Add durable emotional or competitive angles |
 | `core/proof/typicality.md` | Add aggregate outcome and average-case context |
-| `core/content-strategy.md` | Add hooks, frameworks, platform strategy, comment insights |
+| `core/content-strategy.md` / `core/marketing/...` / `core/people/...` | Add hooks, frameworks, platform strategy, comment insights, or layer links |
 | `core/product-ladder.md` | Update ascension logic |
 
 In single-offer mode, paths stay standard:
@@ -462,7 +464,7 @@ In single-offer mode, paths stay standard:
 | `core/audience.md` | Segment by tier |
 | `core/proof/angles/` | Add durable emotional or competitive angles |
 | `core/proof/typicality.md` | Add aggregate outcome and average-case context |
-| `core/content-strategy.md` | Add hooks, frameworks, platform strategy, comment insights |
+| `core/content-strategy.md` / `core/marketing/...` / `core/people/...` | Add hooks, frameworks, platform strategy, comment insights, or layer links |
 
 **Bad:** "Update offer.md"
 **Good:** "Update core/offers/community/offer.md — Add three-tier pricing with benefits per tier"

@@ -58,6 +58,112 @@ def test_validate_passes_well_formed(tmp_path: Path) -> None:
     assert all(f["ok"] for f in report["files"])
 
 
+def test_validate_accepts_simple_content_strategy_entry_point(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "core" / "content-strategy.md",
+        (
+            "---\n"
+            "type: content_strategy\n"
+            "status: active\n"
+            "---\n\n"
+            "# Content Strategy\n\n"
+            "## Known-for target\n"
+            "Be known for helping solo operators keep business memory durable.\n\n"
+            "## Pillars\n"
+            "Repo truth, operator loops, and practical AI-assisted shipping.\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is True
+    strategy = next(file for file in report["files"] if file["schema"] == "content-strategy")
+    assert strategy["errors"] == []
+
+
+def test_validate_reports_layered_content_strategy_connection_failures(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "core" / "content-strategy.md",
+        (
+            "---\n"
+            "type: content_strategy\n"
+            "status: active\n"
+            "linked_strategy_layers:\n"
+            "  - core/marketing/accounts/x-founder.md\n"
+            "---\n\n"
+            "# Content Strategy\n\n"
+            "The account layer should connect to a channel and person file.\n"
+        ),
+    )
+    _write(
+        tmp_path / "core" / "marketing" / "accounts" / "x-founder.md",
+        (
+            "---\n"
+            "type: account_strategy\n"
+            "status: active\n"
+            "platform: x\n"
+            "account: founder\n"
+            "channel_strategy: core/marketing/channels/x.md\n"
+            "voice_source: core/people/founder.md\n"
+            "owner: Operator\n"
+            "last_reviewed: 2026-05-12\n"
+            "update_trigger: Platform norms changed.\n"
+            "source_links: []\n"
+            "---\n\n"
+            "# X Founder Account\n\n"
+            "Audience, allowed topics, voice, cadence, content mix, and CTA path.\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    account = next(file for file in report["files"] if file["schema"] == "content-account-strategy")
+    assert report["ok"] is False
+    assert (
+        "channel_strategy target 'core/marketing/channels/x.md' does not exist" in account["errors"]
+    )
+    assert "voice_source target 'core/people/founder.md' does not exist" in account["errors"]
+
+
+def test_validate_reports_orphaned_and_stale_content_strategy_layers(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "core" / "content-strategy.md",
+        (
+            "---\n"
+            "type: content_strategy\n"
+            "status: active\n"
+            "---\n\n"
+            "# Content Strategy\n\n"
+            "Business-level strategy exists, but it has not indexed the channel layer yet.\n"
+        ),
+    )
+    _write(
+        tmp_path / "core" / "marketing" / "channels" / "reddit.md",
+        (
+            "---\n"
+            "type: channel_strategy\n"
+            "status: active\n"
+            "channel: reddit\n"
+            "owner: Operator\n"
+            "last_reviewed: 2025-01-01\n"
+            "update_trigger: Platform norms changed.\n"
+            "source_links: []\n"
+            "---\n\n"
+            "# Reddit Channel Strategy\n\n"
+            "Community norms, timing, content types, anti-spam rules, and review triggers.\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    channel = next(file for file in report["files"] if file["schema"] == "content-channel-strategy")
+    assert report["ok"] is True
+    assert any("last_reviewed is" in warning for warning in channel["warnings"])
+    assert "layer exists but is not indexed from core/content-strategy.md" in channel["warnings"]
+
+
 def test_validate_accepts_canonical_bet_linked_pushes_without_legacy_campaigns(
     tmp_path: Path,
 ) -> None:

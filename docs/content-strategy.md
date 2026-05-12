@@ -52,6 +52,40 @@ core/people/
 Do not copy the same strategy into every file. The business-level strategy
 sets the shared direction; the other files specialize it.
 
+## Frontmatter Contract
+
+`mb validate` checks layered content strategy files when they exist. The simple
+solo-operator path stays one file, but it should still identify itself:
+
+```yaml
+---
+type: content_strategy
+status: active
+linked_strategy_layers: []
+---
+```
+
+Use `linked_strategy_layers` to index optional layers from
+`core/content-strategy.md`. The index is what `mb status --json --peek` turns
+into normalized `content_strategy` facts for `/mb-start`, `/mb-status`, and a
+future read-only dashboard. A dashboard should read those JSON facts instead of
+parsing markdown.
+
+Layer frontmatter:
+
+| File | Required keys |
+| --- | --- |
+| `core/marketing/distribution-strategy.md` | `type: distribution_strategy`, `status` |
+| `core/marketing/channels/<channel>.md` | `type: channel_strategy`, `status`, `channel`, plus freshness keys |
+| `core/marketing/accounts/<platform>-<account>.md` | `type: account_strategy`, `status`, `platform`, `account`, `channel_strategy`, `voice_source`, plus freshness keys |
+| `core/people/<person>.md` | `type: person`, `status` |
+
+Valid strategy statuses are `draft`, `active`, `paused`, `needs-review`,
+`stale`, and `archived`. Account `channel_strategy` should point to the
+matching channel file. Account `voice_source` should point to
+`core/people/<person>.md` when a person voice is used, or `core/voice.md` for
+brand voice.
+
 ## Layer Contracts
 
 | Layer | Path | Owns |

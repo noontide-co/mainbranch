@@ -177,7 +177,9 @@ say so; keep parent strategy and bet truth in the business repo.]
 
 [Full text of each core file in core/, core/offers/[active]/ if multi-offer,
 core/proof/testimonials.md, core/proof/angles/*.md, core/content-strategy.md,
-core/product-ladder.md if multi-offer, core/operations/funnel/skool-surfaces.md if exists]
+indexed core/marketing/ and core/people/ strategy layers named by
+`content_strategy`, core/product-ladder.md if multi-offer,
+core/operations/funnel/skool-surfaces.md if exists]
 
 === BUSINESS PRIMITIVE GUIDANCE ===
 
@@ -304,8 +306,9 @@ Analyze these dimensions:
    enrichment with no push output = stuck in thinking. All push output
    with no enrichment = running on stale context.
 
-6. **Content strategy health:** Does content-strategy.md have populated pillars?
-   Hooks library? Framework library? Metrics section? Or is it a skeleton?
+6. **Content strategy health:** Use `content_strategy.overall_state` and
+   findings from `mb status --json --peek`. Is the simple file healthy, stale,
+   disconnected from optional layers, or missing operator-useful sections?
 
 Return:
 - Pipeline health summary (2-3 sentences)
@@ -507,7 +510,8 @@ Every gap recommendation must connect to a specific downstream outcome the user 
 | Thin audience.md | Hooks don't land | "Adding 3-5 pain points to audience.md means /mb-ads writes hooks your audience actually recognizes" |
 | No angles | Ad fatigue | "One angle = one ad direction. Three angles = three completely different emotional entry points. More angles = more creative variety before fatigue" |
 | No testimonials | Can't use social proof | "Even 2-3 testimonials unlock proof-based ads. Got any screenshots of wins, DMs, or reviews?" |
-| No content-strategy | No distribution plan | "Your reference is ready to generate content, but without content-strategy.md there's no plan for where it goes. 15 min with /mb-think can build the skeleton" |
+| No content-strategy | No distribution plan | "Your reference is ready to generate content, but status says content strategy is missing. 15 min with /mb-think can build the simple file first." |
+| Disconnected content layers | Dashboard/status cannot trust channel or account health | "Your strategy layers exist, but status says one is disconnected. Repair the link/index before using it for planning." |
 
 ### Make It Easy
 
