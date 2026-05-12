@@ -37,6 +37,7 @@ Pick the route that matches what you are doing.
 
 ### Schemas and contracts
 
+- [`architecture/system-map.md`](architecture/system-map.md) — Mermaid-powered visual index of the Main Branch system, boundaries, and source docs.
 - [`system-architecture.md`](system-architecture.md) — repo shapes, business primitives, boundaries, and schemas.
 - [`json-output-contract.md`](json-output-contract.md) — `mb --json` envelope.
 - [`data-source-registry.md`](data-source-registry.md) — `type: data_source` records.
@@ -97,6 +98,7 @@ all-caps Markdown file appears under `docs/`.
 |---|---|---|
 | Durable reference | `docs/*.md` | `docs/ethos.md` |
 | Index | `docs/README.md` | this file |
+| Architecture map | `docs/architecture/` | `docs/architecture/system-map.md` |
 | Planned product shape | `docs/prd/` | `docs/prd/v0-3-agent-checkpoints.md` |
 | Evidence and dogfood | `docs/reports/` | `docs/reports/2026-05-08-v0-3-11-release-transcript-review.md` |
 | Examples and samples | `docs/examples/` | `docs/examples/grok-8-researched-brief.md` |

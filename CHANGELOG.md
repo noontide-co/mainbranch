@@ -21,6 +21,9 @@ aliases.
 
 ### Added
 
+- Added a Mermaid-powered Main Branch system map with source-of-truth tables
+  for architecture boundaries, provider rails, private data, validation, and
+  runtime stance. Refs MAIN-339, #519.
 - Added `docs/agent-cold-start.md` as the public source for agent read order,
   progressive discovery, release-doc boundaries, and the local preference split,
   so maintainer-local preferences can stay short and private. Refs MAIN-330,
