@@ -22,7 +22,7 @@ fresh. It is the operator-facing companion to
 - The `mb data sync` and `mb data status` commands are **planned**, not
   shipped. The pattern works today with a hand-rolled cron entry.
 - Real bookkeeping data (bank, processor, payroll, tax) does **not**
-  go through `data/<provider>/`. It belongs in the private books vault
+  go through `data/<provider>/`. It belongs in the private bookkeeping vault
   per [`docs/books.md`](books.md).
 
 ## How The Pieces Fit
@@ -251,11 +251,11 @@ Real bookkeeping data does **not** go through `data/<provider>/`.
   to sync into the team-visible `data/<provider>/` registry.
 - Bank exports, processor settlements, payroll, tax, raw customer
   payment rows → these are **Class B** per
-  [`docs/books.md`](books.md). They belong in the private books
+  [`docs/books.md`](books.md). They belong in the private bookkeeping
   vault (`.mb/private/books/imports/` for solo, the books repo for
   team mode), never in `data/<provider>/`.
 
-The sync pattern and the books vault stay separate on purpose. A
+The sync pattern and the bookkeeping vault stay separate on purpose. A
 future `mb books import` command will read from the vault's
 `imports/` directory and feed the hledger journal. It will not read
 from `data/<provider>/`. The team-visible registry never becomes a

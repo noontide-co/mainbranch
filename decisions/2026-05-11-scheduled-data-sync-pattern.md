@@ -52,7 +52,7 @@ Concretely:
   otherwise.
 - **Operational state** (last-run timestamps, exit status, run logs) lives
   under `.mb/private/sync/`, mirroring the
-  [private books vault](2026-05-11-mb-books-foundation.md) ignore pattern.
+  [private bookkeeping vault](2026-05-11-mb-books-foundation.md) ignore pattern.
   The team-visible business repo only carries the data outputs and the
   registry record, never run logs or operator-local paths.
 - **Credentials** stay in the OS keychain, the runtime environment, or
@@ -69,7 +69,7 @@ Concretely:
 - The pattern feeds the data-source registry. It does **not** feed the
   hledger journal directly. The
   [`mb books` foundation](2026-05-11-mb-books-foundation.md) keeps the
-  authoritative ledger inside the private books vault; bookkeeping
+  authoritative ledger inside the private bookkeeping vault; bookkeeping
   imports remain a separate follow-up scope.
 
 This slice ships docs and a decision. No CLI behaviour changes.
@@ -273,13 +273,13 @@ not change. The pattern adds three habits:
 
 The [`mb books` foundation](2026-05-11-mb-books-foundation.md) chose
 hledger as the bookkeeping engine and put the authoritative ledger in
-a **private books vault** (`.mb/private/books/main.journal` for solo
+a **private bookkeeping vault** (`.mb/private/books/main.journal` for solo
 mode, a separate restricted-access repo for team mode).
 
 This pattern does not change that. In particular:
 
 - Scheduled sync **may** write Stripe, PayPal, payroll, or bank
-  exports into the **private books vault's** `imports/` directory
+  exports into the **private bookkeeping vault's** `imports/` directory
   when the operator's script targets that location. That happens
   entirely inside the vault and inherits the vault's storage rules.
 - Scheduled sync **must not** write raw bank, processor, payroll, or
@@ -342,7 +342,7 @@ When the pattern proves itself in real use, file separate issues for:
   Ads daily) shipped under `docs/examples/sync/`.
 - A reference GitHub Actions workflow under `docs/examples/sync/`
   with a public-safe secret model.
-- `mb books import` and the bridge between the private books vault's
+- `mb books import` and the bridge between the private bookkeeping vault's
   `imports/` directory and the hledger journal.
 - Optional sidecar envelope for sync runs if a third-party tool
   becomes part of the recommended path.
@@ -373,8 +373,8 @@ when they ship CLI behaviour, scaffolding, or runtime wiring.
   files for both.
 - `mb` stays one-shot. The product avoids accumulating a background
   process before the rest of the daily loop is boring.
-- The pattern does not collide with the private books vault. Books
-  imports remain a separate scope with stricter data rules.
+- The pattern does not collide with the private bookkeeping vault.
+  Bookkeeping imports remain a separate scope with stricter data rules.
 - Future provider follow-ups have a contract to point at instead of
   re-litigating "where do logs go" each time.
 
@@ -389,7 +389,7 @@ Revisit this decision when any of these become true:
 - The optional sidecar enrichment contract grows a sync-shaped
   envelope that supersedes per-provider scripts.
 - `mb books import` lands and reshapes the boundary between
-  team-visible `data/` and the private books vault's `imports/`
+  team-visible `data/` and the private bookkeeping vault's `imports/`
   directory.
 - A separate accepted decision approves a Main Branch background
   service.

@@ -1,4 +1,4 @@
-# Books Examples
+# Bookkeeping Examples
 
 Fake bookkeeping fixtures used to exercise the shipped `mb books check`
 contract. Everything in this folder is intentionally fake.

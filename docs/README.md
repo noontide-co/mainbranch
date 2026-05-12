@@ -13,8 +13,8 @@ Pick the route that matches what you are doing.
 
 ### New here (cold start)
 
-- [`ethos.md`](ethos.md) — product principles.
-- [`operator-loops.md`](operator-loops.md) — Sense / Decide / Ship / Reflect.
+- [`ethos.md`](ethos.md) — product principles, source-of-truth model, and runtime stance.
+- [`operator-loops.md`](operator-loops.md) — Sense / Decide / Ship / Reflect workflow taxonomy.
 - [`roadmap.md`](roadmap.md) — current public direction.
 - [`beginner-setup.md`](beginner-setup.md) — human setup walkthrough.
 
@@ -27,16 +27,17 @@ Pick the route that matches what you are doing.
 
 ### Operating the daily loop
 
-- [`operator-loops.md`](operator-loops.md) — the four loops.
-- [`playbooks.md`](playbooks.md) — reusable operating recipes.
+- [`operator-loops.md`](operator-loops.md) — how operator work moves through Sense, Decide, Ship, Reflect.
+- [`playbooks.md`](playbooks.md) — reusable operating recipes and run records.
+- [`books.md`](books.md) — bookkeeping safety, hledger, and the private ledger vault model.
 - [`onboarding-progress.md`](onboarding-progress.md) — lifecycle skill resume surface.
-- [`business-connections.md`](business-connections.md) — link conventions inside a repo.
+- [`business-connections.md`](business-connections.md) — when to use frontmatter links, inline links, tags, data refs, or context.
 - [`markdown-link-conventions.md`](markdown-link-conventions.md) — markdown and link rules.
 - [`issue-drafting.md`](issue-drafting.md) — privacy-safe `mb issue` flow.
 
 ### Schemas and contracts
 
-- [`system-architecture.md`](system-architecture.md) — repo shapes, primitives, schemas.
+- [`system-architecture.md`](system-architecture.md) — repo shapes, business primitives, boundaries, and schemas.
 - [`json-output-contract.md`](json-output-contract.md) — `mb --json` envelope.
 - [`data-source-registry.md`](data-source-registry.md) — `type: data_source` records.
 - [`child-repo-descriptors.md`](child-repo-descriptors.md) — `.mainbranch/repo.json`.
@@ -73,6 +74,9 @@ Pick the route that matches what you are doing.
 Under `docs/`:
 
 - Markdown filenames are **lowercase kebab-case** by default.
+- Filenames should name the document's job clearly enough that a fresh agent
+  can classify it from the path. If a short product noun is ambiguous, make the
+  title explicit, for example `Bookkeeping (mb books)`.
 - The only all-caps exception under `docs/` is `docs/README.md`.
 - Files under `docs/reports/` may begin with `YYYY-MM-DD-` (dated evidence).
 - Files under `docs/prd/` use versioned lowercase names like

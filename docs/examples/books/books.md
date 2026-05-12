@@ -11,7 +11,7 @@ encrypted_backup: false
 class_b_data: true
 ---
 
-# Books — Sample
+# Bookkeeping — Sample
 
 > Sample file. Not a real bookkeeping policy. See
 > [docs/books.md](../../books.md) for the operator-facing description and
@@ -20,7 +20,7 @@ class_b_data: true
 
 This is what a real `core/finance/books.md` could look like in a
 business repo for a fictional company using the solo-local storage
-mode. The real books live in a private books vault inside the
+mode. The real bookkeeping records live in a private bookkeeping vault inside the
 business repo's local working tree, ignored from the business repo's
 tracked content and never pushed to its remote.
 

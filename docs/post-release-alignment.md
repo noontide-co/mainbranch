@@ -160,9 +160,10 @@ Use this list as a quick decision-alignment scan during alignment sweeps and
 code review. Each line is intentionally a one-line pointer; the durable
 truth lives in the linked doc or decision.
 
-- **Bookkeeping engine**: hledger. Real books live in a private books vault
-  (solo-local under `.mb/private/books/` by default, or a separate
-  team-private repo). See `docs/books.md` and
+- **Bookkeeping engine**: hledger. The shipped command group is `mb books`,
+  but the business function is bookkeeping. Real bookkeeping records live
+  in a private bookkeeping vault (solo-local under `.mb/private/books/` by
+  default, or a separate team-private repo). See `docs/books.md` and
   `decisions/2026-05-11-mb-books-foundation.md`.
 - **Scheduled data sync**: operator-owned cron / `launchd` / Task Scheduler
   running one-shot per-provider scripts, not a hidden daemon. See

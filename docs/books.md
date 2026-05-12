@@ -1,8 +1,10 @@
-# Books
+# Bookkeeping (`mb books`)
 
 This page describes how Main Branch treats bookkeeping today. It is the
 operator-facing companion to
 [the mb books foundation decision](../decisions/2026-05-11-mb-books-foundation.md).
+The command group is named `mb books` because it is short; the business
+function is bookkeeping.
 
 ## The Short Version
 
@@ -15,11 +17,13 @@ operator-facing companion to
   bookkeeping engine when using `mb books`. `mb` does not require
   hledger to install, onboard, or run.
 - CSV and SQLite are import staging, source snapshots, caches, or
-  report outputs. They are not the books.
-- Real books live in a **private books vault**, never in the
-  team-visible business repo by default. `mb` keeps the books out of
-  GitHub unless the operator explicitly opts in. You should not need
-  to learn `.gitignore` to keep your books private; `mb` handles it.
+  report outputs. They are not the bookkeeping record.
+- Real bookkeeping lives in a **private bookkeeping vault**, never in the
+  team-visible business repo by default. The default path is still
+  `.mb/private/books/`, but the product concept is bookkeeping privacy,
+  not a content library. `mb` keeps raw finance out of GitHub unless the
+  operator explicitly opts in. You should not need to learn `.gitignore`
+  to keep bookkeeping private; `mb` handles it.
 - Real ledgers, statements, payroll, tax data, and account identifiers
   are **Class B data**.
 
@@ -30,8 +34,8 @@ explains the choice in `mb books status`.
 
 ### Solo local (default)
 
-The real books live in a private books vault inside your business
-repo's local working tree — but the vault is ignored by the business
+The real bookkeeping lives in a private bookkeeping vault inside your business
+repo's local working tree, but the vault is ignored by the business
 repo and never pushed to its remote.
 
 ```text
@@ -48,15 +52,15 @@ GitHub remote by default. Encrypted local backup is recommended.
 
 ### Team private repo
 
-When two or more people need books access, the vault graduates to a
-separate **private books repo** with access restricted to the
+When two or more people need bookkeeping access, the vault graduates to a
+separate **private bookkeeping repo** with access restricted to the
 finance/admin users who need it.
 
 ```text
 private-books-repo/
   books/main.journal           # real hledger journal (source of truth)
   books/rules/                 # real import rules
-  books/policies.md            # books policies
+  books/policies.md            # bookkeeping policies
   books/month-close.md         # close runbooks
   books/reports/monthly-summary.md
   books/imports/   # ignored
@@ -67,22 +71,22 @@ private-books-repo/
 
 PR review by another finance/admin user is the expected workflow for
 transaction changes. The main business repo never contains the real
-books, even when team mode is active.
+bookkeeping records, even when team mode is active.
 
 Why a separate repo and not a private folder: GitHub permissions are
 repo-level. If 20 people have access to the main business repo, then a
-"private" folder inside it is not actually private. Real books for a
-team always live in their own repo with their own access control.
+"private" folder inside it is not actually private. Real bookkeeping for a
+team always lives in its own repo with its own access control.
 
 ### Advanced encrypted / off-platform vault
 
-For teams that do not want real books on GitHub at all. `mb` points at
+For teams that do not want real bookkeeping on GitHub at all. `mb` points at
 an encrypted local volume, network drive, or off-platform store. This
 is a deliberate advanced choice, not a default.
 
 ### GitHub Warning
 
-Whenever real books are tracked on GitHub (team mode or advanced
+Whenever real bookkeeping is tracked on GitHub (team mode or advanced
 choice), `mb books status` surfaces:
 
 ```text
@@ -103,7 +107,7 @@ docs/reports/finance/              # sanitized summaries only
 ```
 
 All four are optional. A business repo without them is still valid.
-When present, they describe how the operator runs the books — not
+When present, they describe how the operator runs bookkeeping, not
 what the numbers are. `core/finance/import-rules/` and
 `docs/reports/finance/` may exist only when their contents contain
 no Class B data; `mb books check` warns when real identifiers or
@@ -125,9 +129,9 @@ encrypted_backup: false
 class_b_data: true
 ---
 
-# Books
+# Bookkeeping
 
-This business uses an hledger journal kept in a private books vault.
+This business uses an hledger journal kept in a private bookkeeping vault.
 This file is the public-safe pointer. The journal itself is not
 committed here.
 ```
@@ -138,7 +142,7 @@ operator uses (`assets`, `liabilities`, `equity`, `income`,
 real account numbers, balances, or specific institution names tied
 to live accounts.
 
-### In the private books vault (Class B; not in the business repo)
+### In the private bookkeeping vault (Class B; not in the business repo)
 
 The layout depends on the storage mode — see above. The principle is
 the same: the vault is where real bookkeeping lives, and the
