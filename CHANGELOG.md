@@ -38,6 +38,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   harness gap, and linked it from the release simulation transcript-review
   guidance. Refs MAIN-340, #521, #526.
 
+### Changed
+
+- Updated `/mb-start` and generated repo guidance so recommended Main Branch
+  updates pause business routing, ask the operator whether to update first, and
+  avoid burying update prompts under ranked actions. Refs MAIN-345, #532.
+
 ## [0.3.18] - 2026-05-12
 
 v0.3.18 is a package-visible skill and operator-loop patch. It strengthens
