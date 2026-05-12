@@ -47,7 +47,7 @@ for repair facts before giving prose-only advice.
 | Done, wrapping up, closing, end session, end of day | Route to `/mb-end` |
 | multi-offer, product ladder, offers, switch offer | Multi-Offer FAQ (below) |
 | Better outputs, quality, what next | [making-outputs-better.md](references/making-outputs-better.md) |
-| Content strategy, pillars, platforms, newsletter, content plan | [content-strategy-help.md](references/content-strategy-help.md) |
+| Content strategy, pillars, platforms, newsletter, channel strategy, account strategy, founder voice, weekly content plan | [content-strategy-help.md](references/content-strategy-help.md) |
 | Subagents, parallel, agents, context window, tokens | [working-with-agents.md](references/working-with-agents.md) |
 | workspace-isolated tools, sandboxed workspace, skills not showing | [workspace-setup.md](references/workspace-setup.md) |
 | Contribute, contributor | [becoming-contributor.md](references/becoming-contributor.md) |
@@ -75,17 +75,17 @@ for repair facts before giving prose-only advice.
 | When use skill prompts? | For structured tasks: `/mb-start`, `/mb-think`, `/mb-ads`, `/mb-site`, `/mb-organic` |
 | Drag files in? | Drag from Finder into Terminal, path appears |
 | Voice input? | [Wispr Flow](https://ref.wisprflow.ai/main) (affiliate link) |
-| What is content-strategy.md? | Your distribution backbone -- pillars, platforms, cadence. Built through `/mb-think`, consumed by `/mb-organic` and `/mb-ads`. Lives at `core/content-strategy.md`. |
-| How do I build a content strategy? | Run `/mb-think`. Start by deriving 3-5 pillars from your soul.md + offer.md + audience.md. Then choose platforms, set cadence, and fill in over time. |
+| What is content-strategy.md? | The business-level content strategy and index: what you want to be known for, who content is for, pillars, content jobs, and what not to publish. Use `core/marketing/` and `core/people/` only when you need channel, account, or person-specific layers. |
+| How do I build a content strategy? | Run `/mb-think`. Start with offer clarity, recognition target, audience, and 3-5 pillars in `core/content-strategy.md`. Add distribution, channel, account, and person files only when the simple file gets crowded. |
 | How do pillars work? | Each pillar is a content theme that passes three tests: Soul test (connects to why), Offer test (leads to mechanism), Audience test (they care). 3-5 pillars cover your content universe. |
-| What's the content pipeline? | Keystone-first: write one strong piece weekly, then `/mb-organic` adapts it for social platforms and `/mb-ads` can amplify top performers. One idea, many formats. |
+| What's the content pipeline? | Strategy first, then distribution. Owned assets, email, social, communities, wiki, changelog, and paid amplification should point at the same offer and recognition target. Specific execution lives in `pushes/`; results land in `log/`. |
 | What are subagents? | Claude can spawn parallel agents to research or review simultaneously. You'll see it happen automatically in `/mb-think` (multi-source research) and `/mb-ads review` (6 compliance lenses). Each agent gets its own context window so your main conversation stays clean. |
 | How do I manage context/tokens? | Context management is a skill that develops over time. Your files (`core/`, `research/`, `decisions/`) survive compaction — only conversation memory compresses. After compaction, help Claude rebuild by pointing it at recent files or running /mb-start. Save insights to research files early — if it's in a file, it's safe. |
 | How do I close a session? | Run `/mb-end`. It summarizes what happened, asks if you have final thoughts, offers a crystallize moment if you made decisions, and guides an approved checkpoint instead of raw git commits. Bookend to `/mb-start`. |
 | What is multi-offer? | Multiple products under one brand, one business folder. Each offer gets its own `core/offers/[name]/offer.md`. Soul and voice stay in `core/` because they're brand-level. Use when you sell multiple things (community + newsletter + done-for-you). If you have no `core/offers/` folder, you're in single-offer mode — everything reads from `core/` and nothing changes. |
 | How do I switch offers? | Say `/mb-start [offer-name]` or answer when /mb-start prompts. The choice is session-scoped unless you explicitly approve saving it as local active-offer state. |
 | Where do offer files go? | In a single-offer repo, `core/offer.md` is the durable offer truth. In a multi-offer repo, `core/offer.md` is the portfolio thesis and `core/offers/[name]/offer.md` holds offer-specific details. Legacy `reference/offers` and `reference/core` may point at those folders as compatibility bridges; do not edit both. |
-| What stays in core with multiple offers? | `soul.md` (always), `voice.md` (always), `audience.md` (base, with optional per-offer overrides), `content-strategy.md` (brand-level distribution). |
+| What stays in core with multiple offers? | `soul.md` (always), `voice.md` (always), `audience.md` (base, with optional per-offer overrides), `content-strategy.md` (business-level content strategy), and optional `core/marketing/` / `core/people/` layers. |
 | Where does proof go? | Company-wide testimonials go in `core/proof/testimonials.md`, average-case context in `core/proof/typicality.md`, and angles in `core/proof/angles/`. Offer-specific proof uses matching files under `core/offers/[name]/proof/`. |
 | Can I delete or rename an old offer folder? | Ask first. Offer folders are durable business history. Rename, delete, merge, or move them only after an accepted decision, approved migration plan, or explicit operator instruction. |
 | How do I add another offer? | Run `/mb-setup` -- it detects your existing setup and offers a migration path. Or use `/mb-think` to plan the new offer first. |

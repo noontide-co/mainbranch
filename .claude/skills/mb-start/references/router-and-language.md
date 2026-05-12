@@ -191,6 +191,9 @@ Signals and routes:
 - bet, wager, deadline, metric, result, outcome: `/mb-bet`
 - launch, push, playbook, offer launch: launch orchestration, then `/mb-think`,
   `/mb-site`, `/mb-ads`, or checkpoint as the current step requires
+- content strategy, distribution strategy, channel strategy, account strategy,
+  founder voice, weekly content plan: `/mb-think` to codify the strategy layer,
+  then `/mb-organic`, `/mb-site`, or `/mb-ads` for output
 - site, landing page, lander, minisite, publish: `/mb-site`
 - ads, Google Ads, Meta Ads, video ad, compliance: `/mb-ads`
 - organic, reels, TikTok, LinkedIn, carousel, repurpose: `/mb-organic`

@@ -46,7 +46,7 @@ For multi-offer setups, also explain:
 5. `core/proof/testimonials.md` — Social proof
 6. `core/proof/angles/` — Messaging entry points
 7. `core/brand/visual-style.md` — Visual brand identity (colors, typography, mood, image prompt fragments)
-8. `core/content-strategy.md` — Content pillars, platforms, cadence (template for community businesses)
+8. `core/content-strategy.md` — Known-for target, pillars, asset jobs, distribution links, and optional `core/marketing/` / `core/people/` layers
 9. `core/operations/funnel/skool-surfaces.md` — Live Skool about page + pricing card copy (community businesses with Skool)
 
 ### Multi-Offer Additional Files (if applicable)

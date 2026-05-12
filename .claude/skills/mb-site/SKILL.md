@@ -89,7 +89,12 @@ Say `/mb-site` again after compaction, context loss, or switching focus. It relo
 6. When the page, sales video, or lander depends on a weak offer, load
    `.claude/reference/conversion/offer-sharpening.md` and route to `/mb-think`
    before writing page copy from thin claims.
-7. Ask what the operator is building, then load only the shape reference needed next.
+7. When the site, blog, wiki, changelog, or launch page depends on content or
+   recognition strategy, read `core/content-strategy.md` and relevant
+   `core/marketing/` files if present. Owned site content should support the
+   same known-for target, asset jobs, channel plan, and CTA path rather than
+   duplicating publishable site copy into the business repo.
+8. Ask what the operator is building, then load only the shape reference needed next.
 
 ## Operating Principles
 
@@ -154,6 +159,8 @@ If the operator cannot articulate the shape, ask: "What goal are you trying to h
 - [`references/site-repo-workflow.md`](references/site-repo-workflow.md) - business repo mode vs site repo mode, source links, reverse records.
 - [`references/site-context.md`](references/site-context.md) - prerequisites, active offer resolution, required `core/...` files, and section mapping.
 - `.claude/reference/conversion/offer-sharpening.md` - universal offer rubric, style spectrum, evidence handling, and stop conditions.
+- Engine doc `docs/content-strategy.md` - layered content, distribution,
+  channel, account, person, push, and results model.
 - [`references/sales-video.md`](references/sales-video.md) - sales video, VSL, about-page video, lander video, and embedded pitch scripts for owned surfaces.
 - [`references/site-measurement.md`](references/site-measurement.md) - `mb site check` and paid-traffic readiness states.
 - [`references/site-recovery.md`](references/site-recovery.md) - compaction recovery and scope boundaries.

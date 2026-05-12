@@ -48,6 +48,9 @@ Follow the shared active-offer contract in
 `.claude/reference/business-primitives/offer-bet-push-proof.md`.
 
 Always-core files, never per-offer: `soul.md`, `voice.md`, `content-strategy.md`.
+Use `core/marketing/...` and `core/people/...` as optional content strategy
+layers when a site, blog, wiki, changelog, or launch page needs channel,
+account, distribution, or founder/person voice context.
 
 Offer-aware files, check `core/offers/` first and fall back to `core/`: `offer.md`, `audience.md`.
 
@@ -66,7 +69,7 @@ testimonial files can be read as compatibility context.
 | Soul | `core/soul.md` | Optional |
 | Testimonials | `core/proof/testimonials.md` plus offer-specific proof if present | Recommended |
 | Angles | `core/proof/angles/*.md` | Optional |
-| Content Strategy | `core/content-strategy.md` | Optional |
+| Content Strategy | `core/content-strategy.md` plus relevant `core/marketing/...` / `core/people/...` layers | Optional |
 | Skool Surfaces | `core/operations/funnel/skool-surfaces.md` | Optional for congruence |
 
 Legacy `reference/*` paths are compatibility fallback only. Do not write new evergreen business truth there.

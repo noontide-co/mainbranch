@@ -181,12 +181,20 @@ legacy fallback when `core/` is absent.
 
 ## Content Strategy Updates
 
-When codifying decisions about content pillars, platform selection, cadence, or content performance, update `core/content-strategy.md`. Sections to update:
+When codifying decisions about content pillars, recognition targets, platform
+selection, cadence, account strategy, person voice, or content performance,
+update the right layer. Keep `core/content-strategy.md` as the simple
+business-level strategy and index. Use `core/marketing/...` and
+`core/people/...` only when the detail needs its own layer.
 
 | Decision About | Update Section |
 |----------------|----------------|
-| New pillar discovered | **Content Pillars** — add pillar with sub-topics and three tests (soul, offer, audience) |
-| Platform added or removed | **Platform Strategy** — update priority-ordered platform list |
+| Recognition target or content job changed | `core/content-strategy.md` — update known-for target, audience, asset jobs, and non-publishing rules |
+| New pillar discovered | `core/content-strategy.md` — add pillar with sub-topics and three tests (soul, offer, audience) |
+| Distribution system changed | `core/marketing/distribution-strategy.md` or the distribution section in `core/content-strategy.md` |
+| Platform added or removed | `core/marketing/channels/<channel>.md` plus the strategy index |
+| Account strategy changed | `core/marketing/accounts/<platform>-<account>.md` |
+| Founder/person voice source changed | `core/people/<person>.md` and only update `core/voice.md` when brand voice changes |
 | Winning hook identified | **Hooks Library** — add hook with context and performance |
 | New framework extracted | **Framework Library** — add framework with source and transfer notes |
 | New benchmark established | **Metrics** — update PRP benchmarks or review cadence |
@@ -200,8 +208,8 @@ When codifying decisions about content pillars, platform selection, cadence, or 
 
 ```
 Research: "Which platforms does my audience use?"
-  → Decide: Platform strategy (Instagram Reels + newsletter)
-    → Codify: Update Platform Strategy section in content-strategy.md
+  → Decide: Distribution/channel strategy (blog + LinkedIn + newsletter)
+    → Codify: Update core/content-strategy.md index and core/marketing/channels/linkedin.md
 
 Research: "What content themes drive engagement?"
   → Decide: Three pillars (transformation stories, tactical tips, community wins)
@@ -209,10 +217,15 @@ Research: "What content themes drive engagement?"
 
 Mining: Competitor content analysis
   → Extract: Framework (hook pattern, emotional arc)
-    → Codify: Add to Framework Library + Hooks Library in content-strategy.md
+    → Codify: Add to Framework Library + Hooks Library in the right content strategy layer
 ```
 
-If `content-strategy.md` does not exist and the user is codifying content-related decisions, suggest creating it: "This looks like content strategy work. Want to create `core/content-strategy.md` to store this?" See `mb-setup/references/templates.md` for the template, and `mb-help/references/content-strategy-help.md` for user-facing FAQ.
+If `content-strategy.md` does not exist and the user is codifying
+content-related decisions, suggest creating it: "This looks like content
+strategy work. Want to create `core/content-strategy.md` to store the
+business-level strategy and index?" See `mb-setup/references/templates.md` for
+the templates, and `mb-help/references/content-strategy-help.md` for
+user-facing FAQ.
 
 ---
 

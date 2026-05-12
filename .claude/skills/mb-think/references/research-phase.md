@@ -90,18 +90,31 @@ This is optional — standard naming without the offer prefix works fine. Use th
 
 ## Content Strategy Research Routing
 
-When the user's research topic involves content pillars, platform selection, content cadence, or content performance, check `core/content-strategy.md` first. If it exists, read it to understand current strategy before researching.
+When the user's research topic involves content pillars, platform selection,
+content cadence, account strategy, founder/person voice, distribution, channel
+rules, or content performance, check `core/content-strategy.md` first. If it
+exists, read it to understand current strategy before researching. Then read
+the relevant `core/marketing/` or `core/people/` files when the question names
+a channel, account, or person.
 
-**Trigger topics:** content pillars, which platforms, content plan, cadence, content mix, repurposing, hooks, content frameworks, content metrics, newsletter strategy
+**Trigger topics:** content pillars, recognition target, which platforms,
+content plan, cadence, content mix, repurposing, hooks, content frameworks,
+content metrics, newsletter strategy, channel strategy, account strategy,
+founder voice, weekly content plan
 
 **Research flow for content strategy topics:**
 1. Read existing `core/content-strategy.md` (if present) to understand current state
 2. Read `core/soul.md` + resolved `offer.md` + resolved `audience.md` for pillar derivation context
 3. Conduct research (web, mining, competitor analysis)
 4. Synthesize into a research file as usual
-5. In the **Implications for Reference Files** section, note which sections of `content-strategy.md` should be updated
+5. In the **Implications for Reference Files** section, note which sections of
+   `content-strategy.md`, `core/marketing/...`, or `core/people/...` should be
+   updated
 
-If `content-strategy.md` does not exist, the research output should recommend creating it as an action item. See `mb-setup/references/templates.md` for the content-strategy.md template, and `mb-help/references/content-strategy-help.md` for user-facing FAQ.
+If `content-strategy.md` does not exist, the research output should recommend
+creating it as an action item. See `mb-setup/references/templates.md` for the
+content strategy templates, and `mb-help/references/content-strategy-help.md`
+for user-facing FAQ.
 
 ---
 
