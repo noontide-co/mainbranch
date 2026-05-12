@@ -6,7 +6,7 @@ Small, righteous, vastly outmatched — but armed with one specific advantage. T
 
 - Indie products against incumbents.
 - Challenger brands.
-- Tools built explicitly *against* a market default (Forgejo vs. GitHub, Beancount vs. QuickBooks, Cal.com vs. Calendly, Cloudflare Pages vs. Vercel).
+- Tools built explicitly *against* a market default (Forgejo vs. GitHub, hledger vs. QuickBooks, Cal.com vs. Calendly, Cloudflare Pages vs. Vercel).
 - Operators who already feel small and want an artifact to fight back with.
 
 Do **not** invoke when you're not actually small. If you're the incumbent, picking David is dishonest and the audience clocks it.

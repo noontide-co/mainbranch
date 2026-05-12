@@ -53,7 +53,7 @@ The Dark Hero shows the broken rule and the alternative side-by-side. The verdic
 ## Example brand applications
 
 - **Forgejo** vs. closed-source Git forges: rule = "you ship a forge as a SaaS"; broken rule = self-hostable, AGPL, federation-first.
-- **Beancount** vs. consumer accounting: rule = "users want a GUI"; broken rule = plain-text ledgers in version control.
+- **hledger** vs. consumer accounting: rule = "users want a GUI"; broken rule = plain-text books plus repo-backed summaries.
 - **Cal.com** vs. closed-source scheduling: rule = "scheduling is a SaaS"; broken rule = open source, self-hostable, API-first.
 - **A landing-page builder** that ships pages as static HTML with no JS: rule = "modern sites are React apps"; broken rule = `<html>` files served from a CDN.
 - **A consultancy** that posts every client deliverable to a public GitHub repo (with consent): rule = "deliverables are confidential"; broken rule = the work itself is the marketing.

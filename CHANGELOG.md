@@ -18,6 +18,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   foundation decision. Default generated `.gitignore` files now protect
   `.mb/private/`, `*.journal`, `*.hledger`, and `*.ledger` alongside the
   defensive `*.beancount` pattern.
+- Dogfooded `mb books check` through the installed package and a fresh business
+  repo after the hledger cleanup, recorded the evidence in
+  [`docs/reports/2026-05-12-books-check-dogfood.md`](docs/reports/2026-05-12-books-check-dogfood.md),
+  and updated bundled skill archetype examples that still used Beancount as an
+  active bookkeeping example.
 - Repositioned VSLs as reusable conversion knowledge inside `/mb-think`,
   `/mb-site`, `/mb-ads`, and `/mb-organic` workflows instead of a standalone
   business primitive. `/mb-vsl` remains as a compatibility router for existing
