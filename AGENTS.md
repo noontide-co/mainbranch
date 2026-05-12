@@ -139,10 +139,11 @@ Do not commit:
 - private community operations, launch plans, or partner/customer strategy;
 - untested runtime compatibility claims.
 
-Use OS temp or the runner's gitignored scratch space for throwaway build
-artifacts, scratch repos, smoke-test output, and branch-local handoff notes.
-Scratch space is not durable product truth. Durable truth belongs in code,
-tests, docs, decisions, fixtures, or GitHub issues.
+Use OS temp for throwaway scratch repos. Use `.agent/` for repo-local,
+gitignored agent logs, smoke-test evidence, and branch-local handoff notes.
+Some hosted runners may provide their own ignored scratch space; public examples
+in this repo use `.agent/`. Scratch space is not durable product truth. Durable
+truth belongs in code, tests, docs, decisions, fixtures, or GitHub issues.
 
 ## Start Protocol
 
@@ -153,10 +154,13 @@ cold-start sequence. The short version:
    `docs/operator-loops.md`, `docs/roadmap.md`,
    `docs/oss-operating-checklist.md`, and the current `CHANGELOG.md`
    `[Unreleased]` plus latest shipped section.
-2. Read the assigned GitHub issue and all comments, then call Linear MCP
-   `get_issue` for the mirrored Linear issue. The returned `gitBranchName` is
-   the branch name. GitHub is the public durable work thread for comments by
-   default; Linear-only comments are for private logs or internal team context.
+2. Read the assigned GitHub issue and all comments. Maintainer and hosted
+   agents with Linear access then call Linear MCP `get_issue` for the mirrored
+   Linear issue and use the returned `gitBranchName` as the branch name.
+   External contributors without Linear access can use a GitHub-native branch
+   name and reference the issue in the PR. GitHub is the public durable work
+   thread for comments by default; Linear-only comments are for private logs or
+   internal team context.
 3. Write a local cold-start note for substantial branches before editing.
 4. Progressively discover task-specific docs and decisions only after the work
    thread is clear: runtime docs for runtime claims, release docs for
@@ -218,17 +222,19 @@ concern-organized commits.
 
 ## Branches, Issues, and Releases
 
-GitHub issues in this repo mirror to Linear. For issue work, call Linear MCP
-`get_issue` for the mirrored Linear issue and use its `gitBranchName`; this
-normally has the shape
+GitHub issues in this repo mirror to Linear. Maintainer and hosted agents with
+Linear access should call Linear MCP `get_issue` for the mirrored Linear issue
+and use its `gitBranchName`; this normally has the shape
 `<username>/main-<number>-<full-ticket-title-lowercase-with-dashes>`. Preserve
 Linear IDs in branch names, commit messages, and PR metadata so Linear Releases
 can attach work correctly.
 
-If work truly has no issue, create the public GitHub issue first when the work
-is product-facing, then fetch the mirrored Linear issue and use its
-`gitBranchName`. For non-issue maintenance, use a short concrete branch name
-such as `<gh-username>/status-briefing` or `<gh-username>/runtime-smoke`.
+External contributors without Linear access can use a GitHub-native branch name
+such as `<gh-username>/<issue-number>-<short-title>` and reference the GitHub
+issue in the PR. If work truly has no issue, create the public GitHub issue
+first when the work is product-facing. For non-issue maintenance, use a short
+concrete branch name such as `<gh-username>/status-briefing` or
+`<gh-username>/runtime-smoke`.
 
 GitHub remains the public durable issue thread:
 

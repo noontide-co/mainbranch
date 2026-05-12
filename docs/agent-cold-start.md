@@ -31,8 +31,11 @@ Link them and state only the decision the current task needs.
 ## Then Read The Work Thread
 
 Read the assigned GitHub issue and comments before editing. Main Branch GitHub
-issues mirror to Linear, so call Linear MCP `get_issue` for the mirrored issue
-before naming the branch. The returned `gitBranchName` is the branch name.
+issues mirror to Linear. Maintainer and hosted agents with Linear access should
+call Linear MCP `get_issue` for the mirrored issue before naming the branch; the
+returned `gitBranchName` is the branch name. External contributors without
+Linear access can use a GitHub-native branch name and reference the issue in the
+PR.
 
 GitHub remains the public durable work thread. Leave public coordination
 comments on GitHub by default; the sync carries them to Linear. Use Linear-only
@@ -59,8 +62,11 @@ For substantial branches, write a local cold-start note before editing:
 - validation plan by ladder level;
 - whether package, fixture, runtime, or release smoke is required.
 
-Local scratch space is not durable product truth. Keep durable facts in public
-docs, decisions, tests, fixtures, or GitHub issues.
+Use `.agent/` for repo-local, gitignored agent logs, smoke-test evidence, and
+branch-local handoff notes. Some hosted runners may provide their own ignored
+scratch space; public examples in this repo use `.agent/`. Scratch space is not
+durable product truth. Keep durable facts in public docs, decisions, tests,
+fixtures, or GitHub issues.
 
 ## Progressive Discovery
 
@@ -83,10 +89,13 @@ answer.
 
 ## Branch And Issue Hygiene
 
-- Main Branch issues mirror to Linear. Fetch the mirrored Linear issue with
-  Linear MCP `get_issue` and use its `gitBranchName` for issue work.
+- Main Branch issues mirror to Linear. Maintainer and hosted agents with Linear
+  access fetch the mirrored Linear issue with Linear MCP `get_issue` and use
+  its `gitBranchName` for issue work.
 - The normal shape is `<username>/main-<number>-<full-ticket-title-lowercase-with-dashes>`.
-- Do not synthesize a different branch name for issue work.
+- External contributors without Linear access can use
+  `<gh-username>/<issue-number>-<short-title>` and reference the GitHub issue in
+  the PR.
 - If work truly has no issue, use a short descriptive branch and create the
   public GitHub issue first when the work is product-facing.
 - Preserve Linear IDs in branch names, commit messages, and PR metadata when
