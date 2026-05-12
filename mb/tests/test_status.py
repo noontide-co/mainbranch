@@ -343,6 +343,377 @@ def test_status_money_path_single_offer_structured_caps_without_proof(
     assert money_path["ranked_actions"][0]["component"] == "proof"
 
 
+def test_status_money_path_offer_exposes_guardrail_detail(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    offer = report["money_path"]["objects"]["offer"]
+    guardrails = offer["guardrails"]
+    assert guardrails["checks"]["audience"]["present"] is True
+    assert guardrails["checks"]["audience"]["paths"] == ["core/offer.md"]
+    assert guardrails["checks"]["risk_reversal"]["present"] is False
+    assert "risk_reversal" in guardrails["missing"]
+    assert guardrails["proof_boundary_warnings"] == ["proof_claim_without_proof_file"]
+
+
+def test_status_money_path_generic_proof_quality_stays_structured(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+    proof = repo / "core" / "proof"
+    proof.mkdir(parents=True, exist_ok=True)
+    (proof / "testimonials.md").write_text(
+        "# Testimonials\n\nGreat work from a happy customer.\n",
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    proof_object = report["money_path"]["objects"]["proof"]
+    quality = proof_object["quality"]
+    assert proof_object["level"] == 2
+    assert proof_object["status"] == "structured"
+    assert quality["testimonials"]["total"] == 1
+    assert quality["testimonials"]["generic"] == 1
+    assert quality["testimonials"]["specific"] == 0
+    assert quality["claim_links"]["unsupported_offer_claims"] == [
+        "core/offer.md: no offer-linked proof detected"
+    ]
+    assert report["money_path"]["ranked_actions"][0]["id"] == "strengthen-proof-quality"
+    assert report["money_path"]["ranked_actions"][0]["missing"] == [
+        "specific_testimonials",
+        "offer_linked_proof",
+        "typicality",
+        "supported_offer_claims",
+        "outcome_feedback",
+    ]
+
+
+def test_status_money_path_frontmatter_public_true_counts_as_permission(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+    proof = repo / "core" / "proof"
+    proof.mkdir(parents=True, exist_ok=True)
+    (proof / "testimonials.md").write_text(
+        (
+            "---\n"
+            "testimonials:\n"
+            "  - public: true\n"
+            "    before: stuck rebuilding context\n"
+            "    outcome: booked 3 calls\n"
+            "    timeframe: within 2 weeks\n"
+            "---\n\n"
+            "# Testimonials\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    testimonials = report["money_path"]["objects"]["proof"]["quality"]["testimonials"]
+    assert testimonials["total"] == 1
+    assert testimonials["permissioned_public"] == 1
+    assert testimonials["specific"] == 1
+
+
+def test_status_money_path_proof_cannot_reach_field_tested_without_level_three(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+    proof = repo / "core" / "proof"
+    proof.mkdir(parents=True, exist_ok=True)
+    (proof / "testimonials.md").write_text(
+        (
+            "# Testimonials\n\n"
+            "## Founder A\n"
+            "Permissioned public source: sales call. Before: stuck. "
+            "Outcome: booked 3 calls within 2 weeks.\n\n"
+            "## Founder B\n"
+            "Approved for public source: interview. Previously scattered. "
+            "Result: saved 5 hours in 10 days.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    proof_object = report["money_path"]["objects"]["proof"]
+    quality = proof_object["quality"]
+    assert quality["testimonials"]["specific"] == 2
+    assert quality["testimonials"]["permissioned_public"] == 2
+    assert quality["testimonials"]["linked_to_offer"] == 0
+    assert quality["typicality"]["exists"] is False
+    assert proof_object["level"] == 2
+    assert proof_object["status"] == "structured"
+
+
+def test_status_money_path_common_offer_slug_in_prose_does_not_link_offer(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+    offer = repo / "core" / "offers" / "coaching"
+    offer.mkdir(parents=True, exist_ok=True)
+    (offer / "offer.md").write_text(
+        "---\nslug: coaching\nstatus: running\n---\n\n# Coaching\n\nAudience and proof.\n",
+        encoding="utf-8",
+    )
+    proof = repo / "core" / "proof"
+    proof.mkdir(parents=True, exist_ok=True)
+    (proof / "testimonials.md").write_text(
+        (
+            "# Testimonials\n\n"
+            "## Founder A\n"
+            "Before: stuck rebuilding context. Outcome: booked 3 calls within 2 weeks "
+            "after coaching helped clarify the workflow.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    quality = report["money_path"]["objects"]["proof"]["quality"]
+    assert quality["testimonials"]["specific"] == 1
+    assert quality["testimonials"]["linked_to_offer"] == 0
+    assert quality["claim_links"]["linked_offers"] == []
+    assert (
+        "core/offers/coaching/offer.md: no offer-linked proof detected"
+        in quality["claim_links"]["unsupported_offer_claims"]
+    )
+
+
+def test_status_money_path_permission_warning_only_applies_to_testimonials(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    typicality_repo = tmp_path / "typicality"
+    init_run(path=str(typicality_repo), name="Typicality")
+    _write_money_path_core(typicality_repo)
+    typicality_proof = typicality_repo / "core" / "proof"
+    typicality_proof.mkdir(parents=True, exist_ok=True)
+    (typicality_proof / "typicality.md").write_text(
+        "# Typicality\n\nMost users need setup help first.\n",
+        encoding="utf-8",
+    )
+
+    typicality_report = status_mod.run(path=str(typicality_repo), update_marker=False)
+
+    typicality_warnings = typicality_report["money_path"]["objects"]["offer"]["guardrails"][
+        "proof_boundary_warnings"
+    ]
+    assert "testimonials_without_permissioned_public_signal" not in typicality_warnings
+
+    testimonial_repo = tmp_path / "testimonial"
+    init_run(path=str(testimonial_repo), name="Testimonial")
+    _write_money_path_core(testimonial_repo)
+    testimonial_proof = testimonial_repo / "core" / "proof"
+    testimonial_proof.mkdir(parents=True, exist_ok=True)
+    (testimonial_proof / "testimonials.md").write_text(
+        "# Testimonials\n\nGreat work from a happy customer.\n",
+        encoding="utf-8",
+    )
+
+    testimonial_report = status_mod.run(path=str(testimonial_repo), update_marker=False)
+
+    testimonial_warnings = testimonial_report["money_path"]["objects"]["offer"]["guardrails"][
+        "proof_boundary_warnings"
+    ]
+    assert "testimonials_without_permissioned_public_signal" in testimonial_warnings
+
+
+def test_status_money_path_specific_typicality_without_offer_link_reaches_evidence_backed(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+    proof = repo / "core" / "proof"
+    proof.mkdir(parents=True, exist_ok=True)
+    (proof / "testimonials.md").write_text(
+        (
+            "# Testimonials\n\n"
+            "## Founder A\n"
+            "Before: stuck rebuilding context. Outcome: booked 3 calls within 2 weeks.\n"
+        ),
+        encoding="utf-8",
+    )
+    (proof / "typicality.md").write_text(
+        (
+            "# Typicality\n\n"
+            "Average case: most users need one setup week. Caveat: outcomes vary. "
+            "Common failure context: poor fit. Time to outcome is usually 2 weeks.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    proof_object = report["money_path"]["objects"]["proof"]
+    quality = proof_object["quality"]
+    assert proof_object["level"] == 3
+    assert proof_object["status"] == "evidence_backed"
+    assert quality["testimonials"]["specific"] == 1
+    assert quality["testimonials"]["linked_to_offer"] == 0
+    assert quality["claim_links"]["unsupported_offer_claims"] == [
+        "core/offer.md: no offer-linked proof detected"
+    ]
+
+
+def test_status_money_path_offer_linked_proof_without_outcome_feedback_is_not_instrumented(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    offer = repo / "core" / "offers" / "coaching"
+    offer.mkdir(parents=True, exist_ok=True)
+    (offer / "offer.md").write_text(
+        (
+            "---\nslug: coaching\nstatus: running\n---\n\n"
+            "# Coaching\n\n"
+            "Audience, transformation, mechanism, pricing, proof, objections, "
+            "reason to act, and next step.\n"
+        ),
+        encoding="utf-8",
+    )
+    proof = offer / "proof"
+    proof.mkdir(parents=True, exist_ok=True)
+    (proof / "testimonials.md").write_text(
+        (
+            "# Testimonials\n\n"
+            "## Founder A\n"
+            "Permissioned public source: sales call. Before: stuck rebuilding context. "
+            "Outcome: booked 3 calls within 2 weeks using the workflow. "
+            "Objection: worried about time.\n\n"
+            "## Founder B\n"
+            "Approved for public source: interview. Previously scattered launches. "
+            "Result: saved 5 hours in 10 days through the process.\n"
+        ),
+        encoding="utf-8",
+    )
+    (proof / "typicality.md").write_text(
+        (
+            "# Typicality\n\n"
+            "Average case: most users need one setup week before speed improves. "
+            "Caveat: outcomes vary. Common failure context: poor fit when no offer "
+            "exists. Time to outcome is usually 2 weeks.\n"
+        ),
+        encoding="utf-8",
+    )
+    push = _write_push(repo, "2026-05-06-launch", offer="core/offers/coaching/offer.md")
+    _write_playbook(push, status="active", approval_status="approved")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    proof_object = report["money_path"]["objects"]["proof"]
+    quality = proof_object["quality"]
+    assert proof_object["level"] == 4
+    assert proof_object["status"] == "field_tested"
+    assert quality["testimonials"]["total"] == 2
+    assert quality["testimonials"]["specific"] == 2
+    assert quality["testimonials"]["permissioned_public"] == 2
+    assert quality["testimonials"]["linked_to_offer"] == 2
+    assert quality["testimonials"]["with_timeframe"] == 2
+    assert quality["testimonials"]["with_metric"] == 2
+    assert quality["typicality"] == {
+        "exists": True,
+        "has_average_case": True,
+        "has_caveats": True,
+        "has_common_failure_context": True,
+        "has_time_to_outcome": True,
+    }
+    assert quality["claim_links"]["linked_offers"] == ["core/offers/coaching/offer.md"]
+    assert quality["claim_links"]["unsupported_offer_claims"] == []
+    assert quality["instrumentation"]["active_push"] is True
+    assert quality["instrumentation"]["playbook"] is True
+    assert quality["instrumentation"]["outcome_feedback"] is False
+    assert any(
+        action["id"] == "strengthen-proof-quality" and "outcome_feedback" in action["missing"]
+        for action in report["money_path"]["ranked_actions"]
+    )
+
+
+def test_status_money_path_level_five_proof_requires_outcome_feedback(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    offer = repo / "core" / "offers" / "coaching"
+    offer.mkdir(parents=True, exist_ok=True)
+    (offer / "offer.md").write_text(
+        (
+            "---\nslug: coaching\nstatus: running\n---\n\n"
+            "# Coaching\n\n"
+            "Audience, transformation, mechanism, pricing, proof, objections, "
+            "reason to act, and next step.\n"
+        ),
+        encoding="utf-8",
+    )
+    proof = offer / "proof"
+    proof.mkdir(parents=True, exist_ok=True)
+    (proof / "testimonials.md").write_text(
+        (
+            "# Testimonials\n\n"
+            "## Founder A\n"
+            "Permissioned public source: sales call. Before: stuck rebuilding context. "
+            "Outcome: booked 3 calls within 2 weeks using the workflow. "
+            "Objection: worried about time.\n\n"
+            "## Founder B\n"
+            "Approved for public source: interview. Previously scattered launches. "
+            "Result: saved 5 hours in 10 days through the process.\n"
+        ),
+        encoding="utf-8",
+    )
+    (proof / "typicality.md").write_text(
+        (
+            "# Typicality\n\n"
+            "Average case: most users need one setup week before speed improves. "
+            "Caveat: outcomes vary. Common failure context: poor fit when no offer "
+            "exists. Time to outcome is usually 2 weeks.\n"
+        ),
+        encoding="utf-8",
+    )
+    push = _write_push(repo, "2026-05-06-launch", offer="core/offers/coaching/offer.md")
+    _write_playbook(
+        push,
+        status="active",
+        approval_status="approved",
+        linked_outcomes='["log/2026-05-20-launch-outcome.md"]',
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    proof_object = report["money_path"]["objects"]["proof"]
+    quality = proof_object["quality"]
+    assert proof_object["level"] == 5
+    assert proof_object["status"] == "instrumented"
+    assert quality["instrumentation"]["active_push"] is True
+    assert quality["instrumentation"]["playbook"] is True
+    assert quality["instrumentation"]["outcome_feedback"] is True
+    assert all(
+        action["id"] != "strengthen-proof-quality"
+        for action in report["money_path"]["ranked_actions"]
+    )
+
+
 def test_status_money_path_detects_multi_offer_product_ladder(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     repo = tmp_path / "acme"
