@@ -83,7 +83,7 @@ The engine + your assets = your game.
 
 | Content | Location | Why |
 |---------|----------|-----|
-| Skills, templates | Main Branch | Shared with all members |
+| Skills, templates | Main Branch | Packaged with Main Branch |
 | Your offer, audience, voice | Your repo | Business-specific |
 | Your testimonials and proof | Your repo | Business-specific |
 | Your research and decisions | Your repo | Business-specific |

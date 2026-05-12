@@ -17,7 +17,7 @@ Token economics matter — each concept is a full home-page generation (HTML + C
 ## The flow
 
 1. **Brief locked.** The operator has confirmed offer framing, headline, value prop, conversion endpoint, and any framework choice.
-2. **Determine concept count.** Read `~/.config/vip/local.yaml` for `default_concepts`. If absent, use `2`.
+2. **Determine concept count.** Use an explicit operator preference or current site/concept settings when available. Legacy `~/.config/vip/local.yaml` can be read as fallback only; if absent, use `2`.
 3. **Spawn N concept subagents in parallel** (foreground only). Each gets the same inputs:
    - Locked brief, `offer.md`, `audience.md`, `voice.md`, `soul.md`
    - **Conversion endpoint info** from `<repo>/.mainbranch/conversion.json` — kind (Stripe payment page / lead form / appointment booking / custom webhook), URL, and render mode (link-out / inline / embedded / form-POST). The home CTA rendering varies by kind, so concepts that don't know the kind will design the wrong shape (e.g., a pricing-card hero for what's actually a lead-form offer).
@@ -51,18 +51,21 @@ Operators can override by supplying their own leans (e.g., "I want one warm + on
 
 ## Default concept count
 
-Stored in `~/.config/vip/local.yaml` per the `mb-start/references/config-system.md` config split:
+Use `2` unless the operator asks for more concepts or a current Main Branch
+settings surface exposes a concept default. Legacy `~/.config/vip/local.yaml`
+can be read as fallback only:
 
 ```yaml
-# ~/.config/vip/local.yaml
-vip_path: /path/to/mainbranch
-user: dmthepm
+# legacy fallback only
 default_concepts: 3  # optional; defaults to 2 if absent
 ```
 
 **First-run nudge:** after the operator picks a concept on their first `/mb-site` run, the skill prompts:
 
-> Worked? Want more variations on the next run? You can raise the default — `default_concepts: 3` (or 5) in `~/.config/vip/local.yaml`. Each concept costs roughly the same token budget as one full home-page generation, so 5 ≈ 5x the home-page cost. 2 is fine if you're tight on budget.
+> Worked? Want more variations next time? Say "use 3 concepts" at the start of
+> the run. Each concept costs roughly the same token budget as one full
+> home-page generation, so 5 costs about 5x the home-page budget. 2 is fine if
+> you're tight on budget.
 
 ---
 
@@ -94,4 +97,4 @@ Concept subagents must run in the foreground. Background subagents have a known 
 - [`minisite-build.md`](minisite-build.md) — where concept generation fits in the operator walkthrough
 - [`minisite-generation-system.md`](minisite-generation-system.md) — the system prompt each concept subagent uses
 - [`anti-patterns.md`](anti-patterns.md) — what NOT to bake into concept prompts (over-prescription kills variance)
-- `mb-start/references/config-system.md` — the `~/.config/vip/local.yaml` location for `default_concepts`
+- `mb-start/references/config-system.md` — legacy local settings fallback rules

@@ -6,7 +6,13 @@ Detail for Step 3 of /mb-start: presenting the menu, surfacing unread CHANGELOG 
 
 ## Surfacing CHANGELOG Entries (Before the Menu)
 
-Read `<vip_path>/CHANGELOG.md` and `~/.config/vip/local.yaml:last_seen_version` (a single version string). If the most-recent versioned heading in CHANGELOG (the first `## [X.Y.Z]` after `[Unreleased]`) differs from `last_seen_version`, render a one-line "What's new" banner above the menu. Format:
+Resolve the Main Branch engine path with the canonical engine path resolution
+reference, then read `$ENGINE_PATH/CHANGELOG.md`. Read `last_seen_version` from
+current Main Branch local state when available; if only legacy
+`~/.config/vip/local.yaml` exists, use it as a read-only fallback. If the
+most-recent versioned heading in CHANGELOG (the first `## [X.Y.Z]` after
+`[Unreleased]`) differs from `last_seen_version`, render a one-line "What's
+new" banner above the menu. Format:
 
 ```
 ─── What's new in <version> ───
@@ -22,7 +28,9 @@ If `last_seen_version` matches the current version, skip the banner entirely. If
 - The user types "dismiss" / "seen" / "got it"
 - The banner has been surfaced this session and the user moves on
 
-Update `last_seen_version` in `~/.config/vip/local.yaml` via the safe-write pattern in [config-system.md](config-system.md) to the current engine version.
+Mark the version seen through current Main Branch local state when that surface
+exists. Do not write legacy `~/.config/vip/local.yaml`; if there is no current
+write path, treat the banner as session-scoped.
 
 **Why version-based, not slug-based:** the prior `seen_announcements` list grew without bound and required per-feature housekeeping. A single `last_seen_version` field auto-clears on every release and never drifts.
 

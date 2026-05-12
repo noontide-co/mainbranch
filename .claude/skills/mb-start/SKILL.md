@@ -104,10 +104,10 @@ providers, spending money, changing topology, or creating checkpoints.
 - CWD has `core/` or legacy `reference/core/` — user chose their repo by cd'ing into it
 - User explicitly ran `/mb-start [repo-name]` with a specific path
 
-**After user selects a repo from legacy fallback config:** If the selected repo
-is not the current `default_repo`, ask: "Want me to save [repo-name] as your
-default? (faster startup next time)" If yes, merge-update `default_repo` in
-`~/.config/vip/local.yaml`. Do not create or update `.vip/config.yaml`.
+**After user selects a repo from legacy fallback config:** Treat the selected
+repo as session-scoped unless a current `mb` command exposes an explicit
+persistence path. Do not write `default_repo` into `~/.config/vip/local.yaml`,
+and do not create or update `.vip/config.yaml`.
 
 ---
 

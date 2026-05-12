@@ -1,6 +1,8 @@
 # Repo Detection (Step 2)
 
-CWD-first detection of the business repo, with config fallback. The user starts Claude in their business repo — check CWD first before falling back to config.
+CWD-first detection of the business repo, with legacy fallback only when CWD is
+not a business repo. The user starts Claude in their business repo — check CWD
+first before falling back to old local config.
 
 ---
 
@@ -54,9 +56,15 @@ facts through `mb`:
 
 ## Multi-Repo Selection (When CWD Is NOT a Business Repo)
 
-If CWD detection fails (step 3 above), present options from config:
+If CWD detection fails (step 3 above), present options from legacy local
+config:
 
-**Validate EVERY path in config before showing it to the user.** Never present a dead path as an option. For each path in `default_repo` and `recent_repos`, check `test -d "[path]/core" || test -d "[path]/reference/core"`. If invalid, attempt recovery (check sibling folders for a renamed repo) and auto-prune dead entries. See [config-system.md](config-system.md) for the full recovery algorithm.
+**Validate EVERY path before showing it to the user.** Never present a dead
+path as an option. For each path in `default_repo` and `recent_repos`, check
+`test -d "[path]/core" || test -d "[path]/reference/core"`. If invalid, hide
+it for this session and explain that the old local fallback may be stale. Do
+not rewrite legacy config during repo detection. See
+[config-system.md](config-system.md) for fallback rules.
 
 **ALWAYS present numbered options** — even with ONE repo found:
 
@@ -108,23 +116,13 @@ REPO_PATH="[absolute-path-to-selected-business-repo]"
 
 **Rule:** All business-repo operations must target `REPO_PATH` (not implicit CWD). This is critical when `/mb-start` is invoked from the engine repo and the selected repo is elsewhere.
 
-If `~/.config/vip/local.yaml` doesn't have this repo saved, offer to save:
+Legacy `~/.config/vip/local.yaml` may name a default or recent repo. Treat it
+as a fallback suggestion only, not the current writable repo registry. If the
+operator chooses a different repo, keep that choice session-scoped unless a
+current `mb` command exposes an explicit persistence path.
 
-> "Want me to save [repo-name] as your default? (faster startup next time)"
-
-If yes, update `~/.config/vip/local.yaml`:
-
-```yaml
-vip_path: /path/to/mainbranch
-default_repo: /full/path/to/repo
-recent_repos:
-  - /full/path/to/repo
-user:
-  name: "[ask if not set]"
-  experience: "[ask if not set]"  # beginner | intermediate | advanced
-```
-
-**If user.name or user.experience missing:** Ask once, save for future sessions.
+If user name or experience is missing, ask only when needed for the current
+answer. Do not write the answer into legacy YAML.
 
 Do not create or update `[repo]/.vip/config.yaml` during repo detection. Older
 repos may have it; audit it with `mb doctor repair --plan --json`.

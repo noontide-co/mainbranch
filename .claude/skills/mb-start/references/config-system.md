@@ -112,53 +112,47 @@ cat ~/.config/vip/env.sh 2>/dev/null
 
 ---
 
-## Machine-Local Settings
+## Legacy Machine-Local Fallback
 
 ```bash
 cat ~/.config/vip/local.yaml 2>/dev/null
 ```
 
 ```yaml
-# NOTE: All paths MUST be absolute. Never use ~ (tools don't expand it).
-# /mb-start writes absolute paths automatically when saving config.
+# Legacy fallback only. Current repo truth comes from CWD, mb JSON, repo files,
+# .claude/settings.local.json, .mb/ state, and provider metadata.
 vip_path: /absolute/path/to/mainbranch  # legacy key name; points at Main Branch
 default_repo: /absolute/path/to/my-business
 recent_repos:
   - /absolute/path/to/my-business
   - /absolute/path/to/client-project
 
-# User identity lives here, NOT in repo config
-# Allows multiple people to work on same business repo
+# Optional user hints from old local setup
 user:
   name: "Your Name"
   experience: advanced  # beginner | intermediate | advanced
 
-# Media output configuration
-# Where non-markdown outputs land (images, videos, exports)
-# Machine-specific paths — different per computer
+# Optional media fallback from old local setup
 media:
   root: /absolute/path/to/Main Branch
-  # Per-type overrides (optional — defaults to {root}/{type}/)
   # images: /absolute/path/to/ad-images
   # videos: /absolute/path/to/ad-videos
 
-# Per-skill defaults (optional)
-# /mb-site uses default_concepts to set how many home-page concepts
-# get generated in parallel. Default 2; raise to 3 or 5 if you're
-# OK spending more tokens for more variation.
+# Optional concept fallback from old local setup
 default_concepts: 2
 
-# CHANGELOG version tracking (managed by /mb-start and /mb-update)
-# Last engine version the user has seen the "what's new" banner for.
-# Diff'd against the most recent versioned heading in
-# the active engine's `CHANGELOG.md` to decide whether to surface unread entries.
-# Bumped when the user routes to any skill or types "dismiss".
+# Optional changelog seen-state fallback from old local setup
 last_seen_version: "0.1.0"
 ```
 
-**CRITICAL: Always use absolute paths, never `~`.** The Glob and Read tools do not expand `~`, causing silent failures (0 results when files exist). When writing to `local.yaml`, always expand `~` to the full absolute path first. If `local.yaml` already contains `~`, auto-upgrade it to absolute during path validation.
+**CRITICAL: Always use absolute paths, never `~`.** The Glob and Read tools do
+not expand `~`, causing silent failures (0 results when files exist). If legacy
+fallback values contain `~`, treat them as stale and ask for the path again.
 
-**Media paths** are machine-specific (contain usernames, sync folder locations). They belong in local.yaml, not repo config. Skills resolve media paths with a fallback chain: `media.{type}` → `media.root/{type}/` → ask user and save.
+**Media paths** are machine-specific (contain usernames, sync folder
+locations). Skills may read legacy `media.{type}` or `media.root/{type}/` as
+fallback, but new choices stay session-scoped unless a current `mb` settings
+surface owns the write.
 
 ---
 
@@ -191,8 +185,9 @@ cat ~/.claude/settings.json 2>/dev/null | grep business_repo_path
 
 **If found:**
 1. Extract the path
-2. Offer migration: "Found your repo in old settings. Migrate to new config?"
-3. If yes: create or update `~/.config/vip/local.yaml` with that repo path, preserving existing keys.
+2. Treat it as a fallback suggestion for this session.
+3. Do not migrate it into `~/.config/vip/local.yaml`; that file is legacy local
+   fallback state, not the current repo registry.
 
 ---
 
@@ -223,7 +218,7 @@ Do not create it. Use `mb status --json --peek`, `mb onboard status --json`,
 | `/mb-start` | legacy local.yaml only when CWD/config discovery fails | Find default/recent repos as fallback |
 | `/mb-start` | `mb status --json --peek`, `mb connect`, `mb onboard` | Check readiness, repairs, onboarding, provider state |
 | `/mb-help` | legacy local.yaml only as optional fallback | Adjust verbosity based on experience |
-| `/mb-ads`, `/mb-think` | local.yaml `media.*` | Resolve where non-markdown outputs go |
+| `/mb-ads`, `/mb-think` | current settings when available; legacy `media.*` read-only fallback | Resolve where non-markdown outputs go |
 
 ---
 
@@ -232,23 +227,26 @@ Do not create it. Use `mb status --json --peek`, `mb onboard status --json`,
 | Trigger | What's Written | Where |
 |---------|----------------|-------|
 | `/mb-setup` first run | Current repo files, `.claude/settings.local.json`, skill links, `.mb/` state | Business repo |
-| User selects repo in `/mb-start` | `default_repo`, `recent_repos` only if legacy fallback is still being used and user confirms | local.yaml |
-| User says "I'm advanced" | `user.experience` | local.yaml |
+| User selects repo in `/mb-start` | Session-scoped selection unless a current `mb` command exposes persistence | n/a |
+| User says "I'm advanced" | Use for the current answer unless a current `mb` command exposes persistence | n/a |
 | User says "save as default" | Prefer current skill/workflow inputs; do not write `.vip/config.yaml` | n/a (no write) |
 | User connects infrastructure | Provider metadata through `mb connect`; secrets stay local | `.mb/connect.yaml` and local secret stores |
-| User configures media path | `media.root` or `media.{type}` | local.yaml |
+| User configures media path | Session-scoped path unless a current `mb` command exposes persistence | n/a |
 
-**Rule:** Never write silently. Confirm changes that affect future sessions.
+**Rule:** Never write legacy config as part of normal startup. Legacy files are
+read-only fallback and audit input unless an explicit migration/repair command
+owns the write.
 
-### Safe Write Pattern (CRITICAL)
+### Legacy Config Safety
 
-When updating `~/.config/vip/local.yaml`:
+Do not update `~/.config/vip/local.yaml` from `/mb-start` routing. If a future
+repair command must touch it, that command should:
 
-1. Read the existing file first
-2. Merge changes into existing keys (do not replace whole file)
-3. Preserve unknown keys for forward compatibility
-4. Ask before changing `default_repo` if one already exists
-5. Write the merged result
+1. Read the existing file first.
+2. Merge changes into existing keys rather than replacing the whole file.
+3. Preserve unknown keys for forward compatibility.
+4. Ask before changing defaults that affect future sessions.
+5. Show the planned write before applying it.
 
 **Never use full-file overwrite commands like:**
 ```bash
@@ -264,10 +262,10 @@ That pattern can silently delete fields (like `user.*`, `vip_path`, or future ke
 Config is always optional. Skills work without it.
 
 ```
-1. Try local.yaml → missing? → discovery
+1. Try legacy local.yaml only when CWD and current settings do not identify a repo.
 2. Use `mb status --json --peek`, `mb connect`, and repo files for current facts
-3. Path invalid? → attempt recovery, then clear and rediscover
-4. Parse error? → warn, clear, rediscover
+3. Path invalid? → attempt session-only recovery, then rediscover
+4. Parse error? → warn, then rediscover
 ```
 
 **Principle:** Config is a speed optimization, not a requirement.
@@ -294,20 +292,22 @@ When a config path is invalid:
 
 1. **Check parent directory** — if the parent exists, the folder was likely renamed
 2. **Scan siblings** — look for `core/` or legacy `reference/core/` in adjacent folders
-3. **If match found** — tell the user: "Looks like **[old-name]** moved to **[new-name]**. Updating your config."
+3. **If match found** — tell the user: "Looks like **[old-name]** moved to
+   **[new-name]**. I'll use that for this session."
 4. **If no match** — silently drop the stale entry from the list
 
-### Auto-Prune
+### Stale Entry Handling
 
-After validation, if any paths were removed or updated, write the cleaned `local.yaml` immediately. Removing dead paths is housekeeping — no confirmation needed. Adding or changing the default repo still requires user confirmation.
+After validation, hide stale paths from the option list for this session. Do
+not write the cleaned list back to legacy `local.yaml` from `/mb-start`.
 
 ### Common Scenarios
 
 | What Happened | What User Sees | What /mb-start Does |
 |---------------|---------------|-------------------|
-| Folder renamed | Nothing broken | Detects new name, updates config, presents correct option |
+| Folder renamed | Nothing broken | Detects new name, uses it for this session, presents correct option |
 | Folder deleted | Fewer options | Prunes dead entry, shows only valid repos |
-| Folder moved to new parent | "Switch to different repo" | Can't auto-detect across parents — user provides new path, config updates |
+| Folder moved to new parent | "Switch to different repo" | Can't auto-detect across parents — user provides new path for this session |
 | Clone to new machine | Empty config | Normal discovery flow — no stale paths to worry about |
 
 ---
@@ -326,6 +326,7 @@ After validation, if any paths were removed or updated, write the cleaned `local
 
 If only one repo: show it plus "Switch to different repo."
 
-**After switching:** Ask "Want me to save [repo-name] as your default?" If yes, update `default_repo`.
+**After switching:** Keep the selected repo session-scoped unless a current
+`mb` command exposes an explicit persistence path.
 
 **Never auto-proceed without asking.** The saved default is a suggestion, not a lock-in.

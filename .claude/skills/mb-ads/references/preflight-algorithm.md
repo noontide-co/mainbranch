@@ -189,7 +189,8 @@ If visual-style.md is missing, offer inline creation during pre-flight (don't fo
 ### Detection Flow
 
 ```
-1. Read ~/.config/vip/local.yaml
+1. Read current Main Branch media settings when available.
+   Legacy ~/.config/vip/local.yaml may be read as fallback only.
 2. Resolve image path:
    a. media.images → use directly
    b. media.root → {root}/images/
@@ -205,11 +206,13 @@ If visual-style.md is missing, offer inline creation during pre-flight (don't fo
 5. If no path configured:
    → "Where should generated images be saved?"
    → Examples: "~/Google Drive/My Drive/Main Branch/images"
-   → Save to ~/.config/vip/local.yaml under media.root
+   → Use that path for this run
    → mkdir -p {path}
 ```
 
-**Ask once, save forever.** First `/mb-ads` run with image gen prompts for path. Every subsequent run reads from config and confirms.
+Do not write media defaults into legacy `~/.config/vip/local.yaml`. Keep the
+choice session-scoped unless a current `mb` settings command exposes a durable
+media path.
 
 **If path is inside git repo:**
 → Warn: "This folder is inside your git repo. Binary images will bloat history. Want me to add a .gitignore entry? (y/n)"

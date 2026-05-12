@@ -51,18 +51,21 @@ Operators can override by supplying their own leans (e.g., "I want one warm + on
 
 ## Default concept count
 
-Stored in `~/.config/vip/local.yaml` per the `mb-start/references/config-system.md` config split:
+Use `2` unless the operator asks for more concepts or a current Main Branch
+settings surface exposes a concept default. Legacy `~/.config/vip/local.yaml`
+can be read as fallback only:
 
 ```yaml
-# ~/.config/vip/local.yaml
-vip_path: /path/to/mainbranch
-user: dmthepm
+# legacy fallback only
 default_concepts: 3  # optional; defaults to 2 if absent
 ```
 
 **First-run nudge:** after the operator picks a concept on their first `/mb-site` run, the skill prompts:
 
-> Worked? Want more variations on the next run? You can raise the default — `default_concepts: 3` (or 5) in `~/.config/vip/local.yaml`. Each concept costs roughly the same token budget as one full home-page generation, so 5 ≈ 5x the home-page cost. 2 is fine if you're tight on budget.
+> Worked? Want more variations next time? Say "use 3 concepts" at the start of
+> the run. Each concept costs roughly the same token budget as one full
+> home-page generation, so 5 costs about 5x the home-page budget. 2 is fine if
+> you're tight on budget.
 
 ---
 
