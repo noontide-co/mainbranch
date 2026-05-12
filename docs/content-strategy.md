@@ -39,14 +39,14 @@ core/marketing/
     hacker-news.md
     email.md
   accounts/
-    x-devon.md
-    x-noontide.md
-    linkedin-devon.md
-    linkedin-noontide.md
+    x-founder.md
+    x-company.md
+    linkedin-founder.md
+    linkedin-company.md
 
 core/people/
-  devon.md
-  matt.md
+  founder.md
+  operator.md
 ```
 
 Do not copy the same strategy into every file. The business-level strategy

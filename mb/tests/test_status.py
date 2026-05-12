@@ -369,6 +369,30 @@ def test_status_money_path_reads_layered_channel_strategy(tmp_path: Path, monkey
     assert "docs/content-strategy.md" in channel_strategy["references"]
 
 
+def test_status_money_path_reads_distribution_strategy_only(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    distribution = repo / "core" / "marketing" / "distribution-strategy.md"
+    distribution.write_text(
+        (
+            "---\n"
+            "type: distribution_strategy\n"
+            "status: draft\n"
+            "---\n\n"
+            "# Distribution Strategy\n\n"
+            "Blog, email, wiki, social, community, and partner channels work together.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    channel_strategy = report["money_path"]["objects"]["channel_strategy"]
+    assert channel_strategy["level"] == 1
+    assert channel_strategy["paths"] == ["core/marketing/distribution-strategy.md"]
+
+
 def test_status_money_path_offer_exposes_guardrail_detail(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     repo = tmp_path / "acme"

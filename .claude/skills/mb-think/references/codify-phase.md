@@ -195,14 +195,14 @@ business-level strategy and index. Use `core/marketing/...` and
 | Platform added or removed | `core/marketing/channels/<channel>.md` plus the strategy index |
 | Account strategy changed | `core/marketing/accounts/<platform>-<account>.md` |
 | Founder/person voice source changed | `core/people/<person>.md` and only update `core/voice.md` when brand voice changes |
-| Winning hook identified | **Hooks Library** — add hook with context and performance |
-| New framework extracted | **Framework Library** — add framework with source and transfer notes |
-| New benchmark established | **Metrics** — update PRP benchmarks or review cadence |
-| Content mix ratio adjusted | **Content Mix** — update ratios based on performance data |
-| Cadence changed | **Weekly Cadence** — update day-by-day plan |
-| Named enemy articulated | **Voice.md (Named Enemies section)** — add enemy concept with pillar mapping |
-| Saves insight discovered | **Metrics** — weight saves as #1 purchase intent signal above shares/comments |
-| New angle or emotional territory found | **core/proof/angles/** — create new angle file. Angles are additive. Check README.md for consistency |
+| Winning hook identified | `core/content-strategy.md` by default; use `core/marketing/channels/<channel>.md` for channel-specific hooks or `core/marketing/accounts/<platform>-<account>.md` for account-specific hooks |
+| New framework extracted | `core/content-strategy.md` by default; use the relevant channel/account file when the framework depends on platform norms or account voice |
+| New benchmark established | `core/content-strategy.md` metrics/review section by default; use `core/marketing/distribution-strategy.md` for cross-channel benchmarks or channel/account files for local benchmarks |
+| Content mix ratio adjusted | `core/content-strategy.md` for business-level mix; `core/marketing/distribution-strategy.md` for distribution mix; account file for one account's mix |
+| Cadence changed | `core/content-strategy.md` for simple weekly cadence; `core/marketing/distribution-strategy.md` for cross-channel cadence; channel/account file for local cadence |
+| Named enemy articulated | `core/voice.md` named-enemies section when it changes brand voice; `core/content-strategy.md` when it only changes a content pillar |
+| Saves insight discovered | `core/content-strategy.md` metrics/review section by default; channel/account file when the signal only applies to one surface |
+| New angle or emotional territory found | `core/proof/angles/` — create a new angle file. Angles are additive. Check README.md for consistency |
 
 **How /mb-think cycles update content-strategy.md:**
 
