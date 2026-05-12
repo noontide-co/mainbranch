@@ -190,15 +190,9 @@ points at that section as unavailable, degraded, or needing repair.
 
 ## Step 1: Check Main Branch Updates
 
-Use the `update` section from `mb status --json --peek`. **Do NOT silently
-swallow required updates.** Users on stale code get broken features.
-
-For normal users, updating is not a package-manager menu. Strongly recommend a
-recommended update, and run or route to the cited command when the update is
-required. Name installed/latest versions and version distance when status gives
-them; use status or release highlights if present, but do not invent release
-notes. See [references/router-and-language.md](references/router-and-language.md)
-for the update posture.
+Use the `update` section from `mb status --json --peek`. **Do not bury available
+updates inside a general status wall.** Users on stale code get broken
+features, and normal operators will miss a one-line version note.
 
 If `update.severity` is `required` or the top ranked action is an update action,
 run the cited command. When status does not cite a narrower command, use:
@@ -208,6 +202,12 @@ mb update --repo . --json
 ```
 
 Then run `mb status --json --peek` again before routing.
+
+If `update.severity` is `recommended`, stop there. Do not show ranked actions
+or business recommendations yet; those may change after the update. Ask whether
+to update now, then rerun `mb status --json --peek` before routing. Use
+[references/router-and-language.md](references/router-and-language.md) for
+operator-facing wording and fallback details.
 
 ---
 

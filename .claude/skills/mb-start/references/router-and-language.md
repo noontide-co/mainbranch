@@ -86,22 +86,35 @@ Avoid:
 
 ## Update Posture
 
-When `status.update.severity` is `recommended` or `required`, name the installed
-and latest versions if present and say how many version steps are behind when
-the numbers are obvious.
+When `status.update.severity` is `recommended` or `required`, make the update
+the only recommendation the operator sees before business routing. Do not show
+ranked actions, drift, GitHub facts, or next business moves until the operator
+updates or explicitly chooses to continue. Name the installed and latest
+versions if present and say how many version steps are behind when the numbers
+are obvious.
 
 If the status report includes release highlights or ranked update actions, use
 those highlights. If not, say the user may be missing recent routing, repair,
 or skill fixes; do not invent exact release notes.
 
-Use direct language:
+Use direct, non-technical language:
 
 > "Update strongly recommended: mb 0.3.15 -> 0.3.17. You are two versions behind,
-> and this session touches routing/bookkeeping behavior that has been changing.
-> Run `mb update` before we continue."
+> and Main Branch is in active transition right now. This is a stability boost
+> for routing, repairs, and skills. I recommend updating before we continue.
+> Want me to update it for you? It should only take a second."
 
 If the update is required, run or route to the cited update command before
 business work.
+
+If the update is recommended, pause and ask for the choice before open-ended
+business routing. If the operator declines, continue on the installed version
+and keep the stale-version note visible in the session summary.
+
+Only show the command if the operator asks what will run or if automatic update
+fails. In that case, show the exact command from `status.update.command` or fall
+back to `mb update --repo . --json`, then explain the manual next step in plain
+language.
 
 ---
 

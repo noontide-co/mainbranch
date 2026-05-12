@@ -50,6 +50,16 @@ write/apply command such as `mb skill link --repo .`, `mb skill repair --repo .
 wiring, tell the operator to restart Claude Code from this repo and try
 `/mb-start` again.
 
+If `mb status --json --peek` reports `update.severity` as `recommended` or
+`required`, make that the only recommendation before business routing. Name the
+installed/latest versions when present. For recommended updates, say Main Branch
+is in active transition and the update is a stability boost for routing,
+repairs, and skills when release highlights are unavailable, then ask whether to
+update now. Do not show ranked actions until after the operator updates or
+explicitly chooses to continue. For required updates, route to the cited
+`mb update` command before business work. After an approved update, rerun the
+status briefing.
+
 Do the technical work in technical commands, then translate the result back into
 business-owner language. Speak first in terms of bets, goals, offers, pushes,
 playbooks, outcomes, decisions, next actions, and saved checkpoints. Treat git,

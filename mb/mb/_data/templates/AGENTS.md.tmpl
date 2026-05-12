@@ -61,8 +61,13 @@ command.
 4. Run `mb doctor repair --plan` before recommending setup or repair. Quote the
    exact repair command from the plan. Ask before any write/apply command.
 5. If status says an update is required, route to the cited `mb update` command
-   and ask before running it. After an approved update, rerun
-   `mb status --json --peek`.
+   and ask before running it. If status says an update is recommended, make that
+   the only recommendation before business routing: name installed/latest
+   versions, say Main Branch is in active transition and the update is a
+   stability boost for routing, repairs, and skills when release highlights are
+   unavailable, then ask whether to update now. Do not show ranked actions until
+   after the operator updates or explicitly chooses to continue. After an
+   approved update, rerun `mb status --json --peek`.
 6. Resume onboarding from status facts. In rich repos, read existing `core/`
    files before asking bounded missing-profile questions.
 7. Present one clear business route: frame a bet, think through a decision,
