@@ -20,9 +20,13 @@ Read these before editing or reviewing:
 4. `docs/operator-loops.md` - Sense, Decide, Ship, Reflect taxonomy and daily
    loop language.
 5. `docs/roadmap.md` - current direction, anti-scope, and shipped foundation.
-6. `docs/oss-operating-checklist.md` - release, runtime-claim, state-model,
+6. `docs/system-architecture.md` - current CLI, skill, repo, provider,
+   runtime, graph, and release architecture boundaries.
+7. `docs/oss-operating-checklist.md` - release, runtime-claim, state-model,
    issue/PR, and public/private review checklist.
-7. `CHANGELOG.md` - read `[Unreleased]` and the latest shipped version section
+8. `docs/agent-writing-style.md` - action-first writing rubric for agent docs,
+   PR descriptions, reviews, issue comments, and local preferences.
+9. `CHANGELOG.md` - read `[Unreleased]` and the latest shipped version section
    so current tense matches release truth.
 
 Do not paste these docs into issue comments, PR bodies, or local preferences.
