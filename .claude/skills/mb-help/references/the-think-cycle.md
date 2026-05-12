@@ -106,7 +106,7 @@ Research = any investigation that informs a decision.
 **Don't need it for:**
 - Quick factual questions (just ask)
 - Simple file edits (just edit)
-- Content generation (use `/mb-ads`, `/mb-organic`, `/mb-site`, etc.; `/mb-vsl` remains a compatibility router)
+- Content generation (use `/mb-ads`, `/mb-organic`, `/mb-site`, etc.; sales-video/VSL prompts route by surface)
 
 ---
 

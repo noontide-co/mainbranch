@@ -11,7 +11,6 @@ operator by the surface they are trying to improve.
 | "Write a VSL for this offer", "sales video for my page", "about page video", "lander video", "embedded pitch script" | `/mb-site` |
 | "Turn this offer into a video ad script", "paid sales video", "long-form video ad", "hook variants" | `/mb-ads` |
 | "Make short clips from this sales video", "repurpose this VSL", "creator-style cuts" | `/mb-organic` |
-| Existing `/mb-vsl` command | compatibility router: ask the surface, then route above |
 
 Default ambiguous "write a VSL" requests to `/mb-site` because they usually
 mean an owned conversion surface. If the operator says paid traffic, route to

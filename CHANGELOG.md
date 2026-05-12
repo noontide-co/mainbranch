@@ -37,6 +37,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   validation, and checkpoints before interpreting or writing workflow prose.
   Refs MAIN-338, #518.
 
+### Removed
+
+- Removed the `/mb-vsl` compatibility router. Sales-video and VSL prompts now
+  route directly through `/mb-site`, `/mb-ads`, `/mb-think`, or `/mb-organic`
+  by surface and intent. Refs MAIN-338, #518.
+
 ## [0.3.17] - 2026-05-12
 
 v0.3.17 is a release-tightening patch after the first `mb books` release. It

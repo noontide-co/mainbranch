@@ -105,7 +105,7 @@ If content-strategy.md does not exist, all skills work exactly as they did befor
 
 Main Branch delivers two kinds of value:
 
-1. **Ads and conversion surfaces that convert** -- immediate ROI through `/mb-ads` and `/mb-site`, with `/mb-vsl` kept only as a compatibility router. Reference files make ads and sales videos specific, compliant, and high-converting.
+1. **Ads and conversion surfaces that convert** -- immediate ROI through `/mb-ads` and `/mb-site`. Reference files make ads and sales videos specific, compliant, and high-converting.
 
 2. **Content that runs itself** -- long game through content strategy, `/mb-organic`, and planned newsletter workflows. One keystone piece gets adapted across platforms automatically.
 

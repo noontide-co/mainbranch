@@ -272,7 +272,6 @@ starts, so repaired `/mb-start` links usually appear after restart.
 | `/mb-think` | Research, decide, codify — turns thinking into durable business files. |
 | `/mb-bet` | Open, update, close, list, and narrate business bets. |
 | `/mb-ads` | Generate ad copy and review for compliance. |
-| `/mb-vsl` | Compatibility router for existing users; sales videos/VSLs route through `/mb-site`, `/mb-ads`, `/mb-think`, or `/mb-organic` by intent. |
 | `/mb-organic` | Generate organic content (Reels, TikTok, carousels). |
 | `/mb-site` | Generate and deploy landing pages. |
 | `/mb-wiki` | Personal wiki with atomic notes. |

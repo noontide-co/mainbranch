@@ -73,7 +73,6 @@ _KNOWN_UNPREFIXED_SKILL_ROUTES = {
     "status",
     "think",
     "update",
-    "vsl",
     "wiki",
 }
 _MAIN_BRANCH_SLASH_COMMAND_RE = re.compile(
@@ -96,7 +95,6 @@ _CLI_FIRST_REQUIRED_COMMANDS = {
     "mb-status": ("mb status --json --peek",),
     "mb-think": ("mb status --json --peek", "mb connect doctor --json"),
     "mb-update": ("mb update --repo . --json",),
-    "mb-vsl": ("mb status --json --peek",),
 }
 _RAW_GIT_CHECK_RE = re.compile(r"(?<![\w-])git\s+(?:status|log|diff|add|commit)(?![\w-])")
 _RAW_GIT_ALLOW_TERMS = (

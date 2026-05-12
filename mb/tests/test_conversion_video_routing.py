@@ -35,7 +35,7 @@ def test_natural_sales_video_prompts_route_to_broader_skills(
 
     assert prompt.lower() in start or prompt.lower() in skill
     assert expected_route in start
-    assert "/mb-vsl` is a compatibility router" in start
+    assert "not a standalone vsl skill" in start
 
 
 def test_vsl_framework_references_are_shared_and_reachable_from_broader_skills() -> None:
@@ -53,14 +53,13 @@ def test_vsl_framework_references_are_shared_and_reachable_from_broader_skills()
         ".claude/skills/mb-site/references/sales-video.md",
         ".claude/skills/mb-ads/references/long-form-video-ads.md",
         ".claude/skills/mb-organic/references/sales-video-repurpose.md",
-        ".claude/skills/mb-vsl/SKILL.md",
     ]
     for consumer in consumers:
         text = _read(consumer)
         assert ".claude/reference/conversion/vsl-routing.md" in text
         assert ".claude/skills/mb-vsl/references" not in text
 
-    assert not (REPO_ROOT / ".claude/skills/mb-vsl/references/frameworks").exists()
+    assert not (REPO_ROOT / ".claude/skills/mb-vsl").exists()
 
 
 def test_operator_help_avoids_retired_data_repo_and_public_conductor_framing() -> None:

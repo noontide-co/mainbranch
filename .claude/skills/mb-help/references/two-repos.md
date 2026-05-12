@@ -7,7 +7,8 @@ This is the key concept. Once you get this, everything else makes sense.
 ## Main Branch Engine
 
 The shared system everyone uses. Contains:
-- Skills (`/mb-ads`, `/mb-think`, `/mb-setup`, `/mb-site`, etc.; `/mb-vsl` is a compatibility router)
+- Skills (`/mb-ads`, `/mb-think`, `/mb-setup`, `/mb-site`, etc.; sales-video
+  prompts route by workflow)
 - Templates and frameworks
 - Compliance resources
 - Business setup patterns and primitive guidance

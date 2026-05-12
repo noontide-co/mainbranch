@@ -39,7 +39,6 @@ LEGACY_SKILL_NAMES = (
     "skill-review",
     "start",
     "think",
-    "vsl",
     "wiki",
 )
 ENGINE_MARKER = Path(".claude") / "skills" / PRIMARY_SKILL / "SKILL.md"

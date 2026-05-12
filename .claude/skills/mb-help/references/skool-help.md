@@ -26,7 +26,8 @@ Write sales videos/VSLs for your community.
 **What it does:**
 - Routes about-page or sales-page videos through `/mb-site`
 - Uses the shared 18-section VSL framework when long-form structure helps
-- Keeps `/mb-vsl skool` as a compatibility router for existing users
+- Routes Skool sales videos through `/mb-site`, `/mb-ads`, `/mb-think`, or
+  `/mb-organic` by surface and intent
 - Optimized for community sales
 
 ---

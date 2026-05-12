@@ -9,7 +9,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 MAIN_BRANCH_COMMAND_RE = re.compile(
     r"(?<![\w/.\->])/"
-    r"(?P<name>mb-[a-z0-9-]+|newsletter|ads|bet|end|help|organic|pull|setup|site|start|status|think|update|vsl|wiki)"
+    r"(?P<name>mb-[a-z0-9-]+|newsletter|ads|bet|end|help|organic|pull|setup|site|start|status|think|update|wiki)"
     r"(?=$|[`<\s,).:;])"
 )
 GUIDED_ORCHESTRATION_FORMS = ("/mb-start launch",)
@@ -19,10 +19,6 @@ GUIDED_ORCHESTRATION_CONTEXT_MARKERS = (
     "skill orchestration",
     "guided skill",
     "follows the same contract",
-)
-MB_VSL_COMPATIBILITY_MARKERS = (
-    "compatibility router",
-    "compatibility routing",
 )
 
 
@@ -96,7 +92,7 @@ def test_runtime_docs_mark_mb_start_launch_as_guided_skill_orchestration() -> No
     assert failures == []
 
 
-def test_runtime_docs_mark_mb_vsl_as_compatibility_router() -> None:
+def test_runtime_docs_do_not_reference_retired_mb_vsl() -> None:
     failures: list[str] = []
 
     for path in _scan_paths():
@@ -105,10 +101,6 @@ def test_runtime_docs_mark_mb_vsl_as_compatibility_router() -> None:
         for index, line in enumerate(lines):
             if "/mb-vsl" not in line:
                 continue
-            context = _line_context(lines, index)
-            if not any(marker in context for marker in MB_VSL_COMPATIBILITY_MARKERS):
-                failures.append(
-                    f"{rel}:{index + 1}: /mb-vsl must be framed as a compatibility router"
-                )
+            failures.append(f"{rel}:{index + 1}: /mb-vsl is retired from live guidance")
 
     assert failures == []

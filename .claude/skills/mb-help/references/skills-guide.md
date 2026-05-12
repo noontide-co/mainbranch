@@ -101,7 +101,9 @@ VSL is reusable conversion knowledge, not its own durable primitive:
 - Paid video ad script or long-form conversion creative -> `/mb-ads`
 - Analyze a VSL, extract the pitch, mine objections, codify mechanism -> `/mb-think`
 - Short clips or creator-style excerpts from a sales video -> `/mb-organic`
-- `/mb-vsl` still works as a compatibility router for existing users.
+- Sales-video and VSL prompts route by surface: `/mb-site` for owned pages,
+  `/mb-ads` for paid video ads, `/mb-think` for teardown/research, and
+  `/mb-organic` for clips or excerpts.
 
 ---
 

@@ -88,7 +88,7 @@ The suite covers operator moments rather than raw commands:
 | Ask-before-writing decision | Pre-release | Sense -> Decide -> Ship | `/mb-think` separates recommendation from durable decision writes |
 | Writing skill without silent saves | Pre-release | Sense -> Ship | writing skills draft from fixture truth and ask before saving |
 | Guided offer launch | Pre-release | Sense -> Decide -> Ship | launch/readiness work uses `mb start`, status, provider readiness, and approval boundaries |
-| Natural sales-video prompt routing | Pre-release | Sense -> Decide -> Ship | VSL/sales-video prompts route to the broader conversion workflow skills instead of reviving `/mb-vsl` beyond its compatibility router role |
+| Natural sales-video prompt routing | Pre-release | Sense -> Decide -> Ship | VSL/sales-video prompts route to the broader conversion workflow skills instead of reviving a standalone VSL skill |
 | Bookkeeping safety handoff | Pre-release | Sense -> Decide -> Ship | `mb books` and hledger guidance protect raw finance data, classify provider/readiness facts honestly, and avoid Beancount-era drift |
 | Checkpoint discipline | Pre-release | Ship -> Reflect | checkpoint planning, message validation, and approval happen before save |
 | Broken runtime wiring / shadow repair | Pre-release | Sense -> Ship | stale skill wiring routes to supported repair commands |

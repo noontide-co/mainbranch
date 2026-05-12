@@ -155,7 +155,8 @@ before taking action.
    writing local state.
 7. Present one clear route set or infer intent: `/mb-think`, `/mb-bet`,
    `/mb-ads`, `/mb-organic`, `/mb-site`, `/mb-wiki`, `/mb-help`, or
-   `/mb-end`. `/mb-vsl` is a compatibility router only.
+   `/mb-end`. Sales-video and VSL requests route through the owning workflow,
+   not a standalone VSL skill.
 
 ---
 

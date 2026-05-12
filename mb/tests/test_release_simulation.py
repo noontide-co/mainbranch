@@ -100,7 +100,7 @@ def test_release_simulation_covers_conversion_video_natural_prompts() -> None:
     assert "/mb-ads" in observed
     assert "/mb-think" in observed
     assert "/mb-organic" in observed
-    assert "compatibility router" in observed
+    assert "standalone /mb-vsl skill" in observed
     assert "loop_routing" in sim.expected_behaviors
     assert "ask_before_write" in sim.expected_behaviors
 

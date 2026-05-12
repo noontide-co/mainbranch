@@ -724,7 +724,7 @@
         "Routes paid long-form video ads and hook variants to /mb-ads.",
         "Routes VSL teardown, pitch extraction, objection mining, and codification to /mb-think.",
         "Routes short clips, excerpts, and creator-style repurposing to /mb-organic.",
-        "Treats /mb-vsl as a compatibility router, not the primary owner of VSL knowledge."
+        "Does not route sales-video or VSL prompts to a standalone /mb-vsl skill."
       ],
       "must_not": [
         "Route every sales-video or VSL prompt to /mb-vsl.",
