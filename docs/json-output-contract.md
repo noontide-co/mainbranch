@@ -72,7 +72,7 @@ frontmatter exist. It does not mean each testimonial has outcome structure.
 Nested `proof.quality.structured_entries` means status found structured
 testimonial entries or frontmatter inside `testimonials.md`.
 
-Current `quality` shape:
+When no proof files exist, `quality` contains the baseline empty shape:
 
 ```json
 {
@@ -99,7 +99,14 @@ Current `quality` shape:
   "claim_links": {
     "linked_offers": [],
     "unsupported_offer_claims": []
-  },
+  }
+}
+```
+
+When proof files exist and status can inspect them, `quality` also includes:
+
+```json
+{
   "structured_entries": false,
   "source_backed": false,
   "instrumentation": {
@@ -115,7 +122,7 @@ Generic testimonials are real proof material, but they are not treated as
 specific, offer-linked, typicality-aware, or outcome-backed unless the relevant
 fields say so. Skills and dashboards should cite facts such as
 `permissioned_public`, `linked_to_offer`, `with_outcome`, `with_timeframe`,
-`with_metric`, `typicality.exists`, and
+`with_metric`, `typicality.exists`, and, when present,
 `instrumentation.outcome_feedback`; those are factual signals, not persuasion
 scores.
 
@@ -126,7 +133,8 @@ Dashboard-safe proof categories can be derived from these facts:
 - Specific proof: `testimonials.specific` is greater than `0`.
 - Offer-linked proof: `testimonials.linked_to_offer` is greater than `0`.
 - Typicality-aware proof: `typicality.exists` is `true`.
-- Outcome-backed proof: `instrumentation.outcome_feedback` is `true`.
+- Outcome-backed proof: `instrumentation.outcome_feedback` is present and
+  `true`.
 
 Use factual copy such as "Proof exists, but it is generic", "Proof includes
 specific outcomes", "Proof is linked to an offer", "Proof has typicality
