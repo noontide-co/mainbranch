@@ -17,6 +17,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   and scripts a read-only, gated view of customer progress, offer, audience,
   proof, product ladder, CTA, channel, push, playbook, page readiness, and
   outcome feedback. Refs MAIN-343, #528.
+- Added clearer release dogfood print-mode evidence handling: per-simulation
+  fresh sessions, categorized permission-denial summaries, direct read-only
+  `mb books check` / `mb educational` allowlist coverage, and prompt guardrails
+  against shell-wrapped parsing in proxy runs. Refs MAIN-342, #526.
 - Added a Mermaid-powered Main Branch system map with source-of-truth tables
   for architecture boundaries, provider rails, private data, validation, and
   runtime stance. Refs MAIN-339, #519.

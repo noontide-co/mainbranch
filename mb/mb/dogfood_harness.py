@@ -43,18 +43,25 @@ CLAUDE_PRINT_READ_ONLY_TOOLS = (
     "Bash(mb doctor . --json)",
     "Bash(mb doctor repair --plan)",
     "Bash(mb doctor repair --plan *)",
+    "Bash(mb doctor repair --plan --json)",
+    "Bash(mb doctor repair --repo * --plan --json)",
     "Bash(mb status)",
     "Bash(mb status *)",
+    "Bash(mb status --json --peek)",
     "Bash(mb start)",
     "Bash(mb start --json)",
     "Bash(mb start --repo * --json)",
     "Bash(mb start --json --repo *)",
     "Bash(mb validate)",
     "Bash(mb validate *)",
+    "Bash(mb validate --cross-refs --json)",
     "Bash(mb graph)",
     "Bash(mb graph *)",
     "Bash(mb connect status)",
     "Bash(mb connect status *)",
+    "Bash(mb educational *)",
+    "Bash(mb books check)",
+    "Bash(mb books check *)",
     "Bash(mb checkpoint --hook-status)",
     "Bash(mb checkpoint --hook-status *)",
     "Bash(mb checkpoint --status)",
@@ -78,6 +85,18 @@ CLAUDE_PRINT_WRITE_DENY_TOOLS = (
     "Bash(git reset *)",
     "Bash(git checkout *)",
 )
+CLAUDE_PRINT_PROMPT_PREFIX = """Release simulation harness constraints:
+- Work from this disposable fixture repo only.
+- If you need deterministic Main Branch facts, run direct read-only commands only.
+- Prefer these exact commands when relevant: `mb status --json --peek`,
+  `mb start --json`, `mb doctor --json`, `mb doctor repair --plan --json`,
+  `mb validate --cross-refs --json`, `mb checkpoint --plan --json`,
+  `mb books check`, and `mb educational <topic>`.
+- Do not use shell pipes, redirects, temp files, Python parsers, or Claude
+  tool-result paths to transform command output.
+- Do not call AskUserQuestion in print mode. Put any question for the operator
+  in the final answer.
+"""
 
 SAFE_FIXTURE_FILES: dict[str, str] = {
     "core/offer.md": """# Offer
@@ -1023,6 +1042,11 @@ def score_transcript(text: str) -> dict[str, Any]:
     return release_simulation.score_transcript(text)
 
 
+def claude_print_prompt(simulation: release_simulation.Simulation) -> str:
+    """Return a prompt with harness constraints before the simulation text."""
+    return f"{CLAUDE_PRINT_PROMPT_PREFIX}\nSimulation prompt:\n{simulation.prompt}"
+
+
 def claude_print_env(state: HarnessState) -> dict[str, str]:
     env = os.environ.copy()
     existing_path = env.get("PATH", "")
@@ -1044,7 +1068,7 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
         }
         return
 
-    session_id = ""
+    session_ids: list[str] = []
     turns: list[dict[str, Any]] = []
     transcript_parts: list[str] = []
     permission_denials: list[Any] = []
@@ -1056,6 +1080,7 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
         "allowed_tools": list(CLAUDE_PRINT_READ_ONLY_TOOLS),
         "disallowed_tools": list(CLAUDE_PRINT_WRITE_DENY_TOOLS),
         "bypass_permissions": False,
+        "session_strategy": "fresh_session_per_simulation",
         "write_boundary": (
             "Write/edit tools, git commits, checkpoint saves, repair applies, "
             "and migrations are not allowlisted for print-mode proxy runs."
@@ -1074,10 +1099,7 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
             f"--allowedTools={','.join(CLAUDE_PRINT_READ_ONLY_TOOLS)}",
             f"--disallowedTools={','.join(CLAUDE_PRINT_WRITE_DENY_TOOLS)}",
         ]
-        command = [*base_command]
-        if session_id:
-            command.extend(["--resume", session_id])
-        command.append(simulation.prompt)
+        command = [*base_command, claude_print_prompt(simulation)]
         result = run_command(
             state,
             f"claude-print-{simulation.label}",
@@ -1086,24 +1108,6 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
             env=print_env,
             timeout=600,
         )
-        if (
-            result.returncode != 0
-            and session_id
-            and "No conversation found with session ID" in result.stderr
-        ):
-            state.warn(
-                f"Claude print-mode resume failed at {simulation.label}; "
-                "retried as a fresh print-mode session"
-            )
-            command = [*base_command, simulation.prompt]
-            result = run_command(
-                state,
-                f"claude-print-{simulation.label}-fresh-session",
-                command,
-                cwd=profile_repo,
-                env=print_env,
-                timeout=600,
-            )
         post_status = git_text(profile_repo, "status", "--short")
         post_diff = git_text(profile_repo, "diff", "--stat")
         profile_record["post_run_git_status"] = post_status
@@ -1141,7 +1145,8 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
                 turn["permission_denials"] = len(denials)
             new_session_id = extract_session_id(payload)
             if new_session_id:
-                session_id = new_session_id
+                session_ids.append(new_session_id)
+                turn["session_id"] = new_session_id
             text = transcript_text_from_payload(payload)
             if text:
                 transcript_parts.append(f"## {simulation.label}\n\n{text.strip()}\n")
@@ -1169,8 +1174,10 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
     if transcript_text and observed_unknown_command:
         state.fail("Claude print-mode transcript reported an unknown command")
 
+    permission_summary = summarize_permission_denials(permission_denials)
     grounding = classify_print_grounding(
         permission_denials=permission_denials,
+        permission_summary=permission_summary,
         fixture_profiles=state.fixture_profiles,
         rubric=rubric,
         turns=turns,
@@ -1185,10 +1192,13 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
         "proxy_notice": "Print-mode evidence is not the same as interactive TUI evidence.",
         "simulation_tier": simulation_tier,
         "max_budget_usd": max_budget_usd,
-        "session_id": session_id,
+        "session_id": session_ids[-1] if session_ids else "",
+        "session_ids": session_ids,
+        "session_strategy": "fresh_session_per_simulation",
         "permission_policy": permission_policy,
         "permission_denials": permission_denials,
         "permission_denial_count": len(permission_denials),
+        "permission_denial_summary": permission_summary,
         "grounding": grounding,
         "turns": turns,
         "simulations": [
@@ -1213,12 +1223,17 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
 def classify_print_grounding(
     *,
     permission_denials: list[Any],
+    permission_summary: dict[str, Any] | None = None,
     fixture_profiles: list[dict[str, Any]],
     rubric: dict[str, Any],
     turns: list[dict[str, Any]],
 ) -> dict[str, Any]:
     """Classify whether print-mode grounding is clean, fallback, or distorted."""
-    permission_denial_count = len(permission_denials)
+    permission_summary = permission_summary or summarize_permission_denials(permission_denials)
+    permission_denial_count = int(permission_summary.get("total", len(permission_denials)) or 0)
+    grounding_denial_count = int(
+        permission_summary.get("read_only_mb_grounding", permission_denial_count) or 0
+    )
     facts_available = any(
         bool(
             profile.get("mb_command_facts", {}).get("facts_available")
@@ -1240,19 +1255,27 @@ def classify_print_grounding(
         if isinstance(check, dict) and check.get("ok") is False
     ]
 
-    if permission_denial_count and not facts_available:
+    if grounding_denial_count and not facts_available:
         verdict = "permission_distorted_proxy"
         clean_pass = False
         reason = (
             "Read-only mb grounding was denied and the harness did not capture "
             "equivalent deterministic fixture facts."
         )
-    elif permission_denial_count:
+    elif grounding_denial_count:
         verdict = "partial_proxy_with_deterministic_fallback"
         clean_pass = False
         reason = (
             "Read-only mb grounding saw permission denial(s); deterministic "
             "fixture facts are available as fallback evidence."
+        )
+    elif permission_denial_count:
+        verdict = "print_proxy_manual_review_required"
+        clean_pass = not failed_turns and not failed_checks
+        reason = (
+            "Print-mode recorded permission denial(s), but none were classified "
+            "as read-only mb grounding denials. Manual transcript review is "
+            "still required for release claims."
         )
     else:
         verdict = "print_proxy_manual_review_required"
@@ -1266,12 +1289,107 @@ def classify_print_grounding(
         "verdict": verdict,
         "clean_pass": clean_pass,
         "permission_denial_count": permission_denial_count,
+        "read_only_mb_grounding_denial_count": grounding_denial_count,
+        "permission_denial_summary": permission_summary,
         "deterministic_fixture_facts": facts_available,
         "failed_turns": failed_turns,
         "failed_heuristic_checks": failed_checks,
         "reason": reason,
         "evidence_level": "print-mode proxy",
     }
+
+
+def summarize_permission_denials(permission_denials: list[Any]) -> dict[str, Any]:
+    """Summarize Claude Code permission denials by evidence impact."""
+    summary: dict[str, Any] = {
+        "total": len(permission_denials),
+        "read_only_mb_grounding": 0,
+        "direct_read_only_mb": 0,
+        "shell_wrapped_mb": 0,
+        "operator_question": 0,
+        "local_runtime_artifact": 0,
+        "other": 0,
+        "examples": [],
+    }
+    examples: list[dict[str, str]] = []
+    for denial in permission_denials:
+        tool_name, command = permission_denial_tool(denial)
+        category = permission_denial_category(tool_name, command)
+        summary[category] = int(summary.get(category, 0) or 0) + 1
+        if category in {"direct_read_only_mb", "shell_wrapped_mb"}:
+            summary["read_only_mb_grounding"] = int(summary["read_only_mb_grounding"]) + 1
+        if len(examples) < 10:
+            examples.append(
+                {
+                    "tool": tool_name or "unknown",
+                    "category": category,
+                    "command": command[:240],
+                }
+            )
+    summary["examples"] = examples
+    return summary
+
+
+def permission_denial_tool(denial: Any) -> tuple[str, str]:
+    """Extract a normalized tool name and command from a Claude denial payload."""
+    if isinstance(denial, str):
+        if denial.startswith("Bash(") and denial.endswith(")"):
+            return "Bash", denial.removeprefix("Bash(").removesuffix(")")
+        return denial, ""
+    if not isinstance(denial, dict):
+        return "", ""
+    tool_name = str(denial.get("tool_name") or denial.get("tool") or "")
+    tool_input = denial.get("tool_input")
+    command = ""
+    if isinstance(tool_input, dict):
+        command_value = tool_input.get("command")
+        if isinstance(command_value, str):
+            command = command_value
+    if not command and tool_name.startswith("Bash(") and tool_name.endswith(")"):
+        command = tool_name.removeprefix("Bash(").removesuffix(")")
+        tool_name = "Bash"
+    return tool_name, command
+
+
+def permission_denial_category(tool_name: str, command: str) -> str:
+    """Classify a permission denial without treating every denial as mb grounding."""
+    stripped = command.strip()
+    if tool_name == "AskUserQuestion":
+        return "operator_question"
+    if tool_name == "Bash" and "/.claude/projects/" in stripped:
+        return "local_runtime_artifact"
+    if tool_name == "Bash" and stripped.startswith("mb "):
+        if not is_read_only_mb_command(stripped):
+            return "other"
+        if is_shell_wrapped_command(stripped):
+            return "shell_wrapped_mb"
+        return "direct_read_only_mb"
+    return "other"
+
+
+def is_shell_wrapped_command(command: str) -> bool:
+    """Return whether a command uses shell control or redirection syntax."""
+    return any(marker in command for marker in ("|", ">", "<", ";", "&&", "||"))
+
+
+def is_read_only_mb_command(command: str) -> bool:
+    """Return whether a denied mb command starts from a known read-only surface."""
+    read_only_prefixes = (
+        "mb --version",
+        "mb doctor",
+        "mb status",
+        "mb start",
+        "mb validate",
+        "mb graph",
+        "mb connect status",
+        "mb educational",
+        "mb books check",
+        "mb checkpoint --hook-status",
+        "mb checkpoint --status",
+        "mb checkpoint --plan",
+        "mb checkpoint --validate",
+    )
+    return command.startswith(read_only_prefixes)
 
 
 def collect_post_run_state(state: HarnessState) -> None:
@@ -1334,10 +1452,17 @@ def evidence_template(state: HarnessState, *, install_mode: str, mb_version: str
         if isinstance(permission_policy, dict)
         else "not run"
     )
-    permission_denials = claude.get("permission_denials", []) if isinstance(claude, dict) else []
-    permission_denial_summary: str | int = "not run"
-    if isinstance(permission_denials, list):
-        permission_denial_summary = len(permission_denials)
+    session_strategy = (
+        claude.get("session_strategy", "not run") if isinstance(claude, dict) else "not run"
+    )
+    permission_summary = (
+        claude.get("permission_denial_summary", {}) if isinstance(claude, dict) else {}
+    )
+    permission_denial_summary = "not run"
+    grounding_denial_summary = "not run"
+    if isinstance(permission_summary, dict):
+        permission_denial_summary = permission_summary.get("total", "not run")
+        grounding_denial_summary = permission_summary.get("read_only_mb_grounding", "not run")
     grounding = claude.get("grounding", {}) if isinstance(claude, dict) else {}
     grounding_verdict = (
         grounding.get("verdict", "not run") if isinstance(grounding, dict) else "not run"
@@ -1385,10 +1510,12 @@ Evidence folder: local artifact; see harness output and summary.json
 - Proxy notice: {claude_notice}
 - Permission policy: {permission_mode}
 - Permission denials: {permission_denial_summary}
+- Read-only `mb` grounding denials: {grounding_denial_summary}
 - Grounding verdict: {grounding_verdict}
 - Grounding note: {grounding_reason}
 - Write boundary: {permission_boundary}
-- Session ID preserved: {claude_session}
+- Session strategy: {session_strategy}
+- Session ID captured: {claude_session}
 - Rubric: {rubric_summary}
 - Manual transcript review: docs/release-simulations.md#transcript-review
 - Transcript excerpts: {claude_transcript}
@@ -1621,7 +1748,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--run-claude-print",
         action="store_true",
-        help="Run optional chained claude -p print-mode proxy smoke.",
+        help="Run optional fresh-session claude -p print-mode proxy smoke.",
     )
     parser.add_argument(
         "--simulation-tier",

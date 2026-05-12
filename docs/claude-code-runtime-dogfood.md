@@ -101,8 +101,9 @@ For a release smoke against PyPI:
 scripts/claude-runtime-dogfood.py --install-mode pypi --pypi-version 0.3.6
 ```
 
-The optional print-mode proxy path runs chained `claude -p` prompts and
-preserves the returned session id when Claude Code emits one:
+The optional print-mode proxy path runs each `claude -p` prompt in a fresh
+session for its per-simulation fixture repo and records the returned session
+ids when Claude Code emits them:
 
 ```bash
 scripts/claude-runtime-dogfood.py --install-mode editable --run-claude-print --max-budget-usd 0.25
@@ -119,13 +120,16 @@ after publication.
 When print mode runs, the harness prepends the temp venv `mb` executable to
 `PATH` and passes Claude Code a read-only tool allowlist for deterministic
 grounding commands such as `mb status`, `mb start`, `mb doctor`, `mb validate`,
-and `mb checkpoint --plan`. It does not use permission-bypass mode and does not
-allowlist write/edit tools, checkpoint saves, repair applies, migrations, or git
-commits. Transcript review still has to answer whether Claude actually ran/read
-the `mb` facts, whether permissions distorted the run, and which deterministic
-CLI artifacts are only fallback evidence. The harness labels permission-denied
-grounding as proxy evidence; when profile `mb` facts are available, it records
-that as deterministic fallback rather than an interactive TUI pass.
+`mb books check`, `mb educational`, and `mb checkpoint --plan`. It also tells
+Claude not to use shell pipes, redirects, temp files, Python parsers, local
+Claude tool-result paths, or `AskUserQuestion` in print mode. It does not use
+permission-bypass mode and does not allowlist write/edit tools, checkpoint
+saves, repair applies, migrations, or git commits. Transcript review still has
+to answer whether Claude actually ran/read the `mb` facts, whether permissions
+distorted the run, and which deterministic CLI artifacts are only fallback
+evidence. The harness labels permission-denied grounding as proxy evidence;
+when profile `mb` facts are available, it records that as deterministic
+fallback rather than an interactive TUI pass.
 
 Print-mode evidence is a proxy. It is useful for repeatable regression signal,
 budget/auth failures, transcript excerpts, and rubric scoring, but it is not

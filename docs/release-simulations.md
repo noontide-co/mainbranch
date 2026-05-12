@@ -107,8 +107,8 @@ profiles include the healthy first-day repo, broken project-local skill wiring,
 synthetic private-data refusal material, legacy campaigns/schema drift, launch
 readiness gaps, and dirty approved business files for checkpoint planning.
 Evidence records the profile name, mutations applied, relevant read-only `mb`
-command facts, post-run git state, permission-denial count, and grounding
-verdict.
+command facts, post-run git state, fresh-session ids, permission-denial summary
+by category, and grounding verdict.
 
 ## Running The Suite
 
@@ -152,11 +152,13 @@ checklist. Keep raw local paths and long transcripts out of public comments.
 Print-mode runs intentionally prepend the harness venv's `mb` executable to
 `PATH` and pass Claude Code a read-only allowlist for deterministic `mb`
 grounding commands such as `mb status`, `mb start`, `mb doctor`, `mb validate`,
-and `mb checkpoint --plan`. The harness does not use permission-bypass mode and
-does not allowlist write/edit tools, checkpoint saves, repair applies,
-migrations, or git commits. If a transcript still shows read-only `mb` commands
-were denied, classify the run as permission-distorted proxy evidence and record
-the fallback rather than treating the heuristic rubric as a full pass.
+`mb books check`, `mb educational`, and `mb checkpoint --plan`. Each
+simulation runs in a fresh print-mode session because every simulation has its
+own fixture repo. The harness does not use permission-bypass mode and does not
+allowlist write/edit tools, checkpoint saves, repair applies, migrations, or git
+commits. If a transcript still shows read-only `mb` commands were denied,
+classify the run as permission-distorted proxy evidence and record the fallback
+rather than treating the heuristic rubric as a full pass.
 When deterministic fixture facts were captured for the same scenario, the
 harness labels that as partial proxy evidence with deterministic fallback,
 still not as interactive TUI proof.

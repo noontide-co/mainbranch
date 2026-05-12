@@ -209,12 +209,18 @@ def test_run_claude_print_allows_readonly_mb_and_denies_write_tools(
 
     assert "--dangerously-skip-permissions" not in command
     assert "--permission-mode" not in command
-    assert command[-1] == simulation.prompt
+    assert command[-1].endswith(simulation.prompt)
+    assert "Do not use shell pipes" in command[-1]
+    assert "Do not call AskUserQuestion" in command[-1]
     assert "Bash(mb status)" in allowed
     assert "Bash(mb status *)" in allowed
+    assert "Bash(mb status --json --peek)" in allowed
     assert "Bash(mb start)" in allowed
     assert "Bash(mb start --json --repo *)" in allowed
     assert "Bash(mb doctor repair --plan)" in allowed
+    assert "Bash(mb doctor repair --plan --json)" in allowed
+    assert "Bash(mb educational *)" in allowed
+    assert "Bash(mb books check)" in allowed
     assert "Bash(mb checkpoint --plan)" in allowed
     assert "Bash(mb checkpoint --plan *)" in allowed
     assert "Bash(mb checkpoint --message *)" in disallowed
@@ -222,10 +228,11 @@ def test_run_claude_print_allows_readonly_mb_and_denies_write_tools(
     assert captured["env"]["PATH"].split(os.pathsep)[0] == str(state.mb_path.parent)
     assert state.claude["permission_policy"]["bypass_permissions"] is False
     assert state.claude["permission_policy"]["mode"] == "read_only_mb_allowlist"
+    assert state.claude["session_strategy"] == "fresh_session_per_simulation"
     assert state.claude["permission_denials"] == []
 
 
-def test_run_claude_print_retries_when_resume_session_is_missing(
+def test_run_claude_print_uses_fresh_sessions_for_profile_repos(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     state = harness.HarnessState(
@@ -237,6 +244,7 @@ def test_run_claude_print_retries_when_resume_session_is_missing(
     )
     state.fixture_repo.mkdir(parents=True)
     calls: list[list[str]] = []
+    claude_calls = 0
 
     simulations = (
         release_simulation.Simulation(
@@ -272,24 +280,25 @@ def test_run_claude_print_retries_when_resume_session_is_missing(
         env: dict[str, str] | None = None,
         timeout: int | None = None,
     ) -> harness.CommandResult:
+        nonlocal claude_calls
         del state, cwd, env, timeout
         calls.append(command)
         stdout_path = tmp_path / f"{label}.stdout"
         stderr_path = tmp_path / f"{label}.stderr"
         metadata_path = tmp_path / f"{label}.json"
-        if "--resume" in command:
-            stdout = ""
-            stderr = "No conversation found with session ID: missing\n"
-            returncode = 1
+        if label.startswith("claude-print-"):
+            claude_calls += 1
+            session_id = f"session-{claude_calls}"
         else:
-            stdout = json.dumps(
-                {
-                    "session_id": "session-1",
-                    "result": {"content": [{"text": "/mb-start ran mb status."}]},
-                }
-            )
-            stderr = ""
-            returncode = 0
+            session_id = "setup-session"
+        stdout = json.dumps(
+            {
+                "session_id": session_id,
+                "result": {"content": [{"text": "/mb-start ran mb status."}]},
+            }
+        )
+        stderr = ""
+        returncode = 0
         stdout_path.write_text(stdout, encoding="utf-8")
         stderr_path.write_text(stderr, encoding="utf-8")
         metadata_path.write_text("{}", encoding="utf-8")
@@ -311,10 +320,12 @@ def test_run_claude_print_retries_when_resume_session_is_missing(
 
     harness.run_claude_print(state, max_budget_usd="0.01", simulation_tier="pr_smoke")
 
-    assert any("--resume" in command for command in calls)
-    assert any("retried as a fresh print-mode session" in warning for warning in state.warnings)
+    assert not any("--resume" in command for command in calls)
+    assert not any("retried as a fresh print-mode session" in warning for warning in state.warnings)
     assert [turn["simulation_id"] for turn in state.claude["turns"]] == ["one", "two"]
     assert state.claude["turns"][1]["returncode"] == 0
+    assert state.claude["session_ids"] == ["session-1", "session-2"]
+    assert state.claude["session_strategy"] == "fresh_session_per_simulation"
 
 
 def test_read_json_rejects_non_object_payload() -> None:
@@ -370,7 +381,9 @@ def test_evidence_template_labels_print_mode_as_proxy(tmp_path: Path) -> None:
         "ran": True,
         "proxy_notice": "Print-mode evidence is not the same as interactive TUI evidence.",
         "session_id": "session-1",
+        "session_strategy": "fresh_session_per_simulation",
         "permission_denials": [],
+        "permission_denial_summary": {"total": 0, "read_only_mb_grounding": 0},
         "transcript_excerpts": str(tmp_path / "transcript.md"),
         "rubric": {"passed": 6, "total": 7},
     }
@@ -378,8 +391,10 @@ def test_evidence_template_labels_print_mode_as_proxy(tmp_path: Path) -> None:
     template = harness.evidence_template(state, install_mode="editable", mb_version="mb 0.3.6")
 
     assert "Print-mode evidence is not the same as interactive TUI evidence" in template
-    assert "Session ID preserved: True" in template
+    assert "Session strategy: fresh_session_per_simulation" in template
+    assert "Session ID captured: True" in template
     assert "Permission denials: 0" in template
+    assert "Read-only `mb` grounding denials: 0" in template
     assert "Rubric: 6/7 heuristic checks" in template
     assert "Manual transcript review: docs/release-simulations.md#transcript-review" in template
     assert f"Evidence folder: {state.evidence_dir}" not in template
@@ -541,6 +556,43 @@ def test_print_grounding_classifies_permission_denial_with_fixture_facts_as_part
 
     assert verdict["verdict"] == "partial_proxy_with_deterministic_fallback"
     assert verdict["clean_pass"] is False
+
+
+def test_permission_denial_summary_separates_grounding_from_other_denials() -> None:
+    summary = harness.summarize_permission_denials(
+        [
+            {
+                "tool_name": "AskUserQuestion",
+                "tool_input": {"questions": [{"question": "Choose?"}]},
+            },
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": "mb books check"},
+            },
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": "mb status --json --peek | python3 -c 'pass'"},
+            },
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": "cat /home/example/.claude/projects/demo/tool-results/abc.txt"
+                },
+            },
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": "mb checkpoint --message '[added] demo' --yes"},
+            },
+        ]
+    )
+
+    assert summary["total"] == 5
+    assert summary["operator_question"] == 1
+    assert summary["direct_read_only_mb"] == 1
+    assert summary["shell_wrapped_mb"] == 1
+    assert summary["read_only_mb_grounding"] == 2
+    assert summary["local_runtime_artifact"] == 1
+    assert summary["other"] == 1
 
 
 def test_run_command_captures_artifacts_and_parses_json(tmp_path: Path) -> None:
