@@ -724,23 +724,54 @@ def _offer_slug_from_path(path: str) -> str:
     return match.group(1) if match else ""
 
 
-def _proof_linked_offer_refs(repo: Path, proof_path: str) -> set[str]:
+TestimonialEntry = str | dict[str, Any]
+
+
+def _known_offer_refs(offer_paths: list[str]) -> dict[str, str]:
+    refs: dict[str, str] = {}
+    for path in offer_paths:
+        refs[path] = path
+        slug = _offer_slug_from_path(path)
+        if slug:
+            refs[slug] = path
+            refs[f"core/offers/{slug}"] = path
+            refs[f"core/offers/{slug}/"] = path
+            refs[f"core/offers/{slug}/offer.md"] = path
+    return refs
+
+
+def _normalize_offer_ref(value: Any, offer_paths: list[str]) -> str:
+    if not isinstance(value, str):
+        return ""
+    clean = value.strip().strip("\"'")
+    if not clean:
+        return ""
+    clean = clean.removeprefix("./")
+    return _known_offer_refs(offer_paths).get(clean, "")
+
+
+def _proof_linked_offer_refs(repo: Path, proof_path: str, offer_paths: list[str]) -> set[str]:
     meta = _read_frontmatter(repo / proof_path)
-    refs = set(_coerce_string_list(meta.get("offer")))
-    refs.update(_coerce_string_list(meta.get("linked_offers")))
+    raw_refs = set(_coerce_string_list(meta.get("offer")))
+    raw_refs.update(_coerce_string_list(meta.get("linked_offers")))
+    refs = {
+        normalized for ref in raw_refs if (normalized := _normalize_offer_ref(ref, offer_paths))
+    }
     match = re.match(r"core/offers/([^/]+)/proof/", proof_path)
-    if match:
-        refs.add(f"core/offers/{match.group(1)}/offer.md")
+    if match and (
+        normalized := _normalize_offer_ref(f"core/offers/{match.group(1)}/offer.md", offer_paths)
+    ):
+        refs.add(normalized)
     return {ref for ref in refs if ref}
 
 
-def _testimonial_entries(text: str, meta: dict[str, Any]) -> list[str]:
-    entries: list[str] = []
+def _testimonial_entries(text: str, meta: dict[str, Any]) -> list[TestimonialEntry]:
+    entries: list[TestimonialEntry] = []
     frontmatter_entries = meta.get("testimonials")
     if isinstance(frontmatter_entries, list):
         for item in frontmatter_entries:
             if isinstance(item, dict):
-                entries.append(json.dumps(item, sort_keys=True))
+                entries.append(item)
             elif isinstance(item, str) and item.strip():
                 entries.append(item.strip())
     body = _markdown_body_without_frontmatter(text)
@@ -765,14 +796,79 @@ def _testimonial_entries(text: str, meta: dict[str, Any]) -> list[str]:
             ).strip()
             if len(cleaned) >= 20:
                 entries.append(cleaned)
-    deduped: list[str] = []
+    deduped: list[TestimonialEntry] = []
     seen: set[str] = set()
     for entry in entries:
-        key = entry.strip()
+        key = json.dumps(entry, sort_keys=True) if isinstance(entry, dict) else entry.strip()
         if key and key not in seen:
-            deduped.append(key)
+            deduped.append(entry)
             seen.add(key)
     return deduped
+
+
+def _testimonial_text(entry: TestimonialEntry) -> str:
+    if isinstance(entry, str):
+        return entry
+    values: list[str] = []
+
+    def collect(value: Any) -> None:
+        if isinstance(value, dict):
+            for item in value.values():
+                collect(item)
+        elif isinstance(value, list):
+            for item in value:
+                collect(item)
+        elif isinstance(value, str):
+            values.append(value)
+        elif isinstance(value, (int, float)):
+            values.append(str(value))
+
+    collect(entry)
+    return " ".join(values)
+
+
+def _truthy_structured_value(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "yes", "approved", "public", "permissioned"}
+    return False
+
+
+def _testimonial_structured_permission(entry: TestimonialEntry) -> bool:
+    if not isinstance(entry, dict):
+        return False
+    permission_fields = {
+        "public",
+        "permissioned_public",
+        "approved_for_public",
+        "safe_to_share",
+        "public_approved",
+    }
+    for key, value in entry.items():
+        normalized = str(key).strip().lower().replace("-", "_")
+        if normalized in permission_fields and _truthy_structured_value(value):
+            return True
+    return False
+
+
+def _testimonial_structured_offer_refs(entry: TestimonialEntry) -> list[str]:
+    if not isinstance(entry, dict):
+        return []
+    refs: list[str] = []
+    for key in ("offer", "linked_offer", "linked_offers"):
+        refs.extend(_coerce_string_list(entry.get(key)))
+    return refs
+
+
+def _testimonial_explicit_offer_refs(text: str) -> list[str]:
+    refs: list[str] = []
+    for match in re.finditer(
+        r"(?im)(?:^|\b)(?:offer|linked_offer|linked_offers)\s*:\s*(?:-\s*)?([^\n,;#]+)",
+        text,
+    ):
+        refs.append(match.group(1).strip().strip("\"'`"))
+    return refs
 
 
 def _proof_text_has_timeframe(text: str) -> bool:
@@ -790,7 +886,7 @@ def _proof_text_has_metric(text: str) -> bool:
 
 
 def _testimonial_signal_counts(
-    entries: list[str],
+    entries: list[TestimonialEntry],
     *,
     linked_offer_refs: set[str],
     offer_paths: list[str],
@@ -808,20 +904,25 @@ def _testimonial_signal_counts(
         "with_mechanism": 0,
         "with_objection": 0,
     }
-    offer_refs = set(offer_paths)
-    offer_refs.update(_offer_slug_from_path(path) for path in offer_paths)
-    offer_refs.discard("")
     has_path_offer_link = bool(linked_offer_refs & set(offer_paths))
     for entry in entries:
-        lowered = entry.lower()
+        entry_text = _testimonial_text(entry)
+        lowered = entry_text.lower()
         has_before = _contains_any(lowered, PROOF_BEFORE_KEYWORDS)
         has_outcome = _contains_any(lowered, PROOF_OUTCOME_KEYWORDS)
         has_timeframe = _proof_text_has_timeframe(lowered)
         has_metric = _proof_text_has_metric(lowered)
         has_mechanism = _contains_any(lowered, PROOF_MECHANISM_KEYWORDS)
         has_objection = _contains_any(lowered, PROOF_OBJECTION_KEYWORDS)
-        has_permission = _contains_any(lowered, PROOF_PERMISSION_KEYWORDS)
-        has_offer_link = has_path_offer_link or any(ref.lower() in lowered for ref in offer_refs)
+        has_permission = _testimonial_structured_permission(entry) or _contains_any(
+            lowered, PROOF_PERMISSION_KEYWORDS
+        )
+        explicit_offer_refs = _testimonial_structured_offer_refs(entry)
+        explicit_offer_refs.extend(_testimonial_explicit_offer_refs(entry_text))
+        has_entry_offer_link = any(
+            _normalize_offer_ref(ref, offer_paths) for ref in explicit_offer_refs
+        )
+        has_offer_link = has_path_offer_link or has_entry_offer_link
         signals = [
             has_before,
             has_outcome,
@@ -1513,8 +1614,11 @@ def _money_path_offer(
     proof_boundary_warnings: list[str] = []
     if "proof" in guardrails and not proof_paths:
         proof_boundary_warnings.append("proof_claim_without_proof_file")
-    if proof_paths and int(testimonial_quality.get("permissioned_public") or 0) == 0:
-        proof_boundary_warnings.append("proof_files_without_permissioned_public_signal")
+    if (
+        int(testimonial_quality.get("total") or 0) > 0
+        and int(testimonial_quality.get("permissioned_public") or 0) == 0
+    ):
+        proof_boundary_warnings.append("testimonials_without_permissioned_public_signal")
     if claim_links.get("unsupported_offer_claims"):
         proof_boundary_warnings.append("offer_claims_without_offer_linked_proof")
 
@@ -1712,7 +1816,7 @@ def _proof_quality(
     for path in paths:
         text = _read_markdown_text(repo / path)
         proof_texts.append(text)
-        linked_refs = _proof_linked_offer_refs(repo, path)
+        linked_refs = _proof_linked_offer_refs(repo, path, offer_paths)
         linked_offers.update(linked_refs)
         if path.endswith("testimonials.md"):
             meta = _read_frontmatter(repo / path)
@@ -1839,11 +1943,15 @@ def _money_path_proof(
         level = 3
         status = "evidence_backed"
         summary = "Proof includes specific outcomes tied to typicality or an offer."
-    if int(testimonial_quality["specific"]) >= 2 and (
-        quality["source_backed"]
-        or int(testimonial_quality["permissioned_public"]) > 0
-        or int(testimonial_quality["with_metric"]) > 0
-        or int(testimonial_quality["with_timeframe"]) > 0
+    if (
+        level >= 3
+        and int(testimonial_quality["specific"]) >= 2
+        and (
+            quality["source_backed"]
+            or int(testimonial_quality["permissioned_public"]) > 0
+            or int(testimonial_quality["with_metric"]) > 0
+            or int(testimonial_quality["with_timeframe"]) > 0
+        )
     ):
         level = 4
         status = "field_tested"
