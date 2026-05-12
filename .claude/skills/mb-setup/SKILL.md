@@ -7,8 +7,15 @@ loops: [sense, decide, ship]
 # Repo Setup
 
 Get a new user fully configured with Claude Code and their business repo. Use
+shipped `mb` commands for setup facts before teaching concepts or reading
+reference prose.
+
+**CLI facts first:** Run `mb doctor`, `mb start --json`, and
+`mb status --json --peek` when a repo exists or can be identified. Use
 `mb onboard status --json` and `mb onboard plan` as the durable progress
-contract; do not keep onboarding state only in chat prose.
+contract; do not keep onboarding state only in chat prose. If there is no repo
+yet, use `mb onboard plan` / `mb onboard` to create one instead of hand-rolling
+repo-shape checks.
 
 For provider setup, use `mb connect plan` and `mb connect doctor --json` as the
 durable readiness contract. Explain providers as business capabilities, not
@@ -62,16 +69,18 @@ See **[references/cwd-detection.md](references/cwd-detection.md)** for the full 
 
 **If not installed or user declines:** Proceed with URL fetching, Playwright, or manual screenshots. The extension is convenient but not required.
 
-### 1. Confirm Git + Working Directory
+### 1. Confirm Repo + Working Directory
 
 ```bash
-git status  # Verify we're in a git repo
-pwd         # Confirm working directory
+mb doctor
+mb start --json
+mb status --json --peek
+pwd
 ```
 
-If not a git repo:
+If no business repo exists yet:
 ```bash
-git init
+mb onboard plan --team-size solo --success-stage working
 ```
 
 **Visibility default for business repos: private.** A business repo holds

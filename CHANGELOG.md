@@ -32,6 +32,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   checkpoint-first business-repo contract, replacing stale raw save examples
   and default AI attribution trailers with `mb checkpoint` planning,
   validation, and approval language. Refs MAIN-334, #513.
+- Added a CLI-first contract to high-impact bundled skills so agents start from
+  shipped `mb` facts for status, setup, provider readiness, site checks, books,
+  validation, and checkpoints before interpreting or writing workflow prose.
+  Refs MAIN-338, #518.
 
 ## [0.3.17] - 2026-05-12
 

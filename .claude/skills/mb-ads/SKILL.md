@@ -8,6 +8,10 @@ loops: [ship, reflect]
 
 Create ads, generate creative variations, review for compliance, and check ad account performance.
 
+**CLI facts first:** Find the business repo, run `mb status --json --peek`,
+then use status readiness, drift, integrations, measurement, and ranked actions
+before scoring creative depth or asking setup/provider questions.
+
 ## Output destinations and operator vocabulary
 
 This skill writes new coordinated work to `pushes/<YYYY-MM-DD-slug>/` (the

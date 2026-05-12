@@ -16,6 +16,11 @@ loops: [ship]
 
 Pick a site shape, build it from business context, and ship it through a linked site repo. Cloudflare Pages with git auto-deploy is the default deploy path.
 
+**CLI facts first:** In business repo mode, run `mb status --json --peek`
+before setup/provider/launch-readiness advice. In site repo mode or whenever a
+site repo is known, run `mb site check "$SITE_REPO" --business-repo
+"$BUSINESS_REPO" --json` before paid-traffic readiness or publish guidance.
+
 ## Output destinations and operator vocabulary
 
 Site/lander records that wrap a coordinated push (a launch, drop, or

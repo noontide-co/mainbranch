@@ -34,6 +34,10 @@ Work from the business repo. If unsure, confirm that `core/`, `research/`,
 `decisions/`, or `bets/` exists in the current directory. If not, ask the
 operator to start Claude from the business repo or run `/mb-start`.
 
+**CLI facts first:** Use `mb status --json --peek` for active bets and repo
+readiness before direct file reads. Use `mb validate --cross-refs` after
+bet/link edits instead of hand-checking relationship health in prose.
+
 Before writing, run:
 
 ```bash

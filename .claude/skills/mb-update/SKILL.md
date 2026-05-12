@@ -14,6 +14,9 @@ commands such as `pipx upgrade mainbranch` as the first update path; only use
 that as the bootstrap fallback when `mb update` is unavailable or the installed
 version is `0.1.x`.
 
+**CLI facts first:** Run `mb update --repo . --json` from the business repo and
+use its result before giving install-mode advice.
+
 ---
 
 ## Step 1: Update Main Branch

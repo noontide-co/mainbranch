@@ -73,7 +73,7 @@ See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** f
 
 ---
 
-## Tool Detection (CLI Facts First)
+## CLI Facts First
 
 Provider readiness comes from `mb` first. Run or reuse:
 

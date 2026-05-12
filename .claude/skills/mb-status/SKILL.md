@@ -9,6 +9,9 @@ loops: [sense]
 Show the operator the deterministic Main Branch briefing without duplicating
 repo-health checks in prose.
 
+**CLI facts first:** Run `mb status --json --peek` before answering, then use
+that JSON as the source of truth.
+
 ## Workflow
 
 1. Confirm you are in the business repo. If not, ask the operator to `cd` into

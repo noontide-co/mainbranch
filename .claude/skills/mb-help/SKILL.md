@@ -8,6 +8,10 @@ loops: [sense, decide]
 
 Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 
+**CLI facts first:** For "what should I do?", setup, provider, skill wiring, or
+troubleshooting questions, run `mb status --json --peek` and use `mb doctor`
+for repair facts before giving prose-only advice.
+
 ---
 
 ## Workflow

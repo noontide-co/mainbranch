@@ -10,6 +10,13 @@ Close your session intentionally. The bookend to `/mb-start`.
 
 **You only run this when you choose to.** It is never auto-invoked.
 
+**CLI facts first:** After finding the business repo, run
+`mb status --json --peek` and `mb checkpoint --plan --json` before summarizing
+the session or offering to save. Use status `journal`, `since_last_check`,
+dirty-work, readiness, and checkpoint facts as the primary source. Raw git is
+fallback/detail only when `mb` facts are unavailable or a crystallize step needs
+site-code history the CLI does not expose.
+
 ---
 
 ## Philosophy
@@ -65,36 +72,35 @@ A quick `/mb-end` (user says "just commit and close") can be steps 1-3 and 6. Bu
 
 ## Step 2: Scan Today's Activity
 
-Run these in the user's business repo:
+Run these in the user's business repo first:
 
 ```bash
-# What changed today
-git log --since="6am" --oneline --no-merges 2>/dev/null
-
-# Uncommitted changes
-git status --short 2>/dev/null
-
-# New or modified files today (staged + committed)
-git diff --name-only --diff-filter=AM HEAD@{6am}..HEAD 2>/dev/null
+mb status --json --peek
+mb checkpoint --plan --json
 ```
 
 **Parse what you find into categories:**
 
 | Category | How to Detect |
 |----------|---------------|
-| Research files created | New files in `research/` |
-| Decisions made | New or modified files in `decisions/` |
-| Core files updated | Modified files in `core/` |
-| Push artifacts generated | New files in `pushes/` |
-| Uncommitted changes | `git status --short` output |
+| Research files created | `journal.events[].files` and checkpoint changed files under `research/` |
+| Decisions made | `journal.events[].files` and checkpoint changed files under `decisions/` |
+| Core files updated | Status/checkpoint changed files under `core/` |
+| Push artifacts generated | Status/checkpoint changed files under `pushes/` |
+| Unsaved work | Status dirty-work facts and `mb checkpoint --plan` changed files/blockers |
 
-**Multi-offer detection (skip if no `core/offers/` folder — single-offer mode, everything reads from `core/`):** If `core/offers/` exists, note which offers had files changed:
+**Multi-offer detection (skip if no `core/offers/` folder — single-offer mode,
+everything reads from `core/`):** Use status/checkpoint file paths under
+`core/offers/` to note which offers changed. If those facts are unavailable,
+use a raw git fallback:
 ```bash
 git diff --name-only HEAD@{midnight}..HEAD -- core/offers/ 2>/dev/null | head -20
 ```
 Report: "Offers affected: community, newsletter" (or "Brand-level changes only" if only core/ changed)
 
-**If git log fails** (no commits today, repo issues): Fall back to `git status` and `ls -lt` to find recently modified files. Don't block on this.
+**If status/checkpoint facts are unavailable** (repo issues or an older CLI):
+fall back to `git status`, `git log`, and `ls -lt` only to avoid blocking the
+close.
 
 **If nothing happened today:** Say so briefly. "Quiet day -- no changes detected. Want to close out?" Skip to Step 6.
 
@@ -165,7 +171,9 @@ A dedicated subagent performs deep analysis of the session's work and generates 
 
 ### 5a. Check for Meaningful Activity
 
-Check if decisions, research, or significant core changes happened today:
+Check if decisions, research, or significant core changes happened today. Use
+the `mb status --json --peek` and `mb checkpoint --plan --json` file lists from
+Step 2 first. If they are unavailable, use these raw git fallbacks:
 
 ```bash
 # Decisions created or modified today

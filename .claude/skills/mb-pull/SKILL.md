@@ -9,6 +9,9 @@ loops: [ship]
 `/mb-pull` is kept for existing users. The preferred command is now
 `/mb-update`, matching the CLI command `mb update`.
 
+**CLI facts first:** Run `mb update --repo . --json`; this legacy alias should
+not teach a separate update path.
+
 Run the same update command:
 
 ```bash

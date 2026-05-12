@@ -12,6 +12,9 @@ the operator is actually trying to run.
 
 ## Start Every Run
 
+**CLI facts first:** Use `mb status --json --peek` before compatibility routing
+or framework reads.
+
 1. Load `.claude/reference/conversion/vsl-routing.md`.
 2. Run `mb status --json --peek` from the business repo and use its readiness,
    drift, and ranked-action facts before asking for missing context.

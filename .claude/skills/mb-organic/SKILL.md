@@ -10,6 +10,10 @@ Create organic content scripts in your voice — Reels, TikToks, carousels, stat
 
 **Need help?** Type `/mb-help` + your question anytime. If conversation compacts, `/mb-help` reloads fresh context.
 
+**CLI facts first:** Run `mb status --json --peek` from the business repo before
+triage, reference-health checks, or content planning. Use its readiness, drift,
+and ranked-action facts instead of hand-rolled repo-health probes.
+
 ## Output destinations and operator vocabulary
 
 When this skill produces a coordinated push (a content sequence with a goal,

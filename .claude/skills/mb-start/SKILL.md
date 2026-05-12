@@ -27,7 +27,7 @@ When summarizing repo state, count records under `pushes/` (current) and flag
 display words, speak the operator's word in conversation while still using
 engine paths in commands.
 
-**Status facts first:** Once the business repo path is known, run
+**CLI facts first:** Once the business repo path is known, run
 `mb status --json --peek` before asking setup or routing questions. Treat that
 JSON as the source of truth for update severity, readiness, drift, onboarding,
 integrations, GitHub issue/proposal facts, bets, dirty git, since-last-check, and
