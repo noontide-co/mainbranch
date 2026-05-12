@@ -149,7 +149,7 @@ sanitized file for the current task.
 
 You analyze reference file health at section level -- not just line count, but
 what specific sections exist, what's missing, and what filling each gap would
-unlock for downstream skills (/mb-ads, /mb-vsl, /mb-organic, /mb-site).
+unlock for downstream skills (/mb-ads, /mb-organic, /mb-site, and sales-video outputs).
 
 You are NOT an auditor. You are identifying the highest-leverage gaps.
 

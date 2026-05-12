@@ -1,6 +1,6 @@
 ---
 name: mb-organic
-description: "CREATE organic content scripts (Reels, TikTok, carousels, static posts). Use when user wants to GENERATE new scripts from concepts. NOT for research/mining competitor content - that's /mb-think. NOT for paid ads - use /mb-ads instead. Modes: video, carousel, static. If user says \"mine\", \"scrape\", \"research competitors\" → route to /mb-think."
+description: "CREATE organic content scripts (Reels, TikTok, carousels, static posts) and repurpose sales videos/VSLs into short clips or creator-style excerpts. Use when user wants to GENERATE new scripts from concepts or make short clips from a sales video. NOT for research/mining competitor content - that's /mb-think. NOT for paid ads - use /mb-ads instead. Modes: video, carousel, static, sales-video repurpose. If user says \"mine\", \"scrape\", \"research competitors\" → route to /mb-think."
 loops: [ship]
 ---
 
@@ -67,6 +67,7 @@ Detect if user is in the right place:
 |-----------|-----------|----------|
 | "mine", "scrape", "research competitors", "what are they saying" | Research/Mining | `/mb-think` (research mode) |
 | "transcribe", "extract from video" | Mining | `/mb-think` (research mode) |
+| "short clips from sales video", "repurpose this VSL", "turn this sales video into clips" | Repurpose | Continue with [references/sales-video-repurpose.md](references/sales-video-repurpose.md) |
 | "create", "generate", "write scripts", "make content" | Create | Continue in `/mb-organic` |
 
 **If mining intent detected:**
@@ -379,6 +380,8 @@ For walkthrough examples (context-aware start, video-only, mining redirect) and 
 **Setup:** [first-time-setup.md](references/first-time-setup.md), [minimal-voice-template.md](references/minimal-voice-template.md), [apify-setup.md](references/apify-setup.md)
 
 **Frameworks:** [organic-frameworks.md](references/organic-frameworks.md)
+
+**Sales video repurposing:** [sales-video-repurpose.md](references/sales-video-repurpose.md)
 
 **Templates:** [mining-template.md](references/mining-template.md), [video-script-template.md](references/video-script-template.md), [carousel-template.md](references/carousel-template.md), [static-template.md](references/static-template.md)
 

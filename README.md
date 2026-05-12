@@ -79,7 +79,7 @@ Open source. Lives on your machine. Bring your own Claude Code plan. That's it.
 - Research a topic and turn it into a decision the system remembers
 - Open, run, close, and narrate business bets so the lessons stick around
 - Plan and run launches, drops, challenges, and promos as repeatable playbooks
-- Generate ad copy, video scripts, organic content (Reels, TikTok, carousels), and VSLs in your voice
+- Generate ad copy, video scripts, sales videos/VSLs, organic content (Reels, TikTok, carousels), and page copy in your voice
 - Draft and ship landing pages on Cloudflare from your core files and research
 - Capture meeting transcripts, source material, and fulfillment notes into durable docs
 - Save readable progress points during long agent runs so the next session starts where this one stopped
@@ -268,7 +268,7 @@ Full list: `mb --help`. JSON output contract: [docs/json-output-contract.md](doc
 | `/mb-end` | Close the session — summary, crystallize, checkpoint guidance |
 | `/mb-help` | Get answers, troubleshoot, learn the system |
 | `/mb-update` | Update Main Branch (delegates to `mb update`) |
-| `/mb-ads` `/mb-vsl` `/mb-organic` `/mb-site` | Channel skills (Paid / Organic / Pages) |
+| `/mb-ads` `/mb-organic` `/mb-site` | Channel skills (Paid / Organic / Pages). Sales videos/VSLs route through the relevant workflow. |
 | `/mb-wiki` | Specialty: personal/atomic-notes wiki, not part of the core daily loop |
 
 `/mb-pull` is preserved as a legacy alias for `/mb-update`.

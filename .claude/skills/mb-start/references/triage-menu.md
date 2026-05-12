@@ -52,7 +52,7 @@ offer selection in the same turn.
 > 1. **What should I focus on?** (triage — analyzes your full state) → see [triage-agent.md](triage-agent.md)
 > 2. Enrich the core (research, decide, codify) → `/mb-think`
 > 3. Create ads (image or video) → `/mb-ads`
-> 4. Write a VSL script → `/mb-vsl`
+> 4. Build a conversion surface (site, sales video, or video ad) → `/mb-site` or `/mb-ads`
 > 5. Create organic content → `/mb-organic`
 > 6. Work on my wiki → `/mb-wiki`
 > 7. Build/update a site → `/mb-site`

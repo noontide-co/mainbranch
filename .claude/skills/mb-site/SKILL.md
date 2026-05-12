@@ -1,13 +1,14 @@
 ---
 name: mb-site
-description: "Triage and build any site shape -- lander (1 page), minisite (~4 pages), or full website -- and graduate between them. Routes to per-shape build flow, reads from business context files, deploys to Cloudflare Pages with git auto-deploy. Use when:
+description: "Triage and build any site shape -- lander (1 page), minisite (~4 pages), or full website -- and graduate between them. Also writes owned-surface sales videos/VSLs, about-page videos, landing-page videos, and embedded pitch scripts. Routes to per-shape build flow, reads from business context files, deploys to Cloudflare Pages with git auto-deploy. Use when:
   (1) Operator says 'I want a site' / 'I want a lander' / 'spin up a one-pager'
   (2) Setting up a new site of any shape from offer + audience material
   (3) Updating / iterating on an existing site
   (4) Graduating a site to a new shape (lander -> minisite -> website -> website + CMS)
-  (5) Previewing or publishing changes
+  (5) Writing a sales video, VSL, about-page video, landing-page video, or embedded pitch script for an owned conversion surface
+  (6) Previewing or publishing changes
 
-  Triggered by: /mb-site, 'build a site', 'landing page', 'lander', 'minisite', 'website', 'I need a site', 'spin up a site', 'put this online', 'publish site', 'deploy site', 'update my site', 'graduate my site', 'add a CMS to my site'"
+  Triggered by: /mb-site, 'build a site', 'landing page', 'lander', 'minisite', 'website', 'I need a site', 'spin up a site', 'put this online', 'publish site', 'deploy site', 'update my site', 'graduate my site', 'add a CMS to my site', 'write a VSL', 'sales video', 'about page video', 'landing page video', 'pitch script'"
 loops: [ship]
 ---
 
@@ -144,6 +145,7 @@ If the operator cannot articulate the shape, ask: "What goal are you trying to h
 
 - [`references/site-repo-workflow.md`](references/site-repo-workflow.md) - business repo mode vs site repo mode, source links, reverse records.
 - [`references/site-context.md`](references/site-context.md) - prerequisites, active offer resolution, required `core/...` files, and section mapping.
+- [`references/sales-video.md`](references/sales-video.md) - sales video, VSL, about-page video, lander video, and embedded pitch scripts for owned surfaces.
 - [`references/site-measurement.md`](references/site-measurement.md) - `mb site check` and paid-traffic readiness states.
 - [`references/site-recovery.md`](references/site-recovery.md) - compaction recovery and scope boundaries.
 

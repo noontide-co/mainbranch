@@ -17,15 +17,16 @@ core/operations/
 
 ---
 
-## Skool-Specific Skills
+## Skool-Specific Workflows
 
-### /mb-vsl skool
+### Skool sales videos
 
-Write Video Sales Letters for your community.
+Write sales videos/VSLs for your community.
 
 **What it does:**
-- Uses the 18-section VSL framework
-- Creates scripts for about page videos
+- Routes about-page or sales-page videos through `/mb-site`
+- Uses the shared 18-section VSL framework when long-form structure helps
+- Keeps `/mb-vsl skool` as a compatibility router for existing users
 - Optimized for community sales
 
 ---

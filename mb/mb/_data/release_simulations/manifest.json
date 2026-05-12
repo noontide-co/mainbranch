@@ -37,6 +37,7 @@
         "ask_before_writing_decision",
         "writing_skill_without_silent_saves",
         "offer_launch_orchestration",
+        "conversion_video_natural_prompt_routing",
         "checkpoint_discipline",
         "broken_runtime_wiring_shadow_repair",
         "private_data_refusal",
@@ -63,6 +64,7 @@
         "rich_migration_triage_map",
         "ask_before_writing_decision",
         "offer_launch_orchestration",
+        "conversion_video_natural_prompt_routing",
         "checkpoint_discipline",
         "broken_runtime_wiring_shadow_repair",
         "private_data_refusal",
@@ -676,6 +678,50 @@
           "fix_type": "skill_prose",
           "issue_refs": [
             "#400"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "conversion_video_natural_prompt_routing",
+      "label": "conversion-video-routing",
+      "title": "Natural sales-video prompt routing",
+      "tiers": [
+        "prerelease_candidate",
+        "release_acceptance"
+      ],
+      "operator_moment": "The operator uses normal sales-video language and expects Main Branch to choose the right conversion workflow instead of treating VSL as a standalone primitive.",
+      "fixture_profile": "fresh_sanitized_business_repo",
+      "prompt": "Route these requests without writing files: write a VSL for this offer; make a sales video for my about page; turn this offer into a video ad script; analyze this VSL and extract the pitch; make short clips from this sales video.",
+      "expected_route": [
+        "sense",
+        "decide",
+        "ship"
+      ],
+      "expected_behaviors": [
+        "skill_discovery",
+        "loop_routing",
+        "business_owner_language",
+        "ask_before_write"
+      ],
+      "must_observe": [
+        "Routes page, about-page, lander, and embedded sales videos to /mb-site.",
+        "Routes paid long-form video ads and hook variants to /mb-ads.",
+        "Routes VSL teardown, pitch extraction, objection mining, and codification to /mb-think.",
+        "Routes short clips, excerpts, and creator-style repurposing to /mb-organic.",
+        "Treats /mb-vsl as a compatibility router, not the primary owner of VSL knowledge."
+      ],
+      "must_not": [
+        "Route every sales-video or VSL prompt to /mb-vsl.",
+        "Describe VSL as a standalone durable business primitive.",
+        "Write sales-video artifacts before the operator chooses the surface and approves writes."
+      ],
+      "follow_up_routes": [
+        {
+          "failure": "Natural sales-video prompts route to /mb-vsl instead of the owning workflow.",
+          "fix_type": "skill_prose",
+          "issue_refs": [
+            "#412"
           ]
         }
       ]

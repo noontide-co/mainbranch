@@ -37,6 +37,8 @@ def test_release_simulation_tiers_have_expected_prompt_coverage() -> None:
     assert "ambiguous_mb_start_offer_choice" in {sim.id for sim in release}
     assert "rich_migration_triage_map" in {sim.id for sim in prerelease}
     assert "rich_migration_triage_map" in {sim.id for sim in release}
+    assert "conversion_video_natural_prompt_routing" in {sim.id for sim in prerelease}
+    assert "conversion_video_natural_prompt_routing" in {sim.id for sim in release}
     assert len(prerelease) >= 8
     assert len(release) >= 7
     assert sum(1 for sim in prerelease if sim.prompt.strip()) >= 6
@@ -76,6 +78,29 @@ def test_release_simulation_covers_rich_migration_triage_map() -> None:
     assert any("vaguely scan the repo" in item for item in sim.must_not)
     assert any("private local-state" in item for item in sim.must_not)
     assert "repo_boundary_safety" in sim.expected_behaviors
+
+
+def test_release_simulation_covers_conversion_video_natural_prompts() -> None:
+    simulations = {
+        sim.id: sim for sim in release_simulation.simulations_for_tier("prerelease_candidate")
+    }
+
+    sim = simulations["conversion_video_natural_prompt_routing"]
+
+    prompt = sim.prompt.lower()
+    assert "write a vsl for this offer" in prompt
+    assert "sales video for my about page" in prompt
+    assert "video ad script" in prompt
+    assert "analyze this vsl and extract the pitch" in prompt
+    assert "short clips from this sales video" in prompt
+    observed = " ".join(sim.must_observe).lower()
+    assert "/mb-site" in observed
+    assert "/mb-ads" in observed
+    assert "/mb-think" in observed
+    assert "/mb-organic" in observed
+    assert "compatibility router" in observed
+    assert "loop_routing" in sim.expected_behaviors
+    assert "ask_before_write" in sim.expected_behaviors
 
 
 def test_release_simulation_parser_exposes_expected_tier_choices() -> None:

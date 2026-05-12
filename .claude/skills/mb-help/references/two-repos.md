@@ -1,13 +1,13 @@
-# The Two Repos: Engine + Data
+# Main Branch Engine And Business Repos
 
 This is the key concept. Once you get this, everything else makes sense.
 
 ---
 
-## Main Branch (The Engine)
+## Main Branch Engine
 
 The shared system everyone uses. Contains:
-- Skills (`/mb-ads`, `/mb-think`, `/mb-setup`, `/mb-vsl`, etc.)
+- Skills (`/mb-ads`, `/mb-think`, `/mb-setup`, `/mb-site`, etc.; `/mb-vsl` is a compatibility router)
 - Templates and frameworks
 - Compliance resources
 - Business setup patterns and primitive guidance
@@ -18,7 +18,7 @@ You have read-only access. Think of it like software you install. You use it, yo
 
 ---
 
-## Your Business Repo (Your Data)
+## Your Business Repo
 
 YOUR personal folder. Contains everything about YOUR business:
 - Your offer, pricing, mechanism
@@ -45,9 +45,9 @@ your-business/                    mainbranch/ (linked from business repo)
 └── (yours, you own it)
 ```
 
-You start Claude in your business repo. `/mb-setup` connects Main Branch through `.claude/settings.local.json` for file access, and adds bridge links when needed for skill discovery. The engine then reads your business data and generates content that sounds like you.
+You start Claude in your business repo. `/mb-setup` connects Main Branch through `.claude/settings.local.json` for file access, and adds bridge links when needed for skill discovery. The engine then reads your business files and generates content that sounds like you.
 
-**Same engine + different data = different outputs for each business.**
+**Same engine + different business repo = different outputs for each business.**
 
 ---
 
@@ -64,16 +64,16 @@ The engine + your assets = your game.
 
 ---
 
-## Why Two Repos?
+## Why Separate Engine And Business Repos?
 
 **Separation of concerns:**
-- Engine updates don't touch your data
+- Engine updates don't touch your business files
 - Your changes don't break the engine
-- You can back up your data separately
+- You can back up your business repo separately
 - Multiple businesses can use the same engine
 
 **Portability:**
-- Your data is yours forever
+- Your business memory is yours forever
 - You can move it anywhere
 - Not locked into any platform
 

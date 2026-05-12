@@ -1,6 +1,6 @@
 ---
 name: mb-start
-description: "Main entry point for Main Branch. Detects state and routes to the right skill. Use when: user says start/help/begin, is new/returning/lost, opens Main Branch without a task, needs triage, or wants to launch an offer. Routes to /mb-setup, /mb-think, /mb-bet, /mb-site, /mb-ads, /mb-vsl, /mb-organic, /mb-wiki, /mb-help."
+description: "Main entry point for Main Branch. Detects state and routes to the right skill. Use when: user says start/help/begin, is new/returning/lost, opens Main Branch without a task, needs triage, wants to launch an offer, or asks where a sales video/VSL belongs. Routes to /mb-setup, /mb-think, /mb-bet, /mb-site, /mb-ads, /mb-organic, /mb-wiki, /mb-help, with /mb-vsl preserved as a compatibility router."
 loops: [sense, decide]
 ---
 
@@ -141,8 +141,8 @@ before taking action.
 5. Resolve multi-offer context without reusing numbered choices or silently
    writing local state.
 6. Present one clear route set or infer intent: `/mb-think`, `/mb-bet`,
-   `/mb-ads`, `/mb-vsl`, `/mb-organic`, `/mb-site`, `/mb-wiki`, `/mb-help`, or
-   `/mb-end`.
+   `/mb-ads`, `/mb-organic`, `/mb-site`, `/mb-wiki`, `/mb-help`, or
+   `/mb-end`. Treat `/mb-vsl` as compatibility routing only.
 
 ---
 
@@ -451,7 +451,7 @@ fast. If the user asks for a faster mode, offer to update local experience.
 
 ## Intent Keywords
 
-Auto-detect user intent and route. Skills: `/mb-update`, `/mb-help`, `/mb-setup`, `/mb-think`, `/mb-ads`, `/mb-vsl`, `/mb-organic`, `/mb-site`, `/mb-wiki`, `/mb-end`. Some skills spawn parallel subagents automatically.
+Auto-detect user intent and route. Skills: `/mb-update`, `/mb-help`, `/mb-setup`, `/mb-think`, `/mb-ads`, `/mb-organic`, `/mb-site`, `/mb-wiki`, `/mb-end`; `/mb-vsl` remains a compatibility router. Some skills spawn parallel subagents automatically.
 
 | Keywords | Route To |
 |----------|----------|
@@ -459,13 +459,13 @@ Auto-detect user intent and route. Skills: `/mb-update`, `/mb-help`, `/mb-setup`
 | "help", "confused", "stuck", "don't understand", "how do I" | `/mb-help` |
 | "new", "first time", "get started", "set up" | `/mb-setup` |
 | "add", "update", "more context", "new testimonials", "enrich" | `/mb-think codify` |
-| "research", "decide", "figure out", "explore", "mine", "mining", "competitors", "transcribe" | `/mb-think` |
+| "research", "decide", "figure out", "explore", "mine", "mining", "competitors", "transcribe", "analyze this VSL", "extract the pitch", "script teardown", "objection mining" | `/mb-think` |
 | "content strategy", "pillars", "platforms", "cadence", "content plan", "distribution" | `/mb-think` |
 | "soul check", "is this still right", "feeling obligated", "pull or push" | `/mb-think codify` (soul.md review) |
 | "newsletter", "email", "beehiiv", "weekly email" | `/mb-think` for content strategy, then `/mb-organic` for social repurposing |
-| "ads", "copy", "static", "image ads", "video ads", "review", "compliance" | `/mb-ads` |
-| "vsl", "sales video", "about page video", "b2b video" | `/mb-vsl` |
-| "content", "reels", "tiktok", "organic", "carousel" | `/mb-organic` |
+| "ads", "copy", "static", "image ads", "video ads", "video ad script", "paid sales video", "long-form video ad", "review", "compliance" | `/mb-ads` |
+| "write a VSL", "sales video", "about page video", "landing page video", "pitch script", "embedded video"; literal "/mb-vsl" | `/mb-site` unless paid, teardown, or repurposing intent is explicit; `/mb-vsl` is a compatibility router |
+| "content", "reels", "tiktok", "organic", "carousel", "short clips from sales video", "repurpose this VSL" | `/mb-organic` |
 | "launch offer", "keyword gate then build", "offer launch", "/mb-start launch <offer>" | Use [references/launch-orchestration.md](references/launch-orchestration.md), then route to `/mb-think`, `/mb-site`, and `/mb-ads` as each step becomes current |
 | "site", "landing page", "lander", "minisite", "website", "one-pager", "spin up a site", "deploy site", "put this online", "I need a site", "publish site", "graduate my site", "add a CMS to my site" | `/mb-site` |
 | "wiki", "notes", "atomic", "wikilinks", "publish wiki" | `/mb-wiki` |

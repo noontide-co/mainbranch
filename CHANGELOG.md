@@ -18,6 +18,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   foundation decision. Default generated `.gitignore` files now protect
   `.mb/private/`, `*.journal`, `*.hledger`, and `*.ledger` alongside the
   defensive `*.beancount` pattern.
+- Repositioned VSLs as reusable conversion knowledge inside `/mb-think`,
+  `/mb-site`, `/mb-ads`, and `/mb-organic` workflows instead of a standalone
+  business primitive. `/mb-vsl` remains as a compatibility router for existing
+  users, the Skool and B2B VSL frameworks moved to shared conversion
+  references, and release simulations now cover natural sales-video prompt
+  routing. Refs MAIN-285, #412.
 
 ### Security
 

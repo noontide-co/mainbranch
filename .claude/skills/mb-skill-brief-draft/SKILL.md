@@ -2,13 +2,13 @@
 name: mb-skill-brief-draft
 tier: skill
 calls: []
-description: "Compose a site brief from offer.md + audience.md + voice.md + research files + the operator's dial / archetype picks. Used by /mb-site as the brief-drafting step. Loadable independently for /mb-vsl, /mb-ads, /mb-organic if they want to share the same brief shape."
+description: "Compose a site brief from offer.md + audience.md + voice.md + research files + the operator's dial / archetype picks. Used by /mb-site as the brief-drafting step. Loadable independently for /mb-ads, /mb-organic, or sales-video workflows if they want to share the same brief shape."
 loops: [sense, ship]
 ---
 
 # skill-brief-draft
 
-A composable skill for drafting a site / campaign brief. /mb-site calls this in Step 2 of the minisite flow. /mb-vsl, /mb-ads, /mb-organic *may* call it in v0.2; for now it is only used by /mb-site.
+A composable skill for drafting a site / campaign brief. /mb-site calls this in Step 2 of the minisite flow. /mb-ads, /mb-organic, or sales-video workflows *may* call it later; for now it is only used by /mb-site.
 
 ## Inputs
 

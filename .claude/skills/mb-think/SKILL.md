@@ -1,6 +1,6 @@
 ---
 name: mb-think
-description: "Combined research, decision, and codification workflow. Use when: (1) Exploring a question before committing (2) Making a decision that needs documentation (3) User says research, decide, figure out, explore, codify, enrich, add context, or keyword gate an offer (4) Updating reference files based on decisions (5) User wants to add new testimonials, angles, or proof to existing files. Supports modes: full flow, research-only, keyword-gate, decide-only, codify."
+description: "Combined research, decision, and codification workflow. Use when: (1) Exploring a question before committing (2) Making a decision that needs documentation (3) User says research, decide, figure out, explore, codify, enrich, add context, keyword gate, analyze this VSL, extract the pitch, script teardown, objection mining, or sales video research (4) Updating reference files based on decisions (5) User wants to add testimonials, angles, proof, mechanisms, or pitch context. Supports modes: full flow, research-only, keyword-gate, decide-only, codify."
 loops: [sense, decide, ship]
 ---
 
@@ -61,7 +61,7 @@ Before diving in, know which mode you're in:
 | **Enriching the core** | Pulling insights → reference files | Mining videos, making decisions, updating offer.md, **building content-strategy.md** |
 | **Creating for the world** | Reference files → output | Ads, scripts, courses, code, posts |
 
-`/mb-think` is for **enriching the core**. When you're ready to create, use `/mb-ads`, `/mb-organic`, `/mb-vsl`, or just ask.
+`/mb-think` is for **enriching the core**. When you're ready to create, use `/mb-ads`, `/mb-organic`, `/mb-site`, or just ask.
 
 Both are work. Enriching the core levels up everything downstream.
 
@@ -159,7 +159,7 @@ Detect mode from user's natural language:
 | "research", "investigate", "what do we know about" | Research | [research-phase.md](references/research-phase.md) |
 | "--brief-format=grok-8", "researched brief", "site brief", "launch brief" | Research Brief | [grok-8-brief-format.md](references/grok-8-brief-format.md) |
 | "what are people saying", "sentiment", "X/Twitter", "trending" | Research (Grok) | [grok-social.md](references/grok-social.md) |
-| "winning ads", "review mining", "customer language", "competitor ads", "comment mining" | Research | [winning-ad-research.md](references/winning-ad-research.md) |
+| "winning ads", "review mining", "customer language", "competitor ads", "comment mining", "analyze this VSL", "extract the pitch", "script teardown", "objection mining" | Research | [sales-video-research.md](references/sales-video-research.md) or [winning-ad-research.md](references/winning-ad-research.md) |
 | "keyword gate", "kill or build this offer", "search demand", "buyer intent", "validate paid traffic demand" | Keyword Gate Research | [keyword-gate.md](references/keyword-gate.md) |
 | "decide", "we chose", "document decision" | Decide | [decide-phase.md](references/decide-phase.md) |
 | "codify", "apply", "update reference files" | Codify | [codify-phase.md](references/codify-phase.md) |
@@ -471,7 +471,7 @@ See [references/recovery.md](references/recovery.md) for details.
 
 - Quick factual questions (just ask)
 - Simple file edits (just edit)
-- Generating content (use `/mb-ads`, `/mb-vsl`, `/mb-organic`)
+- Generating content (use `/mb-ads`, `/mb-site`, `/mb-organic`)
 
 Use `/mb-think` when the answer requires investigation and the choice needs documentation.
 

@@ -105,7 +105,7 @@ Some old setups still have `~/.config/vip/local.yaml` with `vip_path`,
 not as the primary repair mechanism.
 
 If you must resolve it manually, use the standard resolver in
-[`vip-path-resolution.md`](vip-path-resolution.md), then immediately route back
+[`engine-path-resolution.md`](engine-path-resolution.md), then immediately route back
 to:
 
 ```bash

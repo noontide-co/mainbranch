@@ -272,11 +272,11 @@ starts, so repaired `/mb-start` links usually appear after restart.
 | `/mb-think` | Research, decide, codify — turns thinking into durable business files. |
 | `/mb-bet` | Open, update, close, list, and narrate business bets. |
 | `/mb-ads` | Generate ad copy and review for compliance. |
-| `/mb-vsl` | Write video sales letter scripts. |
+| `/mb-vsl` | Compatibility router for existing users; sales videos/VSLs route through `/mb-site`, `/mb-ads`, `/mb-think`, or `/mb-organic` by intent. |
 | `/mb-organic` | Generate organic content (Reels, TikTok, carousels). |
 | `/mb-site` | Generate and deploy landing pages. |
 | `/mb-wiki` | Personal wiki with atomic notes. |
-| `/mb-end` | Close session intentionally — summary, crystallize, commit. |
+| `/mb-end` | Close session intentionally — summary, crystallize, checkpoint. |
 | `/mb-help` | Get answers, troubleshoot. |
 | `/mb-update` | Update Main Branch (figures out pipx vs clone). |
 | `/mb-pull` | Old name for `/mb-update`; still works for existing users. |

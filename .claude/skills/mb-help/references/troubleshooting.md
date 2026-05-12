@@ -90,7 +90,7 @@ mb skill repair --repo .
 mb doctor
 ```
 
-If the `mb` CLI is unavailable and you are repairing an old clone-based setup by hand, add skill compatibility links without replacing local folders. First resolve `$ENGINE_PATH` per **[vip-path-resolution.md](vip-path-resolution.md)**, then:
+If the `mb` CLI is unavailable and you are repairing an old clone-based setup by hand, add skill compatibility links without replacing local folders. First resolve `$ENGINE_PATH` per **[engine-path-resolution.md](engine-path-resolution.md)**, then:
 
 ```bash
 # Create bridge links only for missing entries
@@ -129,17 +129,17 @@ claude
 
 ---
 
-## Conductor: Skills Not Showing
+## Workspace-Isolated Tools: Skills Not Showing
 
-Conductor workspaces are isolated; Claude doesn't know where Main Branch is unless you tell it.
+Some workspace tools are isolated; Claude doesn't know where Main Branch is unless the workspace is linked.
 
-**The fix:** Run `mb skill link --repo .` in the workspace when possible. If you need a Pre-Agent (PA) config script, use one that creates the bridge links plus `settings.local.json` before Claude starts.
+**The fix:** Run `mb skill link --repo .` in the workspace when possible. If you need a pre-start hook, use one that creates the bridge links plus `settings.local.json` before Claude starts.
 
-See [conductor-setup.md](conductor-setup.md) for the full script and setup walkthrough.
+See [workspace-setup.md](workspace-setup.md) for the full script and setup walkthrough.
 
 **Quick version:**
 1. Find your Main Branch engine path
-2. Add the PA config script to your Conductor workspace
+2. Add the pre-start hook to your workspace tool if the CLI repair path is unavailable
 3. The script creates symlinks + settings, then exits
 4. Start the agent again — skills appear
 
@@ -149,11 +149,11 @@ See [conductor-setup.md](conductor-setup.md) for the full script and setup walkt
 
 ## "Cannot edit files outside allowed directories"
 
-This is common in sandboxed tools (like Conductor workspaces). It means Claude can only edit files inside the current workspace folder.
+This is common in sandboxed workspace tools. It means Claude can only edit files inside the current workspace folder.
 
 **What this means in plain English:** Claude is working in one folder "bubble" and can't directly write to files outside that bubble with the normal write tool.
 
-**Important context:** In a regular terminal Claude session (not sandboxed by an IDE/workspace tool), Claude will often prompt for permission and continue. This error is most common in stricter sandboxed environments.
+**Important context:** In a regular terminal Claude session (not workspace-isolated by an IDE or agent tool), Claude will often prompt for permission and continue. This error is most common in stricter workspace-isolated environments.
 
 **Fix options:**
 1. **Best:** Start Claude in the repo you want to edit (or switch workspace to that repo)
@@ -161,7 +161,7 @@ This is common in sandboxed tools (like Conductor workspaces). It means Claude c
 
 **Recommended for beginners:** Use option 1 whenever possible. It's easier to review and less error-prone.
 
-**If you're in Conductor:** open a workspace rooted at the target repo, then re-run `/mb-setup` or `/mb-start`.
+**If you're in a workspace tool:** open a workspace rooted at the target repo, then re-run `/mb-setup` or `/mb-start`.
 
 ---
 
@@ -338,7 +338,7 @@ mb skill link --repo .
 mb doctor
 ```
 
-If you deliberately maintain a clone-based engine install, resolve `$ENGINE_PATH` per **[vip-path-resolution.md](vip-path-resolution.md)** and inspect it manually before pulling:
+If you deliberately maintain a clone-based engine install, resolve `$ENGINE_PATH` per **[engine-path-resolution.md](engine-path-resolution.md)** and inspect it manually before pulling:
 
 ```bash
 if [ -n "$ENGINE_PATH" ] && [ -f "$ENGINE_PATH/.claude/skills/mb-start/SKILL.md" ]; then

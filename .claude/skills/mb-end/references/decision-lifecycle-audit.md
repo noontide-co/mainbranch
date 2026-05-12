@@ -3,7 +3,7 @@
 Run the shared lifecycle audit script so `/mb-end` uses the same decision buckets as `/mb-start`.
 
 ```bash
-# Resolve vip script path (settings.local.json first, then ~/.config/vip/local.yaml)
+# Resolve engine script path (settings.local.json first, then ~/.config/vip/local.yaml)
 AUDIT_SCRIPT=$(python3 -c "
 import json, os
 path = '.claude/settings.local.json'

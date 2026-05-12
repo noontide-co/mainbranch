@@ -1,6 +1,6 @@
 ---
 name: mb-help
-description: "Answer questions about Main Branch and Claude Code. Use when: user asks how/what/why questions, is confused about two-repo model or skills, encounters errors, says help or stuck, asks about workflow, is a beginner, or wants to know what to do next."
+description: "Answer questions about Main Branch and Claude Code. Use when: user asks how/what/why questions, is confused about the engine/business-repo model or skills, encounters errors, says help or stuck, asks about workflow, is a beginner, or wants to know what to do next."
 loops: [sense, decide]
 ---
 
@@ -25,7 +25,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Keywords | Reference |
 |----------|-----------|
 | Terminal, drag files, cd, folder, business repo vs site repo | [terminal-basics.md](references/terminal-basics.md) |
-| Two repos, engine, data model, data model | [two-repos.md](references/two-repos.md) |
+| Engine, business repo, linked site repo, repo model | [two-repos.md](references/two-repos.md) |
 | Philosophy, why, compound, passive memory | [philosophy.md](references/philosophy.md) |
 | /mb-think, research, decide, codify | [the-think-cycle.md](references/the-think-cycle.md) |
 | /mb-bet, bet, hypothesis, deadline, public narration, bet vs offer | [skills-guide.md](references/skills-guide.md) |
@@ -39,13 +39,13 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Reels, TikTok, organic, /mb-organic | [organic-help.md](references/organic-help.md) |
 | Skool, community | [skool-help.md](references/skool-help.md) |
 | Wiki, atomic notes, publish, WikiLinks | Route to `/mb-wiki` |
-| Site, landing page, lander, minisite, website, deploy site, publish site, conversion endpoint, concept variations | Route to `/mb-site` (see [skills-guide.md](references/skills-guide.md) for the full one-flow walkthrough) |
+| Site, landing page, lander, minisite, website, sales video, VSL, about page video, deploy site, publish site, conversion endpoint, concept variations | Route to `/mb-site` (see [skills-guide.md](references/skills-guide.md) for the full one-flow walkthrough) |
 | Done, wrapping up, closing, end session, end of day | Route to `/mb-end` |
 | multi-offer, product ladder, offers, switch offer | Multi-Offer FAQ (below) |
 | Better outputs, quality, what next | [making-outputs-better.md](references/making-outputs-better.md) |
 | Content strategy, pillars, platforms, newsletter, content plan | [content-strategy-help.md](references/content-strategy-help.md) |
 | Subagents, parallel, agents, context window, tokens | [working-with-agents.md](references/working-with-agents.md) |
-| Conductor, workspace, PA config, pre-agent, skills not showing (Conductor) | [conductor-setup.md](references/conductor-setup.md) |
+| workspace-isolated tools, sandboxed workspace, skills not showing | [workspace-setup.md](references/workspace-setup.md) |
 | Contribute, contributor | [becoming-contributor.md](references/becoming-contributor.md) |
 
 ---
@@ -53,7 +53,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 ## Principles
 
 - **Explain "why"** — Not just steps
-- **End with action** — Suggest next skill (`/mb-think`, `/mb-setup`, `/mb-ads`, `/mb-vsl`)
+- **End with action** — Suggest next skill (`/mb-think`, `/mb-setup`, `/mb-ads`, `/mb-site`, `/mb-organic`)
 - **Beginner-friendly** — Many never used Terminal
 - **Honest about gaps** — The system is new and evolving. Acknowledge what's still being built rather than presenting everything as polished.
 - **Public issue safety** — Suggest `mb issue draft` for reproducible Main Branch friction, but never submit issues for the operator.
@@ -68,7 +68,7 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Start Claude in a folder? | `cd ~/Documents/GitHub/[your-business] && claude` — Claude sees files in that folder. Main Branch is linked via `settings.local.json`, with bridge links as a compatibility fallback for skill discovery. |
 | I see `.mb/`, not `.mb-vip/`. Is that wrong? | You're good. `.mb/` is the current repo-local Main Branch state folder. `.mb-vip/` was old clone-based setup language and is not required. If slash commands are missing, use `/mb-update` or run `mb update --repo .`, then repair skill links and restart Claude. |
 | Do I start Claude in the hub repo or child repo? | Start in the business hub for strategy, bets, decisions, offers, and routing. Switch to a child repo for its code/site/product/client work; child repos should have `.mainbranch/repo.json`, while existing site repos may still use `.mainbranch/source.json`. |
-| When use skill prompts? | For structured tasks: `/mb-start`, `/mb-think`, `/mb-ads`, `/mb-vsl` |
+| When use skill prompts? | For structured tasks: `/mb-start`, `/mb-think`, `/mb-ads`, `/mb-site`, `/mb-organic` |
 | Drag files in? | Drag from Finder into Terminal, path appears |
 | Voice input? | [Wispr Flow](https://ref.wisprflow.ai/main) (affiliate link) |
 | What is content-strategy.md? | Your distribution backbone -- pillars, platforms, cadence. Built through `/mb-think`, consumed by `/mb-organic` and `/mb-ads`. Lives at `core/content-strategy.md`. |
@@ -91,5 +91,5 @@ Answer questions, troubleshoot issues, explain philosophy, suggest next steps.
 | Is this system finished? | Still new and actively being tuned. We're building around Claude Code, minimizing commands you need to learn while giving you real power. There's progressive discovery in /mb-think — the more you use it, the more it reveals. You might find workflows we haven't documented yet. Post them in Skool. |
 | Where can I see my files? | Open your business repo folder in Finder, Cursor, Warp, VS Code, or any text editor. They're regular .md files on your hard drive. GitHub Desktop also shows them with version history. |
 | What should I connect first? | Run `mb connect plan` from your business repo. It shows GitHub, Cloudflare, Google/Workspace, Meta Ads, and Apify as numbered choices with readiness and exact next commands. |
-| Skills not showing in Conductor? | Conductor workspaces are isolated — they don't know where Main Branch is. You need a Pre-Agent (PA) config script that creates bridge symlinks and `settings.local.json` before Claude starts. See [conductor-setup.md](references/conductor-setup.md) for the script and setup steps. |
-| What's a PA config? | Pre-Agent config — a script Conductor runs before Claude starts in a workspace. Used to set up Main Branch bridge links so skills appear. One-time setup per workspace. |
+| Skills not showing in a workspace-isolated tool? | Run `mb skill link --repo .` from the business repo when possible, then restart Claude. Some tools also support a pre-start script that creates bridge links and `settings.local.json`; see [workspace-setup.md](references/workspace-setup.md) for the generic pattern. |
+| What's a pre-start script? | A workspace tool hook that runs before the agent starts. Use it to set up Main Branch bridge links only when `mb skill link --repo .` is not enough. |

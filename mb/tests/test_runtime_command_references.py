@@ -20,6 +20,12 @@ GUIDED_ORCHESTRATION_CONTEXT_MARKERS = (
     "guided skill",
     "follows the same contract",
 )
+MB_VSL_COMPATIBILITY_MARKERS = (
+    "compatibility",
+    "router",
+    "route to",
+    "routes existing users",
+)
 
 
 def _bundled_slash_commands() -> set[str]:
@@ -87,6 +93,24 @@ def test_runtime_docs_mark_mb_start_launch_as_guided_skill_orchestration() -> No
                 failures.append(
                     f"{rel}:{index + 1}: /mb-start launch must be framed as "
                     "guided skill orchestration"
+                )
+
+    assert failures == []
+
+
+def test_runtime_docs_mark_mb_vsl_as_compatibility_router() -> None:
+    failures: list[str] = []
+
+    for path in _scan_paths():
+        rel = path.relative_to(REPO_ROOT)
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for index, line in enumerate(lines):
+            if "/mb-vsl" not in line:
+                continue
+            context = _line_context(lines, index)
+            if not any(marker in context for marker in MB_VSL_COMPATIBILITY_MARKERS):
+                failures.append(
+                    f"{rel}:{index + 1}: /mb-vsl must be framed as a compatibility router"
                 )
 
     assert failures == []

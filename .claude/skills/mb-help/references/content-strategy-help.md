@@ -105,7 +105,7 @@ If content-strategy.md does not exist, all skills work exactly as they did befor
 
 Main Branch delivers two kinds of value:
 
-1. **Ads that convert** -- immediate ROI through `/mb-ads` and `/mb-vsl`. Reference files make ads specific, compliant, and high-converting.
+1. **Ads and conversion surfaces that convert** -- immediate ROI through `/mb-ads` and `/mb-site`, with `/mb-vsl` kept only as a compatibility router. Reference files make ads and sales videos specific, compliant, and high-converting.
 
 2. **Content that runs itself** -- long game through content strategy, `/mb-organic`, and planned newsletter workflows. One keystone piece gets adapted across platforms automatically.
 
@@ -159,7 +159,7 @@ Not recommended. Your pillars derive from soul + offer + audience. Without those
 - Platform Strategy: when you add or drop a platform
 
 **Q: What if I only do ads, not content?**
-Content-strategy.md is optional. If you only use `/mb-ads` and `/mb-vsl`, you do not need it. It becomes valuable when you start doing organic content or a newsletter.
+Content-strategy.md is optional. If you only use `/mb-ads` and `/mb-site` for direct conversion work, you do not need it. It becomes valuable when you start doing organic content or a newsletter.
 
 **Q: Is there a bundled newsletter skill yet?**
 Not yet. Newsletter infrastructure such as Beehiiv is a future workflow. For

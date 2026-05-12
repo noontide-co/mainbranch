@@ -1,6 +1,22 @@
-# B2B Haynes 7-Step VSL Framework
+# B2B High-Ticket Sales Video Framework
 
-Jeremy Haynes' framework for high-ticket B2B video sales letters. Optimized for affluent, sophisticated buyers.
+Use this reusable conversion reference when the operator asks for a VSL, sales
+video, pitch script, long-form paid video, landing-page video, or teardown for a
+B2B, agency, professional-services, or high-ticket offer.
+
+This file is framework knowledge only. The owning workflow decides what to do:
+`/mb-site` owns page placement and site congruence, `/mb-ads` owns paid creative
+and compliance review, `/mb-think` owns teardown and codification, and
+`/mb-organic` owns excerpts and repurposing. Verify every claim against the
+business repo before drafting. Do not invent results, testimonials, prices,
+guarantees, client counts, or typical outcomes.
+
+Required source context before writing: resolved offer, resolved audience,
+voice, proof/testimonials, typicality when present, and any existing sales page,
+proposal, webinar, or pitch material the operator wants reflected.
+
+Adapted from Jeremy Haynes' framework for high-ticket B2B video sales letters.
+Optimized for affluent, sophisticated buyers.
 
 ## Table of Contents
 

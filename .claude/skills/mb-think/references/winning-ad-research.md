@@ -22,7 +22,7 @@ Route here when the user asks for:
   gated giveaways, build-in-public notes, or a hybrid.
 
 After the research is synthesized and codified, route production to `/mb-ads`,
-`/mb-organic`, `/mb-vsl`, or `/mb-site`.
+`/mb-organic`, `/mb-site`, or `/mb-ads` sales-video workflows.
 
 ## Research Bundle
 

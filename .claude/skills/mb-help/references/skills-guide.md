@@ -80,23 +80,28 @@ accepts that change.
 ---
 
 ### /mb-ads - Ad Generation and Review
-**Use when:** Need copy for static ads, video ad scripts, or compliance review.
+**Use when:** Need copy for static ads, video ad scripts, paid sales videos, long-form conversion video creative, or compliance review.
 
 **Modes:**
 - `/mb-ads` or `/mb-ads static` - Image ad copy (primaries, headlines, image prompts)
 - `/mb-ads video` - Video ad scripts (15-60 seconds, UGC style)
+- `/mb-ads` with "video ad script" or "paid sales video" - Long-form conversion video creative
 - `/mb-ads review` - Multi-lens compliance check (FTC, Meta policy, copy quality)
 
 **Output:** Multiple concepts with variations.
 
 ---
 
-### /mb-vsl - Video Sales Letters
-**Use when:** Need long-form sales video scripts.
+### Sales Videos / VSLs - Conversion Output
+**Use when:** Need a sales video, VSL, about-page video, paid video ad script, teardown, or short-form clips.
 
-**Modes:**
-- `/mb-vsl skool` - 18-section framework for Skool communities
-- `/mb-vsl b2b` - Haynes 7-step framework for high-ticket B2B
+VSL is reusable conversion knowledge, not its own durable primitive:
+
+- Page, about-page, lander, or embedded sales video -> `/mb-site`
+- Paid video ad script or long-form conversion creative -> `/mb-ads`
+- Analyze a VSL, extract the pitch, mine objections, codify mechanism -> `/mb-think`
+- Short clips or creator-style excerpts from a sales video -> `/mb-organic`
+- `/mb-vsl` still works as a compatibility router for existing users.
 
 ---
 
@@ -207,8 +212,8 @@ What do you need?
 ├── Create ad copy? (paid)
 │   └── /mb-ads (static, video, or review mode)
 │
-├── Write video sales letter?
-│   └── /mb-vsl (skool or b2b)
+├── Write a sales video / VSL?
+│   └── /mb-site for pages, /mb-ads for paid, /mb-think for teardown, /mb-organic for clips
 │
 ├── Create organic content? (free reach)
 │   └── /mb-organic (Reels, TikTok, carousels)

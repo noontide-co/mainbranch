@@ -1,6 +1,6 @@
 ---
 name: mb-setup
-description: "Bootstrap a new business repo with Main Branch structure, or migrate an existing single-offer repo to multi-offer. Use when: (1) New user needs Claude Code environment configured (2) User says \"set up\", \"get started\", \"initialize\", \"bootstrap\", \"create my repo\", \"new business\" (3) User is new to Main Branch and needs full onboarding (4) Migrating existing business context into the Main Branch structure (5) User wants to add a second offer to an existing repo. Creates Chrome extension setup, two-repo model, business repo with full structure. Gathers bounded context until core files are useful. Applies business setup patterns. Teaches concepts during setup."
+description: "Bootstrap a new business repo with Main Branch structure, or migrate an existing single-offer repo to multi-offer. Use when: (1) New user needs Claude Code environment configured (2) User says \"set up\", \"get started\", \"initialize\", \"bootstrap\", \"create my repo\", \"new business\" (3) User is new to Main Branch and needs full onboarding (4) Migrating existing business context into the Main Branch structure (5) User wants to add a second offer to an existing repo. Creates engine/business-repo wiring, a business repo with full structure, and bounded context until core files are useful. Applies business setup patterns. Teaches concepts during setup."
 loops: [sense, decide, ship]
 ---
 
@@ -26,7 +26,7 @@ developer config, and end with exact commands.
 
 ### CRITICAL: Write Boundaries in Sandboxed Environments
 
-Some tools (especially workspace-isolated apps, like Conductor workspaces) may only allow direct file writes inside the current workspace folder. If you see:
+Some workspace-isolated tools may only allow direct file writes inside the current workspace folder. If you see:
 
 > "Cannot edit files outside allowed directories"
 
@@ -421,13 +421,13 @@ Once setup is complete, tell the user:
 > - `/mb-think` — Research topics, make decisions, update reference
 > - `/mb-think` — Build your content strategy (pillars, platforms, cadence) — start here after core files are solid
 > - `/mb-ads` — Generate image ads, video scripts, or review for compliance
-> - `/mb-vsl` — Write video sales letters (Skool or B2B)
+> - `/mb-site` — Build pages and owned-surface sales videos/VSLs
 > - `/mb-organic` — Create social content aligned to your content pillars
 > - `/mb-help` — Get answers anytime you're stuck
 >
 > **The core loop:** Use `/mb-think` regularly. Research → Decide → Codify. This is how your core files get smarter over time.
 >
-> **Remember:** Type `/mb-help` + your question anytime. It has comprehensive answers about Terminal basics, the two-repo model, skills, troubleshooting, and more."
+> **Remember:** Type `/mb-help` + your question anytime. It has comprehensive answers about Terminal basics, the engine/business-repo model, skills, troubleshooting, and more."
 
 **If whisper-cpp was missing during setup:**
 

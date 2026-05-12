@@ -2,7 +2,7 @@
 name: mb-skill-review
 tier: skill
 calls: []
-description: "Run dial-gated Seven Sweeps + auxiliary gates against a brief or copy draft. Returns synthesized findings to the operator. Used by /mb-site at pre-lock and pre-publish moments. Reusable by /mb-vsl, /mb-ads in v0.2."
+description: "Run dial-gated Seven Sweeps + auxiliary gates against a brief or copy draft. Returns synthesized findings to the operator. Used by /mb-site at pre-lock and pre-publish moments. Reusable by /mb-ads and sales-video workflows."
 loops: [reflect]
 ---
 

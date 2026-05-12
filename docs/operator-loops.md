@@ -139,7 +139,6 @@ operators ship creatives, SaaS founders ship features.
 **Current surfaces**
 
 - `/mb-ads`
-- `/mb-vsl`
 - `/mb-organic`
 - `/mb-site`
 - `mb connect`
@@ -281,7 +280,7 @@ When opening or working an issue, name the loop it improves:
   capture
 - **Decide** for ranking, triage, recommendations, issue drafting, operator
   overrides
-- **Ship** for domain workflows (ads, sites, organic, VSL), connectors,
+- **Ship** for domain workflows (ads, sites, organic, sales videos), connectors,
   package updates, operational craft
 - **Reflect** for bets, retros, verdicts, decision supersession, public bets
   pages
@@ -301,9 +300,10 @@ Underneath Ship sit the four channels every operator can recognize:
 - **Ops** — bookkeeping (hledger), P&L, compliance, integrations, meetings,
   fulfillment, repo topology, team updates, and operating health
 
-Skills cluster by channel today (`/mb-ads` for Paid, `/mb-organic` and
-`/mb-vsl` for Organic, `/mb-site` for Pages, `mb books check` for
-bookkeeping Ops).
+Skills cluster by channel today (`/mb-ads` for Paid, `/mb-organic` for
+Organic, `/mb-site` for Pages, `mb books check` for bookkeeping Ops). Sales
+videos/VSLs are conversion outputs inside those workflows, not their own
+channel.
 Channels grow over time without bloating the loop count — adding new sidecar
 CLIs adds new Ship channels, not new loops.
 

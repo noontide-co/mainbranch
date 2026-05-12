@@ -60,7 +60,7 @@ They're the truth. Any tool can read them. You're not locked into anything.
 
 ---
 
-## GitHub Sync: Your Data Everywhere
+## GitHub Sync: Your Business Memory Everywhere
 
 Push your repo to GitHub:
 - Team sees the same context

@@ -1,4 +1,20 @@
-# VSL Framework Reference
+# Skool / Membership Sales Video Framework
+
+Use this reusable conversion reference when the operator asks for a VSL, sales
+video, about-page video, landing-page video, embedded pitch script, or teardown
+for a Skool, community, course, or membership offer.
+
+This file is framework knowledge only. The owning workflow decides what to do:
+`/mb-site` owns page placement and site congruence, `/mb-ads` owns paid creative
+and compliance review, `/mb-think` owns teardown and codification, and
+`/mb-organic` owns excerpts and repurposing. Verify every claim against the
+business repo before drafting. Do not invent results, testimonials, prices,
+guarantees, client counts, or typical outcomes.
+
+Required source context before writing: resolved offer, resolved audience,
+voice, proof/testimonials, typicality when present, and live surface copy such
+as `core/operations/funnel/skool-surfaces.md` when the video will sit on or
+near a Skool/about/landing-page surface.
 
 Complete 18-section Video Sales Letter framework with templates and examples.
 

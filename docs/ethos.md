@@ -29,8 +29,8 @@ Main Branch should help an operator move through four loops:
    `mb status`, drift, freshness, connected tools, GitHub activity.
 2. **Decide** - choose what to wager next: the bet, the priority, the override.
    Plain English: pick what matters and commit.
-3. **Ship** - produce and release the work: pages, ads, organic content, VSLs,
-   provider connections, fulfillment work, bookkeeping summaries, system
+3. **Ship** - produce and release the work: pages, ads, organic content,
+   sales videos, provider connections, fulfillment work, bookkeeping summaries, system
    updates, the commit itself. One verb covers producing the artifact and
    putting it in the world.
 4. **Reflect** - extract the lesson, usually scheduled: bet verdicts, retros,

@@ -1,6 +1,6 @@
 ---
 name: mb-ads
-description: "Create and review ads, and prepare provider-safe launch plans/checks. Flexible entry points: full pipeline (copy + images), copy only, images only, creative variations (hook library), video scripts, video repurpose, compliance review, launch-plan, check, or optional Meta ad account check. Use when asked to create ads, ad copy, image prompts, video scripts, creative variations, review ads, plan paid traffic, or check launch performance. Say /mb-ads or describe what you need."
+description: "Create and review ads, and prepare provider-safe launch plans/checks. Flexible entry points: full pipeline (copy + images), copy only, images only, creative variations (hook library), video scripts, long-form video ads/VSL-style paid creative, video repurpose, compliance review, launch-plan, check, or optional Meta ad account check. Use when asked to create ads, ad copy, image prompts, video ad scripts, paid sales videos, creative variations, review ads, plan paid traffic, or check launch performance. Say /mb-ads or describe what you need."
 loops: [ship, reflect]
 ---
 
@@ -222,6 +222,7 @@ Detect what the user wants from natural language. Route internally to the right 
 | "Just need images for existing copy" | Image Only | Nano Banana image gen only |
 | "creative variations", "hook library", "one-liners", "50 hooks" | Hook Library | Bulk creative variations (flexible quantity) |
 | "video scripts", "ad scripts", "spoken word" | Video Scripts | Spoken-word script pipeline |
+| "video ad script", "turn this offer into a video ad", "paid sales video", "long-form video ad", "VSL-style paid creative" | Long-Form Video Ads | Load [references/long-form-video-ads.md](references/long-form-video-ads.md) |
 | "I'm repurposing a video", "I shot a video" | Video Repurpose | Transcribe + extract hooks + copy variants |
 | "I want ideas for an ad", "brainstorm" | Ideation | Account check (if available) + concept generation |
 | "research winning ads", "mine reviews", "analyze competitors first" | Research / Mining | Route to `/mb-think` winning-ad research before generation |
@@ -387,6 +388,10 @@ See **[references/mode-hook-library.md](references/mode-hook-library.md)** for t
 Create diverse spoken-word scripts for camera delivery. 15-30 scripts across 3-4 buyer avatars, ~5th grade reading level, contractions, fragments. Each ad = a fundamentally different reason to buy.
 
 See **[references/mode-video-scripts.md](references/mode-video-scripts.md)** for the 6-step process, script structure (Hook / Body / CTA), spoken delivery optimization, and save convention.
+
+For long-form paid sales videos, video ad scripts that need VSL structure, or
+VSL-style paid creative, load
+[references/long-form-video-ads.md](references/long-form-video-ads.md).
 
 ---
 

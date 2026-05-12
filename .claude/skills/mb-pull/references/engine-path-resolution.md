@@ -56,7 +56,7 @@ After this block, `$ENGINE_PATH` is either a valid path to the Main Branch engin
 
 ## Why two fallbacks (not one)
 
-- **`additionalDirectories`** is the future default mechanism — it requires zero extra config, works without PyYAML, and gives the harness explicit knowledge of the engine path. It's also the only mechanism Conductor / sandboxed environments support cleanly.
+- **`additionalDirectories`** is the default mechanism — it requires zero extra config, works without PyYAML, and gives the harness explicit knowledge of the engine path. It also works cleanly in workspace-isolated environments.
 - **`~/.config/vip/local.yaml`** is the legacy mechanism that pre-dates `additionalDirectories`. We keep it as a fallback so existing users don't break on engine upgrades; it also serves users whose `settings.local.json` got reset by a tool like Claude Desktop's permission wipe.
 
 The order matters: `settings.local.json` is harness-authoritative, `local.yaml` is best-guess. If both exist and disagree, the harness path wins because that's the path Claude Code is actually authorised to read.
