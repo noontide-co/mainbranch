@@ -77,7 +77,7 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     assert "business-owner language" in text
     assert "bets, goals, offers, pushes" in text
     assert "`vocabulary` block from `mb status --json --peek`" in text
-    assert "canonical paths, frontmatter, JSON keys" in text
+    assert "current paths, frontmatter, JSON keys" in text
     assert "If `ranked_actions` has entries" in text
     assert "Do not pretend" in text
 

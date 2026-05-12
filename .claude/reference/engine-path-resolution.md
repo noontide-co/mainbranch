@@ -1,6 +1,6 @@
 # Engine Path Resolution
 
-Canonical resolver for locating the Main Branch engine from a Claude Code session running inside a business repo. Used by `/mb-start`, `/mb-update`, legacy `/mb-pull`, `/mb-setup`, `/mb-help` (troubleshooting), and any reference file that needs to read or pull engine-side files.
+Shared resolver for locating the Main Branch engine from a Claude Code session running inside a business repo. Used by `/mb-start`, `/mb-update`, legacy `/mb-pull`, `/mb-setup`, `/mb-help` (troubleshooting), and any reference file that needs to read or pull engine-side files.
 
 **Single source of truth.** Other reference files MUST link here rather than inline the snippet — the resolver semantics (and the order of fallbacks) need to stay in lockstep across the engine, and inline copies drift.
 
@@ -8,17 +8,17 @@ Canonical resolver for locating the Main Branch engine from a Claude Code sessio
 
 ## Resolution order
 
-1. **`.claude/settings.local.json` → `permissions.additionalDirectories`** (preferred). The directory passed to Claude Code via `additionalDirectories` is the canonical loading mechanism for Main Branch in Phase 2. No external config needed; pure filesystem.
+1. **`.claude/settings.local.json` → `permissions.additionalDirectories`** (preferred). The directory passed to Claude Code via `additionalDirectories` is the current loading mechanism for Main Branch in Phase 2. No external config needed; pure filesystem.
 2. **`~/.config/vip/local.yaml` → `vip_path`** (fallback). For users who haven't yet migrated to `additionalDirectories`, or whose `settings.local.json` is missing / malformed.
 
 The first valid path that contains `.claude/skills/mb-start/SKILL.md` wins.
 
 ---
 
-## The canonical bash + python3 snippet
+## The shared bash + python3 snippet
 
 ```bash
-# Canonical engine resolution (settings.local.json first; no extra deps)
+# Shared engine resolution (settings.local.json first; no extra deps)
 ENGINE_PATH=$(python3 -c "
 import json, os
 try:
@@ -81,7 +81,7 @@ The order matters: `settings.local.json` is harness-authoritative, `local.yaml` 
 
 **Link is correct when:** the snippet would be a verbatim copy. In that case, point at this file and let the caller's bash sub-shell run the snippet.
 
-A reference file that inlines the resolver and *also* customises it should comment the customisation explicitly so it doesn't drift back into the canonical version on a future refactor.
+A reference file that inlines the resolver and *also* customises it should comment the customisation explicitly so it doesn't drift back into the shared version on a future refactor.
 
 ---
 

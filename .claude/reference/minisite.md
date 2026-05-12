@@ -1,6 +1,6 @@
 # Minisite — V1 Spec
 
-The canonical contract for what a minisite **is** in Main Branch. Implementation flows live elsewhere; this file is the source of truth for page list, content contracts, conversion endpoint, tracking, and walkthrough UX.
+The source-of-truth contract for what a minisite **is** in Main Branch. Implementation flows live elsewhere; this file owns the page list, content contracts, conversion endpoint, tracking, and walkthrough UX.
 
 When `/mb-site`, `stripe.py`, or any future launch orchestration ships behavior
 that touches a minisite, that behavior conforms to this spec. If the spec

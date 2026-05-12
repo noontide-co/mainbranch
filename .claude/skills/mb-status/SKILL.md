@@ -29,7 +29,7 @@ mb status --json --peek
    - cited signal summaries
 5. Then summarize only the sections that matter for the operator's question.
    If `vocabulary.terms.push` defines display words, use them in
-   operator-facing prose without changing canonical paths, frontmatter, JSON
+   operator-facing prose without changing current paths, frontmatter, JSON
    keys, validator rules, or command names.
    Do not re-run shell probes that duplicate status facts.
    For "what changed?" or "what happened since last time?", answer from

@@ -6,7 +6,7 @@ Detail for Step 3 of /mb-start: presenting the menu, surfacing unread CHANGELOG 
 
 ## Surfacing CHANGELOG Entries (Before the Menu)
 
-Resolve the Main Branch engine path with the canonical engine path resolution
+Resolve the Main Branch engine path with the shared engine path resolution
 reference, then read `$ENGINE_PATH/CHANGELOG.md`. Read `last_seen_version` from
 current Main Branch local state when available; if only legacy
 `~/.config/vip/local.yaml` exists, use it as a read-only fallback. If the

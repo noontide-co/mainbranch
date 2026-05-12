@@ -655,7 +655,7 @@
       ],
       "must_observe": [
         "Grounds the launch request in deterministic mb status or start facts before planning.",
-        "Routes the offer launch through keyword-gate research, canonical launch push, one-page lander, provider-safe ads plan/check, and checkpoint or approval records.",
+        "Routes the offer launch through keyword-gate research, structured launch push, one-page lander, provider-safe ads plan/check, and checkpoint or approval records.",
         "Keeps provider steps plan-only unless readiness evidence and explicit operator approval are present.",
         "Asks before writing launch artifacts or saving checkpoints."
       ],

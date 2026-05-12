@@ -48,7 +48,7 @@ Older repos may have `reference/` compatibility bridges or offer-specific files
 such as `core/offers/<slug>/testimonials.md`. Read those as legacy context, but
 write new proof under `core/proof/` or `core/offers/<slug>/proof/`.
 
-File-canonical proof targets:
+Primary proof targets:
 
 - Individual permissioned testimonials go to `testimonials.md`.
 - Aggregate outcome context, average-case timelines, caveats, and typicality go
