@@ -6,6 +6,12 @@ grounded in repo truth, use `mb` for deterministic checks, speak in business
 language, ask before durable writes, preserve repo boundaries, and close work
 with a checkpoint path?
 
+The *how* of running these simulations — single documented runtime, captured
+stdout/stderr/exit on the first run, no blind reruns to recover evidence —
+is in [`release-agent-contract.md`](release-agent-contract.md). This file
+owns the simulation tier matrix, prompt fixtures, transcript review, and
+release-acceptance gate.
+
 The packaged simulation manifest lives at
 `mb/mb/_data/release_simulations/manifest.json`. It is public-safe fixture
 truth: prompt fixtures, expected observations, transcript-review categories,

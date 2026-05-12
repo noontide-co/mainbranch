@@ -303,6 +303,11 @@ Do not rewrite pushed history unless the maintainer explicitly asks.
 Use the lightest eval that proves the behavior. Do not ship first-run,
 runtime-discovery, update, packaging, or skill changes on unit tests alone.
 
+For release-bearing flows, the *how* of running these checks — picking one
+runtime path, capturing stdout/stderr/exit on the first run, and not
+re-running long checks to recover lost evidence — lives in
+[`docs/release-agent-contract.md`](docs/release-agent-contract.md).
+
 Level 0, docs/decision:
 
 - frontmatter where expected;
@@ -473,6 +478,14 @@ Do not describe a version as shipped until the release surfaces agree:
 draft PR, planning doc, or local branch mentions a version that has not been
 released, use "planned", "target", or "next" rather than "shipped".
 
+## Post-Release Alignment
+
+After a release ships, run the alignment sweep in
+[`docs/post-release-alignment.md`](docs/post-release-alignment.md) before
+opening the next parallel batch. That doc owns the post-release sequence,
+parallel-work lane rules, AI code review ritual, local agent preferences
+policy, and the current product stance checklist.
+
 ## Review Focus
 
 When reviewing, lead with findings:
@@ -490,3 +503,12 @@ When reviewing, lead with findings:
 - truncated files.
 
 Verdicts should be explicit: approve, request changes, or needs discussion.
+
+## Writing Style
+
+Agent-facing docs (this file, `CLAUDE.md`, generated repo guidance, bundled
+skill prose) and PR descriptions follow the agent writing style rubric in
+[`docs/agent-writing-style.md`](docs/agent-writing-style.md): action-first,
+link instead of restate, plain business language, no narration of internal
+thought process. User-facing product copy stays warmer and is not bound to
+the rubric verbatim.

@@ -17,3 +17,9 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 .coverage
+
+# Local operational state
+# .context/ is collaboration scratch and release-evidence; never durable truth.
+# .claude/*.lock is local Claude Code session state (pid, sessionId).
+.context/
+.claude/*.lock

@@ -28,7 +28,7 @@ Closes #
 - [ ] Reviewer reading `git log --oneline main..HEAD` sees the shape of the work
 - [ ] Commit subjects use `[add]`, `[update]`, `[fix]`, `[remove]`, `[refactor]`, `[docs]`, or `[chore]`
 
-## Test plan
+## Validation
 
 Pre-push gate from repo root:
 
@@ -36,12 +36,23 @@ Pre-push gate from repo root:
 scripts/check.sh
 ```
 
-- [ ] `scripts/check.sh` passes
-- [ ] Wheel install smoke (if packaging touched)
+Cite each level you ran with the evidence-line shape from
+[`docs/release-agent-contract.md`](../docs/release-agent-contract.md):
+`Level <N> <surface>: <command> — runtime: <python3/venv path> — exit: <code> — log: <path or excerpt>`.
+Say which levels were not required and why.
+
+- [ ] Level 1 static: `scripts/check.sh` passes
+- [ ] Level 2 CLI contract: focused Typer/CliRunner tests, exit codes, `--json` behavior, TTY vs non-TTY (if CLI behavior touched)
+- [ ] Level 3 package/install smoke (if packaging touched)
+- [ ] Level 4 fixture repo (if init/onboard/status/start/update touched)
+- [ ] Level 5 runtime smoke / dogfood harness / simulation-tier (if runtime, first-run, skill discovery, or release validation touched)
 - [ ] SKILL.md ≤500 lines (if any skill touched)
-- [ ] Claude runtime dogfood harness / simulation-tier / manual smoke evidence (if runtime, first-run, skill discovery, or release validation touched)
 - [ ] Package-visible release gate evidence before tag/publish (if preparing a release)
 - [ ] Supply-chain review (if `.github/workflows/`, `.github/dependabot.yml`, `mb/pyproject.toml` deps, or `id-token`/`permissions` blocks touched — see [docs/supply-chain-policy.md](../docs/supply-chain-policy.md))
+
+## Success metric
+
+<!-- The observable condition that means this PR did its job. -->
 
 ## CHANGELOG
 
@@ -54,3 +65,8 @@ scripts/check.sh
 - [ ] Yes — migration note below
 
 <!-- If yes, describe what users must do to migrate. -->
+
+## Public / private boundary
+
+<!-- Confirm no private operator strategy, machine-specific paths, or runtime internals were committed.
+     See docs/oss-operating-checklist.md if in doubt. -->
