@@ -115,6 +115,12 @@ content/assets for proof, and metrics/constraints for the success bar. If the
 brief names a resource-delivery mechanic, write or update a push playbook as a
 plan only; do not execute provider mutation.
 
+When organic work is meant to sharpen an offer instead of only create content,
+load `.claude/reference/conversion/offer-sharpening.md`. Use the rubric to turn
+audience language, objections, proof angles, and soft CTAs into durable offer
+updates through `/mb-think`; do not treat comments or saves as buyer proof by
+themselves.
+
 For the full mining methodology (Visual/Audible/Emotional framework, AI capabilities and limits, why mining flows into reference) see [references/mining-methodology.md](references/mining-methodology.md).
 
 ---

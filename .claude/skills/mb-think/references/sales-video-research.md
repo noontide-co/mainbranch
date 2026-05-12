@@ -20,8 +20,11 @@ ask for clips or excerpts, hand off to `/mb-organic`.
 
 ## Shared References
 
-Load `.claude/reference/conversion/vsl-routing.md` first. Load a long-form
-framework only when structure helps the teardown:
+Load `.claude/reference/conversion/vsl-routing.md` first. Load
+`.claude/reference/conversion/offer-sharpening.md` when the teardown should
+change offer truth, proof, objection handling, risk reversal, urgency,
+mechanism, or CTA. Load a long-form framework only when structure helps the
+teardown:
 
 - Skool / membership: `.claude/reference/conversion/vsl/skool-18-section.md`
 - B2B high-ticket: `.claude/reference/conversion/vsl/b2b-haynes.md`

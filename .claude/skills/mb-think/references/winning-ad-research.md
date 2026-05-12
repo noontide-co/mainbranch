@@ -24,6 +24,12 @@ Route here when the user asks for:
 After the research is synthesized and codified, route production to `/mb-ads`,
 `/mb-organic`, `/mb-site`, or `/mb-ads` sales-video workflows.
 
+When research is meant to improve the offer, load
+`.claude/reference/conversion/offer-sharpening.md` before codifying. Separate
+universal offer fundamentals from style choices so customer language can
+sharpen the buyer, mechanism, proof, objections, risk reversal, or next step
+without forcing one tone system on the operator.
+
 ## Research Bundle
 
 Run only the tracks needed for the user's question. For broad "research winning

@@ -21,6 +21,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   intent routing, bookkeeping/books setup, provider setup, save/sync wording,
   stronger update posture, and the rule that generic "set up" must not override
   the user's specific business noun. Refs MAIN-333, #511.
+- Added an offer-sharpening guide and shared conversion reference so `/mb-think`,
+  `/mb-site`, `/mb-ads`, `/mb-organic`, sales-video routing, and launch
+  orchestration use the same offer rubric, style spectrum, evidence boundary,
+  and stop conditions before scaling pages, ads, videos, or launch work. Refs
+  MAIN-336, #516.
 
 ### Changed
 

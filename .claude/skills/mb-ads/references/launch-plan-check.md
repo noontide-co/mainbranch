@@ -14,6 +14,9 @@ adapter ships with approval gates and smoke evidence.
 From the business repo:
 
 - active offer and audience;
+- offer-sharpening facts from
+  `.claude/reference/conversion/offer-sharpening.md`, especially mechanism,
+  proof, risk reversal, objections, reason to act, and next step;
 - the launch push at `pushes/<push>/push.md`;
 - keyword-gate research, especially ready-to-buy terms and negative seeds;
 - site record or linked site repo;
@@ -89,6 +92,8 @@ before launch review.
 Before preparing launch copy:
 
 - run the normal ad compliance review flow;
+- apply the offer-sharpening rubric; stop when proof, guarantee, urgency,
+  mechanism, buyer, outcome, or next step is too thin for paid traffic;
 - check for regulated verticals: medical, finance, credit, employment,
   housing, legal, social issues/politics;
 - decide whether the request needs `/mb-think` first for offer/policy research,

@@ -28,6 +28,9 @@ Load these only when the task needs long-form sales video structure:
 ## Context Rules
 
 - Resolve offer context through current `core/` and `core/offers/` paths.
+- Load `.claude/reference/conversion/offer-sharpening.md` when the script,
+  teardown, or repurpose work changes the offer promise, proof, objections,
+  mechanism, guarantee, urgency, or next step.
 - Treat `.vip/local.yaml` as legacy audit input only; never use it as the
   active-offer source of truth.
 - Verify every claim against offer, audience, proof, typicality, and live

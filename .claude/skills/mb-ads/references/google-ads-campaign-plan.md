@@ -34,6 +34,8 @@ and volume calibration.
 Read or ask for:
 
 - active offer, audience, promise, proof, and current lander;
+- offer-sharpening style choice and rubric state from
+  `.claude/reference/conversion/offer-sharpening.md`;
 - launch push at `pushes/<push>/push.md`;
 - geography shape: single-city radius, multi-city service area, statewide,
   national, or multi-location;
@@ -130,9 +132,11 @@ steps.
 
 ### 1. Offer And Policy Fit
 
-Confirm the offer can be advertised as stated. For regulated categories, read
-provider policy before writing copy. If the offer or lander triggers a
-restricted classification, stop and present options:
+Confirm the offer can be advertised as stated. Apply the offer-sharpening
+rubric first: audience, outcome, transformation, mechanism, proof, price/value
+logic, risk reversal, objections, reason to act, and next step. For regulated
+categories, read provider policy before writing copy. If the offer or lander
+triggers a restricted classification, stop and present options:
 
 - rewrite the offer/lander/copy into a policy-safe form;
 - build a separate product or front door only if the operator accepts the

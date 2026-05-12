@@ -94,6 +94,12 @@ Detail per shape:
 - Minisite: [`minisite-generation-system.md`](minisite-generation-system.md) and [`anti-patterns.md`](anti-patterns.md).
 - Website: [`section-patterns.md`](section-patterns.md) and [`frontend-design.md`](frontend-design.md).
 
+If the resolved offer cannot clearly answer audience, problem/outcome,
+transformation, mechanism, proof, price/value logic, risk reversal, objections,
+reason to act, and next step, load
+`.claude/reference/conversion/offer-sharpening.md` and route to `/mb-think`
+before treating the site as conversion-ready.
+
 ## Pipeline Position
 
 The site is infrastructure, not recurring content. It is the destination the content pipeline drives traffic to.

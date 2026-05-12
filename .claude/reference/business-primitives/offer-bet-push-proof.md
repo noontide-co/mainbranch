@@ -70,6 +70,12 @@ it sells or may sell repeatedly. Examples: confirmed promise, pricing,
 mechanism, deliverables, guarantee, qualification rules, or checkout/fulfillment
 details.
 
+Use the offer-sharpening reference when those durable offer fields are unclear:
+`.claude/reference/conversion/offer-sharpening.md`. The sharpening rubric checks
+audience, problem/outcome, transformation, mechanism, proof, price/value logic,
+risk reversal, objections, reason to act, and next step before page, ad, video,
+or launch work scales.
+
 Create or update a **push** when there is coordinated execution: a launch,
 drop, challenge, promo, content sequence, lander, ads plan, provider setup
 playbook, or internal adoption effort.

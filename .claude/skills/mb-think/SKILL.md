@@ -1,6 +1,6 @@
 ---
 name: mb-think
-description: "Combined research, decision, and codification workflow. Use when: (1) Exploring a question before committing (2) Making a decision that needs documentation (3) User says research, decide, figure out, explore, codify, enrich, add context, keyword gate, analyze this VSL, extract the pitch, script teardown, objection mining, or sales video research (4) Updating reference files based on decisions (5) User wants to add testimonials, angles, proof, mechanisms, or pitch context. Supports modes: full flow, research-only, keyword-gate, decide-only, codify."
+description: "Combined research, decision, and codification workflow. Use when: (1) Exploring a question before committing (2) Making a decision that needs documentation (3) User says research, decide, figure out, explore, codify, enrich, sharpen this offer, improve the offer, add context, keyword gate, analyze this VSL, extract the pitch, script teardown, objection mining, or sales video research (4) Updating reference files based on decisions (5) User wants to add testimonials, angles, proof, mechanisms, objections, guarantees, or pitch context. Supports modes: full flow, research-only, keyword-gate, decide-only, codify."
 loops: [sense, decide, ship]
 ---
 
@@ -158,6 +158,7 @@ Detect mode from user's natural language:
 | "figure out", "explore", "I'm trying to..." | Full Flow | - |
 | "research", "investigate", "what do we know about" | Research | [research-phase.md](references/research-phase.md) |
 | "--brief-format=grok-8", "researched brief", "site brief", "launch brief" | Research Brief | [grok-8-brief-format.md](references/grok-8-brief-format.md) |
+| "sharpen this offer", "improve the offer", "make this offer convert", "pressure-test this offer" | Full Flow | `.claude/reference/conversion/offer-sharpening.md` |
 | "what are people saying", "sentiment", "X/Twitter", "trending" | Research (Grok) | [grok-social.md](references/grok-social.md) |
 | "analyze this VSL", "extract the pitch", "script teardown", "objection mining" | Research | [sales-video-research.md](references/sales-video-research.md) |
 | "winning ads", "review mining", "customer language", "competitor ads", "comment mining" | Research | [winning-ad-research.md](references/winning-ad-research.md) |

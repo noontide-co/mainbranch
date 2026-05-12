@@ -86,7 +86,10 @@ Say `/mb-site` again after compaction, context loss, or switching focus. It relo
      - **skip for now:** record the blocker in the push/site notes and stage a follow-up task.
    - `cfat_` account tokens route automatically when `account_id` is present; keep `token_type=account` in examples because it is explicit and works on older `mb` versions. User API tokens remain supported as a fallback by omitting `token_type=account`.
 5. Resolve the active offer and required business context with [`references/site-context.md`](references/site-context.md).
-6. Ask what the operator is building, then load only the shape reference needed next.
+6. When the page, sales video, or lander depends on a weak offer, load
+   `.claude/reference/conversion/offer-sharpening.md` and route to `/mb-think`
+   before writing page copy from thin claims.
+7. Ask what the operator is building, then load only the shape reference needed next.
 
 ## Operating Principles
 
@@ -150,6 +153,7 @@ If the operator cannot articulate the shape, ask: "What goal are you trying to h
 
 - [`references/site-repo-workflow.md`](references/site-repo-workflow.md) - business repo mode vs site repo mode, source links, reverse records.
 - [`references/site-context.md`](references/site-context.md) - prerequisites, active offer resolution, required `core/...` files, and section mapping.
+- `.claude/reference/conversion/offer-sharpening.md` - universal offer rubric, style spectrum, evidence handling, and stop conditions.
 - [`references/sales-video.md`](references/sales-video.md) - sales video, VSL, about-page video, lander video, and embedded pitch scripts for owned surfaces.
 - [`references/site-measurement.md`](references/site-measurement.md) - `mb site check` and paid-traffic readiness states.
 - [`references/site-recovery.md`](references/site-recovery.md) - compaction recovery and scope boundaries.

@@ -21,6 +21,11 @@ Start from the active offer and audience:
 - accumulated proof and voice files when they clarify pain, promise, and
   forbidden claims.
 
+Before ranking terms, load `.claude/reference/conversion/offer-sharpening.md`
+and check the offer's audience, outcome, mechanism, proof, risk reversal,
+objections, reason to act, and next step. If the offer cannot answer those in
+plain language, stop and sharpen before judging paid-search demand.
+
 If a launch push already exists, link the research to it. If no push exists,
 write the research so `/mb-start` and `/mb-site` can create one later.
 

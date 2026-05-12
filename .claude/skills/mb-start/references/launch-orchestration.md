@@ -25,15 +25,19 @@ cited repair command.
 
 1. **Resolve the offer.** Use the normal active-offer rules. If no offer exists,
    route to `/mb-think` to codify the offer and audience before launch work.
-2. **Create or select a push.** Use `pushes/<YYYY-MM-DD-slug>/push.md` with
+2. **Sharpen the offer.** Load
+   `.claude/reference/conversion/offer-sharpening.md`. If audience, outcome,
+   mechanism, proof, risk reversal, objections, reason to act, or next step is
+   thin, route to `/mb-think` before keyword gate, lander, or ads work.
+3. **Create or select a push.** Use `pushes/<YYYY-MM-DD-slug>/push.md` with
    `type: push`, `kind: launch`, structured `goal`, `owner`, `audience`,
    `offer`, and a short `promise`. If a matching active/planned launch push
    exists, ask whether to continue it instead of creating a duplicate.
-3. **Keyword gate.** Route to `/mb-think` keyword-gate mode. A "kill" verdict
+4. **Keyword gate.** Route to `/mb-think` keyword-gate mode. A "kill" verdict
    stops the default path unless the operator explicitly overrides.
-4. **Lander plan/build.** Route to `/mb-site` lander mode. If paid traffic is in
+5. **Lander plan/build.** Route to `/mb-site` lander mode. If paid traffic is in
    scope, require the site measurement checks from `/mb-site` before ads work.
-5. **Ad launch plan/check.** Route to `/mb-ads` launch-plan or check mode. For
+6. **Ad launch plan/check.** Route to `/mb-ads` launch-plan or check mode. For
    Google Ads, the skill should load the Google Ads campaign-plan reference,
    decide whether `/mb-think` policy/keyword research is needed, reuse useful
    account history when the operator provides it or an approved read-only
@@ -44,7 +48,7 @@ cited repair command.
    facts, but do not treat them as proof that Google Ads campaign creation is
    supported from the terminal. It does not mutate Google Ads/GTM/Meta
    accounts.
-6. **Checkpoint.** After each accepted artifact or approval record, run
+7. **Checkpoint.** After each accepted artifact or approval record, run
    `mb checkpoint --plan --json`, validate the message, and save only after
    operator approval.
 
@@ -53,9 +57,9 @@ cited repair command.
 Show exactly one current step plus the next two steps:
 
 ```text
-Current step: keyword gate the offer.
-Next: create/update the launch push.
-After that: build the lander and prepare ads for review.
+Current step: sharpen the offer.
+Next: keyword gate the demand.
+After that: create/update the launch push, build the lander, and prepare ads.
 ```
 
 Use numbered choices when blocked:

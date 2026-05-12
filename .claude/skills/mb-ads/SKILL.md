@@ -103,6 +103,11 @@ as the source of truth for setup, stale context, GitHub, provider readiness, and
 repair commands. Only run the direct scoring below for ad-specific creative
 depth when status is unavailable or lacks the needed ad-specific detail.
 
+When the request depends on a new, thin, or underperforming offer, load
+`.claude/reference/conversion/offer-sharpening.md` before writing hooks or
+launch-plan claims. Route to `/mb-think` when audience, outcome, mechanism,
+proof, risk reversal, objections, reason to act, or next step is unclear.
+
 ### 0b. Score Reference Files (fast — direct Read only, NO agents)
 
 **NEVER spawn Explore or Task agents for pre-flight.** Read files directly at the known repo path. Pre-flight should complete in under 10 seconds.

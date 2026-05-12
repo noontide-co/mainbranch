@@ -8,6 +8,8 @@ The brief is the locked source of truth for the minisite. Compose it from:
 
 - resolved `offer.md`: framing, value prop, pricing, transformation;
 - resolved `audience.md`: pain frame, language, objections;
+- `.claude/reference/conversion/offer-sharpening.md`: offer fundamentals,
+  style choice, proof/typicality, risk reversal, reason to act, and next step;
 - `voice.md`: tone, register, named enemies, "never say";
 - persisted research files from [`minisite-research.md`](minisite-research.md);
 - any `brief_format: grok-8` researched brief that names the offer, audience,

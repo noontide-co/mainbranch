@@ -20,8 +20,11 @@ Hand off instead when:
 
 ## Shared References
 
-Load `.claude/reference/conversion/vsl-routing.md` first. Load the specific
-long-form framework only when the task needs structured sales-video sections:
+Load `.claude/reference/conversion/vsl-routing.md` first. Load
+`.claude/reference/conversion/offer-sharpening.md` when the script sharpens or
+changes the offer promise, mechanism, proof, objections, risk reversal,
+urgency, or next step. Load the specific long-form framework only when the task
+needs structured sales-video sections:
 
 - Skool / membership: `.claude/reference/conversion/vsl/skool-18-section.md`
 - B2B high-ticket: `.claude/reference/conversion/vsl/b2b-haynes.md`
