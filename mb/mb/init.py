@@ -25,6 +25,10 @@ DATA_FOLDERS = [
     "core/offers",
     "core/proof",
     "core/brand",
+    "core/marketing",
+    "core/marketing/channels",
+    "core/marketing/accounts",
+    "core/people",
     "core/strategy",
     "core/operations",
     "core/finance",
@@ -279,6 +283,8 @@ layer unless the operator asks for the plumbing.
 - `core/offers/` — per-offer specifics when this is a multi-offer repo
 - `core/proof/` — testimonials, typicality, and reusable proof
 - `core/brand/` — visual identity, voice guardrails, and brand systems
+- `core/marketing/` — optional content distribution, channel, and account strategy
+- `core/people/` — optional founder/person voice source material, beliefs, stories, and proof
 - `core/strategy/` — strategic context that should remain evergreen
 - `core/operations/` — operating context such as fulfillment, classroom, funnel, or membership notes
 - `core/finance/` — approved finance summaries, policies, and safe provider refs
@@ -341,6 +347,15 @@ multi-offer repo, `core/offer.md` is the portfolio thesis and
 in `core/proof/`; offer-specific proof belongs in `core/offers/<slug>/proof/`.
 Use standard proof files such as `testimonials.md`, `typicality.md`, and
 `angles/` inside those proof folders.
+Content strategy starts at `core/content-strategy.md`. Keep it as the simple
+business-level strategy and index: what the business wants to be known for, who
+the content is for, pillars, content jobs, non-publishing rules, and links to
+the rest of the model. When the operator needs more detail, use
+`core/marketing/distribution-strategy.md`,
+`core/marketing/channels/<channel>.md`,
+`core/marketing/accounts/<platform>-<account>.md`, and
+`core/people/<person>.md`. Weekly content planning should read those files by
+reference, then write concrete execution to `pushes/` and results to `log/`.
 `mb status --json --peek` also emits `money_path`, a read-only map of whether
 customer progress, offer, proof, CTA, channel, push, playbook, page readiness,
 and outcome feedback are legible and connected. Use MoneyPath from

@@ -2135,7 +2135,24 @@ def _money_path_cta(
 
 def _money_path_channel_strategy(repo: Path, *, pushes: list[dict[str, Any]]) -> dict[str, Any]:
     paths = _relative_existing_paths(
-        repo, ["core/content-strategy.md", "reference/core/content-strategy.md"]
+        repo,
+        [
+            "core/content-strategy.md",
+            "core/marketing/distribution-strategy.md",
+            "reference/core/content-strategy.md",
+        ],
+    )
+    paths.extend(
+        sorted(
+            path.relative_to(repo).as_posix()
+            for root in [
+                repo / "core" / "marketing" / "channels",
+                repo / "core" / "marketing" / "accounts",
+            ]
+            if root.exists()
+            for path in root.glob("*.md")
+            if path.is_file()
+        )
     )
     active_channels = sorted(
         {
@@ -2172,7 +2189,7 @@ def _money_path_channel_strategy(repo: Path, *, pushes: list[dict[str, Any]]) ->
             summary="No channel strategy or push channels were found.",
             paths=["core/content-strategy.md"],
             missing=["active_channel", "distribution_strategy"],
-            references=["docs/operator-loops.md"],
+            references=["docs/content-strategy.md", "docs/operator-loops.md"],
             recommended_route="/mb-think",
         )
     level = 2 if active_channels else 1
@@ -2185,7 +2202,7 @@ def _money_path_channel_strategy(repo: Path, *, pushes: list[dict[str, Any]]) ->
         paths=paths + [str(push.get("path")) for push in pushes[:5] if push.get("path")],
         missing=[] if active_channels else ["active_channel"],
         evidence=evidence,
-        references=["docs/operator-loops.md"],
+        references=["docs/content-strategy.md", "docs/operator-loops.md"],
         recommended_route="/mb-think",
     )
 

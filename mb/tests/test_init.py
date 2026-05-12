@@ -65,6 +65,10 @@ def _assert_claude_md_primitive_routing_contract(text: str) -> None:
     assert "Use standard proof files such as `testimonials.md`" in text
     assert "`typicality.md`" in text
     assert "`angles/`" in text
+    assert "Content strategy starts at `core/content-strategy.md`" in text
+    assert "`core/marketing/channels/<channel>.md`" in text
+    assert "`core/marketing/accounts/<platform>-<account>.md`" in text
+    assert "`core/people/<person>.md`" in text
     assert "A live idea can be both a bet and an offer candidate" in text
     assert "Do not rename, delete, merge, split, or move offer folders" in text
     assert "domain rubric" not in text.lower()
@@ -109,6 +113,10 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert not (target / "reference").exists()
     assert (target / "core" / "proof").is_dir()
     assert (target / "core" / "brand").is_dir()
+    assert (target / "core" / "marketing").is_dir()
+    assert (target / "core" / "marketing" / "channels").is_dir()
+    assert (target / "core" / "marketing" / "accounts").is_dir()
+    assert (target / "core" / "people").is_dir()
     assert (target / "core" / "strategy").is_dir()
     assert (target / "core" / "operations").is_dir()
     assert (target / "bets").is_dir()
