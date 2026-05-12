@@ -30,6 +30,8 @@ INDEX_FIELDS = (
     "linked_people",
 )
 
+UNINDEXED_LAYER_MESSAGE = "layer exists but is not indexed from core/content-strategy.md"
+
 
 def _read_markdown(path: Path) -> tuple[dict[str, Any] | None, str, str | None]:
     try:
@@ -186,6 +188,12 @@ def _state_from_findings(findings: list[dict[str, Any]]) -> str:
     if "needs_review" in states:
         return "needs_review"
     return "healthy"
+
+
+def _warning_finding_code(message: str) -> str:
+    if message == UNINDEXED_LAYER_MESSAGE:
+        return "content_strategy_unindexed_layer"
+    return "content_strategy_warning"
 
 
 def _add_required_checks(
@@ -408,9 +416,7 @@ def validation_results(repo: Path, *, today: date | None = None) -> dict[str, di
         )
     for layer_path in sorted(layer_paths):
         if layer_path not in indexed_refs:
-            results[layer_path].setdefault("warnings", []).append(
-                "layer exists but is not indexed from core/content-strategy.md"
-            )
+            results[layer_path].setdefault("warnings", []).append(UNINDEXED_LAYER_MESSAGE)
 
     for result in results.values():
         result["ok"] = not result.get("errors")
@@ -463,7 +469,7 @@ def facts(repo: Path, *, today: date | None = None) -> dict[str, Any]:
                 state = "disconnected"
             findings.append(
                 _finding(
-                    code="content_strategy_warning",
+                    code=_warning_finding_code(text),
                     path=rel_path,
                     severity="warning",
                     state=state,

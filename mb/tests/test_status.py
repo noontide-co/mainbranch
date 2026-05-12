@@ -523,6 +523,52 @@ def test_status_content_strategy_reports_stale_indexed_channel(tmp_path: Path, m
     assert channel_facts["stale"] is True
 
 
+def test_status_content_strategy_reports_unindexed_layer_code(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core" / "content-strategy.md").write_text(
+        (
+            "---\n"
+            "type: content_strategy\n"
+            "status: active\n"
+            "---\n\n"
+            "# Content Strategy\n\n"
+            "The solo strategy still works, but the channel layer is not indexed yet.\n"
+        ),
+        encoding="utf-8",
+    )
+    channel = repo / "core" / "marketing" / "channels" / "reddit.md"
+    channel.parent.mkdir(parents=True, exist_ok=True)
+    channel.write_text(
+        (
+            "---\n"
+            "type: channel_strategy\n"
+            "status: active\n"
+            "channel: reddit\n"
+            "owner: Operator\n"
+            "last_reviewed: 2026-05-12\n"
+            "update_trigger: Platform norms changed.\n"
+            "source_links: []\n"
+            "---\n\n"
+            "# Reddit Channel Strategy\n\n"
+            "Community norms, timing, content types, anti-spam rules, and review triggers.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    content = report["content_strategy"]
+    finding = next(
+        item for item in content["findings"] if item["code"] == "content_strategy_unindexed_layer"
+    )
+    assert content["overall_state"] == "disconnected"
+    assert finding["path"] == "core/marketing/channels/reddit.md"
+    assert finding["state"] == "disconnected"
+    assert finding["message"] == "layer exists but is not indexed from core/content-strategy.md"
+
+
 def test_status_money_path_offer_exposes_guardrail_detail(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     repo = tmp_path / "acme"

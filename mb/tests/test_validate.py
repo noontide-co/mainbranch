@@ -127,7 +127,7 @@ def test_validate_reports_layered_content_strategy_connection_failures(
     assert "voice_source target 'core/people/founder.md' does not exist" in account["errors"]
 
 
-def test_validate_reports_orphaned_and_stale_content_strategy_layers(tmp_path: Path) -> None:
+def test_validate_reports_unindexed_and_stale_content_strategy_layers(tmp_path: Path) -> None:
     _write(
         tmp_path / "core" / "content-strategy.md",
         (

@@ -149,7 +149,9 @@ channel, account, and person layers exist, whether layers are indexed from the
 business strategy, whether account layers resolve their channel and voice
 source, and whether fast-changing channel/account layers are stale. Dashboard
 and runtime callers should read these normalized facts instead of parsing raw
-markdown.
+markdown. Use `overall_state` as summary health and `findings[].code` for
+repair cards, such as `content_strategy_unindexed_layer` when a layer exists
+but is not indexed from `core/content-strategy.md`.
 
 ## First Migrated Surfaces
 
