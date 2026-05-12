@@ -479,7 +479,7 @@ def facts(repo: Path, *, today: date | None = None) -> dict[str, Any]:
 
     def item(path: Path, *, kind: str, stale: bool = False) -> dict[str, Any]:
         exists = path.is_file()
-        rel = _relative(path, repo) if exists else _relative(path, repo)
+        rel = _relative(path, repo)
         result = results.get(rel, {"errors": [], "warnings": []})
         frontmatter, _, _ = _read_markdown(path) if exists else ({}, "", None)
         return {
