@@ -42,8 +42,8 @@ For solo local use, the default private books vault path is:
 .mb/private/books/
 ```
 
-The business repo should ignore `.mb/private/`, `*.journal`, and `*.hledger`
-so real books do not enter shared history by accident.
+The business repo should ignore `.mb/private/`, `*.journal`, `*.hledger`, and
+`*.ledger` so real books do not enter shared history by accident.
 
 ## What `mb books` checks
 

@@ -43,7 +43,6 @@ def test_provider_registry_includes_initial_foundation() -> None:
     assert providers["hledger"]["metadata_fields"] == [
         "journal_path",
         "vault_path",
-        "storage_mode",
     ]
 
 
@@ -360,7 +359,6 @@ def test_connect_test_marks_metadata_only_provider_ready(tmp_path: Path, monkeyp
         metadata_pairs=[
             "journal_path=.mb/private/books/main.journal",
             "vault_path=.mb/private/books/",
-            "storage_mode=solo-local",
         ],
     )
 
@@ -840,7 +838,6 @@ def test_doctor_and_status_include_integration_state(tmp_path: Path, monkeypatch
         metadata_pairs=[
             "journal_path=.mb/private/books/main.journal",
             "vault_path=.mb/private/books/",
-            "storage_mode=solo-local",
         ],
     )
 

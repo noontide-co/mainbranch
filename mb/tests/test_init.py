@@ -142,6 +142,7 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert ".mb/issue-drafts/" in gitignore
     assert "*.journal" in gitignore
     assert "*.hledger" in gitignore
+    assert "*.ledger" in gitignore
     assert "*.beancount" in gitignore
     assert ".vip/local.yaml" in gitignore
     claude_md = (target / "CLAUDE.md").read_text()

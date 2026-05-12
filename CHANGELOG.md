@@ -16,8 +16,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Replaced the active Beancount-era `mb connect` and `mb educational`
   bookkeeping surfaces with hledger, matching the accepted `mb books`
   foundation decision. Default generated `.gitignore` files now protect
-  `.mb/private/`, `*.journal`, and `*.hledger` alongside the defensive
-  `*.beancount` pattern.
+  `.mb/private/`, `*.journal`, `*.hledger`, and `*.ledger` alongside the
+  defensive `*.beancount` pattern.
 
 ### Security
 

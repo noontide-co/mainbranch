@@ -42,6 +42,7 @@ DEFAULT_GITIGNORE = """\
 .env.*
 *.journal
 *.hledger
+*.ledger
 *.beancount
 .DS_Store
 __pycache__/

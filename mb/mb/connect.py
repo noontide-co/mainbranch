@@ -109,10 +109,11 @@ PROVIDERS: tuple[Provider, ...] = (
         category="finance",
         auth="local_file",
         required_secrets=(),
-        metadata_fields=("journal_path", "vault_path", "storage_mode"),
+        metadata_fields=("journal_path", "vault_path"),
         description=(
             "Local hledger journal metadata for the private books vault. "
-            "Real ledgers stay outside the tracked business repo."
+            "`core/finance/books.md` is the source of truth for storage mode; "
+            "real ledgers stay outside the tracked business repo."
         ),
     ),
     Provider(
