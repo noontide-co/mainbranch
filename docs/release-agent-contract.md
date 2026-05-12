@@ -30,6 +30,27 @@ when in doubt.
 
 ## Rules
 
+### 0. Run cheap release-file preflight before expensive gates.
+
+Before running `scripts/check.sh` on a release-prep branch, update and inspect
+every version-bearing release file in one pass:
+
+- `CHANGELOG.md` has a dated version section and `[Unreleased]` is empty or
+  contains only work intentionally left unreleased;
+- `mb/pyproject.toml` `project.version` matches the release version;
+- `mb/mb/__init__.py` `__version__` matches the release version;
+- `.claude-plugin/plugin.json` `version` matches the release version.
+
+Then run the cheapest targeted guard for those sites:
+
+```bash
+cd mb
+python3 -m pytest tests/test_smoke_coverage.py::test_claude_plugin_manifest_points_at_prefixed_skills -q
+```
+
+If this preflight fails, fix the release files before the full gate. Do not
+spend a full `scripts/check.sh` run discovering a mismatched release version.
+
 ### 1. Pick the runtime up front. Do not switch mid-flow.
 
 On macOS in this workspace, the documented runtime is `python3` (with
