@@ -11,15 +11,26 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.19] - 2026-05-12
+
+v0.3.19 makes daily status more business-aware: MoneyPath, proof-quality, and
+layered content-strategy facts now surface through deterministic CLI JSON so
+`/mb-start`, bundled skills, and future dashboard views can reason from the same
+repo-backed truth without turning the CLI into a strategist. The release also
+makes recommended Main Branch updates pause `/mb-start` business routing before
+ranked actions.
+
 ### Added
 
 - Added deterministic MoneyPath offer guardrail detail and proof-quality facts
   under `money_path.objects.offer` and `money_path.objects.proof`, including
   generic vs. specific testimonials, offer-linked proof, typicality signals,
-  and proof boundary warnings. Refs MAIN-341, #523.
+  unsupported-claim warnings, outcome-feedback signals, and an instrumentation
+  gate that requires outcome feedback. Refs MAIN-341, #523.
 - Added layered content strategy validation and normalized `content_strategy`
   status facts for simple, layered, disconnected, unindexed, and stale strategy
-  files, so future dashboard views can read CLI facts instead of parsing
+  files, including `content_strategy_unindexed_layer` findings for unindexed
+  layers, so future dashboard views can read CLI facts instead of parsing
   markdown. Refs MAIN-346, #536.
 - Added a layered content strategy model for business repos covering
   business-level content strategy, distribution strategy, channel strategy,
@@ -28,7 +39,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added MoneyPath readiness facts to `mb status --json --peek`, giving skills
   and scripts a read-only, gated view of customer progress, offer, audience,
   proof, product ladder, CTA, channel, push, playbook, page readiness, and
-  outcome feedback. Refs MAIN-343, #528.
+  outcome feedback. The CLI reports legibility, support, connection, and
+  instrumentation; skills and operators still own conversion judgment. Refs
+  MAIN-343, #528.
 - Added clearer release dogfood print-mode evidence handling: per-simulation
   fresh sessions, categorized permission-denial summaries, direct read-only
   `mb books check` / `mb educational` allowlist coverage, and prompt
