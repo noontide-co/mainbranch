@@ -42,6 +42,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Removed the `/mb-vsl` compatibility router. Sales-video and VSL prompts now
   route directly through `/mb-site`, `/mb-ads`, `/mb-think`, or `/mb-organic`
   by surface and intent. Refs MAIN-338, #518.
+- Removed the `/mb-pull` compatibility alias now that `/mb-update` and
+  `mb update` own the update flow. Refs MAIN-338, #518.
 
 ## [0.3.17] - 2026-05-12
 

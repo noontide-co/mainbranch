@@ -9,7 +9,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 MAIN_BRANCH_COMMAND_RE = re.compile(
     r"(?<![\w/.\->])/"
-    r"(?P<name>mb-[a-z0-9-]+|newsletter|ads|bet|end|help|organic|pull|setup|site|start|status|think|update|wiki)"
+    r"(?P<name>mb-[a-z0-9-]+|newsletter|ads|bet|end|help|organic|setup|site|start|status|think|update|wiki)"
     r"(?=$|[`<\s,).:;])"
 )
 GUIDED_ORCHESTRATION_FORMS = ("/mb-start launch",)
@@ -92,15 +92,17 @@ def test_runtime_docs_mark_mb_start_launch_as_guided_skill_orchestration() -> No
     assert failures == []
 
 
-def test_runtime_docs_do_not_reference_retired_mb_vsl() -> None:
+def test_runtime_docs_do_not_reference_retired_slash_commands() -> None:
     failures: list[str] = []
+    retired = ("/mb-vsl", "/mb-pull")
 
     for path in _scan_paths():
         rel = path.relative_to(REPO_ROOT)
         lines = path.read_text(encoding="utf-8").splitlines()
         for index, line in enumerate(lines):
-            if "/mb-vsl" not in line:
-                continue
-            failures.append(f"{rel}:{index + 1}: /mb-vsl is retired from live guidance")
+            for command in retired:
+                if command not in line:
+                    continue
+                failures.append(f"{rel}:{index + 1}: {command} is retired from live guidance")
 
     assert failures == []

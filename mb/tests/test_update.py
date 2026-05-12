@@ -41,7 +41,7 @@ def test_update_check_pipx_does_not_run_commands(monkeypatch: Any, tmp_path: Pat
     monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
     monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "0.2.0")
-    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-pull", "mb-start"])
+    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start", "mb-update"])
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
 
     result = update_mod.run(repo=tmp_path / "biz", check=True)
@@ -70,7 +70,7 @@ def test_update_pipx_runs_upgrade_then_relinks(monkeypatch: Any, tmp_path: Path)
                         "ok": True,
                         "linked": [".claude/skills/mb-start"],
                         "copied": [],
-                        "skipped": [".claude/skills/mb-pull"],
+                        "skipped": [".claude/skills/mb-update"],
                         "errors": [],
                     }
                 ),
@@ -93,7 +93,7 @@ def test_update_pipx_runs_upgrade_then_relinks(monkeypatch: Any, tmp_path: Path)
     assert result["new_version"] == "0.2.0"
     assert result["skills_relinked_count"] == 1
     assert result["warnings"] == [
-        "could not refresh existing non-link skill path(s): .claude/skills/mb-pull"
+        "could not refresh existing non-link skill path(s): .claude/skills/mb-update"
     ]
     assert calls == [
         ["pipx", "upgrade", "mainbranch"],
@@ -116,7 +116,7 @@ def test_update_check_clone_fetches_before_reading_origin(monkeypatch: Any, tmp_
     monkeypatch.setattr(update_mod, "engine_root", lambda: root)
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
     monkeypatch.setattr(update_mod, "_version_from_git_ref", lambda _root, _ref: "0.2.0")
-    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-pull", "mb-start", "mb-think"])
+    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start", "mb-status", "mb-think"])
 
     result = update_mod.run(repo=tmp_path / "biz", check=True)
 
@@ -283,7 +283,7 @@ def test_update_relink_payload_errors_are_reported(monkeypatch: Any, tmp_path: P
         "ok": False,
         "linked": [],
         "copied": [".claude/skills/mb-start"],
-        "skipped": [".claude/skills/mb-pull"],
+        "skipped": [".claude/skills/mb-update"],
         "errors": ["could not locate bundled Main Branch engine root"],
     }
 
@@ -296,7 +296,9 @@ def test_update_relink_payload_errors_are_reported(monkeypatch: Any, tmp_path: P
 
     assert count == 1
     assert errors == ["could not locate bundled Main Branch engine root"]
-    assert warnings == ["could not refresh existing non-link skill path(s): .claude/skills/mb-pull"]
+    assert warnings == [
+        "could not refresh existing non-link skill path(s): .claude/skills/mb-update"
+    ]
     assert parsed == payload
 
 
