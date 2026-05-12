@@ -36,6 +36,7 @@ _LEGACY_REFERENCE_PATH_RE = re.compile(
 _LEGACY_REFERENCE_ALLOW_TERMS = (
     "legacy",
     "fallback",
+    "fall back",
     "compatibility",
     "bridge",
     "older",
@@ -80,6 +81,51 @@ _MAIN_BRANCH_SLASH_COMMAND_RE = re.compile(
     r"(?P<name>mb-[a-z0-9-]+|"
     + "|".join(sorted(_KNOWN_UNPREFIXED_SKILL_ROUTES))
     + r")(?=$|[`<\s,).:;])"
+)
+_CLI_FIRST_WINDOW_LINES = 140
+_CLI_FIRST_REQUIRED_COMMANDS = {
+    "mb-ads": ("mb status --json --peek",),
+    "mb-bet": ("mb status --json --peek", "mb validate --cross-refs"),
+    "mb-end": ("mb status --json --peek", "mb checkpoint --plan --json"),
+    "mb-help": ("mb status --json --peek", "mb doctor"),
+    "mb-organic": ("mb status --json --peek",),
+    "mb-pull": ("mb update --repo . --json",),
+    "mb-setup": ("mb doctor", "mb start --json", "mb status --json --peek"),
+    "mb-site": ("mb status --json --peek", "mb site check"),
+    "mb-start": ("mb status --json --peek",),
+    "mb-status": ("mb status --json --peek",),
+    "mb-think": ("mb status --json --peek", "mb connect doctor --json"),
+    "mb-update": ("mb update --repo . --json",),
+    "mb-vsl": ("mb status --json --peek",),
+}
+_RAW_GIT_CHECK_RE = re.compile(r"(?<![\w-])git\s+(?:status|log|diff|add|commit)(?![\w-])")
+_RAW_GIT_ALLOW_TERMS = (
+    "fallback",
+    "fall back",
+    "if status says",
+    "if git log fails",
+    "if no `mb`",
+    "do not",
+    "don't",
+    "not ",
+    "site repo",
+    "wiki repo",
+    "technical detail",
+)
+_UNSHIPPED_COMMANDS = (
+    "mb publish --plan",
+    "mb books status",
+    "mb books doctor",
+)
+_UNSHIPPED_COMMAND_ALLOW_TERMS = (
+    "not shipped",
+    "not yet shipped",
+    "not available",
+    "planned",
+    "deferred",
+    "do not promise",
+    "don't promise",
+    "not promise",
 )
 
 
@@ -243,6 +289,72 @@ def _check_slash_command_references(
     return errors
 
 
+def _body_without_frontmatter(text: str) -> str:
+    lines = text.splitlines()
+    if lines and lines[0].strip() == "---":
+        for index, line in enumerate(lines[1:], start=1):
+            if line.strip() == "---":
+                return "\n".join(lines[index + 1 :])
+    return text
+
+
+def _check_cli_first_contract(name: str, text: str) -> list[str]:
+    required_commands = _CLI_FIRST_REQUIRED_COMMANDS.get(name)
+    if required_commands is None:
+        return []
+
+    errors: list[str] = []
+    body_lines = _body_without_frontmatter(text).splitlines()
+    window = "\n".join(body_lines[:_CLI_FIRST_WINDOW_LINES])
+    normalized_window = window.lower()
+
+    if "cli facts first" not in normalized_window:
+        errors.append(
+            "missing `CLI facts first` instruction near the top of SKILL.md; "
+            "start from shipped mb commands before prose or reference reads"
+        )
+
+    for command in required_commands:
+        if command not in window:
+            errors.append(
+                f"missing required CLI-first command `{command}` in the first "
+                f"{_CLI_FIRST_WINDOW_LINES} lines of SKILL.md"
+            )
+
+    for line_number, line in enumerate(body_lines[:_CLI_FIRST_WINDOW_LINES], start=1):
+        if not _RAW_GIT_CHECK_RE.search(line):
+            continue
+        context = " ".join(
+            body_lines[max(0, line_number - 3) : min(len(body_lines), line_number + 2)]
+        ).lower()
+        if any(term in context for term in _RAW_GIT_ALLOW_TERMS):
+            continue
+        errors.append(
+            f"line {line_number}: raw git check appears before the CLI-first "
+            "contract; use `mb status` or `mb checkpoint` facts first"
+        )
+
+    return errors
+
+
+def _check_unshipped_command_promises(text: str) -> list[str]:
+    errors: list[str] = []
+    lines = text.splitlines()
+    for line_number, line in enumerate(lines, start=1):
+        for command in _UNSHIPPED_COMMANDS:
+            if command not in line:
+                continue
+            context = " ".join(lines[max(0, line_number - 2) : min(len(lines), line_number + 1)])
+            normalized = context.lower()
+            if any(term in normalized for term in _UNSHIPPED_COMMAND_ALLOW_TERMS):
+                continue
+            errors.append(
+                f"line {line_number}: `{command}` is not a shipped mb command; "
+                "do not promise unshipped commands"
+            )
+    return errors
+
+
 def _iter_referenced_markdown(skill_root: Path) -> list[Path]:
     roots = [skill_root / "references", skill_root / "examples"]
     return [
@@ -328,6 +440,8 @@ def _validate_skill_at(name: str, skill_root: Path) -> dict[str, Any]:
     skill_errors.extend(
         _check_slash_command_references(text, available_commands=available_commands)
     )
+    skill_errors.extend(_check_cli_first_contract(name, text))
+    skill_errors.extend(_check_unshipped_command_promises(text))
     skill_warnings.extend(_check_legacy_reference_guidance(text))
     skill_warnings.extend(_check_retired_primitive_language(text))
     all_warnings.extend(skill_warnings)
@@ -355,6 +469,7 @@ def _validate_skill_at(name: str, skill_root: Path) -> dict[str, Any]:
                 available_commands=available_commands,
             )
         )
+        reference_errors.extend(_check_unshipped_command_promises(referenced_text))
         reference_warnings = _check_legacy_reference_guidance(referenced_text)
         reference_warnings.extend(_check_retired_primitive_language(referenced_text))
         rel_path = str(referenced_file.relative_to(skill_root))

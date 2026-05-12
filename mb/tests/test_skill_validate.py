@@ -302,6 +302,114 @@ def test_skill_validate_allows_bundled_slash_command_routes(
     assert report["ok"] is True
 
 
+def test_skill_validate_flags_missing_cli_first_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(tmp_path, "mb-start", body="Read the repo and ask what the user needs.\n")
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-start")
+
+    assert report is not None
+    assert report["ok"] is False
+    errors = report["files"][0]["errors"]
+    assert any("missing `CLI facts first` instruction" in error for error in errors)
+    assert any("mb status --json --peek" in error for error in errors)
+
+
+def test_skill_validate_accepts_cli_first_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(
+        tmp_path,
+        "mb-end",
+        body=(
+            "## CLI Facts First\n\n"
+            "Run `mb status --json --peek` and `mb checkpoint --plan --json` "
+            "before summarizing the session.\n"
+        ),
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-end")
+
+    assert report is not None
+    assert report["ok"] is True
+
+
+def test_skill_validate_flags_raw_git_before_cli_first_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(
+        tmp_path,
+        "mb-end",
+        body=(
+            "Run `git status --short` to inspect work.\n\n"
+            "## CLI Facts First\n\n"
+            "Run `mb status --json --peek` and `mb checkpoint --plan --json`.\n"
+        ),
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-end")
+
+    assert report is not None
+    assert report["ok"] is False
+    assert any(
+        "raw git check appears before the CLI-first contract" in error
+        for error in report["files"][0]["errors"]
+    )
+
+
+def test_skill_validate_allows_raw_git_fallback_language(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(
+        tmp_path,
+        "mb-start",
+        body=(
+            "## CLI Facts First\n\n"
+            "Run `mb status --json --peek` before routing.\n"
+            "Do not run raw `git log` unless status says journal facts are unavailable.\n"
+        ),
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-start")
+
+    assert report is not None
+    assert report["ok"] is True
+
+
+def test_skill_validate_flags_unshipped_mb_command_promises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(tmp_path, "mb-alpha", body="Save and then run `mb publish --plan`.\n")
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-alpha")
+
+    assert report is not None
+    assert report["ok"] is False
+    assert "not a shipped mb command" in report["files"][0]["errors"][0]
+
+
+def test_skill_validate_allows_unshipped_command_boundary_notes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _skill(
+        tmp_path,
+        "mb-alpha",
+        body="The planned `mb publish --plan` command is not shipped yet; do not promise it.\n",
+    )
+    _patch_engine(monkeypatch, tmp_path)
+
+    report = skill_validate_mod.run("mb-alpha")
+
+    assert report is not None
+    assert report["ok"] is True
+
+
 def test_skill_validate_ignores_non_command_slash_paths(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
