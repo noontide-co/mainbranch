@@ -268,12 +268,12 @@ Modeled on /mb-end's crystallize pattern. For returning users, reconnection at s
 
 **Trigger conditions (ALL must be true):**
 1. `core/soul.md` exists and has substance (score 2+)
-2. Last journal event or commit was >3 days ago (returning after absence)
+2. Last status journal event or saved checkpoint was >3 days ago (returning after absence)
 3. This is not the user's first session ever (config exists with `user.name`)
 
 **Skip conditions (ANY skips this check):**
-- First-time user (no config, no commits)
-- Active user (committed within last 3 days)
+- First-time user (no repo history)
+- Active user (saved or updated work within last 3 days)
 - User explicitly stated intent already (e.g., `/mb-start ads` -- they know what they want)
 - Context window is already heavy (>70%)
 
@@ -550,7 +550,7 @@ Health flags from Section 3 appear alongside structural scores. File-level flags
 If session state items were found, append after the health display:
 
 > "**Since last session:**
-> - Last work: [topic from recent commit]
+> - Last work: [topic from recent saved checkpoint or journal event]
 > - [N] decisions still being evaluated or integrated
 > - [N] research files without decisions"
 

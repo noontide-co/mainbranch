@@ -18,7 +18,7 @@ skill directly.
 **Why not always-on:** Three parallel agents burn 50-80K tokens. Running them every session means the user hits 60%+ context before doing any actual work. /mb-end gates crystallize behind meaningful activity — /mb-start gates triage behind user choice. Agents eat the heavy context in their own windows, keeping main lean for whatever comes next.
 
 **Auto-suggest triage when:**
-- Returning user (last commit >3 days ago) and no stated intent
+- Returning user (last saved checkpoint or status journal event is older than 3 days) and no stated intent
 - Readiness is THIN (8-11) — "Triage can help you figure out the highest-leverage gap"
 - User says "what should I work on", "help me prioritize", "what to do next"
 
@@ -36,7 +36,7 @@ Before spawning agents, check these gates (modeled on /mb-end Step 5a):
 |------|-------|----------|
 | Context budget | Is main context < 50%? | Warn user: "Context is at X%. Triage uses significant tokens. Run it anyway?" |
 | Readiness tier | Is score ≥ 8 (THIN or above)? | Skip triage — not enough reference to analyze. Route to `/mb-think` |
-| Meaningful state | Does repo have commits, decisions, or research? | If brand new repo with just setup scaffolding, skip deep triage — suggest `/mb-think` instead |
+| Meaningful state | Does repo have saved checkpoints, decisions, or research? | If brand new repo with just setup scaffolding, skip deep triage — suggest `/mb-think` instead |
 
 ### Tiered Spawning
 
@@ -44,7 +44,7 @@ Not every session needs 3 agents. Match agent count to context:
 
 | Condition | Agents | Why |
 |-----------|--------|-----|
-| THIN (8-11), few commits | **1 agent** (Reference Health only) | Not enough content for pipeline or soul analysis |
+| THIN (8-11), few saved checkpoints | **1 agent** (Reference Health only) | Not enough content for pipeline or soul analysis |
 | GOOD (12-14), active repo | **2 agents** (Reference Health + Pipeline) | Soul analysis adds value when there's meaningful work history |
 | FULL (15-18), active repo | **3 agents** (all three) | Full analysis justified |
 | User says "deep triage" | **3 agents** regardless | Explicit request overrides tiering |
@@ -244,7 +244,7 @@ You are NOT a task manager. You identify patterns and bottlenecks.
 
 === GIT LOG (30 DAYS) ===
 
-[Git log output -- commits, what changed, when]
+[Status journal or git fallback output -- saved checkpoints, what changed, when]
 
 === ACTIVE DECISIONS ===
 
@@ -292,9 +292,9 @@ Analyze these dimensions:
    some research is exploratory. But research older than 14 days without a
    decision may be going stale.
 
-3. **Campaign lifecycle state:** Any campaign files with status: draft?
-   Scheduled? When was the last campaign asset published? Is there a gap
-   between core readiness and campaign generation?
+3. **Push lifecycle state:** Any current push files with status: draft,
+   planned, or active? When was the last execution artifact saved? Is there a
+   gap between core readiness and coordinated work?
 
 4. **Push recency:** When was the last batch generated? What type?
    Long gap between core updates and push generation = missed opportunity.

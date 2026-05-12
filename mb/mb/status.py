@@ -176,27 +176,31 @@ def _build_git_summary(
     behind: int | None,
 ) -> str:
     if workflow_mode == "detached":
-        return "HEAD is detached. Check out a branch before saving."
+        return "This workspace is detached. Check out a workspace before saving."
     if not workflow_mode:
         return ""
 
     if workflow_mode == "solo-on-main":
-        label = f"On {branch or default_branch or 'main'}"
+        label = f"Working in the {branch or default_branch or 'main'} workspace"
     elif workflow_mode == "worktree":
-        label = f"In a worktree on `{branch}`" if branch else "In a worktree"
+        label = "Working in a separate workspace"
     else:
-        label = f"On branch `{branch}`"
+        label = "Working in a separate workspace"
 
     parts: list[str] = [label]
     if dirty_count:
         plural = "" if dirty_count == 1 else "s"
-        parts.append(f"with {dirty_count} uncommitted file{plural}")
+        parts.append(f"with {dirty_count} unsaved local file{plural}")
     else:
-        parts.append("with no uncommitted changes")
-    if ahead:
-        parts.append(f"ahead by {ahead}")
-    if behind:
-        parts.append(f"behind by {behind}")
+        parts.append("with no unsaved local changes")
+    if ahead and behind:
+        parts.append("with local and shared saved work to reconcile")
+    elif ahead:
+        plural = "" if ahead == 1 else "s"
+        parts.append(f"with {ahead} saved checkpoint{plural} waiting to sync")
+    elif behind:
+        plural = "" if behind == 1 else "s"
+        parts.append(f"with {behind} newer shared checkpoint{plural} to catch up")
     return " ".join(parts) + "."
 
 

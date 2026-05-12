@@ -422,10 +422,10 @@ def _check_vault_ignore_rule(repo: Path, storage_mode: str) -> list[dict[str, An
 
 
 def _detect_unsafe_paths(repo: Path) -> list[dict[str, Any]]:
-    """Flag ledger or statement files committed to the business repo.
+    """Flag ledger or statement files saved in the business repo.
 
     Per the foundation decision this is a ``warn``, not a hard fail:
-    operators may legitimately commit non-finance CSVs (research
+    operators may legitimately save non-finance CSVs (research
     exports, audience data) and may ship sample fixtures. Files
     carrying an explicit fixture marker (see ``FIXTURE_MARKER_TOKENS``)
     are exempted.
@@ -482,7 +482,7 @@ def _detect_unsafe_paths(repo: Path) -> list[dict[str, Any]]:
                 state="ok",
                 detail=f"Checked via {method}; no unmarked ledger-shaped files found.",
                 audience="informational",
-                operator_summary=("No raw ledgers or statements committed to the business repo."),
+                operator_summary=("No raw ledgers or statements saved in the business repo."),
             )
         )
         return findings
@@ -502,14 +502,14 @@ def _detect_unsafe_paths(repo: Path) -> list[dict[str, Any]]:
             ),
             audience="operator_decision",
             operator_summary=(
-                f"{len(leaks)} ledger/statement-shaped file(s) committed; "
+                f"{len(leaks)} ledger/statement-shaped file(s) saved in the business repo; "
                 "move them into the private books vault or mark them as "
                 "fixtures."
             ),
             repair=(
                 "Move each file into .mb/private/books/ (solo-local) or "
-                "the private books repo, then `git rm --cached <file>` and "
-                "commit. Rotate the data if it is sensitive."
+                "the private books repo, then remove it from shared tracking "
+                "and save a checkpoint. Rotate the data if it is sensitive."
             ),
             evidence=leaks[:20],
         )

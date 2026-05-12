@@ -2059,8 +2059,8 @@ def test_build_git_summary_reads_in_business_language() -> None:
         ahead=None,
         behind=None,
     )
-    assert "On main" in on_main
-    assert "no uncommitted changes" in on_main
+    assert "main workspace" in on_main
+    assert "no unsaved local changes" in on_main
 
     on_branch = status_mod._build_git_summary(
         workflow_mode="branch",
@@ -2070,10 +2070,9 @@ def test_build_git_summary_reads_in_business_language() -> None:
         ahead=2,
         behind=1,
     )
-    assert "On branch `feature/x`" in on_branch
-    assert "3 uncommitted files" in on_branch
-    assert "ahead by 2" in on_branch
-    assert "behind by 1" in on_branch
+    assert "separate workspace" in on_branch
+    assert "3 unsaved local files" in on_branch
+    assert "local and shared saved work to reconcile" in on_branch
 
     detached = status_mod._build_git_summary(
         workflow_mode="detached",
@@ -2108,12 +2107,12 @@ def test_git_info_solo_on_main_without_remote(tmp_path: Path) -> None:
     assert info["behind"] is None
     assert info["summary"]
     assert "main" in info["summary"]
-    assert "uncommitted" in info["summary"]
+    assert "unsaved local" in info["summary"]
 
 
 def test_git_info_branch_without_upstream(tmp_path: Path) -> None:
     """Feature branch with no upstream should classify as branch, leave
-    ahead/behind null, and reference the branch name in the summary.
+    ahead/behind null, and use business-owner workspace language in the summary.
     Common state when an operator starts work but hasn't pushed yet."""
     repo = tmp_path / "branched"
     repo.mkdir()
@@ -2129,7 +2128,8 @@ def test_git_info_branch_without_upstream(tmp_path: Path) -> None:
     assert info["upstream"] == ""
     assert info["ahead"] is None
     assert info["behind"] is None
-    assert "feature/x" in info["summary"]
+    assert "separate workspace" in info["summary"]
+    assert "feature/x" not in info["summary"]
 
 
 def test_git_info_handles_non_git_directory(tmp_path: Path) -> None:
@@ -2167,7 +2167,7 @@ def test_status_ranked_actions_always_carry_audience_and_summary(
 
 def test_git_info_detects_linked_worktree(tmp_path: Path) -> None:
     """Conductor workspaces and `git worktree add` checkouts should report
-    workflow_mode='worktree' and a populated worktree_root."""
+    workflow_mode='worktree' internally and use operator-facing workspace copy."""
     main_repo = tmp_path / "main"
     main_repo.mkdir()
     assert _git(main_repo, "init", "-b", "main").returncode == 0
@@ -2184,4 +2184,4 @@ def test_git_info_detects_linked_worktree(tmp_path: Path) -> None:
     assert info["branch"] == "feature/x"
     assert info["default_branch"] == "main"
     assert info["worktree_root"] == str(worktree_path.resolve())
-    assert "worktree" in info["summary"].lower()
+    assert "separate workspace" in info["summary"]

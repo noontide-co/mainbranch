@@ -1,27 +1,31 @@
 ---
 name: mb-start
-description: "Main entry point for Main Branch. Detects state and routes to the right skill. Use when: user says start/help/begin, is new/returning/lost, opens Main Branch without a task, needs triage, wants to launch an offer, or asks where a sales video/VSL belongs. Routes to /mb-setup, /mb-think, /mb-bet, /mb-site, /mb-ads, /mb-organic, /mb-wiki, /mb-help, with /mb-vsl preserved as a compatibility router."
+description: "Main Branch business router. Detects repo facts, save/sync state, updates, readiness, and live operator intent, then routes to the right skill or CLI contract. Use when the user starts/returns, asks what to do, needs setup, bookkeeping/books, provider setup, save/checkpoint/sync help, repair/update guidance, launch routing, or help."
 loops: [sense, decide]
 ---
 
 # Start
 
-Single entry point for Main Branch. Detect user state, context level, experience — route to the right skill.
+Single entry point for Main Branch. Detect business state, current intent, save/sync posture, and the smallest useful next route.
 
 **Recommended workflow:** Start Claude in your business repo, run `/mb-start`. It handles everything. Claude Code discovers Main Branch through project-local `.claude/skills/mb-*` bridge links; `additionalDirectories` grants file access to the engine.
 
-## Output destinations and operator vocabulary
+## Router and language contract
 
-This skill routes to other skills; it does not write coordinated work itself.
-When summarizing repo state, count records under `pushes/` (current) and
-flag `campaigns/` separately as legacy compatibility — `mb status` and
-`mb doctor` already do this. If `core/vocabulary.md` defines display words
-(e.g. `terms.push.singular: drop`), speak the operator's word in
-conversation while still referring to engine paths in any commands.
+This skill routes; it is not the worker for coordinated output. Use
+[references/router-and-language.md](references/router-and-language.md) as the
+business router before presenting a menu.
 
-If the repo has legacy `campaigns/` records, surface the doctor warning
-and recommend `mb migrate campaigns --plan` as a triage option before
-routing the operator into a skill that creates new push work.
+Business language comes first. Say saved checkpoint, unsaved local work, catch
+up, sync, reconcile, shared repo, workspace, and provider readiness. Keep raw
+git terms, checkpoint ids, branch names, `origin`, `ahead`, `behind`, `rebase`,
+and `commit` out of the first response unless the user asks for technical detail
+or the exact command must be shown.
+
+When summarizing repo state, count records under `pushes/` (current) and flag
+`campaigns/` separately as legacy compatibility. If `core/vocabulary.md` defines
+display words, speak the operator's word in conversation while still using
+engine paths in commands.
 
 **Status facts first:** Once the business repo path is known, run
 `mb status --json --peek` before asking setup or routing questions. Treat that
@@ -31,11 +35,11 @@ integrations, GitHub issue/proposal facts, bets, dirty git, since-last-check, an
 the status report says a section is unavailable.
 
 **Continuity facts:** Use `since_last_check.journal`, top-level `journal`,
-dirty-git, GitHub activity, and `checkpoint` from status to explain "where we
-left off." Do not run raw `git log` unless status says journal facts are
-unavailable. If the operator asks to save progress, run `mb checkpoint --plan
---json`, validate with `mb checkpoint --validate "..." --json`, then after
-approval run `mb checkpoint --message "..." --yes`.
+GitHub activity, and `checkpoint` from status to explain "where we left off."
+Do not run raw `git log` unless status says journal facts are unavailable. If
+the operator asks to save progress, run `mb checkpoint --plan --json`, validate
+with `mb checkpoint --validate "..." --json`, then after approval run
+`mb checkpoint --message "..." --yes`.
 
 **Provider facts first:** When setup or routing depends on GitHub, Cloudflare,
 Google/Workspace, Meta Ads, or Apify, read the status `integrations` facts
@@ -65,6 +69,12 @@ ads with `/mb-ads`, and checkpoint approved artifacts.
 decision, load `.claude/reference/business-primitives/offer-bet-push-proof.md`
 and `.claude/reference/business-primitives/setup-patterns.md`; route by business
 meaning before suggesting file moves.
+
+**Books/finance routing:** When the user mentions bookkeeping, books, finance,
+accounting, ledgers, statements, P&L, chart of accounts, tax, payroll, hledger,
+or a private admin repo for numbers, run `mb books check --repo "$REPO_PATH"
+--json` before drafting files. Keep raw private finance records out of the
+team-safe business repo; use the books contract and `storage_mode`.
 
 **Slug/destructive-operation guardrails:** Load
 `.claude/reference/business-primitives/slug-conventions.md` before naming
@@ -136,13 +146,15 @@ before taking action.
 2. Run `mb status --json --peek`; status facts gate updates, repair, readiness,
    onboarding, ranked actions, and continuity.
 3. Use status-cited repair/update commands before routing into output work.
-4. Resume onboarding from status facts; in rich repos, read existing `core/`
+4. Route live intent through [references/router-and-language.md](references/router-and-language.md)
+   before showing a generic menu.
+5. Resume onboarding from status facts; in rich repos, read existing `core/`
    before asking bounded missing-profile questions.
-5. Resolve multi-offer context without reusing numbered choices or silently
+6. Resolve multi-offer context without reusing numbered choices or silently
    writing local state.
-6. Present one clear route set or infer intent: `/mb-think`, `/mb-bet`,
+7. Present one clear route set or infer intent: `/mb-think`, `/mb-bet`,
    `/mb-ads`, `/mb-organic`, `/mb-site`, `/mb-wiki`, `/mb-help`, or
-   `/mb-end`. Treat `/mb-vsl` as compatibility routing only.
+   `/mb-end`. `/mb-vsl` is a compatibility router only.
 
 ---
 
@@ -176,12 +188,12 @@ points at that section as unavailable, degraded, or needing repair.
 Use the `update` section from `mb status --json --peek`. **Do NOT silently
 swallow required updates.** Users on stale code get broken features.
 
-For normal users, updating is not a menu of package-manager commands. Do the
-update through the Main Branch product path: route to `/mb-update` when the user
-asked about updating, or run `mb update --repo . --json` yourself during
-`/mb-start` when status says the update is required. Only mention
-`pipx upgrade mainbranch` as a bootstrap fallback when `mb update` is
-unavailable or the installed version is `0.1.x`.
+For normal users, updating is not a package-manager menu. Strongly recommend a
+recommended update, and run or route to the cited command when the update is
+required. Name installed/latest versions and version distance when status gives
+them; use status or release highlights if present, but do not invent release
+notes. See [references/router-and-language.md](references/router-and-language.md)
+for the update posture.
 
 If `update.severity` is `required` or the top ranked action is an update action,
 run the cited command. When status does not cite a narrower command, use:
@@ -211,9 +223,14 @@ See **[references/repo-detection.md](references/repo-detection.md)** for the ful
 
 ---
 
-## Step 3: Pull Business Repo Updates
+## Step 3: Read Save/Sync State
 
-Once business repo is confirmed, pull its latest updates from `REPO_PATH`. See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** "Pull Business Repo Updates" section for the pull command and the result-handling table.
+Once the business repo is confirmed, use status `git`, `checkpoint`, and
+`since_last_check` facts to explain whether work is saved locally, unsaved
+locally, synced to the shared repo, or waiting for reconciliation. Do not
+blindly pull or rebase the business repo from `/mb-start`. See
+[references/router-and-language.md](references/router-and-language.md) for the
+save/sync vocabulary.
 
 ---
 
@@ -306,27 +323,14 @@ See [tool-status-audit.md](references/tool-status-audit.md) for the full procedu
 ## Step 6: Readiness Assessment
 
 Use `readiness` and `ranked_actions` from `mb status --json --peek` before
-routing. The legacy scoring rubric below is fallback detail for gaps that status
-does not expose yet.
+routing. The reference below is fallback detail for gaps that status does not
+expose yet.
 
 See [readiness-assessment.md](references/readiness-assessment.md) for complete scoring rubric, session state checks, soul health check, skill-specific requirements, and display format.
 
-### Quick summary:
-
-1. **Score core files** (soul, offer, audience, voice, testimonials, angles) on 0-3 scale each. Composite max = 18. Multi-offer: score active offer's files, not just core.
-2. **Check continuity state** -- status journal activity, active decisions, uncodified research, and saved/unsaved work.
-3. **Soul health check** — for returning users (last commit >3 days ago), read soul.md and ask: "Is your current work feeling like pull or push?" Skip for active or first-time users.
-4. **Gate routing** based on composite score:
-
-| Score | Status | Action |
-|-------|--------|--------|
-| 0-3 | EMPTY | Route to `/mb-setup` |
-| 4-7 | MINIMAL | Block output skills, route to `/mb-think` |
-| 8-11 | THIN | Warn before output skills, suggest `/mb-think` first |
-| 12-14 | GOOD | All skills, note gaps |
-| 15-18 | FULL | All skills available |
-
-Adapt display to `user.experience` level (beginner = full breakdown, advanced = score only). See reference file for details.
+Quick summary: status readiness gates setup, repair, and output skills; fallback
+scoring only fills missing detail. Adapt display to `user.experience` level
+without making the repo feel audited or behind.
 
 ---
 
@@ -420,13 +424,12 @@ to `/mb-think`.
 
 **Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[active offer or 'single']**"
 
-**Surface unread CHANGELOG entries before the menu**, present the triage route
-without reusing a number from recommendations or offers, and use the "while you
-wait" pattern when spawning agents. See
-**[references/triage-menu.md](references/triage-menu.md)** for the full menu,
-the CHANGELOG "what's new" banner format (diff'd against `last_seen_version`),
-the random "while you wait" filler lines, and rules for when to auto-suggest or
-skip triage.
+If the user stated intent, route directly using
+[references/router-and-language.md](references/router-and-language.md). If the
+session is open-ended, surface the top ranked action, the strongest update
+recommendation, or the compact route menu without reusing numbers from offers or
+recommendations. Use [references/triage-menu.md](references/triage-menu.md) only
+when the user wants prioritization or deep triage.
 
 ---
 
@@ -451,26 +454,15 @@ fast. If the user asks for a faster mode, offer to update local experience.
 
 ## Intent Keywords
 
-Auto-detect user intent and route. Skills: `/mb-update`, `/mb-help`, `/mb-setup`, `/mb-think`, `/mb-ads`, `/mb-organic`, `/mb-site`, `/mb-wiki`, `/mb-end`; `/mb-vsl` remains a compatibility router. Some skills spawn parallel subagents automatically.
+Auto-detect user intent through
+[references/router-and-language.md](references/router-and-language.md). Key
+clusters: save/checkpoint/sync, bookkeeping/books/finance, provider/tool setup,
+repair/update/drift, decide/codify/research, bets, launches, sites, ads, organic,
+wiki, and help.
 
-| Keywords | Route To |
-|----------|----------|
-| "what should I work on", "help me prioritize", "what to do next", "figure out what to work on", "deep triage" | Triage route (see [triage-agent.md](references/triage-agent.md)) |
-| "help", "confused", "stuck", "don't understand", "how do I" | `/mb-help` |
-| "new", "first time", "get started", "set up" | `/mb-setup` |
-| "add", "update", "more context", "new testimonials", "enrich" | `/mb-think codify` |
-| "research", "decide", "figure out", "explore", "mine", "mining", "competitors", "transcribe", "analyze this VSL", "extract the pitch", "script teardown", "objection mining" | `/mb-think` |
-| "content strategy", "pillars", "platforms", "cadence", "content plan", "distribution" | `/mb-think` |
-| "soul check", "is this still right", "feeling obligated", "pull or push" | `/mb-think codify` (soul.md review) |
-| "newsletter", "email", "beehiiv", "weekly email" | `/mb-think` for content strategy, then `/mb-organic` for social repurposing |
-| "ads", "copy", "static", "image ads", "video ads", "video ad script", "paid sales video", "long-form video ad", "review", "compliance" | `/mb-ads` |
-| "write a VSL", "sales video", "about page video", "landing page video", "pitch script", "embedded video"; literal "/mb-vsl" | `/mb-site` unless paid, teardown, or repurposing intent is explicit; `/mb-vsl` is a compatibility router |
-| "content", "reels", "tiktok", "organic", "carousel", "short clips from sales video", "repurpose this VSL" | `/mb-organic` |
-| "launch offer", "keyword gate then build", "offer launch", "/mb-start launch <offer>" | Use [references/launch-orchestration.md](references/launch-orchestration.md), then route to `/mb-think`, `/mb-site`, and `/mb-ads` as each step becomes current |
-| "site", "landing page", "lander", "minisite", "website", "one-pager", "spin up a site", "deploy site", "put this online", "I need a site", "publish site", "graduate my site", "add a CMS to my site" | `/mb-site` |
-| "wiki", "notes", "atomic", "wikilinks", "publish wiki" | `/mb-wiki` |
-| "pull", "update Main Branch", "get latest" | `/mb-update` |
-| "done", "wrapping up", "end my day", "closing out", "call it a day", "that's it" | `/mb-end` |
+Generic "set up" is not enough to route. Use the noun: repo setup routes to
+`/mb-setup`, bookkeeping setup runs `mb books check`, provider setup reads
+`mb connect`, and decision/tool setup routes to `/mb-think`.
 
 ---
 
@@ -484,7 +476,8 @@ treat business `.vip/local.yaml` as audit input only, and do not write it.
 
 ## References
 
-- [references/pull-engine-updates.md](references/pull-engine-updates.md) — Step 1 + Step 3 pull scripts and failure warnings
+- [references/router-and-language.md](references/router-and-language.md) — business router, save/sync language, update posture, and intent clusters
+- [references/pull-engine-updates.md](references/pull-engine-updates.md) — Step 1 engine update handling
 - [references/repo-detection.md](references/repo-detection.md) — Step 2 full CWD detection, migration, multi-repo selection, REPO_PATH, Main Branch wiring verification
 - [references/triage-menu.md](references/triage-menu.md) — Step 10 CHANGELOG banner, menu, "while you wait" pattern, auto-suggest/skip rules
 - [references/auto-heal.md](references/auto-heal.md) — Bridge link recovery

@@ -17,6 +17,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   progressive discovery, release-doc boundaries, and the local preference split,
   so maintainer-local preferences can stay short and private. Refs MAIN-330,
   #507.
+- Added an explicit `/mb-start` router and language contract covering live
+  intent routing, bookkeeping/books setup, provider setup, save/sync wording,
+  stronger update posture, and the rule that generic "set up" must not override
+  the user's specific business noun. Refs MAIN-333, #511.
+
+### Changed
+
+- Reframed `/mb-start`, `mb status` git summaries, `mb start` readiness repair,
+  and `mb books check` operator summaries around saved checkpoints, unsaved
+  local work, catching up, syncing, and reconciliation instead of defaulting to
+  raw commit/rebase/ahead/behind language. Refs MAIN-333, #511.
 
 ## [0.3.17] - 2026-05-12
 

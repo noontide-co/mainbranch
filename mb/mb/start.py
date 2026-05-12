@@ -159,8 +159,8 @@ def _build_checks(
             "severity": "warn",
             "detail": dirty_detail,
             "repair": (
-                "Review, commit, or stash local changes before handing substantive work "
-                "to an agent."
+                "Review, save a checkpoint, or set aside local changes before handing "
+                "substantive work to an agent."
             ),
         },
         {

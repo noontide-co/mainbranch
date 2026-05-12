@@ -77,26 +77,21 @@ and synthesis format.
 
 ## "While You Wait" Pattern
 
-Set expectations, then give them something to chew on:
+Set expectations, then keep the operator anchored in current business facts:
 
 > "Spinning up [1/2/3] analysis agents — this takes about **2-3 minutes**. They're reading your full reference, decisions, git history, and soul alignment so I can give you something actually useful.
 >
-> **Good news:** These run as sub-agents in their own context windows, so they won't eat into your session. You'll still have plenty of room for whatever comes next.
->
-> While we wait: [pick ONE at random per session]
-> - *The word 'decide' comes from Latin 'decidere' — literally 'to cut off.' Every decision is choosing what to let go of.*
-> - *Hemingway rewrote the ending of A Farewell to Arms 47 times. When asked why, he said: 'Getting the words right.'*
-> - *The best time to plant a tree was 20 years ago. The second best time is now.*
-> - *Your reference files are like compound interest — small deposits now, massive returns later.*
-> - *'If you can't explain it simply, you don't understand it well enough.' — Einstein. That's what codifying does.*
-> - *Fun fact: the average person mass-produces 50K+ words a day in their head. You're one of the few who actually filters those into something useful.*"
+> While that runs, here's the compact state I already trust:
+> - [top ranked action or stated intent]
+> - [main readiness or repair signal]
+> - [one continuity fact from journal/status]"
 
 ---
 
 ## When to Auto-Suggest / Skip Triage
 
 **Auto-suggest triage when:**
-- Returning user (last commit >3 days ago) and no stated intent
+- Returning user (last saved checkpoint or status journal event is older than 3 days) and no stated intent
 - Readiness is THIN (8-11) — "Triage can help you figure out the highest-leverage gap"
 - User says "what should I work on", "help me prioritize", "what to do next"
 
