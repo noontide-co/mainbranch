@@ -185,7 +185,7 @@ Provider-specific education is available when a job needs that rail:
 mb educational cloudflare-pages
 mb educational cal-com
 mb educational stripe
-mb educational beancount
+mb educational hledger
 mb educational forgejo
 ```
 

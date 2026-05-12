@@ -59,7 +59,7 @@ mb connect doctor --json
    web mining.
    - Connect when research or organic workflows need structured external data.
 
-6. **Specialized rails** - Cal.com, Stripe, Beancount, Forgejo, Postiz, and
+6. **Specialized rails** - Cal.com, Stripe, hledger, Forgejo, Postiz, and
    other tools.
    - These are chosen for a specific business job, not as a day-one checklist.
 

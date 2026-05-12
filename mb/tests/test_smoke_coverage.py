@@ -66,6 +66,8 @@ def test_educational_beginner_catalog_exists() -> None:
     from mb.educational import BEGINNER_CATALOG_TOPICS, load, topics
 
     assert set(BEGINNER_CATALOG_TOPICS).issubset(set(topics()))
+    assert "beancount" not in topics()
+    assert "hledger" in topics()
     for topic in BEGINNER_CATALOG_TOPICS:
         result = load(topic)
         assert result is not None

@@ -16,7 +16,6 @@ from mb.engine import engine_root
 
 BEGINNER_CATALOG_TOPICS = (
     "anti-cloud-backup",
-    "beancount",
     "cal-com",
     "cli-vs-dashboard",
     "cloudflare-pages",
@@ -26,6 +25,7 @@ BEGINNER_CATALOG_TOPICS = (
     "forgejo",
     "git-history-vs-cloud-sync",
     "github-vs-gdocs",
+    "hledger",
     "markdown-vs-notion",
     "provider-readiness",
     "stripe",

@@ -66,20 +66,20 @@ For raw sensitive material, choose a stricter home:
    business repo.
 4. Test restore before you trust any backup.
 
-## Where Beancount fits
+## Where hledger fits
 
-Beancount-style plain-text ledgers are useful because they are inspectable and
-versionable. That does not mean every ledger belongs in the shared business
+hledger plain-text journals are useful because they are inspectable and
+versionable. That does not mean every journal belongs in the shared business
 repo. A safe pattern is:
 
-- raw ledger and statements in a private finance repo;
+- real journals and statements in a private books vault or restricted books repo;
 - business-readable summaries in `core/finance/` or `log/`;
 - no account numbers, credentials, or customer-private rows in shared docs.
 
 See:
 
 ```bash
-mb educational beancount
+mb educational hledger
 ```
 
 ## What Main Branch does not claim
