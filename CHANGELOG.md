@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.18] - 2026-05-12
+
+v0.3.18 is a package-visible skill and operator-loop patch. It strengthens
+agent cold-start guidance, makes `/mb-start` a stronger business router,
+aligns setup guidance around checkpoint-first saves, and moves high-impact
+bundled skills toward a CLI-first contract while retiring stale compatibility
+aliases.
+
 ### Added
 
 - Added `docs/agent-cold-start.md` as the public source for agent read order,
@@ -24,6 +32,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Added `docs/system-architecture.md` and `docs/agent-writing-style.md` to the
+  public cold-start always-read set, and tightened the release-agent contract
+  with a cheap release-file preflight before expensive validation gates. Refs
+  MAIN-340, #521.
 - Reframed `/mb-start`, `mb status` git summaries, `mb start` readiness repair,
   and `mb books check` operator summaries around saved checkpoints, unsaved
   local work, catching up, syncing, and reconciliation instead of defaulting to
