@@ -5,7 +5,9 @@ business repo layout, primitives, schemas, artifact routing, and state
 boundaries. Product principles live in [ethos.md](ethos.md). Loop taxonomy
 lives in [operator-loops.md](operator-loops.md). Release direction lives in
 [roadmap.md](roadmap.md). The CLI surface lives in
-[the README](../README.md#for-contributors-and-power-users).
+[the README](../README.md#for-contributors-and-power-users). For a visual
+index over the system, see the
+[Main Branch system map](architecture/system-map.md).
 
 Older folder names live in [Superseded Names](#superseded-names) at the
 bottom. The rest of this doc describes the current model.
