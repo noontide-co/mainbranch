@@ -60,8 +60,8 @@ See `docs/system-architecture.md` (current path resolution) for the full algorit
 | `offer.md` (resolved) | Price, mechanism, benefits, guarantee | Required |
 | `audience.md` (resolved) | Pains, desires, demographics, psychographics | Required |
 | `core/voice.md` | Tone, phrases, personality, don'ts | Required |
-| `core/proof/testimonials.md` + offer testimonials | Named testimonials with outcomes | Required |
-| `core/proof/typicality.md` + offer typicality | Average-case outcome context | Recommended |
+| `core/proof/testimonials.md` + offer testimonials + `money_path.objects.proof.quality` | Testimonials plus factual outcome and offer-link signals | Required |
+| `core/proof/typicality.md` + offer typicality + `quality.typicality` facts | Average-case outcome context, caveats, common failure context, and time-to-outcome | Recommended |
 | `core/proof/angles/` | At least 1 angle file beyond README | Required |
 | `core/brand/visual-style.md` | Colors, typography, mood, prompt fragments | Optional (affects image gen) |
 
@@ -146,7 +146,7 @@ generating, route to `/mb-think` with the smallest useful target:
 |-----|---------------------------|
 | Thin audience language | Customer language mining from calls, surveys, support, onboarding, cancellations |
 | Missing objections | Review mining and sales-call objection extraction |
-| Thin proof | Permissioned testimonial pass plus `core/proof/typicality.md` for average-case context |
+| Generic or unlinked proof | Permissioned testimonial pass, explicit offer links, and `core/proof/typicality.md` for average-case context |
 | Empty angles | Competitor gap map and review/comment mining for new emotional territories |
 | No hook variety | Winning script teardown and content/comment mining |
 | Weak mechanism | Competitor mechanism map and offer codification |

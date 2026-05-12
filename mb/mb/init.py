@@ -356,7 +356,11 @@ multi-offer repo, `core/offer.md` is the portfolio thesis and
 `core/offers/<slug>/offer.md` holds per-offer truth. Company-wide proof belongs
 in `core/proof/`; offer-specific proof belongs in `core/offers/<slug>/proof/`.
 Use standard proof files such as `testimonials.md`, `typicality.md`, and
-`angles/` inside those proof folders.
+`angles/` inside those proof folders. Make proof status-detectable with
+structured testimonial fields such as `public`, `permissioned_public`,
+`approved_for_public`, `safe_to_share`, `offer`, `linked_offer`, and
+`linked_offers`. Use `typicality.md` for average-case outcomes, caveats,
+common failure context, and time-to-outcome when available.
 Content strategy starts at `core/content-strategy.md`. Keep it as the simple
 business-level strategy and index: what the business wants to be known for, who
 the content is for, pillars, content jobs, non-publishing rules, and links to
@@ -370,8 +374,9 @@ reference, then write concrete execution to `pushes/` and results to `log/`.
 customer progress, offer, proof, CTA, channel, push, playbook, page readiness,
 and outcome feedback are legible and connected. Use MoneyPath from
 `mb status --json --peek` for routing when the path needs to be legible,
-supported, connected, and instrumented, but do not claim the offer is good,
-bad, or likely to convert.
+supported, connected, and instrumented. Treat proof-quality fields as factual
+signals for badges or gaps, not persuasion scores; do not claim proof or offers
+are good, bad, high-converting, or likely to convert.
 A live idea can be both a bet and an offer candidate: open the bet first, then
 create or update the offer only when the operator wants durable sellable truth.
 

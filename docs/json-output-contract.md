@@ -58,6 +58,82 @@ playbook, page readiness, and outcome feedback. These facts describe whether
 the path is legible, supported, connected, and instrumented; they do not infer
 conversion quality, market strength, or strategic correctness.
 
+### MoneyPath Proof Quality
+
+`money_path.objects.proof` has two layers:
+
+- Component-level `level`, `status`, `summary`, `paths`, and `missing` describe
+  the proof component in the same gated MoneyPath scale as other components.
+- Nested `quality` describes factual proof signals that skills, dashboards, and
+  scripts can cite without inventing a persuasion score.
+
+`proof.status: structured` means standard proof files, parseable entries, or
+frontmatter exist. It does not mean each testimonial has outcome structure.
+Nested `proof.quality.structured_entries` means status found structured
+testimonial entries or frontmatter inside `testimonials.md`.
+
+Current `quality` shape:
+
+```json
+{
+  "testimonials": {
+    "total": 0,
+    "generic": 0,
+    "specific": 0,
+    "permissioned_public": 0,
+    "linked_to_offer": 0,
+    "with_before_state": 0,
+    "with_outcome": 0,
+    "with_timeframe": 0,
+    "with_metric": 0,
+    "with_mechanism": 0,
+    "with_objection": 0
+  },
+  "typicality": {
+    "exists": false,
+    "has_average_case": false,
+    "has_caveats": false,
+    "has_common_failure_context": false,
+    "has_time_to_outcome": false
+  },
+  "claim_links": {
+    "linked_offers": [],
+    "unsupported_offer_claims": []
+  },
+  "structured_entries": false,
+  "source_backed": false,
+  "instrumentation": {
+    "active_push": false,
+    "playbook": false,
+    "page_readiness": false,
+    "outcome_feedback": false
+  }
+}
+```
+
+Generic testimonials are real proof material, but they are not treated as
+specific, offer-linked, typicality-aware, or outcome-backed unless the relevant
+fields say so. Skills and dashboards should cite facts such as
+`permissioned_public`, `linked_to_offer`, `with_outcome`, `with_timeframe`,
+`with_metric`, `typicality.exists`, and
+`instrumentation.outcome_feedback`; those are factual signals, not persuasion
+scores.
+
+Dashboard-safe proof categories can be derived from these facts:
+
+- Missing proof: component `status` is `missing`.
+- Generic proof: testimonials exist, but `specific` is `0`.
+- Specific proof: `testimonials.specific` is greater than `0`.
+- Offer-linked proof: `testimonials.linked_to_offer` is greater than `0`.
+- Typicality-aware proof: `typicality.exists` is `true`.
+- Outcome-backed proof: `instrumentation.outcome_feedback` is `true`.
+
+Use factual copy such as "Proof exists, but it is generic", "Proof includes
+specific outcomes", "Proof is linked to an offer", "Proof has typicality
+context", or "Proof is connected to outcome feedback." Avoid claims such as
+"good proof", "bad proof", "high-converting proof", "ready to win", or
+"persuasive proof."
+
 ## First Migrated Surfaces
 
 The v1 envelope is present on:

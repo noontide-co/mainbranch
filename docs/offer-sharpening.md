@@ -20,8 +20,9 @@ Every offer should answer these ten questions:
 3. **Transformation:** the specific before-and-after, not a vague improvement.
 4. **Mechanism:** why this works, what changes, and what makes it different
    from the obvious alternative.
-5. **Proof:** evidence the claim is true, plus typicality and caveats when the
-   result is not guaranteed for everyone.
+5. **Proof:** evidence the claim is true, plus explicit offer linkage,
+   permission, typicality, caveats, common failure context, and time-to-outcome
+   when the result is not guaranteed for everyone.
 6. **Price/value logic:** why the ask makes sense for the outcome, speed,
    certainty, access, or saved cost.
 7. **Risk reversal:** what makes action safer: trial, refund, guarantee,

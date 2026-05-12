@@ -347,6 +347,8 @@ owned or organic assets have a clear job.
 `core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof in
 matching files under `core/offers/[active]/proof/`. Read older offer
 testimonial files as compatibility context only.
+Before outcome-claim or substantiation recommendations, read `money_path.objects.proof.quality`.
+Treat proof fields as factual signals, not scores; generic testimonials are proof material but not specific, offer-linked, typicality-aware, or outcome-backed unless those signals exist.
 
 **Offer argument:** `/mb-ads [mode] [offer] [campaign]` — e.g., `/mb-ads static community january-launch`
 If offer specified, it selects the offer for this run only.
@@ -362,8 +364,8 @@ Before creating ads, the business repo must have:
 | Offer | `core/offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | Yes |
 | Audience | `core/offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Yes |
 | Voice | `core/voice.md` (always core) | Yes |
-| Testimonials/proof | `core/proof/testimonials.md` + `core/offers/[active]/proof/testimonials.md` when present | Yes |
-| Typicality | `core/proof/typicality.md` + offer-specific typicality when present | Recommended |
+| Testimonials/proof | `core/proof/testimonials.md` + offer-specific proof + `money_path.objects.proof.quality` | Yes |
+| Typicality | `core/proof/typicality.md` + offer-specific typicality + `quality.typicality` facts | Recommended |
 | Angles | `core/proof/angles/*.md` | Yes (at least 1) |
 | Visual Style | `core/brand/visual-style.md` | Optional (affects image gen) |
 | Content Strategy | `core/content-strategy.md` plus relevant `core/marketing/...` and `core/people/...` layers | Optional (improves topic and amplification fit) |

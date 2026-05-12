@@ -30,7 +30,7 @@ For multi-offer setups, also explain:
 > "This is your brand-level offer.md — the umbrella story. It covers what your brand stands for across all offers. Each specific offer gets its own file in `core/offers/[name]/offer.md` with pricing, mechanism, and details."
 
 ### proof placement
-> "Proof goes where it can be reused safely. Company-wide testimonials go in `core/proof/testimonials.md`, average-case context in `core/proof/typicality.md`, and angles in `core/proof/angles/`. Proof that only supports one specific offer uses matching files under `core/offers/[name]/proof/`."
+> "Proof goes where it can be reused safely. Company-wide testimonials go in `core/proof/testimonials.md`, average-case context in `core/proof/typicality.md`, and angles in `core/proof/angles/`. Proof that only supports one specific offer uses matching files under `core/offers/[name]/proof/`. Use structured permission and offer-link fields when proof should be detectable by `mb status`."
 
 ### product-ladder.md
 > "product-ladder.md maps how your offers relate. Which one do people discover first? Where do they go next? This helps us create content and ads that guide people through your world."

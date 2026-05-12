@@ -39,7 +39,7 @@ The generation subagent picks the supporting pages that best serve **this** offe
 | `/pricing/` | Pricing card, what's included, conversion CTA | `offer.md` (pricing), conversion endpoint URL |
 | `/faq/` | Top objections answered, ordered by likelihood-of-asking | `audience.md` (objections), `offer.md` |
 
-A coaching offer often lands on home + how-it-works + proof + faq. A software offer often lands on home + how-it-works + pricing + faq. A services offer with strong proof might land on home + how-it-works + proof + pricing + faq. All valid.
+A coaching offer often lands on home + how-it-works + proof + faq. A software offer often lands on home + how-it-works + pricing + faq. A services offer with offer-linked proof might land on home + how-it-works + proof + pricing + faq. All valid.
 
 ### Required infrastructure pages
 

@@ -176,6 +176,8 @@ Use this report before asking additional questions:
 - `money_path` maps customer progress, offer, proof, CTA, channel, push,
   playbook, page readiness, and outcome feedback. Use levels, objects, and
   ranked actions as evidence; do not call the offer "good" or "will convert."
+  For proof, cite `money_path.objects.proof.quality` facts such as generic
+  testimonials, outcomes, offer linkage, typicality, and outcome feedback.
 - `readiness` gates whether setup/repair work must happen before output skills.
 - `drift.items` names stale or broken status signals and repair commands.
 - `onboarding.summary` and `onboarding.checklist` replace separate onboarding

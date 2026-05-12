@@ -122,6 +122,7 @@ both.
 **Proof files:** company-wide proof uses `core/proof/testimonials.md`,
 `core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof
 uses matching files under `core/offers/<slug>/proof/`.
+When codifying proof, make permission, offer-link, outcome, timeframe, metric, and typicality facts explicit so `money_path.objects.proof.quality` can see them.
 
 For a live idea, ask whether it is something to keep selling or something to
 test before deciding. Use `bets/` for the time-boxed wager, offer files for

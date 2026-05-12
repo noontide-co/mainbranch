@@ -157,6 +157,11 @@ account file; reference it.
 `core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof in
 matching files under `core/offers/[active]/proof/`. Read older offer
 testimonial files as compatibility context only.
+Before turning proof into posts, videos, or outcome claims, read
+`money_path.objects.proof.quality` from `mb status --json --peek`. Treat
+generic testimonials, specific outcomes, offer linkage, typicality context, and
+outcome feedback as factual signals. Do not describe proof as good,
+high-converting, persuasive, or ready to win.
 
 **Offer argument:** `/mb-organic video [offer] "concept"` — e.g., `/mb-organic video community "morning routine"`
 If offer specified, it selects the offer for this run only.

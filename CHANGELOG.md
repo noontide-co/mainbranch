@@ -48,6 +48,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Documented MoneyPath proof-quality facts for docs, bundled skills, generated
+  repo guidance, and future dashboard badges so agents cite factual proof
+  signals instead of subjective proof scores. Refs MAIN-347, #537.
 - Updated `/mb-start` and generated repo guidance so recommended Main Branch
   updates pause business routing, ask the operator whether to update first, and
   avoid burying update prompts under ranked actions. Refs MAIN-345, #532.

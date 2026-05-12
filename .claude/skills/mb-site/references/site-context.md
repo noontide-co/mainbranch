@@ -58,6 +58,10 @@ Accumulate proof: company-wide proof comes from `core/proof/testimonials.md`,
 `core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof
 comes from matching files under `core/offers/[active]/proof/`. Older offer
 testimonial files can be read as compatibility context.
+Before using proof in page claims, read `money_path.objects.proof.quality` from
+`mb status --json --peek`. Use it to distinguish generic proof, specific
+outcomes, offer-linked proof, typicality-aware proof, and outcome-backed proof.
+These are factual page-support signals, not conversion or persuasion scores.
 
 ## Required Business Context
 
@@ -67,7 +71,7 @@ testimonial files can be read as compatibility context.
 | Audience | `core/offers/[active]/audience.md` or `core/audience.md` | Yes |
 | Voice | `core/voice.md` | Recommended |
 | Soul | `core/soul.md` | Optional |
-| Testimonials | `core/proof/testimonials.md` plus offer-specific proof if present | Recommended |
+| Testimonials | `core/proof/testimonials.md` plus offer-specific proof and `money_path.objects.proof.quality` | Recommended |
 | Angles | `core/proof/angles/*.md` | Optional |
 | Content Strategy | `core/content-strategy.md` plus relevant `core/marketing/...` / `core/people/...` layers | Optional |
 | Skool Surfaces | `core/operations/funnel/skool-surfaces.md` | Optional for congruence |

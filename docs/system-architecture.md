@@ -130,6 +130,20 @@ Standard filenames: `testimonials.md` for individual permissioned testimonials,
 `typicality.md` for average-case outcome context, and `angles/` for durable
 messaging angles.
 
+Status-detectable testimonial structure can use frontmatter or structured
+entries with permission fields such as `public`, `permissioned_public`,
+`approved_for_public`, or `safe_to_share`. Offer linkage is explicit when proof
+lives under `core/offers/<slug>/proof/` or when a testimonial entry uses
+`offer`, `linked_offer`, or `linked_offers`. Loose prose can still be useful to
+the operator, but `mb status` only treats path placement and those structured
+fields as offer-link signals.
+
+Generic testimonials are still proof material. They should not be described as
+specific, offer-linked, typicality-aware, or outcome-backed unless the
+corresponding MoneyPath facts say so. `typicality.md` should record
+average-case outcomes, caveats, common failure context, and time-to-outcome
+when those facts are available.
+
 ### MoneyPath Status
 
 MoneyPath is a read-only `mb status` view over existing primitives, not a new
@@ -141,6 +155,12 @@ The score is gated. A missing CTA path, ambiguous active offer, or missing
 outcome feedback caps the overall level even when other files are rich. The CLI
 reports deterministic readiness facts; skills and operators still own offer
 strategy, conversion quality, and market judgment.
+
+Future dashboards can render proof badges or gaps from
+`money_path.objects.proof.quality`, such as generic proof, specific proof,
+offer-linked proof, typicality-aware proof, and outcome-backed proof. Those
+badges should cite the underlying facts rather than invent a separate
+persuasion score.
 
 ### Content Strategy
 

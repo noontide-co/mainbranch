@@ -9,7 +9,11 @@ when status reports that a section is unavailable/degraded.
 Do not mix this fallback 0-3 file score with MoneyPath's 0-5 path scale.
 MoneyPath reports whether customer progress, offer, proof, CTA, channel, push,
 playbook, page readiness, and outcome feedback are legible, supported,
-connected, and instrumented.
+connected, and instrumented. For proof, prefer
+`money_path.objects.proof.quality` facts over the fallback testimonial count:
+generic testimonials, specific outcomes, permissioned public signals, offer
+linkage, typicality context, and outcome feedback are factual signals, not
+proof scores.
 
 ---
 
@@ -607,10 +611,10 @@ Use these tables to determine the specific gap language for each file at each sc
 
 | Score | What's Missing | Actionable Gap | Question to Ask |
 |-------|---------------|----------------|-----------------|
-| 0 | File doesn't exist | "No testimonials. /mb-ads and conversion outputs are dramatically weaker without proof." | "Do you have any testimonials, screenshots, DMs, or reviews? Even 2-3 is a strong start." |
-| 1 | <5 testimonials | "[N] testimonials. More variety = more angles for ads." | "Any testimonials that specifically mention [the transformation from offer.md]? Those are highest value." |
-| 2 | 5-10 testimonials | "Good proof base. Consider: are there testimonials that support each angle in proof/angles/?" | "Which of your testimonials surprises you most? Which one do people respond to when you share it?" |
-| 3 | Strong (10+) | "Strong proof base." | No question unless typicality.md is missing: "You have strong testimonials but no typicality data. For FTC-safe outcome claims, we'd need average results." |
+| 0 | File doesn't exist | "No reusable testimonials found." | "Do you have any permissioned testimonials, screenshots, DMs, or reviews we can save as proof material?" |
+| 1 | <5 testimonials | "[N] testimonials found. Check MoneyPath before using them for outcome claims." | "Do any testimonials mention a specific outcome, timeframe, metric, or offer?" |
+| 2 | 5-10 testimonials | "[N] testimonials found. Check whether proof is permissioned, offer-linked, and supported by typicality context." | "Which testimonials are approved for public use, and which offer does each one support?" |
+| 3 | 10+ testimonials | "10+ testimonials found. Use MoneyPath proof-quality facts before calling them specific, offer-linked, or outcome-backed." | If `typicality.md` is missing: "You have testimonials, but no average-case context. What typical outcome, caveat, common failure case, or time-to-outcome can we document?" |
 
 ### angles/ (proof/angles/)
 

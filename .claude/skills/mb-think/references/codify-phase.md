@@ -168,8 +168,10 @@ After codifying, show summary. Use offer-qualified paths when in multi-offer mod
 `core/offers/[active]/`. Brand-level truth goes to `core/`. Company-wide proof
 uses `core/proof/testimonials.md`, `core/proof/typicality.md`, and
 `core/proof/angles/`; offer-specific proof uses matching files under
-`core/offers/[active]/proof/`. If the change is still being tested, update or
-open a bet instead of rewriting durable offer truth. If unsure, ask the user.
+`core/offers/[active]/proof/`. Use structured permission and offer-link fields
+when testimonials should be detectable by `mb status`. If the change is still
+being tested, update or open a bet instead of rewriting durable offer truth. If
+unsure, ask the user.
 
 **Compatibility bridges:** In current repos, `reference/core` points at
 `core/` and `reference/offers` points at `core/offers/`. These are aliases for
@@ -240,8 +242,8 @@ research source and the evergreen reference separate. Raw extracts stay in
 | Repeated customer phrases, pains, objections | `core/audience.md` or offer-specific `audience.md` |
 | Identity language, named enemies, phrases to use/avoid | `core/voice.md` |
 | New emotional entry point or competitor gap | `core/proof/angles/*.md` |
-| Permissioned individual testimonial with context | `core/proof/testimonials.md` |
-| Average outcomes, typical timelines, caveats, common failures | `core/proof/typicality.md` |
+| Permissioned individual testimonial with outcome, timeframe, metric, or offer context | `core/proof/testimonials.md` |
+| Average-case outcomes, typical timelines, caveats, common failure context | `core/proof/typicality.md` |
 | Proof that applies only to one offer | `core/offers/<slug>/proof/` |
 | Hook pattern, content framework, platform cue, comment insight | `core/content-strategy.md` |
 | Mechanism story, pricing/distribution vulnerability | `core/offer.md` or offer-specific `offer.md` |
