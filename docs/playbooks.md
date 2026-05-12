@@ -31,6 +31,10 @@ back into the business repo's durable memory:
   testimonials, proof angles, and typicality context;
 - `core/content-strategy.md` or other strategy files when the discovery changes
   channel strategy, positioning, or launch cadence;
+- `core/marketing/channels/<channel>.md`,
+  `core/marketing/accounts/<platform>-<account>.md`, or
+  `core/people/<person>.md` when the discovery changes platform rules, account
+  strategy, person voice source material, stories, or fabrication boundaries;
 - `decisions/` when the operator chooses a durable rule or tradeoff.
 
 If the operator has not approved a core edit yet, the run record should include
@@ -122,3 +126,25 @@ A submitted playbook should make clear whether it is:
 Current validation focuses on push playbook run records under `pushes/`.
 Reusable playbook taxonomy and attribution may become stricter as more
 community methods are added.
+
+## Content Playbooks And Freshness
+
+Recurring content workflows should read the layered content strategy model by
+reference instead of copying it into the playbook. A weekly X or LinkedIn
+workflow can read `core/content-strategy.md`,
+`core/marketing/distribution-strategy.md`,
+`core/marketing/channels/<channel>.md`,
+`core/marketing/accounts/<platform>-<account>.md`,
+`core/people/<person>.md`, recent pushes, recent logs, and current bets before
+drafting the queue.
+
+If a content playbook depends on a fast-changing platform, keep a lightweight
+freshness block: `last_reviewed`, owner, update trigger, source links, recent
+learnings, and what changed since the last review. The block can live in the
+channel or account strategy file, the reusable playbook, or the push playbook
+run record depending on where the lesson belongs.
+
+Do not use a playbook as hidden posting authority. Scheduling, publishing,
+replying, DMing, spending, or account mutation stays manual or provider-native
+until a separate adapter has accepted docs, tests, approval gates, and smoke
+evidence.

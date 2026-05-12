@@ -52,6 +52,11 @@ my-business/
 │   ├── offers/
 │   ├── proof/
 │   ├── brand/
+│   ├── marketing/
+│   │   ├── distribution-strategy.md
+│   │   ├── channels/
+│   │   └── accounts/
+│   ├── people/
 │   ├── strategy/
 │   ├── operations/
 │   └── finance/
@@ -136,6 +141,35 @@ The score is gated. A missing CTA path, ambiguous active offer, or missing
 outcome feedback caps the overall level even when other files are rich. The CLI
 reports deterministic readiness facts; skills and operators still own offer
 strategy, conversion quality, and market judgment.
+
+### Content Strategy
+
+The content operating model lives in
+[`docs/content-strategy.md`](content-strategy.md). Keep
+`core/content-strategy.md` as the simple business-level strategy and index.
+It answers what the business wants to be known or recommended for, who the
+content is for, which pillars and content jobs matter, and what not to publish.
+
+Use advanced layers only when the operator needs them:
+
+```text
+core/marketing/distribution-strategy.md
+core/marketing/channels/<channel>.md
+core/marketing/accounts/<platform>-<account>.md
+core/people/<person>.md
+```
+
+`core/marketing/distribution-strategy.md` coordinates blog, wiki, changelog,
+email, social, communities, partners, and paid amplification. Channel files
+record platform norms and update triggers. Account files record account-specific
+audience, voice reference, cadence, content mix, CTA path, and allowed topics.
+Person files hold founder/person voice source material, beliefs, stories, proof,
+and fabrication boundaries. `core/voice.md` remains the brand voice contract.
+
+Specific execution still belongs in `pushes/<YYYY-MM-DD-slug>/`, and results
+or lessons land in `log/`, a push review log, research, decisions, or core
+updates. Do not duplicate publishable site/blog/wiki content into the business
+repo's operating strategy.
 
 ### `research/`
 
@@ -411,7 +445,8 @@ provider data records what happened
 research / decision / log captures what we learned or changed
 ```
 
-- Strategy lives in `core/content-strategy.md` or `core/strategy/...`.
+- Strategy lives in `core/content-strategy.md`, `core/marketing/...`, or
+  `core/strategy/...`.
 - Offers live in `core/offer.md` and `core/offers/<slug>/offer.md`.
 - Bets live in `bets/...` and can link to one or more pushes.
 - Pushes link back to bets, offers, decisions, research, and strategy.

@@ -17,6 +17,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   under `money_path.objects.offer` and `money_path.objects.proof`, including
   generic vs. specific testimonials, offer-linked proof, typicality signals,
   and proof boundary warnings. Refs MAIN-341, #523.
+- Added a layered content strategy model for business repos covering
+  business-level content strategy, distribution strategy, channel strategy,
+  account strategy, founder/person voice files, content playbook freshness,
+  pushes, logs, and skill routing. Refs MAIN-337, #517.
 - Added MoneyPath readiness facts to `mb status --json --peek`, giving skills
   and scripts a read-only, gated view of customer progress, offer, audience,
   proof, product ladder, CTA, channel, push, playbook, page readiness, and
