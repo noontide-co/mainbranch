@@ -85,16 +85,20 @@ Use this sequence:
    recover wording.
 2. Compare each run against `docs/release-simulations.md` transcript-review
    categories and the manifest's `must_observe` / `must_not` rubric.
-3. Classify each miss as hard failure, quality concern, or product opportunity.
+3. Review in two layers: first confirm deterministic proof, then read the
+   transcript as an operator session and ask what product affordance, wording,
+   repair path, JSON field, fixture, or evidence template would make the next
+   run naturally better.
+4. Classify each miss as hard failure, quality concern, or product opportunity.
    Name the likely fix type: skill prose, generated repo guidance, CLI gap,
    docs gap, harness gap, runtime behavior, or user education.
-4. Route public product gaps to GitHub issues. Use `Closes #N` only when a PR
+5. Route public product gaps to GitHub issues. Use `Closes #N` only when a PR
    fully resolves the public issue; use `Refs #N` for partial slices.
-5. Keep private local runtime logs, raw transcripts, local machine details, and
+6. Keep private local runtime logs, raw transcripts, local machine details, and
    maintainer-only notes out of GitHub and public docs. If the synced Linear
    issue needs that context, add a Linear-only comment; otherwise keep it in
    private local scratch space.
-6. Update `docs/release-simulations.md`, the packaged simulation manifest, or
+7. Update `docs/release-simulations.md`, the packaged simulation manifest, or
    the dogfood harness only when the audit finds a repeatable gap that should
    protect future releases.
 

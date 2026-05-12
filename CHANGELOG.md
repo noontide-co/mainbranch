@@ -21,6 +21,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   fresh sessions, categorized permission-denial summaries, direct read-only
   `mb books check` / `mb educational` allowlist coverage, and prompt
   guardrails against shell-wrapped parsing in proxy runs. Refs MAIN-342, #526.
+- Added explicit two-layer transcript review guidance so release audits check
+  deterministic proof first, then mine the agent transcript for product
+  opportunities, repair gaps, and avoidable operator friction. Refs MAIN-342,
+  #526.
 - Added a Mermaid-powered Main Branch system map with source-of-truth tables
   for architecture boundaries, provider rails, private data, validation, and
   runtime stance. Refs MAIN-339, #519.
