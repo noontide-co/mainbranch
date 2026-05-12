@@ -28,6 +28,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   and `mb books check` operator summaries around saved checkpoints, unsaved
   local work, catching up, syncing, and reconciliation instead of defaulting to
   raw commit/rebase/ahead/behind language. Refs MAIN-333, #511.
+- Aligned `/mb-setup` save and review guidance with the shipped
+  checkpoint-first business-repo contract, replacing stale raw save examples
+  and default AI attribution trailers with `mb checkpoint` planning,
+  validation, and approval language. Refs MAIN-334, #513.
 
 ## [0.3.17] - 2026-05-12
 

@@ -1,252 +1,131 @@
-# Git Workflow
+# Save And Review Workflow
 
-GitHub CLI best practices for Main Branch repos.
+Use this reference when `/mb-setup` needs to explain how business-repo work is
+saved, synced, or shared for review.
+
+Main Branch uses git underneath, but the operator should hear business language
+first:
+
+| Technical layer | Operator language |
+| --- | --- |
+| tracked history | saved checkpoints |
+| changed files | unsaved local work |
+| remote update | shared repo update |
+| pull request | proposal / review conversation |
+| branch or worktree | workspace |
 
 ---
 
-## Always Use Git
+## Setup Saves
 
-Every Main Branch business repo should be version controlled. Git provides:
+During setup, use `mb checkpoint` for business-repo saves. Do not ask the
+operator to stage files or write raw save commands.
 
-- History of all changes
-- Ability to revert mistakes
-- Collaboration with team members
-- Backup of your business knowledge
-
----
-
-## Initial Setup
+After the operator approves the created or changed files:
 
 ```bash
-# If starting fresh
-git init
-git add -A
-git commit -m "[init] Bootstrap business repo with Main Branch structure"
+mb checkpoint --plan --json
+mb checkpoint --validate "[added] initial business repo foundation" --json
+mb checkpoint --message "[added] initial business repo foundation" --yes
+```
 
-# Connect to GitHub (optional but recommended)
+Use the subject proposed by `mb checkpoint --plan` when it is good. If you need
+to choose, use lower-case, past-tense business verbs:
+
+- `[added]` for new durable context or setup files;
+- `[updated]` for changed business context;
+- `[decided]` for accepted setup decisions;
+- `[connected]` for provider readiness that is now usable;
+- `[ran]` for setup maintenance, migrations, imports, or checks;
+- `[fixed]` for repaired wiring, links, or setup state.
+
+Avoid engine-contributor subjects such as `[add]`, `[update]`, `[fix]`, or
+`[refactor]` in business repos. Those are for this engine repository, not the
+operator's business history.
+
+Do not add AI attribution trailers by default. Add an `Agent:` trailer only when
+it changes how future readers should interpret generated copy, generated site
+code, synthetic research, or compliance review.
+
+---
+
+## Common Setup Moments
+
+Initial setup:
+
+```bash
+mb checkpoint --plan --json
+mb checkpoint --validate "[added] initial business repo foundation" --json
+mb checkpoint --message "[added] initial business repo foundation" --yes
+```
+
+After a context batch changes core files:
+
+```bash
+mb checkpoint --plan --json
+mb checkpoint --validate "[updated] core business context" --json
+mb checkpoint --message "[updated] core business context" --yes
+```
+
+After a provider becomes usable:
+
+```bash
+mb checkpoint --plan --json
+mb checkpoint --validate "[connected] GitHub" --json
+mb checkpoint --message "[connected] GitHub" --yes
+```
+
+After a multi-offer restructure:
+
+```bash
+mb checkpoint --plan --json
+mb checkpoint --validate "[updated] offer structure" --json
+mb checkpoint --message "[updated] offer structure" --yes
+```
+
+If `mb checkpoint --plan` reports blockers, stop and explain the blocker in
+plain language before trying to save.
+
+---
+
+## Sync And Review
+
+If the operator asks to sync saved work, first read the current facts:
+
+```bash
+mb status --json --peek
+```
+
+Use the `git.summary`, `git.workflow_mode`, `git.ahead`, and `git.behind` facts
+to explain whether work is:
+
+- saved locally but not synced;
+- waiting to catch up with the shared repo;
+- waiting for local and shared saved work to be reconciled;
+- ready to share as a proposal/review conversation.
+
+The planned `mb publish --plan` command and packaged publish skill are not
+shipped yet. Do not promise them. If the operator needs a proposal today, use
+the available GitHub tooling only after explaining the path and getting
+approval.
+
+---
+
+## GitHub Setup
+
+GitHub is optional but recommended for shared backup, tasks, and proposals.
+Check readiness from the business repo:
+
+```bash
+mb connect doctor --json
+```
+
+Creating a private GitHub repo is a setup/provider step, not a substitute for
+checkpointing approved business changes. Prefer private visibility unless the
+repo is intentionally public:
+
+```bash
 gh repo create [business-name] --private --source=. --push
 ```
 
----
-
-## Commit Message Format
-
-Always use this format:
-
-```
-[type] Brief description (50 chars max)
-
-- Detail 1
-- Detail 2
-- Detail 3
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-```
-
-### Types
-
-| Type | Use For |
-|------|---------|
-| `[init]` | Initial repo setup |
-| `[add]` | New files, features, content |
-| `[update]` | Changes to existing files |
-| `[fix]` | Bug fixes, corrections |
-| `[refactor]` | Restructuring without changing behavior |
-| `[docs]` | Documentation only changes |
-| `[remove]` | Deleting files |
-| `[research]` | Adding research files |
-| `[decision]` | Adding decision files |
-
-### Examples
-
-**Initial setup:**
-```
-[init] Bootstrap business repo with Main Branch structure
-
-- Created core/ (soul, offer, audience, voice)
-- Created core/proof/ (testimonials, angles)
-- Created core/operations/products/
-- Drafted CLAUDE.md and README.md
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-```
-
-**Adding content:**
-```
-[add] Customer testimonials from Q4 reviews
-
-- Added 12 new testimonials to proof/testimonials.md
-- Created 2 new angles: gift-giving.md, comfort-fit.md
-- Updated audience.md with new customer language
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-```
-
-**Research:**
-```
-[research] Pinterest strategy analysis
-
-- Added research/2026-01-15-pinterest-strategy-gemini.md
-- Key finding: CTR below benchmark, needs content diversification
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-```
-
-**Decision:**
-```
-[decision] Adopt lunar email calendar
-
-- Added decisions/2026-01-15-lunar-email-strategy.md
-- Decided: New/Full moon timing for campaigns
-- Rejected: Traditional sale calendar
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-```
-
----
-
-## Using HEREDOC for Commits
-
-Always use HEREDOC for multi-line commit messages to ensure proper formatting:
-
-```bash
-git commit -m "$(cat <<'EOF'
-[type] Brief description
-
-- Detail 1
-- Detail 2
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-EOF
-)"
-```
-
-**Why HEREDOC?**
-- Preserves line breaks
-- Handles special characters
-- Works reliably across systems
-
----
-
-## Staging Best Practices
-
-```bash
-# Stage everything
-git add -A
-
-# Stage specific files
-git add core/offer.md core/audience.md
-
-# Stage by folder
-git add core/proof/
-
-# Check what's staged
-git status
-```
-
----
-
-## Common Workflows
-
-### After Context Dump Session
-
-```bash
-git add -A
-git status  # Review changes
-git commit -m "$(cat <<'EOF'
-[update] Incorporate new business context
-
-- Updated offer.md with new pricing
-- Added 5 testimonials from customer calls
-- Created mechanism.md angle
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-EOF
-)"
-```
-
-### After Research Session
-
-```bash
-git add research/
-git commit -m "$(cat <<'EOF'
-[research] Competitor analysis for Q1
-
-- Added research/2026-01-20-competitor-analysis-gemini.md
-- Analyzed 5 competitors' positioning
-- Identified gap in [specific area]
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-EOF
-)"
-```
-
-### After Output Generation
-
-```bash
-git add pushes/
-git commit -m "$(cat <<'EOF'
-[add] January email campaign batch
-
-- Generated 4 welcome sequence emails
-- Created 2 promotional emails for lunar drop
-- All using Devon Voice system
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-EOF
-)"
-```
-
----
-
-## Safety Rules
-
-1. **Never force push to main** — Protect your history
-2. **Commit frequently** — Small, logical commits
-3. **Check status before commit** — Review what's staged
-4. **Use descriptive messages** — Future you will thank you
-5. **Include Co-Authored-By** — Credit AI assistance
-
----
-
-## GitHub CLI Reference
-
-```bash
-# Check GitHub readiness from the business repo
-mb connect doctor --json
-
-# Create private repo and push
-gh repo create [name] --private --source=. --push
-
-# View repo in browser
-gh repo view --web
-
-# Create pull request (if using branches)
-gh pr create --title "Title" --body "Description"
-```
-
----
-
-## .gitignore Recommendations
-
-```gitignore
-# OS files
-.DS_Store
-Thumbs.db
-
-# Editor files
-.vscode/
-.idea/
-
-# Environment
-.env
-*.env.local
-
-# Temporary
-*.tmp
-*.log
-
-# Large media (store elsewhere)
-*.mp4
-*.mov
-```
+Use `/mb-help` for beginner GitHub questions.

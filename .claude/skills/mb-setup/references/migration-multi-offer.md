@@ -50,19 +50,15 @@ If `core/offer.md` exists and no `offers/` folder: this is a migration.
 7. **Write `core/product-ladder.md`:**
    > "How do these offers relate? Is there a natural progression?"
 
-8. **Commit atomically:**
+8. **Save the restructure as a checkpoint:**
    ```bash
-   git add -A
-   git commit -m "[refactor] Migrate to multi-offer structure
-
-   - Moved existing offer to offers/[existing-name]/
-   - Created brand-level core/offer.md
-   - Added offers/[new-name]/
-   - Created product-ladder.md
-   - Selected an active offer for this session; local persistence requires approval
-
-   Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+   mb checkpoint --plan --json
+   mb checkpoint --validate "[updated] offer structure" --json
+   mb checkpoint --message "[updated] offer structure" --yes
    ```
+
+   Summarize the changed offer files and any blockers from the checkpoint plan.
+   Save only after operator approval.
 
 9. **Confirm:**
    > "Migration complete. You now have [N] offers. `/mb-start` will ask which offer to work on each session. Run `/mb-start [offer-name]` to jump straight to one."

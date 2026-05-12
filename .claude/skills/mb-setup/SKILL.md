@@ -316,23 +316,18 @@ Simple human-readable overview:
 - How to use the repo with Main Branch
 - Quick stats
 
-### 9. Initial Commit
+### 9. Initial Saved Checkpoint
 
 ```bash
-git add -A
-git commit -m "$(cat <<'EOF'
-[init] Bootstrap business repo with Main Branch structure
-
-- Created core/ (soul, offer, audience, voice)
-- Created core/offers/ (per-offer specifics)
-- Created core/proof/ (testimonials, angles)
-- Created core/operations/ ([business-type] specific)
-- Drafted CLAUDE.md and README.md
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-EOF
-)"
+mb checkpoint --plan --json
+mb checkpoint --validate "[added] initial business repo foundation" --json
+mb checkpoint --message "[added] initial business repo foundation" --yes
 ```
+
+Summarize the plan first, including changed surfaces/files and any blockers.
+Save only after operator approval. Use `mb checkpoint --plan`'s proposed
+subject when it is good; otherwise use a business-readable checkpoint subject
+from `references/git-workflow.md`.
 
 ### 10. Report Gaps
 
@@ -358,9 +353,16 @@ Ask user for missing pieces or note for later.
 
 ---
 
-## Git Workflow
+## Save And Review Workflow
 
-Format: `[type] Brief description` with Co-Authored-By line. Types: `[init]`, `[add]`, `[update]`, `[fix]`, `[refactor]`, `[docs]`. See `references/git-workflow.md` for full guide.
+Use `mb checkpoint --plan`, `mb checkpoint --validate`, and
+`mb checkpoint --message ... --yes` for business-repo saves. Use lower-case,
+past-tense checkpoint verbs such as `[added]`, `[updated]`, `[decided]`,
+`[connected]`, `[ran]`, or `[fixed]`. Pull requests are proposals or review conversations.
+The planned `mb publish --plan` command and packaged publish
+skill are not shipped yet, so do not promise them.
+
+See `references/git-workflow.md` for the full guide.
 
 ---
 
@@ -372,7 +374,7 @@ Format: `[type] Brief description` with Co-Authored-By line. Types: `[init]`, `[
 - **Context Gathering:** `references/context-gathering.md` — Checklists by business type, completeness criteria
 - **Templates:** `references/templates.md` — All file templates
 - **CLAUDE.md Guide:** `references/claude-md-guide.md` — How to draft a good CLAUDE.md
-- **Git Workflow:** `references/git-workflow.md` — Commit messages and CLI usage
+- **Save and Review Workflow:** `references/git-workflow.md` — Checkpoint-first saves, sync language, and proposal/review guidance
 - **Repo Scaffolding:** `references/repo-scaffolding.md` — API keys, config.yaml, .gitignore
 - **Multi-Offer Migration:** `references/migration-multi-offer.md` — Single to multi-offer migration
 
