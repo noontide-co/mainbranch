@@ -131,6 +131,93 @@ CHANNEL_KEYWORDS = (
     "ads",
     "search",
 )
+PROOF_BEFORE_KEYWORDS = (
+    "before",
+    "previously",
+    "used to",
+    "started with",
+    "came in",
+    "stuck",
+)
+PROOF_OUTCOME_KEYWORDS = (
+    "after",
+    "outcome",
+    "result",
+    "shipped",
+    "booked",
+    "won",
+    "increased",
+    "reduced",
+    "saved",
+)
+PROOF_TIMEFRAME_KEYWORDS = (
+    "time to outcome",
+    "within",
+    "deadline",
+    "review period",
+)
+PROOF_METRIC_KEYWORDS = (
+    "%",
+    "$",
+    "revenue",
+    "calls",
+    "signups",
+    "leads",
+    "conversion",
+    "sales",
+    "hours",
+)
+PROOF_MECHANISM_KEYWORDS = (
+    "mechanism",
+    "method",
+    "process",
+    "because",
+    "using",
+    "through",
+    "workflow",
+)
+PROOF_OBJECTION_KEYWORDS = (
+    "objection",
+    "concern",
+    "skeptical",
+    "worried",
+    "hesitated",
+    "trust",
+    "time",
+    "price",
+)
+PROOF_PERMISSION_KEYWORDS = (
+    "permissioned",
+    "approved for public",
+    "public: true",
+    "safe to share",
+)
+PROOF_AVERAGE_CASE_KEYWORDS = (
+    "average",
+    "median",
+    "typical",
+    "most users",
+    "usual",
+    "common case",
+)
+PROOF_CAVEAT_KEYWORDS = ("caveat", "constraint", "not guaranteed", "depends", "varies")
+PROOF_FAILURE_CONTEXT_KEYWORDS = (
+    "failure",
+    "fails",
+    "does not work",
+    "doesn't work",
+    "when this breaks",
+    "poor fit",
+)
+PROOF_SOURCE_KEYWORDS = (
+    "source",
+    "customer language",
+    "sales call",
+    "interview",
+    "conversion",
+    "outcome log",
+    "recorded",
+)
 
 
 def _utc_now() -> datetime:
@@ -621,6 +708,170 @@ def _keyword_hits(text: str, groups: dict[str, tuple[str, ...]]) -> list[str]:
 def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
     lowered = text.lower()
     return any(keyword in lowered for keyword in keywords)
+
+
+def _markdown_body_without_frontmatter(text: str) -> str:
+    lines = text.splitlines()
+    if lines and lines[0].strip() == "---":
+        for index, line in enumerate(lines[1:], start=1):
+            if line.strip() == "---":
+                return "\n".join(lines[index + 1 :]).strip()
+    return text.strip()
+
+
+def _offer_slug_from_path(path: str) -> str:
+    match = re.match(r"core/offers/([^/]+)/offer\.md$", path)
+    return match.group(1) if match else ""
+
+
+def _proof_linked_offer_refs(repo: Path, proof_path: str) -> set[str]:
+    meta = _read_frontmatter(repo / proof_path)
+    refs = set(_coerce_string_list(meta.get("offer")))
+    refs.update(_coerce_string_list(meta.get("linked_offers")))
+    match = re.match(r"core/offers/([^/]+)/proof/", proof_path)
+    if match:
+        refs.add(f"core/offers/{match.group(1)}/offer.md")
+    return {ref for ref in refs if ref}
+
+
+def _testimonial_entries(text: str, meta: dict[str, Any]) -> list[str]:
+    entries: list[str] = []
+    frontmatter_entries = meta.get("testimonials")
+    if isinstance(frontmatter_entries, list):
+        for item in frontmatter_entries:
+            if isinstance(item, dict):
+                entries.append(json.dumps(item, sort_keys=True))
+            elif isinstance(item, str) and item.strip():
+                entries.append(item.strip())
+    body = _markdown_body_without_frontmatter(text)
+    sections = [
+        section.strip()
+        for section in re.split(r"(?m)^#{2,6}\s+", body)
+        if section.strip() and len(section.strip()) >= 20
+    ]
+    if len(sections) > 1:
+        entries.extend(sections)
+    else:
+        list_entries = [
+            line.strip(" >-*")
+            for line in body.splitlines()
+            if re.match(r"^\s*(?:[-*]\s+|>\s*)", line) and len(line.strip(" >-*")) >= 20
+        ]
+        if list_entries:
+            entries.extend(list_entries)
+        else:
+            cleaned = "\n".join(
+                line for line in body.splitlines() if not line.strip().startswith("#")
+            ).strip()
+            if len(cleaned) >= 20:
+                entries.append(cleaned)
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for entry in entries:
+        key = entry.strip()
+        if key and key not in seen:
+            deduped.append(key)
+            seen.add(key)
+    return deduped
+
+
+def _proof_text_has_timeframe(text: str) -> bool:
+    lowered = text.lower()
+    return bool(re.search(r"\b\d+\s+(?:day|days|week|weeks|month|months)\b", lowered)) or any(
+        keyword in lowered for keyword in PROOF_TIMEFRAME_KEYWORDS
+    )
+
+
+def _proof_text_has_metric(text: str) -> bool:
+    lowered = text.lower()
+    return bool(
+        re.search(r"(?:\d+%|\$\d+|\b\d+\s+(?:calls|signups|leads|sales|hours)\b)", lowered)
+    ) or any(keyword in lowered for keyword in PROOF_METRIC_KEYWORDS)
+
+
+def _testimonial_signal_counts(
+    entries: list[str],
+    *,
+    linked_offer_refs: set[str],
+    offer_paths: list[str],
+) -> dict[str, int]:
+    counts = {
+        "total": len(entries),
+        "generic": 0,
+        "specific": 0,
+        "permissioned_public": 0,
+        "linked_to_offer": 0,
+        "with_before_state": 0,
+        "with_outcome": 0,
+        "with_timeframe": 0,
+        "with_metric": 0,
+        "with_mechanism": 0,
+        "with_objection": 0,
+    }
+    offer_refs = set(offer_paths)
+    offer_refs.update(_offer_slug_from_path(path) for path in offer_paths)
+    offer_refs.discard("")
+    has_path_offer_link = bool(linked_offer_refs & set(offer_paths))
+    for entry in entries:
+        lowered = entry.lower()
+        has_before = _contains_any(lowered, PROOF_BEFORE_KEYWORDS)
+        has_outcome = _contains_any(lowered, PROOF_OUTCOME_KEYWORDS)
+        has_timeframe = _proof_text_has_timeframe(lowered)
+        has_metric = _proof_text_has_metric(lowered)
+        has_mechanism = _contains_any(lowered, PROOF_MECHANISM_KEYWORDS)
+        has_objection = _contains_any(lowered, PROOF_OBJECTION_KEYWORDS)
+        has_permission = _contains_any(lowered, PROOF_PERMISSION_KEYWORDS)
+        has_offer_link = has_path_offer_link or any(ref.lower() in lowered for ref in offer_refs)
+        signals = [
+            has_before,
+            has_outcome,
+            has_timeframe,
+            has_metric,
+            has_mechanism,
+            has_objection,
+        ]
+        counts["with_before_state"] += int(has_before)
+        counts["with_outcome"] += int(has_outcome)
+        counts["with_timeframe"] += int(has_timeframe)
+        counts["with_metric"] += int(has_metric)
+        counts["with_mechanism"] += int(has_mechanism)
+        counts["with_objection"] += int(has_objection)
+        counts["permissioned_public"] += int(has_permission)
+        counts["linked_to_offer"] += int(has_offer_link)
+        if any(signals):
+            counts["specific"] += 1
+        else:
+            counts["generic"] += 1
+    return counts
+
+
+def _empty_proof_quality() -> dict[str, Any]:
+    return {
+        "testimonials": {
+            "total": 0,
+            "generic": 0,
+            "specific": 0,
+            "permissioned_public": 0,
+            "linked_to_offer": 0,
+            "with_before_state": 0,
+            "with_outcome": 0,
+            "with_timeframe": 0,
+            "with_metric": 0,
+            "with_mechanism": 0,
+            "with_objection": 0,
+        },
+        "typicality": {
+            "exists": False,
+            "has_average_case": False,
+            "has_caveats": False,
+            "has_common_failure_context": False,
+            "has_time_to_outcome": False,
+        },
+        "claim_links": {
+            "linked_offers": [],
+            "unsupported_offer_claims": [],
+        },
+    }
 
 
 def _frontmatter_status(repo: Path, rel_path: str) -> str:
@@ -1197,7 +1448,12 @@ def _playbook_health(
     }
 
 
-def _money_path_offer(repo: Path, *, proof_paths: list[str]) -> dict[str, Any]:
+def _money_path_offer(
+    repo: Path,
+    *,
+    proof_paths: list[str],
+    proof_quality: dict[str, Any],
+) -> dict[str, Any]:
     per_offer_paths = sorted(
         path.relative_to(repo).as_posix()
         for path in repo.glob("core/offers/*/offer.md")
@@ -1217,10 +1473,19 @@ def _money_path_offer(repo: Path, *, proof_paths: list[str]) -> dict[str, Any]:
             references=["docs/offer-sharpening.md"],
         )
 
-    texts = [_read_markdown_text(repo / path) for path in paths]
+    texts_by_path = {path: _read_markdown_text(repo / path) for path in paths}
+    texts = list(texts_by_path.values())
     combined = "\n".join(texts)
     guardrails = _keyword_hits(combined, OFFER_GUARDRAIL_KEYWORDS)
     missing = [key for key in OFFER_GUARDRAIL_KEYWORDS if key not in guardrails]
+    guardrail_checks: dict[str, dict[str, Any]] = {}
+    for field, keywords in OFFER_GUARDRAIL_KEYWORDS.items():
+        hit_paths = [path for path, text in texts_by_path.items() if _contains_any(text, keywords)]
+        guardrail_checks[field] = {
+            "present": bool(hit_paths),
+            "paths": hit_paths[:5],
+            "keywords": [keyword for keyword in keywords if keyword in combined.lower()][:5],
+        }
     stubs = [path for path in paths if _is_stub_content(repo, path)]
     evidence = [
         _money_path_evidence(
@@ -1243,6 +1508,15 @@ def _money_path_offer(repo: Path, *, proof_paths: list[str]) -> dict[str, Any]:
     live_offer_paths = [
         path for path in per_offer_paths if _frontmatter_status(repo, path) in LIVE_OFFER_STATUSES
     ]
+    testimonial_quality = proof_quality.get("testimonials") or {}
+    claim_links = proof_quality.get("claim_links") or {}
+    proof_boundary_warnings: list[str] = []
+    if "proof" in guardrails and not proof_paths:
+        proof_boundary_warnings.append("proof_claim_without_proof_file")
+    if proof_paths and int(testimonial_quality.get("permissioned_public") or 0) == 0:
+        proof_boundary_warnings.append("proof_files_without_permissioned_public_signal")
+    if claim_links.get("unsupported_offer_claims"):
+        proof_boundary_warnings.append("offer_claims_without_offer_linked_proof")
 
     level = 1
     status = "stated"
@@ -1280,6 +1554,8 @@ def _money_path_offer(repo: Path, *, proof_paths: list[str]) -> dict[str, Any]:
     item["guardrails"] = {
         "answered": guardrails,
         "missing": missing,
+        "checks": guardrail_checks,
+        "proof_boundary_warnings": proof_boundary_warnings,
         "reference": "docs/offer-sharpening.md",
     }
     return item
@@ -1418,7 +1694,84 @@ def _money_path_customer_progress(repo: Path) -> dict[str, Any]:
     )
 
 
-def _money_path_proof(repo: Path) -> tuple[dict[str, Any], list[str]]:
+def _proof_quality(
+    repo: Path,
+    *,
+    paths: list[str],
+    offer_paths: list[str],
+    pushes: list[dict[str, Any]],
+    playbooks: list[dict[str, Any]],
+    measurement: dict[str, Any],
+    relationship_health: dict[str, Any],
+) -> dict[str, Any]:
+    quality = _empty_proof_quality()
+    testimonial_counts = quality["testimonials"]
+    linked_offers: set[str] = set()
+    any_structured_entry = False
+    proof_texts: list[str] = []
+    for path in paths:
+        text = _read_markdown_text(repo / path)
+        proof_texts.append(text)
+        linked_refs = _proof_linked_offer_refs(repo, path)
+        linked_offers.update(linked_refs)
+        if path.endswith("testimonials.md"):
+            meta = _read_frontmatter(repo / path)
+            entries = _testimonial_entries(text, meta)
+            any_structured_entry = any_structured_entry or len(entries) > 1 or bool(meta)
+            counts = _testimonial_signal_counts(
+                entries,
+                linked_offer_refs=linked_refs,
+                offer_paths=offer_paths,
+            )
+            for key, value in counts.items():
+                testimonial_counts[key] += value
+        if path.endswith("typicality.md"):
+            lowered = text.lower()
+            typicality = quality["typicality"]
+            typicality["exists"] = True
+            typicality["has_average_case"] = _contains_any(lowered, PROOF_AVERAGE_CASE_KEYWORDS)
+            typicality["has_caveats"] = _contains_any(lowered, PROOF_CAVEAT_KEYWORDS)
+            typicality["has_common_failure_context"] = _contains_any(
+                lowered,
+                PROOF_FAILURE_CONTEXT_KEYWORDS,
+            )
+            typicality["has_time_to_outcome"] = _proof_text_has_timeframe(lowered)
+    quality["claim_links"]["linked_offers"] = sorted(linked_offers)
+    unsupported_claims: list[str] = []
+    if offer_paths and paths and not (linked_offers & set(offer_paths)):
+        unsupported_claims.extend(
+            f"{path}: no offer-linked proof detected" for path in offer_paths[:5]
+        )
+    quality["claim_links"]["unsupported_offer_claims"] = unsupported_claims
+    quality["structured_entries"] = any_structured_entry
+    quality["source_backed"] = _contains_any("\n".join(proof_texts), PROOF_SOURCE_KEYWORDS)
+    quality["instrumentation"] = {
+        "active_push": bool(
+            [
+                push
+                for push in pushes
+                if str(push.get("status") or "").lower() in ACTIVE_PUSH_STATUSES
+            ]
+        ),
+        "playbook": bool(playbooks),
+        "page_readiness": bool(measurement.get("available")),
+        "outcome_feedback": bool(
+            (relationship_health.get("sections") or {}).get("outcomes", {}).get("linked_count")
+        )
+        or any(playbook.get("linked_outcomes") for playbook in playbooks),
+    }
+    return quality
+
+
+def _money_path_proof(
+    repo: Path,
+    *,
+    offer_paths: list[str],
+    pushes: list[dict[str, Any]],
+    playbooks: list[dict[str, Any]],
+    measurement: dict[str, Any],
+    relationship_health: dict[str, Any],
+) -> tuple[dict[str, Any], list[str]]:
     proof_files = [
         path
         for root in [repo / "core" / "proof", *repo.glob("core/offers/*/proof")]
@@ -1434,6 +1787,7 @@ def _money_path_proof(repo: Path) -> tuple[dict[str, Any], list[str]]:
     proof_files.extend(legacy_proof)
     paths = sorted({path.relative_to(repo).as_posix() for path in proof_files})
     if not paths:
+        quality = _empty_proof_quality()
         return (
             _money_path_object(
                 level=0,
@@ -1443,10 +1797,20 @@ def _money_path_proof(repo: Path) -> tuple[dict[str, Any], list[str]]:
                 missing=["testimonials", "typicality", "proof_angles"],
                 references=["docs/offer-sharpening.md"],
                 recommended_route="/mb-think",
-            ),
+            )
+            | {"quality": quality},
             [],
         )
 
+    quality = _proof_quality(
+        repo,
+        paths=paths,
+        offer_paths=offer_paths,
+        pushes=pushes,
+        playbooks=playbooks,
+        measurement=measurement,
+        relationship_health=relationship_health,
+    )
     has_testimonials = any(path.endswith("testimonials.md") for path in paths)
     has_typicality = any(path.endswith("typicality.md") for path in paths)
     has_angles = any("/angles/" in path for path in paths)
@@ -1462,14 +1826,37 @@ def _money_path_proof(repo: Path) -> tuple[dict[str, Any], list[str]]:
     level = 1
     status = "stated"
     summary = "Proof files exist."
-    if has_testimonials or has_typicality:
+    testimonial_quality = quality["testimonials"]
+    typicality_quality = quality["typicality"]
+    instrumentation = quality["instrumentation"]
+    if has_testimonials or has_typicality or quality["structured_entries"]:
         level = 2
         status = "structured"
-        summary = "Proof includes standard testimonial or typicality files."
-    if has_testimonials and has_typicality:
+        summary = "Proof includes standard files, entries, or frontmatter."
+    if int(testimonial_quality["specific"]) > 0 and (
+        has_typicality or int(testimonial_quality["linked_to_offer"]) > 0
+    ):
         level = 3
         status = "evidence_backed"
-        summary = "Proof includes both testimonials and typicality context."
+        summary = "Proof includes specific outcomes tied to typicality or an offer."
+    if int(testimonial_quality["specific"]) >= 2 and (
+        quality["source_backed"]
+        or int(testimonial_quality["permissioned_public"]) > 0
+        or int(testimonial_quality["with_metric"]) > 0
+        or int(testimonial_quality["with_timeframe"]) > 0
+    ):
+        level = 4
+        status = "field_tested"
+        summary = "Proof includes multiple specific, source or outcome-backed entries."
+    if (
+        level >= 3
+        and int(testimonial_quality["linked_to_offer"]) > 0
+        and bool(typicality_quality["exists"])
+        and any(bool(value) for value in instrumentation.values())
+    ):
+        level = 5
+        status = "instrumented"
+        summary = "Proof is linked to an offer and connected to active path instrumentation."
     return (
         _money_path_object(
             level=level,
@@ -1485,7 +1872,8 @@ def _money_path_proof(repo: Path) -> tuple[dict[str, Any], list[str]]:
             ],
             references=["docs/offer-sharpening.md"],
             recommended_route="/mb-think",
-        ),
+        )
+        | {"quality": quality},
         paths,
     )
 
@@ -2028,10 +2416,29 @@ def _money_path(repo: Path, report: dict[str, Any]) -> dict[str, Any]:
     playbook_health = report.get("playbook_health") or {}
     relationship_health = report.get("relationship_health") or {}
     measurement = report.get("measurement") or {}
-    proof, proof_paths = _money_path_proof(repo)
-    offer = _money_path_offer(repo, proof_paths=proof_paths)
-    offer_paths = [str(path) for path in offer.get("paths") or [] if (repo / str(path)).is_file()]
     playbooks = _playbook_summaries(repo)
+    candidate_offer_paths = sorted(
+        path.relative_to(repo).as_posix()
+        for path in repo.glob("core/offers/*/offer.md")
+        if path.is_file()
+    )
+    candidate_offer_paths.extend(
+        _relative_existing_paths(repo, ["core/offer.md", "reference/core/offer.md"])
+    )
+    proof, proof_paths = _money_path_proof(
+        repo,
+        offer_paths=candidate_offer_paths,
+        pushes=pushes,
+        playbooks=playbooks,
+        measurement=measurement,
+        relationship_health=relationship_health,
+    )
+    offer = _money_path_offer(
+        repo,
+        proof_paths=proof_paths,
+        proof_quality=proof.get("quality") or _empty_proof_quality(),
+    )
+    offer_paths = [str(path) for path in offer.get("paths") or [] if (repo / str(path)).is_file()]
     multi_offer = bool(list(repo.glob("core/offers/*/offer.md")))
     collected_objects = {
         "customer_progress": _money_path_customer_progress(repo),

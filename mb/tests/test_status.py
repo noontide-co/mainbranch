@@ -343,6 +343,118 @@ def test_status_money_path_single_offer_structured_caps_without_proof(
     assert money_path["ranked_actions"][0]["component"] == "proof"
 
 
+def test_status_money_path_offer_exposes_guardrail_detail(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    offer = report["money_path"]["objects"]["offer"]
+    guardrails = offer["guardrails"]
+    assert guardrails["checks"]["audience"]["present"] is True
+    assert guardrails["checks"]["audience"]["paths"] == ["core/offer.md"]
+    assert guardrails["checks"]["risk_reversal"]["present"] is False
+    assert "risk_reversal" in guardrails["missing"]
+    assert guardrails["proof_boundary_warnings"] == ["proof_claim_without_proof_file"]
+
+
+def test_status_money_path_generic_proof_quality_stays_structured(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+    proof = repo / "core" / "proof"
+    proof.mkdir(parents=True, exist_ok=True)
+    (proof / "testimonials.md").write_text(
+        "# Testimonials\n\nGreat work from a happy customer.\n",
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    proof_object = report["money_path"]["objects"]["proof"]
+    quality = proof_object["quality"]
+    assert proof_object["level"] == 2
+    assert proof_object["status"] == "structured"
+    assert quality["testimonials"]["total"] == 1
+    assert quality["testimonials"]["generic"] == 1
+    assert quality["testimonials"]["specific"] == 0
+    assert quality["claim_links"]["unsupported_offer_claims"] == [
+        "core/offer.md: no offer-linked proof detected"
+    ]
+
+
+def test_status_money_path_specific_offer_linked_proof_can_be_instrumented(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    offer = repo / "core" / "offers" / "coaching"
+    offer.mkdir(parents=True, exist_ok=True)
+    (offer / "offer.md").write_text(
+        (
+            "---\nslug: coaching\nstatus: running\n---\n\n"
+            "# Coaching\n\n"
+            "Audience, transformation, mechanism, pricing, proof, objections, "
+            "reason to act, and next step.\n"
+        ),
+        encoding="utf-8",
+    )
+    proof = offer / "proof"
+    proof.mkdir(parents=True, exist_ok=True)
+    (proof / "testimonials.md").write_text(
+        (
+            "# Testimonials\n\n"
+            "## Founder A\n"
+            "Permissioned public source: sales call. Before: stuck rebuilding context. "
+            "Outcome: booked 3 calls within 2 weeks using the workflow. "
+            "Objection: worried about time.\n\n"
+            "## Founder B\n"
+            "Approved for public source: interview. Previously scattered launches. "
+            "Result: saved 5 hours in 10 days through the process.\n"
+        ),
+        encoding="utf-8",
+    )
+    (proof / "typicality.md").write_text(
+        (
+            "# Typicality\n\n"
+            "Average case: most users need one setup week before speed improves. "
+            "Caveat: outcomes vary. Common failure context: poor fit when no offer "
+            "exists. Time to outcome is usually 2 weeks.\n"
+        ),
+        encoding="utf-8",
+    )
+    push = _write_push(repo, "2026-05-06-launch", offer="core/offers/coaching/offer.md")
+    _write_playbook(push, status="active", approval_status="approved")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    proof_object = report["money_path"]["objects"]["proof"]
+    quality = proof_object["quality"]
+    assert proof_object["level"] == 5
+    assert proof_object["status"] == "instrumented"
+    assert quality["testimonials"]["total"] == 2
+    assert quality["testimonials"]["specific"] == 2
+    assert quality["testimonials"]["permissioned_public"] == 2
+    assert quality["testimonials"]["linked_to_offer"] == 2
+    assert quality["testimonials"]["with_timeframe"] == 2
+    assert quality["testimonials"]["with_metric"] == 2
+    assert quality["typicality"] == {
+        "exists": True,
+        "has_average_case": True,
+        "has_caveats": True,
+        "has_common_failure_context": True,
+        "has_time_to_outcome": True,
+    }
+    assert quality["claim_links"]["linked_offers"] == ["core/offers/coaching/offer.md"]
+    assert quality["claim_links"]["unsupported_offer_claims"] == []
+
+
 def test_status_money_path_detects_multi_offer_product_ladder(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     repo = tmp_path / "acme"

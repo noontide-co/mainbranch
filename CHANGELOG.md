@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added deterministic MoneyPath offer guardrail detail and proof-quality facts
+  under `money_path.objects.offer` and `money_path.objects.proof`, including
+  generic vs. specific testimonials, offer-linked proof, typicality signals,
+  and proof boundary warnings. Refs MAIN-341, #523.
 - Added MoneyPath readiness facts to `mb status --json --peek`, giving skills
   and scripts a read-only, gated view of customer progress, offer, audience,
   proof, product ladder, CTA, channel, push, playbook, page readiness, and
