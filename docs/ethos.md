@@ -60,9 +60,17 @@ durable memory. If two views disagree, the repo wins.
 owns repo shape, validation, migration, status, updates, graphing, integration
 metadata, skill wiring, and runtime adapter contracts.
 
-Agent-runtime skills own synthesis, writing, review, routing, and judgment. A
-skill may call `mb` for facts. It should not reimplement repo-health probes or
+The CLI is the fact and safety layer, not the primary product surface for most
+operators. Agent-runtime skills are the chat UX and judgment layer: synthesis,
+writing, review, routing, and explanation in plain business language. A skill
+may call `mb` for facts. It should not reimplement repo-health probes or
 structural invariants in prose.
+
+This same shape should hold as the system grows: hledger can be the books
+engine while `mb books` provides privacy-bounded JSON and workflow checks;
+research-depth guidance can help the agent choose between memory, repo context,
+public research, and deeper synthesis without turning research into endless
+collection.
 
 ### 3. The Operator Decides
 
@@ -84,8 +92,10 @@ Pull requests can be described as proposals. Git history can be described as
 shipped work. The underlying terms should remain available when the user needs
 them.
 
-Beginner flows should end with exact commands. Power users should always have a
-quiet, scriptable path.
+Beginner flows should end with a clear next action. In chat, the agent should
+run deterministic CLI checks internally and explain the result in plain
+language. Exact commands should remain available for handoff, debugging, docs,
+and power users, but they should not be the default user experience.
 
 ### 5. Runtime Honesty
 
@@ -115,8 +125,9 @@ Specialized tools can make Main Branch stronger when they do one narrow job
 well and return structured output. Examples include public company context,
 ads metrics, bookkeeping, transcription, analytics, or deployment helpers.
 
-Sidecars should be optional providers behind stable contracts, not hard
-dependencies of the core engine.
+Sidecars, MCP servers, and provider rails should be optional,
+permission-aware, and behind stable contracts. They are subordinate to repo
+truth and deterministic `mb` facts, not replacements for the core engine.
 
 ### 8. Curated Rails Beat SaaS Sprawl
 

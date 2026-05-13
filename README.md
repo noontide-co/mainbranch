@@ -74,6 +74,29 @@ Open source. Lives on your machine. Bring your own Claude Code plan. That's it.
 
 ---
 
+## The operating loop
+
+Main Branch is chat-first for the operator and CLI-backed under the hood.
+
+1. **The repo remembers.** Your core files, research, decisions, bets, pushes,
+   logs, documents, and checkpoints hold the business truth.
+2. **`mb` checks facts.** The CLI reads the repo and returns deterministic
+   status, graph, provider, MoneyPath, proof-quality, content-strategy,
+   books-readiness, and checkpoint facts.
+3. **The agent explains.** Claude Code skills turn those facts into plain
+   business guidance, route the work, and ask for the missing decision.
+4. **You approve action.** Writing files, publishing, spending money, mutating
+   provider accounts, and contacting customers stay intentional operator
+   choices.
+5. **The lesson becomes memory.** Accepted work and useful lessons land back in
+   the repo as durable business context for the next session.
+
+Normal users ask the agent. The agent runs `mb` internally. Power users can
+still run the same commands directly when they want to inspect, script, debug,
+or build on the system.
+
+---
+
 ## What you can do today
 
 - Research a topic and turn it into a decision the system remembers
@@ -96,8 +119,8 @@ You don't run any of these commands yourself. You ask the agent. It runs them.
 Main Branch v0.3 has three layers:
 
 - **Your folder is the source of truth.** Offer, audience, voice, decisions, research, bets, launches, logs, documents, links to other repos. Plain markdown files you can read on any computer.
-- **The CLI is the safety net.** Scaffolds the folder, validates the shape, draws the relationship graph, briefs you on what's changed, walks through repairs, saves readable checkpoints, and checks that connected providers (GitHub, Cloudflare, ads accounts) are wired up safely. The agent runs it. You don't have to learn it.
-- **The skills are the judgment layer.** The agent reads your folder, asks you the right questions, drafts work, reviews it, and routes the artifacts back into files.
+- **The CLI is the fact and safety layer.** It scaffolds the folder, validates the shape, draws the relationship graph, briefs the agent on what's changed, walks through repairs, saves readable checkpoints, and checks that connected providers are wired up safely. It also exposes shipped facts for MoneyPath readiness, proof quality, content strategy health, books readiness, provider readiness, status, start, graph, and checkpoint workflows. The agent runs it. You don't have to learn it.
+- **The skills are the chat UX and judgment layer.** The agent reads your folder and `mb` facts, asks you the right questions, drafts work, reviews it, and routes approved artifacts back into files.
 
 Agent recommends. You decide what gets shipped, spent, published, or saved.
 
@@ -119,7 +142,12 @@ The longer-arc operating-system model — where multiple business repos, GitHub 
 
 ## Direction, not promises
 
-The current package is the daily operating loop: open the folder, ground the agent, get a ranked next action, ship the work, save a readable checkpoint. Next direction tightens the same loop, expands curated provider rails, and prepares an optional local dashboard that reads from your folder instead of replacing it.
+The current package is the chat-first daily operating loop: open the folder,
+start Claude Code, let the agent read `mb` facts, choose the next business
+move, ship approved work, and save a readable checkpoint. Next direction
+tightens the same loop, expands curated provider rails, deepens offer and
+market research guidance, and prepares an optional local dashboard that reads
+from repo and CLI facts instead of replacing them.
 
 Mobile thought capture, team views, finance/fulfillment roll-ups, broader Ops/bookkeeping, an optional dashboard, and any future hosted/model-invocation surface are eventual targets in [docs/roadmap.md](docs/roadmap.md), not current behavior.
 

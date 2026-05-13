@@ -28,18 +28,29 @@ Main Branch already ships:
 - graph, status, and topology primitives (including repo-topology facts in
   `mb status --json`, `mb graph --json`, and `mb doctor repair --plan --json`)
   for future dashboard and agent workflows;
-- MoneyPath readiness in `mb status --json --peek`, so daily status can show
-  whether customer progress, offer, proof, CTA, channel, push, playbook, page,
-  and outcome feedback are legible and connected without turning CLI output
-  into strategic judgment;
+- MoneyPath readiness and proof-quality facts in `mb status --json --peek`, so
+  daily status can show whether customer progress, offer, proof, CTA, channel,
+  push, playbook, page, and outcome feedback are legible and connected without
+  turning CLI output into strategic judgment;
+- content strategy health facts for simple and layered strategy files, channel
+  and account layers, freshness, indexing, and disconnected marketing context;
+- compact books readiness in `mb status --json --peek` and `mb start --json`,
+  plus `mb books check`, `mb books status`, and `mb books doctor --plan` for
+  privacy-bounded setup checks without reading ledgers or exposing private
+  vault paths;
 - privacy-safe GitHub issue drafting and submission (`mb issue draft`,
   `mb issue open`) for user friction;
 - push, reusable playbook, and per-push run-record vocabulary for coordinated
   business work;
 - `bets/` and `/mb-bet` as the first Reflect primitive;
 - `mb checkpoint` as the first hidden GitOps save layer for long agent runs;
+- a shared workflow source prototype for the daily start -> MoneyPath
+  `/mb-think` handoff, with native Claude and Codex shell snapshots that avoid
+  overclaiming runtime parity;
 - materialized release-simulation fixtures and the package-visible release
   evidence ladder (PR smoke, pre-release candidate, release acceptance);
+- release and local-state boundary hardening for package publishing and
+  provider metadata paths;
 - public contribution, support, security, compatibility, and agent guidance;
 - accepted workspace/repo/sensitive-data boundary guidance and
   GitHub/Obsidian-compatible markdown/link conventions for future dashboard,
@@ -50,12 +61,13 @@ Claude Code is the supported runtime today. Codex CLI has an experimental
 CLI-first adapter; other runtimes are compatibility targets until adapter code
 and smoke evidence exist.
 
-## Current Direction: Make The Daily Loop Boring
+## Current Direction: Chat-First, CLI-Backed Daily Loop
 
-The current product step is making the normal day feel coherent: open the
-business repo, start Claude Code, ask `/mb-start`, see what matters, repair what
-is stale, ship the next piece of work, and save a readable checkpoint before
-moving on.
+The current product step is making the normal day feel coherent in chat while
+keeping the facts deterministic underneath: open the business repo, start
+Claude Code, ask `/mb-start`, let the agent run `mb` facts internally, see what
+matters in plain language, repair what is stale, ship approved work, and save a
+readable checkpoint before moving on.
 
 In one pass, the loop is:
 
@@ -64,14 +76,16 @@ In one pass, the loop is:
 2. **Route the thought dump.** A messy operator update should become a business
    primitive: bet, research, decision, push, playbook, outcome, log entry, or
    checkpoint.
-3. **Use the right layer.** Claude Code skills handle judgment, synthesis,
-   writing, review, and routing. `mb` handles enforcement: repo shape, graph
-   links, status health, provider readiness, updates, repairs, validation, and
-   guarded commits.
+3. **Use the right layer.** Claude Code skills are the chat UX and judgment
+   layer. `mb` is the fact and safety layer: repo shape, graph links, status
+   health, MoneyPath, proof quality, content strategy health, books readiness,
+   provider readiness, updates, repairs, validation, and guarded commits.
 4. **Hide the plumbing, preserve the memory.** Issues, branches, pull requests,
    commits, graph links, and provider refs exist so the business can inspect
    what happened later. The user-facing language should stay business-readable.
-5. **Close the loop.** `/mb-end` and checkpoint guidance turn the session into
+5. **Keep approval explicit.** Writing durable files, publishing, spending,
+   provider mutation, and customer contact should stay operator-approved.
+6. **Close the loop.** `/mb-end` and checkpoint guidance turn the session into
    durable git-backed memory before the next day starts.
 
 The work clusters into a few durable buckets:
@@ -79,7 +93,8 @@ The work clusters into a few durable buckets:
 - **Start and status.** `/mb-start`, `/mb-status`, and `mb status` should read
   the same facts: since-last-check changes, ranked next actions, drift,
   onboarding progress, update severity, provider readiness, GitHub
-  tasks/proposals, MoneyPath readiness, and recent business activity.
+  tasks/proposals, MoneyPath readiness, proof quality, content strategy health,
+  books readiness, and recent business activity.
 - **Repair and migration.** `mb doctor`, `mb doctor repair`, `mb update`, and
   `mb migrate` should make stale installs, old repo layouts, broken skill
   wiring, ignored local state, and provider setup problems visible and
@@ -91,6 +106,14 @@ The work clusters into a few durable buckets:
   bets, and coordinated pushes remain the strongest shipped wedge. `pushes/` is
   the official folder for coordinated work; `campaigns/` remains a
   compatibility read for older repos.
+- **Research depth.** Offer, market, and content work should escalate source
+  collection deliberately: memory first when enough, repo context next, public
+  research when the answer depends on current outside facts, and deeper
+  synthesis only when the decision justifies the time, tokens, and permissions.
+- **Books readiness and reporting.** hledger is the accounting engine, `mb
+  books` is the privacy, JSON, and workflow wrapper, and skills are the chat UX.
+  Next direction is sample/fake-data reporting before private-vault reports,
+  imports, reconciliation, or close workflows.
 - **Provider rails.** Cloudflare, GitHub, Google/Workspace, ads providers,
   Apify, Postiz-style social scheduling, and future sidecars should enter
   through explicit, tested rails with approval gates where money, publishing,
@@ -117,7 +140,8 @@ Anti-scope for v0.3.x:
 ## Soon: Dashboard, Sidecars, And Multi-Repo Views
 
 Once the daily operating loop is boring, Main Branch should make the broader
-business system easier to see without replacing the repo as source of truth.
+business system easier to see without replacing the repo or deterministic CLI
+facts as source of truth.
 
 Planned scope:
 
@@ -137,7 +161,8 @@ Planned scope:
 Candidate directions stay candidates until a decision, adapter, and smoke
 evidence promote them. That includes dashboard write surfaces, broader provider
 mutation, social scheduling rails, growth automation execution, and non-Claude
-runtime adapters.
+runtime adapters. Future dashboard writes should be narrow, schema-backed, and
+approval-gated, not free-form chat state or a second source of truth.
 
 Anti-scope:
 

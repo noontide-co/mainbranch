@@ -54,6 +54,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Refreshed the README, roadmap, and ethos around the chat-first, CLI-backed
+  operating loop: repo truth feeds deterministic `mb` facts, skills/agents
+  explain and route in chat, operators approve sensitive action, and accepted
+  lessons become durable repo memory. Refs MAIN-358, #562.
 - Updated `/mb-start` routing guidance so path-to-money, revenue, next-dollar,
   and offer-readiness prompts start from deterministic `money_path` facts, carry
   the MoneyPath snapshot into `/mb-think` handoffs, and avoid normal-path
