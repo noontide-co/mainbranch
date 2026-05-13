@@ -19,6 +19,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   parallel research file contracts, synthesis and promotion rules, MoneyPath
   readiness language, and an MCP-first optional Apify research-provider
   boundary. Refs MAIN-344, #529.
+- Added a MAIN-357 design sprint report set for the hledger-backed `mb books`
+  reporting path, recommending a fake packaged sample monthly report before
+  private-vault reporting and documenting hledger command families, chat-first
+  UX, JSON shape, privacy boundaries, and follow-up implementation slices. Refs
+  #560, #128.
 - Added compact, privacy-safe books readiness facts to `mb status --json --peek`
   and `mb start --json`, so daily-loop agents can see bookkeeping setup,
   hledger availability, vault/ignore safety, unsafe artifact counts, and the
