@@ -794,14 +794,14 @@ def _meta_prerequisite_state(
 ) -> str:
     which = which_func or shutil.which
     run = command_runner or _run_command
+    if which("meta"):
+        version = run(["meta", "--version"], None, 5.0)
+        if version.get("ok"):
+            return ""
+        return "missing_cli"
     if not _meta_python_ready(which_func=which, command_runner=run):
         return "wrong_python"
-    if not which("meta"):
-        return "missing_cli"
-    version = run(["meta", "--version"], None, 5.0)
-    if not version.get("ok"):
-        return "missing_cli"
-    return ""
+    return "missing_cli"
 
 
 def _meta_setup() -> dict[str, Any]:

@@ -251,6 +251,46 @@ def test_connect_test_meta_missing_cli_has_python312_repair(tmp_path: Path, monk
     )
 
 
+def test_connect_test_meta_uses_installed_cli_before_python_repair(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    monkeypatch.setattr(sys, "version_info", (3, 11))
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "meta",
+        repo=repo,
+        token="meta-secret-token",
+        metadata_pairs=["ad_account_id=act_test"],
+    )
+    calls: list[list[str]] = []
+
+    def fake_run(
+        args: list[str],
+        cwd: Path | None = None,
+        timeout: float = 5.0,
+        *,
+        env: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        calls.append(args)
+        if args == ["meta", "--version"]:
+            return {"ok": True, "returncode": 0, "stdout": "meta 1.0.1\n", "stderr": ""}
+        return {"ok": True, "returncode": 0, "stdout": "{}\n", "stderr": ""}
+
+    result = connect_mod.test_provider(
+        "meta",
+        repo,
+        which_func=lambda name: "/opt/pipx/bin/meta" if name == "meta" else None,
+        command_runner=fake_run,
+    )
+
+    assert result["ok"] is True
+    assert result["status"]["state"] == "ready"
+    assert calls[0] == ["meta", "--version"]
+    assert all("python" not in call[0] for call in calls)
+
+
 def test_connect_test_meta_read_only_smoke_passes_with_sanitized_env(
     tmp_path: Path, monkeypatch
 ) -> None:
