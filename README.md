@@ -119,7 +119,7 @@ You don't run any of these commands yourself. You ask the agent. It runs them.
 Main Branch v0.3 has three layers:
 
 - **Your folder is the source of truth.** Offer, audience, voice, decisions, research, bets, launches, logs, documents, links to other repos. Plain markdown files you can read on any computer.
-- **The CLI is the fact and safety layer.** It scaffolds the folder, validates the shape, draws the relationship graph, briefs the agent on what's changed, walks through repairs, saves readable checkpoints, and checks that connected providers are wired up safely. It also exposes shipped facts for MoneyPath readiness, proof quality, content strategy health, books readiness and sample reporting, provider readiness, status, start, graph, and checkpoint workflows. The agent runs it. You don't have to learn it.
+- **The CLI is the fact and safety layer.** It scaffolds the folder, validates the shape, draws the relationship graph, briefs the agent on what's changed, walks through repairs, saves readable checkpoints, and checks that connected providers are wired up safely. It also exposes shipped facts for MoneyPath readiness, proof quality, content strategy health, books readiness, provider readiness, status, start, graph, and checkpoint workflows. The agent runs it. You don't have to learn it.
 - **The skills are the chat UX and judgment layer.** The agent reads your folder and `mb` facts, asks you the right questions, drafts work, reviews it, and routes approved artifacts back into files.
 
 Agent recommends. You decide what gets shipped, spent, published, or saved.
@@ -273,7 +273,7 @@ The `mb` CLI is the deterministic control plane. The agent runs it for normal us
 | `mb status`              | Local-first daily briefing: ranked next actions, MoneyPath readiness, since-last-check changes, drift, repo health, runtime wiring, recent activity, GitHub tasks/proposals. `--json` and `--peek` for callers. |
 | `mb doctor`              | Check environment, repo shape, frontmatter, settings. `mb doctor repair --plan` / `--apply` walks through guided reconciliation, including migration drift. |
 | `mb connect`             | Register provider credentials, test provider health, inspect repair-safe integration status without committing secrets. |
-| `mb books`               | Check privacy-bounded bookkeeping setup, inspect hledger readiness, plan safe repairs, and render sample monthly reports from packaged fake data. |
+| `mb books`               | Check privacy-bounded bookkeeping setup, inspect hledger readiness, and plan safe repairs without reading private ledgers. |
 | `mb site check`          | Local paid-traffic measurement readiness for a site folder: GTM install, dataLayer events, consent posture, Google Ads metadata, operator-review gates. |
 | `mb issue draft` / `open`| Draft a privacy-scrubbed GitHub issue locally, review it, then submit through `gh`. |
 | `mb validate`            | Frontmatter shape check across `core/`, `research/`, `decisions/`, `bets/`, `log/`, `pushes/`, `documents/`. Pass/fail per file. |

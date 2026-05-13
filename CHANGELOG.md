@@ -90,8 +90,9 @@ guidance.
 ### Changed
 
 - Refreshed always-read cold-start docs after v0.3.20 so README, roadmap,
-  ethos, and operator-loop language reflect shipped books sample reporting and
-  use saved-checkpoint language where normal owner copy should avoid raw git
+  ethos, and operator-loop language stay aligned with package-visible books
+  readiness while leaving sample reporting under `[Unreleased]`, and use
+  saved-checkpoint language where normal owner copy should avoid raw git
   wording. Refs MAIN-365, #577.
 - Updated release-simulation scoring and `/mb-start` owner-language guidance so
   normal answers translate raw git/GitHub status phrases before speaking, while

@@ -37,8 +37,7 @@ Main Branch already ships:
 - compact books readiness in `mb status --json --peek` and `mb start --json`,
   plus `mb books check`, `mb books status`, and `mb books doctor --plan` for
   privacy-bounded setup checks without reading ledgers or exposing private
-  vault paths, and `mb books report monthly --sample` for fake-data monthly
-  reporting;
+  vault paths;
 - privacy-safe GitHub issue drafting and submission (`mb issue draft`,
   `mb issue open`) for user friction;
 - push, reusable playbook, and per-push run-record vocabulary for coordinated
@@ -113,9 +112,8 @@ The work clusters into a few durable buckets:
   synthesis only when the decision justifies the time, tokens, and permissions.
 - **Books readiness and reporting.** hledger is the accounting engine, `mb
   books` is the privacy, JSON, and workflow wrapper, and skills are the chat UX.
-  Sample/fake-data monthly reporting is the first shipped reporting rail; next
-  direction is private-vault reports, imports, reconciliation, and close
-  workflows.
+  Next direction is fake-data sample reporting before private-vault reports,
+  imports, reconciliation, or close workflows.
 - **Provider rails.** Cloudflare, GitHub, Google/Workspace, ads providers,
   Apify, Postiz-style social scheduling, and future sidecars should enter
   through explicit, tested rails with approval gates where money, publishing,
