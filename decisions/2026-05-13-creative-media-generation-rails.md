@@ -109,6 +109,47 @@ Use current business-repo vocabulary:
 
 The legacy `outputs/` vocabulary should not be used for new generated work.
 
+## Credential And Secret Boundary
+
+OpenAI image generation remains a creative playbook rail for now, not a full
+`mb connect` provider. But any provider credential used by the rail must follow
+the existing Main Branch secret boundary:
+
+- never ask the operator to paste provider secrets into chat;
+- never commit provider keys, raw tokens, private environment files, or local
+  credential paths;
+- prefer existing `SecretStore` / Keychain-style storage when a CLI setup path
+  exists;
+- allow environment variables only as local runtime input, not as committed
+  configuration;
+- artifact records may include safe credential metadata such as
+  `credential_ref: openai:image-generation` or
+  `credential_state: configured`, but never the secret value;
+- if no approved credential is available, fall back to prompt-only/manual mode.
+
+Safe metadata:
+
+```yaml
+provider: openai
+model: gpt-image-2
+credential_ref: openai:image-generation
+credential_state: configured
+output_reference: mb-media://pushes/2026-05-ad-test/images/hero-001.png
+```
+
+Unsafe metadata:
+
+```yaml
+api_key: sk-...
+token_path: /Users/<operator>/.config/provider/token
+env_file: ~/.config/provider/.env
+private_absolute_media_path: /Users/<operator>/PrivateMedia/hero-001.png
+```
+
+Only introduce `mb connect openai` or `mb connect image openai` later if Main
+Branch needs stable provider readiness facts in `mb status --json --peek`.
+Until then, keep this playbook-first with a shared artifact/media contract.
+
 ## Artifact Metadata Contract
 
 Every generated, edited, manually produced, or template-rendered creative asset
