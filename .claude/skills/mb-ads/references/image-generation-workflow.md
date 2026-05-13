@@ -15,7 +15,10 @@ boundaries.
 
 Before any provider call, turn the push brief and business context into 3 to 6
 reviewable Facebook image-ad concepts. The useful artifact is the creative
-decision, not merely the generated file.
+decision, not merely the generated file. A concept should pass this litmus test:
+could this image have come only from this business repo? If it could fit a
+generic productivity app, coaching offer, or accounting tool, do not generate it
+unless the operator is intentionally testing broad top-of-funnel imagery.
 
 Read available context before drafting concepts:
 
@@ -27,10 +30,23 @@ Read available context before drafting concepts:
   summary and `mb` reports it is ready;
 - reference images already represented by safe `mb-media://...` handles.
 
+First extract 5 to 10 source bites from the repo, then choose the 3 strongest
+ones to visualize. Source bites can come from customer language, the offer,
+proof, research, founder notes, a push brief, prior outcomes, visual style, or
+operator-provided inspiration. A source bite proves what the concept latched
+onto before any image prompt exists.
+
 Each concept must record:
 
 - `concept_id`;
 - `status`: `planned`, `generated`, `rejected`, or `needs_revision`;
+- `creative_playbook` or `creative_playbook_candidate`: optional niche/style
+  overlay; do not force a playbook when the source bites do not support one;
+- `source_bite`: source file, type, phrase, insight, and visual translation;
+- `genericness_check`: whether the idea could fit generic adjacent products and
+  a 1 to 5 `specific_to_this_offer` score;
+- `avoidance_strategy`: what generic or unsafe creative patterns the concept
+  avoids, any soft-avoid pattern it intentionally uses, and why;
 - `viewer_scroll_context`;
 - `first_second_read`;
 - `audience_state`;
@@ -55,6 +71,20 @@ Use this shape inside push-local `image-index.md`:
 ```yaml
 schema: mainbranch.image_index.v0
 push_slug: 2026-05-ad-test
+selected_source_bites:
+  - concept_id: lost-thread-branch-map
+    source_file: research/customer-language.md
+    source_type: customer_language
+    extracted_phrase: I keep losing the thread
+    visual_translation: tangled red thread becoming one clean branch map
+post_processing_plan:
+  status: planned_not_implemented
+  resize_target: 1080x1350
+  overlay_expected: true
+  overlay_method: future_deterministic_overlay_step
+  export_format: png_source_then_jpeg_or_png_final
+  compression_target: future_export_step
+  validation: Preview in Meta Ads Manager before launch.
 placement_presets:
   facebook_feed_portrait_4x5:
     aspect_ratio: 4:5
@@ -103,21 +133,73 @@ reference_roles:
   - background
   - mask_source
 concepts:
-  - concept_id: clean-system-vs-ad-chaos
+  - concept_id: lost-thread-branch-map
     status: planned
+    prompt_key: lost-thread-branch-map.v1
+    creative_playbook:
+      id: technical-founder
+      status: suggested
+      use_when:
+        - audience speaks in systems, workflows, and operating clarity
+        - offer promise is about memory, process, or context continuity
+      default_avoid:
+        - generic SaaS gradient
+        - fake dashboard
+        - hologram UI
+        - robot assistant
+      useful_metaphors:
+        - dependency graph
+        - broken pipeline
+        - incident board
+        - branch map
+        - lost thread
+      risky_metaphors:
+        - glowing brain
+        - robot assistant
+        - generic command center
+      prompt_bias:
+        - tactile systems
+        - real artifacts
+        - visible consequence
+        - source-bite metaphor
+    source_bite:
+      source_file: research/customer-language.md
+      source_type: customer_language
+      extracted_phrase: I keep losing the thread
+      insight: The customer does not just feel disorganized; continuity breaks across tools.
+      visual_translation: tangled red thread becoming one clean branch map
+    genericness_check:
+      could_fit_notion: false
+      could_fit_asana: false
+      could_fit_quickbooks: false
+      could_fit_generic_coaching_offer: false
+      could_fit_generic_productivity_app: false
+      could_fit_any_coaching_offer: false
+      could_fit_accounting_software: false
+      specific_to_this_offer: 5
+      reason: The branch-map and durable-memory metaphor expresses the repo-backed business-memory promise.
+    avoidance_strategy:
+      avoids:
+        - stock-photo business imagery
+        - clean desk productivity cliché
+        - website hero composition
+        - fake dashboard
+        - generic SaaS gradient
+      intentionally_uses: []
+      reason: Uses a customer-language source-bite metaphor instead of generic productivity imagery.
     viewer_scroll_context: cold Facebook feed
-    first_second_read: messy ad chaos turns into one clean system
-    audience_state: creator overwhelmed by Meta Ads terminology
-    visual_job: show that ad growth becomes easier when the system is clear
-    visual_metaphor: chaotic notes and ad metrics becoming one clean command center
-    composition: central desk scene, open area at top for overlay text
+    first_second_read: lost business thread becomes one durable branch map
+    audience_state: operator is resuming work after context switching across tools
+    visual_job: make continuity loss visible before showing the repo-backed memory fix
+    visual_metaphor: tangled red thread resolving into a clean branch map and archive
+    composition: tactile maze of red thread and scattered cards, with one clear branch path and upper-right overlay space
     visual_hierarchy:
-      primary_focal_point: clean command center
-      secondary_focal_point: scattered notes
-      text_zone: upper center
-    camera_language: slight top-down editorial desk scene
-    style_strength: subtle, not over-stylized
-    emotional_tone: relief after confusion
+      primary_focal_point: red thread becoming a branch map
+      secondary_focal_point: central archive object
+      text_zone: upper right
+    camera_language: slight top-down editorial ad composition
+    style_strength: specific metaphor, restrained production polish
+    emotional_tone: relief after broken continuity
     placement: facebook_feed_portrait_4x5
     text_overlay_plan: text-free base image; deterministic overlay later, max 4 words
     source_files:
@@ -133,6 +215,13 @@ concepts:
         safe_to_share: false
         use_for: color mood and composition
         do_not_copy: exact subject, logos, text, or private details
+    reference_trait_extraction:
+      - reference_id: style-001
+        traits:
+          palette: muted warm neutrals with one grounded accent
+          composition: simple focal object with visible surrounding context
+          lighting: natural, tactile, not glossy studio light
+        do_not_copy: exact subject, text, logos, layout, or private details
     prompt: >
       Create a Facebook image ad base scene with a clear focal point, mobile-safe
       whitespace, no rendered text, no real logos, and no private data.
@@ -147,6 +236,13 @@ concepts:
       one_second_clarity: pass
       visual_hook_strength: pass
       ad_usefulness: pass
+      source_bite_fit: pass
+      genericness_risk: pass
+      avoidance_strategy_fit: pass
+      avoidance_risk: pass
+      prompt_record_complete: pass
+      reference_copy_risk: pass
+      export_readiness: pass
       readability: pass
       placement_fit: pass
       brand_fit: pass
@@ -155,22 +251,36 @@ concepts:
       policy_risk: pass
       private_data_risk: pass
       ai_generic_risk: pass
+      avoidance_check:
+        stock_photo_risk: pass
+        website_hero_risk: pass
+        clean_desk_cliche_risk: pass
+        generic_saas_risk: pass
+        ai_slop_risk: pass
+        overpolished_risk: pass
+        native_feed_fit: 5
+        too_safe_to_stop_scroll: pass
+        notes: []
       scores:
         one_second_clarity: 5
         visual_hook_strength: 5
         specificity: 5
         brand_fit: 5
+        source_bite_fit: 5
+        specific_to_this_offer: 5
+        native_feed_fit: 5
         ai_generic_risk: 1
       decision: accept
       notes: []
 assets:
-  - asset_id: clean-system-vs-ad-chaos-001
-    concept_id: clean-system-vs-ad-chaos
+  - asset_id: lost-thread-branch-map-001
+    concept_id: lost-thread-branch-map
     provider: openai
     model: gpt-image-2
+    prompt_key: lost-thread-branch-map.v1
     state: blocked
     blocker_code: missing_openai_api_key
-    output_reference: mb-media://pushes/2026-05-ad-test/images/clean-system-vs-ad-chaos-001.png
+    output_reference: mb-media://pushes/2026-05-ad-test/images/lost-thread-branch-map-001.png
     committed_binary: false
 ```
 
@@ -181,10 +291,11 @@ can contain planned concepts even when no provider generated an image.
 
 ## Prompt Strategy
 
-Use the concept brief before writing provider prompts. A small fixture-safe
-comparison for this contract favored "creative-director brief first" because
-it makes the reviewer answer who the image is for, what job the image does,
-which placement it serves, and what it must not claim before generation.
+Use source bites and the concept brief before writing provider prompts. A small
+fixture-safe comparison for this contract favored "creative-director brief
+first" because it makes the reviewer answer what repo fact the image latched
+onto, who the image is for, what job the image does, which placement it serves,
+and what it must not claim before generation.
 
 Keep these reusable patterns:
 
@@ -212,8 +323,66 @@ Creative direction principles to encode in each concept:
 Default flow:
 
 ```text
-business context -> creative-director brief -> no-text base-image prompt ->
-optional generation -> review -> image-index record
+business context -> source bite extraction -> optional creative playbook ->
+concept brief -> genericness and avoidance checks -> prompt record ->
+generation or prompt-only fallback -> review -> image-index record
+```
+
+Creative playbooks are optional overlays, not the base system. Suggest one only
+when it fits the repo's source bites, offer, audience, and brand context. Do not
+make any one metaphor universal across businesses.
+
+Write the prompt record before provider generation. If the selected provider is
+prompt-only or cannot accept image references, convert approved references into
+explicit `reference_trait_extraction` fields such as palette, composition,
+lighting, identity/persona constraints, and `do_not_copy`; do not imply image
+reference support when the provider path cannot use it.
+
+### Avoidance Layer
+
+Hard no items are unsafe or misleading and should be rejected before generation:
+
+- fake Meta, Facebook, or Instagram UI;
+- fake dashboards with performance numbers;
+- fake revenue screenshots;
+- real logos or brand marks without approval;
+- readable customer or member data;
+- private screenshots;
+- fake testimonials;
+- before/after income proof;
+- tiny unreadable text when text is part of the output.
+
+Soft avoid items are not forbidden, but require an intentional reason in
+`avoidance_strategy.intentionally_uses`:
+
+- clean desk productivity scene;
+- coffee, notebook, plant, and laptop still life;
+- split-screen chaos/order composition;
+- centered product on a white or gradient background;
+- polished stock-photo business people;
+- blue or purple SaaS gradient;
+- hologram dashboard;
+- glossy 3D icons;
+- generic growth chart;
+- overly cinematic lighting for everyday products;
+- "professional photoshoot", "modern minimalist aesthetic", and similar prompt
+  language;
+- website hero composition.
+
+Use safe wording in public docs and review notes. Do not claim a platform or
+algorithm penalizes a pattern unless current primary-source evidence supports
+that exact claim. Prefer: "This has high genericness risk, weak native-feed fit,
+and should be revised before generation."
+
+Prompt rewrite example:
+
+```text
+Bad: Professional photoshoot of a clean modern productivity desk with laptop,
+coffee, notebook, and plant.
+
+Better: A tactile visual metaphor: tangled red thread and business decision
+cards forming a maze, with one clear branch path emerging through it. No text,
+no logos, no fake UI, high-contrast feed-native still life.
 ```
 
 Do not commit raw provider payloads, raw generated images, private paths,
@@ -286,7 +455,9 @@ Committed records should use safe logical references such as
 paths.
 
 Reference images should carry roles. The important fields are what to borrow
-and what not to copy:
+and what not to copy. If the operator provides inspiration, ask what should be
+borrowed before using it; inspiration is a role-tagged instruction, not vague
+permission to copy the source image.
 
 ```yaml
 references:
@@ -306,6 +477,22 @@ references:
     privacy_level: private
     use_for: product shape and scale
     do_not_copy: background clutter, labels, or private details
+  - id: inspo-001
+    role: style_reference
+    path: mb-media://pushes/2026-05-ad-test/references/inspo-001.png
+    safe_to_share: false
+    approval_required: true
+    privacy_level: private
+    use_for:
+      - composition tension
+      - gritty lighting
+      - scroll-stopping object metaphor
+    do_not_copy:
+      - exact subject
+      - exact layout
+      - text
+      - brand marks
+    operator_note: I like how specific and hard to ignore this feels.
 ```
 
 ---

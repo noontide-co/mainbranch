@@ -19,9 +19,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   deferred. Refs #590.
 - Updated `/mb-ads` image-generation guidance and the OpenAI image rail smoke
   record so push-local `image-index.md` files can hold reviewable Facebook
-  image-ad concepts, placement presets, reference roles, structured creative
-  review findings, and concept-to-asset links before optional provider
-  generation. Refs MAIN-373, #595.
+  image-ad concepts, source-bite anchors, genericness checks, placement
+  presets, optional creative playbook metadata, prompt records, reference
+  roles, avoidance strategy checks, planned post-processing metadata,
+  structured creative review findings, and concept-to-asset links before
+  optional provider generation. Refs MAIN-373, #595.
 
 ## [0.3.21] - 2026-05-13
 
