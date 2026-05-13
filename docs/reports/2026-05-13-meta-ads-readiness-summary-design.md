@@ -67,6 +67,17 @@ insights_get_exit=0
 dataset_list_exit=0
 ```
 
+Sanitized direct-ping shape:
+
+- `meta --version` returned Meta Ads CLI `1.0.1`;
+- `meta auth status` returned authenticated and showed only a CLI-redacted token
+  preview;
+- ad account listing returned one readable account with active account status,
+  USD currency, and `America/Los_Angeles` timezone;
+- campaign listing returned at least one active campaign plus paused historical
+  campaigns across sales, lead, traffic, and engagement objectives;
+- insights and dataset read commands completed with exit `0`.
+
 Raw command output belongs in ignored local scratch and should not be copied to
 GitHub, docs, PR bodies, or tracked files.
 
