@@ -18,23 +18,37 @@ platform-creative generation support until the exact provider path has current
 docs, setup detection, approval gates, smoke evidence, and reproducibility
 metadata.
 
+The product direction is not a prompt library. The deeper loop is:
+
+1. the agent understands the business context;
+2. the agent generates or helps produce the creative asset;
+3. the agent records the sources, references, prompt, model, and storage
+   location it used;
+4. the operator reviews and approves the asset before publishing or spending;
+5. the system can later connect creative assets to outcomes.
+
 The first readiness rail should be:
 
 1. **Prompt and output record first.** Store the creative brief, prompts,
    source files, claim/proof context, provider/model, output dimensions,
-   post-processing settings, cost, retries, review state, and final file paths.
+   post-processing settings, cost, retries, review state, and safe logical
+   media references.
 2. **OpenAI GPT Image 2 first for provider smoke.** Use a direct OpenAI
    Image API or thin CLI wrapper for fixture-safe static image generation and
    editing. Record the exact model, snapshot when available, docs-checked date,
    prompt, dimensions, quality, usage/cost facts, and output path.
-3. **Prompt-only/manual fallback when no approved provider is configured.**
-   The agent may save prompts and an asset record for manual provider use, but
-   must not ask the operator to paste provider secrets into chat or committed
-   files.
-4. **Deterministic local motion before raw AI video.** Use inspectable
+3. **Configurable media storage.** Commit the durable asset record by default,
+   not the generated image binary. Store media in a configured local/private
+   media location, external media folder, or explicitly approved site/public
+   folder, and record a safe logical media reference.
+4. **Prompt-only/manual fallback when no approved provider is configured.**
+   Prompt-only mode is a safe fallback, not the target rail. The agent may save
+   prompts and an asset record for manual provider use, but must not ask the
+   operator to paste provider secrets into chat or committed files.
+5. **Deterministic local motion before raw AI video.** Use inspectable
    Remotion/FFmpeg-style render settings before accepting raw AI video
    providers as a supported rail.
-5. **No broad model router until one rail is boring.** Google Gemini / Nano
+6. **No broad model router until one rail is boring.** Google Gemini / Nano
    Banana, BFL FLUX.2, xAI Imagine, Ideogram, Runway, Kling, Luma, and similar
    tools remain candidate or reference rails until each has its own setup,
    smoke, cost, and artifact-record evidence.
@@ -78,15 +92,20 @@ Use current business-repo vocabulary:
   `core/brand/` files;
 - coordinated ad, launch, site, organic, or creative work lives under
   `pushes/<YYYY-MM-DD-slug>/`;
-- generated or manually produced creative files for a push may live under
-  `pushes/<YYYY-MM-DD-slug>/images/` or another approved push-local media
-  folder;
-- the durable record for a batch is `image-index.md` or another explicitly
-  named push artifact that maps prompts, metadata, review state, and final
-  file paths;
+- the durable committed record for a batch is `image-index.md` or another
+  explicitly named push artifact that maps prompts, references, metadata,
+  review state, and final media references;
+- generated image binaries are not committed by default;
+- media storage is configurable. Acceptable first options include a local
+  gitignored media cache such as `.mb/media/`, a private operator folder such
+  as `~/MainBranchMedia/<business>/`, an external media folder, or a site
+  repo/public folder only after explicit approval;
+- committed records should store safe logical media references such as
+  `mb-media://pushes/2026-05-ad-test/images/hero-001.png`, not private
+  absolute paths;
 - large binaries are optional business-repo content, not required source of
-  truth. Store large assets in a configured media folder, site repo, or other
-  approved location when that better fits the operator's repo boundary.
+  truth. Store large assets in the configured media location that fits the
+  operator's repo boundary.
 
 The legacy `outputs/` vocabulary should not be used for new generated work.
 
@@ -113,7 +132,9 @@ Required for all assets:
 - cost estimate and actual cost when known;
 - failure/retry count;
 - post-processing notes;
-- output path for each final asset;
+- safe logical output reference for each final asset;
+- storage backend label, such as `mb-media`, `site-public`, `external-media`,
+  or `manual`;
 - approval/review status;
 - `safe_to_share` status;
 - generated-at or manually-produced-at timestamp;
@@ -133,6 +154,20 @@ Optional when useful:
 Do not store secrets, raw private account IDs, customer/member data, private
 provider exports, or unapproved brand/customer assets in public examples,
 fixtures, committed docs, or issue comments.
+
+Reference images should preserve roles without leaking private paths:
+
+```yaml
+references:
+  - id: logo
+    role: logo
+    path: mb-media://brand/logo.png
+    safe_to_share: false
+  - id: product
+    role: product_photo
+    path: mb-media://pushes/2026-05-ad-test/references/product.webp
+    safe_to_share: false
+```
 
 ## Cost / Benefit Notes
 
@@ -161,7 +196,7 @@ current provider docs or console pricing when the cost matters to the operator.
 
 | Rail | State | Boundary |
 | --- | --- | --- |
-| Google Gemini image generation | Candidate provider | Official docs identify Nano Banana 2 Preview (`gemini-3.1-flash-image-preview`) as the all-around image model and Nano Banana Pro Preview (`gemini-3-pro-image-preview`) as the professional asset model. Model names and preview status move quickly, so artifacts must pin the exact model used. |
+| Google Gemini image generation | Candidate provider | Official docs identify Nano Banana image-model families, but exact model IDs and preview status move quickly. Main Branch should avoid shipping hard-coded Gemini image model IDs until a run checks current primary docs and pins the exact model used. |
 | BFL FLUX.2 | Candidate provider/reference local rail | Official BFL docs and repos cover FLUX.2 [pro], [max], [flex], [klein], API pricing, multi-reference editing, typography, and open-weight/local paths. Useful for future local/private or ComfyUI workflows, but heavier than the first Main Branch rail. |
 | xAI Grok Imagine | Candidate provider | Official xAI docs expose image generation/editing and video generation with flat image/video pricing. It is credible for experimentation, but should not be a first rail until setup, moderation, cost, and artifact metadata are smoked. |
 | Ideogram | Candidate typography specialist | Official API docs expose image-generation and editing surfaces. It remains a candidate for text-heavy creative, but exact pricing and setup details should be rechecked before any support claim. |
@@ -182,6 +217,8 @@ current provider docs or console pricing when the cost matters to the operator.
 | A generic model router as the first implementation | Routing across OpenAI, Google, BFL, xAI, Ideogram, and video providers multiplies setup, cost, policy, and validation paths before one rail is proven. |
 | Top-level `brandkit/` as a new business-repo primitive | Brand context already belongs in `core/brand/`, especially `core/brand/visual-style.md`. New top-level folders need a separate repo-shape decision. |
 | `outputs/` for new generated work | `outputs/` is legacy generated-work language. New coordinated creative work should route through `pushes/<push>/` or approved document/media locations. |
+| Committing generated image binaries by default | The durable source of truth is the asset record, not every generated binary. Binary commits require explicit operator approval and a clear repo/storage reason. |
+| `mb connect` provider state before one rail is smoked | Provider state should wait until direct OpenAI image generation/editing has fixture-safe smoke evidence and the metadata/storage contract is stable. |
 | Meta Advantage+ Creative as the generator | It is an in-platform optimization layer, not a reproducible asset generator. Main Branch can record whether the operator used it, but should not treat platform-side resizing, background generation, or animation as source-of-truth creative production. |
 | TikTok Symphony API automation | No public primary API/CLI rail was verified. Keep it as a manual handoff until official automation docs and smoke evidence exist. |
 | Raw AI video as the first creative system | Video generation is slower, more expensive, less reproducible, and higher policy risk than static images plus deterministic motion/export. Start with briefs, static assets, and renderable templates. |
@@ -194,6 +231,8 @@ Useful references checked during the MAIN-362 research pass:
 
 - `wuyoscar/gpt_image_2_skill`: strongest prompt-gallery, CLI, and agent-skill
   reference for GPT Image 2.
+- `Wangnov/gpt-image-2-skill`: useful agent-first CLI/installable skill
+  reference for OpenAI API key and Codex-auth style setup.
 - `dshark3y/gpt-image-2-skill`: small direct-OpenAI script pattern for
   generation and editing.
 - `robonuggets/gpt-image-2-skill`: useful structured prompting reference, but
@@ -207,8 +246,52 @@ Useful references checked during the MAIN-362 research pass:
   model-specific skill references.
 - ComfyUI FLUX.2 examples and CLI harnesses: useful local/private workflow
   references after the first provider rail is proven.
+- x-cmd OpenAI image-generation skill patterns: useful command/skill
+  invocation reference.
 
 These references do not create Main Branch support claims.
+
+## Implementation Patterns To Borrow From References
+
+Borrow patterns, not code:
+
+- repeated reference image inputs;
+- reference roles such as `logo`, `product_photo`, `style_reference`,
+  `background`, and `mask_source`;
+- optional mask path for targeted edits;
+- generate vs. edit vs. mask-edit decision tree;
+- retries, timeouts, and clear failure records;
+- JSON/events or artifact logs that can be inspected after a run;
+- deterministic output naming conventions;
+- prompt galleries as inspiration for templates, not as product truth;
+- CLI-first skill invocation that keeps runtime prose thin.
+
+Wrapper/provider repos can inform input shape and workflow ergonomics, but the
+first Main Branch rail should not depend on them.
+
+## Generate / Edit / Mask Decision Tree
+
+- No image input: generate.
+- Image input plus broad natural-language change: edit.
+- Image input plus exact region change: mask edit.
+- Many prompts, many variants, or repeated reference combinations: batch later,
+  after the single-image rail is stable.
+
+## Recommended CLI Shape
+
+The first implementation does not have to keep this exact command surface, but
+the decision recommends a one-shot, scriptable CLI shape so the next agent does
+not design ad hoc commands:
+
+```bash
+mb image generate --prompt "..." --out mb-media://pushes/2026-05-ad-test/images/hero-001.png
+mb image edit --prompt "..." --ref-image mb-media://brand/logo.png --out mb-media://pushes/2026-05-ad-test/images/hero-002.png
+mb image edit --prompt "..." --ref-image mb-media://pushes/2026-05-ad-test/references/product.webp --mask mb-media://pushes/2026-05-ad-test/references/mask.png --out mb-media://pushes/2026-05-ad-test/images/hero-003.png
+```
+
+The implementation should resolve logical media URIs to configured storage
+locations at runtime, write/update the push-local `image-index.md`, and refuse
+private absolute paths in committed records.
 
 ## Implementation Order
 
@@ -225,6 +308,21 @@ These references do not create Main Branch support claims.
 6. Open follow-up issues for Google Gemini, BFL FLUX.2/ComfyUI, deterministic
    Remotion/FFmpeg templates, and raw video providers only after the OpenAI
    rail and metadata contract are stable.
+
+## Acceptance Criteria For MAIN-362 Decision Readiness
+
+- OpenAI `gpt-image-2` is the first readiness target, not a support claim.
+- Prompt-only/manual mode is a fallback, not the main product target.
+- Generated images are not committed by default.
+- `image-index.md` or equivalent is the durable committed record.
+- Media storage is configurable or explicitly follow-up scoped.
+- Safe logical media URIs are preferred over private absolute paths.
+- Reference image roles are supported in the metadata contract.
+- Community repos are references only, not vendored dependencies.
+- No top-level `brandkit/`, `outputs/`, or `artifacts/` folder is introduced.
+- No generic model router is introduced.
+- No `mb connect` provider state is added until one rail is smoked and boring.
+- `scripts/check.sh` passes before PR.
 
 ## Source Notes
 

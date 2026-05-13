@@ -31,8 +31,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 - Updated `/mb-ads` image-generation guidance and dependency choices to use
   provider-neutral prompt/output records, push-local image indexes, direct
-  OpenAI GPT Image 2 as the first smoke target, and prompt-only fallback when
-  no approved provider is configured. Refs MAIN-362, #569.
+  OpenAI GPT Image 2 as the first smoke target, configurable media storage
+  with safe logical media URIs, reference-image roles, and prompt-only fallback
+  when no approved provider is configured. Refs MAIN-362, #569.
 
 ## [0.3.20] - 2026-05-13
 
