@@ -177,16 +177,13 @@ review_board_question: Which playbook produced the best actual ad candidate?
 review_rule: Beautiful but no click reason = reject.
 ad_readiness_gate:
   state: ready
-  hard_stop_missing:
+  required_fields:
     - offer
     - audience
     - campaign_goal
     - claim_proof_boundary
-  hard_stop_missing_fields:
-    - offer
-    - audience
-    - campaign_goal
-    - claim_proof_boundary
+  hard_stop_missing: []
+  hard_stop_missing_fields: []
   soft_warning_missing:
     - proof
     - customer_language

@@ -127,8 +127,19 @@ def _logical_output(push_slug: str, asset_id: str, extension: str = "png") -> st
     return f"mb-media://pushes/{push_slug}/images/{asset_id}.{extension}"
 
 
+def _logical_review_board(push_slug: str) -> str:
+    return f"mb-media://pushes/{push_slug}/review-board.md"
+
+
 def _repo_relative(path: Path, repo: Path) -> str:
     return path.resolve().relative_to(repo.resolve()).as_posix()
+
+
+def _repo_relative_or_logical(path: Path, repo: Path, logical_reference: str) -> str:
+    try:
+        return _repo_relative(path, repo)
+    except ValueError:
+        return logical_reference
 
 
 def _media_path(repo: Path, media_root: str, push_slug: str, asset_id: str) -> Path:
@@ -1622,12 +1633,13 @@ def _post_processing_plan() -> dict[str, Any]:
 
 
 def _ad_readiness_gate() -> dict[str, Any]:
-    hard_stop_missing = [
+    required_fields = [
         "offer",
         "audience",
         "campaign_goal",
         "claim_proof_boundary",
     ]
+    hard_stop_missing: list[str] = []
     soft_warning_missing = [
         "proof",
         "customer_language",
@@ -1654,6 +1666,7 @@ def _ad_readiness_gate() -> dict[str, Any]:
     return {
         "state": "ready",
         "status": "fixture_ready",
+        "required_fields": required_fields,
         "hard_stop_missing": hard_stop_missing,
         "hard_stop_missing_fields": hard_stop_missing,
         "soft_warning_missing": soft_warning_missing,
@@ -2135,7 +2148,11 @@ def smoke_openai(
         )
     state: SmokeState = "generated" if generated_count else "blocked"
     review_board_path = _review_board_path(repo_path, media_root, push_slug)
-    review_board_rel = _repo_relative(review_board_path, repo_path)
+    review_board_ref = _repo_relative_or_logical(
+        review_board_path,
+        repo_path,
+        _logical_review_board(push_slug),
+    )
     review_board_path.parent.mkdir(parents=True, exist_ok=True)
     review_board_path.write_text(
         _render_review_board(
@@ -2150,7 +2167,7 @@ def smoke_openai(
         concepts=concepts,
         assets=asset_records,
         generated_count=generated_count,
-        review_board_path=review_board_rel,
+        review_board_path=review_board_ref,
     )
     ad_readiness = _ad_readiness_gate()
     image_generation_gate = _image_generation_gate()
@@ -2160,7 +2177,7 @@ def smoke_openai(
         image_generation_gate=image_generation_gate,
         visual_calibration=visual_calibration,
         assets=asset_records,
-        review_board_path=review_board_rel,
+        review_board_path=review_board_ref,
     )
     record = {
         "schema": "mainbranch.image_index.v0",
@@ -2185,7 +2202,7 @@ def smoke_openai(
         "creative_playbook_ids": list(CREATIVE_PLAYBOOK_IDS),
         "review_board_question": "Which playbook produced the best actual ad candidate?",
         "review_board": {
-            "path": review_board_rel,
+            "path": review_board_ref,
             "committed": False,
             "storage": "ignored_media_storage",
         },
@@ -2226,7 +2243,7 @@ def smoke_openai(
         "output_record_written": True,
         "record_path": _repo_relative(index_path, repo_path),
         "review_board_written": True,
-        "review_board_path": review_board_rel,
+        "review_board_path": review_board_ref,
         "output_reference": _logical_output(push_slug, DEFAULT_ASSET_ID),
         "storage_backend": "mb-media",
         "dimensions": {

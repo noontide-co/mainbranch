@@ -1302,7 +1302,10 @@ def image_smoke_openai_cmd(
     media_root: str = typer.Option(
         ".mb/media",
         "--media-root",
-        help="Private media storage root used only when --generate writes a binary.",
+        help=(
+            "Private media storage root for the review board and any approved "
+            "9-candidate --generate batch binaries."
+        ),
     ),
     generate: bool = typer.Option(
         False,

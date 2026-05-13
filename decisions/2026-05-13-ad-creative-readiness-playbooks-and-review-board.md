@@ -58,11 +58,12 @@ Final ad generation requires:
 ```yaml
 ad_readiness:
   state: ready | partial | blocked
-  hard_stop_missing:
+  required_fields:
     - offer
     - audience
     - campaign_goal
     - claim_proof_boundary
+  hard_stop_missing: []
   soft_warning_missing:
     - proof
     - customer_language
@@ -81,9 +82,10 @@ ad_readiness:
   blocked_actions: []
 ```
 
-If a hard-stop field is missing, do not generate final ads. Create an intake or
-source-bite plan, or generate clearly marked low-confidence exploration
-concepts only if the operator approves.
+If a hard-stop field is missing, set `state: blocked` or `state: partial`, list
+the field in `hard_stop_missing`, and do not generate final ads. Create an
+intake or source-bite plan, or generate clearly marked low-confidence
+exploration concepts only if the operator approves.
 
 Suggested refusal:
 

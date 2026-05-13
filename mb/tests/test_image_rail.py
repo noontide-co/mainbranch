@@ -110,12 +110,16 @@ def test_openai_image_smoke_writes_safe_blocked_record(
     assert len(record["assets"]) == 9
     assert "facebook_feed_portrait_4x5" in record["placement_presets"]
     assert "style_reference" in record["reference_roles"]
-    assert record["ad_readiness_gate"]["hard_stop_missing_fields"] == [
+    assert record["ad_readiness_gate"]["state"] == "ready"
+    assert record["ad_readiness_gate"]["required_fields"] == [
         "offer",
         "audience",
         "campaign_goal",
         "claim_proof_boundary",
     ]
+    assert record["ad_readiness_gate"]["hard_stop_missing_fields"] == []
+    assert "api_generation" in record["ad_readiness_gate"]["allowed_actions"]
+    assert "final_ad_package" in record["ad_readiness_gate"]["allowed_actions"]
     assert (
         "operator_approval_for_live_provider_call"
         in record["image_generation_gate"]["required_before_provider_generation"]
@@ -344,6 +348,44 @@ def test_openai_image_smoke_generated_path_keeps_binary_in_media_cache(
     text = index_path.read_text(encoding="utf-8")
     assert str(media_path) not in text
     assert "test-key-not-written" not in text
+
+
+def test_openai_image_smoke_allows_absolute_media_root(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    media_root = tmp_path / "private-media"
+
+    result = image_rail_mod.smoke_openai(
+        repo=str(repo),
+        push_slug="2026-05-13-fake-openai-smoke",
+        docs_checked="2026-05-13",
+        media_root=str(media_root),
+        generate=False,
+    )
+
+    assert result["state"] == "blocked"
+    assert result["blocker_code"] == "generation_not_approved"
+    assert result["review_board_written"] is True
+    assert (
+        result["review_board_path"]
+        == "mb-media://pushes/2026-05-13-fake-openai-smoke/review-board.md"
+    )
+
+    review_board_path = media_root / "pushes" / "2026-05-13-fake-openai-smoke" / "review-board.md"
+    assert review_board_path.exists()
+
+    index_path = repo / "pushes" / "2026-05-13-fake-openai-smoke" / "image-index.md"
+    index_text = index_path.read_text(encoding="utf-8")
+    record = _record_from_index(index_path)
+    assert (
+        record["review_board"]["path"]
+        == "mb-media://pushes/2026-05-13-fake-openai-smoke/review-board.md"
+    )
+    assert str(media_root) not in index_text
 
 
 def test_openai_image_smoke_provider_failure_writes_sanitized_blocker(
