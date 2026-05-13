@@ -251,6 +251,28 @@ def test_score_transcript_allows_business_translation_before_technical_detail() 
     assert operator_language["visible_technical_leakage"]["examples"] == []
 
 
+def test_score_transcript_does_not_treat_product_name_as_branch_language() -> None:
+    transcript = """
+    This release keeps the agent focused on Main Branch language. It explains
+    business state before technical detail.
+    """
+
+    score = release_simulation.score_transcript(transcript)
+
+    assert score["operator_language"]["operator_language_first"] is True
+    assert score["operator_language"]["visible_technical_leakage"]["examples"] == []
+
+
+def test_score_transcript_does_not_double_count_specific_origin_remote_phrase() -> None:
+    transcript = "No GitHub origin remote."
+
+    score = release_simulation.score_transcript(transcript)
+    leakage = score["operator_language"]["visible_technical_leakage"]
+
+    assert leakage["severity"] == "low"
+    assert [item["phrase"] for item in leakage["examples"]] == ["No GitHub origin remote"]
+
+
 def test_score_transcript_flags_broad_checkpoint_notes() -> None:
     transcript = """
     Checkpoint plan ready.

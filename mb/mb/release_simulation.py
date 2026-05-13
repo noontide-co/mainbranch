@@ -298,7 +298,7 @@ _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
         "current business folder",
     ),
     (
-        re.compile(r"\bon\s+`?main`?\b", re.IGNORECASE),
+        re.compile(r"\bon\s+`main`(?=\W|$)|\bon main\b"),
         "on main",
         "in the current business folder",
     ),
@@ -355,10 +355,15 @@ def _visible_technical_leakage(text: str) -> list[dict[str, str]]:
         stripped = line.strip()
         if not stripped or _is_allowed_technical_detail_line(stripped):
             continue
+        matched_spans: list[tuple[int, int]] = []
         for pattern, phrase, preferred in _TECHNICAL_LANGUAGE_PATTERNS:
             match = pattern.search(stripped)
             if match is None:
                 continue
+            span = match.span()
+            if any(_spans_overlap(span, existing) for existing in matched_spans):
+                continue
+            matched_spans.append(span)
             examples.append(
                 {
                     "phrase": phrase,
@@ -367,6 +372,10 @@ def _visible_technical_leakage(text: str) -> list[dict[str, str]]:
                 }
             )
     return examples
+
+
+def _spans_overlap(left: tuple[int, int], right: tuple[int, int]) -> bool:
+    return left[0] < right[1] and right[0] < left[1]
 
 
 def _broad_checkpoint_notes(text: str) -> list[dict[str, str]]:
