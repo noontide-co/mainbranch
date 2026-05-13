@@ -179,6 +179,12 @@ Offer clarity comes before content volume. Use
 believe or buy something and the audience, outcome, mechanism, proof, CTA, or
 style is unclear.
 
+Use `/mb-think` research-depth guidance before deep platform, audience, or
+competitor research. Repo context can be enough for cleaning up an existing
+strategy; public/source-backed research or structured approved-source
+collection may be worth it before committing to a new channel, account voice,
+campaign angle, or market position.
+
 AI/search recognition work is related but separate. This model records what the
 business wants to be known for and how owned/public distribution reinforces
 that target. Site/wiki recognition checklists, entity pages, schema, and AI SEO

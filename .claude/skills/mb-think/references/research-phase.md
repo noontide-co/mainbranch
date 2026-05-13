@@ -25,11 +25,14 @@ silently route from `.vip/local.yaml`. Use legacy `reference/offers/` only when
 ## Workflow
 
 1. **Define the question** — What specifically are you trying to learn?
-2. **Detect intent & route** — Determine which research tools to use (see [research-routing-quick-ref.md](research-routing-quick-ref.md))
-3. **Check capabilities** — Are preferred tools available? Offer setup or fallback if not
-4. **Gather findings** — Execute with token management and cost awareness
-5. **Synthesize** (required) — Distill findings into actionable insight
-6. **Save** — Write to `research/YYYY-MM-DD-topic-[source].md`
+2. **Recommend depth** — For offer, audience, proof, CTA, content strategy,
+   ads/pages, and positioning work, choose the smallest useful depth with
+   [research-depth-ladder.md](research-depth-ladder.md)
+3. **Detect intent & route** — Determine which research tools to use (see [research-routing-quick-ref.md](research-routing-quick-ref.md))
+4. **Check capabilities** — Are preferred tools available? Offer setup or fallback if not
+5. **Gather findings** — Execute with token management and cost awareness
+6. **Synthesize** (required) — Distill findings into actionable insight
+7. **Save** — Write to `research/YYYY-MM-DD-topic-[source].md`
 
 If the operator passes `--brief-format=grok-8`, asks for a researched brief,
 or wants research to feed a site, ads, organic content, or a push playbook,
@@ -153,11 +156,13 @@ only concise excerpts needed to support the synthesis.
 
 ### Provider Routing
 
-- Use Apify only as optional read-only enrichment when configured: YouTube
-  transcripts, Instagram mining, public web scraping, and public X
-  profile/post/reply samples when actor metadata, operator-accepted terms, and
-  a small smoke run support the source. Treat public X actors as sidecar
-  research, not an official X integration.
+- Use Apify only as optional read-only enrichment, preferably through MCP for
+  now: YouTube transcripts, Instagram mining, public web scraping, and public X
+  profile/post/reply samples when actor metadata, operator-accepted terms,
+  access/permission boundaries, and a small smoke run support the source. Treat
+  public X actors as sidecar research, not an official X integration. Treat
+  Apify MCP as an agent-side research tool surface, not automatically as an
+  `mb connect` provider.
 - Use Grok/xAI or web search for topic-level X/social sentiment when
   configured; otherwise ask for screenshots, public embeds, or manual exports.
 - Treat Postiz as planned scheduling/publishing support only where current docs

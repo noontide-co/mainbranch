@@ -23,6 +23,14 @@ Fast lookup table for routing research requests in /mb-think skill.
 - Tier 1 (Flash): **TESTED** - works via REST API
 - Tier 2 (Deep Research): **TESTED** - works via REST API (verified 2026-01-26, ~6min completion)
 
+For offer, audience, proof, CTA, content strategy, ads/pages, and positioning
+work, choose research depth with
+[research-depth-ladder.md](research-depth-ladder.md) before selecting tools.
+Levels 0-3 require no Apify. Level 4 may use Apify/MCP or another structured
+collection path when access, permission, terms, and source quality justify it.
+Level 5 may use Apify/MCP as one provider rail inside multi-source synthesis
+with caveats and durable promotion decisions.
+
 ---
 
 ## Tool Availability Check
@@ -30,7 +38,7 @@ Fast lookup table for routing research requests in /mb-think skill.
 **Run once per session, cache results:**
 
 ```bash
-# Check for Apify (YouTube, Instagram, optional public X post/profile/comment mining)
+# Check for Apify MCP (YouTube, Instagram, optional public X post/profile/comment mining)
 if mcp__apify__* exists: APIFY=true
 
 # Check for Grok (X/Twitter) — requires Python SDK, not just API key

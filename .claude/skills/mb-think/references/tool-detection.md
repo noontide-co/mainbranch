@@ -1,9 +1,11 @@
 # Tool Detection (CLI Facts First, Runtime Probes Second)
 
 Provider readiness belongs to `mb status --json --peek`, `mb connect plan`, and
-`mb connect doctor --json`. Use those facts before probing local runtime tools.
-The checks below are for runtime-local capabilities that `mb` cannot inspect
-directly inside the current Claude Code session.
+`mb connect doctor --json`. Use those facts before probing local runtime tools
+for providers that `mb` owns. Apify research is MCP-first for now, so treat it
+as an agent-side tool surface unless a later CLI contract exposes stable Apify
+readiness facts. The checks below are for runtime-local capabilities that `mb`
+cannot inspect directly inside the current Claude Code session.
 
 ---
 
@@ -44,9 +46,11 @@ For full self-healing contract (stale semantics, status-change messaging, and tr
 
 ## Detection Methods
 
-**Apify:** Use `mb connect doctor --json` for provider readiness first. Then
-check if `mcp__apify__search-actors` exists in session when the selected path
-needs Apify runtime tools.
+**Apify:** Treat Apify as MCP-first agent-side research enrichment. When the
+selected path needs Level 4/5 structured collection, check if `mcp__apify__*`
+tools exist in session, then verify source access, permission, terms/cost,
+actor shape, and no-raw-dump handling before use. Do not require or imply
+`mb connect apify` until a later CLI issue accepts provider-readiness facts.
 
 **Gemini:**
 ```bash

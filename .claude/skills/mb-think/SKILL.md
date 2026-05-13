@@ -23,12 +23,9 @@ Something came your way — a video, a voice memo, a vague feeling, a problem to
 - Anytime you feel lost
 
 **Save progress at natural boundaries.** After a research batch, accepted
-decision, codify pass, or major reference-file update, ask whether to save a
-checkpoint before moving to the next phase. Run `mb checkpoint --plan --json`,
-show the proposed message, changed files, and blockers, then ask whether to save
-it. Validate the final message with `mb checkpoint --validate "..." --json`;
-after operator approval, run `mb checkpoint --message "..." --yes`. Do not save
-hidden checkpoints.
+decision, codify pass, or major reference-file update, ask whether to checkpoint.
+Run `mb checkpoint --plan --json`, show the proposed message, validate with
+`mb checkpoint --validate "..." --json`, then save only after operator approval; no hidden checkpoints.
 
 When research identifies a reusable growth mechanic such as a comment-keyword,
 DM-keyword, public reply/link, resource delivery, provider setup recipe, or
@@ -54,16 +51,12 @@ unless the operator chooses it.
 
 ## Two Modes of Work
 
-Before diving in, know which mode you're in:
-
 | Mode | You're doing | Examples |
 |------|--------------|----------|
 | **Enriching the core** | Pulling insights → reference files | Mining videos, making decisions, updating offer.md, **building content-strategy.md** |
 | **Creating for the world** | Reference files → output | Ads, scripts, courses, code, posts |
 
 `/mb-think` is for **enriching the core**. When you're ready to create, use `/mb-ads`, `/mb-organic`, `/mb-site`, or just ask.
-
-Both are work. Enriching the core levels up everything downstream.
 
 ---
 
@@ -82,8 +75,10 @@ mb status --json --peek
 mb connect doctor --json
 ```
 
-Use those facts for GitHub, Google/Workspace, Meta Ads, Apify, and other
-provider repair language. Runtime-local tool checks happen only after a
+Use those facts for GitHub, Google/Workspace, Meta Ads, and other provider
+repair language. Apify research remains MCP-first for now: treat it as an
+agent-side research tool surface unless a later CLI contract exposes stable
+provider-readiness facts. Runtime-local tool checks happen only after a
 selected research path needs them and `mb` cannot inspect the tool directly.
 
 **Quick gist:** On first `/mb-think` invocation, read status/connect facts. When
@@ -170,6 +165,11 @@ Detect mode from user's natural language:
 | "content strategy", "pillars", "what platforms", "content plan", "cadence", "channel strategy", "account strategy", "founder voice", "weekly content plan" | Full Flow (codify to the right content strategy layer) | [codify-phase.md](references/codify-phase.md) |
 | "where was I", "continue", "pick up" | Recovery | [recovery.md](references/recovery.md) |
 | "here's a PDF", "ingest this", "convert this document", file path (.pdf/.docx/.pptx) | Document Ingestion | [document-ingestion.md](references/document-ingestion.md) |
+
+For offer, audience, proof, CTA, content strategy, ads/pages, and positioning
+requests, use [research-depth-ladder.md](references/research-depth-ladder.md)
+before selecting source tools. The ladder chooses how much research is enough;
+the routing references choose which tools to use.
 
 If unclear, ask: "Are you exploring a question, documenting a decision, or updating reference files?"
 

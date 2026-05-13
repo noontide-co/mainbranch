@@ -42,6 +42,7 @@ source_url:                    # Optional: Gemini/GPT share link for provenance
 model: opus-4.5
 status: draft
 brief_format: standard         # Use grok-8 for the 8-category researched brief
+research_depth: 1              # 0-5; see research-depth-ladder.md
 linked_decisions: []
 linked_pushes: []
 ---
@@ -64,6 +65,25 @@ a typed frontmatter link, inline link, entity tag, data reference, or no link.]
 ## Methodology
 
 [2-4 sentences: How you approached this research. What tools, what context provided, what attachments. Not the full prompt — just enough to reproduce or audit.]
+
+---
+
+## Research Depth
+
+```text
+current_depth:
+recommended_depth:
+reason:
+useful_sources:
+optional_tools:
+fallback:
+stop_condition:
+durable_targets:
+```
+
+Explain why this depth was enough, or what would justify escalation. If using
+Apify/MCP or another structured collection path, include access, permission,
+terms, source-quality, and no-raw-dump notes.
 
 ---
 
@@ -133,6 +153,16 @@ or long tweet threads into committed research files.
 
 - [What we still don't know]
 - [What needs follow-up research]
+
+### Promotion Review
+
+| Candidate Durable Target | Promote? | Reason / Caveat |
+|---|---|---|
+| `core/offer.md` | yes/no | [What should change, or why not yet] |
+| `core/audience.md` | yes/no | [What should change, or why not yet] |
+| `core/proof/` | yes/no | [Permission, typicality, outcome, or caveat note] |
+| `core/content-strategy.md` / `core/marketing/...` / `core/people/...` | yes/no | [Strategy or voice implication] |
+| `decisions/` | yes/no | [Decision needed before changing core truth] |
 
 ---
 

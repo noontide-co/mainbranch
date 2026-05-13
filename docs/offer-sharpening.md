@@ -41,6 +41,12 @@ offer path is legible, supported, connected, and instrumented. It does not
 replace strategic judgment about positioning, demand, copy quality, or market
 strength.
 
+Use `/mb-think` to choose the research depth before spending tokens on deeper
+source collection. Operator memory and repo context may be enough for a small
+copy edit. Source-backed synthesis, structured collection, field evidence, or a
+small push/test may be necessary before changing positioning, proof claims,
+pages, ads, or content strategy.
+
 ## Style Spectrum
 
 Use style to fit the operator and buyer. Do not use style to skip the rubric.

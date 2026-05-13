@@ -80,6 +80,8 @@ Use `/mb-think` for:
 
 - sharpening the offer, audience, mechanism, proof, objections, guarantee, or
   style before creation;
+- choosing research depth before spending tokens on source collection, using
+  `.claude/skills/mb-think/references/research-depth-ladder.md`;
 - sales-video teardown, pitch extraction, objection mining, and codifying the
   mechanism;
 - keyword gate, market-intent research, competitor offer mapping, and

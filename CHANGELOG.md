@@ -13,6 +13,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added a `/mb-think` research-depth ladder for offer, audience, proof,
+  product-ladder, CTA, content strategy, ads/page launch, market positioning,
+  and influence/playbook work, including enough-signal thresholds, stop rules,
+  parallel research file contracts, synthesis and promotion rules, MoneyPath
+  readiness language, and an MCP-first optional Apify research-provider
+  boundary. Refs MAIN-344, #529.
 - Added compact, privacy-safe books readiness facts to `mb status --json --peek`
   and `mb start --json`, so daily-loop agents can see bookkeeping setup,
   hledger availability, vault/ignore safety, unsafe artifact counts, and the
