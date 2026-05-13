@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added a public-safe v0.3.19 post-release transcript review report that records
+  PyPI release-acceptance evidence, print-mode proxy limits, post-release docs
+  alignment, and the #539 path-to-money follow-up route. Refs #538, #539.
+
 ## [0.3.19] - 2026-05-12
 
 v0.3.19 makes daily status more business-aware: MoneyPath, proof-quality, and
