@@ -1007,7 +1007,7 @@ def books_doctor_cmd(
                         "safe_to_share": True,
                     },
                     command="mb books doctor",
-                    schema_name="mainbranch.books.doctor.result",
+                    schema_name="mainbranch.books.doctor.plan.result",
                 )
             )
         else:

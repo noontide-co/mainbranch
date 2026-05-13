@@ -388,6 +388,37 @@ vault_location: ".mb/private/books/"
     assert "books-vault-missing" in {finding["id"] for finding in payload["findings"]}
 
 
+def test_books_status_and_doctor_accept_no_slash_private_ignore_entry(
+    tmp_path: Path,
+) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write(
+        repo / "core/finance/books.md",
+        """---
+type: books
+ledger: hledger
+storage_mode: solo-local
+vault_location: ".mb/private/books/"
+---
+
+# Books
+""",
+    )
+    _write(repo / ".gitignore", ".mb/private\n*.journal\n*.hledger\n*.ledger\n*.beancount\n")
+
+    status_result = runner.invoke(app, ["books", "status", str(repo), "--json"])
+    assert status_result.exit_code == 0, status_result.output
+    status_payload = json.loads(status_result.output)
+    assert status_payload["ignore"]["ok"] is True
+    assert status_payload["ignore"]["missing"] == []
+
+    doctor_result = runner.invoke(app, ["books", "doctor", str(repo), "--plan", "--json"])
+    assert doctor_result.exit_code == 0, doctor_result.output
+    doctor_payload = json.loads(doctor_result.output)
+    actions = {action["id"] for action in doctor_payload["actions"]}
+    assert "add-books-ignore-protections" not in actions
+
+
 def test_books_status_reports_hledger_and_private_journal_without_reading_contents(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -495,6 +526,34 @@ def test_books_doctor_requires_plan(tmp_path: Path) -> None:
     result = runner.invoke(app, ["books", "doctor", str(repo)])
     assert result.exit_code == 2
     assert "--plan is required" in result.output
+
+
+def test_books_doctor_requires_plan_json_uses_plan_schema(tmp_path: Path) -> None:
+    repo = _init_business_repo(tmp_path)
+    result = runner.invoke(app, ["books", "doctor", str(repo), "--json"])
+    assert result.exit_code == 2
+    payload = json.loads(result.output)
+    assert payload["result_schema"]["name"] == "mainbranch.books.doctor.plan.result"
+    assert "--plan is required" in payload["summary"]
+
+
+def test_books_status_cli_human_output_mentions_plan(tmp_path: Path) -> None:
+    repo = _init_business_repo(tmp_path)
+    result = runner.invoke(app, ["books", "status", str(repo)])
+    assert result.exit_code == 0, result.output
+    assert "mb books status" in result.output
+    assert "Ignore rules:      missing" in result.output
+    assert "Run `mb books doctor --plan`" in result.output
+
+
+def test_books_doctor_plan_cli_human_output_formats_ignore_entries(tmp_path: Path) -> None:
+    repo = _init_business_repo(tmp_path)
+    result = runner.invoke(app, ["books", "doctor", str(repo), "--plan"])
+    assert result.exit_code == 0, result.output
+    assert "mb books doctor --plan" in result.output
+    assert "Add books ignore protections" in result.output
+    assert "plan: Add these lines to .gitignore: .mb/private/, *.journal" in result.output
+    assert "`.mb/private/`" not in result.output
 
 
 def test_books_check_packaged_fixtures_carry_marker() -> None:

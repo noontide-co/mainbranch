@@ -205,7 +205,15 @@ def _ignore_rule_present(entries: set[str]) -> bool:
 
 
 def _books_ignore_missing(entries: set[str]) -> list[str]:
-    return [entry for entry in BOOKS_IGNORE_ENTRIES if entry not in entries]
+    missing: list[str] = []
+    if not _ignore_rule_present(entries):
+        missing.append(".mb/private/")
+    missing.extend(
+        entry
+        for entry in BOOKS_IGNORE_ENTRIES
+        if entry not in VAULT_IGNORE_ENTRIES and entry not in entries
+    )
+    return missing
 
 
 def _has_books_policy(repo: Path) -> bool:
@@ -256,18 +264,6 @@ def _vault_info(repo: Path, fm: dict[str, Any]) -> dict[str, Any]:
             "local_path": "",
             "exists": None,
             "journal_placeholder": "not_checked",
-        }
-
-    if not raw_location:
-        return {
-            "storage_mode": storage_mode,
-            "configured": False,
-            "defaulted": False,
-            "location": "not configured",
-            "location_kind": "missing",
-            "local_path": "",
-            "exists": False,
-            "journal_placeholder": "missing",
         }
 
     candidate = Path(raw_location)
@@ -1125,10 +1121,7 @@ def doctor_plan(repo: str | Path = ".") -> dict[str, Any]:
                     "The business repo is missing books ignore rules for the "
                     "private vault or ledger-shaped files."
                 ),
-                command=(
-                    "Add these lines to .gitignore: "
-                    + ", ".join(f"`{entry}`" for entry in missing_ignore)
-                ),
+                command=("Add these lines to .gitignore: " + ", ".join(missing_ignore)),
                 writes=[".gitignore"],
                 evidence=missing_ignore,
                 audience="mechanical",
