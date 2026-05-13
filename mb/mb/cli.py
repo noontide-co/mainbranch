@@ -16,6 +16,7 @@ from typing import Any, NoReturn
 import typer
 
 from mb import __version__
+from mb import ads as ads_mod
 from mb import books as books_mod
 from mb import checkpoint as checkpoint_mod
 from mb import connect as connect_mod
@@ -100,6 +101,20 @@ books_report_app = typer.Typer(
     no_args_is_help=True,
 )
 books_app.add_typer(books_report_app, name="report")
+
+ads_app = typer.Typer(
+    name="ads",
+    help="Read paid-channel account summaries.",
+    no_args_is_help=True,
+)
+app.add_typer(ads_app, name="ads")
+
+ads_meta_app = typer.Typer(
+    name="meta",
+    help="Read privacy-bounded Meta Ads account summaries.",
+    no_args_is_help=True,
+)
+ads_app.add_typer(ads_meta_app, name="meta")
 
 suggest_app = typer.Typer(
     name="suggest",
@@ -1154,6 +1169,84 @@ def books_report_monthly_cmd(
     else:
         books_mod.render_sample_monthly_report(report)
     raise typer.Exit(0 if report["ok"] else 1)
+
+
+@ads_meta_app.command("summary")
+def ads_meta_summary_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo with Meta readiness metadata."),
+    window: str = typer.Option("7d", "--window", help="Recent bounded window, such as 7d."),
+    since: str = typer.Option("", "--since", help="Start date as YYYY-MM-DD."),
+    until: str = typer.Option("", "--until", help="End date as YYYY-MM-DD."),
+    include_campaign_names: bool = typer.Option(
+        False,
+        "--include-campaign-names",
+        help="Include campaign names for this run only.",
+    ),
+    include_exact_spend: bool = typer.Option(
+        False,
+        "--include-exact-spend",
+        help="Include exact spend for this run only.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Pull a compact read-only Meta Ads account summary."""
+    command_parts = ["mb ads meta summary"]
+    if window:
+        command_parts.extend(["--window", window])
+    if since:
+        command_parts.extend(["--since", since])
+    if until:
+        command_parts.extend(["--until", until])
+    if include_campaign_names:
+        command_parts.append("--include-campaign-names")
+    if include_exact_spend:
+        command_parts.append("--include-exact-spend")
+    command = " ".join(command_parts)
+    try:
+        result = ads_mod.meta_summary(
+            repo=repo,
+            window=window,
+            since=since,
+            until=until,
+            include_campaign_names=include_campaign_names,
+            include_exact_spend=include_exact_spend,
+        )
+    except ads_mod.AdsSummaryError as exc:
+        message = f"mb ads meta summary: {exc}"
+        payload = {
+            "ok": False,
+            "schema_version": ads_mod.SUMMARY_SCHEMA_VERSION,
+            "safe_to_share": False,
+            "provider": "meta",
+            "command": "mb ads meta summary",
+            "state": "invalid_arguments",
+            "summary": message,
+            "errors": [message],
+            "actions": [],
+        }
+        if json_out:
+            typer.echo(
+                _json_payload(
+                    payload,
+                    command=command,
+                    schema_name="mainbranch.ads.meta.summary.v1",
+                )
+            )
+        else:
+            typer.echo(message, err=True)
+        raise typer.Exit(2) from exc
+
+    if json_out:
+        typer.echo(
+            _json_payload(
+                result,
+                command=command,
+                schema_name="mainbranch.ads.meta.summary.v1",
+            )
+        )
+    else:
+        ads_mod.render_meta_summary_human(result)
+    raise typer.Exit(0 if result["ok"] else 1)
 
 
 @site_app.command("check")

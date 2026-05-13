@@ -17,6 +17,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `mb connect`, skill/playbook UX, SecretStore/Keychain, privacy/redaction,
   JSON envelope, support-claim, Meta Ads, and image-generation guidance for
   provider cold starts. Refs MAIN-369, #585.
+- Added `mb ads meta summary --repo <BUSINESS_REPO> --window 7d --json` for
+  compact read-only Meta Ads account summaries after `mb connect` readiness,
+  with bounded windows, redacted account/business IDs, coarse spend by default,
+  current-run flags for campaign names and exact spend, and no raw payload or
+  cache writes. Refs MAIN-367, #582, MAIN-366, #581, MAIN-352, #550.
 - Added a MAIN-366 design for the first compact read-only Meta Ads account
   summary surface, keeping `mb connect` as the readiness rail and routing the
   next paid-channel summary shape toward `mb ads meta summary --json` with raw
