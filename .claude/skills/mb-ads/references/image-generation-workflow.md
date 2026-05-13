@@ -106,16 +106,28 @@ mb image edit --prompt "..." --ref-image mb-media://brand/logo.png --out mb-medi
 mb image edit --prompt "..." --ref-image mb-media://pushes/2026-05-ad-test/references/product.webp --mask mb-media://pushes/2026-05-ad-test/references/mask.png --out mb-media://pushes/2026-05-ad-test/images/hero-003.png
 ```
 
-This shape is a decision recommendation, not a shipped command claim.
+This generate/edit shape is a decision recommendation, not a shipped command
+claim. The first shipped smoke surface is narrower:
+
+```bash
+mb image smoke-openai --repo "$BUSINESS_REPO" --json
+mb image smoke-openai --repo "$BUSINESS_REPO" --generate --json
+```
+
+Run without `--generate` to create a safe blocked record. Add `--generate` only
+after the operator approves one fixture-safe provider call and local OpenAI
+credentials are available outside chat and tracked repo files.
 
 ---
 
 ## Generation via Python SDK
 
-The OpenAI Python SDK is the first implementation pattern to smoke for
-MAIN-362. MCP servers, runtime-native image tools, or another SDK can be used
-only when they are configured for the run and the artifact metadata records the
-provider/model.
+The `mb image smoke-openai` command owns the first fixture-safe smoke path.
+When generation is approved, it uses the OpenAI Python SDK shape below and
+writes the binary to configured media storage while committing only the
+push-local `image-index.md` record. MCP servers, runtime-native image tools, or
+another SDK can be used only when they are configured for the run and the
+artifact metadata records the provider/model.
 
 ```python
 import base64

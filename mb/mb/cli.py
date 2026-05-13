@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -23,6 +24,7 @@ from mb import connect as connect_mod
 from mb import doctor as doctor_mod
 from mb import educational as educational_mod
 from mb import graph as graph_mod
+from mb import image_rail as image_rail_mod
 from mb import init as init_mod
 from mb import issue as issue_mod
 from mb import migrate as migrate_mod
@@ -116,6 +118,13 @@ ads_meta_app = typer.Typer(
 )
 ads_app.add_typer(ads_meta_app, name="meta")
 
+image_app = typer.Typer(
+    name="image",
+    help="Smoke fixture-safe creative image rails.",
+    no_args_is_help=True,
+)
+app.add_typer(image_app, name="image")
+
 suggest_app = typer.Typer(
     name="suggest",
     help="Suggest read-only business repo improvements.",
@@ -174,6 +183,10 @@ def _render_launch_screen() -> None:
         ]
     )
     typer.echo("\n".join(lines))
+
+
+def _today_utc() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
 
 
 @app.callback()
@@ -1267,6 +1280,64 @@ def site_check_cmd(
     else:
         site_mod.render_check(result)
     raise typer.Exit(0 if result["ok"] else 1)
+
+
+@image_app.command("smoke-openai")
+def image_smoke_openai_cmd(
+    repo: str = typer.Option(
+        ".",
+        "--repo",
+        help="Business repo where the fake push-local image-index.md should be written.",
+    ),
+    push_slug: str = typer.Option(
+        image_rail_mod.DEFAULT_PUSH_SLUG,
+        "--push-slug",
+        help="Fake push slug for the fixture-safe smoke record.",
+    ),
+    docs_checked: str = typer.Option(
+        "",
+        "--docs-checked",
+        help="Provider docs checked date. Defaults to today in UTC.",
+    ),
+    media_root: str = typer.Option(
+        ".mb/media",
+        "--media-root",
+        help="Private media storage root used only when --generate writes a binary.",
+    ),
+    generate: bool = typer.Option(
+        False,
+        "--generate",
+        help="Call OpenAI only when local credentials exist and the operator approved generation.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Smoke the narrow OpenAI GPT Image 2 rail with fake fixture context."""
+    result = image_rail_mod.smoke_openai(
+        repo=repo,
+        push_slug=push_slug,
+        docs_checked=docs_checked or _today_utc(),
+        media_root=media_root,
+        generate=generate,
+    )
+    if json_out:
+        typer.echo(
+            _json_payload(
+                result,
+                command="image smoke-openai",
+                schema_name="mainbranch.image.smoke_openai.v1",
+            )
+        )
+    elif result["state"] == "generated":
+        typer.echo("OpenAI image rail smoke generated a fixture-safe asset.")
+        typer.echo(f"record: {result['record_path']}")
+        typer.echo(f"media:  {result['output_reference']}")
+        typer.echo("binary committed: false")
+    else:
+        typer.echo("OpenAI image rail smoke blocked safely.")
+        typer.echo(f"record: {result['record_path']}")
+        typer.echo(f"reason: {result['blocker_code']}")
+        typer.echo("I will not ask you to paste provider keys into chat or repo files.")
+    raise typer.Exit(0)
 
 
 @app.command("validate")

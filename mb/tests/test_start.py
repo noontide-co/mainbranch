@@ -334,6 +334,7 @@ def test_start_surfaces_recent_checkpoint_history(tmp_path: Path, monkeypatch) -
     subprocess_result = start_mod._run_command(
         ["git", "commit", "-m", "[added] business scaffold"],
         cwd=repo,
+        timeout=15,
     )
     assert subprocess_result["ok"] is True
     (repo / "core" / "offer.md").write_text("# Offer\n", encoding="utf-8")

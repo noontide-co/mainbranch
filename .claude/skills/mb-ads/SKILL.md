@@ -146,10 +146,10 @@ Display the readiness report, then proceed. See [references/preflight-algorithm.
 mb connect doctor --json
 ```
 
-Use status/connect facts first for Google/Workspace readiness. Only check local
-environment variables when image generation is actually selected and the CLI
-does not report that capability. Never ask the operator to paste API keys into
-chat or public issue text.
+Use status/connect facts first for Google/Workspace readiness. For the first
+OpenAI rail smoke, use `mb image smoke-openai --repo "$BUSINESS_REPO" --json`; see [references/image-generation-workflow.md](references/image-generation-workflow.md)
+for the `--generate`, credential, media-storage, and `image-index.md` boundary.
+Never ask the operator to paste API keys into chat or public issue text.
 
 ### 0e. Paid-Traffic Measurement Gate
 

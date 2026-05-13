@@ -69,6 +69,12 @@ release-simulation owner-language hardening.
   keeping Google Gemini / Nano Banana, BFL FLUX.2, xAI Imagine, ComfyUI, and
   raw video providers as candidate rails behind separate smoke evidence. Refs
   #569, #409.
+- Added `mb image smoke-openai` as the first fixture-safe OpenAI GPT Image 2
+  rail smoke: it writes a push-local `image-index.md`, records generated or
+  sanitized blocked state, stores binaries only in configured media storage
+  when `--generate` is approved, and keeps `.mb/media/` gitignored by default.
+  The package now depends on the official OpenAI Python SDK for that direct
+  rail. Refs MAIN-370, #587.
 
 ### Changed
 
@@ -90,6 +96,9 @@ release-simulation owner-language hardening.
   OpenAI GPT Image 2 as the first smoke target, configurable media storage
   with safe logical media URIs, reference-image roles, and prompt-only fallback
   when no approved provider is configured. Refs MAIN-362, #569.
+- Updated `/mb-ads` image-generation guidance to route the first real provider
+  proof through `mb image smoke-openai`, including the approved-generation and
+  no-secrets credential boundary. Refs MAIN-370, #587.
 - Added verified MAIN-362 implementation research patterns to the creative
   media decision, including a GitHub reference-repo pattern table,
   OpenAI-first ad-volume cost math, and a deterministic video/motion CLI
