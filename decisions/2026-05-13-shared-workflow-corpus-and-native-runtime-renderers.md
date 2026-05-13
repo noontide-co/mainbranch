@@ -9,6 +9,7 @@ linked_decisions:
 linked_issues:
   - https://github.com/noontide-co/mainbranch/issues/451
   - https://github.com/noontide-co/mainbranch/issues/453
+  - https://github.com/noontide-co/mainbranch/issues/539
   - https://github.com/noontide-co/mainbranch/issues/125
 participants: [Devon, Codex]
 tags: [runtime-adapters, codex, claude-code, skills, workflows, renderer]
@@ -39,6 +40,20 @@ cross-runtime work. It remains the shipped Claude Code adapter surface while
 selected workflows are migrated. Do not copy the full Claude skill tree into
 `.agents/skills` by hand.
 
+## Non-goals
+
+This decision does not:
+
+- implement the workflow corpus, renderer, or validator;
+- port `/mb-think`, `/mb-site`, or any full production workflow to Codex;
+- copy `.claude/skills` into `.agents/skills`;
+- claim native Codex skills, slash-command parity, Codex Mac app support,
+  Codex cloud support, or selected Codex workflow support;
+- make `mb` invoke Codex, Claude, or any model;
+- replace Claude Code as the supported runtime;
+- build dashboard, runtime UI, provider mutation, publishing, spend, or
+  customer-contact automation.
+
 ## Evidence Base
 
 Stage 1 Codex evidence is now strong enough to design the next layer, not
@@ -55,6 +70,11 @@ strong enough to claim workflow parity.
   records the current boundary: Codex used `mb` facts and did not silently
   mutate repos, but it did not prove native Codex skills, slash-command parity,
   Mac app support, cloud support, or selected production workflow ports.
+- [MAIN-349 / #539](https://github.com/noontide-co/mainbranch/issues/539)
+  proved the Claude Code side of the same handoff shape: `/mb-start`
+  path-to-money prompts should start from `money_path` facts, carry the
+  MoneyPath snapshot into `/mb-think`, and use runtime evidence before
+  treating that as shipped behavior.
 
 That makes a renderer decision the right next step. Another `AGENTS.md` patch
 would harden Stage 1 but would not solve drift between Claude and Codex
@@ -77,6 +97,8 @@ Each workflow source should declare:
 - required JSON fact paths, such as `money_path`,
   `money_path.objects.proof.quality`, `content_strategy`, `ranked_actions`,
   `runtime`, `checkpoint`, and provider readiness;
+- routing rules, including when to continue in the current workflow and when to
+  hand off to another workflow;
 - read boundaries: which business files may be read and which deterministic
   facts must be checked first;
 - write boundaries: which paths may be changed and which operations need
@@ -86,7 +108,9 @@ Each workflow source should declare:
   file operations;
 - handoff format: how the runtime should explain status, choices, next actions,
   and evidence in business language;
-- validation commands and runtime smoke expectations.
+- validation commands and runtime smoke expectations;
+- runtime-specific notes for invocation syntax, discovery, mode guidance,
+  restart/reload behavior, and unsupported parity claims.
 
 The workflow source should not encode runtime-only UI assumptions such as
 Claude slash-command syntax, Codex mode labels, plugin installation steps, or
@@ -233,6 +257,8 @@ Why this comes first:
 
 - it uses the exact Stage 1 Codex evidence surface: `AGENTS.md`,
   `mb status --json --peek`, `mb start --json`, and `mb doctor repair --plan`;
+- it matches MAIN-349's Claude-side evidence that path-to-money prompts should
+  route through MoneyPath facts before `/mb-think` reads supporting files;
 - it is the daily owner loop, not a niche production workflow;
 - it exercises Sense -> Decide -> Ship without needing provider mutation;
 - it tests read/write boundaries clearly: read facts first, ask before codify
@@ -311,6 +337,10 @@ Validation must name the exact workflows and runtimes that passed smoke. Docs
 may say "selected Main Branch workflows are experimental in Codex" only for
 those workflows.
 
+MAIN-125 should stay parked until the shared workflow prototype proves that one
+workflow family can render or route cleanly through the shared source, Claude
+shell, and Codex shell without semantic drift.
+
 ## Drift And Test Rules
 
 Future implementation PRs should make drift mechanically visible.
@@ -362,6 +392,10 @@ Name the workflow. Do not imply all Claude Code skills work in Codex.
 - **Start with `/mb-site`.** Valuable later, but it carries more provider,
   artifact, child-repo, and publishing complexity than the first renderer
   needs.
+- **Use shared references plus thin entrypoints only.** Useful as a transition
+  tactic, but insufficient as the durable source because references alone do
+  not encode required `mb` commands, JSON fact paths, approval gates,
+  generated-file ownership, support levels, or drift tests.
 
 ## Follow-Up Issue
 
@@ -379,6 +413,37 @@ Suggested scope:
   supported shells;
 - keep runtime behavior unchanged unless the branch also includes the required
   smoke evidence.
+
+Likely files:
+
+- `workflows/mb-start-money-path/workflow.md`;
+- optional `workflows/mb-start-money-path/references/money-path-routing.md`;
+- renderer or validator code under `mb/mb/`;
+- tests under `mb/tests/` for schema validation, renderer snapshots, and drift
+  assertions;
+- snapshot fixtures for Claude and Codex shell output;
+- generated Claude shell output only when the branch is ready to replace
+  hand-maintained `/mb-start` or `/mb-think` handoff prose;
+- generated Codex shell or workflow index only when the branch includes the
+  required Codex smoke evidence;
+- generated `AGENTS.md` updates only if the Codex shell exists and needs an
+  index from the bootstrap file.
+
+Acceptance criteria:
+
+- The workflow source declares intent/triggers, required `mb` commands, JSON
+  facts, routing rules, read/write boundaries, approval gates, handoff format,
+  validation commands, and runtime-specific notes.
+- Tests fail when a supported runtime shell omits a required command or JSON
+  fact from the workflow source.
+- Generated Claude and Codex shell snapshots are committed as test fixtures.
+- Existing Claude Code behavior remains unchanged unless the PR includes
+  Claude skill validation and appropriate runtime smoke.
+- Codex behavior remains experimental; any generated Codex shell is covered by
+  fresh fixture repo smoke and read-only `codex exec` evidence before docs
+  mention selected workflow support.
+- No private paths, credentials, account data, customer/member data, or raw
+  business data appear in workflow sources or generated outputs.
 
 Use `Refs #451` for setup-only slices. Use `Closes #451` only for the PR that
 lands this decision and the staged implementation plan.
