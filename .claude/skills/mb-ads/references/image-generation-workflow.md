@@ -2,8 +2,12 @@
 
 Optional image-generation workflow for producing ad images from approved
 prompts and provider access. The durable product rail is the prompt, source
-context, output index, approval state, and final asset path. Provider support
-is run-scoped until `mb` owns detection and smoke evidence.
+context, output index, approval state, and safe logical media reference.
+Provider support is run-scoped until `mb` owns detection and smoke evidence.
+
+Prompt-only/manual mode is a fallback, not the target. The product direction is
+fixture-safe generation/editing plus strong artifact records and storage
+boundaries.
 
 ---
 
@@ -13,19 +17,24 @@ Use the provider and model verified for this run. Do not hard-code a private
 environment file, assume a provider is configured, or claim Main Branch supports
 image generation because this reference exists.
 
-Current provider notes checked 2026-05-13 against Google's official Gemini
-image generation docs:
-https://ai.google.dev/gemini-api/docs/image-generation
+Current provider notes checked 2026-05-13 against the accepted creative media
+generation decision:
+`decisions/2026-05-13-creative-media-generation-rails.md`.
 
 | Provider | Model family | Use |
 | --- | --- | --- |
-| Google Gemini API | `gemini-3-pro-image-preview` | Professional/high-fidelity image generation when quality matters more than speed. |
-| Google Gemini API | `gemini-2.5-flash-image` | Candidate speed/cost rail for draft or iteration use only. Do not treat it as proven ad-grade output until a smoke/test run records provider, model, prompt, output, review notes, and final asset quality. |
-| OpenAI Image API / Responses API | GPT Image models | Candidate alternate provider for generation and editing. Use only when configured for the run and record the exact model. |
+| OpenAI Image API / Responses API | `gpt-image-2` | First readiness target for fixture-safe static image generation/editing. Use only when configured for the run and record the exact model/snapshot. |
+| Google Gemini API | Nano Banana image-model family | Candidate comparison rail for future work. Do not treat it as proven ad-grade output until a smoke/test run records the current exact model ID, prompt, output, review notes, and final asset quality. |
+| BFL FLUX.2 / ComfyUI | FLUX.2 family | Candidate local/private or heavy-reference rail after the OpenAI rail and metadata contract are stable. |
+| Manual provider use | `manual` | Safe fallback when no approved provider is configured. Save prompts and asset records for the operator to use manually. |
 
 If model names or pricing matter to the recommendation, check the provider's
 current docs before generating and record the docs-checked date in
 `image-index.md`.
+
+Do not hard-code exact candidate-provider model IDs from memory. OpenAI
+`gpt-image-2` is the first readiness target; other provider/model IDs must be
+checked against current primary docs and pinned per run.
 
 ---
 
@@ -38,8 +47,8 @@ only check environment variables when the selected mode actually needs image
 generation.
 
 ```bash
-python3 -c "from google import genai; print('google-genai OK')" 2>/dev/null
 python3 -c "from openai import OpenAI; print('openai OK')" 2>/dev/null
+python3 -c "from google import genai; print('google-genai OK')" 2>/dev/null
 ```
 
 If a provider is available, show the provider/model, estimated cost, output
@@ -51,41 +60,90 @@ prompts only:
 
 ---
 
+## Media Storage Boundary
+
+Commit the push-local `image-index.md` record by default, not generated image
+binaries. Generated or edited media should resolve through configured storage:
+
+- local gitignored media cache, such as `.mb/media/`;
+- private operator media folder, such as `~/MainBranchMedia/<business>/`;
+- external media folder;
+- site repo/public folder only after explicit approval.
+
+Committed records should use safe logical references such as
+`mb-media://pushes/2026-05-ad-test/images/hero-001.png`, not private absolute
+paths.
+
+Reference images should carry roles:
+
+```yaml
+references:
+  - id: logo
+    role: logo
+    path: mb-media://brand/logo.png
+    safe_to_share: false
+  - id: product
+    role: product_photo
+    path: mb-media://pushes/2026-05-ad-test/references/product.webp
+    safe_to_share: false
+```
+
+---
+
+## Generate / Edit / Mask Decision Tree
+
+- No image input: generate.
+- Image input plus broad natural-language change: edit.
+- Image input plus exact region change: mask edit.
+- Many prompts, many variants, or repeated reference combinations: batch later,
+  after the single-image rail is stable.
+
+Recommended implementation shape:
+
+```bash
+mb image generate --prompt "..." --out mb-media://pushes/2026-05-ad-test/images/hero-001.png
+mb image edit --prompt "..." --ref-image mb-media://brand/logo.png --out mb-media://pushes/2026-05-ad-test/images/hero-002.png
+mb image edit --prompt "..." --ref-image mb-media://pushes/2026-05-ad-test/references/product.webp --mask mb-media://pushes/2026-05-ad-test/references/mask.png --out mb-media://pushes/2026-05-ad-test/images/hero-003.png
+```
+
+This shape is a decision recommendation, not a shipped command claim.
+
+---
+
 ## Generation via Python SDK
 
-The `google-genai` Python package is one supported implementation pattern when
-Google is selected for the run. MCP servers or another SDK can be used only
-when they are configured and the artifact metadata records the provider/model.
+The OpenAI Python SDK is the first implementation pattern to smoke for
+MAIN-362. MCP servers, runtime-native image tools, or another SDK can be used
+only when they are configured for the run and the artifact metadata records the
+provider/model.
 
 ```python
-import os, base64
-from google import genai
-from google.genai import types
+import base64
+import os
+from openai import OpenAI
 
-client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
-response = client.models.generate_content(
-    model=os.environ.get("MB_IMAGE_MODEL", "gemini-3-pro-image-preview"),
-    contents=[prompt_text],
-    config=types.GenerateContentConfig(
-        response_modalities=["TEXT", "IMAGE"]
-    )
+response = client.images.generate(
+    model=os.environ.get("MB_IMAGE_MODEL", "gpt-image-2"),
+    prompt=prompt_text,
+    size=os.environ.get("MB_IMAGE_SIZE", "1024x1536"),
+    quality=os.environ.get("MB_IMAGE_QUALITY", "medium"),
 )
 
-# Extract image from response
-for part in response.candidates[0].content.parts:
-    if part.inline_data is not None:
-        data = part.inline_data.data
-        image_bytes = data if isinstance(data, bytes) else base64.b64decode(data)
-        with open("output.png", "wb") as f:
-            f.write(image_bytes)
+image_bytes = base64.b64decode(response.data[0].b64_json)
+with open("output.png", "wb") as f:
+    f.write(image_bytes)
 ```
 
 ---
 
 ## Post-Processing Pipeline (MANDATORY — Never Skip)
 
-**Raw Gemini output is PNG at arbitrary sizes (often 768x1376 or 1024x1024). This is NOT the final deliverable.** You MUST post-process every image immediately after generation. Never save raw PNGs as final output.
+**Raw provider output is not automatically the final deliverable.** Post-process
+every ad image immediately after generation. Never save raw provider files as
+final output unless the operator explicitly approves that exact file as the
+final asset.
 
 ### Steps (run on EVERY generated image)
 
@@ -120,9 +178,8 @@ def post_process(input_path, output_path, width, height, max_kb=300):
 
 ### Provider Watermarking
 
-Record provider watermarking or provenance metadata when known. For Gemini,
-current docs say generated images include SynthID watermarking. Do not promise
-that other providers have the same behavior.
+Record provider watermarking or provenance metadata when known. Do not promise
+that all providers expose the same provenance, watermarking, or C2PA behavior.
 
 ---
 
@@ -189,9 +246,11 @@ Before generating, show cost estimate and get approval:
 ```
 Image Generation Estimate:
   5 angles × 3 styles × 1 format = 15 images
-  Provider/model: Google Gemini / gemini-3-pro-image-preview
+  Provider/model: OpenAI / gpt-image-2
   Docs checked: 2026-05-13
   Estimated cost: $X from current provider pricing
+  Storage: mb-media://pushes/2026-05-ad-test/images/
+  Record: pushes/2026-05-ad-test/image-index.md
 
   Proceed? (y/n)
 ```
@@ -200,13 +259,17 @@ Actual cost depends on prompt complexity and retries.
 
 ---
 
-## Text-on-Image: Always Post-Process
+## Text-on-Image: Prefer Deterministic Final Overlays
 
-**NEVER ask Gemini to render text on the image.** Gemini cannot reliably render text longer than ~5 words. All text goes on via Pillow post-processing.
+GPT Image 2 is the first rail to smoke partly because current validation
+points to strong text rendering. Still, final paid creative often needs exact
+copy, exact safe-zone placement, and predictable export sizes. When exact text
+matters, generate the background or composition and apply final text with a
+deterministic post-processing step such as Pillow.
 
 ### Workflow
 
-1. **Gemini generates background-only images** — no text in the prompt
+1. **Provider generates the background or composition**
 2. **Pillow composites text onto the background** — white bold text, drop shadow, centered
 
 ### Text Positioning (Critical)
@@ -284,8 +347,8 @@ Image generation uses **one subagent per image** (or per 2-3 images for large ba
    - Uses the already-configured provider environment for this run
    - Calls the selected provider/model (single image per API call)
    - Post-processes immediately (resize, PNG to JPEG, compress under 300KB)
-   - Verifies the final JPEG exists on disk
-   - Returns: `{ path: "images/001_01_graphic_vertical.jpg", status: "success", provider: "google", model: "gemini-3-pro-image-preview", cost: 0.05 }` (or `status: "fail"` with error message)
+   - Verifies the final JPEG exists in configured media storage
+   - Returns: `{ output_reference: "mb-media://pushes/2026-05-ad-test/images/001_01_graphic_vertical.jpg", status: "success", provider: "openai", model: "gpt-image-2", cost_estimate: "$X from current provider pricing" }` (or `status: "fail"` with error message)
 
 4. **Main conversation collects results** from all image agents, retries any failures with fresh single-image agents.
 
@@ -315,10 +378,11 @@ Your assigned image(s) from prompts.json at {output_dir}/prompts.json:
 
 For EACH assigned image:
 1. Read the prompt from prompts.json
-2. Run Python: generate via the selected provider/model, save raw PNG
-3. Run Python: post-process (resize to target dims, JPEG compress under 300KB, delete raw PNG)
-4. Verify final JPEG exists: ls {output_dir}/images/{filename}
-5. Return the file path, provider, model, cost, and status
+2. Resolve the assigned `mb-media://...` reference to configured media storage
+3. Run Python: generate via the selected provider/model, save raw PNG in configured media storage
+4. Run Python: post-process (resize to target dims, JPEG compress under 300KB, delete raw PNG)
+5. Verify final JPEG exists in configured media storage and return the safe logical reference
+6. Return the logical media reference, provider, model, cost, and status
 
 If rate-limited (429): sleep 5 seconds, retry once.
 If retry fails: return status "fail" with error message. Do NOT keep retrying.
@@ -339,13 +403,23 @@ pushes/YYYY-MM-DD-static-ads-{campaign}/
 ├── static-ads-batch-001.md        ← Copy (Batch 1)
 ├── proposed-compliance-fixes.json ← Compliance proposals
 ├── review-log.md                  ← Compliance changes after approval
-├── images/
-│   ├── 001_01_graphic_square.jpg
-│   ├── 001_01_graphic_vertical.jpg
-│   ├── 001_02_lofi_square.jpg
-│   ├── 001_02_lofi_vertical.jpg
-│   └── ...
-└── image-index.md                 ← Maps prompts, provider metadata, and files
+└── image-index.md                 ← Maps prompts, provider metadata, review
+                                      state, and mb-media:// references
+```
+
+`image-index.md` stores logical media references that resolve to configured
+storage, not generated binaries in the push folder:
+
+```yaml
+assets:
+  - asset_id: 001_01_graphic_vertical
+    output_reference: mb-media://pushes/YYYY-MM-DD-static-ads-{campaign}/images/001_01_graphic_vertical.jpg
+    storage_backend: mb-media
+    committed_binary: false
+  - asset_id: 001_02_lofi_vertical
+    output_reference: mb-media://pushes/YYYY-MM-DD-static-ads-{campaign}/images/001_02_lofi_vertical.jpg
+    storage_backend: mb-media
+    committed_binary: false
 ```
 
 ### Image Naming Convention
@@ -375,7 +449,9 @@ Every generated image batch gets an `image-index.md` with:
 - post-processing settings;
 - cost estimate and actual cost when known;
 - failure/retry count;
-- final file paths;
+- safe logical media references;
+- reference image roles and safe logical reference paths when used;
+- storage backend label;
 - approval state.
 
 ## Fallback (No Provider)
@@ -383,7 +459,7 @@ Every generated image batch gets an `image-index.md` with:
 If no image provider is configured:
 
 1. Generate text prompts only (structured JSON format)
-2. Save prompts to the output batch file
+2. Save prompts and the intended logical media references to `image-index.md`
 3. Note: "Image prompts saved as text. To generate images, paste these into your chosen image tool or configure an approved provider for a future run."
 
 ---

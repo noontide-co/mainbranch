@@ -47,7 +47,8 @@ GitHub.
    - Check/fix: `mb connect doctor --json`.
 
 4. **Meta Ads** - ad accounts, campaigns, pixels, and future performance facts
-   through the official Meta Ads CLI once Main Branch wiring is verified.
+   through the official Meta Ads CLI after read-only `mb connect test meta`
+   smoke passes.
    - Use when: paid-ad generation, review, or learning needs account context.
    - Check/fix: `mb connect doctor --json`.
 

@@ -187,14 +187,14 @@ context. Do not duplicate provider setup or health checks in prose.
 1. Read `mb status --json --peek` → integrations/providers/measurement facts.
 2. If the operator needs setup choices, run `mb connect plan`.
 3. If something looks broken, run `mb connect doctor --json`.
-4. Only after `mb` says Meta Ads account context is ready or repairable, check
-   whether the current Claude Code session exposes the required read-only MCP
-   tools.
+4. If `mb` says Meta Ads account context is `ready`, ask whether to pull live
+   performance before generating.
 5. Never block generation on missing ad account access.
 ```
 
-**Graceful degradation:** If Meta Ads account context is not ready, skip all
-account-related features. The skill works fully from repo reference files.
+**Graceful degradation:** If Meta Ads account context is not `ready`, mention
+the optional account context once, quote the `mb` repair command when useful,
+then continue from repo reference files.
 
 ### User-Facing Display
 

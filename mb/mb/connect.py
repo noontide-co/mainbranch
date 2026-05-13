@@ -27,7 +27,7 @@ SERVICE_NAME = "mainbranch"
 SENSITIVE_KEY_PARTS = ("token", "secret", "password", "credential", "api_key", "apikey", "key")
 SAFE_METADATA_KEYS = {"token_type", "token_scope", "api_token_type"}
 VALIDATION_TIMEOUT_SECONDS = 8
-CommandRunner = Callable[[list[str], Path | None, float], dict[str, Any]]
+CommandRunner = Callable[..., dict[str, Any]]
 Which = Callable[[str], str | None]
 
 
@@ -69,14 +69,14 @@ PROVIDERS: tuple[Provider, ...] = (
         id="meta",
         name="Meta",
         category="ads",
-        auth="meta_cli_readiness",
-        required_secrets=(),
+        auth="meta_ads_cli_read_only",
+        required_secrets=("access_token",),
         metadata_fields=("ad_account_id", "business_id"),
         description=(
-            "Meta Ads account access through Meta's official Ads CLI. Main Branch "
-            "documents setup requirements now; read-only account checks need mb "
-            "detection and smoke before support is promoted."
+            "Meta Ads account access through Meta's official Ads CLI, with local "
+            "credential storage and read-only account smoke before skills use live facts."
         ),
+        env_vars=("ACCESS_TOKEN", "META_ACCESS_TOKEN"),
     ),
     Provider(
         id="cloudflare",
@@ -178,13 +178,13 @@ PROVIDER_GUIDANCE: dict[str, dict[str, Any]] = {
     "meta": {
         "priority": 4,
         "why": (
-            "Meta Ads readiness lets ad workflows prepare for account, campaign, "
-            "insights, creative, and pixel context through Meta's official Ads CLI."
+            "Meta Ads readiness lets ad workflows use account, campaign, insights, "
+            "creative, and pixel context through Meta's official Ads CLI."
         ),
         "use_when": (
             "Use when the business is generating, reviewing, or learning from Meta/Facebook ads. "
-            "Main Branch can explain setup requirements today; treat live account "
-            "access as unavailable until mb detection and read-only smoke are wired."
+            "Main Branch stores the token outside the repo and only treats live account "
+            "access as ready after read-only CLI smoke passes."
         ),
         "defer_when": (
             "Defer for organic, research, or site work that does not need ad-account facts."
@@ -204,6 +204,45 @@ PROVIDER_GUIDANCE: dict[str, dict[str, Any]] = {
         "status_command": "mb connect doctor --json",
     },
 }
+
+META_SETUP_REQUIREMENTS = (
+    "Meta Business Portfolio / Business Manager access",
+    "An ad account assigned to the user or system user",
+    "The Business portfolio ID from Meta business info when available",
+    "A Meta developer app selected during token generation",
+    "A system user token or individual user token with assigned assets",
+    "Possible second-admin approval in stricter Business Manager setups",
+)
+
+META_TOKEN_SCOPES = (
+    "business_management",
+    "ads_management",
+    "pages_show_list",
+    "pages_read_engagement",
+    "pages_manage_ads",
+    "catalog_management",
+    "read_insights",
+)
+
+META_READ_SMOKE_COMMANDS: tuple[tuple[str, list[str], bool], ...] = (
+    ("adaccount_list", ["meta", "-o", "json", "ads", "adaccount", "list"], False),
+    ("campaign_list", ["meta", "-o", "json", "ads", "campaign", "list"], False),
+    (
+        "insights_get",
+        [
+            "meta",
+            "-o",
+            "json",
+            "ads",
+            "insights",
+            "get",
+            "--fields",
+            "spend,impressions,clicks,ctr,cpc",
+        ],
+        False,
+    ),
+    ("dataset_list", ["meta", "-o", "json", "ads", "dataset", "list"], True),
+)
 
 
 def provider_map() -> dict[str, Provider]:
@@ -408,18 +447,7 @@ def _repair(
             "repair_command": validation_repair_command,
         }
     if provider.id == "meta":
-        return {
-            "summary": (
-                "Meta Ads CLI readiness is documented, but live account checks are "
-                "not wired in this mb release."
-            ),
-            "repair": (
-                "Use reference-file ad workflows for now. The official path is "
-                "`meta-ads` / `meta`; keep credentials outside repo files and wait "
-                "for mb-owned detection/read-only smoke before using live account facts."
-            ),
-            "repair_command": "",
-        }
+        return _meta_repair(state, missing)
     missing_fields = ", ".join(missing or provider.required_secrets)
     connect_command = f"mb connect {provider.id} --token-stdin"
     if state == "not_connected":
@@ -459,6 +487,93 @@ def _repair(
         }
     return {
         "summary": f"{provider.name} is ready.",
+        "repair": "",
+        "repair_command": "",
+    }
+
+
+def _meta_repair(state: str, missing: list[str] | None = None) -> dict[str, str]:
+    connect_command = "mb connect meta --token-stdin --metadata ad_account_id=<act_id>"
+    install_command = "pipx install --python <python3.12-or-newer> meta-ads"
+    if state == "wrong_python":
+        return {
+            "summary": "Meta Ads CLI requires Python 3.12 or newer.",
+            "repair": (
+                "Install Python 3.12+, then install Meta's official Ads CLI with "
+                f"`{install_command}`."
+            ),
+            "repair_command": install_command,
+        }
+    if state == "missing_cli":
+        return {
+            "summary": "Meta Ads CLI is not installed or `meta --version` failed.",
+            "repair": (
+                "Install Meta's official Ads CLI with Python 3.12+, then rerun "
+                "`mb connect test meta`."
+            ),
+            "repair_command": install_command,
+        }
+    if state == "not_connected":
+        return {
+            "summary": "Meta Ads is not connected.",
+            "repair": (
+                "Prepare the Meta Business Portfolio, ad account, app, assigned assets, "
+                f"and token, then run `{connect_command}`."
+            ),
+            "repair_command": connect_command,
+        }
+    if state == "missing_secret":
+        missing_fields = ", ".join(missing or ("access_token",))
+        return {
+            "summary": "Meta Ads metadata exists, but local token material is missing.",
+            "repair": (
+                f"Run `{connect_command}` to replace the missing credential ({missing_fields})."
+            ),
+            "repair_command": connect_command,
+        }
+    if state == "missing_metadata":
+        return {
+            "summary": "Meta Ads needs non-secret `ad_account_id` metadata before validation.",
+            "repair": (
+                "Run `mb connect meta --metadata ad_account_id=<act_id>`, then "
+                "`mb connect test meta`."
+            ),
+            "repair_command": "mb connect meta --metadata ad_account_id=<act_id>",
+        }
+    if state == "unvalidated":
+        return {
+            "summary": "Meta Ads has local setup metadata, but read-only smoke has not passed.",
+            "repair": "Run `mb connect test meta`.",
+            "repair_command": "mb connect test meta",
+        }
+    if state == "waiting_for_admin_approval":
+        return {
+            "summary": "Meta needs another business admin to approve this connection.",
+            "repair": (
+                "Meta needs another business admin to approve this connection. "
+                "Nothing is broken locally."
+            ),
+            "repair_command": "",
+        }
+    if state == "auth_failed":
+        return {
+            "summary": "Meta Ads auth did not pass.",
+            "repair": (
+                "Check token scopes, app, system user, assigned assets, and ad account "
+                "metadata, then rerun `mb connect test meta`."
+            ),
+            "repair_command": "mb connect test meta",
+        }
+    if state == "read_smoke_failed":
+        return {
+            "summary": "Meta Ads auth passed, but read-only account smoke failed.",
+            "repair": (
+                "Check ad account access and token scopes, then rerun `mb connect test meta`."
+            ),
+            "repair_command": "mb connect test meta",
+        }
+    return {
+        "summary": "Meta Ads read-only account context is ready.",
         "repair": "",
         "repair_command": "",
     }
@@ -636,6 +751,74 @@ def _cloudflare_token_type(metadata: dict[str, Any], secret: str = "") -> str:
     return "user"
 
 
+def _python_version_ok(value: str) -> bool:
+    parts = value.strip().split(".")
+    if len(parts) < 2:
+        return False
+    try:
+        major = int(parts[0])
+        minor = int(parts[1])
+    except ValueError:
+        return False
+    return (major, minor) >= (3, 12)
+
+
+def _meta_python_ready(
+    *,
+    which_func: Which | None = None,
+    command_runner: CommandRunner | None = None,
+) -> bool:
+    if sys.version_info >= (3, 12):
+        return True
+    which = which_func or shutil.which
+    run = command_runner or _run_command
+    python312 = which("python3.12")
+    if not python312:
+        return False
+    result = run(
+        [
+            python312,
+            "-c",
+            "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')",
+        ],
+        None,
+        3.0,
+    )
+    return bool(result.get("ok")) and _python_version_ok(str(result.get("stdout") or ""))
+
+
+def _meta_prerequisite_state(
+    *,
+    which_func: Which | None = None,
+    command_runner: CommandRunner | None = None,
+) -> str:
+    which = which_func or shutil.which
+    run = command_runner or _run_command
+    if which("meta"):
+        version = run(["meta", "--version"], None, 5.0)
+        if version.get("ok"):
+            return ""
+        return "missing_cli"
+    if not _meta_python_ready(which_func=which, command_runner=run):
+        return "wrong_python"
+    return "missing_cli"
+
+
+def _meta_setup() -> dict[str, Any]:
+    return {
+        "requirements": list(META_SETUP_REQUIREMENTS),
+        "token_scopes": list(META_TOKEN_SCOPES),
+        "credential_paths": ["--token-stdin", "--from-env", "hidden prompt"],
+        "safe_metadata": [
+            "ad_account_id (use the act_ ad account ID)",
+            "business_id (Meta calls this Business portfolio ID)",
+            "account label",
+        ],
+        "test_command": "mb connect test meta --json",
+        "safe_to_share": True,
+    }
+
+
 def connect_provider(
     provider_id: str,
     repo: str | Path = ".",
@@ -648,12 +831,6 @@ def connect_provider(
     """Connect a provider by writing repo metadata and local secrets."""
 
     provider = normalize_provider(provider_id)
-    if provider.id == "meta":
-        raise ValueError(
-            "Meta Ads CLI readiness is documented but live connection storage is "
-            "not wired in this mb release; "
-            "run `mb connect plan` or `mb educational provider-readiness`."
-        )
     target = Path(repo).resolve()
     config = _read_config(target)
     repo_id = _ensure_repo_id(config, target)
@@ -694,16 +871,27 @@ def connect_provider(
         "config_path": str(path),
         "credential_backend": store.backend,
         "credential_boundary": store.boundary(),
+        "setup": _meta_setup() if provider.id == "meta" else {},
         "status": status,
     }
 
 
-def status_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
+def status_provider(
+    provider_id: str,
+    repo: str | Path = ".",
+    *,
+    which_func: Which | None = None,
+    command_runner: CommandRunner | None = None,
+) -> dict[str, Any]:
     provider = normalize_provider(provider_id)
     target = Path(repo).resolve()
     config = _read_config(target)
     entry = config["providers"].get(provider.id)
     if provider.id == "meta":
+        prereq_state = _meta_prerequisite_state(
+            which_func=which_func,
+            command_runner=command_runner,
+        )
         raw_entry = entry if isinstance(entry, dict) else {}
         raw_meta_metadata = raw_entry.get("metadata")
         meta_metadata: dict[str, Any] = (
@@ -713,25 +901,72 @@ def status_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
         meta_validation: dict[str, Any] = (
             raw_meta_validation if isinstance(raw_meta_validation, dict) else {}
         )
-        repair = _repair(provider, "readiness", validation=meta_validation)
+        stored_secrets = (
+            raw_entry.get("secrets") if isinstance(raw_entry.get("secrets"), dict) else {}
+        )
+        raw_secret = stored_secrets.get("access_token") if isinstance(stored_secrets, dict) else {}
+        raw_secret = raw_secret if isinstance(raw_secret, dict) else {}
+        ref = str(raw_secret.get("ref") or "")
+        backend = str(raw_secret.get("backend") or "local-file")
+        secret_present = bool(ref and SecretStore(backend).get(ref))
+        validation_state = str(meta_validation.get("state") or "unvalidated")
+        if prereq_state:
+            state = prereq_state
+            ok = False
+        elif not isinstance(entry, dict):
+            state = "not_connected"
+            ok = False
+        elif not secret_present:
+            state = "missing_secret"
+            ok = False
+        elif not str(meta_metadata.get("ad_account_id") or "").strip():
+            state = "missing_metadata"
+            ok = False
+        elif validation_state == "ready":
+            state = "ready"
+            ok = True
+        elif validation_state in {
+            "waiting_for_admin_approval",
+            "auth_failed",
+            "read_smoke_failed",
+            "missing_cli",
+            "wrong_python",
+            "missing_metadata",
+        }:
+            state = validation_state
+            ok = False
+        else:
+            state = "unvalidated"
+            ok = False
+        repair = _repair(
+            provider, state, ["access_token"] if not secret_present else [], meta_validation
+        )
         return {
             "provider": provider.id,
             "name": provider.name,
-            "connected": False,
-            "ok": False,
-            "state": "readiness",
+            "connected": bool(isinstance(entry, dict) and raw_entry.get("connected", False)),
+            "ok": ok,
+            "state": state,
             "summary": repair["summary"],
             "repair": repair["repair"],
             "repair_command": repair["repair_command"],
             "safe_to_share": True,
             "account_label": str(raw_entry.get("account_label") or ""),
             "metadata": meta_metadata,
-            "secrets": {},
+            "secrets": {
+                "access_token": {"present": secret_present, "ref": ref, "backend": backend}
+            },
             "last_checked_at": str(raw_entry.get("last_checked_at") or ""),
+            "setup": _meta_setup(),
             "validation": {
-                "state": str(meta_validation.get("state") or "readiness"),
+                "state": str(meta_validation.get("state") or state),
                 "checked_at": str(meta_validation.get("checked_at") or ""),
-                "summary": str(meta_validation.get("summary") or repair["summary"]),
+                "summary": str(meta_validation.get("summary") or ""),
+                "upstream": meta_validation.get("upstream")
+                if isinstance(meta_validation.get("upstream"), dict)
+                else {},
+                "repair": str(meta_validation.get("repair") or ""),
+                "repair_command": str(meta_validation.get("repair_command") or ""),
                 "safe_to_share": True,
             },
         }
@@ -981,8 +1216,201 @@ def _http_get_json(
     }
 
 
+def _meta_env(secret: str, metadata: dict[str, Any]) -> dict[str, str]:
+    keep = ("PATH", "HOME", "LANG", "LC_ALL", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE")
+    env = {key: os.environ[key] for key in keep if key in os.environ}
+    env["ACCESS_TOKEN"] = secret
+    env["AD_ACCOUNT_ID"] = str(metadata.get("ad_account_id") or "").strip()
+    business_id = str(metadata.get("business_id") or "").strip()
+    if business_id:
+        env["BUSINESS_ID"] = business_id
+    return env
+
+
+def _safe_command_check(name: str, args: list[str], result: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "name": name,
+        "command": " ".join(args),
+        "ok": bool(result.get("ok")),
+        "returncode": int(result.get("returncode") or 0),
+        "stdout_present": bool(str(result.get("stdout") or "")),
+        "stderr_present": bool(str(result.get("stderr") or "")),
+        "safe_to_share": True,
+    }
+
+
+def _run_meta_command(
+    run: CommandRunner,
+    args: list[str],
+    repo: Path,
+    env: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    try:
+        return run(args, repo, VALIDATION_TIMEOUT_SECONDS, env=env)
+    except TypeError:
+        return run(args, repo, VALIDATION_TIMEOUT_SECONDS)
+
+
+def _looks_like_admin_approval(result: dict[str, Any]) -> bool:
+    text = f"{result.get('stdout') or ''}\n{result.get('stderr') or ''}".lower()
+    admin_words = ("admin", "business admin", "administrator")
+    approval_words = ("approval", "approve", "pending", "waiting")
+    return any(word in text for word in admin_words) and any(
+        word in text for word in approval_words
+    )
+
+
+def _meta_validation_result(
+    *,
+    ok: bool,
+    state: str,
+    checked_at: str,
+    summary: str,
+    checks: list[dict[str, Any]],
+    repair: str = "",
+    repair_command: str = "",
+) -> dict[str, Any]:
+    return {
+        "ok": ok,
+        "state": state,
+        "checked_at": checked_at,
+        "summary": summary,
+        "repair": repair,
+        "repair_command": repair_command,
+        "safe_to_share": True,
+        "upstream": {
+            "endpoint_family": "meta_ads_cli",
+            "checks": checks,
+            "safe_to_share": True,
+        },
+    }
+
+
+def _validate_meta_with_cli(
+    provider: Provider,
+    secret: str,
+    metadata: dict[str, Any],
+    repo: Path,
+    *,
+    which_func: Which | None = None,
+    command_runner: CommandRunner | None = None,
+) -> dict[str, Any]:
+    checked_at = _now()
+    checks: list[dict[str, Any]] = []
+    prereq_state = _meta_prerequisite_state(
+        which_func=which_func,
+        command_runner=command_runner,
+    )
+    if prereq_state:
+        repair = _meta_repair(prereq_state)
+        checks.append(
+            {
+                "name": "local_prerequisites",
+                "ok": False,
+                "state": prereq_state,
+                "safe_to_share": True,
+            }
+        )
+        return _meta_validation_result(
+            ok=False,
+            state=prereq_state,
+            checked_at=checked_at,
+            summary=repair["summary"],
+            checks=checks,
+            repair=repair["repair"],
+            repair_command=repair["repair_command"],
+        )
+    if not secret:
+        repair = _meta_repair("missing_secret", ["access_token"])
+        return _meta_validation_result(
+            ok=False,
+            state="missing_secret",
+            checked_at=checked_at,
+            summary=repair["summary"],
+            checks=checks,
+            repair=repair["repair"],
+            repair_command=repair["repair_command"],
+        )
+    ad_account_id = str(metadata.get("ad_account_id") or "").strip()
+    if not ad_account_id:
+        repair = _meta_repair("missing_metadata")
+        return _meta_validation_result(
+            ok=False,
+            state="missing_metadata",
+            checked_at=checked_at,
+            summary=repair["summary"],
+            checks=checks,
+            repair=repair["repair"],
+            repair_command=repair["repair_command"],
+        )
+
+    run = command_runner or _run_command
+    env = _meta_env(secret, metadata)
+    auth_args = ["meta", "auth", "status"]
+    auth = _run_meta_command(run, auth_args, repo, env)
+    checks.append(_safe_command_check("auth_status", auth_args, auth))
+    if not auth.get("ok"):
+        state = "waiting_for_admin_approval" if _looks_like_admin_approval(auth) else "auth_failed"
+        repair = _meta_repair(state)
+        return _meta_validation_result(
+            ok=False,
+            state=state,
+            checked_at=checked_at,
+            summary=repair["summary"],
+            checks=checks,
+            repair=repair["repair"],
+            repair_command=repair["repair_command"],
+        )
+
+    for name, args, needs_business_id in META_READ_SMOKE_COMMANDS:
+        if needs_business_id and not str(metadata.get("business_id") or "").strip():
+            checks.append(
+                {
+                    "name": name,
+                    "command": " ".join(args),
+                    "ok": True,
+                    "skipped": True,
+                    "reason": "business_id metadata not set",
+                    "safe_to_share": True,
+                }
+            )
+            continue
+        result = _run_meta_command(run, args, repo, env)
+        checks.append(_safe_command_check(name, args, result))
+        if not result.get("ok"):
+            state = (
+                "waiting_for_admin_approval"
+                if _looks_like_admin_approval(result)
+                else "read_smoke_failed"
+            )
+            repair = _meta_repair(state)
+            return _meta_validation_result(
+                ok=False,
+                state=state,
+                checked_at=checked_at,
+                summary=repair["summary"],
+                checks=checks,
+                repair=repair["repair"],
+                repair_command=repair["repair_command"],
+            )
+
+    return _meta_validation_result(
+        ok=True,
+        state="ready",
+        checked_at=checked_at,
+        summary=f"{provider.name} read-only account smoke passed.",
+        checks=checks,
+    )
+
+
 def _validate_with_provider(
-    provider: Provider, secret: str, metadata: dict[str, Any] | None = None
+    provider: Provider,
+    secret: str,
+    metadata: dict[str, Any] | None = None,
+    *,
+    repo: Path | None = None,
+    which_func: Which | None = None,
+    command_runner: CommandRunner | None = None,
 ) -> dict[str, Any]:
     checked_at = _now()
     metadata = metadata or {}
@@ -1056,6 +1484,15 @@ def _validate_with_provider(
             provider_name=provider.name,
             endpoint_family="apify_user_me",
         )
+    elif provider.id == "meta":
+        return _validate_meta_with_cli(
+            provider,
+            secret,
+            metadata,
+            repo or Path.cwd(),
+            which_func=which_func,
+            command_runner=command_runner,
+        )
     else:
         return {
             "ok": True,
@@ -1079,14 +1516,23 @@ def _validate_with_provider(
     }
 
 
-def test_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
+def test_provider(
+    provider_id: str,
+    repo: str | Path = ".",
+    *,
+    which_func: Which | None = None,
+    command_runner: CommandRunner | None = None,
+) -> dict[str, Any]:
     provider = normalize_provider(provider_id)
     target = Path(repo).resolve()
     config = _read_config(target)
     entry = config["providers"].get(provider.id)
-    status = status_provider(provider.id, target)
-    if provider.id == "meta":
-        return {"ok": False, "provider": provider.id, "status": status, "safe_to_share": True}
+    status = status_provider(
+        provider.id,
+        target,
+        which_func=which_func,
+        command_runner=command_runner,
+    )
     if not isinstance(entry, dict) or status["state"] in {"not_connected", "missing_secret"}:
         return {"ok": False, "provider": provider.id, "status": status, "safe_to_share": True}
 
@@ -1104,12 +1550,24 @@ def test_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
             return {
                 "ok": False,
                 "provider": provider.id,
-                "status": status_provider(provider.id, target),
+                "status": status_provider(
+                    provider.id,
+                    target,
+                    which_func=which_func,
+                    command_runner=command_runner,
+                ),
                 "safe_to_share": True,
             }
         raw_metadata = entry.get("metadata")
         metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
-        validation = _validate_with_provider(provider, secret, metadata)
+        validation = _validate_with_provider(
+            provider,
+            secret,
+            metadata,
+            repo=target,
+            which_func=which_func,
+            command_runner=command_runner,
+        )
 
     entry["validation"] = {
         "state": validation["state"],
@@ -1125,7 +1583,12 @@ def test_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
     entry["last_checked_at"] = validation["checked_at"]
     config["providers"][provider.id] = entry
     _write_config(target, config)
-    status = status_provider(provider.id, target)
+    status = status_provider(
+        provider.id,
+        target,
+        which_func=which_func,
+        command_runner=command_runner,
+    )
     return {
         "ok": bool(validation["ok"]),
         "provider": provider.id,
@@ -1169,7 +1632,13 @@ def status_all(
     }
 
 
-def _run_command(args: list[str], cwd: Path | None = None, timeout: float = 5.0) -> dict[str, Any]:
+def _run_command(
+    args: list[str],
+    cwd: Path | None = None,
+    timeout: float = 5.0,
+    *,
+    env: dict[str, str] | None = None,
+) -> dict[str, Any]:
     try:
         result = subprocess.run(
             args,
@@ -1177,6 +1646,7 @@ def _run_command(args: list[str], cwd: Path | None = None, timeout: float = 5.0)
             capture_output=True,
             text=True,
             timeout=timeout,
+            env=env,
         )
     except FileNotFoundError:
         return {"ok": False, "returncode": 127, "stdout": "", "stderr": f"{args[0]} not found"}
@@ -1490,6 +1960,11 @@ def render_test_result(result: dict[str, Any]) -> None:
 
 def render_connect_result(result: dict[str, Any]) -> None:
     status = result["status"]
+    setup = result.get("setup") if result["provider"] == "meta" else {}
+    if isinstance(setup, dict) and setup.get("requirements"):
+        print("Meta Ads setup requirements:")
+        for item in setup["requirements"]:
+            print(f"  - {item}")
     if status["state"] == "ready":
         print(f"connected {result['provider']} and ready")
     elif status["state"] == "unvalidated":

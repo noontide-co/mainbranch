@@ -26,6 +26,16 @@ def _local_secret_env(monkeypatch, tmp_path: Path) -> None:
             monkeypatch.delenv(env_var, raising=False)
 
 
+def _connect_meta_ready_prereqs(monkeypatch) -> None:
+    monkeypatch.setattr(connect_mod, "_meta_prerequisite_state", lambda **kwargs: "")
+
+
+def _fake_meta_which(name: str) -> str | None:
+    if name in {"meta", "python3.12"}:
+        return f"/usr/bin/{name}"
+    return None
+
+
 def test_provider_registry_includes_initial_foundation() -> None:
     providers = {provider["id"]: provider for provider in connect_mod.provider_registry()}
 
@@ -40,6 +50,9 @@ def test_provider_registry_includes_initial_foundation() -> None:
     }.issubset(providers)
     assert "beancount" not in providers
     assert providers["cloudflare"]["required_secrets"] == ["api_token"]
+    assert providers["meta"]["auth"] == "meta_ads_cli_read_only"
+    assert providers["meta"]["required_secrets"] == ["access_token"]
+    assert "ACCESS_TOKEN" in providers["meta"]["env_vars"]
     assert providers["hledger"]["required_secrets"] == []
     assert providers["hledger"]["metadata_fields"] == [
         "journal_path",
@@ -47,7 +60,8 @@ def test_provider_registry_includes_initial_foundation() -> None:
     ]
 
 
-def test_connect_list_json_does_not_create_repo_metadata(tmp_path: Path) -> None:
+def test_connect_list_json_does_not_create_repo_metadata(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(connect_mod, "_meta_prerequisite_state", lambda **kwargs: "missing_cli")
     repo = tmp_path / "biz"
     repo.mkdir()
 
@@ -57,7 +71,7 @@ def test_connect_list_json_does_not_create_repo_metadata(tmp_path: Path) -> None
     payload = json.loads(result.stdout)
     assert any(provider["id"] == "cloudflare" for provider in payload["providers"])
     meta = next(provider for provider in payload["providers"] if provider["id"] == "meta")
-    assert meta["auth"] == "meta_cli_readiness"
+    assert meta["auth"] == "meta_ads_cli_read_only"
     cloudflare = next(
         provider for provider in payload["providers"] if provider["id"] == "cloudflare"
     )
@@ -78,6 +92,7 @@ def test_connect_plan_returns_numbered_provider_choices(tmp_path: Path, monkeypa
         "safe_to_share": True,
     }
     monkeypatch.setattr(connect_mod, "github_context", lambda repo: github_context)
+    monkeypatch.setattr(connect_mod, "_meta_prerequisite_state", lambda **kwargs: "missing_cli")
 
     result = runner.invoke(app, ["connect", "plan", "--repo", str(repo), "--json"])
 
@@ -87,24 +102,62 @@ def test_connect_plan_returns_numbered_provider_choices(tmp_path: Path, monkeypa
     assert list(steps) == ["github", "cloudflare", "google", "meta", "apify"]
     assert steps["github"]["next_command"] == "gh auth login"
     assert steps["github"]["safe_to_share"] is True
-    assert steps["meta"]["state"] == "readiness"
-    assert steps["meta"]["next_command"] == "mb educational provider-readiness"
+    assert steps["meta"]["state"] == "missing_cli"
+    assert steps["meta"]["next_command"] == "pipx install --python <python3.12-or-newer> meta-ads"
     assert payload["summary"]["total"] == 5
     assert not (repo / ".mb" / "connect.yaml").exists()
 
 
-def test_connect_meta_is_readiness_and_does_not_write_metadata(tmp_path: Path) -> None:
+def test_connect_meta_token_stdin_stores_secret_outside_repo(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    monkeypatch.setattr(connect_mod, "_meta_prerequisite_state", lambda **kwargs: "")
     repo = tmp_path / "biz"
     repo.mkdir()
 
-    result = runner.invoke(app, ["connect", "meta", "--repo", str(repo), "--json"])
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            "meta",
+            "--repo",
+            str(repo),
+            "--token-stdin",
+            "--metadata",
+            "ad_account_id=act_test",
+            "--account",
+            "Meta Test",
+            "--json",
+        ],
+        input="meta-secret-token\n",
+    )
 
-    assert result.exit_code == 2
-    assert "Meta Ads CLI readiness is documented" in result.stderr
-    assert not (repo / ".mb" / "connect.yaml").exists()
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["status"]["state"] == "unvalidated"
+    assert payload["credential_source"]["type"] == "stdin"
+    assert "Meta Business Portfolio" in payload["setup"]["requirements"][0]
+    assert "Business portfolio ID" in payload["setup"]["requirements"][2]
+    assert "act_" in payload["setup"]["safe_metadata"][0]
+    assert "Business portfolio ID" in payload["setup"]["safe_metadata"][1]
+
+    config_text = (repo / ".mb" / "connect.yaml").read_text(encoding="utf-8")
+    assert "meta-secret-token" not in config_text
+    config = yaml.safe_load(config_text)
+    meta = config["providers"]["meta"]
+    assert meta["metadata"] == {"ad_account_id": "act_test"}
+    assert meta["account_label"] == "Meta Test"
+    assert meta["secrets"]["access_token"]["backend"] == "local-file"
+
+    secret_file = tmp_path / "home" / "secrets" / "connect.json"
+    assert "meta-secret-token" in secret_file.read_text(encoding="utf-8")
 
 
-def test_meta_status_remains_readiness_even_with_stale_metadata(tmp_path: Path) -> None:
+def test_meta_status_preserves_stale_metadata_but_reports_missing_secret(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    monkeypatch.setattr(connect_mod, "_meta_prerequisite_state", lambda **kwargs: "")
     repo = tmp_path / "biz"
     repo.mkdir()
     config_path = repo / ".mb" / "connect.yaml"
@@ -129,20 +182,282 @@ def test_meta_status_remains_readiness_even_with_stale_metadata(tmp_path: Path) 
 
     status = connect_mod.status_provider("meta", repo)
 
-    assert status["state"] == "readiness"
-    assert status["connected"] is False
-    assert status["repair_command"] == ""
+    assert status["state"] == "missing_secret"
+    assert status["connected"] is True
+    assert status["repair_command"] == (
+        "mb connect meta --token-stdin --metadata ad_account_id=<act_id>"
+    )
     assert status["metadata"] == {"ad_account_id": "act_123"}
 
     aggregate = connect_mod.status_all(repo)
-    assert aggregate["ok"] is True
-    assert aggregate["summary"]["configured"] == 0
-    assert aggregate["summary"]["needs_repair"] == 0
-    assert aggregate["providers"][0]["state"] == "readiness"
+    assert aggregate["ok"] is False
+    assert aggregate["summary"]["configured"] == 1
+    assert aggregate["summary"]["needs_repair"] == 1
+    assert aggregate["providers"][0]["state"] == "missing_secret"
 
     check = connect_mod.doctor_check(repo, status=aggregate)
-    assert check["ok"] is True
-    assert check["detail"] == "no providers connected"
+    assert check["ok"] is False
+    assert "meta" in check["detail"]
+
+
+def test_connect_test_meta_reports_missing_metadata(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    _connect_meta_ready_prereqs(monkeypatch)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(
+        app,
+        ["connect", "meta", "--repo", str(repo), "--token", "meta-secret-token"],
+    )
+
+    result = runner.invoke(app, ["connect", "test", "meta", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["status"]["state"] == "missing_metadata"
+    assert (
+        payload["status"]["repair_command"] == "mb connect meta --metadata ad_account_id=<act_id>"
+    )
+    assert "meta-secret-token" not in result.stdout
+
+
+def test_connect_test_meta_missing_cli_has_python312_repair(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "meta",
+        repo=repo,
+        token="meta-secret-token",
+        metadata_pairs=["ad_account_id=act_test"],
+    )
+
+    result = connect_mod.test_provider(
+        "meta",
+        repo,
+        which_func=lambda name: "/usr/bin/python3.12" if name == "python3.12" else None,
+        command_runner=lambda args, cwd=None, timeout=5.0: {
+            "ok": True,
+            "returncode": 0,
+            "stdout": "3.12\n",
+            "stderr": "",
+        },
+    )
+
+    assert result["ok"] is False
+    assert result["status"]["state"] == "missing_cli"
+    assert result["status"]["repair_command"] == (
+        "pipx install --python <python3.12-or-newer> meta-ads"
+    )
+
+
+def test_connect_test_meta_uses_installed_cli_before_python_repair(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    monkeypatch.setattr(sys, "version_info", (3, 11))
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "meta",
+        repo=repo,
+        token="meta-secret-token",
+        metadata_pairs=["ad_account_id=act_test"],
+    )
+    calls: list[list[str]] = []
+
+    def fake_run(
+        args: list[str],
+        cwd: Path | None = None,
+        timeout: float = 5.0,
+        *,
+        env: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        calls.append(args)
+        if args == ["meta", "--version"]:
+            return {"ok": True, "returncode": 0, "stdout": "meta 1.0.1\n", "stderr": ""}
+        return {"ok": True, "returncode": 0, "stdout": "{}\n", "stderr": ""}
+
+    result = connect_mod.test_provider(
+        "meta",
+        repo,
+        which_func=lambda name: "/opt/pipx/bin/meta" if name == "meta" else None,
+        command_runner=fake_run,
+    )
+
+    assert result["ok"] is True
+    assert result["status"]["state"] == "ready"
+    assert calls[0] == ["meta", "--version"]
+    assert all("python" not in call[0] for call in calls)
+
+
+def test_connect_test_meta_read_only_smoke_passes_with_sanitized_env(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "meta",
+        repo=repo,
+        token="meta-secret-token",
+        metadata_pairs=["ad_account_id=act_test", "business_id=biz_test"],
+    )
+    calls: list[tuple[list[str], dict[str, str]]] = []
+
+    def fake_run(
+        args: list[str],
+        cwd: Path | None = None,
+        timeout: float = 5.0,
+        *,
+        env: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        if args == ["meta", "--version"]:
+            return {"ok": True, "returncode": 0, "stdout": "meta 1.0.1\n", "stderr": ""}
+        calls.append((args, env or {}))
+        return {"ok": True, "returncode": 0, "stdout": "{}\n", "stderr": ""}
+
+    result = connect_mod.test_provider(
+        "meta",
+        repo,
+        which_func=_fake_meta_which,
+        command_runner=fake_run,
+    )
+
+    assert result["ok"] is True
+    assert result["status"]["state"] == "ready"
+    assert [call[0] for call in calls] == [
+        ["meta", "auth", "status"],
+        ["meta", "-o", "json", "ads", "adaccount", "list"],
+        ["meta", "-o", "json", "ads", "campaign", "list"],
+        [
+            "meta",
+            "-o",
+            "json",
+            "ads",
+            "insights",
+            "get",
+            "--fields",
+            "spend,impressions,clicks,ctr,cpc",
+        ],
+        ["meta", "-o", "json", "ads", "dataset", "list"],
+    ]
+    assert calls[0][1]["ACCESS_TOKEN"] == "meta-secret-token"
+    assert calls[0][1]["AD_ACCOUNT_ID"] == "act_test"
+    assert calls[0][1]["BUSINESS_ID"] == "biz_test"
+    assert "meta-secret-token" not in json.dumps(result)
+
+
+def test_connect_test_meta_admin_approval_state(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "meta",
+        repo=repo,
+        token="meta-secret-token",
+        metadata_pairs=["ad_account_id=act_test"],
+    )
+
+    def fake_run(
+        args: list[str],
+        cwd: Path | None = None,
+        timeout: float = 5.0,
+        *,
+        env: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        if args == ["meta", "--version"]:
+            return {"ok": True, "returncode": 0, "stdout": "meta 1.0.1\n", "stderr": ""}
+        return {
+            "ok": False,
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "Waiting for another business admin approval.",
+        }
+
+    result = connect_mod.test_provider(
+        "meta",
+        repo,
+        which_func=_fake_meta_which,
+        command_runner=fake_run,
+    )
+
+    assert result["ok"] is False
+    assert result["status"]["state"] == "waiting_for_admin_approval"
+    assert result["status"]["summary"] == (
+        "Meta needs another business admin to approve this connection."
+    )
+    assert result["status"]["repair"] == (
+        "Meta needs another business admin to approve this connection. Nothing is broken locally."
+    )
+
+
+def test_connect_test_meta_read_smoke_failure_state(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "meta",
+        repo=repo,
+        token="meta-secret-token",
+        metadata_pairs=["ad_account_id=act_test"],
+    )
+    calls: list[list[str]] = []
+
+    def fake_run(
+        args: list[str],
+        cwd: Path | None = None,
+        timeout: float = 5.0,
+        *,
+        env: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        if args == ["meta", "--version"]:
+            return {"ok": True, "returncode": 0, "stdout": "meta 1.0.1\n", "stderr": ""}
+        calls.append(args)
+        ok = args == ["meta", "auth", "status"]
+        return {
+            "ok": ok,
+            "returncode": 0 if ok else 1,
+            "stdout": "{}\n" if ok else "",
+            "stderr": "" if ok else "permission denied",
+        }
+
+    result = connect_mod.test_provider(
+        "meta",
+        repo,
+        which_func=_fake_meta_which,
+        command_runner=fake_run,
+    )
+
+    assert result["ok"] is False
+    assert result["status"]["state"] == "read_smoke_failed"
+    assert calls == [
+        ["meta", "auth", "status"],
+        ["meta", "-o", "json", "ads", "adaccount", "list"],
+    ]
+
+
+def test_status_peek_exposes_meta_integration_state(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    monkeypatch.setattr(connect_mod, "_meta_prerequisite_state", lambda **kwargs: "")
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "meta",
+        repo=repo,
+        token="meta-secret-token",
+        metadata_pairs=["ad_account_id=act_test"],
+    )
+
+    result = runner.invoke(app, ["status", str(repo), "--json", "--peek"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    meta = payload["integrations"]["providers"][0]
+    assert meta["provider"] == "meta"
+    assert meta["state"] == "unvalidated"
+    assert meta["repair_command"] == "mb connect test meta"
+    assert "meta-secret-token" not in result.stdout
 
 
 def test_connect_plan_human_output_uses_numbered_choices(tmp_path: Path, monkeypatch) -> None:
@@ -157,6 +472,7 @@ def test_connect_plan_human_output_uses_numbered_choices(tmp_path: Path, monkeyp
         "safe_to_share": True,
     }
     monkeypatch.setattr(connect_mod, "github_context", lambda repo: github_context)
+    monkeypatch.setattr(connect_mod, "_meta_prerequisite_state", lambda **kwargs: "missing_cli")
 
     result = runner.invoke(app, ["connect", "plan", "--repo", str(repo)])
 

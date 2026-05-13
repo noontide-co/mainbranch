@@ -77,8 +77,8 @@ pip3 list 2>/dev/null | grep -i "mlx-whisper" && echo "WHISPER=mlx_whisper"
 
 **Meta Ads account access:** Use `mb connect doctor --json` for provider
 readiness first. The official path is the Meta Ads CLI (`meta-ads` package,
-`meta` binary). Main Branch support is `readiness`: setup requirements are
-known, but live account checks wait for `mb` detection and read-only smoke.
+`meta` binary). Treat live account context as available only when `mb` reports
+Meta as `ready`.
 ```bash
 # Future detection once mb reports Meta ready:
 # which meta

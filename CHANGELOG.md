@@ -17,10 +17,33 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   technical leakage in Claude final answers, plus docs and tests for
   translating git/GitHub/checkpoint mechanics into normal owner language first.
   Refs MAIN-363, #573.
+- Added Meta Ads read-only `mb connect` readiness wiring: `mb connect meta`
+  now stores tokens through `SecretStore`, keeps safe account metadata in
+  `.mb/connect.yaml`, and `mb connect test meta --json` models Python/CLI,
+  secret, metadata, admin-approval, auth, read-smoke, and ready states for
+  `/mb-ads` and status consumers. Refs MAIN-352, #550.
 - Added the first hledger-backed `mb books report monthly --sample --month
   YYYY-MM` surface, including packaged fake journal data, stable JSON envelope
   output, beginner-safe human output, missing-hledger guidance, invalid month
   handling, and privacy-boundary tests. Refs MAIN-360, #567, #560.
+- Added a MAIN-362 refresh to the creative media generation rails decision,
+  making OpenAI GPT Image 2 the first static-image readiness target while
+  keeping Google Gemini / Nano Banana, BFL FLUX.2, xAI Imagine, ComfyUI, and
+  raw video providers as candidate rails behind separate smoke evidence. Refs
+  #569, #409.
+
+### Changed
+
+- Updated `/mb-ads` image-generation guidance and dependency choices to use
+  provider-neutral prompt/output records, push-local image indexes, direct
+  OpenAI GPT Image 2 as the first smoke target, configurable media storage
+  with safe logical media URIs, reference-image roles, and prompt-only fallback
+  when no approved provider is configured. Refs MAIN-362, #569.
+- Added verified MAIN-362 implementation research patterns to the creative
+  media decision, including a GitHub reference-repo pattern table,
+  OpenAI-first ad-volume cost math, and a deterministic video/motion CLI
+  boundary that keeps raw generative video out of the first rail. Refs
+  MAIN-362, #569.
 
 ## [0.3.20] - 2026-05-13
 

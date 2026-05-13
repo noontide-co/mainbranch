@@ -53,8 +53,8 @@ mb connect doctor --json
 4. **Meta Ads / Google Ads** - account facts, campaign references, pixels, and
    future performance context where official paths are verified.
    - Meta Ads uses Meta's official `meta-ads` package and `meta` CLI. Main
-     Branch can explain setup requirements now, but live account checks stay
-     unavailable until `mb` owns detection and read-only smoke.
+     Branch can store the token outside the repo, keep safe account metadata
+     in `.mb/connect.yaml`, and run read-only account smoke.
    - Connect only when paid work needs account facts and Main Branch reports the
      path ready.
 
@@ -73,8 +73,16 @@ mb connect doctor --json
   not yet wire a safe setup, detection, or validation path.
 - `readiness` means the official provider path and setup requirements are known,
   but `mb` does not yet validate the account or use live provider data.
+- `wrong_python` means the local install path needs Python 3.12 or newer.
+- `missing_cli` means the provider CLI is not installed or cannot run.
 - `missing_secret` means metadata exists but the local secret is missing.
+- `missing_metadata` means the token exists but a safe local identifier, such as
+  `ad_account_id`, is missing.
 - `unvalidated` means a credential is stored, but it has not been tested.
+- `waiting_for_admin_approval` means the provider needs an account admin to
+  approve the connection before local validation can pass.
+- `auth_failed` and `read_smoke_failed` mean auth or read-only smoke failed
+  without exposing raw provider output.
 - `invalid` means validation failed and the credential should be replaced.
 - `ready` means the safest available check passed.
 
@@ -99,9 +107,9 @@ Main Branch should teach this while setup happens. Numbered choices,
 readiness checks, and exact next commands beat a long essay and a pile of
 manual account setup.
 
-## Meta Ads readiness
+## Meta Ads read-only readiness
 
-Meta Ads is at `readiness` support. The official path is the Meta Ads CLI:
+Meta Ads uses the official Meta Ads CLI:
 
 ```bash
 pipx install meta-ads
@@ -116,7 +124,22 @@ system user token, and scopes including `business_management`, `ads_management`,
 `pages_show_list`, `pages_read_engagement`, `pages_manage_ads`,
 `catalog_management`, and `read_insights`.
 
-Practical read-only commands available through the official CLI include:
+Connect through `mb` so the token stays outside the repo:
+
+```bash
+mb connect meta --token-stdin \
+  --metadata=ad_account_id=<act_id> \
+  --metadata=business_id=<business_portfolio_id>
+mb connect test meta --json
+```
+
+Safe metadata in `.mb/connect.yaml` may include `ad_account_id` (use the `act_`
+ad account ID), optional `business_id` (Meta calls this the Business portfolio
+ID on the business info page), an account label, and validation summaries. Raw
+tokens and raw provider responses do not belong in tracked files.
+
+Practical read-only commands that `mb connect test meta` can smoke through the
+official CLI include:
 
 ```bash
 meta ads adaccount list
@@ -128,14 +151,9 @@ meta ads insights get --fields spend,impressions,clicks,ctr,cpc
 meta ads dataset list
 ```
 
-Main Branch should make this easy before promoting support:
-
-1. detect `meta` and `meta --version`;
-2. run `meta auth status` without printing tokens;
-3. verify a read-only account/campaign/insights smoke;
-4. report safe readiness facts through `mb connect status`, `mb connect doctor`,
-   and `mb status --json --peek`;
-5. keep raw exports, tokens, and account-private IDs out of tracked files.
+Main Branch reports safe readiness facts through `mb connect status`, `mb
+connect doctor`, and `mb status --json --peek`. `/mb-ads` should consume those
+facts before asking whether to use live account context.
 
 Write-capable CLI commands exist for campaigns, ad sets, ads, creatives,
 datasets, and catalogs. They remain out of scope for Main Branch until approval
