@@ -379,6 +379,7 @@ def _ensure_repo_id(config: dict[str, Any], repo: Path) -> str:
 def _write_config(repo: Path, config: dict[str, Any]) -> Path:
     path = _checked_config_path(repo)
     path.parent.mkdir(parents=True, exist_ok=True)
+    # Re-check after creating .mb so a swapped local-state path cannot escape the repo.
     path = _checked_config_path(repo)
     text = yaml.safe_dump(config, sort_keys=False)
     path.write_text(text, encoding="utf-8")

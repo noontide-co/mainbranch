@@ -78,8 +78,9 @@ human approval over clever automation.
   individual PRs so the release-pipeline review is not hidden inside a
   group diff. See
   [`.github/dependabot.yml`](../.github/dependabot.yml).
-- Pinning to commit SHAs is preferred for higher-risk supply chains.
-  The original release-gates decision tracked SHA pinning as follow-up in
+- Pinning to commit SHAs remains the preferred control for higher-risk supply
+  chains. The original release-gates decision tracked SHA pinning as follow-up;
+  the release workflow now carries that control. See
   [`decisions/2026-05-11-supply-chain-security-gates.md`](../decisions/2026-05-11-supply-chain-security-gates.md).
 
 ### Package metadata and dependency surface
