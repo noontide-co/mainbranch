@@ -13,6 +13,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added an accepted decision for agentic security review sidecars: DeepSec may
+  be used as an optional local pre-release review aid for security-sensitive
+  branches, while Greptile remains a hosted PR-review candidate pending a
+  separate privacy/setup evaluation. Release and post-release docs now route
+  sidecar evidence through targeted pre-release checks and sanitized
+  post-release follow-up, and contributor/release-agent docs cover sidecar
+  evidence capture. Refs #554.
 - Added the first narrow MAIN-128 `mb books` setup slice: `mb books status`
   now reports hledger availability, sanitized private-books-vault setup, ignore
   protections, and check health; `mb books doctor --plan` now gives a

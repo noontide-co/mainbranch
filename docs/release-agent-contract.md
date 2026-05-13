@@ -21,6 +21,8 @@ Applies to any agent or human driver running:
 - wheel build + fresh-install smoke for a release candidate;
 - `scripts/claude-runtime-dogfood.py` at any simulation tier;
 - post-publish PyPI verification;
+- optional agentic security sidecars such as DeepSec when a release candidate
+  touches security-sensitive surfaces;
 - any other validation that takes more than ~10 seconds and produces output
   worth preserving.
 
@@ -143,6 +145,18 @@ Before re-running any long check, check in order:
 
 Re-run only when the previous result is genuinely unknown or a code change
 warrants a fresh run.
+
+### 3a. Time-box optional security sidecars.
+
+Agentic security sidecars are review aids, not release truth. When a
+security-sensitive release branch runs DeepSec or a comparable tool, scope it
+to changed high-risk files or scanner candidates, capture the first run's log
+and exit state, and record partial or stalled runs honestly.
+
+Keep raw model output, local paths, and scanner workspaces under `.agent/` or
+another ignored evidence directory. Public PR evidence should include only the
+command shape, scope, exit/timeout result, candidate/finding count, and which
+items were confirmed, rejected, or routed to follow-up issues.
 
 ### 4. Release PRs stay release-only.
 
