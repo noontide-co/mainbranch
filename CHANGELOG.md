@@ -13,6 +13,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added a proposed shared workflow corpus and native runtime renderer decision
+  that names `workflows/<workflow>/` as the portable source for selected
+  workflow semantics, keeps Claude Code and Codex runtime shells native, and
+  chooses the daily start -> MoneyPath `/mb-think` handoff as the first
+  workflow family to prototype. Refs MAIN-302, #451.
 - Added a public-safe v0.3.19 post-release transcript review report that records
   PyPI release-acceptance evidence, print-mode proxy limits, post-release docs
   alignment, and the #539 path-to-money follow-up route. Refs #538, #539.
