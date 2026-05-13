@@ -28,10 +28,10 @@ Main Branch should help an operator move through four loops:
 1. **Sense** - pull state in: offers, audience, voice, research, decisions,
    `mb status`, drift, freshness, connected tools, GitHub activity.
 2. **Decide** - choose what to wager next: the bet, the priority, the override.
-   Plain English: pick what matters and commit.
+   Plain English: pick what matters and make the call.
 3. **Ship** - produce and release the work: pages, ads, organic content,
    sales videos, provider connections, fulfillment work, bookkeeping summaries, system
-   updates, the commit itself. One verb covers producing the artifact and
+   updates, and saved checkpoints. One verb covers producing the artifact and
    putting it in the world.
 4. **Reflect** - extract the lesson, usually scheduled: bet verdicts, retros,
    decisions superseded, core files updated from what you learned. The

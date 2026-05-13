@@ -55,7 +55,7 @@ Open source. Lives on your machine. Bring your own Claude Code plan. That's it.
 | ------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | "I'm not technical enough. I don't know git, terminals, or any of that." | If you can move a file into a folder, the system handles the rest.       |
 | "I'll set it up wrong and not know."                    | The system tells you the next command. It can't get lost.                         |
-| "I'd mess it up and lose everything."                   | Every change is saved and rewindable. Git remembers. Mistakes don't stick.        |
+| "I'd mess it up and lose everything."                   | Every change can be saved and reviewed. Mistakes don't stick.                     |
 | "I need a clear plan before I start."                   | Start with the folder. The system explains itself in plain English as you go.     |
 | "I need someone to sit down and walk me through it."    | Type `/mb-start` in Claude. The agent explains. You go at your own pace.          |
 | "I won't keep up with the maintenance."                 | When something falls out of date, the system tells you the exact next step.       |
@@ -78,7 +78,7 @@ Open source. Lives on your machine. Bring your own Claude Code plan. That's it.
 
 Main Branch is chat-first for the operator and CLI-backed under the hood.
 
-1. **The repo remembers.** Your core files, research, decisions, bets, pushes,
+1. **Your folder remembers.** Your core files, research, decisions, bets, pushes,
    logs, documents, and checkpoints hold the business truth.
 2. **`mb` checks facts.** The CLI reads the repo and returns deterministic
    status, graph, provider, MoneyPath, proof-quality, content-strategy,
@@ -119,7 +119,7 @@ You don't run any of these commands yourself. You ask the agent. It runs them.
 Main Branch v0.3 has three layers:
 
 - **Your folder is the source of truth.** Offer, audience, voice, decisions, research, bets, launches, logs, documents, links to other repos. Plain markdown files you can read on any computer.
-- **The CLI is the fact and safety layer.** It scaffolds the folder, validates the shape, draws the relationship graph, briefs the agent on what's changed, walks through repairs, saves readable checkpoints, and checks that connected providers are wired up safely. It also exposes shipped facts for MoneyPath readiness, proof quality, content strategy health, books readiness, provider readiness, status, start, graph, and checkpoint workflows. The agent runs it. You don't have to learn it.
+- **The CLI is the fact and safety layer.** It scaffolds the folder, validates the shape, draws the relationship graph, briefs the agent on what's changed, walks through repairs, saves readable checkpoints, and checks that connected providers are wired up safely. It also exposes shipped facts for MoneyPath readiness, proof quality, content strategy health, books readiness and sample reporting, provider readiness, status, start, graph, and checkpoint workflows. The agent runs it. You don't have to learn it.
 - **The skills are the chat UX and judgment layer.** The agent reads your folder and `mb` facts, asks you the right questions, drafts work, reviews it, and routes approved artifacts back into files.
 
 Agent recommends. You decide what gets shipped, spent, published, or saved.
@@ -253,9 +253,9 @@ Hit a real problem? Ask the agent to draft a clean public issue for you. It scru
 
 ---
 
-## Open source vs paid community
+## Open source and optional community
 
-- **Open-source (MIT)**: the `mb` CLI, bundled skills, schema, framework, docs, and any future local dashboard. Usable without joining the paid community.
+- **Open-source (MIT)**: the `mb` CLI, bundled skills, schema, framework, docs, and any future local dashboard. Usable without joining the community.
 - **Community ([Skool](https://skool.com/main))**: Watch us build companies live with Main Branch. Live narration, calls, support, and curated examples — not required to use the CLI or skills.
 
 Main Branch is usable on its own. The community is the live narration on top.
@@ -273,6 +273,7 @@ The `mb` CLI is the deterministic control plane. The agent runs it for normal us
 | `mb status`              | Local-first daily briefing: ranked next actions, MoneyPath readiness, since-last-check changes, drift, repo health, runtime wiring, recent activity, GitHub tasks/proposals. `--json` and `--peek` for callers. |
 | `mb doctor`              | Check environment, repo shape, frontmatter, settings. `mb doctor repair --plan` / `--apply` walks through guided reconciliation, including migration drift. |
 | `mb connect`             | Register provider credentials, test provider health, inspect repair-safe integration status without committing secrets. |
+| `mb books`               | Check privacy-bounded bookkeeping setup, inspect hledger readiness, plan safe repairs, and render sample monthly reports from packaged fake data. |
 | `mb site check`          | Local paid-traffic measurement readiness for a site folder: GTM install, dataLayer events, consent posture, Google Ads metadata, operator-review gates. |
 | `mb issue draft` / `open`| Draft a privacy-scrubbed GitHub issue locally, review it, then submit through `gh`. |
 | `mb validate`            | Frontmatter shape check across `core/`, `research/`, `decisions/`, `bets/`, `log/`, `pushes/`, `documents/`. Pass/fail per file. |

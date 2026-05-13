@@ -46,7 +46,7 @@ chain:
   playbook to draft, or a repair to approve.
 - **Ship:** the skill creates or updates the artifact, while `mb` supplies
   deterministic checks, repair commands, validation, provider readiness, and
-  checkpoint/commit plans.
+  checkpoint plans.
 - **Reflect:** `/mb-end`, bet close/narrate behavior, push review notes, or
   checkpoint guidance records what changed and what the next Sense pass should
   know.
@@ -198,7 +198,7 @@ of work.
 - `bets/` and the bet lifecycle (verdicts go here)
 - `decisions/` (when superseding a prior decision is itself a reflection)
 - `CHANGELOG.md` (release-as-retro)
-- `mb checkpoint` and `git` history — business-readable commits at meaningful
+- `mb checkpoint` and history — business-readable saved checkpoints at meaningful
   boundaries
 
 **Direction**
@@ -254,7 +254,7 @@ mirror loop names. There is no requirement for skill-to-loop 1:1 mapping.
 | `/mb-ads` | Ship (with Reflect-style review gates) | Draft + post |
 | `/mb-end` | Reflect (with optional Ship of the reflection) | Session crystallize |
 | `mb status` (CLI) | Sense | Daily briefing |
-| `mb checkpoint` | Ship | The commit is itself a Ship event |
+| `mb checkpoint` | Ship | The saved checkpoint is itself a Ship event |
 
 The `/mb-think` skill name is preserved — "Think" is a brand name for a
 multi-loop research-decide-codify skill, not a loop. Operators say "I'm going
