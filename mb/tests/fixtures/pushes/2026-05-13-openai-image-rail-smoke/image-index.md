@@ -41,6 +41,8 @@ assets:
     aspect_ratio: '2:3'
     format: png
     quality: medium
+    generated_width: 1024
+    generated_height: 1536
   output_reference: mb-media://pushes/2026-05-13-openai-image-rail-smoke/images/fake-openai-image-001.png
   storage_backend: mb-media
   committed_binary: false

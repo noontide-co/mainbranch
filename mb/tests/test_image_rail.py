@@ -120,7 +120,9 @@ def test_openai_image_smoke_generated_path_keeps_binary_in_media_cache(
     monkeypatch.setattr(
         image_rail_mod,
         "_generate_openai_image",
-        lambda prompt, *, model, size, quality: b"fake-png-bytes",
+        lambda prompt, *, model, size, quality: (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x04\x00\x00\x00\x06\x00fake-png-tail"
+        ),
     )
 
     result = runner.invoke(
@@ -142,6 +144,7 @@ def test_openai_image_smoke_generated_path_keeps_binary_in_media_cache(
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert payload["state"] == "generated"
+    assert payload["generated_dimensions"] == {"width": 1024, "height": 1536}
     assert payload["binary_written"] is True
     assert payload["binary_committed"] is False
 
@@ -154,9 +157,13 @@ def test_openai_image_smoke_generated_path_keeps_binary_in_media_cache(
         / "images"
         / "fake-openai-image-001.png"
     )
-    assert media_path.read_bytes() == b"fake-png-bytes"
+    assert media_path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
     index_path = repo / "pushes" / "2026-05-13-fake-openai-smoke" / "image-index.md"
+    record = _record_from_index(index_path)
+    dimensions = record["assets"][0]["dimensions"]
+    assert dimensions["generated_width"] == 1024
+    assert dimensions["generated_height"] == 1536
     text = index_path.read_text(encoding="utf-8")
     assert str(media_path) not in text
     assert "test-key-not-written" not in text

@@ -6,6 +6,7 @@ import base64
 import importlib
 import importlib.util
 import os
+import struct
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
@@ -91,6 +92,17 @@ def _generate_openai_image(prompt: str, *, model: str, size: str, quality: str) 
     return base64.b64decode(encoded)
 
 
+def _png_dimensions(image_bytes: bytes) -> dict[str, int] | None:
+    if len(image_bytes) < 24:
+        return None
+    if not image_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        return None
+    if image_bytes[12:16] != b"IHDR":
+        return None
+    width, height = struct.unpack(">II", image_bytes[16:24])
+    return {"width": width, "height": height}
+
+
 def _asset_record(
     *,
     push_slug: str,
@@ -106,6 +118,7 @@ def _asset_record(
     model: str,
     size: str,
     quality: str,
+    generated_dimensions: dict[str, int] | None,
 ) -> dict[str, Any]:
     return {
         "asset_id": asset_id,
@@ -139,6 +152,12 @@ def _asset_record(
             "aspect_ratio": "2:3",
             "format": "png",
             "quality": quality,
+            "generated_width": (
+                generated_dimensions["width"] if generated_dimensions is not None else None
+            ),
+            "generated_height": (
+                generated_dimensions["height"] if generated_dimensions is not None else None
+            ),
         },
         "output_reference": output_reference,
         "storage_backend": "mb-media",
@@ -196,6 +215,7 @@ def smoke_openai(
     state: SmokeState = "blocked" if blocker_code else "generated"
 
     binary_written = False
+    generated_dimensions: dict[str, int] | None = None
     if state == "generated":
         out_path = _media_path(repo_path, media_root, push_slug, DEFAULT_ASSET_ID)
         out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -215,6 +235,7 @@ def smoke_openai(
                 f"organization verification, quota, model access, and network state."
             )
         else:
+            generated_dimensions = _png_dimensions(image_bytes)
             out_path.write_bytes(image_bytes)
             binary_written = True
 
@@ -239,6 +260,7 @@ def smoke_openai(
                 model=DEFAULT_MODEL,
                 size=DEFAULT_SIZE,
                 quality=DEFAULT_QUALITY,
+                generated_dimensions=generated_dimensions,
             )
         ],
     }
@@ -254,6 +276,13 @@ def smoke_openai(
         "record_path": _repo_relative(index_path, repo_path),
         "output_reference": output_reference,
         "storage_backend": "mb-media",
+        "dimensions": {
+            "requested_size": DEFAULT_SIZE,
+            "aspect_ratio": "2:3",
+            "format": "png",
+            "quality": DEFAULT_QUALITY,
+        },
+        "generated_dimensions": generated_dimensions,
         "binary_written": binary_written,
         "binary_committed": False,
         "safe_to_share": True,
