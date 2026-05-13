@@ -14,6 +14,11 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _normalize(text: str) -> str:
+    lines = [line.removeprefix("> ").strip() for line in text.splitlines()]
+    return " ".join(" ".join(lines).split())
+
+
 def test_mb_start_delegates_router_detail_without_bloating_skill_body() -> None:
     start = _read(START_SKILL)
 
@@ -50,9 +55,11 @@ def test_router_contract_covers_books_save_sync_and_updates() -> None:
 def test_start_router_routes_money_intent_from_moneypath_facts() -> None:
     start = _read(START_SKILL)
     router = _read(ROUTER_REF)
+    normalized_start = _normalize(start)
+    normalized_router = _normalize(router)
 
-    assert "Parse the full JSON once" in start
-    assert "do not slice\nstatus output with `head` or `sed`" in start
+    assert "Parse the full JSON once" in normalized_start
+    assert "do not slice status output with `head` or `sed`" in normalized_start
 
     required_phrases = [
         "Path to money, revenue, offer readiness",
@@ -60,9 +67,9 @@ def test_start_router_routes_money_intent_from_moneypath_facts() -> None:
         "next dollar",
         "offer readiness",
         "Keep hard gates first",
-        "Required update, broken install/runtime/wiring, repair blockers, validation\n"
-        "  blockers, relationship health blockers, playbook health blockers, and unsafe\n"
-        "  provider/private-data blockers all win before MoneyPath routing.",
+        "Required update, broken install/runtime/wiring, repair blockers, validation "
+        "blockers, relationship health blockers, playbook health blockers, and unsafe "
+        "provider/private-data blockers all win before MoneyPath routing.",
         "`money_path.overall_level`",
         "`money_path.overall_label`",
         "`money_path.objects.offer`",
@@ -74,21 +81,21 @@ def test_start_router_routes_money_intent_from_moneypath_facts() -> None:
         "`money_path.objects.outcome_feedback_loop`",
         "`money_path.ranked_actions`",
         "without conversion judgment",
-        "Explain whether top-level `ranked_actions` agree with the MoneyPath\n  bottleneck",
+        "Explain whether top-level `ranked_actions` agree with the MoneyPath bottleneck",
         "include a MoneyPath snapshot in the handoff",
-        "Product ladder is stated but has no\n> clear paid entry step",
-        "Channel strategy exists, but no active push is\n> attached",
+        "Product ladder is stated but has no clear paid entry step",
+        "Channel strategy exists, but no active push is attached",
         "Outcome feedback loop is missing",
         "Recommended route: use `/mb-think`",
     ]
     for phrase in required_phrases:
-        assert phrase in router
+        assert phrase in normalized_router
 
-    assert "Your offer is bad." in router
-    assert "This will not convert." in router
-    assert "This will convert." in router
-    assert "The business is weak." in router
-    assert "This is ready to win." in router
+    assert "Your offer is bad." in normalized_router
+    assert "This will not convert." in normalized_router
+    assert "This will convert." in normalized_router
+    assert "The business is weak." in normalized_router
+    assert "This is ready to win." in normalized_router
 
 
 def test_start_router_no_longer_blindly_pulls_business_repo() -> None:
