@@ -51,6 +51,11 @@ def test_openai_image_smoke_writes_safe_blocked_record(
     assert payload["blocker_code"] == "generation_not_approved"
     assert payload["candidate_count"] == 9
     assert payload["generated_count"] == 0
+    assert payload["best_candidate"] is None
+    assert payload["best_playbook"] is None
+    assert payload["all_rejected"] is None
+    assert payload["overlay_tested"] is False
+    assert "no_visual_quality_proven" in payload["main_failure_modes"]
     assert payload["output_record_written"] is True
     assert payload["review_board_written"] is True
     assert payload["binary_committed"] is False
@@ -70,6 +75,29 @@ def test_openai_image_smoke_writes_safe_blocked_record(
     assert record["conversion_language"] == "conversion_informed"
     assert record["batch_plan"]["candidate_count"] == 9
     assert record["generated_count"] == 0
+    assert record["best_candidate"] is None
+    assert record["best_playbook"] is None
+    assert record["all_rejected"] is None
+    assert record["overlay_tested"] is False
+    assert "provider_generation_not_run" in record["main_failure_modes"]
+    assert record["visual_calibration_result"]["state"] == "blocked"
+    assert record["visual_calibration_result"]["generated_count"] == 0
+    assert record["visual_calibration_result"]["best_candidate"] is None
+    assert record["visual_calibration_result"]["best_playbook"] is None
+    assert record["visual_calibration_result"]["all_rejected"] is None
+    assert record["visual_calibration_result"]["overlay_tested"] is False
+    assert "no_visual_quality_proven" in record["visual_calibration_result"]["main_failure_modes"]
+    assert record["dashboard_readiness"]["state"] == "readable"
+    assert record["dashboard_readiness"]["read_only"] is True
+    assert record["dashboard_readiness"]["dashboard_role"] == "visual_map"
+    assert record["dashboard_readiness"]["logic_owners"]["cli"] == "facts_and_safe_checks"
+    assert "mb start --json" in record["dashboard_readiness"]["safe_sources"]
+    assert (
+        record["dashboard_readiness"]["record_sections"]["winner_or_rejection"]
+        == "visual_calibration_result"
+    )
+    assert "confirm_openai_image_credential_state" in record["dashboard_readiness"]["next_actions"]
+    assert "no_secrets" in record["dashboard_readiness"]["boundaries"]
     assert (
         record["review_board_question"] == "Which playbook produced the best actual ad candidate?"
     )
@@ -209,6 +237,10 @@ def test_openai_image_smoke_generate_without_key_records_missing_key(
     payload = json.loads(result.stdout)
     assert payload["state"] == "blocked"
     assert payload["blocker_code"] == "missing_openai_api_key"
+    assert payload["best_candidate"] is None
+    assert payload["best_playbook"] is None
+    assert payload["all_rejected"] is None
+    assert payload["overlay_tested"] is False
 
     index_path = repo / "pushes" / "2026-05-13-fake-openai-smoke" / "image-index.md"
     record = _record_from_index(index_path)
@@ -222,6 +254,8 @@ def test_openai_image_smoke_generate_without_key_records_missing_key(
     assert record["concepts"][0]["review"]["avoidance_strategy_fit"] == "pass"
     assert record["concepts"][0]["review"]["prompt_record_complete"] == "pass"
     assert record["concepts"][0]["review"]["scores"]["ai_generic_risk"] == 1
+    assert record["visual_calibration_result"]["state"] == "blocked"
+    assert record["visual_calibration_result"]["overlay_tested"] is False
     assert asset["concept_id"] == image_rail_mod.DEFAULT_CONCEPT_ID
 
 
@@ -262,6 +296,11 @@ def test_openai_image_smoke_generated_path_keeps_binary_in_media_cache(
     assert payload["state"] == "generated"
     assert payload["candidate_count"] == 9
     assert payload["generated_count"] == 9
+    assert payload["best_candidate"] == image_rail_mod.DEFAULT_ASSET_ID
+    assert payload["best_playbook"] == "specific_object_metaphor"
+    assert payload["all_rejected"] is False
+    assert payload["overlay_tested"] is False
+    assert payload["main_failure_modes"] == []
     assert payload["generated_dimensions"] == {"width": 1024, "height": 1536}
     assert payload["binary_written"] is True
     assert payload["binary_written_count"] == 9
@@ -282,6 +321,19 @@ def test_openai_image_smoke_generated_path_keeps_binary_in_media_cache(
     record = _record_from_index(index_path)
     dimensions = record["assets"][0]["dimensions"]
     assert record["generated_count"] == 9
+    assert record["best_candidate"] == image_rail_mod.DEFAULT_ASSET_ID
+    assert record["best_playbook"] == "specific_object_metaphor"
+    assert record["all_rejected"] is False
+    assert record["overlay_tested"] is False
+    assert record["main_failure_modes"] == []
+    assert record["visual_calibration_result"]["state"] == "creative_review_winner_selected"
+    assert record["visual_calibration_result"]["best_candidate"] == image_rail_mod.DEFAULT_ASSET_ID
+    assert record["visual_calibration_result"]["best_playbook"] == "specific_object_metaphor"
+    assert record["visual_calibration_result"]["overlay_tested"] is False
+    assert (
+        "test_deterministic_overlay_on_best_one_to_three_candidates"
+        in record["dashboard_readiness"]["next_actions"]
+    )
     assert all(asset["state"] == "generated" for asset in record["assets"])
     assert dimensions["generated_width"] == 1024
     assert dimensions["generated_height"] == 1536
@@ -329,10 +381,17 @@ def test_openai_image_smoke_provider_failure_writes_sanitized_blocker(
     assert payload["state"] == "blocked"
     assert payload["blocker_code"] == "provider_request_failed"
     assert payload["generated_count"] == 0
+    assert payload["best_candidate"] is None
+    assert payload["best_playbook"] is None
+    assert payload["all_rejected"] is None
+    assert payload["overlay_tested"] is False
+    assert "no_visual_quality_proven" in payload["main_failure_modes"]
 
     index_path = repo / "pushes" / "2026-05-13-fake-openai-smoke" / "image-index.md"
     record = _record_from_index(index_path)
     assert all(asset["blocker_code"] == "provider_request_failed" for asset in record["assets"])
+    assert record["visual_calibration_result"]["state"] == "blocked"
+    assert record["visual_calibration_result"]["best_candidate"] is None
     text = index_path.read_text(encoding="utf-8")
     assert "RuntimeError" in text
     assert "secret-bearing provider details" not in text

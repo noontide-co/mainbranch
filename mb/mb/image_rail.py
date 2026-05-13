@@ -1701,6 +1701,198 @@ def _image_generation_gate() -> dict[str, Any]:
     }
 
 
+def _candidate_score(concept: dict[str, Any]) -> int:
+    review = _dict_value(concept.get("review"))
+    ad_quality = _dict_value(review.get("ad_quality"))
+    visual_quality = _dict_value(review.get("visual_quality"))
+    risk = _dict_value(review.get("risk"))
+    risk_penalty = int(risk.get("ai_slop_risk") or 5) + int(risk.get("genericness_risk") or 5)
+    return (
+        int(ad_quality.get("thumb_stop") or 0)
+        + int(ad_quality.get("problem_clarity") or 0)
+        + int(ad_quality.get("offer_relevance") or 0)
+        + int(visual_quality.get("composition") or 0)
+        - risk_penalty
+    )
+
+
+def _visual_calibration_result(
+    *,
+    concepts: list[dict[str, Any]],
+    assets: list[dict[str, Any]],
+    generated_count: int,
+    review_board_path: str,
+) -> dict[str, Any]:
+    generated_assets = [asset for asset in assets if asset.get("state") == "generated"]
+    asset_by_concept = {str(asset.get("concept_id")): asset for asset in generated_assets}
+    accepted = [
+        concept
+        for concept in concepts
+        if str(concept.get("concept_id")) in asset_by_concept
+        and _dict_value(concept.get("review")).get("decision") == "accept"
+    ]
+    if generated_count == 0:
+        state = "blocked"
+        best_candidate = None
+        best_playbook = None
+        all_rejected = None
+        failure_modes = [
+            "provider_generation_not_run",
+            "no_visual_quality_proven",
+            "overlay_not_tested",
+        ]
+    elif not accepted:
+        state = "all_rejected"
+        best_candidate = None
+        best_playbook = None
+        all_rejected = True
+        failure_modes = [
+            "no_candidate_passed_review",
+            "no_click_reason_or_ad_quality_gap",
+        ]
+    else:
+        state = "creative_review_winner_selected"
+        winner = sorted(accepted, key=_candidate_score, reverse=True)[0]
+        winning_asset = asset_by_concept[str(winner.get("concept_id"))]
+        best_candidate = winning_asset.get("asset_id")
+        best_playbook = winner.get("creative_playbook_id")
+        all_rejected = False
+        failure_modes = []
+    return {
+        "state": state,
+        "generated_count": generated_count,
+        "provider": "openai",
+        "model": DEFAULT_MODEL,
+        "binary_committed": False,
+        "review_board_written": True,
+        "review_board_path": review_board_path,
+        "best_candidate": best_candidate,
+        "best_playbook": best_playbook,
+        "all_rejected": all_rejected,
+        "overlay_tested": False,
+        "overlay_required_for_best_1_to_3": True,
+        "main_failure_modes": failure_modes,
+        "note": (
+            "This record proves batch plumbing when generation is blocked. It proves "
+            "visual quality only after generated_count is greater than zero and the "
+            "review board compares real outputs."
+        ),
+    }
+
+
+def _dashboard_readiness(
+    *,
+    push_slug: str,
+    ad_readiness: dict[str, Any],
+    image_generation_gate: dict[str, Any],
+    visual_calibration: dict[str, Any],
+    assets: list[dict[str, Any]],
+    review_board_path: str,
+) -> dict[str, Any]:
+    blocker_codes = sorted(
+        {
+            str(asset.get("blocker_code"))
+            for asset in assets
+            if asset.get("blocker_code") is not None
+        }
+    )
+    credential_states = sorted(
+        {
+            str(asset.get("credential_state"))
+            for asset in assets
+            if asset.get("credential_state") is not None
+        }
+    )
+    next_actions = [
+        "review_hard_stop_offer_audience_campaign_goal_claim_boundary",
+        "review_source_bites_before_generation",
+    ]
+    if int(visual_calibration.get("generated_count") or 0) == 0:
+        next_actions.extend(
+            [
+                "confirm_openai_image_credential_state",
+                "get_operator_approval_for_live_provider_call",
+                "rerun_smoke_openai_with_generate",
+            ]
+        )
+    elif visual_calibration.get("all_rejected") is True:
+        next_actions.append("revise_or_replace_rejected_playbook_candidates")
+    elif visual_calibration.get("best_candidate"):
+        next_actions.extend(
+            [
+                "test_deterministic_overlay_on_best_one_to_three_candidates",
+                "record_creative_review_winner_distinct_from_performance_winner",
+            ]
+        )
+
+    return {
+        "state": "readable",
+        "read_only": True,
+        "dashboard_role": "visual_map",
+        "logic_owners": {
+            "cli": "facts_and_safe_checks",
+            "skills": "workflow_and_judgment",
+            "repo_files": "memory",
+            "dashboard": "visual_map",
+        },
+        "safe_sources": [
+            "mb start --json",
+            "mb status --json --peek",
+            "mb ads meta summary --json when operator approved",
+            f"pushes/{push_slug}/image-index.md",
+            review_board_path,
+            "current push files",
+        ],
+        "record_sections": {
+            "ad_readiness": "ad_readiness_gate",
+            "missing_inputs": [
+                "ad_readiness_gate.hard_stop_missing_fields",
+                "ad_readiness_gate.soft_warning_missing_fields",
+            ],
+            "source_bites": "selected_source_bites",
+            "playbook_router_choices": [
+                "concepts[].creative_playbook_id",
+                "concepts[].router_inputs",
+                "concepts[].router_reason",
+                "concepts[].playbook_fit",
+            ],
+            "image_candidates": ["concepts[]", "assets[]"],
+            "review_scores": [
+                "concepts[].review.visual_quality",
+                "concepts[].review.ad_quality",
+                "concepts[].review.risk",
+            ],
+            "winner_or_rejection": "visual_calibration_result",
+            "provider_readiness": [
+                "assets[].credential_state",
+                "assets[].blocker_code",
+                "image_generation_gate.required_before_provider_generation",
+            ],
+            "next_actions": "dashboard_readiness.next_actions",
+        },
+        "provider_readiness": {
+            "provider": "openai",
+            "model": DEFAULT_MODEL,
+            "credential_states": credential_states,
+            "blocker_codes": blocker_codes,
+            "required_before_generation": image_generation_gate[
+                "required_before_provider_generation"
+            ],
+        },
+        "missing_inputs": {
+            "hard_stop": ad_readiness["hard_stop_missing_fields"],
+            "soft_warning": ad_readiness["soft_warning_missing_fields"],
+        },
+        "next_actions": next_actions,
+        "boundaries": [
+            "no_secrets",
+            "no_raw_provider_payloads",
+            "no_private_paths",
+            "no_committed_image_binaries",
+        ],
+    }
+
+
 def _asset_record(
     *,
     push_slug: str,
@@ -1943,6 +2135,7 @@ def smoke_openai(
         )
     state: SmokeState = "generated" if generated_count else "blocked"
     review_board_path = _review_board_path(repo_path, media_root, push_slug)
+    review_board_rel = _repo_relative(review_board_path, repo_path)
     review_board_path.parent.mkdir(parents=True, exist_ok=True)
     review_board_path.write_text(
         _render_review_board(
@@ -1952,6 +2145,22 @@ def smoke_openai(
             generated_at=generated_at,
         ),
         encoding="utf-8",
+    )
+    visual_calibration = _visual_calibration_result(
+        concepts=concepts,
+        assets=asset_records,
+        generated_count=generated_count,
+        review_board_path=review_board_rel,
+    )
+    ad_readiness = _ad_readiness_gate()
+    image_generation_gate = _image_generation_gate()
+    dashboard_readiness = _dashboard_readiness(
+        push_slug=push_slug,
+        ad_readiness=ad_readiness,
+        image_generation_gate=image_generation_gate,
+        visual_calibration=visual_calibration,
+        assets=asset_records,
+        review_board_path=review_board_rel,
     )
     record = {
         "schema": "mainbranch.image_index.v0",
@@ -1968,15 +2177,15 @@ def smoke_openai(
             "provider_validation": "official_api_rail_only",
         },
         "generated_count": generated_count,
-        "all_rejected": all(
-            isinstance(concept.get("review"), dict)
-            and concept["review"].get("decision") == "reject"
-            for concept in concepts
-        ),
+        "best_candidate": visual_calibration["best_candidate"],
+        "best_playbook": visual_calibration["best_playbook"],
+        "all_rejected": visual_calibration["all_rejected"],
+        "overlay_tested": visual_calibration["overlay_tested"],
+        "main_failure_modes": visual_calibration["main_failure_modes"],
         "creative_playbook_ids": list(CREATIVE_PLAYBOOK_IDS),
         "review_board_question": "Which playbook produced the best actual ad candidate?",
         "review_board": {
-            "path": _repo_relative(review_board_path, repo_path),
+            "path": review_board_rel,
             "committed": False,
             "storage": "ignored_media_storage",
         },
@@ -1985,12 +2194,14 @@ def smoke_openai(
             "External creative research is scratch/source signal only; raw dumps, "
             "screenshots, and unverified claims are not committed."
         ),
-        "ad_readiness_gate": _ad_readiness_gate(),
-        "image_generation_gate": _image_generation_gate(),
+        "ad_readiness_gate": ad_readiness,
+        "image_generation_gate": image_generation_gate,
+        "dashboard_readiness": dashboard_readiness,
         "placement_presets": PLACEMENT_PRESETS,
         "reference_roles": list(REFERENCE_ROLES),
         "selected_source_bites": _selected_source_bites(concepts),
         "post_processing_plan": _post_processing_plan(),
+        "visual_calibration_result": visual_calibration,
         "concepts": concepts,
         "assets": asset_records,
     }
@@ -2007,10 +2218,15 @@ def smoke_openai(
         "blocker_code": result_blocker_code,
         "candidate_count": len(concepts),
         "generated_count": generated_count,
+        "best_candidate": visual_calibration["best_candidate"],
+        "best_playbook": visual_calibration["best_playbook"],
+        "all_rejected": visual_calibration["all_rejected"],
+        "overlay_tested": visual_calibration["overlay_tested"],
+        "main_failure_modes": visual_calibration["main_failure_modes"],
         "output_record_written": True,
         "record_path": _repo_relative(index_path, repo_path),
         "review_board_written": True,
-        "review_board_path": _repo_relative(review_board_path, repo_path),
+        "review_board_path": review_board_rel,
         "output_reference": _logical_output(push_slug, DEFAULT_ASSET_ID),
         "storage_backend": "mb-media",
         "dimensions": {

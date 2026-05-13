@@ -213,6 +213,24 @@ only safe records:
 - review scores and decisions;
 - distilled findings.
 
+## Future Dashboard Boundary
+
+A future local dashboard should read these records, not own creative or provider
+logic:
+
+```text
+CLI = facts and safe checks
+skills = workflow and judgment
+repo files = memory
+dashboard = visual map
+```
+
+The image-index record should remain structured enough for a read-only local
+dashboard to show ad readiness, missing inputs, source bites, playbook router
+choices, image candidates, review scores, best candidate or rejection state,
+provider readiness, and next actions. It should not require secrets, raw
+provider payloads, private paths, or committed image binaries.
+
 Public evidence should be sanitized:
 
 ```text
@@ -222,6 +240,20 @@ model=gpt-image-2
 binary_committed=false
 review_board_written=true
 best_candidate=<asset_id> or all_rejected=true
+best_playbook=<playbook_id> or none
+overlay_tested=true/false
+```
+
+If the provider call is blocked or not approved, the record must say so instead
+of implying visual quality proof:
+
+```text
+generated_count=0
+best_candidate=null
+best_playbook=null
+all_rejected=null
+overlay_tested=false
+main_failure_modes=[provider_generation_not_run, no_visual_quality_proven, overlay_not_tested]
 ```
 
 ## External Research Boundary
