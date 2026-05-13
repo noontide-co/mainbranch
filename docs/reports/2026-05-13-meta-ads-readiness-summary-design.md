@@ -44,12 +44,18 @@ closed:
 - no raw account payload, account ID, business ID, token, private path, or
   performance dump was included in public evidence.
 
-Agent-run real operator smoke was blocked because this workspace had Meta's
-`meta` CLI installed but did not have operator-held Meta token, ad account, or
-business ID values available. That is the expected privacy boundary: the agent
-should not ask for or receive those secrets in chat. A local-only command block
-was provided so the maintainer can run the real-account smoke and share only
-sanitized state lines.
+Real operator smoke reached `ready` with operator-held credentials. Sanitized
+evidence:
+
+```text
+connect_state=unvalidated
+test_state=ready
+connect_status_state=ready
+status_peek_meta_state=ready
+credential_backend=macos-keychain
+test_exit=0 status_exit=0 peek_exit=0
+business_repo_git_status_count=0
+```
 
 Raw command output belongs in ignored local scratch and should not be copied to
 GitHub, docs, PR bodies, or tracked files.
