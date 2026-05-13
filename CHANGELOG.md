@@ -13,6 +13,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added a MAIN-366 design for the first compact read-only Meta Ads account
+  summary surface, keeping `mb connect` as the readiness rail and routing the
+  next paid-channel summary shape toward `mb ads meta summary --json` with raw
+  payloads, account IDs, tracked caches, and mutations out of scope. Refs
+  MAIN-366, #581.
 - Added release-simulation operator-language rubric warnings for visible
   technical leakage in Claude final answers, plus docs and tests for
   translating git/GitHub/checkpoint mechanics into normal owner language first.
@@ -34,6 +39,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Updated `/mb-ads` Meta account guidance so agents ask before pulling a
+  compact read-only account summary, continue from repo files, screenshots, or
+  manual Ads Manager notes when Meta is not ready, and avoid implying raw
+  performance imports or account mutation. Refs MAIN-366, #581.
 - Updated `/mb-ads` image-generation guidance and dependency choices to use
   provider-neutral prompt/output records, push-local image indexes, direct
   OpenAI GPT Image 2 as the first smoke target, configurable media storage

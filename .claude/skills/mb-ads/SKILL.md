@@ -187,14 +187,15 @@ context. Do not duplicate provider setup or health checks in prose.
 1. Read `mb status --json --peek` → integrations/providers/measurement facts.
 2. If the operator needs setup choices, run `mb connect plan`.
 3. If something looks broken, run `mb connect doctor --json`.
-4. If `mb` says Meta Ads account context is `ready`, ask whether to pull live
-   performance before generating.
+4. If `mb` says Meta Ads account context is `ready`, ask whether to pull a
+   compact read-only account summary before generating.
 5. Never block generation on missing ad account access.
 ```
 
 **Graceful degradation:** If Meta Ads account context is not `ready`, mention
 the optional account context once, quote the `mb` repair command when useful,
-then continue from repo reference files.
+then continue from repo reference files, exported screenshots, or manual Ads
+Manager notes.
 
 ### User-Facing Display
 
@@ -205,16 +206,16 @@ vendor names or unsupported setup paths.
 **Pre-flight status line (add after image-provider check):**
 
 If ready:
-> `Ad account:   ✓ connected (I can check what's performing before we create)`
+> `Ad account:   ✓ connected (I can pull a compact read-only summary before we create)`
 
 If not ready:
-> `Ad account:   — not connected (optional — lets me see your live Meta ad performance to inform new ads)`
+> `Ad account:   — not connected (optional — lets me use live Meta context to inform new ads)`
 
 **Never say:** "provider tool not configured" or name an implementation detail
 the user does not need. Keep the status line capability-first.
 
 **If user asks what this means:**
-> "You can optionally connect your Meta/Facebook ad account so I can pull live performance data — what's spending, what's winning, CPAs, creative that's working. This helps me create ads that fit your account structure and build on what's already performing. Want to run `mb connect plan`, or skip and work from your reference files?"
+> "You can optionally connect your Meta/Facebook ad account so I can pull a compact read-only summary before making recommendations. This helps me see account readiness, broad activity, and useful next steps without saving raw account data. Want to run `mb connect plan`, or skip and work from your reference files?"
 
 ---
 
@@ -268,19 +269,18 @@ steps, and approval records; do not mutate ad accounts or start spend.
 If `mb status --json --peek` / `mb connect doctor --json` reports Meta Ads
 ready and the current runtime exposes the read-only ad account tools:
 
-**Before generating:** Suggest checking the account first. Explain the value briefly — don't assume the user knows what this does:
-> "Your Meta ad account is connected. Want me to pull your live performance data first? I can see what's spending, which creative has the best CPA, and use that to inform what we create. (Takes ~30 seconds.)"
+**Before generating:** Ask before pulling live account context:
+> "Meta appears connected for read-only checks. Do you want me to pull a compact account summary before making recommendations?"
 
 If user says yes, run Account Check component (see [references/meta-ads-integration.md](references/meta-ads-integration.md)):
-- Pull active campaigns and top performers
-- Surface winning patterns (angles, hooks, images with low CPA)
-- Extract naming conventions so new ads match
-- Show where new creative fits in existing structure
+- Say: "I'll pull a read-only summary and avoid saving raw account data."
+- Pull only the compact account summary the current runtime supports
+- Use safe readiness, activity, and naming-pattern context only
 
 If user says no, proceed to generation with reference files only.
 
-**After generating:** If Meta Ads account context is available, show account context:
-> "Here's what's currently live. Your new creative could fit as [suggested placement]."
+**After generating:** If the operator approved a read-only summary, use it to
+frame next steps without exposing raw account data or implying account mutation.
 
 Account awareness is currently read-only. Write operations are on the roadmap
 and require explicit operator approval gates -- see
@@ -496,5 +496,5 @@ For review: Which lenses completed?
 **Hook library (creative variations):** Flexible quantity (default 30), Andromeda-optimized
 **Video scripts:** 15-30 diverse scripts, spoken-word optimized
 **Review:** 6 lenses, P1/P2/P3 report, fix suggestions
-**Account check:** read-only Meta Ads context -- campaigns, performance, creative audit when `mb connect` and runtime tools are ready
+**Account check:** compact read-only Meta Ads summary when `mb connect` and runtime tools are ready
 **Launch plan/check:** provider-safe Google Ads/GTM/paid-traffic plan or outcome check; no account mutation without a shipped adapter and explicit approval

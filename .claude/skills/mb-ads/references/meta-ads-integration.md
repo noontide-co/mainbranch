@@ -125,20 +125,54 @@ Triggered lazily at `/mb-think` or `/mb-ads` when the topic is ads-related:
 
 ---
 
+## First Account Summary Surface
+
+The first product surface should be a compact read-only account summary, not a
+raw reporting import. The proposed command is:
+
+```bash
+mb ads meta summary --repo <BUSINESS_REPO> --window 7d --json
+```
+
+Use `mb connect` for setup, credential storage, readiness, repair, and smoke
+tests. Use the future `mb ads` family for paid-channel read-only summaries and
+any later approval-gated account work.
+
+Before calling a live summary, ask:
+
+```text
+Meta appears connected for read-only checks. Do you want me to pull a compact account summary before making recommendations?
+```
+
+If approved, say:
+
+```text
+I'll pull a read-only summary and avoid saving raw account data.
+```
+
+The summary should default to account readiness, safe label, currency/timezone,
+active campaign count, recent spend presence or bounded total, broad direction,
+dataset/pixel readiness, creative counts or naming patterns when safe, findings,
+and next actions. Campaign names require current-run approval.
+
+Do not save raw provider payloads, account IDs, business IDs, full campaign
+dumps, performance caches, or private paths into tracked files.
+
 ## Account Context Uses
 
 When read-only account context is verified, use it for these workflows:
 
 | Workflow | Purpose |
 |----------|---------|
-| Account overview | See active campaigns, current spend, and broad performance direction |
+| Account overview | See readiness, active campaign count, current spend context, and broad direction |
 | Creative audit | Find winning angles, hooks, offers, formats, and naming conventions |
 | Performance check | Compare recent CPA, ROAS, spend, and volume trends |
 | Performance iteration | Generate variants that build on known winners |
 | Pixel/event survey | Inspect datasets/pixels and conversion-source readiness |
 
-Keep account data in conversation context only. Do not write raw account exports,
-customer data, tokens, or sensitive performance details into public files.
+Keep account data in conversation context only. Do not write raw account
+exports, customer data, tokens, account IDs, or sensitive performance details
+into public files.
 
 ---
 
@@ -156,9 +190,7 @@ Ad account context is optional. The entire `/mb-ads` skill works without it.
 If live account access is missing, mention the option once per session and move
 on. Use this framing:
 
-> "Live Meta ad account context is optional. It is not ready in this repo yet,
-> so I will work from your reference files. If you want account context today,
-> check Ads Manager manually and paste the specific metrics you want me to use."
+> "I do not have live Meta account context yet. I can still work from your repo, exported screenshots, or manual Ads Manager notes."
 
 ---
 
@@ -205,7 +237,7 @@ Describe the capability, not the vendor or transport.
 
 | Context | Suggestion |
 |---------|------------|
-| Before generating new creative | "Your Meta ad account is connected. Want me to pull live performance data first? I can see what's spending, which creative has the best CPA, and use that to inform what we create." |
+| Before generating new creative | "Meta appears connected for read-only checks. Do you want me to pull a compact account summary before making recommendations?" |
 | After generating a batch | "Want to compare this against what's currently live before you upload it?" |
 | In `/mb-think` with an ad-related topic | "Should we use live ad account data for this research, or stay with reference files?" |
 | Monday review cadence | "Want to check this week's Meta ad performance?" |
