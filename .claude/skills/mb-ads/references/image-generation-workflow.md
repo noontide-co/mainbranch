@@ -13,15 +13,16 @@ Use the provider and model verified for this run. Do not hard-code a private
 environment file, assume a provider is configured, or claim Main Branch supports
 image generation because this reference exists.
 
-Current provider notes checked 2026-05-13 against Google's official Gemini
-image generation docs:
-https://ai.google.dev/gemini-api/docs/image-generation
+Current provider notes checked 2026-05-13 against the accepted creative media
+generation decision:
+`decisions/2026-05-13-creative-media-generation-rails.md`.
 
 | Provider | Model family | Use |
 | --- | --- | --- |
-| Google Gemini API | `gemini-3-pro-image-preview` | Professional/high-fidelity image generation when quality matters more than speed. |
-| Google Gemini API | `gemini-2.5-flash-image` | Candidate speed/cost rail for draft or iteration use only. Do not treat it as proven ad-grade output until a smoke/test run records provider, model, prompt, output, review notes, and final asset quality. |
-| OpenAI Image API / Responses API | GPT Image models | Candidate alternate provider for generation and editing. Use only when configured for the run and record the exact model. |
+| OpenAI Image API / Responses API | `gpt-image-2` | First readiness target for fixture-safe static image generation/editing. Use only when configured for the run and record the exact model/snapshot. |
+| Google Gemini API | Nano Banana 2 / Nano Banana Pro image models | Candidate comparison rail for future work. Do not treat it as proven ad-grade output until a smoke/test run records provider, model, prompt, output, review notes, and final asset quality. |
+| BFL FLUX.2 / ComfyUI | FLUX.2 family | Candidate local/private or heavy-reference rail after the OpenAI rail and metadata contract are stable. |
+| Manual provider use | `manual` | Safe fallback when no approved provider is configured. Save prompts and asset records for the operator to use manually. |
 
 If model names or pricing matter to the recommendation, check the provider's
 current docs before generating and record the docs-checked date in
@@ -38,8 +39,8 @@ only check environment variables when the selected mode actually needs image
 generation.
 
 ```bash
-python3 -c "from google import genai; print('google-genai OK')" 2>/dev/null
 python3 -c "from openai import OpenAI; print('openai OK')" 2>/dev/null
+python3 -c "from google import genai; print('google-genai OK')" 2>/dev/null
 ```
 
 If a provider is available, show the provider/model, estimated cost, output
@@ -53,39 +54,38 @@ prompts only:
 
 ## Generation via Python SDK
 
-The `google-genai` Python package is one supported implementation pattern when
-Google is selected for the run. MCP servers or another SDK can be used only
-when they are configured and the artifact metadata records the provider/model.
+The OpenAI Python SDK is the first implementation pattern to smoke for
+MAIN-362. MCP servers, runtime-native image tools, or another SDK can be used
+only when they are configured for the run and the artifact metadata records the
+provider/model.
 
 ```python
-import os, base64
-from google import genai
-from google.genai import types
+import base64
+import os
+from openai import OpenAI
 
-client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
-response = client.models.generate_content(
-    model=os.environ.get("MB_IMAGE_MODEL", "gemini-3-pro-image-preview"),
-    contents=[prompt_text],
-    config=types.GenerateContentConfig(
-        response_modalities=["TEXT", "IMAGE"]
-    )
+response = client.images.generate(
+    model=os.environ.get("MB_IMAGE_MODEL", "gpt-image-2"),
+    prompt=prompt_text,
+    size=os.environ.get("MB_IMAGE_SIZE", "1536x1024"),
+    quality=os.environ.get("MB_IMAGE_QUALITY", "medium"),
 )
 
-# Extract image from response
-for part in response.candidates[0].content.parts:
-    if part.inline_data is not None:
-        data = part.inline_data.data
-        image_bytes = data if isinstance(data, bytes) else base64.b64decode(data)
-        with open("output.png", "wb") as f:
-            f.write(image_bytes)
+image_bytes = base64.b64decode(response.data[0].b64_json)
+with open("output.png", "wb") as f:
+    f.write(image_bytes)
 ```
 
 ---
 
 ## Post-Processing Pipeline (MANDATORY — Never Skip)
 
-**Raw Gemini output is PNG at arbitrary sizes (often 768x1376 or 1024x1024). This is NOT the final deliverable.** You MUST post-process every image immediately after generation. Never save raw PNGs as final output.
+**Raw provider output is not automatically the final deliverable.** Post-process
+every ad image immediately after generation. Never save raw provider files as
+final output unless the operator explicitly approves that exact file as the
+final asset.
 
 ### Steps (run on EVERY generated image)
 
@@ -120,9 +120,8 @@ def post_process(input_path, output_path, width, height, max_kb=300):
 
 ### Provider Watermarking
 
-Record provider watermarking or provenance metadata when known. For Gemini,
-current docs say generated images include SynthID watermarking. Do not promise
-that other providers have the same behavior.
+Record provider watermarking or provenance metadata when known. Do not promise
+that all providers expose the same provenance, watermarking, or C2PA behavior.
 
 ---
 
@@ -189,7 +188,7 @@ Before generating, show cost estimate and get approval:
 ```
 Image Generation Estimate:
   5 angles × 3 styles × 1 format = 15 images
-  Provider/model: Google Gemini / gemini-3-pro-image-preview
+  Provider/model: OpenAI / gpt-image-2
   Docs checked: 2026-05-13
   Estimated cost: $X from current provider pricing
 
@@ -200,13 +199,17 @@ Actual cost depends on prompt complexity and retries.
 
 ---
 
-## Text-on-Image: Always Post-Process
+## Text-on-Image: Prefer Deterministic Final Overlays
 
-**NEVER ask Gemini to render text on the image.** Gemini cannot reliably render text longer than ~5 words. All text goes on via Pillow post-processing.
+GPT Image 2 is the first rail to smoke partly because current validation
+points to strong text rendering. Still, final paid creative often needs exact
+copy, exact safe-zone placement, and predictable export sizes. When exact text
+matters, generate the background or composition and apply final text with a
+deterministic post-processing step such as Pillow.
 
 ### Workflow
 
-1. **Gemini generates background-only images** — no text in the prompt
+1. **Provider generates the background or composition**
 2. **Pillow composites text onto the background** — white bold text, drop shadow, centered
 
 ### Text Positioning (Critical)
@@ -285,7 +288,7 @@ Image generation uses **one subagent per image** (or per 2-3 images for large ba
    - Calls the selected provider/model (single image per API call)
    - Post-processes immediately (resize, PNG to JPEG, compress under 300KB)
    - Verifies the final JPEG exists on disk
-   - Returns: `{ path: "images/001_01_graphic_vertical.jpg", status: "success", provider: "google", model: "gemini-3-pro-image-preview", cost: 0.05 }` (or `status: "fail"` with error message)
+   - Returns: `{ path: "images/001_01_graphic_vertical.jpg", status: "success", provider: "openai", model: "gpt-image-2", cost: 0.05 }` (or `status: "fail"` with error message)
 
 4. **Main conversation collects results** from all image agents, retries any failures with fresh single-image agents.
 

@@ -21,6 +21,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   YYYY-MM` surface, including packaged fake journal data, stable JSON envelope
   output, beginner-safe human output, missing-hledger guidance, invalid month
   handling, and privacy-boundary tests. Refs MAIN-360, #567, #560.
+- Added a MAIN-362 refresh to the creative media generation rails decision,
+  making OpenAI GPT Image 2 the first static-image readiness target while
+  keeping Google Gemini / Nano Banana, BFL FLUX.2, xAI Imagine, ComfyUI, and
+  raw video providers as candidate rails behind separate smoke evidence. Refs
+  #569, #409.
+
+### Changed
+
+- Updated `/mb-ads` image-generation guidance and dependency choices to use
+  provider-neutral prompt/output records, push-local image indexes, direct
+  OpenAI GPT Image 2 as the first smoke target, and prompt-only fallback when
+  no approved provider is configured. Refs MAIN-362, #569.
 
 ## [0.3.20] - 2026-05-13
 
