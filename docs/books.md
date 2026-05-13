@@ -282,8 +282,9 @@ review and avoids printing private external vault paths or real
 financial data.
 
 `mb books report monthly --sample` generates a beginner-safe monthly report
-from packaged fake hledger data. It validates the bundled fixture with hledger
-when available, emits stable JSON with `--json`, redacts fixture internals that
+from packaged fake hledger data through hledger. If hledger is unavailable, the
+command fails with install guidance instead of falling back to a non-hledger
+report. It emits stable JSON with `--json`, redacts fixture internals that
 should not train operators to paste private paths or account identifiers, and
 keeps `safe_to_share: true` because the data is synthetic.
 
@@ -299,7 +300,9 @@ Exit codes:
   `mb books doctor` without `--plan` exits `2` because applying
   repairs is not implemented.
 - `mb books report monthly --sample`: `0` when the sample report is generated;
-  `1` for report-generation errors such as an invalid month or missing fixture.
+  `1` for generation failures such as missing hledger or missing fixture;
+  `2` for usage errors such as missing `--sample`, missing `--month`, or an
+  invalid month.
 
 It does **not**:
 
