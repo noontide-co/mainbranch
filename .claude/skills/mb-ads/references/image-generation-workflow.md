@@ -127,7 +127,7 @@ client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 response = client.images.generate(
     model=os.environ.get("MB_IMAGE_MODEL", "gpt-image-2"),
     prompt=prompt_text,
-    size=os.environ.get("MB_IMAGE_SIZE", "1536x1024"),
+    size=os.environ.get("MB_IMAGE_SIZE", "1024x1536"),
     quality=os.environ.get("MB_IMAGE_QUALITY", "medium"),
 )
 
@@ -347,8 +347,8 @@ Image generation uses **one subagent per image** (or per 2-3 images for large ba
    - Uses the already-configured provider environment for this run
    - Calls the selected provider/model (single image per API call)
    - Post-processes immediately (resize, PNG to JPEG, compress under 300KB)
-   - Verifies the final JPEG exists on disk
-   - Returns: `{ path: "mb-media://pushes/2026-05-ad-test/images/001_01_graphic_vertical.jpg", status: "success", provider: "openai", model: "gpt-image-2", cost_estimate: "$X from current provider pricing" }` (or `status: "fail"` with error message)
+   - Verifies the final JPEG exists in configured media storage
+   - Returns: `{ output_reference: "mb-media://pushes/2026-05-ad-test/images/001_01_graphic_vertical.jpg", status: "success", provider: "openai", model: "gpt-image-2", cost_estimate: "$X from current provider pricing" }` (or `status: "fail"` with error message)
 
 4. **Main conversation collects results** from all image agents, retries any failures with fresh single-image agents.
 
@@ -378,10 +378,11 @@ Your assigned image(s) from prompts.json at {output_dir}/prompts.json:
 
 For EACH assigned image:
 1. Read the prompt from prompts.json
-2. Run Python: generate via the selected provider/model, save raw PNG
-3. Run Python: post-process (resize to target dims, JPEG compress under 300KB, delete raw PNG)
-4. Verify final JPEG exists: ls {output_dir}/images/{filename}
-5. Return the file path, provider, model, cost, and status
+2. Resolve the assigned `mb-media://...` reference to configured media storage
+3. Run Python: generate via the selected provider/model, save raw PNG in configured media storage
+4. Run Python: post-process (resize to target dims, JPEG compress under 300KB, delete raw PNG)
+5. Verify final JPEG exists in configured media storage and return the safe logical reference
+6. Return the logical media reference, provider, model, cost, and status
 
 If rate-limited (429): sleep 5 seconds, retry once.
 If retry fails: return status "fail" with error message. Do NOT keep retrying.
@@ -402,13 +403,23 @@ pushes/YYYY-MM-DD-static-ads-{campaign}/
 ├── static-ads-batch-001.md        ← Copy (Batch 1)
 ├── proposed-compliance-fixes.json ← Compliance proposals
 ├── review-log.md                  ← Compliance changes after approval
-├── images/
-│   ├── 001_01_graphic_square.jpg
-│   ├── 001_01_graphic_vertical.jpg
-│   ├── 001_02_lofi_square.jpg
-│   ├── 001_02_lofi_vertical.jpg
-│   └── ...
-└── image-index.md                 ← Maps prompts, provider metadata, and files
+└── image-index.md                 ← Maps prompts, provider metadata, review
+                                      state, and mb-media:// references
+```
+
+`image-index.md` stores logical media references that resolve to configured
+storage, not generated binaries in the push folder:
+
+```yaml
+assets:
+  - asset_id: 001_01_graphic_vertical
+    output_reference: mb-media://pushes/YYYY-MM-DD-static-ads-{campaign}/images/001_01_graphic_vertical.jpg
+    storage_backend: mb-media
+    committed_binary: false
+  - asset_id: 001_02_lofi_vertical
+    output_reference: mb-media://pushes/YYYY-MM-DD-static-ads-{campaign}/images/001_02_lofi_vertical.jpg
+    storage_backend: mb-media
+    committed_binary: false
 ```
 
 ### Image Naming Convention
