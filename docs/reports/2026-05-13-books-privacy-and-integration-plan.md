@@ -113,7 +113,6 @@ Recommended sample envelope:
     "kind": "packaged_fixture",
     "fixture": true,
     "engine": "hledger",
-    "engine_version": "1.52.1",
     "journal": {
       "label": "acme-fixture",
       "location_kind": "packaged",
@@ -176,6 +175,10 @@ Recommended sample envelope:
 For future real private-vault reports, default `safe_to_share` should be
 `false` unless the command explicitly produces an approved sanitized summary.
 The envelope should still omit private paths and raw transaction rows.
+
+Do not hardcode hledger versions in the JSON schema. If implementation adds an
+`engine_version` diagnostic later, populate it from the live `hledger --version`
+result for the command run.
 
 ## Fields Never To Expose In Readiness
 

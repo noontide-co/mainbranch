@@ -129,6 +129,10 @@ mainbranch.books.report.v1
 
 Minimum fields:
 
+Build this payload through the shared JSON result helper so standard top-level
+fields such as `result_envelope_version`, `ok`, `result_status`, `errors`,
+`warnings`, and `actions` stay consistent with other `mb --json` commands.
+
 ```json
 {
   "schema_version": "1.0",

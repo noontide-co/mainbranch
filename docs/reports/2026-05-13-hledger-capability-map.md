@@ -155,7 +155,7 @@ The fake sample journal should stay small and obviously synthetic:
 
 commodity 1000.00 USD
 
-account assets:bank:checking          ; type:C
+account assets:bank:checking          ; type:A
 account liabilities:credit-card       ; type:L
 account equity:opening-balances       ; type:E
 account income:sales                  ; type:R
