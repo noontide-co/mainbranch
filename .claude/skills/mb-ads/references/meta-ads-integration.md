@@ -112,8 +112,8 @@ Triggered lazily at `/mb-think` or `/mb-ads` when the topic is ads-related:
 ```
 1. Read `mb status --json --peek`.
 2. If the operator needs setup choices, run `mb connect plan`.
-3. If provider facts are degraded, missing, readiness-only, or otherwise not
-   ready, run
+3. If provider facts are `readiness`, degraded, missing, invalid, or otherwise
+   not `ready`, run
    `mb connect doctor --json` and quote the repair/setup guidance.
 4. Only if `mb` reports Meta account context ready, check the current runtime
    for the verified official CLI:
