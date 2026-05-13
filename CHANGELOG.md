@@ -11,8 +11,20 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.21] - 2026-05-13
+
+v0.3.21 packages the first compact read-only Meta Ads readiness and summary
+rail, the hledger-backed sample monthly books report, shared `/mb-think`
+workflow shells for Claude and Codex, provider wrapper boundary guidance, and
+release-simulation owner-language hardening.
+
 ### Added
 
+- Added an accepted creative media generation rails decision for MAIN-282,
+  classifying static image providers, deterministic motion/export rails, AI
+  video providers, and platform creative tools as recommended, candidate, or
+  refused while keeping provider support claims behind setup detection,
+  approval gates, smoke evidence, and artifact metadata. Refs #409.
 - Added a durable provider CLI/API vs `mb` wrapper boundary decision, including
   `mb connect`, skill/playbook UX, SecretStore/Keychain, privacy/redaction,
   JSON envelope, support-claim, Meta Ads, and image-generation guidance for
@@ -53,6 +65,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Refreshed always-read cold-start docs after v0.3.20 so README, roadmap,
+  ethos, and operator-loop language stay aligned with package-visible books
+  readiness while leaving sample reporting under `[Unreleased]`, and use
+  saved-checkpoint language where normal owner copy should avoid raw git
+  wording. Refs MAIN-365, #577.
+- Updated release-simulation scoring and `/mb-start` owner-language guidance so
+  normal answers translate raw git/GitHub status phrases before speaking, while
+  allowing ordinary phrasing such as "only commit summaries." Refs MAIN-364,
+  #575.
 - Updated `/mb-ads` Meta account guidance so agents ask before pulling a
   compact read-only account summary, continue from repo files, screenshots, or
   manual Ads Manager notes when Meta is not ready, and avoid implying raw
@@ -67,6 +88,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   OpenAI-first ad-volume cost math, and a deterministic video/motion CLI
   boundary that keeps raw generative video out of the first rail. Refs
   MAIN-362, #569.
+- Updated `/mb-ads` image-generation guidance to stop hard-coding a single
+  Gemini model or private local environment path, require provider/model
+  metadata in image indexes, and fall back to saved prompts when no approved
+  image provider is configured. Refs MAIN-282, #409.
 
 ## [0.3.20] - 2026-05-13
 
@@ -80,11 +105,6 @@ guidance.
 
 ### Added
 
-- Added an accepted creative media generation rails decision for MAIN-282,
-  classifying static image providers, deterministic motion/export rails, AI
-  video providers, and platform creative tools as recommended, candidate, or
-  refused while keeping provider support claims behind setup detection,
-  approval gates, smoke evidence, and artifact metadata. Refs #409.
 - Added a `/mb-think` research-depth ladder for offer, audience, proof,
   product-ladder, CTA, content strategy, ads/page launch, market positioning,
   and influence/playbook work, including enough-signal thresholds, stop rules,
@@ -135,19 +155,6 @@ guidance.
 
 ### Changed
 
-- Refreshed always-read cold-start docs after v0.3.20 so README, roadmap,
-  ethos, and operator-loop language stay aligned with package-visible books
-  readiness while leaving sample reporting under `[Unreleased]`, and use
-  saved-checkpoint language where normal owner copy should avoid raw git
-  wording. Refs MAIN-365, #577.
-- Updated release-simulation scoring and `/mb-start` owner-language guidance so
-  normal answers translate raw git/GitHub status phrases before speaking, while
-  allowing ordinary phrasing such as "only commit summaries." Refs MAIN-364,
-  #575.
-- Updated `/mb-ads` image-generation guidance to stop hard-coding a single
-  Gemini model or private local environment path, require provider/model
-  metadata in image indexes, and fall back to saved prompts when no approved
-  image provider is configured. Refs MAIN-282, #409.
 - Refreshed the README, roadmap, and ethos around the chat-first, CLI-backed
   operating loop: repo truth feeds deterministic `mb` facts, skills/agents
   explain and route in chat, operators approve sensitive action, and accepted
