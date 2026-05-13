@@ -153,14 +153,21 @@ it. Run them before tagging an `oe-v*` release.
    `grep -RIn "id-token\|permissions:" .github/workflows/`.
 4. Confirm Dependabot is current. No open security advisories,
    no overdue grouped upgrades that should land in this release.
-5. Confirm the `pypi` GitHub Environment still requires a reviewer.
+5. For release candidates that touch security-sensitive surfaces, consider a
+   targeted local agentic security review sidecar over the changed risky files
+   or candidates. DeepSec is the accepted local sidecar for this optional
+   review aid; keep raw output under `.agent/`, publish only sanitized
+   summaries, time-box AI processing, and treat findings as review leads rather
+   than release truth. See
+   [`decisions/2026-05-13-agentic-security-review-sidecars.md`](../decisions/2026-05-13-agentic-security-review-sidecars.md).
+6. Confirm the `pypi` GitHub Environment still requires a reviewer.
    This is a settings check, not a YAML check.
-6. Tag and publish via the GitHub Releases UI. The publish workflow
+7. Tag and publish via the GitHub Releases UI. The publish workflow
    triggers on `release: published`; the publish job blocks on the
    `pypi` environment approval.
-7. Approve the deployment in the GitHub Actions UI only after the build
+8. Approve the deployment in the GitHub Actions UI only after the build
    and release-notes jobs have completed and the artifact looks right.
-8. After publish, verify the fresh PyPI install per
+9. After publish, verify the fresh PyPI install per
    `docs/release-simulations.md` (Release Acceptance tier).
 
 ## Post-Compromise Response
@@ -198,6 +205,7 @@ proves the gap.
 ## Related Links
 
 - [Supply-chain security gates decision](../decisions/2026-05-11-supply-chain-security-gates.md)
+- [Agentic security review sidecars decision](../decisions/2026-05-13-agentic-security-review-sidecars.md)
 - [Repo setup, visibility, and checks model decision](../decisions/2026-05-11-repo-setup-visibility-and-checks-model.md)
 - [Workspace, repo, and sensitive-data boundaries decision](../decisions/2026-05-04-workspace-repo-sensitive-data-boundaries.md)
 - [Dependency choices](dependency-choices.md)

@@ -81,6 +81,15 @@ against the best available release artifact whenever feasible, and manually
 review the transcript for whether Claude actually used `mb` facts or only
 handled a permission-distorted fallback.
 
+When a release candidate or PR changes security-sensitive surfaces, add a
+targeted agentic security sidecar review over the changed risky files or
+scanner candidates. DeepSec is the accepted local sidecar today; keep raw output
+under `.agent/`, time-box AI processing, and publish only sanitized summaries.
+Do not treat DeepSec, Greptile, or any other AI reviewer as a required gate;
+sidecar output is review input. See
+[the sidecar decision](decisions/2026-05-13-agentic-security-review-sidecars.md)
+and [the supply-chain policy](docs/supply-chain-policy.md).
+
 For Go tools (Phase 2):
 
 ```bash
