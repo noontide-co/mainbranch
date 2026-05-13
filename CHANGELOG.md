@@ -17,6 +17,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   report and Meta Ads read-only summary are described as shipped, while
   private-vault reporting, imports, reconciliation, and provider mutation remain
   deferred. Refs #590.
+- Updated `/mb-ads` image-generation guidance and the OpenAI image rail smoke
+  record so push-local `image-index.md` files can hold reviewable Facebook
+  image-ad concepts, placement presets, reference roles, structured creative
+  review findings, and concept-to-asset links before optional provider
+  generation. Refs MAIN-373, #595.
 
 ## [0.3.21] - 2026-05-13
 

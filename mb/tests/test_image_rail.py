@@ -56,8 +56,30 @@ def test_openai_image_smoke_writes_safe_blocked_record(
     assert index_path.exists()
     record = _record_from_index(index_path)
     asset = record["assets"][0]
+    concepts = record["concepts"]
 
     assert record["schema"] == "mainbranch.image_index.v0"
+    assert len(concepts) == 3
+    assert "facebook_feed_portrait_4x5" in record["placement_presets"]
+    assert "style_reference" in record["reference_roles"]
+    assert concepts[0]["concept_id"] == asset["concept_id"]
+    assert concepts[0]["prompt_strategy"] == "creative_director_brief_first_no_text_base"
+    assert concepts[1]["prompt_strategy"] == "reference_aware_no_text_base"
+    assert concepts[0]["viewer_scroll_context"] == "cold Facebook feed"
+    assert concepts[0]["first_second_read"]
+    assert concepts[0]["visual_hierarchy"]["text_zone"] == "upper center"
+    assert concepts[0]["placement"] == "facebook_feed_portrait_4x5"
+    assert concepts[0]["source_files"]
+    assert concepts[0]["claim_boundary"]
+    assert concepts[0]["references"] == []
+    assert concepts[1]["references"][0]["role"] == "style_reference"
+    assert concepts[1]["references"][0]["approval_required"] is True
+    assert concepts[1]["references"][0]["privacy_level"] == "private"
+    assert concepts[1]["references"][0]["use_for"]
+    assert concepts[1]["references"][0]["do_not_copy"]
+    assert concepts[0]["review"]["one_second_clarity"] == "pass"
+    assert concepts[0]["review"]["scores"]["one_second_clarity"] == 5
+    assert concepts[0]["review"]["decision"] == "accept"
     assert asset["provider"] == "openai"
     assert asset["model"] == "gpt-image-2"
     assert asset["model_snapshot"] == "gpt-image-2-2026-04-21"
@@ -71,6 +93,7 @@ def test_openai_image_smoke_writes_safe_blocked_record(
     assert str(tmp_path) not in text
     assert "OPENAI_API_KEY=" not in text
     assert not (repo / ".mb" / "media").exists()
+    assert not list((repo / "pushes").rglob("*.png"))
 
 
 def test_openai_image_smoke_generate_without_key_records_missing_key(
@@ -107,6 +130,10 @@ def test_openai_image_smoke_generate_without_key_records_missing_key(
     asset = record["assets"][0]
     assert asset["blocker_code"] == "missing_openai_api_key"
     assert "Do not paste provider keys" in asset["blocker"]
+    assert record["concepts"][0]["status"] == "planned"
+    assert record["concepts"][0]["review"]["status"] == "accepted"
+    assert record["concepts"][0]["review"]["scores"]["ai_generic_risk"] == 1
+    assert asset["concept_id"] == image_rail_mod.DEFAULT_CONCEPT_ID
 
 
 def test_openai_image_smoke_generated_path_keeps_binary_in_media_cache(
@@ -209,6 +236,35 @@ def test_openai_image_smoke_provider_failure_writes_sanitized_blocker(
     assert "RuntimeError" in text
     assert "secret-bearing provider details" not in text
     assert "test-key-not-written" not in text
+
+
+def test_image_concept_review_catches_unsafe_fixture_case() -> None:
+    concept = {
+        "concept_id": "unsafe-meta-dashboard",
+        "audience_state": "operator wants proof that ads are working",
+        "visual_job": "show guaranteed revenue from ads",
+        "visual_metaphor": "dashboard screenshot with Meta Ads Manager results",
+        "composition": "real Meta UI with account ID in the corner",
+        "emotional_tone": "hype",
+        "placement": "unsupported_feed_banner",
+        "text_overlay_plan": "render text-in-image with tiny claim",
+        "source_files": [],
+        "claim_boundary": "guaranteed revenue after launch",
+        "references": [],
+        "prompt": "Use customer data and a dashboard screenshot with guaranteed profit.",
+        "negative_constraints": [],
+    }
+
+    review = image_rail_mod.review_concept(concept)
+
+    assert review["status"] == "rejected"
+    assert review["fake_ui_risk"] == "fail"
+    assert review["claim_safety"] == "fail"
+    assert review["private_data_risk"] == "fail"
+    assert review["placement_fit"] == "warning"
+    assert review["readability"] == "warning"
+    assert review["scores"]["specificity"] == 5
+    assert review["scores"]["ai_generic_risk"] == 1
 
 
 def test_init_gitignore_keeps_media_cache_out_of_git(tmp_path: Path) -> None:

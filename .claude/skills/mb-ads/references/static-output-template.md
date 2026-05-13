@@ -230,7 +230,9 @@ If a provider generated the image:
 
 ## Image Index
 
-When a provider generates actual images, create an `image-index.md` in the batch folder:
+When planning or generating images, create an `image-index.md` in the batch
+folder. It can hold both planned concepts and generated assets. Link assets
+back to concepts with `concept_id`.
 
 ```markdown
 # Image Index — {Campaign Name}
@@ -243,6 +245,14 @@ Estimated cost: ${estimate}
 Actual cost: ${actual or unknown}
 Post-processing: {dimensions, format, compression, crop rules}
 Approval state: {draft/reviewed/approved}
+
+## Concepts
+
+| Concept ID | Status | Audience State | Visual Job | Placement | Claim Boundary | Review |
+|------------|--------|----------------|------------|-----------|----------------|--------|
+| clean-system-vs-ad-chaos | planned | Overwhelmed operator | Show clarity replacing ad chaos | facebook_feed_portrait_4x5 | No revenue guarantee or Meta partnership claim | accepted |
+
+## Assets
 
 | File | Angle | Style | Format | Prompt Key | Retries | Notes |
 |------|-------|-------|--------|------------|---------|-------|

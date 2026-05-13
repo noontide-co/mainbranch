@@ -27,6 +27,71 @@ charts, and warm natural light. Do not include real brands, real people,
 customer data, logos, screenshots, account details, or private information.
 Leave open space near the upper center for a later deterministic text overlay.
 """
+DEFAULT_CONCEPT_ID = "clean-ledger-command-center"
+REFERENCE_ROLES = (
+    "logo",
+    "product_photo",
+    "style_reference",
+    "screenshot_reference",
+    "background",
+    "mask_source",
+)
+PLACEMENT_PRESETS: dict[str, dict[str, Any]] = {
+    "facebook_feed_portrait_4x5": {
+        "aspect_ratio": "4:5",
+        "nearest_provider_size": "1024x1536",
+        "recommended_generation_size": "1440x1800",
+        "final_export_size": "1080x1350",
+        "safe_zone": {
+            "top": "10%",
+            "bottom": "10%",
+            "sides": "10%",
+            "notes": "Keep focal point and overlay text inside conservative feed margins.",
+        },
+        "deterministic_overlay_expected": True,
+        "source_boundary": (
+            "Aspect ratio checked against public Meta guidance; pixel sizes are "
+            "planning defaults. Verify current Ads Manager specs before launch."
+        ),
+        "validation": "Preview in Meta Ads Manager before launch.",
+    },
+    "facebook_feed_square_1x1": {
+        "aspect_ratio": "1:1",
+        "nearest_provider_size": "1024x1024",
+        "recommended_generation_size": "1440x1440",
+        "final_export_size": "1080x1080",
+        "safe_zone": {
+            "top": "10%",
+            "bottom": "10%",
+            "sides": "10%",
+            "notes": "Keep the focal point centered for mobile feed crop.",
+        },
+        "deterministic_overlay_expected": True,
+        "source_boundary": (
+            "Planning preset for square feed/carousel-style creative. Verify current "
+            "Ads Manager specs before launch."
+        ),
+        "validation": "Preview in Meta Ads Manager before launch.",
+    },
+    "facebook_story_reels_9x16": {
+        "aspect_ratio": "9:16",
+        "nearest_provider_size": "1024x1792",
+        "recommended_generation_size": "1440x2560",
+        "final_export_size": "1080x1920",
+        "safe_zone": {
+            "top": "14%",
+            "bottom": "35%",
+            "sides": "6%",
+            "notes": "Keep critical content inside the center safe band.",
+        },
+        "deterministic_overlay_expected": True,
+        "source_boundary": (
+            "9:16 vertical guidance checked against public Meta Reels guidance; "
+            "verify current Ads Manager specs before launch."
+        ),
+        "validation": "Preview Stories/Reels placements before launch.",
+    },
+}
 
 SmokeState = Literal["generated", "blocked"]
 
@@ -103,10 +168,307 @@ def _png_dimensions(image_bytes: bytes) -> dict[str, int] | None:
     return {"width": width, "height": height}
 
 
+def review_concept(concept: dict[str, Any]) -> dict[str, Any]:
+    """Return a structured creative review for a planned or generated concept."""
+
+    joined = " ".join(
+        str(concept.get(key, ""))
+        for key in (
+            "visual_job",
+            "visual_metaphor",
+            "composition",
+            "text_overlay_plan",
+            "claim_boundary",
+            "prompt",
+        )
+    ).lower()
+    source_files = concept.get("source_files")
+    references = concept.get("references")
+    placement = str(concept.get("placement", ""))
+    text_overlay_plan = str(concept.get("text_overlay_plan", "")).lower()
+    negative_constraints = [str(item).lower() for item in concept.get("negative_constraints", [])]
+
+    fake_ui_terms = ("real meta ui", "ads manager", "dashboard screenshot", "fake ui")
+    private_terms = ("customer data", "account id", "private screenshot", "token")
+    unsupported_claim_terms = (
+        "guaranteed revenue",
+        "guaranteed profit",
+        "meta partnership",
+        "before/after income",
+    )
+    negative_text = " ".join(negative_constraints)
+
+    fake_ui_risk = (
+        "fail"
+        if any(term in joined for term in fake_ui_terms)
+        and not any(
+            "no real meta ui" in item or "avoid fake ui" in item for item in negative_constraints
+        )
+        else "pass"
+    )
+    unsafe_private_data = False
+    for term in private_terms:
+        if term not in joined:
+            continue
+        if f"no {term}" in negative_text:
+            continue
+        if "do not include" in joined and term in joined:
+            continue
+        unsafe_private_data = True
+    private_data_risk = "fail" if unsafe_private_data else "pass"
+    unsupported_claim = False
+    for term in unsupported_claim_terms:
+        if term not in joined:
+            continue
+        if f"do not imply {term}" in joined or f"do not promise {term}" in joined:
+            continue
+        if "do not imply" in joined and term in joined:
+            continue
+        if "do not promise" in joined and term in joined:
+            continue
+        if f"no {term}" in negative_text:
+            continue
+        unsupported_claim = True
+    claim_safety = "fail" if unsupported_claim else "pass"
+    readability = (
+        "warning"
+        if "text-in-image" in text_overlay_plan or "render text" in joined or "tiny text" in joined
+        else "pass"
+    )
+    placement_fit = "pass" if placement in PLACEMENT_PRESETS else "warning"
+    brand_fit = "pass" if source_files else "warning"
+    visual_hook_strength = "pass" if concept.get("visual_metaphor") else "warning"
+    one_second_clarity = "pass" if concept.get("visual_job") else "warning"
+    ad_usefulness = "pass" if concept.get("audience_state") else "warning"
+    ai_generic_risk = "warning" if not references and "generic ai art" in joined else "pass"
+
+    checks = {
+        "one_second_clarity": one_second_clarity,
+        "visual_hook_strength": visual_hook_strength,
+        "ad_usefulness": ad_usefulness,
+        "readability": readability,
+        "placement_fit": placement_fit,
+        "brand_fit": brand_fit,
+        "claim_safety": claim_safety,
+        "fake_ui_risk": fake_ui_risk,
+        "policy_risk": "pass" if claim_safety == "pass" else "fail",
+        "private_data_risk": private_data_risk,
+        "ai_generic_risk": ai_generic_risk,
+    }
+    notes = []
+    if fake_ui_risk == "fail":
+        notes.append("Remove dashboard or Ads Manager UI cues before generation.")
+    if readability == "warning":
+        notes.append("Prefer a text-free base image and deterministic overlay later.")
+    if brand_fit == "warning":
+        notes.append("Add source files or references before approving generation.")
+    if placement_fit == "warning":
+        notes.append("Use one of the supported Facebook placement presets.")
+    if claim_safety == "fail":
+        notes.append("Remove unsupported revenue, partnership, or before/after claims.")
+    if private_data_risk == "fail":
+        notes.append("Remove private data, account identifiers, and screenshots.")
+
+    scores = {
+        "one_second_clarity": _review_score(one_second_clarity),
+        "visual_hook_strength": _review_score(visual_hook_strength),
+        "specificity": _review_score(ad_usefulness),
+        "brand_fit": _review_score(brand_fit),
+        "ai_generic_risk": _review_score(ai_generic_risk, risk=True),
+    }
+
+    status = "accepted"
+    if "fail" in checks.values():
+        status = "rejected"
+    elif "warning" in checks.values():
+        status = "needs_revision"
+    decision = {
+        "accepted": "accept",
+        "needs_revision": "revise",
+        "rejected": "reject",
+    }[status]
+
+    return {
+        "status": status,
+        "decision": decision,
+        **checks,
+        "scores": scores,
+        "notes": notes,
+    }
+
+
+def _review_score(value: str, *, risk: bool = False) -> int:
+    if value == "pass":
+        return 5 if not risk else 1
+    if value == "warning":
+        return 3
+    return 1 if not risk else 5
+
+
+def fixture_facebook_image_concepts(push_slug: str) -> list[dict[str, Any]]:
+    """Build reviewable fixture concepts for the smoke image index."""
+
+    common_sources = [
+        "core/offer.md",
+        "core/audience.md",
+        "core/proof/testimonials.md",
+        "core/brand/visual-style.md",
+        f"pushes/{push_slug}/push.md",
+    ]
+    concepts: list[dict[str, Any]] = [
+        {
+            "concept_id": DEFAULT_CONCEPT_ID,
+            "status": "planned",
+            "prompt_strategy": "creative_director_brief_first_no_text_base",
+            "prompt_strategy_notes": (
+                "Default production path: brief the visual job first, generate "
+                "a text-free base image, then apply deterministic overlay later."
+            ),
+            "viewer_scroll_context": "cold Facebook feed",
+            "first_second_read": "messy finance clutter becomes one clean operating system",
+            "audience_state": "owner wants calmer bookkeeping without exposing private ledgers",
+            "visual_job": (
+                "show that finance work becomes easier when the operating system is clear"
+            ),
+            "visual_metaphor": (
+                "messy receipts and notes resolving into one clean desk command center"
+            ),
+            "composition": (
+                "warm desk scene, strong central notebook focal point, open upper-center space"
+            ),
+            "visual_hierarchy": {
+                "primary_focal_point": "clean notebook command center",
+                "secondary_focal_point": "scattered receipts and notes",
+                "text_zone": "upper center",
+            },
+            "camera_language": "slight top-down editorial desk scene",
+            "style_strength": "subtle, not over-stylized",
+            "emotional_tone": "relief after clutter",
+            "placement": "facebook_feed_portrait_4x5",
+            "placement_details": PLACEMENT_PRESETS["facebook_feed_portrait_4x5"],
+            "text_overlay_plan": "text-free base image; deterministic overlay later, max 4 words",
+            "source_files": common_sources,
+            "claim_boundary": (
+                "do not imply guaranteed revenue, tax advice, or provider partnership"
+            ),
+            "references": [],
+            "prompt": DEFAULT_PROMPT.strip(),
+            "negative_constraints": [
+                "no real Meta UI",
+                "no real logos",
+                "no tiny text",
+                "no revenue screenshots",
+                "no before/after income claim",
+                "no customer data",
+            ],
+        },
+        {
+            "concept_id": "operator-before-after-chaos",
+            "status": "planned",
+            "prompt_strategy": "reference_aware_no_text_base",
+            "prompt_strategy_notes": (
+                "Use the style reference for mood and composition only; do not "
+                "copy subjects, logos, text, or private details."
+            ),
+            "viewer_scroll_context": "mobile feed between founder and SaaS posts",
+            "first_second_read": "scattered business facts snap into a simple map",
+            "audience_state": "operator has business facts scattered across docs and dashboards",
+            "visual_job": "make scattered operating memory feel visible and organized",
+            "visual_metaphor": "paper fragments forming a simple business map on a wall",
+            "composition": "square crop, centered map, clear negative space around the focal point",
+            "visual_hierarchy": {
+                "primary_focal_point": "simple business map",
+                "secondary_focal_point": "paper fragments",
+                "text_zone": "top third",
+            },
+            "camera_language": "straight-on editorial wall composition",
+            "style_strength": "clean but still native to the feed",
+            "emotional_tone": "control without hype",
+            "placement": "facebook_feed_square_1x1",
+            "placement_details": PLACEMENT_PRESETS["facebook_feed_square_1x1"],
+            "text_overlay_plan": "no rendered text; reserve top third for overlay",
+            "source_files": common_sources,
+            "claim_boundary": "do not promise automatic growth or financial outcomes",
+            "references": [
+                {
+                    "id": "style-001",
+                    "role": "style_reference",
+                    "path": "mb-media://references/style-001.png",
+                    "safe_to_share": False,
+                    "approval_required": True,
+                    "privacy_level": "private",
+                    "use_for": "color mood and simple composition",
+                    "do_not_copy": "exact subject, logos, text, or private details",
+                }
+            ],
+            "prompt": (
+                "Create a fixture-safe square Facebook ad base image for a "
+                "fictional business operating system. Show scattered paper "
+                "fragments forming a clean business map. No text, logos, "
+                "screenshots, private data, or real brands."
+            ),
+            "negative_constraints": [
+                "no real logos",
+                "no rendered words",
+                "no private screenshots",
+                "no guaranteed outcome claim",
+            ],
+        },
+        {
+            "concept_id": "mobile-safe-progress-path",
+            "status": "planned",
+            "prompt_strategy": "creative_director_brief_first_no_text_base",
+            "prompt_strategy_notes": (
+                "Plan the vertical composition and text-safe zone before any provider call."
+            ),
+            "viewer_scroll_context": "story or reels vertical placement",
+            "first_second_read": "one practical next step appears inside launch clutter",
+            "audience_state": "solo operator wants the next practical move from a messy launch",
+            "visual_job": "make the next step feel obvious on a phone screen",
+            "visual_metaphor": (
+                "a narrow lit path through launch notes toward one marked checkpoint"
+            ),
+            "composition": "vertical story crop, focal path inside center 1:1 safe zone",
+            "visual_hierarchy": {
+                "primary_focal_point": "lit path and checkpoint",
+                "secondary_focal_point": "launch notes",
+                "text_zone": "above center",
+            },
+            "camera_language": "vertical mobile-first scene with centered subject",
+            "style_strength": "specific scene, low gloss",
+            "emotional_tone": "focused momentum",
+            "placement": "facebook_story_reels_9x16",
+            "placement_details": PLACEMENT_PRESETS["facebook_story_reels_9x16"],
+            "text_overlay_plan": "text-free base image; overlay after export above center",
+            "source_files": common_sources,
+            "claim_boundary": "do not imply the software launches or spends money automatically",
+            "references": [],
+            "prompt": (
+                "Create a vertical 9:16 Facebook story ad base image for a "
+                "fictional business planning tool. A narrow lit path moves "
+                "through launch notes toward one simple checkpoint. Keep all "
+                "critical detail in the center safe zone. No text, UI, logos, "
+                "screenshots, account data, or private details."
+            ),
+            "negative_constraints": [
+                "no platform UI",
+                "no logos",
+                "no tiny text",
+                "no account data",
+                "no unsupported automation claim",
+            ],
+        },
+    ]
+    for concept in concepts:
+        concept["review"] = review_concept(concept)
+    return concepts
+
+
 def _asset_record(
     *,
     push_slug: str,
     asset_id: str,
+    concept_id: str,
     docs_checked: str,
     generated_at: str,
     state: SmokeState,
@@ -122,6 +484,7 @@ def _asset_record(
 ) -> dict[str, Any]:
     return {
         "asset_id": asset_id,
+        "concept_id": concept_id,
         "rail": "provider",
         "provider": "openai",
         "model": model,
@@ -149,7 +512,17 @@ def _asset_record(
         "references": [],
         "dimensions": {
             "requested_size": size,
-            "aspect_ratio": "2:3",
+            "requested_aspect_ratio": "2:3",
+            "placement": "facebook_feed_portrait_4x5",
+            "placement_aspect_ratio": PLACEMENT_PRESETS["facebook_feed_portrait_4x5"][
+                "aspect_ratio"
+            ],
+            "nearest_provider_size": PLACEMENT_PRESETS["facebook_feed_portrait_4x5"][
+                "nearest_provider_size"
+            ],
+            "final_export_size": PLACEMENT_PRESETS["facebook_feed_portrait_4x5"][
+                "final_export_size"
+            ],
             "format": "png",
             "quality": quality,
             "generated_width": (
@@ -184,8 +557,9 @@ def _render_index(record: dict[str, Any]) -> str:
     return (
         "# Image Index - OpenAI Image Rail Smoke\n\n"
         "This fixture-safe record proves the first narrow OpenAI image rail "
-        "without committing generated binaries, secrets, private paths, or "
-        "provider request credentials.\n\n"
+        "with reviewable Facebook image-ad concepts, safe logical media "
+        "references, and no generated binaries, secrets, private paths, or "
+        "provider request credentials committed.\n\n"
         "```yaml\n"
         f"{yaml_text}"
         "```\n"
@@ -245,10 +619,14 @@ def smoke_openai(
         "docs_checked": docs_checked,
         "output_record_written": True,
         "binary_committed": False,
+        "placement_presets": PLACEMENT_PRESETS,
+        "reference_roles": list(REFERENCE_ROLES),
+        "concepts": fixture_facebook_image_concepts(push_slug),
         "assets": [
             _asset_record(
                 push_slug=push_slug,
                 asset_id=DEFAULT_ASSET_ID,
+                concept_id=DEFAULT_CONCEPT_ID,
                 docs_checked=docs_checked,
                 generated_at=generated_at,
                 state=state,
@@ -278,7 +656,11 @@ def smoke_openai(
         "storage_backend": "mb-media",
         "dimensions": {
             "requested_size": DEFAULT_SIZE,
-            "aspect_ratio": "2:3",
+            "requested_aspect_ratio": "2:3",
+            "placement": "facebook_feed_portrait_4x5",
+            "placement_aspect_ratio": PLACEMENT_PRESETS["facebook_feed_portrait_4x5"][
+                "aspect_ratio"
+            ],
             "format": "png",
             "quality": DEFAULT_QUALITY,
         },

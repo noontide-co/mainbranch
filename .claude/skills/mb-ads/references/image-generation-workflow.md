@@ -11,6 +11,217 @@ boundaries.
 
 ---
 
+## Creative Direction Contract
+
+Before any provider call, turn the push brief and business context into 3 to 6
+reviewable Facebook image-ad concepts. The useful artifact is the creative
+decision, not merely the generated file.
+
+Read available context before drafting concepts:
+
+- resolved offer and audience files;
+- proof and typicality context;
+- `core/brand/visual-style.md` when present;
+- the push brief or static-ad batch;
+- compact Meta summary only when the operator approved a read-only account
+  summary and `mb` reports it is ready;
+- reference images already represented by safe `mb-media://...` handles.
+
+Each concept must record:
+
+- `concept_id`;
+- `status`: `planned`, `generated`, `rejected`, or `needs_revision`;
+- `viewer_scroll_context`;
+- `first_second_read`;
+- `audience_state`;
+- `visual_job`;
+- `visual_metaphor` or scene;
+- `composition`;
+- `visual_hierarchy`;
+- `camera_language`;
+- `style_strength`;
+- `emotional_tone`;
+- `placement`;
+- `text_overlay_plan`;
+- `source_files`;
+- `claim_boundary`;
+- `references`;
+- `prompt`;
+- `negative_constraints`;
+- `review`.
+
+Use this shape inside push-local `image-index.md`:
+
+```yaml
+schema: mainbranch.image_index.v0
+push_slug: 2026-05-ad-test
+placement_presets:
+  facebook_feed_portrait_4x5:
+    aspect_ratio: 4:5
+    nearest_provider_size: 1024x1536
+    recommended_generation_size: 1440x1800
+    final_export_size: 1080x1350
+    safe_zone:
+      top: 10%
+      bottom: 10%
+      sides: 10%
+      notes: Keep focal point and overlay text inside conservative feed margins.
+    deterministic_overlay_expected: true
+    source_boundary: Aspect ratio checked against public Meta guidance; pixel sizes are planning defaults. Verify current Ads Manager specs before launch.
+    validation: Preview in Meta Ads Manager before launch.
+  facebook_feed_square_1x1:
+    aspect_ratio: 1:1
+    nearest_provider_size: 1024x1024
+    recommended_generation_size: 1440x1440
+    final_export_size: 1080x1080
+    safe_zone:
+      top: 10%
+      bottom: 10%
+      sides: 10%
+      notes: Keep the focal point centered for mobile feed crop.
+    deterministic_overlay_expected: true
+    source_boundary: Planning preset for square feed/carousel-style creative. Verify current Ads Manager specs before launch.
+    validation: Preview in Meta Ads Manager before launch.
+  facebook_story_reels_9x16:
+    aspect_ratio: 9:16
+    nearest_provider_size: 1024x1792
+    recommended_generation_size: 1440x2560
+    final_export_size: 1080x1920
+    safe_zone:
+      top: 14%
+      bottom: 35%
+      sides: 6%
+      notes: Keep critical content inside the center safe band.
+    deterministic_overlay_expected: true
+    source_boundary: 9:16 vertical guidance checked against public Meta Reels guidance; verify current Ads Manager specs before launch.
+    validation: Preview Stories/Reels placements before launch.
+reference_roles:
+  - logo
+  - product_photo
+  - style_reference
+  - screenshot_reference
+  - background
+  - mask_source
+concepts:
+  - concept_id: clean-system-vs-ad-chaos
+    status: planned
+    viewer_scroll_context: cold Facebook feed
+    first_second_read: messy ad chaos turns into one clean system
+    audience_state: creator overwhelmed by Meta Ads terminology
+    visual_job: show that ad growth becomes easier when the system is clear
+    visual_metaphor: chaotic notes and ad metrics becoming one clean command center
+    composition: central desk scene, open area at top for overlay text
+    visual_hierarchy:
+      primary_focal_point: clean command center
+      secondary_focal_point: scattered notes
+      text_zone: upper center
+    camera_language: slight top-down editorial desk scene
+    style_strength: subtle, not over-stylized
+    emotional_tone: relief after confusion
+    placement: facebook_feed_portrait_4x5
+    text_overlay_plan: text-free base image; deterministic overlay later, max 4 words
+    source_files:
+      - core/offer.md
+      - core/audience.md
+      - core/brand/visual-style.md
+      - pushes/2026-05-ad-test/push.md
+    claim_boundary: do not imply guaranteed revenue or Meta partnership
+    references:
+      - id: style-001
+        role: style_reference
+        path: mb-media://references/style-001.png
+        safe_to_share: false
+        use_for: color mood and composition
+        do_not_copy: exact subject, logos, text, or private details
+    prompt: >
+      Create a Facebook image ad base scene with a clear focal point, mobile-safe
+      whitespace, no rendered text, no real logos, and no private data.
+    negative_constraints:
+      - no real Meta UI
+      - no real logos
+      - no tiny text
+      - no revenue screenshots
+      - no before/after income claim
+    review:
+      status: accepted
+      one_second_clarity: pass
+      visual_hook_strength: pass
+      ad_usefulness: pass
+      readability: pass
+      placement_fit: pass
+      brand_fit: pass
+      claim_safety: pass
+      fake_ui_risk: pass
+      policy_risk: pass
+      private_data_risk: pass
+      ai_generic_risk: pass
+      scores:
+        one_second_clarity: 5
+        visual_hook_strength: 5
+        specificity: 5
+        brand_fit: 5
+        ai_generic_risk: 1
+      decision: accept
+      notes: []
+assets:
+  - asset_id: clean-system-vs-ad-chaos-001
+    concept_id: clean-system-vs-ad-chaos
+    provider: openai
+    model: gpt-image-2
+    state: blocked
+    blocker_code: missing_openai_api_key
+    output_reference: mb-media://pushes/2026-05-ad-test/images/clean-system-vs-ad-chaos-001.png
+    committed_binary: false
+```
+
+Concepts and assets must be linkable through `concept_id`. `image-index.md`
+can contain planned concepts even when no provider generated an image.
+
+---
+
+## Prompt Strategy
+
+Use the concept brief before writing provider prompts. A small fixture-safe
+comparison for this contract favored "creative-director brief first" because
+it makes the reviewer answer who the image is for, what job the image does,
+which placement it serves, and what it must not claim before generation.
+
+Keep these reusable patterns:
+
+- direct prompts are acceptable for quick fixture smoke only;
+- creative-director briefs are the default for real ad concepts;
+- reference-aware prompts should say what to borrow and what not to copy;
+- no-text base images are the default when final ad text needs control;
+- text-in-image prompts are testable, but should be marked for readability
+  review and not become the default final-ad path.
+
+Creative direction principles to encode in each concept:
+
+- Native but specific beats generic polish. Use feed-native or UGC-like scenes
+  when the brand allows it, but still specify the subject, environment,
+  lighting, camera language, and emotional state.
+- Build a small brand world before prompting: mood, palette, environment,
+  texture/material cues, and style strength.
+- Design the visual hierarchy explicitly: primary focal point, secondary
+  support, and text zone.
+- Use concept diversity before micro-variants: different audience states,
+  metaphors, funnel emotions, and placements.
+- Treat AI output as raw material that needs human review, compliance checks,
+  and final overlay/polish.
+
+Default flow:
+
+```text
+business context -> creative-director brief -> no-text base-image prompt ->
+optional generation -> review -> image-index record
+```
+
+Do not commit raw provider payloads, raw generated images, private paths,
+credentials, or raw research dumps. Summarize only the reusable workflow
+pattern in committed docs or fixtures.
+
+---
+
 ## Provider Choice
 
 Use the provider and model verified for this run. Do not hard-code a private
@@ -74,7 +285,8 @@ Committed records should use safe logical references such as
 `mb-media://pushes/2026-05-ad-test/images/hero-001.png`, not private absolute
 paths.
 
-Reference images should carry roles:
+Reference images should carry roles. The important fields are what to borrow
+and what not to copy:
 
 ```yaml
 references:
@@ -82,10 +294,18 @@ references:
     role: logo
     path: mb-media://brand/logo.png
     safe_to_share: false
+    approval_required: true
+    privacy_level: private
+    use_for: brand mark placement only after explicit approval
+    do_not_copy: private file path or unapproved lockup variants
   - id: product
     role: product_photo
     path: mb-media://pushes/2026-05-ad-test/references/product.webp
     safe_to_share: false
+    approval_required: true
+    privacy_level: private
+    use_for: product shape and scale
+    do_not_copy: background clutter, labels, or private details
 ```
 
 ---
@@ -200,6 +420,10 @@ that all providers expose the same provenance, watermarking, or C2PA behavior.
 For Meta-first static creative, plan the default pair as **1:1 (square)** and
 **9:16 (vertical)**. Treat placement specs as provider-specific; check current
 platform requirements before launch.
+
+`facebook_feed_portrait_4x5` is a concept-planning preset for feed creative and
+nearest-provider-size selection. Do not claim exact Meta upload/export support
+from the preset alone.
 
 ### Design Strategy
 
@@ -453,18 +677,58 @@ Examples:
 
 Every generated image batch gets an `image-index.md` with:
 
+- 3 to 6 planned/reviewed concepts when the task is image creative direction;
+- concept-to-asset links through `concept_id`;
 - provider and model, or `manual`;
 - docs-checked date;
 - source files read;
 - prompt text or prompt file key;
+- placement preset and safe-zone notes;
+- reference image roles, safe logical paths, `use_for`, and `do_not_copy`;
+- structured review status and checks;
 - output dimensions and format;
 - post-processing settings;
 - cost estimate and actual cost when known;
 - failure/retry count;
 - safe logical media references;
-- reference image roles and safe logical reference paths when used;
 - storage backend label;
 - approval state.
+
+### Creative Review Rubric
+
+Review generated or manually produced images before treating them as campaign
+assets. Record structured checks:
+
+```yaml
+review:
+  status: needs_revision
+  one_second_clarity: pass
+  visual_hook_strength: pass
+  ad_usefulness: pass
+  readability: warning
+  placement_fit: pass
+  brand_fit: warning
+  claim_safety: pass
+  fake_ui_risk: fail
+  policy_risk: warning
+  private_data_risk: pass
+  ai_generic_risk: warning
+  scores:
+    one_second_clarity: 4
+    visual_hook_strength: 4
+    specificity: 3
+    brand_fit: 3
+    ai_generic_risk: 3
+  decision: revise
+  notes:
+    - Avoid fake Meta dashboard elements.
+    - Leave more upper-right whitespace for overlay.
+```
+
+The review should answer: what the image is supposed to do, who it is for,
+what pain or desire it visualizes, why the composition and placement fit, what
+claim boundary it respects, and whether to accept, revise, regenerate, or
+reject it.
 
 ## Fallback (No Provider)
 
