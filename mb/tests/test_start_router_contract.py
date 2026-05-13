@@ -60,6 +60,9 @@ def test_start_router_routes_money_intent_from_moneypath_facts() -> None:
         "next dollar",
         "offer readiness",
         "Keep hard gates first",
+        "Required update, broken install/runtime/wiring, repair blockers, validation\n"
+        "  blockers, relationship health blockers, playbook health blockers, and unsafe\n"
+        "  provider/private-data blockers all win before MoneyPath routing.",
         "`money_path.overall_level`",
         "`money_path.overall_label`",
         "`money_path.objects.offer`",
@@ -73,12 +76,19 @@ def test_start_router_routes_money_intent_from_moneypath_facts() -> None:
         "without conversion judgment",
         "Explain whether top-level `ranked_actions` agree with the MoneyPath\n  bottleneck",
         "include a MoneyPath snapshot in the handoff",
+        "Product ladder is stated but has no\n> clear paid entry step",
+        "Channel strategy exists, but no active push is\n> attached",
+        "Outcome feedback loop is missing",
+        "Recommended route: use `/mb-think`",
     ]
     for phrase in required_phrases:
         assert phrase in router
 
     assert "Your offer is bad." in router
     assert "This will not convert." in router
+    assert "This will convert." in router
+    assert "The business is weak." in router
+    assert "This is ready to win." in router
 
 
 def test_start_router_no_longer_blindly_pulls_business_repo() -> None:

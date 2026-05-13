@@ -198,6 +198,9 @@ Route:
 - Keep hard gates first. Required updates, broken wiring, unsafe provider
   operations, private-data boundaries, and repair blockers pause business
   routing before MoneyPath interpretation.
+- Required update, broken install/runtime/wiring, repair blockers, validation
+  blockers, relationship health blockers, playbook health blockers, and unsafe
+  provider/private-data blockers all win before MoneyPath routing.
 - Use the `money_path` object from the already-run `mb status --json --peek`
   report. Parse the full status JSON once; do not slice it with `head`, `sed`,
   or partial shell chunks that can drop late-added sections.
@@ -221,14 +224,22 @@ Good handoff shape:
 
 > "MoneyPath snapshot: overall Level 2 / structured. Bottleneck: CTA path
 > missing. Proof exists but is generic and not outcome-backed. Offer is
-> structured but missing risk reversal. Recommended route: clarify the paid
-> entry step and CTA before creating more content or ads."
+> structured but missing risk reversal. Product ladder is stated but has no
+> clear paid entry step. Channel strategy exists, but no active push is
+> attached. Outcome feedback loop is missing. Recommended route: use `/mb-think`
+> to clarify the paid entry step and CTA before creating more content or ads."
 
 Avoid:
 
 > "Your offer is bad."
 
 > "This will not convert."
+
+> "This will convert."
+
+> "The business is weak."
+
+> "This is ready to win."
 
 ### Decide, codify, research
 
