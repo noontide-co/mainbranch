@@ -156,7 +156,7 @@ After completing research with a fallback, optionally mention the upgrade:
 | Grok | `.claude/skills/mb-think/references/grok-setup.md` |
 | Gemini | `.claude/skills/mb-think/references/gemini-setup.md` |
 | whisper | `.claude/skills/mb-think/references/local-transcription.md` |
-| Meta ad account context | Official Meta Ads CLI path pending Main Branch wiring. See `.claude/skills/mb-ads/references/meta-ads-integration.md` |
+| Meta ad account context | Official Meta Ads CLI path through `mb connect meta`; use only after `mb` reports Meta as `ready`. See `.claude/skills/mb-ads/references/meta-ads-integration.md` |
 | markitdown | `pip install 'markitdown[all]'` (no guide needed) |
 | pandoc | `brew install pandoc` or OS package manager |
 | marker | `pip install marker-pdf` (may need system deps) |
