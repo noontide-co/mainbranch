@@ -30,6 +30,8 @@ avoids local paths, account data, private business context, and long excerpts.
 - `mb status --json --peek`: schema 1.0, skill wiring ok, `money_path` and
   top-level `content_strategy` present
 - `mb start --json`: handoff ready, follow-up `/mb-start`
+- `mb books check --fixture --json`: not rerun; the bookkeeping surface was
+  unchanged from v0.3.18
 - Fresh business repo smoke: ok
 - Fixture business repo after run: clean, except the intentional checkpoint
   fixture that leaves approved business-file changes dirty for checkpoint
@@ -41,8 +43,7 @@ avoids local paths, account data, private business context, and long excerpts.
 - Print-mode ran: yes
 - Rubric score: 11/11 heuristic checks
 - Grounding verdict: partial proxy with deterministic fallback
-- Permission denials: 1
-- Read-only `mb` grounding denials: 1
+- Permission denials: 1, the same event as the read-only `mb` grounding denial
 - Session ID preserved: yes
 - Interactive Claude Code TUI smoke: not run in this branch-author pass
 
