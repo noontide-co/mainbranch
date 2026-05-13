@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added the first shared workflow source prototype for the daily start ->
+  MoneyPath `/mb-think` handoff, with generated Claude/Codex shell snapshots
+  and drift tests that require shared `mb` commands and JSON facts to stay
+  present. Refs MAIN-351, #549.
 - Added a proposed shared workflow corpus and native runtime renderer decision
   that names `workflows/<workflow>/` as the portable source for selected
   workflow semantics, keeps Claude Code and Codex runtime shells native, and
