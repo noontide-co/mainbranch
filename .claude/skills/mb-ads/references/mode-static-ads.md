@@ -82,8 +82,11 @@ platform: meta
 | Interrupt | Pattern interrupt, scroll-stopping, contrarian |
 | Text Overlay | Background-only for text overlay (used with creative variation copy) |
 
-**Format pair: 1:1 + 9:16** — Facebook Ads Manager accepts exactly these two formats per ad. Design 9:16 first with critical content in center 1:1 safe zone. Center-crop for square. One design → two uploads.
+**Default Meta format pair: 1:1 + 9:16** — For Meta-first static
+creative, design 9:16 first with critical content in the center 1:1 safe zone,
+then center-crop for square. Treat placement specs as provider-specific and
+check current platform requirements before launch.
 
 See [static-output-template.md](static-output-template.md) for full output format.
 See [image-prompt-templates.md](image-prompt-templates.md) for template library.
-See [image-generation-workflow.md](image-generation-workflow.md) for Nano Banana integration.
+See [image-generation-workflow.md](image-generation-workflow.md) for optional provider generation.

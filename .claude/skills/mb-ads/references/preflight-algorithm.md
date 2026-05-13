@@ -116,7 +116,7 @@ Pre-Flight Check:
   Composite: 13/18 — GREEN
   Gaps: angles thin, no visual style
 
-  Image gen:    ✓ Nano Banana available
+  Image gen:    ✓ provider available for this run
   Ad account:   — not connected (optional — lets me see your live Meta ad performance to inform new ads)
 ```
 

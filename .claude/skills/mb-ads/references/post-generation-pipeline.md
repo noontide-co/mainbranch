@@ -24,17 +24,18 @@ user can always `git diff HEAD~1` to see what changed.
 
 Visual Standards evaluates image prompt composition and safe zones -- skip it for text-only outputs.
 
-## Step 3: Check Nano Banana Availability
+## Step 3: Check Optional Image Provider Availability
 
-If Nano Banana was detected at Step 0d AND the mode produces images (Static or One-Liner):
+If an approved image provider was detected at Step 0d AND the mode produces
+images (Static or One-Liner):
 
 1. Calculate cost estimate:
-   - **Static ads:** N angles x 3 styles x ~$0.05/image
-   - **One-liners:** 8 background clusters x ~$0.05/image = ~$0.40
-2. Ask ONE question: "Compliance review will run automatically. Also generate images? Est. cost: ~$X for N images. (y/n)"
+   - **Static ads:** N angles x 3 styles x current provider price
+   - **One-liners:** 8 background clusters x current provider price
+2. Ask ONE question: "Compliance review will run automatically. Also generate images with {provider/model}? Est. cost: ~$X for N images. (y/n)"
 3. If yes -> include image gen agent in the parallel spawn
 4. If no -> skip image gen, run compliance only
-5. If Nano Banana unavailable -> skip image gen silently, compliance runs alone
+5. If no provider is available -> skip image gen silently, compliance runs alone
 
 **Video scripts:** No image generation. Skip this step.
 
@@ -174,4 +175,5 @@ Generate 1 background per cluster (8 total) using **parallel subagents -- one ag
 
 **Cost:** 8 images x ~$0.05 = ~$0.40 (recommended). User can choose 15 backgrounds ($0.75) or 30 unique ($1.50). At 15+, batch agents into groups of 2-3 images each to limit agent count.
 
-See [image-generation-workflow.md](image-generation-workflow.md) for Nano Banana integration details.
+See [image-generation-workflow.md](image-generation-workflow.md) for provider
+selection, metadata, and fallback details.
