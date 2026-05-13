@@ -184,6 +184,27 @@ current provider docs or console pricing when the cost matters to the operator.
 | Deterministic Remotion / FFmpeg | Local compute and storage rather than per-image generation fees. | Best first motion/export rail because source, timing, captions, crops, and variants are inspectable and reproducible. | Requires template work and local render dependencies. It does not solve novel image generation by itself. |
 | Raw AI video providers | Often priced per second, credit, tier, or model and usually more expensive than static images. | Useful for future creative exploration when the operator accepts cost and lower reproducibility. | Higher policy, latency, cost, account-access, and reproducibility risk; keep out of the first MAIN-362 implementation. |
 
+### OpenAI First-Rail Ad-Volume Math
+
+Use this table as a first implementation planning aid, not as a billing
+guarantee. It is based on OpenAI pricing examples checked on 2026-05-13 and
+excludes prompt/reference-image input tokens, retries, edits, storage,
+post-processing, and any provider-side pricing changes.
+
+| OpenAI `gpt-image-2` example | Per-image example cost | 100 images | 500 images | 1,000 images | 5,000 images |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1024x1024 `low` | `$0.006` | `$0.60` | `$3.00` | `$6.00` | `$30.00` |
+| 1024x1024 `medium` | `$0.053` | `$5.30` | `$26.50` | `$53.00` | `$265.00` |
+| 1024x1024 `high` | `$0.211` | `$21.10` | `$105.50` | `$211.00` | `$1,055.00` |
+| 1536x1024 `low` | `$0.005` | `$0.50` | `$2.50` | `$5.00` | `$25.00` |
+| 1536x1024 `medium` | `$0.041` | `$4.10` | `$20.50` | `$41.00` | `$205.00` |
+| 1536x1024 `high` | `$0.165` | `$16.50` | `$82.50` | `$165.00` | `$825.00` |
+
+The first rail should make the cost visible before generation and record both
+estimated and actual cost when the provider exposes usage. For testing, default
+to low or medium quality. Use high quality for final typography, packaging, or
+identity-sensitive assets only after approval.
+
 ## Recommended Rails
 
 | Rail | State | Why |
@@ -229,25 +250,16 @@ Use external repositories as references, not vendored product code.
 
 Useful references checked during the MAIN-362 research pass:
 
-- `wuyoscar/gpt_image_2_skill`: strongest prompt-gallery, CLI, and agent-skill
-  reference for GPT Image 2.
-- `Wangnov/gpt-image-2-skill`: useful agent-first CLI/installable skill
-  reference for OpenAI API key and Codex-auth style setup.
-- `dshark3y/gpt-image-2-skill`: small direct-OpenAI script pattern for
-  generation and editing.
-- `robonuggets/gpt-image-2-skill`: useful structured prompting reference, but
-  Fal-backed rather than direct OpenAI.
-- `EvoLinkAI/gpt-image-2-gen-skill`: useful installer/package reference, but
-  provider-wrapper-backed rather than direct OpenAI.
-- `buluslan/gpt-image2-ecommerce`: useful e-commerce/ad scene-template
-  reference.
-- `hypersocialinc/shots`: useful app-store screenshot workflow reference.
-- BFL `flux2`, `flux-mcp`, and `skills`: useful FLUX.2 API, MCP, and
-  model-specific skill references.
-- ComfyUI FLUX.2 examples and CLI harnesses: useful local/private workflow
-  references after the first provider rail is proven.
-- x-cmd OpenAI image-generation skill patterns: useful command/skill
-  invocation reference.
+| Repo | Direct API or wrapper | Pattern to borrow | Do not copy |
+| --- | --- | --- | --- |
+| `wuyoscar/gpt_image_2_skill` | Direct/OpenAI-oriented skill and CLI reference | Prompt gallery shape, CLI-first skill structure, reference-image edit examples, size/quality flags, install/update cautions | Do not vendor the full skill, prompt library, showcase claims, or local install workflow |
+| `dshark3y/gpt-image-2-skill` | Direct OpenAI scripts | Clean `generate.py` / `edit.py` split, PEP 723 / `uv run` script ergonomics, up-to-10 reference image input shape, size validation notes | Do not copy code without license review; do not inherit omissions such as limited logging or no explicit mask support |
+| `Wangnov/gpt-image-2-skill` | Agent-first CLI with OpenAI, OpenAI-compatible, and Codex-auth provider paths | JSON stdout, JSONL progress events, retries/timeouts, provider config inspection, masks, custom size validation, transparent-asset verification patterns | Do not inherit its broader provider abstraction, desktop app, Codex-auth support claim, release machinery, or `auth.json` dependency |
+| `robonuggets/gpt-image-2-skill` | Fal-backed wrapper around GPT Image 2 endpoints | Structured prompt shape, explicit generate-vs-edit endpoint distinction, optional mask field, cost-tier defaults | Do not use Fal as the first dependency, copy Fal-specific auth/header behavior, or inherit wrapper pricing claims |
+| `EvoLinkAI/gpt-image-2-gen-skill` | EvoLink/OpenAI-compatible wrapper | One-command installer ergonomics, agent-facing setup docs, multi-runtime packaging notes | Do not add wrapper dependency, auto-installer behavior, or support claims for runtimes Main Branch has not smoked |
+| `YouMind-OpenLab/gpt-image-2-prompts-search` | Prompt-search skill, not generation rail | Token-efficient prompt search, category manifests, prompt-gallery indexing, remix workflow | Do not copy prompt corpus, viral/source claims, or treat prompt search as generation support |
+| `lansespirit/image-gen-mcp` | MCP server, multi-provider wrapper | Future MCP server boundary, storage/resource URI ideas, local metadata and cleanup patterns | Do not make MCP or multi-provider routing the first implementation |
+| `openai/codex` imagegen sample skill | Runtime-native sample and built-in-tool boundary | Generate/edit decision tree, reference-role labeling, batch-vs-variant distinction, transparent-background fallback cautions | Do not claim Codex image-generation parity for Main Branch without compatibility docs and runtime smoke |
 
 These references do not create Main Branch support claims.
 
@@ -276,6 +288,19 @@ first Main Branch rail should not depend on them.
 - Image input plus exact region change: mask edit.
 - Many prompts, many variants, or repeated reference combinations: batch later,
   after the single-image rail is stable.
+
+## Video / Motion CLI Boundary
+
+Video research stays useful as source discovery, but MAIN-362 should not become
+a raw generative-video provider branch. The first video-shaped CLI work should
+be deterministic motion/export around already-approved media.
+
+| Need | First CLI shape to prefer | Why | Do not do in MAIN-362 |
+| --- | --- | --- | --- |
+| Resize/crop/compress/static-to-platform exports | `mb media export` or `mb video export` over FFmpeg-style settings | Deterministic, inspectable, low cost, easy to validate in fixture repos | Do not call raw video models just to make platform crops |
+| Branded motion templates | `mb video render --template ... --data ... --out mb-media://...` over Remotion-style templates | Fits git-backed templates, exact text, captions, timing, safe zones, and repeatable variants | Do not put Remotion/Node dependencies in core without a separate dependency decision |
+| Short animated ad variants | Template render from approved image assets plus deterministic overlays | Lets the image rail, metadata record, and media URI contract stay shared | Do not add Kling/Runway/Luma/Sora/Veo/xAI provider routing here |
+| AI-generated video exploration | Follow-up provider decision and smoke issue | Higher cost, policy, latency, and reproducibility risk | Do not claim support from market sentiment or social examples |
 
 ## Recommended CLI Shape
 

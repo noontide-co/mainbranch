@@ -34,6 +34,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   OpenAI GPT Image 2 as the first smoke target, configurable media storage
   with safe logical media URIs, reference-image roles, and prompt-only fallback
   when no approved provider is configured. Refs MAIN-362, #569.
+- Added verified MAIN-362 implementation research patterns to the creative
+  media decision, including a GitHub reference-repo pattern table,
+  OpenAI-first ad-volume cost math, and a deterministic video/motion CLI
+  boundary that keeps raw generative video out of the first rail. Refs
+  MAIN-362, #569.
 
 ## [0.3.20] - 2026-05-13
 
