@@ -200,8 +200,8 @@ Manager notes.
 ### User-Facing Display
 
 In user-facing messages, describe the capability: connecting a Meta ad account,
-pulling live performance, or auditing active campaigns. Do not mention connector
-vendor names or unsupported setup paths.
+pulling a compact read-only account summary, or auditing active campaigns. Do
+not mention connector vendor names or unsupported setup paths.
 
 **Pre-flight status line (add after image-provider check):**
 
@@ -370,7 +370,7 @@ Before creating ads, the business repo must have:
 | Visual Style | `core/brand/visual-style.md` | Optional (affects image gen) |
 | Content Strategy | `core/content-strategy.md` plus relevant `core/marketing/...` and `core/people/...` layers | Optional (improves topic and amplification fit) |
 | Skool Surfaces | `core/operations/funnel/skool-surfaces.md` | Optional (congruence check) |
-| Ad Account Access | `mb status --json --peek` + `mb connect doctor --json` | Optional (enables live performance data) |
+| Ad Account Access | `mb status --json --peek` + `mb connect doctor --json` | Optional (enables compact read-only account context) |
 
 If required files are missing, Step 0 pre-flight catches this and routes appropriately.
 

@@ -118,8 +118,8 @@ Triggered lazily at `/mb-think` or `/mb-ads` when the topic is ads-related:
 3. If provider facts are degraded, missing, invalid, waiting for admin approval,
    or otherwise not `ready`, run
    `mb connect doctor --json` and quote the repair/setup guidance.
-4. Only if `mb` reports Meta account context `ready`, ask whether to pull live
-   performance before generating.
+4. Only if `mb` reports Meta account context `ready`, ask whether to pull a
+   compact read-only account summary before generating.
 5. Never block generation on missing account access.
 ```
 
@@ -182,7 +182,7 @@ Ad account context is optional. The entire `/mb-ads` skill works without it.
 
 | With Account Context | Without Account Context |
 |----------------------|-------------------------|
-| Ask whether to pull live performance before generating | Skip to generation |
+| Ask whether to pull a compact read-only account summary before generating | Skip to generation |
 | Use winning patterns before generating | Generate from reference files |
 | Match account naming conventions | Ask the operator for naming conventions if needed |
 | Suggest where new creative fits | Operator decides placement in Ads Manager |
