@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added the public-safe v0.3.20 post-release transcript review note, recording
+  PyPI release-acceptance evidence, print-mode proxy limits, books-readiness
+  privacy review, and post-release issue-state alignment. Refs #564, #552.
+
 ## [0.3.20] - 2026-05-13
 
 v0.3.20 packages the chat-first, fact-backed daily operating loop. It adds
