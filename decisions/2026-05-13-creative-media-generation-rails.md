@@ -129,8 +129,9 @@ Required for all assets:
 - prompt text and negative constraints;
 - dimensions, aspect ratio, format, compression, crop, and safe-zone rules;
 - quality or generation setting when applicable;
-- cost estimate and actual cost when known;
-- failure/retry count;
+- cost estimate, provider usage details when available, and actual cost when
+  known;
+- failure, retry, and timeout count;
 - post-processing notes;
 - safe logical output reference for each final asset;
 - storage backend label, such as `mb-media`, `site-public`, `external-media`,
