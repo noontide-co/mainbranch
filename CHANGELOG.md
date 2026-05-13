@@ -17,7 +17,7 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   now reports hledger availability, sanitized private-books-vault setup, ignore
   protections, and check health; `mb books doctor --plan` now gives a
   non-mutating repair plan for safe bookkeeping setup gaps without reading or
-  mutating real ledger contents. Refs MAIN-128, #128.
+  mutating real ledger contents. Refs #552, #128.
 - Added the first shared workflow source prototype for the daily start ->
   MoneyPath `/mb-think` handoff, with generated Claude/Codex shell snapshots
   and drift tests that require shared `mb` commands and JSON facts to stay
