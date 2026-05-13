@@ -1,7 +1,7 @@
 ---
 type: decision
 date: 2026-05-13
-status: proposed
+status: accepted
 topic: Shared workflow corpus and native runtime renderers
 linked_decisions:
   - decisions/2026-05-04-skill-cli-runtime-adapter-contract.md
