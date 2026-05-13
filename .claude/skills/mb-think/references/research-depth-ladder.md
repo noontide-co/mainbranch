@@ -76,8 +76,9 @@ research depth would improve confidence.
 | Level 4 | Sales calls, customer language, ad tests, real content response, or outcome logs support the path. | Durable performance without instrumentation. |
 | Level 5 | Channel/page/push metrics, outcome feedback, and reviewed learning loops support the path. | Future results or claims beyond the evidence. |
 
-Do not convert this into a new score unless a separate CLI issue accepts that
-contract. For now, this is skill guidance.
+These are agent-side explanatory labels, not a parallel MoneyPath score. Do not
+convert this into a new score unless a separate CLI issue accepts that contract.
+For now, this is skill guidance.
 
 ## Source Quality
 

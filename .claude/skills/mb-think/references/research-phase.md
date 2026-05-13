@@ -33,6 +33,8 @@ silently route from `.vip/local.yaml`. Use legacy `reference/offers/` only when
 5. **Gather findings** — Execute with token management and cost awareness
 6. **Synthesize** (required) — Distill findings into actionable insight
 7. **Save** — Write to `research/YYYY-MM-DD-topic-[source].md`
+8. **Checkpoint** — Ask whether to make the research batch durable before the
+   next decision or codify pass
 
 If the operator passes `--brief-format=grok-8`, asks for a researched brief,
 or wants research to feed a site, ads, organic content, or a push playbook,

@@ -24,8 +24,7 @@ Something came your way — a video, a voice memo, a vague feeling, a problem to
 
 **Save progress at natural boundaries.** After a research batch, accepted
 decision, codify pass, or major reference-file update, ask whether to checkpoint.
-Run `mb checkpoint --plan --json`, show the proposed message, validate with
-`mb checkpoint --validate "..." --json`, then save only after operator approval; no hidden checkpoints.
+Run `mb checkpoint --plan --json`, show the proposed message, validate with `mb checkpoint --validate "..." --json`, then save with `mb checkpoint --message "..." --yes` only after approval; no hidden checkpoints.
 
 When research identifies a reusable growth mechanic such as a comment-keyword,
 DM-keyword, public reply/link, resource delivery, provider setup recipe, or

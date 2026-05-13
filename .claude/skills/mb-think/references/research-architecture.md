@@ -436,17 +436,17 @@ Tool missing + User wants that research type → Offer setup once per session
 ### Standard Flow (All Research Types)
 
 ```
-1. Detect Intent
-   └─> Determine research type from user message
+1. Define Question
+   └─> What specifically are you trying to learn?
 
-2. Check Capabilities
-   └─> Is preferred tool available?
-
-3. Recommend Depth
+2. Recommend Depth
    ├─> For offer/audience/proof/CTA/content/ads/pages/positioning
    └─> Use research-depth-ladder.md to decide how much research is enough
 
-4. Route
+3. Detect Intent & Route
+   └─> Determine research type from user message
+
+4. Check Capabilities
    ├─> If available: Use preferred tool
    └─> If not: Offer setup or fallback
 
