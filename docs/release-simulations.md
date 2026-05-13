@@ -246,6 +246,9 @@ release-specific launch-offer simulation:
 The v0.3.18 post-publish review shows the package-visible acceptance shape
 with print-mode proxy limits and follow-up routing:
 [reports/2026-05-12-v0-3-18-post-release-transcript-review.md](reports/2026-05-12-v0-3-18-post-release-transcript-review.md).
+The v0.3.19 post-release review shows the same shape after MoneyPath,
+proof-quality, content-strategy, and start-update-posture changes shipped:
+[reports/2026-05-12-v0-3-19-post-release-transcript-review.md](reports/2026-05-12-v0-3-19-post-release-transcript-review.md).
 
 ## Evidence Rules
 
