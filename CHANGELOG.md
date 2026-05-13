@@ -30,6 +30,11 @@ guidance.
 
 ### Added
 
+- Added an accepted creative media generation rails decision for MAIN-282,
+  classifying static image providers, deterministic motion/export rails, AI
+  video providers, and platform creative tools as recommended, candidate, or
+  refused while keeping provider support claims behind setup detection,
+  approval gates, smoke evidence, and artifact metadata. Refs #409.
 - Added a `/mb-think` research-depth ladder for offer, audience, proof,
   product-ladder, CTA, content strategy, ads/page launch, market positioning,
   and influence/playbook work, including enough-signal thresholds, stop rules,
@@ -80,6 +85,10 @@ guidance.
 
 ### Changed
 
+- Updated `/mb-ads` image-generation guidance to stop hard-coding a single
+  Gemini model or private local environment path, require provider/model
+  metadata in image indexes, and fall back to saved prompts when no approved
+  image provider is configured. Refs MAIN-282, #409.
 - Refreshed the README, roadmap, and ethos around the chat-first, CLI-backed
   operating loop: repo truth feeds deterministic `mb` facts, skills/agents
   explain and route in chat, operators approve sensitive action, and accepted

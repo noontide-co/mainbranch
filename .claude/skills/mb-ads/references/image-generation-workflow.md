@@ -1,64 +1,74 @@
 # Image Generation Workflow
 
-Nano Banana (Google Gemini) integration for generating actual ad images from Claude Code.
+Optional image-generation workflow for producing ad images from approved
+prompts and provider access. The durable product rail is the prompt, source
+context, output index, approval state, and final asset path. Provider support
+is run-scoped until `mb` owns detection and smoke evidence.
 
 ---
 
-## Model — EXACT Name (DO NOT HALLUCINATE)
+## Provider Choice
 
-**The ONLY model to use:**
+Use the provider and model verified for this run. Do not hard-code a private
+environment file, assume a provider is configured, or claim Main Branch supports
+image generation because this reference exists.
 
-```
-gemini-3-pro-image-preview
-```
+Current provider notes checked 2026-05-13 against Google's official Gemini
+image generation docs:
+https://ai.google.dev/gemini-api/docs/image-generation
 
-Copy-paste that string exactly. No other model is acceptable — not for drafts, not for testing, not for anything.
+| Provider | Model family | Use |
+| --- | --- | --- |
+| Google Gemini API | `gemini-3-pro-image-preview` | Professional/high-fidelity image generation when quality matters more than speed. |
+| Google Gemini API | `gemini-2.5-flash-image` | Candidate speed/cost rail for draft or iteration use only. Do not treat it as proven ad-grade output until a smoke/test run records provider, model, prompt, output, review notes, and final asset quality. |
+| OpenAI Image API / Responses API | GPT Image models | Candidate alternate provider for generation and editing. Use only when configured for the run and record the exact model. |
 
-**NEVER use these (they will 404 or produce garbage):**
-- ~~`gemini-2.0-flash-preview-image-generation`~~ — does not exist
-- ~~`gemini-2.5-flash-image`~~ — exists but quality is not ad-grade. NEVER use.
-- ~~`gemini-2.5-flash-preview-04-17`~~ — does not exist
-- ~~`gemini-pro-image`~~ — incomplete name
-- ~~`gemini-flash-image`~~ — incomplete name
-- Any model with "flash" in the name — NEVER for image generation
+If model names or pricing matter to the recommendation, check the provider's
+current docs before generating and record the docs-checked date in
+`image-index.md`.
 
 ---
 
 ## Detection
 
-At triage, check if Nano Banana is available:
+At triage, check whether an approved image provider is available. Use
+`mb status --json --peek` / `mb connect doctor --json` first for provider
+readiness when available. Those commands may not prove a media API key exists;
+only check environment variables when the selected mode actually needs image
+generation.
 
 ```bash
-source ~/.config/vip/env.sh 2>/dev/null
-python3 -c "from google import genai; print('OK')" 2>/dev/null
+python3 -c "from google import genai; print('google-genai OK')" 2>/dev/null
+python3 -c "from openai import OpenAI; print('openai OK')" 2>/dev/null
 ```
 
-**If available:** Offer Batch 4 (image generation) after copy + compliance.
-**If unavailable:** Output text prompts only. Note: "Image prompts saved. Paste into Gemini or another image tool to generate."
+If a provider is available, show the provider/model, estimated cost, output
+path, and required approval before generating. If unavailable, output text
+prompts only:
 
-Use `mb status --json --peek` / `mb connect doctor --json` first for
-Google/Workspace readiness. Those commands do not prove the Gemini API key used
-by Nano Banana is present; use the local SDK/env check above when the selected
-mode actually needs image generation.
+> "Image prompts saved. Paste them into your chosen image tool, or configure an
+> approved provider before asking Main Branch to generate files directly."
 
 ---
 
 ## Generation via Python SDK
 
-The `google-genai` Python package is the generation interface. MCP servers are an alternative but the SDK provides more control.
+The `google-genai` Python package is one supported implementation pattern when
+Google is selected for the run. MCP servers or another SDK can be used only
+when they are configured and the artifact metadata records the provider/model.
 
 ```python
 import os, base64
 from google import genai
 from google.genai import types
 
-client = genai.Client(api_key=os.environ['GOOGLE_API_KEY'])
+client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
 
 response = client.models.generate_content(
-    model='gemini-3-pro-image-preview',
+    model=os.environ.get("MB_IMAGE_MODEL", "gemini-3-pro-image-preview"),
     contents=[prompt_text],
     config=types.GenerateContentConfig(
-        response_modalities=['TEXT', 'IMAGE']
+        response_modalities=["TEXT", "IMAGE"]
     )
 )
 
@@ -67,7 +77,7 @@ for part in response.candidates[0].content.parts:
     if part.inline_data is not None:
         data = part.inline_data.data
         image_bytes = data if isinstance(data, bytes) else base64.b64decode(data)
-        with open('output.png', 'wb') as f:
+        with open("output.png", "wb") as f:
             f.write(image_bytes)
 ```
 
@@ -108,15 +118,19 @@ def post_process(input_path, output_path, width, height, max_kb=300):
     return 45  # best effort
 ```
 
-### No Gemini Watermark from API
+### Provider Watermarking
 
-API output does NOT include the Gemini watermark visible in the web UI. SynthID (invisible digital watermark) is embedded but does not affect visual quality.
+Record provider watermarking or provenance metadata when known. For Gemini,
+current docs say generated images include SynthID watermarking. Do not promise
+that other providers have the same behavior.
 
 ---
 
 ## Format Pair: 1:1 + 9:16
 
-Facebook Ads Manager offers exactly two image uploads per ad: **1:1 (square)** and **9:16 (vertical)**. There is no 4:5 option.
+For Meta-first static creative, plan the default pair as **1:1 (square)** and
+**9:16 (vertical)**. Treat placement specs as provider-specific; check current
+platform requirements before launch.
 
 ### Design Strategy
 
@@ -175,8 +189,9 @@ Before generating, show cost estimate and get approval:
 ```
 Image Generation Estimate:
   5 angles × 3 styles × 1 format = 15 images
-  Model: gemini-3-pro-image-preview @ ~$0.05/image
-  Estimated cost: ~$0.75
+  Provider/model: Google Gemini / gemini-3-pro-image-preview
+  Docs checked: 2026-05-13
+  Estimated cost: $X from current provider pricing
 
   Proceed? (y/n)
 ```
@@ -239,10 +254,10 @@ For a typical ad campaign with 5 angles (15 images):
 3. Main conversation writes prompts.json to disk (keyed by target filename)
 4. PARALLEL (all agents spawned in a single message):
    a. Compliance agents (5-6 lenses, read-only) → findings report
-   b. Image agents (1 per image, if user approved):
+   b. Image agents (1 per image, if user approved and provider configured):
       - Each agent reads its prompt(s) from prompts.json
       - Reads visual-style.md for brand context
-      - Generates 9:16 image via API
+      - Generates 9:16 image via the selected provider/model
       - Post-processes: resize, JPEG compress, center-crop for 1:1
       - Verifies file(s) exist on disk
       - Returns: file path(s) + status (success/fail) + cost
@@ -266,11 +281,11 @@ Image generation uses **one subagent per image** (or per 2-3 images for large ba
 
 3. **Each image agent:**
    - Reads its assigned prompt(s) from `prompts.json` (by filename key)
-   - Sources the API key: `source ~/.config/vip/env.sh`
-   - Calls Gemini via Python SDK (single image per API call)
+   - Uses the already-configured provider environment for this run
+   - Calls the selected provider/model (single image per API call)
    - Post-processes immediately (resize, PNG to JPEG, compress under 300KB)
    - Verifies the final JPEG exists on disk
-   - Returns: `{ path: "images/001_01_graphic_vertical.jpg", status: "success", cost: 0.05 }` (or `status: "fail"` with error message)
+   - Returns: `{ path: "images/001_01_graphic_vertical.jpg", status: "success", provider: "google", model: "gemini-3-pro-image-preview", cost: 0.05 }` (or `status: "fail"` with error message)
 
 4. **Main conversation collects results** from all image agents, retries any failures with fresh single-image agents.
 
@@ -291,18 +306,19 @@ Each agent adds a `time.sleep(2)` before its first API call. Natural stagger fro
 ```
 You are an image generation agent. Generate the assigned image(s) and return results.
 
-Environment setup:
-  source ~/.config/vip/env.sh
+Provider setup:
+  Use the provider/model selected by the main conversation.
+  Do not ask the operator to paste API keys into chat.
 
 Your assigned image(s) from prompts.json at {output_dir}/prompts.json:
   Key(s): {filename_key(s)}
 
 For EACH assigned image:
 1. Read the prompt from prompts.json
-2. Run Python: generate via gemini-3-pro-image-preview, save raw PNG
+2. Run Python: generate via the selected provider/model, save raw PNG
 3. Run Python: post-process (resize to target dims, JPEG compress under 300KB, delete raw PNG)
 4. Verify final JPEG exists: ls {output_dir}/images/{filename}
-5. Return the file path and status
+5. Return the file path, provider, model, cost, and status
 
 If rate-limited (429): sleep 5 seconds, retry once.
 If retry fails: return status "fail" with error message. Do NOT keep retrying.
@@ -329,7 +345,7 @@ pushes/YYYY-MM-DD-static-ads-{campaign}/
 │   ├── 001_02_lofi_square.jpg
 │   ├── 001_02_lofi_vertical.jpg
 │   └── ...
-└── image-index.md                 ← Maps images to concepts
+└── image-index.md                 ← Maps prompts, provider metadata, and files
 ```
 
 ### Image Naming Convention
@@ -347,13 +363,28 @@ Examples:
 
 ---
 
-## Fallback (No Nano Banana)
+## Image Index Metadata
 
-If Nano Banana is not configured:
+Every generated image batch gets an `image-index.md` with:
+
+- provider and model, or `manual`;
+- docs-checked date;
+- source files read;
+- prompt text or prompt file key;
+- output dimensions and format;
+- post-processing settings;
+- cost estimate and actual cost when known;
+- failure/retry count;
+- final file paths;
+- approval state.
+
+## Fallback (No Provider)
+
+If no image provider is configured:
 
 1. Generate text prompts only (structured JSON format)
 2. Save prompts to the output batch file
-3. Note: "Image prompts saved as text. To generate images, paste these into Google AI Studio or configure Nano Banana (`/mb-help nano banana setup`)."
+3. Note: "Image prompts saved as text. To generate images, paste these into your chosen image tool or configure an approved provider for a future run."
 
 ---
 

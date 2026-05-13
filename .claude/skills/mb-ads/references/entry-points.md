@@ -19,7 +19,7 @@ Real ad workflows don't fit neat categories. Someone might have images but need 
 | "I want ideas for an ad" | Ideation | Account check (if available) + research + concept generation | Read-only |
 | "I'm repurposing a video" | Video Repurpose | Transcribe + extract hooks + copy variants | No |
 | "I already have images, just need copy" | Copy Only | Skip image gen, primaries + headlines | No |
-| "Just need images for existing copy" | Image Only | Nano Banana image gen only | No |
+| "Just need images for existing copy" | Image Only | Image prompts and optional provider generation | No |
 | "Full from scratch" | Full Pipeline | Copy + compliance + images (classic static flow) | Optional |
 | "Check my ad performance" | Account Check | Read-only account context -- insights, winners/losers | Required |
 | "Launch ads", "paid traffic plan", "Google Ads launch" | Launch Plan | Readiness, policy, keyword, budget, approval plan | Plan-only |
@@ -78,7 +78,7 @@ Each entry point assembles different components. Components are modular -- they 
 | **Copy Engine** | Generate primaries, headlines, hooks | SKILL.md (Static Ads section) |
 | **Hook Library** | Generate N creative variations (also called "one-liners") | [one-liner-methodology.md](one-liner-methodology.md) |
 | **Video Scripts** | Generate spoken-word scripts | [video-templates-hooks.md](video-templates-hooks.md) |
-| **Image Gen** | Nano Banana image prompts + generation | [image-generation-workflow.md](image-generation-workflow.md) |
+| **Image Gen** | Image prompts + optional provider generation | [image-generation-workflow.md](image-generation-workflow.md) |
 | **Compliance Review** | 6-lens review pipeline | [review-workflow.md](review-workflow.md) |
 | **Launch Plan / Check** | Provider-safe paid-traffic plan and outcome check | [launch-plan-check.md](launch-plan-check.md) |
 | **Post-Gen Pipeline** | Git commit + compliance + image gen | [post-generation-pipeline.md](post-generation-pipeline.md) |

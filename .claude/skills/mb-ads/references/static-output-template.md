@@ -218,10 +218,10 @@ Design the **9:16 vertical first** with critical content in the **center 1:1 saf
 Aspect ratio 9:16, resolution 1080x1920. Place all critical content (headline, product, key visual) in the center 1:1 zone. Fill top and bottom margins with atmospheric/contextual elements. Keep text and important elements centered vertically between 25% and 70% from top to stay within safe zones.
 ```
 
-### Post-Processing (When Using Nano Banana)
+### Post-Processing (When Using An Image Provider)
 
-If Nano Banana generated the image:
-- Raw output is PNG at 1024x1024
+If a provider generated the image:
+- Record the raw output dimensions and format
 - Resize to 1080×1920 (9:16) and 1920×1920 (1:1 center-crop)
 - Convert PNG → JPEG, compress under 300KB
 - See `image-generation-workflow.md` for full pipeline
@@ -230,19 +230,24 @@ If Nano Banana generated the image:
 
 ## Image Index
 
-When Nano Banana generates actual images, create an `image-index.md` in the batch folder:
+When a provider generates actual images, create an `image-index.md` in the batch folder:
 
 ```markdown
 # Image Index — {Campaign Name}
 
-| File | Angle | Style | Format | Prompt Summary |
-|------|-------|-------|--------|----------------|
-| 001_01_graphic_square.jpg | Authority | Graphic | 1:1 | Bold framework on dark gradient |
-| 001_01_graphic_vertical.jpg | Authority | Graphic | 9:16 | Same, full vertical |
-| 001_02_lofi_square.jpg | Social Proof | Lo-fi | 1:1 | Casual phone-style screenshot |
-| ... | ... | ... | ... | ... |
+Docs checked: {date}
+Provider: {provider or manual}
+Model: {exact model or n/a}
+Source files: {offer.md, audience.md, visual-style.md, ...}
+Estimated cost: ${estimate}
+Actual cost: ${actual or unknown}
+Post-processing: {dimensions, format, compression, crop rules}
+Approval state: {draft/reviewed/approved}
 
-Generated: {date}
-Model: gemini-3-pro-image-preview
-Cost: ~${total}
+| File | Angle | Style | Format | Prompt Key | Retries | Notes |
+|------|-------|-------|--------|------------|---------|-------|
+| 001_01_graphic_square.jpg | Authority | Graphic | 1:1 | 001_01_graphic | 0 | Center crop |
+| 001_01_graphic_vertical.jpg | Authority | Graphic | 9:16 | 001_01_graphic | 0 | Full vertical |
+| 001_02_lofi_square.jpg | Social Proof | Lo-fi | 1:1 | 001_02_lofi | 1 | Manual review needed |
+| ... | ... | ... | ... | ... | ... | ... |
 ```

@@ -116,7 +116,7 @@ Pre-Flight Check:
   Composite: 13/18 — GREEN
   Gaps: angles thin, no visual style
 
-  Image gen:    ✓ Nano Banana available
+  Image gen:    ✓ provider available for this run
   Ad account:   — not connected (optional — lets me see your live Meta ad performance to inform new ads)
 ```
 
@@ -190,7 +190,7 @@ If visual-style.md is missing, offer inline creation during pre-flight (don't fo
 
 ```
 1. Read current Main Branch media settings when available.
-   Legacy ~/.config/vip/local.yaml may be read as fallback only.
+   Legacy local settings may be read as fallback only.
 2. Resolve image path:
    a. media.images → use directly
    b. media.root → {root}/images/
@@ -210,9 +210,9 @@ If visual-style.md is missing, offer inline creation during pre-flight (don't fo
    → mkdir -p {path}
 ```
 
-Do not write media defaults into legacy `~/.config/vip/local.yaml`. Keep the
-choice session-scoped unless a current `mb` settings command exposes a durable
-media path.
+Do not write media defaults into deprecated local settings. Keep the choice
+session-scoped unless a current `mb` settings command exposes a durable media
+path.
 
 **If path is inside git repo:**
 → Warn: "This folder is inside your git repo. Binary images will bloat history. Want me to add a .gitignore entry? (y/n)"

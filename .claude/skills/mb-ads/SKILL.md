@@ -202,7 +202,7 @@ In user-facing messages, describe the capability: connecting a Meta ad account,
 pulling live performance, or auditing active campaigns. Do not mention connector
 vendor names or unsupported setup paths.
 
-**Pre-flight status line (add after Nano Banana check):**
+**Pre-flight status line (add after image-provider check):**
 
 If ready:
 > `Ad account:   ✓ connected (I can check what's performing before we create)`
@@ -228,7 +228,7 @@ Detect what the user wants from natural language. Route internally to the right 
 |-----------|-------------|-------------|
 | "static ads", "full from scratch", "image ads" | Full Pipeline | Copy + compliance + images (classic flow) |
 | "I already have images, just need copy" | Copy Only | Skip image gen, primaries + headlines |
-| "Just need images for existing copy" | Image Only | Nano Banana image gen only |
+| "Just need images for existing copy" | Image Only | Image prompts and optional provider generation |
 | "creative variations", "hook library", "one-liners", "50 hooks" | Hook Library | Bulk creative variations (flexible quantity) |
 | "video scripts", "ad scripts", "spoken word" | Video Scripts | Spoken-word script pipeline |
 | "video ad script", "turn this offer into a video ad", "paid sales video", "long-form video ad", "VSL-style paid creative" | Long-Form Video Ads | Load [references/long-form-video-ads.md](references/long-form-video-ads.md) |
@@ -428,7 +428,7 @@ See **[references/mode-review.md](references/mode-review.md)** for the full lens
 
 **Every generation entry point (Full Pipeline, Copy Only, Hook Library, Video Scripts) runs this pipeline automatically after saving output.** Do not ask the user whether to run compliance review -- it is automatic.
 
-See **[references/post-generation-pipeline.md](references/post-generation-pipeline.md)** for the complete pipeline: checkpoint pre-review, lens tier selection, Nano Banana check, parallel agent spawning (compliance + image), synthesis, proposed-change approval gate, unified report, and post-review checkpoint.
+See **[references/post-generation-pipeline.md](references/post-generation-pipeline.md)** for the complete pipeline: checkpoint pre-review, lens tier selection, optional image-provider check, parallel agent spawning (compliance + image), synthesis, proposed-change approval gate, unified report, and post-review checkpoint.
 
 **Quick summary:** Save a checkpoint for the pre-review state after operator approval, spawn 5-6 compliance agents + optional image agents in parallel, synthesize P1/P2/P3 findings, surface P1 to user, show proposed P2/P3 copy edits as a dry-run diff, apply copy edits only after explicit approval, present unified report, and offer a post-review checkpoint.
 
