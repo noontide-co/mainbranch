@@ -57,6 +57,16 @@ test_exit=0 status_exit=0 peek_exit=0
 business_repo_git_status_count=0
 ```
 
+Direct `meta` CLI read-only API ping also passed with sanitized exit evidence:
+
+```text
+auth_status_exit=0
+adaccount_list_exit=0
+campaign_list_exit=0
+insights_get_exit=0
+dataset_list_exit=0
+```
+
 Raw command output belongs in ignored local scratch and should not be copied to
 GitHub, docs, PR bodies, or tracked files.
 
