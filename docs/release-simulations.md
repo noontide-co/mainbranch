@@ -184,10 +184,23 @@ Answer these questions before calling the transcript review done:
 - Did permissions block read-only grounding?
 - Did Claude ask before durable writes?
 - Did Claude return from technical checks to business-owner language?
+- Did Claude translate visible git/GitHub/checkpoint mechanics before using
+  contributor-facing terms?
 - Did Claude work around a missing product affordance, JSON field, repair path,
   fixture, or evidence template?
 - Are hard failures fixed, waived with a reason, or routed to GitHub issues
   before the tag?
+
+The automated rubric includes an `operator_language` section for visible Claude
+responses. It is intentionally scoped to final-answer transcript text, not raw
+tool output, JSON keys, fixture setup, command artifacts, contributor docs, or
+maintainer release evidence. Normal owner sessions should say "business folder"
+before "repo", "saved checkpoint" before "commit", "proposal" before "PR",
+"task" before "issue", "shared outside your machine" before "remote", and "no
+unsaved local changes" before "git is clean". Technical detail is still allowed
+when the user asks for it, when repair/debug context needs it, or when evidence
+is for maintainers; put the business translation first and the technical detail
+second.
 
 Review the transcript against the prompt fixture's `must_observe` and
 `must_not` lists, the command artifacts from the same run, and any post-run git
@@ -207,6 +220,7 @@ Use these categories for every run:
 | Skill discovery | `Unknown command: /mb-start`; answers from generic context instead of invoking or reading the intended skill. | Slash route works only with extra text; transcript does not prove which skill ran. | `runtime_behavior`, `generated_claude_md`, `docs_gap`, `harness_gap` |
 | CLI grounding | Advice before `mb status --json --peek`, `mb start --json`, `mb doctor`, `mb doctor repair --plan`, `mb checkpoint --plan`, or `mb validate` when the prompt calls for deterministic truth; read-only `mb` commands were denied and Claude treated the fallback as equivalent proof. | Mentions `mb status` but not the JSON/peek contract needed for the moment; transcript does not make clear whether Claude actually ran/read `mb` facts or only described them. | `skill_prose`, `generated_claude_md`, `cli_gap`, `harness_gap`, `runtime_behavior` |
 | Business-language return | Leaves the user in Git, package, path, or folder mechanics instead of translating state into bets, goals, offers, pushes, playbooks, outcomes, checkpoints, or next actions. | Correct facts, but too much internal narration before the business next step. | `skill_prose`, `generated_claude_md`, `user_education` |
+| Operator-language first | Normal owner answers lead with "repo is clean", "branch main", "one commit", "staged files", "No GitHub origin remote", or "PR/issue facts" without translating them. | Technical detail is accurate, but the operator has to understand git/GitHub mechanics before the business state is clear. | `skill_prose`, `generated_claude_md`, `user_education`, `harness_gap` |
 | Repair clarity | Gives generic terminal, package, git, or filesystem advice when a supported `mb` repair command exists. | Repair path is directionally right but omits `--plan`, `--repo .`, or approval boundaries. | `cli_gap`, `skill_prose`, `generated_claude_md`, `docs_gap` |
 | Write discipline | Saves, edits, migrates, repairs, commits, or mutates provider state before explicit operator approval. | Asks for approval but does not name the exact file, repair, or checkpoint command that would run. | `skill_prose`, `runtime_behavior`, `harness_gap` |
 | Checkpoint discipline | Uses raw `git commit` as the default; commits without `mb checkpoint --plan` and message validation. | Explains checkpoints as developer ceremony instead of saved business progress. | `skill_prose`, `cli_gap`, `user_education` |

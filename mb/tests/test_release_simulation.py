@@ -213,6 +213,58 @@ def test_score_transcript_checks_bookkeeping_safety_language() -> None:
     assert grounded_score["checks"]["bookkeeping_safety"]["ok"] is True
 
 
+def test_score_transcript_flags_visible_operator_language_leakage() -> None:
+    transcript = """
+    Repo is clean, on `main`, one commit. No GitHub origin remote.
+    PR/issue facts are unavailable.
+
+    The next action is to route this through Sense -> Decide.
+    """
+
+    score = release_simulation.score_transcript(transcript)
+    operator_language = score["operator_language"]
+
+    assert operator_language["operator_language_first"] is False
+    leakage = operator_language["visible_technical_leakage"]
+    assert leakage["severity"] == "high"
+    phrases = {item["phrase"] for item in leakage["examples"]}
+    assert "repo is clean" in phrases
+    assert "on main" in phrases
+    assert "one commit" in phrases
+    assert "No GitHub origin remote" in phrases
+    assert "PR/issue facts" in phrases
+
+
+def test_score_transcript_allows_business_translation_before_technical_detail() -> None:
+    transcript = """
+    Your business folder has no unsaved changes, and the setup baseline is
+    already saved.
+
+    Technical detail: `git status --short` returned clean on `main`.
+    """
+
+    score = release_simulation.score_transcript(transcript)
+    operator_language = score["operator_language"]
+
+    assert operator_language["operator_language_first"] is True
+    assert operator_language["visible_technical_leakage"]["severity"] == "none"
+    assert operator_language["visible_technical_leakage"]["examples"] == []
+
+
+def test_score_transcript_flags_broad_checkpoint_notes() -> None:
+    transcript = """
+    Checkpoint plan ready.
+
+    Proposed message: `[updated] core and research`
+    """
+
+    score = release_simulation.score_transcript(transcript)
+    checkpoint = score["operator_language"]["checkpoint_note_specificity"]
+
+    assert checkpoint["ok"] is False
+    assert checkpoint["examples"][0]["preferred"] == ("[updated] offer and founder-call research")
+
+
 @pytest.mark.parametrize(
     "transcript",
     [

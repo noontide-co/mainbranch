@@ -158,9 +158,42 @@ def score_transcript(text: str, checks: tuple[BehaviorCheck, ...] | None = None)
         "passed": passed,
         "total": len(active_checks),
         "checks": results,
+        "operator_language": analyze_operator_language(text),
         "heuristic_notice": (
             "Keyword scoring is proxy evidence; inspect transcript review "
             "categories before release acceptance."
+        ),
+    }
+
+
+def analyze_operator_language(text: str) -> dict[str, Any]:
+    """Return UX warnings for visible technical language in final responses.
+
+    Release simulations pass Claude's final answer text into this helper. It is
+    deliberately not meant for raw command output, JSON artifacts, fixture setup,
+    or maintainer-only evidence.
+    """
+    visible_text = _strip_fenced_code(text)
+    leakage_examples = _visible_technical_leakage(visible_text)
+    checkpoint_examples = _broad_checkpoint_notes(visible_text)
+    severity = _operator_language_severity(
+        leakage_count=len(leakage_examples),
+        checkpoint_count=len(checkpoint_examples),
+    )
+    return {
+        "operator_language_first": severity == "none",
+        "visible_technical_leakage": {
+            "severity": severity,
+            "examples": leakage_examples,
+        },
+        "checkpoint_note_specificity": {
+            "ok": not checkpoint_examples,
+            "examples": checkpoint_examples,
+        },
+        "scope": (
+            "Scores visible Claude final responses only; raw tools, JSON, "
+            "fixture setup, command artifacts, and maintainer evidence are "
+            "outside this lexical warning layer."
         ),
     }
 
@@ -241,6 +274,139 @@ def _contains_overclaim(text: str) -> bool:
         "spent money for you",
     )
     return any(term in text for term in overclaim_terms)
+
+
+_TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
+    (
+        re.compile(r"\bgit (?:tree )?is clean\b", re.IGNORECASE),
+        "git is clean",
+        "nothing unsaved locally",
+    ),
+    (
+        re.compile(r"\brepo is clean\b", re.IGNORECASE),
+        "repo is clean",
+        "your business folder has no unsaved changes",
+    ),
+    (
+        re.compile(r"\bworking tree (?:is )?clean\b", re.IGNORECASE),
+        "working tree clean",
+        "no unsaved file changes",
+    ),
+    (
+        re.compile(r"\bbranch\s+`?main`?\b", re.IGNORECASE),
+        "branch main",
+        "current business folder",
+    ),
+    (
+        re.compile(r"\bon\s+`?main`?\b", re.IGNORECASE),
+        "on main",
+        "in the current business folder",
+    ),
+    (
+        re.compile(r"\bonly commit(?: so far)?\b", re.IGNORECASE),
+        "only commit so far",
+        "last saved checkpoint",
+    ),
+    (
+        re.compile(r"\bone commit\b", re.IGNORECASE),
+        "one commit",
+        "one saved checkpoint",
+    ),
+    (
+        re.compile(r"\bstaged files?\b", re.IGNORECASE),
+        "staged files",
+        "files queued for save",
+    ),
+    (
+        re.compile(r"\bno github origin remote\b", re.IGNORECASE),
+        "No GitHub origin remote",
+        "no connected GitHub backup or shared task source",
+    ),
+    (
+        re.compile(r"\borigin remote\b", re.IGNORECASE),
+        "origin remote",
+        "GitHub connection",
+    ),
+    (
+        re.compile(r"\bpr/issue facts\b", re.IGNORECASE),
+        "PR/issue facts",
+        "GitHub task and proposal context",
+    ),
+    (
+        re.compile(r"\bbefore (?:this|anything) goes to a remote\b", re.IGNORECASE),
+        "before this goes to a remote",
+        "before anything is shared outside your machine",
+    ),
+)
+
+_BROAD_CHECKPOINT_NOTE_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\[(?:added|updated|changed)\]\s+(?:core and research|files|stuff|changes)\b"),
+    re.compile(r"proposed message:\s*`?\[(?:added|updated|changed)\]\s+core and research`?"),
+)
+
+
+def _strip_fenced_code(text: str) -> str:
+    return re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+
+
+def _visible_technical_leakage(text: str) -> list[dict[str, str]]:
+    examples: list[dict[str, str]] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or _is_allowed_technical_detail_line(stripped):
+            continue
+        for pattern, phrase, preferred in _TECHNICAL_LANGUAGE_PATTERNS:
+            match = pattern.search(stripped)
+            if match is None:
+                continue
+            examples.append(
+                {
+                    "phrase": phrase,
+                    "preferred": preferred,
+                    "excerpt": _short_excerpt(stripped, match.start(), match.end()),
+                }
+            )
+    return examples
+
+
+def _broad_checkpoint_notes(text: str) -> list[dict[str, str]]:
+    normalized = text.lower()
+    examples: list[dict[str, str]] = []
+    for pattern in _BROAD_CHECKPOINT_NOTE_PATTERNS:
+        match = pattern.search(normalized)
+        if match is None:
+            continue
+        examples.append(
+            {
+                "phrase": match.group(0),
+                "preferred": "[updated] offer and founder-call research",
+            }
+        )
+    return examples
+
+
+def _operator_language_severity(*, leakage_count: int, checkpoint_count: int) -> str:
+    total = leakage_count + checkpoint_count
+    if total == 0:
+        return "none"
+    if total == 1:
+        return "low"
+    if total <= 3:
+        return "medium"
+    return "high"
+
+
+def _is_allowed_technical_detail_line(line: str) -> bool:
+    normalized = line.lower()
+    return normalized.startswith(("technical detail:", "technical details:", "exact command:"))
+
+
+def _short_excerpt(line: str, start: int, end: int) -> str:
+    prefix_start = max(0, start - 60)
+    suffix_end = min(len(line), end + 60)
+    prefix = "..." if prefix_start > 0 else ""
+    suffix = "..." if suffix_end < len(line) else ""
+    return f"{prefix}{line[prefix_start:suffix_end]}{suffix}"
 
 
 def _normalize_unknown_command_line(line: str) -> str:

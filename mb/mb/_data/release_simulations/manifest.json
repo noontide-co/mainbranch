@@ -115,7 +115,7 @@
     },
     {
       "id": "business_owner_language",
-      "description": "Explains work in business-owner language before technical plumbing.",
+      "description": "Explains work in business-owner language before technical plumbing and translates visible git/GitHub mechanics for normal owners.",
       "keywords": [
         "offer",
         "audience",
@@ -128,7 +128,7 @@
     },
     {
       "id": "ask_before_write",
-      "description": "Asks before durable writes, saves, repairs, migrations, provider mutation, or commits.",
+      "description": "Asks before durable writes, saves, repairs, migrations, provider mutation, or checkpoint commits.",
       "keywords": [
         "ask before",
         "approval",
@@ -139,7 +139,7 @@
     },
     {
       "id": "no_silent_commits",
-      "description": "Does not save checkpoints or create commits without an explicit operator approval path.",
+      "description": "Does not save checkpoints without an explicit operator approval path.",
       "keywords": [
         "mb checkpoint",
         "--plan",

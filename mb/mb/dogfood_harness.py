@@ -1431,8 +1431,22 @@ def evidence_template(state: HarnessState, *, install_mode: str, mb_version: str
     }
     rubric = claude.get("rubric") if isinstance(claude, dict) else None
     rubric_summary = "not run"
+    operator_language_summary = "not run"
     if isinstance(rubric, dict):
         rubric_summary = f"{rubric.get('passed', 0)}/{rubric.get('total', 0)} heuristic checks"
+        operator_language = rubric.get("operator_language", {})
+        if isinstance(operator_language, dict):
+            leakage = operator_language.get("visible_technical_leakage", {})
+            checkpoint = operator_language.get("checkpoint_note_specificity", {})
+            leakage_severity = (
+                leakage.get("severity", "unknown") if isinstance(leakage, dict) else "unknown"
+            )
+            checkpoint_ok = (
+                checkpoint.get("ok", "unknown") if isinstance(checkpoint, dict) else "unknown"
+            )
+            operator_language_summary = (
+                f"technical leakage {leakage_severity}; checkpoint note specificity {checkpoint_ok}"
+            )
     skill_present = (state.fixture_repo / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
     status_schema = status_payload.get("schema_version", "unknown")
     status_wiring = nested_get(status_payload, ("runtime", "skill_wiring", "ok"))
@@ -1519,6 +1533,7 @@ Evidence folder: local artifact; see harness output and summary.json
 - Session strategy: {session_strategy}
 - Session ID captured: {claude_session}
 - Rubric: {rubric_summary}
+- Operator language: {operator_language_summary}
 - Manual transcript review: docs/release-simulations.md#transcript-review
 - Transcript excerpts: {claude_transcript}
 

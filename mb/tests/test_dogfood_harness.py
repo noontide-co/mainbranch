@@ -385,7 +385,14 @@ def test_evidence_template_labels_print_mode_as_proxy(tmp_path: Path) -> None:
         "permission_denials": [],
         "permission_denial_summary": {"total": 0, "read_only_mb_grounding": 0},
         "transcript_excerpts": str(tmp_path / "transcript.md"),
-        "rubric": {"passed": 6, "total": 7},
+        "rubric": {
+            "passed": 6,
+            "total": 7,
+            "operator_language": {
+                "visible_technical_leakage": {"severity": "medium", "examples": []},
+                "checkpoint_note_specificity": {"ok": False, "examples": []},
+            },
+        },
     }
 
     template = harness.evidence_template(state, install_mode="editable", mb_version="mb 0.3.6")
@@ -396,6 +403,8 @@ def test_evidence_template_labels_print_mode_as_proxy(tmp_path: Path) -> None:
     assert "Permission denials: 0" in template
     assert "Read-only `mb` grounding denials: 0" in template
     assert "Rubric: 6/7 heuristic checks" in template
+    assert "Operator language: technical leakage medium" in template
+    assert "checkpoint note specificity False" in template
     assert "Manual transcript review: docs/release-simulations.md#transcript-review" in template
     assert f"Evidence folder: {state.evidence_dir}" not in template
     assert str(tmp_path / "transcript.md") not in template

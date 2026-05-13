@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added release-simulation operator-language rubric warnings for visible
+  technical leakage in Claude final answers, plus docs and tests for
+  translating git/GitHub/checkpoint mechanics into normal owner language first.
+  Refs MAIN-363, #573.
 - Added the first hledger-backed `mb books report monthly --sample --month
   YYYY-MM` surface, including packaged fake journal data, stable JSON envelope
   output, beginner-safe human output, missing-hledger guidance, invalid month
