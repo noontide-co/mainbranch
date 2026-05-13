@@ -17,6 +17,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   PyPI release-acceptance evidence, print-mode proxy limits, post-release docs
   alignment, and the #539 path-to-money follow-up route. Refs #538, #539.
 
+### Changed
+
+- Updated `/mb-start` routing guidance so path-to-money, revenue, next-dollar,
+  and offer-readiness prompts start from deterministic `money_path` facts, carry
+  the MoneyPath snapshot into `/mb-think` handoffs, and avoid normal-path
+  `head` / `sed` status JSON chunking. Refs MAIN-349, #539.
+
 ## [0.3.19] - 2026-05-12
 
 v0.3.19 makes daily status more business-aware: MoneyPath, proof-quality, and

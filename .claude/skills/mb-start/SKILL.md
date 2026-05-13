@@ -31,8 +31,8 @@ actual file paths in commands.
 `mb status --json --peek` before asking setup or routing questions. Treat JSON
 as source of truth for update severity, readiness, drift, onboarding,
 integrations, GitHub, bets, dirty git, since-last-check, `content_strategy`,
-`money_path`, and `ranked_actions`; avoid ad hoc probes unless status says a
-section is unavailable.
+`money_path`, and `ranked_actions`. Parse the full JSON once; do not slice
+status output with `head` or `sed` in the normal path.
 
 **Continuity facts:** Use `since_last_check.journal`, top-level `journal`,
 GitHub activity, and `checkpoint` from status to explain "where we left off."
@@ -315,7 +315,7 @@ selected research path.
 
 ## Step 5: Tool Status Audit (Deterministic Facts First)
 
-Run a lightweight provider/readiness audit before routing:
+Run a lightweight provider/readiness audit:
 
 - Use `mb status --json --peek` facts already gathered.
 - Run `mb connect doctor --json` when a provider section is degraded, missing,
@@ -376,7 +376,7 @@ If `core/offers` is absent and `core/` is also absent, legacy
 `reference/offers` is fallback only. In current repos it bridges to
 `core/offers`.
 
-**If no offers/ folder:** Single-offer mode. Skip to Step 2. Everything reads from `core/`.
+**If no offers/ folder:** Single-offer mode. Skip to Step 2. Read from `core/`.
 
 **If offers/ found:** Multi-offer mode.
 1. Check current CLI status facts first. If a future `mb` JSON field exposes
@@ -429,7 +429,7 @@ to `/mb-think`.
 
 **Respect readiness gates from Step 6.** If status is MINIMAL or EMPTY, do not offer output skills. If THIN, warn. See [readiness-assessment.md](references/readiness-assessment.md) for skill-specific requirements.
 
-**Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[active offer or 'single']**"
+**Show context:** "Business: **[repo name]** | Offer: **[active offer or 'single']**"
 
 If the user stated intent, route directly using
 [references/router-and-language.md](references/router-and-language.md). If the

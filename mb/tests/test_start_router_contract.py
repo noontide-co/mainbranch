@@ -47,6 +47,40 @@ def test_router_contract_covers_books_save_sync_and_updates() -> None:
     assert "noontide-admin" not in router.lower()
 
 
+def test_start_router_routes_money_intent_from_moneypath_facts() -> None:
+    start = _read(START_SKILL)
+    router = _read(ROUTER_REF)
+
+    assert "Parse the full JSON once" in start
+    assert "do not slice\nstatus output with `head` or `sed`" in start
+
+    required_phrases = [
+        "Path to money, revenue, offer readiness",
+        "path to money",
+        "next dollar",
+        "offer readiness",
+        "Keep hard gates first",
+        "`money_path.overall_level`",
+        "`money_path.overall_label`",
+        "`money_path.objects.offer`",
+        "`money_path.objects.proof`",
+        "`money_path.objects.product_ladder`",
+        "`money_path.objects.cta_path`",
+        "`money_path.objects.channel_strategy`",
+        "`money_path.objects.active_push`",
+        "`money_path.objects.outcome_feedback_loop`",
+        "`money_path.ranked_actions`",
+        "without conversion judgment",
+        "Explain whether top-level `ranked_actions` agree with the MoneyPath\n  bottleneck",
+        "include a MoneyPath snapshot in the handoff",
+    ]
+    for phrase in required_phrases:
+        assert phrase in router
+
+    assert "Your offer is bad." in router
+    assert "This will not convert." in router
+
+
 def test_start_router_no_longer_blindly_pulls_business_repo() -> None:
     start = _read(START_SKILL)
     update = _read(UPDATE_REF)
