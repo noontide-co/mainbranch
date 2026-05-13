@@ -273,6 +273,18 @@ def test_score_transcript_does_not_double_count_specific_origin_remote_phrase() 
     assert [item["phrase"] for item in leakage["examples"]] == ["No GitHub origin remote"]
 
 
+def test_score_transcript_allows_commit_as_plain_verb() -> None:
+    transcript = """
+    Keep raw ledgers in the private books vault and only commit summaries that
+    are safe for the team repo.
+    """
+
+    score = release_simulation.score_transcript(transcript)
+    leakage = score["operator_language"]["visible_technical_leakage"]
+
+    assert leakage["examples"] == []
+
+
 def test_score_transcript_flags_broad_checkpoint_notes() -> None:
     transcript = """
     Checkpoint plan ready.

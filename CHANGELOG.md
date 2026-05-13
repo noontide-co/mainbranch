@@ -89,6 +89,10 @@ guidance.
 
 ### Changed
 
+- Updated release-simulation scoring and `/mb-start` owner-language guidance so
+  normal answers translate raw git/GitHub status phrases before speaking, while
+  allowing ordinary phrasing such as "only commit summaries." Refs MAIN-364,
+  #575.
 - Updated `/mb-ads` image-generation guidance to stop hard-coding a single
   Gemini model or private local environment path, require provider/model
   metadata in image indexes, and fall back to saved prompts when no approved

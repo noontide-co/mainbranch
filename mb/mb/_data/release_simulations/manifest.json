@@ -825,7 +825,7 @@
         "repo_boundary_safety"
       ],
       "must_observe": [
-        "Runs or recommends mb checkpoint --plan before commit.",
+        "Runs or recommends mb checkpoint --plan before saving.",
         "Validates the proposed message before save.",
         "Asks for explicit approval before mb checkpoint --message ... --yes.",
         "Explains checkpoint as saved business progress."

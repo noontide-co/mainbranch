@@ -73,6 +73,19 @@ Do not print checkpoint ids, branch names, `origin`, `ahead`, `behind`,
 `diverged`, `rebase`, or `commit` in the first response unless they are inside a
 command the user must run or the user asked for technical detail.
 
+Before answering a normal owner prompt, translate raw status summaries that leak
+from tools:
+
+| Tool phrasing | Owner-facing translation |
+| --- | --- |
+| `git is clean`, `repo is clean`, `working tree clean` | nothing unsaved locally |
+| `on main`, `branch main` | current business folder or current workspace |
+| `one commit`, `only commit so far` | setup baseline saved or last saved checkpoint |
+| `staged files` | files queued for save |
+| `No GitHub origin remote` | local-only folder or no connected GitHub backup |
+| `PR/issue facts` | GitHub task and proposal context |
+| `before this goes to a remote` | before anything is shared outside your machine |
+
 Good pattern:
 
 > "Your bookkeeping setup is saved locally. The shared repo also has one newer
