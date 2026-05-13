@@ -16,7 +16,7 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added compact, privacy-safe books readiness facts to `mb status --json --peek`
   and `mb start --json`, so daily-loop agents can see bookkeeping setup,
   hledger availability, vault/ignore safety, unsafe artifact counts, and the
-  next safe books command without reading ledger contents or exposing private
+  next safe books route without reading ledger contents or exposing private
   paths. Refs MAIN-355, #555, #510, #553, #128.
 - Added an accepted decision for agentic security review sidecars: DeepSec may
   be used as an optional local pre-release review aid for security-sensitive

@@ -1063,6 +1063,18 @@ def _readiness_summary(state: str, status_report: dict[str, Any]) -> str:
     return str(status_report.get("summary") or "Bookkeeping setup passed.")
 
 
+def _readiness_route(state: str) -> dict[str, str]:
+    if state in {"blocked", "warn", "missing"}:
+        return {
+            "tool": "mb books doctor --plan",
+            "reason": "plan bookkeeping setup repairs",
+        }
+    return {
+        "tool": "mb books status",
+        "reason": "inspect bookkeeping setup",
+    }
+
+
 def readiness(repo: str | Path = ".") -> dict[str, Any]:
     """Return compact books readiness facts for daily status/start JSON.
 
@@ -1086,6 +1098,7 @@ def readiness(repo: str | Path = ".") -> dict[str, Any]:
         if state in {"blocked", "warn", "missing"}
         else "mb books status --json"
     )
+    recommended_route = _readiness_route(state)
     return {
         "schema_version": "1.0",
         "state": state,
@@ -1110,6 +1123,7 @@ def readiness(repo: str | Path = ".") -> dict[str, Any]:
         "unsafe_artifacts": {"count": unsafe_count},
         "chart_of_accounts": {"present": chart_present},
         "next_command": next_command,
+        "recommended_route": recommended_route,
         "source": "mb books status",
         "safe_to_share": True,
     }

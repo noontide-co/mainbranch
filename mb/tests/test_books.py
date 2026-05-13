@@ -512,6 +512,10 @@ ledger: hledger
     assert readiness["ignore"]["ok"] is True
     assert readiness["unsafe_artifacts"]["count"] == 0
     assert readiness["chart_of_accounts"]["present"] is True
+    assert readiness["recommended_route"] == {
+        "tool": "mb books status",
+        "reason": "inspect bookkeeping setup",
+    }
     assert "PRIVATE_LEDGER_CONTENT" not in payload
     assert "/fake/private/bin/hledger" not in payload
 
@@ -528,6 +532,10 @@ def test_books_readiness_counts_unsafe_artifacts_without_names(tmp_path: Path) -
     assert readiness["mention"] is True
     assert readiness["unsafe_artifacts"]["count"] == 1
     assert readiness["next_command"] == "mb books doctor --plan --json"
+    assert readiness["recommended_route"] == {
+        "tool": "mb books doctor --plan",
+        "reason": "plan bookkeeping setup repairs",
+    }
     assert "customer-bank-statement.csv" not in payload
     assert "Acme,100" not in payload
 

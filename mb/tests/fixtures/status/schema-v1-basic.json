@@ -119,6 +119,7 @@
       "mention",
       "next_command",
       "policy",
+      "recommended_route",
       "safe_to_share",
       "schema_version",
       "source",

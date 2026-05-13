@@ -213,6 +213,10 @@ def test_start_json_preserves_books_readiness(
     assert report["books"]["hledger"]["available"] is False
     assert report["books"]["ignore"]["ok"] is False
     assert report["books"]["next_command"] == "mb books doctor --plan --json"
+    assert report["books"]["recommended_route"] == {
+        "tool": "mb books doctor --plan",
+        "reason": "plan bookkeeping setup repairs",
+    }
 
 
 def test_start_degrades_when_claude_is_missing(tmp_path: Path, monkeypatch) -> None:

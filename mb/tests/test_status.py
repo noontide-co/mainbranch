@@ -348,6 +348,10 @@ def test_status_books_readiness_fresh_repo_is_compact(
     assert books["hledger"]["available"] is False
     assert books["policy"]["present"] is False
     assert books["next_command"] == "mb books status --json"
+    assert books["recommended_route"] == {
+        "tool": "mb books status",
+        "reason": "inspect bookkeeping setup",
+    }
     assert books["safe_to_share"] is True
 
 
