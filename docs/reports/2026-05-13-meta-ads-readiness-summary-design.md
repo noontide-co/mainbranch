@@ -57,7 +57,7 @@ test_exit=0 status_exit=0 peek_exit=0
 business_repo_git_status_count=0
 ```
 
-Direct `meta` CLI read-only API ping also passed with sanitized exit evidence:
+Direct `meta` CLI read-only API ping also passed with exit-only evidence:
 
 ```text
 auth_status_exit=0
@@ -66,17 +66,6 @@ campaign_list_exit=0
 insights_get_exit=0
 dataset_list_exit=0
 ```
-
-Sanitized direct-ping shape:
-
-- `meta --version` returned Meta Ads CLI `1.0.1`;
-- `meta auth status` returned authenticated and showed only a CLI-redacted token
-  preview;
-- ad account listing returned one readable account with active account status,
-  USD currency, and `America/Los_Angeles` timezone;
-- campaign listing returned at least one active campaign plus paused historical
-  campaigns across sales, lead, traffic, and engagement objectives;
-- insights and dataset read commands completed with exit `0`.
 
 Raw command output belongs in ignored local scratch and should not be copied to
 GitHub, docs, PR bodies, or tracked files.
@@ -95,6 +84,11 @@ Default behavior:
 - emit JSON to stdout only;
 - write no raw provider payloads or cache files;
 - redact account IDs and business IDs;
+- set `safe_to_share: false` because even compact account summaries can expose
+  private account context;
+- show spend presence or a coarse spend range by default, not exact spend;
+- include exact spend only behind explicit current-run approval such as
+  `--include-exact-spend`;
 - omit campaign names unless the operator explicitly approves including names
   for the current run.
 
@@ -103,20 +97,29 @@ Suggested options:
 ```bash
 mb ads meta summary --repo <BUSINESS_REPO> --window 7d --json
 mb ads meta summary --repo <BUSINESS_REPO> --since 2026-05-01 --until 2026-05-07 --json
+mb ads meta summary --repo <BUSINESS_REPO> --include-exact-spend --json
 mb ads meta summary --repo <BUSINESS_REPO> --include-campaign-names --json
 ```
 
-`--include-campaign-names` should be current-run only. It should not change
-saved provider metadata or cause names to be written into tracked files.
+`--include-exact-spend` and `--include-campaign-names` should be current-run
+only. They should not change saved provider metadata or cause values or names to
+be written into tracked files. Any exact spend output still forces
+`safe_to_share: false`.
 
 ## JSON Shape
 
-Keep the envelope small and stable:
+Use the shared `mb.json_result` envelope pattern for the actual CLI response.
+Do not invent a competing result shape. The implementation should preserve
+normal result fields such as `mb_command`, `result_schema`, `result_status`,
+`errors`, and `actions` where current CLI conventions expect them.
+
+The domain payload inside that shared envelope should stay small and stable:
 
 ```json
 {
   "ok": true,
-  "schema_version": 1,
+  "schema_version": "1.0",
+  "safe_to_share": false,
   "provider": "meta",
   "command": "mb ads meta summary",
   "state": "ready",
@@ -127,10 +130,10 @@ Keep the envelope small and stable:
     "until": "2026-05-13"
   },
   "privacy": {
-    "safe_to_share_publicly": false,
     "raw_payload_written": false,
     "tracked_files_written": false,
     "account_ids_redacted": true,
+    "exact_spend_included": false,
     "campaign_names_included": false
   },
   "readiness": {
@@ -176,6 +179,12 @@ Keep the envelope small and stable:
 }
 ```
 
+`safe_to_share: false` means the command output is appropriate for the
+operator's local chat/session after approval, but should not be copied into
+public issues, PRs, docs, or tracked business files. The flag stays false even
+when raw IDs are redacted because account activity, spend context,
+currency/timezone, counts, and campaign context can still be private.
+
 If Meta is not ready, the command should return a non-zero exit with the same
 readiness state and repair command that `mb connect` reports. It should not
 probe account data after a readiness failure.
@@ -208,7 +217,8 @@ The summary may include:
 - safe account label;
 - currency and timezone;
 - active campaign count;
-- recent spend presence, range, or total for the requested window;
+- recent spend presence or a coarse range by default;
+- exact spend only with explicit current-run approval;
 - campaign names only with current-run approval;
 - broad performance direction;
 - dataset or pixel readiness when available;
@@ -229,7 +239,7 @@ The summary must avoid:
 ## Follow-Up Implementation
 
 Implementation is tracked in
-[GitHub issue #582](https://github.com/noontide-co/mainbranch/issues/582). It
-is scoped to `mb ads meta summary --json`, focused tests, and a read-only smoke
-path. It does not include mutation, dashboards, durable performance caches, or
-broad reporting imports.
+[GitHub issue #582 / MAIN-367](https://github.com/noontide-co/mainbranch/issues/582).
+It is scoped to `mb ads meta summary --json`, focused tests, and a read-only
+smoke path. It does not include mutation, dashboards, durable performance
+caches, or broad reporting imports.
