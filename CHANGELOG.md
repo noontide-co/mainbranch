@@ -18,6 +18,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   protections, and check health; `mb books doctor --plan` now gives a
   non-mutating repair plan for safe bookkeeping setup gaps without reading or
   mutating real ledger contents. Refs #552, #128.
+- Added the MAIN-332 post-#553 bookkeeping dogfood report covering `mb books
+  check`, `mb books status`, `mb books doctor --plan`, skill routing, status
+  gaps, and privacy boundary findings. Refs #510, #555.
 - Added the first shared workflow source prototype for the daily start ->
   MoneyPath `/mb-think` handoff, with generated Claude/Codex shell snapshots
   and drift tests that require shared `mb` commands and JSON facts to stay
@@ -42,6 +45,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   setup and read-only command surface, and keeps live account checks out of
   scope until `mb` owns detection and sanitized read-only smoke. Refs MAIN-350,
   #542.
+
+### Fixed
+
+- Fixed post-#553 bookkeeping dogfood gaps: `/mb-start` now routes bookkeeping
+  checks through the shipped positional `mb books check "$REPO_PATH" --json`
+  syntax, and `mb books status` / `mb books doctor --plan` now warn when
+  non-local books storage is selected without a safe private vault label. Refs
+  MAIN-332, #510.
 
 ## [0.3.19] - 2026-05-12
 

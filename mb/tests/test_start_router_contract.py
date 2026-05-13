@@ -39,7 +39,7 @@ def test_router_contract_covers_books_save_sync_and_updates() -> None:
         "proposal/review path",
         "ad hoc PR-instruction attachments",
         "Update strongly recommended",
-        'Run `mb books check --repo "$REPO_PATH" --json`',
+        'Run `mb books check "$REPO_PATH" --json`',
         "`storage_mode`",
         "hub registry",
         "child descriptor `.mainbranch/repo.json`",

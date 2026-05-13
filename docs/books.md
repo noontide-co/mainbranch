@@ -244,6 +244,8 @@ mb books doctor [REPO] --plan [--json]
 - sanitized private-vault location labels. Relative paths inside the
   business repo may be shown; external absolute vault paths are
   reported as external private paths instead of printed;
+- a warning when team/private or advanced storage mode is selected but
+  the policy does not name a safe private repo or vault label;
 - whether the configured local vault exists;
 - whether a private `main.journal` placeholder exists, without
   reading its contents;
@@ -259,6 +261,7 @@ gaps:
 - add a safe `core/finance/books.md` policy when the operator is
   ready;
 - add or fix `storage_mode`;
+- add a safe private repo or vault label for non-local storage modes;
 - add bookkeeping ignore protections;
 - create the private books vault directory;
 - create a private hledger journal placeholder from a safe template

@@ -72,8 +72,8 @@ meaning before suggesting file moves.
 
 **Books/finance routing:** When the user mentions bookkeeping, books, finance,
 accounting, ledgers, statements, P&L, chart of accounts, tax, payroll, hledger,
-or a restricted `finance` child repo, run `mb books check --repo "$REPO_PATH"
---json` before drafting files. Keep raw private finance records out of the
+or a restricted `finance` child repo, run `mb books check "$REPO_PATH" --json`
+before drafting files. Keep raw private finance records out of the
 team-safe hub repo; use the books contract, `storage_mode`, and topology
 visibility (`restricted` or `local_only`) to route raw records.
 

@@ -147,7 +147,7 @@ hledger, receipts, tax, payroll, revenue report.
 
 Route:
 
-- Run `mb books check --repo "$REPO_PATH" --json` before inventing structure.
+- Run `mb books check "$REPO_PATH" --json` before inventing structure.
 - Keep raw ledgers, statements, credentials, account numbers, payroll rows, tax
   IDs, and exact private numbers out of the public/team-safe business repo.
 - Preserve public topology terms: hub repo, child repo, hub registry

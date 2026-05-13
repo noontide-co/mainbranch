@@ -369,6 +369,29 @@ def _status_extra_findings(
         )
 
     vault = _vault_info(repo, fm)
+    storage_mode = vault["storage_mode"]
+    if storage_mode in NON_LOCAL_STORAGE_MODES and not vault["configured"]:
+        findings.append(
+            _finding(
+                id="books-vault-location-missing",
+                title="Private books vault location is not configured",
+                state="warn",
+                detail=(
+                    f"storage_mode={storage_mode!r} expects the real books to live "
+                    "outside this repo, but core/finance/books.md does not name "
+                    "the private repo or vault handle."
+                ),
+                audience="operator_decision",
+                operator_summary=(
+                    "Set vault_location in core/finance/books.md so the operator "
+                    "knows where the private books live."
+                ),
+                repair=(
+                    "Add a safe vault_location label to core/finance/books.md; "
+                    "do not paste an absolute private path or real ledger data."
+                ),
+            )
+        )
     policy_present = _has_books_policy(repo)
     if vault["exists"] is True:
         findings.append(
@@ -1107,6 +1130,23 @@ def doctor_plan(repo: str | Path = ".") -> dict[str, Any]:
                 ),
                 writes=["core/finance/chart-of-accounts.md"],
                 audience="informational",
+            )
+        )
+
+    if "books-vault-location-missing" in findings:
+        finding = findings["books-vault-location-missing"]
+        actions.append(
+            _plan_action(
+                id="configure-private-books-vault-location",
+                title="Configure private books vault location",
+                state="warn",
+                reason=finding["operator_summary"],
+                command=(
+                    "Set vault_location in core/finance/books.md to a safe private "
+                    "repo or vault label; keep raw finance data out of this repo."
+                ),
+                writes=["core/finance/books.md"],
+                audience="operator_decision",
             )
         )
 
