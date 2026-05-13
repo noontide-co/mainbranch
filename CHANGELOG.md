@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Aligned post-v0.3.21 roadmap and bookkeeping docs so the sample monthly books
+  report and Meta Ads read-only summary are described as shipped, while
+  private-vault reporting, imports, reconciliation, and provider mutation remain
+  deferred. Refs #590.
+
 ## [0.3.21] - 2026-05-13
 
 v0.3.21 packages the first compact read-only Meta Ads readiness and summary

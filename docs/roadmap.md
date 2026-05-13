@@ -38,6 +38,13 @@ Main Branch already ships:
   plus `mb books check`, `mb books status`, and `mb books doctor --plan` for
   privacy-bounded setup checks without reading ledgers or exposing private
   vault paths;
+- the first hledger-backed sample monthly books report through
+  `mb books report monthly --sample --month YYYY-MM`, using packaged fake data
+  so operators can see the report shape without exposing real books;
+- Meta Ads read-only readiness through `mb connect meta` /
+  `mb connect test meta --json`, plus compact `mb ads meta summary --json`
+  account context after the operator has configured the official Meta Ads CLI
+  path;
 - privacy-safe GitHub issue drafting and submission (`mb issue draft`,
   `mb issue open`) for user friction;
 - push, reusable playbook, and per-push run-record vocabulary for coordinated
@@ -112,12 +119,14 @@ The work clusters into a few durable buckets:
   synthesis only when the decision justifies the time, tokens, and permissions.
 - **Books readiness and reporting.** hledger is the accounting engine, `mb
   books` is the privacy, JSON, and workflow wrapper, and skills are the chat UX.
-  Next direction is fake-data sample reporting before private-vault reports,
-  imports, reconciliation, or close workflows.
-- **Provider rails.** Cloudflare, GitHub, Google/Workspace, ads providers,
-  Apify, Postiz-style social scheduling, and future sidecars should enter
-  through explicit, tested rails with approval gates where money, publishing,
-  account mutation, or customer contact is involved.
+  Fake-data sample monthly reporting is shipped; next direction is
+  private-vault reports, imports, reconciliation, or close workflows only after
+  separate privacy and smoke evidence.
+- **Provider rails.** Cloudflare, GitHub, Google/Workspace, Meta Ads, Apify,
+  Postiz-style social scheduling, and future sidecars should enter through
+  explicit, tested rails with approval gates where money, publishing, account
+  mutation, or customer contact is involved. Meta Ads has read-only readiness
+  and compact summary rails; broader provider mutation remains out of scope.
 - **Issue and friction capture.** Confusing errors, missing workflows, and
   repeated repair steps should turn into privacy-safe issue drafts so real use
   improves the public engine.
