@@ -23,6 +23,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   and offer-readiness prompts start from deterministic `money_path` facts, carry
   the MoneyPath snapshot into `/mb-think` handoffs, and avoid normal-path
   `head` / `sed` status JSON chunking. Refs MAIN-349, #539.
+- Promoted Meta Ads provider guidance from `planned` to `readiness`: Main
+  Branch now names Meta's official `meta-ads` / `meta` CLI path, documents the
+  setup and read-only command surface, and keeps live account checks out of
+  scope until `mb` owns detection and sanitized read-only smoke. Refs MAIN-350,
+  #542.
 
 ## [0.3.19] - 2026-05-12
 
