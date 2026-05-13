@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added the first hledger-backed `mb books report monthly --sample --month
+  YYYY-MM` surface, including packaged fake journal data, stable JSON envelope
+  output, beginner-safe human output, missing-hledger guidance, invalid month
+  handling, and privacy-boundary tests. Refs MAIN-360, #567, #560.
+
 ## [0.3.20] - 2026-05-13
 
 v0.3.20 packages the chat-first, fact-backed daily operating loop. It adds
@@ -23,10 +30,6 @@ guidance.
 
 ### Added
 
-- Added the first hledger-backed `mb books report monthly --sample --month
-  YYYY-MM` surface, including packaged fake monthly report data, stable JSON
-  envelope output, beginner-safe human output, missing-hledger guidance, invalid
-  month handling, and privacy-boundary tests. Refs MAIN-360, #567, #560.
 - Added a `/mb-think` research-depth ladder for offer, audience, proof,
   product-ladder, CTA, content strategy, ads/page launch, market positioning,
   and influence/playbook work, including enough-signal thresholds, stop rules,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -41,6 +42,17 @@ def _git_add_all(repo: Path) -> None:
 
 def _findings_by_id(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {finding["id"]: finding for finding in report["findings"]}
+
+
+def _assert_monthly_report_envelope(payload: dict[str, Any]) -> None:
+    assert payload["result_schema"]["name"] == "mainbranch.books.report.v1"
+    assert payload["result_envelope_version"] == "1.0"
+    assert payload["schema_version"] == "1.0"
+    assert "source" in payload
+    assert "report" in payload
+    assert "totals" in payload
+    assert "findings" in payload
+    assert "redactions" in payload
 
 
 def test_books_check_empty_repo_reports_recommendations(tmp_path: Path) -> None:
@@ -790,17 +802,6 @@ def test_bundled_fixture_matches_docs_fixture() -> None:
     )
 
 
-def test_bundled_sample_report_fixture_matches_docs_fixture() -> None:
-    """The packaged sample report is a byte-identical mirror of the docs copy."""
-    repo_root = Path(__file__).resolve().parents[2]
-    docs_bytes = (repo_root / "docs/examples/books/reports/sample-monthly.json").read_bytes()
-    pkg_bytes = (repo_root / "mb/mb/_data/books/reports/sample-monthly.json").read_bytes()
-    assert docs_bytes == pkg_bytes, (
-        "mb/mb/_data/books/reports/sample-monthly.json has drifted from "
-        "docs/examples/books/reports/sample-monthly.json. Re-sync them."
-    )
-
-
 def test_books_report_monthly_json_uses_hledger_envelope_and_sample_boundary(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -815,9 +816,7 @@ def test_books_report_monthly_json_uses_hledger_envelope_and_sample_boundary(
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
     assert payload["mb_command"] == "mb books report monthly --sample --month 2026-01"
-    assert payload["result_schema"]["name"] == "mainbranch.books.report.v1"
-    assert payload["result_envelope_version"] == "1.0"
-    assert payload["schema_version"] == "1.0"
+    _assert_monthly_report_envelope(payload)
     assert payload["safe_to_share"] is True
     assert payload["source"]["kind"] == "packaged_fixture"
     assert payload["source"]["fixture"] is True
@@ -848,6 +847,23 @@ def test_books_report_monthly_json_uses_hledger_envelope_and_sample_boundary(
     assert any("balance" in call and "assets:bank" in call and "-H" in call for call in seen)
     assert any("balancesheetequity" in call and "-O" in call and "json" in call for call in seen)
     assert all("-n" in call for call in seen)
+
+
+def test_books_report_monthly_docs_example_matches_real_hledger_output() -> None:
+    if not shutil.which("hledger"):
+        pytest.skip("hledger is not installed")
+    repo_root = Path(__file__).resolve().parents[2]
+    expected = json.loads(
+        (repo_root / "docs/examples/books/reports/sample-monthly.json").read_text()
+    )
+
+    result = runner.invoke(
+        app,
+        ["books", "report", "monthly", "--sample", "--month", "2026-01", "--json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output) == expected
 
 
 def test_books_report_monthly_human_output_is_beginner_safe(
@@ -882,9 +898,29 @@ def test_books_report_monthly_requires_sample_flag() -> None:
 
     assert result.exit_code == 2, result.output
     payload = json.loads(result.output)
+    _assert_monthly_report_envelope(payload)
     assert payload["ok"] is False
+    assert payload["mb_command"] == "mb books report monthly --month 2026-01"
     assert "only --sample reports are implemented" in payload["operator_summary"]
     assert "private books reporting is out of scope" in payload["operator_summary"]
+    findings = _findings_by_id(payload)
+    assert findings["sample-required"]["state"] == "error"
+
+
+def test_books_report_monthly_requires_month_with_uniform_envelope() -> None:
+    result = runner.invoke(
+        app,
+        ["books", "report", "monthly", "--sample", "--json"],
+    )
+
+    assert result.exit_code == 2, result.output
+    payload = json.loads(result.output)
+    _assert_monthly_report_envelope(payload)
+    assert payload["ok"] is False
+    assert payload["mb_command"] == "mb books report monthly --sample"
+    assert "--month is required" in payload["operator_summary"]
+    findings = _findings_by_id(payload)
+    assert findings["month-required"]["state"] == "error"
 
 
 def test_books_report_monthly_rejects_invalid_month() -> None:
@@ -895,8 +931,11 @@ def test_books_report_monthly_rejects_invalid_month() -> None:
 
     assert result.exit_code == 2, result.output
     payload = json.loads(result.output)
+    _assert_monthly_report_envelope(payload)
     assert payload["ok"] is False
     assert "real calendar month" in payload["operator_summary"]
+    findings = _findings_by_id(payload)
+    assert findings["month-invalid"]["state"] == "error"
 
 
 def test_books_report_monthly_missing_hledger_returns_guidance(
@@ -917,3 +956,15 @@ def test_books_report_monthly_missing_hledger_returns_guidance(
     assert findings["hledger-missing"]["state"] == "error"
     assert "Install hledger" in findings["hledger-missing"]["repair"]
     assert "not reading your private books" in result.output
+
+
+def test_amount_owed_display_keeps_machine_readable_sign() -> None:
+    amount = books_mod._amount_from_parts(
+        commodity="USD",
+        mantissa=-6750,
+        places=2,
+        owed=True,
+    )
+
+    assert amount["decimal_mantissa"] == -6750
+    assert amount["display"] == "$67.50 owed"

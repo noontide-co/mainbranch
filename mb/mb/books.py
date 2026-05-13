@@ -974,7 +974,7 @@ def _amount_from_parts(
     scale = 10**places
     whole = absolute_mantissa // scale
     fraction = absolute_mantissa % scale
-    sign = "-" if display_mantissa < 0 else ""
+    sign = "" if owed else "-" if mantissa < 0 else ""
     if commodity == "USD" and places == 2:
         display = f"{sign}${whole:,}.{fraction:02d}"
     elif places > 0:
@@ -985,7 +985,7 @@ def _amount_from_parts(
         display = f"{display} owed"
     return {
         "commodity": commodity,
-        "decimal_mantissa": abs(mantissa) if owed else mantissa,
+        "decimal_mantissa": mantissa,
         "decimal_places": places,
         "display": display,
     }
@@ -1143,6 +1143,11 @@ def _sample_report_error(
     label: str,
     findings: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    operator_summary = (
+        findings[0]["operator_summary"]
+        if len(findings) == 1
+        else "Main Branch could not generate the sample books report."
+    )
     return {
         "ok": False,
         "schema_version": BOOKS_REPORT_SCHEMA,
@@ -1164,7 +1169,7 @@ def _sample_report_error(
             "currency": "USD",
         },
         "totals": {},
-        "operator_summary": "Main Branch could not generate the sample books report.",
+        "operator_summary": operator_summary,
         "warnings": [SAMPLE_REPORT_WARNING],
         "errors": [finding["operator_summary"] for finding in findings],
         "findings": findings,
@@ -1175,6 +1180,38 @@ def _sample_report_error(
             "transaction_memos": True,
         },
     }
+
+
+def sample_monthly_rejection(
+    *,
+    month: str,
+    finding_id: str,
+    title: str,
+    message: str,
+    repair: str = "",
+) -> dict[str, Any]:
+    """Return a uniform sample monthly report envelope for validation rejections."""
+    label = month or "not selected"
+    if month:
+        try:
+            _, _, label = _month_bounds(month)
+        except ValueError:
+            label = month
+    return _sample_report_error(
+        month=month,
+        label=label,
+        findings=[
+            _finding(
+                id=finding_id,
+                title=title,
+                state="error",
+                detail=message,
+                audience="operator_decision",
+                operator_summary=message,
+                repair=repair,
+            )
+        ],
+    )
 
 
 def _validate_fixture(

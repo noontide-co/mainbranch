@@ -36,8 +36,9 @@ mb/mb/_data/books/acme-fixture.journal
 The docs copy is the human-readable public example. The packaged copy is what
 installed `mb` can use for fixture-backed checks and sample reports.
 
-Tests already require both copies to carry a fixture marker and stay
-byte-identical. Keep that pattern for any future fake report fixture outputs.
+Tests already require both journal copies to carry a fixture marker and stay
+byte-identical. Keep generated JSON report examples in docs unless runtime code
+needs to read a cached output fixture.
 
 Do not copy fake journals into generated business repos with `mb init` or
 `mb onboard`. A sample report should be available from the package, not by
@@ -45,8 +46,9 @@ placing ledger-shaped files in the user's business repo.
 
 ## Package Data Shape
 
-If the first implementation needs cached expected output fixtures, keep them
-under the same fake-data namespace:
+The first implementation generates report output from the packaged fake journal
+at runtime. Keep the documented JSON example under the docs namespace and test
+it against real hledger output when hledger is available:
 
 ```text
 docs/examples/books/
@@ -56,12 +58,13 @@ docs/examples/books/
 
 mb/mb/_data/books/
   acme-fixture.journal
-  reports/
-    sample-monthly.json
 ```
 
-Only fake fixture outputs generated from fake fixture data belong there. Do not
-package real ledgers, real statement exports, or private-vault examples.
+If a future implementation needs cached expected output fixtures in package
+data, keep them under the same fake-data namespace and make runtime or smoke
+tests consume them so they cannot drift silently. Only fake fixture outputs
+generated from fake fixture data belong there. Do not package real ledgers, real
+statement exports, or private-vault examples.
 
 ## Status And Start Integration
 

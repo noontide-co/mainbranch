@@ -1062,49 +1062,31 @@ def books_report_monthly_cmd(
         "--sample",
         help="Use the fake packaged sample journal. Required in this release.",
     ),
-    month: str = typer.Option(..., "--month", help="Report month as YYYY-MM."),
+    month: str = typer.Option("", "--month", help="Report month as YYYY-MM."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Generate a sample monthly books report through hledger."""
-    command = f"mb books report monthly --sample --month {month}"
+    month = month.strip()
+    command_parts = ["mb books report monthly"]
+    if sample:
+        command_parts.append("--sample")
+    if month:
+        command_parts.extend(["--month", month])
+    command = " ".join(command_parts)
     if not sample:
         message = (
             "mb books report monthly: only --sample reports are implemented; "
             "private books reporting is out of scope for this release"
         )
-        payload = {
-            "ok": False,
-            "schema_version": books_mod.BOOKS_REPORT_SCHEMA,
-            "safe_to_share": True,
-            "summary": message,
-            "operator_summary": message,
-            "errors": [message],
-            "warnings": [books_mod.SAMPLE_REPORT_WARNING],
-        }
-        if json_out:
-            typer.echo(
-                _json_payload(
-                    payload,
-                    command=f"mb books report monthly --month {month}",
-                    schema_name="mainbranch.books.report.v1",
-                )
-            )
-        else:
-            typer.echo(message, err=True)
-        raise typer.Exit(2)
-
-    try:
-        report = books_mod.sample_monthly_report(month)
-    except ValueError as exc:
-        payload = {
-            "ok": False,
-            "schema_version": books_mod.BOOKS_REPORT_SCHEMA,
-            "safe_to_share": True,
-            "summary": str(exc),
-            "operator_summary": str(exc),
-            "errors": [str(exc)],
-            "warnings": [books_mod.SAMPLE_REPORT_WARNING],
-        }
+        payload = books_mod.sample_monthly_rejection(
+            month=month,
+            finding_id="sample-required",
+            title="Sample flag required",
+            message=message,
+            repair=(
+                "Run `mb books report monthly --sample --month 2026-01` to view fake sample data."
+            ),
+        )
         if json_out:
             typer.echo(
                 _json_payload(
@@ -1114,7 +1096,51 @@ def books_report_monthly_cmd(
                 )
             )
         else:
-            typer.echo(f"mb books report monthly: {exc}", err=True)
+            typer.echo(message, err=True)
+        raise typer.Exit(2)
+
+    if not month:
+        message = "mb books report monthly: --month is required; use YYYY-MM, for example 2026-01"
+        payload = books_mod.sample_monthly_rejection(
+            month=month,
+            finding_id="month-required",
+            title="Report month required",
+            message=message,
+            repair="Run `mb books report monthly --sample --month 2026-01`.",
+        )
+        if json_out:
+            typer.echo(
+                _json_payload(
+                    payload,
+                    command=command,
+                    schema_name="mainbranch.books.report.v1",
+                )
+            )
+        else:
+            books_mod.render_sample_monthly_report(payload)
+        raise typer.Exit(2)
+
+    try:
+        report = books_mod.sample_monthly_report(month)
+    except ValueError as exc:
+        message = f"mb books report monthly: {exc}"
+        payload = books_mod.sample_monthly_rejection(
+            month=month,
+            finding_id="month-invalid",
+            title="Report month invalid",
+            message=message,
+            repair="Use YYYY-MM with a real calendar month, for example 2026-01.",
+        )
+        if json_out:
+            typer.echo(
+                _json_payload(
+                    payload,
+                    command=command,
+                    schema_name="mainbranch.books.report.v1",
+                )
+            )
+        else:
+            books_mod.render_sample_monthly_report(payload)
         raise typer.Exit(2) from exc
 
     if json_out:
