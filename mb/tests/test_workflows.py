@@ -81,6 +81,18 @@ def test_drift_detection_flags_omitted_required_command_or_fact() -> None:
     assert "shell missing required JSON fact path: money_path.objects.proof.quality" in errors
 
 
+def test_drift_detection_requires_exact_bulleted_fact_paths() -> None:
+    workflow = load_workflow(WORKFLOW)
+    shell = render_codex_shell(workflow)
+    drifted = shell.replace("- `money_path`\n", "")
+    drifted = drifted.replace("- `ranked_actions`\n", "")
+
+    errors = shell_drift_errors(workflow, drifted)
+
+    assert "shell missing required JSON fact path: money_path" in errors
+    assert "shell missing required JSON fact path: ranked_actions" in errors
+
+
 def test_workflow_source_and_snapshots_stay_public_safe() -> None:
     texts = [
         WORKFLOW.read_text(encoding="utf-8"),

@@ -209,12 +209,17 @@ def shell_drift_errors(workflow: WorkflowSource, shell_text: str) -> list[str]:
 
     errors: list[str] = []
     for command in workflow.required_mb_commands:
-        if command not in shell_text:
+        if not _has_exact_bullet_item(shell_text, command):
             errors.append(f"shell missing required mb command: {command}")
     for fact in workflow.json_facts:
-        if fact not in shell_text:
+        if not _has_exact_bullet_item(shell_text, fact):
             errors.append(f"shell missing required JSON fact path: {fact}")
     return errors
+
+
+def _has_exact_bullet_item(text: str, item: str) -> bool:
+    expected = f"- `{item}`"
+    return any(line.strip() == expected for line in text.splitlines())
 
 
 def public_private_boundary_errors(text: str) -> list[str]:
