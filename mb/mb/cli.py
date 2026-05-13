@@ -94,6 +94,13 @@ books_app = typer.Typer(
 )
 app.add_typer(books_app, name="books")
 
+books_report_app = typer.Typer(
+    name="report",
+    help="Generate privacy-bounded bookkeeping reports.",
+    no_args_is_help=True,
+)
+books_app.add_typer(books_report_app, name="report")
+
 suggest_app = typer.Typer(
     name="suggest",
     help="Suggest read-only business repo improvements.",
@@ -1046,6 +1053,81 @@ def books_doctor_cmd(
     else:
         books_mod.render_doctor_plan(report)
     raise typer.Exit(0)
+
+
+@books_report_app.command("monthly")
+def books_report_monthly_cmd(
+    sample: bool = typer.Option(
+        False,
+        "--sample",
+        help="Use the fake packaged sample journal. Required in this release.",
+    ),
+    month: str = typer.Option(..., "--month", help="Report month as YYYY-MM."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Generate a sample monthly books report through hledger."""
+    command = f"mb books report monthly --sample --month {month}"
+    if not sample:
+        message = (
+            "mb books report monthly: only --sample reports are implemented; "
+            "private books reporting is out of scope for this release"
+        )
+        payload = {
+            "ok": False,
+            "schema_version": books_mod.BOOKS_REPORT_SCHEMA,
+            "safe_to_share": True,
+            "summary": message,
+            "operator_summary": message,
+            "errors": [message],
+            "warnings": [books_mod.SAMPLE_REPORT_WARNING],
+        }
+        if json_out:
+            typer.echo(
+                _json_payload(
+                    payload,
+                    command=f"mb books report monthly --month {month}",
+                    schema_name="mainbranch.books.report.v1",
+                )
+            )
+        else:
+            typer.echo(message, err=True)
+        raise typer.Exit(2)
+
+    try:
+        report = books_mod.sample_monthly_report(month)
+    except ValueError as exc:
+        payload = {
+            "ok": False,
+            "schema_version": books_mod.BOOKS_REPORT_SCHEMA,
+            "safe_to_share": True,
+            "summary": str(exc),
+            "operator_summary": str(exc),
+            "errors": [str(exc)],
+            "warnings": [books_mod.SAMPLE_REPORT_WARNING],
+        }
+        if json_out:
+            typer.echo(
+                _json_payload(
+                    payload,
+                    command=command,
+                    schema_name="mainbranch.books.report.v1",
+                )
+            )
+        else:
+            typer.echo(f"mb books report monthly: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    if json_out:
+        typer.echo(
+            _json_payload(
+                report,
+                command=command,
+                schema_name="mainbranch.books.report.v1",
+            )
+        )
+    else:
+        books_mod.render_sample_monthly_report(report)
+    raise typer.Exit(0 if report["ok"] else 1)
 
 
 @site_app.command("check")

@@ -2,7 +2,7 @@
 ; SAMPLE FIXTURE — NOT A REAL LEDGER
 ; ----------------------------------------------------------------------
 ; Fictional company: Acme Fixture Inc.
-; Purpose: exercise the shipped `mb books check` contract.
+; Purpose: exercise the shipped `mb books check` and sample report contracts.
 ; Real ledgers never live in this engine repo. See docs/books.md.
 ; ----------------------------------------------------------------------
 

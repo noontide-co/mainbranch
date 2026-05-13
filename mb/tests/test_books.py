@@ -282,6 +282,63 @@ def _hledger_dispatcher(
     return seen
 
 
+def _hledger_report_dispatcher(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
+    seen: list[list[str]] = []
+
+    class _FakeCompleted:
+        def __init__(self, stdout: str = "", returncode: int = 0, stderr: str = "") -> None:
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    def _amount(mantissa: int) -> dict[str, Any]:
+        return {
+            "acommodity": "USD",
+            "aquantity": {
+                "decimalMantissa": mantissa,
+                "decimalPlaces": 2,
+                "floatingPoint": mantissa / 100,
+            },
+        }
+
+    def _periodic(total: int) -> dict[str, Any]:
+        return {"prTotals": {"prrTotal": [_amount(total)]}}
+
+    income = {
+        "cbrSubreports": [
+            ["Revenues", _periodic(25000), True],
+            ["Expenses", _periodic(6750), False],
+        ],
+        "cbrTotals": {"prrTotal": [_amount(18250)]},
+    }
+    cash = _periodic(125000)
+    balance_sheet = {
+        "cbrSubreports": [
+            ["Assets", _periodic(125000), True],
+            ["Liabilities", _periodic(6750), False],
+            ["Equity", _periodic(100000), False],
+        ]
+    }
+
+    def _dispatch(args: Any, *rest: Any, **kwargs: Any) -> Any:
+        argv = list(args) if isinstance(args, (list, tuple)) else [args]
+        seen.append(argv)
+        if not argv or Path(str(argv[0])).name != "hledger":
+            raise AssertionError(f"unexpected non-hledger call: {argv}")
+        if "check" in argv:
+            return _FakeCompleted()
+        if "incomestatement" in argv:
+            return _FakeCompleted(json.dumps(income))
+        if "balance" in argv:
+            return _FakeCompleted(json.dumps(cash))
+        if "balancesheetequity" in argv:
+            return _FakeCompleted(json.dumps(balance_sheet))
+        raise AssertionError(f"unexpected hledger report command: {argv}")
+
+    monkeypatch.setattr("mb.books.subprocess.run", _dispatch)
+    return seen
+
+
 def test_books_check_fixture_runs_when_hledger_available(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -731,3 +788,130 @@ def test_bundled_fixture_matches_docs_fixture() -> None:
         "mb/mb/_data/books/acme-fixture.journal has drifted from "
         "docs/examples/books/acme-fixture.journal. Re-sync them."
     )
+
+
+def test_bundled_sample_report_fixture_matches_docs_fixture() -> None:
+    """The packaged sample report is a byte-identical mirror of the docs copy."""
+    repo_root = Path(__file__).resolve().parents[2]
+    docs_bytes = (repo_root / "docs/examples/books/reports/sample-monthly.json").read_bytes()
+    pkg_bytes = (repo_root / "mb/mb/_data/books/reports/sample-monthly.json").read_bytes()
+    assert docs_bytes == pkg_bytes, (
+        "mb/mb/_data/books/reports/sample-monthly.json has drifted from "
+        "docs/examples/books/reports/sample-monthly.json. Re-sync them."
+    )
+
+
+def test_books_report_monthly_json_uses_hledger_envelope_and_sample_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "/fake/hledger")
+    seen = _hledger_report_dispatcher(monkeypatch)
+
+    result = runner.invoke(
+        app,
+        ["books", "report", "monthly", "--sample", "--month", "2026-01", "--json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["mb_command"] == "mb books report monthly --sample --month 2026-01"
+    assert payload["result_schema"]["name"] == "mainbranch.books.report.v1"
+    assert payload["result_envelope_version"] == "1.0"
+    assert payload["schema_version"] == "1.0"
+    assert payload["safe_to_share"] is True
+    assert payload["source"]["kind"] == "packaged_fixture"
+    assert payload["source"]["fixture"] is True
+    assert payload["source"]["engine"] == "hledger"
+    assert payload["source"]["journal"]["path_exposed"] is False
+    assert payload["report"]["period"] == {
+        "start": "2026-01-01",
+        "end": "2026-02-01",
+        "label": "January 2026",
+    }
+    assert payload["totals"]["revenue"]["decimal_mantissa"] == 25000
+    assert payload["totals"]["revenue"]["display"] == "$250.00"
+    assert payload["totals"]["expenses"]["display"] == "$67.50"
+    assert payload["totals"]["net_income"]["display"] == "$182.50"
+    assert payload["totals"]["cash"]["display"] == "$1,250.00"
+    assert payload["totals"]["credit_card"]["display"] == "$67.50 owed"
+    assert payload["redactions"] == {
+        "private_paths": True,
+        "account_identifiers": True,
+        "payees": True,
+        "transaction_memos": True,
+    }
+    assert "not reading your private books" in result.output
+    assert "PRIVATE_ACCOUNT_ID" not in result.output
+    assert not any("engine_version" in key for key in payload)
+    assert any("check" in call for call in seen)
+    assert any("incomestatement" in call and "-O" in call and "json" in call for call in seen)
+    assert any("balance" in call and "assets:bank" in call and "-H" in call for call in seen)
+    assert any("balancesheetequity" in call and "-O" in call and "json" in call for call in seen)
+    assert all("-n" in call for call in seen)
+
+
+def test_books_report_monthly_human_output_is_beginner_safe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "/fake/hledger")
+    _hledger_report_dispatcher(monkeypatch)
+
+    result = runner.invoke(
+        app,
+        ["books", "report", "monthly", "--sample", "--month", "2026-01"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "sample monthly bookkeeping report using fake packaged data" in result.output
+    assert "January 2026 sample" in result.output
+    assert "Revenue: $250.00" in result.output
+    assert "Expenses: $67.50" in result.output
+    assert "Net income: $182.50" in result.output
+    assert "Checking cash at month end: $1,250.00" in result.output
+    assert "Credit card balance: $67.50 owed" in result.output
+    assert "This is sample data only. It is not reading your private books." in result.output
+
+
+def test_books_report_monthly_requires_sample_flag() -> None:
+    result = runner.invoke(
+        app,
+        ["books", "report", "monthly", "--month", "2026-01", "--json"],
+    )
+
+    assert result.exit_code == 2, result.output
+    payload = json.loads(result.output)
+    assert payload["ok"] is False
+    assert "only --sample reports are implemented" in payload["operator_summary"]
+    assert "private books reporting is out of scope" in payload["operator_summary"]
+
+
+def test_books_report_monthly_rejects_invalid_month() -> None:
+    result = runner.invoke(
+        app,
+        ["books", "report", "monthly", "--sample", "--month", "2026-13", "--json"],
+    )
+
+    assert result.exit_code == 2, result.output
+    payload = json.loads(result.output)
+    assert payload["ok"] is False
+    assert "real calendar month" in payload["operator_summary"]
+
+
+def test_books_report_monthly_missing_hledger_returns_guidance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "")
+
+    result = runner.invoke(
+        app,
+        ["books", "report", "monthly", "--sample", "--month", "2026-01", "--json"],
+    )
+
+    assert result.exit_code == 1, result.output
+    payload = json.loads(result.output)
+    assert payload["ok"] is False
+    assert payload["safe_to_share"] is True
+    findings = _findings_by_id(payload)
+    assert findings["hledger-missing"]["state"] == "error"
+    assert "Install hledger" in findings["hledger-missing"]["repair"]
+    assert "not reading your private books" in result.output

@@ -22,6 +22,9 @@ data. Real ledger contents under the private books vault are not read.
 
 from __future__ import annotations
 
+import calendar
+import json
+import re
 import shutil
 import subprocess
 from importlib import resources
@@ -53,11 +56,15 @@ NON_LOCAL_STORAGE_MODES = frozenset({"team-private-repo", "advanced-vault"})
 
 BUNDLED_FIXTURE_NAME = "acme-fixture.journal"
 DOCS_BOOKS_PATH = "docs/books.md"
+BOOKS_REPORT_SCHEMA = "1.0"
+SAMPLE_FIXTURE_LABEL = "acme-fixture"
+SAMPLE_REPORT_WARNING = "This is sample data only. It is not reading your private books."
 GITHUB_PRIVATE_WARNING = (
     "GitHub private repos are private, not financial vaults. Anyone with repo "
     "access can read the full ledger and history. Removing a transaction later "
     "does not remove it from history."
 )
+MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 
 # Fixture markers an operator can put in a sample journal/CSV to opt the
 # file out of unsafe-path detection. See the foundation decision.
@@ -817,6 +824,358 @@ def _bundled_fixture_path() -> Path | None:
     return None
 
 
+def _month_bounds(month: str) -> tuple[str, str, str]:
+    if not MONTH_RE.match(month):
+        raise ValueError("month must use YYYY-MM, for example 2026-01")
+    year, raw_month = month.split("-", 1)
+    month_number = int(raw_month)
+    if month_number < 1 or month_number > 12:
+        raise ValueError("month must use a real calendar month, for example 2026-01")
+    next_year = int(year) + 1 if month_number == 12 else int(year)
+    next_month = 1 if month_number == 12 else month_number + 1
+    return (
+        f"{year}-{month_number:02d}-01",
+        f"{next_year}-{next_month:02d}-01",
+        f"{calendar.month_name[month_number]} {year}",
+    )
+
+
+def _sanitize_hledger_detail(text: str, journal: Path) -> str:
+    detail = text.strip().replace(str(journal), "packaged fixture")
+    return detail[:2000]
+
+
+def _hledger_missing_finding() -> dict[str, Any]:
+    return _finding(
+        id="hledger-missing",
+        title="hledger is not installed",
+        state="error",
+        detail=(
+            "hledger is required for books reports because Main Branch uses "
+            "hledger for the accounting math."
+        ),
+        audience="informational",
+        operator_summary=("Install hledger before generating sample monthly books reports."),
+        repair="Install hledger from https://hledger.org/install.html",
+    )
+
+
+def _run_hledger_json(
+    journal: Path,
+    command: list[str],
+    *,
+    finding_id: str,
+    title: str,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    try:
+        proc = subprocess.run(
+            ["hledger", "-n", "-f", str(journal), *command],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError) as exc:
+        return None, _finding(
+            id=finding_id,
+            title=title,
+            state="error",
+            detail=str(exc),
+            audience="informational",
+            operator_summary="Main Branch found hledger on PATH but could not run it.",
+        )
+    if proc.returncode != 0:
+        return None, _finding(
+            id=finding_id,
+            title=title,
+            state="error",
+            detail=_sanitize_hledger_detail(proc.stderr or proc.stdout, journal),
+            audience="operator_decision",
+            operator_summary=(
+                "hledger could not generate the sample books report from the packaged fixture."
+            ),
+        )
+    try:
+        parsed = json.loads(proc.stdout or "{}")
+    except json.JSONDecodeError as exc:
+        return None, _finding(
+            id=finding_id,
+            title=title,
+            state="error",
+            detail=f"hledger returned invalid JSON: {exc}",
+            audience="informational",
+            operator_summary="hledger returned output Main Branch could not parse.",
+        )
+    if not isinstance(parsed, dict):
+        return None, _finding(
+            id=finding_id,
+            title=title,
+            state="error",
+            detail="hledger JSON output was not an object.",
+            audience="informational",
+            operator_summary="hledger returned an unexpected JSON shape.",
+        )
+    return parsed, None
+
+
+def _run_hledger_check(journal: Path) -> dict[str, Any] | None:
+    try:
+        proc = subprocess.run(
+            ["hledger", "-n", "-f", str(journal), "check"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError) as exc:
+        return _finding(
+            id="sample-check-error",
+            title="hledger check could not run",
+            state="error",
+            detail=str(exc),
+            audience="informational",
+            operator_summary="Main Branch found hledger on PATH but could not run its check.",
+        )
+    if proc.returncode != 0:
+        return _finding(
+            id="sample-check-failed",
+            title="Packaged books fixture failed hledger check",
+            state="error",
+            detail=_sanitize_hledger_detail(proc.stderr or proc.stdout, journal),
+            audience="operator_decision",
+            operator_summary="The packaged sample journal did not pass hledger check.",
+        )
+    return None
+
+
+def _hledger_amount(raw: Any, *, owed: bool = False) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        return _amount_from_parts(commodity="USD", mantissa=0, places=2, owed=owed)
+    quantity = raw.get("aquantity")
+    if not isinstance(quantity, dict):
+        return _amount_from_parts(commodity=str(raw.get("acommodity") or "USD"), owed=owed)
+    return _amount_from_parts(
+        commodity=str(raw.get("acommodity") or "USD"),
+        mantissa=int(quantity.get("decimalMantissa") or 0),
+        places=int(quantity.get("decimalPlaces") or 0),
+        owed=owed,
+    )
+
+
+def _amount_from_parts(
+    *,
+    commodity: str,
+    mantissa: int = 0,
+    places: int = 2,
+    owed: bool = False,
+) -> dict[str, Any]:
+    display_mantissa = abs(mantissa) if owed else mantissa
+    absolute_mantissa = abs(display_mantissa)
+    scale = 10**places
+    whole = absolute_mantissa // scale
+    fraction = absolute_mantissa % scale
+    sign = "-" if display_mantissa < 0 else ""
+    if commodity == "USD" and places == 2:
+        display = f"{sign}${whole:,}.{fraction:02d}"
+    elif places > 0:
+        display = f"{sign}{whole:,}.{fraction:0{places}d} {commodity}".strip()
+    else:
+        display = f"{sign}{whole:,} {commodity}".strip()
+    if owed:
+        display = f"{display} owed"
+    return {
+        "commodity": commodity,
+        "decimal_mantissa": abs(mantissa) if owed else mantissa,
+        "decimal_places": places,
+        "display": display,
+    }
+
+
+def _first_amount(container: Any) -> Any:
+    if not isinstance(container, dict):
+        return None
+    total = container.get("prrTotal")
+    if isinstance(total, list) and total:
+        return total[0]
+    amounts = container.get("prrAmounts")
+    if isinstance(amounts, list) and amounts and isinstance(amounts[0], list) and amounts[0]:
+        return amounts[0][0]
+    return None
+
+
+def _period_total(report: dict[str, Any]) -> Any:
+    compound_totals = report.get("cbrTotals") if isinstance(report, dict) else None
+    compound_amount = _first_amount(compound_totals)
+    if compound_amount is not None:
+        return compound_amount
+    totals = report.get("prTotals") if isinstance(report, dict) else None
+    return _first_amount(totals)
+
+
+def _subreport_total(report: dict[str, Any], name: str) -> Any:
+    for subreport in report.get("cbrSubreports") or []:
+        if (
+            isinstance(subreport, list)
+            and len(subreport) >= 2
+            and str(subreport[0]).lower() == name.lower()
+            and isinstance(subreport[1], dict)
+        ):
+            return _period_total(subreport[1])
+    return None
+
+
+def sample_monthly_report(month: str) -> dict[str, Any]:
+    """Generate the fake packaged monthly books report through hledger."""
+    start, end, label = _month_bounds(month)
+    journal = _bundled_fixture_path()
+    if journal is None:
+        finding = _finding(
+            id="fixture-missing",
+            title="Books fixture not found",
+            state="error",
+            detail="The packaged sample books fixture could not be located.",
+            audience="operator_decision",
+            operator_summary="Reinstall Main Branch and try the sample report again.",
+        )
+        return _sample_report_error(month=month, label=label, findings=[finding])
+    if not shutil.which("hledger"):
+        return _sample_report_error(month=month, label=label, findings=[_hledger_missing_finding()])
+
+    findings: list[dict[str, Any]] = []
+    check_finding = _run_hledger_check(journal)
+    if check_finding:
+        findings.append(check_finding)
+
+    income, income_error = _run_hledger_json(
+        journal,
+        ["incomestatement", "-M", "-O", "json", "-b", start, "-e", end],
+        finding_id="income-report-failed",
+        title="hledger income statement failed",
+    )
+    cash, cash_error = _run_hledger_json(
+        journal,
+        ["balance", "assets:bank", "assets:cash", "-H", "-M", "-O", "json", "-b", start, "-e", end],
+        finding_id="cash-report-failed",
+        title="hledger cash balance failed",
+    )
+    balance_sheet, balance_error = _run_hledger_json(
+        journal,
+        ["balancesheetequity", "-M", "-O", "json", "-b", start, "-e", end],
+        finding_id="balance-sheet-failed",
+        title="hledger balance sheet failed",
+    )
+    findings.extend(
+        finding for finding in (income_error, cash_error, balance_error) if finding is not None
+    )
+    if findings:
+        return _sample_report_error(month=month, label=label, findings=findings)
+
+    assert income is not None
+    assert cash is not None
+    assert balance_sheet is not None
+
+    revenue = _hledger_amount(_subreport_total(income, "Revenues"))
+    expenses = _hledger_amount(_subreport_total(income, "Expenses"))
+    net_income = _hledger_amount(_period_total(income))
+    cash_balance = _hledger_amount(_period_total(cash))
+    credit_card = _hledger_amount(_subreport_total(balance_sheet, "Liabilities"), owed=True)
+    currency = str(
+        revenue.get("commodity")
+        or expenses.get("commodity")
+        or net_income.get("commodity")
+        or "USD"
+    )
+
+    return {
+        "ok": True,
+        "schema_version": BOOKS_REPORT_SCHEMA,
+        "safe_to_share": True,
+        "source": {
+            "kind": "packaged_fixture",
+            "fixture": True,
+            "engine": "hledger",
+            "journal": {
+                "label": SAMPLE_FIXTURE_LABEL,
+                "location_kind": "packaged",
+                "path_exposed": False,
+                "content_read": True,
+            },
+        },
+        "report": {
+            "kind": "sample_monthly",
+            "period": {"start": start, "end": end, "label": label},
+            "currency": currency,
+        },
+        "totals": {
+            "revenue": revenue,
+            "expenses": expenses,
+            "net_income": net_income,
+            "cash": cash_balance,
+            "credit_card": credit_card,
+        },
+        "operator_summary": (
+            "This fake sample month shows the reporting shape; it is not your business data."
+        ),
+        "warnings": [SAMPLE_REPORT_WARNING],
+        "findings": [
+            _finding(
+                id="sample-report-generated",
+                title="Sample monthly books report generated",
+                state="ok",
+                detail="hledger generated the sample report from the packaged fake fixture.",
+                audience="informational",
+                operator_summary="Sample monthly books report generated from fake packaged data.",
+            )
+        ],
+        "redactions": {
+            "private_paths": True,
+            "account_identifiers": True,
+            "payees": True,
+            "transaction_memos": True,
+        },
+    }
+
+
+def _sample_report_error(
+    *,
+    month: str,
+    label: str,
+    findings: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "ok": False,
+        "schema_version": BOOKS_REPORT_SCHEMA,
+        "safe_to_share": True,
+        "source": {
+            "kind": "packaged_fixture",
+            "fixture": True,
+            "engine": "hledger",
+            "journal": {
+                "label": SAMPLE_FIXTURE_LABEL,
+                "location_kind": "packaged",
+                "path_exposed": False,
+                "content_read": False,
+            },
+        },
+        "report": {
+            "kind": "sample_monthly",
+            "period": {"month": month, "label": label},
+            "currency": "USD",
+        },
+        "totals": {},
+        "operator_summary": "Main Branch could not generate the sample books report.",
+        "warnings": [SAMPLE_REPORT_WARNING],
+        "errors": [finding["operator_summary"] for finding in findings],
+        "findings": findings,
+        "redactions": {
+            "private_paths": True,
+            "account_identifiers": True,
+            "payees": True,
+            "transaction_memos": True,
+        },
+    }
+
+
 def _validate_fixture(
     fixture: Path | None,
 ) -> list[dict[str, Any]]:
@@ -1415,6 +1774,40 @@ def render_status(report: dict[str, Any]) -> None:
             typer.echo(f"           - {item}")
     typer.echo("")
     typer.echo("Run `mb books doctor --plan` for safe setup repair guidance.")
+
+
+def render_sample_monthly_report(report: dict[str, Any]) -> None:
+    """Print the sample monthly report for humans."""
+    import typer
+
+    if not report.get("ok"):
+        typer.echo("mb books report monthly - could not generate sample report")
+        for finding in report.get("findings", []):
+            typer.echo(f"  [{finding.get('state', 'error').upper()}] {finding['title']}")
+            if finding.get("operator_summary"):
+                typer.echo(f"         {finding['operator_summary']}")
+            if finding.get("repair"):
+                typer.echo(f"         next: {finding['repair']}")
+        typer.echo("")
+        typer.echo(SAMPLE_REPORT_WARNING)
+        return
+
+    period = (report.get("report") or {}).get("period") or {}
+    totals = report.get("totals") or {}
+    typer.echo(
+        "Here is a sample monthly bookkeeping report using fake packaged data, "
+        "so you can see the shape before connecting private books."
+    )
+    typer.echo("")
+    typer.echo(f"{period.get('label', 'Sample month')} sample")
+    typer.echo("")
+    typer.echo(f"Revenue: {totals['revenue']['display']}")
+    typer.echo(f"Expenses: {totals['expenses']['display']}")
+    typer.echo(f"Net income: {totals['net_income']['display']}")
+    typer.echo(f"Checking cash at month end: {totals['cash']['display']}")
+    typer.echo(f"Credit card balance: {totals['credit_card']['display']}")
+    typer.echo("")
+    typer.echo(SAMPLE_REPORT_WARNING)
 
 
 def render_doctor_plan(report: dict[str, Any]) -> None:
