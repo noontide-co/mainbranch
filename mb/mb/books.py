@@ -369,29 +369,6 @@ def _status_extra_findings(
         )
 
     vault = _vault_info(repo, fm)
-    storage_mode = vault["storage_mode"]
-    if storage_mode in NON_LOCAL_STORAGE_MODES and not vault["configured"]:
-        findings.append(
-            _finding(
-                id="books-vault-location-missing",
-                title="Private books vault location is not configured",
-                state="warn",
-                detail=(
-                    f"storage_mode={storage_mode!r} expects the real books to live "
-                    "outside this repo, but core/finance/books.md does not name "
-                    "the private repo or vault handle."
-                ),
-                audience="operator_decision",
-                operator_summary=(
-                    "Set vault_location in core/finance/books.md so the operator "
-                    "knows where the private books live."
-                ),
-                repair=(
-                    "Add a safe vault_location label to core/finance/books.md; "
-                    "do not paste an absolute private path or real ledger data."
-                ),
-            )
-        )
     policy_present = _has_books_policy(repo)
     if vault["exists"] is True:
         findings.append(
@@ -467,6 +444,34 @@ def _status_extra_findings(
             )
         )
     return findings
+
+
+def _non_local_vault_location_findings(fm: dict[str, Any]) -> list[dict[str, Any]]:
+    storage_mode = _policy_storage_mode(fm)
+    raw_location = str(fm.get("vault_location") or "").strip()
+    if storage_mode not in NON_LOCAL_STORAGE_MODES or raw_location:
+        return []
+    return [
+        _finding(
+            id="books-vault-location-missing",
+            title="Private books vault location is not configured",
+            state="warn",
+            detail=(
+                f"storage_mode={storage_mode!r} expects the real books to live "
+                "outside this repo, but core/finance/books.md does not name "
+                "the private repo or vault handle."
+            ),
+            audience="operator_decision",
+            operator_summary=(
+                "Set vault_location in core/finance/books.md so the operator "
+                "knows where the private books live."
+            ),
+            repair=(
+                "Add a safe vault_location label to core/finance/books.md; "
+                "do not paste an absolute private path or real ledger data."
+            ),
+        )
+    ]
 
 
 def _detect_books_policy(repo: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -928,6 +933,7 @@ def run(
     findings.extend(policy_findings)
     findings.extend(_detect_chart_of_accounts(repo_path))
     storage_mode = str(fm.get("storage_mode") or "").strip()
+    findings.extend(_non_local_vault_location_findings(fm))
     findings.extend(_check_vault_ignore_rule(repo_path, storage_mode))
     findings.extend(_detect_unsafe_paths(repo_path))
 

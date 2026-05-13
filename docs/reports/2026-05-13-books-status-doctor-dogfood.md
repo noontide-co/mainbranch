@@ -65,7 +65,7 @@ had no repair. This report's branch fixes that.
 
 **Is `doctor --plan` obviously non-mutating?**
 
-Yes. The command name, human heading, JSON `mode: plan`, and
+Yes. The command name, human heading, and each JSON action's `mode: plan` plus
 `safe_to_apply: false` make the posture clear. The command exits `2` without
 `--plan`, so there is no accidental apply path.
 
