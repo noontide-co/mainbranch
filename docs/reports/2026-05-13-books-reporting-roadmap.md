@@ -15,11 +15,17 @@ tags: [bookkeeping, hledger, roadmap, reports]
 Build sample reporting before private-vault reporting.
 
 The first implementation should add a beginner-safe sample monthly report using
-hledger and fake packaged data:
+hledger and fake packaged data. The command/action should mean "monthly report
+using fake sample data." The exact CLI spelling can be settled in the
+implementation issue; the preferred scalable shape is:
 
 ```bash
-mb books report sample-monthly --json
+mb books report monthly --sample --month 2026-01 --json
 ```
+
+`mb books report sample-monthly --json` remains an acceptable simpler candidate
+if the implementation chooses a named sample action instead of a `monthly`
+report subcommand with `--sample`.
 
 The command should run hledger internally against the packaged Acme fixture,
 translate hledger JSON into a stable Main Branch JSON envelope, and produce
@@ -43,7 +49,7 @@ Agent runs internally:
 mb status --json --peek
 mb books status --json
 mb books check --fixture --json
-mb books report sample-monthly --json
+mb books report monthly --sample --month 2026-01 --json
 ```
 
 Agent answers:
@@ -130,7 +136,7 @@ Minimum fields:
     "name": "mainbranch.books.report.v1",
     "version": "1.0"
   },
-  "mb_command": "mb books report sample-monthly",
+  "mb_command": "mb books report monthly --sample --month 2026-01",
   "safe_to_share": true,
   "source": {
     "kind": "packaged_fixture",
@@ -239,7 +245,8 @@ Add a beginner-safe sample books report using hledger and fake packaged data.
 
 ## Scope
 
-- `mb books report sample-monthly`
+- monthly sample report command syntax, likely
+  `mb books report monthly --sample --month 2026-01`
 - hledger-backed sample report
 - human output for chat/agent UX
 - stable JSON output for agents
@@ -260,8 +267,8 @@ Add a beginner-safe sample books report using hledger and fake packaged data.
 Validation:
 
 - focused `mb/tests/test_books.py` coverage;
-- `mb books report sample-monthly --json`;
-- `mb books report sample-monthly`;
+- chosen sample monthly report command with `--json`;
+- chosen sample monthly report command in human mode;
 - missing-hledger path;
 - package fixture byte-identity test;
 - `scripts/check.sh`;

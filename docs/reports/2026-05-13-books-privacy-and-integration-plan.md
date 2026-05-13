@@ -82,11 +82,15 @@ Daily-loop status should remain safe to share and route-oriented.
 The first sample report command should produce a Main Branch envelope rather
 than exposing hledger's raw JSON.
 
-Recommended command:
+Recommended command shape:
 
 ```bash
-mb books report sample-monthly --json
+mb books report monthly --sample --month 2026-01 --json
 ```
+
+The first implementation issue can still choose `mb books report
+sample-monthly --json` if a named sample action proves cleaner, but the
+`monthly --sample --month` shape ages better once private monthly reports land.
 
 Recommended schema name:
 
@@ -103,7 +107,7 @@ Recommended sample envelope:
     "name": "mainbranch.books.report.v1",
     "version": "1.0"
   },
-  "mb_command": "mb books report sample-monthly",
+  "mb_command": "mb books report monthly --sample --month 2026-01",
   "safe_to_share": true,
   "source": {
     "kind": "packaged_fixture",

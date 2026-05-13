@@ -23,12 +23,13 @@ The first experience should be:
 
 ```text
 User asks: "Show me a sample monthly bookkeeping report."
-Agent runs: mb books report sample-monthly --json
+Agent runs: mb books report monthly --sample --month 2026-01 --json
 Agent says: "Here is a fake sample report so you can see the shape."
 ```
 
-The command name is a recommendation for the next implementation issue, not a
-shipped surface in this report.
+The command spelling is a recommendation for the next implementation issue, not
+a shipped surface in this report. `mb books report sample-monthly --json` is an
+acceptable simpler candidate if implementation chooses a named sample action.
 
 ## Product Surface
 
@@ -89,12 +90,12 @@ For the first sample-report slice, the agent should start from safe facts:
 mb status --json --peek
 mb books status --json
 mb books check --fixture --json
-mb books report sample-monthly --json
+mb books report monthly --sample --month 2026-01 --json
 ```
 
-If `mb books report sample-monthly --json` does not exist yet, the agent should
-not improvise private reporting. It should explain that the sample report is
-planned and use current readiness commands only.
+If the sample report command does not exist yet, the agent should not improvise
+private reporting. It should explain that the sample report is planned and use
+current readiness commands only.
 
 For future private-vault reporting, the agent should run readiness checks first:
 
