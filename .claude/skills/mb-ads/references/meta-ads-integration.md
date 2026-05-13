@@ -5,10 +5,10 @@ live account context only after deterministic `mb` provider facts say the Meta
 path is ready and the current runtime exposes verified read-only account tools.
 
 Main Branch no longer supports third-party Meta MCP setup or detection as a
-fallback. The official Meta Ads CLI is real and installable, and Main Branch
-can explain setup requirements. Main Branch has not wired safe detection and
-read-only smoke yet. Until `mb` reports Meta as ready, skills must work from
-repo reference files and manual Ads Manager input.
+fallback. The official Meta Ads CLI is real and installable, and `mb connect
+meta` owns setup guidance, safe token capture, and read-only smoke. Until `mb`
+reports Meta as `ready`, skills must work from repo reference files and manual
+Ads Manager input.
 
 ---
 
@@ -26,11 +26,11 @@ Meta's package metadata classifies `meta-ads` 1.0.1 as Alpha and requires
 Python 3.12+. Expect setup and command details to move over the next few
 months.
 
-Main Branch support level is `readiness`: the official path and setup
-requirements are known, but `mb` does not yet validate accounts or use live
-provider data. Therefore:
+Main Branch support level is read-only readiness: the official path and setup
+requirements are known, and `mb connect test meta` can validate local token,
+metadata, auth, and read-only account smoke. Therefore:
 
-- do not tell users Meta account access is ready unless `mb` says it is ready;
+- do not tell users Meta account access is ready unless `mb` says it is `ready`;
 - do not ask users to configure third-party Meta connector fallbacks;
 - do not ask users to paste Meta tokens into chat or repo files;
 - do not run live campaign mutations from this skill.
@@ -45,15 +45,14 @@ Official docs:
 
 ## Official CLI Setup Facts
 
-When Main Branch wires this provider, the setup path should follow Meta's CLI
-docs:
+The setup path follows Meta's CLI docs:
 
 1. Install the package as `meta-ads`; the binary is `meta`.
 2. Use a Meta Developer App and a system user access token for the CLI path.
-3. Store `ACCESS_TOKEN`, `AD_ACCOUNT_ID`, and optional `BUSINESS_ID` in a
-   gitignored project-level `.env` file, or in Meta's user-level
-   `~/.config/meta/` fallback.
-4. Verify with `meta auth status`.
+3. Use `mb connect meta --token-stdin --metadata ad_account_id=<act_id>` so
+   `ACCESS_TOKEN` lands in `SecretStore` and only safe metadata lands in
+   `.mb/connect.yaml`.
+4. Verify with `mb connect test meta --json`.
 
 The CLI uses this precedence: CLI flag, environment variable, project `.env`,
 then user-level `~/.config/meta/`.
@@ -66,8 +65,8 @@ meta --version
 meta auth status
 ```
 
-If the user's default Python is too old, a future `mb` repair path can suggest
-an equivalent Python 3.12+ tool install. Do not recommend `meta auth login`,
+If the user's default Python is too old, quote the Python 3.12+ repair command
+from `mb connect plan` or `mb connect doctor --json`. Do not recommend `meta auth login`,
 `meta-ads-cli`, `npm install -g @meta/ads-cli`, or `mcp.meta.com/ads`.
 
 Meta's documented baseline token scopes are:
@@ -84,6 +83,10 @@ Some Business Manager configurations require a second admin to approve system
 user token generation. Surface that as conditional repair copy, not a universal
 rule.
 
+When the user is in Meta's business info page, the UI label "Business portfolio
+ID" is the optional `business_id` metadata value. The ad account metadata should
+be the `act_` ad account ID.
+
 ---
 
 ## Provider Facts
@@ -99,8 +102,8 @@ mb connect doctor --json
 Use the CLI's `summary`, `next_command`, and `repair_command` fields. Do not
 write provider readiness into business-repo config from this skill.
 
-If `mb connect` reports Meta as anything other than ready, explain that live
-Meta account access is not wired for this repo yet and continue from reference
+If `mb connect` reports Meta as anything other than `ready`, mention the account
+context once, quote the repair or setup command, and continue from reference
 files.
 
 ---
@@ -112,16 +115,11 @@ Triggered lazily at `/mb-think` or `/mb-ads` when the topic is ads-related:
 ```
 1. Read `mb status --json --peek`.
 2. If the operator needs setup choices, run `mb connect plan`.
-3. If provider facts are `readiness`, degraded, missing, invalid, or otherwise
-   not `ready`, run
+3. If provider facts are degraded, missing, invalid, waiting for admin approval,
+   or otherwise not `ready`, run
    `mb connect doctor --json` and quote the repair/setup guidance.
-4. Only if `mb` reports Meta account context ready, check the current runtime
-   for the verified official CLI:
-   - `which meta`
-   - `meta --version`
-   - `meta auth status`
-   - `meta -o json ads campaign list`
-   - `meta -o json ads insights get --fields spend,impressions,clicks,ctr,cpc`
+4. Only if `mb` reports Meta account context `ready`, ask whether to pull live
+   performance before generating.
 5. Never block generation on missing account access.
 ```
 
@@ -171,14 +169,12 @@ campaign changes.
 
 Before any future write operation exists, Main Branch needs:
 
-1. wired `mb connect` detection for `meta auth status`;
-2. read-only smoke from a fresh business repo;
-3. a `pushes/<push>/playbooks/<playbook>.md` plan with preview, approval
+1. a `pushes/<push>/playbooks/<playbook>.md` plan with preview, approval
    state, safe provider state, validation evidence, and outcome links;
-4. explicit preview of every account change;
-5. explicit operator approval in chat;
-6. PAUSED-by-default campaign/ad/ad-set creation preserved;
-7. no budget changes without a separate approval gate.
+2. explicit preview of every account change;
+3. explicit operator approval in chat;
+4. PAUSED-by-default campaign/ad/ad-set creation preserved;
+5. no budget changes without a separate approval gate.
 
 Until those conditions are met, write operations are roadmap only.
 
@@ -186,7 +182,7 @@ Until those conditions are met, write operations are roadmap only.
 
 ## CLI Sharp Edges
 
-Future implementers should preserve these constraints in setup and repair copy:
+Preserve these constraints in setup and repair copy:
 
 - `meta auth status` is the documented auth check. There is no documented
   `meta auth login`.
@@ -195,9 +191,8 @@ Future implementers should preserve these constraints in setup and repair copy:
   operator action.
 - Creating fresh creatives can require the Meta Developer App to be in Live
   Mode; document this because the CLI docs do not surface it clearly.
-- Use project-level `.env` as the default credential location, and keep it
-  gitignored.
-- Use `~/.config/meta/` only as the user-level fallback.
+- Store tokens through `SecretStore`; keep only safe metadata and validation
+  summaries in `.mb/connect.yaml`.
 - If the operator hits a two-admin token approval gate, explain that it depends
   on the Business Manager's security configuration.
 

@@ -23,6 +23,7 @@ __pycache__/
 # .claude/*.lock is local Claude Code session state (pid, sessionId).
 .agent/
 .context/
+.mb/connect.yaml
 .claude/*.lock
 # Claude local runtime state
 .claude/settings.local.json
