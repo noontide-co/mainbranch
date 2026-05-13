@@ -153,11 +153,12 @@ it. Run them before tagging an `oe-v*` release.
    `grep -RIn "id-token\|permissions:" .github/workflows/`.
 4. Confirm Dependabot is current. No open security advisories,
    no overdue grouped upgrades that should land in this release.
-5. For release candidates that touch security-sensitive surfaces, run a
+5. For release candidates that touch security-sensitive surfaces, consider a
    targeted local agentic security review sidecar over the changed risky files
-   or candidates. DeepSec is the accepted local sidecar for this purpose; keep
-   raw output under `.agent/`, publish only sanitized summaries, time-box AI
-   processing, and treat findings as review leads rather than release truth. See
+   or candidates. DeepSec is the accepted local sidecar for this optional
+   review aid; keep raw output under `.agent/`, publish only sanitized
+   summaries, time-box AI processing, and treat findings as review leads rather
+   than release truth. See
    [`decisions/2026-05-13-agentic-security-review-sidecars.md`](../decisions/2026-05-13-agentic-security-review-sidecars.md).
 6. Confirm the `pypi` GitHub Environment still requires a reviewer.
    This is a settings check, not a YAML check.

@@ -122,9 +122,10 @@ pnpm deepsec process --project-id mainbranch --agent codex --diff origin/main --
 pnpm deepsec process --project-id mainbranch --agent codex --files .github/workflows/publish-pypi.yml --concurrency 1 --batch-size 1
 ```
 
-Fill `data/mainbranch/INFO.md` before `process`; it is injected into each AI
-investigation batch. Keep it short and public-safe. Time-box the AI phase and
-record partial/stalled runs honestly.
+Fill `.agent/deepsec/data/mainbranch/INFO.md` before `process`; it is injected
+into each AI investigation batch from the gitignored scratch workspace. Keep it
+short and public-safe. Time-box the AI phase and record partial/stalled runs
+honestly.
 
 ## Do Not Use DeepSec When
 
