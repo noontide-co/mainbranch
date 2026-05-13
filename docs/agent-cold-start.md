@@ -80,6 +80,7 @@ you are changing.
 | Trigger | Read |
 | --- | --- |
 | Product direction, roadmap, workflow shape, dashboard, provider choice, dependency choice, setup policy | `docs/roadmap.md`, `docs/operator-loops.md`, relevant `decisions/`, relevant PRD under `docs/prd/`, `docs/dependency-choices.md` when dependencies or provider rails are in play |
+| Provider wrappers, connectors, media rails, external CLIs/APIs, or support claims | `decisions/2026-05-13-provider-cli-api-wrapper-boundary.md`, `docs/dependency-choices.md`, relevant provider decisions, and the relevant skill or playbook docs |
 | CLI/runtime boundary, runtime support claim, adapter behavior | `decisions/2026-05-01-mb-cli-vs-agent-workflows-boundary.md`, `docs/compatibility.md`, `docs/claude-code-runtime-dogfood.md` when Claude Code evidence matters |
 | Skills or generated runtime guidance | relevant `.claude/skills/<name>/SKILL.md`, its `references/`, generated templates under `templates/`, nearby skill validation tests or fixtures |
 | First-run, package install, skill discovery, `mb init`, `mb onboard`, `mb status`, `mb start`, `mb update` | `docs/release-simulations.md`, `docs/release-agent-contract.md`, package/install smoke contract in `AGENTS.md`, relevant CLI tests |

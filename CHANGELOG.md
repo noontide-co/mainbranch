@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added a durable provider CLI/API vs `mb` wrapper boundary decision, including
+  `mb connect`, skill/playbook UX, SecretStore/Keychain, privacy/redaction,
+  JSON envelope, support-claim, Meta Ads, and image-generation guidance for
+  provider cold starts. Refs MAIN-369, #585.
 - Added a MAIN-366 design for the first compact read-only Meta Ads account
   summary surface, keeping `mb connect` as the readiness rail and routing the
   next paid-channel summary shape toward `mb ads meta summary --json` with raw

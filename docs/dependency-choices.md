@@ -65,6 +65,13 @@ This keeps the daily loop coherent. Users think in bets, pushes, playbooks,
 outcomes, and checkpoints. `mb` checks whether the rails are ready. Provider
 tools and sidecars do narrow jobs behind explicit contracts.
 
+When the question is specifically whether an agent should call a provider
+CLI/API directly or Main Branch should build an `mb` wrapper, use the
+[provider CLI/API and `mb` wrapper boundary decision](../decisions/2026-05-13-provider-cli-api-wrapper-boundary.md).
+The short rule: provider tools are raw capability; `mb` wrappers are safe,
+stable business primitives; skills and playbooks are the human-friendly
+workflow layer.
+
 ## Decision Rubric
 
 Use this rubric before adding, promoting, replacing, or removing a dependency.
@@ -174,7 +181,7 @@ why a tool disappeared.
 | 2026-05-04 | Workspace docs and sheets | Google Workspace | Planned optional provider | Many operators already have Docs, Sheets, and Drive source material. Main Branch should ingest or reference that material without making Google the source of memory. | Treat Google Workspace as source/input and provider metadata; durable summaries and decisions flow back into the business repo. | Follow-up issue needed |
 | 2026-05-04 | GitHub-native task and release flow | GitHub CLI | Adopted core operational dependency | GitHub issues, pull requests, releases, and auth are central public primitives; `gh` is inspectable, scriptable, and already expected by contributor and issue-drafting flows. | Keep browser/manual fallbacks for user-facing issue submission where needed; use `gh` for GitHub truth and mutations in agent workflows. | [#264](https://github.com/noontide-co/mainbranch/issues/264) |
 | 2026-05-11 | Repo setup, visibility, and checks model | GitHub repo/PR/checks rail, Cloudflare site/DNS/deploy rail, `mb` local checks, no GitHub Pages | Adopted product stance | One clean default path beats every fallback. Setup, site, and dependency docs need to agree that GitHub is for source/history/collaboration/PRs/checks, Cloudflare is for site/DNS/deploy, `mb` owns local checks, and public deploy does not require public source. GitHub organizations can be free; org does not imply paid. | Apply the visibility rubric in `/mb-setup` and `/mb-site` (default private; ask one visibility question for site repos). Layer checks locally first via `mb`; reuse the same rules in GitHub Actions and branch protection when a team repo wants them. See [the setup-and-checks decision](../decisions/2026-05-11-repo-setup-visibility-and-checks-model.md). | [#477](https://github.com/noontide-co/mainbranch/issues/477) |
-| 2026-05-07 | Provider/tool boundary | Build vs wrap vs sidecar rule | Adopted docs rule | Main Branch needs one public rule for when to use an external CLI/API/MCP directly, wrap it through `mb`, build an optional sidecar, promote behavior into core, or leave the surface manual or declined. | Apply the rule above before adding provider dependencies, sidecars, or support claims. Create follow-up implementation issues only when concrete smoke evidence or a specific user loop justifies them. | [#366](https://github.com/noontide-co/mainbranch/issues/366) |
+| 2026-05-13 | Provider/tool boundary | Provider CLI/API vs `mb` wrapper rule | Adopted decision | Main Branch needs one public rule for when to use an external CLI/API/MCP directly, wrap it through `mb`, build an optional sidecar, promote behavior into core, or leave the surface manual or declined. | Apply the [provider wrapper boundary decision](../decisions/2026-05-13-provider-cli-api-wrapper-boundary.md) before adding provider dependencies, sidecars, or support claims. Create follow-up implementation issues only when concrete smoke evidence or a specific user loop justifies them. | [#585](https://github.com/noontide-co/mainbranch/issues/585) |
 
 ## Related Public Contracts
 
@@ -192,5 +199,8 @@ why a tool disappeared.
   roadmap runtime surfaces.
 - [Sidecar enrichment CLI contract](../decisions/2026-05-04-sidecar-enrichment-cli-contract.md)
   defines how optional sidecars should integrate.
+- [Provider CLI/API and `mb` wrapper boundary](../decisions/2026-05-13-provider-cli-api-wrapper-boundary.md)
+  defines when raw provider capability should stay direct and when Main Branch
+  should own a stable wrapper.
 - [Workspace, repo, and sensitive-data boundaries](../decisions/2026-05-04-workspace-repo-sensitive-data-boundaries.md)
   defines where secrets, finance/legal data, and provider authority belong.
