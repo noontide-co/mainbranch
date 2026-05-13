@@ -49,27 +49,69 @@ def test_openai_image_smoke_writes_safe_blocked_record(
     assert payload["model"] == "gpt-image-2"
     assert payload["state"] == "blocked"
     assert payload["blocker_code"] == "generation_not_approved"
+    assert payload["candidate_count"] == 9
+    assert payload["generated_count"] == 0
     assert payload["output_record_written"] is True
+    assert payload["review_board_written"] is True
     assert payload["binary_committed"] is False
 
     index_path = repo / "pushes" / "2026-05-13-fake-openai-smoke" / "image-index.md"
+    review_board_path = (
+        repo / ".mb" / "media" / "pushes" / "2026-05-13-fake-openai-smoke" / "review-board.md"
+    )
     assert index_path.exists()
+    assert review_board_path.exists()
     record = _record_from_index(index_path)
     asset = record["assets"][0]
     concepts = record["concepts"]
 
     assert record["schema"] == "mainbranch.image_index.v0"
-    assert len(concepts) == 3
+    assert record["experiment_frame"] == "first_creative_playbook_router_experiment"
+    assert record["conversion_language"] == "conversion_informed"
+    assert record["batch_plan"]["candidate_count"] == 9
+    assert record["generated_count"] == 0
+    assert (
+        record["review_board_question"] == "Which playbook produced the best actual ad candidate?"
+    )
+    assert record["review_rule"] == "Beautiful but no click reason = reject."
+    assert record["review_board"]["committed"] is False
+    assert "high_contrast_poster" in record["creative_playbook_ids"]
+    assert "bold_meme_poster" not in record["creative_playbook_ids"]
+    assert "native_collage" not in record["creative_playbook_ids"]
+    assert len(concepts) == 9
+    assert len(record["assets"]) == 9
     assert "facebook_feed_portrait_4x5" in record["placement_presets"]
     assert "style_reference" in record["reference_roles"]
+    assert record["ad_readiness_gate"]["hard_stop_missing_fields"] == [
+        "offer",
+        "audience",
+        "campaign_goal",
+        "claim_proof_boundary",
+    ]
+    assert (
+        "operator_approval_for_live_provider_call"
+        in record["image_generation_gate"]["required_before_provider_generation"]
+    )
     assert record["selected_source_bites"][0]["concept_id"] == concepts[0]["concept_id"]
     assert record["selected_source_bites"][0]["extracted_phrase"] == "I keep losing the thread"
     assert record["post_processing_plan"]["status"] == "planned_not_implemented"
     assert record["post_processing_plan"]["overlay_expected"] is True
     assert concepts[0]["concept_id"] == asset["concept_id"]
     assert concepts[0]["prompt_key"] == image_rail_mod.DEFAULT_PROMPT_KEY
-    assert concepts[0]["creative_playbook"]["id"] == "technical-founder"
-    assert concepts[0]["creative_playbook"]["status"] == "suggested"
+    assert concepts[0]["creative_playbook_id"] == "specific_object_metaphor"
+    assert concepts[0]["creative_playbook"]["id"] == "specific_object_metaphor"
+    assert concepts[0]["creative_playbook"]["legacy_label"] == "technical-founder"
+    assert concepts[0]["creative_playbook"]["status"] == "candidate"
+    assert concepts[0]["router_inputs"]["offer_type"] == "open_source_business_os"
+    assert concepts[0]["router_inputs"]["source_bite_type"] == "customer_language"
+    assert concepts[0]["router_reason"]
+    assert concepts[0]["playbook_fit"]["conversion_pattern_fit"] == 4
+    assert concepts[0]["external_pattern_signal"]["source_type"] == "grok_synthesis"
+    assert concepts[0]["external_pattern_signal"]["primary_source_verified"] is False
+    assert concepts[0]["reference_influence_test"]["mode"] == "none"
+    assert concepts[0]["reference_influence"]["mode"] == "none"
+    assert concepts[0]["reference_influence"]["influence_score"] is None
+    assert concepts[0]["reference_influence"]["copy_risk"] == "pass"
     assert "branch map" in concepts[0]["creative_playbook"]["useful_metaphors"]
     assert concepts[0]["prompt_strategy"] == "creative_director_brief_first_no_text_base"
     assert concepts[1]["prompt_strategy"] == "reference_aware_no_text_base"
@@ -106,8 +148,14 @@ def test_openai_image_smoke_writes_safe_blocked_record(
     assert concepts[0]["review"]["prompt_record_complete"] == "pass"
     assert concepts[0]["review"]["reference_copy_risk"] == "pass"
     assert concepts[0]["review"]["export_readiness"] == "pass"
+    assert concepts[0]["review"]["click_reason_fit"] == "pass"
     assert concepts[0]["review"]["avoidance_check"]["native_feed_fit"] == 5
     assert concepts[0]["review"]["avoidance_check"]["clean_desk_cliche_risk"] == "pass"
+    assert concepts[0]["review"]["visual_quality"]["composition"] == 5
+    assert concepts[0]["review"]["ad_quality"]["thumb_stop"] == 5
+    assert concepts[0]["review"]["ad_quality"]["likely_click_reason"]
+    assert concepts[0]["review"]["risk"]["ai_slop_risk"] == 1
+    assert concepts[0]["review"]["risk"]["compliance_risk"] == "pass"
     assert concepts[0]["review"]["scores"]["one_second_clarity"] == 5
     assert concepts[0]["review"]["scores"]["specific_to_this_offer"] == 5
     assert concepts[0]["review"]["scores"]["native_feed_fit"] == 5
@@ -123,9 +171,13 @@ def test_openai_image_smoke_writes_safe_blocked_record(
     assert asset["safe_to_share"] is True
 
     text = index_path.read_text(encoding="utf-8")
+    board_text = review_board_path.read_text(encoding="utf-8")
     assert str(tmp_path) not in text
+    assert str(tmp_path) not in board_text
+    assert "Which playbook produced the best actual ad candidate?" in board_text
+    assert "Beautiful but no click reason = reject." in board_text
     assert "OPENAI_API_KEY=" not in text
-    assert not (repo / ".mb" / "media").exists()
+    assert not list((repo / ".mb" / "media").rglob("*.png"))
     assert not list((repo / "pushes").rglob("*.png"))
 
 
@@ -208,8 +260,11 @@ def test_openai_image_smoke_generated_path_keeps_binary_in_media_cache(
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert payload["state"] == "generated"
+    assert payload["candidate_count"] == 9
+    assert payload["generated_count"] == 9
     assert payload["generated_dimensions"] == {"width": 1024, "height": 1536}
     assert payload["binary_written"] is True
+    assert payload["binary_written_count"] == 9
     assert payload["binary_committed"] is False
 
     media_path = (
@@ -226,10 +281,13 @@ def test_openai_image_smoke_generated_path_keeps_binary_in_media_cache(
     index_path = repo / "pushes" / "2026-05-13-fake-openai-smoke" / "image-index.md"
     record = _record_from_index(index_path)
     dimensions = record["assets"][0]["dimensions"]
+    assert record["generated_count"] == 9
+    assert all(asset["state"] == "generated" for asset in record["assets"])
     assert dimensions["generated_width"] == 1024
     assert dimensions["generated_height"] == 1536
     assert record["assets"][0]["prompt_key"] == image_rail_mod.DEFAULT_PROMPT_KEY
     assert record["selected_source_bites"]
+    assert record["review_board"]["path"].endswith("review-board.md")
     assert record["post_processing_plan"]["resize_target"] == "1080x1350"
     text = index_path.read_text(encoding="utf-8")
     assert str(media_path) not in text
@@ -270,8 +328,11 @@ def test_openai_image_smoke_provider_failure_writes_sanitized_blocker(
     payload = json.loads(result.stdout)
     assert payload["state"] == "blocked"
     assert payload["blocker_code"] == "provider_request_failed"
+    assert payload["generated_count"] == 0
 
     index_path = repo / "pushes" / "2026-05-13-fake-openai-smoke" / "image-index.md"
+    record = _record_from_index(index_path)
+    assert all(asset["blocker_code"] == "provider_request_failed" for asset in record["assets"])
     text = index_path.read_text(encoding="utf-8")
     assert "RuntimeError" in text
     assert "secret-bearing provider details" not in text

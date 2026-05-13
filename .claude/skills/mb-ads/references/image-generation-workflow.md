@@ -11,6 +11,54 @@ boundaries.
 
 ---
 
+## Ad Readiness Gate
+
+Do not generate final ads when required business context is missing.
+
+Hard-stop fields for final ad generation:
+
+- offer;
+- audience;
+- current campaign goal;
+- claim/proof boundary.
+
+Soft-warning fields:
+
+- proof;
+- customer language or reviews;
+- brand visual style;
+- prior outcomes;
+- Meta summary;
+- reference images.
+
+If a hard-stop field is missing, output an intake/source-bite plan instead of
+finished ads:
+
+```text
+I do not have enough offer context to make ads yet. I can help create the
+missing offer, audience, and claim-boundary files first.
+```
+
+Allowed low-context actions: intake questions, repo/source audit, ad strategy
+outline, missing-info checklist, and placeholder concepts clearly marked as
+placeholders. Blocked low-context actions: final ad package, provider image
+generation, campaign-ready claims, and Meta-informed recommendations.
+
+Use CLI facts first:
+
+```bash
+mb status --json --peek
+mb start --json
+mb connect doctor --json
+mb ads meta summary --json   # only if ready and operator approved
+```
+
+If a stable readiness check emerges from this experiment, propose
+`mb ads readiness --json` as a future command. Do not invent facts in skill
+prose.
+
+---
+
 ## Creative Direction Contract
 
 Before any provider call, turn the push brief and business context into 3 to 6
@@ -36,17 +84,52 @@ proof, research, founder notes, a push brief, prior outcomes, visual style, or
 operator-provided inspiration. A source bite proves what the concept latched
 onto before any image prompt exists.
 
+If there is no source bite, mark the concept `source_light: true` and do not
+generate unless the operator explicitly approves broad exploration.
+
+MAIN-374 treats creative playbooks as emerging metadata for a router
+experiment, not a full official schema. Use `creative_playbook_id` on every
+candidate and keep the list small until generated candidates prove which
+patterns work:
+
+- `native_problem_scene`
+- `specific_object_metaphor`
+- `proof_artifact`
+- `myth_vs_fact`
+- `with_without_transformation`
+- `crossed_out_problem_list`
+- `founder_pov`
+- `high_contrast_poster`
+- `simple_chart_comparison`
+- `testimonials_with_artifact`
+- `us_vs_them_split`
+- `simple_list_framework`
+
+Use `conversion_informed`, not `high_converting`, unless the business has live
+result data.
+
 Each concept must record:
 
 - `concept_id`;
 - `status`: `planned`, `generated`, `rejected`, or `needs_revision`;
-- `creative_playbook` or `creative_playbook_candidate`: optional niche/style
-  overlay; do not force a playbook when the source bites do not support one;
+- `creative_playbook_id` and optional `creative_playbook`: playbook-router
+  candidate metadata, not a canonical library;
+- `router_inputs`: offer type, audience, source-bite type, proof availability,
+  brand style, platform, and niche when known;
+- `router_reason`: why the playbook fits this source bite and audience;
+- `playbook_fit`: 1 to 5 scores for source-bite fit, offer fit, audience fit,
+  visual distinctiveness, and conversion-pattern fit;
 - `source_bite`: source file, type, phrase, insight, and visual translation;
 - `genericness_check`: whether the idea could fit generic adjacent products and
   a 1 to 5 `specific_to_this_offer` score;
 - `avoidance_strategy`: what generic or unsafe creative patterns the concept
   avoids, any soft-avoid pattern it intentionally uses, and why;
+- `external_pattern_signal`: optional scratch/source signal only, with
+  `primary_source_verified: false` unless primary research has been checked;
+- `reference_influence_test`: `none`, `text_traits`, or `image_reference`,
+  plus specificity, native-feed-fit, and AI-slop-risk effects;
+- `reference_influence`: lean future hook with `mode`, `influence_score:
+  null`, and `copy_risk`;
 - `viewer_scroll_context`;
 - `first_second_read`;
 - `audience_state`;
@@ -66,11 +149,66 @@ Each concept must record:
 - `negative_constraints`;
 - `review`.
 
+External creative research, including Grok or ad-research synthesis, is only a
+source signal until verified against primary sources. Do not commit raw Grok
+dumps, screenshots, provider payloads, or unverified claims.
+
 Use this shape inside push-local `image-index.md`:
 
 ```yaml
 schema: mainbranch.image_index.v0
 push_slug: 2026-05-ad-test
+experiment_frame: first_creative_playbook_router_experiment
+conversion_language: conversion_informed
+creative_playbook_ids:
+  - native_problem_scene
+  - specific_object_metaphor
+  - proof_artifact
+  - myth_vs_fact
+  - with_without_transformation
+  - crossed_out_problem_list
+  - founder_pov
+  - high_contrast_poster
+  - simple_chart_comparison
+  - testimonials_with_artifact
+  - us_vs_them_split
+  - simple_list_framework
+review_board_question: Which playbook produced the best actual ad candidate?
+review_rule: Beautiful but no click reason = reject.
+ad_readiness_gate:
+  state: ready
+  hard_stop_missing:
+    - offer
+    - audience
+    - campaign_goal
+    - claim_proof_boundary
+  hard_stop_missing_fields:
+    - offer
+    - audience
+    - campaign_goal
+    - claim_proof_boundary
+  soft_warning_missing:
+    - proof
+    - customer_language
+    - brand_visual_style
+    - prior_outcomes
+    - meta_summary
+    - reference_images
+  soft_warning_missing_fields:
+    - proof
+    - customer_language
+    - brand_visual_style
+    - prior_outcomes
+    - meta_summary
+    - reference_images
+image_generation_gate:
+  required_before_provider_generation:
+    - selected_concept
+    - prompt_record
+    - safe_media_storage
+    - image_index_target
+    - credential_state
+    - operator_approval_for_live_provider_call
 selected_source_bites:
   - concept_id: lost-thread-branch-map
     source_file: research/customer-language.md
@@ -136,9 +274,10 @@ concepts:
   - concept_id: lost-thread-branch-map
     status: planned
     prompt_key: lost-thread-branch-map.v1
+    creative_playbook_id: specific_object_metaphor
     creative_playbook:
-      id: technical-founder
-      status: suggested
+      id: specific_object_metaphor
+      status: candidate
       use_when:
         - audience speaks in systems, workflows, and operating clarity
         - offer promise is about memory, process, or context continuity
@@ -162,6 +301,37 @@ concepts:
         - real artifacts
         - visible consequence
         - source-bite metaphor
+    router_inputs:
+      niche: founder_tool
+      offer_type: open_source_business_os
+      audience: solo founder or operator
+      source_bite_type: customer_language
+      proof_available: false
+      brand_style: tactile, technical, irreverent
+      platform: facebook_feed
+    router_reason: >
+      The source bite is emotional and abstract, so a specific object metaphor,
+      native problem scene, or bold meme/poster is more useful than chart proof.
+    playbook_fit:
+      source_bite_fit: 5
+      offer_fit: 5
+      audience_fit: 4
+      visual_distinctiveness: 5
+      conversion_pattern_fit: 4
+    external_pattern_signal:
+      source_type: grok_synthesis
+      pattern: specific_object_metaphor
+      confidence: medium
+      primary_source_verified: false
+    reference_influence_test:
+      mode: none
+      effect_on_specificity: 4
+      effect_on_native_feed_fit: 4
+      effect_on_ai_slop_risk: 2
+    reference_influence:
+      mode: none
+      influence_score: null
+      copy_risk: pass
     source_bite:
       source_file: research/customer-language.md
       source_type: customer_language
@@ -231,6 +401,7 @@ concepts:
       - no tiny text
       - no revenue screenshots
       - no before/after income claim
+    likely_click_reason: A founder who feels context slipping away recognizes the lost-thread problem before reading the overlay.
     review:
       status: accepted
       one_second_clarity: pass
@@ -251,6 +422,22 @@ concepts:
       policy_risk: pass
       private_data_risk: pass
       ai_generic_risk: pass
+      click_reason_fit: pass
+      visual_quality:
+        composition: 5
+        style: 5
+        polish_control: 5
+      ad_quality:
+        thumb_stop: 5
+        problem_clarity: 5
+        desire_clarity: 5
+        curiosity_gap: 5
+        offer_relevance: 5
+        likely_click_reason: A founder who feels context slipping away recognizes the lost-thread problem before reading the overlay.
+      risk:
+        ai_slop_risk: 1
+        genericness_risk: 1
+        compliance_risk: pass
       avoidance_check:
         stock_photo_risk: pass
         website_hero_risk: pass
@@ -323,14 +510,17 @@ Creative direction principles to encode in each concept:
 Default flow:
 
 ```text
-business context -> source bite extraction -> optional creative playbook ->
-concept brief -> genericness and avoidance checks -> prompt record ->
-generation or prompt-only fallback -> review -> image-index record
+repo facts -> ad readiness -> source bites -> playbook router -> concepts ->
+review/genericness checks -> prompt records -> generation or fallback ->
+review board -> image-index
 ```
 
 Creative playbooks are optional overlays, not the base system. Suggest one only
 when it fits the repo's source bites, offer, audience, and brand context. Do not
 make any one metaphor universal across businesses.
+
+The review board should answer: "Which playbook produced the best actual ad
+candidate?" Do not reduce review to "Which image looked best?"
 
 Write the prompt record before provider generation. If the selected provider is
 prompt-only or cannot accept image references, convert approved references into
@@ -865,6 +1055,8 @@ Examples:
 Every generated image batch gets an `image-index.md` with:
 
 - 3 to 6 planned/reviewed concepts when the task is image creative direction;
+- creative playbook IDs, router inputs/reasons, and fit scores for each
+  candidate;
 - concept-to-asset links through `concept_id`;
 - provider and model, or `manual`;
 - docs-checked date;
@@ -900,6 +1092,22 @@ review:
   policy_risk: warning
   private_data_risk: pass
   ai_generic_risk: warning
+  click_reason_fit: pass
+  visual_quality:
+    composition: 4
+    style: 4
+    polish_control: 3
+  ad_quality:
+    thumb_stop: 4
+    problem_clarity: 4
+    desire_clarity: 3
+    curiosity_gap: 4
+    offer_relevance: 3
+    likely_click_reason: The audience recognizes the source-bite problem fast.
+  risk:
+    ai_slop_risk: 3
+    genericness_risk: 3
+    compliance_risk: warning
   scores:
     one_second_clarity: 4
     visual_hook_strength: 4
@@ -916,6 +1124,10 @@ The review should answer: what the image is supposed to do, who it is for,
 what pain or desire it visualizes, why the composition and placement fit, what
 claim boundary it respects, and whether to accept, revise, regenerate, or
 reject it.
+
+Beautiful but no click reason = reject. Separate image quality from ad quality:
+a polished composition with no audience-specific reason to click is not a
+usable ad candidate.
 
 ## Fallback (No Provider)
 

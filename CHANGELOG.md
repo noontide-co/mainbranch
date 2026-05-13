@@ -24,6 +24,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   roles, avoidance strategy checks, planned post-processing metadata,
   structured creative review findings, and concept-to-asset links before
   optional provider generation. Refs MAIN-373, #595.
+- Expanded the `/mb-ads` image production loop as the first creative
+  playbook/router experiment: ad readiness gates, source-bite-first prompting,
+  conversion-informed playbook metadata, separate visual/ad/risk scoring,
+  local ignored review boards, official API batch smoke records, and safe
+  `image-index.md` evidence distinguish actual ad candidates from merely
+  attractive images. Refs MAIN-374, #596.
 
 ## [0.3.21] - 2026-05-13
 

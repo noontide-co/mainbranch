@@ -16,6 +16,7 @@ import yaml
 DEFAULT_PUSH_SLUG = "2026-05-13-openai-image-rail-smoke"
 DEFAULT_ASSET_ID = "fake-openai-image-001"
 DEFAULT_PROMPT_KEY = "lost-thread-branch-map.v1"
+DEFAULT_BATCH_CANDIDATE_COUNT = 8
 DEFAULT_MODEL = "gpt-image-2"
 DEFAULT_MODEL_SNAPSHOT = "gpt-image-2-2026-04-21"
 DEFAULT_SIZE = "1024x1536"
@@ -43,6 +44,20 @@ REFERENCE_ROLES = (
     "screenshot_reference",
     "background",
     "mask_source",
+)
+CREATIVE_PLAYBOOK_IDS = (
+    "native_problem_scene",
+    "specific_object_metaphor",
+    "proof_artifact",
+    "myth_vs_fact",
+    "with_without_transformation",
+    "crossed_out_problem_list",
+    "founder_pov",
+    "high_contrast_poster",
+    "simple_chart_comparison",
+    "testimonials_with_artifact",
+    "us_vs_them_split",
+    "simple_list_framework",
 )
 PLACEMENT_PRESETS: dict[str, dict[str, Any]] = {
     "facebook_feed_portrait_4x5": {
@@ -121,6 +136,13 @@ def _media_path(repo: Path, media_root: str, push_slug: str, asset_id: str) -> P
     if not root.is_absolute():
         root = repo / root
     return root / "pushes" / push_slug / "images" / f"{asset_id}.png"
+
+
+def _review_board_path(repo: Path, media_root: str, push_slug: str) -> Path:
+    root = Path(media_root).expanduser()
+    if not root.is_absolute():
+        root = repo / root
+    return root / "pushes" / push_slug / "review-board.md"
 
 
 def _provider_blocker(generate: bool) -> tuple[str, str]:
@@ -274,6 +296,27 @@ def review_concept(concept: dict[str, Any]) -> dict[str, Any]:
         "pass" if isinstance(specific_to_offer, int) and specific_to_offer >= 4 else "fail"
     )
     ai_generic_risk = "warning" if not references and "generic ai art" in joined else "pass"
+    visual_quality = _visual_quality_scores(
+        concept,
+        avoidance_risk=avoidance_risk,
+        brand_fit=brand_fit,
+    )
+    ad_quality = _ad_quality_scores(
+        concept,
+        one_second_clarity=one_second_clarity,
+        source_bite_fit=source_bite_fit,
+        genericness_risk=genericness_risk,
+        avoidance_check=avoidance_check,
+    )
+    risk = _risk_scores(
+        ai_generic_risk=ai_generic_risk,
+        genericness_risk=genericness_risk,
+        claim_safety=claim_safety,
+        private_data_risk=private_data_risk,
+        fake_ui_risk=fake_ui_risk,
+        readability=readability,
+    )
+    click_reason_fit = "pass" if ad_quality["likely_click_reason"] else "fail"
 
     checks = {
         "one_second_clarity": one_second_clarity,
@@ -294,6 +337,7 @@ def review_concept(concept: dict[str, Any]) -> dict[str, Any]:
         "policy_risk": "pass" if claim_safety == "pass" else "fail",
         "private_data_risk": private_data_risk,
         "ai_generic_risk": ai_generic_risk,
+        "click_reason_fit": click_reason_fit,
     }
     notes = []
     if fake_ui_risk == "fail":
@@ -322,6 +366,8 @@ def review_concept(concept: dict[str, Any]) -> dict[str, Any]:
         notes.append("Reference traits must say what to borrow and what not to copy.")
     if export_readiness != "pass":
         notes.append("Add placement and post-processing expectations before export.")
+    if click_reason_fit != "pass":
+        notes.append("Beautiful but no click reason = reject.")
 
     scores = {
         "one_second_clarity": _review_score(one_second_clarity),
@@ -350,6 +396,9 @@ def review_concept(concept: dict[str, Any]) -> dict[str, Any]:
         "status": status,
         "decision": decision,
         **checks,
+        "visual_quality": visual_quality,
+        "ad_quality": ad_quality,
+        "risk": risk,
         "avoidance_check": avoidance_check,
         "scores": scores,
         "notes": notes,
@@ -498,6 +547,712 @@ def _review_score(value: str, *, risk: bool = False) -> int:
     return 1 if not risk else 5
 
 
+def _dict_value(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _fixture_playbook_metadata(concept_id: str) -> dict[str, Any]:
+    common_router_inputs = {
+        "niche": "founder_tool",
+        "offer_type": "open_source_business_os",
+        "audience": "solo founder or operator",
+        "proof_available": False,
+        "brand_style": "tactile, technical, irreverent",
+        "platform": "facebook_feed",
+    }
+    by_concept: dict[str, dict[str, Any]] = {
+        DEFAULT_CONCEPT_ID: {
+            "creative_playbook_id": "specific_object_metaphor",
+            "source_bite_type": "customer_language",
+            "router_reason": (
+                "The source bite is emotional and abstract, so a specific object "
+                "metaphor is more useful than chart proof."
+            ),
+            "playbook_fit": {
+                "source_bite_fit": 5,
+                "offer_fit": 5,
+                "audience_fit": 4,
+                "visual_distinctiveness": 5,
+                "conversion_pattern_fit": 4,
+            },
+            "external_pattern_signal": {
+                "source_type": "grok_synthesis",
+                "pattern": "specific_object_metaphor",
+                "confidence": "medium",
+                "primary_source_verified": False,
+            },
+            "reference_influence_test": {
+                "mode": "none",
+                "effect_on_specificity": 4,
+                "effect_on_native_feed_fit": 4,
+                "effect_on_ai_slop_risk": 2,
+            },
+            "likely_click_reason": (
+                "A founder who feels context slipping away recognizes the lost-thread "
+                "problem before reading the overlay."
+            ),
+        },
+        "operator-before-after-chaos": {
+            "creative_playbook_id": "native_problem_scene",
+            "source_bite_type": "offer",
+            "router_reason": (
+                "The offer bite is broad, so a native problem scene gives the abstract "
+                "business-memory promise a concrete feed-native setting."
+            ),
+            "playbook_fit": {
+                "source_bite_fit": 4,
+                "offer_fit": 5,
+                "audience_fit": 4,
+                "visual_distinctiveness": 3,
+                "conversion_pattern_fit": 4,
+            },
+            "external_pattern_signal": {
+                "source_type": "grok_synthesis",
+                "pattern": "native_problem_scene",
+                "confidence": "medium",
+                "primary_source_verified": False,
+            },
+            "reference_influence_test": {
+                "mode": "text_traits",
+                "effect_on_specificity": 4,
+                "effect_on_native_feed_fit": 4,
+                "effect_on_ai_slop_risk": 2,
+            },
+            "likely_click_reason": (
+                "The operator sees scattered business facts becoming a map they own."
+            ),
+        },
+        "mobile-safe-progress-path": {
+            "creative_playbook_id": "proof_artifact",
+            "source_bite_type": "push_brief",
+            "router_reason": (
+                "The push bite asks for the next practical move, so a proof-artifact "
+                "checkpoint scene can make progress feel inspectable without fake data."
+            ),
+            "playbook_fit": {
+                "source_bite_fit": 4,
+                "offer_fit": 4,
+                "audience_fit": 4,
+                "visual_distinctiveness": 3,
+                "conversion_pattern_fit": 3,
+            },
+            "external_pattern_signal": {
+                "source_type": "grok_synthesis",
+                "pattern": "proof_artifact",
+                "confidence": "low",
+                "primary_source_verified": False,
+            },
+            "reference_influence_test": {
+                "mode": "none",
+                "effect_on_specificity": 3,
+                "effect_on_native_feed_fit": 3,
+                "effect_on_ai_slop_risk": 3,
+            },
+            "likely_click_reason": (
+                "The image promises a practical next step instead of another vague "
+                "productivity dashboard."
+            ),
+        },
+        "app-sprawl-native-scene": {
+            "creative_playbook_id": "native_problem_scene",
+            "source_bite_type": "customer_language",
+            "router_reason": (
+                "The source bite describes a native operating problem, so the best "
+                "test is a feed-native scene before abstract proof."
+            ),
+            "playbook_fit": {
+                "source_bite_fit": 5,
+                "offer_fit": 4,
+                "audience_fit": 5,
+                "visual_distinctiveness": 4,
+                "conversion_pattern_fit": 4,
+            },
+            "external_pattern_signal": {
+                "source_type": "grok_synthesis",
+                "pattern": "native_problem_scene",
+                "confidence": "medium",
+                "primary_source_verified": False,
+            },
+            "reference_influence_test": {
+                "mode": "none",
+                "effect_on_specificity": 4,
+                "effect_on_native_feed_fit": 5,
+                "effect_on_ai_slop_risk": 2,
+            },
+            "likely_click_reason": (
+                "The scene looks like the founder's real tabs-and-notes problem."
+            ),
+        },
+        "myth-vs-folder": {
+            "creative_playbook_id": "myth_vs_fact",
+            "source_bite_type": "objection",
+            "router_reason": (
+                "The source bite is a misconception about needing another app, so a "
+                "myth/fact frame can create a fast belief shift."
+            ),
+            "playbook_fit": {
+                "source_bite_fit": 4,
+                "offer_fit": 4,
+                "audience_fit": 4,
+                "visual_distinctiveness": 3,
+                "conversion_pattern_fit": 4,
+            },
+            "external_pattern_signal": {
+                "source_type": "grok_synthesis",
+                "pattern": "myth_vs_fact",
+                "confidence": "low",
+                "primary_source_verified": False,
+            },
+            "reference_influence_test": {
+                "mode": "none",
+                "effect_on_specificity": 3,
+                "effect_on_native_feed_fit": 3,
+                "effect_on_ai_slop_risk": 3,
+            },
+            "likely_click_reason": "The ad challenges the assumption that the fix is another app.",
+        },
+        "with-without-context": {
+            "creative_playbook_id": "with_without_transformation",
+            "source_bite_type": "problem_outcome_contrast",
+            "router_reason": (
+                "The source bite has a before/after operating-state contrast, so a "
+                "with/without transformation can make the promise concrete."
+            ),
+            "playbook_fit": {
+                "source_bite_fit": 5,
+                "offer_fit": 5,
+                "audience_fit": 4,
+                "visual_distinctiveness": 4,
+                "conversion_pattern_fit": 4,
+            },
+            "external_pattern_signal": {
+                "source_type": "grok_synthesis",
+                "pattern": "with_without_transformation",
+                "confidence": "medium",
+                "primary_source_verified": False,
+            },
+            "reference_influence_test": {
+                "mode": "text_traits",
+                "effect_on_specificity": 4,
+                "effect_on_native_feed_fit": 4,
+                "effect_on_ai_slop_risk": 2,
+            },
+            "likely_click_reason": (
+                "The operator can see the cost of scattered context and the relief "
+                "of a durable operating folder."
+            ),
+        },
+        "crossed-out-tools": {
+            "creative_playbook_id": "crossed_out_problem_list",
+            "source_bite_type": "problem_list",
+            "router_reason": (
+                "The source bite names multiple repeated pains, so a crossed-out "
+                "problem list can test whether visual checklist relief works."
+            ),
+            "playbook_fit": {
+                "source_bite_fit": 4,
+                "offer_fit": 4,
+                "audience_fit": 4,
+                "visual_distinctiveness": 3,
+                "conversion_pattern_fit": 4,
+            },
+            "external_pattern_signal": {
+                "source_type": "grok_synthesis",
+                "pattern": "crossed_out_problem_list",
+                "confidence": "medium",
+                "primary_source_verified": False,
+            },
+            "reference_influence_test": {
+                "mode": "none",
+                "effect_on_specificity": 3,
+                "effect_on_native_feed_fit": 3,
+                "effect_on_ai_slop_risk": 3,
+            },
+            "likely_click_reason": "The operator recognizes three repeated pains at once.",
+        },
+        "founder-pov-checkpoint": {
+            "creative_playbook_id": "founder_pov",
+            "source_bite_type": "founder_note",
+            "router_reason": (
+                "The source bite is a founder/operator moment, so first-person desk "
+                "perspective is a better test than a polished product scene."
+            ),
+            "playbook_fit": {
+                "source_bite_fit": 4,
+                "offer_fit": 4,
+                "audience_fit": 5,
+                "visual_distinctiveness": 4,
+                "conversion_pattern_fit": 3,
+            },
+            "external_pattern_signal": {
+                "source_type": "grok_synthesis",
+                "pattern": "founder_pov",
+                "confidence": "low",
+                "primary_source_verified": False,
+            },
+            "reference_influence_test": {
+                "mode": "text_traits",
+                "effect_on_specificity": 4,
+                "effect_on_native_feed_fit": 5,
+                "effect_on_ai_slop_risk": 2,
+            },
+            "likely_click_reason": "The viewpoint feels like the viewer's own work session.",
+        },
+        "high-contrast-context-poster": {
+            "creative_playbook_id": "high_contrast_poster",
+            "source_bite_type": "customer_language",
+            "router_reason": (
+                "The source bite is emotionally simple, so a high-contrast poster "
+                "tests thumb-stop without leaning into casual meme language."
+            ),
+            "playbook_fit": {
+                "source_bite_fit": 4,
+                "offer_fit": 4,
+                "audience_fit": 3,
+                "visual_distinctiveness": 5,
+                "conversion_pattern_fit": 3,
+            },
+            "external_pattern_signal": {
+                "source_type": "grok_synthesis",
+                "pattern": "high_contrast_poster",
+                "confidence": "low",
+                "primary_source_verified": False,
+            },
+            "reference_influence_test": {
+                "mode": "none",
+                "effect_on_specificity": 3,
+                "effect_on_native_feed_fit": 3,
+                "effect_on_ai_slop_risk": 3,
+            },
+            "likely_click_reason": "The stark visual makes the continuity pain impossible to miss.",
+        },
+    }
+    metadata = by_concept[concept_id]
+    router_inputs = dict(common_router_inputs)
+    router_inputs["source_bite_type"] = metadata["source_bite_type"]
+    return {
+        "creative_playbook_id": metadata["creative_playbook_id"],
+        "router_inputs": router_inputs,
+        "router_reason": metadata["router_reason"],
+        "playbook_fit": metadata["playbook_fit"],
+        "external_pattern_signal": metadata["external_pattern_signal"],
+        "reference_influence_test": metadata["reference_influence_test"],
+        "reference_influence": {
+            "mode": metadata["reference_influence_test"]["mode"],
+            "influence_score": None,
+            "copy_risk": "pass",
+        },
+        "likely_click_reason": metadata["likely_click_reason"],
+    }
+
+
+def _visual_quality_scores(
+    concept: dict[str, Any],
+    *,
+    avoidance_risk: str,
+    brand_fit: str,
+) -> dict[str, int]:
+    composition = 5 if concept.get("visual_hierarchy") and concept.get("composition") else 3
+    if not concept.get("composition"):
+        composition = 1
+    style = 5 if concept.get("camera_language") and concept.get("style_strength") else 3
+    if brand_fit == "warning":
+        style = min(style, 4)
+    polish_control = {"pass": 5, "warning": 3, "fail": 1}.get(avoidance_risk, 3)
+    return {
+        "composition": composition,
+        "style": style,
+        "polish_control": polish_control,
+    }
+
+
+def _ad_quality_scores(
+    concept: dict[str, Any],
+    *,
+    one_second_clarity: str,
+    source_bite_fit: str,
+    genericness_risk: str,
+    avoidance_check: dict[str, Any],
+) -> dict[str, Any]:
+    problem_clarity = _review_score(one_second_clarity)
+    desire_clarity = 5 if concept.get("visual_job") and concept.get("audience_state") else 3
+    if genericness_risk == "fail":
+        desire_clarity = min(desire_clarity, 2)
+    curiosity_gap = 5 if concept.get("visual_metaphor") else 3
+    offer_relevance = min(_review_score(source_bite_fit), _review_score(genericness_risk))
+    thumb_stop = int(avoidance_check.get("native_feed_fit") or 1)
+    return {
+        "thumb_stop": thumb_stop,
+        "problem_clarity": problem_clarity,
+        "desire_clarity": desire_clarity,
+        "curiosity_gap": curiosity_gap,
+        "offer_relevance": offer_relevance,
+        "likely_click_reason": str(concept.get("likely_click_reason") or "").strip(),
+    }
+
+
+def _risk_scores(
+    *,
+    ai_generic_risk: str,
+    genericness_risk: str,
+    claim_safety: str,
+    private_data_risk: str,
+    fake_ui_risk: str,
+    readability: str,
+) -> dict[str, Any]:
+    compliance_values = [claim_safety, private_data_risk, fake_ui_risk]
+    if "fail" in compliance_values:
+        compliance_risk = "fail"
+    elif readability == "warning":
+        compliance_risk = "warning"
+    else:
+        compliance_risk = "pass"
+    return {
+        "ai_slop_risk": _review_score(ai_generic_risk, risk=True),
+        "genericness_risk": _review_score(genericness_risk, risk=True),
+        "compliance_risk": compliance_risk,
+    }
+
+
+def _extra_fixture_concepts(push_slug: str, common_sources: list[str]) -> list[dict[str, Any]]:
+    base = {
+        "status": "planned",
+        "prompt_strategy": "creative_director_brief_first_no_text_base",
+        "viewer_scroll_context": "cold Facebook feed",
+        "placement": "facebook_feed_portrait_4x5",
+        "placement_details": PLACEMENT_PRESETS["facebook_feed_portrait_4x5"],
+        "text_overlay_plan": "text-free base image; deterministic overlay later",
+        "source_files": common_sources,
+        "references": [],
+        "reference_trait_extraction": [],
+        "claim_boundary": (
+            "do not imply automatic decisions, guaranteed outcomes, or provider partnership"
+        ),
+        "negative_constraints": [
+            "no real Meta UI",
+            "no real logos",
+            "no rendered words",
+            "no customer data",
+            "no unsupported outcome claim",
+        ],
+    }
+
+    extras = [
+        {
+            "concept_id": "app-sprawl-native-scene",
+            "prompt_key": "app-sprawl-native-scene.v1",
+            "source_bite": {
+                "source_file": "research/customer-language.md",
+                "source_type": "customer_language",
+                "extracted_phrase": "everything is scattered across too many places",
+                "insight": "The problem is visible in the operator's live work surface.",
+                "visual_translation": (
+                    "browser tabs, notes, and invoices crowding a laptop while one "
+                    "folder anchors the scene"
+                ),
+            },
+            "genericness_check": {
+                "could_fit_notion": True,
+                "could_fit_asana": True,
+                "could_fit_quickbooks": False,
+                "could_fit_generic_coaching_offer": False,
+                "could_fit_generic_productivity_app": True,
+                "could_fit_any_coaching_offer": False,
+                "could_fit_accounting_software": False,
+                "specific_to_this_offer": 4,
+                "reason": "The folder-owned business memory cue narrows a common tab-sprawl scene.",
+            },
+            "avoidance_strategy": {
+                "avoids": [
+                    "stock-photo business imagery",
+                    "fake dashboard",
+                    "generic SaaS gradient",
+                ],
+                "intentionally_uses": [],
+                "reason": "Uses a native problem scene instead of a polished product mockup.",
+            },
+            "first_second_read": "too many open loops, one owned business folder",
+            "audience_state": "operator has too many tabs and notes open after a work session",
+            "visual_job": "make app sprawl feel familiar and solvable",
+            "visual_metaphor": "one physical folder grounding a messy laptop scene",
+            "composition": (
+                "phone-camera desk scene with laptop tabs, notes, and one "
+                "labeled-but-unreadable folder"
+            ),
+            "visual_hierarchy": {
+                "primary_focal_point": "owned folder beside laptop",
+                "secondary_focal_point": "messy tabs and notes",
+                "text_zone": "top third",
+            },
+            "camera_language": "native phone snapshot with natural desk mess",
+            "style_strength": "lo-fi and specific, not polished",
+            "emotional_tone": "recognition before relief",
+            "prompt": (
+                "Create a feed-native phone-style Facebook ad base image showing a "
+                "founder desk with too many browser tabs, handwritten notes, and one "
+                "plain business folder anchoring the mess. No readable text, UI, logos, "
+                "customer data, or private details."
+            ),
+        },
+        {
+            "concept_id": "myth-vs-folder",
+            "prompt_key": "myth-vs-folder.v1",
+            "source_bite": {
+                "source_file": "core/audience.md",
+                "source_type": "objection",
+                "extracted_phrase": "I probably need another app",
+                "insight": (
+                    "The audience may misdiagnose the memory problem as a "
+                    "software-shopping problem."
+                ),
+                "visual_translation": "a pile of app icons fading behind one durable local folder",
+            },
+            "genericness_check": {
+                "could_fit_notion": True,
+                "could_fit_asana": True,
+                "could_fit_quickbooks": False,
+                "could_fit_generic_coaching_offer": False,
+                "could_fit_generic_productivity_app": True,
+                "could_fit_any_coaching_offer": False,
+                "could_fit_accounting_software": False,
+                "specific_to_this_offer": 4,
+                "reason": "The local folder and owned-memory frame point back to Main Branch.",
+            },
+            "avoidance_strategy": {
+                "avoids": ["fake app logos", "generic SaaS gradient", "website hero composition"],
+                "intentionally_uses": [],
+                "reason": "Tests an educational split without using real trademarks.",
+            },
+            "first_second_read": "not another app; one owned folder",
+            "audience_state": "operator thinks the fix is buying or configuring another tool",
+            "visual_job": "challenge the app-shopping misconception",
+            "visual_metaphor": "ghosted generic app tiles behind a plain local folder",
+            "composition": (
+                "simple split-feel poster with a crossed-out app pile and one tactile folder"
+            ),
+            "visual_hierarchy": {
+                "primary_focal_point": "plain folder",
+                "secondary_focal_point": "crossed-out generic app pile",
+                "text_zone": "upper right",
+            },
+            "camera_language": "flat editorial poster with tactile paper objects",
+            "style_strength": "educational, high contrast, not glossy",
+            "emotional_tone": "belief shift",
+            "prompt": (
+                "Create a text-free Facebook ad base image that visually contrasts a "
+                "faded pile of generic unlabeled app tiles with one tactile local "
+                "business folder. No rendered words, real logos, UI, customer data, "
+                "or private details."
+            ),
+        },
+        {
+            "concept_id": "with-without-context",
+            "prompt_key": "with-without-context.v1",
+            "source_bite": {
+                "source_file": "core/offer.md",
+                "source_type": "problem_outcome_contrast",
+                "extracted_phrase": "stop re-explaining the business every session",
+                "insight": (
+                    "The core transformation is from repeated context setup to preserved memory."
+                ),
+                "visual_translation": (
+                    "two work surfaces: repeated sticky-note explanations versus "
+                    "one connected repo map"
+                ),
+            },
+            "genericness_check": {
+                "could_fit_notion": True,
+                "could_fit_asana": False,
+                "could_fit_quickbooks": False,
+                "could_fit_generic_coaching_offer": False,
+                "could_fit_generic_productivity_app": True,
+                "could_fit_any_coaching_offer": False,
+                "could_fit_accounting_software": False,
+                "specific_to_this_offer": 5,
+                "reason": (
+                    "The repeated re-explanation pain is tied to AI-assisted business memory."
+                ),
+            },
+            "avoidance_strategy": {
+                "avoids": ["split-screen chaos/order cliché", "clean desk productivity cliché"],
+                "intentionally_uses": ["before/after contrast"],
+                "reason": (
+                    "Uses transformation contrast, but grounds it in source-specific "
+                    "re-explanation."
+                ),
+            },
+            "first_second_read": "without memory versus with durable business context",
+            "audience_state": "operator keeps rebuilding context before useful work starts",
+            "visual_job": "make the cost of re-explaining visible",
+            "visual_metaphor": "sticky-note repetition becoming one connected map",
+            "composition": (
+                "subtle left/right transformation with sticky notes moving into a clean branch map"
+            ),
+            "visual_hierarchy": {
+                "primary_focal_point": "connected branch map",
+                "secondary_focal_point": "repeated sticky notes",
+                "text_zone": "top center",
+            },
+            "camera_language": "editorial tabletop comparison, not sterile",
+            "style_strength": "clear contrast with real paper texture",
+            "emotional_tone": "frustration turning into relief",
+            "prompt": (
+                "Create a text-free Facebook feed ad base image showing a before/after "
+                "operating-memory contrast: repeated sticky-note explanations resolving "
+                "into one connected branch map. No readable words, logos, UI, customer "
+                "data, or private details."
+            ),
+        },
+        {
+            "concept_id": "crossed-out-tools",
+            "prompt_key": "crossed-out-tools.v1",
+            "source_bite": {
+                "source_file": "research/customer-language.md",
+                "source_type": "problem_list",
+                "extracted_phrase": "I forgot the decision, the offer, and the next step",
+                "insight": "The pain is a cluster of repeated operating-memory failures.",
+                "visual_translation": (
+                    "three unlabeled problem cards crossed out beside one branch-map card"
+                ),
+            },
+            "genericness_check": {
+                "could_fit_notion": True,
+                "could_fit_asana": True,
+                "could_fit_quickbooks": False,
+                "could_fit_generic_coaching_offer": True,
+                "could_fit_generic_productivity_app": True,
+                "could_fit_any_coaching_offer": False,
+                "could_fit_accounting_software": False,
+                "specific_to_this_offer": 4,
+                "reason": (
+                    "The decision/offer/next-step trio ties the checklist to the "
+                    "business repo model."
+                ),
+            },
+            "avoidance_strategy": {
+                "avoids": ["tiny unreadable text", "generic checklist stock art"],
+                "intentionally_uses": ["crossed-out problem list"],
+                "reason": "Tests checklist relief while keeping final copy deterministic.",
+            },
+            "first_second_read": "the recurring memory failures get crossed out",
+            "audience_state": "operator loses decisions, offers, and next steps between sessions",
+            "visual_job": "make the solution feel like eliminating repeated pains",
+            "visual_metaphor": "crossed-out problem cards beside one branch-map card",
+            "composition": (
+                "bold card layout with three crossed-out icons and one grounded folder card"
+            ),
+            "visual_hierarchy": {
+                "primary_focal_point": "crossed-out problem cards",
+                "secondary_focal_point": "branch-map card",
+                "text_zone": "bottom third",
+            },
+            "camera_language": "simple poster-card composition",
+            "style_strength": "bold, legible, controlled",
+            "emotional_tone": "satisfying cleanup",
+            "prompt": (
+                "Create a text-free Facebook ad base image with three unlabeled problem "
+                "cards crossed out and one clear branch-map card beside them. No readable "
+                "words, logos, UI, customer data, or private details."
+            ),
+        },
+        {
+            "concept_id": "founder-pov-checkpoint",
+            "prompt_key": "founder-pov-checkpoint.v1",
+            "source_bite": {
+                "source_file": f"pushes/{push_slug}/push.md",
+                "source_type": "founder_note",
+                "extracted_phrase": "what did we decide last time?",
+                "insight": "The ad can start from the founder's own return-to-work moment.",
+                "visual_translation": (
+                    "first-person hand opening a checkpoint folder next to yesterday's notes"
+                ),
+            },
+            "genericness_check": {
+                "could_fit_notion": True,
+                "could_fit_asana": False,
+                "could_fit_quickbooks": False,
+                "could_fit_generic_coaching_offer": False,
+                "could_fit_generic_productivity_app": True,
+                "could_fit_any_coaching_offer": False,
+                "could_fit_accounting_software": False,
+                "specific_to_this_offer": 4,
+                "reason": "The checkpoint and decision-memory language tie the POV to Main Branch.",
+            },
+            "avoidance_strategy": {
+                "avoids": ["stock-photo founder pose", "fake testimonial", "polished office"],
+                "intentionally_uses": ["founder point of view"],
+                "reason": "Keeps the scene first-person and tactile rather than influencer-style.",
+            },
+            "first_second_read": "opening yesterday's decision checkpoint",
+            "audience_state": "founder is resuming after a context gap",
+            "visual_job": "make preserved decision memory feel personal",
+            "visual_metaphor": "hand opening a checkpoint folder beside yesterday's notes",
+            "composition": "first-person phone-camera view of hand, folder, and scattered notes",
+            "visual_hierarchy": {
+                "primary_focal_point": "hand opening checkpoint folder",
+                "secondary_focal_point": "yesterday notes",
+                "text_zone": "upper left",
+            },
+            "camera_language": "first-person founder POV",
+            "style_strength": "native, imperfect, close-range",
+            "emotional_tone": "relief on return",
+            "prompt": (
+                "Create a first-person founder POV Facebook ad base image: a hand opens "
+                "a plain checkpoint folder beside yesterday's messy notes. No readable "
+                "words, face, logos, UI, customer data, or private details."
+            ),
+        },
+        {
+            "concept_id": "high-contrast-context-poster",
+            "prompt_key": "high-contrast-context-poster.v1",
+            "source_bite": {
+                "source_file": "research/customer-language.md",
+                "source_type": "customer_language",
+                "extracted_phrase": "starting from zero every Monday",
+                "insight": "The emotional hook is the waste of restarting context.",
+                "visual_translation": "a stark reset button cracked by a small branch map",
+            },
+            "genericness_check": {
+                "could_fit_notion": True,
+                "could_fit_asana": True,
+                "could_fit_quickbooks": False,
+                "could_fit_generic_coaching_offer": True,
+                "could_fit_generic_productivity_app": True,
+                "could_fit_any_coaching_offer": True,
+                "could_fit_accounting_software": False,
+                "specific_to_this_offer": 4,
+                "reason": "The branch-map reset visual narrows a broad restart frustration.",
+            },
+            "avoidance_strategy": {
+                "avoids": ["casual meme template", "generic motivational poster", "glossy 3D icon"],
+                "intentionally_uses": ["high contrast poster"],
+                "reason": "Tests thumb-stop with a poster frame without drifting into meme tone.",
+            },
+            "first_second_read": "stop starting from zero",
+            "audience_state": "operator dreads rebuilding context at the start of the week",
+            "visual_job": "create a sharp pattern interrupt around reset fatigue",
+            "visual_metaphor": "cracked reset button interrupted by a small branch map",
+            "composition": (
+                "high-contrast poster object scene, large reset object, branch-map detail"
+            ),
+            "visual_hierarchy": {
+                "primary_focal_point": "cracked reset object",
+                "secondary_focal_point": "branch-map detail",
+                "text_zone": "top third",
+            },
+            "camera_language": "bold poster-like still life",
+            "style_strength": "high contrast, spare, tactile",
+            "emotional_tone": "frustrated pattern interrupt",
+            "prompt": (
+                "Create a text-free high-contrast Facebook ad base image: a stark reset "
+                "button-like object cracked by a small branch-map detail. No rendered "
+                "words, logos, UI, customer data, or private details."
+            ),
+        },
+    ]
+    return [{**base, **extra} for extra in extras]
+
+
 def fixture_facebook_image_concepts(push_slug: str) -> list[dict[str, Any]]:
     """Build reviewable fixture concepts for the smoke image index."""
 
@@ -515,8 +1270,9 @@ def fixture_facebook_image_concepts(push_slug: str) -> list[dict[str, Any]]:
             "status": "planned",
             "prompt_key": DEFAULT_PROMPT_KEY,
             "creative_playbook": {
-                "id": "technical-founder",
-                "status": "suggested",
+                "id": "specific_object_metaphor",
+                "status": "candidate",
+                "legacy_label": "technical-founder",
                 "use_when": [
                     "audience speaks in systems, workflows, and operating clarity",
                     "offer promise is about memory, process, or context continuity",
@@ -816,7 +1572,21 @@ def fixture_facebook_image_concepts(push_slug: str) -> list[dict[str, Any]]:
             ],
         },
     ]
+    concepts.extend(_extra_fixture_concepts(push_slug, common_sources))
     for concept in concepts:
+        playbook_metadata = _fixture_playbook_metadata(str(concept["concept_id"]))
+        concept.update(playbook_metadata)
+        creative_playbook = concept.setdefault(
+            "creative_playbook",
+            {
+                "id": playbook_metadata["creative_playbook_id"],
+                "status": "candidate",
+            },
+        )
+        if isinstance(creative_playbook, dict):
+            creative_playbook.setdefault("id", playbook_metadata["creative_playbook_id"])
+            creative_playbook.setdefault("status", "candidate")
+            creative_playbook["id"] = playbook_metadata["creative_playbook_id"]
         concept["review"] = review_concept(concept)
     return concepts
 
@@ -848,6 +1618,86 @@ def _post_processing_plan() -> dict[str, Any]:
         "export_format": "png_source_then_jpeg_or_png_final",
         "compression_target": "future_export_step",
         "validation": "Preview in Meta Ads Manager before launch.",
+    }
+
+
+def _ad_readiness_gate() -> dict[str, Any]:
+    hard_stop_missing = [
+        "offer",
+        "audience",
+        "campaign_goal",
+        "claim_proof_boundary",
+    ]
+    soft_warning_missing = [
+        "proof",
+        "customer_language",
+        "brand_visual_style",
+        "prior_outcomes",
+        "meta_summary",
+        "reference_images",
+    ]
+    allowed_actions = [
+        "intake",
+        "repo_source_audit",
+        "ad_strategy_outline",
+        "missing_info_checklist",
+        "exploration_concepts",
+        "api_generation",
+        "final_ad_package",
+    ]
+    blocked_actions = [
+        "final_ad_package_when_hard_stop_missing",
+        "provider_image_generation_when_hard_stop_missing",
+        "campaign_ready_claims_when_hard_stop_missing",
+        "meta_informed_recommendations_without_approved_summary",
+    ]
+    return {
+        "state": "ready",
+        "status": "fixture_ready",
+        "hard_stop_missing": hard_stop_missing,
+        "hard_stop_missing_fields": hard_stop_missing,
+        "soft_warning_missing": soft_warning_missing,
+        "soft_warning_missing_fields": soft_warning_missing,
+        "allowed_actions": allowed_actions,
+        "allowed_low_context_actions": [
+            "intake",
+            "repo_source_audit",
+            "ad_strategy_outline",
+            "missing_info_checklist",
+            "placeholder_concepts_marked_as_placeholders",
+        ],
+        "blocked_actions": blocked_actions,
+        "blocked_low_context_actions": blocked_actions,
+        "future_cli_candidate": "mb ads readiness --json",
+        "rule": (
+            "If hard-stop fields are missing, produce an intake/source-bite plan "
+            "instead of final ads."
+        ),
+    }
+
+
+def _image_generation_gate() -> dict[str, Any]:
+    return {
+        "required_before_provider_generation": [
+            "selected_concept",
+            "prompt_record",
+            "safe_media_storage",
+            "image_index_target",
+            "credential_state",
+            "operator_approval_for_live_provider_call",
+        ],
+        "workflow": [
+            "repo_facts",
+            "ad_readiness",
+            "source_bites",
+            "playbook_router",
+            "concepts",
+            "review_genericness_checks",
+            "prompt_records",
+            "generation_or_fallback",
+            "review_board",
+            "image_index",
+        ],
     }
 
 
@@ -941,6 +1791,64 @@ def _asset_record(
     }
 
 
+def _render_review_board(
+    *,
+    push_slug: str,
+    concepts: list[dict[str, Any]],
+    assets: list[dict[str, Any]],
+    generated_at: str,
+) -> str:
+    asset_by_concept = {str(asset.get("concept_id")): asset for asset in assets}
+    lines = [
+        f"# Image Review Board - {push_slug}",
+        "",
+        "Local scratch board. Do not commit raw generated images, private paths, "
+        "provider payloads, or unverified external research.",
+        "",
+        "Question: Which playbook produced the best actual ad candidate?",
+        "",
+        "Rule: Beautiful but no click reason = reject.",
+        "",
+        f"Generated at: {generated_at}",
+        "",
+        "| Candidate | Playbook | Source Bite | Output | Thumb | Offer | Risk | "
+        "Decision | Click Reason |",
+        "| --- | --- | --- | --- | ---: | ---: | ---: | --- | --- |",
+    ]
+    for concept in concepts:
+        review = _dict_value(concept.get("review"))
+        ad_quality = _dict_value(review.get("ad_quality"))
+        risk = _dict_value(review.get("risk"))
+        source_bite = _dict_value(concept.get("source_bite"))
+        asset = _dict_value(asset_by_concept.get(str(concept.get("concept_id"))))
+        lines.append(
+            "| {candidate} | {playbook} | {bite} | {output} | {thumb} | {offer} | "
+            "{risk_score} | {decision} | {reason} |".format(
+                candidate=concept.get("concept_id", ""),
+                playbook=concept.get("creative_playbook_id", ""),
+                bite=str(source_bite.get("extracted_phrase", "")).replace("|", "/"),
+                output=str(asset.get("output_reference", "")).replace("|", "/"),
+                thumb=ad_quality.get("thumb_stop", ""),
+                offer=ad_quality.get("offer_relevance", ""),
+                risk_score=risk.get("ai_slop_risk", ""),
+                decision=review.get("decision", ""),
+                reason=str(ad_quality.get("likely_click_reason", "")).replace("|", "/"),
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "## Boundary",
+            "",
+            "- Raw visual comparison belongs here or in ignored media storage.",
+            "- Commit only `image-index.md` and distilled findings.",
+            "- External pattern signals are scratch/source signal unless primary "
+            "sources are verified.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
 def _render_index(record: dict[str, Any]) -> str:
     yaml_text = yaml.safe_dump(record, sort_keys=False, allow_unicode=False)
     return (
@@ -971,81 +1879,139 @@ def smoke_openai(
 
     index_path = push_dir / "image-index.md"
     generated_at = _utc_now()
-    output_reference = _logical_output(push_slug, DEFAULT_ASSET_ID)
 
     blocker_code, blocker = _provider_blocker(generate)
     credential_state = "configured_env" if os.environ.get("OPENAI_API_KEY") else "missing_env"
-    state: SmokeState = "blocked" if blocker_code else "generated"
+    default_state: SmokeState = "blocked" if blocker_code else "generated"
 
-    binary_written = False
+    concepts = fixture_facebook_image_concepts(push_slug)
+    asset_records: list[dict[str, Any]] = []
+    generated_count = 0
+    binary_written_count = 0
     generated_dimensions: dict[str, int] | None = None
-    if state == "generated":
-        out_path = _media_path(repo_path, media_root, push_slug, DEFAULT_ASSET_ID)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            image_bytes = _generate_openai_image(
-                DEFAULT_PROMPT,
+    for index, concept in enumerate(concepts, start=1):
+        concept_id = str(concept.get("concept_id") or f"candidate-{index:03d}")
+        asset_id = DEFAULT_ASSET_ID if index == 1 else f"{concept_id}-001"
+        output_reference = _logical_output(push_slug, asset_id)
+        concept_state = default_state
+        concept_blocker_code = blocker_code
+        concept_blocker = blocker
+        concept_dimensions: dict[str, int] | None = None
+        if default_state == "generated":
+            out_path = _media_path(repo_path, media_root, push_slug, asset_id)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                image_bytes = _generate_openai_image(
+                    str(concept.get("prompt") or DEFAULT_PROMPT),
+                    model=DEFAULT_MODEL,
+                    size=DEFAULT_SIZE,
+                    quality=DEFAULT_QUALITY,
+                )
+            except Exception as exc:  # noqa: BLE001 - provider errors must become sanitized records.
+                concept_state = "blocked"
+                concept_blocker_code = "provider_request_failed"
+                concept_blocker = (
+                    f"OpenAI image generation failed before a usable image was written "
+                    f"({exc.__class__.__name__}). Check the local provider account, "
+                    f"organization verification, quota, model access, and network state."
+                )
+            else:
+                concept_dimensions = _png_dimensions(image_bytes)
+                generated_dimensions = generated_dimensions or concept_dimensions
+                out_path.write_bytes(image_bytes)
+                generated_count += 1
+                binary_written_count += 1
+        asset_records.append(
+            _asset_record(
+                push_slug=push_slug,
+                asset_id=asset_id,
+                concept_id=concept_id,
+                docs_checked=docs_checked,
+                generated_at=generated_at,
+                state=concept_state,
+                blocker_code=concept_blocker_code,
+                blocker=concept_blocker,
+                credential_state=credential_state,
+                output_reference=output_reference,
+                prompt=str(concept.get("prompt") or DEFAULT_PROMPT),
+                prompt_key=str(concept.get("prompt_key") or DEFAULT_PROMPT_KEY),
                 model=DEFAULT_MODEL,
                 size=DEFAULT_SIZE,
                 quality=DEFAULT_QUALITY,
+                generated_dimensions=concept_dimensions,
             )
-        except Exception as exc:  # noqa: BLE001 - provider errors must become sanitized records.
-            state = "blocked"
-            blocker_code = "provider_request_failed"
-            blocker = (
-                f"OpenAI image generation failed before a usable image was written "
-                f"({exc.__class__.__name__}). Check the local provider account, "
-                f"organization verification, quota, model access, and network state."
-            )
-        else:
-            generated_dimensions = _png_dimensions(image_bytes)
-            out_path.write_bytes(image_bytes)
-            binary_written = True
-
-    concepts = fixture_facebook_image_concepts(push_slug)
+        )
+    state: SmokeState = "generated" if generated_count else "blocked"
+    review_board_path = _review_board_path(repo_path, media_root, push_slug)
+    review_board_path.parent.mkdir(parents=True, exist_ok=True)
+    review_board_path.write_text(
+        _render_review_board(
+            push_slug=push_slug,
+            concepts=concepts,
+            assets=asset_records,
+            generated_at=generated_at,
+        ),
+        encoding="utf-8",
+    )
     record = {
         "schema": "mainbranch.image_index.v0",
         "push_slug": push_slug,
         "docs_checked": docs_checked,
         "output_record_written": True,
         "binary_committed": False,
+        "experiment_frame": "first_creative_playbook_router_experiment",
+        "conversion_language": "conversion_informed",
+        "batch_plan": {
+            "candidate_count": len(concepts),
+            "target_range": "8-12",
+            "strategy": "top playbook candidates with one to two variants each",
+            "provider_validation": "official_api_rail_only",
+        },
+        "generated_count": generated_count,
+        "all_rejected": all(
+            isinstance(concept.get("review"), dict)
+            and concept["review"].get("decision") == "reject"
+            for concept in concepts
+        ),
+        "creative_playbook_ids": list(CREATIVE_PLAYBOOK_IDS),
+        "review_board_question": "Which playbook produced the best actual ad candidate?",
+        "review_board": {
+            "path": _repo_relative(review_board_path, repo_path),
+            "committed": False,
+            "storage": "ignored_media_storage",
+        },
+        "review_rule": "Beautiful but no click reason = reject.",
+        "external_research_boundary": (
+            "External creative research is scratch/source signal only; raw dumps, "
+            "screenshots, and unverified claims are not committed."
+        ),
+        "ad_readiness_gate": _ad_readiness_gate(),
+        "image_generation_gate": _image_generation_gate(),
         "placement_presets": PLACEMENT_PRESETS,
         "reference_roles": list(REFERENCE_ROLES),
         "selected_source_bites": _selected_source_bites(concepts),
         "post_processing_plan": _post_processing_plan(),
         "concepts": concepts,
-        "assets": [
-            _asset_record(
-                push_slug=push_slug,
-                asset_id=DEFAULT_ASSET_ID,
-                concept_id=DEFAULT_CONCEPT_ID,
-                docs_checked=docs_checked,
-                generated_at=generated_at,
-                state=state,
-                blocker_code=blocker_code,
-                blocker=blocker,
-                credential_state=credential_state,
-                output_reference=output_reference,
-                prompt=DEFAULT_PROMPT,
-                prompt_key=DEFAULT_PROMPT_KEY,
-                model=DEFAULT_MODEL,
-                size=DEFAULT_SIZE,
-                quality=DEFAULT_QUALITY,
-                generated_dimensions=generated_dimensions,
-            )
-        ],
+        "assets": asset_records,
     }
     index_path.write_text(_render_index(record), encoding="utf-8")
+    result_blocker_code = blocker_code or None
+    if state == "blocked" and result_blocker_code is None and asset_records:
+        result_blocker_code = asset_records[0].get("blocker_code")
 
     return {
         "ok": True,
         "provider": "openai",
         "model": DEFAULT_MODEL,
         "state": state,
-        "blocker_code": blocker_code or None,
+        "blocker_code": result_blocker_code,
+        "candidate_count": len(concepts),
+        "generated_count": generated_count,
         "output_record_written": True,
         "record_path": _repo_relative(index_path, repo_path),
-        "output_reference": output_reference,
+        "review_board_written": True,
+        "review_board_path": _repo_relative(review_board_path, repo_path),
+        "output_reference": _logical_output(push_slug, DEFAULT_ASSET_ID),
         "storage_backend": "mb-media",
         "dimensions": {
             "requested_size": DEFAULT_SIZE,
@@ -1058,7 +2024,8 @@ def smoke_openai(
             "quality": DEFAULT_QUALITY,
         },
         "generated_dimensions": generated_dimensions,
-        "binary_written": binary_written,
+        "binary_written": binary_written_count > 0,
+        "binary_written_count": binary_written_count,
         "binary_committed": False,
         "safe_to_share": True,
         "docs_checked": docs_checked,

@@ -142,6 +142,11 @@ Display the readiness report, then proceed. See [references/preflight-algorithm.
 
 ### 0d. Check Image Generation Readiness
 
+For Facebook image-ad generation, load the MAIN-374 decision and
+[references/image-generation-workflow.md](references/image-generation-workflow.md)
+for ad readiness, source bites, playbook routing, review boards, and
+`image-index.md`.
+
 ```bash
 mb connect doctor --json
 ```
@@ -486,15 +491,8 @@ If context was compacted mid-task, check:
 For full pipeline: Did we finish image prompts (Part 1) before copy (Part 2)?
 For hook library: How many variations generated out of requested quantity?
 For video: How many of 15-30 scripts are done?
-For review: Which lenses completed?
-
----
-
 ## Quick Reference
 
-**Full pipeline (static ads):** 5-6 concepts x 5 primaries x 5 headlines x 3 image prompts
-**Hook library (creative variations):** Flexible quantity (default 30), Andromeda-optimized
-**Video scripts:** 15-30 diverse scripts, spoken-word optimized
-**Review:** 6 lenses, P1/P2/P3 report, fix suggestions
-**Account check:** compact read-only Meta Ads summary when `mb connect` and runtime tools are ready
-**Launch plan/check:** provider-safe Google Ads/GTM/paid-traffic plan or outcome check; no account mutation without a shipped adapter and explicit approval
+**Full/static:** 5-6 concepts x 5 primaries x 5 headlines x 3 image prompts.
+**Hook/video/review:** default 30 hooks, 15-30 scripts, or 6-lens P1/P2/P3 review.
+**Account/launch:** read-only Meta summary or provider-safe paid plan/check; no account mutation without shipped adapter and explicit approval.

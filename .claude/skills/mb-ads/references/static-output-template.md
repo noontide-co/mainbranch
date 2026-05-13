@@ -53,8 +53,10 @@ prompt_file: "pushes/{push}/prompts/{descriptive-concept-id}.md"
 
 **Creative playbook (optional):**
 ```yaml
-id: "{playbook id if one clearly fits, otherwise omit}"
-status: suggested
+creative_playbook_id: "{native_problem_scene | specific_object_metaphor | proof_artifact | myth_vs_fact | with_without_transformation | crossed_out_problem_list | founder_pov | high_contrast_poster | simple_chart_comparison | testimonials_with_artifact | us_vs_them_split | simple_list_framework}"
+creative_playbook:
+  id: "{same as creative_playbook_id}"
+  status: candidate
 use_when:
   - "{why this playbook fits the source bite, offer, audience, and brand}"
 default_avoid:
@@ -65,6 +67,20 @@ risky_metaphors:
   - "{niche-specific metaphor to avoid unless intentional}"
 prompt_bias:
   - "{style or artifact bias for this niche}"
+router_inputs:
+  offer_type: "{offer type}"
+  audience: "{audience}"
+  source_bite_type: "{customer_language | offer | proof | research | founder_note | push_brief}"
+  proof_available: false
+  brand_style: "{visual style summary}"
+  platform: facebook_feed
+router_reason: "{why this playbook fits this candidate}"
+playbook_fit:
+  source_bite_fit: 1
+  offer_fit: 1
+  audience_fit: 1
+  visual_distinctiveness: 1
+  conversion_pattern_fit: 1
 ```
 
 **Source bite:**
@@ -258,7 +274,10 @@ Copy and paste into Ads Manager after images are ready.
 
 ## Format Pair: 1:1 + 9:16
 
-Facebook Ads Manager accepts exactly two image uploads per ad: **1:1 (square)** and **9:16 (vertical)**. There is no 4:5 option.
+For Meta-first static creative, plan a default pair: **1:1 (square)** and
+**9:16 (vertical)**. Verify current Ads Manager placement specs before launch.
+Use 4:5 only as a concept-planning preset unless the current provider/upload
+surface supports it for the selected placement.
 
 ### Design Strategy
 
@@ -290,6 +309,10 @@ When planning or generating images, create an `image-index.md` in the batch
 folder. It can hold both planned concepts and generated assets. Link assets
 back to concepts with `concept_id`.
 
+Also write a local ignored review board/contact sheet under configured media
+storage. The board answers: "Which playbook produced the best actual ad
+candidate?" Commit only safe `image-index.md` records and distilled findings.
+
 ```markdown
 # Image Index — {Campaign Name}
 
@@ -297,6 +320,7 @@ Docs checked: {date}
 Provider: {provider or manual}
 Model: {exact model or n/a}
 Source files: {offer.md, audience.md, visual-style.md, ...}
+Review board: {ignored local path or not written}
 Estimated cost: ${estimate}
 Actual cost: ${actual or unknown}
 Post-processing: {dimensions, format, compression, crop rules}
@@ -304,9 +328,9 @@ Approval state: {draft/reviewed/approved}
 
 ## Concepts
 
-| Concept ID | Status | Audience State | Visual Job | Placement | Claim Boundary | Review |
-|------------|--------|----------------|------------|-----------|----------------|--------|
-| clean-system-vs-ad-chaos | planned | Overwhelmed operator | Show clarity replacing ad chaos | facebook_feed_portrait_4x5 | No revenue guarantee or Meta partnership claim | accepted |
+| Concept ID | Playbook | Status | Audience State | Visual Job | Likely Click Reason | Review |
+|------------|----------|--------|----------------|------------|---------------------|--------|
+| clean-system-vs-ad-chaos | native_problem_scene | planned | Overwhelmed operator | Show clarity replacing ad chaos | Recognizes the source-bite problem in one second | accepted |
 
 ## Assets
 

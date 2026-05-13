@@ -105,7 +105,12 @@ When all agents return:
      ```
 
 2. **Image synthesis (if applicable):**
-   - Collect results from all image agents, retry any failures, write `image-index.md`
+   - Collect results from all image agents, retry any failures, write a local
+     ignored review board/contact sheet, and write `image-index.md`
+   - The review board answers: "Which playbook produced the best actual ad
+     candidate?" It is visual-comparison scratch, not committed proof.
+   - Commit only safe `image-index.md` records and distilled findings, not raw
+     images, private paths, provider payloads, or screenshots.
 
 3. **Review log:**
    - `review-log.md` is written only when the user approves source copy changes.
@@ -130,7 +135,8 @@ Pipeline complete:
     |- proposed-compliance-fixes.json
     [|- review-log.md]
     [|- image-index.md]
-    [|- images/ (N files)]
+    [|- .mb/media/.../review-board.md (ignored scratch)]
+    [|- .mb/media/.../images/ (ignored media)]
 
   Save reviewed copy [+ images] as a checkpoint? (y/n)
 ```

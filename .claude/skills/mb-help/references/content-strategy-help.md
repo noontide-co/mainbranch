@@ -116,7 +116,7 @@ If content strategy files do not exist, all skills work exactly as they did befo
 
 Main Branch delivers two kinds of value:
 
-1. **Ads and conversion surfaces that convert** -- immediate ROI through `/mb-ads` and `/mb-site`. Reference files make ads and conversion scripts specific, compliant, and high-converting.
+1. **Ads and conversion surfaces** -- sharper ROI work through `/mb-ads` and `/mb-site`. Reference files make ads and conversion scripts specific, compliant, and conversion-informed.
 
 2. **Content that compounds** -- long game through content strategy,
    `/mb-organic`, owned pages, email/newsletter planning, social/community
