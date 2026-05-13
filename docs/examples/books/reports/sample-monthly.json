@@ -54,7 +54,7 @@
       "display": "$67.50 owed"
     }
   },
-  "operator_summary": "This fake sample month shows the reporting shape; it is not your business data.",
+  "operator_summary": "This fake sample month shows the report shape only; it is not reading your private books.",
   "warnings": [
     "This is sample data only. It is not reading your private books."
   ],

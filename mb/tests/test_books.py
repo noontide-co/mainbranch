@@ -863,6 +863,8 @@ def test_books_report_monthly_human_output_is_beginner_safe(
 
     assert result.exit_code == 0, result.output
     assert "sample monthly bookkeeping report using fake packaged data" in result.output
+    assert "shows the report shape only" in result.output
+    assert "does not touch private books" in result.output
     assert "January 2026 sample" in result.output
     assert "Revenue: $250.00" in result.output
     assert "Expenses: $67.50" in result.output

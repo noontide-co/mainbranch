@@ -1114,7 +1114,8 @@ def sample_monthly_report(month: str) -> dict[str, Any]:
             "credit_card": credit_card,
         },
         "operator_summary": (
-            "This fake sample month shows the reporting shape; it is not your business data."
+            "This fake sample month shows the report shape only; "
+            "it is not reading your private books."
         ),
         "warnings": [SAMPLE_REPORT_WARNING],
         "findings": [
@@ -1795,8 +1796,8 @@ def render_sample_monthly_report(report: dict[str, Any]) -> None:
     period = (report.get("report") or {}).get("period") or {}
     totals = report.get("totals") or {}
     typer.echo(
-        "Here is a sample monthly bookkeeping report using fake packaged data, "
-        "so you can see the shape before connecting private books."
+        "Here is a sample monthly bookkeeping report using fake packaged data. "
+        "It shows the report shape only; it does not touch private books."
     )
     typer.echo("")
     typer.echo(f"{period.get('label', 'Sample month')} sample")
