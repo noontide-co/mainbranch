@@ -56,7 +56,7 @@ def test_connect_list_json_does_not_create_repo_metadata(tmp_path: Path) -> None
     payload = json.loads(result.stdout)
     assert any(provider["id"] == "cloudflare" for provider in payload["providers"])
     meta = next(provider for provider in payload["providers"] if provider["id"] == "meta")
-    assert meta["auth"] == "meta_cli_pending"
+    assert meta["auth"] == "meta_cli_readiness"
     cloudflare = next(
         provider for provider in payload["providers"] if provider["id"] == "cloudflare"
     )
@@ -86,24 +86,24 @@ def test_connect_plan_returns_numbered_provider_choices(tmp_path: Path, monkeypa
     assert list(steps) == ["github", "cloudflare", "google", "meta", "apify"]
     assert steps["github"]["next_command"] == "gh auth login"
     assert steps["github"]["safe_to_share"] is True
-    assert steps["meta"]["state"] == "planned"
+    assert steps["meta"]["state"] == "readiness"
     assert steps["meta"]["next_command"] == "mb educational provider-readiness"
     assert payload["summary"]["total"] == 5
     assert not (repo / ".mb" / "connect.yaml").exists()
 
 
-def test_connect_meta_is_planned_and_does_not_write_metadata(tmp_path: Path) -> None:
+def test_connect_meta_is_readiness_and_does_not_write_metadata(tmp_path: Path) -> None:
     repo = tmp_path / "biz"
     repo.mkdir()
 
     result = runner.invoke(app, ["connect", "meta", "--repo", str(repo), "--json"])
 
     assert result.exit_code == 2
-    assert "Meta Ads CLI support is planned" in result.stderr
+    assert "Meta Ads CLI readiness is documented" in result.stderr
     assert not (repo / ".mb" / "connect.yaml").exists()
 
 
-def test_meta_status_remains_planned_even_with_stale_metadata(tmp_path: Path) -> None:
+def test_meta_status_remains_readiness_even_with_stale_metadata(tmp_path: Path) -> None:
     repo = tmp_path / "biz"
     repo.mkdir()
     config_path = repo / ".mb" / "connect.yaml"
@@ -128,7 +128,7 @@ def test_meta_status_remains_planned_even_with_stale_metadata(tmp_path: Path) ->
 
     status = connect_mod.status_provider("meta", repo)
 
-    assert status["state"] == "planned"
+    assert status["state"] == "readiness"
     assert status["connected"] is False
     assert status["repair_command"] == ""
     assert status["metadata"] == {"ad_account_id": "act_123"}
@@ -137,7 +137,7 @@ def test_meta_status_remains_planned_even_with_stale_metadata(tmp_path: Path) ->
     assert aggregate["ok"] is True
     assert aggregate["summary"]["configured"] == 0
     assert aggregate["summary"]["needs_repair"] == 0
-    assert aggregate["providers"][0]["state"] == "planned"
+    assert aggregate["providers"][0]["state"] == "readiness"
 
     check = connect_mod.doctor_check(repo, status=aggregate)
     assert check["ok"] is True

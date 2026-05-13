@@ -188,6 +188,59 @@ Route:
 - Use `mb validate --cross-refs` only when relationship/link health is the
   stated task or status points there.
 
+### Path to money, revenue, offer readiness
+
+Signals: path to money, revenue, make money, next dollar, what sells, paid step,
+CTA, offer readiness, product ladder, proof, launch readiness, sales path.
+
+Route:
+
+- Keep hard gates first. Required updates, broken wiring, unsafe provider
+  operations, private-data boundaries, and repair blockers pause business
+  routing before MoneyPath interpretation.
+- Required update, broken install/runtime/wiring, repair blockers, validation
+  blockers, relationship health blockers, playbook health blockers, and unsafe
+  provider/private-data blockers all win before MoneyPath routing.
+- Use the `money_path` object from the already-run `mb status --json --peek`
+  report. Parse the full status JSON once; do not slice it with `head`, `sed`,
+  or partial shell chunks that can drop late-added sections.
+- Start the first business interpretation from `money_path.overall_level`,
+  `money_path.overall_label`, `money_path.objects.offer`,
+  `money_path.objects.proof`, `money_path.objects.product_ladder`,
+  `money_path.objects.cta_path`, `money_path.objects.channel_strategy`,
+  `money_path.objects.active_push`,
+  `money_path.objects.outcome_feedback_loop`, and
+  `money_path.ranked_actions`.
+- Translate the facts. Name the current bottleneck and gaps in business
+  language without dumping JSON and without conversion judgment.
+- Explain whether top-level `ranked_actions` agree with the MoneyPath
+  bottleneck. If they disagree, say which gate or route is taking priority.
+- Only after that, read supporting offer, product ladder, decision, research,
+  finance-summary, push, or channel files for judgment.
+- If routing to `/mb-think`, include a MoneyPath snapshot in the handoff so the
+  worker starts from the same facts.
+
+Good handoff shape:
+
+> "MoneyPath snapshot: overall Level 2 / structured. Bottleneck: CTA path
+> missing. Proof exists but is generic and not outcome-backed. Offer is
+> structured but missing risk reversal. Product ladder is stated but has no
+> clear paid entry step. Channel strategy exists, but no active push is
+> attached. Outcome feedback loop is missing. Recommended route: use `/mb-think`
+> to clarify the paid entry step and CTA before creating more content or ads."
+
+Avoid:
+
+> "Your offer is bad."
+
+> "This will not convert."
+
+> "This will convert."
+
+> "The business is weak."
+
+> "This is ready to win."
+
 ### Decide, codify, research
 
 Signals: think, decide, figure out, explore, research, compare, tool decision,

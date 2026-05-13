@@ -44,7 +44,7 @@ Required provider choices for the setup/provider loop:
 | GitHub | durable work threads, proposals, reviews, shipped history | `mb connect doctor --json` |
 | Cloudflare | sites, DNS, Pages, Workers | `mb connect doctor --json` |
 | Google / Workspace | Drive, Docs, Sheets, Slides | `mb connect doctor --json` |
-| Meta Ads | planned: ad accounts, campaigns, pixels through the official Meta Ads CLI once wired | `mb connect doctor --json` |
+| Meta Ads | readiness: official `meta-ads` / `meta` CLI path known; live account checks wait for `mb` detection and read-only smoke | `mb connect doctor --json` |
 | Apify | scraping, YouTube, Instagram, research sidecars | `mb connect doctor --json` |
 
 Only continue to MCP/tool presence checks when the selected skill needs runtime

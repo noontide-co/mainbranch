@@ -68,7 +68,7 @@ flowchart TB
     github["GitHub<br/>repos, issues, PRs, releases, checks"]
     cloudflare["Cloudflare<br/>sites, DNS, Pages deploy rail"]
     google["Google / Workspace / Ads / GTM<br/>planned and readiness-checked provider paths"]
-    meta["Meta Ads<br/>planned official provider path"]
+    meta["Meta Ads<br/>official CLI readiness path"]
     apify["Apify and research sidecars<br/>optional read-only enrichment"]
     postiz["Postiz-style scheduling<br/>candidate rail until full smoke"]
     sync["scheduled sync<br/>cron, launchd, Task Scheduler, or GitHub Actions"]

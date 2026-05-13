@@ -65,12 +65,13 @@ PROVIDERS: tuple[Provider, ...] = (
         id="meta",
         name="Meta",
         category="ads",
-        auth="meta_cli_pending",
+        auth="meta_cli_readiness",
         required_secrets=(),
         metadata_fields=("ad_account_id", "business_id"),
         description=(
-            "Meta Ads account access through Meta's official Ads CLI, pending "
-            "Main Branch detection and smoke."
+            "Meta Ads account access through Meta's official Ads CLI. Main Branch "
+            "documents setup requirements now; read-only account checks need mb "
+            "detection and smoke before support is promoted."
         ),
     ),
     Provider(
@@ -173,13 +174,13 @@ PROVIDER_GUIDANCE: dict[str, dict[str, Any]] = {
     "meta": {
         "priority": 4,
         "why": (
-            "Meta Ads readiness will let ad workflows reason about ad accounts, campaigns, "
-            "and pixels through Meta's official Ads CLI path."
+            "Meta Ads readiness lets ad workflows prepare for account, campaign, "
+            "insights, creative, and pixel context through Meta's official Ads CLI."
         ),
         "use_when": (
             "Use when the business is generating, reviewing, or learning from Meta/Facebook ads. "
-            "For now, treat live account access as planned until Main Branch detection "
-            "and read-only smoke are wired."
+            "Main Branch can explain setup requirements today; treat live account "
+            "access as unavailable until mb detection and read-only smoke are wired."
         ),
         "defer_when": (
             "Defer for organic, research, or site work that does not need ad-account facts."
@@ -371,11 +372,14 @@ def _repair(
         }
     if provider.id == "meta":
         return {
-            "summary": ("Meta Ads CLI support is planned but not wired in this mb release."),
+            "summary": (
+                "Meta Ads CLI readiness is documented, but live account checks are "
+                "not wired in this mb release."
+            ),
             "repair": (
-                "Use reference-file ad workflows for now. Do not add third-party "
-                "Meta MCP or access-token setup as a fallback; wait for the "
-                "official Meta Ads CLI detection/read-only smoke to land."
+                "Use reference-file ad workflows for now. The official path is "
+                "`meta-ads` / `meta`; keep credentials outside repo files and wait "
+                "for mb-owned detection/read-only smoke before using live account facts."
             ),
             "repair_command": "",
         }
@@ -609,7 +613,8 @@ def connect_provider(
     provider = normalize_provider(provider_id)
     if provider.id == "meta":
         raise ValueError(
-            "Meta Ads CLI support is planned but not wired in this mb release; "
+            "Meta Ads CLI readiness is documented but live connection storage is "
+            "not wired in this mb release; "
             "run `mb connect plan` or `mb educational provider-readiness`."
         )
     target = Path(repo).resolve()
@@ -671,13 +676,13 @@ def status_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
         meta_validation: dict[str, Any] = (
             raw_meta_validation if isinstance(raw_meta_validation, dict) else {}
         )
-        repair = _repair(provider, "planned", validation=meta_validation)
+        repair = _repair(provider, "readiness", validation=meta_validation)
         return {
             "provider": provider.id,
             "name": provider.name,
             "connected": False,
             "ok": False,
-            "state": "planned",
+            "state": "readiness",
             "summary": repair["summary"],
             "repair": repair["repair"],
             "repair_command": repair["repair_command"],
@@ -687,7 +692,7 @@ def status_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
             "secrets": {},
             "last_checked_at": str(raw_entry.get("last_checked_at") or ""),
             "validation": {
-                "state": str(meta_validation.get("state") or "planned"),
+                "state": str(meta_validation.get("state") or "readiness"),
                 "checked_at": str(meta_validation.get("checked_at") or ""),
                 "summary": str(meta_validation.get("summary") or repair["summary"]),
                 "safe_to_share": True,
@@ -1273,7 +1278,7 @@ def provider_plan(repo: str | Path = ".") -> dict[str, Any]:
                     item["repair_command"]
                     or (
                         "mb educational provider-readiness"
-                        if item["state"] == "planned"
+                        if item["state"] in {"planned", "readiness"}
                         else f"mb connect test {provider_id}"
                     )
                 ),

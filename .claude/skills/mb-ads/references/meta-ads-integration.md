@@ -5,9 +5,10 @@ live account context only after deterministic `mb` provider facts say the Meta
 path is ready and the current runtime exposes verified read-only account tools.
 
 Main Branch no longer supports third-party Meta MCP setup or detection as a
-fallback. The official Meta Ads CLI is real, but Main Branch has not wired
-safe detection and read-only smoke yet. Until `mb` reports Meta as ready, skills
-must work from repo reference files and manual Ads Manager input.
+fallback. The official Meta Ads CLI is real and installable, and Main Branch
+can explain setup requirements. Main Branch has not wired safe detection and
+read-only smoke yet. Until `mb` reports Meta as ready, skills must work from
+repo reference files and manual Ads Manager input.
 
 ---
 
@@ -21,10 +22,13 @@ Meta Ads AI Connectors has two surfaces:
   supported chat clients. Treat it as forward-looking for Claude Code until the
   OAuth handshake is proven there.
 
-Meta's package metadata classifies the CLI as Alpha as of its 2026-04-29 launch.
-Expect setup and command details to move over the next few months.
+Meta's package metadata classifies `meta-ads` 1.0.1 as Alpha and requires
+Python 3.12+. Expect setup and command details to move over the next few
+months.
 
-Main Branch has not wired the CLI into `mb connect` yet. Therefore:
+Main Branch support level is `readiness`: the official path and setup
+requirements are known, but `mb` does not yet validate accounts or use live
+provider data. Therefore:
 
 - do not tell users Meta account access is ready unless `mb` says it is ready;
 - do not ask users to configure third-party Meta connector fallbacks;
@@ -54,8 +58,17 @@ docs:
 The CLI uses this precedence: CLI flag, environment variable, project `.env`,
 then user-level `~/.config/meta/`.
 
-Do not recommend `meta auth login`, `meta-ads-cli`, `npm install -g
-@meta/ads-cli`, or `mcp.meta.com/ads`.
+For user setup, prefer an isolated tool install when available:
+
+```bash
+pipx install meta-ads
+meta --version
+meta auth status
+```
+
+If the user's default Python is too old, a future `mb` repair path can suggest
+an equivalent Python 3.12+ tool install. Do not recommend `meta auth login`,
+`meta-ads-cli`, `npm install -g @meta/ads-cli`, or `mcp.meta.com/ads`.
 
 Meta's documented baseline token scopes are:
 
@@ -86,8 +99,9 @@ mb connect doctor --json
 Use the CLI's `summary`, `next_command`, and `repair_command` fields. Do not
 write provider readiness into business-repo config from this skill.
 
-If `mb connect` reports Meta as `planned`, explain that live Meta account access
-is not wired yet and continue from reference files.
+If `mb connect` reports Meta as anything other than ready, explain that live
+Meta account access is not wired for this repo yet and continue from reference
+files.
 
 ---
 
@@ -98,13 +112,16 @@ Triggered lazily at `/mb-think` or `/mb-ads` when the topic is ads-related:
 ```
 1. Read `mb status --json --peek`.
 2. If the operator needs setup choices, run `mb connect plan`.
-3. If provider facts are degraded, missing, or planned, run
+3. If provider facts are `readiness`, degraded, missing, invalid, or otherwise
+   not `ready`, run
    `mb connect doctor --json` and quote the repair/setup guidance.
 4. Only if `mb` reports Meta account context ready, check the current runtime
    for the verified official CLI:
    - `which meta`
    - `meta --version`
    - `meta auth status`
+   - `meta -o json ads campaign list`
+   - `meta -o json ads insights get --fields spend,impressions,clicks,ctr,cpc`
 5. Never block generation on missing account access.
 ```
 
@@ -120,6 +137,7 @@ When read-only account context is verified, use it for these workflows:
 | Creative audit | Find winning angles, hooks, offers, formats, and naming conventions |
 | Performance check | Compare recent CPA, ROAS, spend, and volume trends |
 | Performance iteration | Generate variants that build on known winners |
+| Pixel/event survey | Inspect datasets/pixels and conversion-source readiness |
 
 Keep account data in conversation context only. Do not write raw account exports,
 customer data, tokens, or sensitive performance details into public files.
@@ -172,6 +190,7 @@ Future implementers should preserve these constraints in setup and repair copy:
 
 - `meta auth status` is the documented auth check. There is no documented
   `meta auth login`.
+- Global output flags belong before the subcommand: use `meta -o json ads ...`.
 - Campaign and ad set creation default to PAUSED. Activation remains a separate
   operator action.
 - Creating fresh creatives can require the Meta Developer App to be in Live
