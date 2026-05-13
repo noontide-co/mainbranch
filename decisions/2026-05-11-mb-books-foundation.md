@@ -402,9 +402,9 @@ The first fixture lives under `docs/examples/books/`. Packaging it
 into `mb/mb/_data/` is a follow-up concern when `mb books check`
 ships.
 
-## First `mb books` Surface
+## First `mb books` Surfaces
 
-The first command, deferred to a follow-up implementation issue, is:
+The first command shipped in the follow-up implementation issue is:
 
 ```text
 mb books check [--json]
@@ -437,11 +437,12 @@ What it must do:
 - emit an `mb` JSON envelope when `--json` is passed, matching the
   pattern used by `mb doctor` / `mb validate`.
 
-A sibling `mb books status` command (also deferred to the follow-up)
-prints the storage-mode summary shown above and the
-GitHub-as-backup warning when appropriate. A sibling `mb books doctor`
-repairs missing ignore rules and missing vault scaffolding without
-ever touching real ledger contents.
+A sibling `mb books status` command prints the storage-mode summary
+shown above and the GitHub-as-backup warning when appropriate. A
+sibling `mb books doctor --plan` produces a non-mutating repair plan
+for missing ignore rules, missing vault scaffolding, hledger
+availability, and private journal placeholder setup without ever
+touching real ledger contents.
 
 What it must not do in the first surface:
 

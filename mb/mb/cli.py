@@ -963,6 +963,71 @@ def books_check_cmd(
     raise typer.Exit(0 if report["ok"] else 1)
 
 
+@books_app.command("status")
+def books_status_cmd(
+    repo: str = typer.Argument(".", help="Business repo to inspect."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Show hledger/private-books-vault setup and storage health."""
+    report = books_mod.status(repo=repo)
+    if json_out:
+        typer.echo(
+            _json_payload(
+                report,
+                command="mb books status",
+                schema_name="mainbranch.books.status.result",
+            )
+        )
+    else:
+        books_mod.render_status(report)
+    raise typer.Exit(0 if report["ok"] else 1)
+
+
+@books_app.command("doctor")
+def books_doctor_cmd(
+    repo: str = typer.Argument(".", help="Business repo to inspect."),
+    plan: bool = typer.Option(
+        False,
+        "--plan",
+        help="Print a non-mutating repair plan. Required; apply is not implemented.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Plan safe books setup repairs without touching real ledger contents."""
+    if not plan:
+        message = "mb books doctor: --plan is required; apply is not implemented"
+        if json_out:
+            typer.echo(
+                _json_payload(
+                    {
+                        "ok": False,
+                        "state": "error",
+                        "summary": message,
+                        "errors": [message],
+                        "safe_to_share": True,
+                    },
+                    command="mb books doctor",
+                    schema_name="mainbranch.books.doctor.result",
+                )
+            )
+        else:
+            typer.echo(message, err=True)
+        raise typer.Exit(2)
+
+    report = books_mod.doctor_plan(repo=repo)
+    if json_out:
+        typer.echo(
+            _json_payload(
+                report,
+                command="mb books doctor --plan",
+                schema_name="mainbranch.books.doctor.plan.result",
+            )
+        )
+    else:
+        books_mod.render_doctor_plan(report)
+    raise typer.Exit(0)
+
+
 @site_app.command("check")
 def site_check_cmd(
     site_repo: str = typer.Argument(".", help="Site repo or built static site to inspect."),

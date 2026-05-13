@@ -356,6 +356,147 @@ def test_books_check_unsafe_paths_warn_does_not_exit_one(tmp_path: Path) -> None
     assert "WARN" in result.output
 
 
+def test_books_status_json_reports_missing_hledger_and_vault(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write(
+        repo / "core/finance/books.md",
+        """---
+type: books
+ledger: hledger
+storage_mode: solo-local
+vault_location: ".mb/private/books/"
+---
+
+# Books
+""",
+    )
+    _write(repo / ".gitignore", ".mb/private/\n*.journal\n*.hledger\n*.ledger\n*.beancount\n")
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "")
+
+    result = runner.invoke(app, ["books", "status", str(repo), "--json"])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["mb_command"] == "mb books status"
+    assert payload["result_schema"]["name"] == "mainbranch.books.status.result"
+    assert payload["engine"] == "hledger"
+    assert payload["hledger"]["available"] is False
+    assert payload["vault"]["location"] == ".mb/private/books"
+    assert payload["vault"]["exists"] is False
+    assert payload["ignore"]["ok"] is True
+    assert "books-vault-missing" in {finding["id"] for finding in payload["findings"]}
+
+
+def test_books_status_reports_hledger_and_private_journal_without_reading_contents(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write(
+        repo / "core/finance/books.md",
+        """---
+type: books
+ledger: hledger
+storage_mode: solo-local
+vault_location: ".mb/private/books/"
+---
+
+# Books
+""",
+    )
+    _write(repo / ".gitignore", ".mb/private/\n*.journal\n*.hledger\n*.ledger\n*.beancount\n")
+    _write(repo / ".mb/private/books/main.journal", "; PRIVATE_ACCOUNT_ID\n")
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "/fake/private/bin/hledger")
+
+    result = runner.invoke(app, ["books", "status", str(repo), "--json"])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["hledger"]["available"] is True
+    assert payload["vault"]["exists"] is True
+    assert payload["vault"]["journal_placeholder"] == "present"
+    assert "/fake/private/bin/hledger" not in result.output
+    assert "PRIVATE_ACCOUNT_ID" not in result.output
+
+
+def test_books_status_sanitizes_external_absolute_vault_path(tmp_path: Path) -> None:
+    repo = _init_business_repo(tmp_path)
+    private_path = tmp_path / "private-books" / "main.journal"
+    _write(
+        repo / "core/finance/books.md",
+        f"""---
+type: books
+ledger: hledger
+storage_mode: solo-local
+vault_location: "{private_path.parent}"
+---
+
+# Books
+""",
+    )
+
+    result = runner.invoke(app, ["books", "status", str(repo), "--json"])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["vault"]["location"] == "external private path"
+    assert str(private_path.parent) not in result.output
+
+
+def test_books_doctor_plan_json_lists_safe_repairs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write(repo / "core/finance/main.journal", "; leaked real journal\n")
+    _git_add_all(repo)
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "")
+
+    result = runner.invoke(app, ["books", "doctor", str(repo), "--plan", "--json"])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["mb_command"] == "mb books doctor --plan"
+    assert payload["result_schema"]["name"] == "mainbranch.books.doctor.plan.result"
+    actions = {action["id"]: action for action in payload["actions"]}
+    assert "install-hledger" in actions
+    assert "create-private-books-vault" in actions
+    assert "add-books-ignore-protections" in actions
+    assert "move-unsafe-finance-artifacts" in actions
+    assert "core/finance/main.journal" in actions["move-unsafe-finance-artifacts"]["evidence"]
+    assert payload["safe_to_share"] is True
+
+
+def test_books_doctor_plan_reports_missing_private_journal_placeholder(tmp_path: Path) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write(
+        repo / "core/finance/books.md",
+        """---
+type: books
+ledger: hledger
+storage_mode: solo-local
+vault_location: ".mb/private/books/"
+---
+
+# Books
+""",
+    )
+    _write(repo / ".gitignore", ".mb/private/\n*.journal\n*.hledger\n*.ledger\n*.beancount\n")
+    (repo / ".mb/private/books").mkdir(parents=True)
+
+    result = runner.invoke(app, ["books", "doctor", str(repo), "--plan", "--json"])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    actions = {action["id"]: action for action in payload["actions"]}
+    assert "create-private-journal-placeholder" in actions
+    assert actions["create-private-journal-placeholder"]["writes"] == [
+        ".mb/private/books/main.journal"
+    ]
+
+
+def test_books_doctor_requires_plan(tmp_path: Path) -> None:
+    repo = _init_business_repo(tmp_path)
+    result = runner.invoke(app, ["books", "doctor", str(repo)])
+    assert result.exit_code == 2
+    assert "--plan is required" in result.output
+
+
 def test_books_check_packaged_fixtures_carry_marker() -> None:
     """The shipped fixtures must continue to carry an explicit marker.
 

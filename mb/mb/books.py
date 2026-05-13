@@ -38,13 +38,26 @@ STATEMENT_EXTENSIONS = (".csv", ".ofx", ".qfx", ".qbo", ".qif")
 UNSAFE_EXTENSIONS = LEDGER_EXTENSIONS + STATEMENT_EXTENSIONS
 
 VAULT_RELATIVE = Path(".mb/private")
+DEFAULT_BOOKS_VAULT_RELATIVE = Path(".mb/private/books")
 VAULT_IGNORE_ENTRIES = (".mb/private/", ".mb/private")
+BOOKS_IGNORE_ENTRIES = (
+    ".mb/private/",
+    "*.journal",
+    "*.hledger",
+    "*.ledger",
+    "*.beancount",
+)
 
 VALID_STORAGE_MODES = frozenset({"solo-local", "team-private-repo", "advanced-vault"})
 NON_LOCAL_STORAGE_MODES = frozenset({"team-private-repo", "advanced-vault"})
 
 BUNDLED_FIXTURE_NAME = "acme-fixture.journal"
 DOCS_BOOKS_PATH = "docs/books.md"
+GITHUB_PRIVATE_WARNING = (
+    "GitHub private repos are private, not financial vaults. Anyone with repo "
+    "access can read the full ledger and history. Removing a transaction later "
+    "does not remove it from history."
+)
 
 # Fixture markers an operator can put in a sample journal/CSV to opt the
 # file out of unsafe-path detection. See the foundation decision.
@@ -189,6 +202,252 @@ def _has_fixture_marker(path: Path) -> bool:
 
 def _ignore_rule_present(entries: set[str]) -> bool:
     return any(entry in entries for entry in VAULT_IGNORE_ENTRIES)
+
+
+def _books_ignore_missing(entries: set[str]) -> list[str]:
+    return [entry for entry in BOOKS_IGNORE_ENTRIES if entry not in entries]
+
+
+def _has_books_policy(repo: Path) -> bool:
+    return (repo / "core" / "finance" / "books.md").exists()
+
+
+def _policy_storage_mode(fm: dict[str, Any]) -> str:
+    return str(fm.get("storage_mode") or "").strip()
+
+
+def _safe_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def _vault_info(repo: Path, fm: dict[str, Any]) -> dict[str, Any]:
+    """Return sanitized private-books-vault facts.
+
+    The report deliberately avoids printing absolute vault paths outside the
+    business repo. It only stats relative paths or absolute paths that resolve
+    under ``repo``. External locations are reported as configured, but the
+    literal path is not included.
+    """
+    storage_mode = _policy_storage_mode(fm)
+    raw_location = str(fm.get("vault_location") or "").strip()
+    defaulted = False
+    if not raw_location and storage_mode not in NON_LOCAL_STORAGE_MODES:
+        raw_location = DEFAULT_BOOKS_VAULT_RELATIVE.as_posix()
+        defaulted = True
+
+    if storage_mode in NON_LOCAL_STORAGE_MODES:
+        configured = bool(raw_location)
+        return {
+            "storage_mode": storage_mode,
+            "configured": configured,
+            "defaulted": False,
+            "location": (
+                "configured external private books repo"
+                if storage_mode == "team-private-repo" and configured
+                else "configured external private books vault"
+                if configured
+                else "not configured"
+            ),
+            "location_kind": "external",
+            "local_path": "",
+            "exists": None,
+            "journal_placeholder": "not_checked",
+        }
+
+    if not raw_location:
+        return {
+            "storage_mode": storage_mode,
+            "configured": False,
+            "defaulted": False,
+            "location": "not configured",
+            "location_kind": "missing",
+            "local_path": "",
+            "exists": False,
+            "journal_placeholder": "missing",
+        }
+
+    candidate = Path(raw_location)
+    repo_resolved = repo.resolve()
+    if candidate.is_absolute():
+        resolved = candidate.resolve()
+        try:
+            rel = resolved.relative_to(repo_resolved)
+        except ValueError:
+            return {
+                "storage_mode": storage_mode,
+                "configured": True,
+                "defaulted": defaulted,
+                "location": "external private path",
+                "location_kind": "external",
+                "local_path": "",
+                "exists": None,
+                "journal_placeholder": "not_checked",
+            }
+        local_path = repo / rel
+        display = rel.as_posix()
+    else:
+        local_path = repo / candidate
+        display = candidate.as_posix().rstrip("/") or "."
+
+    exists = local_path.exists()
+    journal = local_path / "main.journal"
+    return {
+        "storage_mode": storage_mode,
+        "configured": True,
+        "defaulted": defaulted,
+        "location": display,
+        "location_kind": "repo_relative",
+        "local_path": display,
+        "exists": exists,
+        "journal_placeholder": "present" if journal.exists() else "missing",
+    }
+
+
+def _status_extra_findings(
+    repo: Path, fm: dict[str, Any], check_report: dict[str, Any]
+) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    hledger_path = shutil.which("hledger")
+    if hledger_path:
+        findings.append(
+            _finding(
+                id="hledger-available",
+                title="hledger is available",
+                state="ok",
+                detail="The hledger command is available on PATH.",
+                audience="informational",
+                operator_summary="hledger is installed for deeper local books checks.",
+            )
+        )
+    else:
+        findings.append(
+            _finding(
+                id="hledger-missing",
+                title="hledger is not installed",
+                state="info",
+                detail=(
+                    "hledger is optional for base Main Branch installs, but it is "
+                    "needed for real local journal checks."
+                ),
+                audience="informational",
+                operator_summary="Install hledger before validating real local journals.",
+                repair="Install hledger from https://hledger.org/install.html",
+            )
+        )
+
+    entries = _gitignore_entries(repo)
+    missing_ignore = _books_ignore_missing(entries)
+    if missing_ignore:
+        findings.append(
+            _finding(
+                id="books-ignore-protections-missing",
+                title="Bookkeeping ignore protections are incomplete",
+                state="warn",
+                detail=(
+                    "The business repo .gitignore is missing bookkeeping safety "
+                    f"entries: {', '.join(missing_ignore)}."
+                ),
+                audience="mechanical",
+                operator_summary=(
+                    "Add the missing books ignore rules so real ledgers and the "
+                    "private vault do not enter tracked history."
+                ),
+                repair="Add the missing entries to .gitignore.",
+                evidence=missing_ignore,
+            )
+        )
+    else:
+        findings.append(
+            _finding(
+                id="books-ignore-protections-ok",
+                title="Bookkeeping ignore protections are present",
+                state="ok",
+                detail="The expected private-vault and ledger-extension ignore rules are present.",
+                audience="informational",
+                operator_summary="Books ignore protections are present.",
+            )
+        )
+
+    vault = _vault_info(repo, fm)
+    policy_present = _has_books_policy(repo)
+    if vault["exists"] is True:
+        findings.append(
+            _finding(
+                id="books-vault-present",
+                title="Private books vault exists",
+                state="ok",
+                detail=f"Configured vault location: {vault['location']}.",
+                audience="informational",
+                operator_summary="Private books vault directory exists.",
+            )
+        )
+    elif vault["exists"] is False:
+        findings.append(
+            _finding(
+                id="books-vault-missing",
+                title="Private books vault is not set up yet",
+                state="warn" if policy_present else "info",
+                detail=f"Configured vault location: {vault['location']}.",
+                audience="mechanical" if policy_present else "informational",
+                operator_summary=(
+                    "Create the private books vault before storing real journals."
+                    if policy_present
+                    else "No private books vault yet. Set it up when you start real bookkeeping."
+                ),
+                repair=f"mkdir -p {DEFAULT_BOOKS_VAULT_RELATIVE.as_posix()}",
+            )
+        )
+
+    if vault["journal_placeholder"] == "missing" and vault["exists"] is True:
+        findings.append(
+            _finding(
+                id="books-journal-placeholder-missing",
+                title="No private main.journal placeholder",
+                state="info",
+                detail=(
+                    f"{vault['location']}/main.journal is not present. Main Branch "
+                    "does not create or edit real journals in this slice."
+                ),
+                audience="operator_decision",
+                operator_summary=(
+                    "Create a private hledger main.journal when you are ready to start books."
+                ),
+                repair=(
+                    "Create a private hledger journal inside the books vault; use "
+                    "docs/examples/books/acme-fixture.journal only as a fake shape reference."
+                ),
+            )
+        )
+    elif vault["journal_placeholder"] == "present":
+        findings.append(
+            _finding(
+                id="books-journal-placeholder-present",
+                title="Private main.journal placeholder exists",
+                state="ok",
+                detail=f"{vault['location']}/main.journal exists; contents were not read.",
+                audience="informational",
+                operator_summary="Private main.journal exists; Main Branch did not read it.",
+            )
+        )
+
+    if check_report.get("storage_mode") == "team-private-repo" or _safe_bool(
+        fm.get("github_backup")
+    ):
+        findings.append(
+            _finding(
+                id="github-private-books-warning",
+                title="GitHub private repo warning",
+                state="warn",
+                detail=GITHUB_PRIVATE_WARNING,
+                audience="operator_decision",
+                operator_summary=GITHUB_PRIVATE_WARNING,
+            )
+        )
+    return findings
 
 
 def _detect_books_policy(repo: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -679,6 +938,266 @@ def run(
     }
 
 
+def status(repo: str | Path = ".") -> dict[str, Any]:
+    """Return read-only books setup and storage health.
+
+    This is the safe operator-facing status surface for the private hledger
+    books vault. It never reads real ledger contents and it sanitizes private
+    vault paths that point outside the business repo.
+    """
+    repo_path = Path(repo).resolve()
+    check_report = run(repo=repo_path)
+    fm, _ = _detect_books_policy(repo_path)
+    extra_findings = _status_extra_findings(repo_path, fm, check_report)
+    findings = [*check_report["findings"], *extra_findings]
+    state = _max_state([finding["state"] for finding in findings])
+    errors = [finding["operator_summary"] for finding in findings if finding["state"] == "error"]
+    warnings = [finding["operator_summary"] for finding in findings if finding["state"] == "warn"]
+
+    hledger_available = any(finding["id"] == "hledger-available" for finding in extra_findings)
+    entries = _gitignore_entries(repo_path)
+    missing_ignore = _books_ignore_missing(entries)
+    vault = _vault_info(repo_path, fm)
+    storage_mode = check_report.get("storage_mode") or _policy_storage_mode(fm)
+    status_summary = "Books setup passed." if state == "ok" else _summary(state, findings)
+
+    return {
+        "ok": state not in {"error"},
+        "state": state,
+        "repo": str(repo_path),
+        "engine": "hledger",
+        "hledger": {
+            "available": hledger_available,
+            "command": "hledger",
+            "install": "https://hledger.org/install.html",
+        },
+        "policy": {
+            "present": _has_books_policy(repo_path),
+            "path": "core/finance/books.md",
+            "storage_mode": storage_mode,
+            "valid_storage_mode": bool(storage_mode in VALID_STORAGE_MODES),
+        },
+        "vault": vault,
+        "ignore": {
+            "missing": missing_ignore,
+            "ok": not missing_ignore,
+            "expected": list(BOOKS_IGNORE_ENTRIES),
+        },
+        "check": {
+            "state": check_report["state"],
+            "summary": check_report["summary"],
+            "warnings": check_report["warnings"],
+            "errors": check_report["errors"],
+        },
+        "github_private_warning": (
+            GITHUB_PRIVATE_WARNING
+            if storage_mode == "team-private-repo" or _safe_bool(fm.get("github_backup"))
+            else ""
+        ),
+        "summary": status_summary,
+        "findings": findings,
+        "errors": errors,
+        "warnings": warnings,
+        "safe_to_share": True,
+    }
+
+
+def _plan_action(
+    *,
+    id: str,
+    title: str,
+    state: str,
+    reason: str,
+    command: str,
+    writes: list[str] | None = None,
+    evidence: list[str] | None = None,
+    audience: str = "operator_decision",
+) -> dict[str, Any]:
+    return {
+        "id": id,
+        "title": title,
+        "state": state,
+        "mode": "plan",
+        "safe_to_apply": False,
+        "reason": reason,
+        "command": command,
+        "writes": writes or [],
+        "evidence": evidence or [],
+        "audience": audience if audience in AUDIENCE_VALUES else "operator_decision",
+        "operator_summary": reason,
+    }
+
+
+def doctor_plan(repo: str | Path = ".") -> dict[str, Any]:
+    """Return a non-mutating books repair plan."""
+    status_report = status(repo=repo)
+    findings = {finding["id"]: finding for finding in status_report["findings"]}
+    actions: list[dict[str, Any]] = []
+
+    if "hledger-missing" in findings:
+        finding = findings["hledger-missing"]
+        actions.append(
+            _plan_action(
+                id="install-hledger",
+                title="Install hledger",
+                state="info",
+                reason=finding["operator_summary"],
+                command="Install hledger from https://hledger.org/install.html",
+                evidence=finding.get("evidence") or [],
+                audience="informational",
+            )
+        )
+
+    if "books-policy-missing" in findings:
+        finding = findings["books-policy-missing"]
+        actions.append(
+            _plan_action(
+                id="add-books-policy",
+                title="Add a safe books policy",
+                state="info",
+                reason=finding["operator_summary"],
+                command=(
+                    "Use docs/examples/books/books.md as the shape for "
+                    "core/finance/books.md; keep real ledger data out of it."
+                ),
+                writes=["core/finance/books.md"],
+                audience="informational",
+            )
+        )
+    elif "books-policy-frontmatter-error" in findings:
+        finding = findings["books-policy-frontmatter-error"]
+        actions.append(
+            _plan_action(
+                id="fix-books-policy-frontmatter",
+                title="Fix books policy frontmatter",
+                state="error",
+                reason=finding["operator_summary"],
+                command=finding["repair"],
+                writes=["core/finance/books.md"],
+            )
+        )
+    elif (
+        "books-policy-storage-mode-missing" in findings
+        or "books-policy-storage-mode-invalid" in findings
+    ):
+        key = (
+            "books-policy-storage-mode-missing"
+            if "books-policy-storage-mode-missing" in findings
+            else "books-policy-storage-mode-invalid"
+        )
+        finding = findings[key]
+        actions.append(
+            _plan_action(
+                id="fix-books-storage-mode",
+                title="Fix books storage mode",
+                state="warn",
+                reason=finding["operator_summary"],
+                command=finding["repair"],
+                writes=["core/finance/books.md"],
+            )
+        )
+
+    if "chart-of-accounts-missing" in findings:
+        finding = findings["chart-of-accounts-missing"]
+        actions.append(
+            _plan_action(
+                id="add-chart-of-accounts",
+                title="Add chart of accounts when ready",
+                state="info",
+                reason=finding["operator_summary"],
+                command=(
+                    "Use docs/examples/books/chart-of-accounts.md as the shape "
+                    "for core/finance/chart-of-accounts.md; do not include real balances."
+                ),
+                writes=["core/finance/chart-of-accounts.md"],
+                audience="informational",
+            )
+        )
+
+    missing_ignore = status_report["ignore"]["missing"]
+    if missing_ignore:
+        actions.append(
+            _plan_action(
+                id="add-books-ignore-protections",
+                title="Add books ignore protections",
+                state="warn",
+                reason=(
+                    "The business repo is missing books ignore rules for the "
+                    "private vault or ledger-shaped files."
+                ),
+                command=(
+                    "Add these lines to .gitignore: "
+                    + ", ".join(f"`{entry}`" for entry in missing_ignore)
+                ),
+                writes=[".gitignore"],
+                evidence=missing_ignore,
+                audience="mechanical",
+            )
+        )
+
+    if "books-vault-missing" in findings:
+        finding = findings["books-vault-missing"]
+        actions.append(
+            _plan_action(
+                id="create-private-books-vault",
+                title="Create private books vault",
+                state=finding["state"],
+                reason=finding["operator_summary"],
+                command=f"mkdir -p {DEFAULT_BOOKS_VAULT_RELATIVE.as_posix()}",
+                writes=[DEFAULT_BOOKS_VAULT_RELATIVE.as_posix()],
+                audience=finding["audience"],
+            )
+        )
+
+    if "books-journal-placeholder-missing" in findings:
+        finding = findings["books-journal-placeholder-missing"]
+        actions.append(
+            _plan_action(
+                id="create-private-journal-placeholder",
+                title="Create private hledger journal placeholder",
+                state="info",
+                reason=finding["operator_summary"],
+                command=finding["repair"],
+                writes=[f"{DEFAULT_BOOKS_VAULT_RELATIVE.as_posix()}/main.journal"],
+                audience="operator_decision",
+            )
+        )
+
+    if "unsafe-paths-detected" in findings:
+        finding = findings["unsafe-paths-detected"]
+        actions.append(
+            _plan_action(
+                id="move-unsafe-finance-artifacts",
+                title="Move unsafe tracked finance artifacts",
+                state="warn",
+                reason=finding["operator_summary"],
+                command=finding["repair"],
+                evidence=finding.get("evidence") or [],
+                audience="operator_decision",
+            )
+        )
+
+    action_state = _max_state([action["state"] for action in actions])
+    state = action_state if actions else "ok"
+    return {
+        "ok": True,
+        "state": state,
+        "repo": status_report["repo"],
+        "summary": (
+            f"{len(actions)} planned repair action(s)." if actions else "No books repairs planned."
+        ),
+        "actions": actions,
+        "status": {
+            "state": status_report["state"],
+            "summary": status_report["summary"],
+            "hledger": status_report["hledger"],
+            "vault": status_report["vault"],
+            "ignore": status_report["ignore"],
+        },
+        "safe_to_share": True,
+    }
+
+
 def _summary(state: str, findings: list[dict[str, Any]]) -> str:
     counts = {"ok": 0, "info": 0, "warn": 0, "error": 0}
     for finding in findings:
@@ -720,3 +1239,58 @@ def render_human(report: dict[str, Any]) -> None:
             typer.echo(f"           - {item}")
     typer.echo("")
     typer.echo(f"See {DOCS_BOOKS_PATH} for the full books contract.")
+
+
+def render_status(report: dict[str, Any]) -> None:
+    """Print ``mb books status`` for humans."""
+    import typer
+
+    hledger = "available" if report["hledger"]["available"] else "missing"
+    vault = report["vault"]
+    typer.echo(f"mb books status — {report['summary']}")
+    typer.echo(f"Books engine:      {report['engine']}")
+    typer.echo(f"hledger:           {hledger}")
+    typer.echo(f"Storage mode:      {report['policy']['storage_mode'] or 'not configured'}")
+    typer.echo(f"Bookkeeping vault: {vault['location']}")
+    if vault["exists"] is not None:
+        typer.echo(f"Vault exists:      {'yes' if vault['exists'] else 'no'}")
+    typer.echo(f"Ignore rules:      {'ok' if report['ignore']['ok'] else 'missing'}")
+    if report.get("github_private_warning"):
+        typer.echo("")
+        typer.echo(report["github_private_warning"])
+    typer.echo("")
+    for finding in report.get("findings", []):
+        if finding.get("state") == "ok":
+            continue
+        marker = {"info": "info", "warn": "WARN", "error": "FAIL"}.get(
+            finding.get("state", "info"), "    "
+        )
+        typer.echo(f"  [{marker}] {finding['title']}")
+        if finding.get("operator_summary"):
+            typer.echo(f"         {finding['operator_summary']}")
+        if finding.get("repair"):
+            typer.echo(f"         repair: {finding['repair']}")
+        for item in (finding.get("evidence") or [])[:5]:
+            typer.echo(f"           - {item}")
+    typer.echo("")
+    typer.echo("Run `mb books doctor --plan` for safe setup repair guidance.")
+
+
+def render_doctor_plan(report: dict[str, Any]) -> None:
+    """Print ``mb books doctor --plan`` for humans."""
+    import typer
+
+    typer.echo(f"mb books doctor --plan — {report['summary']}")
+    if not report.get("actions"):
+        return
+    typer.echo("")
+    for action in report["actions"]:
+        marker = {"info": "info", "warn": "WARN", "error": "FAIL"}.get(
+            action.get("state", "info"), "    "
+        )
+        typer.echo(f"  [{marker}] {action['title']}")
+        typer.echo(f"         {action['reason']}")
+        if action.get("command"):
+            typer.echo(f"         plan: {action['command']}")
+        for item in (action.get("evidence") or [])[:5]:
+            typer.echo(f"           - {item}")

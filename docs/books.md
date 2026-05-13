@@ -8,9 +8,9 @@ function is bookkeeping.
 
 ## The Short Version
 
-- Main Branch ships `mb books check`, the first surface in the `mb books`
-  command group. It validates bookkeeping safety without reading any
-  real ledger contents.
+- Main Branch ships the first safe `mb books` setup surfaces:
+  `check`, `status`, and `doctor --plan`. They validate and explain
+  bookkeeping safety without reading any real ledger contents.
 - **Main Branch uses hledger as the bookkeeping engine for `mb books`.**
   The hledger journal is the only authoritative ledger.
 - hledger is **optional** for base `mb` installs, but it is the chosen
@@ -202,10 +202,12 @@ There is no `mb` command for it.
 
 ## What `mb books` Does Today
 
-The shipped surface is:
+The shipped safe setup surfaces are:
 
 ```bash
 mb books check [REPO] [--fixture] [--fixture-path PATH] [--json]
+mb books status [REPO] [--json]
+mb books doctor [REPO] --plan [--json]
 ```
 
 `mb books check` runs read-only checks against a business repo. It:
@@ -235,11 +237,49 @@ mb books check [REPO] [--fixture] [--fixture-path PATH] [--json]
 - emits a JSON envelope with `--json` for scripts and skills, with
   every finding carrying `audience` and `operator_summary` fields.
 
+`mb books status` shows readable setup/storage health:
+
+- hledger availability, without printing the local binary path;
+- configured storage mode from `core/finance/books.md`;
+- sanitized private-vault location labels. Relative paths inside the
+  business repo may be shown; external absolute vault paths are
+  reported as external private paths instead of printed;
+- whether the configured local vault exists;
+- whether a private `main.journal` placeholder exists, without
+  reading its contents;
+- whether `.gitignore` includes the expected private-vault and
+  ledger-extension protections;
+- the GitHub private repo warning when team-private mode or GitHub
+  backup is configured.
+
+`mb books doctor --plan` prints a non-mutating repair plan for setup
+gaps:
+
+- install hledger when deeper local journal checks are needed;
+- add a safe `core/finance/books.md` policy when the operator is
+  ready;
+- add or fix `storage_mode`;
+- add bookkeeping ignore protections;
+- create the private books vault directory;
+- create a private hledger journal placeholder from a safe template
+  shape;
+- move unsafe tracked finance artifacts out of the business repo.
+
+It does not apply repairs yet. The plan is designed for operator
+review and avoids printing private external vault paths or real
+financial data.
+
 Exit codes:
 
-- `0` — no error findings (info or warn states allowed);
-- `1` — at least one error finding (e.g. broken policy frontmatter,
+- `mb books check`: `0` when there are no error findings (info or
+  warn states allowed); `1` when there is at least one error finding
+  (e.g. broken policy frontmatter,
   or `.mb/private/` exists without a matching ignore rule).
+- `mb books status`: `0` when there are no error findings; `1` when
+  status finds an error.
+- `mb books doctor --plan`: `0` after printing a plan. Running
+  `mb books doctor` without `--plan` exits `2` because applying
+  repairs is not implemented.
 
 It does **not**:
 
@@ -250,10 +290,9 @@ It does **not**:
 - read the real ledger contents inside the vault;
 - mutate any file.
 
-Sibling commands `mb books status` (storage-mode summary plus the
-GitHub-as-backup warning) and `mb books doctor` (mechanical repairs
-to ignore rules and vault scaffolding) are named in the foundation
-decision and not yet shipped.
+Later slices may add real imports, reconciliation, month close, or
+fixture-safe reporting only after separate decisions and smoke
+evidence. They are not part of the current command surface.
 
 The full first-surface spec lives in
 [the mb books foundation decision](../decisions/2026-05-11-mb-books-foundation.md).
@@ -289,10 +328,9 @@ The setup path, when the time comes:
    journal contents in.
 5. Optionally add `core/finance/chart-of-accounts.md` describing your
    account-naming convention.
-6. Run `mb books check` to verify the policy parses and the
-   `.mb/private/` ignore rule is in place. When the sibling
-   `mb books doctor` ships, it will mechanically add missing ignore
-   rules for you.
+6. Run `mb books status` to review setup/storage health, then
+   `mb books doctor --plan` for safe repair guidance. Run
+   `mb books check` when you need the lower-level safety findings.
 
 ## Related
 

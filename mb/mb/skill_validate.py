@@ -107,11 +107,7 @@ _RAW_GIT_ALLOW_TERMS = (
     "wiki repo",
     "technical detail",
 )
-_UNSHIPPED_COMMANDS = (
-    "mb publish --plan",
-    "mb books status",
-    "mb books doctor",
-)
+_UNSHIPPED_COMMANDS = ("mb publish --plan",)
 _UNSHIPPED_COMMAND_ALLOW_TERMS = (
     "not shipped",
     "not yet shipped",
