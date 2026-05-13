@@ -13,13 +13,14 @@ Use the provider and model verified for this run. Do not hard-code a private
 environment file, assume a provider is configured, or claim Main Branch supports
 image generation because this reference exists.
 
-Current provider notes checked 2026-05-13:
+Current provider notes checked 2026-05-13 against Google's official Gemini
+image generation docs:
+https://ai.google.dev/gemini-api/docs/image-generation
 
 | Provider | Model family | Use |
 | --- | --- | --- |
 | Google Gemini API | `gemini-3-pro-image-preview` | Professional/high-fidelity image generation when quality matters more than speed. |
-| Google Gemini API | `gemini-3.1-flash-image-preview` | Higher-efficiency image generation when speed/volume matters. |
-| Google Gemini API | `gemini-2.5-flash-image` | Older/current fast image model; useful when the operator accepts lower quality for speed/cost. |
+| Google Gemini API | `gemini-2.5-flash-image` | Candidate speed/cost rail for draft or iteration use only. Do not treat it as proven ad-grade output until a smoke/test run records provider, model, prompt, output, review notes, and final asset quality. |
 | OpenAI Image API / Responses API | GPT Image models | Candidate alternate provider for generation and editing. Use only when configured for the run and record the exact model. |
 
 If model names or pricing matter to the recommendation, check the provider's

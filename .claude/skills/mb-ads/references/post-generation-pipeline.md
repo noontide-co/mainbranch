@@ -173,7 +173,11 @@ After creative variations are generated, cluster them by hook category:
 
 Generate 1 background per cluster (8 total) using **parallel subagents -- one agent per cluster**. Each agent generates its background, post-processes it, and returns the path + status. All 8 agents spawn in the same message as compliance agents. Map each variation to its cluster. Text overlay composited via Pillow post-processing (separate from Gemini generation).
 
-**Cost:** 8 images x ~$0.05 = ~$0.40 (recommended). User can choose 15 backgrounds ($0.75) or 30 unique ($1.50). At 15+, batch agents into groups of 2-3 images each to limit agent count.
+Estimate cost from the current provider/model pricing at run time and record
+the provider, model, docs-checked date, estimated cost, retries, and final cost
+if available. User can choose 8 recommended background clusters, 15
+backgrounds, or 30 unique backgrounds. At 15+, batch agents into groups of 2-3
+images each to limit agent count.
 
 See [image-generation-workflow.md](image-generation-workflow.md) for provider
 selection, metadata, and fallback details.
