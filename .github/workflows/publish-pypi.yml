@@ -18,9 +18,10 @@ name: publish-pypi
 #   - Top-level permissions are contents: read; jobs widen explicitly.
 #   - The release artifact is built once in `build` and republished by
 #     `publish`; no rebuild happens in the publish environment.
-#   - The publish job is double-gated: the `pypi` environment requires a
-#     human approver, and an `if:` guard requires the release tag to match
-#     `oe-v*` so a stray release on a non-Main-Branch tag cannot publish.
+#   - The release metadata job validates the tag as `oe-vMAJOR.MINOR.PATCH`
+#     before any version-derived value is used by downstream jobs.
+#   - Release workflow actions are pinned to commit SHAs. Update them
+#     intentionally during dependency/security maintenance.
 #
 # Release notes: the `extract-changelog` job parses CHANGELOG.md for the
 # section matching the release tag and updates the GitHub Release body
@@ -34,16 +35,42 @@ permissions:
   contents: read
 
 jobs:
+  release-metadata:
+    name: Validate release tag
+    runs-on: ubuntu-latest
+    outputs:
+      valid: ${{ steps.validate.outputs.valid }}
+      tag: ${{ steps.validate.outputs.tag }}
+      version: ${{ steps.validate.outputs.version }}
+      name: ${{ steps.validate.outputs.name }}
+    steps:
+      - name: Validate Main Branch release tag
+        id: validate
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [[ ! "$tag" =~ ^oe-v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Release tag must match oe-vMAJOR.MINOR.PATCH."
+            exit 1
+          fi
+          version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
+          {
+            echo "valid=true"
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "name=Main Branch $version"
+          } >> "$GITHUB_OUTPUT"
+
   build:
     name: Build sdist + wheel
+    needs: [release-metadata]
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: mb
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.12"
           cache: pip
@@ -55,7 +82,7 @@ jobs:
         run: python -m build
 
       - name: Upload dist artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: dist
           path: mb/dist/
@@ -63,23 +90,23 @@ jobs:
 
   release-notes:
     name: Sync release notes from CHANGELOG
+    needs: [release-metadata]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Extract CHANGELOG section for this release
         id: extract
+        env:
+          RELEASE_VERSION: ${{ needs.release-metadata.outputs.version }}
         run: |
-          # Tag scheme: oe-vMAJOR.MINOR.PATCH (e.g. oe-v0.1.0).
+          # Tag scheme is validated by the release-metadata job.
           # CHANGELOG heading: ## [MAJOR.MINOR.PATCH] - YYYY-MM-DD ...
-          tag="${GITHUB_REF_NAME}"
-          version="${tag#oe-v}"
-          echo "tag=$tag version=$version"
-          python3 - <<PY > release-notes.md
-          import re, sys, pathlib
-          version = "$version"
+          python3 - <<'PY' > release-notes.md
+          import os, pathlib, re, sys
+          version = os.environ["RELEASE_VERSION"]
           body = pathlib.Path("CHANGELOG.md").read_text(encoding="utf-8")
           # Match "## [<version>]" through the next "## [" or EOF.
           pattern = re.compile(
@@ -108,18 +135,15 @@ jobs:
       - name: Update GitHub Release body
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.release-metadata.outputs.tag }}
         run: |
-          gh release edit "${GITHUB_REF_NAME}" --notes-file release-notes.md
+          gh release edit "$RELEASE_TAG" --notes-file release-notes.md
 
   publish:
     name: Publish to PyPI
-    needs: [build, release-notes]
+    needs: [release-metadata, build, release-notes]
     runs-on: ubuntu-latest
-    # Defense in depth: trusted publishing + `pypi` environment approval are
-    # the primary gates. This `if:` blocks any GitHub Release whose tag does
-    # not match the Main Branch release scheme (`oe-vMAJOR.MINOR.PATCH`)
-    # from claiming an OIDC token, even if the environment is approved.
-    if: startsWith(github.event.release.tag_name, 'oe-v')
+    if: needs.release-metadata.outputs.valid == 'true'
     environment:
       name: pypi
       url: https://pypi.org/p/mainbranch
@@ -127,37 +151,35 @@ jobs:
       id-token: write
     steps:
       - name: Download dist artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: dist
           path: dist/
 
       - name: Publish via trusted publisher
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
 
   linear-release:
     name: Sync Linear release
-    needs: [publish]
+    needs: [release-metadata, publish]
     runs-on: ubuntu-latest
-    if: startsWith(github.event.release.tag_name, 'oe-v')
+    if: needs.release-metadata.outputs.valid == 'true'
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
 
       - name: Derive Linear release metadata
         id: meta
         run: |
-          tag="${{ github.event.release.tag_name }}"
-          version="${tag#oe-v}"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "name=Main Branch $version" >> "$GITHUB_OUTPUT"
+          echo "tag=${{ needs.release-metadata.outputs.tag }}" >> "$GITHUB_OUTPUT"
+          echo "version=${{ needs.release-metadata.outputs.version }}" >> "$GITHUB_OUTPUT"
+          echo "name=${{ needs.release-metadata.outputs.name }}" >> "$GITHUB_OUTPUT"
 
       - name: Sync issues into Linear release
-        uses: linear/linear-release-action@v0.10.0
+        uses: linear/linear-release-action@0917777589db006387af296dde440385f88d6ac4 # v0.10.0
         with:
           access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
           command: sync
@@ -165,7 +187,7 @@ jobs:
           version: ${{ steps.meta.outputs.tag }}
 
       - name: Mark Linear release as released
-        uses: linear/linear-release-action@v0.10.0
+        uses: linear/linear-release-action@0917777589db006387af296dde440385f88d6ac4 # v0.10.0
         with:
           access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
           command: complete

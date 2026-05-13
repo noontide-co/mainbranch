@@ -61,6 +61,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   non-local books storage is selected without a safe private vault label. Refs
   MAIN-332, #510.
 
+### Security
+
+- Tightened package release workflow tag validation, release-notes extraction,
+  and release-action pinning; tightened `.mb/connect.yaml` local-state boundary
+  handling so provider metadata paths stay inside the selected repo. Refs
+  MAIN-356, #558.
+
 ## [0.3.19] - 2026-05-12
 
 v0.3.19 makes daily status more business-aware: MoneyPath, proof-quality, and
