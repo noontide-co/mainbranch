@@ -11,6 +11,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.20] - 2026-05-13
+
+v0.3.20 packages the chat-first, fact-backed daily operating loop. It adds
+privacy-safe books readiness facts for status and start, introduces the first
+shared workflow source prototype for the daily start -> MoneyPath handoff,
+deepens `/mb-think` research-depth guidance, hardens release and local-state
+boundaries, and refreshes the public narrative around agents using
+deterministic `mb` facts internally while operators see plain business
+guidance.
+
 ### Added
 
 - Added a `/mb-think` research-depth ladder for offer, audience, proof,
@@ -48,6 +58,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   MoneyPath `/mb-think` handoff, with generated Claude/Codex shell snapshots
   and drift tests that require shared `mb` commands and JSON facts to stay
   present. Refs MAIN-351, #549.
+- Added a public-safe Codex Stage 1 dogfood report documenting the experimental
+  CLI-first support boundary, generated `AGENTS.md` grounding, deterministic
+  `mb` fact usage, and follow-up route for native workflow decisions without
+  claiming Codex slash-command parity. Refs MAIN-304, #453.
 - Added a proposed shared workflow corpus and native runtime renderer decision
   that names `workflows/<workflow>/` as the portable source for selected
   workflow semantics, keeps Claude Code and Codex runtime shells native, and
