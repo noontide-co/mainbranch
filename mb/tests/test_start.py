@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pytest
 from typer.testing import CliRunner
 
 from mb import codex as codex_mod
@@ -97,6 +98,8 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     assert report["command"]["follow_up"] == "/mb-start"
     assert report["launch"]["requested"] is False
     assert report["checkpoint"]["pending"]["status"] == "ready"
+    assert report["books"]["schema_version"] == "1.0"
+    assert report["books"]["safe_to_share"] is True
     assert report["push_count"] == 0
     assert report["deprecated_campaign_keys"] is True
     assert report["push_compatibility"]["legacy_campaigns_read"] is True
@@ -172,6 +175,44 @@ def test_start_json_exposes_push_and_legacy_campaign_facts(tmp_path: Path, monke
         "campaigns/2026-05-legacy/campaign.md",
     }
     assert report["campaigns"][0]["deprecated"] is True
+
+
+def test_start_json_preserves_books_readiness(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real_which = shutil.which
+    monkeypatch.setattr(start_mod, "_which", _with_claude)
+    monkeypatch.setattr(
+        "mb.books.shutil.which",
+        lambda name: "" if name == "hledger" else real_which(name),
+    )
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core" / "finance").mkdir(parents=True, exist_ok=True)
+    (repo / "core" / "finance" / "books.md").write_text(
+        (
+            "---\n"
+            "type: books\n"
+            "ledger: hledger\n"
+            "storage_mode: solo-local\n"
+            'vault_location: ".mb/private/books/"\n'
+            "---\n\n"
+            "# Books\n"
+        ),
+        encoding="utf-8",
+    )
+    (repo / ".gitignore").write_text("", encoding="utf-8")
+
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    report = json.loads(result.stdout)
+    assert report["books"]["state"] == "warn"
+    assert report["books"]["configured"] is True
+    assert report["books"]["mention"] is True
+    assert report["books"]["hledger"]["available"] is False
+    assert report["books"]["ignore"]["ok"] is False
+    assert report["books"]["next_command"] == "mb books doctor --plan --json"
 
 
 def test_start_degrades_when_claude_is_missing(tmp_path: Path, monkeypatch) -> None:

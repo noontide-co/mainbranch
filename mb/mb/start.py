@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from mb import books as books_mod
 from mb import checkpoint as checkpoint_mod
 from mb import codex as codex_mod
 from mb import journal as journal_mod
@@ -270,6 +271,7 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
     journal = journal_mod.collect(repo_path, limit=8, since="14 days ago")
     push_report = push_facts(repo_path)
     vocabulary_report = vocabulary.facts(repo_path)
+    books = books_mod.readiness(repo_path)
     checks = _build_checks(repo_shape, git, claude_path, wiring, codex, update)
     hard_failures = _hard_failures(checks)
     handoff_ready = not hard_failures
@@ -315,6 +317,7 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
         "update": update,
         "checkpoint": checkpoint,
         "journal": journal,
+        "books": books,
         "pushes": push_report["records"],
         "active_pushes": push_report["active"],
         "push_count": push_report["count"],

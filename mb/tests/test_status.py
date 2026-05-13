@@ -9,6 +9,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import pytest
 from typer.testing import CliRunner
 
 from mb import codex as codex_mod
@@ -252,6 +253,8 @@ def test_status_json_degrades_without_github(tmp_path: Path, monkeypatch) -> Non
     assert report["vocabulary"]["terms"]["statuses"]["active"] == "live"
     assert report["vocabulary"]["terms"]["channels"]["paid"] == "paid traffic"
     assert report["vocabulary"]["terms"]["kinds"]["launch"] == "launch"
+    assert report["books"]["schema_version"] == "1.0"
+    assert report["books"]["safe_to_share"] is True
     assert report["since_last_check"]["first_run"] is True
     assert report["marker_update"]["ok"] is True
     assert (repo / ".mb" / "last-status-seen.json").is_file()
@@ -287,6 +290,7 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
                 "git_activity",
                 "journal",
                 "brain",
+                "books",
                 "vocabulary",
                 "onboarding",
                 "integrations",
@@ -325,6 +329,73 @@ def test_status_money_path_default_repo_stays_low(tmp_path: Path, monkeypatch) -
     assert money_path["overall_level"] <= 1
     assert "customer_progress" in money_path["objects"]
     assert money_path["ranked_actions"]
+
+
+def test_status_books_readiness_fresh_repo_is_compact(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "")
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    books = report["books"]
+    assert books["state"] == "not_configured"
+    assert books["configured"] is False
+    assert books["mention"] is False
+    assert books["hledger"]["available"] is False
+    assert books["policy"]["present"] is False
+    assert books["next_command"] == "mb books status --json"
+    assert books["safe_to_share"] is True
+
+
+def test_status_books_readiness_redacts_private_paths_and_contents(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "/private/bin/hledger")
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    private_vault = tmp_path / "private-books"
+    books_path = repo / "core" / "finance" / "books.md"
+    books_path.parent.mkdir(parents=True, exist_ok=True)
+    books_path.write_text(
+        (
+            "---\n"
+            "type: books\n"
+            "ledger: hledger\n"
+            "storage_mode: solo-local\n"
+            f'vault_location: "{private_vault}"\n'
+            "---\n\n"
+            "# Books\n"
+        ),
+        encoding="utf-8",
+    )
+    (repo / "core" / "finance" / "chart-of-accounts.md").write_text(
+        "---\ntype: chart-of-accounts\nledger: hledger\n---\n\n# Chart\n",
+        encoding="utf-8",
+    )
+    (repo / ".gitignore").write_text(
+        ".mb/private/\n*.journal\n*.hledger\n*.ledger\n*.beancount\n",
+        encoding="utf-8",
+    )
+    private_vault.mkdir(parents=True)
+    (private_vault / "main.journal").write_text("; PRIVATE_LEDGER_CONTENT\n", encoding="utf-8")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+    payload = json.dumps(report["books"])
+
+    books = report["books"]
+    assert books["hledger"]["available"] is True
+    assert books["vault"]["location_kind"] == "external"
+    assert books["vault"]["exists"] is None
+    assert books["ignore"]["ok"] is True
+    assert books["chart_of_accounts"]["present"] is True
+    assert str(private_vault) not in payload
+    assert "/private/bin/hledger" not in payload
+    assert "PRIVATE_LEDGER_CONTENT" not in payload
 
 
 def test_status_money_path_single_offer_structured_caps_without_proof(

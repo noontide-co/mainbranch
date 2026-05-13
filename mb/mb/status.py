@@ -13,6 +13,7 @@ from typing import Any
 import yaml
 
 from mb import __version__, github_activity, relationships, vocabulary
+from mb import books as books_mod
 from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import content_strategy as content_strategy_mod
@@ -3682,6 +3683,7 @@ def run(
         "deprecated_campaign_keys": True,
         "push_compatibility": push_report["compatibility"],
         "vocabulary": vocabulary.facts(repo_path),
+        "books": books_mod.readiness(repo_path),
         "onboarding": onboard_mod.onboarding_status(repo_path),
         "integrations": connect_mod.status_all(repo_path, github=github.get("context")),
         "measurement": _measurement(repo_path),

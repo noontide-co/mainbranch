@@ -4,6 +4,7 @@
   "top_level_keys": [
     "active_campaigns",
     "active_pushes",
+    "books",
     "brain",
     "campaign_count",
     "campaigns",
@@ -109,6 +110,22 @@
       "recent_research",
       "stale_decisions",
       "stale_research"
+    ],
+    "books": [
+      "chart_of_accounts",
+      "configured",
+      "hledger",
+      "ignore",
+      "mention",
+      "next_command",
+      "policy",
+      "safe_to_share",
+      "schema_version",
+      "source",
+      "state",
+      "summary",
+      "unsafe_artifacts",
+      "vault"
     ],
     "vocabulary": [
       "errors",

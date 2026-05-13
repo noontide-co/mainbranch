@@ -1027,6 +1027,94 @@ def status(repo: str | Path = ".") -> dict[str, Any]:
     }
 
 
+def _unsafe_artifact_count(findings: list[dict[str, Any]]) -> int:
+    for finding in findings:
+        if finding.get("id") == "unsafe-paths-detected":
+            evidence = finding.get("evidence")
+            return len(evidence) if isinstance(evidence, list) else 0
+    return 0
+
+
+def _readiness_state(status_report: dict[str, Any], unsafe_count: int) -> str:
+    policy = status_report.get("policy") or {}
+    raw_state = str(status_report.get("state") or "")
+    if raw_state == "error":
+        return "blocked"
+    if unsafe_count:
+        return "warn"
+    if not policy.get("present"):
+        return "not_configured"
+    if raw_state == "warn":
+        return "warn"
+    if raw_state == "info":
+        return "missing"
+    return "ok"
+
+
+def _readiness_summary(state: str, status_report: dict[str, Any]) -> str:
+    if state == "not_configured":
+        return "Bookkeeping is not configured."
+    if state == "blocked":
+        return "Bookkeeping setup is blocked; run the books repair plan."
+    if state == "warn":
+        return "Bookkeeping setup has warnings."
+    if state == "missing":
+        return "Bookkeeping setup is missing optional pieces."
+    return str(status_report.get("summary") or "Bookkeeping setup passed.")
+
+
+def readiness(repo: str | Path = ".") -> dict[str, Any]:
+    """Return compact books readiness facts for daily status/start JSON.
+
+    This adapter intentionally exposes less than ``mb books status``. It keeps
+    routing signals and counts, but omits ledger contents, hledger binary paths,
+    private vault paths, raw exports, and unsafe artifact filenames.
+    """
+    status_report = status(repo=repo)
+    policy = status_report.get("policy") or {}
+    vault = status_report.get("vault") or {}
+    ignore = status_report.get("ignore") or {}
+    hledger = status_report.get("hledger") or {}
+    unsafe_count = _unsafe_artifact_count(status_report.get("findings") or [])
+    chart_present = any(
+        finding.get("id") == "chart-of-accounts-ok"
+        for finding in status_report.get("findings") or []
+    )
+    state = _readiness_state(status_report, unsafe_count)
+    next_command = (
+        "mb books doctor --plan --json"
+        if state in {"blocked", "warn", "missing"}
+        else "mb books status --json"
+    )
+    return {
+        "schema_version": "1.0",
+        "state": state,
+        "summary": _readiness_summary(state, status_report),
+        "configured": bool(policy.get("present")),
+        "mention": state in {"blocked", "warn", "missing"},
+        "hledger": {"available": bool(hledger.get("available"))},
+        "policy": {
+            "present": bool(policy.get("present")),
+            "storage_mode": str(policy.get("storage_mode") or ""),
+            "valid_storage_mode": bool(policy.get("valid_storage_mode")),
+        },
+        "vault": {
+            "configured": bool(vault.get("configured")),
+            "location_kind": str(vault.get("location_kind") or ""),
+            "exists": vault.get("exists") if vault.get("location_kind") != "external" else None,
+        },
+        "ignore": {
+            "ok": bool(ignore.get("ok")),
+            "missing_count": len(ignore.get("missing") or []),
+        },
+        "unsafe_artifacts": {"count": unsafe_count},
+        "chart_of_accounts": {"present": chart_present},
+        "next_command": next_command,
+        "source": "mb books status",
+        "safe_to_share": True,
+    }
+
+
 def _plan_action(
     *,
     id: str,

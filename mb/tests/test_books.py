@@ -472,6 +472,90 @@ vault_location: "{private_path.parent}"
     assert str(private_path.parent) not in result.output
 
 
+def test_books_readiness_ok_for_configured_fake_books_repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write(
+        repo / "core/finance/books.md",
+        """---
+type: books
+ledger: hledger
+storage_mode: solo-local
+vault_location: ".mb/private/books/"
+---
+
+# Books
+""",
+    )
+    _write(
+        repo / "core/finance/chart-of-accounts.md",
+        """---
+type: chart-of-accounts
+ledger: hledger
+---
+
+# Chart
+""",
+    )
+    _write(repo / ".gitignore", ".mb/private/\n*.journal\n*.hledger\n*.ledger\n*.beancount\n")
+    _write(repo / ".mb/private/books/main.journal", "; PRIVATE_LEDGER_CONTENT\n")
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "/fake/private/bin/hledger")
+
+    readiness = books_mod.readiness(repo=repo)
+    payload = json.dumps(readiness)
+
+    assert readiness["state"] == "ok"
+    assert readiness["configured"] is True
+    assert readiness["mention"] is False
+    assert readiness["hledger"]["available"] is True
+    assert readiness["ignore"]["ok"] is True
+    assert readiness["unsafe_artifacts"]["count"] == 0
+    assert readiness["chart_of_accounts"]["present"] is True
+    assert "PRIVATE_LEDGER_CONTENT" not in payload
+    assert "/fake/private/bin/hledger" not in payload
+
+
+def test_books_readiness_counts_unsafe_artifacts_without_names(tmp_path: Path) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write(repo / "exports/customer-bank-statement.csv", "vendor,amount\nAcme,100\n")
+    _git_add_all(repo)
+
+    readiness = books_mod.readiness(repo=repo)
+    payload = json.dumps(readiness)
+
+    assert readiness["state"] == "warn"
+    assert readiness["mention"] is True
+    assert readiness["unsafe_artifacts"]["count"] == 1
+    assert readiness["next_command"] == "mb books doctor --plan --json"
+    assert "customer-bank-statement.csv" not in payload
+    assert "Acme,100" not in payload
+
+
+def test_books_readiness_redacts_external_vault_path(tmp_path: Path) -> None:
+    repo = _init_business_repo(tmp_path)
+    private_path = tmp_path / "private-books" / "main.journal"
+    _write(
+        repo / "core/finance/books.md",
+        f"""---
+type: books
+ledger: hledger
+storage_mode: solo-local
+vault_location: "{private_path.parent}"
+---
+
+# Books
+""",
+    )
+
+    readiness = books_mod.readiness(repo=repo)
+    payload = json.dumps(readiness)
+
+    assert readiness["vault"]["location_kind"] == "external"
+    assert readiness["vault"]["exists"] is None
+    assert str(private_path.parent) not in payload
+
+
 def test_books_check_status_and_doctor_flag_missing_external_vault_location(
     tmp_path: Path,
 ) -> None:
