@@ -13,6 +13,7 @@ avoids local paths, account data, private business context, and long excerpts.
 - Evidence level: fresh PyPI install fixture, `codex exec` smoke, interactive
   Codex CLI smoke in an existing business repo, and Codex prompt-input
   inspection
+- Codex Mac app and Codex cloud: not exercised in this round
 - Related implementation: [#405](https://github.com/noontide-co/mainbranch/issues/405)
   and [PR #456](https://github.com/noontide-co/mainbranch/pull/456)
 - Public/private boundary: sanitized summary only
@@ -63,6 +64,20 @@ behavior:
   `mb status --json --peek` workflow instead.
 - Codex asked before repair/write commands instead of mutating the repo
   silently.
+
+Prompt-family coverage was partial and should not be overstated:
+
+- Path-to-money and update-first posture: the interactive "what next" prompt
+  used status and repair-plan facts to prioritize setup/readiness before
+  business-output work.
+- Proof distinctions: `money_path.objects.proof.quality` was verified in the
+  package fixture, but no separate interactive prompt proved Codex used that
+  nested proof-quality distinction in natural language.
+- Content strategy: top-level `content_strategy` was verified in the package
+  fixture, but no separate interactive prompt proved Codex preferred the JSON
+  content-strategy facts over raw file inspection.
+- Bounded writes: the interactive repair/setup path showed Codex asking before
+  write or repair commands.
 
 This is the right outcome for the current public claim: Codex has an
 experimental CLI-first adapter, not slash-command parity.
