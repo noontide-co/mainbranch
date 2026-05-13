@@ -103,10 +103,10 @@ Codex workflow surface exists and has runtime smoke evidence.
 
 ## Follow-Up Route
 
-The next ticket that moves Codex support forward is
+The right next decision/design issue for moving Codex support forward is
 [MAIN-302 / #451](https://github.com/noontide-co/mainbranch/issues/451):
-design the shared workflow corpus and native runtime renderers. It should use
-this dogfood evidence to decide:
+decide the native workflow architecture before selected workflow ports move
+into implementation. It should use this dogfood evidence to decide:
 
 - whether `.claude/skills` remains canonical or a runtime-neutral workflow
   source is introduced;
@@ -114,12 +114,15 @@ this dogfood evidence to decide:
 - whether Codex `AGENTS.md` is only bootstrap guidance or also indexes native
   workflow entrypoints;
 - how tests detect drift between runtime surfaces;
-- which first workflow family should be rendered after the decision, likely
+- whether the next durable path is a shared workflow corpus plus native
+  renderers, a smaller Codex workflow shell, or another staged approach;
+- which first workflow family should be rendered after that decision, likely
   lifecycle start/end before broader skill parity.
 
-After MAIN-302 lands, [#125](https://github.com/noontide-co/mainbranch/issues/125)
-can become an implementation slice for selected Codex workflow ports instead of
-a broad compatibility bucket.
+After MAIN-302 decides that architecture,
+[#125](https://github.com/noontide-co/mainbranch/issues/125) can become an
+implementation slice for selected Codex workflow ports instead of a broad
+compatibility bucket.
 
 ## Remaining MAIN-304 Work
 
