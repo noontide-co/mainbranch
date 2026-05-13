@@ -208,6 +208,7 @@ PROVIDER_GUIDANCE: dict[str, dict[str, Any]] = {
 META_SETUP_REQUIREMENTS = (
     "Meta Business Portfolio / Business Manager access",
     "An ad account assigned to the user or system user",
+    "The Business portfolio ID from Meta business info when available",
     "A Meta developer app selected during token generation",
     "A system user token or individual user token with assigned assets",
     "Possible second-admin approval in stricter Business Manager setups",
@@ -808,7 +809,11 @@ def _meta_setup() -> dict[str, Any]:
         "requirements": list(META_SETUP_REQUIREMENTS),
         "token_scopes": list(META_TOKEN_SCOPES),
         "credential_paths": ["--token-stdin", "--from-env", "hidden prompt"],
-        "safe_metadata": ["ad_account_id", "business_id", "account label"],
+        "safe_metadata": [
+            "ad_account_id (use the act_ ad account ID)",
+            "business_id (Meta calls this Business portfolio ID)",
+            "account label",
+        ],
         "test_command": "mb connect test meta --json",
         "safe_to_share": True,
     }

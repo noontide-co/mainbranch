@@ -127,13 +127,16 @@ system user token, and scopes including `business_management`, `ads_management`,
 Connect through `mb` so the token stays outside the repo:
 
 ```bash
-mb connect meta --token-stdin --metadata ad_account_id=<act_id>
+mb connect meta --token-stdin \
+  --metadata=ad_account_id=<act_id> \
+  --metadata=business_id=<business_portfolio_id>
 mb connect test meta --json
 ```
 
-Safe metadata in `.mb/connect.yaml` may include `ad_account_id`, optional
-`business_id`, an account label, and validation summaries. Raw tokens and raw
-provider responses do not belong in tracked files.
+Safe metadata in `.mb/connect.yaml` may include `ad_account_id` (use the `act_`
+ad account ID), optional `business_id` (Meta calls this the Business portfolio
+ID on the business info page), an account label, and validation summaries. Raw
+tokens and raw provider responses do not belong in tracked files.
 
 Practical read-only commands that `mb connect test meta` can smoke through the
 official CLI include:

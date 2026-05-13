@@ -83,6 +83,10 @@ Some Business Manager configurations require a second admin to approve system
 user token generation. Surface that as conditional repair copy, not a universal
 rule.
 
+When the user is in Meta's business info page, the UI label "Business portfolio
+ID" is the optional `business_id` metadata value. The ad account metadata should
+be the `act_` ad account ID.
+
 ---
 
 ## Provider Facts

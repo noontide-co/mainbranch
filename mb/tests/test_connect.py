@@ -137,6 +137,9 @@ def test_connect_meta_token_stdin_stores_secret_outside_repo(tmp_path: Path, mon
     assert payload["status"]["state"] == "unvalidated"
     assert payload["credential_source"]["type"] == "stdin"
     assert "Meta Business Portfolio" in payload["setup"]["requirements"][0]
+    assert "Business portfolio ID" in payload["setup"]["requirements"][2]
+    assert "act_" in payload["setup"]["safe_metadata"][0]
+    assert "Business portfolio ID" in payload["setup"]["safe_metadata"][1]
 
     config_text = (repo / ".mb" / "connect.yaml").read_text(encoding="utf-8")
     assert "meta-secret-token" not in config_text
