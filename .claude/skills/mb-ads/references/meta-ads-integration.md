@@ -99,8 +99,9 @@ mb connect doctor --json
 Use the CLI's `summary`, `next_command`, and `repair_command` fields. Do not
 write provider readiness into business-repo config from this skill.
 
-If `mb connect` reports Meta as `planned`, explain that live Meta account access
-is not wired yet and continue from reference files.
+If `mb connect` reports Meta as anything other than ready, explain that live
+Meta account access is not wired for this repo yet and continue from reference
+files.
 
 ---
 
@@ -111,7 +112,8 @@ Triggered lazily at `/mb-think` or `/mb-ads` when the topic is ads-related:
 ```
 1. Read `mb status --json --peek`.
 2. If the operator needs setup choices, run `mb connect plan`.
-3. If provider facts are degraded, missing, or planned, run
+3. If provider facts are degraded, missing, readiness-only, or otherwise not
+   ready, run
    `mb connect doctor --json` and quote the repair/setup guidance.
 4. Only if `mb` reports Meta account context ready, check the current runtime
    for the verified official CLI:
