@@ -18,6 +18,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   next paid-channel summary shape toward `mb ads meta summary --json` with raw
   payloads, account IDs, tracked caches, and mutations out of scope. Refs
   MAIN-366, #581.
+- Added an accepted shared workflow source and runtime shells decision, plus a
+  `/mb-think` shared workflow source with generated Claude/Codex shell snapshots
+  and drift tests for required `mb` facts, research-depth guidance,
+  public/private boundaries, approval gates, and Codex overclaim language. Refs
+  MAIN-368, #583.
 - Added release-simulation operator-language rubric warnings for visible
   technical leakage in Claude final answers, plus docs and tests for
   translating git/GitHub/checkpoint mechanics into normal owner language first.
