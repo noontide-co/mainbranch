@@ -285,6 +285,23 @@ def test_score_transcript_allows_commit_as_plain_verb() -> None:
     assert leakage["examples"] == []
 
 
+@pytest.mark.parametrize(
+    "transcript",
+    [
+        "This is your only commit.",
+        "The only commit is the setup baseline.",
+        "It's the only commit in this repo.",
+        "That is your only commit so far.",
+    ],
+)
+def test_score_transcript_flags_only_commit_count_language(transcript: str) -> None:
+    score = release_simulation.score_transcript(transcript)
+    leakage = score["operator_language"]["visible_technical_leakage"]
+
+    assert leakage["severity"] == "low"
+    assert [item["phrase"] for item in leakage["examples"]] == ["only commit so far"]
+
+
 def test_score_transcript_flags_broad_checkpoint_notes() -> None:
     transcript = """
     Checkpoint plan ready.

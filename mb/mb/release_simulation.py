@@ -303,7 +303,13 @@ _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
         "in the current business folder",
     ),
     (
-        re.compile(r"\bonly commit so far\b", re.IGNORECASE),
+        re.compile(
+            r"\bonly commit so far\b|"
+            r"\b(?:the|your|this is your|this is the|it is your|it is the|"
+            r"it's your|it's the|that is your|that is the|that's your|that's the)"
+            r"\s+only commit\b",
+            re.IGNORECASE,
+        ),
         "only commit so far",
         "last saved checkpoint",
     ),
