@@ -22,8 +22,8 @@ human approval over clever automation.
   dotfiles, or in any GitHub Actions workflow.
 - The publish workflow triggers on `release: published`, not on raw tag
   push. A release is a deliberate Releases-UI action by a maintainer.
-- The publish job carries a defensive `if:` guard so it only runs when
-  the release tag matches `oe-v*`. Defense in depth — the trusted
+- A release metadata job validates the tag as `oe-vMAJOR.MINOR.PATCH` before
+  downstream jobs use the tag-derived version. Defense in depth — the trusted
   publisher binding is the primary gate.
 - The release artifact is built once in the `build` job, uploaded as an
   artifact, then downloaded and published by the `publish` job. No
@@ -54,16 +54,23 @@ human approval over clever automation.
   CHANGELOG slice. It does not have `id-token: write` and cannot publish
   to PyPI.
 - The `linear-release` job requests `contents: read` and uses the
-  `LINEAR_ACCESS_KEY` secret. It is gated on the `oe-v*` tag prefix and
-  only runs after `publish` succeeds.
+  `LINEAR_ACCESS_KEY` secret. It uses the same strict release metadata output
+  as the PyPI publish job and only runs after `publish` succeeds.
 - New workflows or jobs must declare the minimum permissions they need
   and document any deviation from `contents: read` in the workflow file
   header.
 
 ### Action pinning
 
-- GitHub Actions are pinned to major-version tags
-  (e.g. `actions/checkout@v6`, `pypa/gh-action-pypi-publish@release/v1`).
+- Actions in `.github/workflows/publish-pypi.yml` are pinned to full commit
+  SHAs because the release path can claim PyPI OIDC and use release-related
+  secrets.
+- Maintainers update release-workflow actions intentionally during dependency
+  or security maintenance. Verify the upstream tag or branch maps to the chosen
+  SHA before changing the workflow, and keep the trailing version comment next
+  to the pinned SHA current.
+- Lower-risk CI actions may remain pinned to major-version tags
+  (e.g. `actions/checkout@v6`) until their risk profile changes.
 - Dependabot's `github-actions` ecosystem opens weekly PRs when a pinned
   major changes, with minor/patch updates grouped into a `github-actions-official`
   PR (the `actions/*` family) and a `github-actions-release` PR (the
@@ -71,9 +78,9 @@ human approval over clever automation.
   individual PRs so the release-pipeline review is not hidden inside a
   group diff. See
   [`.github/dependabot.yml`](../.github/dependabot.yml).
-- Pinning to commit SHAs is preferred for higher-risk supply chains.
-  Main Branch defers SHA pinning until the publish surface grows; it is
-  tracked as a follow-up in
+- Pinning to commit SHAs remains the preferred control for higher-risk supply
+  chains. The original release-gates decision tracked SHA pinning as follow-up;
+  the release workflow now carries that control. See
   [`decisions/2026-05-11-supply-chain-security-gates.md`](../decisions/2026-05-11-supply-chain-security-gates.md).
 
 ### Package metadata and dependency surface

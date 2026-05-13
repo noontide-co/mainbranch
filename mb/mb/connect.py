@@ -31,6 +31,10 @@ CommandRunner = Callable[[list[str], Path | None, float], dict[str, Any]]
 Which = Callable[[str], str | None]
 
 
+class ConfigBoundaryError(ValueError):
+    """Raised when local connect metadata is outside the selected repo boundary."""
+
+
 @dataclass(frozen=True)
 class Provider:
     """Provider registry entry.
@@ -245,12 +249,43 @@ def _config_path(repo: Path) -> Path:
     return repo / CONFIG_RELATIVE_PATH
 
 
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
+def _checked_config_path(repo: Path) -> Path:
+    root = repo.resolve()
+    path = _config_path(root)
+    config_dir = path.parent
+
+    if config_dir.is_symlink() or path.is_symlink():
+        raise ConfigBoundaryError(
+            "Refusing to use .mb/connect.yaml because the local state path is a symlink."
+        )
+    if config_dir.exists() and not config_dir.is_dir():
+        raise ConfigBoundaryError(
+            "Refusing to use .mb/connect.yaml because the local state directory is invalid."
+        )
+
+    parent_resolved = config_dir.resolve(strict=False)
+    path_resolved = path.resolve(strict=False)
+    if not _is_within(parent_resolved, root) or not _is_within(path_resolved, root):
+        raise ConfigBoundaryError(
+            "Refusing to use .mb/connect.yaml because it is outside the selected repo boundary."
+        )
+    return path
+
+
 def _empty_config() -> dict[str, Any]:
     return {"version": 1, "repo_id": "", "repo_identity": {}, "providers": {}}
 
 
 def _read_config(repo: Path) -> dict[str, Any]:
-    path = _config_path(repo)
+    path = _checked_config_path(repo)
     if not path.exists():
         return _empty_config()
     try:
@@ -342,8 +377,10 @@ def _ensure_repo_id(config: dict[str, Any], repo: Path) -> str:
 
 
 def _write_config(repo: Path, config: dict[str, Any]) -> Path:
-    path = _config_path(repo)
+    path = _checked_config_path(repo)
     path.parent.mkdir(parents=True, exist_ok=True)
+    # Re-check after creating .mb so a swapped local-state path cannot escape the repo.
+    path = _checked_config_path(repo)
     text = yaml.safe_dump(config, sort_keys=False)
     path.write_text(text, encoding="utf-8")
     return path
@@ -1118,7 +1155,7 @@ def status_all(
     return {
         "ok": not broken,
         "repo": str(target),
-        "config_path": str(_config_path(target)),
+        "config_path": str(_checked_config_path(target)),
         "repo_id": str(config.get("repo_id") or identity["repo_id"]),
         "providers": providers,
         "github": github or github_context(target),

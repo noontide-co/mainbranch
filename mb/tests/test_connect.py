@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pytest
 import yaml
 from typer.testing import CliRunner
 
@@ -826,6 +827,128 @@ def test_connect_status_tolerates_malformed_config_version(tmp_path: Path, monke
     assert status.exit_code == 0
     status_payload = json.loads(status.stdout)
     assert status_payload["summary"]["configured"] == 0
+
+
+def test_connect_status_missing_config_still_reports_empty_state(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    status = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+
+    assert status.exit_code == 0
+    payload = json.loads(status.stdout)
+    assert payload["summary"]["configured"] == 0
+    assert not (repo / ".mb" / "connect.yaml").exists()
+
+
+def test_connect_refuses_symlinked_mb_directory_without_leaking_path(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    outside = tmp_path / "outside"
+    repo.mkdir()
+    outside.mkdir()
+    (repo / ".mb").symlink_to(outside, target_is_directory=True)
+
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            "hledger",
+            "--repo",
+            str(repo),
+            "--metadata",
+            "vault_path=.mb/private/books",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "local state path is a symlink" in result.stderr
+    assert str(tmp_path) not in result.stderr
+    assert not (outside / "connect.yaml").exists()
+
+
+def test_connect_refuses_symlinked_connect_yaml_without_leaking_path(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    outside = tmp_path / "outside"
+    repo.mkdir()
+    outside.mkdir()
+    (repo / ".mb").mkdir()
+    (repo / ".mb" / "connect.yaml").symlink_to(outside / "connect.yaml")
+
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            "hledger",
+            "--repo",
+            str(repo),
+            "--metadata",
+            "vault_path=.mb/private/books",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "local state path is a symlink" in result.stderr
+    assert str(tmp_path) not in result.stderr
+    assert not (outside / "connect.yaml").exists()
+
+
+def test_connect_status_refuses_config_that_resolves_outside_repo(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    outside = tmp_path / "outside"
+    repo.mkdir()
+    outside.mkdir()
+    (outside / "connect.yaml").write_text(
+        yaml.safe_dump({"version": 1, "providers": {"hledger": {"connected": True}}}),
+        encoding="utf-8",
+    )
+    (repo / ".mb").symlink_to(outside, target_is_directory=True)
+
+    status = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+
+    assert status.exit_code == 2
+    assert "local state path is a symlink" in status.stderr
+    assert str(tmp_path) not in status.stderr
+
+
+def test_checked_connect_config_path_rejects_outside_boundary(tmp_path: Path, monkeypatch) -> None:
+    repo = tmp_path / "biz"
+    outside = tmp_path / "outside" / "connect.yaml"
+    repo.mkdir()
+    outside.parent.mkdir()
+    monkeypatch.setattr(connect_mod, "_config_path", lambda repo: outside)
+
+    with pytest.raises(connect_mod.ConfigBoundaryError) as exc_info:
+        connect_mod.status_all(repo)
+
+    assert str(exc_info.value) == (
+        "Refusing to use .mb/connect.yaml because it is outside the selected repo boundary."
+    )
+    assert str(tmp_path) not in str(exc_info.value)
+
+
+def test_checked_connect_config_path_rejects_invalid_local_state_directory(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    (repo / ".mb").write_text("not a directory", encoding="utf-8")
+
+    with pytest.raises(connect_mod.ConfigBoundaryError, match="local state directory is invalid"):
+        connect_mod.status_all(repo)
 
 
 def test_doctor_and_status_include_integration_state(tmp_path: Path, monkeypatch) -> None:

@@ -11,7 +11,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 import typer
 
@@ -121,6 +121,11 @@ def _json_payload(payload: dict[str, Any], *, command: str, schema_name: str) ->
 
 def _is_interactive_terminal() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def _connect_boundary_exit(command: str, exc: ValueError) -> NoReturn:
+    typer.echo(f"{command}: {exc}", err=True)
+    raise typer.Exit(2) from exc
 
 
 def _render_launch_screen() -> None:
@@ -761,35 +766,50 @@ def connect_cmd(
 ) -> None:
     """Connect provider credentials without committing secrets."""
     if not target:
-        result = connect_mod.list_providers(repo)
+        try:
+            result = connect_mod.list_providers(repo)
+        except connect_mod.ConfigBoundaryError as exc:
+            _connect_boundary_exit("mb connect", exc)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
             connect_mod.render_list(result)
         raise typer.Exit(0)
     if target == "list":
-        result = connect_mod.list_providers(repo)
+        try:
+            result = connect_mod.list_providers(repo)
+        except connect_mod.ConfigBoundaryError as exc:
+            _connect_boundary_exit("mb connect list", exc)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
             connect_mod.render_list(result)
         raise typer.Exit(0)
     if target == "plan":
-        result = connect_mod.provider_plan(repo)
+        try:
+            result = connect_mod.provider_plan(repo)
+        except connect_mod.ConfigBoundaryError as exc:
+            _connect_boundary_exit("mb connect plan", exc)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
             connect_mod.render_plan(result)
         raise typer.Exit(0)
     if target == "status":
-        result = connect_mod.status_all(repo, include_all=all_providers)
+        try:
+            result = connect_mod.status_all(repo, include_all=all_providers)
+        except connect_mod.ConfigBoundaryError as exc:
+            _connect_boundary_exit("mb connect status", exc)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
             connect_mod.render_status(result)
         raise typer.Exit(0 if result["ok"] else 1)
     if target == "doctor":
-        result = connect_mod.doctor(repo)
+        try:
+            result = connect_mod.doctor(repo)
+        except connect_mod.ConfigBoundaryError as exc:
+            _connect_boundary_exit("mb connect doctor", exc)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
