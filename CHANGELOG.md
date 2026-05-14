@@ -30,6 +30,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   local ignored review boards, official API batch smoke records, and safe
   `image-index.md` evidence distinguish actual ad candidates from merely
   attractive images. Refs MAIN-374, #596.
+- Recorded the MAIN-376 OpenAI image rail dogfood result: official API
+  generation produced nine fixture-safe candidates, binaries stayed ignored,
+  and manual review rejected the full batch for generic AI image feel, weak
+  native-feed fit, and no clear Facebook ad click reason. Refs MAIN-376, #600.
 
 ## [0.3.21] - 2026-05-13
 
