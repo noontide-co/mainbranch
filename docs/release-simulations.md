@@ -271,6 +271,10 @@ with print-mode proxy limits and follow-up routing:
 The v0.3.19 post-release review shows the same shape after MoneyPath,
 proof-quality, content-strategy, and start-update-posture changes shipped:
 [reports/2026-05-12-v0-3-19-post-release-transcript-review.md](reports/2026-05-12-v0-3-19-post-release-transcript-review.md).
+The v0.3.22 post-release review shows the package-visible acceptance shape
+after the OpenAI image rail and owner-language hardening release, including the
+route for repeated owner-language leakage:
+[reports/2026-05-14-v0-3-22-post-release-transcript-review.md](reports/2026-05-14-v0-3-22-post-release-transcript-review.md).
 
 ## Evidence Rules
 
