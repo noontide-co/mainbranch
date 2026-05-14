@@ -22,6 +22,7 @@ from mb import books as books_mod
 from mb import checkpoint as checkpoint_mod
 from mb import codex as codex_mod
 from mb import connect as connect_mod
+from mb import dashboard as dashboard_mod
 from mb import doctor as doctor_mod
 from mb import educational as educational_mod
 from mb import graph as graph_mod
@@ -125,6 +126,13 @@ image_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(image_app, name="image")
+
+dashboard_app = typer.Typer(
+    name="dashboard",
+    help="Build or open the local read-only business dashboard.",
+    no_args_is_help=True,
+)
+app.add_typer(dashboard_app, name="dashboard")
 
 suggest_app = typer.Typer(
     name="suggest",
@@ -1827,6 +1835,61 @@ def image_smoke_fal_cmd(
         typer.echo(f"review board: {result['review_board_path']}")
         typer.echo(f"reason: {result['blocker_code']}")
         typer.echo("I will not ask you to paste provider keys into chat or repo files.")
+    raise typer.Exit(0)
+
+
+@dashboard_app.command("build")
+def dashboard_build_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo to visualize."),
+    output: str = typer.Option(
+        "",
+        "--output",
+        "-o",
+        help="Dashboard HTML output path. Defaults to .mb/dashboard/index.html in the repo.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Build a local read-only dashboard HTML file."""
+    result = dashboard_mod.build(repo=repo, output=output or None)
+    if json_out:
+        typer.echo(
+            _json_payload(
+                result,
+                command="mb dashboard build",
+                schema_name="mainbranch.dashboard.v1",
+            )
+        )
+    else:
+        typer.echo("Built local read-only Main Branch dashboard.")
+        typer.echo(f"output: {result['output']['path']}")
+        typer.echo("generated file is local output; do not commit it unless explicitly approved.")
+    raise typer.Exit(0)
+
+
+@dashboard_app.command("open")
+def dashboard_open_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo to visualize."),
+    output: str = typer.Option(
+        "",
+        "--output",
+        "-o",
+        help="Dashboard HTML output path. Defaults to .mb/dashboard/index.html in the repo.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Build and open the local read-only dashboard in the default browser."""
+    result = dashboard_mod.open_dashboard(repo=repo, output=output or None)
+    if json_out:
+        typer.echo(
+            _json_payload(
+                result,
+                command="mb dashboard open",
+                schema_name="mainbranch.dashboard.v1",
+            )
+        )
+    else:
+        typer.echo("Opened local read-only Main Branch dashboard.")
+        typer.echo(f"output: {result['output']['path']}")
     raise typer.Exit(0)
 
 

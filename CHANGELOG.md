@@ -13,6 +13,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added `mb dashboard build/open` as a local read-only dashboard surface over
+  safe repo, status, provider, push, and image-index facts, including business
+  readiness, ad readiness, creative candidate state, provider readiness, and
+  next actions without committing generated output by default. Refs MAIN-375,
+  #599.
 - Made the fixture-safe image rail provider-pluggable behind an explicit
   provider registry in `image_rail.py`. `mb image smoke-openai` keeps
   byte-identical default behavior, and a new `mb image smoke-fal` surface
