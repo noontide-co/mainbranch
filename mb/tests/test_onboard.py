@@ -374,7 +374,7 @@ def test_onboard_cli_interactive_path_renders_clear_labels(tmp_path: Path, monke
 def test_onboard_github_create_push_commits_and_sets_tracking(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(onboard_mod, "_which", lambda name: f"/usr/bin/{name}")
     repo = tmp_path / "acme"
-    state = {"commit": False, "remote": "", "tracking": ""}
+    state = {"commit": False, "remote": "", "tracking": "", "staged": False, "dirty": False}
     commands: list[list[str]] = []
 
     def fake_run(
@@ -406,11 +406,21 @@ def test_onboard_github_create_push_commits_and_sets_tracking(tmp_path: Path, mo
                 "returncode": 0 if state["commit"] else 1,
             }
         if args[:2] == ["git", "status"]:
-            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+            stdout = "?? private.txt\n" if state["dirty"] else ""
+            return {"ok": True, "stdout": stdout, "stderr": "", "returncode": 0}
         if args[:2] == ["git", "add"]:
+            state["staged"] = True
             return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:3] == ["git", "diff", "--cached"]:
+            return {
+                "ok": not state["staged"],
+                "stdout": "",
+                "stderr": "",
+                "returncode": 1 if state["staged"] else 0,
+            }
         if args[:2] == ["git", "commit"]:
             state["commit"] = True
+            state["staged"] = False
             return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
         if args[:3] == ["gh", "auth", "status"]:
             return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
@@ -435,9 +445,234 @@ def test_onboard_github_create_push_commits_and_sets_tracking(tmp_path: Path, mo
     assert result["ok"] is True
     assert result["github"]["ok"] is True
     assert result["github"]["committed"] is True
+    add_command = next(cmd for cmd in commands if cmd[:3] == ["git", "add", "--"])
+    assert "." not in add_command
+    assert "CLAUDE.md" in add_command
+    assert ".gitignore" in add_command
     assert result["github"]["pushed"] is True
     assert result["setup_complete"]["github_requested"] is True
     assert result["setup_complete"]["github_remote_connected"] is True
     assert result["setup_complete"]["pushed_tracking_remote"] is True
     assert "created, saved, synced to GitHub" in result["setup_complete"]["owner_outcome"]
     assert any(cmd[:3] == ["gh", "repo", "create"] and "--private" in cmd for cmd in commands)
+
+
+def test_onboard_github_push_commits_generated_scaffold_in_repo_with_head(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", lambda name: f"/usr/bin/{name}")
+    repo = tmp_path / "existing"
+    state = {"commit": True, "remote": "", "tracking": "", "staged": False, "dirty": False}
+    commands: list[list[str]] = []
+
+    def fake_run(
+        args: list[str], cwd: Path | None = None, timeout: float = 5.0
+    ) -> dict[str, object]:
+        commands.append(args)
+        if args[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
+            return {"ok": True, "stdout": "true\n", "stderr": "", "returncode": 0}
+        if args[:3] == ["git", "branch", "--show-current"]:
+            return {"ok": True, "stdout": "main\n", "stderr": "", "returncode": 0}
+        if args[:4] == ["git", "config", "--get", "remote.origin.url"]:
+            ok = bool(state["remote"])
+            return {"ok": ok, "stdout": state["remote"], "stderr": "", "returncode": 0 if ok else 1}
+        if args[:5] == ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]:
+            ok = bool(state["tracking"])
+            return {
+                "ok": ok,
+                "stdout": state["tracking"],
+                "stderr": "",
+                "returncode": 0 if ok else 1,
+            }
+        if args[:3] == ["git", "rev-parse", "--verify"]:
+            return {"ok": True, "stdout": "abc123\n", "stderr": "", "returncode": 0}
+        if args[:2] == ["git", "status"]:
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:2] == ["git", "add"]:
+            state["staged"] = True
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:3] == ["git", "diff", "--cached"]:
+            return {
+                "ok": not state["staged"],
+                "stdout": "",
+                "stderr": "",
+                "returncode": 1 if state["staged"] else 0,
+            }
+        if args[:2] == ["git", "commit"]:
+            state["staged"] = False
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:3] == ["gh", "auth", "status"]:
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:3] == ["gh", "repo", "create"]:
+            state["remote"] = "https://github.com/dmthepm/existing.git\n"
+            state["tracking"] = "origin/main\n"
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        raise AssertionError(args)
+
+    monkeypatch.setattr(onboard_mod, "_run_command", fake_run)
+
+    result = onboard_mod.run(
+        path=str(repo),
+        name="Existing",
+        mode="new",
+        level="power",
+        github_repo="dmthepm/existing",
+        github_visibility="private",
+        github_push=True,
+    )
+
+    assert result["ok"] is True
+    assert result["github"]["ok"] is True
+    assert result["github"]["committed"] is True
+    assert any(cmd[:2] == ["git", "commit"] for cmd in commands)
+    assert any(cmd[:3] == ["gh", "repo", "create"] for cmd in commands)
+
+
+def test_onboard_github_push_does_not_sweep_preexisting_untracked_files(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", lambda name: f"/usr/bin/{name}")
+    repo = tmp_path / "private-folder"
+    repo.mkdir()
+    (repo / "private-notes.txt").write_text("do not publish\n", encoding="utf-8")
+    state = {"commit": False, "remote": "", "tracking": "", "staged": False, "dirty": True}
+    commands: list[list[str]] = []
+
+    def fake_run(
+        args: list[str], cwd: Path | None = None, timeout: float = 5.0
+    ) -> dict[str, object]:
+        commands.append(args)
+        if args[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
+            return {"ok": True, "stdout": "true\n", "stderr": "", "returncode": 0}
+        if args[:3] == ["git", "branch", "--show-current"]:
+            return {"ok": True, "stdout": "main\n", "stderr": "", "returncode": 0}
+        if args[:4] == ["git", "config", "--get", "remote.origin.url"]:
+            return {"ok": False, "stdout": "", "stderr": "", "returncode": 1}
+        if args[:5] == ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]:
+            return {"ok": False, "stdout": "", "stderr": "", "returncode": 1}
+        if args[:3] == ["git", "rev-parse", "--verify"]:
+            return {
+                "ok": state["commit"],
+                "stdout": "abc123\n" if state["commit"] else "",
+                "stderr": "",
+                "returncode": 0 if state["commit"] else 1,
+            }
+        if args[:2] == ["git", "status"]:
+            return {"ok": True, "stdout": "?? private-notes.txt\n", "stderr": "", "returncode": 0}
+        if args[:2] == ["git", "add"]:
+            assert "private-notes.txt" not in args
+            assert "." not in args
+            state["staged"] = True
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:3] == ["git", "diff", "--cached"]:
+            return {
+                "ok": not state["staged"],
+                "stdout": "",
+                "stderr": "",
+                "returncode": 1 if state["staged"] else 0,
+            }
+        if args[:2] == ["git", "commit"]:
+            state["commit"] = True
+            state["staged"] = False
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:3] == ["gh", "auth", "status"]:
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        raise AssertionError(args)
+
+    monkeypatch.setattr(onboard_mod, "_run_command", fake_run)
+
+    result = onboard_mod.run(
+        path=str(repo),
+        name="Private Folder",
+        mode="new",
+        level="power",
+        github_repo="dmthepm/private-folder",
+        github_visibility="private",
+        github_push=True,
+    )
+
+    assert result["ok"] is False
+    assert result["github"]["ok"] is False
+    assert any("uncommitted files outside" in error for error in result["github"]["errors"])
+    assert not any(cmd[:3] == ["gh", "repo", "create"] for cmd in commands)
+
+
+def test_onboard_github_success_uses_reachability_over_stale_auth_status(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", lambda name: f"/usr/bin/{name}")
+    repo = tmp_path / "reachable"
+    state = {"commit": False, "remote": "", "tracking": "", "staged": False}
+
+    def fake_run(
+        args: list[str], cwd: Path | None = None, timeout: float = 5.0
+    ) -> dict[str, object]:
+        if args[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
+            return {"ok": True, "stdout": "true\n", "stderr": "", "returncode": 0}
+        if args[:3] == ["git", "branch", "--show-current"]:
+            return {"ok": True, "stdout": "main\n", "stderr": "", "returncode": 0}
+        if args[:4] == ["git", "config", "--get", "remote.origin.url"]:
+            ok = bool(state["remote"])
+            return {"ok": ok, "stdout": state["remote"], "stderr": "", "returncode": 0 if ok else 1}
+        if args[:5] == ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]:
+            ok = bool(state["tracking"])
+            return {
+                "ok": ok,
+                "stdout": state["tracking"],
+                "stderr": "",
+                "returncode": 0 if ok else 1,
+            }
+        if args[:3] == ["git", "rev-parse", "--verify"]:
+            return {
+                "ok": state["commit"],
+                "stdout": "abc123\n" if state["commit"] else "",
+                "stderr": "",
+                "returncode": 0 if state["commit"] else 1,
+            }
+        if args[:2] == ["git", "status"]:
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:2] == ["git", "add"]:
+            state["staged"] = True
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:3] == ["git", "diff", "--cached"]:
+            return {
+                "ok": not state["staged"],
+                "stdout": "",
+                "stderr": "",
+                "returncode": 1 if state["staged"] else 0,
+            }
+        if args[:2] == ["git", "commit"]:
+            state["commit"] = True
+            state["staged"] = False
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:3] == ["gh", "auth", "status"]:
+            return {"ok": False, "stdout": "", "stderr": "stale auth", "returncode": 1}
+        if args[:3] == ["gh", "repo", "create"]:
+            state["remote"] = "https://github.com/dmthepm/reachable.git\n"
+            state["tracking"] = "origin/main\n"
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:3] == ["gh", "repo", "view"]:
+            return {
+                "ok": True,
+                "stdout": '{"nameWithOwner":"dmthepm/reachable"}\n',
+                "stderr": "",
+                "returncode": 0,
+            }
+        raise AssertionError(args)
+
+    monkeypatch.setattr(onboard_mod, "_run_command", fake_run)
+
+    result = onboard_mod.run(
+        path=str(repo),
+        name="Reachable",
+        mode="new",
+        level="auto",
+        github_repo="dmthepm/reachable",
+        github_visibility="private",
+        github_push=True,
+    )
+
+    assert result["ok"] is True
+    assert result["tools"]["github_cli"]["authenticated"] is True
+    assert result["tools"]["github_cli"]["state"] == "ready_reachable"
+    assert not any("gh auth login" in warning for warning in result["warnings"])
