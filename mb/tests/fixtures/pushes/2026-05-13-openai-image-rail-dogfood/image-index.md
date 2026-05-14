@@ -15,6 +15,13 @@ batch_plan:
   target_range: 8-12
   strategy: top playbook candidates with one to two variants each
   provider_validation: official_api_rail_only
+  generation_size_override:
+    applied_to_all_assets: true
+    requested_size: 1024x1536
+    reason: Keep the official API dogfood batch consistent while testing creative
+      direction before per-placement export.
+    boundary: Concept placement metadata remains in `concepts[].placement_details`;
+      asset dimensions record the actual provider generation request.
 generated_count: 9
 best_candidate: null
 best_playbook: null
@@ -1800,6 +1807,11 @@ assets:
     quality: medium
     generated_width: 1024
     generated_height: 1536
+    generation_size_override: batch_portrait_override
+    generation_size_override_note: >-
+      This dogfood batch intentionally used one provider size, 1024x1536,
+      for all candidates. Concept placement metadata remains in
+      concepts[].placement_details and was not used for per-asset provider sizing.
   output_reference: mb-media://pushes/2026-05-13-openai-image-rail-dogfood/images/fake-openai-image-001.png
   storage_backend: mb-media
   committed_binary: false
@@ -1809,7 +1821,18 @@ assets:
     estimate: unknown_token_metered
     actual: unknown
     usage: null
-  review_status: unreviewed
+  review_status: rejected
+  review:
+    decision: reject
+    reviewer: operator
+    reviewed_from: ignored local contact sheet and image folder
+    reason_codes:
+    - generic_ai_image_feel
+    - not_native_to_feed
+    - weak_ad_click_reason
+    notes:
+    - Rejected as part of the all-rejected manual batch review.
+    - No deterministic overlay was tested because no generated base image passed the ad-quality bar.
   safe_to_share: true
   generated_at: '2026-05-13T22:44:17+00:00'
   operator_notes: Fixture-safe OpenAI image rail smoke. Commit this record only; keep
@@ -1850,6 +1873,11 @@ assets:
     quality: medium
     generated_width: 1024
     generated_height: 1536
+    generation_size_override: batch_portrait_override
+    generation_size_override_note: >-
+      This dogfood batch intentionally used one provider size, 1024x1536,
+      for all candidates. Concept placement metadata remains in
+      concepts[].placement_details and was not used for per-asset provider sizing.
   output_reference: mb-media://pushes/2026-05-13-openai-image-rail-dogfood/images/operator-before-after-chaos-001.png
   storage_backend: mb-media
   committed_binary: false
@@ -1859,7 +1887,18 @@ assets:
     estimate: unknown_token_metered
     actual: unknown
     usage: null
-  review_status: unreviewed
+  review_status: rejected
+  review:
+    decision: reject
+    reviewer: operator
+    reviewed_from: ignored local contact sheet and image folder
+    reason_codes:
+    - generic_ai_image_feel
+    - not_native_to_feed
+    - weak_ad_click_reason
+    notes:
+    - Rejected as part of the all-rejected manual batch review.
+    - No deterministic overlay was tested because no generated base image passed the ad-quality bar.
   safe_to_share: true
   generated_at: '2026-05-13T22:44:17+00:00'
   operator_notes: Fixture-safe OpenAI image rail smoke. Commit this record only; keep
@@ -1901,6 +1940,11 @@ assets:
     quality: medium
     generated_width: 1024
     generated_height: 1536
+    generation_size_override: batch_portrait_override
+    generation_size_override_note: >-
+      This dogfood batch intentionally used one provider size, 1024x1536,
+      for all candidates. Concept placement metadata remains in
+      concepts[].placement_details and was not used for per-asset provider sizing.
   output_reference: mb-media://pushes/2026-05-13-openai-image-rail-dogfood/images/mobile-safe-progress-path-001.png
   storage_backend: mb-media
   committed_binary: false
@@ -1910,7 +1954,18 @@ assets:
     estimate: unknown_token_metered
     actual: unknown
     usage: null
-  review_status: unreviewed
+  review_status: rejected
+  review:
+    decision: reject
+    reviewer: operator
+    reviewed_from: ignored local contact sheet and image folder
+    reason_codes:
+    - generic_ai_image_feel
+    - not_native_to_feed
+    - weak_ad_click_reason
+    notes:
+    - Rejected as part of the all-rejected manual batch review.
+    - No deterministic overlay was tested because no generated base image passed the ad-quality bar.
   safe_to_share: true
   generated_at: '2026-05-13T22:44:17+00:00'
   operator_notes: Fixture-safe OpenAI image rail smoke. Commit this record only; keep
@@ -1951,6 +2006,11 @@ assets:
     quality: medium
     generated_width: 1024
     generated_height: 1536
+    generation_size_override: batch_portrait_override
+    generation_size_override_note: >-
+      This dogfood batch intentionally used one provider size, 1024x1536,
+      for all candidates. Concept placement metadata remains in
+      concepts[].placement_details and was not used for per-asset provider sizing.
   output_reference: mb-media://pushes/2026-05-13-openai-image-rail-dogfood/images/app-sprawl-native-scene-001.png
   storage_backend: mb-media
   committed_binary: false
@@ -1960,7 +2020,18 @@ assets:
     estimate: unknown_token_metered
     actual: unknown
     usage: null
-  review_status: unreviewed
+  review_status: rejected
+  review:
+    decision: reject
+    reviewer: operator
+    reviewed_from: ignored local contact sheet and image folder
+    reason_codes:
+    - generic_ai_image_feel
+    - not_native_to_feed
+    - weak_ad_click_reason
+    notes:
+    - Rejected as part of the all-rejected manual batch review.
+    - No deterministic overlay was tested because no generated base image passed the ad-quality bar.
   safe_to_share: true
   generated_at: '2026-05-13T22:44:17+00:00'
   operator_notes: Fixture-safe OpenAI image rail smoke. Commit this record only; keep
@@ -2001,6 +2072,11 @@ assets:
     quality: medium
     generated_width: 1024
     generated_height: 1536
+    generation_size_override: batch_portrait_override
+    generation_size_override_note: >-
+      This dogfood batch intentionally used one provider size, 1024x1536,
+      for all candidates. Concept placement metadata remains in
+      concepts[].placement_details and was not used for per-asset provider sizing.
   output_reference: mb-media://pushes/2026-05-13-openai-image-rail-dogfood/images/myth-vs-folder-001.png
   storage_backend: mb-media
   committed_binary: false
@@ -2010,7 +2086,18 @@ assets:
     estimate: unknown_token_metered
     actual: unknown
     usage: null
-  review_status: unreviewed
+  review_status: rejected
+  review:
+    decision: reject
+    reviewer: operator
+    reviewed_from: ignored local contact sheet and image folder
+    reason_codes:
+    - generic_ai_image_feel
+    - not_native_to_feed
+    - weak_ad_click_reason
+    notes:
+    - Rejected as part of the all-rejected manual batch review.
+    - No deterministic overlay was tested because no generated base image passed the ad-quality bar.
   safe_to_share: true
   generated_at: '2026-05-13T22:44:17+00:00'
   operator_notes: Fixture-safe OpenAI image rail smoke. Commit this record only; keep
@@ -2051,6 +2138,11 @@ assets:
     quality: medium
     generated_width: 1024
     generated_height: 1536
+    generation_size_override: batch_portrait_override
+    generation_size_override_note: >-
+      This dogfood batch intentionally used one provider size, 1024x1536,
+      for all candidates. Concept placement metadata remains in
+      concepts[].placement_details and was not used for per-asset provider sizing.
   output_reference: mb-media://pushes/2026-05-13-openai-image-rail-dogfood/images/with-without-context-001.png
   storage_backend: mb-media
   committed_binary: false
@@ -2060,7 +2152,18 @@ assets:
     estimate: unknown_token_metered
     actual: unknown
     usage: null
-  review_status: unreviewed
+  review_status: rejected
+  review:
+    decision: reject
+    reviewer: operator
+    reviewed_from: ignored local contact sheet and image folder
+    reason_codes:
+    - generic_ai_image_feel
+    - not_native_to_feed
+    - weak_ad_click_reason
+    notes:
+    - Rejected as part of the all-rejected manual batch review.
+    - No deterministic overlay was tested because no generated base image passed the ad-quality bar.
   safe_to_share: true
   generated_at: '2026-05-13T22:44:17+00:00'
   operator_notes: Fixture-safe OpenAI image rail smoke. Commit this record only; keep
@@ -2101,6 +2204,11 @@ assets:
     quality: medium
     generated_width: 1024
     generated_height: 1536
+    generation_size_override: batch_portrait_override
+    generation_size_override_note: >-
+      This dogfood batch intentionally used one provider size, 1024x1536,
+      for all candidates. Concept placement metadata remains in
+      concepts[].placement_details and was not used for per-asset provider sizing.
   output_reference: mb-media://pushes/2026-05-13-openai-image-rail-dogfood/images/crossed-out-tools-001.png
   storage_backend: mb-media
   committed_binary: false
@@ -2110,7 +2218,18 @@ assets:
     estimate: unknown_token_metered
     actual: unknown
     usage: null
-  review_status: unreviewed
+  review_status: rejected
+  review:
+    decision: reject
+    reviewer: operator
+    reviewed_from: ignored local contact sheet and image folder
+    reason_codes:
+    - generic_ai_image_feel
+    - not_native_to_feed
+    - weak_ad_click_reason
+    notes:
+    - Rejected as part of the all-rejected manual batch review.
+    - No deterministic overlay was tested because no generated base image passed the ad-quality bar.
   safe_to_share: true
   generated_at: '2026-05-13T22:44:17+00:00'
   operator_notes: Fixture-safe OpenAI image rail smoke. Commit this record only; keep
@@ -2151,6 +2270,11 @@ assets:
     quality: medium
     generated_width: 1024
     generated_height: 1536
+    generation_size_override: batch_portrait_override
+    generation_size_override_note: >-
+      This dogfood batch intentionally used one provider size, 1024x1536,
+      for all candidates. Concept placement metadata remains in
+      concepts[].placement_details and was not used for per-asset provider sizing.
   output_reference: mb-media://pushes/2026-05-13-openai-image-rail-dogfood/images/founder-pov-checkpoint-001.png
   storage_backend: mb-media
   committed_binary: false
@@ -2160,7 +2284,18 @@ assets:
     estimate: unknown_token_metered
     actual: unknown
     usage: null
-  review_status: unreviewed
+  review_status: rejected
+  review:
+    decision: reject
+    reviewer: operator
+    reviewed_from: ignored local contact sheet and image folder
+    reason_codes:
+    - generic_ai_image_feel
+    - not_native_to_feed
+    - weak_ad_click_reason
+    notes:
+    - Rejected as part of the all-rejected manual batch review.
+    - No deterministic overlay was tested because no generated base image passed the ad-quality bar.
   safe_to_share: true
   generated_at: '2026-05-13T22:44:17+00:00'
   operator_notes: Fixture-safe OpenAI image rail smoke. Commit this record only; keep
@@ -2201,6 +2336,11 @@ assets:
     quality: medium
     generated_width: 1024
     generated_height: 1536
+    generation_size_override: batch_portrait_override
+    generation_size_override_note: >-
+      This dogfood batch intentionally used one provider size, 1024x1536,
+      for all candidates. Concept placement metadata remains in
+      concepts[].placement_details and was not used for per-asset provider sizing.
   output_reference: mb-media://pushes/2026-05-13-openai-image-rail-dogfood/images/high-contrast-context-poster-001.png
   storage_backend: mb-media
   committed_binary: false
@@ -2210,7 +2350,18 @@ assets:
     estimate: unknown_token_metered
     actual: unknown
     usage: null
-  review_status: unreviewed
+  review_status: rejected
+  review:
+    decision: reject
+    reviewer: operator
+    reviewed_from: ignored local contact sheet and image folder
+    reason_codes:
+    - generic_ai_image_feel
+    - not_native_to_feed
+    - weak_ad_click_reason
+    notes:
+    - Rejected as part of the all-rejected manual batch review.
+    - No deterministic overlay was tested because no generated base image passed the ad-quality bar.
   safe_to_share: true
   generated_at: '2026-05-13T22:44:17+00:00'
   operator_notes: Fixture-safe OpenAI image rail smoke. Commit this record only; keep

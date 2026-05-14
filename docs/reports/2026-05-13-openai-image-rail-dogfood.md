@@ -36,11 +36,14 @@ not tested.
 - The committed `image-index.md` record uses safe logical media references and
   does not include raw provider payloads, secrets, private paths, or image
   binaries.
+- The batch intentionally used one portrait provider size for every asset while
+  testing creative direction before per-placement export.
 
 ## What Failed
 
 - Pre-generation concept scoring selected a theoretical winner, but the actual
   visuals did not pass manual ad-quality review.
+- Per-concept placement plans were not used for provider sizing in this batch.
 - The prompts still produced polished, generic GPT-image aesthetics.
 - The batch did not create a strong native-feed click reason.
 
