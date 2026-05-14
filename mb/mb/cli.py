@@ -799,7 +799,7 @@ def issue_open_cmd(
 def connect_cmd(
     target: str = typer.Argument(
         "",
-        help="Provider to connect, or `list` / `plan` / `status` / `doctor` / `test`.",
+        help="Provider to connect, or `list` / `plan` / `status` / `doctor` / `test` / `hydrate`.",
     ),
     provider: str = typer.Argument(
         "",
@@ -807,6 +807,11 @@ def connect_cmd(
     ),
     repo: str = typer.Option(".", "--repo", help="Business repo whose metadata is updated."),
     account_label: str = typer.Option("", "--account", "--label", help="Human account label."),
+    scope: str = typer.Option(
+        "repo",
+        "--scope",
+        help="Connection metadata scope: repo or user.",
+    ),
     token: str = typer.Option(
         "",
         "--token",
@@ -881,6 +886,19 @@ def connect_cmd(
         else:
             connect_mod.render_doctor(result)
         raise typer.Exit(0 if result["ok"] else 1)
+    if target == "hydrate":
+        try:
+            result = connect_mod.hydrate(repo, provider_id=provider)
+        except ValueError as exc:
+            typer.echo(f"mb connect hydrate: {exc}", err=True)
+            raise typer.Exit(2) from exc
+        except connect_mod.ConfigBoundaryError as exc:
+            _connect_boundary_exit("mb connect hydrate", exc)
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            connect_mod.render_hydrate_result(result)
+        raise typer.Exit(0 if result["ok"] else 1)
     if target == "test":
         if not provider:
             typer.echo("mb connect test: provider required", err=True)
@@ -939,6 +957,7 @@ def connect_cmd(
             token=secret_value,
             account_label=account_label,
             metadata_pairs=metadata,
+            scope=scope,
         )
         result["credential_source"] = {
             "type": credential_source if secret_value else "missing",

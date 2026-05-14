@@ -79,6 +79,9 @@ mb connect doctor --json
 - `missing_metadata` means the token exists but a safe local identifier, such as
   `ad_account_id`, is missing.
 - `unvalidated` means a credential is stored, but it has not been tested.
+- `needs_hydration` means this repo has provider setup in user scope, but the
+  current workspace needs `mb connect hydrate --repo .` before local readiness
+  commands can use it.
 - `waiting_for_admin_approval` means the provider needs an account admin to
   approve the connection before local validation can pass.
 - `auth_failed` and `read_smoke_failed` mean auth or read-only smoke failed
@@ -90,6 +93,17 @@ Secrets stay outside the business repo. `.mb/connect.yaml` stores only safe
 metadata, labels, secret references, and last-check facts, and is gitignored by
 default. Do not paste tokens into markdown files, GitHub issues, screenshots,
 or committed config.
+
+Disposable workspaces can use user scope:
+
+```bash
+mb connect cloudflare --scope user --token-stdin --metadata account_id=...
+mb connect hydrate --repo .
+```
+
+User scope is keyed by the business repo identity and provider, so a second
+repo can use a different Cloudflare connection. Hydration writes only ignored
+workspace-local metadata; the token stays in the local secret store.
 
 ## Why this is business onboarding
 
