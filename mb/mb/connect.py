@@ -23,9 +23,11 @@ from typing import Any
 import yaml
 
 CONFIG_RELATIVE_PATH = Path(".mb") / "connect.yaml"
+USER_SCOPE_RELATIVE_PATH = Path("connect") / "user-scope.yaml"
 SERVICE_NAME = "mainbranch"
 SENSITIVE_KEY_PARTS = ("token", "secret", "password", "credential", "api_key", "apikey", "key")
 SAFE_METADATA_KEYS = {"token_type", "token_scope", "api_token_type"}
+CONNECT_SCOPES = {"repo", "user"}
 VALIDATION_TIMEOUT_SECONDS = 8
 CommandRunner = Callable[..., dict[str, Any]]
 Which = Callable[[str], str | None]
@@ -437,6 +439,77 @@ def _write_config(repo: Path, config: dict[str, Any]) -> Path:
     return path
 
 
+def _user_scope_path() -> Path:
+    return _home() / USER_SCOPE_RELATIVE_PATH
+
+
+def _empty_user_scope() -> dict[str, Any]:
+    return {"version": 1, "repos": {}}
+
+
+def _read_user_scope() -> dict[str, Any]:
+    path = _user_scope_path()
+    if not path.exists():
+        return _empty_user_scope()
+    try:
+        raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        raw = {}
+    if not isinstance(raw, dict):
+        raw = {}
+    repos = raw.get("repos")
+    if not isinstance(repos, dict):
+        repos = {}
+    try:
+        version = int(raw.get("version") or 1)
+    except (TypeError, ValueError):
+        version = 1
+    return {"version": version, "repos": repos}
+
+
+def _write_user_scope(data: dict[str, Any]) -> Path:
+    path = _user_scope_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with suppress(OSError):
+        path.parent.chmod(0o700)
+    path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    with suppress(OSError):
+        path.chmod(0o600)
+    return path
+
+
+def _user_scope_provider_entry(repo_id: str, provider_id: str) -> dict[str, Any] | None:
+    data = _read_user_scope()
+    raw_repo = data["repos"].get(repo_id)
+    repo_entry = raw_repo if isinstance(raw_repo, dict) else {}
+    providers = repo_entry.get("providers") if isinstance(repo_entry.get("providers"), dict) else {}
+    raw_entry = providers.get(provider_id) if isinstance(providers, dict) else None
+    return raw_entry if isinstance(raw_entry, dict) else None
+
+
+def _write_user_scope_provider(
+    repo_id: str,
+    *,
+    repo_identity: dict[str, Any],
+    provider_id: str,
+    entry: dict[str, Any],
+) -> Path:
+    data = _read_user_scope()
+    raw_repos = data.get("repos")
+    repos: dict[str, Any] = raw_repos if isinstance(raw_repos, dict) else {}
+    data["repos"] = repos
+    raw_repo = repos.get(repo_id)
+    repo_entry = raw_repo if isinstance(raw_repo, dict) else {}
+    raw_providers = repo_entry.get("providers")
+    providers: dict[str, Any] = raw_providers if isinstance(raw_providers, dict) else {}
+    repo_entry["repo_identity"] = repo_identity
+    repo_entry["updated_at"] = _now()
+    repo_entry["providers"] = providers
+    providers[provider_id] = entry
+    repos[repo_id] = repo_entry
+    return _write_user_scope(data)
+
+
 def _secret_ref(repo_id: str, provider_id: str, field: str) -> str:
     digest = hashlib.sha256(f"{repo_id}:{provider_id}:{field}".encode()).hexdigest()[:24]
     return f"mainbranch://{digest}/{provider_id}/{field}"
@@ -839,10 +912,14 @@ def connect_provider(
     account_label: str = "",
     metadata_pairs: list[str] | None = None,
     secret_backend: str | None = None,
+    scope: str = "repo",
 ) -> dict[str, Any]:
     """Connect a provider by writing repo metadata and local secrets."""
 
     provider = normalize_provider(provider_id)
+    normalized_scope = scope.strip().lower().replace("_", "-") or "repo"
+    if normalized_scope not in CONNECT_SCOPES:
+        raise ValueError("scope must be repo or user")
     target = Path(repo).resolve()
     config = _read_config(target)
     repo_id = _ensure_repo_id(config, target)
@@ -867,6 +944,7 @@ def connect_provider(
     providers[provider.id] = {
         "provider": provider.id,
         "connected": True,
+        "scope": normalized_scope,
         "account_label": account_label.strip(),
         "connected_at": _now(),
         "last_checked_at": _now(),
@@ -874,17 +952,85 @@ def connect_provider(
         "secrets": secrets,
         "metadata": metadata,
     }
+    user_scope_path = ""
+    if normalized_scope == "user":
+        user_scope_path = str(
+            _write_user_scope_provider(
+                repo_id,
+                repo_identity=config.get("repo_identity") or {},
+                provider_id=provider.id,
+                entry=providers[provider.id],
+            )
+        )
     path = _write_config(target, config)
     status = status_provider(provider.id, target)
     return {
         "ok": status["state"] != "missing_secret",
         "ready": bool(status["ok"]),
         "provider": provider.id,
+        "scope": normalized_scope,
         "config_path": str(path),
+        "user_scope_path": user_scope_path,
+        "hydrated": normalized_scope == "user",
         "credential_backend": store.backend,
         "credential_boundary": store.boundary(),
         "setup": _meta_setup() if provider.id == "meta" else {},
         "status": status,
+    }
+
+
+def _secret_statuses(provider: Provider, entry: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    secrets: dict[str, dict[str, Any]] = {}
+    missing: list[str] = []
+    stored_secrets = entry.get("secrets") if isinstance(entry.get("secrets"), dict) else {}
+    for field in provider.required_secrets:
+        raw = stored_secrets.get(field) if isinstance(stored_secrets, dict) else None
+        raw = raw if isinstance(raw, dict) else {}
+        ref = str(raw.get("ref") or "")
+        backend = str(raw.get("backend") or "local-file")
+        present = bool(ref and SecretStore(backend).get(ref))
+        if not present:
+            missing.append(field)
+        secrets[field] = {"present": present, "ref": ref, "backend": backend}
+    return secrets, missing
+
+
+def _unhydrated_status(provider: Provider, entry: dict[str, Any]) -> dict[str, Any]:
+    secrets, missing = _secret_statuses(provider, entry)
+    raw_metadata = entry.get("metadata")
+    metadata: dict[str, Any] = raw_metadata if isinstance(raw_metadata, dict) else {}
+    if missing:
+        repair = _repair(provider, "missing_secret", missing)
+        state = "missing_secret"
+        ok = False
+    else:
+        repair = {
+            "summary": (
+                f"{provider.name} exists in user scope, but this workspace is not hydrated."
+            ),
+            "repair": "Run `mb connect hydrate --repo .` from this workspace.",
+            "repair_command": "mb connect hydrate --repo .",
+        }
+        state = "needs_hydration"
+        ok = False
+    return {
+        "provider": provider.id,
+        "name": provider.name,
+        "connected": True,
+        "ok": ok,
+        "state": state,
+        "summary": repair["summary"],
+        "repair": repair["repair"],
+        "repair_command": repair["repair_command"],
+        "safe_to_share": True,
+        "account_label": str(entry.get("account_label") or ""),
+        "metadata": metadata,
+        "secrets": secrets,
+        "last_checked_at": str(entry.get("last_checked_at") or ""),
+        "scope": "user",
+        "user_scope_available": True,
+        "hydrated": False,
+        "validation": {"state": state, "checked_at": "", "summary": repair["summary"]},
     }
 
 
@@ -898,7 +1044,13 @@ def status_provider(
     provider = normalize_provider(provider_id)
     target = Path(repo).resolve()
     config = _read_config(target)
+    identity = _repo_identity(target)
+    repo_id = str(config.get("repo_id") or identity["repo_id"])
     entry = config["providers"].get(provider.id)
+    if not isinstance(entry, dict):
+        user_entry = _user_scope_provider_entry(repo_id, provider.id)
+        if user_entry is not None:
+            return _unhydrated_status(provider, user_entry)
     if provider.id == "meta":
         prereq_state = _meta_prerequisite_state(
             which_func=which_func,
@@ -969,6 +1121,9 @@ def status_provider(
                 "access_token": {"present": secret_present, "ref": ref, "backend": backend}
             },
             "last_checked_at": str(raw_entry.get("last_checked_at") or ""),
+            "scope": str(raw_entry.get("scope") or "repo"),
+            "user_scope_available": bool(raw_entry.get("scope") == "user"),
+            "hydrated": bool(raw_entry.get("scope") == "user"),
             "setup": _meta_setup(),
             "validation": {
                 "state": str(meta_validation.get("state") or state),
@@ -998,21 +1153,13 @@ def status_provider(
             "metadata": {},
             "secrets": {},
             "last_checked_at": "",
+            "scope": "repo",
+            "user_scope_available": False,
+            "hydrated": False,
             "validation": {"state": "not_connected", "checked_at": "", "summary": ""},
         }
 
-    secrets: dict[str, dict[str, Any]] = {}
-    missing: list[str] = []
-    stored_secrets = entry.get("secrets") if isinstance(entry.get("secrets"), dict) else {}
-    for field in provider.required_secrets:
-        raw = stored_secrets.get(field) if isinstance(stored_secrets, dict) else None
-        raw = raw if isinstance(raw, dict) else {}
-        ref = str(raw.get("ref") or "")
-        backend = str(raw.get("backend") or "local-file")
-        present = bool(ref and SecretStore(backend).get(ref))
-        if not present:
-            missing.append(field)
-        secrets[field] = {"present": present, "ref": ref, "backend": backend}
+    secrets, missing = _secret_statuses(provider, entry)
 
     raw_metadata = entry.get("metadata")
     metadata: dict[str, Any] = raw_metadata if isinstance(raw_metadata, dict) else {}
@@ -1050,6 +1197,9 @@ def status_provider(
         "metadata": metadata,
         "secrets": secrets,
         "last_checked_at": str(entry.get("last_checked_at") or ""),
+        "scope": str(entry.get("scope") or "repo"),
+        "user_scope_available": bool(entry.get("scope") == "user"),
+        "hydrated": bool(entry.get("scope") == "user"),
         "validation": {
             "state": str(validation.get("state") or state),
             "checked_at": str(validation.get("checked_at") or ""),
@@ -1061,6 +1211,59 @@ def status_provider(
             "repair_command": str(validation.get("repair_command") or ""),
             "safe_to_share": True,
         },
+    }
+
+
+def hydrate(
+    repo: str | Path = ".",
+    *,
+    provider_id: str = "",
+) -> dict[str, Any]:
+    """Materialize ignored repo-local provider metadata from user scope."""
+
+    target = Path(repo).resolve()
+    config = _read_config(target)
+    repo_id = _ensure_repo_id(config, target)
+    data = _read_user_scope()
+    raw_repo = data["repos"].get(repo_id)
+    repo_entry = raw_repo if isinstance(raw_repo, dict) else {}
+    raw_providers = repo_entry.get("providers")
+    providers = raw_providers if isinstance(raw_providers, dict) else {}
+    selected_ids: list[str]
+    if provider_id:
+        provider = normalize_provider(provider_id)
+        selected_ids = [provider.id]
+    else:
+        selected_ids = sorted(str(key) for key in providers)
+
+    hydrated: list[str] = []
+    missing: list[str] = []
+    for selected in selected_ids:
+        raw_entry = providers.get(selected)
+        if not isinstance(raw_entry, dict):
+            missing.append(selected)
+            continue
+        config["providers"][selected] = raw_entry
+        hydrated.append(selected)
+
+    path = ""
+    if hydrated:
+        path = str(_write_config(target, config))
+
+    statuses = [status_provider(provider, target) for provider in hydrated]
+    return {
+        "ok": bool(hydrated) and not missing,
+        "repo": str(target),
+        "repo_id": repo_id,
+        "config_path": path or str(_checked_config_path(target)),
+        "user_scope_path": str(_user_scope_path()),
+        "hydrated": hydrated,
+        "missing": missing,
+        "statuses": statuses,
+        "safe_to_share": True,
+        "repair_command": ""
+        if hydrated
+        else "mb connect <provider> --scope user --token-stdin --repo .",
     }
 
 
@@ -1595,6 +1798,18 @@ def test_provider(
     entry["last_checked_at"] = validation["checked_at"]
     config["providers"][provider.id] = entry
     _write_config(target, config)
+    if entry.get("scope") == "user":
+        identity = {
+            "source": str(config.get("repo_identity", {}).get("source") or ""),
+            "basis_sha256": str(config.get("repo_identity", {}).get("basis_sha256") or ""),
+            "repo_id_source": str(config.get("repo_identity", {}).get("repo_id_source") or ""),
+        }
+        _write_user_scope_provider(
+            str(config.get("repo_id") or _repo_identity(target)["repo_id"]),
+            repo_identity=identity,
+            provider_id=provider.id,
+            entry=entry,
+        )
     status = status_provider(
         provider.id,
         target,
@@ -1619,7 +1834,13 @@ def status_all(
     target = Path(repo).resolve()
     config = _read_config(target)
     identity = _repo_identity(target)
+    repo_id = str(config.get("repo_id") or identity["repo_id"])
+    user_repo = _read_user_scope()["repos"].get(repo_id)
+    user_repo = user_repo if isinstance(user_repo, dict) else {}
+    user_providers = user_repo.get("providers")
     configured = set(config["providers"].keys())
+    if isinstance(user_providers, dict):
+        configured.update(str(key) for key in user_providers)
     providers = []
     for provider in PROVIDERS:
         if include_all or provider.id in configured:
@@ -1631,7 +1852,8 @@ def status_all(
         "ok": not broken,
         "repo": str(target),
         "config_path": str(_checked_config_path(target)),
-        "repo_id": str(config.get("repo_id") or identity["repo_id"]),
+        "repo_id": repo_id,
+        "user_scope_path": str(_user_scope_path()),
         "providers": providers,
         "github": github or github_context(target),
         "safe_to_share": True,
@@ -1994,6 +2216,19 @@ def render_test_result(result: dict[str, Any]) -> None:
         print(f"next: {status['repair_command']}")
 
 
+def render_hydrate_result(result: dict[str, Any]) -> None:
+    print(f"mb connect hydrate  {result['repo']}")
+    if result["hydrated"]:
+        print(f"hydrated: {', '.join(result['hydrated'])}")
+        print(f"metadata: {result['config_path']}")
+    else:
+        print("no user-scoped provider metadata found for this repo")
+    if result["missing"]:
+        print(f"missing: {', '.join(result['missing'])}")
+    if result.get("repair_command"):
+        print(f"next: {result['repair_command']}")
+
+
 def render_connect_result(result: dict[str, Any]) -> None:
     status = result["status"]
     setup = result.get("setup") if result["provider"] == "meta" else {}
@@ -2010,6 +2245,8 @@ def render_connect_result(result: dict[str, Any]) -> None:
     else:
         print(f"connected {result['provider']} metadata")
     print(f"metadata: {result['config_path']}")
+    if result.get("scope") == "user":
+        print(f"user scope: {result['user_scope_path']}")
     print(f"secrets: {result['credential_boundary']}")
     source = result.get("credential_source") or {}
     if source.get("type") == "env" and source.get("env_var"):

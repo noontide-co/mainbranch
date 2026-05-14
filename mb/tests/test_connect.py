@@ -555,6 +555,190 @@ def test_connect_repo_identity_is_stable_across_worktrees(tmp_path: Path, monkey
     )
 
 
+def test_connect_user_scope_hydrates_disposable_checkout(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    canonical = tmp_path / "canonical"
+    disposable = tmp_path / "workspace"
+    canonical.mkdir()
+    disposable.mkdir()
+
+    def fake_git(repo: Path, args: list[str]) -> str:
+        if args == ["config", "--get", "remote.origin.url"]:
+            return "git@github.com:acme/business.git"
+        return ""
+
+    monkeypatch.setattr(connect_mod, "_git_output", fake_git)
+
+    result = connect_mod.connect_provider(
+        "cloudflare",
+        repo=canonical,
+        token="cf-test-token",
+        account_label="Acme Cloudflare",
+        metadata_pairs=["account_id=acct_123", "zone_id=zone_456"],
+        scope="user",
+    )
+
+    assert result["ok"] is True
+    assert result["scope"] == "user"
+    assert result["hydrated"] is True
+    assert Path(result["user_scope_path"]).exists()
+    assert "cf-test-token" not in Path(result["user_scope_path"]).read_text(encoding="utf-8")
+
+    before = connect_mod.status_provider("cloudflare", disposable)
+    assert before["state"] == "needs_hydration"
+    assert before["user_scope_available"] is True
+    assert before["hydrated"] is False
+    assert before["repair_command"] == "mb connect hydrate --repo ."
+    assert not (disposable / ".mb" / "connect.yaml").exists()
+
+    aggregate = connect_mod.status_all(disposable)
+    assert aggregate["summary"]["configured"] == 1
+    assert aggregate["summary"]["needs_repair"] == 1
+    assert aggregate["providers"][0]["state"] == "needs_hydration"
+
+    doctor = connect_mod.doctor(disposable)
+    cloudflare = next(check for check in doctor["checks"] if check["name"] == "provider:cloudflare")
+    assert cloudflare["state"] == "needs_hydration"
+    assert cloudflare["repair_command"] == "mb connect hydrate --repo ."
+
+    hydrated = connect_mod.hydrate(disposable)
+
+    assert hydrated["ok"] is True
+    assert hydrated["hydrated"] == ["cloudflare"]
+    config = yaml.safe_load((disposable / ".mb" / "connect.yaml").read_text(encoding="utf-8"))
+    assert config["providers"]["cloudflare"]["account_label"] == "Acme Cloudflare"
+    assert config["providers"]["cloudflare"]["metadata"] == {
+        "account_id": "acct_123",
+        "zone_id": "zone_456",
+    }
+    assert "cf-test-token" not in (disposable / ".mb" / "connect.yaml").read_text(encoding="utf-8")
+
+    after = connect_mod.status_provider("cloudflare", disposable)
+    assert after["state"] == "unvalidated"
+    assert after["scope"] == "user"
+    assert after["hydrated"] is True
+    assert after["secrets"]["api_token"]["present"] is True
+
+
+def test_connect_user_scope_keeps_different_repos_isolated(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    first.mkdir()
+    second.mkdir()
+
+    def fake_git(repo: Path, args: list[str]) -> str:
+        if args == ["config", "--get", "remote.origin.url"]:
+            slug = "first" if repo == first else "second"
+            return f"git@github.com:acme/{slug}.git"
+        return ""
+
+    monkeypatch.setattr(connect_mod, "_git_output", fake_git)
+
+    connect_mod.connect_provider(
+        "cloudflare",
+        repo=first,
+        token="first-token",
+        metadata_pairs=["account_id=acct_first"],
+        scope="user",
+    )
+
+    second_status = connect_mod.status_provider("cloudflare", second)
+    second_all = connect_mod.status_all(second)
+    hydrated = connect_mod.hydrate(second)
+
+    assert second_status["state"] == "not_connected"
+    assert second_status["user_scope_available"] is False
+    assert second_all["providers"] == []
+    assert hydrated["ok"] is False
+    assert hydrated["hydrated"] == []
+    assert not (second / ".mb" / "connect.yaml").exists()
+
+
+def test_connect_user_scope_validation_updates_hydration_source(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    canonical = tmp_path / "canonical"
+    disposable = tmp_path / "workspace"
+    canonical.mkdir()
+    disposable.mkdir()
+
+    def fake_git(repo: Path, args: list[str]) -> str:
+        if args == ["config", "--get", "remote.origin.url"]:
+            return "git@github.com:acme/business.git"
+        return ""
+
+    monkeypatch.setattr(connect_mod, "_git_output", fake_git)
+    connect_mod.connect_provider(
+        "postiz",
+        repo=canonical,
+        token="postiz-token",
+        metadata_pairs=["workspace=acme"],
+        scope="user",
+    )
+
+    tested = connect_mod.test_provider("postiz", canonical)
+    hydrated = connect_mod.hydrate(disposable, provider_id="postiz")
+    after = connect_mod.status_provider("postiz", disposable)
+
+    assert tested["ok"] is True
+    assert hydrated["ok"] is True
+    assert after["state"] == "ready"
+    assert (
+        after["validation"]["summary"]
+        == "Postiz has no automated safe validation probe yet; local credential presence "
+        "was confirmed."
+    )
+
+
+def test_connect_hydrate_cli_materializes_user_scope_metadata(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    canonical = tmp_path / "canonical"
+    disposable = tmp_path / "workspace"
+    canonical.mkdir()
+    disposable.mkdir()
+
+    def fake_git(repo: Path, args: list[str]) -> str:
+        if args == ["config", "--get", "remote.origin.url"]:
+            return "git@github.com:acme/business.git"
+        if args == ["rev-parse", "--is-inside-work-tree"]:
+            return "true"
+        return ""
+
+    monkeypatch.setattr(connect_mod, "_git_output", fake_git)
+
+    connected = runner.invoke(
+        app,
+        [
+            "connect",
+            "cloudflare",
+            "--repo",
+            str(canonical),
+            "--scope",
+            "user",
+            "--token",
+            "cf-token",
+            "--metadata",
+            "account_id=acct_123",
+            "--json",
+        ],
+    )
+    hydrated = runner.invoke(
+        app,
+        ["connect", "hydrate", "--repo", str(disposable), "--json"],
+    )
+
+    assert connected.exit_code == 0
+    connected_payload = json.loads(connected.stdout)
+    assert connected_payload["scope"] == "user"
+    assert connected_payload["hydrated"] is True
+    assert hydrated.exit_code == 0
+    hydrated_payload = json.loads(hydrated.stdout)
+    assert hydrated_payload["hydrated"] == ["cloudflare"]
+    assert (disposable / ".mb" / "connect.yaml").exists()
+
+
 def test_connect_normalizes_common_remote_protocol_variants() -> None:
     assert connect_mod._normalized_remote("git@gitlab.com:team/business.git") == (
         "https://gitlab.com/team/business"

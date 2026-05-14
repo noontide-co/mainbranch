@@ -18,6 +18,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   to a private/public GitHub repo, pushed, and reported in owner-facing
   language. Fresh business repos now include a small tracked `README.md`.
   Refs MAIN-378, #606.
+- Added user-scoped provider connection metadata and `mb connect hydrate` so
+  disposable workspaces can materialize ignored local provider readiness from a
+  repo-id keyed user store without re-entering provider tokens. Refs MAIN-379,
+  #608.
 
 ### Changed
 

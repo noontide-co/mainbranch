@@ -173,6 +173,18 @@ mb connect doctor --json
 Secrets stay outside your repo. Main Branch stores only safe metadata in
 `.mb/connect.yaml`, such as provider name, account label, account-token type,
 and last check time. The file is gitignored by default.
+
+If you use disposable checkouts or agent workspaces, store provider setup in
+user scope and hydrate each workspace:
+
+```bash
+printf '%s' "$CLOUDFLARE_API_TOKEN" | mb connect cloudflare --scope user --token-stdin --metadata token_type=account --metadata account_id=...
+mb connect hydrate --repo .
+```
+
+User scope is keyed by the business repo identity, so another business repo can
+use a different Cloudflare account or zone without sharing that connection.
+
 For the longer plain-English explanation, run:
 
 ```bash
