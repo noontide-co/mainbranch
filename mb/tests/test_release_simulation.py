@@ -183,12 +183,15 @@ def test_claude_print_prompt_includes_owner_language_guardrails() -> None:
 
     simulation = release_simulation.simulations_for_tier("pr_smoke")[0]
     prompt = dogfood_harness.claude_print_prompt(simulation)
+    normalized_prompt = " ".join(prompt.split())
 
-    assert "nothing unsaved locally" in prompt
-    assert "current business folder" in prompt
-    assert "no connected GitHub backup or shared task source" in prompt
-    assert "saved checkpoint" in prompt
-    assert "[updated] offer and founder-call research" in prompt
+    assert "nothing unsaved locally" in normalized_prompt
+    assert "current business folder" in normalized_prompt
+    assert "no connected GitHub backup or shared task source" in normalized_prompt
+    assert "No GitHub origin remote" in normalized_prompt
+    assert '"connected GitHub backup or shared task source" before "origin' in normalized_prompt
+    assert "saved checkpoint" in normalized_prompt
+    assert "[updated] offer and founder-call research" in normalized_prompt
 
 
 def test_score_transcript_flags_provider_overclaim() -> None:

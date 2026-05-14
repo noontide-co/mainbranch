@@ -97,9 +97,10 @@ CLAUDE_PRINT_PROMPT_PREFIX = """Release simulation harness constraints:
 - In the final answer, translate status for a normal business owner before any
   technical detail: say "nothing unsaved locally" before "git is clean" or
   "working tree clean"; "current business folder" before "branch main";
-  "no connected GitHub backup or shared task source" before "origin remote";
-  "saved checkpoint" before "commit"; "task" before "issue"; and "proposal"
-  before "PR".
+  "no connected GitHub backup or shared task source" before "No GitHub origin
+  remote"; "connected GitHub backup or shared task source" before "origin
+  remote"; "saved checkpoint" before "commit"; "task" before "issue"; and
+  "proposal" before "PR".
 - Checkpoint examples must name the saved business artifact, such as
   `[updated] offer and founder-call research`, not broad buckets like
   `[updated] core and research`.
