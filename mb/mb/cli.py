@@ -275,6 +275,10 @@ def _render_onboard_human(result: dict[str, Any]) -> None:
     console.print(f"\n[bold]mb onboard[/bold]  {mark}")
     console.print(f"repo: {result['path']}")
     console.print(f"level / action: {result['level']} / {result['action']}\n")
+    setup_complete = result.get("setup_complete") or {}
+    if setup_complete:
+        console.print(f"[bold]Outcome[/bold] {setup_complete.get('owner_outcome')}")
+        console.print()
 
     if result["level"] != "power":
         console.print("[bold]Why this stack[/bold]")
@@ -297,6 +301,15 @@ def _render_onboard_human(result: dict[str, Any]) -> None:
     console.print(f"  {'ok' if skill_wiring['ok'] else 'fail'}  Claude Code skill discovery")
     if checkpoint_hook:
         console.print(f"  {'ok' if checkpoint_hook.get('ok') else 'warn'}  checkpoint save hook")
+    if setup_complete:
+        console.print(
+            f"  {'ok' if setup_complete.get('committed_with_durable_files') else 'warn'}  "
+            "saved baseline"
+        )
+        if setup_complete.get("github_requested"):
+            console.print(
+                f"  {'ok' if setup_complete.get('pushed_tracking_remote') else 'warn'}  GitHub sync"
+            )
 
     warnings = result["warnings"]
     errors = result["errors"]
@@ -359,6 +372,21 @@ def onboard_cmd(
         "--desired-outcome",
         help="Short target outcome for onboarding progress.",
     ),
+    github_repo: str = typer.Option(
+        "",
+        "--github",
+        help="Create/connect a GitHub repo such as owner/name or name.",
+    ),
+    github_visibility: str = typer.Option(
+        "private",
+        "--github-visibility",
+        help="GitHub repo visibility when --github is used: private or public.",
+    ),
+    github_push: bool = typer.Option(
+        False,
+        "--push",
+        help="Push main and set origin tracking after creating the GitHub repo.",
+    ),
     yes: bool = typer.Option(False, "--yes", "-y", help="Use defaults and never prompt."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
@@ -406,6 +434,9 @@ def onboard_cmd(
             business_type=business_type,
             success_stage=success_stage,
             desired_outcome=desired_outcome,
+            github_repo=github_repo,
+            github_visibility=github_visibility,
+            github_push=github_push,
         )
     except ValueError as exc:
         typer.echo(f"mb onboard: {exc}", err=True)

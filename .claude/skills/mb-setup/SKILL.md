@@ -83,6 +83,18 @@ If no business repo exists yet:
 mb onboard plan --team-size solo --success-stage working
 ```
 
+If the operator wants the folder created, saved, synced to GitHub, and ready
+for Claude Code in one first-run pass, prefer the first-class onboarding path
+over hand-rolled `git` / `gh` glue:
+
+```bash
+mb onboard --yes --name "[Business Name]" --path "[repo-path]" --github "[owner/repo]" --github-visibility private --push
+```
+
+End setup answers in owner language first: created, saved, synced to GitHub
+when requested, and ready to open in Claude Code. Put git, remote, branch,
+validation, and wiring details second as the technical receipt.
+
 **Visibility default for business repos: private.** A business repo holds
 offer experiments, strategy, drafts, client work, screenshots, and
 operating notes. Default to a private repo and only switch to public when

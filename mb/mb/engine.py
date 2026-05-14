@@ -19,10 +19,13 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 from datetime import datetime, timezone
 from importlib import resources
 from pathlib import Path
 from typing import Any
+
+from mb import __version__
 
 SKILL_PREFIX = "mb-"
 PRIMARY_SKILL = "mb-start"
@@ -122,6 +125,75 @@ def _read_settings(path: Path) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def _iter_mb_binaries(path_value: str | None = None) -> list[str]:
+    """Return executable `mb` binaries on PATH, preserving PATH order."""
+    path_text = path_value if path_value is not None else os.environ.get("PATH", "")
+    binaries: list[str] = []
+    seen: set[str] = set()
+    for raw_dir in path_text.split(os.pathsep):
+        if not raw_dir:
+            continue
+        candidate = Path(raw_dir).expanduser() / "mb"
+        if not candidate.is_file() or not os.access(candidate, os.X_OK):
+            continue
+        try:
+            key = str(candidate.resolve())
+        except OSError:
+            key = str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        binaries.append(str(candidate))
+    return binaries
+
+
+def _mb_binary_version(path: str, *, timeout: float = 3.0) -> dict[str, Any]:
+    try:
+        result = subprocess.run(
+            [path, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"ok": False, "version": "", "output": "", "error": str(exc)}
+    output = (result.stdout or result.stderr).strip()
+    version = output.removeprefix("mb ").strip() if output.startswith("mb ") else output
+    return {
+        "ok": result.returncode == 0,
+        "version": version if result.returncode == 0 else "",
+        "output": output,
+        "error": "" if result.returncode == 0 else output,
+    }
+
+
+def mb_install_diagnostics(path_value: str | None = None) -> dict[str, Any]:
+    """Describe active `mb` binaries on PATH for runtime wiring diagnostics."""
+    active = shutil.which("mb") or ""
+    installs: list[dict[str, Any]] = []
+    for binary in _iter_mb_binaries(path_value):
+        version = _mb_binary_version(binary)
+        installs.append(
+            {
+                "path": binary,
+                "version": version["version"],
+                "ok": version["ok"],
+                "error": version["error"],
+                "active": bool(active and Path(binary) == Path(active)),
+            }
+        )
+    versions = {str(item["version"]) for item in installs if item.get("version")}
+    return {
+        "active_path": active,
+        "current_version": __version__,
+        "installs": installs,
+        "multiple_installs": len(installs) > 1,
+        "multiple_versions": len(versions) > 1,
+        "repair_command": "mb skill link --repo .",
+    }
 
 
 def _looks_like_engine_root_path(path: Path) -> bool:
@@ -571,10 +643,31 @@ def link_status(repo: str | Path) -> dict[str, Any]:
 
     root_str = str(root) if root is not None else ""
     settings_has_engine = bool(root_str and root_str in dirs)
+    stale_engine_paths = [
+        value
+        for value in dirs
+        if isinstance(value, str) and root is not None and _is_stale_engine_path(value, root)
+    ]
+    configured_engine_paths = [
+        value
+        for value in dirs
+        if isinstance(value, str) and _looks_like_engine_root_path(Path(value).expanduser())
+    ]
+    wired_engine_path = (
+        root_str
+        if settings_has_engine
+        else (
+            stale_engine_paths[0]
+            if stale_engine_paths
+            else (configured_engine_paths[0] if configured_engine_paths else "")
+        )
+    )
     start_link = target / ".claude" / "skills" / PRIMARY_SKILL
     start_skill = start_link / "SKILL.md"
     start_link_ok = start_skill.is_file()
     shadow_report = inspect_personal_skill_conflicts(target, apply=False)
+    install_diagnostics = mb_install_diagnostics()
+    stale_from_other_install = bool(stale_engine_paths and install_diagnostics["multiple_installs"])
 
     return {
         "ok": settings_has_engine and start_link_ok and shadow_report["ok"],
@@ -582,12 +675,23 @@ def link_status(repo: str | Path) -> dict[str, Any]:
         "engine_root": root_str or None,
         "settings_path": str(settings_path),
         "settings_has_engine": settings_has_engine,
+        "settings_additional_directories": [str(item) for item in dirs if isinstance(item, str)],
+        "wired_engine_path": wired_engine_path,
+        "stale_engine_paths": stale_engine_paths,
+        "stale_from_other_install": stale_from_other_install,
+        "current_mb": {
+            "path": install_diagnostics["active_path"],
+            "version": install_diagnostics["current_version"],
+            "engine_root": root_str or "",
+        },
+        "mb_installs": install_diagnostics,
         "primary_skill": PRIMARY_SKILL,
         "primary_link_ok": start_link_ok,
         "primary_link": str(start_link),
         "start_link_ok": start_link_ok,
         "start_link": str(start_link),
         "shadow_report": shadow_report,
+        "repair_command": "mb skill link --repo .",
     }
 
 

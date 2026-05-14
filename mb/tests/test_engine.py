@@ -236,3 +236,64 @@ def test_link_skills_removes_stale_mainbranch_engine_paths(tmp_path: Path) -> No
     assert str(tmp_path / "mb-vip") not in dirs
     assert str(unrelated_missing) in dirs
     assert str(other_dir) in dirs
+
+
+def test_mb_install_diagnostics_reports_multiple_versions(tmp_path: Path, monkeypatch) -> None:
+    bin_a = tmp_path / "a"
+    bin_b = tmp_path / "b"
+    bin_a.mkdir()
+    bin_b.mkdir()
+    mb_a = bin_a / "mb"
+    mb_b = bin_b / "mb"
+    mb_a.write_text("#!/bin/sh\necho 'mb 0.3.22'\n", encoding="utf-8")
+    mb_b.write_text("#!/bin/sh\necho 'mb 0.3.18'\n", encoding="utf-8")
+    mb_a.chmod(0o755)
+    mb_b.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_a}:{bin_b}")
+
+    result = engine_mod.mb_install_diagnostics()
+
+    assert result["active_path"] == str(mb_a)
+    assert result["multiple_installs"] is True
+    assert result["multiple_versions"] is True
+    assert [item["version"] for item in result["installs"]] == ["0.3.22", "0.3.18"]
+    assert result["repair_command"] == "mb skill link --repo ."
+
+
+def test_link_status_explains_stale_engine_path_from_other_install(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo = tmp_path / "biz"
+    stale_engine = tmp_path / "mb-vip"
+    _write_skill(stale_engine, "start")
+    (stale_engine / "CHANGELOG.md").write_text("# Changelog\n", encoding="utf-8")
+    settings = repo / ".claude" / "settings.local.json"
+    settings.parent.mkdir(parents=True)
+    settings.write_text(
+        json.dumps({"permissions": {"additionalDirectories": [str(stale_engine)]}}) + "\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        engine_mod,
+        "mb_install_diagnostics",
+        lambda: {
+            "active_path": "/tmp/new/mb",
+            "current_version": "0.3.22",
+            "multiple_installs": True,
+            "multiple_versions": True,
+            "installs": [
+                {"path": "/tmp/new/mb", "version": "0.3.22"},
+                {"path": "/tmp/old/mb", "version": "0.3.18"},
+            ],
+            "repair_command": "mb skill link --repo .",
+        },
+    )
+
+    result = engine_mod.link_status(repo)
+
+    assert result["ok"] is False
+    assert str(stale_engine) in result["stale_engine_paths"]
+    assert result["stale_from_other_install"] is True
+    assert result["current_mb"]["path"] == "/tmp/new/mb"
+    assert result["repair_command"] == "mb skill link --repo ."

@@ -377,23 +377,40 @@ def _lint_settings(repo: Path, findings: list[dict[str, Any]]) -> None:
     root = engine_mod.engine_root()
     if root is None:
         return
+    install = engine_mod.mb_install_diagnostics()
     stale = [
         value
         for value in dirs
         if isinstance(value, str) and engine_mod.is_stale_engine_path(value, root)
     ]
     if stale:
+        other_install = (
+            " This often happens when multiple `mb` installs are active on PATH."
+            if install.get("multiple_installs")
+            else ""
+        )
         findings.append(
-            _finding(
-                code="stale-claude-settings-engine-path",
-                path=".claude/settings.local.json",
-                category="runtime-settings",
-                message=(
-                    f".claude/settings.local.json has {len(stale)} stale Main Branch engine "
-                    "path(s). Refresh project-local skill wiring before trusting runtime discovery."
+            {
+                **_finding(
+                    code="stale-claude-settings-engine-path",
+                    path=".claude/settings.local.json",
+                    category="runtime-settings",
+                    message=(
+                        f".claude/settings.local.json has {len(stale)} stale Main Branch "
+                        "engine path(s). Refresh project-local skill wiring before trusting "
+                        f"runtime discovery. Current mb: {install.get('active_path') or 'unknown'} "
+                        f"{install.get('current_version') or ''}; wired engine: {stale[0]}."
+                        f"{other_install}"
+                    ),
+                    repair_command="mb skill link --repo . --json",
                 ),
-                repair_command="mb skill link --repo . --json",
-            )
+                "current_mb_path": install.get("active_path") or "",
+                "current_mb_version": install.get("current_version") or "",
+                "current_engine_path": str(root),
+                "wired_engine_paths": stale,
+                "multiple_mb_installs": bool(install.get("multiple_installs")),
+                "mb_installs": install.get("installs") or [],
+            }
         )
 
 

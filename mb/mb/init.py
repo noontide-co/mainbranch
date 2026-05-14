@@ -156,6 +156,11 @@ def run(path: str, name: str) -> dict[str, Any]:
     (target / "CLAUDE.md").write_text(_render(claude_tmpl, mapping), encoding="utf-8")
     created.append("CLAUDE.md")
 
+    readme_tmpl = _read_template("README.md.tmpl")
+    if readme_tmpl:
+        (target / "README.md").write_text(_render(readme_tmpl, mapping), encoding="utf-8")
+        created.append("README.md")
+
     agents_result = codex_mod.write_agents_md(
         target,
         name=business_name,

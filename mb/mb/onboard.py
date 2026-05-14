@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from mb import checkpoint as checkpoint_mod
+from mb import connect as connect_mod
 from mb import init as init_mod
 from mb.engine import link_skills, link_status
 
@@ -38,6 +39,13 @@ BOUNDARIES = {
 }
 
 ONBOARDING_GITIGNORE_ENTRY = ".mb/onboarding.json"
+LOCAL_SETUP_PATH_PREFIXES = (
+    ".git/",
+    ".mb/",
+    ".claude/settings.local.json",
+    ".claude/worktrees/",
+    ".claude/skills/",
+)
 
 
 def _which(name: str) -> str:
@@ -64,6 +72,224 @@ def _run_command(args: list[str], cwd: Path | None = None, timeout: float = 5.0)
         "stdout": result.stdout,
         "stderr": result.stderr,
         "returncode": result.returncode,
+    }
+
+
+def _git_output(repo: Path, args: list[str], timeout: float = 5.0) -> dict[str, Any]:
+    return _run_command(["git", *args], cwd=repo, timeout=timeout)
+
+
+def _has_git_commit(repo: Path) -> bool:
+    head = _git_output(repo, ["rev-parse", "--verify", "HEAD"])
+    return bool(head["ok"])
+
+
+def _git_remote(repo: Path) -> str:
+    remote = _git_output(repo, ["config", "--get", "remote.origin.url"])
+    return remote["stdout"].strip() if remote["ok"] else ""
+
+
+def _git_branch(repo: Path) -> str:
+    branch = _git_output(repo, ["branch", "--show-current"])
+    return branch["stdout"].strip() if branch["ok"] else ""
+
+
+def _tracking_branch(repo: Path) -> str:
+    tracking = _git_output(repo, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"])
+    return tracking["stdout"].strip() if tracking["ok"] else ""
+
+
+def _working_tree_dirty(repo: Path) -> bool:
+    status = _git_output(repo, ["status", "--porcelain"])
+    return bool(status["ok"] and status["stdout"].strip())
+
+
+def _durable_generated_paths(paths: list[str]) -> list[str]:
+    durable: list[str] = []
+    for raw in paths:
+        rel = raw.strip().replace("\\", "/").strip("/")
+        if not rel or rel == ".git":
+            continue
+        path = Path(rel)
+        if path.is_absolute() or ".." in path.parts:
+            continue
+        if any(
+            rel == prefix.rstrip("/") or rel.startswith(prefix)
+            for prefix in LOCAL_SETUP_PATH_PREFIXES
+        ):
+            continue
+        if rel not in durable:
+            durable.append(rel)
+    return durable
+
+
+def _commit_generated_scaffold(
+    repo: Path,
+    *,
+    business_name: str,
+    generated_paths: list[str],
+) -> dict[str, Any]:
+    commit_message = f"[opened] Main Branch scaffold for {business_name or repo.name}"
+    result: dict[str, Any] = {
+        "ok": False,
+        "committed": False,
+        "commands": [],
+        "errors": [],
+        "repair": "",
+    }
+    durable_paths = _durable_generated_paths(generated_paths)
+    if durable_paths:
+        add = _git_output(repo, ["add", "--", *durable_paths])
+        result["commands"].append("git add -- " + " ".join(durable_paths))
+        if not add["ok"]:
+            result["errors"].append(add["stderr"].strip() or "git add failed")
+            result["repair"] = "Review `git status`, then commit the scaffold manually."
+            return result
+
+    staged = _git_output(repo, ["diff", "--cached", "--quiet", "--"])
+    staged_changes = staged["returncode"] == 1
+    if staged["returncode"] not in {0, 1}:
+        result["errors"].append(staged["stderr"].strip() or "git staged diff failed")
+        result["repair"] = "Review `git status`, then commit the scaffold manually."
+        return result
+    if staged_changes:
+        commit = _git_output(repo, ["commit", "-m", commit_message], timeout=15.0)
+        result["commands"].append(f"git commit -m {commit_message!r}")
+        if not commit["ok"]:
+            result["errors"].append(commit["stderr"].strip() or commit["stdout"].strip())
+            result["repair"] = (
+                "Configure git author identity if needed, then run "
+                f'`git commit -m "{commit_message}"`.'
+            )
+            return result
+        result["committed"] = True
+    elif not _has_git_commit(repo):
+        result["errors"].append("No durable scaffold files were staged for the first commit.")
+        result["repair"] = "Review `git status`, then commit the scaffold manually."
+        return result
+
+    if _working_tree_dirty(repo):
+        result["errors"].append(
+            "Working tree has uncommitted files outside the generated Main Branch scaffold."
+        )
+        result["repair"] = (
+            "Review `git status`; commit, ignore, or move private files before pushing."
+        )
+        return result
+
+    result["ok"] = True
+    return result
+
+
+def _github_create_push(
+    repo: Path,
+    *,
+    business_name: str,
+    github_repo: str,
+    visibility: str,
+    push: bool,
+    generated_paths: list[str] | None = None,
+) -> dict[str, Any]:
+    requested = bool(github_repo.strip())
+    result: dict[str, Any] = {
+        "requested": requested,
+        "ok": not requested,
+        "repo": github_repo.strip(),
+        "visibility": visibility,
+        "committed": False,
+        "clean_tree": not _working_tree_dirty(repo),
+        "remote_set": bool(_git_remote(repo)),
+        "pushed": False,
+        "tracking": _tracking_branch(repo),
+        "commands": [],
+        "errors": [],
+        "repair": "",
+    }
+    if not requested:
+        return result
+    if visibility not in {"private", "public"}:
+        result["errors"].append("github visibility must be private or public")
+        result["repair"] = "Use `--github-visibility private` or `--github-visibility public`."
+        return result
+    if not _which("gh"):
+        result["errors"].append("GitHub CLI is not installed.")
+        result["repair"] = "Install GitHub CLI, then run `gh auth login`."
+        return result
+    if not _which("git"):
+        result["errors"].append("git is not installed.")
+        result["repair"] = "Install git before creating the GitHub repo."
+        return result
+
+    commit_result = _commit_generated_scaffold(
+        repo,
+        business_name=business_name,
+        generated_paths=generated_paths or [],
+    )
+    result["commands"].extend(commit_result["commands"])
+    result["committed"] = bool(commit_result["committed"])
+    result["clean_tree"] = commit_result["ok"]
+    if not commit_result["ok"]:
+        result["errors"].extend(str(item) for item in commit_result["errors"])
+        result["repair"] = str(commit_result["repair"])
+        return result
+
+    args = ["gh", "repo", "create", github_repo.strip(), f"--{visibility}", "--source", "."]
+    if not _git_remote(repo):
+        args.extend(["--remote", "origin"])
+    if push:
+        args.append("--push")
+    create = _run_command(args, cwd=repo, timeout=30.0)
+    result["commands"].append(" ".join(args))
+    if not create["ok"]:
+        result["errors"].append(create["stderr"].strip() or create["stdout"].strip())
+        result["repair"] = (
+            "Run `gh auth login`, then rerun onboarding or create the GitHub repo manually."
+        )
+        return result
+    result["remote_set"] = bool(_git_remote(repo))
+    result["tracking"] = _tracking_branch(repo)
+    result["pushed"] = bool(push and result["tracking"])
+    result["clean_tree"] = not _working_tree_dirty(repo)
+    result["ok"] = True
+    return result
+
+
+def _setup_complete(repo: Path, *, github_requested: bool = False) -> dict[str, Any]:
+    markers = _repo_markers(repo)
+    git_repo = _git_output(repo, ["rev-parse", "--is-inside-work-tree"])
+    branch = _git_branch(repo)
+    remote = _git_remote(repo)
+    tracking = _tracking_branch(repo)
+    checkpoint_hook = checkpoint_mod.hook_status(repo)
+    wiring = link_status(repo)
+    committed = _has_git_commit(repo)
+    dirty = _working_tree_dirty(repo)
+    return {
+        "scaffolded": _looks_initialized(markers),
+        "initialized_on_main": bool(git_repo["ok"] and branch == "main"),
+        "checkpoint_hook_ready": bool(checkpoint_hook.get("ok")),
+        "checkpoint_hook_repair": ""
+        if checkpoint_hook.get("ok")
+        else "mb checkpoint --install-hook",
+        "committed_with_durable_files": bool(committed and not dirty),
+        "github_remote_connected": bool(remote),
+        "github_remote": remote,
+        "pushed_tracking_remote": bool(tracking),
+        "tracking_branch": tracking,
+        "github_requested": github_requested,
+        "claude_code_handoff_ready": bool(wiring.get("ok")),
+        "codex_instructions_present": (repo / "AGENTS.md").is_file(),
+        "owner_outcome": (
+            "This business folder is created, saved, synced to GitHub, and ready to open "
+            "in Claude Code."
+            if github_requested
+            and remote
+            and tracking
+            and wiring.get("ok")
+            and committed
+            and not dirty
+            else "This business folder is created and ready for the next setup step."
+        ),
     }
 
 
@@ -259,19 +485,31 @@ def _looks_initialized(markers: dict[str, bool]) -> bool:
     return markers["claude_md"] and shaped_dirs >= 2
 
 
-def _tool_readiness(repo: Path) -> dict[str, Any]:
+def _tool_readiness(
+    repo: Path,
+    *,
+    github_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     git_path = _which("git")
     gh_path = _which("gh")
     claude_path = _which("claude")
     gh_auth = False
+    gh_repair = ""
+    gh_state = "missing_cli"
     git_repo = False
 
     if git_path:
         git_probe = _run_command(["git", "rev-parse", "--is-inside-work-tree"], cwd=repo)
         git_repo = git_probe["ok"] and git_probe["stdout"].strip() == "true"
-    if gh_path:
+    if github_context is not None:
+        gh_auth = bool(github_context.get("ok"))
+        gh_state = str(github_context.get("state") or ("ready" if gh_auth else "unknown"))
+        gh_repair = str(github_context.get("repair") or github_context.get("repair_command") or "")
+    elif gh_path:
         gh_probe = _run_command(["gh", "auth", "status"], cwd=repo)
         gh_auth = gh_probe["ok"]
+        gh_state = "ready" if gh_auth else "unauthenticated"
+        gh_repair = "" if gh_auth else "Run `gh auth login` to connect GitHub tasks and proposals."
 
     return {
         "git": {
@@ -283,10 +521,12 @@ def _tool_readiness(repo: Path) -> dict[str, Any]:
         "github_cli": {
             "found": bool(gh_path),
             "authenticated": gh_auth,
+            "state": gh_state,
             "path": gh_path,
             "repair": ""
             if gh_path and gh_auth
-            else (
+            else gh_repair
+            or (
                 "Install GitHub CLI: https://cli.github.com/ and run `gh auth login`."
                 if not gh_path
                 else "Run `gh auth login` to connect GitHub tasks and proposals."
@@ -553,6 +793,9 @@ def run(
     business_type: str = "",
     success_stage: str = "unknown",
     desired_outcome: str = "",
+    github_repo: str = "",
+    github_visibility: str = "private",
+    github_push: bool = False,
 ) -> dict[str, Any]:
     """Create or connect a business repo and verify the Claude Code handoff."""
     target = Path(path).expanduser().resolve()
@@ -566,6 +809,7 @@ def run(
     result_business_name = name.strip() if normalized_mode == "connect" else ""
     init_result: dict[str, Any] | None = None
     link_result: dict[str, Any] | None = None
+    github_result: dict[str, Any] | None = None
 
     if normalized_mode == "connect" and not target.exists():
         errors.append(f"cannot connect missing repo: {target}")
@@ -596,17 +840,9 @@ def run(
     wiring = link_status(target)
     tools = _tool_readiness(target)
     selected_level = _normalize_level(level)
-    if selected_level == "auto":
-        selected_level = _infer_level(tools)
 
     if not after["git"]:
         warnings.append("Repo is not a git work tree. Run `git init` or `mb doctor` for repair.")
-    if not tools["github_cli"]["found"] or not tools["github_cli"]["authenticated"]:
-        warnings.append(str(tools["github_cli"]["repair"]))
-    if not tools["claude_code"]["found"]:
-        warnings.append(str(tools["claude_code"]["repair"]))
-    if not wiring["ok"]:
-        warnings.append("Claude Code skill discovery is not wired. Run `mb doctor` for details.")
     checkpoint_hook = (
         init_result.get("checkpoint_hook")
         if init_result
@@ -616,6 +852,37 @@ def run(
     )
     if isinstance(checkpoint_hook, dict) and not checkpoint_hook.get("ok"):
         warnings.append(str(checkpoint_hook.get("summary") or "Checkpoint hook needs repair."))
+
+    if github_repo.strip() and target.exists() and not errors:
+        github_result = _github_create_push(
+            target,
+            business_name=result_business_name,
+            github_repo=github_repo,
+            visibility=github_visibility.strip().lower(),
+            push=github_push,
+            generated_paths=created,
+        )
+        if not github_result.get("ok"):
+            errors.extend(str(item) for item in github_result.get("errors", []))
+            if github_result.get("repair"):
+                warnings.append(str(github_result["repair"]))
+        else:
+            github_context = connect_mod.github_context(
+                target,
+                which_func=_which,
+                command_runner=_run_command,
+            )
+            tools = _tool_readiness(target, github_context=github_context)
+
+    if selected_level == "auto":
+        selected_level = _infer_level(tools)
+
+    if not tools["github_cli"]["found"] or not tools["github_cli"]["authenticated"]:
+        warnings.append(str(tools["github_cli"]["repair"]))
+    if not tools["claude_code"]["found"]:
+        warnings.append(str(tools["claude_code"]["repair"]))
+    if not wiring["ok"]:
+        warnings.append("Claude Code skill discovery is not wired. Run `mb doctor` for details.")
 
     ok = not errors and wiring["ok"] and after["claude_md"]
     progress = (
@@ -650,6 +917,17 @@ def run(
         "errors": errors,
         "doctor_command": f"mb doctor {target}",
         "checkpoint_hook": checkpoint_hook,
+        "github": github_result
+        or _github_create_push(
+            target,
+            business_name=result_business_name,
+            github_repo="",
+            visibility=github_visibility.strip().lower(),
+            push=False,
+        ),
+        "setup_complete": _setup_complete(target, github_requested=bool(github_repo.strip()))
+        if target.exists()
+        else {},
         "onboarding": progress,
         "next_steps": _next_steps(target),
         "init": init_result,
