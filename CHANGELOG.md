@@ -34,6 +34,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   generation produced nine fixture-safe candidates, binaries stayed ignored,
   and manual review rejected the full batch for generic AI image feel, weak
   native-feed fit, and no clear Facebook ad click reason. Refs MAIN-376, #600.
+- Tightened release-simulation owner-language guidance, scoring, and `/mb-start`
+  wording so normal final answers translate git/GitHub/checkpoint state before
+  technical terms and use specific saved-checkpoint examples. Refs MAIN-372,
+  #591.
 
 ## [0.3.21] - 2026-05-13
 

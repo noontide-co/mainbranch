@@ -278,6 +278,11 @@ def _contains_overclaim(text: str) -> bool:
 
 _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
     (
+        re.compile(r"\bclean on\s+`?main`?\b", re.IGNORECASE),
+        "clean on main",
+        "nothing unsaved locally in the current business folder",
+    ),
+    (
         re.compile(r"\bgit (?:tree )?is clean\b", re.IGNORECASE),
         "git is clean",
         "nothing unsaved locally",
@@ -346,8 +351,14 @@ _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
 )
 
 _BROAD_CHECKPOINT_NOTE_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"\[(?:added|updated|changed)\]\s+(?:core and research|files|stuff|changes)\b"),
-    re.compile(r"proposed message:\s*`?\[(?:added|updated|changed)\]\s+core and research`?"),
+    re.compile(
+        r"\[(?:added|updated|changed)\]\s+"
+        r"(?:core\s*(?:and|&|\+|,)\s*research|files|stuff|changes)\b"
+    ),
+    re.compile(
+        r"proposed message:\s*`?\[(?:added|updated|changed)\]\s+"
+        r"core\s*(?:and|&|\+|,)\s*research`?"
+    ),
 )
 
 

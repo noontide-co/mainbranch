@@ -56,11 +56,14 @@ def test_router_contract_translates_visible_git_language_before_owner_answer() -
     router = _read(ROUTER_REF)
 
     required_translations = {
-        "`git is clean`, `repo is clean`, `working tree clean`": "nothing unsaved locally",
+        (
+            "`git is clean`, `repo is clean`, `working tree clean`, `clean on main`"
+        ): "nothing unsaved locally",
         "`on main`, `branch main`": "current business folder or current workspace",
         "`one commit`, `only commit so far`": "setup baseline saved or last saved checkpoint",
         "`staged files`": "files queued for save",
         "`No GitHub origin remote`": "local-only folder or no connected GitHub backup",
+        "`origin remote`": "connected GitHub backup or shared task source",
         "`PR/issue facts`": "GitHub task and proposal context",
         "`before this goes to a remote`": "before anything is shared outside your machine",
     }

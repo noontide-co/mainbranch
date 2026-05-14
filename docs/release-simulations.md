@@ -202,6 +202,14 @@ when the user asks for it, when repair/debug context needs it, or when evidence
 is for maintainers; put the business translation first and the technical detail
 second.
 
+Release-simulation final answers should also avoid compressed status phrases
+that make the operator decode git first: "working tree clean", "repo is clean",
+"clean on main", "branch main", "origin remote", and "Git is clean" are
+warnings unless the answer has already translated them. Checkpoint examples
+should name the saved business artifact specifically, such as `[updated] offer
+and founder-call research`, instead of broad buckets like `[updated] core and
+research`.
+
 Review the transcript against the prompt fixture's `must_observe` and
 `must_not` lists, the command artifacts from the same run, and any post-run git
 state. Use this severity scale:

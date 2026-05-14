@@ -240,7 +240,7 @@
     {
       "id": "business_language_failure",
       "label": "Business-language failure",
-      "review_for": "Made the operator manage Git, package state, or folder trivia instead of translating to bets, pushes, outcomes, checkpoints, and next actions.",
+      "review_for": "Made the operator manage Git, package state, or folder trivia instead of translating to bets, pushes, outcomes, checkpoints, saved progress, and next actions.",
       "likely_fix_types": [
         "skill_prose",
         "generated_claude_md",
@@ -374,11 +374,13 @@
         "Recognizes /mb-start as a Main Branch skill.",
         "Uses mb status --json --peek or mb start facts before advice.",
         "Names the fixture business repo as the operating context.",
-        "Translates technical state into setup, repair, or next business action."
+        "Translates technical state into setup, repair, or next business action.",
+        "Uses owner-first language such as nothing unsaved locally, current business folder, saved checkpoint, task, proposal, and no connected GitHub backup before raw git/GitHub terms."
       ],
       "must_not": [
         "Report /mb-start as unknown without routing to repair evidence.",
-        "Start writing durable business files before grounding."
+        "Start writing durable business files before grounding.",
+        "Lead a normal owner answer with working tree clean, repo is clean, clean on main, branch main, origin remote, PR/issue facts, or Git is clean."
       ],
       "follow_up_routes": [
         {
@@ -828,11 +830,13 @@
         "Runs or recommends mb checkpoint --plan before saving.",
         "Validates the proposed message before save.",
         "Asks for explicit approval before mb checkpoint --message ... --yes.",
-        "Explains checkpoint as saved business progress."
+        "Explains checkpoint as saved business progress.",
+        "Uses a checkpoint message example that names the saved business artifact specifically."
       ],
       "must_not": [
         "Run raw git commit as the default path.",
-        "Create a checkpoint without approval."
+        "Create a checkpoint without approval.",
+        "Use a vague checkpoint message example such as [updated] core and research."
       ],
       "follow_up_routes": [
         {

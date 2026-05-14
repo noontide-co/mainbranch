@@ -94,6 +94,15 @@ CLAUDE_PRINT_PROMPT_PREFIX = """Release simulation harness constraints:
   `mb books check`, and `mb educational <topic>`.
 - Do not use shell pipes, redirects, temp files, Python parsers, or Claude
   tool-result paths to transform command output.
+- In the final answer, translate status for a normal business owner before any
+  technical detail: say "nothing unsaved locally" before "git is clean" or
+  "working tree clean"; "current business folder" before "branch main";
+  "no connected GitHub backup or shared task source" before "origin remote";
+  "saved checkpoint" before "commit"; "task" before "issue"; and "proposal"
+  before "PR".
+- Checkpoint examples must name the saved business artifact, such as
+  `[updated] offer and founder-call research`, not broad buckets like
+  `[updated] core and research`.
 - Do not call AskUserQuestion in print mode. Put any question for the operator
   in the final answer.
 """

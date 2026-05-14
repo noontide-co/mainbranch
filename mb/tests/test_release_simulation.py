@@ -62,6 +62,27 @@ def test_release_simulation_covers_ambiguous_mb_start_offer_choice() -> None:
     assert "ask_before_write" in sim.expected_behaviors
 
 
+def test_release_simulation_covers_owner_first_status_expectations() -> None:
+    simulations = {sim.id: sim for sim in release_simulation.simulations()}
+
+    fresh = simulations["fresh_first_day"]
+    checkpoint = simulations["checkpoint_discipline"]
+
+    fresh_observed = " ".join(fresh.must_observe).lower()
+    fresh_blocked = " ".join(fresh.must_not).lower()
+    assert "nothing unsaved locally" in fresh_observed
+    assert "current business folder" in fresh_observed
+    assert "no connected github backup" in fresh_observed
+    assert "clean on main" in fresh_blocked
+    assert "git is clean" in fresh_blocked
+    assert "origin remote" in fresh_blocked
+
+    checkpoint_observed = " ".join(checkpoint.must_observe).lower()
+    checkpoint_blocked = " ".join(checkpoint.must_not).lower()
+    assert "saved business artifact" in checkpoint_observed
+    assert "[updated] core and research" in checkpoint_blocked
+
+
 def test_release_simulation_covers_rich_migration_triage_map() -> None:
     simulations = {
         sim.id: sim for sim in release_simulation.simulations_for_tier("prerelease_candidate")
@@ -155,6 +176,19 @@ def test_release_simulation_manifest_loads_from_package_data() -> None:
             "before writing anything durable.",
         ),
     )
+
+
+def test_claude_print_prompt_includes_owner_language_guardrails() -> None:
+    from mb import dogfood_harness
+
+    simulation = release_simulation.simulations_for_tier("pr_smoke")[0]
+    prompt = dogfood_harness.claude_print_prompt(simulation)
+
+    assert "nothing unsaved locally" in prompt
+    assert "current business folder" in prompt
+    assert "no connected GitHub backup or shared task source" in prompt
+    assert "saved checkpoint" in prompt
+    assert "[updated] offer and founder-call research" in prompt
 
 
 def test_score_transcript_flags_provider_overclaim() -> None:
@@ -273,6 +307,19 @@ def test_score_transcript_does_not_double_count_specific_origin_remote_phrase() 
     assert [item["phrase"] for item in leakage["examples"]] == ["No GitHub origin remote"]
 
 
+def test_score_transcript_flags_clean_on_main_language() -> None:
+    transcript = "Clean on main. Continue with the next action."
+
+    score = release_simulation.score_transcript(transcript)
+    leakage = score["operator_language"]["visible_technical_leakage"]
+
+    assert leakage["severity"] == "low"
+    assert [item["phrase"] for item in leakage["examples"]] == ["clean on main"]
+    assert leakage["examples"][0]["preferred"] == (
+        "nothing unsaved locally in the current business folder"
+    )
+
+
 def test_score_transcript_allows_commit_as_plain_verb() -> None:
     transcript = """
     Keep raw ledgers in the private books vault and only commit summaries that
@@ -302,11 +349,19 @@ def test_score_transcript_flags_only_commit_count_language(transcript: str) -> N
     assert [item["phrase"] for item in leakage["examples"]] == ["only commit so far"]
 
 
-def test_score_transcript_flags_broad_checkpoint_notes() -> None:
-    transcript = """
+@pytest.mark.parametrize(
+    "message",
+    [
+        "[updated] core and research",
+        "[updated] core + research",
+        "[updated] core, research",
+    ],
+)
+def test_score_transcript_flags_broad_checkpoint_notes(message: str) -> None:
+    transcript = f"""
     Checkpoint plan ready.
 
-    Proposed message: `[updated] core and research`
+    Proposed message: `{message}`
     """
 
     score = release_simulation.score_transcript(transcript)
