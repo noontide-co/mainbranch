@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from mb import engine as engine_mod
 from mb import migration_lint
 
 
@@ -104,18 +105,35 @@ def test_migration_lint_does_not_flag_negated_reference_write_guidance(
 
 
 def test_migration_lint_reports_stale_claude_settings_engine_path(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch
 ) -> None:
     stale_engine = tmp_path / "mb-vip"
     _write(
         tmp_path / ".claude" / "settings.local.json",
         json.dumps({"permissions": {"additionalDirectories": [str(stale_engine)]}}),
     )
+    monkeypatch.setattr(
+        engine_mod,
+        "mb_install_diagnostics",
+        lambda: {
+            "active_path": "/tmp/current/mb",
+            "current_version": "0.3.22",
+            "multiple_installs": True,
+            "installs": [{"path": "/tmp/current/mb", "version": "0.3.22"}],
+        },
+    )
 
     report = migration_lint.run(tmp_path)
 
     codes = {finding["code"] for finding in report["findings"]}
     assert "stale-claude-settings-engine-path" in codes
+    finding = next(
+        item for item in report["findings"] if item["code"] == "stale-claude-settings-engine-path"
+    )
+    assert finding["current_mb_path"] == "/tmp/current/mb"
+    assert finding["current_mb_version"] == "0.3.22"
+    assert finding["wired_engine_paths"] == [str(stale_engine)]
+    assert "multiple `mb` installs" in finding["message"]
 
 
 def test_migration_lint_reuses_push_frontmatter_reads(tmp_path: Path, monkeypatch) -> None:

@@ -120,9 +120,18 @@ Check readiness from the business repo:
 mb connect doctor --json
 ```
 
+For a brand-new business repo, prefer `mb onboard` to create, save, push, and
+report the setup receipt in one flow:
+
+```bash
+mb onboard --yes --name "[Business Name]" --path "[repo-path]" --github "[owner/repo]" --github-visibility private --push
+```
+
 Creating a private GitHub repo is a setup/provider step, not a substitute for
 checkpointing approved business changes. Prefer private visibility unless the
-repo is intentionally public:
+repo is intentionally public. If an older installed `mb` does not expose the
+GitHub onboarding option yet, use the raw GitHub CLI fallback only after
+approval:
 
 ```bash
 gh repo create [business-name] --private --source=. --push

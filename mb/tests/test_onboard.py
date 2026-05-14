@@ -61,6 +61,11 @@ def test_onboard_yes_creates_repo_and_reports_next_steps(tmp_path: Path, monkeyp
     assert (repo / ".git" / "hooks" / "commit-msg").exists()
     assert result["checkpoint_hook"]["state"] == "installed"
     assert result["skill_wiring"]["ok"] is True
+    assert result["setup_complete"]["scaffolded"] is True
+    assert result["setup_complete"]["initialized_on_main"] is True
+    assert result["setup_complete"]["checkpoint_hook_ready"] is True
+    assert result["setup_complete"]["claude_code_handoff_ready"] is True
+    assert result["setup_complete"]["codex_instructions_present"] is True
     assert result["next_steps"] == [f"cd {repo.resolve()}", "claude", "/mb-start"]
     assert any("Claude Code" in warning for warning in result["warnings"])
     assert any(
@@ -165,6 +170,8 @@ def test_onboard_cli_yes_json_smoke(tmp_path: Path, monkeypatch) -> None:
     assert payload["ok"] is True
     assert payload["path"] == str(repo.resolve())
     assert payload["next_steps"][-1] == "/mb-start"
+    assert payload["setup_complete"]["scaffolded"] is True
+    assert payload["setup_complete"]["github_requested"] is False
     assert (repo / ".mb" / "onboarding.json").exists()
     assert payload["onboarding"]["summary"]["status"] == "in_progress"
     assert ".mb/onboarding.json" in (repo / ".gitignore").read_text(encoding="utf-8")
@@ -359,5 +366,78 @@ def test_onboard_cli_interactive_path_renders_clear_labels(tmp_path: Path, monke
     assert "level / action: beginner / created" in result.stdout
     assert "path: beginner / created" not in result.stdout
     assert "Connected accounts" in result.stdout
+    assert "Outcome" in result.stdout
     assert "CLAUDE.md -> Connected accounts" in result.stdout
     assert "Show the short why" not in result.stdout
+
+
+def test_onboard_github_create_push_commits_and_sets_tracking(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", lambda name: f"/usr/bin/{name}")
+    repo = tmp_path / "acme"
+    state = {"commit": False, "remote": "", "tracking": ""}
+    commands: list[list[str]] = []
+
+    def fake_run(
+        args: list[str], cwd: Path | None = None, timeout: float = 5.0
+    ) -> dict[str, object]:
+        commands.append(args)
+        if args[:2] == ["git", "init"]:
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
+            return {"ok": True, "stdout": "true\n", "stderr": "", "returncode": 0}
+        if args[:3] == ["git", "branch", "--show-current"]:
+            return {"ok": True, "stdout": "main\n", "stderr": "", "returncode": 0}
+        if args[:4] == ["git", "config", "--get", "remote.origin.url"]:
+            ok = bool(state["remote"])
+            return {"ok": ok, "stdout": state["remote"], "stderr": "", "returncode": 0 if ok else 1}
+        if args[:5] == ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]:
+            ok = bool(state["tracking"])
+            return {
+                "ok": ok,
+                "stdout": state["tracking"],
+                "stderr": "",
+                "returncode": 0 if ok else 1,
+            }
+        if args[:3] == ["git", "rev-parse", "--verify"]:
+            return {
+                "ok": state["commit"],
+                "stdout": "abc123\n" if state["commit"] else "",
+                "stderr": "",
+                "returncode": 0 if state["commit"] else 1,
+            }
+        if args[:2] == ["git", "status"]:
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:2] == ["git", "add"]:
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:2] == ["git", "commit"]:
+            state["commit"] = True
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:3] == ["gh", "auth", "status"]:
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:3] == ["gh", "repo", "create"]:
+            state["remote"] = "https://github.com/dmthepm/acme.git\n"
+            state["tracking"] = "origin/main\n"
+            return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        raise AssertionError(args)
+
+    monkeypatch.setattr(onboard_mod, "_run_command", fake_run)
+
+    result = onboard_mod.run(
+        path=str(repo),
+        name="Acme",
+        mode="new",
+        level="power",
+        github_repo="dmthepm/acme",
+        github_visibility="private",
+        github_push=True,
+    )
+
+    assert result["ok"] is True
+    assert result["github"]["ok"] is True
+    assert result["github"]["committed"] is True
+    assert result["github"]["pushed"] is True
+    assert result["setup_complete"]["github_requested"] is True
+    assert result["setup_complete"]["github_remote_connected"] is True
+    assert result["setup_complete"]["pushed_tracking_remote"] is True
+    assert "created, saved, synced to GitHub" in result["setup_complete"]["owner_outcome"]
+    assert any(cmd[:3] == ["gh", "repo", "create"] and "--private" in cmd for cmd in commands)

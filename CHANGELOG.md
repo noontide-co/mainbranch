@@ -11,6 +11,22 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added a first-run setup completion envelope and optional `mb onboard --github
+  ... --push` path so fresh business repos can be scaffolded, saved, connected
+  to a private/public GitHub repo, pushed, and reported in owner-facing
+  language. Fresh business repos now include a small tracked `README.md`.
+  Refs MAIN-378, #606.
+
+### Changed
+
+- Improved stale Claude wiring diagnostics to show the current `mb` path and
+  version, stale wired engine path, multiple-install signal, and repair command.
+  GitHub readiness now treats successful `gh repo view owner/repo` reachability
+  as stronger evidence than stale `gh auth status` metadata. Refs MAIN-378,
+  #606.
+
 ## [0.3.22] - 2026-05-14
 
 v0.3.22 packages the first fixture-safe OpenAI GPT Image 2 smoke rail, the

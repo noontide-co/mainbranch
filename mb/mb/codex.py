@@ -62,6 +62,11 @@ playbooks, outcomes, decisions, next actions, and saved checkpoints. Treat git,
 branches, pull requests, provider refs, and local wiring as the hidden memory
 layer unless the operator asks for the plumbing.
 
+When finishing first-run setup, lead with the owner outcome before the receipt:
+created, saved, synced to GitHub when requested, and ready to open in Claude
+Code. Put commands, remotes, branches, validation checks, and local wiring in a
+short technical receipt after that outcome.
+
 Use the `vocabulary` block from `mb status --json --peek` when present. If
 `core/vocabulary.md` says this business calls pushes drops, launches,
 challenges, or promos, use that word in operator-facing prose while preserving

@@ -2946,6 +2946,22 @@ def _runtime(repo: Path) -> dict[str, Any]:
     claude_path = _which("claude")
     wiring = link_status(repo)
     codex = codex_mod.readiness(repo)
+    wiring_repair = "Run `mb skill repair --repo .`, then `mb skill link --repo .`."
+    wiring_summary = "Claude Code skill wiring is ready."
+    if not wiring["ok"]:
+        if wiring.get("stale_engine_paths"):
+            current = wiring.get("current_mb") or {}
+            wired = str(wiring.get("wired_engine_path") or wiring["stale_engine_paths"][0])
+            wiring_summary = (
+                "Claude Code wiring points at a different Main Branch engine. "
+                f"Current mb: {current.get('path') or 'unknown'} "
+                f"{current.get('version') or ''}; wired engine: {wired}."
+            )
+            if wiring.get("stale_from_other_install"):
+                wiring_summary += " Multiple mb installs are active on PATH."
+            wiring_repair = "Run `mb skill link --repo .`."
+        else:
+            wiring_summary = "Claude Code skill wiring is missing or unhealthy."
     return {
         "claude_code": {
             "found": bool(claude_path),
@@ -2954,9 +2970,8 @@ def _runtime(repo: Path) -> dict[str, Any]:
         },
         "skill_wiring": {
             **wiring,
-            "repair": ""
-            if wiring["ok"]
-            else "Run `mb skill repair --repo .`, then `mb skill link --repo .`.",
+            "summary": wiring_summary,
+            "repair": "" if wiring["ok"] else wiring_repair,
         },
         "codex_cli": codex,
     }
@@ -3459,7 +3474,10 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
             {
                 "id": "broken_skill_wiring",
                 "severity": "error",
-                "summary": "Claude Code skill wiring is missing or unhealthy.",
+                "summary": str(
+                    skill_wiring.get("summary")
+                    or "Claude Code skill wiring is missing or unhealthy."
+                ),
                 "evidence": list(skill_wiring.get("missing") or [])[:5],
                 "repair": str(skill_wiring.get("repair") or "Run `mb skill link --repo .`."),
                 "safe_to_share": True,

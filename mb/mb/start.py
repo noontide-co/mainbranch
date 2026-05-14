@@ -137,6 +137,21 @@ def _build_checks(
     shadow_summary = wiring.get("shadow_report", {}).get("summary", {})
     active_shadows = int(shadow_summary.get("active_shadows", 0) or 0)
     legacy_globals = int(shadow_summary.get("legacy_globals", 0) or 0)
+    skill_detail = (
+        "mb-start skill discoverable"
+        if wiring["ok"]
+        else "Claude Code mb-start skill is not wired or is shadowed"
+    )
+    if wiring.get("stale_engine_paths"):
+        current = wiring.get("current_mb") or {}
+        wired = str(wiring.get("wired_engine_path") or wiring["stale_engine_paths"][0])
+        skill_detail = (
+            "Claude Code wiring points at a different Main Branch engine. "
+            f"Current mb: {current.get('path') or 'unknown'} "
+            f"{current.get('version') or ''}; wired engine: {wired}."
+        )
+        if wiring.get("stale_from_other_install"):
+            skill_detail += " Multiple mb installs are active on PATH."
     checks = [
         {
             "name": "mainbranch_repo",
@@ -182,9 +197,7 @@ def _build_checks(
             "name": "skill_wiring",
             "ok": bool(wiring["ok"]),
             "severity": "error",
-            "detail": "mb-start skill discoverable"
-            if wiring["ok"]
-            else "Claude Code mb-start skill is not wired or is shadowed",
+            "detail": skill_detail,
             "repair": (
                 "Run `mb skill repair --repo .`, then `mb skill link --repo .` "
                 "from the business repo."

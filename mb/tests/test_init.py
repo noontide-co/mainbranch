@@ -86,6 +86,8 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     assert "explicit operator approval" in text
     assert "business-owner language" in text
     assert "bets, goals, offers, pushes" in text
+    assert "created, saved, synced to GitHub when requested" in text
+    assert "short technical receipt" in text
     assert "`vocabulary` block from `mb status --json --peek`" in text
     assert "MoneyPath" in text
     assert "Use `money_path` when the next move depends on customer progress" in text
@@ -130,6 +132,7 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "terms:" in vocab
     assert "singular: push" in vocab
     assert (target / "CLAUDE.md").exists()
+    assert (target / "README.md").exists()
     assert (target / "AGENTS.md").exists()
     assert (target / ".github" / "CODEOWNERS").exists()
     assert (target / ".gitignore").exists()
@@ -163,8 +166,12 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert ".vip/local.yaml" in gitignore
     claude_md = (target / "CLAUDE.md").read_text()
     agents_md = (target / "AGENTS.md").read_text()
+    readme_md = (target / "README.md").read_text()
     assert "Acme Brewing" in claude_md
     assert "Acme Brewing" in agents_md
+    assert "Acme Brewing" in readme_md
+    assert "/mb-start" in readme_md
+    assert ".mb/onboarding.json" in readme_md
     assert "## Connected accounts" in claude_md
     assert "Stripe account IDs" in claude_md
     assert "Google Ads customer IDs" in claude_md

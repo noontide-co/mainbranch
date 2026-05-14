@@ -1108,6 +1108,47 @@ def test_github_context_distinguishes_missing_remote(monkeypatch, tmp_path: Path
     assert context["repair_command"] == "gh repo create --source . --remote origin --push"
 
 
+def test_github_context_trusts_repo_view_when_auth_status_is_stale(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        connect_mod.shutil,  # type: ignore[attr-defined]
+        "which",
+        lambda name: "/usr/bin/gh" if name == "gh" else "/usr/bin/git",
+    )
+
+    def fake_run(args: list[str], cwd: Path | None = None, timeout: float = 5.0) -> dict[str, Any]:
+        if args[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
+            return {"ok": True, "returncode": 0, "stdout": "true\n", "stderr": ""}
+        if args[:4] == ["git", "config", "--get", "remote.origin.url"]:
+            return {
+                "ok": True,
+                "returncode": 0,
+                "stdout": "https://github.com/dmthepm/acme.git\n",
+                "stderr": "",
+            }
+        if args[:3] == ["gh", "auth", "status"]:
+            return {"ok": False, "returncode": 1, "stdout": "", "stderr": "stale token"}
+        if args[:3] == ["gh", "repo", "view"]:
+            return {
+                "ok": True,
+                "returncode": 0,
+                "stdout": '{"nameWithOwner":"dmthepm/acme"}\n',
+                "stderr": "",
+            }
+        raise AssertionError(args)
+
+    monkeypatch.setattr(connect_mod, "_run_command", fake_run)
+
+    context = connect_mod.github_context(tmp_path)
+
+    assert context["ok"] is True
+    assert context["state"] == "ready_reachable"
+    assert context["repo"] == "dmthepm/acme"
+    assert context["auth_status_ok"] is False
+    assert context["repo_view_ok"] is True
+
+
 def test_status_all_reuses_supplied_github_context(monkeypatch, tmp_path: Path) -> None:
     context = {
         "ok": True,

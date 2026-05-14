@@ -1,0 +1,39 @@
+# {{BUSINESS_NAME}}
+
+This is the Main Branch business folder for {{BUSINESS_NAME}}.
+
+The durable business memory lives here: offer, audience, voice, proof,
+decisions, bets, pushes, logs, research, and approved summaries. Claude Code
+reads this folder before advising, so work starts from the business context
+instead of a blank chat.
+
+## Start
+
+Open a terminal in this folder:
+
+```bash
+claude
+```
+
+Then run:
+
+```text
+/mb-start
+```
+
+For a terminal-only check:
+
+```bash
+mb status --json --peek
+mb start --json
+```
+
+## Safety
+
+Commit business-readable files. Do not commit API keys, OAuth tokens,
+service-account JSON, customer exports, raw finance/legal records, or local
+runtime settings.
+
+Local setup files such as `.claude/settings.local.json`, `.mb/onboarding.json`,
+`.mb/connect.yaml`, and `.mb/private/` stay on this machine and are ignored by
+git.

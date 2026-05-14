@@ -381,6 +381,18 @@ def _normalized_remote(value: str) -> str:
     return remote.removesuffix(".git")
 
 
+def _github_repo_full_name(remote: str) -> str:
+    normalized = _normalized_remote(remote)
+    parsed = urllib.parse.urlparse(normalized)
+    if parsed.hostname != "github.com":
+        return ""
+    path = parsed.path.strip("/")
+    if path.count("/") < 1:
+        return ""
+    owner, repo_name, *_ = path.split("/")
+    return f"{owner}/{repo_name.removesuffix('.git')}" if owner and repo_name else ""
+
+
 def _repo_identity(repo: Path) -> dict[str, str]:
     remote = _git_output(repo, ["config", "--get", "remote.origin.url"])
     if remote:
@@ -1681,17 +1693,6 @@ def github_context(
             "safe_to_share": True,
         }
 
-    auth = run(["gh", "auth", "status"], target, 5.0)
-    if not auth["ok"]:
-        return {
-            "ok": False,
-            "state": "unauthenticated",
-            "summary": "GitHub CLI is installed but not authenticated.",
-            "repair": "Run `gh auth login`.",
-            "repair_command": "gh auth login",
-            "safe_to_share": True,
-        }
-
     git = run(["git", "rev-parse", "--is-inside-work-tree"], target, 3.0)
     if not git["ok"] or git["stdout"].strip() != "true":
         return {
@@ -1715,12 +1716,47 @@ def github_context(
             "safe_to_share": True,
         }
 
+    auth = run(["gh", "auth", "status"], target, 5.0)
+    if not auth["ok"]:
+        full_name = _github_repo_full_name(remote_value)
+        reachable = (
+            run(["gh", "repo", "view", full_name, "--json", "nameWithOwner"], target, 5.0)
+            if full_name
+            else {"ok": False, "stdout": "", "stderr": ""}
+        )
+        if reachable["ok"]:
+            return {
+                "ok": True,
+                "state": "ready_reachable",
+                "summary": (
+                    "GitHub repo is reachable even though `gh auth status` reports stale "
+                    "auth metadata."
+                ),
+                "repair": "",
+                "repair_command": "",
+                "repo": full_name,
+                "auth_status_ok": False,
+                "repo_view_ok": True,
+                "safe_to_share": True,
+            }
+        return {
+            "ok": False,
+            "state": "unauthenticated",
+            "summary": "GitHub CLI is installed but not authenticated.",
+            "repair": "Run `gh auth login`.",
+            "repair_command": "gh auth login",
+            "safe_to_share": True,
+        }
+
     return {
         "ok": True,
         "state": "ready",
         "summary": "GitHub CLI auth and repo remote are ready.",
         "repair": "",
         "repair_command": "",
+        "repo": _github_repo_full_name(remote_value),
+        "auth_status_ok": True,
+        "repo_view_ok": False,
         "safe_to_share": True,
     }
 
