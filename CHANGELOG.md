@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.23] - 2026-05-14
+
+v0.3.23 packages the owner-ready first-run GitHub setup path and
+user-scoped provider hydration for disposable workspaces. Together they make a
+fresh business repo easier to set up, save, sync, and rehydrate from agent
+workspaces without re-entering provider tokens.
+
 ### Added
 
 - Added a first-run setup completion envelope and optional `mb onboard --github
