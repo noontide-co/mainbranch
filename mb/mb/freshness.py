@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ MINIMUM_SUPPORTED_VERSION = "0.2.0"
 # `mb update` first shipped in the same release as the current support floor.
 MB_UPDATE_AVAILABLE_VERSION = "0.2.0"
 PYPI_PACKAGE_URL = "https://pypi.org/pypi/mainbranch/json"
+GITHUB_RELEASE_URL_TEMPLATE = "https://github.com/noontide-co/mainbranch/releases/tag/oe-v{version}"
 _LATEST_AUTO = object()
 
 
@@ -39,6 +41,11 @@ def latest_pypi_version(timeout: float = 3.0) -> str | None:
     info = data.get("info", {})
     version = info.get("version") if isinstance(info, dict) else None
     return version if isinstance(version, str) and version else None
+
+
+def release_notes_url(version: str) -> str:
+    version = version.strip()
+    return GITHUB_RELEASE_URL_TEMPLATE.format(version=version) if version else ""
 
 
 def looks_like_business_repo(repo: Path) -> bool:
@@ -70,6 +77,12 @@ def package_update_status(
         if latest_version is _LATEST_AUTO and mode not in {"clone", "source"}
         else latest_version
     )
+    checked_at = (
+        datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    )
+    latest_source = "not_applicable" if mode in {"clone", "source"} else "provided"
+    if latest_version is _LATEST_AUTO and mode not in {"clone", "source"}:
+        latest_source = "pypi_json" if latest else "unavailable"
     if latest is _LATEST_AUTO:
         latest = None
     latest_text = latest if isinstance(latest, str) else ""
@@ -107,8 +120,14 @@ def package_update_status(
         "minimum_supported": minimum_supported,
         "severity": severity,
         "command": command,
+        "update_check_command": "mb update --check --json"
+        if mode not in {"clone", "source"}
+        else "",
         "post_update_commands": _post_update_commands(repo),
         "reason": reason,
+        "latest_source": latest_source,
+        "checked_at": checked_at,
+        "release_notes_url": release_notes_url(latest_text) if latest_text else "",
     }
 
 

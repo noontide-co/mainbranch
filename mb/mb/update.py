@@ -6,15 +6,23 @@ import json
 import re
 import shutil
 import subprocess
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
 
 from mb import __version__
 from mb.engine import bundled_skills, engine_root, install_mode
-from mb.freshness import latest_pypi_version as _latest_pypi_version
+from mb.freshness import (
+    latest_pypi_version as _latest_pypi_version,
+)
+from mb.freshness import release_notes_url, version_key
 
 VERSION_RE = re.compile(r'__version__\s*=\s*["\']([^"\']+)["\']')
 CLONE_UPDATE_COMMAND = ["git", "pull", "--ff-only", "origin", "main"]
+GITHUB_RELEASE_API_URL_TEMPLATE = (
+    "https://api.github.com/repos/noontide-co/mainbranch/releases/tags/oe-v{version}"
+)
 
 
 def _run_command(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -88,6 +96,58 @@ def _skill_count_from_link_result(result: dict[str, Any]) -> int:
     return total
 
 
+def _release_summary(body: str) -> str:
+    lines: list[str] = []
+    for raw_line in body.splitlines():
+        line = raw_line.strip()
+        if not line:
+            if lines:
+                break
+            continue
+        if line.startswith("#"):
+            continue
+        lines.append(line)
+    return " ".join(lines)
+
+
+def _release_context(version: str, *, timeout: float = 3.0) -> dict[str, Any]:
+    version = version.strip()
+    context: dict[str, Any] = {
+        "version": version,
+        "tag": f"oe-v{version}" if version else "",
+        "url": release_notes_url(version),
+        "name": "",
+        "published_at": "",
+        "summary": "",
+        "available": False,
+        "source": "github_release",
+    }
+    if not version:
+        return context
+    url = GITHUB_RELEASE_API_URL_TEMPLATE.format(version=version)
+    try:
+        request = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json"})
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except (OSError, TimeoutError, urllib.error.URLError, json.JSONDecodeError):
+        context["source"] = "github_release_unavailable"
+        return context
+    if not isinstance(data, dict):
+        context["source"] = "github_release_unavailable"
+        return context
+    body = str(data.get("body") or "")
+    context.update(
+        {
+            "url": str(data.get("html_url") or context["url"]),
+            "name": str(data.get("name") or ""),
+            "published_at": str(data.get("published_at") or ""),
+            "summary": _release_summary(body),
+            "available": True,
+        }
+    )
+    return context
+
+
 def _link_warnings(payload: dict[str, Any]) -> list[str]:
     skipped = _list_field(payload, "skipped")
     if not skipped:
@@ -130,6 +190,8 @@ def _base_result(repo: Path, *, check: bool, mode: str, root: Path | None) -> di
         "old_version": _engine_version(root),
         "new_version": None,
         "skills_relinked_count": 0,
+        "planned_skills_relink_count": 0,
+        "release": {},
         "actions": [],
         "warnings": [],
         "errors": [],
@@ -180,7 +242,24 @@ def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
                     f"would run `mb skill link --repo {target_repo} --json`",
                 ]
             )
-        result["skills_relinked_count"] = len(bundled_skills())
+        planned_count = len(bundled_skills())
+        result["skills_relinked_count"] = planned_count
+        result["planned_skills_relink_count"] = planned_count
+        new_version = str(result.get("new_version") or "")
+        old_version = str(result.get("old_version") or "")
+        if new_version and version_key(new_version) > version_key(old_version):
+            result["release"] = _release_context(new_version)
+        elif new_version:
+            result["release"] = {
+                "version": new_version,
+                "tag": f"oe-v{new_version}",
+                "url": release_notes_url(new_version),
+                "name": "",
+                "published_at": "",
+                "summary": "",
+                "available": False,
+                "source": "not_newer",
+            }
         return result
 
     if mode == "pipx":
@@ -232,6 +311,14 @@ def render_human(result: dict[str, Any]) -> None:
     if result.get("check"):
         print(f"install mode: {mode}")
         print(f"version: {old} -> {new}")
+        raw_release = result.get("release")
+        release = raw_release if isinstance(raw_release, dict) else {}
+        release_url = str(release.get("url") or "")
+        release_summary = str(release.get("summary") or "")
+        if release_url:
+            print(f"release notes: {release_url}")
+        if release_summary:
+            print(f"release summary: {release_summary}")
         for action in result.get("actions", []):
             print(action)
         if count:

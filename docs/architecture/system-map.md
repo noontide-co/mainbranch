@@ -199,7 +199,7 @@ flowchart TB
 
 | Surface | Owns | Does not own | Source |
 | --- | --- | --- | --- |
-| `mb` CLI | Deterministic facts, repo shape, validation, migration, status, graph, provider readiness, updates, skill wiring, checkpoint planning. | Judgment-heavy writing, model conversations, broad provider products, secret storage. | [Ethos](../ethos.md), [README](../../README.md#for-contributors-and-power-users) |
+| `mb` CLI | Deterministic facts, repo shape, validation, migration, status, graph, provider readiness, credential routing, safe connection metadata, updates, skill wiring, checkpoint planning. | Judgment-heavy writing, model conversations, broad provider products, secret values. | [Ethos](../ethos.md), [README](../../README.md#for-contributors-and-power-users) |
 | Skills | Judgment, routing, synthesis, drafting, review, explanation, session flow. | Structural invariants that `mb` can check, raw provider mutation without approval, repo-health probes in prose. | [AGENTS](../../AGENTS.md#product-shape), [Operator loops](../operator-loops.md) |
 | Business repo | Durable business memory: core files, research, decisions, bets, pushes, logs, documents, safe data records, approved summaries. | Secrets, raw finance/legal/account data, rebuildable caches as source of truth. | [System architecture](../system-architecture.md), [OSS checklist](../oss-operating-checklist.md) |
 | Git and GitHub | History, issues, proposals, checks, releases, public coordination. | Private operational notes or customer/member/account details. | [Checks and review model](../checks-and-review-model.md), [Issue drafting](../issue-drafting.md) |
@@ -228,7 +228,7 @@ flowchart TB
 | Provider metrics | `data/<provider>/` records, SQLite, snapshots, and reports when the rows are safe for the repo audience. | `data/<provider>/source.md`, `linked_data_sources`, reports. |
 | Scheduled sync state | `.mb/private/sync/` and scheduler logs; ignored local state or hosted-runner logs. | `source.md` freshness and sanitized run summaries. |
 | Real bookkeeping | Private bookkeeping vault using hledger; separate private repo for teams when needed. | `core/finance/books.md`, sanitized finance summaries, bookkeeping policy. |
-| Credentials | OS keychain, environment, provider-native auth, GitHub Actions secrets. | `mb connect` safe metadata and readiness state. |
+| Credentials | OS keychain, environment, provider-native auth, GitHub Actions secrets. | `mb connect` safe metadata, user-scoped routing, and readiness state. |
 | Raw customer, member, legal, account, or transcript data | Provider systems, private repos, private vaults, or explicit local ignored storage. | Sanitized summaries, approved excerpts, or no pointer. |
 
 Sources: [Data-source registry](../data-source-registry.md),

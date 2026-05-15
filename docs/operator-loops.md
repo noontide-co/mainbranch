@@ -37,15 +37,15 @@ The normal Main Branch day is a compact Sense -> Decide -> Ship -> Reflect
 chain:
 
 - **Sense:** `/mb-start`, `/mb-status`, or `mb status --json --peek` reads
-  repo health, graph links, provider readiness, recent activity, update state,
-  GitHub task/proposal signals, and MoneyPath readiness for the path from
+  repo health, graph links, connected-account readiness, recent activity,
+  update state, GitHub task/proposal signals, and MoneyPath readiness for the path from
   customer progress to offer, proof, CTA, channel, push, playbook, page, and
   outcome feedback.
 - **Decide:** the agent and operator choose the next business move: a bet to
   frame, a piece of research to run, a decision to codify, a push to advance, a
   playbook to draft, or a repair to approve.
 - **Ship:** the skill creates or updates the artifact, while `mb` supplies
-  deterministic checks, repair commands, validation, provider readiness, and
+  deterministic checks, repair commands, validation, connected-account readiness, and
   checkpoint plans.
 - **Reflect:** `/mb-end`, bet close/narrate behavior, push review notes, or
   checkpoint guidance records what changed and what the next Sense pass should
@@ -55,8 +55,8 @@ The user-facing nouns are business nouns: bets, goals, offers, pushes,
 playbooks, outcomes, and checkpoints. The technical nouns underneath are still
 part of the architecture, but they serve the loop: issues are durable work
 threads, pull requests are proposals/reviews, commits are saved checkpoints,
-graph links are relationship memory, and provider refs are safe handles to
-external systems.
+graph links are relationship memory, and connected-account handles point to
+external systems without copying private account data into the repo.
 
 ## 1. Sense
 

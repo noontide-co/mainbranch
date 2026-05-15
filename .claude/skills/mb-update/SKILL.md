@@ -67,21 +67,27 @@ Do not continue as if the update worked.
 
 ## Step 3: Restart If Skill Links Changed
 
-If `skills_relinked_count` is greater than zero, tell the user:
+If `skills_relinked_count` is greater than zero after an actual update, tell
+the user:
 
 > "Skill links were refreshed. If a slash command does not appear in Claude
 > Code, restart Claude from this repo and run `/mb-start`."
 
 Claude Code loads slash commands at session start, so a restart can be required
-after repairing links.
+after repairing links. In `--check --json` output, treat
+`planned_skills_relink_count` as a dry-run preview, not proof that links already
+changed.
 
 ---
 
 ## Step 4: What Changed
 
-After a successful update, read `CHANGELOG.md` from the active Main Branch
-engine if available and summarize only the most recent "What this means for
-you" section. Keep it short: 3-5 bullets max.
+After a successful update, use `release.summary` and `release.url` from the
+JSON result when present. Keep it short: 3-5 bullets max, and include the
+release URL when the user asks what changed.
+
+If the JSON result has no release summary, read `CHANGELOG.md` from the active
+Main Branch engine if available and summarize only the matching version section.
 
 If no changelog is available, do not guess. Say:
 

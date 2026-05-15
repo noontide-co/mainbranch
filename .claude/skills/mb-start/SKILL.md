@@ -197,7 +197,7 @@ updates inside a general status wall.** Users on stale code get broken
 features, and normal operators will miss a one-line version note.
 
 If `update.severity` is `required` or the top ranked action is an update action,
-run the cited command. When status does not cite a narrower command, use:
+run the cited update command. When status does not cite one, use:
 
 ```bash
 mb update --repo . --json
@@ -205,10 +205,10 @@ mb update --repo . --json
 
 Then run `mb status --json --peek` again before routing.
 
-If `update.severity` is `recommended`, stop there. Do not show ranked actions
-or business recommendations yet; those may change after the update. Ask whether
-to update now, then rerun `mb status --json --peek` before routing. Use
-[references/router-and-language.md](references/router-and-language.md) for
+If `update.severity` is `recommended`, stop there. Use `update.release_notes_url`
+or `update.update_check_command` to answer what changed or run a fresh dry-run.
+Ask whether to update now, then rerun `mb status --json --peek` before routing.
+Use [references/router-and-language.md](references/router-and-language.md) for
 operator-facing wording and fallback details.
 
 ---

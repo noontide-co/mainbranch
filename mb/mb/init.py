@@ -277,13 +277,13 @@ wiring, tell the operator to restart Claude Code from this repo and try
 
 If `mb status --json --peek` reports `update.severity` as `recommended` or
 `required`, make that the only recommendation before business routing. Name the
-installed/latest versions when present. For recommended updates, say the update
-brings recent routing, repair, and skill improvements when release highlights
-are unavailable, then ask whether to update now. Do not show ranked actions
-until after the operator updates or explicitly chooses to continue. For required
-updates, route to the cited
-`mb update` command before business work. After an approved update, rerun the
-status briefing.
+installed/latest versions when present. Use `update.release_notes_url` or
+`update.update_check_command` when present to answer what changed. If release
+context is unavailable, say the update brings recent routing, repair, and skill
+improvements, then ask whether to update now. Do not show ranked actions until
+after the operator updates or explicitly chooses to continue. For required
+updates, route to the cited `mb update` command before business work. After an
+approved update, rerun the status briefing.
 
 Do the technical work in technical commands, then translate the result back into
 business-owner language. Speak first in terms of bets, goals, offers, pushes,

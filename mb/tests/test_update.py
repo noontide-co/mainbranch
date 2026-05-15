@@ -40,7 +40,21 @@ def test_update_check_pipx_does_not_run_commands(monkeypatch: Any, tmp_path: Pat
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
-    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "0.2.0")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
+    monkeypatch.setattr(
+        update_mod,
+        "_release_context",
+        lambda version: {
+            "version": version,
+            "tag": f"oe-v{version}",
+            "url": f"https://github.com/noontide-co/mainbranch/releases/tag/oe-v{version}",
+            "name": f"Main Branch {version}",
+            "published_at": "2026-05-15T00:00:00Z",
+            "summary": "Test release summary.",
+            "available": True,
+            "source": "github_release",
+        },
+    )
     monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start", "mb-update"])
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
 
@@ -48,8 +62,11 @@ def test_update_check_pipx_does_not_run_commands(monkeypatch: Any, tmp_path: Pat
 
     assert result["ok"] is True
     assert result["old_version"] == __version__
-    assert result["new_version"] == "0.2.0"
+    assert result["new_version"] == "9.9.9"
     assert result["skills_relinked_count"] == 2
+    assert result["planned_skills_relink_count"] == 2
+    assert result["release"]["url"].endswith("/oe-v9.9.9")
+    assert result["release"]["summary"] == "Test release summary."
     assert calls == []
 
 
@@ -195,7 +212,21 @@ def test_update_clone_pulls_engine_root_then_relinks(monkeypatch: Any, tmp_path:
 def test_update_json_cli_envelope(monkeypatch: Any, tmp_path: Path) -> None:
     monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
-    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "0.2.0")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
+    monkeypatch.setattr(
+        update_mod,
+        "_release_context",
+        lambda version: {
+            "version": version,
+            "tag": f"oe-v{version}",
+            "url": f"https://github.com/noontide-co/mainbranch/releases/tag/oe-v{version}",
+            "name": "",
+            "published_at": "",
+            "summary": "Release notes from GitHub.",
+            "available": True,
+            "source": "github_release",
+        },
+    )
     monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start"])
 
     result = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--check", "--json"])
@@ -204,9 +235,28 @@ def test_update_json_cli_envelope(monkeypatch: Any, tmp_path: Path) -> None:
     payload = json.loads(result.stdout)
     assert payload["mode"] == "pipx"
     assert payload["old_version"] == __version__
-    assert payload["new_version"] == "0.2.0"
+    assert payload["new_version"] == "9.9.9"
     assert payload["skills_relinked_count"] == 1
+    assert payload["planned_skills_relink_count"] == 1
+    assert payload["release"]["summary"] == "Release notes from GitHub."
+    assert payload["release"]["url"].endswith("/oe-v9.9.9")
     assert payload["errors"] == []
+
+
+def test_update_check_current_release_still_exposes_notes_url(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: __version__)
+    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start"])
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    assert result["ok"] is True
+    assert result["new_version"] == __version__
+    assert result["release"]["source"] == "not_newer"
+    assert result["release"]["url"].endswith(f"/oe-v{__version__}")
 
 
 def test_update_rejects_unknown_install_mode(monkeypatch: Any, tmp_path: Path) -> None:
@@ -310,6 +360,10 @@ def test_update_render_human_check_and_error(capsys: Any) -> None:
             "old_version": "0.1.2",
             "new_version": "0.2.0",
             "skills_relinked_count": 3,
+            "release": {
+                "url": "https://github.com/noontide-co/mainbranch/releases/tag/oe-v0.2.0",
+                "summary": "Release context.",
+            },
             "actions": ["would run `git pull`"],
             "errors": ["boom"],
             "warnings": ["careful"],
@@ -320,6 +374,10 @@ def test_update_render_human_check_and_error(capsys: Any) -> None:
 
     assert "install mode: clone" in output
     assert "version: 0.1.2 -> 0.2.0" in output
+    assert (
+        "release notes: https://github.com/noontide-co/mainbranch/releases/tag/oe-v0.2.0" in output
+    )
+    assert "release summary: Release context." in output
     assert "would refresh 3 skill link(s)" in output
     assert "error: boom" in output
     assert "warning: careful" in output

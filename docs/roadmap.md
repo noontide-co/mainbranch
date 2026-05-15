@@ -2,13 +2,16 @@
 
 This roadmap is direction, not a promise. GitHub issues and release notes are
 the detailed execution record. This file explains the product shape so users,
-contributors, and agents understand where Main Branch is going.
+contributors, and agents understand where Main Branch is going. The current
+direction anchor is
+[Repo-owned operating memory](../decisions/2026-05-15-repo-owned-operating-memory.md).
 
 Main Branch is not only a marketing-growth context folder. Growth is the first
 high-value wedge because ads, pages, content, and launches expose the memory
 problem quickly. The broader product is durable operating memory for
 AI-assisted businesses: meetings, fulfillment, bookkeeping summaries, provider
-refs, decisions, bets, pushes, logs, and lessons in repos the team owns.
+safe account refs, decisions, bets, pushes, logs, and lessons in repos the team
+owns.
 
 ## Shipped Foundation
 
@@ -86,10 +89,11 @@ In one pass, the loop is:
 3. **Use the right layer.** Claude Code skills are the chat UX and judgment
    layer. `mb` is the fact and safety layer: repo shape, graph links, status
    health, MoneyPath, proof quality, content strategy health, books readiness,
-   provider readiness, updates, repairs, validation, and guarded commits.
+   connected-account readiness, updates, repairs, validation, and guarded commits.
 4. **Hide the plumbing, preserve the memory.** Issues, branches, pull requests,
-   commits, graph links, and provider refs exist so the business can inspect
-   what happened later. The user-facing language should stay business-readable.
+   commits, graph links, and connected-account handles exist so the business
+   can inspect what happened later. The user-facing language should stay
+   business-readable.
 5. **Keep approval explicit.** Writing durable files, publishing, spending,
    provider mutation, and customer contact should stay operator-approved.
 6. **Close the loop.** `/mb-end` and checkpoint guidance turn the session into
@@ -99,7 +103,7 @@ The work clusters into a few durable buckets:
 
 - **Start and status.** `/mb-start`, `/mb-status`, and `mb status` should read
   the same facts: since-last-check changes, ranked next actions, drift,
-  onboarding progress, update severity, provider readiness, GitHub
+  onboarding progress, update severity, connected-account readiness, GitHub
   tasks/proposals, MoneyPath readiness, proof quality, content strategy health,
   books readiness, and recent business activity.
 - **Repair and migration.** `mb doctor`, `mb doctor repair`, `mb update`, and
@@ -135,7 +139,7 @@ Current public implementation anchors are GitHub issues, not promises in this
 roadmap. Check live issues before using any anchor as current scope. For this
 phase, the durable topic cluster is generated repo guidance, migration lint,
 topology/status/graph facts, child repo descriptors, reusable playbooks,
-runtime dogfood, provider readiness, and issue/friction capture. Link specific
+runtime dogfood, connected-account readiness, and issue/friction capture. Link specific
 issue numbers only after verifying their state on GitHub.
 
 Anti-scope for v0.3.x:

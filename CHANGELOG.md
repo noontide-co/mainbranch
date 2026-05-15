@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Added release-note context and freshness evidence to update checks:
+  `mb status --json --peek` now names the fresh check command, latest-version
+  source, check timestamp, and release notes URL, while `mb update --check`
+  reports GitHub Release metadata in JSON and human output when available.
+  Refs MAIN-384, #616.
+
 ## [0.3.23] - 2026-05-14
 
 v0.3.23 packages the owner-ready first-run GitHub setup path and

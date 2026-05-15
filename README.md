@@ -119,12 +119,12 @@ You don't run any of these commands yourself. You ask the agent. It runs them.
 Main Branch v0.3 has three layers:
 
 - **Your folder is the source of truth.** Offer, audience, voice, decisions, research, bets, launches, logs, documents, links to other repos. Plain markdown files you can read on any computer.
-- **The CLI is the fact and safety layer.** It scaffolds the folder, validates the shape, draws the relationship graph, briefs the agent on what's changed, walks through repairs, saves readable checkpoints, and checks that connected providers are wired up safely. It also exposes shipped facts for MoneyPath readiness, proof quality, content strategy health, books readiness, provider readiness, status, start, graph, and checkpoint workflows. The agent runs it. You don't have to learn it.
+- **The CLI is the fact and safety layer.** It scaffolds the folder, validates the shape, maps how the business pieces connect, briefs the agent on what's changed, walks through repairs, saves readable checkpoints, and checks that connected accounts are wired up safely. It also exposes shipped facts for MoneyPath readiness, proof quality, content strategy health, books readiness, connected-account health, status, start, graph, and checkpoint workflows. The agent runs it. You don't have to learn it.
 - **The skills are the chat UX and judgment layer.** The agent reads your folder and `mb` facts, asks you the right questions, drafts work, reviews it, and routes approved artifacts back into files.
 
 Agent recommends. You decide what gets shipped, spent, published, or saved.
 
-The longer-arc operating-system model — where multiple business repos, GitHub teams, structured data, and runtime adapters compose into a full team operating system — is direction, not the v0.3 shape. See [`decisions/2026-05-02-github-native-business-os.md`](decisions/2026-05-02-github-native-business-os.md).
+The longer-arc operating-memory model — where multiple business repos, GitHub teams, structured data, and runtime adapters compose into a full team operating system — is direction, not the v0.3 shape. See [`decisions/2026-05-15-repo-owned-operating-memory.md`](decisions/2026-05-15-repo-owned-operating-memory.md).
 
 ---
 
