@@ -96,14 +96,15 @@ CLAUDE_PRINT_PROMPT_PREFIX = """Release simulation harness constraints:
   tool-result paths to transform command output.
 - In the final answer, translate status for a normal business owner before any
   technical detail: say "nothing unsaved locally" before "git is clean" or
-  "working tree clean"; "current business folder" before "branch main";
-  "no connected GitHub backup or shared task source" before "No GitHub origin
-  remote"; "connected GitHub backup or shared task source" before "origin
-  remote"; "saved checkpoint" before "commit"; "task" before "issue"; and
-  "proposal" before "PR".
+  "working tree clean" / "working tree: clean"; "current business folder"
+  before "branch main" / "branch: main"; "no connected GitHub backup or shared
+  task source" before "No GitHub origin remote" / "No origin remote";
+  "connected GitHub backup or shared task source" before "origin remote";
+  "saved checkpoint" before "commit"; "task" before "issue"; and "proposal"
+  before "PR".
 - Checkpoint examples must name the saved business artifact, such as
   `[updated] offer and founder-call research`, not broad buckets like
-  `[updated] core and research`.
+  `[updated] core and research`, `[drafted] files`, or `[ran] changes`.
 - Do not call AskUserQuestion in print mode. Put any question for the operator
   in the final answer.
 """

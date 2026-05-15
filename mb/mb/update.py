@@ -315,9 +315,12 @@ def render_human(result: dict[str, Any]) -> None:
         release = raw_release if isinstance(raw_release, dict) else {}
         release_url = str(release.get("url") or "")
         release_summary = str(release.get("summary") or "")
-        if release_url:
+        release_available = release.get("available") is True
+        if release_url and release_available:
             print(f"release notes: {release_url}")
-        if release_summary:
+        elif release_url and release.get("source") != "not_newer":
+            print(f"expected release notes URL: {release_url}")
+        if release_summary and release_available:
             print(f"release summary: {release_summary}")
         for action in result.get("actions", []):
             print(action)

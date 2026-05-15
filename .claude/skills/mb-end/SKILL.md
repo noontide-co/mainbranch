@@ -199,7 +199,7 @@ Before spawning the agent, read and collect:
 
 | Content | How | Always/Conditional |
 |---------|-----|-------------------|
-| Today's git summary | From Step 2 output | Always |
+| Today's saved-work summary | From Step 2 output | Always |
 | Today's decision files (full text) | Read each file detected in 5a | Always |
 | Today's research files (full text) | Read each file detected in 5a | Always |
 | Core file diffs | `git diff HEAD@{6am}..HEAD -- core/` | If core changed |

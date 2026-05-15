@@ -278,7 +278,7 @@ def _contains_overclaim(text: str) -> bool:
 
 _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
     (
-        re.compile(r"\bclean on\s+`?main`?\b", re.IGNORECASE),
+        re.compile(r"\bclean\s+(?:on|branch)\s+`?main`?\b", re.IGNORECASE),
         "clean on main",
         "nothing unsaved locally in the current business folder",
     ),
@@ -293,12 +293,15 @@ _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
         "your business folder has no unsaved changes",
     ),
     (
-        re.compile(r"\bworking tree (?:is )?clean\b", re.IGNORECASE),
+        re.compile(
+            r"\bworking tree\s*(?:(?:is|status)\s*)?(?::|=|-)?\s*clean\b",
+            re.IGNORECASE,
+        ),
         "working tree clean",
         "no unsaved file changes",
     ),
     (
-        re.compile(r"\bbranch\s+`?main`?\b", re.IGNORECASE),
+        re.compile(r"\b(?:current\s+)?branch\s*(?::|=|-)?\s*`?main`?\b", re.IGNORECASE),
         "branch main",
         "current business folder",
     ),
@@ -329,7 +332,7 @@ _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
         "files queued for save",
     ),
     (
-        re.compile(r"\bno github origin remote\b", re.IGNORECASE),
+        re.compile(r"\bno (?:github )?origin remote\b", re.IGNORECASE),
         "No GitHub origin remote",
         "no connected GitHub backup or shared task source",
     ),
@@ -339,7 +342,7 @@ _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
         "GitHub connection",
     ),
     (
-        re.compile(r"\bpr/issue facts\b", re.IGNORECASE),
+        re.compile(r"\bpr\s*(?:/|and)\s*issue facts\b", re.IGNORECASE),
         "PR/issue facts",
         "GitHub task and proposal context",
     ),
@@ -352,14 +355,23 @@ _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
 
 _BROAD_CHECKPOINT_NOTE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(
-        r"\[(?:added|updated|changed)\]\s+"
+        r"\[(?:added|updated|changed|drafted|ran|fixed)\]\s+"
         r"(?:core\s*(?:and|&|\+|,)\s*research|files|stuff|changes)\b"
     ),
     re.compile(
-        r"proposed message:\s*`?\[(?:added|updated|changed)\]\s+"
-        r"core\s*(?:and|&|\+|,)\s*research`?"
+        r"proposed (?:checkpoint )?message:\s*`?"
+        r"\[(?:added|updated|changed|drafted|ran|fixed)\]\s+"
+        r"(?:core\s*(?:and|&|\+|,)\s*research|files|stuff|changes)`?"
     ),
 )
+
+_POSITIVE_REMOTE_TRANSLATIONS = {
+    "github connection",
+    "connected github backup",
+    "connected github backup or shared task source",
+    "connected shared task source",
+    "shared task source is connected",
+}
 
 
 def _strip_fenced_code(text: str) -> str:
@@ -378,6 +390,9 @@ def _visible_technical_leakage(text: str) -> list[dict[str, str]]:
             if match is None:
                 continue
             span = match.span()
+            if _owner_translation_precedes(stripped, match.start(), preferred):
+                matched_spans.append(span)
+                continue
             if any(_spans_overlap(span, existing) for existing in matched_spans):
                 continue
             matched_spans.append(span)
@@ -389,6 +404,79 @@ def _visible_technical_leakage(text: str) -> list[dict[str, str]]:
                 }
             )
     return examples
+
+
+def _owner_translation_precedes(line: str, end: int, preferred: str) -> bool:
+    earlier = line[:end].lower()
+    if not earlier.strip():
+        return False
+    normalized_preferred = preferred.lower()
+    if _translation_candidate_precedes(earlier, normalized_preferred):
+        return True
+    return any(
+        _translation_candidate_precedes(earlier, fragment)
+        for fragment in _translation_fragments(preferred)
+    )
+
+
+def _translation_candidate_precedes(earlier: str, candidate: str) -> bool:
+    if candidate not in _POSITIVE_REMOTE_TRANSLATIONS:
+        return candidate in earlier
+    pattern = re.compile(rf"(?<!\bno\s)(?<!\bnot\s)(?<!\bwithout\s)\b{re.escape(candidate)}\b")
+    return pattern.search(earlier) is not None
+
+
+def _translation_fragments(preferred: str) -> tuple[str, ...]:
+    normalized = preferred.lower()
+    if "unsaved" in normalized:
+        return (
+            "nothing unsaved locally",
+            "no unsaved file changes",
+            "business folder has no unsaved changes",
+        )
+    if "current business folder" in normalized or "workspace" in normalized:
+        return ("current business folder", "current workspace")
+    if "checkpoint" in normalized:
+        return ("setup baseline saved", "last saved checkpoint", "one saved checkpoint")
+    if "queued for save" in normalized:
+        return ("files queued for save",)
+    if "no connected github backup" in normalized or "no shared task source" in normalized:
+        return (
+            "no connected github backup",
+            "no connected github backup or shared task source",
+            "no shared task source",
+            "local-only folder",
+            "local only folder",
+        )
+    if "github connection" in normalized:
+        return (
+            "github connection",
+            "connected github backup",
+            "connected github backup or shared task source",
+            "connected shared task source",
+            "shared task source is connected",
+        )
+    if "task and proposal" in normalized:
+        return ("github task and proposal context",)
+    if "shared outside" in normalized:
+        return ("shared outside your machine",)
+    return (
+        "nothing unsaved locally",
+        "no unsaved file changes",
+        "business folder has no unsaved changes",
+        "current business folder",
+        "current workspace",
+        "setup baseline saved",
+        "last saved checkpoint",
+        "one saved checkpoint",
+        "files queued for save",
+        "no connected github backup",
+        "no shared task source",
+        "github connection",
+        "connected github backup",
+        "github task and proposal context",
+        "shared outside your machine",
+    )
 
 
 def _spans_overlap(left: tuple[int, int], right: tuple[int, int]) -> bool:

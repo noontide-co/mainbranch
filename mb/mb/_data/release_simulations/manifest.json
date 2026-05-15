@@ -380,7 +380,7 @@
       "must_not": [
         "Report /mb-start as unknown without routing to repair evidence.",
         "Start writing durable business files before grounding.",
-        "Lead a normal owner answer with working tree clean, repo is clean, clean on main, branch main, origin remote, PR/issue facts, or Git is clean."
+        "Lead a normal owner answer with working tree clean, working tree: clean, repo is clean, clean on main, branch main, branch: main, origin remote, No origin remote, PR/issue facts, or Git is clean."
       ],
       "follow_up_routes": [
         {
@@ -836,7 +836,7 @@
       "must_not": [
         "Run raw git commit as the default path.",
         "Create a checkpoint without approval.",
-        "Use a vague checkpoint message example such as [updated] core and research."
+        "Use a vague checkpoint message example such as [updated] core and research, [drafted] files, or [ran] changes."
       ],
       "follow_up_routes": [
         {

@@ -363,6 +363,7 @@ def test_update_render_human_check_and_error(capsys: Any) -> None:
             "release": {
                 "url": "https://github.com/noontide-co/mainbranch/releases/tag/oe-v0.2.0",
                 "summary": "Release context.",
+                "available": True,
             },
             "actions": ["would run `git pull`"],
             "errors": ["boom"],
@@ -381,6 +382,61 @@ def test_update_render_human_check_and_error(capsys: Any) -> None:
     assert "would refresh 3 skill link(s)" in output
     assert "error: boom" in output
     assert "warning: careful" in output
+
+
+def test_update_render_human_check_labels_unavailable_release_url(capsys: Any) -> None:
+    update_mod.render_human(
+        {
+            "check": True,
+            "mode": "pipx",
+            "old_version": "0.1.2",
+            "new_version": "0.2.0",
+            "skills_relinked_count": 0,
+            "release": {
+                "url": "https://github.com/noontide-co/mainbranch/releases/tag/oe-v0.2.0",
+                "summary": "Fallback summary should not print.",
+                "available": False,
+                "source": "github_release_unavailable",
+            },
+            "actions": [],
+            "errors": [],
+            "warnings": [],
+        }
+    )
+
+    output = capsys.readouterr().out
+
+    assert "release notes:" not in output
+    assert (
+        "expected release notes URL: https://github.com/noontide-co/mainbranch/releases/tag/oe-v0.2.0"
+        in output
+    )
+    assert "Fallback summary should not print." not in output
+
+
+def test_update_render_human_check_skips_current_release_url(capsys: Any) -> None:
+    update_mod.render_human(
+        {
+            "check": True,
+            "mode": "pipx",
+            "old_version": "0.2.0",
+            "new_version": "0.2.0",
+            "skills_relinked_count": 0,
+            "release": {
+                "url": "https://github.com/noontide-co/mainbranch/releases/tag/oe-v0.2.0",
+                "available": False,
+                "source": "not_newer",
+            },
+            "actions": [],
+            "errors": [],
+            "warnings": [],
+        }
+    )
+
+    output = capsys.readouterr().out
+
+    assert "release notes:" not in output
+    assert "expected release notes URL:" not in output
 
 
 def test_update_render_human_success(capsys: Any) -> None:
