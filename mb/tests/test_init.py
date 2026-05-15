@@ -39,6 +39,14 @@ def _assert_claude_md_cli_first_contract(text: str) -> None:
     assert "business-owner language" in text
     assert "bets, goals, offers, pushes" in text
     assert "playbooks, outcomes" in text
+    assert "`working tree: clean`" in text
+    assert "nothing unsaved locally" in text
+    assert "`branch: main`" in text
+    assert "current business" in text
+    assert "`No origin remote`" in text
+    assert "no connected GitHub backup" in text
+    assert "`PR and issue facts`" in text
+    assert "GitHub task and proposal context" in text
     assert "Claude Desktop" not in text
     for unsupported_runtime in ("Codex", "Cursor", "OpenClaw", "Hermes"):
         assert unsupported_runtime not in text
@@ -86,6 +94,14 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     assert "explicit operator approval" in text
     assert "business-owner language" in text
     assert "bets, goals, offers, pushes" in text
+    assert "`working tree: clean`" in text
+    assert "nothing unsaved locally" in text
+    assert "`branch: main`" in text
+    assert "current business" in text
+    assert "`No origin remote`" in text
+    assert "no connected GitHub backup" in text
+    assert "`PR and issue facts`" in text
+    assert "GitHub task and proposal context" in text
     assert "created, saved, synced to GitHub when requested" in text
     assert "short technical receipt" in text
     assert "`vocabulary` block from `mb status --json --peek`" in text

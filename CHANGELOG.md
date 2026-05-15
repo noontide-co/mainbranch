@@ -24,7 +24,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Tightened release-simulation owner-language scoring and prompt guidance so
   punctuation variants like `working tree: clean`, `branch: main`, and vague
   checkpoint examples such as `[drafted] files` are caught unless the final
-  answer translates the matching business meaning first. Refs MAIN-377, #604.
+  answer translates the matching business meaning first. Generated business-repo
+  Claude/Codex guidance now carries the same default translations. Refs
+  MAIN-377, #604.
 
 ## [0.3.23] - 2026-05-14
 
