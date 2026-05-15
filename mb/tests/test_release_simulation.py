@@ -194,7 +194,8 @@ def test_claude_print_prompt_includes_owner_language_guardrails() -> None:
     assert "current business folder" in normalized_prompt
     assert "no connected GitHub backup or shared task source" in normalized_prompt
     assert "No GitHub origin remote" in normalized_prompt
-    assert '"connected GitHub backup or shared task source" before "origin' in normalized_prompt
+    assert '"connected GitHub backup or shared task source" instead of "origin' in normalized_prompt
+    assert "Technical detail:" in normalized_prompt
     assert "saved checkpoint" in normalized_prompt
     assert "[updated] offer and founder-call research" in normalized_prompt
 
@@ -283,6 +284,7 @@ def test_score_transcript_allows_business_translation_before_technical_detail() 
     already saved.
 
     Technical detail: `git status --short` returned clean on `main`.
+    - Exact command: `gh repo create --source . --remote origin --push`
     """
 
     score = release_simulation.score_transcript(transcript)
@@ -330,6 +332,10 @@ def test_score_transcript_requires_matching_business_translation_before_git_deta
         (
             "No connected GitHub backup yet (`origin remote`).",
             "origin remote",
+        ),
+        (
+            "Connected GitHub backup: none surfaced.",
+            "Connected GitHub backup: none surfaced",
         ),
     ],
 )

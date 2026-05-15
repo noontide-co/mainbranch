@@ -577,6 +577,48 @@ def _surface_phrase(surfaces: list[str]) -> str:
     return ", ".join(named[:-1]) + f", and {named[-1]}"
 
 
+def _slug_words(value: str) -> str:
+    slug = re.sub(r"^\d{4}-\d{2}-\d{2}-", "", value)
+    slug = re.sub(r"^(?:unsaved|draft|approved|sanitized)-", "", slug)
+    return slug.replace("_", "-").replace("-", " ").strip()
+
+
+def _core_object_label(path: Path) -> str:
+    parts = path.parts
+    if len(parts) >= 4 and parts[0] == "core" and parts[1] == "offers":
+        offer = _slug_words(parts[2])
+        stem = _slug_words(path.stem)
+        if path.name == "offer.md":
+            return f"{offer} offer"
+        if path.name == "audience.md":
+            return f"{offer} audience"
+        return f"{offer} {stem}"
+    if path.name == "offer.md":
+        return "offer"
+    if path.name == "audience.md":
+        return "audience"
+    if path.name == "soul.md":
+        return "soul"
+    if path.name == "voice.md":
+        return "voice"
+    if path.name == "content-strategy.md":
+        return "content strategy"
+    if path.name == "product-ladder.md":
+        return "product ladder"
+    if len(parts) > 1 and parts[1] == "proof":
+        return "proof"
+    return _slug_words(path.stem)
+
+
+def _research_object_label(path: Path) -> str:
+    slug = re.sub(r"^\d{4}-\d{2}-\d{2}-", "", path.stem)
+    slug = re.sub(r"^(?:unsaved|draft|approved|sanitized)-", "", slug)
+    if "founder-calls" in slug:
+        return "founder-call research"
+    label = _slug_words(slug)
+    return f"{label} research" if label else "research"
+
+
 def _object_from_single_change(change: dict[str, Any]) -> str:
     path = str(change["path"])
     surface = str(change["surface"])
@@ -585,19 +627,47 @@ def _object_from_single_change(change: dict[str, Any]) -> str:
         stem = path_obj.stem if path_obj.suffix else path_obj.name
         return f"bet {stem}"
     if surface == "pushes":
-        return f"push {path_obj.parent.name}" if path_obj.name == "push.md" else path_obj.stem
+        return (
+            f"{_slug_words(path_obj.parent.name)} push"
+            if path_obj.name == "push.md"
+            else f"{_slug_words(path_obj.stem)} push"
+        )
     if surface == "campaigns":
         return (
-            f"campaign {path_obj.parent.name}" if path_obj.name == "campaign.md" else path_obj.stem
+            f"{_slug_words(path_obj.parent.name)} campaign"
+            if path_obj.name == "campaign.md"
+            else f"{_slug_words(path_obj.stem)} campaign"
         )
     if surface == "decisions":
         stem = path_obj.stem
-        return stem[11:] if re.match(r"^\d{4}-\d{2}-\d{2}-", stem) else stem
-    if surface in {"core", "research", "log", "documents"}:
-        return path_obj.name
+        label = stem[11:] if re.match(r"^\d{4}-\d{2}-\d{2}-", stem) else stem
+        return f"{_slug_words(label)} decision"
+    if surface == "core":
+        return _core_object_label(path_obj)
+    if surface == "research":
+        return _research_object_label(path_obj)
+    if surface == "log":
+        return f"{_slug_words(path_obj.stem)} log"
+    if surface == "documents":
+        return f"{_slug_words(path_obj.stem)} document"
     if surface == "config":
         return "setup"
     return path_obj.stem or path_obj.name or path
+
+
+def _object_phrase(changes: list[dict[str, Any]]) -> str | None:
+    if not 1 <= len(changes) <= 3:
+        return None
+    labels = [_object_from_single_change(change) for change in changes]
+    if any(not label or label in {"setup", "repo files"} for label in labels):
+        return None
+    if len(set(labels)) != len(labels):
+        return None
+    if len(labels) == 1:
+        return labels[0]
+    if len(labels) == 2:
+        return f"{labels[0]} and {labels[1]}"
+    return ", ".join(labels[:-1]) + f", and {labels[-1]}"
 
 
 def _proposal_verb(changes: list[dict[str, Any]], surfaces: list[str]) -> tuple[str, str]:
@@ -624,9 +694,8 @@ def _proposal(changes: list[dict[str, Any]], blocks: list[dict[str, str]]) -> di
     counts = _surface_counts(changes)
     surfaces = [surface for surface in SURFACE_ORDER if surface in counts]
     verb, reason = _proposal_verb(changes, surfaces)
-    if len(changes) == 1:
-        phrase = _object_from_single_change(changes[0])
-    else:
+    phrase = _object_phrase(changes)
+    if phrase is None:
         phrase = _surface_phrase(surfaces)
     changed_paths = [str(change["path"]) for change in changes]
     message = f"[{verb}] {phrase}"

@@ -199,15 +199,16 @@ before "repo", "saved checkpoint" before "commit", "proposal" before "PR",
 "task" before "issue", "shared outside your machine" before "remote", and "no
 unsaved local changes" before "git is clean". Technical detail is still allowed
 when the user asks for it, when repair/debug context needs it, or when evidence
-is for maintainers; put the business translation first and the technical detail
-second.
+is for maintainers; put raw terms in a separate "Technical detail:" or "Exact
+command:" line after the business meaning instead of parenthetical restatement.
 
 Release-simulation final answers should also avoid compressed status phrases
 that make the operator decode git first. Warnings include "working tree clean",
 "working tree: clean", "repo is clean", "clean on main", "branch main",
-"branch: main", "origin remote", "No origin remote", and "Git is clean" unless
-the answer has already translated the matching business meaning. Checkpoint
-examples should name the saved business artifact specifically, such as
+"branch: main", "origin remote", "No origin remote", "Connected GitHub backup:
+none surfaced", and "Git is clean" unless the answer has already translated the
+matching business meaning. Checkpoint examples should name the saved business
+artifact specifically, such as
 `[updated] offer and founder-call research`, instead of broad buckets like
 `[updated] core and research`, `[drafted] files`, or `[ran] changes`.
 

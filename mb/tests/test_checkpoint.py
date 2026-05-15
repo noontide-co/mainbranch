@@ -137,7 +137,7 @@ def test_checkpoint_plan_classifies_dirty_business_files(tmp_path: Path, monkeyp
         "pushes": 1,
         "decisions": 1,
     }
-    assert report["proposal"]["message"] == "[added] core, pushes, and decisions"
+    assert report["proposal"]["message"] == "[added] offer, test decision, and paid push"
     assert report["proposal"]["verb"] == "added"
     assert report["proposal"]["loop"] == "sense"
     assert report["proposal"]["validation"]["ok"] is True
@@ -160,10 +160,26 @@ def test_checkpoint_cli_json_contract(tmp_path: Path, monkeypatch: Any) -> None:
     assert payload["status"] == "ready"
     assert payload["mode"] == "beginner"
     assert payload["summary"]["surfaces"] == {"research": 1}
-    assert payload["proposal"]["message"] == "[added] market.md"
+    assert payload["proposal"]["message"] == "[added] market research"
     assert (
         payload["proposal"]["reason"] == "Chosen because new durable business context was created."
     )
+
+
+def test_checkpoint_plan_names_core_and_research_artifacts(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
+    (repo / "core" / "offer.md").write_text("# Offer\n\nUpdated promise.\n", encoding="utf-8")
+    (repo / "research" / "2026-05-08-unsaved-founder-calls.md").write_text(
+        "# Founder Calls\n\nApproved insight.\n",
+        encoding="utf-8",
+    )
+
+    report = checkpoint_mod.plan(repo)
+
+    assert report["ok"] is True
+    assert report["proposal"]["message"] == "[added] offer and founder-call research"
 
 
 def test_checkpoint_validate_accepts_business_verb_json() -> None:
