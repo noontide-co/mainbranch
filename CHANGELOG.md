@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.24] - 2026-05-15
+
+v0.3.24 packages the release freshness context and owner-language hardening
+that landed after v0.3.23. It helps agents explain update availability from
+fresh facts and keeps normal business-owner answers from leading with
+git/GitHub mechanics.
+
 ### Changed
 
 - Added release-note context and freshness evidence to update checks:
