@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- Tightened post-v0.3.24 release-simulation guidance and scoring so final
+  answers avoid parenthetical git/GitHub restatements, flag
+  `Connected GitHub backup: none surfaced` as owner-language leakage, and use
+  more specific checkpoint proposals such as `[updated] offer and founder-call
+  research` instead of broad buckets. Refs MAIN-385, #619.
+
 ## [0.3.24] - 2026-05-15
 
 v0.3.24 packages the release freshness context and owner-language hardening

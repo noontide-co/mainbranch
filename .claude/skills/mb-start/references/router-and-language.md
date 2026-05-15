@@ -72,6 +72,9 @@ exact command, validation evidence, or the operator asks for git details.
 Do not print checkpoint ids, branch names, `origin`, `ahead`, `behind`,
 `diverged`, `rebase`, or `commit` in the first response unless they are inside a
 command the user must run or the user asked for technical detail.
+Do not put raw git/GitHub terms in parentheses after the translation; use a
+separate "Technical detail:" or "Exact command:" line when the raw term is
+actually needed.
 
 Before answering a normal owner prompt, translate raw status summaries that leak
 from tools:
@@ -82,7 +85,7 @@ from tools:
 | `on main`, `branch main`, `branch: main`, `current branch: main` | current business folder or current workspace |
 | `one commit`, `only commit so far` | setup baseline saved or last saved checkpoint |
 | `staged files` | files queued for save |
-| `No GitHub origin remote`, `No origin remote` | local-only folder or no connected GitHub backup |
+| `No GitHub origin remote`, `No origin remote`, `Connected GitHub backup: none surfaced` | local-only folder or no connected GitHub backup |
 | `origin remote` | connected GitHub backup or shared task source |
 | `PR/issue facts`, `PR and issue facts` | GitHub task and proposal context |
 | `before this goes to a remote` | before anything is shared outside your machine |

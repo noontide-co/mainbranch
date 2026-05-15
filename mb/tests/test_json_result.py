@@ -149,7 +149,7 @@ def test_checkpoint_json_uses_shared_result_envelope(tmp_path: Path) -> None:
     )
     assert payload["status"] == "ready"
     assert payload["summary"]["surfaces"] == {"research": 1}
-    assert payload["proposal"]["message"] == "[added] market.md"
+    assert payload["proposal"]["message"] == "[added] market research"
 
 
 def test_issue_draft_json_uses_shared_result_envelope(tmp_path: Path) -> None:

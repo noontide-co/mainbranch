@@ -337,6 +337,15 @@ _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
         "no connected GitHub backup or shared task source",
     ),
     (
+        re.compile(
+            r"\bconnected github backup\s*:\s*"
+            r"(?:none|not found|not surfaced|none surfaced|missing|unavailable)\b",
+            re.IGNORECASE,
+        ),
+        "Connected GitHub backup: none surfaced",
+        "no connected GitHub backup or shared task source",
+    ),
+    (
         re.compile(r"\borigin remote\b", re.IGNORECASE),
         "origin remote",
         "GitHub connection",
@@ -512,6 +521,7 @@ def _operator_language_severity(*, leakage_count: int, checkpoint_count: int) ->
 
 def _is_allowed_technical_detail_line(line: str) -> bool:
     normalized = line.lower()
+    normalized = re.sub(r"^[>\-\*\d\.\s]+", "", normalized)
     return normalized.startswith(("technical detail:", "technical details:", "exact command:"))
 
 
