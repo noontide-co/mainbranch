@@ -107,9 +107,12 @@ updates or explicitly chooses to continue. Name the installed and latest
 versions if present and say how many version steps are behind when the numbers
 are obvious.
 
-If the status report includes release highlights or ranked update actions, use
-those highlights. If not, say the user may be missing recent routing, repair,
-or skill fixes; do not invent exact release notes.
+If the status report includes `update.release_notes_url`, release highlights, or
+ranked update actions, use those facts. If the user asks what changed and status
+includes `update.update_check_command`, run that dry-run and use its
+`release.summary` or `release.url`. If no release context is available, say the
+user may be missing recent routing, repair, or skill fixes; do not invent exact
+release notes.
 
 Use direct, non-technical language:
 
