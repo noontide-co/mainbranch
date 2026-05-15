@@ -74,6 +74,9 @@ def test_release_simulation_covers_owner_first_status_expectations() -> None:
     assert "current business folder" in fresh_observed
     assert "no connected github backup" in fresh_observed
     assert "clean on main" in fresh_blocked
+    assert "working tree: clean" in fresh_blocked
+    assert "branch: main" in fresh_blocked
+    assert "no origin remote" in fresh_blocked
     assert "git is clean" in fresh_blocked
     assert "origin remote" in fresh_blocked
 
@@ -81,6 +84,8 @@ def test_release_simulation_covers_owner_first_status_expectations() -> None:
     checkpoint_blocked = " ".join(checkpoint.must_not).lower()
     assert "saved business artifact" in checkpoint_observed
     assert "[updated] core and research" in checkpoint_blocked
+    assert "[drafted] files" in checkpoint_blocked
+    assert "[ran] changes" in checkpoint_blocked
 
 
 def test_release_simulation_covers_rich_migration_triage_map() -> None:
@@ -288,6 +293,33 @@ def test_score_transcript_allows_business_translation_before_technical_detail() 
     assert operator_language["visible_technical_leakage"]["examples"] == []
 
 
+def test_score_transcript_allows_same_line_business_translation_before_git_detail() -> None:
+    transcript = (
+        "Nothing unsaved locally in the current business folder "
+        "(`working tree: clean`, current branch: main).\n"
+        "There is no connected GitHub backup or shared task source yet "
+        "(`No GitHub origin remote`)."
+    )
+
+    score = release_simulation.score_transcript(transcript)
+    operator_language = score["operator_language"]
+
+    assert operator_language["operator_language_first"] is True
+    assert operator_language["visible_technical_leakage"]["examples"] == []
+
+
+def test_score_transcript_requires_matching_business_translation_before_git_detail() -> None:
+    transcript = """
+    There is no connected GitHub backup yet. Current branch: main.
+    """
+
+    score = release_simulation.score_transcript(transcript)
+    leakage = score["operator_language"]["visible_technical_leakage"]
+
+    assert leakage["severity"] == "low"
+    assert [item["phrase"] for item in leakage["examples"]] == ["branch main"]
+
+
 def test_score_transcript_does_not_treat_product_name_as_branch_language() -> None:
     transcript = """
     This release keeps the agent focused on Main Branch language. It explains
@@ -321,6 +353,26 @@ def test_score_transcript_flags_clean_on_main_language() -> None:
     assert leakage["examples"][0]["preferred"] == (
         "nothing unsaved locally in the current business folder"
     )
+
+
+@pytest.mark.parametrize(
+    ("transcript", "phrase"),
+    [
+        ("Working tree: clean. Continue with the next action.", "working tree clean"),
+        ("Current branch: main. Continue with the next action.", "branch main"),
+        ("Clean branch main. Continue with the next action.", "clean on main"),
+        ("No origin remote. Continue with the next action.", "No GitHub origin remote"),
+        ("PR and issue facts are unavailable.", "PR/issue facts"),
+    ],
+)
+def test_score_transcript_flags_punctuated_owner_language_variants(
+    transcript: str, phrase: str
+) -> None:
+    score = release_simulation.score_transcript(transcript)
+    leakage = score["operator_language"]["visible_technical_leakage"]
+
+    assert leakage["severity"] == "low"
+    assert [item["phrase"] for item in leakage["examples"]] == [phrase]
 
 
 def test_score_transcript_allows_commit_as_plain_verb() -> None:
@@ -358,6 +410,9 @@ def test_score_transcript_flags_only_commit_count_language(transcript: str) -> N
         "[updated] core and research",
         "[updated] core + research",
         "[updated] core, research",
+        "[drafted] files",
+        "[ran] changes",
+        "[fixed] stuff",
     ],
 )
 def test_score_transcript_flags_broad_checkpoint_notes(message: str) -> None:

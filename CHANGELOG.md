@@ -19,6 +19,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   reports GitHub Release metadata in JSON and human output when available.
   Refs MAIN-384, #616.
 
+### Fixed
+
+- Tightened release-simulation owner-language scoring and prompt guidance so
+  punctuation variants like `working tree: clean`, `branch: main`, and vague
+  checkpoint examples such as `[drafted] files` are caught unless the final
+  answer translates the matching business meaning first. Refs MAIN-377, #604.
+
 ## [0.3.23] - 2026-05-14
 
 v0.3.23 packages the owner-ready first-run GitHub setup path and
