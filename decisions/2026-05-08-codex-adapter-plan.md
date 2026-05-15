@@ -1,7 +1,7 @@
 ---
 type: decision
 date: 2026-05-08
-status: proposed
+status: accepted
 topic: Codex adapter plan without duplicating the skill system
 linked_decisions:
   - decisions/2026-05-01-mb-cli-vs-agent-workflows-boundary.md
@@ -14,6 +14,12 @@ tags: [runtime-adapters, codex, skills, cli, decision-needed]
 ---
 
 # Codex Adapter Plan
+
+> Status note: Stage 1 has shipped as the experimental CLI-first Codex adapter.
+> Fresh business repos include `AGENTS.md`, and `mb doctor`, `mb status`, and
+> `mb start` expose Codex readiness. This decision remains the staging plan;
+> current public support wording lives in
+> [docs/compatibility.md](../docs/compatibility.md).
 
 ## Decision
 
@@ -49,16 +55,17 @@ does not mean identical runtime behavior.
 Main Branch facts:
 
 - Claude Code is the only supported runtime today.
-- `docs/compatibility.md` already says Codex is a roadmap surface until adapter
-  docs/code and fresh-repo smoke evidence exist.
-- `mb start --json`, `mb status --json`, and generated business `CLAUDE.md`
-  are Claude-first today.
+- Codex CLI has an experimental CLI-first adapter for power users. Fresh
+  business repos include generated `AGENTS.md`; `mb doctor`, `mb status`, and
+  `mb start` expose Codex readiness; no slash-command or workflow parity is
+  claimed.
+- `mb start --json`, `mb status --json`, generated business `CLAUDE.md`, and
+  generated business `AGENTS.md` are the current runtime handoff surfaces.
 - Claude Code discovery depends on project-local `.claude/skills/mb-*` bridge
   links. `.claude/settings.local.json` grants engine file access but does not
   by itself prove slash-command discovery.
-- There is no generated business `AGENTS.md`, Codex handoff envelope, Codex
-  skill-link command, Codex conflict/shadow repair, or Codex fresh-repo smoke
-  evidence in this repository today.
+- There is no Codex skill-link command or broad Codex workflow parity in this
+  repository today.
 
 Codex facts from official docs:
 

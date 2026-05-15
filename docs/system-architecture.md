@@ -522,11 +522,11 @@ Provider systems record live operational facts. Sidecars can enrich Main
 Branch with structured data. A future local dashboard could render repo and
 provider truth without owning it. None of these replace the main business record.
 
-Main Branch does not mutate provider accounts today. Provider mutation
-requires a shipped adapter with approval gates, readiness checks, and smoke
-evidence; until then, playbooks are plans and approvals, not execution. See
-[roadmap.md](roadmap.md) and [dependency-choices.md](dependency-choices.md)
-for direction.
+Main Branch does not claim blanket provider mutation. A provider rail can mutate
+external systems only when that exact workflow has preview behavior, operator
+approval, readiness checks, tests, and smoke evidence. Until then, playbooks are
+plans and approvals, not execution. See [roadmap.md](roadmap.md) and
+[dependency-choices.md](dependency-choices.md) for direction.
 
 Correct pattern:
 

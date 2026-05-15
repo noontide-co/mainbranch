@@ -1,9 +1,11 @@
 ---
 type: decision
 date: 2026-04-29
-status: proposed
+status: superseded
 topic: mb-vip v0.1.0 — engine-side master decision (skill composition, repo shape, PyPI packaging, /mb-site upgrade, conductor preferences)
 mirrors: noontide-projects/decisions/2026-04-29-main-branch-v0-1-0-master.md
+superseded_by:
+  - decisions/2026-05-15-repo-owned-operating-memory.md
 linked_research:
   - noontide-projects/research/2026-04-29-marketing-site-brief-framework-yt-mining.md
   - noontide-projects/research/2026-04-29-marketing-skills-repo-mining.md
@@ -16,6 +18,16 @@ tags: [v0-1-0, mb-vip, engine, /mb-site, pypi, conductor-preferences]
 
 # mb-vip v0.1.0 — Engine Master Decision
 
+> Superseded. This is a historical launch-planning mirror from before the public
+> repo, package, folder model, operator language, and current runtime support
+> stance settled. Current product truth lives in
+> [2026-05-15 Repo-Owned Operating Memory](2026-05-15-repo-owned-operating-memory.md),
+> [README](../README.md), [AGENTS](../AGENTS.md),
+> [docs/roadmap.md](../docs/roadmap.md), and
+> [docs/system-architecture.md](../docs/system-architecture.md). Do not use this
+> file for current branch naming, setup, packaging, pricing, paid/private
+> content, or runtime-support guidance.
+
 ## Context
 
 This file is the engine-side mirror of the noontide-projects master decision (`noontide-projects/decisions/2026-04-29-main-branch-v0-1-0-master.md`). The noontide-projects master sets the business-level locks: vocabulary (tool/skill/playbook), folder shape, OSS-vs-paid mechanism, pricing, dashboard commitment, and the 8-item v0.1.0 ship list at the conceptual level. This file lands the same locks on the **engine repo (`mb-vip`)** with concrete file paths, package shape, and per-skill change lists.
@@ -24,7 +36,8 @@ It exists because Devon already acked the noontide-projects master on 2026-04-29
 
 There is no relitigation here. Vocabulary, folder shape, dial naming, archetype catalog, OSS/paid mechanism, PyPI commitment, and conductor-preferences-for-mb-vip are all decided in the noontide-projects master or in the linked research files. This file translates them into engine-repo execution.
 
-The decision is `status: proposed` because it has not yet been opened as a PR. It graduates to `status: accepted` when Devon merges the v0.1.0-rc1 PR on this branch.
+This decision started as `status: proposed` during v0.1 launch planning. It is
+now `status: superseded`; see the notice above for current product truth.
 
 ---
 
@@ -922,7 +935,9 @@ Mirrors the noontide-projects master.
 
 Engine-side ships:
 
-- This decision file lands as `decisions/2026-04-29-mb-vip-v0-1-0-master.md`, status `proposed` → `accepted` on merge.
+- This historical plan expected the decision file to land as
+  `decisions/2026-04-29-mb-vip-v0-1-0-master.md`, status `proposed` →
+  `accepted` on merge. That path has since been superseded.
 - Repo reorg: skills stay flat, playbooks dir created flat, educational dir created.
 - Vocabulary sweep (any remaining `atom-*` / `molecule` / `compound` mentions in skill files → `tool-*` / `skill` / `playbook`).
 - /mb-site skill upgrade *outline only*: brief schema doc'd in `SKILL.md`, `archetypes.md` index file lands, 3 archetype detail files land, Seven Sweeps lands in `review.md`, AI-tells lands in `anti-patterns.md`. Remaining 6 archetypes are `status: stub` placeholders that load but say "detail coming v0.1.1."
