@@ -320,6 +320,29 @@ def test_score_transcript_requires_matching_business_translation_before_git_deta
     assert [item["phrase"] for item in leakage["examples"]] == ["branch main"]
 
 
+@pytest.mark.parametrize(
+    ("transcript", "phrase"),
+    [
+        (
+            "The shared task source is unavailable. No origin remote.",
+            "No GitHub origin remote",
+        ),
+        (
+            "No connected GitHub backup yet (`origin remote`).",
+            "origin remote",
+        ),
+    ],
+)
+def test_score_transcript_requires_remote_translation_polarity(
+    transcript: str, phrase: str
+) -> None:
+    score = release_simulation.score_transcript(transcript)
+    leakage = score["operator_language"]["visible_technical_leakage"]
+
+    assert leakage["severity"] == "low"
+    assert [item["phrase"] for item in leakage["examples"]] == [phrase]
+
+
 def test_score_transcript_does_not_treat_product_name_as_branch_language() -> None:
     transcript = """
     This release keeps the agent focused on Main Branch language. It explains

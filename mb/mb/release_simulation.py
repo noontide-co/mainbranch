@@ -365,6 +365,14 @@ _BROAD_CHECKPOINT_NOTE_PATTERNS: tuple[re.Pattern[str], ...] = (
     ),
 )
 
+_POSITIVE_REMOTE_TRANSLATIONS = {
+    "github connection",
+    "connected github backup",
+    "connected github backup or shared task source",
+    "connected shared task source",
+    "shared task source is connected",
+}
+
 
 def _strip_fenced_code(text: str) -> str:
     return re.sub(r"```.*?```", "", text, flags=re.DOTALL)
@@ -381,9 +389,10 @@ def _visible_technical_leakage(text: str) -> list[dict[str, str]]:
             match = pattern.search(stripped)
             if match is None:
                 continue
-            if _owner_translation_precedes(stripped, match.start(), preferred):
-                continue
             span = match.span()
+            if _owner_translation_precedes(stripped, match.start(), preferred):
+                matched_spans.append(span)
+                continue
             if any(_spans_overlap(span, existing) for existing in matched_spans):
                 continue
             matched_spans.append(span)
@@ -402,9 +411,19 @@ def _owner_translation_precedes(line: str, end: int, preferred: str) -> bool:
     if not earlier.strip():
         return False
     normalized_preferred = preferred.lower()
-    if normalized_preferred in earlier:
+    if _translation_candidate_precedes(earlier, normalized_preferred):
         return True
-    return any(fragment in earlier for fragment in _translation_fragments(preferred))
+    return any(
+        _translation_candidate_precedes(earlier, fragment)
+        for fragment in _translation_fragments(preferred)
+    )
+
+
+def _translation_candidate_precedes(earlier: str, candidate: str) -> bool:
+    if candidate not in _POSITIVE_REMOTE_TRANSLATIONS:
+        return candidate in earlier
+    pattern = re.compile(rf"(?<!\bno\s)(?<!\bnot\s)(?<!\bwithout\s)\b{re.escape(candidate)}\b")
+    return pattern.search(earlier) is not None
 
 
 def _translation_fragments(preferred: str) -> tuple[str, ...]:
@@ -421,10 +440,22 @@ def _translation_fragments(preferred: str) -> tuple[str, ...]:
         return ("setup baseline saved", "last saved checkpoint", "one saved checkpoint")
     if "queued for save" in normalized:
         return ("files queued for save",)
-    if "github backup" in normalized or "shared task source" in normalized:
-        return ("no connected github backup", "shared task source")
+    if "no connected github backup" in normalized or "no shared task source" in normalized:
+        return (
+            "no connected github backup",
+            "no connected github backup or shared task source",
+            "no shared task source",
+            "local-only folder",
+            "local only folder",
+        )
     if "github connection" in normalized:
-        return ("github connection", "connected github backup", "shared task source")
+        return (
+            "github connection",
+            "connected github backup",
+            "connected github backup or shared task source",
+            "connected shared task source",
+            "shared task source is connected",
+        )
     if "task and proposal" in normalized:
         return ("github task and proposal context",)
     if "shared outside" in normalized:
@@ -440,8 +471,9 @@ def _translation_fragments(preferred: str) -> tuple[str, ...]:
         "one saved checkpoint",
         "files queued for save",
         "no connected github backup",
-        "shared task source",
+        "no shared task source",
         "github connection",
+        "connected github backup",
         "github task and proposal context",
         "shared outside your machine",
     )
