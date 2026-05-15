@@ -170,7 +170,7 @@ in a skill or in an action is a workaround, not a check.
   validation evidence.
 - **Hosted dashboard state model** is out of scope until a dashboard surface
   is accepted. See
-  [`decisions/2026-05-02-github-native-business-os.md`](../decisions/2026-05-02-github-native-business-os.md).
+  [`decisions/2026-05-15-repo-owned-operating-memory.md`](../decisions/2026-05-15-repo-owned-operating-memory.md).
 
 ## Related links
 

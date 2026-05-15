@@ -1,11 +1,20 @@
 ---
 title: Main Branch as GitHub-native business operating system
 date: 2026-05-02
-status: proposed
+status: superseded
 tags: [product-direction, github, cli, integrations, graph, business-os]
+superseded_by:
+  - decisions/2026-05-15-repo-owned-operating-memory.md
 ---
 
 # Main Branch as GitHub-Native Business Operating System
+
+> Superseded by
+> [2026-05-15 Repo-Owned Operating Memory](2026-05-15-repo-owned-operating-memory.md).
+> This proposal was useful direction for v0.2, but it predates the current
+> chat-first daily loop, push primitive, hidden GitOps layer, user-scoped
+> provider connection model, and experimental Codex CLI-first adapter. Use it as
+> historical context, not current product truth.
 
 ## Decision
 

@@ -55,13 +55,17 @@
       "version"
     ],
     "update": [
+      "checked_at",
       "command",
       "installed",
       "latest",
+      "latest_source",
       "minimum_supported",
       "post_update_commands",
       "reason",
-      "severity"
+      "release_notes_url",
+      "severity",
+      "update_check_command"
     ],
     "runtime": [
       "claude_code",
