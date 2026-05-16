@@ -38,6 +38,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   of stranding the operator at manual cleanup. The push path now records
   GitHub CLI auth/account preflight facts before creating the repo. Refs
   MAIN-389, #626.
+- Added a checkpoint review gate for suspicious scratch files, prompt drafts,
+  conflict/editor leftovers, and empty accidental notes so `mb checkpoint` does
+  not save them without explicit operator approval. Refs MAIN-390, #627.
 
 ## [0.3.25] - 2026-05-16
 

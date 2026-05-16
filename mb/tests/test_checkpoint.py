@@ -166,6 +166,48 @@ def test_checkpoint_cli_json_contract(tmp_path: Path, monkeypatch: Any) -> None:
     )
 
 
+def test_checkpoint_plan_flags_scratch_files_for_review(tmp_path: Path, monkeypatch: Any) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
+    (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
+    (repo / "Untitled.md").write_text("# Scratch\n", encoding="utf-8")
+    (repo / "setup-prompt.txt").write_text("Do not save this prompt.\n", encoding="utf-8")
+    (repo / "scratch-notes.md").write_text("", encoding="utf-8")
+
+    result = runner.invoke(app, ["checkpoint", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["status"] == "review_required"
+    review_required = payload["safety"]["review_required"]
+    assert {item["code"] for item in review_required} == {
+        "generic_untitled_file",
+        "prompt_draft",
+        "zero_byte_file",
+    }
+    assert {item["path"] for item in review_required} == {
+        "Untitled.md",
+        "setup-prompt.txt",
+        "scratch-notes.md",
+    }
+
+
+def test_checkpoint_plan_explains_scratch_review_in_business_language(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
+    (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
+    (repo / "Untitled.md").write_text("# Scratch\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["checkpoint", "--repo", str(repo), "--plan"])
+
+    assert result.exit_code == 1
+    assert "checkpoint needs review before saving" in result.output
+    assert "not durable business memory" in result.output
+    assert "Untitled.md" in result.output
+    assert "--include-review-required" in result.output
+
+
 def test_checkpoint_plan_names_core_and_research_artifacts(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
@@ -584,6 +626,65 @@ def test_checkpoint_commit_refuses_blocked_plan_without_commit(
     assert payload["status"] == "blocked"
     assert payload["committed"] is False
     assert _git(repo, "log", "--oneline").stdout.count("\n") == 1
+
+
+def test_checkpoint_commit_requires_explicit_scratch_file_override(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
+    (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
+    (repo / "Untitled.md").write_text("# Scratch\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "checkpoint",
+            "--repo",
+            str(repo),
+            "--message",
+            "[updated] offer and scratch review",
+            "--yes",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "review_required"
+    assert payload["committed"] is False
+    assert payload["plan"]["safety"]["review_required"][0]["path"] == "Untitled.md"
+    assert _git(repo, "log", "--oneline").stdout.count("\n") == 1
+    assert "Untitled.md" in _git(repo, "status", "--porcelain").stdout
+
+
+def test_checkpoint_commit_allows_explicit_scratch_file_override(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
+    (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
+    (repo / "Untitled.md").write_text("# Intentional Scratch\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "checkpoint",
+            "--repo",
+            str(repo),
+            "--message",
+            "[updated] offer and scratch review",
+            "--yes",
+            "--include-review-required",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "committed"
+    assert payload["committed"] is True
+    log = _git(repo, "log", "-1", "--pretty=%B").stdout
+    assert "Untitled.md" in log
+    assert _git(repo, "status", "--porcelain").stdout == ""
 
 
 def test_checkpoint_commit_clean_repo_is_noop(tmp_path: Path, monkeypatch: Any) -> None:

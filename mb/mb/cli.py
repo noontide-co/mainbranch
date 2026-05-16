@@ -1642,6 +1642,11 @@ def checkpoint_cmd(
         help="Remove the Main Branch checkpoint commit-message hook.",
     ),
     yes: bool = typer.Option(False, "--yes", help="Save the checkpoint after safety gates pass."),
+    include_review_required: bool = typer.Option(
+        False,
+        "--include-review-required",
+        help="Intentionally include files that checkpoint planning marked for review.",
+    ),
     mode: str = typer.Option(
         "beginner",
         "--mode",
@@ -1666,8 +1671,14 @@ def checkpoint_cmd(
     elif validate:
         validation_message = sys.stdin.read() if validate == "-" else validate
         result = checkpoint_mod.validate_message(validation_message)
-    elif yes or message:
-        result = checkpoint_mod.commit(repo=repo, message=message, mode=mode, yes=yes)
+    elif yes or message or include_review_required:
+        result = checkpoint_mod.commit(
+            repo=repo,
+            message=message,
+            mode=mode,
+            yes=yes,
+            include_review_required=include_review_required,
+        )
     elif status_check:
         result = checkpoint_mod.status(repo=repo, mode=mode)
     else:

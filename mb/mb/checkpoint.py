@@ -28,6 +28,11 @@ SURFACE_ORDER = [
     "unknown",
 ]
 
+REVIEW_REQUIRED_GUIDANCE = (
+    "Remove it from the business folder, move it to local scratch space, or rerun "
+    "with --include-review-required if it intentionally belongs in this checkpoint."
+)
+
 SECRET_RE = re.compile(
     r"(?i)("
     r"(api[_-]?key|access[_-]?token|secret|client[_-]?secret)\s*[:=]\s*['\"]?[A-Za-z0-9_./+=-]{8,}"
@@ -428,7 +433,7 @@ def _surface(path: str) -> str:
         return "site"
     if path.startswith((".github/", ".claude/", ".mainbranch/", ".mb/")):
         return "config"
-    if path in {"CLAUDE.md", ".gitignore", "README.md"}:
+    if path in {"AGENTS.md", "CLAUDE.md", ".gitignore", "README.md"}:
         return "config"
     return "unknown"
 
@@ -463,6 +468,100 @@ def _service_account_json(path: str, text: str) -> bool:
         return False
     lowered = text.lower()
     return '"type"' in lowered and "service_account" in lowered and "private_key" in lowered
+
+
+def _review_required(repo: Path, changes: list[dict[str, Any]]) -> list[dict[str, str]]:
+    review: list[dict[str, str]] = []
+    for change in changes:
+        path = str(change["path"])
+        name = Path(path).name
+        lowered_name = name.lower()
+        abs_path = repo / path
+        surface = str(change.get("surface", "unknown"))
+
+        if re.match(r"^untitled(?:[\s._-]*\d*)?(?:\.[^.]+)?$", lowered_name):
+            review.append(
+                {
+                    "code": "generic_untitled_file",
+                    "path": path,
+                    "message": (
+                        "generic Untitled files look like accidental editor scratch, "
+                        "not durable business memory"
+                    ),
+                    "guidance": REVIEW_REQUIRED_GUIDANCE,
+                }
+            )
+            continue
+
+        scratch_suffixes = (
+            ".bak",
+            ".orig",
+            ".rej",
+            ".swp",
+            ".swo",
+            ".tmp",
+        )
+        scratch_markers = (
+            "conflicted copy",
+            "merge conflict",
+            "merge-conflict",
+            ".backup.",
+            ".base.",
+            ".local.",
+            ".remote.",
+        )
+        if (
+            lowered_name.endswith("~")
+            or lowered_name.endswith(scratch_suffixes)
+            or any(marker in lowered_name for marker in scratch_markers)
+        ):
+            review.append(
+                {
+                    "code": "editor_or_conflict_scratch",
+                    "path": path,
+                    "message": "file looks like editor, backup, or conflict scratch",
+                    "guidance": REVIEW_REQUIRED_GUIDANCE,
+                }
+            )
+            continue
+
+        if (
+            name != ".gitkeep"
+            and not change.get("deleted")
+            and abs_path.is_file()
+            and abs_path.stat().st_size == 0
+        ):
+            review.append(
+                {
+                    "code": "zero_byte_file",
+                    "path": path,
+                    "message": "empty files are often accidental notes or setup leftovers",
+                    "guidance": REVIEW_REQUIRED_GUIDANCE,
+                }
+            )
+            continue
+
+        if "prompt" in lowered_name and surface in {"unknown", "config"}:
+            review.append(
+                {
+                    "code": "prompt_draft",
+                    "path": path,
+                    "message": "prompt drafts should be reviewed before becoming business memory",
+                    "guidance": REVIEW_REQUIRED_GUIDANCE,
+                }
+            )
+            continue
+
+        if change.get("untracked") and surface == "unknown":
+            review.append(
+                {
+                    "code": "unexpected_repo_file",
+                    "path": path,
+                    "message": "file is outside the expected business folders for a checkpoint",
+                    "guidance": REVIEW_REQUIRED_GUIDANCE,
+                }
+            )
+    return review
 
 
 def _safety_blocks(repo: Path, changes: list[dict[str, Any]]) -> list[dict[str, str]]:
@@ -865,6 +964,7 @@ def plan(repo: str | Path = ".", *, mode: str = "beginner") -> dict[str, Any]:
         for record in records
     ]
     blocks = _safety_blocks(root, changes)
+    review_required = _review_required(root, changes)
     warnings: list[dict[str, str]] = []
     if not looks_like_business_repo(root) and not _is_engine_repo(root):
         warnings.append(
@@ -877,11 +977,16 @@ def plan(repo: str | Path = ".", *, mode: str = "beginner") -> dict[str, Any]:
 
     status = "clean"
     if changes:
-        status = "blocked" if blocks else "ready"
+        if blocks:
+            status = "blocked"
+        elif review_required:
+            status = "review_required"
+        else:
+            status = "ready"
     proposal = _proposal(changes, blocks)
     counts = _surface_counts(changes)
     return {
-        "ok": not blocks,
+        "ok": not blocks and not review_required,
         "status": status,
         "repo": str(root),
         "mode": mode,
@@ -895,8 +1000,9 @@ def plan(repo: str | Path = ".", *, mode: str = "beginner") -> dict[str, Any]:
         },
         "changes": changes,
         "safety": {
-            "ok": not blocks,
+            "ok": not blocks and not review_required,
             "blocks": blocks,
+            "review_required": review_required,
             "warnings": warnings,
         },
         "proposal": proposal,
@@ -910,6 +1016,7 @@ def commit(
     message: str = "",
     mode: str = "beginner",
     yes: bool = False,
+    include_review_required: bool = False,
 ) -> dict[str, Any]:
     """Commit an approved checkpoint plan."""
     planned = plan(repo=repo, mode=mode)
@@ -922,7 +1029,10 @@ def commit(
             "plan": planned,
             "errors": [],
         }
-    if not planned.get("ok"):
+    safety = planned.get("safety", {})
+    blocks = safety.get("blocks", []) if isinstance(safety, dict) else []
+    review_required = safety.get("review_required", []) if isinstance(safety, dict) else []
+    if blocks:
         return {
             "ok": False,
             "status": "blocked",
@@ -930,6 +1040,20 @@ def commit(
             "committed": False,
             "plan": planned,
             "errors": ["checkpoint plan is blocked"],
+        }
+    if review_required and not include_review_required:
+        return {
+            "ok": False,
+            "status": "review_required",
+            "repo": planned.get("repo"),
+            "committed": False,
+            "plan": planned,
+            "errors": [
+                (
+                    "checkpoint includes files that need review; remove them or pass "
+                    "--include-review-required after confirming they belong in business memory"
+                )
+            ],
         }
     if not yes:
         return {
@@ -1079,6 +1203,26 @@ def render_human(result: dict[str, Any]) -> None:
         print("approval required.")
         print("review the plan, then rerun with --yes to save the checkpoint.")
         return
+    if status == "review_required":
+        print("checkpoint needs review before saving.")
+        plan_result = result.get("plan")
+        safety_source = plan_result if isinstance(plan_result, dict) else result
+        safety = safety_source.get("safety", {}) if isinstance(safety_source, dict) else {}
+        review = safety.get("review_required", []) if isinstance(safety, dict) else []
+        if review:
+            print(
+                "These files look like scratch, setup junk, or prompt drafts, "
+                "not durable business memory:"
+            )
+            for item in review:
+                print(f"  - {item['path']}: {item['message']}")
+            print(
+                "Remove them, or rerun with --include-review-required "
+                "if they intentionally belong here."
+            )
+        for error in result.get("errors", []):
+            print(f"error: {error}")
+        return
     if status == "clean":
         print("nothing to checkpoint.")
         return
@@ -1109,6 +1253,17 @@ def render_human(result: dict[str, Any]) -> None:
         print("checkpoint blocked:")
         for block in blocks:
             print(f"  - {block['path']}: {block['message']}")
+        return
+    review = safety.get("review_required", []) if isinstance(safety, dict) else []
+    if review:
+        print("")
+        print("checkpoint needs review before saving:")
+        for item in review:
+            print(f"  - {item['path']}: {item['message']}")
+        print(
+            "Remove them, or rerun with --include-review-required "
+            "if they intentionally belong here."
+        )
         return
 
     proposal = result.get("proposal")
