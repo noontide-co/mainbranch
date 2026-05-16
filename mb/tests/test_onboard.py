@@ -27,7 +27,12 @@ def _tool_path(name: str) -> str:
     return ""
 
 
+def _normalize(text: str) -> str:
+    return " ".join(text.split())
+
+
 def _assert_onboard_claude_md_cli_first_contract(text: str) -> None:
+    normalized = _normalize(text)
     assert "## Claude operating contract" in text
     assert "Main Branch CLI facts are the source of truth" in text
     assert "mb status --json --peek" in text
@@ -37,6 +42,10 @@ def _assert_onboard_claude_md_cli_first_contract(text: str) -> None:
     assert "require explicit operator approval before applying" in text
     assert "If `/mb-start` is not discoverable" in text
     assert "business-owner language" in text
+    assert "## First-run setup intent" in text
+    assert "setup intent, not as a document to save" in normalized
+    assert "gh auth status" in normalized
+    assert "business brain" in normalized
     assert "## Business primitive routing" in text
     assert "multi-offer repo, `core/offer.md` is the portfolio thesis" in text
     assert "offer-specific proof belongs in `core/offers/<slug>/proof/`" in text

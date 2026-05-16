@@ -64,6 +64,30 @@ refresh local runtime wiring, update packages, migrate business files, create
 checkpoints, publish, spend money, contact customers, email, or mutate provider
 accounts require explicit operator approval before applying.
 
+## First-run setup intent
+
+When the operator pastes a setup guide, bootstrap prompt, or business/folder
+description into an empty or uninitialized folder, treat it as setup intent,
+not as a document to save. Do not ask what file format to save the prompt in. First
+check `mb --version`. If `mb` is missing, stop and give the exact install step:
+`pipx install mainbranch`. If `mb` is available, inspect the setup path with
+`mb onboard --help` or `mb onboard plan`, then explain which folder will become
+the business brain and ask before running a writing command.
+
+If the operator asks for GitHub backup, sync, collaboration, or
+`mb onboard --github --push`, check GitHub CLI before any setup write:
+`gh auth status` and `gh api user --jq .login`. Confirm the signed-in account
+matches the operator's expected account. GitHub is strongly recommended because
+it gives Main Branch a free cloud backup, shared history, task/proposal layer,
+and connector-friendly copy of the business brain. Main Branch can start
+locally without GitHub; GitHub is needed for sync, collaboration, and the
+GitHub-backed onboarding path.
+
+After setup, run `mb status --json --peek` and `mb start --json`. Summarize the
+outcome in business language first: folder created, business brain ready,
+baseline saved, GitHub backup connected when requested, checkpoint state, and
+next safe action. Put commands and git/GitHub details second.
+
 Do the technical work in technical commands, then translate the result back into
 business-owner language. Speak first in terms of bets, goals, offers, pushes,
 playbooks, outcomes, decisions, next actions, and saved checkpoints. Treat git,

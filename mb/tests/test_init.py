@@ -15,7 +15,12 @@ def _section(text: str, start: str, end: str) -> str:
     return text[start_index:end_index]
 
 
+def _normalize(text: str) -> str:
+    return " ".join(text.split())
+
+
 def _assert_claude_md_cli_first_contract(text: str) -> None:
+    normalized = _normalize(text)
     assert "## Claude operating contract" in text
     assert "Main Branch CLI facts are the source of truth" in text
     assert "run `claude`" in text
@@ -34,6 +39,14 @@ def _assert_claude_md_cli_first_contract(text: str) -> None:
     assert "mb skill link --repo .          # writes project-local Claude skill wiring" in text
     assert "mb skill repair --repo . --apply" in text
     assert "mb doctor repair --apply" in text
+    assert "## First-run setup intent" in text
+    assert "setup intent, not as a document to save" in normalized
+    assert "pipx install mainbranch" in normalized
+    assert "gh auth status" in normalized
+    assert "gh api user --jq .login" in normalized
+    assert "GitHub is strongly recommended" in normalized
+    assert "connector-friendly copy of the business brain" in normalized
+    assert "business brain" in normalized
     assert "If `/mb-start` is not discoverable" in text
     assert "restart Claude Code from this repo and try" in text
     assert "business-owner language" in text
@@ -83,6 +96,7 @@ def _assert_claude_md_primitive_routing_contract(text: str) -> None:
 
 
 def _assert_agents_md_codex_start_contract(text: str) -> None:
+    normalized = _normalize(text)
     assert "## Codex Operating Contract" in text
     assert "Do not pretend Claude" in text
     assert "slash commands exist in Codex." in text
@@ -106,6 +120,14 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     assert "mb start --json" in text
     assert "mb doctor repair --plan" in text
     assert "explicit operator approval" in text
+    assert "## First-run setup intent" in text
+    assert "setup intent, not as a document to save" in normalized
+    assert "pipx install mainbranch" in normalized
+    assert "gh auth status" in normalized
+    assert "gh api user --jq .login" in normalized
+    assert "GitHub is strongly recommended" in normalized
+    assert "connector-friendly copy of the business brain" in normalized
+    assert "business brain" in normalized
     assert "business-owner language" in text
     assert "bets, goals, offers, pushes" in text
     assert "`working tree: clean`" in text
@@ -201,6 +223,9 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "Acme Brewing" in agents_md
     assert "Acme Brewing" in readme_md
     assert "/mb-start" in readme_md
+    assert "## Save, Checkpoint, Backup" in readme_md
+    assert "A checkpoint is an approved saved point" in readme_md
+    assert "GitHub backup/sync is strongly recommended" in readme_md
     assert ".mb/onboarding.json" in readme_md
     assert "## Connected accounts" in claude_md
     assert "Stripe account IDs" in claude_md

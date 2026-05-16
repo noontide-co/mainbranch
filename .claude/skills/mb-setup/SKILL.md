@@ -21,6 +21,21 @@ For provider setup, use `mb connect plan` and `mb connect doctor --json` as the
 durable readiness contract. Explain providers as business capabilities, not
 developer config, and end with exact commands.
 
+**Pasted setup guide = setup intent.** If the user pastes this guide, the
+beginner setup guide, or a bootstrap prompt with business/folder intent, treat
+it as setup intent, not as a document to save. Do not offer to save it as a
+document. Check `mb --version`; if missing, stop with `pipx install
+mainbranch`. If present, inspect `mb onboard --help` or `mb onboard plan`,
+explain the target folder, and ask before any write.
+
+**GitHub-backed setup preflight.** GitHub is strongly recommended because it
+gives Main Branch a free cloud backup, shared history, task/proposal layer, and
+connector-friendly copy of the business brain. Main Branch can start locally
+without GitHub. If the user wants backup, sync, collaboration, or `mb onboard
+--github --push`, check `gh auth status` and `gh api user --jq .login` first.
+Confirm the account is the one they expect before running a writing setup
+command.
+
 ---
 
 ## Before We Begin

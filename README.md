@@ -155,6 +155,8 @@ Mobile thought capture, team views, finance/fulfillment roll-ups, broader Ops/bo
 
 ## Quickstart
 
+Start with the folder that should become your business brain:
+
 ```bash
 pipx install mainbranch
 mb onboard --name "My Business" --path my-business
@@ -164,6 +166,22 @@ claude
 ```
 
 That's it. `mb onboard` creates the folder, wires Claude Code, and shows the next step. `/mb-start` reads the folder and tells you what to do.
+
+If you open Claude Code or Codex CLI in an empty folder first, paste the
+folder-first bootstrap from [beginner setup](docs/beginner-setup.md#folder-first-bootstrap).
+It tells the agent this is setup intent, not a document to save, and routes it
+to deterministic `mb onboard` checks before anything writes.
+
+GitHub backup/sync is strongly recommended for almost everyone. It does not
+need to cost anything, and it gives the business brain cloud backup, readable
+saved history, shared tasks/proposals, and a repo that AI tools with GitHub
+connectors can read. Before choosing the GitHub-backed setup path, install
+GitHub CLI and confirm it is signed in to the account you expect:
+
+```bash
+gh auth status
+gh api user --jq .login
+```
 
 After the first session, the daily flow is:
 

@@ -27,6 +27,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `AGENTS.md`, covering start, status, and thinking/codification routes while
   keeping `.agents/skills`, plugin packaging, site/ads/provider workflows, and
   slash-command parity out of scope. Refs MAIN-387, #624.
+- Added a folder-first first-run setup contract across beginner docs, README,
+  generated runtime guidance, and `/mb-setup`: pasted setup guides now route to
+  deterministic `mb onboard` setup intent instead of document creation, with
+  plain-language save/checkpoint/update/runtime boundaries and strongly
+  recommended GitHub backup, sync, connector, and account-check guidance. Refs
+  MAIN-388, #625; MAIN-395, #632; MAIN-394, #631.
 
 ### Fixed
 
