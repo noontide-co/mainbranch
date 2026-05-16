@@ -57,7 +57,7 @@ interactive slash-command behavior.
 |---|---|---|---|
 | GitHub Release, PyPI publish, fresh install, installed CLI version, bundled skills, books fixture checks, and Linear release sync all agreed on v0.3.22. | Pass | evidence quality, package/install | The package-visible release is installable and release surfaces agree. |
 | The post-publish proxy simulation preserved read-only grounding, write discipline, repo boundaries, and provider/runtime honesty. | Pass | CLI grounding, write discipline, repo boundary, provider honesty | v0.3.22 did not introduce a release-blocking runtime safety regression in the proxy harness. |
-| Owner-facing transcript excerpts still leaked raw git/GitHub words such as branch, working tree, and origin remote after the business translation appeared nearby. Checkpoint examples still included a broad folder-level phrase. | Quality concern | operator-language first, business-language return, skill prose, generated repo guidance | This is the next owner-language slice, not a v0.3.22 publish blocker. Route to #604. |
+| Owner-facing transcript excerpts still leaked raw git/GitHub words such as branch, working tree, and origin remote after the business translation appeared nearby. Checkpoint examples still included a broad folder-level phrase. | Quality concern | operator-language first, business-language return, skill prose, generated repo guidance | This was routed to #604 after v0.3.22 and resolved by the later owner-language hardening. |
 
 ## Release Decision
 
@@ -87,13 +87,15 @@ claims.
   summary, and image-rail direction while keeping private-vault reporting and
   provider mutation deferred.
 - Release simulations: no process change needed; the existing transcript
-  rubric caught the owner-language leakage and routed it to #604.
+  rubric caught the owner-language leakage and routed it to #604, which later
+  landed as the owner-language hardening follow-up.
 - Local preferences: no new private workflow protocol found; no update needed.
 
 ## Follow-Up Route
 
-- Keep
-  [#604](https://github.com/noontide-co/mainbranch/issues/604) as the next
-  focused branch for owner-language leakage in release-simulation answers.
+- Treat
+  [#604](https://github.com/noontide-co/mainbranch/issues/604) as the
+  historical route from this review. It has since landed; open a fresh focused
+  issue for any new owner-language misses.
 - Keep the fix public-safe: no raw transcript dumps, private paths, local
   machine details, account data, or private operator strategy.
