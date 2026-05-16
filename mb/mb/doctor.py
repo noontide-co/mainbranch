@@ -2390,7 +2390,10 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
                 mode="write",
                 command="mb doctor repair --apply",
                 safe_to_apply=True,
-                reason="wrote the current CLI-first Codex start workflow and approval boundaries",
+                reason=(
+                    "wrote the current CLI-first Codex lifecycle workflow index, "
+                    "fact grounding, and approval boundaries"
+                ),
                 writes=["AGENTS.md"],
                 applied=bool(agents["changed"]),
                 result=agents,

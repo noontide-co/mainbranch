@@ -190,6 +190,13 @@ It should:
 - point to generated Codex workflow entrypoints only after those entrypoints
   exist and have smoke evidence.
 
+Status note: MAIN-387 chose the compact generated Codex workflow index
+referenced from `AGENTS.md` for the first lifecycle discovery slice. That index
+routes start, status, and thinking/codification requests through deterministic
+`mb` facts and keeps `.agents/skills`, plugin packaging, provider mutation,
+publishing, spend, domains, and customer contact out of the current support
+claim.
+
 Rendered Codex shells may produce:
 
 - repo-local `.agents/skills/<workflow>/SKILL.md` bridge links for selected
