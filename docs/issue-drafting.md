@@ -4,6 +4,11 @@ Main Branch improves through public friction reports, but business repos can
 contain private context. Use `mb issue` when an error, confusing step, missing
 workflow, or question should become a GitHub issue.
 
+When the source is a full customer call, webinar transcript, chat export, or
+agent session log, first use [`session-excavation.md`](session-excavation.md)
+to classify findings by priority and keep private evidence out of public
+GitHub.
+
 ## Commands
 
 ```bash
@@ -56,3 +61,7 @@ Skills should not file or open issues on their own. They should summarize the
 public-safe problem, recommend the matching shape (`bug`, `feature`, or
 `question`), and let the operator run `mb issue open ... --yes` after reviewing
 the draft.
+
+For larger transcript/export reviews, skills should also leave behind the
+reusable artifact that would make the same review easier next time: a doc,
+decision, fixture, test, template, or skill reference.
