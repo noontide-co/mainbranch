@@ -33,6 +33,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Fixed `mb status --json --peek` so date-valued status facts serialize as ISO
   strings and status failures return the shared JSON error envelope instead of
   leaking Python tracebacks. Refs MAIN-391, #628.
+- Fixed `mb onboard --github <owner/repo> --push` so first-run GitHub backup
+  includes generated `.mb/schema_version` state in the saved baseline instead
+  of stranding the operator at manual cleanup. The push path now records
+  GitHub CLI auth/account preflight facts before creating the repo. Refs
+  MAIN-389, #626.
 
 ## [0.3.25] - 2026-05-16
 

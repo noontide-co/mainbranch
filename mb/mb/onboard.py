@@ -46,6 +46,9 @@ LOCAL_SETUP_PATH_PREFIXES = (
     ".claude/worktrees/",
     ".claude/skills/",
 )
+TRACKED_LOCAL_SETUP_PATHS = {
+    ".mb/schema_version",
+}
 
 
 def _which(name: str) -> str:
@@ -113,7 +116,7 @@ def _durable_generated_paths(paths: list[str]) -> list[str]:
         path = Path(rel)
         if path.is_absolute() or ".." in path.parts:
             continue
-        if any(
+        if rel not in TRACKED_LOCAL_SETUP_PATHS and any(
             rel == prefix.rstrip("/") or rel.startswith(prefix)
             for prefix in LOCAL_SETUP_PATH_PREFIXES
         ):
@@ -143,14 +146,20 @@ def _commit_generated_scaffold(
         result["commands"].append("git add -- " + " ".join(durable_paths))
         if not add["ok"]:
             result["errors"].append(add["stderr"].strip() or "git add failed")
-            result["repair"] = "Review `git status`, then commit the scaffold manually."
+            result["repair"] = (
+                "Rerun `mb onboard --yes --path <repo> --github <owner/repo> --push` "
+                "after the folder is writable."
+            )
             return result
 
     staged = _git_output(repo, ["diff", "--cached", "--quiet", "--"])
     staged_changes = staged["returncode"] == 1
     if staged["returncode"] not in {0, 1}:
         result["errors"].append(staged["stderr"].strip() or "git staged diff failed")
-        result["repair"] = "Review `git status`, then commit the scaffold manually."
+        result["repair"] = (
+            "Rerun `mb onboard --yes --path <repo> --github <owner/repo> --push` "
+            "after the folder is writable."
+        )
         return result
     if staged_changes:
         commit = _git_output(repo, ["commit", "-m", commit_message], timeout=15.0)
@@ -165,18 +174,53 @@ def _commit_generated_scaffold(
         result["committed"] = True
     elif not _has_git_commit(repo):
         result["errors"].append("No durable scaffold files were staged for the first commit.")
-        result["repair"] = "Review `git status`, then commit the scaffold manually."
+        result["repair"] = (
+            "Rerun `mb onboard --yes --path <repo> --github <owner/repo> --push` "
+            "after the folder is writable."
+        )
         return result
 
     if _working_tree_dirty(repo):
-        result["errors"].append(
-            "Working tree has uncommitted files outside the generated Main Branch scaffold."
-        )
+        result["errors"].append("This folder has files Main Branch did not create.")
         result["repair"] = (
-            "Review `git status`; commit, ignore, or move private files before pushing."
+            "Move private or scratch files out of the business folder, then rerun "
+            "`mb onboard --yes --path <repo> --github <owner/repo> --push`."
         )
         return result
 
+    result["ok"] = True
+    return result
+
+
+def _github_owner(github_repo: str) -> str:
+    parts = github_repo.strip().split("/", maxsplit=1)
+    return parts[0].strip() if len(parts) == 2 else ""
+
+
+def _github_preflight(github_repo: str) -> dict[str, Any]:
+    owner = _github_owner(github_repo)
+    result: dict[str, Any] = {
+        "ok": False,
+        "authenticated": False,
+        "authenticated_account": "",
+        "expected_owner": owner,
+        "owner_matches_authenticated_account": False,
+        "commands": [],
+        "errors": [],
+        "repair": "",
+    }
+    auth = _run_command(["gh", "auth", "status"], timeout=5.0)
+    result["commands"].append("gh auth status")
+    user = _run_command(["gh", "api", "user", "--jq", ".login"], timeout=5.0)
+    result["commands"].append("gh api user --jq .login")
+    account = user["stdout"].strip() if user["ok"] else ""
+    result["authenticated_account"] = account
+    result["authenticated"] = bool(auth["ok"] or account)
+    result["owner_matches_authenticated_account"] = bool(owner and account and owner == account)
+    if not result["authenticated"]:
+        result["errors"].append("GitHub CLI is installed but not authenticated.")
+        result["repair"] = "Run `gh auth login`, then rerun onboarding."
+        return result
     result["ok"] = True
     return result
 
@@ -201,6 +245,7 @@ def _github_create_push(
         "remote_set": bool(_git_remote(repo)),
         "pushed": False,
         "tracking": _tracking_branch(repo),
+        "preflight": {},
         "commands": [],
         "errors": [],
         "repair": "",
@@ -218,6 +263,14 @@ def _github_create_push(
     if not _which("git"):
         result["errors"].append("git is not installed.")
         result["repair"] = "Install git before creating the GitHub repo."
+        return result
+
+    preflight = _github_preflight(github_repo.strip())
+    result["preflight"] = preflight
+    result["commands"].extend(preflight["commands"])
+    if not preflight["ok"]:
+        result["errors"].extend(str(item) for item in preflight["errors"])
+        result["repair"] = str(preflight["repair"])
         return result
 
     commit_result = _commit_generated_scaffold(
