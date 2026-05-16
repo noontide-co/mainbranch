@@ -21,6 +21,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   status, proof, stale-source, repo-boundary, and beginner-explanation issues.
   Refs MAIN-386, #622.
 
+### Changed
+
+- Added compact Codex lifecycle workflow discovery to generated business-repo
+  `AGENTS.md`, covering start, status, and thinking/codification routes while
+  keeping `.agents/skills`, plugin packaging, site/ads/provider workflows, and
+  slash-command parity out of scope. Refs MAIN-387, #624.
+
 ## [0.3.25] - 2026-05-16
 
 v0.3.25 packages the post-v0.3.24 release-simulation language fix. It makes

@@ -86,8 +86,22 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     assert "## Codex Operating Contract" in text
     assert "Do not pretend Claude" in text
     assert "slash commands exist in Codex." in text
+    assert "## Codex Lifecycle Workflow Index" in text
+    assert "current Codex lifecycle discovery surface" in text
+    assert "Do not create `.agents/skills`" in text
+    assert "Start the day / what next / get oriented" in text
+    assert "Inspect status / what changed / what is stale" in text
+    assert "Think / research / decide / codify" in text
+    assert "do not claim these workflows are ported to" in text
     assert "## Codex Start Workflow" in text
     assert "This is the Codex-native port of `/mb-start`" in text
+    assert "## Codex Status Workflow" in text
+    assert "This is the Codex-native status route" in text
+    assert "since_last_check" in text
+    assert "## Codex Think Route" in text
+    assert "existing `mb-think` shared workflow" in text
+    assert "smallest honest research depth" in text
+    assert "mb checkpoint --plan --json" in text
     assert "mb status --json --peek" in text
     assert "mb start --json" in text
     assert "mb doctor repair --plan" in text

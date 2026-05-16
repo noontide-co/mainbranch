@@ -281,6 +281,31 @@ def test_doctor_repair_plan_reports_missing_codex_agents_md(tmp_path: Path) -> N
     assert actions["codex-agents-md"]["writes"] == ["AGENTS.md"]
 
 
+def test_doctor_repair_plan_reports_stale_codex_lifecycle_guidance(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    agents = repo / "AGENTS.md"
+    agents.write_text(
+        agents.read_text(encoding="utf-8").replace(
+            "## Codex Lifecycle Workflow Index",
+            "## Old Codex Notes",
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "codex-wiring")
+    agents_check = next(check for check in section["checks"] if check["name"] == "AGENTS.md")
+    assert agents_check["state"] == "warn"
+    assert agents_check["lifecycle_discovery_ok"] is False
+    assert "## Codex Lifecycle Workflow Index" in agents_check["missing_lifecycle_guidance"]
+    actions = {action["id"]: action for action in payload["actions"]}
+    assert "codex-agents-md" in actions
+
+
 def test_doctor_repair_apply_refreshes_codex_agents_md(tmp_path: Path) -> None:
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
@@ -294,6 +319,9 @@ def test_doctor_repair_apply_refreshes_codex_agents_md(tmp_path: Path) -> None:
     assert "codex-agents-md" in applied
     agents_text = (repo / "AGENTS.md").read_text(encoding="utf-8")
     assert "## Codex Start Workflow" in agents_text
+    assert "## Codex Lifecycle Workflow Index" in agents_text
+    assert "## Codex Status Workflow" in agents_text
+    assert "## Codex Think Route" in agents_text
     assert "mb status --json --peek" in agents_text
 
 
