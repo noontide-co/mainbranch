@@ -178,11 +178,13 @@ You'll need a Claude plan that includes Claude Code. Install Claude Code from [c
 ### Trying Codex CLI
 
 Codex CLI support is experimental and CLI-first. Fresh business folders include
-an `AGENTS.md` file that tells Codex how to start from Main Branch facts. Expect
-Codex to run `mb status --json --peek`, `mb start --json`, and
-`mb doctor repair --plan`, then translate those facts into a useful owner
-briefing. Do not expect Claude Code slash commands such as `/mb-start` to work
-inside Codex yet.
+an `AGENTS.md` file that tells Codex how to start from Main Branch facts and
+routes the lifecycle basics: start the day, inspect status, and think through
+or codify a decision. Expect Codex to run `mb status --json --peek`,
+`mb start --json`, and `mb doctor repair --plan`, then translate those facts
+into a useful owner briefing. Do not expect Claude Code slash commands such as
+`/mb-start` to work inside Codex yet, and do not expect site, ads, publishing,
+provider mutation, spend, or customer-contact workflows to be ported there.
 
 After installing Codex CLI, test a new repo with:
 

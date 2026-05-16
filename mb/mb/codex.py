@@ -19,6 +19,14 @@ REQUIRED_FACT_COMMANDS = (
     "mb start --json",
     "mb doctor repair --plan",
 )
+REQUIRED_LIFECYCLE_GUIDANCE = (
+    "## Codex Lifecycle Workflow Index",
+    "## Codex Status Workflow",
+    "## Codex Think Route",
+    "mb checkpoint --plan --json",
+    "Do not create `.agents/skills`",
+    "do not claim these workflows are ported to",
+)
 
 
 _DEFAULT_AGENTS = """\
@@ -81,6 +89,33 @@ Use the `vocabulary` block from `mb status --json --peek` when present. If
 challenges, or promos, use that word in operator-facing prose while preserving
 canonical paths, frontmatter, JSON keys, validator rules, and command names.
 
+## Codex Lifecycle Workflow Index
+
+This tracked `AGENTS.md` file is the current Codex lifecycle discovery surface.
+It is owned by `mb init`, `mb onboard`, `mb doctor repair`, and the operator.
+Keep it compact: route to lifecycle workflows and `mb` facts here, but do not
+duplicate the full Main Branch skill tree.
+
+Do not create `.agents/skills`, Codex plugin manifests, generated runtime
+files, or symlinked Claude skills unless a future `mb` command or issue says
+that surface is supported for this repo.
+
+Use this index to map natural Codex requests:
+
+- **Start the day / what next / get oriented:** use the Codex Start Workflow
+  below. Run `mb status --json --peek` first, then `mb start --json` when
+  runtime handoff or adapter-readiness facts matter.
+- **Inspect status / what changed / what is stale:** use the Codex Status
+  Workflow below. Answer from `ranked_actions`, `since_last_check`, `journal`,
+  `money_path`, `content_strategy`, `integrations`, `readiness`, and
+  `drift.items`.
+- **Think / research / decide / codify:** use the Codex Think Route below.
+  Start from `mb` facts, choose a research depth, and ask before writing
+  durable business files.
+- **Site, ads, organic production, provider mutation, publishing, spend,
+  domains, or customer contact:** do not claim these workflows are ported to
+  Codex. Use read-only `mb` facts for planning and ask before any action.
+
 ## Codex Start Workflow
 
 This is the Codex-native port of `/mb-start`. It is a workflow, not a slash
@@ -110,6 +145,73 @@ command.
 Use numbered lists for operator choices, with one active choice namespace per
 turn. If the operator replies with an ambiguous number, ask what they meant
 before acting.
+
+## Codex Status Workflow
+
+This is the Codex-native status route. It is a workflow, not a slash command.
+
+1. Run `mb status --json --peek`.
+2. Treat the JSON as the source of truth for setup, update, drift, GitHub,
+   onboarding, integrations, bets, recent work, since-last-check,
+   `content_strategy`, `money_path`, vocabulary, checkpoint state, and
+   `ranked_actions`.
+3. Lead with the top `ranked_actions` entry when the operator asks what to do
+   next. Include the reason and cited signal summaries.
+4. For "what changed?" answer from `since_last_check.journal` first, then
+   top-level `journal` for recent context.
+5. For provider questions, read `integrations` first. Run `mb connect plan` or
+   `mb connect doctor --json` only when the operator needs choices or repair
+   commands.
+6. Use `money_path` for customer progress, offer, proof, CTA, channel, push,
+   playbook, page readiness, and outcome feedback questions. Keep language
+   evidence-based: legible, supported, connected, instrumented.
+7. Use `content_strategy` for content strategy health, layered channel/account
+   files, stale platform rules, or disconnected content layers.
+
+Do not mutate the last-check marker unless the operator explicitly says this is
+the daily check-in and wants it recorded.
+
+## Codex Think Route
+
+This is Codex-native guidance for the existing `mb-think` shared workflow
+source. It is not a slash command, and it does not mean all Main Branch skills
+work in Codex.
+
+Use it when the operator asks to think through an offer, research a market,
+compare providers, make a decision, or codify what was learned.
+
+Before advice, run the read-only facts that fit the situation:
+
+```bash
+mb status --json --peek
+mb start --json
+mb doctor repair --plan
+```
+
+If the task touches provider readiness, run `mb connect doctor --json`. Before
+recommending a saved checkpoint, run `mb checkpoint --plan --json`. These
+commands provide facts and plans; they do not authorize writes.
+
+Choose the smallest honest research depth:
+
+- Level 0: operator memory is enough for a low-risk move.
+- Level 1: existing repo context and `mb` facts are enough.
+- Level 2: lightweight public or operator-provided research is needed.
+- Level 3: multi-source synthesis is needed.
+- Level 4: structured approved-source collection is justified.
+- Level 5: high-resolution market analysis or field evidence is needed.
+
+Read only the business files needed for the question: `core/`, `research/`,
+`decisions/`, `bets/`, `pushes/`, `log/`, and `documents/`. Do not inspect
+secrets, raw provider exports, raw finance/legal records, customer/member
+records, private DMs, gated communities, local runtime settings, or credentials
+unless the operator gives explicit permission and the source belongs in the
+business repo.
+
+Ask before creating, editing, moving, deleting, archiving, codifying, or
+checkpointing business files. Ask before publishing, opening a public issue,
+submitting a proposal, spending money, mutating provider state, or contacting
+customers.
 
 ## Routing Rules
 
@@ -280,7 +382,13 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
     missing_commands = [command for command in REQUIRED_FACT_COMMANDS if command not in text]
     approval_ok = "explicit operator approval" in text
     slash_ok = "Do not pretend Claude" in text and "slash commands exist in Codex." in text
-    fact_grounding_ok = bool(exists and not missing_commands and approval_ok and slash_ok)
+    missing_lifecycle_guidance = [
+        phrase for phrase in REQUIRED_LIFECYCLE_GUIDANCE if phrase not in text
+    ]
+    lifecycle_discovery_ok = bool(exists and not missing_lifecycle_guidance)
+    fact_grounding_ok = bool(
+        exists and not missing_commands and approval_ok and slash_ok and lifecycle_discovery_ok
+    )
     template_match = bool(exists and text == expected)
     current = fact_grounding_ok
     return {
@@ -292,6 +400,8 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
         "path": AGENTS_RELATIVE_PATH,
         "absolute_path": str(path),
         "missing_fact_commands": missing_commands,
+        "missing_lifecycle_guidance": missing_lifecycle_guidance,
+        "lifecycle_discovery_ok": lifecycle_discovery_ok,
         "approval_boundary_ok": approval_ok,
         "codex_native_ok": slash_ok,
         "repair": ""
