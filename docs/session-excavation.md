@@ -14,7 +14,7 @@ Use session excavation for:
 
 - first-run setup calls;
 - customer onboarding calls;
-- exported Claude Code, Codex, or Conductor sessions;
+- exported Claude Code, Codex, or other agent-runner sessions;
 - webinar transcripts and chat logs;
 - runtime dogfood transcripts that are not release validation;
 - generated business-repo history after a live session;
@@ -49,10 +49,10 @@ Private artifacts may include:
 - internal operator notes;
 - screenshots or logs that contain private context.
 
-Keep private evidence in local scratch space such as `.context/` or `.agent/`,
-or in Linear-only comments when the tool clearly supports keeping the note
-private. Do not copy private Linear evidence into public GitHub comments or PR
-bodies.
+Keep private evidence in ignored local scratch space such as `.agent/`, an
+agent-runner scratch directory, or OS temp, or in Linear-only comments when the
+tool clearly supports keeping the note private. Do not copy private Linear
+evidence into public GitHub comments or PR bodies.
 
 ## Source Inventory
 
