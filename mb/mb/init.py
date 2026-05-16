@@ -399,8 +399,10 @@ Use standard proof files such as `testimonials.md`, `typicality.md`, and
 `angles/` inside those proof folders. Make proof status-detectable with
 structured testimonial fields such as `public`, `permissioned_public`,
 `approved_for_public`, `safe_to_share`, `offer`, `linked_offer`, and
-`linked_offers`. Use `typicality.md` for average-case outcomes, caveats,
-common failure context, and time-to-outcome when available.
+`linked_offers`. Use `permissioned_public: false` for specific internal proof
+that is not approved for public marketing yet. Use `typicality.md` for
+average-case outcomes, caveats, common failure context, and time-to-outcome
+when available.
 Content strategy starts at `core/content-strategy.md`. Keep it as the simple
 business-level strategy and index: what the business wants to be known for, who
 the content is for, pillars, content jobs, non-publishing rules, and links to
@@ -419,7 +421,9 @@ and outcome feedback are legible and connected. Use MoneyPath from
 `mb status --json --peek` for routing when the path needs to be legible,
 supported, connected, and instrumented. Treat proof-quality fields as factual
 signals for badges or gaps, not persuasion scores; do not claim proof or offers
-are good, bad, high-converting, or likely to convert.
+are good, bad, high-converting, or likely to convert. If
+`money_path.objects.proof.quality.public_marketing.status` is `blocked`,
+collect permission before using that proof in public ads, pages, or claims.
 A live idea can be both a bet and an offer candidate: open the bet first, then
 create or update the offer only when the operator wants durable sellable truth.
 

@@ -81,6 +81,7 @@ When no proof files exist, `quality` contains the baseline empty shape:
     "generic": 0,
     "specific": 0,
     "permissioned_public": 0,
+    "specific_permissioned_public": 0,
     "linked_to_offer": 0,
     "with_before_state": 0,
     "with_outcome": 0,
@@ -99,6 +100,13 @@ When no proof files exist, `quality` contains the baseline empty shape:
   "claim_links": {
     "linked_offers": [],
     "unsupported_offer_claims": []
+  },
+  "public_marketing": {
+    "ready": false,
+    "status": "missing",
+    "summary": "No testimonial proof is available for public marketing.",
+    "missing": ["testimonials"],
+    "next_action": "collect_testimonials"
   }
 }
 ```
@@ -121,16 +129,24 @@ When proof files exist and status can inspect them, `quality` also includes:
 Generic testimonials are real proof material, but they are not treated as
 specific, offer-linked, typicality-aware, or outcome-backed unless the relevant
 fields say so. Skills and dashboards should cite facts such as
-`permissioned_public`, `linked_to_offer`, `with_outcome`, `with_timeframe`,
-`with_metric`, `typicality.exists`, and, when present,
+`permissioned_public`, `specific_permissioned_public`, `linked_to_offer`,
+`with_outcome`, `with_timeframe`, `with_metric`, `typicality.exists`, and, when present,
 `instrumentation.outcome_feedback`; those are factual signals, not persuasion
 scores.
+
+`quality.public_marketing` distinguishes internal proof from proof that can be
+used in public campaigns. If testimonials have specific outcomes but none are
+permissioned for public use, `public_marketing.status` is `blocked` and
+`ready` is `false`; skills should route to permission collection before
+drafting proof-backed public ads, pages, or claims.
 
 Dashboard-safe proof categories can be derived from these facts:
 
 - Missing proof: component `status` is `missing`.
 - Generic proof: testimonials exist, but `specific` is `0`.
 - Specific proof: `testimonials.specific` is greater than `0`.
+- Public marketing proof: `public_marketing.ready` is `true`.
+- Permission-blocked public proof: `public_marketing.status` is `blocked`.
 - Offer-linked proof: `testimonials.linked_to_offer` is greater than `0`.
 - Typicality-aware proof: `typicality.exists` is `true`.
 - Outcome-backed proof: `instrumentation.outcome_feedback` is present and

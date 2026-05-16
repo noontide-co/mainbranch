@@ -138,6 +138,12 @@ lives under `core/offers/<slug>/proof/` or when a testimonial entry uses
 the operator, but `mb status` only treats path placement and those structured
 fields as offer-link signals.
 
+Use `permissioned_public: false` for specific proof that is useful internally
+but not approved for public marketing yet. `mb status --json --peek` reports
+that as blocked public-marketing proof under
+`money_path.objects.proof.quality.public_marketing`; skills should collect
+permission before using it in public ads, pages, or claims.
+
 Generic testimonials are still proof material. They should not be described as
 specific, offer-linked, typicality-aware, or outcome-backed unless the
 corresponding MoneyPath facts say so. `typicality.md` should record

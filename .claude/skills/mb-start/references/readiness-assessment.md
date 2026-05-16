@@ -15,6 +15,9 @@ connected, and instrumented. For proof, prefer
 generic testimonials, specific outcomes, permissioned public signals, offer
 linkage, typicality context, and outcome feedback are factual signals, not
 proof scores.
+Use `quality.public_marketing` for public ads/pages readiness. Specific
+testimonials with no permissioned public signal are internal strategy proof,
+not public marketing proof; route to permission collection before public claims.
 
 ---
 

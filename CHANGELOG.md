@@ -33,6 +33,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   plain-language save/checkpoint/update/runtime boundaries and strongly
   recommended GitHub backup, sync, connector, and account-check guidance. Refs
   MAIN-388, #625; MAIN-395, #632; MAIN-394, #631.
+- Added public-marketing proof permission readiness to MoneyPath status facts
+  and tightened start/ads/site/think guidance so specific internal proof routes
+  to permission collection before proof-backed public campaigns. Refs MAIN-392,
+  #629.
 
 ### Fixed
 

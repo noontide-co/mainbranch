@@ -84,6 +84,8 @@ def _assert_claude_md_primitive_routing_contract(text: str) -> None:
     assert "`core/proof/`" in text
     assert "offer-specific proof belongs in `core/offers/<slug>/proof/`" in text
     assert "Use standard proof files such as `testimonials.md`" in text
+    assert "`permissioned_public: false`" in text
+    assert "`money_path.objects.proof.quality.public_marketing.status` is `blocked`" in text
     assert "`typicality.md`" in text
     assert "`angles/`" in text
     assert "Content strategy starts at `core/content-strategy.md`" in text
@@ -143,6 +145,7 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     assert "`vocabulary` block from `mb status --json --peek`" in text
     assert "MoneyPath" in text
     assert "Use `money_path` when the next move depends on customer progress" in text
+    assert "`permissioned_public: false`" in text
     assert "current paths, frontmatter, JSON keys" in text
     assert "If `ranked_actions` has entries" in text
     assert "Do not pretend" in text

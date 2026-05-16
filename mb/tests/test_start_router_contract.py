@@ -8,6 +8,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 START_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-start" / "SKILL.md"
 ROUTER_REF = REPO_ROOT / ".claude" / "skills" / "mb-start" / "references" / "router-and-language.md"
 UPDATE_REF = REPO_ROOT / ".claude" / "skills" / "mb-start" / "references" / "pull-engine-updates.md"
+ADS_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-ads" / "SKILL.md"
+SITE_CONTEXT_REF = REPO_ROOT / ".claude" / "skills" / "mb-site" / "references" / "site-context.md"
+THINK_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-think" / "SKILL.md"
 
 
 def _read(path: Path) -> str:
@@ -99,6 +102,8 @@ def test_start_router_routes_money_intent_from_moneypath_facts() -> None:
         "`money_path.overall_label`",
         "`money_path.objects.offer`",
         "`money_path.objects.proof`",
+        "`money_path.objects.proof.quality.public_marketing.status`",
+        "permission collection",
         "`money_path.objects.product_ladder`",
         "`money_path.objects.cta_path`",
         "`money_path.objects.channel_strategy`",
@@ -130,3 +135,16 @@ def test_start_router_no_longer_blindly_pulls_business_repo() -> None:
     combined = f"{start}\n{update}"
     assert 'git -C "$REPO_PATH" pull origin main' not in combined
     assert "blindly pull or rebase the business repo" in start
+
+
+def test_public_marketing_proof_permission_guidance_is_shared() -> None:
+    combined = "\n".join(
+        _read(path) for path in [START_SKILL, ROUTER_REF, ADS_SKILL, SITE_CONTEXT_REF, THINK_SKILL]
+    )
+
+    assert "quality.public_marketing.status" in combined
+    assert "permission collection" in combined
+    assert "ads, pages, or public claims" in combined
+    assert "do not draft proof-backed public ad claims" in combined
+    assert "do not use those\ntestimonials in public page copy" in combined
+    assert "`permissioned_public: false`" in combined

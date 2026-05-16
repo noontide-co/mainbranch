@@ -763,6 +763,54 @@ def test_status_json_peek_handles_date_valued_testimonial_frontmatter(
     assert testimonials["permissioned_public"] == 1
 
 
+def test_status_money_path_specific_unpermissioned_proof_blocks_public_marketing(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+    proof = repo / "core" / "proof"
+    proof.mkdir(parents=True, exist_ok=True)
+    (proof / "testimonials.md").write_text(
+        (FIXTURES / "proof" / "specific-unpermissioned-testimonials.md").read_text(
+            encoding="utf-8"
+        ),
+        encoding="utf-8",
+    )
+    (proof / "typicality.md").write_text(
+        (
+            "# Typicality\n\n"
+            "Average case: most users need one setup week. Caveat: outcomes vary. "
+            "Common failure context: no clear offer. Time to outcome is usually 2 weeks.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    proof_object = report["money_path"]["objects"]["proof"]
+    quality = proof_object["quality"]
+    testimonials = quality["testimonials"]
+    assert testimonials["specific"] == 2
+    assert testimonials["permissioned_public"] == 0
+    assert testimonials["specific_permissioned_public"] == 0
+    assert quality["public_marketing"] == {
+        "ready": False,
+        "status": "blocked",
+        "summary": (
+            "Specific proof exists for internal strategy, but no specific "
+            "testimonial is permissioned for public marketing."
+        ),
+        "missing": ["permissioned_public_testimonials"],
+        "next_action": "collect_public_permission",
+    }
+    assert report["money_path"]["ranked_actions"][0]["id"] == "collect-proof-permission"
+    assert report["money_path"]["ranked_actions"][0]["source"] == (
+        "money_path.objects.proof.quality.public_marketing"
+    )
+
+
 def test_status_money_path_proof_cannot_reach_field_tested_without_level_three(
     tmp_path: Path, monkeypatch
 ) -> None:

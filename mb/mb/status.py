@@ -195,6 +195,12 @@ PROOF_PERMISSION_KEYWORDS = (
     "public: true",
     "safe to share",
 )
+PROOF_PERMISSION_NEGATIVE_RE = re.compile(
+    r"\b(?:not|no|without|pending|needs?|awaiting|unapproved)\b.{0,40}"
+    r"\b(?:permission|permissioned|approved|public|share|sharing)\b"
+    r"|\b(?:permission|permissioned|approved|public|share|sharing)\b.{0,40}"
+    r"\b(?:not|no|without|pending|needed|awaiting|unapproved|false)\b"
+)
 PROOF_AVERAGE_CASE_KEYWORDS = (
     "average",
     "median",
@@ -842,9 +848,25 @@ def _truthy_structured_value(value: Any) -> bool:
     return False
 
 
-def _testimonial_structured_permission(entry: TestimonialEntry) -> bool:
+def _falsey_structured_value(value: Any) -> bool:
+    if isinstance(value, bool):
+        return not value
+    if isinstance(value, str):
+        return value.strip().lower() in {
+            "false",
+            "no",
+            "not approved",
+            "not permissioned",
+            "pending",
+            "private",
+            "internal",
+        }
+    return False
+
+
+def _testimonial_structured_permission_signal(entry: TestimonialEntry) -> bool | None:
     if not isinstance(entry, dict):
-        return False
+        return None
     permission_fields = {
         "public",
         "permissioned_public",
@@ -852,11 +874,24 @@ def _testimonial_structured_permission(entry: TestimonialEntry) -> bool:
         "safe_to_share",
         "public_approved",
     }
+    explicit_false = False
     for key, value in entry.items():
         normalized = str(key).strip().lower().replace("-", "_")
-        if normalized in permission_fields and _truthy_structured_value(value):
+        if normalized not in permission_fields:
+            continue
+        if _truthy_structured_value(value):
             return True
-    return False
+        explicit_false = explicit_false or _falsey_structured_value(value)
+    if explicit_false:
+        return False
+    return None
+
+
+def _testimonial_text_permission_signal(text: str) -> bool:
+    lowered = text.lower()
+    if PROOF_PERMISSION_NEGATIVE_RE.search(lowered):
+        return False
+    return _contains_any(lowered, PROOF_PERMISSION_KEYWORDS)
 
 
 def _testimonial_structured_offer_refs(entry: TestimonialEntry) -> list[str]:
@@ -903,6 +938,7 @@ def _testimonial_signal_counts(
         "generic": 0,
         "specific": 0,
         "permissioned_public": 0,
+        "specific_permissioned_public": 0,
         "linked_to_offer": 0,
         "with_before_state": 0,
         "with_outcome": 0,
@@ -921,8 +957,11 @@ def _testimonial_signal_counts(
         has_metric = _proof_text_has_metric(lowered)
         has_mechanism = _contains_any(lowered, PROOF_MECHANISM_KEYWORDS)
         has_objection = _contains_any(lowered, PROOF_OBJECTION_KEYWORDS)
-        has_permission = _testimonial_structured_permission(entry) or _contains_any(
-            lowered, PROOF_PERMISSION_KEYWORDS
+        structured_permission = _testimonial_structured_permission_signal(entry)
+        has_permission = (
+            structured_permission
+            if structured_permission is not None
+            else _testimonial_text_permission_signal(entry_text)
         )
         explicit_offer_refs = _testimonial_structured_offer_refs(entry)
         explicit_offer_refs.extend(_testimonial_explicit_offer_refs(entry_text))
@@ -945,6 +984,7 @@ def _testimonial_signal_counts(
         counts["with_mechanism"] += int(has_mechanism)
         counts["with_objection"] += int(has_objection)
         counts["permissioned_public"] += int(has_permission)
+        counts["specific_permissioned_public"] += int(has_permission and any(signals))
         counts["linked_to_offer"] += int(has_offer_link)
         if any(signals):
             counts["specific"] += 1
@@ -960,6 +1000,7 @@ def _empty_proof_quality() -> dict[str, Any]:
             "generic": 0,
             "specific": 0,
             "permissioned_public": 0,
+            "specific_permissioned_public": 0,
             "linked_to_offer": 0,
             "with_before_state": 0,
             "with_outcome": 0,
@@ -979,6 +1020,61 @@ def _empty_proof_quality() -> dict[str, Any]:
             "linked_offers": [],
             "unsupported_offer_claims": [],
         },
+        "public_marketing": {
+            "ready": False,
+            "status": "missing",
+            "summary": "No testimonial proof is available for public marketing.",
+            "missing": ["testimonials"],
+            "next_action": "collect_testimonials",
+        },
+    }
+
+
+def _proof_public_marketing_readiness(quality: dict[str, Any]) -> dict[str, Any]:
+    testimonial_quality = quality.get("testimonials") or {}
+    total = int(testimonial_quality.get("total") or 0)
+    specific = int(testimonial_quality.get("specific") or 0)
+    permissioned = int(testimonial_quality.get("permissioned_public") or 0)
+    specific_permissioned = int(testimonial_quality.get("specific_permissioned_public") or 0)
+    if total == 0:
+        return {
+            "ready": False,
+            "status": "missing",
+            "summary": "No testimonial proof is available for public marketing.",
+            "missing": ["testimonials"],
+            "next_action": "collect_testimonials",
+        }
+    if specific > 0 and specific_permissioned == 0:
+        return {
+            "ready": False,
+            "status": "blocked",
+            "summary": (
+                "Specific proof exists for internal strategy, but no specific "
+                "testimonial is permissioned for public marketing."
+            ),
+            "missing": ["permissioned_public_testimonials"],
+            "next_action": "collect_public_permission",
+        }
+    if specific == 0:
+        missing = ["specific_testimonials"]
+        if permissioned == 0:
+            missing.append("permissioned_public_testimonials")
+        return {
+            "ready": False,
+            "status": "incomplete",
+            "summary": (
+                "Testimonials exist, but public marketing proof needs "
+                "specific permissioned evidence."
+            ),
+            "missing": missing,
+            "next_action": "strengthen_testimonials",
+        }
+    return {
+        "ready": True,
+        "status": "ready",
+        "summary": "At least one specific testimonial is permissioned for public marketing.",
+        "missing": [],
+        "next_action": None,
     }
 
 
@@ -1871,6 +1967,7 @@ def _proof_quality(
         )
         or any(playbook.get("linked_outcomes") for playbook in playbooks),
     }
+    quality["public_marketing"] = _proof_public_marketing_readiness(quality)
     return quality
 
 
@@ -2504,6 +2601,28 @@ def _money_path_ranked_actions(
             typicality_quality = quality.get("typicality") or {}
             claim_links = quality.get("claim_links") or {}
             instrumentation = quality.get("instrumentation") or {}
+            public_marketing = quality.get("public_marketing") or {}
+            if public_marketing.get("status") == "blocked":
+                actions.append(
+                    {
+                        "id": "collect-proof-permission",
+                        "title": "Collect proof permission",
+                        "reason": str(
+                            public_marketing.get("summary")
+                            or "Specific proof exists, but public marketing permission is missing."
+                        ),
+                        "route": "/mb-think",
+                        "source": "money_path.objects.proof.quality.public_marketing",
+                        "component": "proof",
+                        "confidence": "high",
+                        "effort_hint": "low",
+                        "missing": [
+                            str(item) for item in (public_marketing.get("missing") or [])[:5]
+                        ],
+                        "safe_to_share": True,
+                    }
+                )
+                continue
             proof_quality_gaps: list[str] = []
             if int(testimonial_quality.get("generic") or 0) > 0:
                 proof_quality_gaps.append("specific_testimonials")
