@@ -354,6 +354,8 @@ matching files under `core/offers/[active]/proof/`. Read older offer
 testimonial files as compatibility context only.
 Before outcome-claim or substantiation recommendations, read `money_path.objects.proof.quality`.
 Treat proof fields as factual signals, not scores; generic testimonials are proof material but not specific, offer-linked, typicality-aware, or outcome-backed unless those signals exist.
+If `quality.public_marketing.status` is `blocked`, do not draft proof-backed public ad claims from those testimonials.
+Route to `/mb-think` to collect permission or reframe the proof as internal strategy unless the operator explicitly approves an internal-only use.
 
 **Offer argument:** `/mb-ads [mode] [offer] [campaign]` — e.g., `/mb-ads static community january-launch`
 If offer specified, it selects the offer for this run only.

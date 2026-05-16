@@ -241,7 +241,9 @@ customers.
 - `core/offers/` - per-offer specifics when this is a multi-offer repo.
 - `core/proof/` - testimonials, typicality, and reusable proof. Use
   structured permission and offer-link fields when proof should be detectable
-  by `mb status`.
+  by `mb status`. If specific proof is not approved for public marketing, use
+  `permissioned_public: false` and collect permission before public ads, pages,
+  or claims use it.
 - `core/content-strategy.md` - business-level content strategy and index.
 - `core/marketing/` - optional distribution, channel, and account strategy.
 - `core/people/` - optional founder/person voice source material, beliefs,

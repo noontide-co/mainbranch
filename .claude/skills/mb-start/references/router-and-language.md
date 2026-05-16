@@ -25,6 +25,9 @@ first.
 3. Use status facts as evidence: `ranked_actions`, `update`, `readiness`,
    `onboarding`, `drift`, `integrations`, `github`, `brain`, `checkpoint`,
    `since_last_check`, `journal`, and `money_path`.
+   When `money_path.objects.proof.quality.public_marketing.status` is
+   `blocked`, route public ads/pages/claim work to proof permission collection
+   before recommending proof-backed campaigns.
 4. Choose the smallest useful next workflow. Do not present the full route menu
    when a clear intent maps to one route.
 5. If two routes are plausible, ask one business question that separates them.

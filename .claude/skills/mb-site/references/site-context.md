@@ -62,6 +62,10 @@ Before using proof in page claims, read `money_path.objects.proof.quality` from
 `mb status --json --peek`. Use it to distinguish generic proof, specific
 outcomes, offer-linked proof, typicality-aware proof, and outcome-backed proof.
 These are factual page-support signals, not conversion or persuasion scores.
+If `quality.public_marketing.status` is `blocked`, do not use those
+testimonials in public page copy. Route to permission collection first, or use
+the proof only as internal strategy if the operator explicitly reframes the
+work that way.
 
 ## Required Business Context
 
