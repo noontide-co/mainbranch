@@ -478,6 +478,8 @@ def _review_required(repo: Path, changes: list[dict[str, Any]]) -> list[dict[str
         lowered_name = name.lower()
         abs_path = repo / path
         surface = str(change.get("surface", "unknown"))
+        if change.get("deleted"):
+            continue
 
         if re.match(r"^untitled(?:[\s._-]*\d*)?(?:\.[^.]+)?$", lowered_name):
             review.append(
@@ -525,12 +527,7 @@ def _review_required(repo: Path, changes: list[dict[str, Any]]) -> list[dict[str
             )
             continue
 
-        if (
-            name != ".gitkeep"
-            and not change.get("deleted")
-            and abs_path.is_file()
-            and abs_path.stat().st_size == 0
-        ):
+        if name != ".gitkeep" and abs_path.is_file() and abs_path.stat().st_size == 0:
             review.append(
                 {
                     "code": "zero_byte_file",

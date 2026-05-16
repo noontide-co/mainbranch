@@ -657,6 +657,48 @@ def test_checkpoint_commit_requires_explicit_scratch_file_override(
     assert "Untitled.md" in _git(repo, "status", "--porcelain").stdout
 
 
+def test_checkpoint_commit_allows_scratch_file_deletion_without_override(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
+    _commit_file(
+        repo,
+        "Untitled.md",
+        "# Accidental Scratch\n",
+        "[added] scratch review",
+    )
+    (repo / "Untitled.md").unlink()
+
+    plan = runner.invoke(app, ["checkpoint", "--repo", str(repo), "--plan", "--json"])
+
+    assert plan.exit_code == 0
+    plan_payload = json.loads(plan.stdout)
+    assert plan_payload["status"] == "ready"
+    assert plan_payload["safety"]["review_required"] == []
+    assert plan_payload["changes"][0]["deleted"] is True
+
+    result = runner.invoke(
+        app,
+        [
+            "checkpoint",
+            "--repo",
+            str(repo),
+            "--message",
+            "[fixed] scratch cleanup",
+            "--yes",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "committed"
+    assert payload["committed"] is True
+    assert "Untitled.md" in payload["commit"]["body"]
+    assert _git(repo, "status", "--porcelain").stdout == ""
+    assert not (repo / "Untitled.md").exists()
+
+
 def test_checkpoint_commit_allows_explicit_scratch_file_override(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
