@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.26] - 2026-05-16
+
+v0.3.26 packages the first-run trust batch after v0.3.25. It tightens setup,
+save, sync, status, checkpoint, Codex lifecycle discovery, and proof permission
+paths so a real founder setup can stay grounded in deterministic Main Branch
+facts without exposing private setup evidence.
+
 ### Added
 
 - Added a public session excavation workflow for turning customer calls, chat

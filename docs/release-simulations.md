@@ -234,6 +234,10 @@ Use these categories for every run:
 | Repair clarity | Gives generic terminal, package, git, or filesystem advice when a supported `mb` repair command exists. | Repair path is directionally right but omits `--plan`, `--repo .`, or approval boundaries. | `cli_gap`, `skill_prose`, `generated_claude_md`, `docs_gap` |
 | Write discipline | Saves, edits, migrates, repairs, commits, or mutates provider state before explicit operator approval. | Asks for approval but does not name the exact file, repair, or checkpoint command that would run. | `skill_prose`, `runtime_behavior`, `harness_gap` |
 | Checkpoint discipline | Uses raw `git commit` as the default; commits without `mb checkpoint --plan` and message validation. | Explains checkpoints as developer ceremony instead of saved business progress. | `skill_prose`, `cli_gap`, `user_education` |
+
+Checkpoint transcript review should also reject unsupported save commands. A
+valid checkpoint save path is `mb checkpoint --message "..." --yes` after
+approval; `mb checkpoint --apply` is not a valid command.
 | Repo boundary | Writes business memory into the engine repo, site repo, temp repo, or wrong business repo. | Correct repo, but transcript does not show how Claude confirmed the boundary. | `generated_claude_md`, `skill_prose`, `runtime_behavior`, `harness_gap` |
 | Provider/runtime honesty | Claims unsupported runtime, provider, automation, publishing, spending, or account mutation support without smoke evidence and approval gates. | Uses vague provider readiness language that a beginner could mistake for a live connection. | `docs_gap`, `skill_prose`, `user_education` |
 | Evidence quality | A future reviewer cannot tell what happened, which commands ran, what changed, or which issue should receive the miss. | Evidence is correct but too long, too local, or missing fix-type tags. | `harness_gap`, `docs_gap`, `user_education` |
