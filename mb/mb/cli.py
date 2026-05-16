@@ -312,13 +312,26 @@ def _render_onboard_human(result: dict[str, Any]) -> None:
     tools = result["tools"]
     skill_wiring = result["skill_wiring"]
     checkpoint_hook = result.get("checkpoint_hook") or {}
+    raw_github = result.get("github")
+    github_result: dict[str, Any] = raw_github if isinstance(raw_github, dict) else {}
+    raw_github_preflight = github_result.get("preflight")
+    github_preflight: dict[str, Any] = (
+        raw_github_preflight if isinstance(raw_github_preflight, dict) else {}
+    )
     git = tools["git"]
     github = tools["github_cli"]
     claude = tools["claude_code"]
     console.print("[bold]Checks[/bold]")
     console.print(f"  {'ok' if git['found'] else 'warn'}  git")
     github_state = "ok" if github["found"] and github["authenticated"] else "warn"
-    console.print(f"  {github_state}  GitHub CLI")
+    github_label = "GitHub CLI"
+    account = str(github_preflight.get("authenticated_account") or "")
+    expected_owner = str(github_preflight.get("expected_owner") or "")
+    if account and expected_owner:
+        github_label = f"GitHub CLI signed in as {account}; backup target {expected_owner}"
+    elif account:
+        github_label = f"GitHub CLI signed in as {account}"
+    console.print(f"  {github_state}  {github_label}")
     console.print(f"  {'ok' if claude['found'] else 'warn'}  Claude Code")
     console.print(f"  {'ok' if skill_wiring['ok'] else 'fail'}  Claude Code skill discovery")
     if checkpoint_hook:

@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from mb import graph as graph_mod
@@ -424,6 +428,8 @@ def test_onboard_github_create_push_commits_and_sets_tracking(tmp_path: Path, mo
             return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
         if args[:3] == ["gh", "auth", "status"]:
             return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:4] == ["gh", "api", "user", "--jq"]:
+            return {"ok": True, "stdout": "dmthepm\n", "stderr": "", "returncode": 0}
         if args[:3] == ["gh", "repo", "create"]:
             state["remote"] = "https://github.com/dmthepm/acme.git\n"
             state["tracking"] = "origin/main\n"
@@ -449,7 +455,10 @@ def test_onboard_github_create_push_commits_and_sets_tracking(tmp_path: Path, mo
     assert "." not in add_command
     assert "CLAUDE.md" in add_command
     assert ".gitignore" in add_command
+    assert ".mb/schema_version" in add_command
     assert result["github"]["pushed"] is True
+    assert result["github"]["preflight"]["authenticated_account"] == "dmthepm"
+    assert result["github"]["preflight"]["owner_matches_authenticated_account"] is True
     assert result["setup_complete"]["github_requested"] is True
     assert result["setup_complete"]["github_remote_connected"] is True
     assert result["setup_complete"]["pushed_tracking_remote"] is True
@@ -503,6 +512,8 @@ def test_onboard_github_push_commits_generated_scaffold_in_repo_with_head(
             return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
         if args[:3] == ["gh", "auth", "status"]:
             return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:4] == ["gh", "api", "user", "--jq"]:
+            return {"ok": True, "stdout": "dmthepm\n", "stderr": "", "returncode": 0}
         if args[:3] == ["gh", "repo", "create"]:
             state["remote"] = "https://github.com/dmthepm/existing.git\n"
             state["tracking"] = "origin/main\n"
@@ -577,6 +588,8 @@ def test_onboard_github_push_does_not_sweep_preexisting_untracked_files(
             return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
         if args[:3] == ["gh", "auth", "status"]:
             return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
+        if args[:4] == ["gh", "api", "user", "--jq"]:
+            return {"ok": True, "stdout": "dmthepm\n", "stderr": "", "returncode": 0}
         raise AssertionError(args)
 
     monkeypatch.setattr(onboard_mod, "_run_command", fake_run)
@@ -593,7 +606,7 @@ def test_onboard_github_push_does_not_sweep_preexisting_untracked_files(
 
     assert result["ok"] is False
     assert result["github"]["ok"] is False
-    assert any("uncommitted files outside" in error for error in result["github"]["errors"])
+    assert any("files Main Branch did not create" in error for error in result["github"]["errors"])
     assert not any(cmd[:3] == ["gh", "repo", "create"] for cmd in commands)
 
 
@@ -647,6 +660,8 @@ def test_onboard_github_success_uses_reachability_over_stale_auth_status(
             return {"ok": True, "stdout": "", "stderr": "", "returncode": 0}
         if args[:3] == ["gh", "auth", "status"]:
             return {"ok": False, "stdout": "", "stderr": "stale auth", "returncode": 1}
+        if args[:4] == ["gh", "api", "user", "--jq"]:
+            return {"ok": True, "stdout": "dmthepm\n", "stderr": "", "returncode": 0}
         if args[:3] == ["gh", "repo", "create"]:
             state["remote"] = "https://github.com/dmthepm/reachable.git\n"
             state["tracking"] = "origin/main\n"
@@ -676,3 +691,105 @@ def test_onboard_github_success_uses_reachability_over_stale_auth_status(
     assert result["tools"]["github_cli"]["authenticated"] is True
     assert result["tools"]["github_cli"]["state"] == "ready_reachable"
     assert not any("gh auth login" in warning for warning in result["warnings"])
+
+
+def test_onboard_cli_github_push_fixture_leaves_generated_mb_state_clean(
+    tmp_path: Path, monkeypatch
+) -> None:
+    if not shutil.which("git"):
+        pytest.skip("git is required for the fixture push smoke")
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fake_gh = fake_bin / "gh"
+    remote = tmp_path / "remote.git"
+    fake_gh.write_text(
+        f"""#!{sys.executable}
+import json
+import os
+import subprocess
+import sys
+
+args = sys.argv[1:]
+remote = os.environ["MB_TEST_REMOTE"]
+
+if args[:2] == ["auth", "status"]:
+    sys.exit(0)
+if args[:4] == ["api", "user", "--jq", ".login"]:
+    print("fixture-owner")
+    sys.exit(0)
+if args[:2] == ["repo", "view"]:
+    print(json.dumps({{"nameWithOwner": args[2]}}))
+    sys.exit(0)
+if args[:2] == ["repo", "create"]:
+    full_name = args[2]
+    if not os.path.exists(remote):
+        subprocess.run(["git", "init", "--bare", remote], check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(["git", "remote", "remove", "origin"], stderr=subprocess.DEVNULL)
+    subprocess.run(["git", "remote", "add", "origin", remote], check=True)
+    if "--push" in args:
+        subprocess.run(["git", "push", "-u", "origin", "main"], check=True)
+    subprocess.run(
+        ["git", "remote", "set-url", "origin", "https://github.com/" + full_name + ".git"],
+        check=True,
+    )
+    sys.exit(0)
+
+print("unexpected gh command: " + " ".join(args), file=sys.stderr)
+sys.exit(2)
+""",
+        encoding="utf-8",
+    )
+    fake_gh.chmod(0o755)
+    monkeypatch.setenv("PATH", str(fake_bin) + os.pathsep + os.environ.get("PATH", ""))
+    monkeypatch.setenv("MB_TEST_REMOTE", str(remote))
+    monkeypatch.setenv("GIT_AUTHOR_NAME", "Main Branch Test")
+    monkeypatch.setenv("GIT_AUTHOR_EMAIL", "test@example.com")
+    monkeypatch.setenv("GIT_COMMITTER_NAME", "Main Branch Test")
+    monkeypatch.setenv("GIT_COMMITTER_EMAIL", "test@example.com")
+    monkeypatch.setattr(onboard_mod, "is_interactive", lambda: False)
+    repo = tmp_path / "acme"
+
+    result = runner.invoke(
+        app,
+        [
+            "onboard",
+            "--yes",
+            "--name",
+            "Acme",
+            "--path",
+            str(repo),
+            "--github",
+            "fixture-owner/acme",
+            "--push",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stdout + result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["github"]["ok"] is True
+    assert payload["github"]["committed"] is True
+    assert payload["github"]["pushed"] is True
+    assert payload["github"]["preflight"]["authenticated_account"] == "fixture-owner"
+    assert payload["setup_complete"]["committed_with_durable_files"] is True
+    assert payload["setup_complete"]["pushed_tracking_remote"] is True
+    assert ".mb/schema_version" in " ".join(payload["github"]["commands"])
+
+    status = subprocess.run(
+        ["git", "status", "--short"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert status.stdout == ""
+    schema_history = subprocess.run(
+        ["git", "log", "--oneline", "--", ".mb/schema_version"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert schema_history.stdout.strip()
