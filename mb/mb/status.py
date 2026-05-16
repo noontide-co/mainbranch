@@ -26,6 +26,7 @@ from mb import topology as topology_mod
 from mb import validate as validate_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status
+from mb.json_result import json_default
 
 IMPORTANT_DIRS = (
     "core",
@@ -801,7 +802,11 @@ def _testimonial_entries(text: str, meta: dict[str, Any]) -> list[TestimonialEnt
     deduped: list[TestimonialEntry] = []
     seen: set[str] = set()
     for entry in entries:
-        key = json.dumps(entry, sort_keys=True) if isinstance(entry, dict) else entry.strip()
+        key = (
+            json.dumps(entry, sort_keys=True, default=json_default)
+            if isinstance(entry, dict)
+            else entry.strip()
+        )
         if key and key not in seen:
             deduped.append(entry)
             seen.add(key)

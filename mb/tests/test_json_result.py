@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -90,6 +91,57 @@ def test_status_json_uses_shared_result_envelope(tmp_path: Path, monkeypatch: An
     assert payload["schema"]["name"] == "mainbranch.status"
     assert payload["repo"]["looks_like_mainbranch_repo"] is True
     assert "ranked_actions" in payload
+
+
+def test_status_json_normalizes_date_values_in_payload(monkeypatch: Any) -> None:
+    def fake_status_run(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        return {
+            "ok": True,
+            "schema": {"name": "mainbranch.status"},
+            "generated_at": date(2026, 5, 16),
+            "money_path": {
+                "objects": {
+                    "proof": {
+                        "review_on": date(2026, 5, 20),
+                        "checked_at": datetime(2026, 5, 16, 12, 30, tzinfo=timezone.utc),
+                    }
+                }
+            },
+        }
+
+    monkeypatch.setattr(status_mod, "run", fake_status_run)
+
+    result = runner.invoke(app, ["status", ".", "--json", "--peek"])
+
+    assert result.exit_code == 0
+    payload = _load_json(result)
+    _assert_envelope(payload, command="mb status", schema_name="mainbranch.status")
+    assert payload["generated_at"] == "2026-05-16"
+    assert payload["money_path"]["objects"]["proof"]["review_on"] == "2026-05-20"
+    assert payload["money_path"]["objects"]["proof"]["checked_at"] == "2026-05-16T12:30:00+00:00"
+
+
+def test_status_json_failure_returns_error_envelope(monkeypatch: Any) -> None:
+    def fail_status_run(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise RuntimeError("cannot read /Users/devon/private/status-source.md")
+
+    monkeypatch.setattr(status_mod, "run", fail_status_run)
+
+    result = runner.invoke(app, ["status", ".", "--json", "--peek"])
+
+    assert result.exit_code == 1
+    assert "Traceback" not in result.stdout
+    assert "Traceback" not in result.stderr
+    payload = _load_json(result)
+    _assert_envelope(
+        payload,
+        command="mb status",
+        expected_result_status="error",
+        schema_name="mainbranch.status",
+    )
+    assert payload["errors"][0]["code"] == "status_unavailable"
+    assert "<local-path>" in payload["errors"][0]["message"]
+    assert "/Users/devon" not in json.dumps(payload)
 
 
 def test_start_json_uses_shared_result_envelope(tmp_path: Path, monkeypatch: Any) -> None:
