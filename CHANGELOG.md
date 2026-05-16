@@ -16,6 +16,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added a public session excavation workflow for turning customer calls, chat
   exports, agent logs, and generated repo history into prioritized,
   privacy-safe follow-ups. Refs MAIN-386, #622.
+- Added the first sanitized session excavation report from a real customer
+  setup, with public follow-up routing for setup, onboarding, checkpoint,
+  status, proof, stale-source, repo-boundary, and beginner-explanation issues.
+  Refs MAIN-386, #622.
 
 ## [0.3.25] - 2026-05-16
 
