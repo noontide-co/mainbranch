@@ -28,10 +28,66 @@ readiness checks, and Claude Code skills.
 
 ---
 
-## Required Accounts
+## What You Need
 
-- **GitHub** — where the code lives. Free signup at [github.com/signup](https://github.com/signup).
-- **Anthropic Pro or Max** — your Claude subscription. Required for Claude Code. Sign up at [claude.ai](https://claude.ai). Pro is $20/month.
+- **A folder on your computer** — this becomes the business brain.
+- **Main Branch (`mb`)** — creates and checks that folder.
+- **Claude Code** — the first supported chat runtime for Main Branch skills.
+- **A Claude plan that includes Claude Code** — pricing and limits can change;
+  use Anthropic's current Claude Code plan details as the source of truth.
+- **GitHub CLI (`gh`)** — strongly recommended for almost everyone, and
+  required when you want GitHub backup, sync, collaboration, or
+  `mb onboard --github <owner/repo> --push`.
+
+GitHub does not need to cost anything, and it is the highest-leverage
+connection after your local folder. It gives you cloud backup, readable saved
+history, shared tasks and proposals, and a repo that other AI tools with GitHub
+connectors can read as your business brain. Main Branch can start locally
+before GitHub is ready, but most users should connect it during first setup.
+
+Before using GitHub-backed setup, install GitHub CLI and confirm it is signed in
+to the account you expect:
+
+```bash
+gh auth status
+gh api user --jq .login
+```
+
+If that account is wrong, stop before creating the GitHub-backed setup and run
+`gh auth login` or `gh auth switch`.
+
+## Folder-First Bootstrap
+
+If you are starting from an empty folder with Claude Code, Codex CLI, or another
+agent-like runtime, open that runtime in the folder where the business brain
+should live and paste this prompt:
+
+```text
+I want to set up Main Branch for this business in the current folder.
+
+Treat this as setup intent, not as a document to save.
+
+First, check whether `mb` is available. If it is not installed, stop and tell me
+the exact install step. If it is installed, inspect the available setup/onboard
+command before running it.
+
+Use this folder as the business repo location unless I say otherwise. Before any
+write, explain the folder or repo that will be created or modified and ask for
+approval.
+
+If I ask for GitHub backup or sync, first check whether GitHub CLI is installed,
+authenticated, and signed in to the account I expect. GitHub is strongly
+recommended because it gives Main Branch a free cloud backup, shared history,
+task/proposal layer, and connector-friendly copy of the business brain. Main
+Branch can start locally without GitHub, but GitHub is needed for sync,
+collaboration, and `mb onboard --github <owner/repo> --push`.
+
+After setup, run the read-only health/status checks, summarize what was created
+in business language, and tell me the next safest action.
+```
+
+Do not save that prompt as a markdown document. It is the instruction that tells
+the agent to start setup.
 
 ---
 
@@ -49,11 +105,19 @@ pipx ensurepath
 
 # 3. Install Main Branch
 pipx install mainbranch
+
+# 4. Strongly recommended, for GitHub backup/sync/collaboration
+brew install gh
+gh auth login
 ```
 
 ### Linux
 
-Same flow as macOS — use `apt install pipx` (Debian/Ubuntu) or `dnf install pipx` (Fedora) instead of `brew install pipx`. Then `pipx ensurepath && pipx install mainbranch`.
+Same flow as macOS — use `apt install pipx` (Debian/Ubuntu) or `dnf install
+pipx` (Fedora) instead of `brew install pipx`. Then `pipx ensurepath && pipx
+install mainbranch`. For GitHub backup/sync/collaboration, install GitHub CLI
+from [cli.github.com](https://cli.github.com/) and run
+`gh auth login`.
 
 ### Windows
 
@@ -72,6 +136,10 @@ python -m pipx ensurepath
 
 # 4. Install Main Branch
 pipx install mainbranch
+
+# 5. Strongly recommended, for GitHub backup/sync/collaboration
+# Download GitHub CLI from: https://cli.github.com/
+gh auth login
 ```
 
 After install, verify:
@@ -85,11 +153,18 @@ claude doctor   # should report Claude Code is healthy
 
 ## Step 2: Create Your Business Repo
 
-Pick a name and a folder. Then:
+Pick a name and a folder. Local-only setup:
 
 ```bash
 cd ~/Documents/GitHub          # or wherever you keep code
 mb onboard --name "My Business" --path my-business
+cd my-business
+```
+
+GitHub-backed setup, after `gh auth status` shows the expected account:
+
+```bash
+mb onboard --name "My Business" --path my-business --github your-gh-username/my-business --github-visibility private --push
 cd my-business
 ```
 
@@ -103,6 +178,21 @@ You may also see a `.mb/` folder. That is normal. It stores Main Branch's local
 operational state for that business repo, such as onboarding progress, safe
 provider metadata, backups, and issue drafts. You do not need a `.mb-vip/`
 folder; that name comes from the old clone-based setup.
+
+### What Gets Saved
+
+- Saving a file writes it on your computer.
+- A checkpoint is an approved saved point in the business history.
+- GitHub backup/sync means the approved history is also available from GitHub,
+  where AI tools with GitHub connectors can read the business brain.
+- Main Branch updates change the engine and skills; they do not rewrite your
+  business files without an approved repair, migration, or edit.
+
+Use one business repo when brand, team, voice, access, and operating history are
+shared. Create a separate business repo for a separate entity or independent
+operating history. Use linked child repos for sites, products, finance/legal,
+client work, or private ops when access or lifecycle differs. The full model
+lives in [system architecture](system-architecture.md#repo-topology).
 
 ---
 

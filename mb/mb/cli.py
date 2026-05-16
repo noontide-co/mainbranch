@@ -308,6 +308,13 @@ def _render_onboard_human(result: dict[str, Any]) -> None:
         console.print("  Git remembers how the business changed.")
         console.print("  GitHub turns tasks and proposals into a team surface.")
         console.print("  Claude Code is the first runtime that can act on the repo.\n")
+    console.print("[bold]Save model[/bold]")
+    console.print("  Files save locally first.")
+    console.print("  Checkpoints are approved saved points in the business history.")
+    console.print(
+        "  GitHub backup/sync is strongly recommended for cloud backup, "
+        "collaboration, and AI connector access.\n"
+    )
 
     tools = result["tools"]
     skill_wiring = result["skill_wiring"]

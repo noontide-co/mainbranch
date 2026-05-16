@@ -12,14 +12,31 @@ reference prose.
 
 **CLI facts first:** Run `mb doctor`, `mb start --json`, and
 `mb status --json --peek` when a repo exists or can be identified. Use
-`mb onboard status --json` and `mb onboard plan` as the durable progress
-contract; do not keep onboarding state only in chat prose. If there is no repo
-yet, use `mb onboard plan` / `mb onboard` to create one instead of hand-rolling
-repo-shape checks.
+`mb onboard status --json` as the read-only progress check for existing repos.
+Use `mb onboard plan` only after the operator approves writing setup progress;
+do not keep onboarding state only in chat prose. If there is no repo yet,
+inspect `mb onboard --help`, explain the target folder, ask for approval, then
+use `mb onboard` to create one instead of hand-rolling repo-shape checks.
 
 For provider setup, use `mb connect plan` and `mb connect doctor --json` as the
 durable readiness contract. Explain providers as business capabilities, not
 developer config, and end with exact commands.
+
+**Pasted setup guide = setup intent.** If the user pastes this guide, the
+beginner setup guide, or a bootstrap prompt with business/folder intent, treat
+it as setup intent, not as a document to save. Do not offer to save it as a
+document. Check `mb --version`; if missing, stop with `pipx install
+mainbranch`. If present, inspect `mb onboard --help`, explain the target
+folder, and ask before any write.
+
+**GitHub-backed setup preflight.** GitHub is strongly recommended because it
+gives Main Branch a free cloud backup, shared history, task/proposal layer, and
+connector-friendly copy of the business brain. Main Branch can start locally
+without GitHub. If the user wants backup, sync, collaboration, or `mb onboard
+--github <owner/repo> --push`, check `gh auth status` and
+`gh api user --jq .login` first.
+Confirm the account is the one they expect before running a writing setup
+command.
 
 ---
 
@@ -80,7 +97,7 @@ pwd
 
 If no business repo exists yet:
 ```bash
-mb onboard plan --team-size solo --success-stage working
+mb onboard --help
 ```
 
 If the operator wants the folder created, saved, synced to GitHub, and ready
@@ -172,7 +189,7 @@ mb onboard status --repo "$REPO_PATH" --json
 ```
 
 If business type, team size, success stage, or desired outcome are missing, ask
-briefly and save them:
+briefly. After the operator approves saving setup progress, write the plan:
 
 ```bash
 mb onboard plan --repo "$REPO_PATH" --team-size solo --success-stage working
