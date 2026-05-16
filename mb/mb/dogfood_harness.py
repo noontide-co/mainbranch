@@ -94,16 +94,19 @@ CLAUDE_PRINT_PROMPT_PREFIX = """Release simulation harness constraints:
   `mb books check`, and `mb educational <topic>`.
 - Do not use shell pipes, redirects, temp files, Python parsers, or Claude
   tool-result paths to transform command output.
-- In the final answer, translate status for a normal business owner before any
-  technical detail: say "nothing unsaved locally" before "git is clean" or
-  "working tree clean"; "current business folder" before "branch main";
-  "no connected GitHub backup or shared task source" before "No GitHub origin
-  remote"; "connected GitHub backup or shared task source" before "origin
-  remote"; "saved checkpoint" before "commit"; "task" before "issue"; and
-  "proposal" before "PR".
+- In the final answer, use normal business-owner language first and avoid
+  parenthetical git/GitHub restatements. Say "nothing unsaved locally" instead
+  of "git is clean" or "working tree clean" / "working tree: clean"; "current
+  business folder" instead of "branch main" / "branch: main"; "no connected
+  GitHub backup or shared task source" instead of "No GitHub origin remote",
+  "No origin remote", or "Connected GitHub backup: none surfaced"; "connected
+  GitHub backup or shared task source" instead of "origin remote"; "saved
+  checkpoint" instead of "commit"; "task" instead of "issue"; and "proposal"
+  instead of "PR". If an exact raw term is necessary for debugging, put it on a
+  separate `Technical detail:` or `Exact command:` line after the owner meaning.
 - Checkpoint examples must name the saved business artifact, such as
   `[updated] offer and founder-call research`, not broad buckets like
-  `[updated] core and research`.
+  `[updated] core and research`, `[drafted] files`, or `[ran] changes`.
 - Do not call AskUserQuestion in print mode. Put any question for the operator
   in the final answer.
 """

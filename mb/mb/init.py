@@ -291,6 +291,17 @@ playbooks, outcomes, decisions, next actions, and saved checkpoints. Treat git,
 branches, pull requests, provider refs, and local wiring as the hidden memory
 layer unless the operator asks for the plumbing.
 
+Default translations for normal owner answers:
+- `git is clean`, `repo is clean`, `working tree clean`, or `working tree: clean`
+  -> nothing unsaved locally;
+- `branch main`, `branch: main`, or `current branch: main` -> current business
+  folder or workspace;
+- `No GitHub origin remote`, `No origin remote`, or `Connected GitHub backup:
+  none surfaced` -> no connected GitHub backup or shared task source;
+- `PR/issue facts` or `PR and issue facts` -> GitHub task and proposal context.
+Use raw git/GitHub terms only in exact commands or a separate "Technical
+detail:" line after the owner meaning.
+
 ## Folders
 
 - `core/` — the business brain: offer, audience, voice, soul, proof, brand,

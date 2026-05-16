@@ -11,6 +11,21 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- Tightened post-v0.3.24 release-simulation guidance and scoring so final
+  answers avoid parenthetical git/GitHub restatements, flag
+  `Connected GitHub backup: none surfaced` as owner-language leakage, and use
+  more specific checkpoint proposals such as `[updated] offer and founder-call
+  research` instead of broad buckets. Refs MAIN-385, #619.
+
+## [0.3.24] - 2026-05-15
+
+v0.3.24 packages the release freshness context and owner-language hardening
+that landed after v0.3.23. It helps agents explain update availability from
+fresh facts and keeps normal business-owner answers from leading with
+git/GitHub mechanics.
+
 ### Changed
 
 - Added release-note context and freshness evidence to update checks:
@@ -18,6 +33,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   source, check timestamp, and release notes URL, while `mb update --check`
   reports GitHub Release metadata in JSON and human output when available.
   Refs MAIN-384, #616.
+
+### Fixed
+
+- Tightened release-simulation owner-language scoring and prompt guidance so
+  punctuation variants like `working tree: clean`, `branch: main`, and vague
+  checkpoint examples such as `[drafted] files` are caught unless the final
+  answer translates the matching business meaning first. Generated business-repo
+  Claude/Codex guidance now carries the same default translations. Refs
+  MAIN-377, #604.
+- Labeled unavailable update release-note URLs as expected fallback URLs in
+  `mb update --check` human output instead of presenting them as authoritative
+  release notes. Refs MAIN-384, #616.
 
 ## [0.3.23] - 2026-05-14
 
