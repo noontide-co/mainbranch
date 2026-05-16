@@ -47,11 +47,11 @@ description into an empty or uninitialized folder, treat it as setup intent,
 not as a document to save. Do not ask what file format to save the prompt in. First
 check `mb --version`. If `mb` is missing, stop and give the exact install step:
 `pipx install mainbranch`. If `mb` is available, inspect the setup path with
-`mb onboard --help` or `mb onboard plan`, then explain which folder will become
-the business brain and ask before running a writing command.
+`mb onboard --help`, then explain which folder will become the business brain
+and ask before running any command that writes files.
 
 If the operator asks for GitHub backup, sync, collaboration, or
-`mb onboard --github --push`, check GitHub CLI before any setup write:
+`mb onboard --github <owner/repo> --push`, check GitHub CLI before any setup write:
 `gh auth status` and `gh api user --jq .login`. Confirm the signed-in account
 matches the operator's expected account. GitHub is strongly recommended because
 it gives Main Branch a free cloud backup, shared history, task/proposal layer,

@@ -115,7 +115,7 @@ P0 and P1 findings now have concrete public issues:
 | Issue | Owner Loop | Validation Need |
 |---|---|---|
 | [#625](https://github.com/noontide-co/mainbranch/issues/625) | Sense / Decide | Runtime or fixture prompt for full-guide paste recognition |
-| [#626](https://github.com/noontide-co/mainbranch/issues/626) | Ship | Fixture repo smoke for `mb onboard --github --push` |
+| [#626](https://github.com/noontide-co/mainbranch/issues/626) | Ship | Fixture repo smoke for `mb onboard --github <owner/repo> --push` |
 | [#627](https://github.com/noontide-co/mainbranch/issues/627) | Ship / Reflect | Checkpoint plan/hook tests with suspicious scratch files |
 | [#628](https://github.com/noontide-co/mainbranch/issues/628) | Sense | Status JSON regression test with date-valued facts |
 | [#629](https://github.com/noontide-co/mainbranch/issues/629) | Decide / Ship | MoneyPath/proof fixture plus skill routing review |

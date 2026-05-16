@@ -37,7 +37,7 @@ readiness checks, and Claude Code skills.
   use Anthropic's current Claude Code plan details as the source of truth.
 - **GitHub CLI (`gh`)** — strongly recommended for almost everyone, and
   required when you want GitHub backup, sync, collaboration, or
-  `mb onboard --github --push`.
+  `mb onboard --github <owner/repo> --push`.
 
 GitHub does not need to cost anything, and it is the highest-leverage
 connection after your local folder. It gives you cloud backup, readable saved
@@ -80,7 +80,7 @@ authenticated, and signed in to the account I expect. GitHub is strongly
 recommended because it gives Main Branch a free cloud backup, shared history,
 task/proposal layer, and connector-friendly copy of the business brain. Main
 Branch can start locally without GitHub, but GitHub is needed for sync,
-collaboration, and `mb onboard --github --push`.
+collaboration, and `mb onboard --github <owner/repo> --push`.
 
 After setup, run the read-only health/status checks, summarize what was created
 in business language, and tell me the next safest action.
