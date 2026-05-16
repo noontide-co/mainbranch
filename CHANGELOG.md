@@ -28,6 +28,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   keeping `.agents/skills`, plugin packaging, site/ads/provider workflows, and
   slash-command parity out of scope. Refs MAIN-387, #624.
 
+### Fixed
+
+- Fixed `mb status --json --peek` so date-valued status facts serialize as ISO
+  strings and status failures return the shared JSON error envelope instead of
+  leaking Python tracebacks. Refs MAIN-391, #628.
+
 ## [0.3.25] - 2026-05-16
 
 v0.3.25 packages the post-v0.3.24 release-simulation language fix. It makes

@@ -728,6 +728,41 @@ def test_status_money_path_frontmatter_public_true_counts_as_permission(
     assert testimonials["specific"] == 1
 
 
+def test_status_json_peek_handles_date_valued_testimonial_frontmatter(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_money_path_core(repo)
+    proof = repo / "core" / "proof"
+    proof.mkdir(parents=True, exist_ok=True)
+    (proof / "testimonials.md").write_text(
+        (
+            "---\n"
+            "testimonials:\n"
+            "  - public: true\n"
+            "    received_on: 2026-05-16\n"
+            "    before: stuck rebuilding context\n"
+            "    outcome: booked 3 calls\n"
+            "    timeframe: within 2 weeks\n"
+            "---\n\n"
+            "# Testimonials\n"
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["status", str(repo), "--json", "--peek"])
+
+    assert result.exit_code == 0
+    assert "Traceback" not in result.stdout
+    assert "Traceback" not in result.stderr
+    report = json.loads(result.stdout)
+    testimonials = report["money_path"]["objects"]["proof"]["quality"]["testimonials"]
+    assert testimonials["total"] == 1
+    assert testimonials["permissioned_public"] == 1
+
+
 def test_status_money_path_proof_cannot_reach_field_tested_without_level_three(
     tmp_path: Path, monkeypatch
 ) -> None:

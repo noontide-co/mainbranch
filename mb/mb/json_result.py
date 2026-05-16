@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from typing import Any
 
 JSON_RESULT_ENVELOPE_VERSION = "1.0"
+
+
+def json_default(value: Any) -> str:
+    """Normalize scalar values that common parsers return but JSON rejects."""
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    raise TypeError(f"Object of type {value.__class__.__name__} is not JSON serializable")
 
 
 def _coerce_list(value: Any) -> list[Any]:

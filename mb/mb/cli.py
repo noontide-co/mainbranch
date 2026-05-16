@@ -40,7 +40,7 @@ from mb import think as think_mod
 from mb import update as update_mod
 from mb import validate as validate_mod
 from mb.freshness import format_update_alert, looks_like_business_repo, package_update_status
-from mb.json_result import envelope
+from mb.json_result import envelope, json_default
 
 app = typer.Typer(
     name="mb",
@@ -147,7 +147,29 @@ def _version_callback(value: bool) -> None:
 
 
 def _json_payload(payload: dict[str, Any], *, command: str, schema_name: str) -> str:
-    return json.dumps(envelope(payload, command=command, schema_name=schema_name), indent=2)
+    return json.dumps(
+        envelope(payload, command=command, schema_name=schema_name),
+        indent=2,
+        default=json_default,
+    )
+
+
+def _json_error_payload(
+    *,
+    command: str,
+    schema_name: str,
+    code: str,
+    message: str,
+) -> str:
+    return _json_payload(
+        {
+            "ok": False,
+            "errors": [{"code": code, "message": message}],
+            "safe_to_share": True,
+        },
+        command=command,
+        schema_name=schema_name,
+    )
 
 
 def _is_interactive_terminal() -> bool:
@@ -989,9 +1011,35 @@ def status_cmd(
     ),
 ) -> None:
     """Show a cheap daily briefing for a Main Branch repo."""
-    report = status_mod.run(path=path, update_marker=not peek, validation_cross_refs=not peek)
+    try:
+        report = status_mod.run(path=path, update_marker=not peek, validation_cross_refs=not peek)
+    except Exception as exc:
+        message = status_mod._safe_exception_message(exc)
+        if json_out:
+            typer.echo(
+                _json_error_payload(
+                    command="mb status",
+                    schema_name="mainbranch.status",
+                    code="status_unavailable",
+                    message=message,
+                )
+            )
+        else:
+            typer.echo(f"mb status: {message}", err=True)
+        raise typer.Exit(1) from exc
     if json_out:
-        typer.echo(_json_payload(report, command="mb status", schema_name="mainbranch.status"))
+        try:
+            typer.echo(_json_payload(report, command="mb status", schema_name="mainbranch.status"))
+        except TypeError as exc:
+            typer.echo(
+                _json_error_payload(
+                    command="mb status",
+                    schema_name="mainbranch.status",
+                    code="status_json_serialization_failed",
+                    message=status_mod._safe_exception_message(exc),
+                )
+            )
+            raise typer.Exit(1) from exc
     else:
         status_mod.render_human(report, verbose=verbose, no_color=no_color)
 
