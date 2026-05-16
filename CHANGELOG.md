@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.25] - 2026-05-16
+
+v0.3.25 packages the post-v0.3.24 release-simulation language fix. It makes
+checkpoint suggestions more specific and keeps release-acceptance transcripts
+stricter about business-owner wording before git/GitHub details.
+
 ### Fixed
 
 - Tightened post-v0.3.24 release-simulation guidance and scoring so final
