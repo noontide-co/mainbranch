@@ -836,12 +836,18 @@
       "must_not": [
         "Run raw git commit as the default path.",
         "Create a checkpoint without approval.",
+        "Suggest `mb checkpoint --apply`; checkpoint saves use `mb checkpoint --message \"...\" --yes` after approval.",
         "Use a vague checkpoint message example such as [updated] core and research, [drafted] files, or [ran] changes."
       ],
       "follow_up_routes": [
         {
           "failure": "Raw git commit guidance replaces mb checkpoint.",
           "fix_type": "skill_prose",
+          "issue_refs": []
+        },
+        {
+          "failure": "Checkpoint save guidance suggests an unsupported `mb checkpoint --apply` command.",
+          "fix_type": "harness_gap",
           "issue_refs": []
         }
       ]

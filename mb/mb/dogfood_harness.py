@@ -107,6 +107,9 @@ CLAUDE_PRINT_PROMPT_PREFIX = """Release simulation harness constraints:
 - Checkpoint examples must name the saved business artifact, such as
   `[updated] offer and founder-call research`, not broad buckets like
   `[updated] core and research`, `[drafted] files`, or `[ran] changes`.
+- When showing the checkpoint save command after approval, use
+  `mb checkpoint --message "..." --yes`. `mb checkpoint` has no `--apply`
+  flag.
 - Do not call AskUserQuestion in print mode. Put any question for the operator
   in the final answer.
 """

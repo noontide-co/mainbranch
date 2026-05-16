@@ -20,6 +20,12 @@ metadata:
 }
 ```
 
+JSON surfaces normalize Python `date` and `datetime` values to ISO strings
+before writing output. If `mb status --json` cannot produce its normal payload,
+it returns the same envelope with `ok: false`, `result_status: "error"`, and a
+safe error action instead of leaking a Python traceback or local filesystem
+path.
+
 ## Shared Fields
 
 - `result_envelope_version`: shared result-envelope version. This is separate
