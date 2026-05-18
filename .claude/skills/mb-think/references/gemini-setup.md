@@ -97,10 +97,10 @@ echo 'source ~/.config/vip/env.sh' >> ~/.zshrc
 ## Verify It's Working
 
 ```bash
-echo $GOOGLE_API_KEY
+test -n "$GOOGLE_API_KEY" && echo "GOOGLE_API_KEY is set" || echo "GOOGLE_API_KEY is not set"
 ```
 
-Should show your key (not empty).
+This should confirm the key is set without printing the value.
 
 **In Claude Code:**
 
@@ -123,7 +123,8 @@ Gemini Deep Research is now available in /mb-think.
 **"Key not found"**
 - Did you `source ~/.config/vip/env.sh`?
 - Or restart your terminal?
-- Check: `echo $GOOGLE_API_KEY`
+- Check presence without printing the value:
+  `test -n "$GOOGLE_API_KEY" && echo "GOOGLE_API_KEY is set" || echo "GOOGLE_API_KEY is not set"`
 
 **"Invalid API key"**
 - Verify key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)

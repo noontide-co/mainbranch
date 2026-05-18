@@ -7,6 +7,7 @@ import importlib
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -29,8 +30,22 @@ SENSITIVE_KEY_PARTS = ("token", "secret", "password", "credential", "api_key", "
 SAFE_METADATA_KEYS = {"token_type", "token_scope", "api_token_type"}
 CONNECT_SCOPES = {"repo", "user"}
 VALIDATION_TIMEOUT_SECONDS = 8
+SECRET_REPLACEMENT = "<redacted>"
 CommandRunner = Callable[..., dict[str, Any]]
 Which = Callable[[str], str | None]
+
+SECRET_ASSIGNMENT_RE = re.compile(
+    r"(?i)\b"
+    r"(api[_ -]?key|access[_ -]?token|refresh[_ -]?token|token|secret|password|"
+    r"credential|authorization)"
+    r"([ \t]*[:=][ \t]*)(bearer[ \t]+)?([^\s,;]+)"
+)
+SECRET_PHRASE_RE = re.compile(
+    r"(?i)\b"
+    r"((?:api[_ -]?key|access[_ -]?token|refresh[_ -]?token|authorization)[ \t]+)"
+    r"(bearer[ \t]+)?([A-Za-z0-9._~+/=-]{12,})"
+)
+BEARER_SECRET_RE = re.compile(r"(?i)\bbearer[ \t]+[^\s,;]+")
 
 
 class ConfigBoundaryError(ValueError):
@@ -1306,7 +1321,45 @@ def _provider_error_summary(provider_name: str, upstream: dict[str, Any]) -> str
     return f"{provider_name} validation could not complete."
 
 
-def _extract_upstream_errors(payload: Any) -> tuple[list[str], list[str]]:
+def _header_secret_candidates(headers: dict[str, str] | None) -> list[str]:
+    if not headers:
+        return []
+    candidates: list[str] = []
+    for key, value in headers.items():
+        key_text = str(key).lower()
+        value_text = str(value)
+        if not value_text:
+            continue
+        if key_text == "authorization":
+            candidates.append(value_text)
+            parts = value_text.split()
+            if len(parts) >= 2 and parts[0].lower() == "bearer":
+                candidates.append(parts[1])
+        elif any(part in key_text for part in SENSITIVE_KEY_PARTS):
+            candidates.append(value_text)
+    return candidates
+
+
+def _redact_sensitive_text(value: Any, secret_values: tuple[str, ...] = ()) -> str:
+    text = str(value)
+    for secret in sorted(set(secret_values), key=len, reverse=True):
+        if len(secret) >= 4:
+            text = text.replace(secret, SECRET_REPLACEMENT)
+    text = BEARER_SECRET_RE.sub(f"Bearer {SECRET_REPLACEMENT}", text)
+    text = SECRET_ASSIGNMENT_RE.sub(
+        lambda match: f"{match.group(1)}{match.group(2)}{match.group(3) or ''}{SECRET_REPLACEMENT}",
+        text,
+    )
+    text = SECRET_PHRASE_RE.sub(
+        lambda match: f"{match.group(1)}{match.group(2) or ''}{SECRET_REPLACEMENT}",
+        text,
+    )
+    return text
+
+
+def _extract_upstream_errors(
+    payload: Any, secret_values: tuple[str, ...] = ()
+) -> tuple[list[str], list[str]]:
     if not isinstance(payload, dict):
         return [], []
     codes: list[str] = []
@@ -1323,7 +1376,7 @@ def _extract_upstream_errors(payload: Any) -> tuple[list[str], list[str]]:
             if code not in {None, ""}:
                 codes.append(str(code))
             if message:
-                messages.append(str(message))
+                messages.append(_redact_sensitive_text(message, secret_values))
     return codes, messages
 
 
@@ -1335,6 +1388,7 @@ def _http_get_json(
     endpoint_family: str = "unknown",
 ) -> dict[str, Any]:
     request = urllib.request.Request(url, headers=headers or {})
+    secret_values = tuple(_header_secret_candidates(headers))
     upstream: dict[str, Any] = {
         "endpoint_family": endpoint_family,
         "http_status": None,
@@ -1355,7 +1409,7 @@ def _http_get_json(
         if body:
             with suppress(json.JSONDecodeError, UnicodeDecodeError):
                 payload = json.loads(body.decode("utf-8"))
-        codes, messages = _extract_upstream_errors(payload)
+        codes, messages = _extract_upstream_errors(payload, secret_values)
         upstream.update(
             {
                 "http_status": int(exc.code),
@@ -1384,7 +1438,7 @@ def _http_get_json(
     if body:
         with suppress(json.JSONDecodeError, UnicodeDecodeError):
             payload = json.loads(body.decode("utf-8"))
-    codes, messages = _extract_upstream_errors(payload)
+    codes, messages = _extract_upstream_errors(payload, secret_values)
     upstream.update(
         {
             "http_status": status,

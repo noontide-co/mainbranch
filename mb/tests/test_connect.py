@@ -895,7 +895,7 @@ def test_connect_test_records_invalid_provider_without_leaking_secret(
                 "http_status": 403,
                 "response_received": True,
                 "error_codes": ["9109"],
-                "error_messages": ["Invalid access token"],
+                "error_messages": ["Invalid access token <redacted>"],
                 "safe_to_share": True,
             },
         },
@@ -912,7 +912,36 @@ def test_connect_test_records_invalid_provider_without_leaking_secret(
     assert payload["validation"]["upstream"]["endpoint_family"] == "cloudflare_user_token_verify"
     assert payload["validation"]["upstream"]["http_status"] == 403
     assert payload["validation"]["upstream"]["error_codes"] == ["9109"]
+    assert payload["validation"]["upstream"]["error_messages"] == [
+        "Invalid access token <redacted>"
+    ]
     assert "cf-secret-token" not in result.stdout
+
+
+def test_connect_redacts_secret_material_from_provider_errors() -> None:
+    codes, messages = connect_mod._extract_upstream_errors(
+        {
+            "errors": [
+                {
+                    "code": "bad_auth",
+                    "message": "Invalid access token cf-secret-token for request",
+                },
+                {"message": "Authorization: Bearer sk-live-secret"},
+                {"message": "api_key=plain-secret-value"},
+            ]
+        },
+        secret_values=("cf-secret-token", "sk-live-secret", "plain-secret-value"),
+    )
+
+    serialized = json.dumps({"codes": codes, "messages": messages})
+    assert "cf-secret-token" not in serialized
+    assert "sk-live-secret" not in serialized
+    assert "plain-secret-value" not in serialized
+    assert messages == [
+        "Invalid access token <redacted> for request",
+        "Authorization: Bearer <redacted>",
+        "api_key=<redacted>",
+    ]
 
 
 def test_connect_test_routes_cloudflare_account_tokens_to_account_endpoint(

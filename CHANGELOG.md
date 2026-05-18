@@ -38,6 +38,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `AGENTS.md` alignment while keeping Codex support experimental and
   CLI-first. Refs MAIN-397, #636.
 
+### Fixed
+
+- Redacted provider upstream error messages before storing or printing
+  `mb connect test` validation results, and tightened setup references so
+  provider smoke evidence records readiness without printing credential values.
+  Refs MAIN-413, #658.
+
 ## [0.3.26] - 2026-05-16
 
 v0.3.26 packages the first-run trust batch after v0.3.25. It tightens setup,

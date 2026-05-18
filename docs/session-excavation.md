@@ -93,6 +93,8 @@ Read the session in passes. Do not start with broad product wishes.
    restart requirements, OAuth scope confusion, direct provider writes, secret
    handling, account mutation, and whether a provider path is `mb`-native,
    runtime-native, plugin-based, CLI/API-key-based, or unsupported.
+   Provider smoke evidence should record presence, exit status, and readiness
+   facts, never credential values or token prefixes.
 8. **Roadmap signal:** useful future direction that should not become an
    immediate support claim.
 
