@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from mb import codex as codex_mod
 from mb.workflows import (
     codex_shell_policy_errors,
     load_workflow,
@@ -119,6 +120,18 @@ def test_codex_agents_think_route_preserves_shared_workflow_contract() -> None:
         assert f"`{gate}`" in text
     for boundary in workflow.public_private_boundaries:
         assert f"`{boundary}`" in text
+
+
+def test_codex_contract_markers_match_think_workflow_source() -> None:
+    workflow = load_workflow(THINK_WORKFLOW)
+
+    assert codex_mod.CODEX_THINK_SOURCE_WORKFLOW == "workflows/mb-think/workflow.md"
+    assert tuple(workflow.required_mb_commands) == codex_mod.CODEX_THINK_REQUIRED_MB_COMMANDS
+    assert tuple(workflow.json_facts) == codex_mod.CODEX_THINK_REQUIRED_JSON_FACTS
+    assert tuple(workflow.approval_gates) == codex_mod.CODEX_THINK_APPROVAL_GATES
+    assert (
+        tuple(workflow.public_private_boundaries) == codex_mod.CODEX_THINK_PUBLIC_PRIVATE_BOUNDARIES
+    )
 
 
 def test_drift_detection_flags_omitted_required_command_or_fact() -> None:
