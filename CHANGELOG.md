@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.27] - 2026-05-18
+
+v0.3.27 packages the shared-workflow and customer-call cleanup batch after
+v0.3.26. It makes `/mb-think` the first official runtime-agnostic workflow
+source, adds Codex-aligned generated guidance for that workflow, tightens
+Claude Code worktree repair and provider smoke privacy, and adds MoneyPath bet
+exit/exposure facts plus a second public-safe session excavation report.
+
 ### Added
 
 - Added the second sanitized member session excavation report, with public
