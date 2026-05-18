@@ -17,6 +17,11 @@ tags: [runtime-adapters, codex, claude-code, skills, workflows, renderer]
 
 # Shared Workflow Corpus And Native Runtime Renderers
 
+Historical naming note: this decision used "workflow corpus" while the adapter
+shape was being chosen. Current product language is **shared workflow source**,
+with **runtime shells**, **runtime guidance**, and **runtime adapters** over
+that source.
+
 ## Decision
 
 Main Branch should introduce a runtime-neutral workflow corpus under

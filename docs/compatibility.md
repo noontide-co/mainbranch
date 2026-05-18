@@ -144,7 +144,7 @@ smoke evidence exist.
 | Runtime surface | Status | Invocation | Skill/workflow discovery | Routing and automation | Observability and packaging |
 |---|---|---|---|---|---|
 | Claude Code | Supported | `mb start --repo "$repo"` prints the `claude` handoff; `mb start --launch` may launch after readiness checks. | `mb skill link --repo "$repo"` writes project-local `.claude/skills/mb-*` bridge links and `.claude/settings.local.json`. | Slash commands such as `/mb-start` and `/mb-think` own conversation and judgment; they call deterministic `mb` commands for facts. | `mb doctor`, `mb status --json`, `mb start --json`, `mb skill repair`, and runtime dogfood evidence gate release claims. Skills ship inside the Python package today. |
-| Codex CLI | Experimental | Can call deterministic `mb` commands as a subprocess when pointed at a business repo. `AGENTS.md` gives Codex a CLI-first lifecycle discovery surface for start, status, and thinking/codification routes. | Fresh `mb onboard` repos include tracked `AGENTS.md`; `mb doctor repair --plan` / `--apply` can report and refresh it. No `.agents/skills` or plugin parity is claimed yet. | Codex should run `mb status --json --peek`, `mb start --json`, and `mb doctor repair --plan` before advice, translate facts into business language, route status/thinking work through the generated lifecycle index, and ask before writes. | `mb doctor`, `mb status --json`, and `mb start --json` expose Codex readiness. Support remains experimental; only the generated lifecycle guidance and `/mb-think` shared workflow guidance have smoke-backed coverage. |
+| Codex CLI | Experimental | Can call deterministic `mb` commands as a subprocess when pointed at a business repo. `AGENTS.md` gives Codex a CLI-first lifecycle discovery surface for start, status, and thinking/codification routes. | Fresh `mb onboard` repos include tracked `AGENTS.md`; `mb doctor repair --plan` / `--apply` can report and refresh it. No `.agents/skills` or plugin parity is claimed yet. | Codex should run `mb status --json --peek`, `mb start --json`, and `mb doctor repair --plan` before advice, translate facts into business language, route status/thinking work through the generated lifecycle index, and ask before writes. | `mb doctor`, `mb status --json`, and `mb start --json` expose Codex readiness. Support remains experimental; generated lifecycle guidance is checked against the `mb-think` shared workflow source, but no Codex slash-command or selected-workflow support is claimed without fresh smoke evidence. |
 | Cursor | Roadmap | Can call deterministic `mb` commands from terminal/tasks when pointed at a business repo. | No supported Cursor rules/package adapter yet. | No supported Main Branch routing contract. | Needs adapter docs, install/update rules, conflict handling, and smoke evidence. |
 | OpenClaw | Roadmap | Target public runtime surface. It should call `mb` through stable CLI/JSON commands rather than clone-era paths. | No supported OpenClaw adapter yet. | Main Branch should coexist with OpenClaw as the business repo/GitHub memory layer, not replace it. | Needs explicit adapter shape, migration notes, generated-file rules, and smoke evidence. |
 | Hermes | Roadmap | Target runtime/memory surface. It may supervise or host workflows that call packaged `mb` commands. | No supported Hermes adapter yet. | Hermes-specific routing belongs in the Hermes adapter, while `mb` remains deterministic and non-conversational. | Docs may describe internal-package expectations generically, but not as the only blessed public path. Smoke evidence is required before support claims. |
@@ -183,9 +183,11 @@ For the Codex staging plan, see
 [Codex Adapter Plan](../decisions/2026-05-08-codex-adapter-plan.md). The current
 implementation is the experimental CLI-first slice: generated `AGENTS.md`,
 deterministic readiness facts, doctor repair coverage, and compact lifecycle
-discovery for start, status, and thinking/codification. It does not claim
-supported Codex parity, slash-command parity, `.agents/skills` distribution, or
-provider/publishing workflow support.
+discovery for start, status, and thinking/codification. The think route is
+checked against `workflows/mb-think/workflow.md` as the first official shared
+workflow source pattern. It does not claim supported Codex parity,
+slash-command parity, selected workflow support, `.agents/skills` distribution,
+or provider/publishing workflow support.
 
 ## Recommended setup
 

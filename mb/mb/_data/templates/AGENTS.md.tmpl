@@ -174,6 +174,46 @@ This is Codex-native guidance for the existing `mb-think` shared workflow
 source. It is not a slash command, and it does not mean all Main Branch skills
 work in Codex.
 
+Source workflow: `workflows/mb-think/workflow.md`
+
+Shared source required `mb` commands:
+
+- `mb status --json --peek`
+- `mb start --json`
+- `mb doctor repair --plan`
+- `mb connect doctor --json`
+- `mb checkpoint --plan --json`
+
+Shared source required JSON fact paths:
+
+- `money_path`
+- `money_path.objects.offer`
+- `money_path.objects.proof`
+- `money_path.objects.proof.quality`
+- `money_path.objects.product_ladder`
+- `money_path.objects.cta_path`
+- `money_path.objects.channel_strategy`
+- `money_path.objects.active_push`
+- `money_path.objects.outcome_feedback_loop`
+- `money_path.ranked_actions`
+- `content_strategy`
+- `ranked_actions`
+- `update`
+- `readiness`
+- `drift.items`
+- `books`
+- `runtime.codex`
+- `runtime.claude_code`
+
+Shared source gates: `updates_repairs_migrations`, `file_writes`,
+`checkpoint`, `provider_mutation`, `publishing_or_spend`, `customer_contact`,
+`private_data`, `destructive_operations`, `structured_collection`,
+`public_issue_or_proposal`.
+
+Shared public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
+`no_customer_member_data`, `no_private_runtime_settings`,
+`no_private_dms_or_gated_communities`, `no_raw_finance_legal_records`.
+
 Use it when the operator asks to think through an offer, research a market,
 compare providers, make a decision, or codify what was learned.
 

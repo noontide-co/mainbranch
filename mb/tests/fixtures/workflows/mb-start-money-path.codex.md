@@ -2,6 +2,8 @@
 
 Source workflow: `workflows/mb-start-money-path/workflow.md`
 Runtime support: `codex_cli: experimental_shell`
+Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`, `provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`, `destructive_operations`
+Public/private boundaries: `no_secrets`, `no_raw_provider_exports`, `no_customer_member_data`, `no_private_runtime_settings`, `no_private_maintainer_notes`
 
 Codex remains experimental and CLI-first. This guidance is a generated snapshot
 for validation; it does not mean `/mb-start` slash commands work inside Codex

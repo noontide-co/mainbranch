@@ -102,6 +102,25 @@ business language is direction, not current behavior; see
 
 ## Primitive Contracts
 
+### Shared Workflow Source
+
+Portable workflow semantics live in `workflows/<workflow>/workflow.md`.
+Runtime-specific files are runtime shells or runtime guidance over that source,
+not the canonical truth.
+
+The first official pattern is `workflows/mb-think/workflow.md`. It declares the
+workflow intent, operator loops, runtime support level, checked runtime
+surfaces, required `mb` fact commands, JSON fact paths, approval gates,
+public/private boundaries, routing rules, handoff shape, and validation
+expectations. Claude Code remains the first-class runtime shell through
+`.claude/skills/mb-think/SKILL.md`; Codex remains experimental and uses tracked
+`AGENTS.md` guidance checked against the shared source. Neither `.claude/skills`
+nor `.agents/skills` is the canonical source for cross-runtime workflow
+semantics.
+
+`mb` may validate, render snapshots for tests, and repair generated runtime
+guidance. It must not invoke Claude, Codex, or any model.
+
 ### `core/`
 
 Evergreen business truth: offer, audience, soul, voice, proof, brand systems,
