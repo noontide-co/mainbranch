@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added the second sanitized member session excavation report, with public
+  follow-up routing for Claude worktree skill discovery, provider mutation
+  gates, secret-safe smoke checks, transcript/source-ingestion privacy,
+  connector readiness, dashboard direction, repo boundaries, and stale-source
+  cleanup. Refs MAIN-408, #653.
+
 ## [0.3.26] - 2026-05-16
 
 v0.3.26 packages the first-run trust batch after v0.3.25. It tightens setup,
