@@ -2,6 +2,8 @@
 
 Source workflow: `workflows/mb-start-money-path/workflow.md`
 Runtime support: `claude_code: supported_shell`
+Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`, `provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`, `destructive_operations`
+Public/private boundaries: `no_secrets`, `no_raw_provider_exports`, `no_customer_member_data`, `no_private_runtime_settings`, `no_private_maintainer_notes`
 
 Use from `/mb-start` when the operator asks about revenue, offer readiness, the
 next dollar, or the path to money. Preserve slash-command-native language and

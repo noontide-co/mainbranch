@@ -7,6 +7,9 @@ runtime_support:
   claude_code: supported_shell
   codex_cli: experimental_shell
   future: planned
+runtime_surfaces:
+  claude_code: .claude/skills/mb-think/SKILL.md
+  codex_cli: AGENTS.md#codex-think-route
 required_mb_commands:
   - mb status --json --peek
   - mb start --json
@@ -32,6 +35,24 @@ json_facts:
   - books
   - runtime.codex
   - runtime.claude_code
+approval_gates:
+  - updates_repairs_migrations
+  - file_writes
+  - checkpoint
+  - provider_mutation
+  - publishing_or_spend
+  - customer_contact
+  - private_data
+  - destructive_operations
+  - structured_collection
+  - public_issue_or_proposal
+public_private_boundaries:
+  - no_secrets
+  - no_raw_provider_exports
+  - no_customer_member_data
+  - no_private_runtime_settings
+  - no_private_dms_or_gated_communities
+  - no_raw_finance_legal_records
 writes_business_files: true
 provider_mutation: false
 publishing_or_spend: false

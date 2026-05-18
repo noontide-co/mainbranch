@@ -23,6 +23,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `/mb-start` now routes stale-source cleanup requests into the reconcile,
   decision, codify, and checkpoint loop. Refs MAIN-393, #630.
 
+### Changed
+
+- Made `workflows/mb-think/workflow.md` the first official shared workflow
+  source pattern by adding checked runtime surfaces, approval gates,
+  public/private boundary metadata, generated shell drift checks, and Codex
+  `AGENTS.md` alignment while keeping Codex support experimental and
+  CLI-first. Refs MAIN-397, #636.
+
 ## [0.3.26] - 2026-05-16
 
 v0.3.26 packages the first-run trust batch after v0.3.25. It tightens setup,

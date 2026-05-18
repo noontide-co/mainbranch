@@ -16,8 +16,11 @@ REQUIRED_FRONTMATTER_FIELDS = {
     "description",
     "loops",
     "runtime_support",
+    "runtime_surfaces",
     "required_mb_commands",
     "json_facts",
+    "approval_gates",
+    "public_private_boundaries",
     "writes_business_files",
     "provider_mutation",
     "publishing_or_spend",
@@ -51,6 +54,20 @@ MINIMUM_JSON_FACTS = {
     "update",
     "readiness",
     "drift.items",
+}
+MINIMUM_APPROVAL_GATES = {
+    "file_writes",
+    "checkpoint",
+    "provider_mutation",
+    "publishing_or_spend",
+    "customer_contact",
+    "private_data",
+}
+MINIMUM_PUBLIC_PRIVATE_BOUNDARIES = {
+    "no_secrets",
+    "no_raw_provider_exports",
+    "no_customer_member_data",
+    "no_private_runtime_settings",
 }
 REQUIRED_SHELL_PHRASES_BY_WORKFLOW: dict[str, dict[str, str]] = {
     "mb-think": {
@@ -108,6 +125,14 @@ class WorkflowSource:
     @property
     def json_facts(self) -> list[str]:
         return [str(item) for item in self.frontmatter["json_facts"]]
+
+    @property
+    def approval_gates(self) -> list[str]:
+        return [str(item) for item in self.frontmatter["approval_gates"]]
+
+    @property
+    def public_private_boundaries(self) -> list[str]:
+        return [str(item) for item in self.frontmatter["public_private_boundaries"]]
 
 
 class WorkflowValidationError(ValueError):
@@ -187,6 +212,15 @@ def validate_workflow(path: Path) -> list[str]:
             if actual != expected:
                 errors.append(f"runtime_support.{runtime} must be {expected!r}, got {actual!r}")
 
+    runtime_surfaces = frontmatter.get("runtime_surfaces")
+    if not isinstance(runtime_surfaces, dict):
+        errors.append("frontmatter field runtime_surfaces must be a mapping")
+    else:
+        for runtime in REQUIRED_RUNTIME_SUPPORT:
+            actual = runtime_surfaces.get(runtime)
+            if not isinstance(actual, str) or not actual.strip():
+                errors.append(f"runtime_surfaces.{runtime} must name the checked shell path")
+
     commands = _coerce_string_list(frontmatter.get("required_mb_commands"))
     if commands is None:
         errors.append("frontmatter field required_mb_commands must be a list of strings")
@@ -202,6 +236,24 @@ def validate_workflow(path: Path) -> list[str]:
         missing_facts = sorted(MINIMUM_JSON_FACTS - set(facts))
         if missing_facts:
             errors.append(f"json_facts missing minimum paths: {missing_facts}")
+
+    approval_gates = _coerce_string_list(frontmatter.get("approval_gates"))
+    if approval_gates is None:
+        errors.append("frontmatter field approval_gates must be a list of strings")
+    else:
+        missing_gates = sorted(MINIMUM_APPROVAL_GATES - set(approval_gates))
+        if missing_gates:
+            errors.append(f"approval_gates missing minimum gates: {missing_gates}")
+
+    boundaries = _coerce_string_list(frontmatter.get("public_private_boundaries"))
+    if boundaries is None:
+        errors.append("frontmatter field public_private_boundaries must be a list of strings")
+    else:
+        missing_boundaries = sorted(MINIMUM_PUBLIC_PRIVATE_BOUNDARIES - set(boundaries))
+        if missing_boundaries:
+            errors.append(
+                f"public_private_boundaries missing minimum boundaries: {missing_boundaries}"
+            )
 
     for field in ("writes_business_files", "provider_mutation", "publishing_or_spend"):
         if field in frontmatter and not isinstance(frontmatter[field], bool):
@@ -234,6 +286,12 @@ def shell_drift_errors(workflow: WorkflowSource, shell_text: str) -> list[str]:
     for fact in workflow.json_facts:
         if not _has_exact_bullet_item(shell_text, fact):
             errors.append(f"shell missing required JSON fact path: {fact}")
+    for gate in workflow.approval_gates:
+        if f"`{gate}`" not in shell_text:
+            errors.append(f"shell missing required approval gate: {gate}")
+    for boundary in workflow.public_private_boundaries:
+        if f"`{boundary}`" not in shell_text:
+            errors.append(f"shell missing required public/private boundary: {boundary}")
     for label, phrase in REQUIRED_SHELL_PHRASES_BY_WORKFLOW.get(workflow.name, {}).items():
         if phrase.lower() not in shell_text.lower():
             errors.append(f"shell missing required workflow rule: {label}")
@@ -269,6 +327,10 @@ def _bullet_list(items: list[str]) -> str:
     return "\n".join(f"- `{item}`" for item in items)
 
 
+def _inline_code_list(items: list[str]) -> str:
+    return ", ".join(f"`{item}`" for item in items)
+
+
 def _display_path(path: Path) -> str:
     parts = path.parts
     if "workflows" in parts:
@@ -292,6 +354,8 @@ def _render_start_money_path_claude_shell(workflow: WorkflowSource) -> str:
 
 Source workflow: `{_display_path(workflow.path)}`
 Runtime support: `claude_code: supported_shell`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
 
 Use from `/mb-start` when the operator asks about revenue, offer readiness, the
 next dollar, or the path to money. Preserve slash-command-native language and
@@ -358,6 +422,8 @@ def _render_start_money_path_codex_shell(workflow: WorkflowSource) -> str:
 
 Source workflow: `{_display_path(workflow.path)}`
 Runtime support: `codex_cli: experimental_shell`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
 
 Codex remains experimental and CLI-first. This guidance is a generated snapshot
 for validation; it does not mean `/mb-start` slash commands work inside Codex
@@ -417,6 +483,8 @@ def _render_think_claude_shell(workflow: WorkflowSource) -> str:
 
 Source workflow: `{_display_path(workflow.path)}`
 Runtime support: `claude_code: supported_shell`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
 
 Use from `/mb-think` when the operator asks to research, decide, figure out,
 compare, codify, sharpen an offer, or turn learning into durable business
@@ -483,6 +551,8 @@ def _render_think_codex_shell(workflow: WorkflowSource) -> str:
 
 Source workflow: `{_display_path(workflow.path)}`
 Runtime support: `codex_cli: experimental_shell`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
 
 Codex remains experimental and CLI-first. This guidance tells Codex how to
 treat a natural-language request as a Main Branch thinking task through

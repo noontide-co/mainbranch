@@ -19,13 +19,72 @@ REQUIRED_FACT_COMMANDS = (
     "mb start --json",
     "mb doctor repair --plan",
 )
+CODEX_THINK_SOURCE_WORKFLOW = "workflows/mb-think/workflow.md"
+CODEX_THINK_REQUIRED_MB_COMMANDS = (
+    "mb status --json --peek",
+    "mb start --json",
+    "mb doctor repair --plan",
+    "mb connect doctor --json",
+    "mb checkpoint --plan --json",
+)
+CODEX_THINK_REQUIRED_JSON_FACTS = (
+    "money_path",
+    "money_path.objects.offer",
+    "money_path.objects.proof",
+    "money_path.objects.proof.quality",
+    "money_path.objects.product_ladder",
+    "money_path.objects.cta_path",
+    "money_path.objects.channel_strategy",
+    "money_path.objects.active_push",
+    "money_path.objects.outcome_feedback_loop",
+    "money_path.ranked_actions",
+    "content_strategy",
+    "ranked_actions",
+    "update",
+    "readiness",
+    "drift.items",
+    "books",
+    "runtime.codex",
+    "runtime.claude_code",
+)
+CODEX_THINK_APPROVAL_GATES = (
+    "updates_repairs_migrations",
+    "file_writes",
+    "checkpoint",
+    "provider_mutation",
+    "publishing_or_spend",
+    "customer_contact",
+    "private_data",
+    "destructive_operations",
+    "structured_collection",
+    "public_issue_or_proposal",
+)
+CODEX_THINK_PUBLIC_PRIVATE_BOUNDARIES = (
+    "no_secrets",
+    "no_raw_provider_exports",
+    "no_customer_member_data",
+    "no_private_runtime_settings",
+    "no_private_dms_or_gated_communities",
+    "no_raw_finance_legal_records",
+)
 REQUIRED_LIFECYCLE_GUIDANCE = (
     "## Codex Lifecycle Workflow Index",
     "## Codex Status Workflow",
     "## Codex Think Route",
-    "mb checkpoint --plan --json",
+    f"Engine source workflow: `{CODEX_THINK_SOURCE_WORKFLOW}`",
+    "Shared source required `mb` commands",
+    "Shared source required JSON fact paths",
+    "Shared source gates",
+    "Shared public/private boundaries",
     "Do not create `.agents/skills`",
     "do not claim these workflows are ported to",
+)
+REQUIRED_LIFECYCLE_GUIDANCE_MARKERS = (
+    *REQUIRED_LIFECYCLE_GUIDANCE,
+    *(f"- `{command}`" for command in CODEX_THINK_REQUIRED_MB_COMMANDS),
+    *(f"- `{fact}`" for fact in CODEX_THINK_REQUIRED_JSON_FACTS),
+    *(f"`{gate}`" for gate in CODEX_THINK_APPROVAL_GATES),
+    *(f"`{boundary}`" for boundary in CODEX_THINK_PUBLIC_PRIVATE_BOUNDARIES),
 )
 
 
@@ -200,6 +259,46 @@ the daily check-in and wants it recorded.
 This is Codex-native guidance for the existing `mb-think` shared workflow
 source. It is not a slash command, and it does not mean all Main Branch skills
 work in Codex.
+
+Engine source workflow: `workflows/mb-think/workflow.md`
+
+Shared source required `mb` commands:
+
+- `mb status --json --peek`
+- `mb start --json`
+- `mb doctor repair --plan`
+- `mb connect doctor --json`
+- `mb checkpoint --plan --json`
+
+Shared source required JSON fact paths:
+
+- `money_path`
+- `money_path.objects.offer`
+- `money_path.objects.proof`
+- `money_path.objects.proof.quality`
+- `money_path.objects.product_ladder`
+- `money_path.objects.cta_path`
+- `money_path.objects.channel_strategy`
+- `money_path.objects.active_push`
+- `money_path.objects.outcome_feedback_loop`
+- `money_path.ranked_actions`
+- `content_strategy`
+- `ranked_actions`
+- `update`
+- `readiness`
+- `drift.items`
+- `books`
+- `runtime.codex`
+- `runtime.claude_code`
+
+Shared source gates: `updates_repairs_migrations`, `file_writes`,
+`checkpoint`, `provider_mutation`, `publishing_or_spend`, `customer_contact`,
+`private_data`, `destructive_operations`, `structured_collection`,
+`public_issue_or_proposal`.
+
+Shared public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
+`no_customer_member_data`, `no_private_runtime_settings`,
+`no_private_dms_or_gated_communities`, `no_raw_finance_legal_records`.
 
 Use it when the operator asks to think through an offer, research a market,
 compare providers, make a decision, or codify what was learned.
@@ -407,7 +506,7 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
     approval_ok = "explicit operator approval" in text
     slash_ok = "Do not pretend Claude" in text and "slash commands exist in Codex." in text
     missing_lifecycle_guidance = [
-        phrase for phrase in REQUIRED_LIFECYCLE_GUIDANCE if phrase not in text
+        marker for marker in REQUIRED_LIFECYCLE_GUIDANCE_MARKERS if marker not in text
     ]
     lifecycle_discovery_ok = bool(exists and not missing_lifecycle_guidance)
     fact_grounding_ok = bool(
