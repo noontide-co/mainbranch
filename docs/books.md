@@ -14,6 +14,11 @@ function is bookkeeping.
 - Main Branch also ships a fake-data sample monthly report:
   `mb books report monthly --sample --month YYYY-MM`. It uses packaged fixture
   data, not the operator's private books.
+- Main Branch ships privacy-bounded bet exposure checks:
+  `mb books exposure --repo . --bet bets/YYYY-MM-DD-slug.md --json` and
+  `mb books exposure --repo . --active --json`. Exposure checks read the
+  configured private hledger journal through hledger only to return aggregate
+  bet totals, cap state, and transaction counts.
 - **Main Branch uses hledger as the bookkeeping engine for `mb books`.**
   The hledger journal is the only authoritative ledger.
 - hledger is **optional** for base `mb` installs, but it is the chosen
@@ -219,6 +224,13 @@ The shipped sample reporting surface is:
 mb books report monthly --sample --month YYYY-MM [--json]
 ```
 
+The shipped privacy-bounded exposure surface is:
+
+```bash
+mb books exposure --repo . --bet bets/YYYY-MM-DD-slug.md [--json]
+mb books exposure --repo . --active [--json]
+```
+
 `mb books check` runs read-only checks against a business repo. It:
 
 - detects whether `core/finance/books.md` exists and parses (including
@@ -288,6 +300,21 @@ report. It emits stable JSON with `--json`, redacts fixture internals that
 should not train operators to paste private paths or account identifiers, and
 keeps `safe_to_share: true` because the data is synthetic.
 
+`mb books exposure` checks whether bet spending is anchored in the private
+hledger journal:
+
+- resolves the private journal from `vault_location` in
+  `core/finance/books.md`;
+- runs `hledger -f <journal> check` before querying exposure;
+- queries `tag:bet=<id>` for one bet or all active bets;
+- returns aggregate gross outflow, exposure cap, remaining cap, anchor
+  presence, and transaction count;
+- withholds private hledger stderr/stdout on failures because hledger can print
+  transaction context;
+- keeps `safe_to_share: true` by omitting raw rows, payees, descriptions,
+  account names, account numbers, transaction memos, provider payloads, private
+  vault paths, and absolute business-repo paths.
+
 Exit codes:
 
 - `mb books check`: `0` when there are no error findings (info or
@@ -303,6 +330,10 @@ Exit codes:
   `1` for generation failures such as missing hledger or missing fixture;
   `2` for usage errors such as missing `--sample`, missing `--month`, or an
   invalid month.
+- `mb books exposure`: `0` when hledger can check the private journal and return
+  aggregate exposure facts, including warning states such as a missing anchor;
+  `1` for hledger, policy, journal, bet, or query errors; `2` when the operator
+  does not choose exactly one of `--bet` or `--active`.
 
 It does **not**:
 
@@ -310,7 +341,11 @@ It does **not**:
   cash-flow, or tax claims;
 - import the hledger library directly into `mb`;
 - scrape human terminal output when structured output exists;
-- read the real ledger contents inside the vault;
+- read the real ledger contents inside the vault except for the explicit
+  `mb books exposure` hledger query, which returns only aggregate bet exposure
+  facts;
+- print raw ledger rows, payees, descriptions, account details, transaction
+  memos, provider payloads, private vault paths, or finance/legal records;
 - mutate any file.
 
 Later slices may add real imports, reconciliation, month close, or

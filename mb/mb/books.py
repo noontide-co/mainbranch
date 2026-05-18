@@ -846,11 +846,6 @@ def _sanitize_hledger_detail(text: str, journal: Path) -> str:
     return detail[:2000]
 
 
-def _sanitize_private_journal_detail(text: str, journal: Path) -> str:
-    detail = text.strip().replace(str(journal), "private journal")
-    return detail[:2000]
-
-
 def _hledger_missing_finding() -> dict[str, Any]:
     return _finding(
         id="hledger-missing",
@@ -963,23 +958,38 @@ def _run_private_hledger_check(journal: Path) -> dict[str, Any] | None:
             timeout=15,
             check=False,
         )
-    except (FileNotFoundError, subprocess.SubprocessError) as exc:
+    except (FileNotFoundError, subprocess.SubprocessError):
         return _finding(
             id="hledger-check-error",
             title="hledger check could not run",
             state="error",
-            detail=str(exc),
+            detail=(
+                "hledger could not run the private journal check. Private command output "
+                "is withheld because it can contain ledger context."
+            ),
             audience="informational",
             operator_summary="Main Branch found hledger on PATH but could not run its check.",
+            repair=(
+                "Run hledger check inside the private books vault and keep details out "
+                "of the business repo."
+            ),
         )
     if proc.returncode != 0:
         return _finding(
             id="hledger-check-failed",
             title="Private books journal failed hledger check",
             state="error",
-            detail=_sanitize_private_journal_detail(proc.stderr or proc.stdout, journal),
+            detail=(
+                "hledger check failed for the configured private journal. Private command "
+                "output is withheld because it can contain payees, account names, memos, "
+                "or raw ledger rows."
+            ),
             audience="operator_decision",
             operator_summary="hledger check failed for the configured private journal.",
+            repair=(
+                "Run hledger check inside the private books vault and repair the private "
+                "journal there."
+            ),
         )
     return None
 
@@ -1158,23 +1168,35 @@ def _run_hledger_print(
             timeout=15,
             check=False,
         )
-    except (FileNotFoundError, subprocess.SubprocessError) as exc:
+    except (FileNotFoundError, subprocess.SubprocessError):
         return None, _finding(
             id="hledger-exposure-query-error",
             title="hledger exposure query could not run",
             state="error",
-            detail=str(exc),
+            detail=(
+                "hledger could not run the private exposure query. Private command output "
+                "is withheld because it can contain ledger context."
+            ),
             audience="informational",
             operator_summary="Main Branch found hledger on PATH but could not query bet exposure.",
+            repair=(
+                "Run the tag query inside the private books vault and keep details out "
+                "of the business repo."
+            ),
         )
     if proc.returncode != 0:
         return None, _finding(
             id="hledger-exposure-query-failed",
             title="hledger exposure query failed",
             state="error",
-            detail=_sanitize_private_journal_detail(proc.stderr or proc.stdout, journal),
+            detail=(
+                "hledger could not query transactions for this bet anchor. Private command "
+                "output is withheld because it can contain payees, account names, memos, "
+                "or raw ledger rows."
+            ),
             audience="operator_decision",
             operator_summary="hledger could not query transactions for this bet anchor.",
+            repair="Check the bet tag and journal syntax inside the private books vault.",
         )
     try:
         parsed = json.loads(proc.stdout or "[]")
@@ -1211,7 +1233,7 @@ def _exposure_error(
         "state": state,
         "schema_version": BOOKS_EXPOSURE_SCHEMA,
         "safe_to_share": True,
-        "repo": str(repo),
+        "repo": {"label": "business repo", "path_exposed": False},
         "mode": mode,
         "summary": findings[0]["operator_summary"] if findings else "Exposure check failed.",
         "exposures": [],
@@ -1449,7 +1471,7 @@ def exposure(
         "state": state,
         "schema_version": BOOKS_EXPOSURE_SCHEMA,
         "safe_to_share": True,
-        "repo": str(repo_path),
+        "repo": {"label": "business repo", "path_exposed": False},
         "mode": mode,
         "summary": (
             f"Checked {len(exposures)} bet exposure record(s); "

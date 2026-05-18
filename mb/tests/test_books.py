@@ -354,6 +354,11 @@ def _hledger_report_dispatcher(monkeypatch: pytest.MonkeyPatch) -> list[list[str
 def _hledger_exposure_dispatcher(
     monkeypatch: pytest.MonkeyPatch,
     transactions: list[dict[str, Any]],
+    *,
+    check_returncode: int = 0,
+    check_stderr: str = "",
+    query_returncode: int = 0,
+    query_stderr: str = "",
 ) -> list[list[str]]:
     real_run = subprocess.run
     seen: list[list[str]] = []
@@ -369,9 +374,13 @@ def _hledger_exposure_dispatcher(
         seen.append(argv)
         if argv and Path(str(argv[0])).name == "hledger":
             if "check" in argv:
-                return _FakeCompleted()
+                return _FakeCompleted(returncode=check_returncode, stderr=check_stderr)
             if "print" in argv:
-                return _FakeCompleted(json.dumps(transactions))
+                return _FakeCompleted(
+                    json.dumps(transactions),
+                    returncode=query_returncode,
+                    stderr=query_stderr,
+                )
             raise AssertionError(f"unexpected hledger command: {argv}")
         return real_run(args, *rest, **kwargs)
 
@@ -558,6 +567,7 @@ tags: []
     assert "PRIVATE PAYEE" not in result.output
     assert "PRIVATE_ACCOUNT" not in result.output
     assert "PRIVATE_LEDGER_CONTENT" not in result.output
+    assert str(repo) not in result.output
     assert str(repo / ".mb/private/books") not in result.output
 
 
@@ -600,6 +610,121 @@ tags: []
         "Add the bet tag to private ledger transactions before execution spend."
         in payload["warnings"]
     )
+
+
+def test_books_exposure_redacts_private_hledger_check_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write_books_policy_with_private_journal(repo)
+    _write(
+        repo / "bets/2026-05-16-private.md",
+        """---
+status: open
+opened: 2026-05-16
+deadline: 2026-05-30
+appetite: small
+money_path:
+  required: true
+  bet_id: 2026-05-16-private
+linked_decisions: []
+linked_research: []
+linked_pushes: []
+linked_outcomes: []
+public: false
+channels: []
+tags: []
+---
+# Private
+""",
+    )
+    private_stderr = (
+        "PRIVATE PAYEE\nAssets:Bank:PRIVATE_ACCOUNT\nmemo: PRIVATE_MEMO\n2026-05-16 raw ledger row"
+    )
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "/fake/hledger")
+    _hledger_exposure_dispatcher(monkeypatch, [], check_returncode=1, check_stderr=private_stderr)
+
+    result = runner.invoke(
+        app,
+        [
+            "books",
+            "exposure",
+            "--repo",
+            str(repo),
+            "--bet",
+            "bets/2026-05-16-private.md",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    payload = json.loads(result.output)
+    assert payload["findings"][0]["id"] == "hledger-check-failed"
+    assert "Private command output is withheld" in payload["findings"][0]["detail"]
+    assert "PRIVATE PAYEE" not in result.output
+    assert "PRIVATE_ACCOUNT" not in result.output
+    assert "PRIVATE_MEMO" not in result.output
+    assert "2026-05-16 raw ledger row" not in result.output
+    assert str(repo) not in result.output
+
+
+def test_books_exposure_redacts_private_hledger_query_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write_books_policy_with_private_journal(repo)
+    _write(
+        repo / "bets/2026-05-16-private.md",
+        """---
+status: open
+opened: 2026-05-16
+deadline: 2026-05-30
+appetite: small
+money_path:
+  required: true
+  bet_id: 2026-05-16-private
+linked_decisions: []
+linked_research: []
+linked_pushes: []
+linked_outcomes: []
+public: false
+channels: []
+tags: []
+---
+# Private
+""",
+    )
+    private_stderr = (
+        "PRIVATE PAYEE\n"
+        "Expenses:Marketing:PRIVATE_ACCOUNT\n"
+        "memo: PRIVATE_MEMO\n"
+        "2026-05-16 raw ledger row"
+    )
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "/fake/hledger")
+    _hledger_exposure_dispatcher(monkeypatch, [], query_returncode=1, query_stderr=private_stderr)
+
+    result = runner.invoke(
+        app,
+        [
+            "books",
+            "exposure",
+            "--repo",
+            str(repo),
+            "--bet",
+            "bets/2026-05-16-private.md",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    payload = json.loads(result.output)
+    assert payload["findings"][1]["id"] == "hledger-exposure-query-failed"
+    assert "Private command output is withheld" in payload["findings"][1]["detail"]
+    assert "PRIVATE PAYEE" not in result.output
+    assert "PRIVATE_ACCOUNT" not in result.output
+    assert "PRIVATE_MEMO" not in result.output
+    assert "2026-05-16 raw ledger row" not in result.output
+    assert str(repo) not in result.output
 
 
 def test_books_status_json_reports_missing_hledger_and_vault(
