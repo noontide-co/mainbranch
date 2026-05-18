@@ -275,6 +275,18 @@ strategy, positioning, offer, audience, voice, soul check, vendor choice.
 Route to `/mb-think`, with `codify` when the task is to turn known context into
 durable repo truth.
 
+### Stale source, claim, or angle cleanup
+
+Signals: stale source, old source, outdated file, obsolete claim, retire this
+claim, retire this angle, stop using that proof, not true anymore, old offer
+detail, old SOP.
+
+Route to `/mb-think` stale-source cleanup. Start from `mb status --json --peek`,
+then have the worker identify the stale item, find downstream usage, reconcile
+current `core/` and per-offer files, record a decision when durable truth
+changes, and offer a business-readable checkpoint. Do not ask the operator to
+inspect a git diff as the primary workflow.
+
 ### Bets, pushes, sites, ads, organic, wiki
 
 Signals and routes:

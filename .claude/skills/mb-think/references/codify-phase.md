@@ -145,6 +145,14 @@ When user has new information to add:
 - "Any client calls or DMs that show how you talk?"
 - "What's changed since you last updated these files?"
 
+## Retiring Stale Source
+
+When the new context says old source material, a claim, an offer detail, proof
+usage, or an angle is stale, switch to
+[stale-source-cleanup.md](stale-source-cleanup.md). Reconcile current truth,
+keep historical source auditable, write or update the decision that explains
+the change, and checkpoint only after approval.
+
 ---
 
 ## Change Report

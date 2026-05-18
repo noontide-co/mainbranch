@@ -174,6 +174,15 @@ def test_think_drift_detection_flags_missing_required_workflow_rules() -> None:
     assert "shell missing required workflow rule: public/private boundary" in errors
 
 
+def test_think_runtime_shells_surface_stale_source_cleanup_route() -> None:
+    workflow = load_workflow(THINK_WORKFLOW)
+
+    for shell in (render_claude_shell(workflow), render_codex_shell(workflow)):
+        assert "stale source, claim, proof, or angle cleanup" in shell
+        assert "find downstream usage" in shell
+        assert "record and codify the decision" in shell
+
+
 def test_think_codex_shell_does_not_claim_slash_command_or_skill_parity() -> None:
     workflow = load_workflow(THINK_WORKFLOW)
     shell = render_codex_shell(workflow)
