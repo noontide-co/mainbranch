@@ -37,6 +37,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   public/private boundary metadata, generated shell drift checks, and Codex
   `AGENTS.md` alignment while keeping Codex support experimental and
   CLI-first. Refs MAIN-397, #636.
+- Aligned public agent, compatibility, and release-sweep docs around shared
+  workflow sources, thin runtime shells, pre-release alignment gates, and
+  Claude/Codex support boundaries. Refs MAIN-416, #664.
 
 ### Fixed
 

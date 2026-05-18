@@ -11,6 +11,8 @@ markdown files in git.
 
 - `mb` is the deterministic, inspectable, scriptable control plane.
 - Agent-runtime skills are the judgment-heavy execution layer.
+- Shared workflow sources are the runtime-agnostic workflow contract; runtime
+  shells and generated guidance are adapters over those sources.
 - GitHub issues are tasks.
 - Pull requests are proposals and review conversations.
 - Git history is the evolution story.
@@ -96,6 +98,7 @@ python -m venv /tmp/mainbranch-smoke
 +-- mb/                # Python package, CLI, tests, bundled data
 +-- .claude/skills/    # bundled Claude Code skill source
 +-- templates/         # files copied into created business repos
++-- workflows/         # runtime-agnostic workflow source contracts
 +-- tools/             # experimental helper tools
 +-- scripts/           # repo-level validation helpers
 ```
@@ -107,6 +110,8 @@ Changes may affect one or more public surfaces:
 - CLI behavior in `mb/mb/` and `mb/tests/`;
 - packaged data under `mb/mb/_data/`;
 - bundled skills under `.claude/skills/`;
+- shared workflow sources under `workflows/` and generated runtime shells or
+  fixtures derived from them;
 - business-repo scaffolding under `templates/` and `mb/mb/init.py`;
 - user docs in `README.md`, `docs/beginner-setup.md`, `docs/migrating.md`,
   `SUPPORT.md`, and `docs/compatibility.md`;

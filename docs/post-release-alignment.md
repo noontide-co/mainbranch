@@ -7,6 +7,10 @@ stance. This playbook is the standard sweep to run after every
 package-visible release, plus the safe pattern for running multiple
 branches in parallel.
 
+Run the same sweep before a package-visible release when a batch changes the
+agent contract itself: shared workflow sources, generated runtime guidance,
+runtime support claims, release validation, or public/private evidence policy.
+
 It complements the release runbook (`docs/release-simulations.md`), the
 release-agent contract (`docs/release-agent-contract.md`), the
 OSS operating checklist (`docs/oss-operating-checklist.md`), and the
@@ -66,6 +70,9 @@ operators, or contributors read:
 - Confirm `docs/agent-cold-start.md` still tells agents which docs are
   always-read and which are task-triggered. Do not push release-specific
   instructions into local preferences when they belong in public docs.
+- Before a package-visible release, run this same sweep after the last
+  release-bearing branch merges and before the release-prep branch. The
+  release-prep branch should then only package the already-aligned truth.
 
 Default to a small alignment PR labeled `[docs]`. If the sweep finds nothing
 worth changing, write that as a one-line comment on the release-prep issue
