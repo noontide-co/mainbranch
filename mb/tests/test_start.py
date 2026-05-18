@@ -131,6 +131,26 @@ def test_start_json_omits_codex_command_when_codex_is_missing(
     assert "Install Codex CLI" not in report["next_actions"]
 
 
+def test_start_json_names_doctor_repair_when_start_wiring_is_missing(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(start_mod, "_which", _with_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    shutil.rmtree(repo / ".claude" / "skills")
+
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 1
+    report = json.loads(result.stdout)
+    wiring = report["runtime"]["skill_wiring"]
+    assert report["handoff_ready"] is False
+    assert "Missing Main Branch start wiring" in wiring["summary"]
+    assert "project-local /mb-start bridge" in wiring["missing"]
+    assert any("mb doctor repair --plan" in action for action in report["next_actions"])
+    assert any("mb doctor repair --apply" in action for action in report["next_actions"])
+
+
 def test_start_json_exposes_push_and_legacy_campaign_facts(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(start_mod, "_which", _with_claude)
     repo = tmp_path / "acme"

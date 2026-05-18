@@ -3289,7 +3289,10 @@ def _runtime(repo: Path) -> dict[str, Any]:
                 wiring_summary += " Multiple mb installs are active on PATH."
             wiring_repair = "Run `mb skill link --repo .`."
         else:
-            wiring_summary = "Claude Code skill wiring is missing or unhealthy."
+            wiring_summary = str(wiring.get("summary") or "Missing Main Branch start wiring.")
+            wiring_repair = (
+                "Run `mb doctor repair --plan`, review it, then run `mb doctor repair --apply`."
+            )
     return {
         "claude_code": {
             "found": bool(claude_path),

@@ -9,6 +9,7 @@ from typing import Any
 from typer.testing import CliRunner
 
 from mb import doctor as doctor_mod
+from mb import engine as engine_mod
 from mb import migration_lint
 from mb.cli import app
 from mb.doctor import _detect_cloud_paths, _repo_layout_check, run
@@ -261,6 +262,48 @@ def test_doctor_repair_plan_reports_missing_checkpoint_hook(tmp_path: Path) -> N
     assert section["state"] == "warn"
     actions = {action["id"]: action for action in payload["actions"]}
     assert actions["checkpoint-hook-install"]["safe_to_apply"] is True
+
+
+def test_doctor_repair_apply_restores_missing_claude_worktree_start_wiring(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    doctor_mod._run_git(repo, ["config", "user.email", "test@example.com"])
+    doctor_mod._run_git(repo, ["config", "user.name", "Test User"])
+    doctor_mod._run_git(repo, ["add", "AGENTS.md", "CLAUDE.md", "README.md", "core"])
+    commit = doctor_mod._run_git(repo, ["commit", "-m", "[updated] setup -- baseline"])
+    assert commit["ok"], commit["stderr"]
+    worktree = repo / ".claude" / "worktrees" / "repair-start"
+    added = doctor_mod._run_git(repo, ["worktree", "add", "-b", "repair-start", str(worktree)])
+    assert added["ok"], added["stderr"]
+
+    assert not (worktree / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
+
+    plan = doctor_mod.repair_plan(repo=worktree)
+    section = next(section for section in plan["sections"] if section["id"] == "claude-wiring")
+    start_check = next(
+        check for check in section["checks"] if check["name"] == "project-local-skills"
+    )
+    actions = {action["id"]: action for action in plan["actions"]}
+
+    assert section["state"] == "error"
+    assert "Missing Main Branch start wiring" in start_check["summary"]
+    assert "project-local /mb-start bridge" in start_check["summary"]
+    assert start_check["fallback_commands"] == [
+        "mb start --json",
+        "mb doctor repair --plan",
+        "mb doctor repair --apply",
+    ]
+    assert actions["skill-link"]["command"] == "mb doctor repair --apply"
+    assert "/mb-start" in actions["skill-link"]["reason"]
+
+    applied = doctor_mod.repair_apply(repo=worktree)
+    applied_actions = {action["id"]: action for action in applied["applied_actions"]}
+
+    assert "skill-link" in applied_actions
+    assert (worktree / ".claude" / "skills" / "mb-start" / "SKILL.md").is_file()
+    assert engine_mod.link_status(worktree)["ok"] is True
 
 
 def test_doctor_repair_plan_reports_missing_codex_agents_md(tmp_path: Path) -> None:

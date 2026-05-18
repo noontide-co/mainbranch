@@ -1404,8 +1404,8 @@ def run(path: str) -> dict[str, Any]:
                 f"mb-start skill linked via {wiring['engine_root']}"
                 if wiring_ok
                 else (
-                    "Claude Code skill links missing or shadowed. Run "
-                    "`mb skill repair --repo .`, then `mb skill link --repo .`."
+                    "Missing Main Branch start wiring for Claude Code. Run "
+                    "`mb doctor repair --plan`, then `mb doctor repair --apply`."
                 )
             ),
             "severity": "ok"
@@ -1931,8 +1931,9 @@ def repair_plan(
             "summary": (
                 "Claude Code can discover mb-start"
                 if wiring.get("ok")
-                else "project-local skill wiring is missing or shadowed"
+                else str(wiring.get("summary") or "missing Main Branch start wiring")
             ),
+            "fallback_commands": wiring.get("fallback_commands", []),
         },
         {
             "name": "personal-skill-shadowing",
@@ -1961,12 +1962,15 @@ def repair_plan(
         actions.append(
             _action(
                 id="skill-link",
-                title="Refresh project-local Claude Code skill wiring",
+                title="Restore Main Branch start wiring for Claude Code",
                 state="error",
                 mode="write",
-                command="mb skill link --repo . --json",
+                command="mb doctor repair --apply",
                 safe_to_apply=True,
-                reason="relinks bundled skills and repairs Main Branch local gitignore entries",
+                reason=(
+                    "restores project-local Main Branch start wiring so Claude Code "
+                    "can discover /mb-start from this repo or worktree"
+                ),
                 writes=[
                     ".claude/settings.local.json",
                     ".claude/skills/",
@@ -2348,12 +2352,15 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
         applied.append(
             _action(
                 id="skill-link",
-                title="Refreshed project-local Claude Code skill wiring",
+                title="Restored Main Branch start wiring for Claude Code",
                 state="ok" if linked["ok"] else "error",
                 mode="write",
                 command="mb skill link --repo . --json",
                 safe_to_apply=True,
-                reason="refreshed Main Branch skill links and local settings",
+                reason=(
+                    "restored project-local Main Branch start wiring so Claude Code "
+                    "can discover /mb-start"
+                ),
                 writes=[".claude/settings.local.json", ".claude/skills/", ".gitignore"],
                 applied=True,
                 result=linked,

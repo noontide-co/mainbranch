@@ -140,7 +140,7 @@ def _build_checks(
     skill_detail = (
         "mb-start skill discoverable"
         if wiring["ok"]
-        else "Claude Code mb-start skill is not wired or is shadowed"
+        else str(wiring.get("summary") or "Missing Main Branch start wiring.")
     )
     if wiring.get("stale_engine_paths"):
         current = wiring.get("current_mb") or {}
@@ -199,8 +199,8 @@ def _build_checks(
             "severity": "error",
             "detail": skill_detail,
             "repair": (
-                "Run `mb skill repair --repo .`, then `mb skill link --repo .` "
-                "from the business repo."
+                "Run `mb doctor repair --plan`, review it, then run "
+                "`mb doctor repair --apply` from the business repo."
             ),
         },
         {
