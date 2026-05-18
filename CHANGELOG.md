@@ -44,6 +44,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `mb connect test` validation results, and tightened setup references so
   provider smoke evidence records readiness without printing credential values.
   Refs MAIN-413, #658.
+- Tightened Claude Code worktree repair so missing project-local `/mb-start`
+  wiring is reported as missing Main Branch start wiring, `mb start --json`
+  points to `mb doctor repair --plan` / `--apply`, and doctor repair restores
+  the bridge in a fresh worktree fixture. Refs MAIN-410, #655.
 
 ## [0.3.26] - 2026-05-16
 

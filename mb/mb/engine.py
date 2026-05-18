@@ -668,6 +668,18 @@ def link_status(repo: str | Path) -> dict[str, Any]:
     shadow_report = inspect_personal_skill_conflicts(target, apply=False)
     install_diagnostics = mb_install_diagnostics()
     stale_from_other_install = bool(stale_engine_paths and install_diagnostics["multiple_installs"])
+    missing: list[str] = []
+    if not settings_has_engine:
+        missing.append("Main Branch engine access")
+    if not start_link_ok:
+        missing.append("project-local /mb-start bridge")
+    if not shadow_report["ok"]:
+        missing.append("personal Claude skill shadow")
+    summary = (
+        "Main Branch start wiring is ready."
+        if not missing
+        else "Missing Main Branch start wiring: " + ", ".join(missing) + "."
+    )
 
     return {
         "ok": settings_has_engine and start_link_ok and shadow_report["ok"],
@@ -691,6 +703,13 @@ def link_status(repo: str | Path) -> dict[str, Any]:
         "start_link_ok": start_link_ok,
         "start_link": str(start_link),
         "shadow_report": shadow_report,
+        "missing": missing,
+        "summary": summary,
+        "fallback_commands": [
+            "mb start --json",
+            "mb doctor repair --plan",
+            "mb doctor repair --apply",
+        ],
         "repair_command": "mb skill link --repo .",
     }
 
