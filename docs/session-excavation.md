@@ -89,7 +89,11 @@ Read the session in passes. Do not start with broad product wishes.
 6. **Workflow gaps:** missing source-ingestion flows, review gates, repo
    boundary decisions, provider readiness, dashboards, or other repeated
    operator loops.
-7. **Roadmap signal:** useful future direction that should not become an
+7. **Provider and connector boundaries:** connector setup friction, bridge or
+   restart requirements, OAuth scope confusion, direct provider writes, secret
+   handling, account mutation, and whether a provider path is `mb`-native,
+   runtime-native, plugin-based, CLI/API-key-based, or unsupported.
+8. **Roadmap signal:** useful future direction that should not become an
    immediate support claim.
 
 Separate facts from inferences. A fact is visible in the transcript, logs, repo
@@ -159,6 +163,9 @@ After the table is drafted, route each P0 and P1 row.
 | Public/private leak risk | GitHub issue if generic; private note only if the evidence itself is sensitive |
 | Generated repo guidance gap | Skill prose, template, docs, and a fixture/runtime smoke if first-run behavior changes |
 | Stale business source handling | Workflow issue, skill update, or decision if it changes repo primitives |
+| Provider write or secret handling risk | Provider mutation, approval-gate, or secret-redaction issue with a validation target |
+| Connector bridge confusion | Connector-readiness issue or shared-workflow source issue; do not claim runtime support from directory availability alone |
+| Transcript or authenticated-community ingestion | Ingestion/privacy issue with manifest-first, skip-filter, and proof-permission requirements |
 | Connector/provider request | Provider-readiness issue only after support claim and smoke boundary are clear |
 | Roadmap pull | Roadmap note or backlog issue; do not claim support |
 
