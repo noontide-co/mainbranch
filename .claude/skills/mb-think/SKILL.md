@@ -1,6 +1,6 @@
 ---
 name: mb-think
-description: "Combined research, decision, and codification workflow. Use when: (1) Exploring a question before committing (2) Making a decision that needs documentation (3) User says research, decide, figure out, explore, codify, enrich, sharpen this offer, improve the offer, add context, keyword gate, analyze this VSL, extract the pitch, script teardown, objection mining, or sales video research (4) Updating reference files based on decisions (5) User wants to add testimonials, angles, proof, mechanisms, objections, guarantees, or pitch context. Supports modes: full flow, research-only, keyword-gate, decide-only, codify."
+description: "Combined research, decision, and codification workflow. Use when: (1) Exploring a question before committing (2) Making a decision that needs documentation (3) User says research, decide, figure out, explore, codify, enrich, retire stale source, sharpen this offer, improve the offer, add context, keyword gate, analyze this VSL, extract the pitch, script teardown, objection mining, or sales video research (4) Updating reference files based on decisions (5) User wants to add testimonials, angles, proof, mechanisms, objections, guarantees, or pitch context. Supports modes: full flow, research-only, keyword-gate, decide-only, codify."
 loops: [sense, decide, ship]
 ---
 
@@ -162,10 +162,10 @@ Detect mode from user's natural language:
 | "decide", "we chose", "document decision" | Decide | [decide-phase.md](references/decide-phase.md) |
 | "codify", "apply", "update reference files" | Codify | [codify-phase.md](references/codify-phase.md) |
 | "add context", "enrich", "I have new info" | Codify | [codify-phase.md](references/codify-phase.md) |
+| "this source/claim/angle is stale", "old source", "obsolete claim", "retire this", "stop using that proof" | Stale-source cleanup | [stale-source-cleanup.md](references/stale-source-cleanup.md) |
 | "content strategy", "pillars", "what platforms", "content plan", "cadence", "channel strategy", "account strategy", "founder voice", "weekly content plan" | Full Flow (codify to the right content strategy layer) | [codify-phase.md](references/codify-phase.md) |
 | "where was I", "continue", "pick up" | Recovery | [recovery.md](references/recovery.md) |
 | "here's a PDF", "ingest this", "convert this document", file path (.pdf/.docx/.pptx) | Document Ingestion | [document-ingestion.md](references/document-ingestion.md) |
-
 For offer, audience, proof, CTA, content strategy, ads/pages, and positioning
 requests, use [research-depth-ladder.md](references/research-depth-ladder.md)
 before selecting source tools. The ladder chooses how much research is enough;

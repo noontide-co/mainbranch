@@ -47,12 +47,14 @@ into durable business files.
 
 Use this workflow when the operator asks to think through an offer, research a
 market, compare providers, pressure-test positioning, choose a direction, turn
-source material into a decision, or codify what was learned.
+source material into a decision, retire stale source, or codify what was
+learned.
 
 Trigger phrases include think through, research, decide, figure out, explore,
 codify, enrich, sharpen this offer, improve the offer, compare providers,
 market research, customer language, proof, objections, guarantees, keyword
-gate, sales video research, script teardown, and decision.
+gate, sales video research, script teardown, stale source, obsolete claim,
+retire this angle, and decision.
 
 Do not use this workflow for a site build, ads generation, organic post
 production, provider mutation, publishing, spend, customer contact, or model
@@ -141,6 +143,14 @@ handling.
 Use decisions when the work changes durable business truth. A decision should
 name options, rationale, tradeoffs, consequences, and the specific files that
 would change. Codify only after the operator accepts the direction.
+
+When source material, a claim, an offer detail, proof usage, or an angle is
+stale, reconcile current truth instead of erasing history. Identify the stale
+item, find downstream usage, keep source/evidence auditable with a stale note,
+update `core/` and per-offer files after approval, record a decision when
+durable truth changes, and checkpoint only after approval. Do not expand this
+cleanup route into transcript ingestion, provider connectors, newsletter
+implementation, or dashboard work.
 
 ## Read Boundaries
 

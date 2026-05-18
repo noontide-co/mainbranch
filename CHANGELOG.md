@@ -18,6 +18,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   gates, secret-safe smoke checks, transcript/source-ingestion privacy,
   connector readiness, dashboard direction, repo boundaries, and stale-source
   cleanup. Refs MAIN-408, #653.
+- Added a `/mb-think` stale-source cleanup workflow for retiring obsolete
+  source material, claims, offer details, proof usage, or messaging angles;
+  `/mb-start` now routes stale-source cleanup requests into the reconcile,
+  decision, codify, and checkpoint loop. Refs MAIN-393, #630.
 
 ## [0.3.26] - 2026-05-16
 
