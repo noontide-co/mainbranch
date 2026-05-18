@@ -41,8 +41,12 @@ If you don't have `env.sh` yet, run `/mb-setup` first or create it manually:
 
 ```bash
 mkdir -p ~/.config/vip
-echo 'export GOOGLE_API_KEY="your-key"' >> ~/.config/vip/env.sh
+chmod 700 ~/.config/vip
+$EDITOR ~/.config/vip/env.sh
 ```
+
+Add the `export GOOGLE_API_KEY="..."` line in the editor. Do not paste API keys
+into chat, screenshots, or terminal output.
 
 ### 3. Add MCP Server
 
@@ -122,7 +126,7 @@ Free tier includes limited image generation. Paid credits scale to hundreds of i
 
 **"MCP not found"** — Run `claude mcp add` command again. Make sure npx is available (`which npx`).
 
-**"Invalid API key"** — Check `echo $GOOGLE_API_KEY`. Verify at [aistudio.google.com](https://aistudio.google.com).
+**"Invalid API key"** — Check presence without printing the value: `test -n "$GOOGLE_API_KEY" && echo "GOOGLE_API_KEY is set" || echo "GOOGLE_API_KEY is not set"`. Verify at [aistudio.google.com](https://aistudio.google.com).
 
 **"Rate limited"** — Free tier has limits. Wait or upgrade to paid credits.
 

@@ -226,7 +226,9 @@ Still useful for finding popular/viral posts that have been indexed.
 
 **SDK: "ModuleNotFoundError: xai_sdk"** — Run `pip install xai-sdk`
 
-**SDK: "Invalid API key"** — Check `echo $XAI_API_KEY` and verify at [console.x.ai](https://console.x.ai)
+**SDK: "Invalid API key"** — Check presence without printing the value:
+`test -n "$XAI_API_KEY" && echo "XAI_API_KEY is set" || echo "XAI_API_KEY is not set"`,
+then verify at [console.x.ai](https://console.x.ai)
 
 **SDK: "num_sources_used: 0"** — You're using REST API, not SDK. Make sure you're using `x_search()` tool.
 
