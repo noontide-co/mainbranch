@@ -52,7 +52,7 @@ When checking section markers, search for these headings (case-insensitive). The
 
 ### How to Score
 
-**CRITICAL: Use absolute paths for ALL file reads and searches.** The repo path from Step 2 is an absolute path (e.g., `/Users/devon/Documents/GitHub/my-business`). Always use it — never use `~` or relative paths. The Glob and Read tools do not expand `~`, so `~/Documents/GitHub/repo/core/proof` will silently return 0 results even when files exist.
+**CRITICAL: Use absolute paths for ALL file reads and searches.** The repo path from Step 2 is an absolute path (e.g., `/absolute/path/to/my-business`). Always use it — never use `~` or relative paths. The Glob and Read tools do not expand `~`, so `~/Documents/GitHub/repo/core/proof` will silently return 0 results even when files exist.
 
 1. **Read each file** with the Read tool using the absolute repo path (e.g., `[repo-path]/core/soul.md`). If the read fails or returns empty, score 0.
 2. **Count lines** for the primary threshold check.

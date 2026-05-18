@@ -104,6 +104,7 @@ Common shipped automation-safe commands include:
 | Update dry-run | `mb update --repo "$repo" --check --json` |
 | Bundled skill inventory | `mb skill list` |
 | Bundled skill validation | `mb skill validate --all --json` |
+| Claude Code start wiring repair preview | `mb doctor repair --repo "$repo" --plan --json` |
 | Claude Code skill-link repair preview | `mb skill repair --repo "$repo" --json` |
 
 Some current commands are runtime handoff hints, not workflow execution. For
@@ -133,7 +134,7 @@ directory paths. If a sample needs a path, use placeholders like
 Runtime config may point at a business repo, an engine install, and optional
 provider tools. Credentials, OAuth tokens, API keys, raw exports, and local
 machine preferences must stay outside tracked business files. Business
-business memory remains in the repo's tracked `core/`, `research/`,
+memory remains in the repo's tracked `core/`, `research/`,
 `decisions/`, `bets/`, `pushes/`, `log/`, and `documents/` files.
 
 ## Runtime adapter readiness map
@@ -155,6 +156,12 @@ smoke evidence exist.
 
 The CLI/repo contract and the slash-skill workflow contract have different
 support levels:
+
+Shared workflow sources under `workflows/` are runtime-agnostic contracts.
+Runtime shells, Claude Code skills, generated `AGENTS.md`, and future adapter
+packages should stay thin over those sources. A checked shared workflow source
+does not by itself make every runtime supported; support still requires an
+adapter and smoke evidence for that runtime.
 
 | Surface | Claude Code | Other runtimes and orchestrators |
 |---|---|---|
