@@ -71,7 +71,7 @@ REQUIRED_LIFECYCLE_GUIDANCE = (
     "## Codex Lifecycle Workflow Index",
     "## Codex Status Workflow",
     "## Codex Think Route",
-    f"Source workflow: `{CODEX_THINK_SOURCE_WORKFLOW}`",
+    f"Engine source workflow: `{CODEX_THINK_SOURCE_WORKFLOW}`",
     "Shared source required `mb` commands",
     "Shared source required JSON fact paths",
     "Shared source gates",
@@ -260,7 +260,7 @@ This is Codex-native guidance for the existing `mb-think` shared workflow
 source. It is not a slash command, and it does not mean all Main Branch skills
 work in Codex.
 
-Source workflow: `workflows/mb-think/workflow.md`
+Engine source workflow: `workflows/mb-think/workflow.md`
 
 Shared source required `mb` commands:
 

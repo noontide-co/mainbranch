@@ -111,7 +111,7 @@ def test_codex_agents_think_route_preserves_shared_workflow_contract() -> None:
     workflow = load_workflow(THINK_WORKFLOW)
     text = AGENTS_TEMPLATE.read_text(encoding="utf-8")
 
-    assert "Source workflow: `workflows/mb-think/workflow.md`" in text
+    assert "Engine source workflow: `workflows/mb-think/workflow.md`" in text
     for command in workflow.required_mb_commands:
         assert f"- `{command}`" in text
     for fact in workflow.json_facts:
