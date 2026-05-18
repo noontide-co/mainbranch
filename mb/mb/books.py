@@ -57,6 +57,7 @@ NON_LOCAL_STORAGE_MODES = frozenset({"team-private-repo", "advanced-vault"})
 BUNDLED_FIXTURE_NAME = "acme-fixture.journal"
 DOCS_BOOKS_PATH = "docs/books.md"
 BOOKS_REPORT_SCHEMA = "1.0"
+BOOKS_EXPOSURE_SCHEMA = "1.0"
 SAMPLE_FIXTURE_LABEL = "acme-fixture"
 SAMPLE_REPORT_WARNING = "This is sample data only. It is not reading your private books."
 GITHUB_PRIVATE_WARNING = (
@@ -845,6 +846,11 @@ def _sanitize_hledger_detail(text: str, journal: Path) -> str:
     return detail[:2000]
 
 
+def _sanitize_private_journal_detail(text: str, journal: Path) -> str:
+    detail = text.strip().replace(str(journal), "private journal")
+    return detail[:2000]
+
+
 def _hledger_missing_finding() -> dict[str, Any]:
     return _finding(
         id="hledger-missing",
@@ -946,6 +952,521 @@ def _run_hledger_check(journal: Path) -> dict[str, Any] | None:
             operator_summary="The packaged sample journal did not pass hledger check.",
         )
     return None
+
+
+def _run_private_hledger_check(journal: Path) -> dict[str, Any] | None:
+    try:
+        proc = subprocess.run(
+            ["hledger", "-f", str(journal), "check"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError) as exc:
+        return _finding(
+            id="hledger-check-error",
+            title="hledger check could not run",
+            state="error",
+            detail=str(exc),
+            audience="informational",
+            operator_summary="Main Branch found hledger on PATH but could not run its check.",
+        )
+    if proc.returncode != 0:
+        return _finding(
+            id="hledger-check-failed",
+            title="Private books journal failed hledger check",
+            state="error",
+            detail=_sanitize_private_journal_detail(proc.stderr or proc.stdout, journal),
+            audience="operator_decision",
+            operator_summary="hledger check failed for the configured private journal.",
+        )
+    return None
+
+
+def _journal_from_policy(
+    repo: Path, fm: dict[str, Any]
+) -> tuple[Path | None, dict[str, Any] | None]:
+    raw_location = str(fm.get("vault_location") or "").strip()
+    if not raw_location:
+        raw_location = DEFAULT_BOOKS_VAULT_RELATIVE.as_posix()
+    candidate = Path(raw_location).expanduser()
+    location = candidate if candidate.is_absolute() else repo / candidate
+    journal = location if location.suffix in LEDGER_EXTENSIONS else location / "main.journal"
+    if not journal.exists():
+        return None, _finding(
+            id="books-journal-missing",
+            title="Private books journal is missing",
+            state="error",
+            detail=(
+                "The configured books vault does not contain a readable main.journal. "
+                "The private path is intentionally not shown."
+            ),
+            audience="operator_decision",
+            operator_summary="Create the private hledger journal before checking bet exposure.",
+            repair="Create main.journal inside the configured private books vault.",
+        )
+    return journal, None
+
+
+def _bet_frontmatter(repo: Path, bet_path: Path) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    if not bet_path.is_absolute():
+        bet_path = repo / bet_path
+    try:
+        resolved = bet_path.resolve()
+        resolved.relative_to(repo.resolve())
+    except (OSError, ValueError):
+        return {}, _finding(
+            id="bet-path-outside-repo",
+            title="Bet path is outside the business repo",
+            state="error",
+            detail="The --bet path must point to a bet file inside the business repo.",
+            audience="operator_decision",
+            operator_summary="Choose a bet file inside this business repo.",
+        )
+    if not resolved.exists():
+        return {}, _finding(
+            id="bet-file-missing",
+            title="Bet file does not exist",
+            state="error",
+            detail="The requested bet file does not exist.",
+            audience="operator_decision",
+            operator_summary="Choose an existing bet file.",
+        )
+    fm, err = _read_frontmatter(resolved)
+    if err:
+        return {}, _finding(
+            id="bet-frontmatter-error",
+            title="Bet frontmatter does not parse",
+            state="error",
+            detail=err,
+            audience="operator_decision",
+            operator_summary="Fix the bet frontmatter before checking exposure.",
+            repair=f"Fix YAML frontmatter in {resolved.relative_to(repo).as_posix()}.",
+        )
+    return fm, None
+
+
+def _active_bet_paths(repo: Path) -> list[Path]:
+    paths: list[Path] = []
+    for path in sorted((repo / "bets").glob("*.md")):
+        fm, err = _read_frontmatter(path)
+        if err or str(fm.get("status") or "").lower() not in {"open", "paused"}:
+            continue
+        paths.append(path)
+    return paths
+
+
+def _money_path_for_bet(path: Path, fm: dict[str, Any]) -> dict[str, Any]:
+    raw = fm.get("money_path")
+    money_path = raw if isinstance(raw, dict) else {}
+    cap = money_path.get("exposure_cap")
+    exposure_cap = cap if isinstance(cap, dict) else {}
+    return {
+        "declared": isinstance(raw, dict),
+        "required": _safe_bool(money_path.get("required")),
+        "bet_id": str(money_path.get("bet_id") or path.stem).strip(),
+        "expected_bet_id": path.stem,
+        "anchor_required_before": str(money_path.get("anchor_required_before") or "").strip(),
+        "exposure_cap": {
+            "amount": exposure_cap.get("amount"),
+            "currency": str(exposure_cap.get("currency") or "").strip(),
+        }
+        if exposure_cap
+        else None,
+    }
+
+
+def _decimal_mantissa_from_number(value: Any, places: int = 2) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        return int(round(float(value) * (10**places)))
+    if isinstance(value, str):
+        try:
+            return int(round(float(value.replace(",", "").strip()) * (10**places)))
+        except ValueError:
+            return None
+    return None
+
+
+def _amount_parts(raw: Any) -> tuple[str, int, int] | None:
+    if not isinstance(raw, dict):
+        return None
+    quantity = raw.get("aquantity")
+    if not isinstance(quantity, dict):
+        return None
+    return (
+        str(raw.get("acommodity") or "USD"),
+        int(quantity.get("decimalMantissa") or 0),
+        int(quantity.get("decimalPlaces") or 0),
+    )
+
+
+def _posting_amounts(posting: dict[str, Any]) -> list[tuple[str, int, int]]:
+    raw_amounts = posting.get("pamount")
+    amounts: list[tuple[str, int, int]] = []
+    if isinstance(raw_amounts, list):
+        for raw in raw_amounts:
+            parts = _amount_parts(raw)
+            if parts is not None:
+                amounts.append(parts)
+    else:
+        parts = _amount_parts(raw_amounts)
+        if parts is not None:
+            amounts.append(parts)
+    return amounts
+
+
+def _transaction_postings(txn: Any) -> list[dict[str, Any]]:
+    if isinstance(txn, dict):
+        postings = txn.get("tpostings") or txn.get("postings") or []
+        if isinstance(postings, list):
+            return [posting for posting in postings if isinstance(posting, dict)]
+    return []
+
+
+def _gross_outflow_from_transactions(transactions: list[Any]) -> tuple[str, int, int, bool]:
+    expenses: list[tuple[str, int, int]] = []
+    negative_fallback: list[tuple[str, int, int]] = []
+    for txn in transactions:
+        for posting in _transaction_postings(txn):
+            account = str(posting.get("paccount") or posting.get("account") or "").lower()
+            for commodity, mantissa, places in _posting_amounts(posting):
+                if account.startswith("expenses") and mantissa > 0:
+                    expenses.append((commodity, mantissa, places))
+                elif mantissa < 0:
+                    negative_fallback.append((commodity, abs(mantissa), places))
+    selected = expenses or negative_fallback
+    if not selected:
+        return "USD", 0, 2, False
+    commodity = selected[0][0]
+    places = selected[0][2]
+    mixed = any(item[0] != commodity or item[2] != places for item in selected)
+    total = sum(item[1] for item in selected if item[0] == commodity and item[2] == places)
+    return commodity, total, places, mixed
+
+
+def _run_hledger_print(
+    journal: Path, bet_id: str
+) -> tuple[list[Any] | None, dict[str, Any] | None]:
+    try:
+        proc = subprocess.run(
+            ["hledger", "-n", "-f", str(journal), "print", f"tag:bet={bet_id}", "-O", "json"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError) as exc:
+        return None, _finding(
+            id="hledger-exposure-query-error",
+            title="hledger exposure query could not run",
+            state="error",
+            detail=str(exc),
+            audience="informational",
+            operator_summary="Main Branch found hledger on PATH but could not query bet exposure.",
+        )
+    if proc.returncode != 0:
+        return None, _finding(
+            id="hledger-exposure-query-failed",
+            title="hledger exposure query failed",
+            state="error",
+            detail=_sanitize_private_journal_detail(proc.stderr or proc.stdout, journal),
+            audience="operator_decision",
+            operator_summary="hledger could not query transactions for this bet anchor.",
+        )
+    try:
+        parsed = json.loads(proc.stdout or "[]")
+    except json.JSONDecodeError as exc:
+        return None, _finding(
+            id="hledger-exposure-json-invalid",
+            title="hledger exposure query returned invalid JSON",
+            state="error",
+            detail=f"hledger returned invalid JSON: {exc}",
+            audience="informational",
+            operator_summary="hledger returned output Main Branch could not parse.",
+        )
+    if not isinstance(parsed, list):
+        return None, _finding(
+            id="hledger-exposure-json-shape",
+            title="hledger exposure query returned an unexpected shape",
+            state="error",
+            detail="Expected a JSON list of transactions.",
+            audience="informational",
+            operator_summary="hledger returned an unexpected JSON shape.",
+        )
+    return parsed, None
+
+
+def _exposure_error(
+    *,
+    repo: Path,
+    mode: str,
+    findings: list[dict[str, Any]],
+) -> dict[str, Any]:
+    state = _max_state([finding["state"] for finding in findings])
+    return {
+        "ok": False,
+        "state": state,
+        "schema_version": BOOKS_EXPOSURE_SCHEMA,
+        "safe_to_share": True,
+        "repo": str(repo),
+        "mode": mode,
+        "summary": findings[0]["operator_summary"] if findings else "Exposure check failed.",
+        "exposures": [],
+        "findings": findings,
+        "errors": [
+            finding["operator_summary"] for finding in findings if finding["state"] == "error"
+        ],
+        "warnings": [
+            finding["operator_summary"] for finding in findings if finding["state"] == "warn"
+        ],
+        "redactions": {
+            "private_paths": True,
+            "account_identifiers": True,
+            "payees": True,
+            "transaction_memos": True,
+            "raw_rows": True,
+        },
+    }
+
+
+def _bet_exposure(
+    repo: Path, journal: Path, bet_path: Path
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    fm, frontmatter_error = _bet_frontmatter(repo, bet_path)
+    if frontmatter_error is not None:
+        return {}, [frontmatter_error]
+    resolved = bet_path if bet_path.is_absolute() else repo / bet_path
+    rel = resolved.resolve().relative_to(repo.resolve()).as_posix()
+    money_path = _money_path_for_bet(resolved, fm)
+    bet_id = str(money_path.get("bet_id") or resolved.stem)
+    findings: list[dict[str, Any]] = []
+    if not money_path["declared"]:
+        findings.append(
+            _finding(
+                id="bet-money-path-missing",
+                title="Bet has no MoneyPath metadata",
+                state="warn",
+                detail=f"{rel} does not declare money_path metadata.",
+                audience="operator_decision",
+                operator_summary=(
+                    "Add money_path metadata to the bet before treating exposure as committed."
+                ),
+            )
+        )
+    elif money_path["bet_id"] != money_path["expected_bet_id"]:
+        findings.append(
+            _finding(
+                id="bet-money-path-id-mismatch",
+                title="Bet MoneyPath id does not match filename",
+                state="warn",
+                detail=f"{rel} declares a bet_id that does not match the file stem.",
+                audience="operator_decision",
+                operator_summary="Align money_path.bet_id with the bet filename stem.",
+            )
+        )
+    transactions, query_error = _run_hledger_print(journal, bet_id)
+    if query_error is not None:
+        return {}, [*findings, query_error]
+    assert transactions is not None
+    commodity, gross_mantissa, places, mixed = _gross_outflow_from_transactions(transactions)
+    if mixed:
+        findings.append(
+            _finding(
+                id="bet-exposure-mixed-commodities",
+                title="Bet exposure uses mixed commodities",
+                state="warn",
+                detail="The anchored hledger transactions use multiple commodities or precisions.",
+                audience="operator_decision",
+                operator_summary=(
+                    "Review the private journal; Main Branch is reporting the first commodity only."
+                ),
+            )
+        )
+    if not transactions and money_path["required"]:
+        findings.append(
+            _finding(
+                id="bet-anchor-missing",
+                title="No hledger transactions carry the bet anchor",
+                state="warn",
+                detail=f"No private journal transactions matched tag:bet={bet_id}.",
+                audience="operator_decision",
+                operator_summary=(
+                    "Add the bet tag to private ledger transactions before execution spend."
+                ),
+            )
+        )
+    cap = money_path.get("exposure_cap")
+    remaining = None
+    cap_amount = None
+    if isinstance(cap, dict):
+        cap_currency = str(cap.get("currency") or commodity or "USD")
+        cap_places = places or 2
+        cap_mantissa = _decimal_mantissa_from_number(cap.get("amount"), cap_places)
+        if cap_mantissa is not None:
+            cap_amount = _amount_from_parts(
+                commodity=cap_currency,
+                mantissa=cap_mantissa,
+                places=cap_places,
+            )
+            if cap_currency == commodity:
+                remaining = _amount_from_parts(
+                    commodity=commodity,
+                    mantissa=cap_mantissa - gross_mantissa,
+                    places=cap_places,
+                )
+            else:
+                findings.append(
+                    _finding(
+                        id="bet-exposure-cap-currency-mismatch",
+                        title="Bet exposure cap currency does not match ledger commodity",
+                        state="warn",
+                        detail="Exposure cap currency differs from the anchored ledger commodity.",
+                        audience="operator_decision",
+                        operator_summary=(
+                            "Review the cap currency before relying on remaining exposure."
+                        ),
+                    )
+                )
+    exposure = {
+        "path": rel,
+        "title": str(fm.get("title") or resolved.stem),
+        "status": str(fm.get("status") or ""),
+        "money_path": money_path,
+        "anchor": {
+            "tag": f"bet:{bet_id}",
+            "query": f"tag:bet={bet_id}",
+            "present": bool(transactions),
+            "transaction_count": len(transactions),
+        },
+        "totals": {
+            "gross_outflow": _amount_from_parts(
+                commodity=commodity,
+                mantissa=gross_mantissa,
+                places=places or 2,
+            ),
+            "exposure_cap": cap_amount,
+            "remaining_cap": remaining,
+        },
+    }
+    return exposure, findings
+
+
+def exposure(
+    *,
+    repo: str | Path = ".",
+    bet: str | Path | None = None,
+    active: bool = False,
+) -> dict[str, Any]:
+    """Return privacy-bounded bet exposure totals from a private hledger journal."""
+    repo_path = Path(repo).resolve()
+    mode = "active" if active else "single"
+    fm, policy_findings = _detect_books_policy(repo_path)
+    error_findings = [finding for finding in policy_findings if finding["state"] == "error"]
+    if error_findings:
+        return _exposure_error(repo=repo_path, mode=mode, findings=error_findings)
+    if not _has_books_policy(repo_path):
+        return _exposure_error(
+            repo=repo_path,
+            mode=mode,
+            findings=[
+                _finding(
+                    id="books-policy-missing",
+                    title="No bookkeeping policy file",
+                    state="error",
+                    detail="core/finance/books.md is required for exposure checks.",
+                    audience="operator_decision",
+                    operator_summary="Add core/finance/books.md before checking bet exposure.",
+                )
+            ],
+        )
+    if not shutil.which("hledger"):
+        return _exposure_error(
+            repo=repo_path,
+            mode=mode,
+            findings=[
+                _finding(
+                    id="hledger-missing",
+                    title="hledger is not installed",
+                    state="error",
+                    detail="hledger is required for private books exposure checks.",
+                    audience="informational",
+                    operator_summary="Install hledger before checking bet exposure.",
+                    repair="Install hledger from https://hledger.org/install.html",
+                )
+            ],
+        )
+    journal, journal_error = _journal_from_policy(repo_path, fm)
+    if journal_error is not None or journal is None:
+        return _exposure_error(
+            repo=repo_path, mode=mode, findings=[journal_error] if journal_error else []
+        )
+    check_error = _run_private_hledger_check(journal)
+    if check_error is not None:
+        return _exposure_error(repo=repo_path, mode=mode, findings=[check_error])
+    bet_paths = _active_bet_paths(repo_path) if active else [Path(bet)] if bet else []
+    if not bet_paths:
+        return _exposure_error(
+            repo=repo_path,
+            mode=mode,
+            findings=[
+                _finding(
+                    id="bet-selection-missing",
+                    title="No bet selected",
+                    state="error",
+                    detail="Pass --bet bets/YYYY-MM-DD-slug.md or --active.",
+                    audience="operator_decision",
+                    operator_summary="Choose one bet or request active bet exposure.",
+                )
+            ],
+        )
+    exposures: list[dict[str, Any]] = []
+    findings: list[dict[str, Any]] = [
+        _finding(
+            id="hledger-check-passed",
+            title="Private books journal passed hledger check",
+            state="ok",
+            detail="hledger check passed for the configured private journal.",
+            audience="informational",
+            operator_summary="Private journal passed hledger check.",
+        )
+    ]
+    for bet_path in bet_paths:
+        exposure_item, bet_findings = _bet_exposure(repo_path, journal, bet_path)
+        if exposure_item:
+            exposures.append(exposure_item)
+        findings.extend(bet_findings)
+    state = _max_state([finding["state"] for finding in findings])
+    errors = [finding["operator_summary"] for finding in findings if finding["state"] == "error"]
+    warnings = [finding["operator_summary"] for finding in findings if finding["state"] == "warn"]
+    transaction_count = sum(
+        int((item.get("anchor") or {}).get("transaction_count") or 0) for item in exposures
+    )
+    return {
+        "ok": state != "error",
+        "state": state,
+        "schema_version": BOOKS_EXPOSURE_SCHEMA,
+        "safe_to_share": True,
+        "repo": str(repo_path),
+        "mode": mode,
+        "summary": (
+            f"Checked {len(exposures)} bet exposure record(s); "
+            f"{transaction_count} anchored transaction(s) found."
+        ),
+        "exposures": exposures,
+        "findings": findings,
+        "errors": errors,
+        "warnings": warnings,
+        "redactions": {
+            "private_paths": True,
+            "account_identifiers": True,
+            "payees": True,
+            "transaction_memos": True,
+            "raw_rows": True,
+        },
+    }
 
 
 def _hledger_amount(raw: Any, *, owed: bool = False) -> dict[str, Any]:
@@ -1812,6 +2333,36 @@ def render_status(report: dict[str, Any]) -> None:
             typer.echo(f"           - {item}")
     typer.echo("")
     typer.echo("Run `mb books doctor --plan` for safe setup repair guidance.")
+
+
+def render_exposure(report: dict[str, Any]) -> None:
+    """Print ``mb books exposure`` for humans."""
+    import typer
+
+    typer.echo(f"mb books exposure — {report.get('summary', '')}")
+    for item in report.get("exposures") or []:
+        anchor = item.get("anchor") or {}
+        totals = item.get("totals") or {}
+        gross = totals.get("gross_outflow") or {}
+        remaining = totals.get("remaining_cap") or {}
+        typer.echo(
+            f"  - {item.get('path')}: {anchor.get('transaction_count', 0)} transaction(s), "
+            f"gross outflow {gross.get('display', '$0.00')}"
+        )
+        if remaining:
+            typer.echo(f"    remaining cap: {remaining.get('display')}")
+    if report.get("warnings"):
+        typer.echo("")
+        typer.echo("Warnings:")
+        for warning in report["warnings"]:
+            typer.echo(f"  - {warning}")
+    if report.get("errors"):
+        typer.echo("")
+        typer.echo("Errors:")
+        for error in report["errors"]:
+            typer.echo(f"  - {error}")
+    typer.echo("")
+    typer.echo("Private paths, payees, account names, memos, and raw rows are redacted.")
 
 
 def render_sample_monthly_report(report: dict[str, Any]) -> None:

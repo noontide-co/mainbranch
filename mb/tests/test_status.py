@@ -2244,6 +2244,106 @@ def test_status_brain_includes_active_bets(tmp_path: Path) -> None:
     assert brain["bets"]["active"][0]["deadline"] == deadline.isoformat()
 
 
+def test_status_brain_evaluates_declared_bet_exit_signals(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    (repo / "bets").mkdir(parents=True)
+    (repo / "bets" / "2026-05-16-offer-test.md").write_text(
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-16\n"
+            "deadline: 2026-05-30\n"
+            "appetite: 2 weeks\n"
+            "appetite_tier: small\n"
+            "hypothesis: Offer sharpening creates qualified calls.\n"
+            "metric: qualified_calls\n"
+            "target: 3 qualified calls\n"
+            "result: ''\n"
+            "metrics:\n"
+            "  qualified_calls: 2\n"
+            "  cost_per_qualified_call: 120\n"
+            "money_path:\n"
+            "  required: true\n"
+            "  bet_id: 2026-05-16-offer-test\n"
+            "  exposure_cap:\n"
+            "    amount: 500\n"
+            "    currency: USD\n"
+            "  anchor_required_before: execution\n"
+            "kill_rubric:\n"
+            "  failure_signals:\n"
+            "    - id: no-qualified-calls\n"
+            "      metric: qualified_calls\n"
+            "      comparator: <\n"
+            "      threshold: 3\n"
+            "      by: 2026-05-01\n"
+            "      action: kill\n"
+            "  double_down_signals:\n"
+            "    - id: profitable-signal\n"
+            "      metric: cost_per_qualified_call\n"
+            "      comparator: <=\n"
+            "      threshold: 150\n"
+            "      action: double_down\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_pushes: []\n"
+            "linked_outcomes: []\n"
+            "public: false\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n\n"
+            "# Offer test\n"
+        ),
+        encoding="utf-8",
+    )
+
+    brain = status_mod._brain(repo)
+
+    bet = brain["bets"]["active"][0]
+    assert bet["appetite_tier"] == "small"
+    assert bet["money_path"]["required"] is True
+    assert bet["exit_criteria"]["declared"] is True
+    assert bet["exit_criteria"]["triggered_failure_signals"][0]["id"] == "no-qualified-calls"
+    assert bet["exit_criteria"]["triggered_double_down_signals"][0]["id"] == "profitable-signal"
+    assert brain["bets"]["exit_criteria"]["triggered_failure_signals"][0]["path"] == (
+        "bets/2026-05-16-offer-test.md"
+    )
+
+
+def test_status_brain_flags_active_bets_without_predeclared_exit_criteria(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    (repo / "bets").mkdir(parents=True)
+    (repo / "bets" / "2026-05-16-open.md").write_text(
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-16\n"
+            "deadline: 2026-05-30\n"
+            "appetite: 2 weeks\n"
+            "hypothesis: A test creates calls.\n"
+            "metric: calls\n"
+            "target: 3 calls\n"
+            "result: ''\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_pushes: []\n"
+            "linked_outcomes: []\n"
+            "public: false\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n\n"
+            "# Open bet\n"
+        ),
+        encoding="utf-8",
+    )
+
+    brain = status_mod._brain(repo)
+
+    assert brain["bets"]["active"][0]["exit_criteria"]["missing"] is True
+    assert brain["bets"]["exit_criteria"]["missing"][0]["path"] == "bets/2026-05-16-open.md"
+
+
 def test_status_frontmatter_reader_accepts_delimiter_whitespace(tmp_path: Path) -> None:
     path = tmp_path / "note.md"
     path.write_text("--- \nstatus: open\n--- \n# Note\n", encoding="utf-8")

@@ -198,6 +198,112 @@ def test_validate_accepts_canonical_bet_linked_pushes_without_legacy_campaigns(
     assert bet["errors"] == []
 
 
+def test_validate_accepts_bet_money_path_and_kill_rubric(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "bets" / "2026-05-16-offer-test.md",
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-16\n"
+            "deadline: 2026-05-30\n"
+            "appetite: 2 weeks\n"
+            "appetite_tier: small\n"
+            "hypothesis: If we sharpen the offer, calls will increase.\n"
+            "metric: qualified_calls\n"
+            "target: 3 qualified calls\n"
+            "result: ''\n"
+            "money_path:\n"
+            "  required: true\n"
+            "  bet_id: 2026-05-16-offer-test\n"
+            "  exposure_cap:\n"
+            "    amount: 500\n"
+            "    currency: USD\n"
+            "  anchor_required_before: execution\n"
+            "kill_rubric:\n"
+            "  failure_signals:\n"
+            "    - id: no-qualified-calls\n"
+            "      metric: qualified_calls\n"
+            "      comparator: <\n"
+            "      threshold: 3\n"
+            "      by: 2026-05-30\n"
+            "      action: kill\n"
+            "  double_down_signals:\n"
+            "    - id: profitable-signal\n"
+            "      metric: cost_per_qualified_call\n"
+            "      comparator: <=\n"
+            "      threshold: 150\n"
+            "      action: double_down\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_pushes: []\n"
+            "linked_outcomes: []\n"
+            "public: false\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n"
+            "# Offer test\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is True
+    bet = next(file for file in report["files"] if file["schema"] == "bets")
+    assert bet["errors"] == []
+    assert bet["warnings"] == []
+
+
+def test_validate_warns_on_malformed_bet_money_path_without_failing(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "bets" / "2026-05-16-offer-test.md",
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-16\n"
+            "deadline: 2026-05-30\n"
+            "appetite: 2 weeks\n"
+            "appetite_tier: giant\n"
+            "hypothesis: If we sharpen the offer, calls will increase.\n"
+            "metric: qualified_calls\n"
+            "target: 3 qualified calls\n"
+            "result: ''\n"
+            "money_path:\n"
+            "  required: true\n"
+            "  bet_id: wrong-id\n"
+            "  exposure_cap:\n"
+            "    amount: -1\n"
+            "    currency: ''\n"
+            "kill_rubric:\n"
+            "  failure_signals:\n"
+            "    - id: no-qualified-calls\n"
+            "      metric: qualified_calls\n"
+            "      comparator: near\n"
+            "      threshold: 3\n"
+            "      action: kill\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_pushes: []\n"
+            "linked_outcomes: []\n"
+            "public: false\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n"
+            "# Offer test\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is True
+    bet = next(file for file in report["files"] if file["schema"] == "bets")
+    assert bet["errors"] == []
+    assert any("appetite_tier" in warning for warning in bet["warnings"])
+    assert any("money_path.bet_id should match" in warning for warning in bet["warnings"])
+    assert any(
+        "kill_rubric.failure_signals[0].comparator" in warning for warning in bet["warnings"]
+    )
+
+
 def test_validate_keeps_legacy_bet_campaign_links_readable(tmp_path: Path) -> None:
     _write(
         tmp_path / "bets" / "2026-05-08-legacy.md",

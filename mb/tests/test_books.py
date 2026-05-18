@@ -351,6 +351,50 @@ def _hledger_report_dispatcher(monkeypatch: pytest.MonkeyPatch) -> list[list[str
     return seen
 
 
+def _hledger_exposure_dispatcher(
+    monkeypatch: pytest.MonkeyPatch,
+    transactions: list[dict[str, Any]],
+) -> list[list[str]]:
+    real_run = subprocess.run
+    seen: list[list[str]] = []
+
+    class _FakeCompleted:
+        def __init__(self, stdout: str = "", returncode: int = 0, stderr: str = "") -> None:
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    def _dispatch(args: Any, *rest: Any, **kwargs: Any) -> Any:
+        argv = list(args) if isinstance(args, (list, tuple)) else [args]
+        seen.append(argv)
+        if argv and Path(str(argv[0])).name == "hledger":
+            if "check" in argv:
+                return _FakeCompleted()
+            if "print" in argv:
+                return _FakeCompleted(json.dumps(transactions))
+            raise AssertionError(f"unexpected hledger command: {argv}")
+        return real_run(args, *rest, **kwargs)
+
+    monkeypatch.setattr("mb.books.subprocess.run", _dispatch)
+    return seen
+
+
+def _write_books_policy_with_private_journal(repo: Path) -> None:
+    _write(
+        repo / "core/finance/books.md",
+        """---
+type: books
+ledger: hledger
+storage_mode: solo-local
+vault_location: ".mb/private/books/"
+---
+
+# Books
+""",
+    )
+    _write(repo / ".mb/private/books/main.journal", "; PRIVATE_LEDGER_CONTENT\n")
+
+
 def test_books_check_fixture_runs_when_hledger_available(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -423,6 +467,139 @@ def test_books_check_unsafe_paths_warn_does_not_exit_one(tmp_path: Path) -> None
     result = runner.invoke(app, ["books", "check", str(repo)])
     assert result.exit_code == 0, result.output
     assert "WARN" in result.output
+
+
+def test_books_exposure_json_reports_safe_bet_totals(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write_books_policy_with_private_journal(repo)
+    _write(
+        repo / "bets/2026-05-16-offer-test.md",
+        """---
+status: open
+opened: 2026-05-16
+deadline: 2026-05-30
+appetite: 2 weeks
+appetite_tier: small
+hypothesis: If we sharpen the offer, calls will increase.
+metric: qualified_calls
+target: 3 qualified calls
+result: ''
+money_path:
+  required: true
+  bet_id: 2026-05-16-offer-test
+  exposure_cap:
+    amount: 500
+    currency: USD
+  anchor_required_before: execution
+linked_decisions: []
+linked_research: []
+linked_pushes: []
+linked_outcomes: []
+public: false
+channels: []
+tags: []
+---
+# Offer test
+""",
+    )
+    transactions = [
+        {
+            "tdescription": "PRIVATE PAYEE",
+            "tpostings": [
+                {
+                    "paccount": "Assets:Bank:PRIVATE_ACCOUNT",
+                    "pamount": [
+                        {
+                            "acommodity": "USD",
+                            "aquantity": {"decimalMantissa": -12500, "decimalPlaces": 2},
+                        }
+                    ],
+                },
+                {
+                    "paccount": "Expenses:Marketing",
+                    "pamount": [
+                        {
+                            "acommodity": "USD",
+                            "aquantity": {"decimalMantissa": 12500, "decimalPlaces": 2},
+                        }
+                    ],
+                },
+            ],
+        }
+    ]
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "/fake/hledger")
+    seen = _hledger_exposure_dispatcher(monkeypatch, transactions)
+
+    result = runner.invoke(
+        app,
+        [
+            "books",
+            "exposure",
+            "--repo",
+            str(repo),
+            "--bet",
+            "bets/2026-05-16-offer-test.md",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["mb_command"] == "mb books exposure"
+    assert payload["result_schema"]["name"] == "mainbranch.books.exposure.result"
+    exposure = payload["exposures"][0]
+    assert exposure["anchor"]["present"] is True
+    assert exposure["anchor"]["transaction_count"] == 1
+    assert exposure["totals"]["gross_outflow"]["display"] == "$125.00"
+    assert exposure["totals"]["remaining_cap"]["display"] == "$375.00"
+    assert any("tag:bet=2026-05-16-offer-test" in call for call in seen)
+    assert "PRIVATE PAYEE" not in result.output
+    assert "PRIVATE_ACCOUNT" not in result.output
+    assert "PRIVATE_LEDGER_CONTENT" not in result.output
+    assert str(repo / ".mb/private/books") not in result.output
+
+
+def test_books_exposure_active_warns_when_required_anchor_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write_books_policy_with_private_journal(repo)
+    _write(
+        repo / "bets/2026-05-16-anchor-missing.md",
+        """---
+status: open
+opened: 2026-05-16
+deadline: 2026-05-30
+appetite: small
+money_path:
+  required: true
+  bet_id: 2026-05-16-anchor-missing
+linked_decisions: []
+linked_research: []
+linked_pushes: []
+linked_outcomes: []
+public: false
+channels: []
+tags: []
+---
+# Anchor missing
+""",
+    )
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "/fake/hledger")
+    _hledger_exposure_dispatcher(monkeypatch, [])
+
+    result = runner.invoke(app, ["books", "exposure", "--repo", str(repo), "--active", "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["state"] == "warn"
+    assert payload["exposures"][0]["anchor"]["present"] is False
+    assert (
+        "Add the bet tag to private ledger transactions before execution spend."
+        in payload["warnings"]
+    )
 
 
 def test_books_status_json_reports_missing_hledger_and_vault(
