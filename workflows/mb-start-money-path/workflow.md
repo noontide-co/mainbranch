@@ -7,6 +7,9 @@ runtime_support:
   claude_code: supported_shell
   codex_cli: experimental_shell
   future: planned
+runtime_surfaces:
+  claude_code: .claude/skills/mb-start/SKILL.md
+  codex_cli: AGENTS.md#codex-lifecycle-workflow-index
 required_mb_commands:
   - mb status --json --peek
   - mb start --json
@@ -27,6 +30,21 @@ json_facts:
   - update
   - readiness
   - drift.items
+approval_gates:
+  - updates_repairs_migrations
+  - file_writes
+  - checkpoint
+  - provider_mutation
+  - publishing_or_spend
+  - customer_contact
+  - private_data
+  - destructive_operations
+public_private_boundaries:
+  - no_secrets
+  - no_raw_provider_exports
+  - no_customer_member_data
+  - no_private_runtime_settings
+  - no_private_maintainer_notes
 writes_business_files: true
 provider_mutation: false
 publishing_or_spend: false

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from mb import codex as codex_mod
 from mb.workflows import (
     codex_shell_policy_errors,
     load_workflow,
@@ -18,6 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO_ROOT / "workflows" / "mb-start-money-path" / "workflow.md"
 THINK_WORKFLOW = REPO_ROOT / "workflows" / "mb-think" / "workflow.md"
 FIXTURES = REPO_ROOT / "mb" / "tests" / "fixtures" / "workflows"
+AGENTS_TEMPLATE = REPO_ROOT / "mb" / "mb" / "_data" / "templates" / "AGENTS.md.tmpl"
 WORKFLOW_PATHS = [
     WORKFLOW,
     THINK_WORKFLOW,
@@ -58,6 +60,19 @@ def test_workflow_validation_flags_missing_required_json_fact(tmp_path: Path) ->
     assert any("money_path.objects.proof.quality" in error for error in errors)
 
 
+def test_workflow_validation_flags_missing_required_approval_gate(tmp_path: Path) -> None:
+    broken = tmp_path / "workflow.md"
+    broken.write_text(
+        THINK_WORKFLOW.read_text(encoding="utf-8").replace("  - checkpoint\n", "", 1),
+        encoding="utf-8",
+    )
+
+    errors = validate_workflow(broken)
+
+    assert any("approval_gates missing minimum gates" in error for error in errors)
+    assert any("checkpoint" in error for error in errors)
+
+
 def test_generated_start_money_path_claude_and_codex_snapshots_match_fixtures() -> None:
     workflow = load_workflow(WORKFLOW)
 
@@ -92,6 +107,33 @@ def test_supported_shells_preserve_required_commands_and_json_facts() -> None:
             assert shell_drift_errors(workflow, shell) == []
 
 
+def test_codex_agents_think_route_preserves_shared_workflow_contract() -> None:
+    workflow = load_workflow(THINK_WORKFLOW)
+    text = AGENTS_TEMPLATE.read_text(encoding="utf-8")
+
+    assert "Engine source workflow: `workflows/mb-think/workflow.md`" in text
+    for command in workflow.required_mb_commands:
+        assert f"- `{command}`" in text
+    for fact in workflow.json_facts:
+        assert f"- `{fact}`" in text
+    for gate in workflow.approval_gates:
+        assert f"`{gate}`" in text
+    for boundary in workflow.public_private_boundaries:
+        assert f"`{boundary}`" in text
+
+
+def test_codex_contract_markers_match_think_workflow_source() -> None:
+    workflow = load_workflow(THINK_WORKFLOW)
+
+    assert codex_mod.CODEX_THINK_SOURCE_WORKFLOW == "workflows/mb-think/workflow.md"
+    assert tuple(workflow.required_mb_commands) == codex_mod.CODEX_THINK_REQUIRED_MB_COMMANDS
+    assert tuple(workflow.json_facts) == codex_mod.CODEX_THINK_REQUIRED_JSON_FACTS
+    assert tuple(workflow.approval_gates) == codex_mod.CODEX_THINK_APPROVAL_GATES
+    assert (
+        tuple(workflow.public_private_boundaries) == codex_mod.CODEX_THINK_PUBLIC_PRIVATE_BOUNDARIES
+    )
+
+
 def test_drift_detection_flags_omitted_required_command_or_fact() -> None:
     workflow = load_workflow(WORKFLOW)
     shell = render_codex_shell(workflow)
@@ -122,6 +164,7 @@ def test_think_drift_detection_flags_missing_required_workflow_rules() -> None:
     drifted = shell.replace("Research Depth Recommendation", "research note")
     drifted = drifted.replace("Research depth recommendation", "research note")
     drifted = drifted.replace("parallel research files", "source notes")
+    drifted = drifted.replace("Public/private boundaries", "boundaries")
     drifted = drifted.replace("public/private handling", "handling")
 
     errors = shell_drift_errors(workflow, drifted)

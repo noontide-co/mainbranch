@@ -54,9 +54,10 @@ Main Branch already ships:
   business work;
 - `bets/` and `/mb-bet` as the first Reflect primitive;
 - `mb checkpoint` as the first hidden GitOps save layer for long agent runs;
-- a shared workflow source prototype for the daily start -> MoneyPath
-  `/mb-think` handoff, with native Claude and Codex shell snapshots that avoid
-  overclaiming runtime parity;
+- the first official shared workflow source pattern in
+  `workflows/mb-think/workflow.md`, with checked Claude/Codex runtime shell
+  snapshots and generated Codex lifecycle guidance that avoids overclaiming
+  runtime parity;
 - materialized release-simulation fixtures and the package-visible release
   evidence ladder (PR smoke, pre-release candidate, release acceptance);
 - release and local-state boundary hardening for package publishing and
