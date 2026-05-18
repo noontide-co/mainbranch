@@ -375,7 +375,7 @@ def _check_one(path: Path, schema: dict[str, Any]) -> dict[str, Any]:
     if primitive == "push":
         _check_push_frontmatter(path, fm, errors)
     elif primitive == "bet":
-        _check_bet_frontmatter(fm, errors)
+        _check_bet_frontmatter(path, fm, errors, warnings)
     elif primitive == "playbook":
         _check_playbook_frontmatter(path, fm, errors)
     elif primitive == "legacy-campaign":
@@ -388,9 +388,125 @@ def _check_one(path: Path, schema: dict[str, Any]) -> dict[str, Any]:
     return {"path": str(path), "ok": not errors, "errors": errors, "warnings": warnings}
 
 
-def _check_bet_frontmatter(fm: dict[str, Any], errors: list[str]) -> None:
+BET_APPETITE_TIERS = {"trivial", "small", "material", "strategic"}
+BET_ANCHOR_REQUIRED_BEFORE = {"planning", "execution", "spend", "launch", "none"}
+BET_SIGNAL_COMPARATORS = {"<", "<=", "==", ">=", ">", "!="}
+BET_SIGNAL_ACTIONS = {"kill", "double_down", "review"}
+BET_OWNER_REF_RE = re.compile(r"^core/team/[a-z0-9][a-z0-9-]*\.md$")
+
+
+def _check_bet_frontmatter(
+    path: Path,
+    fm: dict[str, Any],
+    errors: list[str],
+    warnings: list[str],
+) -> None:
     if "linked_pushes" not in fm and "linked_campaigns" not in fm:
         errors.append("missing key: linked_pushes or linked_campaigns")
+    appetite_tier = fm.get("appetite_tier")
+    if appetite_tier is not None and appetite_tier not in BET_APPETITE_TIERS:
+        warnings.append(
+            f"appetite_tier={appetite_tier!r} is not one of {sorted(BET_APPETITE_TIERS)}"
+        )
+    _check_bet_owner(fm, warnings)
+    _check_bet_money_path(path, fm, warnings)
+    _check_bet_kill_rubric(fm, warnings)
+
+
+def _check_bet_owner(fm: dict[str, Any], warnings: list[str]) -> None:
+    owner = fm.get("owner")
+    if owner is None:
+        return
+    if not isinstance(owner, str) or not owner.strip():
+        warnings.append("owner should be a team member slug matching core/team/<slug>.md")
+        return
+    owner_ref = owner.strip()
+    if "/" in owner_ref and not BET_OWNER_REF_RE.fullmatch(owner_ref):
+        warnings.append("owner path references should use core/team/<slug>.md")
+
+
+def _check_bet_money_path(path: Path, fm: dict[str, Any], warnings: list[str]) -> None:
+    money_path = fm.get("money_path")
+    if money_path is None:
+        return
+    if not isinstance(money_path, dict):
+        warnings.append("money_path must be a mapping when declared")
+        return
+    required = money_path.get("required")
+    if required is not None and not isinstance(required, bool):
+        warnings.append("money_path.required should be true or false")
+    bet_id = money_path.get("bet_id")
+    if bet_id is not None:
+        if not isinstance(bet_id, str) or not bet_id.strip():
+            warnings.append("money_path.bet_id must be a non-empty string")
+        elif bet_id.strip() != path.stem:
+            warnings.append("money_path.bet_id should match the bet filename stem")
+    elif required is True:
+        warnings.append("money_path.required is true but money_path.bet_id is missing")
+    anchor_required_before = money_path.get("anchor_required_before")
+    if (
+        anchor_required_before is not None
+        and anchor_required_before not in BET_ANCHOR_REQUIRED_BEFORE
+    ):
+        warnings.append(
+            "money_path.anchor_required_before should be one of "
+            f"{sorted(BET_ANCHOR_REQUIRED_BEFORE)}"
+        )
+    exposure_cap = money_path.get("exposure_cap")
+    if exposure_cap is None:
+        return
+    if not isinstance(exposure_cap, dict):
+        warnings.append("money_path.exposure_cap must be a mapping with amount and currency")
+        return
+    amount = exposure_cap.get("amount")
+    if not isinstance(amount, int | float) or isinstance(amount, bool) or amount < 0:
+        warnings.append("money_path.exposure_cap.amount must be a non-negative number")
+    currency = exposure_cap.get("currency")
+    if not isinstance(currency, str) or not currency.strip():
+        warnings.append("money_path.exposure_cap.currency must be a non-empty string")
+
+
+def _check_bet_kill_rubric(fm: dict[str, Any], warnings: list[str]) -> None:
+    rubric = fm.get("kill_rubric")
+    if rubric is None:
+        return
+    if not isinstance(rubric, dict):
+        warnings.append("kill_rubric must be a mapping when declared")
+        return
+    for key, expected_action in (
+        ("failure_signals", "kill"),
+        ("double_down_signals", "double_down"),
+    ):
+        signals = rubric.get(key)
+        if signals is None:
+            continue
+        if not isinstance(signals, list):
+            warnings.append(f"kill_rubric.{key} must be a list")
+            continue
+        for index, signal in enumerate(signals):
+            prefix = f"kill_rubric.{key}[{index}]"
+            if not isinstance(signal, dict):
+                warnings.append(f"{prefix} must be a mapping")
+                continue
+            for field in ("id", "metric", "comparator", "threshold", "action"):
+                if field not in signal:
+                    warnings.append(f"{prefix}.{field} is missing")
+            comparator = signal.get("comparator")
+            if comparator is not None and comparator not in BET_SIGNAL_COMPARATORS:
+                warnings.append(
+                    f"{prefix}.comparator={comparator!r} is not one of "
+                    f"{sorted(BET_SIGNAL_COMPARATORS)}"
+                )
+            action = signal.get("action")
+            if action is not None and action not in BET_SIGNAL_ACTIONS:
+                warnings.append(
+                    f"{prefix}.action={action!r} is not one of {sorted(BET_SIGNAL_ACTIONS)}"
+                )
+            elif action is not None and action != expected_action:
+                warnings.append(f"{prefix}.action is usually {expected_action!r}")
+            threshold = signal.get("threshold")
+            if threshold is not None and not isinstance(threshold, int | float | str):
+                warnings.append(f"{prefix}.threshold should be a number or string")
 
 
 def _require_non_empty_string(fm: dict[str, Any], key: str, errors: list[str]) -> None:

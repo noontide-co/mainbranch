@@ -20,7 +20,7 @@ For the full offer/bet/push/proof routing rubric, use
 
 Use `/mb-bet` for five modes:
 
-- `new` - open a bet with hypothesis, appetite, metric, target, deadline, and links.
+- `new` - open a bet with hypothesis, appetite, MoneyPath anchor, metric, target, deadline, and links.
 - `update` - add progress and link new evidence.
 - `close` - record result, verdict, learning, and follow-up links.
 - `list` - summarize active bets and deadlines.
@@ -64,10 +64,33 @@ status: open
 opened: YYYY-MM-DD
 deadline: YYYY-MM-DD
 appetite: "2 weeks"
+appetite_tier: small
 hypothesis: "If we do X for Y, Z will happen because..."
 metric: "qualified calls booked"
 target: "10 qualified calls by deadline"
 result: ""
+owner: ""
+money_path:
+  required: true
+  bet_id: YYYY-MM-DD-slug
+  exposure_cap:
+    amount: 500
+    currency: USD
+  anchor_required_before: execution
+kill_rubric:
+  failure_signals:
+    - id: no-qualified-calls
+      metric: qualified_calls
+      comparator: <
+      threshold: 3
+      by: YYYY-MM-DD
+      action: kill
+  double_down_signals:
+    - id: profitable-signal
+      metric: cost_per_qualified_call
+      comparator: <=
+      threshold: 150
+      action: double_down
 linked_decisions: []
 linked_research: []
 linked_pushes: []
@@ -80,6 +103,35 @@ tags: []
 ```
 
 Allowed statuses: `open`, `paused`, `closed`, `canceled`.
+Allowed `appetite_tier` values: `trivial`, `small`, `material`, `strategic`.
+Keep `appetite` human-readable, and use `appetite_tier` for rough financial
+weight. The tier should match the operator's appetite thresholds in
+`core/finance/books.md` when that file exists.
+
+When an owner is known, use the team member slug that will map to
+`core/team/<slug>.md`; do not invent team files before that primitive exists.
+
+For financially material bets, use `money_path.bet_id` equal to the filename
+stem and tag private hledger transactions with `bet:<id>`. Check exposure with:
+
+```bash
+mb books exposure --repo . --bet bets/YYYY-MM-DD-slug.md --json
+```
+
+For active bets:
+
+```bash
+mb books exposure --repo . --active --json
+```
+
+Treat the exposure output as safe aggregate evidence only. Do not ask for or
+paste raw ledger rows, payees, account names, account numbers, private vault
+paths, or transaction memos into bet files.
+
+Use `kill_rubric.failure_signals` and `kill_rubric.double_down_signals` for
+pre-committed exit and scale criteria. `mb status --json` evaluates only
+declared rubrics against explicit `metrics:` or `metric_values:` frontmatter;
+it does not infer kill criteria from prose.
 
 Use repo-relative paths in link fields:
 
@@ -111,13 +163,17 @@ docs/business-connections.md and do not invent relationships from body links.
 
 Use when the operator says they want to try, launch, test, prove, or make a bet.
 
-1. Ask only for missing essentials: hypothesis, appetite, deadline, metric,
-   target, public/private posture, channels, and any known linked files.
+1. Ask only for missing essentials: hypothesis, appetite, appetite tier,
+   exposure cap or MoneyPath anchor requirement, deadline, metric, target,
+   kill/double-down signals, public/private posture, channels, and any known
+   linked files.
 2. If the idea also sounds like a new offer, ask whether it is only a wager for
    now or whether the operator wants to preserve a durable offer candidate too.
    Do not create, rename, delete, or move `core/offers/` folders without an
    accepted decision, approved migration plan, or explicit instruction.
 3. Create `bets/YYYY-MM-DD-slug.md`.
+   If `money_path.required` is true, set `money_path.bet_id` to
+   `YYYY-MM-DD-slug`; do not invent private ledger details.
 4. Add reverse `linked_bets` frontmatter to linked decisions, research,
    pushes (or legacy campaigns), and outcome files when those files already
    exist and the edit is clearly safe.
@@ -193,6 +249,9 @@ Summarize active bets from `mb status --json --peek` and direct file reads:
 - status
 - target
 - metric
+- appetite tier and exposure cap when declared
+- missing MoneyPath or missing exit criteria
+- triggered kill or double-down signals
 - public/private posture
 - blocked or overdue signals
 

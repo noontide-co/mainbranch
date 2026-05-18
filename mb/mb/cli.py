@@ -1201,6 +1201,53 @@ def books_doctor_cmd(
     raise typer.Exit(0)
 
 
+@books_app.command("exposure")
+def books_exposure_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo to inspect."),
+    bet: str = typer.Option("", "--bet", help="Repo-relative bet file to check."),
+    active: bool = typer.Option(False, "--active", help="Check all active bets."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Check privacy-bounded hledger exposure totals for bet anchors."""
+    if bool(bet) == active:
+        message = "mb books exposure: choose exactly one of --bet or --active"
+        payload = {
+            "ok": False,
+            "state": "error",
+            "schema_version": books_mod.BOOKS_EXPOSURE_SCHEMA,
+            "safe_to_share": True,
+            "summary": message,
+            "exposures": [],
+            "errors": [message],
+            "warnings": [],
+            "findings": [],
+        }
+        if json_out:
+            typer.echo(
+                _json_payload(
+                    payload,
+                    command="mb books exposure",
+                    schema_name="mainbranch.books.exposure.result",
+                )
+            )
+        else:
+            typer.echo(message, err=True)
+        raise typer.Exit(2)
+
+    report = books_mod.exposure(repo=repo, bet=bet or None, active=active)
+    if json_out:
+        typer.echo(
+            _json_payload(
+                report,
+                command="mb books exposure",
+                schema_name="mainbranch.books.exposure.result",
+            )
+        )
+    else:
+        books_mod.render_exposure(report)
+    raise typer.Exit(0 if report["ok"] else 1)
+
+
 @books_report_app.command("monthly")
 def books_report_monthly_cmd(
     sample: bool = typer.Option(

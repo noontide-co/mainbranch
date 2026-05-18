@@ -45,6 +45,8 @@ LAST_STATUS_SEEN_GITIGNORE_ENTRY = ".mb/last-status-seen.json"
 STALE_DECISION_DAYS = 14
 STALE_RESEARCH_DAYS = 45
 ACTIVE_BET_STATUSES = {"open", "paused"}
+BET_APPETITE_TIERS = {"trivial", "small", "material", "strategic"}
+BET_SIGNAL_COMPARATORS = {"<", "<=", "==", ">=", ">", "!="}
 ACTIVE_PUSH_STATUSES = {"planned", "active", "paused"}
 COMPLETED_PUSH_STATUSES = {"completed"}
 LIVE_OFFER_STATUSES = {"accepted", "graduated", "running", "scaling"}
@@ -1226,6 +1228,8 @@ def _bet_summary(repo: Path, path: Path) -> dict[str, Any]:
     channels = meta.get("channels")
     if not isinstance(channels, list):
         channels = []
+    money_path = _bet_money_path_summary(meta, path)
+    exit_criteria = _bet_exit_criteria(meta, today=date.today())
     return {
         "path": rel,
         "title": _title_from_markdown(path),
@@ -1233,13 +1237,187 @@ def _bet_summary(repo: Path, path: Path) -> dict[str, Any]:
         "opened": opened.isoformat() if opened else "",
         "deadline": deadline.isoformat() if deadline else "",
         "appetite": str(meta.get("appetite", "") or ""),
+        "appetite_tier": _bet_appetite_tier(meta),
         "hypothesis": str(meta.get("hypothesis", "") or ""),
         "metric": str(meta.get("metric", "") or ""),
         "target": str(meta.get("target", "") or ""),
         "result": str(meta.get("result", "") or ""),
+        "money_path": money_path,
+        "exit_criteria": exit_criteria,
         "public": bool(meta.get("public", False)),
         "channels": [str(channel) for channel in channels if isinstance(channel, str)],
         "updated_at": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
+    }
+
+
+def _bet_appetite_tier(meta: dict[str, Any]) -> str:
+    tier = meta.get("appetite_tier")
+    if isinstance(tier, str) and tier.strip().lower() in BET_APPETITE_TIERS:
+        return tier.strip().lower()
+    appetite = meta.get("appetite")
+    if isinstance(appetite, str) and appetite.strip().lower() in BET_APPETITE_TIERS:
+        return appetite.strip().lower()
+    return ""
+
+
+def _bet_money_path_summary(meta: dict[str, Any], path: Path) -> dict[str, Any]:
+    raw = meta.get("money_path")
+    if not isinstance(raw, dict):
+        return {
+            "declared": False,
+            "required": False,
+            "bet_id": "",
+            "expected_bet_id": path.stem,
+            "anchor_required_before": "",
+            "exposure_cap": None,
+        }
+    exposure_cap = raw.get("exposure_cap")
+    cap: dict[str, Any] | None = None
+    if isinstance(exposure_cap, dict):
+        amount = exposure_cap.get("amount")
+        currency = exposure_cap.get("currency")
+        cap = {
+            "amount": amount
+            if isinstance(amount, int | float) and not isinstance(amount, bool)
+            else None,
+            "currency": str(currency or "").strip(),
+        }
+    return {
+        "declared": True,
+        "required": bool(raw.get("required")),
+        "bet_id": str(raw.get("bet_id") or "").strip(),
+        "expected_bet_id": path.stem,
+        "anchor_required_before": str(raw.get("anchor_required_before") or "").strip(),
+        "exposure_cap": cap,
+    }
+
+
+def _bet_metric_values(meta: dict[str, Any]) -> dict[str, Any]:
+    for key in ("metrics", "metric_values"):
+        value = meta.get(key)
+        if isinstance(value, dict):
+            return {str(metric): current for metric, current in value.items()}
+    return {}
+
+
+def _coerce_signal_number(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        return float(value)
+    if isinstance(value, str):
+        cleaned = value.strip().replace(",", "")
+        if not cleaned:
+            return None
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+    return None
+
+
+def _compare_signal(current: Any, comparator: str, threshold: Any) -> bool | None:
+    current_number = _coerce_signal_number(current)
+    threshold_number = _coerce_signal_number(threshold)
+    if current_number is not None and threshold_number is not None:
+        if comparator == "<":
+            return current_number < threshold_number
+        if comparator == "<=":
+            return current_number <= threshold_number
+        if comparator == "==":
+            return current_number == threshold_number
+        if comparator == ">=":
+            return current_number >= threshold_number
+        if comparator == ">":
+            return current_number > threshold_number
+        if comparator == "!=":
+            return current_number != threshold_number
+    if comparator == "==":
+        return str(current) == str(threshold)
+    if comparator == "!=":
+        return str(current) != str(threshold)
+    return None
+
+
+def _evaluate_bet_signal(
+    signal: dict[str, Any],
+    *,
+    metrics: dict[str, Any],
+    today: date,
+) -> dict[str, Any]:
+    metric = str(signal.get("metric") or "").strip()
+    comparator = str(signal.get("comparator") or "").strip()
+    threshold = signal.get("threshold")
+    by_date = _parse_explicit_date(signal.get("by"))
+    current_value = metrics.get(metric) if metric else None
+    base = {
+        "id": str(signal.get("id") or metric or "unnamed-signal"),
+        "metric": metric,
+        "comparator": comparator,
+        "threshold": threshold,
+        "current_value": current_value,
+        "by": by_date.isoformat() if by_date else str(signal.get("by") or ""),
+        "action": str(signal.get("action") or ""),
+        "triggered": False,
+        "status": "not_triggered",
+    }
+    if not metric or comparator not in BET_SIGNAL_COMPARATORS:
+        base["status"] = "invalid"
+        return base
+    if metric not in metrics:
+        base["status"] = "missing_metric"
+        return base
+    matched = _compare_signal(current_value, comparator, threshold)
+    if matched is None:
+        base["status"] = "invalid"
+        return base
+    if by_date is not None and by_date > today:
+        base["status"] = "pending"
+        return base
+    base["triggered"] = bool(matched)
+    base["status"] = "triggered" if matched else "not_triggered"
+    return base
+
+
+def _bet_exit_criteria(meta: dict[str, Any], *, today: date) -> dict[str, Any]:
+    rubric = meta.get("kill_rubric")
+    if not isinstance(rubric, dict):
+        return {
+            "declared": False,
+            "missing": True,
+            "failure_signals": [],
+            "double_down_signals": [],
+            "triggered_failure_signals": [],
+            "triggered_double_down_signals": [],
+            "metrics_source": "",
+        }
+    metrics = _bet_metric_values(meta)
+    failure_signals = [
+        _evaluate_bet_signal(signal, metrics=metrics, today=today)
+        for signal in rubric.get("failure_signals") or []
+        if isinstance(signal, dict)
+    ]
+    double_down_signals = [
+        _evaluate_bet_signal(signal, metrics=metrics, today=today)
+        for signal in rubric.get("double_down_signals") or []
+        if isinstance(signal, dict)
+    ]
+    return {
+        "declared": True,
+        "missing": False,
+        "failure_signals": failure_signals,
+        "double_down_signals": double_down_signals,
+        "triggered_failure_signals": [
+            signal for signal in failure_signals if signal.get("triggered")
+        ],
+        "triggered_double_down_signals": [
+            signal for signal in double_down_signals if signal.get("triggered")
+        ],
+        "metrics_source": "frontmatter.metrics"
+        if "metrics" in meta
+        else "frontmatter.metric_values"
+        if "metric_values" in meta
+        else "",
     }
 
 
@@ -1270,11 +1448,37 @@ def _bets(repo: Path) -> dict[str, Any]:
             due_item = dict(item)
             due_item["days_until_deadline"] = days_until
             due_soon.append(due_item)
+    missing_exit_criteria = [
+        item for item in active if (item.get("exit_criteria") or {}).get("missing")
+    ]
+    triggered_failure_signals = [
+        {
+            "path": item.get("path"),
+            "title": item.get("title"),
+            "signal": signal,
+        }
+        for item in active
+        for signal in (item.get("exit_criteria") or {}).get("triggered_failure_signals", [])
+    ]
+    triggered_double_down_signals = [
+        {
+            "path": item.get("path"),
+            "title": item.get("title"),
+            "signal": signal,
+        }
+        for item in active
+        for signal in (item.get("exit_criteria") or {}).get("triggered_double_down_signals", [])
+    ]
     return {
         "active": active[:5],
         "due_soon": due_soon[:5],
         "overdue": overdue[:5],
         "recent": bet_items[:5],
+        "exit_criteria": {
+            "missing": missing_exit_criteria[:5],
+            "triggered_failure_signals": triggered_failure_signals[:10],
+            "triggered_double_down_signals": triggered_double_down_signals[:10],
+        },
     }
 
 

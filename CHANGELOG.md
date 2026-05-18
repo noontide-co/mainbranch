@@ -22,6 +22,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   source material, claims, offer details, proof usage, or messaging angles;
   `/mb-start` now routes stale-source cleanup requests into the reconcile,
   decision, codify, and checkpoint loop. Refs MAIN-393, #630.
+- Added bet MoneyPath metadata, appetite-tier, kill-rubric, and double-down
+  validation warnings plus `mb status --json` exit-signal facts for declared
+  active bet rubrics. Refs MAIN-399, #644.
+- Added `mb books exposure --repo . --bet ... --json` and
+  `mb books exposure --repo . --active --json` for privacy-bounded hledger bet
+  exposure totals without raw ledger rows, payees, account names, account
+  numbers, private vault paths, or transaction memos. Refs MAIN-399, #644.
 
 ### Changed
 
