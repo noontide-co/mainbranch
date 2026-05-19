@@ -554,11 +554,12 @@ Runtime support: `codex_cli: experimental_shell`
 Approval gates: {_inline_code_list(workflow.approval_gates)}
 Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
 
-Codex remains experimental and CLI-first. This guidance tells Codex how to
-treat a natural-language request as a Main Branch thinking task through
-`AGENTS.md` posture and deterministic `mb` facts. It does not claim Claude
-Code slash commands work inside Codex or that all Main Branch workflows are
-available in Codex.
+Codex remains experimental and CLI-first. This guidance is generated from the
+engine workflow source for business-repo `AGENTS.md`; the business repo does
+not need to contain `{_display_path(workflow.path)}`. Treat this rendered route
+as the Codex shell for natural-language thinking tasks. It does not claim
+Claude Code slash commands work inside Codex or that all Main Branch workflows
+are available in Codex.
 
 ## Required mb Commands
 

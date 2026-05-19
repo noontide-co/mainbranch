@@ -112,6 +112,8 @@ def test_codex_agents_think_route_preserves_shared_workflow_contract() -> None:
     text = AGENTS_TEMPLATE.read_text(encoding="utf-8")
 
     assert "Engine source workflow: `workflows/mb-think/workflow.md`" in text
+    assert "does not need to contain that engine source file" in text
+    assert "`AGENTS.md` section as the Codex shell" in text
     for command in workflow.required_mb_commands:
         assert f"- `{command}`" in text
     for fact in workflow.json_facts:
@@ -190,6 +192,8 @@ def test_think_codex_shell_does_not_claim_slash_command_or_skill_parity() -> Non
     assert codex_shell_policy_errors(workflow, shell) == []
     assert "Run `/mb-think`" not in shell
     assert "Claude Code skills work in Codex" not in shell
+    assert "not need to contain `workflows/mb-think/workflow.md`" in shell
+    assert "as the Codex shell for natural-language thinking tasks" in shell
 
 
 def test_think_codex_policy_flags_forbidden_support_language() -> None:
