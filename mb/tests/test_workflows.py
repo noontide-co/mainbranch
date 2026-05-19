@@ -173,9 +173,12 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
     data = json.loads(result.stdout)
     assert data["support_level"] == "first_class_owner_loop"
     statuses = set(data["statuses"])
-    assert {"supported", "pending_shared_source_migration", "intentionally_unsupported"}.issubset(
-        statuses
-    )
+    assert {
+        "supported",
+        "pending_shared_source_migration",
+        "generated_shell_pending",
+        "intentionally_unsupported",
+    }.issubset(statuses)
     by_id = {item["id"]: item for item in data["items"]}
     assert by_id["think-codify"]["codex_status"] == "supported"
     assert by_id["ads"]["codex_status"] == "pending_shared_source_migration"

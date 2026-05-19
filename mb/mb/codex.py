@@ -111,6 +111,12 @@ CODEX_SKILL_REQUIRED_MARKERS = (
     "end/checkpoint/save",
     "Ask before durable writes",
 )
+CODEX_WORKFLOW_STATUS_VOCABULARY = (
+    "supported",
+    "pending_shared_source_migration",
+    "generated_shell_pending",
+    "intentionally_unsupported",
+)
 
 CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
     {
@@ -652,7 +658,10 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
         copied = dict(item)
         copied["commands"] = list(_commands_for_inventory_item(item))
         items.append(copied)
-    statuses = sorted({str(item["codex_status"]) for item in CODEX_WORKFLOW_INVENTORY})
+    statuses = sorted(
+        {*CODEX_WORKFLOW_STATUS_VOCABULARY}
+        | {str(item["codex_status"]) for item in CODEX_WORKFLOW_INVENTORY}
+    )
     return {
         "ok": True,
         "runtime": runtime,
