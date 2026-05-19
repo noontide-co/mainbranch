@@ -20,6 +20,13 @@ Use session excavation for:
 - generated business-repo history after a live session;
 - repeated support conversations that expose the same friction.
 
+When the goal is to mine transcripts, authenticated community content,
+connected-provider recordings, cloud-drive files, or mixed private/business
+sources into business memory, use [`source-ingestion.md`](source-ingestion.md)
+before reading source content. Session excavation turns a session into public
+product follow-ups; source ingestion controls whether and how source material
+may be read and routed.
+
 For release-bearing runtime validation, use
 [`release-simulations.md`](release-simulations.md) and
 [`release-agent-contract.md`](release-agent-contract.md) first. This document
@@ -167,7 +174,7 @@ After the table is drafted, route each P0 and P1 row.
 | Stale business source handling | Workflow issue, skill update, or decision if it changes repo primitives |
 | Provider write or secret handling risk | Provider mutation, approval-gate, or secret-redaction issue with a validation target |
 | Connector bridge confusion | Connector-readiness issue or shared-workflow source issue; do not claim runtime support from directory availability alone |
-| Transcript or authenticated-community ingestion | Ingestion/privacy issue with manifest-first, skip-filter, and proof-permission requirements |
+| Transcript or authenticated-community ingestion | Use `source-ingestion.md`; open or link an ingestion/privacy issue when the rail itself needs product work |
 | Connector/provider request | Provider-readiness issue only after support claim and smoke boundary are clear |
 | Roadmap pull | Roadmap note or backlog issue; do not claim support |
 

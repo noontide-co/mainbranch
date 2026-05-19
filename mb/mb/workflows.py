@@ -517,11 +517,14 @@ This snapshot does not replace shipped `.claude/skills/mb-think/SKILL.md`.
    caveats, promotion limits, and public/private handling.
 5. Write a decision when durable business truth changes. Codify only after the
    operator accepts the direction.
-6. For stale source, claim, proof, or angle cleanup, identify the stale item,
+6. For transcripts, authenticated community content, provider recordings, or
+   mixed private/business sources, use manifest-first allow/skip filters before
+   reading content. Route synthesized output, not raw payloads.
+7. For stale source, claim, proof, or angle cleanup, identify the stale item,
    find downstream usage, keep history auditable with a stale note, reconcile
    current truth after approval, record and codify the decision, then
    checkpoint only after approval.
-7. Ask for approval before creating or editing business files, promoting
+8. Ask for approval before creating or editing business files, promoting
    research into core truth, using structured collection, or saving a
    checkpoint.
 
@@ -588,11 +591,14 @@ available in Codex.
    caveats, promotion limits, and public/private handling.
 6. Write a decision when durable business truth changes. Codify only after the
    operator accepts the direction.
-7. For stale source, claim, proof, or angle cleanup, identify the stale item,
+7. For transcripts, authenticated community content, provider recordings, or
+   mixed private/business sources, use manifest-first allow/skip filters before
+   reading content. Route synthesized output, not raw payloads.
+8. For stale source, claim, proof, or angle cleanup, identify the stale item,
    find downstream usage, keep history auditable with a stale note, reconcile
    current truth after approval, record and codify the decision, then
    checkpoint only after approval.
-8. Ask for approval before creating or editing business files, promoting
+9. Ask for approval before creating or editing business files, promoting
    research into core truth, using structured collection, opening public
    issues, publishing, mutating providers, spending money, contacting
    customers, or saving a checkpoint.

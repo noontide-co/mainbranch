@@ -49,6 +49,7 @@ approval_gates:
 public_private_boundaries:
   - no_secrets
   - no_raw_provider_exports
+  - no_raw_transcripts
   - no_customer_member_data
   - no_private_runtime_settings
   - no_private_dms_or_gated_communities
@@ -68,8 +69,8 @@ into durable business files.
 
 Use this workflow when the operator asks to think through an offer, research a
 market, compare providers, pressure-test positioning, choose a direction, turn
-source material into a decision, retire stale source, or codify what was
-learned.
+source material into a decision, mine approved source material, retire stale
+source, or codify what was learned.
 
 Trigger phrases include think through, research, decide, figure out, explore,
 codify, enrich, sharpen this offer, improve the offer, compare providers,
@@ -164,6 +165,15 @@ handling.
 Use decisions when the work changes durable business truth. A decision should
 name options, rationale, tradeoffs, consequences, and the specific files that
 would change. Codify only after the operator accepts the direction.
+
+When transcripts, authenticated community content, provider recordings,
+cloud-drive files, call notes, exported chats, or mixed private/business
+sources may become business memory, route through the source-ingestion privacy
+rail before reading content: inventory sources, review a metadata-only
+manifest, apply allow/skip filters, read the smallest approved slice, and route
+synthesized output into research, decisions, proof candidates, pushes, logs, or
+issue drafts. Raw transcripts, provider payloads, gated-community content, and
+private customer/member data stay out of committed files by default.
 
 When source material, a claim, an offer detail, proof usage, or an angle is
 stale, reconcile current truth instead of erasing history. Identify the stale

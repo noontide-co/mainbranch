@@ -8,6 +8,12 @@ How /mb-think handles non-markdown files: PDFs, DOCX, PPTX, and other documents.
 
 The repo is a precision instrument, not a dumping ground. Documents get **converted to markdown** during /mb-think — the originals stay where they are. Only the extracted, synthesized knowledge enters the repo.
 
+If the document comes from an authenticated provider, mixed private/business
+account, cloud drive, CRM, classroom, community, call recorder, or other source
+that may contain customer/member or restricted data, use the source-ingestion
+privacy rail first: [`source-ingestion.md`](source-ingestion.md).
+Inventory and manifest review happen before conversion or content reads.
+
 ---
 
 ## Detection
@@ -88,7 +94,7 @@ pdftotext input.pdf output.txt
 
 ## Output Format
 
-Converted documents save to research/ with extraction metadata:
+Synthesized document findings save to `research/` with extraction metadata:
 
 ```yaml
 ---
@@ -103,6 +109,11 @@ status: complete
 ```
 
 Filename: `research/YYYY-MM-DD-topic-doc-extraction.md`
+
+Raw conversions should stay in OS temp or ignored local scratch unless the
+operator explicitly approves a sanitized excerpt. Do not commit full extracted
+documents, provider payloads, private transcripts, or copied source archives by
+default.
 
 ---
 
