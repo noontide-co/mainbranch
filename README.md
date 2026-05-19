@@ -1,22 +1,46 @@
-# Main Branch
+<p align="center">
+  <img src="docs/assets/main-branch-logo.png" alt="Main Branch logo" width="100" />
+</p>
 
-[![Star on GitHub](https://img.shields.io/github/stars/noontide-co/mainbranch?style=social&label=Star)](https://github.com/noontide-co/mainbranch)
-[![PyPI version](https://img.shields.io/pypi/v/mainbranch?style=flat&label=PyPI)](https://pypi.org/project/mainbranch/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+<h1 align="center">Main Branch</h1>
+
+<p align="center"><strong>Durable operating memory for AI-assisted businesses.</strong></p>
+
+<p align="center"><code>AI should remember your business before it answers.</code></p>
 
 <p align="center">
+  <a href="https://github.com/noontide-co/mainbranch/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/noontide-co/mainbranch?style=social"></a>
+  <a href="https://pypi.org/project/mainbranch/"><img alt="PyPI" src="https://img.shields.io/pypi/v/mainbranch?label=PyPI"></a>
+  <a href="https://github.com/noontide-co/mainbranch/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/noontide-co/mainbranch/ci.yml?label=CI"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <img alt="Runtime" src="https://img.shields.io/badge/Claude%20Code-first--class-black">
+  <img alt="Codex" src="https://img.shields.io/badge/Codex-experimental%20CLI--first-orange">
+</p>
+
+<p align="center">
+  <strong>Overview:</strong>
+  <a href="#what-is-main-branch">What it is</a> &middot;
+  <a href="#the-operating-loop">Operating loop</a> &middot;
+  <a href="#what-you-can-do-today">Features</a>
+</p>
+
+<p align="center">
+  <strong>Get started:</strong>
   <a href="#quickstart"><strong>Quickstart</strong></a> &middot;
+  <a href="docs/beginner-setup.md"><strong>Beginner setup</strong></a> &middot;
+  <a href="docs/compatibility.md"><strong>Compatibility</strong></a>
+</p>
+
+<p align="center">
+  <strong>Resources:</strong>
   <a href="docs/ethos.md"><strong>Ethos</strong></a> &middot;
   <a href="docs/roadmap.md"><strong>Roadmap</strong></a> &middot;
-  <a href="docs/beginner-setup.md"><strong>Beginner setup</strong></a> &middot;
   <a href="https://skool.com/main"><strong>Community</strong></a>
 </p>
 
 ---
 
 ## What is Main Branch?
-
-# Durable operating memory for AI-assisted businesses
 
 **You don't need to know git. You don't need to know terminals. You just need a folder.**
 
