@@ -254,9 +254,10 @@ truth lives in the linked doc or decision.
 - **Language**: plain business language first. Technical terms (canonical,
   schema, primitive) are fine in code comments and contributor docs, not in
   user-facing copy. See `docs/agent-writing-style.md`.
-- **Runtime claims**: Claude Code is first-class. Codex CLI has an
-  experimental CLI-first adapter. Other runtimes are compatibility targets
-  until smoke evidence exists. See `docs/compatibility.md`.
+- **Runtime claims**: Claude Code is first-class for slash skills. Codex CLI is
+  first-class for the proven owner loop through generated repo guidance and a
+  generated owner-loop skill. Other runtimes are compatibility targets until
+  smoke evidence exists. See `docs/compatibility.md`.
 
 If a PR or issue contradicts one of these, treat the contradiction as a
 stale-assumption finding and block until reconciled or a new decision file

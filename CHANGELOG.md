@@ -13,12 +13,22 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added a generated Codex owner-loop skill at
+  `.agents/skills/main-branch-owner-loop`, a generated workflow inventory, and
+  `mb workflow list --runtime codex` so Codex can discover supported,
+  pending, and intentionally unsupported Main Branch workflow surfaces. Refs
+  MAIN-421, #676.
 - Added source-ingestion privacy rails for transcripts, authenticated
   community/provider sources, mixed-account manifests, skip filters, proof
   permission gates, and `/mb-think` routing. Refs MAIN-409, #657.
 
 ### Changed
 
+- Promoted Codex narrowly from experimental CLI-first guidance to first-class
+  owner-loop support for start/status/setup/update/doctor, think/codify,
+  end/checkpoint/save, validate, and workflow discovery while keeping
+  slash-command, provider-write, publishing, spend, customer-contact, and
+  copied Claude skill parity out of scope. Refs MAIN-421, #676.
 - Tightened generated Codex `AGENTS.md` thinking-route guidance so fresh
   business repos treat the rendered route as the Codex shell for the
   `mb-think` shared workflow source instead of chasing engine-only workflow

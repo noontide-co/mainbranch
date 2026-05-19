@@ -57,7 +57,7 @@ Open source. Lives on your machine. Bring your own Claude Code plan. That's it.
 ---
 
 <div align="center">
-  <em>Works with</em> <strong>Claude Code today</strong>. Codex CLI has an experimental CLI-first adapter for power users; Cursor, OpenClaw, Hermes, and local runtimes remain compatibility targets — see <a href="docs/compatibility.md">compatibility</a>.
+  <em>Works with</em> <strong>Claude Code</strong> and <strong>Codex CLI for the owner loop</strong>. Cursor, OpenClaw, Hermes, and local runtimes remain compatibility targets — see <a href="docs/compatibility.md">compatibility</a>.
 </div>
 
 ---
@@ -156,7 +156,7 @@ The longer-arc operating-memory model — where multiple business repos, GitHub 
 
 |                                  |                                                                                                |
 | -------------------------------- | ---------------------------------------------------------------------------------------------- |
-| **Not a chat app.**              | The supported chat surface is Claude Code; Codex CLI is experimental. Main Branch gives agents durable context to read from. |
+| **Not a chat app.**              | The supported chat surfaces are Claude Code and Codex CLI for the owner loop. Main Branch gives agents durable context to read from. |
 | **Not a SaaS dashboard.**        | Your business doesn't live on our servers. It lives in your folder.                            |
 | **Not a connect-every-tool hub.**| We pick boring, inspectable rails: GitHub, Cloudflare, official ads paths. Curated, not sprawl.|
 | **Not a model host.**            | We don't run models. We hand the agent the right context so the model you already use is sharper.|
@@ -217,16 +217,22 @@ claude
 
 You'll need a Claude plan that includes Claude Code. Install Claude Code from [claude.ai](https://claude.ai). Step-by-step beginner walkthrough: [docs/beginner-setup.md](docs/beginner-setup.md).
 
-### Trying Codex CLI
+### Using Codex CLI
 
-Codex CLI support is experimental and CLI-first. Fresh business folders include
-an `AGENTS.md` file that tells Codex how to start from Main Branch facts and
-routes the lifecycle basics: start the day, inspect status, and think through
-or codify a decision. Expect Codex to run `mb status --json --peek`,
-`mb start --json`, and `mb doctor repair --plan`, then translate those facts
-into a useful owner briefing. Do not expect Claude Code slash commands such as
-`/mb-start` to work inside Codex yet, and do not expect site, ads, publishing,
-provider mutation, spend, or customer-contact workflows to be ported there.
+Codex CLI is first-class for the Main Branch owner loop, not for Claude Code
+slash-command parity. Fresh business folders include a tracked `AGENTS.md`
+bootstrap plus `.agents/skills/main-branch-owner-loop`, so Codex can start the
+day, inspect status, route setup/update/doctor work, think through or codify a
+decision, plan an end/checkpoint/save closeout, validate the repo, and list
+workflow support.
+
+Expect Codex to run `mb status --json --peek`, `mb start --json`,
+`mb doctor repair --plan --json`, `mb checkpoint --plan --json`,
+`mb validate --json`, and `mb workflow list --runtime codex --json`, then
+translate those facts into a useful owner briefing. Do not expect Claude Code slash commands
+such as `/mb-start` to work inside Codex, and do not expect site, ads,
+publishing, provider mutation, spend, or customer-contact workflows to be
+ported there.
 
 After installing Codex CLI, test a new repo with:
 
@@ -324,6 +330,7 @@ The `mb` CLI is the deterministic control plane. The agent runs it for normal us
 | `mb graph`               | Build a folder graph from frontmatter links, wikilinks, and entity tags. Graphviz DOT, JSON, and PNG outputs. |
 | `mb suggest links`       | Suggest likely frontmatter, inline, tag, data, and context connections for a file without editing it. |
 | `mb checkpoint`          | Plan or save a business-readable git checkpoint during long agent runs. |
+| `mb workflow list`       | List Codex workflow support: supported owner-loop surfaces, pending shared-source migrations, and intentionally unsupported workflows. |
 | `mb skill list` / `path` / `validate` / `link` / `repair` | Manage and repair the bundled Claude Code skills. |
 | `mb update`              | Update Main Branch in place. |
 

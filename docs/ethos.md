@@ -99,9 +99,12 @@ and power users, but they should not be the default user experience.
 
 ### 5. Runtime Honesty
 
-Claude Code is the first supported runtime today. Codex, Cursor, OpenClaw,
-Hermes, Paperclip-adjacent orchestration, and local runtimes are compatibility
-targets only when adapter code and smoke evidence exist.
+Claude Code is the first supported slash-skill runtime today. Codex CLI is
+first-class for the proven owner loop through generated repo guidance,
+generated owner-loop skill discovery, deterministic `mb` facts, and smoke
+evidence. Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and local
+runtimes are compatibility targets only when adapter code and smoke evidence
+exist.
 
 Main Branch should meet operators where they already work, but it should not
 claim support before support is proven.

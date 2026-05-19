@@ -95,5 +95,6 @@ backup location, and no conflicts.
 ## What Main Branch does not claim
 
 Updating the engine is not the same as proving a runtime behavior. Claude Code
-is the supported runtime today. Other runtimes remain roadmap targets until
-adapter code and smoke evidence exist.
+is the supported slash-skill runtime today, and Codex CLI is supported for the
+owner loop. Other runtimes remain roadmap targets until adapter code and smoke
+evidence exist.
