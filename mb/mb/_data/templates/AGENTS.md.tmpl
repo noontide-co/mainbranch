@@ -214,8 +214,9 @@ Shared source gates: `updates_repairs_migrations`, `file_writes`,
 `public_issue_or_proposal`.
 
 Shared public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
-`no_customer_member_data`, `no_private_runtime_settings`,
-`no_private_dms_or_gated_communities`, `no_raw_finance_legal_records`.
+`no_raw_transcripts`, `no_customer_member_data`,
+`no_private_runtime_settings`, `no_private_dms_or_gated_communities`,
+`no_raw_finance_legal_records`.
 
 Use it when the operator asks to think through an offer, research a market,
 compare providers, make a decision, or codify what was learned.
@@ -243,10 +244,14 @@ Choose the smallest honest research depth:
 
 Read only the business files needed for the question: `core/`, `research/`,
 `decisions/`, `bets/`, `pushes/`, `log/`, and `documents/`. Do not inspect
-secrets, raw provider exports, raw finance/legal records, customer/member
-records, private DMs, gated communities, local runtime settings, or credentials
-unless the operator gives explicit permission and the source belongs in the
-business repo.
+secrets, raw provider exports, raw transcripts, raw finance/legal records,
+customer/member records, private DMs, gated communities, local runtime
+settings, or credentials unless the operator gives explicit permission and the
+source belongs in the business repo. For transcripts, authenticated community
+content, provider recordings, cloud-drive files, exported chats, or mixed
+private/business sources, inventory sources and apply manifest-first
+allow/skip filters before reading content; commit synthesized findings, not raw
+payloads.
 
 Ask before creating, editing, moving, deleting, archiving, codifying, or
 checkpointing business files. Ask before publishing, opening a public issue,

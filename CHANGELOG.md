@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added source-ingestion privacy rails for transcripts, authenticated
+  community/provider sources, mixed-account manifests, skip filters, proof
+  permission gates, and `/mb-think` routing. Refs MAIN-409, #657.
+
 ### Changed
 
 - Tightened generated Codex `AGENTS.md` thinking-route guidance so fresh

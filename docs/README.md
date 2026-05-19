@@ -34,6 +34,7 @@ Pick the route that matches what you are doing.
 - [`onboarding-progress.md`](onboarding-progress.md) — lifecycle skill resume surface.
 - [`business-connections.md`](business-connections.md) — when to use frontmatter links, inline links, tags, data refs, or context.
 - [`markdown-link-conventions.md`](markdown-link-conventions.md) — markdown and link rules.
+- [`source-ingestion.md`](source-ingestion.md) — manifest-first privacy rail for transcripts, authenticated sources, and provider exports.
 - [`issue-drafting.md`](issue-drafting.md) — privacy-safe `mb issue` flow.
 - [`session-excavation.md`](session-excavation.md) — turn transcripts, chat exports, and session logs into prioritized public-safe follow-ups.
 

@@ -162,14 +162,12 @@ Detect mode from user's natural language:
 | "decide", "we chose", "document decision" | Decide | [decide-phase.md](references/decide-phase.md) |
 | "codify", "apply", "update reference files" | Codify | [codify-phase.md](references/codify-phase.md) |
 | "add context", "enrich", "I have new info" | Codify | [codify-phase.md](references/codify-phase.md) |
+| "mine these transcripts", "ingest community posts", "process call recordings", "use Drive/provider exports", "mixed account sources" | Source ingestion privacy rail | [source-ingestion.md](references/source-ingestion.md) |
 | "this source/claim/angle is stale", "old source", "obsolete claim", "retire this", "stop using that proof" | Stale-source cleanup | [stale-source-cleanup.md](references/stale-source-cleanup.md) |
 | "content strategy", "pillars", "what platforms", "content plan", "cadence", "channel strategy", "account strategy", "founder voice", "weekly content plan" | Full Flow (codify to the right content strategy layer) | [codify-phase.md](references/codify-phase.md) |
 | "where was I", "continue", "pick up" | Recovery | [recovery.md](references/recovery.md) |
 | "here's a PDF", "ingest this", "convert this document", file path (.pdf/.docx/.pptx) | Document Ingestion | [document-ingestion.md](references/document-ingestion.md) |
-For offer, audience, proof, CTA, content strategy, ads/pages, and positioning
-requests, use [research-depth-ladder.md](references/research-depth-ladder.md)
-before selecting source tools. The ladder chooses how much research is enough;
-the routing references choose which tools to use.
+For offer, audience, proof, CTA, content strategy, ads/pages, and positioning requests, use [research-depth-ladder.md](references/research-depth-ladder.md) before selecting source tools.
 
 If unclear, ask: "Are you exploring a question, documenting a decision, or updating reference files?"
 
@@ -301,6 +299,7 @@ Gather from codebase, web, user input, local recordings.
 | X/Twitter sentiment | Grok X Insights MCP ([grok-social.md](references/grok-social.md)) | `-x-social.md` |
 | Local video/audio | whisper-cpp ([local-transcription.md](references/local-transcription.md)) | `-local-mining.md` |
 | Voice memos | whisper-cpp | `-voice-mining.md` |
+| Authenticated community, calls, Drive/provider exports, mixed private sources | Source inventory + manifest-first filters ([source-ingestion.md](references/source-ingestion.md)) | `-source-mining.md` |
 | Instagram mining | Apify or manual | `-ig-mining.md` |
 | Ad account data | Verified Meta Ads account context | `-ad-account.md` |
 | Competitor sites | Browser MCP or web fetch | `-competitor-mining.md` |
@@ -318,7 +317,7 @@ Every research output needs:
 - Implications for reference files
 - Open questions
 
-Synthesis works best when the main conversation is clean — which is exactly what subagents provide. Heavy raw content (transcripts, mined posts) lives in the subagent context windows, and only distilled summaries return to main.
+Synthesis works best when the main conversation is clean — which is exactly what subagents provide. Heavy raw content (transcripts, mined posts) lives in the subagent context windows, and only distilled summaries return to main. For authenticated or private sources, run the source-ingestion rail first and keep raw transcripts/provider payloads out of committed files by default.
 
 **For content mining specifically:** AI shows WHAT worked. You must judge WHY.
 
