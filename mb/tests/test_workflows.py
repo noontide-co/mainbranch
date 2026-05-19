@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
+import yaml
+from typer.testing import CliRunner
+
 from mb import codex as codex_mod
+from mb.cli import app
 from mb.workflows import (
     codex_shell_policy_errors,
     load_workflow,
@@ -15,6 +20,7 @@ from mb.workflows import (
     validate_workflow,
 )
 
+runner = CliRunner()
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO_ROOT / "workflows" / "mb-start-money-path" / "workflow.md"
 THINK_WORKFLOW = REPO_ROOT / "workflows" / "mb-think" / "workflow.md"
@@ -134,6 +140,67 @@ def test_codex_contract_markers_match_think_workflow_source() -> None:
     assert (
         tuple(workflow.public_private_boundaries) == codex_mod.CODEX_THINK_PUBLIC_PRIVATE_BOUNDARIES
     )
+
+
+def test_codex_owner_loop_skill_and_inventory_render() -> None:
+    skill = codex_mod.render_codex_skill_md()
+    inventory = codex_mod.render_workflow_inventory_md()
+
+    assert "Main Branch owner loop for Codex" in skill
+    assert "mb workflow list --runtime codex --json" in skill
+    assert "start/status/setup/update/doctor" in skill
+    assert "think/codify" in skill
+    assert "end/checkpoint/save" in skill
+    assert "Ask before durable writes" in skill
+    assert "pending_shared_source_migration" in inventory
+    assert "intentionally_unsupported" in inventory
+    assert "Copied Claude" not in skill
+
+
+def test_codex_owner_loop_skill_frontmatter_is_valid_yaml() -> None:
+    skill = codex_mod.render_codex_skill_md()
+    _, frontmatter, _ = skill.split("---", 2)
+    data = yaml.safe_load(frontmatter)
+
+    assert data["name"] == "main-branch-owner-loop"
+    assert "start/status/setup/update/doctor" in data["description"]
+
+
+def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces() -> None:
+    result = runner.invoke(app, ["workflow", "list", "--runtime", "codex", "--json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.stdout)
+    assert data["support_level"] == "first_class_owner_loop"
+    statuses = set(data["statuses"])
+    assert {
+        "supported",
+        "pending_shared_source_migration",
+        "generated_shell_pending",
+        "intentionally_unsupported",
+    }.issubset(statuses)
+    by_id = {item["id"]: item for item in data["items"]}
+    assert by_id["think-codify"]["codex_status"] == "supported"
+    assert by_id["ads"]["codex_status"] == "pending_shared_source_migration"
+    assert by_id["wiki"]["codex_status"] == "intentionally_unsupported"
+
+
+def test_codex_workflow_inventory_json_unsupported_runtime_uses_error_envelope() -> None:
+    result = runner.invoke(app, ["workflow", "list", "--runtime", "claude", "--json"])
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["result_status"] == "error"
+    assert payload["mb_command"] == "mb workflow list"
+    assert payload["result_schema"]["name"] == "mainbranch.workflow.inventory.result"
+    assert payload["errors"] == [
+        {
+            "code": "unsupported_runtime",
+            "message": "mb workflow list: only --runtime codex is available today",
+        }
+    ]
+    assert result.stderr == ""
 
 
 def test_drift_detection_flags_omitted_required_command_or_fact() -> None:

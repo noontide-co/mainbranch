@@ -39,7 +39,7 @@ REQUIRED_SECTIONS = {
 }
 REQUIRED_RUNTIME_SUPPORT = {
     "claude_code": "supported_shell",
-    "codex_cli": "experimental_shell",
+    "codex_cli": "owner_loop_shell",
 }
 MINIMUM_MB_COMMANDS = {
     "mb status --json --peek",
@@ -133,6 +133,13 @@ class WorkflowSource:
     @property
     def public_private_boundaries(self) -> list[str]:
         return [str(item) for item in self.frontmatter["public_private_boundaries"]]
+
+    @property
+    def runtime_support(self) -> dict[str, str]:
+        raw = self.frontmatter["runtime_support"]
+        if not isinstance(raw, dict):
+            return {}
+        return {str(key): str(value) for key, value in raw.items()}
 
 
 class WorkflowValidationError(ValueError):
@@ -421,13 +428,13 @@ def _render_start_money_path_codex_shell(workflow: WorkflowSource) -> str:
     output = f"""# Generated Codex Workflow Guidance: {workflow.title}
 
 Source workflow: `{_display_path(workflow.path)}`
-Runtime support: `codex_cli: experimental_shell`
+Runtime support: `codex_cli: {workflow.runtime_support.get("codex_cli", "")}`
 Approval gates: {_inline_code_list(workflow.approval_gates)}
 Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
 
-Codex remains experimental and CLI-first. This guidance is a generated snapshot
-for validation; it does not mean `/mb-start` slash commands work inside Codex
-and it does not claim selected Codex workflow support.
+Codex is first-class for the proven owner loop only. This guidance is a
+generated owner-loop shell; it does not mean `/mb-start` slash commands work
+inside Codex and it does not claim all Main Branch workflow support.
 
 Start from deterministic `mb` facts before reading business markdown or giving
 path-to-money advice.
@@ -553,14 +560,14 @@ def _render_think_codex_shell(workflow: WorkflowSource) -> str:
     output = f"""# Generated Codex Workflow Guidance: {workflow.title}
 
 Source workflow: `{_display_path(workflow.path)}`
-Runtime support: `codex_cli: experimental_shell`
+Runtime support: `codex_cli: {workflow.runtime_support.get("codex_cli", "")}`
 Approval gates: {_inline_code_list(workflow.approval_gates)}
 Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
 
-Codex remains experimental and CLI-first. This guidance is generated from the
-engine workflow source for business-repo `AGENTS.md`; the business repo does
-not need to contain `{_display_path(workflow.path)}`. Treat this rendered route
-as the Codex shell for natural-language thinking tasks. It does not claim
+Codex is first-class for the proven owner loop only. This guidance is generated
+from the engine workflow source for business-repo `AGENTS.md`; the business repo
+does not need to contain `{_display_path(workflow.path)}`. Treat this rendered
+route as the Codex shell for natural-language thinking tasks. It does not claim
 Claude Code slash commands work inside Codex or that all Main Branch workflows
 are available in Codex.
 

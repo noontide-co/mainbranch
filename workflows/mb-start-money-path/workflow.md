@@ -5,7 +5,7 @@ description: Ground daily start path-to-money prompts in deterministic MoneyPath
 loops: [sense, decide, ship]
 runtime_support:
   claude_code: supported_shell
-  codex_cli: experimental_shell
+  codex_cli: owner_loop_shell
   future: planned
 runtime_surfaces:
   claude_code: .claude/skills/mb-start/SKILL.md
@@ -216,10 +216,11 @@ skill validation and runtime evidence.
 
 ### Codex CLI
 
-Codex remains experimental and CLI-first. Rendered Codex shell snapshots must
-start from generated `AGENTS.md` style grounding and deterministic `mb` facts.
+Codex is first-class for the proven owner loop only. Rendered Codex shell
+snapshots must start from generated `AGENTS.md` style grounding and
+deterministic `mb` facts.
 
-Do not say `/mb-start` works inside Codex. Do not claim selected Codex workflow
+Do not say `/mb-start` works inside Codex. Do not claim broader Codex workflow
 support until a fresh fixture repo and read-only `codex exec --json --ephemeral
 --sandbox read-only -C <repo>` smoke prove the generated shell is actually
 used.

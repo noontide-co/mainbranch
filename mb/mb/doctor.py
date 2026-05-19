@@ -1340,11 +1340,14 @@ def run(path: str) -> dict[str, Any]:
         {
             "name": "codex-agents-md",
             "ok": bool(codex_instructions["ok"]),
-            "detail": "AGENTS.md is current and points Codex to mb facts and lifecycle routes"
+            "detail": (
+                "AGENTS.md and the Codex owner-loop skill are current and point "
+                "Codex to mb facts, lifecycle routes, and workflow inventory"
+            )
             if codex_instructions["ok"]
             else (
-                "AGENTS.md is missing, stale, or missing required mb fact commands "
-                "or lifecycle discovery guidance. "
+                "Codex AGENTS.md or owner-loop skill files are missing, stale, "
+                "or missing required mb fact commands or lifecycle discovery guidance. "
                 "Run `mb doctor repair --plan`, review, then `mb doctor repair --apply`."
             ),
             "severity": "ok" if codex_instructions["ok"] else "warn",
@@ -2026,16 +2029,18 @@ def repair_plan(
             "name": "AGENTS.md",
             "state": "ok" if codex_instruction_status["ok"] else "warn",
             "summary": (
-                "Codex instructions are current and include mb fact grounding and lifecycle routes"
+                "Codex instructions and owner-loop skill are current and include "
+                "mb fact grounding, lifecycle routes, and workflow inventory"
                 if codex_instruction_status["ok"]
                 else (
-                    "Codex instructions are missing, stale, or missing mb fact grounding "
-                    "or lifecycle discovery guidance"
+                    "Codex instructions or owner-loop skill files are missing, stale, "
+                    "or missing mb fact grounding or lifecycle discovery guidance"
                 )
             ),
             "missing_fact_commands": codex_instruction_status["missing_fact_commands"],
             "missing_lifecycle_guidance": codex_instruction_status["missing_lifecycle_guidance"],
             "lifecycle_discovery_ok": codex_instruction_status["lifecycle_discovery_ok"],
+            "skill": codex_instruction_status["skill"],
             "approval_boundary_ok": codex_instruction_status["approval_boundary_ok"],
             "codex_native_ok": codex_instruction_status["codex_native_ok"],
         },
@@ -2050,10 +2055,15 @@ def repair_plan(
             command="mb doctor repair --apply",
             safe_to_apply=True,
             reason=(
-                "AGENTS.md is the tracked Codex entrypoint; repair writes the current "
-                "CLI-first lifecycle workflow index, fact grounding, and approval boundaries"
+                "AGENTS.md and .agents/skills are the tracked Codex entrypoints; "
+                "repair writes the current owner-loop workflow index, fact grounding, "
+                "and approval boundaries"
             ),
-            writes=["AGENTS.md"],
+            writes=[
+                "AGENTS.md",
+                codex_mod.CODEX_SKILL_RELATIVE_PATH,
+                codex_mod.CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
+            ],
         )
         actions.append(action)
         codex_actions.append(action)
@@ -2062,7 +2072,10 @@ def repair_plan(
             "codex-wiring",
             "Codex CLI Adapter",
             _max_state([str(item["state"]) for item in codex_checks]),
-            "Experimental CLI-first adapter instructions and executable readiness",
+            (
+                "First-class owner-loop adapter instructions, native skill, "
+                "workflow inventory, and executable readiness"
+            ),
             checks=codex_checks,
             actions=codex_actions,
         )
@@ -2392,16 +2405,21 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
         applied.append(
             _action(
                 id="codex-agents-md",
-                title="Refreshed Codex AGENTS.md instructions",
+                title="Refreshed Codex owner-loop instructions",
                 state="ok" if agents["ok"] else "error",
                 mode="write",
                 command="mb doctor repair --apply",
                 safe_to_apply=True,
                 reason=(
-                    "wrote the current CLI-first Codex lifecycle workflow index, "
-                    "fact grounding, and approval boundaries"
+                    "wrote the current Codex owner-loop skill, lifecycle workflow "
+                    "index, fact grounding, and approval boundaries"
                 ),
-                writes=["AGENTS.md"],
+                writes=list(agents.get("changed_paths", []))
+                or [
+                    "AGENTS.md",
+                    codex_mod.CODEX_SKILL_RELATIVE_PATH,
+                    codex_mod.CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
+                ],
                 applied=bool(agents["changed"]),
                 result=agents,
             )

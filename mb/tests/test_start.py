@@ -131,6 +131,24 @@ def test_start_json_omits_codex_command_when_codex_is_missing(
     assert "Install Codex CLI" not in report["next_actions"]
 
 
+def test_start_human_labels_missing_codex_without_experimental_copy(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(start_mod, "_which", _with_claude)
+    monkeypatch.setattr(codex_mod, "_which", _without_codex)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    result = runner.invoke(app, ["start", "--repo", str(repo)])
+
+    assert result.exit_code == 0
+    assert "Codex" in result.stdout
+    assert "missing" in result.stdout
+    assert "owner loop" in result.stdout
+    assert "experimental" not in result.stdout
+
+
 def test_start_json_names_doctor_repair_when_start_wiring_is_missing(
     tmp_path: Path, monkeypatch
 ) -> None:

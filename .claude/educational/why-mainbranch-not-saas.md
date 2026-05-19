@@ -47,9 +47,10 @@ you to paste the same offer, audience, proof, and decisions every session.
 regular git. Issues and pull requests are durable work threads and proposals,
 not hidden rows in a vendor database.
 
-**You can switch tools later.** Claude Code is the supported runtime today, but
-the repo shape is not trapped inside Claude Code. Future adapters should read
-the same files and deterministic `mb` commands.
+**You can switch tools later.** Claude Code is the supported slash-skill
+runtime today, and Codex CLI is supported for the owner loop. The repo shape is
+not trapped inside either runtime. Future adapters should read the same files
+and deterministic `mb` commands.
 
 **You keep SaaS tools as rails, not the brain.** GitHub, Cloudflare,
 Google/Workspace, ads tools, Apify, Stripe, Cal.com, and other providers can be
@@ -90,6 +91,7 @@ portable, inspectable, and compounding.
 Main Branch is not a hosted dashboard, chat client, background daemon, vector
 database, scheduler, marketplace, or model host today.
 
-Claude Code is the supported runtime today. Codex, Cursor, OpenClaw, Hermes,
-Paperclip-adjacent orchestration, and local runtimes are compatibility targets
-until adapter code and smoke evidence prove support.
+Claude Code is the supported slash-skill runtime today. Codex CLI is supported
+for the owner loop. Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration,
+and local runtimes are compatibility targets until adapter code and smoke
+evidence prove support.

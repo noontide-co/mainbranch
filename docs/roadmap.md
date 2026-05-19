@@ -68,9 +68,11 @@ Main Branch already ships:
   team daily log, bookkeeping, and multi-repo work;
 - initial paid-traffic site readiness checks through `mb site check`.
 
-Claude Code is the supported runtime today. Codex CLI has an experimental
-CLI-first adapter; other runtimes are compatibility targets until adapter code
-and smoke evidence exist.
+Claude Code is the supported slash-skill runtime today. Codex CLI is
+first-class for the proven owner loop through generated `AGENTS.md`,
+`.agents/skills/main-branch-owner-loop`, deterministic `mb` facts, and workflow
+inventory. Other runtimes are compatibility targets until adapter code and
+smoke evidence exist.
 
 ## Current Direction: Chat-First, CLI-Backed Daily Loop
 

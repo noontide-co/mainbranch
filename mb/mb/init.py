@@ -166,8 +166,9 @@ def run(path: str, name: str) -> dict[str, Any]:
         name=business_name,
         gh_username=gh_user,
     )
-    if agents_result["changed"]:
-        created.append("AGENTS.md")
+    for created_path in agents_result.get("changed_paths", []):
+        if created_path not in created:
+            created.append(str(created_path))
 
     vocabulary_tmpl = _read_template("core_vocabulary.md.tmpl")
     if vocabulary_tmpl:

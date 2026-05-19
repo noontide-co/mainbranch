@@ -84,14 +84,17 @@ current paths, frontmatter, JSON keys, validator rules, and command names.
 
 ## Codex Lifecycle Workflow Index
 
-This tracked `AGENTS.md` file is the current Codex lifecycle discovery surface.
-It is owned by `mb init`, `mb onboard`, `mb doctor repair`, and the operator.
-Keep it compact: route to lifecycle workflows and `mb` facts here, but do not
-duplicate the full Main Branch skill tree.
+This tracked `AGENTS.md` file is the repo-level Codex bootstrap. The generated
+project-local skill at `.agents/skills/main-branch-owner-loop/SKILL.md` is the
+Codex-native owner-loop discovery surface. Both are owned by `mb init`,
+`mb onboard`, `mb doctor repair`, and the operator. Keep them compact: route to
+lifecycle workflows and `mb` facts, but do not duplicate the full Main Branch
+skill tree.
 
-Do not create `.agents/skills`, Codex plugin manifests, generated runtime
-files, or symlinked Claude skills unless a future `mb` command or issue says
-that surface is supported for this repo.
+Use `.agents/skills/main-branch-owner-loop` for the proven owner loop only. Do
+not create Codex plugin manifests, copied Claude skill trees, or symlinked
+Claude skills unless a future `mb` command or issue says that surface is
+supported for this repo.
 
 Use this index to map natural Codex requests:
 

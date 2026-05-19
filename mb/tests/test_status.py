@@ -1964,6 +1964,22 @@ def test_status_human_output_mentions_core_sections(tmp_path: Path, monkeypatch)
     assert "next:" in result.stdout
 
 
+def test_status_human_labels_missing_codex_without_experimental_copy(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setattr(codex_mod, "_which", _without_codex)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    result = runner.invoke(app, ["status", str(repo), "--no-color", "--peek"])
+
+    assert result.exit_code == 0
+    assert "Codex: missing owner loop" in result.stdout
+    assert "experimental" not in result.stdout
+
+
 def test_status_since_last_check_uses_repo_marker(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     repo = tmp_path / "acme"

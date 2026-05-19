@@ -103,8 +103,9 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     assert "Do not pretend Claude" in text
     assert "slash commands exist in Codex." in text
     assert "## Codex Lifecycle Workflow Index" in text
-    assert "current Codex lifecycle discovery surface" in text
-    assert "Do not create `.agents/skills`" in text
+    assert "repo-level Codex bootstrap" in text
+    assert ".agents/skills/main-branch-owner-loop/SKILL.md" in text
+    assert "Use `.agents/skills/main-branch-owner-loop`" in text
     assert "Start the day / what next / get oriented" in text
     assert "Inspect status / what changed / what is stale" in text
     assert "Think / research / decide / codify" in text
@@ -189,6 +190,15 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert (target / "CLAUDE.md").exists()
     assert (target / "README.md").exists()
     assert (target / "AGENTS.md").exists()
+    assert (target / ".agents" / "skills" / "main-branch-owner-loop" / "SKILL.md").exists()
+    assert (
+        target
+        / ".agents"
+        / "skills"
+        / "main-branch-owner-loop"
+        / "references"
+        / "workflow-inventory.md"
+    ).exists()
     assert (target / ".github" / "CODEOWNERS").exists()
     assert (target / ".gitignore").exists()
     assert (target / ".mb" / "schema_version").read_text(encoding="utf-8") == "0.2\n"
@@ -221,6 +231,9 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert ".vip/local.yaml" in gitignore
     claude_md = (target / "CLAUDE.md").read_text()
     agents_md = (target / "AGENTS.md").read_text()
+    codex_skill = (
+        target / ".agents" / "skills" / "main-branch-owner-loop" / "SKILL.md"
+    ).read_text()
     readme_md = (target / "README.md").read_text()
     assert "Acme Brewing" in claude_md
     assert "Acme Brewing" in agents_md
@@ -245,6 +258,8 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     _assert_claude_md_cli_first_contract(claude_md)
     _assert_claude_md_primitive_routing_contract(claude_md)
     _assert_agents_md_codex_start_contract(agents_md)
+    assert "Main Branch owner loop for Codex" in codex_skill
+    assert "mb workflow list --runtime codex --json" in codex_skill
     assert codex_mod.instructions_status(target)["ok"] is True
 
 
