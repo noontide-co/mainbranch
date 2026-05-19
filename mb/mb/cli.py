@@ -412,7 +412,18 @@ def workflow_list_cmd(
     """List supported and pending workflow surfaces for a runtime."""
     normalized_runtime = runtime.strip().lower().replace("-", "_")
     if normalized_runtime not in {"codex", "codex_cli"}:
-        typer.echo("mb workflow list: only --runtime codex is available today", err=True)
+        message = "mb workflow list: only --runtime codex is available today"
+        if json_out:
+            typer.echo(
+                _json_error_payload(
+                    command="mb workflow list",
+                    schema_name="mainbranch.workflow.inventory.result",
+                    code="unsupported_runtime",
+                    message=message,
+                )
+            )
+        else:
+            typer.echo(message, err=True)
         raise typer.Exit(2)
     result = codex_mod.workflow_inventory(runtime="codex")
     if json_out:

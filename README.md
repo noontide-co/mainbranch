@@ -14,7 +14,7 @@
   <a href="https://github.com/noontide-co/mainbranch/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/noontide-co/mainbranch/ci.yml?label=CI"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <img alt="Runtime" src="https://img.shields.io/badge/Claude%20Code-first--class-black">
-  <img alt="Codex" src="https://img.shields.io/badge/Codex-experimental%20CLI--first-orange">
+  <img alt="Codex" src="https://img.shields.io/badge/Codex-first--class%20owner--loop-blue">
 </p>
 
 <p align="center">

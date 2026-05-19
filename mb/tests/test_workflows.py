@@ -185,6 +185,24 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
     assert by_id["wiki"]["codex_status"] == "intentionally_unsupported"
 
 
+def test_codex_workflow_inventory_json_unsupported_runtime_uses_error_envelope() -> None:
+    result = runner.invoke(app, ["workflow", "list", "--runtime", "claude", "--json"])
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["result_status"] == "error"
+    assert payload["mb_command"] == "mb workflow list"
+    assert payload["result_schema"]["name"] == "mainbranch.workflow.inventory.result"
+    assert payload["errors"] == [
+        {
+            "code": "unsupported_runtime",
+            "message": "mb workflow list: only --runtime codex is available today",
+        }
+    ]
+    assert result.stderr == ""
+
+
 def test_drift_detection_flags_omitted_required_command_or_fact() -> None:
     workflow = load_workflow(WORKFLOW)
     shell = render_codex_shell(workflow)

@@ -4257,7 +4257,9 @@ def render_human(
     codex = runtime.get("codex_cli") or {}
     claude_mark = "[green]found[/green]" if claude["found"] else "[yellow]missing[/yellow]"
     skill_mark = "[green]wired[/green]" if skills["ok"] else "[yellow]missing[/yellow]"
-    codex_mark = "[green]ready[/green]" if codex.get("ok") else "[blue]experimental[/blue]"
+    codex_label = codex_mod.human_readiness_label(codex)
+    codex_style = "green" if codex_label == "ready" else "yellow"
+    codex_mark = f"[{codex_style}]{codex_label}[/{codex_style}] owner loop"
     console.print(
         f"[bold]Runtime[/bold] Claude Code: {claude_mark}  skills: {skill_mark}  "
         f"Codex: {codex_mark}"

@@ -914,6 +914,20 @@ def readiness(repo: str | Path) -> dict[str, Any]:
     }
 
 
+def human_readiness_label(readiness_report: dict[str, Any]) -> str:
+    """Return a short user-facing Codex readiness label."""
+
+    if readiness_report.get("ok"):
+        return "ready"
+    executable = readiness_report.get("executable") or {}
+    if not executable.get("found"):
+        return "missing"
+    instructions = readiness_report.get("instructions") or {}
+    if not instructions.get("ok"):
+        return "needs setup"
+    return "not ready"
+
+
 def write_agents_md(
     repo: str | Path,
     *,

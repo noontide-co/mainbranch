@@ -405,9 +405,10 @@ def render_human(report: dict[str, Any]) -> None:
         + ("[green]found[/green]" if runtime["found"] else "[red]missing[/red]")
     )
     codex = runtime.get("codex_cli") or {}
+    codex_label = codex_mod.human_readiness_label(codex)
+    codex_style = "green" if codex_label == "ready" else "yellow"
     console.print(
-        "[bold]Codex[/bold]  "
-        + ("[green]ready[/green]" if codex.get("ok") else "[blue]experimental[/blue]")
+        "[bold]Codex[/bold]  " + f"[{codex_style}]{codex_label}[/{codex_style}]" + "  owner loop"
     )
     console.print(
         "[bold]Skills[/bold]  /mb-start "
