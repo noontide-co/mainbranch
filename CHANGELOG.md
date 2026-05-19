@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added source-ingestion privacy rails for transcripts, authenticated
+  community/provider sources, mixed-account manifests, skip filters, proof
+  permission gates, and `/mb-think` routing. Refs MAIN-409, #657.
+
 ## [0.3.27] - 2026-05-18
 
 v0.3.27 packages the shared-workflow and customer-call cleanup batch after

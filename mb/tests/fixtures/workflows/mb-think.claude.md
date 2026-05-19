@@ -3,7 +3,7 @@
 Source workflow: `workflows/mb-think/workflow.md`
 Runtime support: `claude_code: supported_shell`
 Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`, `provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`, `destructive_operations`, `structured_collection`, `public_issue_or_proposal`
-Public/private boundaries: `no_secrets`, `no_raw_provider_exports`, `no_customer_member_data`, `no_private_runtime_settings`, `no_private_dms_or_gated_communities`, `no_raw_finance_legal_records`
+Public/private boundaries: `no_secrets`, `no_raw_provider_exports`, `no_raw_transcripts`, `no_customer_member_data`, `no_private_runtime_settings`, `no_private_dms_or_gated_communities`, `no_raw_finance_legal_records`
 
 Use from `/mb-think` when the operator asks to research, decide, figure out,
 compare, codify, sharpen an offer, or turn learning into durable business
@@ -57,11 +57,14 @@ This snapshot does not replace shipped `.claude/skills/mb-think/SKILL.md`.
    caveats, promotion limits, and public/private handling.
 5. Write a decision when durable business truth changes. Codify only after the
    operator accepts the direction.
-6. For stale source, claim, proof, or angle cleanup, identify the stale item,
+6. For transcripts, authenticated community content, provider recordings, or
+   mixed private/business sources, use manifest-first allow/skip filters before
+   reading content. Route synthesized output, not raw payloads.
+7. For stale source, claim, proof, or angle cleanup, identify the stale item,
    find downstream usage, keep history auditable with a stale note, reconcile
    current truth after approval, record and codify the decision, then
    checkpoint only after approval.
-7. Ask for approval before creating or editing business files, promoting
+8. Ask for approval before creating or editing business files, promoting
    research into core truth, using structured collection, or saving a
    checkpoint.
 

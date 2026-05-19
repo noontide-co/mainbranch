@@ -2,6 +2,11 @@
 
 When user has local media files to mine, use whisper.
 
+If the recording comes from a meeting provider, phone-call system,
+authenticated community, shared drive, mixed private/business account, or other
+source that may contain restricted data, run the source-ingestion privacy rail
+before transcription or content reads: [`source-ingestion.md`](source-ingestion.md).
+
 ---
 
 ## Prerequisites Check
@@ -90,15 +95,21 @@ Trigger phrases:
 
 ## Output
 
-Save transcripts to:
-- `research/YYYY-MM-DD-[topic]-transcript.txt` (raw)
-- Or synthesize directly into `research/YYYY-MM-DD-[topic]-mining.md`
+Save raw transcripts to OS temp or ignored local scratch first. Commit the
+synthesis by default:
+
+- `research/YYYY-MM-DD-[topic]-mining.md`
 
 **Always synthesize.** Raw transcripts are rarely useful. Extract:
 - Key insights and frameworks
 - Quotable moments
 - Messaging patterns
 - Action items mentioned
+
+Do not commit full transcripts, phone-call payloads, meeting exports,
+authenticated-community content, customer/member data, or provider raw output
+unless the operator explicitly approves a short sanitized excerpt and the
+public/private boundary is safe.
 
 ---
 

@@ -75,7 +75,7 @@ the output with `brief_format: grok-8` and include all eight categories.
 | `-voice-mining.md` | Voice memo transcription |
 | `-competitor-mining.md` | Competitor site mining |
 | `-internal-mining.md` | Internal data (emails, DMs, reviews) |
-| `-transcript.txt` | Raw transcript (use specific `-mining.md` for synthesized) |
+| `-source-mining.md` | Authenticated/private source synthesis after manifest-first review |
 | `-audit.md` | Site or system audit |
 | (none) | General or mixed sources |
 
@@ -156,6 +156,14 @@ comment dumps, customer records, full tweet threads, and copyrighted page
 copies do not belong in committed research files. Cite source URLs and keep
 only concise excerpts needed to support the synthesis.
 
+For transcripts, authenticated community content, connected-provider
+recordings, cloud-drive files, call notes, exported chats, or mixed
+private/business sources, use the source-ingestion privacy rail before reading
+content: [`source-ingestion.md`](source-ingestion.md).
+Inventory sources, review a manifest, apply allow/skip filters, then read only
+the smallest approved slice. Commit synthesized findings, not raw provider
+payloads or transcripts.
+
 ### Provider Routing
 
 - Use Apify only as optional read-only enrichment, preferably through MCP for
@@ -186,6 +194,9 @@ only concise excerpts needed to support the synthesis.
 6. **Local video/audio** — User's own recordings, voice memos, Loom exports (see [local-transcription.md](local-transcription.md))
 7. **Customer/review/comment evidence** — When researching ad or organic angles,
    use [winning-ad-research.md](winning-ad-research.md)
+8. **Authenticated/private source sets** — Use `source-ingestion.md` first for
+   manifest-first review, skip filters, proof-permission gates, and private
+   evidence handling
 
 ---
 
@@ -258,6 +269,8 @@ Then fetch results with `mcp__apify__get-actor-output` using the returned datase
 2. Extract quotable moments
 3. Note messaging patterns
 4. Save to `research/YYYY-MM-DD-[topic]-mining.md`
+5. For private or authenticated sources, keep raw output in ignored scratch and
+   record proof candidates with permission fields before public use
 
 **Example workflow:**
 > User: "Research what Alex Hormozi says about pricing"
