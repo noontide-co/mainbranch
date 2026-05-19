@@ -5,11 +5,12 @@ Runtime support: `codex_cli: experimental_shell`
 Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`, `provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`, `destructive_operations`, `structured_collection`, `public_issue_or_proposal`
 Public/private boundaries: `no_secrets`, `no_raw_provider_exports`, `no_raw_transcripts`, `no_customer_member_data`, `no_private_runtime_settings`, `no_private_dms_or_gated_communities`, `no_raw_finance_legal_records`
 
-Codex remains experimental and CLI-first. This guidance tells Codex how to
-treat a natural-language request as a Main Branch thinking task through
-`AGENTS.md` posture and deterministic `mb` facts. It does not claim Claude
-Code slash commands work inside Codex or that all Main Branch workflows are
-available in Codex.
+Codex remains experimental and CLI-first. This guidance is generated from the
+engine workflow source for business-repo `AGENTS.md`; the business repo does
+not need to contain `workflows/mb-think/workflow.md`. Treat this rendered route
+as the Codex shell for natural-language thinking tasks. It does not claim
+Claude Code slash commands work inside Codex or that all Main Branch workflows
+are available in Codex.
 
 ## Required mb Commands
 
@@ -84,6 +85,5 @@ Stop condition: <what is enough signal>.
 Durable targets: <research/, decisions/, core/, bets/, pushes/, log/, or documents/>.
 Approval needed before writes: yes.
 ```
-
 Do not tell Codex users to run Claude slash commands. Runtime smoke is required
 before docs say this selected workflow is supported or available in Codex.

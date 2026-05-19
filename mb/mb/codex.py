@@ -73,6 +73,7 @@ REQUIRED_LIFECYCLE_GUIDANCE = (
     "## Codex Status Workflow",
     "## Codex Think Route",
     f"Engine source workflow: `{CODEX_THINK_SOURCE_WORKFLOW}`",
+    "does not need to contain that engine source file",
     "Shared source required `mb` commands",
     "Shared source required JSON fact paths",
     "Shared source gates",
@@ -261,7 +262,10 @@ This is Codex-native guidance for the existing `mb-think` shared workflow
 source. It is not a slash command, and it does not mean all Main Branch skills
 work in Codex.
 
-Engine source workflow: `workflows/mb-think/workflow.md`
+Engine source workflow: `workflows/mb-think/workflow.md`. This business repo
+does not need to contain that engine source file. Treat this generated
+`AGENTS.md` section as the Codex shell for that source unless you are explicitly
+working inside the Main Branch engine repo.
 
 Shared source required `mb` commands:
 

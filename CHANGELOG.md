@@ -17,6 +17,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   community/provider sources, mixed-account manifests, skip filters, proof
   permission gates, and `/mb-think` routing. Refs MAIN-409, #657.
 
+### Changed
+
+- Tightened generated Codex `AGENTS.md` thinking-route guidance so fresh
+  business repos treat the rendered route as the Codex shell for the
+  `mb-think` shared workflow source instead of chasing engine-only workflow
+  paths. Refs MAIN-418, #671.
+
 ## [0.3.27] - 2026-05-18
 
 v0.3.27 packages the shared-workflow and customer-call cleanup batch after
