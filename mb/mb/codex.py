@@ -72,6 +72,7 @@ REQUIRED_LIFECYCLE_GUIDANCE = (
     "## Codex Status Workflow",
     "## Codex Think Route",
     f"Engine source workflow: `{CODEX_THINK_SOURCE_WORKFLOW}`",
+    "does not need to contain that engine source file",
     "Shared source required `mb` commands",
     "Shared source required JSON fact paths",
     "Shared source gates",
