@@ -20,6 +20,7 @@ from mb import __version__
 from mb import ads as ads_mod
 from mb import books as books_mod
 from mb import checkpoint as checkpoint_mod
+from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import doctor as doctor_mod
 from mb import educational as educational_mod
@@ -131,6 +132,13 @@ suggest_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(suggest_app, name="suggest")
+
+workflow_app = typer.Typer(
+    name="workflow",
+    help="List Main Branch workflow support across runtimes.",
+    no_args_is_help=True,
+)
+app.add_typer(workflow_app, name="workflow")
 
 CONNECT_METADATA_OPTION = typer.Option(
     [],
@@ -377,6 +385,46 @@ def _render_onboard_human(result: dict[str, Any]) -> None:
     if warnings:
         console.print(f"\nFor a full setup check, run `{result['doctor_command']}`.")
     console.print()
+
+
+def _render_workflow_inventory_human(result: dict[str, Any]) -> None:
+    from rich.console import Console
+
+    console = Console()
+    console.print("\n[bold]Main Branch workflow support[/bold]")
+    console.print(f"runtime: {result['runtime']}")
+    console.print(f"entrypoint: {result['entrypoint']}")
+    console.print()
+    for item in result["items"]:
+        commands = ", ".join(item.get("commands") or [])
+        suffix = f"  facts: {commands}" if commands else ""
+        console.print(
+            f"- {item['label']}  [{item['codex_status']}]\n  Codex: {item['codex_surface']}{suffix}"
+        )
+    console.print()
+
+
+@workflow_app.command("list")
+def workflow_list_cmd(
+    runtime: str = typer.Option("codex", "--runtime", help="Runtime inventory to show."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """List supported and pending workflow surfaces for a runtime."""
+    normalized_runtime = runtime.strip().lower().replace("-", "_")
+    if normalized_runtime not in {"codex", "codex_cli"}:
+        typer.echo("mb workflow list: only --runtime codex is available today", err=True)
+        raise typer.Exit(2)
+    result = codex_mod.workflow_inventory(runtime="codex")
+    if json_out:
+        typer.echo(
+            _json_payload(
+                result,
+                command="mb workflow list",
+                schema_name="mainbranch.workflow.inventory.result",
+            )
+        )
+    else:
+        _render_workflow_inventory_human(result)
 
 
 @onboard_app.callback()

@@ -431,7 +431,7 @@ def _surface(path: str) -> str:
         return "site"
     if path in {"package.json", "astro.config.mjs", "vite.config.ts", "vite.config.js"}:
         return "site"
-    if path.startswith((".github/", ".claude/", ".mainbranch/", ".mb/")):
+    if path.startswith((".github/", ".agents/", ".claude/", ".mainbranch/", ".mb/")):
         return "config"
     if path in {"AGENTS.md", "CLAUDE.md", ".gitignore", "README.md"}:
         return "config"

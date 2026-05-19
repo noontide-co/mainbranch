@@ -5,7 +5,7 @@ description: Research, decide, and codify durable Main Branch business truth fro
 loops: [sense, decide, ship]
 runtime_support:
   claude_code: supported_shell
-  codex_cli: experimental_shell
+  codex_cli: owner_loop_shell
   future: planned
 runtime_surfaces:
   claude_code: .claude/skills/mb-think/SKILL.md
@@ -293,11 +293,11 @@ replacement and includes skill validation plus runtime evidence.
 
 ### Codex CLI
 
-Codex remains experimental and CLI-first. Rendered Codex shell snapshots must
-start from generated `AGENTS.md` style grounding, deterministic `mb` facts, and
-natural-language workflow routing.
+Codex is first-class for the proven owner loop only. Rendered Codex shell
+snapshots must start from generated `AGENTS.md` style grounding, deterministic
+`mb` facts, and natural-language workflow routing.
 
 Do not say `/mb-think` works inside Codex. Do not say "Run `/mb-think`." Do
-not claim selected Codex workflow support until a fresh fixture repo and
-read-only `codex exec --json --ephemeral --sandbox read-only -C <repo>` smoke
-prove the guidance is actually used.
+not claim broader Codex workflow support until a fresh fixture repo and read-only
+`codex exec --json --ephemeral --sandbox read-only -C <repo>` smoke prove the
+guidance is actually used.

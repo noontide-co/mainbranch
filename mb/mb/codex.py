@@ -14,10 +14,25 @@ from typing import Any
 
 AGENTS_TEMPLATE = "AGENTS.md.tmpl"
 AGENTS_RELATIVE_PATH = "AGENTS.md"
+CODEX_SKILL_DIR_RELATIVE_PATH = ".agents/skills/main-branch-owner-loop"
+CODEX_SKILL_RELATIVE_PATH = f"{CODEX_SKILL_DIR_RELATIVE_PATH}/SKILL.md"
+CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH = (
+    f"{CODEX_SKILL_DIR_RELATIVE_PATH}/references/workflow-inventory.md"
+)
 REQUIRED_FACT_COMMANDS = (
     "mb status --json --peek",
     "mb start --json",
     "mb doctor repair --plan",
+)
+OWNER_LOOP_COMMANDS = (
+    "mb --version",
+    "mb status --json --peek",
+    "mb start --json",
+    "mb doctor repair --plan --json",
+    "mb update --check --json",
+    "mb validate --json",
+    "mb checkpoint --plan --json",
+    "mb workflow list --runtime codex --json",
 )
 CODEX_THINK_SOURCE_WORKFLOW = "workflows/mb-think/workflow.md"
 CODEX_THINK_REQUIRED_MB_COMMANDS = (
@@ -78,7 +93,7 @@ REQUIRED_LIFECYCLE_GUIDANCE = (
     "Shared source required JSON fact paths",
     "Shared source gates",
     "Shared public/private boundaries",
-    "Do not create `.agents/skills`",
+    "Use `.agents/skills/main-branch-owner-loop`",
     "do not claim these workflows are ported to",
 )
 REQUIRED_LIFECYCLE_GUIDANCE_MARKERS = (
@@ -87,6 +102,139 @@ REQUIRED_LIFECYCLE_GUIDANCE_MARKERS = (
     *(f"- `{fact}`" for fact in CODEX_THINK_REQUIRED_JSON_FACTS),
     *(f"`{gate}`" for gate in CODEX_THINK_APPROVAL_GATES),
     *(f"`{boundary}`" for boundary in CODEX_THINK_PUBLIC_PRIVATE_BOUNDARIES),
+)
+CODEX_SKILL_REQUIRED_MARKERS = (
+    "Main Branch owner loop for Codex",
+    "mb workflow list --runtime codex --json",
+    "start/status/setup/update/doctor",
+    "think/codify",
+    "end/checkpoint/save",
+    "Ask before durable writes",
+)
+
+CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
+    {
+        "id": "owner-loop-start-status",
+        "label": "Start, status, and what changed",
+        "claude_surface": "/mb-start, /mb-status",
+        "codex_status": "supported",
+        "codex_surface": "AGENTS.md and .agents/skills/main-branch-owner-loop",
+        "commands": ("mb status --json --peek", "mb start --json"),
+        "notes": (
+            "Codex starts from deterministic status/start facts, translates them "
+            "into business language, and routes one next owner-loop move."
+        ),
+    },
+    {
+        "id": "owner-loop-setup-repair-update",
+        "label": "Setup, update, doctor, and repair planning",
+        "claude_surface": "/mb-setup, /mb-update, /mb-start repair routing",
+        "codex_status": "supported",
+        "codex_surface": "AGENTS.md and .agents/skills/main-branch-owner-loop",
+        "commands": (
+            "mb --version",
+            "mb doctor repair --plan --json",
+            "mb update --check --json",
+        ),
+        "notes": (
+            "Codex may inspect plans and explain next steps. Applying updates, "
+            "repairs, migrations, or setup writes requires explicit approval."
+        ),
+    },
+    {
+        "id": "think-codify",
+        "label": "Think, research, decide, and codify",
+        "claude_surface": "/mb-think",
+        "codex_status": "supported",
+        "codex_surface": "AGENTS.md#codex-think-route and owner-loop skill",
+        "shared_source": CODEX_THINK_SOURCE_WORKFLOW,
+        "commands": CODEX_THINK_REQUIRED_MB_COMMANDS,
+        "notes": (
+            "Codex uses the shared mb-think contract for research depth, source "
+            "privacy, decision routing, codification, and approval gates."
+        ),
+    },
+    {
+        "id": "end-checkpoint-save",
+        "label": "End, checkpoint, and save business memory",
+        "claude_surface": "/mb-end, mb checkpoint",
+        "codex_status": "supported",
+        "codex_surface": "AGENTS.md and .agents/skills/main-branch-owner-loop",
+        "commands": ("mb checkpoint --plan --json", "mb validate --json"),
+        "notes": (
+            "Codex can plan a closeout and propose checkpoint subjects. Creating "
+            "a checkpoint or editing files requires explicit approval."
+        ),
+    },
+    {
+        "id": "workflow-discovery",
+        "label": "Workflow discovery and support inventory",
+        "claude_surface": "/mb-help and docs",
+        "codex_status": "supported",
+        "codex_surface": "mb workflow list and owner-loop skill inventory",
+        "commands": ("mb workflow list --runtime codex --json",),
+        "notes": "Codex users can inspect supported, pending, and unsupported workflow surfaces.",
+    },
+    {
+        "id": "bets",
+        "label": "Bet lifecycle",
+        "claude_surface": "/mb-bet",
+        "codex_status": "pending_shared_source_migration",
+        "codex_surface": "Read-only facts and business-file planning only",
+        "commands": ("mb status --json --peek", "mb validate --json"),
+        "notes": (
+            "Codex may inspect and discuss bets. A generated Codex shell should "
+            "wait for a shared bet workflow source."
+        ),
+    },
+    {
+        "id": "ads",
+        "label": "Ads and paid creative",
+        "claude_surface": "/mb-ads",
+        "codex_status": "pending_shared_source_migration",
+        "codex_surface": "Read-only planning only",
+        "commands": ("mb status --json --peek", "mb connect doctor --json"),
+        "notes": "No provider mutation, spend, upload, or publishing is supported in Codex.",
+    },
+    {
+        "id": "organic-content",
+        "label": "Organic content and newsletter planning",
+        "claude_surface": "/mb-organic and related playbooks",
+        "codex_status": "pending_shared_source_migration",
+        "codex_surface": "Read-only planning only",
+        "commands": ("mb status --json --peek",),
+        "notes": (
+            "Codex may route content strategy questions through think/codify, "
+            "but publishing and newsletter dogfood remain outside this parity slice."
+        ),
+    },
+    {
+        "id": "site",
+        "label": "Site and page production",
+        "claude_surface": "/mb-site",
+        "codex_status": "pending_shared_source_migration",
+        "codex_surface": "Read-only planning and site readiness facts only",
+        "commands": ("mb status --json --peek", "mb site check --json"),
+        "notes": "Codex must not claim site build, deploy, domain, or publishing parity.",
+    },
+    {
+        "id": "wiki",
+        "label": "Wiki and personal atomic notes",
+        "claude_surface": "/mb-wiki",
+        "codex_status": "intentionally_unsupported",
+        "codex_surface": "None",
+        "commands": (),
+        "notes": "Specialty workflow outside the v0.3.28 owner-loop parity target.",
+    },
+    {
+        "id": "skill-authoring",
+        "label": "Skill concept, draft, and review",
+        "claude_surface": "/mb-skill-concept, /mb-skill-brief-draft, /mb-skill-review",
+        "codex_status": "intentionally_unsupported",
+        "codex_surface": "None",
+        "commands": (),
+        "notes": "Engine-contributor workflow, not a business owner-loop runtime surface.",
+    },
 )
 
 
@@ -176,14 +324,17 @@ canonical paths, frontmatter, JSON keys, validator rules, and command names.
 
 ## Codex Lifecycle Workflow Index
 
-This tracked `AGENTS.md` file is the current Codex lifecycle discovery surface.
-It is owned by `mb init`, `mb onboard`, `mb doctor repair`, and the operator.
-Keep it compact: route to lifecycle workflows and `mb` facts here, but do not
-duplicate the full Main Branch skill tree.
+This tracked `AGENTS.md` file is the repo-level Codex bootstrap. The generated
+project-local skill at `.agents/skills/main-branch-owner-loop/SKILL.md` is the
+Codex-native owner-loop discovery surface. Both are owned by `mb init`,
+`mb onboard`, `mb doctor repair`, and the operator. Keep them compact: route to
+lifecycle workflows and `mb` facts, but do not duplicate the full Main Branch
+skill tree.
 
-Do not create `.agents/skills`, Codex plugin manifests, generated runtime
-files, or symlinked Claude skills unless a future `mb` command or issue says
-that surface is supported for this repo.
+Use `.agents/skills/main-branch-owner-loop` for the proven owner loop only. Do
+not create Codex plugin manifests, copied Claude skill trees, or symlinked
+Claude skills unless a future `mb` command or issue says that surface is
+supported for this repo.
 
 Use this index to map natural Codex requests:
 
@@ -486,8 +637,137 @@ def render_agents_md(repo: str | Path, *, name: str = "", gh_username: str = "")
     return _render(template, mapping)
 
 
+def _commands_for_inventory_item(item: dict[str, Any]) -> tuple[str, ...]:
+    commands = item.get("commands") or ()
+    if not isinstance(commands, tuple):
+        return tuple(str(command) for command in commands)
+    return tuple(str(command) for command in commands)
+
+
+def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
+    """Return the public-safe Main Branch workflow support inventory."""
+
+    items = []
+    for item in CODEX_WORKFLOW_INVENTORY:
+        copied = dict(item)
+        copied["commands"] = list(_commands_for_inventory_item(item))
+        items.append(copied)
+    statuses = sorted({str(item["codex_status"]) for item in CODEX_WORKFLOW_INVENTORY})
+    return {
+        "ok": True,
+        "runtime": runtime,
+        "support_level": "first_class_owner_loop",
+        "entrypoint": CODEX_SKILL_RELATIVE_PATH,
+        "repo_guidance": AGENTS_RELATIVE_PATH,
+        "inventory_path": CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
+        "statuses": statuses,
+        "items": items,
+        "safe_to_share": True,
+    }
+
+
+def render_workflow_inventory_md() -> str:
+    """Render the project-local Codex workflow inventory reference."""
+
+    rows = []
+    for item in CODEX_WORKFLOW_INVENTORY:
+        commands = ", ".join(f"`{command}`" for command in _commands_for_inventory_item(item))
+        rows.append(
+            "| {label} | `{status}` | {claude} | {codex} | {commands} |".format(
+                label=item["label"],
+                status=item["codex_status"],
+                claude=item["claude_surface"],
+                codex=item["codex_surface"],
+                commands=commands or "None",
+            )
+        )
+    return (
+        "# Main Branch Codex Workflow Inventory\n\n"
+        "Generated by `mb`. Do not edit by hand in business repos. This file maps "
+        "Main Branch workflow surfaces to the Codex owner-loop support boundary.\n\n"
+        "Status meanings:\n\n"
+        "- `supported`: Codex can use this surface for the owner loop from "
+        "deterministic `mb` facts and generated guidance.\n"
+        "- `pending_shared_source_migration`: Codex may plan from read-only facts, "
+        "but a runtime shell should wait for a shared workflow source.\n"
+        "- `generated_shell_pending`: a shared source exists, but a generated Codex "
+        "shell still needs implementation and smoke evidence.\n"
+        "- `intentionally_unsupported`: outside the current Codex owner-loop target.\n\n"
+        "| Workflow | Codex status | Claude Code surface | Codex surface | Fact commands |\n"
+        "|---|---|---|---|---|\n" + "\n".join(rows) + "\n\n"
+        "Codex must ask before durable writes, checkpoints, repairs, updates, "
+        "migrations, provider mutation, publishing, spend, customer contact, or "
+        "public issue/proposal submission.\n"
+    )
+
+
+def render_codex_skill_md() -> str:
+    """Render the project-local Codex skill for the owner loop."""
+
+    command_lines = "\n".join(f"- `{command}`" for command in OWNER_LOOP_COMMANDS)
+    description = (
+        "Use when the operator asks Codex to run Main Branch daily owner-loop work "
+        "from a business repo: start/status/setup/update/doctor, think/codify, "
+        "end/checkpoint/save, validate, or workflow discovery. Starts from "
+        "deterministic mb facts and asks before durable writes, provider mutations, "
+        "publishing, spend, customer contact, or checkpoints."
+    )
+    return f"""---
+name: main-branch-owner-loop
+description: >-
+  {description}
+---
+
+# Main Branch owner loop for Codex
+
+Run Main Branch owner-loop work from a business repo. This is a Codex-native
+skill generated by `mb`; `AGENTS.md` remains the repo-level bootstrap.
+
+## Start Here
+
+Before advice, run read-only facts that fit the request:
+
+{command_lines}
+
+Use `mb status --json --peek` as the first daily read. Use `mb start --json`
+when runtime handoff or adapter readiness matters. Use
+`mb workflow list --runtime codex --json` when the operator asks what Codex can
+do.
+
+## Supported Owner Loop
+
+- start/status/setup/update/doctor: inspect facts and plans, then ask before
+  applying repairs, migrations, setup writes, or updates.
+- think/codify: follow the `mb-think` shared workflow route in `AGENTS.md`.
+- end/checkpoint/save: run `mb checkpoint --plan --json`, propose a
+  business-readable checkpoint, and ask before saving it.
+- validate: run `mb validate --json` and explain repo health in business
+  language before technical details.
+- workflow discovery: read `references/workflow-inventory.md` or run
+  `mb workflow list --runtime codex --json`.
+
+## Approval Gates
+
+Ask before durable writes, checkpoints, updates, repairs, migrations, provider
+mutation, publishing, spend, customer contact, destructive operations, raw
+private-source reads, or public issue/proposal submission.
+
+Do not claim Claude Code slash commands work in Codex. Do not claim ads, site,
+organic, provider-write, wiki, or skill-authoring parity unless the inventory
+marks that surface `supported`.
+"""
+
+
 def agents_path(repo: str | Path) -> Path:
     return Path(repo).expanduser().resolve() / AGENTS_RELATIVE_PATH
+
+
+def codex_skill_path(repo: str | Path) -> Path:
+    return Path(repo).expanduser().resolve() / CODEX_SKILL_RELATIVE_PATH
+
+
+def workflow_inventory_path(repo: str | Path) -> Path:
+    return Path(repo).expanduser().resolve() / CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH
 
 
 def executable_status() -> dict[str, Any]:
@@ -496,7 +776,57 @@ def executable_status() -> dict[str, Any]:
         "found": bool(path),
         "path": path,
         "executable": "codex",
-        "repair": "" if path else "Install Codex CLI before using the experimental Codex adapter.",
+        "repair": "" if path else "Install Codex CLI before using the Codex owner-loop adapter.",
+    }
+
+
+def skill_status(repo: str | Path) -> dict[str, Any]:
+    target = Path(repo).expanduser().resolve()
+    skill = codex_skill_path(target)
+    inventory = workflow_inventory_path(target)
+    skill_exists = skill.is_file()
+    inventory_exists = inventory.is_file()
+    expected_skill = render_codex_skill_md()
+    expected_inventory = render_workflow_inventory_md()
+    try:
+        skill_text = skill.read_text(encoding="utf-8") if skill_exists else ""
+        inventory_text = inventory.read_text(encoding="utf-8") if inventory_exists else ""
+    except OSError as exc:
+        return {
+            "ok": False,
+            "exists": bool(skill_exists and inventory_exists),
+            "current": False,
+            "path": CODEX_SKILL_RELATIVE_PATH,
+            "inventory_path": CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
+            "missing_markers": list(CODEX_SKILL_REQUIRED_MARKERS),
+            "read_error": str(exc),
+            "repair": "Run `mb doctor repair --plan`, review, then `mb doctor repair --apply`.",
+            "repair_command": "mb doctor repair --apply",
+            "safe_to_share": True,
+        }
+    missing_markers = [
+        marker for marker in CODEX_SKILL_REQUIRED_MARKERS if marker not in skill_text
+    ]
+    template_match = bool(
+        skill_exists
+        and inventory_exists
+        and skill_text == expected_skill
+        and inventory_text == expected_inventory
+    )
+    ok = bool(skill_exists and inventory_exists and not missing_markers and template_match)
+    return {
+        "ok": ok,
+        "exists": bool(skill_exists and inventory_exists),
+        "current": template_match,
+        "path": CODEX_SKILL_RELATIVE_PATH,
+        "inventory_path": CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
+        "missing_markers": missing_markers,
+        "read_error": "",
+        "repair": ""
+        if ok
+        else "Run `mb doctor repair --plan`, review, then `mb doctor repair --apply`.",
+        "repair_command": "mb doctor repair --apply",
+        "safe_to_share": True,
     }
 
 
@@ -522,10 +852,11 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
     fact_grounding_ok = bool(
         exists and not missing_commands and approval_ok and slash_ok and lifecycle_discovery_ok
     )
+    skill = skill_status(target)
     template_match = bool(exists and text == expected)
-    current = fact_grounding_ok
+    current = bool(fact_grounding_ok and skill["ok"])
     return {
-        "ok": fact_grounding_ok,
+        "ok": current,
         "exists": exists,
         "current": current,
         "template_match": template_match,
@@ -535,10 +866,12 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
         "missing_fact_commands": missing_commands,
         "missing_lifecycle_guidance": missing_lifecycle_guidance,
         "lifecycle_discovery_ok": lifecycle_discovery_ok,
+        "skill": skill,
+        "workflow_inventory": workflow_inventory(),
         "approval_boundary_ok": approval_ok,
         "codex_native_ok": slash_ok,
         "repair": ""
-        if fact_grounding_ok
+        if current
         else "Run `mb doctor repair --plan`, review, then `mb doctor repair --apply`.",
         "repair_command": "mb doctor repair --apply",
         "read_error": read_error,
@@ -553,9 +886,11 @@ def readiness(repo: str | Path) -> dict[str, Any]:
     return {
         "ok": ok,
         "status": "ready" if ok else "needs_setup",
-        "support_level": "experimental_cli_first_adapter",
+        "support_level": "first_class_owner_loop",
         "executable": executable,
         "instructions": instructions,
+        "skill": instructions["skill"],
+        "workflow_inventory": workflow_inventory(),
         "fact_commands": list(REQUIRED_FACT_COMMANDS),
         "repair": "" if ok else instructions["repair"] or executable["repair"],
         "start_command": f"codex -C {shlex.quote(str(Path(repo).expanduser().resolve()))}",
@@ -581,11 +916,32 @@ def write_agents_md(
     rendered = render_agents_md(target, name=name, gh_username=gh_username)
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
     changed = existing != rendered
+    changed_paths: list[str] = []
     if changed:
         path.write_text(rendered, encoding="utf-8")
+        changed_paths.append(AGENTS_RELATIVE_PATH)
+
+    skill_path = codex_skill_path(target)
+    skill_path.parent.mkdir(parents=True, exist_ok=True)
+    rendered_skill = render_codex_skill_md()
+    existing_skill = skill_path.read_text(encoding="utf-8") if skill_path.exists() else ""
+    if existing_skill != rendered_skill:
+        skill_path.write_text(rendered_skill, encoding="utf-8")
+        changed_paths.append(CODEX_SKILL_RELATIVE_PATH)
+
+    inventory_path = workflow_inventory_path(target)
+    inventory_path.parent.mkdir(parents=True, exist_ok=True)
+    rendered_inventory = render_workflow_inventory_md()
+    existing_inventory = (
+        inventory_path.read_text(encoding="utf-8") if inventory_path.exists() else ""
+    )
+    if existing_inventory != rendered_inventory:
+        inventory_path.write_text(rendered_inventory, encoding="utf-8")
+        changed_paths.append(CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH)
     return {
         "ok": True,
         "path": AGENTS_RELATIVE_PATH,
-        "changed": changed,
+        "changed": bool(changed_paths),
+        "changed_paths": changed_paths,
         "status": instructions_status(target),
     }

@@ -321,7 +321,8 @@ def test_doctor_repair_plan_reports_missing_codex_agents_md(tmp_path: Path) -> N
     assert agents_check["state"] == "warn"
     actions = {action["id"]: action for action in payload["actions"]}
     assert actions["codex-agents-md"]["safe_to_apply"] is True
-    assert actions["codex-agents-md"]["writes"] == ["AGENTS.md"]
+    assert "AGENTS.md" in actions["codex-agents-md"]["writes"]
+    assert ".agents/skills/main-branch-owner-loop/SKILL.md" in actions["codex-agents-md"]["writes"]
 
 
 def test_doctor_repair_plan_reports_stale_codex_lifecycle_guidance(tmp_path: Path) -> None:
@@ -378,7 +379,8 @@ def test_doctor_repair_plan_reports_pre_engine_source_boundary_codex_guidance(
     )
     actions = {action["id"]: action for action in payload["actions"]}
     assert actions["codex-agents-md"]["safe_to_apply"] is True
-    assert actions["codex-agents-md"]["writes"] == ["AGENTS.md"]
+    assert "AGENTS.md" in actions["codex-agents-md"]["writes"]
+    assert ".agents/skills/main-branch-owner-loop/SKILL.md" in actions["codex-agents-md"]["writes"]
 
 
 def test_doctor_repair_plan_reports_custom_codex_agents_missing_source_item(
@@ -423,6 +425,11 @@ def test_doctor_repair_apply_refreshes_codex_agents_md(tmp_path: Path) -> None:
     assert "## Codex Status Workflow" in agents_text
     assert "## Codex Think Route" in agents_text
     assert "mb status --json --peek" in agents_text
+    skill_text = (repo / ".agents" / "skills" / "main-branch-owner-loop" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Main Branch owner loop for Codex" in skill_text
+    assert "mb workflow list --runtime codex --json" in skill_text
 
 
 def test_doctor_repair_preserves_custom_codex_agents_md_when_contract_is_current(

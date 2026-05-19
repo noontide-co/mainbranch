@@ -3822,8 +3822,14 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
             {
                 "id": "codex_instructions_not_ready",
                 "severity": "warn",
-                "summary": "Codex AGENTS.md instructions are missing or stale.",
-                "evidence": [str(codex_instructions.get("path") or "AGENTS.md")],
+                "summary": "Codex owner-loop instructions are missing or stale.",
+                "evidence": [
+                    str(codex_instructions.get("path") or "AGENTS.md"),
+                    str(
+                        (codex_instructions.get("skill") or {}).get("path")
+                        or codex_mod.CODEX_SKILL_RELATIVE_PATH
+                    ),
+                ],
                 "repair": str(
                     codex_instructions.get("repair")
                     or "Run `mb doctor repair --plan`, then `mb doctor repair --apply`."

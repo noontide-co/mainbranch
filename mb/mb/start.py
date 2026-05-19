@@ -240,11 +240,14 @@ def _build_checks(
                 "name": "codex_agents_md",
                 "ok": bool(codex_instructions.get("ok")),
                 "severity": "warn" if codex_found else "info",
-                "detail": "AGENTS.md is present and points Codex to mb facts and lifecycle routes"
+                "detail": (
+                    "AGENTS.md and Codex owner-loop skill point Codex to mb facts, "
+                    "lifecycle routes, and workflow inventory"
+                )
                 if codex_instructions.get("ok")
                 else (
-                    "AGENTS.md is missing, stale, or missing required mb fact commands "
-                    "or lifecycle discovery guidance"
+                    "Codex AGENTS.md or owner-loop skill files are missing, stale, "
+                    "or missing required mb fact commands or lifecycle discovery guidance"
                 ),
                 "repair": codex_instructions.get("repair") if codex_found else "",
             },
