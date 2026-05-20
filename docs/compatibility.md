@@ -149,8 +149,8 @@ docs or skills should rely on it.
 Use `mb connect status --repo "$repo" --json` for Main Branch provider rails.
 Use the runtime's own tool surface for Claude.ai, Claude Code, Codex, Conductor,
 or future adapters. For the decision table that separates `mb connect`,
-Claude.ai connectors, Claude Code bridged tools/MCP, Codex/Conductor tools,
-local CLI/API-key paths, and unsupported providers, run:
+Claude.ai connectors, Claude Code bridged tools/MCP/plugins,
+Codex/Conductor tools, local CLI/API-key paths, and unsupported providers, run:
 
 ```bash
 mb educational provider-readiness
