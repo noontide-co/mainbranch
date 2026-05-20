@@ -33,6 +33,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   business repos treat the rendered route as the Codex shell for the
   `mb-think` shared workflow source instead of chasing engine-only workflow
   paths. Refs MAIN-418, #671.
+- Clarified connector and provider readiness guidance so Claude.ai connectors,
+  Claude Code bridged tools/MCP/plugins, Codex/Conductor tools, `mb connect`
+  rails, local CLI/API-key paths, and unsupported providers have separate
+  restart, OAuth/scope, and read-only smoke expectations. Refs MAIN-411, #654.
 
 ## [0.3.27] - 2026-05-18
 

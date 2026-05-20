@@ -2,7 +2,7 @@
 type: educational
 topic: provider-readiness
 status: draft
-last-updated: 2026-05-12
+last-updated: 2026-05-19
 ---
 
 # Provider readiness: connect outside tools only when the job needs them
@@ -34,6 +34,30 @@ For machine-readable status, agents and power users can use:
 mb status --json --peek
 mb connect doctor --json
 ```
+
+## Connector readiness decision table
+
+Do not treat every "connected" surface as the same thing. Claude.ai web chat,
+Claude Code, Codex, Conductor, provider CLIs, and `mb connect` have different
+readiness checks.
+
+| Surface | What it proves | Next smoke check | Restart or OAuth guidance |
+| --- | --- | --- | --- |
+| `mb connect` provider rail | Main Branch knows a repo-safe provider path, credential reference, metadata, and repair command. | Run `mb connect status --json` or `mb connect doctor --json`; for a specific provider, run the documented `mb connect test ... --json` when available. | No runtime restart is normally required for CLI facts. If the provider uses OAuth and cannot read expected files or accounts, refresh scopes in the provider, then rerun the read-only smoke. |
+| Claude.ai connector | The Claude.ai web product can access that connector in web chat. | In Claude.ai, ask for a harmless read-only action against a known non-sensitive file or record. | This does not prove Claude Code or Codex can see the connector. If access fails, update the connector's OAuth scopes or selected resources, then retry in Claude.ai. |
+| Claude Code bridged tool, MCP, or plugin | The current Claude Code session exposes a tool to the agent. | Restart Claude Code after installing or changing connectors, MCP servers, plugins, or marketplace tools, then ask the agent to list or perform a harmless read-only check with the tool. | Tool lists can be session-scoped. Restart after install, permission, OAuth, or scope changes before deciding the bridge is missing. |
+| Codex or Conductor tool/plugin | The current Codex/Conductor agent session exposes a tool to that agent. | Use the available tool's read-only operation against a safe target, or fall back to deterministic `mb`/CLI checks. | Availability in one hosted/local agent does not prove support in another runtime. Restart or start a new session after installing a plugin or changing connector scopes. |
+| Local CLI or API-key setup | The operator's machine can run the provider's official local tool or API path. | Run the provider's auth/status command and the smallest read-only command the provider documents. Store secrets outside the repo. | Shell sessions may need a restart after installing a CLI or changing environment variables. API keys and OAuth refresh tokens do not belong in markdown, GitHub issues, or tracked config. |
+| Unsupported, planned, or future provider | The provider may be useful, but Main Branch has no supported setup or smoke path yet. | Create or link a follow-up issue with the desired job, official provider path, privacy boundary, and smoke plan. | Do not claim support from a connector listing, local experiment, or provider marketing page. Keep the work manual until a supported rail exists. |
+
+When a connector exists but cannot read expected files, treat it as a scope or
+resource-selection problem before assuming Main Branch is broken. Re-authorize
+or refresh the connector with the minimum needed scope, restart the runtime if
+the tool list is session-scoped, then rerun a read-only smoke check.
+
+Provider writes, publishing, spend, account mutation, and customer contact need
+explicit operator approval and provider authority. A ready connector or passing
+read smoke is not approval to mutate the account.
 
 ## The default order
 
@@ -179,3 +203,8 @@ Main Branch does not claim all providers are fully automated. Trust the current
 CLI status, compatibility docs, and provider-specific smoke evidence. If a
 provider is marked planned or readiness, treat it as direction, not shipped live
 account support.
+
+Main Branch also does not claim that Claude.ai connector availability means
+Claude Code, Codex, Conductor, or another agent runtime can use that connector.
+Each runtime needs its own visible tool surface, restart behavior, and read-only
+smoke evidence before guidance should rely on it.

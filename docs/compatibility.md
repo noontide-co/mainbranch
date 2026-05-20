@@ -138,6 +138,24 @@ machine preferences must stay outside tracked business files. Business
 memory remains in the repo's tracked `core/`, `research/`,
 `decisions/`, `bets/`, `pushes/`, `log/`, and `documents/` files.
 
+## Connector and provider readiness
+
+Connector availability is runtime-specific. A Claude.ai web connector does not
+prove that Claude Code, Codex, Conductor, or another agent runtime can use the
+same tool. Each surface needs its own visible tool list or deterministic CLI
+check, restart behavior, OAuth/scope refresh path, and read-only smoke before
+docs or skills should rely on it.
+
+Use `mb connect status --repo "$repo" --json` for Main Branch provider rails.
+Use the runtime's own tool surface for Claude.ai, Claude Code, Codex, Conductor,
+or future adapters. For the decision table that separates `mb connect`,
+Claude.ai connectors, Claude Code bridged tools/MCP/plugins,
+Codex/Conductor tools, local CLI/API-key paths, and unsupported providers, run:
+
+```bash
+mb educational provider-readiness
+```
+
 ## Runtime adapter readiness map
 
 This map compares runtime surfaces without claiming support before adapters and
