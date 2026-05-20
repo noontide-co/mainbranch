@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.28] - 2026-05-19
+
+v0.3.28 packages the Codex owner-loop runtime release after v0.3.27. It makes
+Codex first-class for the proven Main Branch owner loop by adding a generated
+Codex skill surface, workflow inventory, repair/status readiness, and release
+evidence while keeping slash-command, all-skills, provider-write, publishing,
+spend, and customer-contact parity out of scope.
+
 ### Added
 
 - Added a generated Codex owner-loop skill at
