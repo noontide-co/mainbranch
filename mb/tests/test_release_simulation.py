@@ -187,9 +187,27 @@ def test_claude_print_prompt_includes_owner_language_guardrails() -> None:
     from mb import dogfood_harness
 
     simulation = release_simulation.simulations_for_tier("pr_smoke")[0]
-    prompt = dogfood_harness.claude_print_prompt(simulation)
+    prompt = dogfood_harness.claude_print_prompt(
+        simulation,
+        {
+            "facts_available": True,
+            "status_schema_version": "1.0",
+            "status_skill_wiring_ok": True,
+            "status_git_dirty": False,
+            "start_follow_up": "/mb-start",
+            "start_handoff_ready": True,
+            "doctor_repair_read_only": True,
+            "doctor_repair_actions": [],
+            "checkpoint_plan_dirty": False,
+        },
+    )
     normalized_prompt = " ".join(prompt.split())
 
+    assert "compact harness-captured fact block" in normalized_prompt
+    assert "Do not re-create that summary with shell parsing" in normalized_prompt
+    assert "mb status --json --peek | python3" in normalized_prompt
+    assert "`mb status --json --peek`: schema 1.0; skill wiring ok True; dirty False" in prompt
+    assert "`mb start --json`: follow-up /mb-start; handoff ready True" in prompt
     assert "nothing unsaved locally" in normalized_prompt
     assert "current business folder" in normalized_prompt
     assert "no connected GitHub backup or shared task source" in normalized_prompt
@@ -198,6 +216,31 @@ def test_claude_print_prompt_includes_owner_language_guardrails() -> None:
     assert "Technical detail:" in normalized_prompt
     assert "saved checkpoint" in normalized_prompt
     assert "[updated] offer and founder-call research" in normalized_prompt
+
+
+def test_claude_print_prompt_omits_uncaptured_migration_facts() -> None:
+    from mb import dogfood_harness
+
+    simulation = release_simulation.simulations_for_tier("pr_smoke")[0]
+    prompt = dogfood_harness.claude_print_prompt(
+        simulation,
+        {
+            "facts_available": True,
+            "status_schema_version": "1.0",
+            "status_skill_wiring_ok": True,
+            "status_git_dirty": False,
+            "start_follow_up": "/mb-start",
+            "start_handoff_ready": True,
+            "doctor_repair_read_only": True,
+            "doctor_repair_actions": [],
+            "checkpoint_plan_dirty": False,
+            "migrate_campaign_moves": None,
+            "migrate_campaign_ambiguous": None,
+        },
+    )
+
+    assert "`mb migrate campaigns --plan --json`" not in prompt
+    assert "moves 0; ambiguous 0" not in prompt
 
 
 def test_score_transcript_flags_provider_overclaim() -> None:
