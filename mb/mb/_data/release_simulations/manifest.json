@@ -108,8 +108,17 @@
         "sense + decide",
         "ship -> reflect",
         "route to",
+        "route through",
+        "route into",
         "routes to",
+        "routes through",
+        "routes into",
         "expected route",
+        "routing recommendation",
+        "orchestration path",
+        "ordered next steps",
+        "suggested order",
+        "recommended next step",
         "next action"
       ]
     },

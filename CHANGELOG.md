@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Tuned the release-simulation `loop_routing` rubric so release acceptance
+  recognizes clear business-language routing while generic no-routing answers
+  still fail. Refs MAIN-425, #691.
+
 ## [0.3.30] - 2026-05-22
 
 v0.3.30 packages the Codex runtime readiness follow-up after v0.3.29. It
