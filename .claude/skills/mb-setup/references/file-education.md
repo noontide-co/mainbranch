@@ -8,6 +8,9 @@ When sorting content into files during setup, teach WHY each file matters as you
 
 Present each blurb before writing the corresponding file.
 
+### core/team/<slug>.md
+> "core/team records public-safe business context for the people in this repo: name, preferred name, role, relationship, owned areas, and GitHub handle. It helps Main Branch translate repo activity into business language. Do not put payroll, private contact details, legal ownership percentages, credentials, or customer/member data here."
+
 ### soul.md
 > "soul.md is WHY you exist. Not the marketing answer — the real one. Three questions: What do you research when no one's watching? What intersections excite you? What decisions feel like discovery vs obligation? This file is your reconnection fuel — when you're grinding and feel nothing, re-read it."
 
@@ -39,22 +42,23 @@ For multi-offer setups, also explain:
 
 ## Priority Order (Single-Offer)
 
-1. `core/soul.md` — Why you exist (reconnection fuel)
-2. `core/offer.md` — What you sell (or brand thesis if multi-offer)
-3. `core/audience.md` — Who buys
-4. `core/voice.md` — How you sound
-5. `core/proof/testimonials.md` — Social proof
-6. `core/proof/angles/` — Messaging entry points
-7. `core/brand/visual-style.md` — Visual brand identity (colors, typography, mood, image prompt fragments)
-8. `core/content-strategy.md` — Known-for target, pillars, asset jobs, distribution links, and optional `core/marketing/` / `core/people/` layers
-9. `core/operations/funnel/skool-surfaces.md` — Live Skool about page + pricing card copy (community businesses with Skool)
+1. `core/team/<slug>.md` — Public-safe owner/team context
+2. `core/soul.md` — Why you exist (reconnection fuel)
+3. `core/offer.md` — What you sell (or brand thesis if multi-offer)
+4. `core/audience.md` — Who buys
+5. `core/voice.md` — How you sound
+6. `core/proof/testimonials.md` — Social proof
+7. `core/proof/angles/` — Messaging entry points
+8. `core/brand/visual-style.md` — Visual brand identity (colors, typography, mood, image prompt fragments)
+9. `core/content-strategy.md` — Known-for target, pillars, asset jobs, distribution links, and optional `core/marketing/` / `core/people/` layers
+10. `core/operations/funnel/skool-surfaces.md` — Live Skool about page + pricing card copy (community businesses with Skool)
 
 ### Multi-Offer Additional Files (if applicable)
 
-10. `core/offers/[name]/offer.md` — Offer-specific details for each offer
-11. `core/offers/[name]/audience.md` — Only if this offer targets a different segment
-12. `core/offers/[name]/proof/` — Only if proof applies to one specific offer
-13. `core/product-ladder.md` — How offers relate to each other
+11. `core/offers/[name]/offer.md` — Offer-specific details for each offer
+12. `core/offers/[name]/audience.md` — Only if this offer targets a different segment
+13. `core/offers/[name]/proof/` — Only if proof applies to one specific offer
+14. `core/product-ladder.md` — How offers relate to each other
 
 > **Note:** content-strategy.md and visual-style.md start as templates and get filled through `/mb-think` cycles. Not required at setup — scaffolded with placeholder sections.
 

@@ -322,7 +322,7 @@ Use templates from `references/templates.md`.
 
 **Teach WHY each file matters as you create it.** Don't just scaffold — explain. This is the user's first encounter with the system. The act of writing these files IS the learning.
 
-See **[references/file-education.md](references/file-education.md)** for the educational blurbs to present before writing each core file (soul, offer, audience, voice, multi-offer additions), the priority order, and the visual style scaffolding questions.
+See **[references/file-education.md](references/file-education.md)** for the educational blurbs to present before writing each core file (team, soul, offer, audience, voice, multi-offer additions), the priority order, and the visual style scaffolding questions.
 
 ### 6. Apply Business Setup Pattern
 

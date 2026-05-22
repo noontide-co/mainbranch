@@ -277,7 +277,7 @@ Tested on macOS and Linux. Windows is experimental — use WSL2.
 
 **Can I edit the skills?** You can. You don't need to.
 
-**What makes this different from ChatGPT?** ChatGPT resets between sessions. Main Branch is a folder Claude can re-read every session — your offer, audience, voice, decisions, research, and bets — so the output stays consistent with your business.
+**What makes this different from ChatGPT?** ChatGPT resets between sessions. Main Branch is a folder Claude can re-read every session — your offer, audience, voice, team context, decisions, research, and bets — so the output stays consistent with your business.
 
 **I'm stuck.** Type `/mb-start` again.
 

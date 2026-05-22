@@ -85,23 +85,15 @@ def _gh_username() -> str:
     return ""
 
 
-def _git_user_name() -> str:
-    """Best-effort git author name probe. Returns empty string on miss."""
+def _owner_display_name(owner_name: str) -> str:
+    """Return an explicit owner name without reading local machine identity."""
+    explicit_name = owner_name.strip()
+    if explicit_name:
+        return explicit_name
     env_name = os.environ.get("MB_OWNER_NAME", "").strip()
     if env_name:
         return env_name
-    try:
-        out = subprocess.run(
-            ["git", "config", "--global", "user.name"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if out.returncode == 0:
-            return out.stdout.strip()
-    except (FileNotFoundError, subprocess.SubprocessError):
-        pass
-    return ""
+    return "Business Owner"
 
 
 def _read_template(name: str) -> str:
@@ -166,8 +158,12 @@ def run(
     if not business_name:
         return {"status": "error", "path": str(target), "error": "empty business name"}
 
-    gh_user = team_mod.normalize_github_handle(owner_github) or _gh_username() or "your-gh-username"
-    owner_display_name = owner_name.strip() or _git_user_name() or "Business Owner"
+    gh_user = (
+        team_mod.normalize_github_handle(owner_github)
+        or team_mod.normalize_github_handle(_gh_username())
+        or "your-gh-username"
+    )
+    owner_display_name = _owner_display_name(owner_name)
     owner_slug = _owner_slug(owner_display_name, gh_user)
 
     created: list[str] = []

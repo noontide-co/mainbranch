@@ -108,8 +108,9 @@ Keep `appetite` human-readable, and use `appetite_tier` for rough financial
 weight. The tier should match the operator's appetite thresholds in
 `core/finance/books.md` when that file exists.
 
-When an owner is known, use the team member slug that will map to
-`core/team/<slug>.md`; do not invent team files before that primitive exists.
+When an owner is known, use the existing team member slug from
+`core/team/<slug>.md`. Ask before creating a new team file, and keep owner
+enforcement future-scoped unless the bet schema validates it.
 
 For financially material bets, use `money_path.bet_id` equal to the filename
 stem and tag private hledger transactions with `bet:<id>`. Check exposure with:

@@ -3,8 +3,8 @@
 Main Branch has three user-visible pieces:
 
 - **Your business folder** -- the place Claude reads and writes durable
-  business memory: offer, audience, voice, proof, research, decisions, bets,
-  pushes, logs, and outcomes.
+  business memory: offer, audience, voice, proof, team context, research,
+  decisions, bets, pushes, logs, and outcomes.
 - **The `mb` CLI** -- the deterministic control plane. It checks setup,
   status, validation, graph links, provider readiness, updates, repairs, and
   checkpoints.
@@ -21,7 +21,7 @@ checkout. They open the business folder, start Claude Code, and run
 
 ```text
 business folder
-├── core/                 # offer, audience, voice, proof, strategy
+├── core/                 # offer, audience, voice, proof, team, strategy
 ├── research/             # source notes and investigations
 ├── decisions/            # choices the business made
 ├── bets/                 # time-boxed operating hypotheses
