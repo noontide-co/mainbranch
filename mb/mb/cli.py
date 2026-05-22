@@ -672,6 +672,7 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
     plan = False
     apply_changes = False
     include_migration = False
+    only = ""
     local_json = json_out
     idx = 0
     while idx < len(args):
@@ -679,7 +680,7 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
         if arg == "--help":
             typer.echo(
                 "Usage: mb doctor repair [--repo PATH] [--plan | --apply] "
-                "[--include-migration] [--json]"
+                "[--only codex] [--include-migration] [--json]"
             )
             typer.echo("")
             typer.echo("Plan or apply guided business-repo reconciliation repairs.")
@@ -701,6 +702,12 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
             apply_changes = True
         elif arg == "--include-migration":
             include_migration = True
+        elif arg == "--only":
+            idx += 1
+            if idx >= len(args):
+                typer.echo("mb doctor repair: --only requires a scope", err=True)
+                raise typer.Exit(2)
+            only = args[idx]
         elif arg == "--json":
             local_json = True
         else:
@@ -719,11 +726,31 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
             err=True,
         )
         raise typer.Exit(2)
+    if only and only != "codex":
+        typer.echo("mb doctor repair: --only currently supports only `codex`", err=True)
+        raise typer.Exit(2)
+    if only and include_migration:
+        typer.echo("mb doctor repair: --only cannot be combined with --include-migration", err=True)
+        raise typer.Exit(2)
 
     if apply_changes:
-        report = doctor_mod.repair_apply(repo=repo, include_migration=include_migration)
+        if only:
+            report = doctor_mod.repair_apply(
+                repo=repo,
+                include_migration=include_migration,
+                only=only,
+            )
+        else:
+            report = doctor_mod.repair_apply(
+                repo=repo,
+                include_migration=include_migration,
+            )
     else:
-        report = doctor_mod.repair_plan(repo=repo)
+        report = (
+            doctor_mod.repair_plan(repo=repo, only=only)
+            if only
+            else doctor_mod.repair_plan(repo=repo)
+        )
 
     if local_json:
         typer.echo(
@@ -748,7 +775,10 @@ def _doctor_help() -> None:
     typer.echo("  --help   Show this message and exit.")
     typer.echo("")
     typer.echo("Repair:")
-    typer.echo("  mb doctor repair [--repo PATH] [--plan | --apply] [--include-migration] [--json]")
+    typer.echo(
+        "  mb doctor repair [--repo PATH] [--plan | --apply] "
+        "[--only codex] [--include-migration] [--json]"
+    )
     typer.echo("  Note: --include-migration is valid only with --apply after plan review.")
 
 

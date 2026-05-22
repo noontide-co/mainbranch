@@ -196,6 +196,121 @@ def mb_install_diagnostics(path_value: str | None = None) -> dict[str, Any]:
     }
 
 
+def _same_path(left: str, right: str) -> bool:
+    if not left or not right:
+        return False
+    try:
+        return Path(left).resolve() == Path(right).resolve()
+    except OSError:
+        return Path(left) == Path(right)
+
+
+def login_shell_mb_diagnostics(shell: str | None = None, *, timeout: float = 5.0) -> dict[str, Any]:
+    """Check which `mb` a login shell is likely to execute.
+
+    Claude Code and Codex command execution can enter through a login shell even
+    when the operator's current process has the right pipx or venv PATH. This
+    probe keeps the deterministic CLI facts honest without invoking an agent.
+    """
+
+    shell_path = shell or os.environ.get("SHELL") or "/bin/sh"
+    command = (
+        "mb_path=$(command -v mb 2>/dev/null || true); "
+        "printf '__MB_PATH__=%s\\n' \"$mb_path\"; "
+        'if [ -n "$mb_path" ]; then '
+        "mb_version=$(mb --version 2>&1); mb_rc=$?; "
+        "else mb_version=''; mb_rc=127; fi; "
+        "printf '__MB_VERSION__=%s\\n' \"$mb_version\"; "
+        'exit "$mb_rc"'
+    )
+    active_path = shutil.which("mb") or ""
+    result: subprocess.CompletedProcess[str] | None = None
+    try:
+        result = subprocess.run(
+            [shell_path, "-lc", command],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {
+            "checked": True,
+            "ok": False,
+            "state": "error",
+            "shell": shell_path,
+            "command": command,
+            "path": "",
+            "version": "",
+            "active_path": active_path,
+            "active_version": __version__,
+            "path_mismatch": False,
+            "version_mismatch": False,
+            "mismatch": False,
+            "error": str(exc),
+            "summary": "Could not check the login-shell mb runtime path.",
+            "repair": "Run `command -v mb && mb --version` in the runtime shell.",
+            "safe_to_share": True,
+        }
+
+    output_lines = (result.stdout or "").splitlines() + (result.stderr or "").splitlines()
+    tagged: dict[str, str] = {}
+    for raw_line in output_lines:
+        line = raw_line.strip()
+        if line.startswith("__MB_PATH__="):
+            tagged["path"] = line.removeprefix("__MB_PATH__=").strip()
+        elif line.startswith("__MB_VERSION__="):
+            tagged["version"] = line.removeprefix("__MB_VERSION__=").strip()
+    runtime_path = tagged.get("path", "")
+    version_output = tagged.get("version", "")
+    runtime_version = (
+        version_output.removeprefix("mb ").strip()
+        if version_output.startswith("mb ")
+        else version_output
+    )
+    command_ok = result.returncode == 0 and bool(runtime_path and runtime_version)
+    path_mismatch = bool(command_ok and active_path and not _same_path(runtime_path, active_path))
+    version_mismatch = bool(command_ok and runtime_version != __version__)
+    mismatch = path_mismatch or version_mismatch
+    if not command_ok:
+        state = "error"
+        summary = "Login-shell runtime could not resolve a usable mb command."
+    elif mismatch:
+        state = "warn"
+        summary = (
+            "Login-shell runtime resolves a different mb than this process. "
+            f"Active mb: {active_path or 'unknown'} {__version__}; "
+            f"login shell mb: {runtime_path} {runtime_version}."
+        )
+    else:
+        state = "ok"
+        summary = "Login-shell runtime resolves the current mb command."
+    return {
+        "checked": True,
+        "ok": bool(command_ok and not mismatch),
+        "state": state,
+        "shell": shell_path,
+        "command": command,
+        "path": runtime_path,
+        "version": runtime_version,
+        "active_path": active_path,
+        "active_version": __version__,
+        "path_mismatch": path_mismatch,
+        "version_mismatch": version_mismatch,
+        "mismatch": mismatch,
+        "returncode": result.returncode,
+        "error": "" if command_ok else "\n".join(output_lines),
+        "summary": summary,
+        "repair": (
+            "Put the current Main Branch install earlier on the login-shell PATH, "
+            "then rerun `mb status --json --peek`."
+        )
+        if mismatch
+        else ("Install or expose `mb` on the runtime shell PATH." if not command_ok else ""),
+        "safe_to_share": True,
+    }
+
+
 def _looks_like_engine_root_path(path: Path) -> bool:
     has_skill_marker = any(
         (path / ".claude" / "skills" / name / "SKILL.md").is_file()

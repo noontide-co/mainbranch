@@ -322,8 +322,93 @@ def test_doctor_repair_plan_reports_missing_codex_agents_md(tmp_path: Path) -> N
     assert agents_check["state"] == "warn"
     actions = {action["id"]: action for action in payload["actions"]}
     assert actions["codex-agents-md"]["safe_to_apply"] is True
+    assert actions["codex-agents-md"]["command"] == "mb doctor repair --apply --only codex"
     assert "AGENTS.md" in actions["codex-agents-md"]["writes"]
     assert ".agents/skills/main-branch-owner-loop/SKILL.md" in actions["codex-agents-md"]["writes"]
+
+
+def test_doctor_repair_only_codex_filters_unrelated_related_links(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    (repo / "AGENTS.md").write_text("# stale\n\nNo facts here.\n", encoding="utf-8")
+    decision = repo / "decisions" / "2026-05-22-choice.md"
+    _write_md(
+        decision,
+        "---\n"
+        "type: decision\n"
+        "date: 2026-05-22\n"
+        "status: proposed\n"
+        "linked_offers:\n"
+        "  - ../core/offer.md\n"
+        "---\n\n"
+        "# Choice\n",
+    )
+
+    plan_result = runner.invoke(
+        app,
+        ["doctor", "repair", "--repo", str(repo), "--plan", "--only", "codex", "--json"],
+    )
+
+    assert plan_result.exit_code in {0, 1}
+    plan = json.loads(plan_result.stdout)
+    assert plan["only"] == "codex"
+    assert [section["id"] for section in plan["sections"]] == ["codex-wiring", "git"]
+    assert [action["id"] for action in plan["actions"]] == ["codex-agents-md"]
+
+    apply_result = runner.invoke(
+        app,
+        ["doctor", "repair", "--repo", str(repo), "--apply", "--only", "codex", "--json"],
+    )
+
+    assert apply_result.exit_code in {0, 1}
+    payload = json.loads(apply_result.stdout)
+    applied = {action["id"]: action for action in payload["applied_actions"]}
+    assert set(applied) == {"codex-agents-md"}
+    assert applied["codex-agents-md"]["command"] == "mb doctor repair --apply --only codex"
+    assert "## Related links" not in decision.read_text(encoding="utf-8")
+
+
+def test_doctor_repair_plan_marks_codex_runtime_info_when_codex_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(codex_mod, "_which", lambda name: "" if name == "codex" else None)
+    monkeypatch.setattr(
+        codex_mod,
+        "_login_shell_mb_diagnostics",
+        lambda: {
+            "checked": True,
+            "ok": False,
+            "state": "warn",
+            "shell": "/bin/zsh",
+            "command": "command -v mb && mb --version",
+            "path": "/old/bin/mb",
+            "version": "0.3.18",
+            "active_path": "/new/bin/mb",
+            "active_version": "0.3.29",
+            "path_mismatch": True,
+            "version_mismatch": True,
+            "mismatch": True,
+            "error": "",
+            "summary": "Login-shell runtime resolves a different mb than this process.",
+            "repair": "Put the current Main Branch install earlier on the login-shell PATH.",
+            "safe_to_share": True,
+        },
+    )
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "codex-wiring")
+    runtime_check = next(
+        check for check in section["checks"] if check["name"] == "codex-runtime-mb"
+    )
+    assert runtime_check["state"] == "info"
+    assert "waits until Codex CLI is installed" in runtime_check["summary"]
+    assert runtime_check["repair"] == ""
 
 
 def test_doctor_repair_plan_reports_stale_codex_lifecycle_guidance(tmp_path: Path) -> None:

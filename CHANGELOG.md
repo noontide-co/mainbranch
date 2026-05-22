@@ -11,6 +11,19 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added Codex runtime `mb` path/version diagnostics so status, start, and doctor
+  can warn when the login-shell runtime would execute a stale Main Branch
+  binary even though generated Codex adapter files are current. Refs MAIN-424,
+  #688.
+
+### Changed
+
+- Scoped Codex adapter repair through `mb doctor repair --only codex` and
+  updated `mb update` plus generated Codex guidance to point operators at the
+  focused repair and runtime `mb --version` preflight. Refs MAIN-424, #688.
+
 ## [0.3.29] - 2026-05-22
 
 v0.3.29 packages the owner-loop hardening batch after v0.3.28. It tightens
