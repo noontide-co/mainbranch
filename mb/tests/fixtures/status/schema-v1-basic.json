@@ -36,6 +36,7 @@
     "schema",
     "schema_version",
     "since_last_check",
+    "team",
     "topology",
     "update",
     "validation",
@@ -143,6 +144,15 @@
       "terms",
       "type",
       "warnings"
+    ],
+    "team": [
+      "github",
+      "members",
+      "ok",
+      "path",
+      "safe_to_share",
+      "schema_version",
+      "summary"
     ],
     "onboarding": [
       "boundaries",

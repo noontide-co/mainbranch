@@ -174,6 +174,10 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert (target / "core" / "marketing").is_dir()
     assert (target / "core" / "marketing" / "channels").is_dir()
     assert (target / "core" / "marketing" / "accounts").is_dir()
+    assert (target / "core" / "team").is_dir()
+    team_files = list((target / "core" / "team").glob("*.md"))
+    assert len(team_files) == 1
+    assert "type: team_member" in team_files[0].read_text(encoding="utf-8")
     assert (target / "core" / "people").is_dir()
     assert (target / "core" / "strategy").is_dir()
     assert (target / "core" / "operations").is_dir()
