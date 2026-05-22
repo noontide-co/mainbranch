@@ -82,6 +82,12 @@ Use the `vocabulary` block from `mb status --json --peek` when present. If
 challenges, or promos, use that word in operator-facing prose while preserving
 current paths, frontmatter, JSON keys, validator rules, and command names.
 
+Use the `team` block from `mb status --json --peek` when present. Map known
+GitHub handles to the business names in `core/team/<slug>.md`; keep unknown
+handles as handles and suggest adding a public-safe team file when the person is
+part of the business context. Do not invent identities from commit authors,
+emails, or usernames alone.
+
 ## Codex Lifecycle Workflow Index
 
 This tracked `AGENTS.md` file is the repo-level Codex bootstrap. The generated

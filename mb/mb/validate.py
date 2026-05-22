@@ -15,7 +15,7 @@ from typing import Any
 
 import yaml
 
-from mb import content_strategy, github_activity, migration_lint, related_links, relationships
+from mb import content_strategy, github_activity, migration_lint, related_links, relationships, team
 from mb import pushes as pushes_mod
 
 DECISION_STATUS = {"proposed", "accepted", "rejected", "superseded", "running"}
@@ -68,6 +68,7 @@ DATA_SOURCE_CADENCE = {
 }
 DATA_SOURCE_PROVIDER_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 DATA_SOURCE_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+TEAM_MEMBER_TYPE = "team_member"
 
 TOPOLOGY_SCHEMA = {"mb.repo_topology.v0"}
 TOPOLOGY_STATUS = {"proposed", "active", "paused", "superseded", "archived"}
@@ -165,6 +166,8 @@ VALIDATION_CATEGORY_REPAIR: dict[str, str] = {
     "other_warning": (
         "Review the warning and decide whether the relationship or file shape is intentional."
     ),
+    "duplicate_github_handle": "Use each GitHub handle in only one core/team/<slug>.md file.",
+    "unnormalized_github_handle": "Store GitHub handles without @, URLs, or uppercase letters.",
 }
 
 # Audience routing per category. See decision
@@ -197,6 +200,8 @@ VALIDATION_CATEGORY_OPERATOR_SUMMARY: dict[str, str] = {
     ),
     "other_error": "Read the validation message and decide how to fix the file.",
     "other_warning": "Decide whether the relationship or shape is intentional, or change it.",
+    "duplicate_github_handle": "One GitHub handle points to more than one team member.",
+    "unnormalized_github_handle": "Normalize the GitHub handle before agents rely on it.",
 }
 
 DECISION_STATUS_ORDER = {
@@ -333,6 +338,12 @@ SCHEMAS: dict[str, dict[str, Any]] = {
         "enums": {"type": {DATA_SOURCE_TYPE}, "privacy": DATA_SOURCE_PRIVACY},
         "primitive": "data-source",
     },
+    "team-members": {
+        "glob": "core/team/*.md",
+        "required": ["type", "slug", "name", "relationship"],
+        "enums": {"type": {TEAM_MEMBER_TYPE}, "relationship": team.RELATIONSHIPS},
+        "primitive": "team-member",
+    },
 }
 
 
@@ -384,6 +395,8 @@ def _check_one(path: Path, schema: dict[str, Any]) -> dict[str, Any]:
         _check_repo_topology_frontmatter(path, fm, errors, warnings)
     elif primitive == "data-source":
         _check_data_source_frontmatter(path, fm, errors, warnings)
+    elif primitive == "team-member":
+        _check_team_member_frontmatter(path, fm, errors, warnings)
     _check_provider_refs_shape(fm, errors)
     return {"path": str(path), "ok": not errors, "errors": errors, "warnings": warnings}
 
@@ -797,6 +810,70 @@ def _check_data_source_frontmatter(
     if secret_paths:
         errors.append(
             "data-source frontmatter must not contain secrets: " + ", ".join(secret_paths)
+        )
+
+
+def _check_team_member_frontmatter(
+    path: Path,
+    fm: dict[str, Any],
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    if fm.get("type") != TEAM_MEMBER_TYPE:
+        errors.append(f"type must be {TEAM_MEMBER_TYPE!r}")
+    if not team.SLUG_RE.fullmatch(path.stem):
+        errors.append("team member filename must be a lowercase slug")
+    slug = fm.get("slug")
+    if isinstance(slug, str) and slug.strip() and slug.strip() != path.stem:
+        errors.append("slug must match the core/team/<slug>.md filename")
+    _require_non_empty_string(fm, "name", errors)
+
+    github = fm.get("github")
+    raw_handles: list[str] = []
+    if github is None:
+        raw_handles = []
+    elif isinstance(github, str):
+        raw_handles = [github]
+    elif isinstance(github, list) and all(isinstance(item, str) for item in github):
+        raw_handles = [str(item) for item in github]
+    else:
+        errors.append("github must be a string or list of strings")
+
+    seen_handles: set[str] = set()
+    for raw_handle in raw_handles:
+        normalized = team.normalize_github_handle(raw_handle)
+        if not normalized:
+            errors.append(f"github handle {raw_handle!r} is not valid")
+            continue
+        if raw_handle.strip() != normalized:
+            errors.append(f"github handle {raw_handle!r} must be normalized as {normalized!r}")
+        if normalized in seen_handles:
+            errors.append(f"duplicate github handle {normalized!r} in this team member")
+        seen_handles.add(normalized)
+
+    areas = fm.get("areas")
+    if areas is not None and (
+        not isinstance(areas, list)
+        or not all(isinstance(item, str) and item.strip() for item in areas)
+    ):
+        errors.append("areas must be a list of non-empty strings")
+
+    secret_paths = sorted(set(_iter_secret_paths(fm)))
+    if secret_paths:
+        errors.append(
+            "team member frontmatter must not contain secrets: " + ", ".join(secret_paths)
+        )
+
+    sensitive_keys = sorted(
+        key
+        for key in fm
+        if isinstance(key, str)
+        and re.search(r"(home|birthday|birthdate|ssn|compensation|payroll)", key, re.IGNORECASE)
+    )
+    if sensitive_keys:
+        warnings.append(
+            "team member frontmatter should avoid sensitive personal fields: "
+            + ", ".join(sensitive_keys)
         )
 
 
@@ -1234,8 +1311,52 @@ def _add_migration_lint_warnings(
         files_by_path[rel].setdefault("warnings", []).append(message)
 
 
+def _add_team_handle_duplicate_errors(repo: Path, files_by_path: dict[str, dict[str, Any]]) -> None:
+    handles: dict[str, list[str]] = {}
+    for path in sorted((repo / team.TEAM_DIR).glob("*.md")):
+        if path.name == "README.md":
+            continue
+        fm, err = _read_frontmatter(path)
+        if err is not None or fm is None:
+            continue
+        github = fm.get("github")
+        raw_handles = (
+            [github] if isinstance(github, str) else github if isinstance(github, list) else []
+        )
+        if not isinstance(raw_handles, list):
+            continue
+        rel = path.relative_to(repo).as_posix()
+        for raw_handle in raw_handles:
+            normalized = team.normalize_github_handle(raw_handle)
+            if normalized:
+                handles.setdefault(normalized, []).append(rel)
+
+    for handle, paths in handles.items():
+        unique_paths = sorted(set(paths))
+        if len(unique_paths) < 2:
+            continue
+        message = f"duplicate github handle {handle!r} appears in {', '.join(unique_paths)}"
+        for rel in unique_paths:
+            files_by_path.setdefault(
+                rel,
+                {
+                    "path": rel,
+                    "ok": True,
+                    "errors": [],
+                    "warnings": [],
+                    "schema": "team-members",
+                },
+            )
+            files_by_path[rel].setdefault("errors", []).append(message)
+            files_by_path[rel]["ok"] = False
+
+
 def _validation_category(message: str, *, severity: str, schema: str) -> str:
     lowered = message.lower()
+    if schema == "team-members" and "duplicate github handle" in lowered:
+        return "duplicate_github_handle"
+    if schema == "team-members" and "must be normalized as" in lowered:
+        return "unnormalized_github_handle"
     if message == "missing key: slug":
         return "missing_slug"
     if message.startswith("missing key:"):
@@ -1696,6 +1817,7 @@ def _is_folder_doc(path: Path, schema_name: str) -> bool:
         "log",
         "documents",
         "push-playbooks",
+        "team-members",
     } and (path.name == "README.md")
 
 
@@ -1719,6 +1841,7 @@ def run(
             r["path"] = str(f.relative_to(repo))
             files_by_path[r["path"]] = r
     files_by_path.update(content_strategy.validation_results(repo))
+    _add_team_handle_duplicate_errors(repo, files_by_path)
 
     if migration_drift_report is None:
         migration_drift_report = migration_lint.run(repo)

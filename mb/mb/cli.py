@@ -248,10 +248,16 @@ def main_callback(
 def init_cmd(
     path: str = typer.Argument(".", help="Where to scaffold (default: current dir)."),
     name: str = typer.Option("", "--name", help="Business name (skips prompt if given)."),
+    owner_name: str = typer.Option("", "--owner-name", help="Business name for the owner file."),
+    owner_github: str = typer.Option(
+        "",
+        "--owner-github",
+        help="GitHub handle for the owner file, without @.",
+    ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Set up a fresh business repo (business folders, CLAUDE.md, git init)."""
-    result = init_mod.run(path=path, name=name)
+    result = init_mod.run(path=path, name=name, owner_name=owner_name, owner_github=owner_github)
     if json_out:
         typer.echo(json.dumps(result, indent=2))
     else:
@@ -443,6 +449,12 @@ def onboard_cmd(
     ctx: typer.Context,
     path_opt: str = typer.Option("", "--path", help="Repo path to create or connect."),
     name: str = typer.Option("", "--name", help="Business name."),
+    owner_name: str = typer.Option("", "--owner-name", help="Business name for the owner file."),
+    owner_github: str = typer.Option(
+        "",
+        "--owner-github",
+        help="GitHub handle for the owner file, without @.",
+    ),
     mode: str = typer.Option(
         "auto",
         "--mode",
@@ -505,6 +517,8 @@ def onboard_cmd(
     selected_mode = mode
     target = _onboard_target_path("", path_opt, name)
     business_name = name
+    selected_owner_name = owner_name
+    selected_owner_github = owner_github
 
     if not yes:
         typer.echo("Main Branch setup")
@@ -524,11 +538,19 @@ def onboard_cmd(
         if target == "." and business_name:
             default_path = onboard_mod._slug(business_name)
         target = typer.prompt("Repo path", default=default_path)
+        if selected_mode != "connect":
+            selected_owner_name = typer.prompt("Owner name", default=owner_name or "Business Owner")
+            selected_owner_github = typer.prompt(
+                "Owner GitHub handle (without @)",
+                default=owner_github or "",
+            )
 
     try:
         result = onboard_mod.run(
             path=target,
             name=business_name,
+            owner_name=selected_owner_name,
+            owner_github=selected_owner_github,
             mode=selected_mode,
             level=selected_level,
             team_size=team_size,
