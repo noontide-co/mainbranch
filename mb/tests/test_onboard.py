@@ -368,7 +368,7 @@ def test_onboard_cli_interactive_path_renders_clear_labels(tmp_path: Path, monke
     result = runner.invoke(
         app,
         ["onboard"],
-        input=f"beginner\nnew\nInteractive Business\n{repo}\n",
+        input=f"beginner\nnew\nInteractive Business\n{repo}\nTaylor Owner\ntaylor-owner\n",
     )
 
     assert result.exit_code == 0

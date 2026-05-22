@@ -8,6 +8,7 @@ an existing repo returns ``status=already-initialized`` (idempotent).
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from importlib import resources
@@ -16,6 +17,7 @@ from typing import Any
 
 from mb import checkpoint as checkpoint_mod
 from mb import codex as codex_mod
+from mb import team as team_mod
 from mb.engine import link_skills
 from mb.migrate import LATEST_SCHEMA_VERSION, SCHEMA_MARKER
 
@@ -28,6 +30,7 @@ DATA_FOLDERS = [
     "core/marketing",
     "core/marketing/channels",
     "core/marketing/accounts",
+    "core/team",
     "core/people",
     "core/strategy",
     "core/operations",
@@ -82,6 +85,17 @@ def _gh_username() -> str:
     return ""
 
 
+def _owner_display_name(owner_name: str) -> str:
+    """Return an explicit owner name without reading local machine identity."""
+    explicit_name = owner_name.strip()
+    if explicit_name:
+        return explicit_name
+    env_name = os.environ.get("MB_OWNER_NAME", "").strip()
+    if env_name:
+        return env_name
+    return "Business Owner"
+
+
 def _read_template(name: str) -> str:
     """Read a bundled template by relative path under ``_data/templates/``."""
     try:
@@ -102,7 +116,21 @@ def _render(text: str, mapping: dict[str, str]) -> str:
     return out
 
 
-def run(path: str, name: str) -> dict[str, Any]:
+def _owner_slug(owner_name: str, github_handle: str) -> str:
+    handle = team_mod.normalize_github_handle(github_handle)
+    if handle:
+        return handle
+    slug = re.sub(r"[^a-z0-9]+", "-", owner_name.lower()).strip("-")
+    return slug or "owner"
+
+
+def run(
+    path: str,
+    name: str,
+    *,
+    owner_name: str = "",
+    owner_github: str = "",
+) -> dict[str, Any]:
     """Scaffold ``path`` as a Main Branch business repo.
 
     Returns a dict with ``status`` ∈ {ok, already-initialized, error},
@@ -130,7 +158,13 @@ def run(path: str, name: str) -> dict[str, Any]:
     if not business_name:
         return {"status": "error", "path": str(target), "error": "empty business name"}
 
-    gh_user = _gh_username() or "your-gh-username"
+    gh_user = (
+        team_mod.normalize_github_handle(owner_github)
+        or team_mod.normalize_github_handle(_gh_username())
+        or "your-gh-username"
+    )
+    owner_display_name = _owner_display_name(owner_name)
+    owner_slug = _owner_slug(owner_display_name, gh_user)
 
     created: list[str] = []
     for sub in DATA_FOLDERS:
@@ -150,6 +184,8 @@ def run(path: str, name: str) -> dict[str, Any]:
     mapping = {
         "BUSINESS_NAME": business_name,
         "GH_USERNAME": gh_user,
+        "OWNER_NAME": owner_display_name,
+        "OWNER_SLUG": owner_slug,
     }
 
     claude_tmpl = _read_template("CLAUDE.md.tmpl") or _DEFAULT_CLAUDE
@@ -177,6 +213,14 @@ def run(path: str, name: str) -> dict[str, Any]:
         if not vocabulary_path.exists():
             vocabulary_path.write_text(_render(vocabulary_tmpl, mapping), encoding="utf-8")
             created.append("core/vocabulary.md")
+
+    team_tmpl = _read_template("core_team_member.md.tmpl")
+    if team_tmpl:
+        owner_path = target / "core" / "team" / f"{owner_slug}.md"
+        owner_path.parent.mkdir(parents=True, exist_ok=True)
+        if not owner_path.exists():
+            owner_path.write_text(_render(team_tmpl, mapping), encoding="utf-8")
+            created.append(f"core/team/{owner_slug}.md")
 
     codeowners_tmpl = _read_template("CODEOWNERS.tmpl") or f"* @{gh_user}\n"
     github_dir = target / ".github"
@@ -335,6 +379,8 @@ detail:" line after the owner meaning.
 - `core/proof/` — testimonials, typicality, and reusable proof
 - `core/brand/` — visual identity, voice guardrails, and brand systems
 - `core/marketing/` — optional content distribution, channel, and account strategy
+- `core/team/` — public-safe team member files for names, roles, GitHub
+  handles, and ownership context
 - `core/people/` — optional founder/person voice source material, beliefs, stories, and proof
 - `core/strategy/` — strategic context that should remain evergreen
 - `core/operations/` — operating context such as fulfillment, classroom, funnel, or membership notes
@@ -427,6 +473,15 @@ are good, bad, high-converting, or likely to convert. If
 collect permission before using that proof in public ads, pages, or claims.
 A live idea can be both a bet and an offer candidate: open the bet first, then
 create or update the offer only when the operator wants durable sellable truth.
+
+Team context lives in `core/team/<slug>.md`. Use it for public-safe business
+identity: name, preferred name, role, relationship, owned areas, and GitHub
+handles without `@`. Do not put payroll, legal ownership percentages, home
+contact details, private customer/member data, or credentials there. Keep
+external collaborators in the same folder with
+`relationship: external_collaborator` only when they are useful business
+context. Unknown GitHub handles should stay as handles until the operator
+chooses to add a team file.
 
 Do not rename, delete, merge, split, or move offer folders until an accepted
 decision, approved migration plan, or explicit operator instruction exists.

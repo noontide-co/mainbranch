@@ -292,6 +292,7 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
                 "brain",
                 "books",
                 "vocabulary",
+                "team",
                 "onboarding",
                 "integrations",
                 "measurement",
@@ -2439,7 +2440,7 @@ def test_status_ranker_mentions_due_bets(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(
         status_mod,
         "_github",
-        lambda repo, git: {
+        lambda repo, git, **kwargs: {
             "available": True,
             "authenticated": True,
             "degraded": False,
@@ -2839,6 +2840,64 @@ def test_status_github_activity_business_sections(tmp_path: Path, monkeypatch) -
     assert sections["shipped_this_week"][0]["what_shipped"] == "Launched 7"
     assert sections["recently_closed_tasks"][0]["business_status"] == "closed"
     assert sections["blocked_or_stale_tasks"][0]["labels"] == ["blocked"]
+
+
+def test_status_github_activity_resolves_team_handles(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "core" / "team").mkdir(parents=True)
+    (tmp_path / "core" / "team" / "maya.md").write_text(
+        (
+            "---\n"
+            "type: team_member\n"
+            "slug: maya\n"
+            "name: Maya Chen\n"
+            "preferred_name: Maya\n"
+            "relationship: member\n"
+            "github:\n"
+            "  - mayachen\n"
+            "---\n\n"
+            "# Maya\n"
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        connect_mod,
+        "github_context",
+        lambda repo, **kwargs: {
+            "ok": True,
+            "state": "ready",
+            "summary": "GitHub ready",
+            "repair": "",
+            "repair_command": "",
+            "safe_to_share": True,
+        },
+    )
+    monkeypatch.setattr(status_mod, "_which", lambda name: "/usr/bin/gh" if name == "gh" else "")
+    monkeypatch.setattr(
+        status_mod,
+        "_run_command",
+        lambda args, cwd=None, timeout=3.0: {"ok": True, "stdout": "", "stderr": ""},
+    )
+
+    def fake_gh_json(args: list[str], repo: Path) -> tuple[bool, Any, str]:
+        if args[1:3] == ["pr", "list"] and "review-requested:@me" in args:
+            return True, [{"number": 6, "title": "Review me", "author": {"login": "mayachen"}}], ""
+        if args[1:3] == ["pr", "list"] and "--state" in args and "merged" in args:
+            return True, [{"number": 7, "title": "Merged", "author": {"login": "unknown-dev"}}], ""
+        return True, [], ""
+
+    monkeypatch.setattr(status_mod, "_gh_json", fake_gh_json)
+
+    report = status_mod.run(path=str(tmp_path), update_marker=False)
+    attention = report["github"]["sections"]["attention_requests"][0]
+    shipped = report["github"]["sections"]["shipped_this_week"][0]
+
+    assert report["team"]["summary"]["members"] == 1
+    assert attention["author"] == "mayachen"
+    assert attention["author_display"] == "Maya"
+    assert attention["author_known"] is True
+    assert attention["author_team_slug"] == "maya"
+    assert shipped["author_display"] == "unknown contributor (@unknown-dev)"
+    assert shipped["author_known"] is False
 
 
 def test_status_github_context_stops_before_low_level_remote_errors(

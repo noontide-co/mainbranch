@@ -81,6 +81,96 @@ def test_validate_accepts_simple_content_strategy_entry_point(tmp_path: Path) ->
     assert strategy["errors"] == []
 
 
+def test_validate_accepts_team_members_and_normalized_github_handles(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "core" / "team" / "maya.md",
+        (
+            "---\n"
+            "type: team_member\n"
+            "slug: maya\n"
+            "name: Maya Chen\n"
+            "preferred_name: Maya\n"
+            "role: Growth Lead\n"
+            "relationship: member\n"
+            "github:\n"
+            "  - mayachen\n"
+            "areas:\n"
+            "  - paid traffic\n"
+            "  - launch reviews\n"
+            "---\n\n"
+            "# Maya\n"
+        ),
+    )
+    _write(
+        tmp_path / "core" / "team" / "rafa.md",
+        (
+            "---\n"
+            "type: team_member\n"
+            "slug: rafa\n"
+            "name: Rafael Ortiz\n"
+            "role: Advisor\n"
+            "relationship: advisor\n"
+            "github: rafa-ops\n"
+            "---\n\n"
+            "# Rafael\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is True
+    team_files = [file for file in report["files"] if file["schema"] == "team-members"]
+    assert len(team_files) == 2
+    assert all(file["errors"] == [] for file in team_files)
+
+
+def test_validate_rejects_duplicate_and_unnormalized_team_github_handles(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "core" / "team" / "maya.md",
+        (
+            "---\n"
+            "type: team_member\n"
+            "slug: maya\n"
+            "name: Maya Chen\n"
+            "relationship: member\n"
+            "github:\n"
+            "  - '@MayaChen'\n"
+            "---\n\n"
+            "# Maya\n"
+        ),
+    )
+    _write(
+        tmp_path / "core" / "team" / "ops.md",
+        (
+            "---\n"
+            "type: team_member\n"
+            "slug: ops\n"
+            "name: Ops Contractor\n"
+            "relationship: contractor\n"
+            "github:\n"
+            "  - mayachen\n"
+            "---\n\n"
+            "# Ops\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is False
+    by_path = {file["path"]: file for file in report["files"]}
+    assert any(
+        "must be normalized as 'mayachen'" in error
+        for error in by_path["core/team/maya.md"]["errors"]
+    )
+    assert any(
+        "duplicate github handle 'mayachen'" in error
+        for error in by_path["core/team/maya.md"]["errors"]
+    )
+    assert report["by_category"]["duplicate_github_handle"]["errors"] == 2
+
+
 def test_validate_reports_layered_content_strategy_connection_failures(
     tmp_path: Path,
 ) -> None:

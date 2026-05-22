@@ -12,7 +12,7 @@ from typing import Any
 
 import yaml
 
-from mb import __version__, github_activity, relationships, vocabulary
+from mb import __version__, github_activity, relationships, team, vocabulary
 from mb import books as books_mod
 from mb import codex as codex_mod
 from mb import connect as connect_mod
@@ -3219,7 +3219,12 @@ def _gh_json(args: list[str], repo: Path) -> tuple[bool, Any, str]:
         return False, None, "gh returned invalid JSON"
 
 
-def _github(repo: Path, git: dict[str, Any]) -> dict[str, Any]:
+def _github(
+    repo: Path,
+    git: dict[str, Any],
+    *,
+    team_facts: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     context = connect_mod.github_context(repo, which_func=_which, command_runner=_run_command)
     if not context["ok"]:
         sections: dict[str, list[dict[str, Any]]] = {
@@ -3251,9 +3256,12 @@ def _github(repo: Path, git: dict[str, Any]) -> dict[str, Any]:
             "recent_merged_prs": [],
             "context": context,
         }
+    if team_facts is None:
+        team_facts = team.facts(repo)
     report = github_activity.collect(
         repo,
         remote=str(git.get("remote", "")),
+        team_facts=team_facts,
         which_func=_which,
         command_runner=_run_command,
         json_runner=_gh_json,
@@ -4007,7 +4015,8 @@ def run(
     repo_shape = _looks_like_mainbranch_repo(repo_path)
     git = _git_info(repo_path)
     update = package_update_status(repo_path)
-    github = _github(repo_path, git)
+    team_facts = team.facts(repo_path)
+    github = _github(repo_path, git, team_facts=team_facts)
     brain = _brain(repo_path)
     topology_payload = topology_mod.collect(
         str(repo_path),
@@ -4038,6 +4047,7 @@ def run(
         "deprecated_campaign_keys": True,
         "push_compatibility": push_report["compatibility"],
         "vocabulary": vocabulary.facts(repo_path),
+        "team": team_facts,
         "books": books_mod.readiness(repo_path),
         "onboarding": onboard_mod.onboarding_status(repo_path),
         "integrations": connect_mod.status_all(repo_path, github=github.get("context")),

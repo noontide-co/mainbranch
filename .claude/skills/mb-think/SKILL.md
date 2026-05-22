@@ -363,7 +363,7 @@ See [decide-phase.md](references/decide-phase.md) for format details.
 
 Apply changes described in `## What Changes` to reference files. Mark decision as codified.
 
-**Codify targets include:** `core/*.md`, active offer/audience files, proof files, `core/content-strategy.md`, `core/marketing/...`, `core/people/...`, `core/operations/funnel/skool-surfaces.md`, `core/product-ladder.md`, and `bets/` only when updating the live wager or verdict. See [codify-phase.md](references/codify-phase.md) for layer-specific rules.
+**Codify targets include:** `core/*.md`, active offer/audience files, proof files, `core/content-strategy.md`, `core/marketing/...`, `core/people/...`, `core/team/<slug>.md`, `core/operations/funnel/skool-surfaces.md`, `core/product-ladder.md`, and `bets/` only when updating the live wager or verdict. See [codify-phase.md](references/codify-phase.md) for layer-specific rules.
 
 ---
 

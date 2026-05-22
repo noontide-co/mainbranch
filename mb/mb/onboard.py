@@ -681,6 +681,11 @@ def _profile_missing(profile: dict[str, Any]) -> list[str]:
 
 def _team_step(profile: dict[str, Any], repo: Path) -> dict[str, Any]:
     team_size = str(profile.get("team_size") or "unknown")
+    team_files = [
+        path
+        for path in (repo / "core" / "team").glob("*.md")
+        if path.is_file() and path.name != "README.md"
+    ]
     if team_size == "unknown":
         return {
             "id": "team_layer",
@@ -692,19 +697,22 @@ def _team_step(profile: dict[str, Any], repo: Path) -> dict[str, Any]:
             "required": False,
         }
     if team_size == "solo":
+        missing = [] if team_files else ["core/team/<owner>.md"]
         return {
             "id": "team_layer",
             "title": "Solo operating loop",
-            "status": "complete",
+            "status": "complete" if not missing else "pending",
             "owner": "agent",
-            "missing_inputs": [],
+            "missing_inputs": missing,
             "next_action": (
-                "Use GitHub issues as your personal task list when work starts to sprawl."
+                "Keep the owner file in core/team/ so GitHub activity can use a business name."
             ),
             "required": False,
         }
 
     missing = []
+    if len(team_files) < 2:
+        missing.append("core/team/<member>.md for each teammate")
     if not (repo / ".github" / "CODEOWNERS").exists():
         missing.append(".github/CODEOWNERS")
     if not _has_any_file([repo / "decisions", repo / "documents" / "team-workflow.md"]):
@@ -840,6 +848,8 @@ def run(
     *,
     path: str,
     name: str = "",
+    owner_name: str = "",
+    owner_github: str = "",
     mode: str = "auto",
     level: str = "auto",
     team_size: str = "unknown",
@@ -880,7 +890,12 @@ def run(
     else:
         business_name = name.strip() or target.name.replace("-", " ").title()
         result_business_name = business_name
-        init_result = init_mod.run(path=str(target), name=business_name)
+        init_result = init_mod.run(
+            path=str(target),
+            name=business_name,
+            owner_name=owner_name,
+            owner_github=owner_github,
+        )
         created.extend(str(item) for item in init_result.get("created", []))
         if init_result["status"] == "error":
             errors.append(str(init_result.get("error") or "mb init failed"))

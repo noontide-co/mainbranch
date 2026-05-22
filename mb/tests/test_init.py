@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from mb import codex as codex_mod
+from mb import init as init_mod
 from mb.init import _DEFAULT_CLAUDE, DATA_FOLDERS, _read_template, run
 
 
@@ -174,6 +175,10 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert (target / "core" / "marketing").is_dir()
     assert (target / "core" / "marketing" / "channels").is_dir()
     assert (target / "core" / "marketing" / "accounts").is_dir()
+    assert (target / "core" / "team").is_dir()
+    team_files = list((target / "core" / "team").glob("*.md"))
+    assert len(team_files) == 1
+    assert "type: team_member" in team_files[0].read_text(encoding="utf-8")
     assert (target / "core" / "people").is_dir()
     assert (target / "core" / "strategy").is_dir()
     assert (target / "core" / "operations").is_dir()
@@ -261,6 +266,38 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "Main Branch owner loop for Codex" in codex_skill
     assert "mb workflow list --runtime codex --json" in codex_skill
     assert codex_mod.instructions_status(target)["ok"] is True
+
+
+def test_init_defaults_owner_name_without_local_git_identity(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("MB_OWNER_NAME", "")
+    monkeypatch.setattr(init_mod, "_gh_username", lambda: "MixedCaseUser")
+    target = tmp_path / "acme"
+
+    result = run(path=str(target), name="Acme Brewing")
+
+    assert result["status"] == "ok"
+    owner_file = target / "core" / "team" / "mixedcaseuser.md"
+    assert owner_file.exists()
+    text = owner_file.read_text(encoding="utf-8")
+    assert "name: Business Owner" in text
+    assert "preferred_name: Business Owner" in text
+    assert "  - mixedcaseuser" in text
+
+
+def test_init_uses_explicit_owner_name_env_override(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MB_OWNER_NAME", "Env Owner")
+    monkeypatch.setattr(init_mod, "_gh_username", lambda: "")
+    target = tmp_path / "acme"
+
+    result = run(path=str(target), name="Acme Brewing")
+
+    assert result["status"] == "ok"
+    owner_file = target / "core" / "team" / "your-gh-username.md"
+    assert owner_file.exists()
+    assert "name: Env Owner" in owner_file.read_text(encoding="utf-8")
 
 
 def test_init_idempotent(tmp_path: Path) -> None:

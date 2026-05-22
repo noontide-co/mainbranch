@@ -11,6 +11,8 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
+from mb import team as team_mod
+
 CommandResult = dict[str, Any]
 CommandRunner = Callable[[list[str], Path | None, float], CommandResult]
 JsonRunner = Callable[[list[str], Path], tuple[bool, Any, str]]
@@ -71,6 +73,7 @@ def collect(
     *,
     remote: str = "",
     today: date | None = None,
+    team_facts: dict[str, Any] | None = None,
     which_func: Which = which,
     command_runner: CommandRunner = run_command,
     json_runner: JsonRunner = gh_json,
@@ -180,6 +183,7 @@ def collect(
                     repo_name,
                     business_status="needs_review",
                     reason="Your review is requested",
+                    team_facts=team_facts,
                 )
                 for item in review_requests
             ],
@@ -198,6 +202,7 @@ def collect(
                     repo_name,
                     business_status="mentioned",
                     reason="You were mentioned",
+                    team_facts=team_facts,
                 )
                 for item in mentioned_prs
             ],
@@ -209,10 +214,11 @@ def collect(
             repo_name,
             business_status="open_proposal",
             reason="Your open proposal may need follow-up",
+            team_facts=team_facts,
         )
         for item in open_prs
     ]
-    shipped_this_week = recent_merged_prs(merged, repo_name=repo_name)
+    shipped_this_week = recent_merged_prs(merged, repo_name=repo_name, team_facts=team_facts)
     recently_closed_tasks = [
         _task_item(item, repo_name, business_status="closed", reason="Recently closed")
         for item in closed
@@ -254,12 +260,22 @@ def collect(
     return report
 
 
-def recent_merged_prs(prs: list[dict[str, Any]], repo_name: str = "") -> list[dict[str, Any]]:
+def recent_merged_prs(
+    prs: list[dict[str, Any]],
+    repo_name: str = "",
+    *,
+    team_facts: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     sorted_prs = sorted(prs, key=lambda pr: str(pr.get("mergedAt", "") or ""), reverse=True)
-    return [summarize_pr(pr, repo_name=repo_name) for pr in sorted_prs[:5]]
+    return [summarize_pr(pr, repo_name=repo_name, team_facts=team_facts) for pr in sorted_prs[:5]]
 
 
-def summarize_pr(pr: dict[str, Any], repo_name: str = "") -> dict[str, Any]:
+def summarize_pr(
+    pr: dict[str, Any],
+    repo_name: str = "",
+    *,
+    team_facts: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     title = str(pr.get("title", "") or "")
     body = str(pr.get("body", "") or "")
     summary = ""
@@ -276,6 +292,7 @@ def summarize_pr(pr: dict[str, Any], repo_name: str = "") -> dict[str, Any]:
         repo_name=repo_name,
         business_status="shipped",
         reason="Merged this week",
+        team_facts=team_facts,
     )
     item["what_shipped"] = summary[:220]
     item["mergedAt"] = item["merged_at"]
@@ -389,7 +406,10 @@ def _proposal_item(
     *,
     business_status: str,
     reason: str,
+    team_facts: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    author = _author_login(pr.get("author"))
+    author_identity = team_mod.resolve_github_handle(author, team_facts)
     return {
         "type": "proposal",
         "github_type": "pull_request",
@@ -402,7 +422,11 @@ def _proposal_item(
         "state": str(pr.get("state", "") or ""),
         "updated_at": str(pr.get("updatedAt", "") or ""),
         "merged_at": str(pr.get("mergedAt", "") or ""),
-        "author": _author_login(pr.get("author")),
+        "author": author,
+        "author_handle": author_identity["handle"],
+        "author_display": author_identity["label"],
+        "author_known": author_identity["known"],
+        "author_team_slug": author_identity["slug"],
         "is_draft": bool(pr.get("isDraft", False)),
         "review_decision": str(pr.get("reviewDecision", "") or ""),
     }

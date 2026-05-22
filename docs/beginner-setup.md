@@ -170,9 +170,10 @@ cd my-business
 
 `mb onboard` walks you through the setup, explains why Main Branch uses local
 files, git, and GitHub, scaffolds the business folder taxonomy (`core/`,
-`research/`, `decisions/`, `bets/`, `log/`, `pushes/`, `documents/` plus an
-optional `core/vocabulary.md` for operator-owned display words), and wires the
-bridge files Claude Code needs to find Main Branch's skills.
+`research/`, `decisions/`, `bets/`, `log/`, `pushes/`, `documents/` plus
+`core/team/<owner>.md` for public-safe owner context and optional
+`core/vocabulary.md` for operator-owned display words), and wires the bridge
+files Claude Code needs to find Main Branch's skills.
 
 You may also see a `.mb/` folder. That is normal. It stores Main Branch's local
 operational state for that business repo, such as onboarding progress, safe

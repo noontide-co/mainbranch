@@ -43,7 +43,7 @@ flowchart TB
   end
 
   subgraph brain["Business repo - durable business brain"]
-    core["core/<br/>offer, audience, voice, strategy, operations, finance policy"]
+    core["core/<br/>offer, audience, voice, team, strategy, operations, finance policy"]
     growthcraft["offer sharpening + AI SEO/recognition<br/>content strategy and conversion knowledge"]
     research["research/<br/>point-in-time findings"]
     decisions["decisions/<br/>accepted choices and rationale"]
