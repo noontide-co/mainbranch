@@ -15,7 +15,7 @@ contract for those surfaces.
 | Install mode | `pipx install mainbranch` | Official public install path. |
 | Developer mode | Git clone | For contributors who want to edit the engine or skills. |
 | Agent runtime | Claude Code | First-class slash-skill runtime today. |
-| Codex CLI | First-class owner loop | Fresh business repos include `AGENTS.md` and `.agents/skills/main-branch-owner-loop`; `mb workflow list --runtime codex` exposes supported, pending, and unsupported workflow surfaces. This is not slash-command parity or provider/publishing parity. |
+| Codex CLI | First-class owner loop | Fresh business repos include `AGENTS.md`, `.agents/skills/main-branch-owner-loop`, and `.agents/plugins/main-branch-owner-loop`; `mb workflow list --runtime codex` exposes supported, pending, and unsupported workflow surfaces. This is owner-loop plugin command support, not all-skill or provider/publishing parity. |
 | Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, local LLMs | Roadmap | `mb` is runtime-agnostic by design, but these adapters are not supported yet. |
 
 **Windows tip — try WSL2.** If you're on Windows and want a working setup today, use [Windows Subsystem for Linux 2 (WSL2)](https://learn.microsoft.com/en-us/windows/wsl/install). Inside WSL2, follow the supported Linux flow. The pipx install path works there.
@@ -164,7 +164,7 @@ smoke evidence exist.
 | Runtime surface | Status | Invocation | Skill/workflow discovery | Routing and automation | Observability and packaging |
 |---|---|---|---|---|---|
 | Claude Code | Supported | `mb start --repo "$repo"` prints the `claude` handoff; `mb start --launch` may launch after readiness checks. | `mb skill link --repo "$repo"` writes project-local `.claude/skills/mb-*` bridge links and `.claude/settings.local.json`. | Slash commands such as `/mb-start` and `/mb-think` own conversation and judgment; they call deterministic `mb` commands for facts. | `mb doctor`, `mb status --json`, `mb start --json`, `mb skill repair`, and runtime dogfood evidence gate release claims. Skills ship inside the Python package today. |
-| Codex CLI | First-class owner loop | Can call deterministic `mb` commands as a subprocess when pointed at a business repo. `AGENTS.md` gives Codex the repo bootstrap and `.agents/skills/main-branch-owner-loop` gives Codex a native owner-loop discovery surface. | Fresh `mb onboard` repos include tracked `AGENTS.md`, `.agents/skills/main-branch-owner-loop/SKILL.md`, and a generated workflow inventory. `mb doctor repair --plan` / `--apply` can report and refresh them. | Codex should run `mb status --json --peek`, `mb start --json`, `mb doctor repair --plan --json`, `mb checkpoint --plan --json`, `mb validate --json`, and `mb workflow list --runtime codex --json` before owner-loop advice, translate facts into business language, and ask before writes. | `mb doctor`, `mb status --json`, `mb start --json`, and `mb workflow list` expose Codex readiness and workflow support. Support is first-class only for the proven owner loop: start/status/setup/update/doctor, think/codify, end/checkpoint/save, validate, and workflow discovery. This is not slash-command, ads/site/provider, publishing, spend, or customer-contact parity. |
+| Codex CLI | First-class owner loop | Can call deterministic `mb` commands as a subprocess when pointed at a business repo. `AGENTS.md` gives Codex the repo bootstrap, `.agents/skills/main-branch-owner-loop` gives Codex a native owner-loop skill surface, and `.agents/plugins/main-branch-owner-loop` gives Codex owner-loop plugin commands. | Fresh `mb onboard` repos include tracked `AGENTS.md`, `.agents/skills/main-branch-owner-loop/SKILL.md`, `.agents/plugins/marketplace.json`, a plugin manifest, plugin-packaged skill, thin `/mb-*` command shims, and a generated workflow inventory. `mb doctor repair --plan` / `--apply` can report and refresh them. | Codex should run `mb status --json --peek`, `mb start --json`, `mb doctor repair --plan --json`, `mb checkpoint --plan --json`, `mb validate --json`, and `mb workflow list --runtime codex --json` before owner-loop advice, translate facts into business language, and ask before writes. The generated plugin exposes `/mb-start`, `/mb-status`, `/mb-setup`, `/mb-update`, `/mb-doctor`, `/mb-think`, `/mb-end`, `/mb-checkpoint`, `/mb-validate`, `/mb-workflows`, and `/mb-help` as thin shims over those facts. | `mb doctor`, `mb status --json`, `mb start --json`, and `mb workflow list` expose Codex readiness and workflow support. Support is first-class only for the proven owner loop: start/status/setup/update/doctor, think/codify, end/checkpoint/save, validate, and workflow discovery. This is not all-skill, ads/site/provider, publishing, spend, or customer-contact parity. |
 | Cursor | Roadmap | Can call deterministic `mb` commands from terminal/tasks when pointed at a business repo. | No supported Cursor rules/package adapter yet. | No supported Main Branch routing contract. | Needs adapter docs, install/update rules, conflict handling, and smoke evidence. |
 | OpenClaw | Roadmap | Target public runtime surface. It should call `mb` through stable CLI/JSON commands rather than clone-era paths. | No supported OpenClaw adapter yet. | Main Branch should coexist with OpenClaw as the business repo/GitHub memory layer, not replace it. | Needs explicit adapter shape, migration notes, generated-file rules, and smoke evidence. |
 | Hermes | Roadmap | Target runtime/memory surface. It may supervise or host workflows that call packaged `mb` commands. | No supported Hermes adapter yet. | Hermes-specific routing belongs in the Hermes adapter, while `mb` remains deterministic and non-conversational. | Docs may describe internal-package expectations generically, but not as the only blessed public path. Smoke evidence is required before support claims. |
@@ -178,16 +178,16 @@ support levels:
 
 Shared workflow sources under `workflows/` are runtime-agnostic contracts.
 Runtime shells, Claude Code skills, generated `AGENTS.md`, generated Codex
-skills, and future adapter packages should stay thin over those sources. A
+skills/plugins, and future adapter packages should stay thin over those sources. A
 checked shared workflow source does not by itself make every runtime supported;
 support still requires an adapter and smoke evidence for that runtime.
 
 | Surface | Claude Code | Other runtimes and orchestrators |
 |---|---|---|
 | Deterministic CLI facts (`mb status --json`, `mb validate --json`, `mb graph --json`, `mb connect status --json`) | Supported when `mb` is installed and pointed at a business repo. | Callable as packaged CLI subprocesses, but this does not make the hosting runtime supported. |
-| Runtime handoff (`mb start --json`, `mb start --launch`) | Supported for Claude Code handoff and launch readiness. | Codex CLI handoff metadata is supported for owner-loop readiness: `mb start --json` reports Codex executable, `AGENTS.md`, and owner-loop skill readiness. `mb` does not launch Codex. |
-| Lifecycle slash skills (`/mb-start`, `/mb-status`, `/mb-setup`, `/mb-update`, `/mb-end`, `/mb-help`) | Supported through Claude Code project-local skill discovery. | Codex does not use slash commands. The generated owner-loop skill covers start/status/setup/update/doctor, end/checkpoint/save, validate, and workflow discovery through deterministic `mb` facts and approval gates. |
-| Production slash skills (`/mb-think`, `/mb-ads`, `/mb-organic`, `/mb-site`, `/mb-wiki`, `/mb-bet`) | Supported through Claude Code skills, subject to each skill's provider and workflow limits. Conversion scripts route through the owning workflow instead of a standalone primitive or skill. | Codex supports think/codify through `workflows/mb-think/workflow.md` and generated guidance. Ads, organic/newsletter, site, and bet workflows are pending shared-source migration. Wiki and skill-authoring workflows are intentionally unsupported for the owner-loop target. |
+| Runtime handoff (`mb start --json`, `mb start --launch`) | Supported for Claude Code handoff and launch readiness. | Codex CLI handoff metadata is supported for owner-loop readiness: `mb start --json` reports Codex executable, `AGENTS.md`, owner-loop skill, and plugin readiness. `mb` does not launch Codex. |
+| Lifecycle slash skills (`/mb-start`, `/mb-status`, `/mb-setup`, `/mb-update`, `/mb-end`, `/mb-help`) | Supported through Claude Code project-local skill discovery. | Codex supports owner-loop plugin commands for start/status/setup/update/doctor, end/checkpoint/save, validate, and workflow discovery through deterministic `mb` facts and approval gates. This is not all Claude Code slash-skill parity. |
+| Production slash skills (`/mb-think`, `/mb-ads`, `/mb-organic`, `/mb-site`, `/mb-wiki`, `/mb-bet`) | Supported through Claude Code skills, subject to each skill's provider and workflow limits. Conversion scripts route through the owning workflow instead of a standalone primitive or skill. | Codex supports `/mb-think` for think/codify through `workflows/mb-think/workflow.md` and generated guidance. Ads, organic/newsletter, site, and bet workflows are pending shared-source migration. Wiki and skill-authoring workflows are intentionally unsupported for the owner-loop target. |
 | Automation routines | May call CLI commands before handing judgment work to Claude Code. | May call shipped deterministic CLI commands against an explicit repo path. Conversation, retries, routing, and model invocation belong to the runtime adapter, not `mb`. |
 
 ## Adapter checklist
@@ -208,15 +208,14 @@ write runtime state, credentials, or raw account data into tracked files.
 For the Codex staging plan, see
 [Codex Adapter Plan](../decisions/2026-05-08-codex-adapter-plan.md). The current
 implementation is the owner-loop slice: generated `AGENTS.md`, generated
-`.agents/skills/main-branch-owner-loop`, deterministic readiness facts, doctor
-repair coverage, `mb workflow list`, and compact workflow discovery for
-start/status/setup/update/doctor, think/codify, end/checkpoint/save, validate,
-and workflow inventory. The think route is checked against
+`.agents/skills/main-branch-owner-loop`, `.agents/plugins/main-branch-owner-loop`,
+deterministic readiness facts, doctor repair coverage, `mb workflow list`, and
+compact workflow discovery for start/status/setup/update/doctor, think/codify,
+end/checkpoint/save, validate, and workflow inventory. The think route is checked against
 `workflows/mb-think/workflow.md` as the first official shared workflow source
 pattern, and fresh read-only Codex smoke covers the owner-loop surface from a
-business repo. It does not claim slash-command parity, copied Claude skill
-parity, provider/publishing workflow support, spend, or customer-contact
-support.
+business repo. It does not claim all-skill parity, copied Claude skill parity,
+provider/publishing workflow support, spend, or customer-contact support.
 
 ## Recommended setup
 
@@ -281,7 +280,7 @@ mb doctor
 
 - Claude Code is the first-class slash-skill runtime today.
 - Codex CLI is first-class for the proven owner loop. Main Branch does not
-  claim Codex slash-command parity, copied Claude skill parity, provider writes,
+  claim all-skill parity, copied Claude skill parity, provider writes,
   publishing, spend, or customer-contact workflows.
 - Windows is experimental.
 - Skills are bundled into the installed Python package, so public users update

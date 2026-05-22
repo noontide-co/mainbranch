@@ -297,7 +297,9 @@ Codex is first-class for the proven owner loop only. Rendered Codex shell
 snapshots must start from generated `AGENTS.md` style grounding, deterministic
 `mb` facts, and natural-language workflow routing.
 
-Do not say `/mb-think` works inside Codex. Do not say "Run `/mb-think`." Do
-not claim broader Codex workflow support until a fresh fixture repo and read-only
-`codex exec --json --ephemeral --sandbox read-only -C <repo>` smoke prove the
-guidance is actually used.
+When the generated Main Branch Owner Loop plugin is installed, `/mb-think` is
+the Codex owner-loop command for this route. Without the plugin, use the
+generated Codex shell fallback in `AGENTS.md` and natural-language routing from
+read-only `mb` facts. Do not claim broader Codex workflow support until a fresh
+fixture repo and read-only `codex exec --json --ephemeral --sandbox read-only
+-C <repo>` smoke prove the generated guidance or plugin route is actually used.

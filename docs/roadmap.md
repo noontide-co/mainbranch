@@ -70,9 +70,9 @@ Main Branch already ships:
 
 Claude Code is the supported slash-skill runtime today. Codex CLI is
 first-class for the proven owner loop through generated `AGENTS.md`,
-`.agents/skills/main-branch-owner-loop`, deterministic `mb` facts, and workflow
-inventory. Other runtimes are compatibility targets until adapter code and
-smoke evidence exist.
+`.agents/skills/main-branch-owner-loop`, `.agents/plugins/main-branch-owner-loop`,
+deterministic `mb` facts, and workflow inventory. Other runtimes are
+compatibility targets until adapter code and smoke evidence exist.
 
 ## Current Direction: Chat-First, CLI-Backed Daily Loop
 
@@ -149,7 +149,7 @@ Anti-scope for v0.3.x:
 
 - no dashboard as source of truth;
 - no broad multi-runtime support claims;
-- no marketplace;
+- no hosted/public/provider marketplace product;
 - no automatic model invocation from `mb`;
 - no provider setup that stores secrets in repo files.
 

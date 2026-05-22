@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from mb import codex as codex_mod
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 MAIN_BRANCH_COMMAND_RE = re.compile(
@@ -59,16 +61,22 @@ def _line_context(lines: list[str], index: int) -> str:
 
 def test_runtime_docs_reference_only_bundled_main_branch_slash_commands() -> None:
     bundled = _bundled_slash_commands()
+    codex_plugin_commands = set(codex_mod.CODEX_COMMAND_NAMES)
     failures: list[str] = []
 
     for path in _scan_paths():
         rel = path.relative_to(REPO_ROOT)
-        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for index, line in enumerate(lines):
             for match in MAIN_BRANCH_COMMAND_RE.finditer(line):
                 command_name = match.group("name")
                 if command_name in bundled:
                     continue
-                failures.append(f"{rel}:{line_number}: /{command_name} is not a bundled skill")
+                if command_name in codex_plugin_commands:
+                    context = _line_context(lines, index)
+                    if "codex" in context and "plugin" in context:
+                        continue
+                failures.append(f"{rel}:{index + 1}: /{command_name} is not a bundled skill")
 
     assert failures == []
 

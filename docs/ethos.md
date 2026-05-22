@@ -101,10 +101,10 @@ and power users, but they should not be the default user experience.
 
 Claude Code is the first supported slash-skill runtime today. Codex CLI is
 first-class for the proven owner loop through generated repo guidance,
-generated owner-loop skill discovery, deterministic `mb` facts, and smoke
-evidence. Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and local
-runtimes are compatibility targets only when adapter code and smoke evidence
-exist.
+generated owner-loop skill/plugin discovery, deterministic `mb` facts, and
+smoke evidence. Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and
+local runtimes are compatibility targets only when adapter code and smoke
+evidence exist.
 
 Main Branch should meet operators where they already work, but it should not
 claim support before support is proven.
@@ -169,7 +169,10 @@ autosave; it is durable business memory.
 ## What We Are Not Building Yet
 
 Main Branch is not a hosted SaaS dashboard, chat client, background daemon,
-model host, vector database, scheduler, or marketplace today.
+model host, vector database, scheduler, or hosted marketplace product today.
+Repo-local runtime marketplace metadata, such as the Codex plugin marketplace
+file generated into a business repo, is an adapter mechanism rather than a
+Main Branch marketplace business surface.
 
 Those may become useful surfaces later. They earn their way in by preserving
 the same source of truth: the business repo, GitHub, git history, deterministic

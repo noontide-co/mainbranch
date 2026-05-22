@@ -102,19 +102,22 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     normalized = _normalize(text)
     assert "## Codex Operating Contract" in text
     assert "Do not pretend Claude" in text
-    assert "slash commands exist in Codex." in text
+    assert "Code skills work in Codex." in text
     assert "## Codex Lifecycle Workflow Index" in text
     assert "repo-level Codex bootstrap" in text
     assert ".agents/skills/main-branch-owner-loop/SKILL.md" in text
+    assert ".agents/plugins/main-branch-owner-loop/" in text
     assert "Use `.agents/skills/main-branch-owner-loop`" in text
     assert "Start the day / what next / get oriented" in text
+    assert "generated Codex plugin is installed" in text
     assert "Inspect status / what changed / what is stale" in text
     assert "Think / research / decide / codify" in text
     assert "do not claim these workflows are ported to" in text
+    assert "/plugins" in text
     assert "## Codex Start Workflow" in text
-    assert "This is the Codex-native port of `/mb-start`" in text
+    assert "This is the Codex-native port behind `/mb-start`" in text
     assert "## Codex Status Workflow" in text
-    assert "This is the Codex-native status route" in text
+    assert "This is the Codex-native status route behind `/mb-status`" in text
     assert "since_last_check" in text
     assert "## Codex Think Route" in text
     assert "existing `mb-think` shared workflow" in text
@@ -204,6 +207,22 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
         / "references"
         / "workflow-inventory.md"
     ).exists()
+    assert (
+        target / ".agents" / "plugins" / "main-branch-owner-loop" / ".codex-plugin" / "plugin.json"
+    ).exists()
+    assert (
+        target
+        / ".agents"
+        / "plugins"
+        / "main-branch-owner-loop"
+        / "skills"
+        / "main-branch-owner-loop"
+        / "SKILL.md"
+    ).exists()
+    assert (
+        target / ".agents" / "plugins" / "main-branch-owner-loop" / "commands" / "mb-start.md"
+    ).exists()
+    assert (target / ".agents" / "plugins" / "marketplace.json").exists()
     assert (target / ".github" / "CODEOWNERS").exists()
     assert (target / ".gitignore").exists()
     assert (target / ".mb" / "schema_version").read_text(encoding="utf-8") == "0.2\n"
@@ -244,6 +263,10 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "Acme Brewing" in agents_md
     assert "Acme Brewing" in readme_md
     assert "/mb-start" in readme_md
+    assert "Codex CLI" in readme_md
+    assert "codex plugin marketplace add ." in readme_md
+    assert "/plugins" in readme_md
+    assert "Main Branch Owner Loop" in readme_md
     assert "## Save, Checkpoint, Backup" in readme_md
     assert "A checkpoint is an approved saved point" in readme_md
     assert "GitHub backup/sync is strongly recommended" in readme_md

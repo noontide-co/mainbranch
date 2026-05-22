@@ -8,6 +8,7 @@ from typing import Any
 
 from typer.testing import CliRunner
 
+from mb import codex as codex_mod
 from mb import doctor as doctor_mod
 from mb import engine as engine_mod
 from mb import migration_lint
@@ -430,6 +431,44 @@ def test_doctor_repair_apply_refreshes_codex_agents_md(tmp_path: Path) -> None:
     )
     assert "Main Branch owner loop for Codex" in skill_text
     assert "mb workflow list --runtime codex --json" in skill_text
+    plugin_skill_text = (repo / codex_mod.CODEX_PLUGIN_SKILL_RELATIVE_PATH).read_text(
+        encoding="utf-8"
+    )
+    command_text = (
+        repo / ".agents" / "plugins" / "main-branch-owner-loop" / "commands" / "mb-start.md"
+    ).read_text(encoding="utf-8")
+    marketplace_text = (repo / codex_mod.CODEX_MARKETPLACE_RELATIVE_PATH).read_text(
+        encoding="utf-8"
+    )
+    assert plugin_skill_text == skill_text
+    assert "Main Branch Owner Loop" in (
+        repo / codex_mod.CODEX_PLUGIN_MANIFEST_RELATIVE_PATH
+    ).read_text(encoding="utf-8")
+    assert "thin Codex shim" in command_text
+    assert "mb start --json" in command_text
+    assert "main-branch-owner-loop" in marketplace_text
+
+
+def test_doctor_repair_refreshes_stale_codex_plugin_command(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    command = repo / ".agents" / "plugins" / "main-branch-owner-loop" / "commands" / "mb-start.md"
+    command.write_text("# stale\n", encoding="utf-8")
+
+    plan_result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+    assert plan_result.exit_code in {0, 1}
+    plan = json.loads(plan_result.stdout)
+    actions = {action["id"]: action for action in plan["actions"]}
+    assert "codex-agents-md" in actions
+    assert str(command.relative_to(repo)) in actions["codex-agents-md"]["writes"]
+
+    apply_result = runner.invoke(
+        app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"]
+    )
+    assert apply_result.exit_code in {0, 1}
+    command_text = command.read_text(encoding="utf-8")
+    assert "thin Codex shim" in command_text
+    assert "provider mutation" in command_text
 
 
 def test_doctor_repair_preserves_custom_codex_agents_md_when_contract_is_current(

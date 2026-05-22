@@ -221,28 +221,33 @@ You'll need a Claude plan that includes Claude Code. Install Claude Code from [c
 
 Codex CLI is first-class for the Main Branch owner loop, not for Claude Code
 slash-command parity. Fresh business folders include a tracked `AGENTS.md`
-bootstrap plus `.agents/skills/main-branch-owner-loop`, so Codex can start the
-day, inspect status, route setup/update/doctor work, think through or codify a
+bootstrap, `.agents/skills/main-branch-owner-loop`, and a repo-scoped Codex
+plugin at `.agents/plugins/main-branch-owner-loop`, so Codex can start the day,
+inspect status, route setup/update/doctor work, think through or codify a
 decision, plan an end/checkpoint/save closeout, validate the repo, and list
 workflow support.
 
 Expect Codex to run `mb status --json --peek`, `mb start --json`,
 `mb doctor repair --plan --json`, `mb checkpoint --plan --json`,
 `mb validate --json`, and `mb workflow list --runtime codex --json`, then
-translate those facts into a useful owner briefing. Do not expect Claude Code slash commands
-such as `/mb-start` to work inside Codex, and do not expect site, ads,
-publishing, provider mutation, spend, or customer-contact workflows to be
-ported there.
+translate those facts into a useful owner briefing. When the plugin is
+installed from `/plugins`, Codex exposes thin owner-loop commands such as
+`/mb-start`, `/mb-status`, `/mb-think`, `/mb-end`, and `/mb-help`. Do not expect
+all Claude Code skills, site, ads, publishing, provider mutation, spend, or
+customer-contact workflows to be ported there.
 
 After installing Codex CLI, test a new repo with:
 
 ```bash
 mb onboard --yes --name "Codex Smoke Business" --path codex-smoke-business
 cd codex-smoke-business
+codex plugin marketplace add .
 codex
 ```
 
-Ask Codex to start the business day from read-only `mb` facts and to ask before
+Open `/plugins`, install **Main Branch Owner Loop** from the registered repo
+marketplace, then run `/mb-start`. If the plugin is not installed yet, ask
+Codex to start the business day from read-only `mb` facts and to ask before
 writing files.
 
 For a read-only smoke test:

@@ -241,13 +241,14 @@ def _build_checks(
                 "ok": bool(codex_instructions.get("ok")),
                 "severity": "warn" if codex_found else "info",
                 "detail": (
-                    "AGENTS.md and Codex owner-loop skill point Codex to mb facts, "
-                    "lifecycle routes, and workflow inventory"
+                    "AGENTS.md, Codex owner-loop skill, plugin commands, and marketplace "
+                    "point Codex to mb facts, lifecycle routes, and workflow inventory"
                 )
                 if codex_instructions.get("ok")
                 else (
-                    "Codex AGENTS.md or owner-loop skill files are missing, stale, "
-                    "or missing required mb fact commands or lifecycle discovery guidance"
+                    "Codex AGENTS.md, owner-loop skill, plugin, marketplace, or command "
+                    "files are missing, stale, or missing required mb fact commands or "
+                    "lifecycle discovery guidance"
                 ),
                 "repair": codex_instructions.get("repair") if codex_found else "",
             },
@@ -324,8 +325,9 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "argv": ["codex", "-C", str(repo_path)],
             "display": _codex_display_command(repo_path),
             "startup_prompt": (
-                "Start this Main Branch business day. Run only read-only mb checks "
-                "before advice and ask before writes."
+                "Start this Main Branch business day with /mb-start if the Main Branch "
+                "plugin is installed; otherwise run only read-only mb checks before "
+                "advice and ask before writes."
             ),
         }
 

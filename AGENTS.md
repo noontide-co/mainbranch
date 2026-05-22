@@ -21,11 +21,12 @@ markdown files in git.
 
 Claude Code is the first-class slash-skill runtime today. Codex CLI is
 first-class for the proven owner loop through generated `AGENTS.md`,
-`.agents/skills/main-branch-owner-loop`, deterministic `mb` facts, and
-workflow inventory. That is not slash-command parity or full production
-workflow parity. Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration,
-and local runtimes remain compatibility targets until tested. Do not claim
-support before there is an adapter and smoke evidence for the exact surface.
+`.agents/skills/main-branch-owner-loop`, `.agents/plugins/main-branch-owner-loop`,
+deterministic `mb` facts, and workflow inventory. That is owner-loop plugin
+command support, not all-skill parity or full production workflow parity.
+Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and local runtimes
+remain compatibility targets until tested. Do not claim support before there is
+an adapter and smoke evidence for the exact surface.
 
 The public product frame lives in `docs/ethos.md`, the operator loop taxonomy
 lives in `docs/operator-loops.md`, and release direction lives in
@@ -37,7 +38,7 @@ The current product center is the daily owner loop:
 
 1. The operator opens the business repo and starts Claude Code or Codex CLI.
 2. `/mb-start`, the generated repo instructions, or the generated Codex
-   owner-loop skill ground the agent in
+   owner-loop skill/plugin surface ground the agent in
    deterministic `mb` facts before advice.
 3. The agent routes thought dumps and requests into business primitives:
    bets, goals, offers, research, decisions, pushes, playbooks, outcomes, and

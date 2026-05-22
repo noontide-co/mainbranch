@@ -7,8 +7,8 @@ Main Branch business repo instructions for Codex.
 Main Branch CLI facts are the source of truth for repo health, setup, runtime
 wiring, updates, graph/status signals, provider readiness, and repair paths.
 When the operator asks to start, begin, get oriented, triage the day, or decide
-what to do next, use this Codex-native start workflow. Do not pretend Claude
-Code slash commands exist in Codex.
+what to do next, use this Codex-native start workflow or the generated Codex
+plugin command surface. Do not pretend Claude Code skills work in Codex.
 
 Start in this repo. Before setup, routing, migration, update, or repair advice,
 run the read-only checks that fit the situation:
@@ -91,37 +91,43 @@ emails, or usernames alone.
 ## Codex Lifecycle Workflow Index
 
 This tracked `AGENTS.md` file is the repo-level Codex bootstrap. The generated
-project-local skill at `.agents/skills/main-branch-owner-loop/SKILL.md` is the
-Codex-native owner-loop discovery surface. Both are owned by `mb init`,
+project-local skill at `.agents/skills/main-branch-owner-loop/SKILL.md` plus
+the repo-scoped plugin at `.agents/plugins/main-branch-owner-loop/` are the
+Codex-native owner-loop discovery surfaces. They are owned by `mb init`,
 `mb onboard`, `mb doctor repair`, and the operator. Keep them compact: route to
 lifecycle workflows and `mb` facts, but do not duplicate the full Main Branch
 skill tree.
 
 Use `.agents/skills/main-branch-owner-loop` for the proven owner loop only. Do
-not create Codex plugin manifests, copied Claude skill trees, or symlinked
-Claude skills unless a future `mb` command or issue says that surface is
-supported for this repo.
+not create additional Codex plugin manifests, copied Claude skill trees, or
+symlinked Claude skills unless a future `mb` command or issue says that surface
+is supported for this repo.
 
 Use this index to map natural Codex requests:
 
-- **Start the day / what next / get oriented:** use the Codex Start Workflow
-  below. Run `mb status --json --peek` first, then `mb start --json` when
-  runtime handoff or adapter-readiness facts matter.
-- **Inspect status / what changed / what is stale:** use the Codex Status
-  Workflow below. Answer from `ranked_actions`, `since_last_check`, `journal`,
-  `money_path`, `content_strategy`, `integrations`, `readiness`, and
-  `drift.items`.
-- **Think / research / decide / codify:** use the Codex Think Route below.
-  Start from `mb` facts, choose a research depth, and ask before writing
-  durable business files.
+- **Start the day / what next / get oriented:** use `/mb-start` when the
+  generated Codex plugin is installed, or the Codex Start Workflow below. Run
+  `mb status --json --peek` first, then `mb start --json` when runtime handoff
+  or adapter-readiness facts matter.
+- **Inspect status / what changed / what is stale:** use `/mb-status` when the
+  generated Codex plugin is installed, or the Codex Status Workflow below.
+  Answer from `ranked_actions`, `since_last_check`, `journal`, `money_path`,
+  `content_strategy`, `integrations`, `readiness`, and `drift.items`.
+- **Think / research / decide / codify:** use `/mb-think` when the generated
+  Codex plugin is installed, or the Codex Think Route below. Start from `mb`
+  facts, choose a research depth, and ask before writing durable business files.
 - **Site, ads, organic production, provider mutation, publishing, spend,
   domains, or customer contact:** do not claim these workflows are ported to
   Codex. Use read-only `mb` facts for planning and ask before any action.
 
+The generated plugin also exposes `/mb-setup`, `/mb-update`, `/mb-doctor`,
+`/mb-end`, `/mb-checkpoint`, `/mb-validate`, `/mb-workflows`, and `/mb-help`
+as thin command shims over this owner-loop contract. Use `/plugins` to inspect
+or install the Main Branch Owner Loop plugin from this repo.
+
 ## Codex Start Workflow
 
-This is the Codex-native port of `/mb-start`. It is a workflow, not a slash
-command.
+This is the Codex-native port behind `/mb-start`.
 
 1. Run `mb status --json --peek` from the current working directory. Use the
    repo markers in that JSON to confirm this is the business repo. If the
@@ -154,7 +160,7 @@ before acting.
 
 ## Codex Status Workflow
 
-This is the Codex-native status route. It is a workflow, not a slash command.
+This is the Codex-native status route behind `/mb-status`.
 
 1. Run `mb status --json --peek`.
 2. Treat the JSON as the source of truth for setup, update, drift, GitHub,
@@ -180,8 +186,10 @@ the daily check-in and wants it recorded.
 ## Codex Think Route
 
 This is Codex-native guidance for the existing `mb-think` shared workflow
-source. It is not a slash command, and it does not mean all Main Branch skills
-work in Codex.
+source. When the generated Main Branch Owner Loop plugin is installed, this is
+the fallback route behind `/mb-think`; without the plugin, treat this section as
+the natural-language Codex route. It does not mean all Main Branch skills work
+in Codex.
 
 Engine source workflow: `workflows/mb-think/workflow.md`. This business repo
 does not need to contain that engine source file. Treat this generated

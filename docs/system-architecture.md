@@ -115,10 +115,11 @@ surfaces, required `mb` fact commands, JSON fact paths, approval gates,
 public/private boundaries, routing rules, handoff shape, and validation
 expectations. Claude Code remains the first-class slash-skill runtime shell
 through `.claude/skills/mb-think/SKILL.md`; Codex uses tracked `AGENTS.md` and
-generated `.agents/skills/main-branch-owner-loop` guidance for the proven owner
-loop, checked against shared workflow sources where migrated. Neither
-`.claude/skills` nor `.agents/skills` is the canonical source for cross-runtime
-workflow semantics.
+generated `.agents/skills/main-branch-owner-loop` plus
+`.agents/plugins/main-branch-owner-loop` guidance for the proven owner loop,
+checked against shared workflow sources where migrated. Neither
+`.claude/skills`, `.agents/skills`, nor `.agents/plugins` is the canonical
+source for cross-runtime workflow semantics.
 
 `mb` may validate, render snapshots for tests, and repair generated runtime
 guidance. It must not invoke Claude, Codex, or any model.
@@ -622,8 +623,9 @@ and checkpoint. The full surface lives in
 Skills own judgment-heavy work: synthesis, writing, review, routing. They call
 `mb` for facts. Claude Code is the supported slash-skill runtime today. Codex
 CLI is supported for the proven owner loop through generated repo guidance and
-a generated owner-loop skill. Other runtimes are compatibility targets until
-adapter code and smoke evidence exist. See [compatibility.md](compatibility.md).
+a generated owner-loop skill/plugin surface. Other runtimes are compatibility
+targets until adapter code and smoke evidence exist. See
+[compatibility.md](compatibility.md).
 
 Curated rails — GitHub, Cloudflare, Google/Workspace, official ads paths,
 Postiz, hledger, transcription helpers — earn their place by improving a loop

@@ -15,11 +15,17 @@ tags: [runtime-adapters, codex, skills, cli, decision-needed]
 
 # Codex Adapter Plan
 
-> Status note: Stage 1 has shipped as the experimental CLI-first Codex adapter.
-> Fresh business repos include `AGENTS.md`, and `mb doctor`, `mb status`, and
-> `mb start` expose Codex readiness. This decision remains the staging plan;
-> current public support wording lives in
+> Status note: Stage 1 shipped as the first Codex adapter. Fresh business repos
+> include `AGENTS.md`, and `mb doctor`, `mb status`, and `mb start` expose Codex
+> readiness. This decision remains the staging plan; current public support
+> wording lives in
 > [docs/compatibility.md](../docs/compatibility.md).
+>
+> Status note, MAIN-423 / #682: the proven owner loop has since gained a
+> repo-scoped Codex plugin and installed `/mb-*` command surface through
+> `.agents/plugins/main-branch-owner-loop`. This updates the current support
+> boundary without changing this decision's historical staging rationale. See
+> [docs/compatibility.md](../docs/compatibility.md) for current claims.
 
 ## Decision
 
@@ -50,15 +56,14 @@ runtime-neutral `skills/` corpus that generates Claude and Codex adapters.
 Codex supports a compatible `SKILL.md` directory shape, but compatible format
 does not mean identical runtime behavior.
 
-## Current Facts
+## Facts At Decision Time
 
 Main Branch facts:
 
 - Claude Code is the only supported runtime today.
-- Codex CLI has an experimental CLI-first adapter for power users. Fresh
-  business repos include generated `AGENTS.md`; `mb doctor`, `mb status`, and
-  `mb start` expose Codex readiness; no slash-command or workflow parity is
-  claimed.
+- Codex CLI has a first adapter for power users. Fresh business repos include
+  generated `AGENTS.md`; `mb doctor`, `mb status`, and `mb start` expose Codex
+  readiness; no installed command or workflow parity was claimed at the time.
 - `mb start --json`, `mb status --json`, generated business `CLAUDE.md`, and
   generated business `AGENTS.md` are the current runtime handoff surfaces.
 - Claude Code discovery depends on project-local `.claude/skills/mb-*` bridge
@@ -103,12 +108,14 @@ Local Codex capability evidence:
 
 ## What "Codex Support" Means
 
-Use these terms in public docs and implementation PRs.
+This decision used these staged terms in public docs and implementation PRs at
+the time. Current support language lives in
+[docs/compatibility.md](../docs/compatibility.md).
 
 | Level | Meaning | Allowed public claim | Required evidence |
 |---|---|---|---|
 | CLI-callable compatibility | Codex can run packaged `mb` commands when launched in or pointed at a business repo. | "Codex can call deterministic `mb` JSON facts manually." | Existing package install plus local command evidence. This is not runtime support. |
-| Experimental CLI-first adapter | `mb` can generate or repair Codex-facing repo instructions and handoff metadata, and Codex can ground a fresh business repo in `mb status --json --peek`. No skill parity claim. | "Experimental Codex CLI-first adapter for power users." | Fresh `mb onboard` repo, generated `AGENTS.md`, read-only `codex exec --json --ephemeral --sandbox read-only -C "$repo"`, no tracked secret/runtime state, no business write without approval. |
+| Stage 1 instruction-file adapter | `mb` can generate or repair Codex-facing repo instructions and handoff metadata, and Codex can ground a fresh business repo in `mb status --json --peek`. No skill parity claim. | "Stage 1 Codex adapter for power users." | Fresh `mb onboard` repo, generated `AGENTS.md`, read-only `codex exec --json --ephemeral --sandbox read-only -C "$repo"`, no tracked secret/runtime state, no business write without approval. |
 | Experimental workflow adapter | Codex can discover selected Main Branch Agent Skills from one canonical source through `.agents/skills` or a Codex plugin package. | "Selected Main Branch workflows are experimental in Codex." | Stage 1 evidence plus selected skill invocation, repo-boundary checks, generated-file rules, and known gaps. |
 | Supported parity | Codex covers the daily `/mb-start`-equivalent loop and selected production workflows with release-simulation evidence comparable to Claude Code. | "Codex is a supported Main Branch runtime." | Full adapter contract, install/update/repair docs, fixture repo smoke, runtime transcript review, and release gate. |
 

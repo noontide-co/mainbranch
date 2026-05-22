@@ -332,6 +332,14 @@ def _setup_complete(repo: Path, *, github_requested: bool = False) -> dict[str, 
         "github_requested": github_requested,
         "claude_code_handoff_ready": bool(wiring.get("ok")),
         "codex_instructions_present": (repo / "AGENTS.md").is_file(),
+        "codex_plugin_present": (
+            repo
+            / ".agents"
+            / "plugins"
+            / "main-branch-owner-loop"
+            / ".codex-plugin"
+            / "plugin.json"
+        ).is_file(),
         "owner_outcome": (
             "This business folder is created, saved, synced to GitHub, and ready to open "
             "in Claude Code."
@@ -625,11 +633,21 @@ def _normalize_mode(mode: str, existing: bool) -> str:
 
 
 def _next_steps(repo: Path) -> list[str]:
-    return [
+    steps = [
         f"cd {repo}",
         "claude",
         "/mb-start",
     ]
+    if _which("codex"):
+        steps.extend(
+            [
+                f"codex plugin marketplace add {repo}",
+                f"codex -C {repo}",
+                "/plugins -> install Main Branch Owner Loop",
+                "/mb-start",
+            ]
+        )
+    return steps
 
 
 def _has_any_file(paths: list[Path]) -> bool:
