@@ -59,8 +59,8 @@ This decision does not:
 - implement the workflow corpus, renderer, or validator;
 - port `/mb-think`, `/mb-site`, or any full production workflow to Codex;
 - copy `.claude/skills` into `.agents/skills`;
-- claim native Codex skills, slash-command parity, Codex Mac app support,
-  Codex cloud support, or selected Codex workflow support;
+- claim native Codex skills, Claude-style installed command parity, Codex Mac
+  app support, Codex cloud support, or selected Codex workflow support;
 - make `mb` invoke Codex, Claude, or any model;
 - replace Claude Code as the supported runtime;
 - build dashboard, runtime UI, provider mutation, publishing, spend, or
@@ -80,8 +80,9 @@ strong enough to claim workflow parity.
 - The dogfood report
   [`docs/reports/2026-05-12-codex-stage1-dogfood.md`](../docs/reports/2026-05-12-codex-stage1-dogfood.md)
   records the current boundary: Codex used `mb` facts and did not silently
-  mutate repos, but it did not prove native Codex skills, slash-command parity,
-  Mac app support, cloud support, or selected production workflow ports.
+  mutate repos, but it did not prove native Codex skills, Claude-style
+  installed command parity, Mac app support, cloud support, or selected
+  production workflow ports.
 - [MAIN-349 / #539](https://github.com/noontide-co/mainbranch/issues/539)
   proved the Claude Code side of the same handoff shape: `/mb-start`
   path-to-money prompts should start from `money_path` facts, carry the
@@ -381,11 +382,12 @@ required before support language changes.
 
 ## Support Language
 
-Use these claims until future evidence changes them:
+At decision time, use these claims until future evidence changes them:
 
 - Claude Code: supported runtime for current slash-command skills.
-- Codex CLI: experimental CLI-first adapter grounded by generated `AGENTS.md`
-  and deterministic `mb` facts; no slash-command parity.
+- Codex CLI: Stage 1 instruction-file adapter grounded by generated `AGENTS.md`
+  and deterministic `mb` facts; no installed plugin command surface had shipped
+  yet.
 - Codex selected workflows: not shipped yet.
 - Future runtimes: compatibility targets only.
 

@@ -53,7 +53,7 @@ canonical workflow source for Main Branch workflows.
 
 The first Codex adapter slice proved that Codex can be grounded by generated
 `AGENTS.md` and deterministic `mb` facts, but it did not prove Claude-style
-slash-command parity or selected workflow support.
+installed command support or selected workflow support.
 
 The first shared source prototype proved that a portable workflow file can
 declare intent, required `mb` commands, JSON fact paths, routing rules,
@@ -93,11 +93,12 @@ Runtime shells own presentation and discovery:
 `mb` owns deterministic facts and validation. It may render, validate, and
 repair runtime files. It must not invoke a model or run the conversation.
 
-## Codex Boundary
+## Codex Boundary At Decision Time
 
 Codex is CLI/instruction-file-first in the current Main Branch support model.
 Fresh business repos include `AGENTS.md`; `mb status`, `mb start`, and
-`mb doctor repair` expose Codex readiness. That is not slash-command parity.
+`mb doctor repair` expose Codex readiness. At the time, that did not prove an
+installed plugin command surface.
 
 Codex guidance should say how to treat a natural request as a Main Branch
 workflow, starting from read-only `mb` facts. It should not tell users to run
@@ -111,7 +112,7 @@ The narrow support claim after a successful `/mb-think` read-only smoke is:
 Do not claim:
 
 - Codex supports all Main Branch skills.
-- Codex has `/mb-think` slash-command parity.
+- Codex has full Claude-style `/mb-think` skill parity.
 - Claude Code skills work in Codex.
 
 ## `.agents/skills` Boundary
