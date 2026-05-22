@@ -104,13 +104,13 @@ Synthesize findings and surface them to the operator. They address or proceed.
 
 ## Brief Lock
 
-Once review is addressed, or skipped with operator awareness, commit the brief to the business repo:
+Once review is addressed, or skipped with operator awareness, checkpoint the brief in the business repo:
 
 ```bash
 cd <business_repo>
-git add decisions/YYYY-MM-DD-minisite-brief-<slug>.md
-git commit -m "[lock] minisite brief - <slug>"
-git push
+mb checkpoint --plan --json
+mb checkpoint --validate "[decided] minisite brief -- <slug>" --json
+mb checkpoint --message "[decided] minisite brief -- <slug>" --yes
 ```
 
 The brief is now durable. Move to [`minisite-setup.md`](minisite-setup.md).

@@ -107,3 +107,13 @@ include:
 
 Keep secrets, tokens, raw provider exports, customer rows, and private browser
 traces out of both repos.
+
+After writing or updating the reverse site record, save that business-repo
+state through the checkpoint path:
+
+```bash
+cd <business_repo>
+mb checkpoint --plan --json
+mb checkpoint --validate "[connected] site repo -- <slug>" --json
+mb checkpoint --message "[connected] site repo -- <slug>" --yes
+```

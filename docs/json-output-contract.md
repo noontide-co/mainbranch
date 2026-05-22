@@ -64,6 +64,25 @@ playbook, page readiness, and outcome feedback. These facts describe whether
 the path is legible, supported, connected, and instrumented; they do not infer
 conversion quality, market strength, or strategic correctness.
 
+`mb checkpoint --validate <message> --json` includes a `contract` object for
+the checkpoint subject format. In v1 this contract is a bracketed finite
+business verb, a required object, and an optional result segment:
+
+```json
+{
+  "contract": {
+    "format": "[verb] object [-- result]",
+    "format_id": "bracket_verb",
+    "accepted_prefixes": ["[added]", "[updated]"],
+    "legacy_prefixes": ["[checkpoint]"]
+  }
+}
+```
+
+`accepted_prefixes` contains the full packaged verb registry in command output;
+the shortened example above is illustrative. `legacy_prefixes` are readable in
+history but are not accepted for new checkpoint subjects.
+
 ### MoneyPath Proof Quality
 
 `money_path.objects.proof` has two layers:

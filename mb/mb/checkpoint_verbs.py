@@ -12,6 +12,8 @@ import yaml
 
 VALID_LOOPS = {"sense", "decide", "ship", "reflect"}
 MAX_SUBJECT_LENGTH = 90
+CHECKPOINT_SUBJECT_FORMAT = "[verb] object [-- result]"
+LEGACY_PREFIXES = ("[checkpoint]",)
 
 PREFIX_RE = re.compile(r"^\[(?P<verb>[a-z]+)\]\s+(?P<object>.+?)\s*$")
 RESULT_SPLIT_RE = re.compile(r"\s+--\s+", re.ASCII)
@@ -85,6 +87,16 @@ def accepted_prefix_pattern() -> str:
     return rf"^\[({verbs}|checkpoint)\]"
 
 
+def contract() -> dict[str, Any]:
+    """Return the public checkpoint subject contract for JSON consumers."""
+    return {
+        "format": CHECKPOINT_SUBJECT_FORMAT,
+        "format_id": "bracket_verb",
+        "accepted_prefixes": [entry.prefix for entry in registry().values()],
+        "legacy_prefixes": list(LEGACY_PREFIXES),
+    }
+
+
 def parse_subject(subject: str) -> dict[str, Any]:
     """Parse a checkpoint subject without judging whether it is acceptable."""
     first_line = subject.strip().splitlines()[0] if subject.strip() else ""
@@ -92,6 +104,7 @@ def parse_subject(subject: str) -> dict[str, Any]:
     if not match:
         return {
             "recognized": False,
+            "format": None,
             "subject": first_line,
             "verb": None,
             "prefix": None,
@@ -110,6 +123,7 @@ def parse_subject(subject: str) -> dict[str, Any]:
     result = parts[1].strip() if len(parts) > 1 else ""
     return {
         "recognized": entry is not None,
+        "format": "bracket_verb",
         "subject": first_line,
         "verb": verb if entry else None,
         "prefix": f"[{verb}]",
