@@ -298,8 +298,9 @@ def event_from_commit(commit: dict[str, Any], files: list[str]) -> dict[str, Any
         if parsed.get("recognized")
         else "unrecognized"
     )
-    loop = _best_loop(parsed, files, refs)
-    channel = _best_channel(parsed, files, refs)
+    loop = None if recognized_as == "unrecognized" else _best_loop(parsed, files, refs)
+    channel = None if recognized_as == "unrecognized" else _best_channel(parsed, files, refs)
+    target_kind = "work" if recognized_as == "unrecognized" else _target_kind(parsed, files, refs)
     return {
         "id": str(commit.get("sha") or ""),
         "sha": str(commit.get("sha") or ""),
@@ -316,7 +317,7 @@ def event_from_commit(commit: dict[str, Any], files: list[str]) -> dict[str, Any
         "loops": parsed.get("loops") or ([] if loop is None else [loop]),
         "channel": channel,
         "channel_hint": parsed.get("channel_hint"),
-        "target_kind": _target_kind(parsed, files, refs),
+        "target_kind": target_kind,
         "refs": refs,
         "files": files[:12],
         "file_count": len(files),

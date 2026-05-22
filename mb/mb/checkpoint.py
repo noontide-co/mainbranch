@@ -1141,6 +1141,7 @@ def validate_message(message: str) -> dict[str, Any]:
         "ok": validation["ok"],
         "status": "valid" if validation["ok"] else "invalid",
         "validation": validation,
+        "contract": checkpoint_verbs.contract(),
         "verbs": {
             verb: {
                 "prefix": entry.prefix,

@@ -460,6 +460,7 @@ def test_onboard_github_create_push_commits_and_sets_tracking(tmp_path: Path, mo
     assert result["ok"] is True
     assert result["github"]["ok"] is True
     assert result["github"]["committed"] is True
+    assert ["git", "commit", "-m", "[opened] Main Branch scaffold for Acme"] in commands
     add_command = next(cmd for cmd in commands if cmd[:3] == ["git", "add", "--"])
     assert "." not in add_command
     assert "CLAUDE.md" in add_command

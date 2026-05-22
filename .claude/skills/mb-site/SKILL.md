@@ -103,7 +103,7 @@ Four behaviors `/mb-site` uses on every run:
 1. **One flow: brief to site.** Do not route the operator to a separate brief skill and then ask them to come back. `/mb-site` walks research, brief draft, review, lock, concept variations, publish, and iteration as one flow.
 2. **Foreground subagents.** Research, concept, and review subagents run in the foreground. Background subagents can appear to write files that do not persist.
 3. **Parallel by default.** Multiple research questions, concepts, or review passes should run in parallel.
-4. **Publish-first, then iterate.** Commit the rawest durable brief and rawest working concept before iterating. Git history is the memory across context clears.
+4. **Publish-first, then iterate.** Checkpoint the rawest durable business-repo brief and commit the rawest working site-repo concept before iterating. Git history is the memory across context clears.
 
 When research subagents record findings, they follow the `/mb-think` research pattern: dated `research/YYYY-MM-DD-slug-claude-code.md` files with frontmatter and `linked_decisions: []`.
 When the operator needs a broad researched brief before the site brief, run or
@@ -111,6 +111,14 @@ reuse `/mb-think --brief-format=grok-8`. Its eight categories feed the site
 flow directly: offering, ICP, journey, competitive landscape, brand story,
 technical requirements, assets, and metrics/constraints. Keep the `grok-8`
 brief in `research/`; the locked site brief still belongs in `decisions/`.
+
+Business-repo saves use `mb checkpoint`, not raw git commits. For accepted
+research files, locked briefs, and reverse site records, run
+`mb checkpoint --plan --json`, validate a subject such as
+`[drafted] minisite research -- <slug>`, `[decided] minisite brief -- <slug>`,
+or `[connected] site repo -- <slug>`, then save with
+`mb checkpoint --message "<subject>" --yes` after operator approval. Site repo
+code commits still use that site's normal git flow.
 
 ## Invocation Mode
 

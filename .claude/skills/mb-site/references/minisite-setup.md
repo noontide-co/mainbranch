@@ -155,6 +155,16 @@ record or offer note: site repo path or URL, domain, Cloudflare project,
 environment, measurement state, launch status, and the next manual approval
 step.
 
+After writing or updating that business-repo record, checkpoint it before
+continuing:
+
+```bash
+cd <business_repo>
+mb checkpoint --plan --json
+mb checkpoint --validate "[connected] site repo -- <slug>" --json
+mb checkpoint --message "[connected] site repo -- <slug>" --yes
+```
+
 Treat `~/.mainbranch/sites.json` as legacy fallback only when no repo-local link exists. If needed, write or extend:
 
 ```json

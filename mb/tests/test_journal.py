@@ -81,6 +81,27 @@ def test_parse_refs_stops_at_lowercase_body_header() -> None:
     assert refs[0]["path"] == "pushes/workshop/push.md"
 
 
+def test_event_from_commit_does_not_recognize_conventional_commit_type() -> None:
+    event = journal_mod.event_from_commit(
+        {
+            "sha": "abc123",
+            "commit": "abc123",
+            "date": "2026-05-22",
+            "authored_at": "2026-05-22",
+            "subject": "docs: setup guide",
+            "body": "",
+        },
+        ["core/offer.md"],
+    )
+
+    assert event["recognized_as"] == "unrecognized"
+    assert event["verb"] is None
+    assert event["loop"] is None
+    assert event["loops"] == []
+    assert event["channel"] is None
+    assert event["target_kind"] == "work"
+
+
 def test_collect_groups_business_commits_and_preserves_legacy_checkpoints(tmp_path: Path) -> None:
     repo = _business_repo(tmp_path)
     _commit(

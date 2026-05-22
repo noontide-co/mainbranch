@@ -239,8 +239,12 @@ def test_checkpoint_validate_accepts_business_verb_json() -> None:
     payload = json.loads(result.stdout)
     assert payload["status"] == "valid"
     assert payload["validation"]["parsed"]["verb"] == "opened"
+    assert payload["validation"]["parsed"]["format"] == "bracket_verb"
     assert payload["validation"]["parsed"]["loop"] == "decide"
     assert payload["validation"]["acceptable_for_beginner"] is True
+    assert payload["contract"]["format"] == "[verb] object [-- result]"
+    assert "[opened]" in payload["contract"]["accepted_prefixes"]
+    assert payload["contract"]["legacy_prefixes"] == ["[checkpoint]"]
 
 
 def test_checkpoint_validate_rejects_vague_subject() -> None:
@@ -270,6 +274,31 @@ def test_checkpoint_validate_rejects_private_path_and_secret_like_subject() -> N
     codes = {error["code"] for error in payload["validation"]["errors"]}
     assert "private_local_path" in codes
     assert "secret_like_subject" in codes
+
+
+def test_checkpoint_validate_rejects_conventional_commit_type() -> None:
+    result = runner.invoke(app, ["checkpoint", "--validate", "docs: setup guide", "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    codes = {error["code"] for error in payload["validation"]["errors"]}
+    assert "missing_prefix" in codes
+    assert payload["validation"]["parsed"]["recognized"] is False
+    assert payload["validation"]["parsed"]["format"] is None
+    assert payload["validation"]["parsed"]["verb"] is None
+
+
+def test_checkpoint_validate_rejects_unknown_bracket_prefix() -> None:
+    result = runner.invoke(app, ["checkpoint", "--validate", "[docs] setup guide", "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    codes = {error["code"] for error in payload["validation"]["errors"]}
+    assert "unknown_prefix" in codes
+    assert payload["validation"]["parsed"]["recognized"] is False
+    assert payload["validation"]["parsed"]["format"] == "bracket_verb"
+    assert payload["validation"]["parsed"]["prefix"] == "[docs]"
+    assert payload["validation"]["parsed"]["verb"] is None
 
 
 def test_checkpoint_validate_reads_stdin() -> None:
@@ -348,6 +377,20 @@ def test_checkpoint_hook_rejects_vague_raw_git_commit(tmp_path: Path, monkeypatc
 
     assert result.returncode != 0
     assert "not business-readable" in result.stderr
+    assert _git(repo, "status", "--porcelain").stdout
+
+
+def test_checkpoint_hook_rejects_unknown_bracket_raw_git_commit(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo = _business_repo(tmp_path, monkeypatch)
+    (repo / "core" / "offer.md").write_text("# Offer\nUpdated\n", encoding="utf-8")
+    _git(repo, "add", "core/offer.md")
+
+    result = _git(repo, "commit", "-m", "[docs] setup guide")
+
+    assert result.returncode != 0
+    assert "[docs]` is not an accepted business checkpoint verb" in result.stderr
     assert _git(repo, "status", "--porcelain").stdout
 
 
