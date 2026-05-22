@@ -56,6 +56,7 @@ my-business/
 │   │   ├── distribution-strategy.md
 │   │   ├── channels/
 │   │   └── accounts/
+│   ├── team/
 │   ├── people/
 │   ├── strategy/
 │   ├── operations/
@@ -221,6 +222,43 @@ Specific execution still belongs in `pushes/<YYYY-MM-DD-slug>/`, and results
 or lessons land in `log/`, a push review log, research, decisions, or core
 updates. Do not duplicate publishable site/blog/wiki content into the business
 repo's operating strategy.
+
+### Team Members
+
+Public-safe team context lives in `core/team/<slug>.md`. The filename stem is
+the stable team member slug that other primitives can reference later, for
+example a future bet `owner: maya` or `owner: core/team/maya.md`. Prefer a slug
+that matches the person's primary GitHub handle when that is stable.
+
+Team member frontmatter:
+
+```yaml
+type: team_member
+slug: maya
+name: Maya Chen
+preferred_name: Maya
+role: Growth Lead
+relationship: member
+github:
+  - mayachen
+areas:
+  - paid traffic
+  - launch reviews
+notes: Public-safe business context only.
+```
+
+Allowed `relationship` values are `owner`, `member`, `contractor`, `advisor`,
+and `external_collaborator`. Owners and members are part of the operating team.
+Contractors and advisors are useful business context but may not own decisions.
+External collaborators are outside the team; add them only when GitHub activity,
+pushes, offers, or decisions need a business-readable name.
+
+Do not store payroll, compensation, legal ownership percentages, home contact
+details, private customer/member data, secrets, or account credentials in team
+files. GitHub handles should be stored without `@`. `mb validate` checks team
+frontmatter shape, handle normalization, and duplicate handles. `mb status`
+exposes a `team` block so GitHub activity can say a person's business name when
+the handle is known and preserve unknown handles when it is not.
 
 ### `research/`
 

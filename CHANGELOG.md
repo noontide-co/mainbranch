@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added a public-safe `core/team/<slug>.md` team member primitive, onboarding
+  scaffold, validation for normalized and duplicate GitHub handles, and status
+  GitHub activity handle resolution so business repos can name known team
+  contributors. Refs MAIN-396, #633.
+
 ### Fixed
 
 - Tightened Claude print-mode release dogfood prompts so agents can use

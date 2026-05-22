@@ -44,7 +44,7 @@
 
 **You don't need to know git. You don't need to know terminals. You just need a folder.**
 
-Main Branch is a folder on your computer that holds your business — offer, audience, voice, decisions, research, bets, launches, meeting notes, fulfillment context, lessons. The agent reads that folder before it answers, so the work it gives you sounds like your business instead of generic AI output. The system saves itself between sessions, so you stop re-explaining who you are every time you open Claude.
+Main Branch is a folder on your computer that holds your business — offer, audience, voice, team context, decisions, research, bets, launches, meeting notes, fulfillment context, lessons. The agent reads that folder before it answers, so the work it gives you sounds like your business instead of generic AI output. The system saves itself between sessions, so you stop re-explaining who you are every time you open Claude.
 
 Open source. Lives on your machine. Bring your own Claude Code plan. That's it.
 
@@ -142,7 +142,7 @@ You don't run any of these commands yourself. You ask the agent. It runs them.
 
 Main Branch v0.3 has three layers:
 
-- **Your folder is the source of truth.** Offer, audience, voice, decisions, research, bets, launches, logs, documents, links to other repos. Plain markdown files you can read on any computer.
+- **Your folder is the source of truth.** Offer, audience, voice, public-safe team roles, decisions, research, bets, launches, logs, documents, links to other repos. Plain markdown files you can read on any computer.
 - **The CLI is the fact and safety layer.** It scaffolds the folder, validates the shape, maps how the business pieces connect, briefs the agent on what's changed, walks through repairs, saves readable checkpoints, and checks that connected accounts are wired up safely. It also exposes shipped facts for MoneyPath readiness, proof quality, content strategy health, books readiness, connected-account health, status, start, graph, and checkpoint workflows. The agent runs it. You don't have to learn it.
 - **The skills are the chat UX and judgment layer.** The agent reads your folder and `mb` facts, asks you the right questions, drafts work, reviews it, and routes approved artifacts back into files.
 
