@@ -226,6 +226,7 @@ def _build_checks(
         )
     codex_executable = codex.get("executable") or {}
     codex_instructions = codex.get("instructions") or {}
+    codex_runtime = codex.get("runtime") or {}
     codex_found = bool(codex_executable.get("found"))
     checks.extend(
         [
@@ -251,6 +252,18 @@ def _build_checks(
                     "lifecycle discovery guidance"
                 ),
                 "repair": codex_instructions.get("repair") if codex_found else "",
+            },
+            {
+                "name": "codex_runtime_mb",
+                "ok": bool(
+                    not codex_found or not codex_instructions.get("ok") or codex_runtime.get("ok")
+                ),
+                "severity": "warn",
+                "detail": str(
+                    codex_runtime.get("summary")
+                    or "Codex runtime mb command has not been verified."
+                ),
+                "repair": str(codex_runtime.get("repair") or "") if codex_found else "",
             },
         ]
     )

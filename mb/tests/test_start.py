@@ -131,6 +131,50 @@ def test_start_json_omits_codex_command_when_codex_is_missing(
     assert "Install Codex CLI" not in report["next_actions"]
 
 
+def test_start_json_separates_codex_static_and_runtime_readiness(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(start_mod, "_which", _with_claude)
+    monkeypatch.setattr(codex_mod, "_which", _with_codex)
+    monkeypatch.setattr(
+        codex_mod,
+        "_login_shell_mb_diagnostics",
+        lambda: {
+            "checked": True,
+            "ok": False,
+            "state": "warn",
+            "shell": "/bin/zsh",
+            "command": "command -v mb && mb --version",
+            "path": "/old/bin/mb",
+            "version": "0.3.18",
+            "active_path": "/new/bin/mb",
+            "active_version": "0.3.29",
+            "path_mismatch": True,
+            "version_mismatch": True,
+            "mismatch": True,
+            "error": "",
+            "summary": "Login-shell runtime resolves a different mb than this process.",
+            "repair": "Put the current Main Branch install earlier on the login-shell PATH.",
+            "safe_to_share": True,
+        },
+    )
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    report = json.loads(result.stdout)
+    codex = report["runtime"]["codex_cli"]
+    assert codex["static_ok"] is True
+    assert codex["runtime_ok"] is False
+    assert codex["status"] == "runtime_mismatch"
+    check = next(item for item in report["checks"] if item["name"] == "codex_runtime_mb")
+    assert check["ok"] is False
+    assert "different mb" in check["detail"]
+
+
 def test_start_human_labels_missing_codex_without_experimental_copy(
     tmp_path: Path,
     monkeypatch,

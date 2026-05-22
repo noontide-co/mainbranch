@@ -1360,6 +1360,50 @@ def test_status_drift_does_not_warn_for_codex_instructions_until_codex_is_presen
     assert any(item["id"] == "codex_instructions_not_ready" for item in report["drift"]["items"])
 
 
+def test_status_warns_when_codex_runtime_uses_stale_mb(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setattr(codex_mod, "_which", _with_codex)
+    monkeypatch.setattr(
+        codex_mod,
+        "_login_shell_mb_diagnostics",
+        lambda: {
+            "checked": True,
+            "ok": False,
+            "state": "warn",
+            "shell": "/bin/zsh",
+            "command": "command -v mb && mb --version",
+            "path": "/old/bin/mb",
+            "version": "0.3.18",
+            "active_path": "/new/bin/mb",
+            "active_version": "0.3.29",
+            "path_mismatch": True,
+            "version_mismatch": True,
+            "mismatch": True,
+            "error": "",
+            "summary": "Login-shell runtime resolves a different mb than this process.",
+            "repair": "Put the current Main Branch install earlier on the login-shell PATH.",
+            "safe_to_share": True,
+        },
+    )
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    codex = report["runtime"]["codex_cli"]
+    assert codex["ok"] is False
+    assert codex["status"] == "runtime_mismatch"
+    assert codex["static_ok"] is True
+    finding = next(
+        item for item in report["drift"]["items"] if item["id"] == "codex_runtime_mb_mismatch"
+    )
+    assert "different mb" in finding["summary"]
+    assert "login-shell PATH" in finding["repair"]
+
+
 def test_status_json_exposes_push_and_legacy_campaign_facts(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     repo = tmp_path / "acme"

@@ -7,13 +7,29 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+import pytest
 from typer.testing import CliRunner
 
 from mb import __version__
+from mb import codex as codex_mod
 from mb import update as update_mod
 from mb.cli import app
 
 runner = CliRunner()
+
+
+@pytest.fixture(autouse=True)
+def codex_adapter_ready(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        codex_mod,
+        "instructions_status",
+        lambda repo: {
+            "ok": True,
+            "exists": True,
+            "current": True,
+            "repair_command": "",
+        },
+    )
 
 
 def _completed(
@@ -117,6 +133,52 @@ def test_update_pipx_runs_upgrade_then_relinks(monkeypatch: Any, tmp_path: Path)
         ["mb", "--version"],
         ["mb", "skill", "link", "--repo", str(repo.resolve()), "--json"],
     ]
+
+
+def test_update_points_to_scoped_codex_repair_when_adapter_missing(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        if args == ["pipx", "upgrade", "mainbranch"]:
+            return _completed(args, stdout="upgraded package mainbranch")
+        if args == ["mb", "--version"]:
+            return _completed(args, stdout="mb 0.3.29\n")
+        if args[:3] == ["mb", "skill", "link"]:
+            return _completed(
+                args,
+                stdout=json.dumps(
+                    {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
+                ),
+            )
+        return _completed(args, returncode=1, stderr="unexpected")
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(
+        update_mod.shutil,  # type: ignore[attr-defined]
+        "which",
+        lambda name: "/opt/homebrew/bin/pipx",
+    )
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+    monkeypatch.setattr(
+        codex_mod,
+        "instructions_status",
+        lambda repo: {
+            "ok": False,
+            "exists": False,
+            "current": False,
+            "repair_command": "mb doctor repair --apply --only codex",
+        },
+    )
+
+    result = update_mod.run(repo=tmp_path / "biz")
+
+    assert result["ok"] is True
+    assert result["codex_adapter"]["ok"] is False
+    assert "mb doctor repair --plan --only codex" in result["next_actions"]
+    assert any(
+        "Codex owner-loop files still need repo repair" in item for item in result["warnings"]
+    )
 
 
 def test_update_check_clone_fetches_before_reading_origin(monkeypatch: Any, tmp_path: Path) -> None:

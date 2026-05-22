@@ -1555,6 +1555,7 @@ def repair_plan(
     *,
     mode: str = "plan",
     applied_actions: list[dict[str, Any]] | None = None,
+    only: str = "",
 ) -> dict[str, Any]:
     """Build the guided reconciliation plan without writing repo status markers."""
     target = Path(repo).expanduser().resolve()
@@ -2019,6 +2020,7 @@ def repair_plan(
 
     codex_status = codex_mod.readiness(target)
     codex_instruction_status = codex_status["instructions"]
+    codex_runtime_status = codex_status["runtime"]
     codex_checks = [
         {
             "name": "codex-cli",
@@ -2046,6 +2048,16 @@ def repair_plan(
             "approval_boundary_ok": codex_instruction_status["approval_boundary_ok"],
             "codex_native_ok": codex_instruction_status["codex_native_ok"],
         },
+        {
+            "name": "codex-runtime-mb",
+            "state": "ok" if codex_runtime_status["ok"] else "warn",
+            "summary": codex_runtime_status["summary"],
+            "active_path": codex_runtime_status.get("active_path", ""),
+            "active_version": codex_runtime_status.get("active_version", ""),
+            "runtime_path": codex_runtime_status.get("path", ""),
+            "runtime_version": codex_runtime_status.get("version", ""),
+            "repair": codex_runtime_status.get("repair", ""),
+        },
     ]
     codex_actions: list[dict[str, Any]] = []
     if not codex_instruction_status["ok"]:
@@ -2054,7 +2066,7 @@ def repair_plan(
             title="Refresh Codex AGENTS.md instructions",
             state="warn",
             mode="write",
-            command="mb doctor repair --apply",
+            command="mb doctor repair --apply --only codex",
             safe_to_apply=True,
             reason=(
                 "AGENTS.md, .agents/skills, and .agents/plugins are the tracked Codex "
@@ -2230,6 +2242,12 @@ def repair_plan(
         )
     )
 
+    if only:
+        if only != "codex":
+            raise ValueError(f"unknown repair scope: {only}")
+        sections = [section for section in sections if section["id"] in {"codex-wiring", "git"}]
+        actions = [action for action in actions if str(action.get("id")) == "codex-agents-md"]
+
     states = [str(section["state"]) for section in sections]
     summary = {
         "ok": sum(1 for state in states if state == "ok"),
@@ -2247,6 +2265,7 @@ def repair_plan(
         "schema_version": REPAIR_SCHEMA_VERSION,
         "ok": summary["error"] == 0,
         "mode": mode,
+        "only": only,
         "read_only": mode == "plan",
         "repo": str(target),
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -2287,15 +2306,22 @@ def repair_plan(
     }
 
 
-def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> dict[str, Any]:
+def repair_apply(
+    repo: str | Path = ".",
+    *,
+    include_migration: bool = False,
+    only: str = "",
+) -> dict[str, Any]:
     """Apply safe doctor repairs and return a fresh reconciliation report."""
+    if only and only != "codex":
+        raise ValueError(f"unknown repair scope: {only}")
     target = Path(repo).expanduser().resolve()
-    before = repair_plan(target)
+    before = repair_plan(target, only=only)
     applied: list[dict[str, Any]] = []
 
     missing_gitignore = _missing_gitignore_entries(target)
     tracked_local_state = _tracked_local_state_paths(target)
-    if missing_gitignore:
+    if missing_gitignore and not only:
         changed = _append_unique_lines(target / ".gitignore", missing_gitignore)
         applied.append(
             _action(
@@ -2311,7 +2337,7 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
                 result={"added": missing_gitignore},
             )
         )
-    if tracked_local_state:
+    if tracked_local_state and not only:
         results = [_untrack_local_state_path(target, rel) for rel in tracked_local_state]
         applied.append(
             _action(
@@ -2332,7 +2358,7 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
         )
 
     checkpoint_hook = checkpoint_mod.hook_status(target)
-    if checkpoint_hook.get("state") in {"missing", "broken"}:
+    if checkpoint_hook.get("state") in {"missing", "broken"} and not only:
         installed = checkpoint_mod.install_commit_hook(target)
         applied.append(
             _action(
@@ -2349,8 +2375,8 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
             )
         )
 
-    shadow = engine_mod.inspect_personal_skill_conflicts(target, apply=True)
-    if int(shadow.get("summary", {}).get("repaired", 0) or 0):
+    shadow = engine_mod.inspect_personal_skill_conflicts(target, apply=not bool(only))
+    if int(shadow.get("summary", {}).get("repaired", 0) or 0) and not only:
         applied.append(
             _action(
                 id="skill-shadow-repair",
@@ -2366,7 +2392,7 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
             )
         )
 
-    if not link_status(target).get("ok"):
+    if not link_status(target).get("ok") and not only:
         linked = engine_mod.link_skills(target)
         applied.append(
             _action(
@@ -2387,8 +2413,12 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
         )
 
     legacy_links = _legacy_claude_symlinks(target)
-    repaired_links = _repair_legacy_claude_symlinks(target, legacy_links["findings"])
-    if repaired_links["moved"] or repaired_links["errors"]:
+    repaired_links = (
+        {"moved": [], "errors": [], "ok": True}
+        if only
+        else _repair_legacy_claude_symlinks(target, legacy_links["findings"])
+    )
+    if (repaired_links["moved"] or repaired_links["errors"]) and not only:
         _append_unique_lines(target / ".gitignore", [".mb/backups/"])
         applied.append(
             _action(
@@ -2396,7 +2426,9 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
                 title="Moved old clone-path lens/reference symlinks to backup",
                 state="ok" if repaired_links["ok"] else "error",
                 mode="write",
-                command="mb doctor repair --apply",
+                command=(
+                    "mb doctor repair --apply --only codex" if only else "mb doctor repair --apply"
+                ),
                 safe_to_apply=True,
                 reason="moved stale symlink entries, not user-authored files",
                 writes=[".claude/lenses/", ".claude/reference/", ".mb/backups/"],
@@ -2435,7 +2467,9 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
             )
         )
 
-    related_links_result = related_links_mod.apply(target)
+    related_links_result: dict[str, Any] = {"changed": [], "errors": [], "ok": True}
+    if not only:
+        related_links_result = related_links_mod.apply(target)
     if related_links_result["changed"] or related_links_result["errors"]:
         applied.append(
             _action(
@@ -2455,7 +2489,7 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
             )
         )
 
-    if include_migration:
+    if include_migration and not only:
         migrated = migrate_mod.apply(target)
         applied.append(
             _action(
@@ -2472,7 +2506,7 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
             )
         )
 
-    after = repair_plan(target, mode="apply", applied_actions=applied)
+    after = repair_plan(target, mode="apply", applied_actions=applied, only=only)
     after["before_summary"] = before["summary"]
     return after
 
@@ -2484,6 +2518,8 @@ def render_repair(report: dict[str, Any]) -> None:
     console = Console()
     mode = "read-only plan" if report["read_only"] else "apply summary"
     console.print(f"\n[bold]mb doctor repair[/bold]  {mode}")
+    if report.get("only"):
+        console.print(f"scope: {report['only']}")
     console.print(f"repo: {report['repo']}\n")
     for section in report["sections"]:
         state = str(section["state"])

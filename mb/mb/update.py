@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from mb import __version__
+from mb import codex as codex_mod
 from mb.engine import bundled_skills, engine_root, install_mode
 from mb.freshness import (
     latest_pypi_version as _latest_pypi_version,
@@ -195,7 +196,32 @@ def _base_result(repo: Path, *, check: bool, mode: str, root: Path | None) -> di
         "actions": [],
         "warnings": [],
         "errors": [],
+        "next_actions": [],
+        "codex_adapter": {},
     }
+
+
+def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
+    codex = codex_mod.instructions_status(repo)
+    result["codex_adapter"] = {
+        "ok": codex["ok"],
+        "exists": codex["exists"],
+        "current": codex["current"],
+        "repair_command": codex.get("repair_command", ""),
+    }
+    if not codex["ok"]:
+        message = (
+            "Codex owner-loop files still need repo repair. Run "
+            "`mb doctor repair --plan --only codex`, review it, then approve "
+            "`mb doctor repair --apply --only codex`."
+        )
+        result["warnings"].append(message)
+        result["next_actions"].extend(
+            [
+                "mb doctor repair --plan --only codex",
+                "mb doctor repair --apply --only codex",
+            ]
+        )
 
 
 def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
@@ -260,6 +286,7 @@ def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
                 "available": False,
                 "source": "not_newer",
             }
+        _add_codex_follow_up(result, target_repo)
         return result
 
     if mode == "pipx":
@@ -298,6 +325,7 @@ def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
     if link_errors:
         result["ok"] = False
         result["errors"].extend(link_errors)
+    _add_codex_follow_up(result, target_repo)
     return result
 
 
@@ -324,11 +352,15 @@ def render_human(result: dict[str, Any]) -> None:
             print(f"release summary: {release_summary}")
         for action in result.get("actions", []):
             print(action)
+        for action in result.get("next_actions", []):
+            print(f"next: {action}")
         if count:
             print(f"would refresh {count} skill link(s)")
     elif result.get("ok"):
         print(f"updated Main Branch ({old} -> {new})")
         print(f"refreshed {count} skill link(s)")
+        for action in result.get("next_actions", []):
+            print(f"next: {action}")
 
     if result.get("errors"):
         for error in result["errors"]:

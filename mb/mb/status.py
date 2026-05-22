@@ -3825,6 +3825,7 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
     codex_cli = report["runtime"].get("codex_cli") or {}
     codex_executable = codex_cli.get("executable") or {}
     codex_instructions = codex_cli.get("instructions") or {}
+    codex_runtime = codex_cli.get("runtime") or {}
     if codex_executable.get("found") and not codex_instructions.get("ok"):
         items.append(
             {
@@ -3841,6 +3842,32 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
                 "repair": str(
                     codex_instructions.get("repair")
                     or "Run `mb doctor repair --plan`, then `mb doctor repair --apply`."
+                ),
+                "safe_to_share": True,
+            }
+        )
+    if (
+        codex_executable.get("found")
+        and codex_instructions.get("ok")
+        and not codex_runtime.get("ok")
+    ):
+        items.append(
+            {
+                "id": "codex_runtime_mb_mismatch",
+                "severity": "warn",
+                "summary": str(
+                    codex_runtime.get("summary")
+                    or "Codex runtime may execute a different mb than this shell."
+                ),
+                "evidence": [
+                    f"active: {codex_runtime.get('active_path') or 'unknown'} "
+                    f"{codex_runtime.get('active_version') or ''}".strip(),
+                    f"runtime: {codex_runtime.get('path') or 'unknown'} "
+                    f"{codex_runtime.get('version') or ''}".strip(),
+                ],
+                "repair": str(
+                    codex_runtime.get("repair")
+                    or "Put the current Main Branch install earlier on the runtime PATH."
                 ),
                 "safe_to_share": True,
             }

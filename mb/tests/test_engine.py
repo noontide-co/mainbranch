@@ -260,6 +260,35 @@ def test_mb_install_diagnostics_reports_multiple_versions(tmp_path: Path, monkey
     assert result["repair_command"] == "mb skill link --repo ."
 
 
+def test_login_shell_mb_diagnostics_reports_stale_runtime_mb(tmp_path: Path, monkeypatch) -> None:
+    active_bin = tmp_path / "active"
+    stale_bin = tmp_path / "stale"
+    active_bin.mkdir()
+    stale_bin.mkdir()
+    active_mb = active_bin / "mb"
+    stale_mb = stale_bin / "mb"
+    active_mb.write_text("#!/bin/sh\necho 'mb 0.3.29'\n", encoding="utf-8")
+    stale_mb.write_text("#!/bin/sh\necho 'mb 0.3.18'\n", encoding="utf-8")
+    active_mb.chmod(0o755)
+    stale_mb.chmod(0o755)
+    shell = tmp_path / "login-shell"
+    shell.write_text(
+        f'#!/bin/sh\nPATH={stale_bin}:$PATH exec /bin/sh -c "$2"\n',
+        encoding="utf-8",
+    )
+    shell.chmod(0o755)
+    monkeypatch.setenv("PATH", str(active_bin))
+
+    result = engine_mod.login_shell_mb_diagnostics(str(shell))
+
+    assert result["ok"] is False
+    assert result["mismatch"] is True
+    assert result["path"] == str(stale_mb)
+    assert result["version"] == "0.3.18"
+    assert result["active_path"] == str(active_mb)
+    assert "different mb" in result["summary"]
+
+
 def test_link_status_explains_stale_engine_path_from_other_install(
     tmp_path: Path, monkeypatch
 ) -> None:
