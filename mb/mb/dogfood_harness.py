@@ -782,6 +782,7 @@ def _profile_fact_summary(parsed: dict[str, Any]) -> dict[str, Any]:
     start = parsed.get("start", {})
     checkpoint = parsed.get("checkpoint_plan", {})
     migrate_campaigns = parsed.get("migrate_campaigns_plan", {})
+    captured_migrate_campaigns = "migrate_campaigns_plan" in parsed
     checks = doctor.get("checks", []) if isinstance(doctor, dict) else []
     repair_actions = repair.get("actions", []) if isinstance(repair, dict) else []
     return {
@@ -812,10 +813,10 @@ def _profile_fact_summary(parsed: dict[str, Any]) -> dict[str, Any]:
         "start_handoff_ready": start.get("handoff_ready") if isinstance(start, dict) else None,
         "checkpoint_plan_dirty": checkpoint.get("dirty") if isinstance(checkpoint, dict) else None,
         "migrate_campaign_moves": len(migrate_campaigns.get("moves", []))
-        if isinstance(migrate_campaigns, dict)
+        if captured_migrate_campaigns and isinstance(migrate_campaigns, dict)
         else None,
         "migrate_campaign_ambiguous": len(migrate_campaigns.get("ambiguous", []))
-        if isinstance(migrate_campaigns, dict)
+        if captured_migrate_campaigns and isinstance(migrate_campaigns, dict)
         else None,
     }
 

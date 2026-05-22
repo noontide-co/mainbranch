@@ -631,6 +631,32 @@ def test_permission_denial_summary_separates_grounding_from_other_denials() -> N
     assert summary["other"] == 1
 
 
+def test_profile_fact_summary_uses_none_for_uncaptured_migration_facts() -> None:
+    summary = harness._profile_fact_summary(
+        {
+            "status_peek": {"schema_version": "1.0"},
+            "start": {"handoff_ready": True},
+            "doctor_repair_plan": {"read_only": True, "actions": []},
+            "checkpoint_plan": {"dirty": False},
+        }
+    )
+
+    assert summary["migrate_campaign_moves"] is None
+    assert summary["migrate_campaign_ambiguous"] is None
+
+
+def test_profile_fact_summary_counts_captured_empty_migration_plan() -> None:
+    summary = harness._profile_fact_summary(
+        {
+            "status_peek": {"schema_version": "1.0"},
+            "migrate_campaigns_plan": {"moves": [], "ambiguous": []},
+        }
+    )
+
+    assert summary["migrate_campaign_moves"] == 0
+    assert summary["migrate_campaign_ambiguous"] == 0
+
+
 def test_run_command_captures_artifacts_and_parses_json(tmp_path: Path) -> None:
     state = harness.HarnessState(
         engine_repo=tmp_path / "engine",

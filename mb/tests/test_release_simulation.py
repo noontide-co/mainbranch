@@ -218,6 +218,31 @@ def test_claude_print_prompt_includes_owner_language_guardrails() -> None:
     assert "[updated] offer and founder-call research" in normalized_prompt
 
 
+def test_claude_print_prompt_omits_uncaptured_migration_facts() -> None:
+    from mb import dogfood_harness
+
+    simulation = release_simulation.simulations_for_tier("pr_smoke")[0]
+    prompt = dogfood_harness.claude_print_prompt(
+        simulation,
+        {
+            "facts_available": True,
+            "status_schema_version": "1.0",
+            "status_skill_wiring_ok": True,
+            "status_git_dirty": False,
+            "start_follow_up": "/mb-start",
+            "start_handoff_ready": True,
+            "doctor_repair_read_only": True,
+            "doctor_repair_actions": [],
+            "checkpoint_plan_dirty": False,
+            "migrate_campaign_moves": None,
+            "migrate_campaign_ambiguous": None,
+        },
+    )
+
+    assert "`mb migrate campaigns --plan --json`" not in prompt
+    assert "moves 0; ambiguous 0" not in prompt
+
+
 def test_score_transcript_flags_provider_overclaim() -> None:
     transcript = """
     I ran mb status for the Dogfood Studio business repo, routed this through
