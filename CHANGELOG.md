@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.30] - 2026-05-22
+
+v0.3.30 packages the Codex runtime readiness follow-up after v0.3.29. It
+keeps the supported Codex owner loop honest when a login shell would resolve a
+different `mb` binary, and it narrows Codex repair guidance to the scoped
+adapter path when only Codex wiring needs repair.
+
 ### Added
 
 - Added Codex runtime `mb` path/version diagnostics so status, start, and doctor
