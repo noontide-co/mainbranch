@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Tightened `mb checkpoint` around finite bracketed checkpoint subjects such as
+  `[updated] offer.md -- clarified guarantee`, keeping saved business history
+  scannable while improving validation, hook guidance, journal facts, and
+  `/mb-site` business-repo save guidance. Refs MAIN-403, #648.
+
 ### Fixed
 
 - Tightened Claude print-mode release dogfood prompts so agents can use

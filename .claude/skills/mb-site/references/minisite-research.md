@@ -45,6 +45,19 @@ shape. It covers business/offering, ICP, customer journey, competitive
 landscape, brand story, technical requirements, content/assets, and
 metrics/constraints before the brief is drafted.
 
+After the operator accepts research files written directly by `/mb-site`, save
+the business-repo research through the checkpoint path:
+
+```bash
+cd <business_repo>
+mb checkpoint --plan --json
+mb checkpoint --validate "[drafted] minisite research -- <slug>" --json
+mb checkpoint --message "[drafted] minisite research -- <slug>" --yes
+```
+
+If research was routed through `/mb-think`, use `/mb-think`'s own checkpoint
+loop instead of duplicating the save.
+
 ## Exit Criteria
 
 Research is ready to feed the brief when:

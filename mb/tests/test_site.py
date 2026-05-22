@@ -76,6 +76,31 @@ def test_mb_site_skill_hard_gates_cloudflare_dependent_work() -> None:
     assert "Main Branch cannot buy domains through `domain.py` yet" in setup
 
 
+def test_mb_site_business_repo_saves_use_checkpoint_contract() -> None:
+    skill = (REPO_ROOT / ".claude" / "skills" / "mb-site" / "SKILL.md").read_text(encoding="utf-8")
+    brief = (
+        REPO_ROOT / ".claude" / "skills" / "mb-site" / "references" / "minisite-brief.md"
+    ).read_text(encoding="utf-8")
+    research = (
+        REPO_ROOT / ".claude" / "skills" / "mb-site" / "references" / "minisite-research.md"
+    ).read_text(encoding="utf-8")
+    setup = (
+        REPO_ROOT / ".claude" / "skills" / "mb-site" / "references" / "minisite-setup.md"
+    ).read_text(encoding="utf-8")
+    workflow = (
+        REPO_ROOT / ".claude" / "skills" / "mb-site" / "references" / "site-repo-workflow.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Business-repo saves use `mb checkpoint`, not raw git commits." in skill
+    assert "site repo\ncode commits still use that site's normal git flow" in skill.lower()
+    assert 'git commit -m "[lock]' not in brief
+    assert "git add decisions/" not in brief
+    assert 'mb checkpoint --validate "[decided] minisite brief -- <slug>" --json' in brief
+    assert 'mb checkpoint --validate "[drafted] minisite research -- <slug>" --json' in research
+    assert 'mb checkpoint --validate "[connected] site repo -- <slug>" --json' in setup
+    assert 'mb checkpoint --validate "[connected] site repo -- <slug>" --json' in workflow
+
+
 def test_site_check_reports_ready_for_operator_review(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
     monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
