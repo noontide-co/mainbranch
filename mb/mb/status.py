@@ -4016,7 +4016,7 @@ def run(
     git = _git_info(repo_path)
     update = package_update_status(repo_path)
     team_facts = team.facts(repo_path)
-    github = _github(repo_path, git)
+    github = _github(repo_path, git, team_facts=team_facts)
     brain = _brain(repo_path)
     topology_payload = topology_mod.collect(
         str(repo_path),

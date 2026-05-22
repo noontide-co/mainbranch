@@ -2440,7 +2440,7 @@ def test_status_ranker_mentions_due_bets(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(
         status_mod,
         "_github",
-        lambda repo, git: {
+        lambda repo, git, **kwargs: {
             "available": True,
             "authenticated": True,
             "degraded": False,
