@@ -149,7 +149,7 @@ Anti-scope for v0.3.x:
 
 - no dashboard as source of truth;
 - no broad multi-runtime support claims;
-- no marketplace;
+- no hosted/public/provider marketplace product;
 - no automatic model invocation from `mb`;
 - no provider setup that stores secrets in repo files.
 

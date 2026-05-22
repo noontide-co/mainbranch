@@ -1,7 +1,8 @@
-"""Experimental Codex CLI-first adapter helpers.
+"""Codex owner-loop adapter helpers.
 
-Codex support starts with repo instructions and deterministic ``mb`` facts.
-This module intentionally does not invoke Codex or manage model conversation.
+Codex owner-loop support starts with repo instructions, the repo-scoped plugin
+surface, and deterministic ``mb`` facts. This module intentionally does not
+invoke Codex or manage model conversation.
 """
 
 from __future__ import annotations
@@ -628,8 +629,10 @@ the daily check-in and wants it recorded.
 ## Codex Think Route
 
 This is Codex-native guidance for the existing `mb-think` shared workflow
-source. It is not a slash command, and it does not mean all Main Branch skills
-work in Codex.
+source. When the generated Main Branch Owner Loop plugin is installed, this is
+the fallback route behind `/mb-think`; without the plugin, treat this section as
+the natural-language Codex route. It does not mean all Main Branch skills work
+in Codex.
 
 Engine source workflow: `workflows/mb-think/workflow.md`. This business repo
 does not need to contain that engine source file. Treat this generated

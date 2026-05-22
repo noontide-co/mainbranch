@@ -169,7 +169,10 @@ autosave; it is durable business memory.
 ## What We Are Not Building Yet
 
 Main Branch is not a hosted SaaS dashboard, chat client, background daemon,
-model host, vector database, scheduler, or marketplace today.
+model host, vector database, scheduler, or hosted marketplace product today.
+Repo-local runtime marketplace metadata, such as the Codex plugin marketplace
+file generated into a business repo, is an adapter mechanism rather than a
+Main Branch marketplace business surface.
 
 Those may become useful surfaces later. They earn their way in by preserving
 the same source of truth: the business repo, GitHub, git history, deterministic

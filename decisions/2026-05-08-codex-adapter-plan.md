@@ -20,6 +20,12 @@ tags: [runtime-adapters, codex, skills, cli, decision-needed]
 > `mb start` expose Codex readiness. This decision remains the staging plan;
 > current public support wording lives in
 > [docs/compatibility.md](../docs/compatibility.md).
+>
+> Status note, MAIN-423 / #682: the proven owner loop has since gained a
+> repo-scoped Codex plugin and installed `/mb-*` command surface through
+> `.agents/plugins/main-branch-owner-loop`. This updates the current support
+> boundary without changing this decision's historical staging rationale. See
+> [docs/compatibility.md](../docs/compatibility.md) for current claims.
 
 ## Decision
 

@@ -22,6 +22,13 @@ shape was being chosen. Current product language is **shared workflow source**,
 with **runtime shells**, **runtime guidance**, and **runtime adapters** over
 that source.
 
+> Status note, MAIN-423 / #682: the proven Codex owner loop has since gained a
+> repo-scoped plugin and installed `/mb-*` command surface through
+> `.agents/plugins/main-branch-owner-loop`. That support is still an adapter
+> over shared workflow sources and deterministic `mb` facts, not full Claude
+> skill parity or broad production workflow parity. See
+> [docs/compatibility.md](../docs/compatibility.md) for current claims.
+
 ## Decision
 
 Main Branch should introduce a runtime-neutral workflow corpus under
