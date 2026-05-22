@@ -254,6 +254,7 @@ research source and the evergreen reference separate. Raw extracts stay in
 | Average-case outcomes, typical timelines, caveats, common failure context | `core/proof/typicality.md` |
 | Proof that applies only to one offer | `core/offers/<slug>/proof/` |
 | Hook pattern, content framework, platform cue, comment insight | `core/content-strategy.md` |
+| Team role, relationship, owned area, or GitHub handle changed | `core/team/<slug>.md` with public-safe context only |
 | Mechanism story, pricing/distribution vulnerability | `core/offer.md` or offer-specific `offer.md` |
 | Live hypothesis, deadline, target, evidence, or verdict | `bets/YYYY-MM-DD-slug.md` |
 
