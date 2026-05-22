@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.29] - 2026-05-22
+
+v0.3.29 packages the owner-loop hardening batch after v0.3.28. It tightens
+release dogfood grounding, checkpoint subject semantics, public-safe team
+member context, and the repo-scoped Codex owner-loop plugin/command surface
+while keeping broader Codex slash-command parity, all-skill parity,
+provider-write, publishing, spend, and customer-contact workflows out of scope.
+
 ### Added
 
 - Added a public-safe `core/team/<slug>.md` team member primitive, onboarding

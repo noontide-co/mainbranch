@@ -437,7 +437,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "codex_status": "intentionally_unsupported",
         "codex_surface": "None",
         "commands": (),
-        "notes": "Specialty workflow outside the v0.3.28 owner-loop parity target.",
+        "notes": "Specialty workflow outside the owner-loop support target.",
     },
     {
         "id": "skill-authoring",
