@@ -2029,12 +2029,14 @@ def repair_plan(
             "name": "AGENTS.md",
             "state": "ok" if codex_instruction_status["ok"] else "warn",
             "summary": (
-                "Codex instructions and owner-loop skill are current and include "
-                "mb fact grounding, lifecycle routes, and workflow inventory"
+                "Codex instructions, owner-loop skill, plugin commands, and marketplace "
+                "are current and include mb fact grounding, lifecycle routes, "
+                "and workflow inventory"
                 if codex_instruction_status["ok"]
                 else (
-                    "Codex instructions or owner-loop skill files are missing, stale, "
-                    "or missing mb fact grounding or lifecycle discovery guidance"
+                    "Codex instructions, owner-loop skill, plugin, marketplace, or command "
+                    "files are missing, stale, or missing mb fact grounding or lifecycle "
+                    "discovery guidance"
                 )
             ),
             "missing_fact_commands": codex_instruction_status["missing_fact_commands"],
@@ -2055,14 +2057,18 @@ def repair_plan(
             command="mb doctor repair --apply",
             safe_to_apply=True,
             reason=(
-                "AGENTS.md and .agents/skills are the tracked Codex entrypoints; "
-                "repair writes the current owner-loop workflow index, fact grounding, "
-                "and approval boundaries"
+                "AGENTS.md, .agents/skills, and .agents/plugins are the tracked Codex "
+                "entrypoints; repair writes the current owner-loop plugin, command "
+                "shims, workflow index, fact grounding, and approval boundaries"
             ),
             writes=[
                 "AGENTS.md",
                 codex_mod.CODEX_SKILL_RELATIVE_PATH,
                 codex_mod.CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
+                codex_mod.CODEX_MARKETPLACE_RELATIVE_PATH,
+                codex_mod.CODEX_PLUGIN_MANIFEST_RELATIVE_PATH,
+                codex_mod.CODEX_PLUGIN_SKILL_RELATIVE_PATH,
+                *codex_mod.CODEX_PLUGIN_COMMAND_RELATIVE_PATHS,
             ],
         )
         actions.append(action)
@@ -2073,8 +2079,8 @@ def repair_plan(
             "Codex CLI Adapter",
             _max_state([str(item["state"]) for item in codex_checks]),
             (
-                "First-class owner-loop adapter instructions, native skill, "
-                "workflow inventory, and executable readiness"
+                "First-class owner-loop adapter instructions, native skill, plugin "
+                "commands, workflow inventory, marketplace, and executable readiness"
             ),
             checks=codex_checks,
             actions=codex_actions,
@@ -2419,6 +2425,10 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
                     "AGENTS.md",
                     codex_mod.CODEX_SKILL_RELATIVE_PATH,
                     codex_mod.CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
+                    codex_mod.CODEX_MARKETPLACE_RELATIVE_PATH,
+                    codex_mod.CODEX_PLUGIN_MANIFEST_RELATIVE_PATH,
+                    codex_mod.CODEX_PLUGIN_SKILL_RELATIVE_PATH,
+                    *codex_mod.CODEX_PLUGIN_COMMAND_RELATIVE_PATHS,
                 ],
                 applied=bool(agents["changed"]),
                 result=agents,

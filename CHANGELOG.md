@@ -17,6 +17,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   scaffold, validation for normalized and duplicate GitHub handles, and status
   GitHub activity handle resolution so business repos can name known team
   contributors. Refs MAIN-396, #633.
+- Added a repo-scoped Codex plugin marketplace, owner-loop plugin manifest,
+  plugin-packaged owner-loop skill, and thin `/mb-*` command shims for the
+  supported Main Branch owner loop while keeping deterministic `mb` facts and
+  shared workflow sources as the source of truth. Refs MAIN-423, #682.
 
 ### Changed
 

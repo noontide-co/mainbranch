@@ -145,6 +145,8 @@ def test_codex_contract_markers_match_think_workflow_source() -> None:
 def test_codex_owner_loop_skill_and_inventory_render() -> None:
     skill = codex_mod.render_codex_skill_md()
     inventory = codex_mod.render_workflow_inventory_md()
+    manifest = codex_mod.render_codex_plugin_manifest()
+    marketplace = codex_mod.render_codex_marketplace_json()
 
     assert "Main Branch owner loop for Codex" in skill
     assert "mb workflow list --runtime codex --json" in skill
@@ -152,9 +154,39 @@ def test_codex_owner_loop_skill_and_inventory_render() -> None:
     assert "think/codify" in skill
     assert "end/checkpoint/save" in skill
     assert "Ask before durable writes" in skill
+    assert "Main Branch Owner Loop" in manifest
+    assert '"skills": "./skills/"' in manifest
+    assert '"path": "./.agents/plugins/main-branch-owner-loop"' in marketplace
+    assert "Codex plugin files live under `.agents/plugins/main-branch-owner-loop/`" in inventory
+    assert "`/mb-start`" in inventory
     assert "pending_shared_source_migration" in inventory
     assert "intentionally_unsupported" in inventory
     assert "Copied Claude" not in skill
+
+
+def test_codex_plugin_skill_matches_generated_owner_loop_skill() -> None:
+    assert codex_mod.render_codex_plugin_skill_md() == codex_mod.render_codex_skill_md()
+
+
+def test_codex_plugin_commands_are_thin_owner_loop_shims() -> None:
+    for command in codex_mod.CODEX_COMMAND_NAMES:
+        text = codex_mod.render_codex_command_md(command)
+        assert f"# /{command}" in text
+        assert "Main Branch owner-loop skill" in text
+        assert "thin Codex shim" in text
+        assert "mb status --json --peek" in text or command in {
+            "mb-doctor",
+            "mb-checkpoint",
+            "mb-validate",
+            "mb-workflows",
+            "mb-help",
+        }
+        assert "Ask before durable writes" in text
+        assert "provider mutation" in text
+        assert "publishing" in text
+        assert "customer contact" in text
+        assert "Do not claim Claude Code skill parity" in text
+        assert "Do not shell-wrap `mb` JSON" in text
 
 
 def test_codex_owner_loop_skill_frontmatter_is_valid_yaml() -> None:
@@ -181,8 +213,15 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
     }.issubset(statuses)
     by_id = {item["id"]: item for item in data["items"]}
     assert by_id["think-codify"]["codex_status"] == "supported"
+    assert by_id["think-codify"]["codex_entrypoints"] == ["/mb-think"]
+    assert by_id["owner-loop-start-status"]["codex_entrypoints"] == [
+        "/mb-start",
+        "/mb-status",
+    ]
     assert by_id["ads"]["codex_status"] == "pending_shared_source_migration"
     assert by_id["wiki"]["codex_status"] == "intentionally_unsupported"
+    assert data["plugin"]["manifest_path"] == codex_mod.CODEX_PLUGIN_MANIFEST_RELATIVE_PATH
+    assert "/mb-start" in data["plugin"]["commands"]
 
 
 def test_codex_workflow_inventory_json_unsupported_runtime_uses_error_envelope() -> None:
