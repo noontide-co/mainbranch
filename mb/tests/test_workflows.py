@@ -147,6 +147,7 @@ def test_codex_owner_loop_skill_and_inventory_render() -> None:
     inventory = codex_mod.render_workflow_inventory_md()
     manifest = codex_mod.render_codex_plugin_manifest()
     marketplace = codex_mod.render_codex_marketplace_json()
+    inventory_json = codex_mod.workflow_inventory(runtime="codex")
 
     assert "Main Branch owner loop for Codex" in skill
     assert "mb workflow list --runtime codex --json" in skill
@@ -158,6 +159,12 @@ def test_codex_owner_loop_skill_and_inventory_render() -> None:
     assert '"skills": "./skills/"' in manifest
     assert '"path": "./.agents/plugins/main-branch-owner-loop"' in marketplace
     assert "Codex plugin files live under `.agents/plugins/main-branch-owner-loop/`" in inventory
+    assert "codex plugin marketplace add ." in inventory
+    assert (
+        inventory_json["plugin"]["install_hint"]
+        == "Run `codex plugin marketplace add .`, open `/plugins`, choose the repo "
+        "marketplace, then install Main Branch Owner Loop."
+    )
     assert "`/mb-start`" in inventory
     assert "pending_shared_source_migration" in inventory
     assert "intentionally_unsupported" in inventory

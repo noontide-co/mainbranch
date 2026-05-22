@@ -892,7 +892,8 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
             "command_paths": list(CODEX_PLUGIN_COMMAND_RELATIVE_PATHS),
             "commands": [f"/{name}" for name in CODEX_COMMAND_NAMES],
             "install_hint": (
-                "Open `/plugins`, choose the repo marketplace, then install Main Branch Owner Loop."
+                "Run `codex plugin marketplace add .`, open `/plugins`, choose the "
+                "repo marketplace, then install Main Branch Owner Loop."
             ),
         },
         "statuses": statuses,
@@ -931,7 +932,8 @@ def render_workflow_inventory_md() -> str:
         "shell still needs implementation and smoke evidence.\n"
         "- `intentionally_unsupported`: outside the current Codex owner-loop target.\n\n"
         "Codex plugin files live under `.agents/plugins/main-branch-owner-loop/` "
-        "and are listed by `.agents/plugins/marketplace.json` for `/plugins`.\n\n"
+        "and are listed by `.agents/plugins/marketplace.json`. Register the repo "
+        "first with `codex plugin marketplace add .`, then use `/plugins`.\n\n"
         "| Workflow | Codex status | Claude Code surface | Codex surface | "
         "Codex commands | Fact commands |\n"
         "|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n\n"

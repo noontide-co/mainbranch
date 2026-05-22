@@ -241,12 +241,14 @@ After installing Codex CLI, test a new repo with:
 ```bash
 mb onboard --yes --name "Codex Smoke Business" --path codex-smoke-business
 cd codex-smoke-business
+codex plugin marketplace add .
 codex
 ```
 
-Open `/plugins`, install **Main Branch Owner Loop** from the repo marketplace,
-then run `/mb-start`. If the plugin is not installed yet, ask Codex to start
-the business day from read-only `mb` facts and to ask before writing files.
+Open `/plugins`, install **Main Branch Owner Loop** from the registered repo
+marketplace, then run `/mb-start`. If the plugin is not installed yet, ask
+Codex to start the business day from read-only `mb` facts and to ask before
+writing files.
 
 For a read-only smoke test:
 

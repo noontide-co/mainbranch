@@ -27,6 +27,12 @@ def _tool_path(name: str) -> str:
     return ""
 
 
+def _tool_path_with_codex(name: str) -> str:
+    if name == "codex":
+        return "/usr/local/bin/codex"
+    return _tool_path(name)
+
+
 def _normalize(text: str) -> str:
     return " ".join(text.split())
 
@@ -84,6 +90,30 @@ def test_onboard_yes_creates_repo_and_reports_next_steps(tmp_path: Path, monkeyp
     assert any(
         "gh auth login" in warning or "GitHub CLI" in warning for warning in result["warnings"]
     )
+
+
+def test_onboard_next_steps_register_codex_marketplace_when_available(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path_with_codex)
+    repo = tmp_path / "acme"
+
+    result = onboard_mod.run(
+        path=str(repo),
+        name="Acme Brewing",
+        mode="new",
+        level="beginner",
+    )
+
+    assert result["next_steps"] == [
+        f"cd {repo.resolve()}",
+        "claude",
+        "/mb-start",
+        f"codex plugin marketplace add {repo.resolve()}",
+        f"codex -C {repo.resolve()}",
+        "/plugins -> install Main Branch Owner Loop",
+        "/mb-start",
+    ]
 
 
 def test_onboard_rerun_is_idempotent(tmp_path: Path, monkeypatch) -> None:

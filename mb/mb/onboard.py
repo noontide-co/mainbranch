@@ -641,6 +641,7 @@ def _next_steps(repo: Path) -> list[str]:
     if _which("codex"):
         steps.extend(
             [
+                f"codex plugin marketplace add {repo}",
                 f"codex -C {repo}",
                 "/plugins -> install Main Branch Owner Loop",
                 "/mb-start",

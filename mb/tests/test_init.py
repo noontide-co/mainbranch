@@ -264,6 +264,7 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "Acme Brewing" in readme_md
     assert "/mb-start" in readme_md
     assert "Codex CLI" in readme_md
+    assert "codex plugin marketplace add ." in readme_md
     assert "/plugins" in readme_md
     assert "Main Branch Owner Loop" in readme_md
     assert "## Save, Checkpoint, Backup" in readme_md
