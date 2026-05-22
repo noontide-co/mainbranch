@@ -92,8 +92,12 @@ CLAUDE_PRINT_PROMPT_PREFIX = """Release simulation harness constraints:
   `mb start --json`, `mb doctor --json`, `mb doctor repair --plan --json`,
   `mb validate --cross-refs --json`, `mb checkpoint --plan --json`,
   `mb books check`, and `mb educational <topic>`.
+- A compact harness-captured fact block may appear below. Use it when you need
+  small status fields. Do not re-create that summary with shell parsing.
 - Do not use shell pipes, redirects, temp files, Python parsers, or Claude
   tool-result paths to transform command output.
+- Do not run commands such as `mb status --json --peek | python3 ...`,
+  `mb status --json --peek > file`, or `python3 -c ...` to parse `mb` output.
 - In the final answer, use normal business-owner language first and avoid
   parenthetical git/GitHub restatements. Say "nothing unsaved locally" instead
   of "git is clean" or "working tree clean" / "working tree: clean"; "current
@@ -1058,9 +1062,45 @@ def score_transcript(text: str) -> dict[str, Any]:
     return release_simulation.score_transcript(text)
 
 
-def claude_print_prompt(simulation: release_simulation.Simulation) -> str:
+def claude_print_fixture_facts(facts: dict[str, Any] | None) -> str:
+    """Return public-safe compact fixture facts for the Claude print prompt."""
+    if not facts or not facts.get("facts_available"):
+        return (
+            "Harness-captured deterministic fixture facts:\n"
+            "- Not available for this simulation; use direct read-only `mb` commands."
+        )
+
+    lines = [
+        "Harness-captured deterministic fixture facts:",
+        f"- `mb status --json --peek`: schema {facts.get('status_schema_version', 'unknown')}; "
+        f"skill wiring ok {facts.get('status_skill_wiring_ok', 'unknown')}; "
+        f"dirty {facts.get('status_git_dirty', 'unknown')}",
+        f"- `mb start --json`: follow-up {facts.get('start_follow_up', 'unknown')}; "
+        f"handoff ready {facts.get('start_handoff_ready', 'unknown')}",
+        f"- `mb doctor repair --plan --json`: read-only "
+        f"{facts.get('doctor_repair_read_only', 'unknown')}; actions "
+        f"{len(facts.get('doctor_repair_actions', []) or [])}",
+        f"- `mb checkpoint --plan --json`: dirty {facts.get('checkpoint_plan_dirty', 'unknown')}",
+    ]
+    if facts.get("migrate_campaign_moves") is not None:
+        lines.append(
+            "- `mb migrate campaigns --plan --json`: "
+            f"moves {facts.get('migrate_campaign_moves', 'unknown')}; "
+            f"ambiguous {facts.get('migrate_campaign_ambiguous', 'unknown')}"
+        )
+    lines.append(
+        "- Treat this block as fallback evidence only; direct `mb` command output "
+        "or interactive Claude Code evidence is still stronger."
+    )
+    return "\n".join(lines)
+
+
+def claude_print_prompt(
+    simulation: release_simulation.Simulation, mb_command_facts: dict[str, Any] | None = None
+) -> str:
     """Return a prompt with harness constraints before the simulation text."""
-    return f"{CLAUDE_PRINT_PROMPT_PREFIX}\nSimulation prompt:\n{simulation.prompt}"
+    fixture_facts = claude_print_fixture_facts(mb_command_facts)
+    return f"{CLAUDE_PRINT_PROMPT_PREFIX}\n{fixture_facts}\nSimulation prompt:\n{simulation.prompt}"
 
 
 def claude_print_env(state: HarnessState) -> dict[str, str]:
@@ -1115,7 +1155,10 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
             f"--allowedTools={','.join(CLAUDE_PRINT_READ_ONLY_TOOLS)}",
             f"--disallowedTools={','.join(CLAUDE_PRINT_WRITE_DENY_TOOLS)}",
         ]
-        command = [*base_command, claude_print_prompt(simulation)]
+        command = [
+            *base_command,
+            claude_print_prompt(simulation, profile_record["mb_command_facts"]),
+        ]
         result = run_command(
             state,
             f"claude-print-{simulation.label}",

@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- Tightened Claude print-mode release dogfood prompts so agents can use
+  harness-captured fixture facts instead of shell-wrapping `mb status --json`
+  through pipes, redirects, temp files, or Python parsers. Refs MAIN-419, #672.
+
 ## [0.3.28] - 2026-05-19
 
 v0.3.28 packages the Codex owner-loop runtime release after v0.3.27. It makes

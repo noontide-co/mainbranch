@@ -211,6 +211,10 @@ def test_run_claude_print_allows_readonly_mb_and_denies_write_tools(
     assert "--permission-mode" not in command
     assert command[-1].endswith(simulation.prompt)
     assert "Do not use shell pipes" in command[-1]
+    assert "Do not re-create that summary with shell parsing" in command[-1]
+    assert "mb status --json --peek | python3" in command[-1]
+    assert "Harness-captured deterministic fixture facts" in command[-1]
+    assert "`mb status --json --peek`: schema" in command[-1]
     assert "Do not call AskUserQuestion" in command[-1]
     assert "Bash(mb status)" in allowed
     assert "Bash(mb status *)" in allowed

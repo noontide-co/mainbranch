@@ -131,6 +131,14 @@ evidence. The harness labels permission-denied grounding as proxy evidence;
 when profile `mb` facts are available, it records that as deterministic
 fallback rather than an interactive TUI pass.
 
+For each print-mode simulation, the harness also prepends a compact
+public-safe fixture fact block derived from direct read-only `mb` commands.
+That block exists so Claude can use small status fields without shell-wrapping
+`mb status --json --peek`, redirecting output, writing temp files, reading local
+Claude tool-result paths, or running Python parsers. Direct `mb` command output
+and interactive Claude Code evidence remain stronger than the compact fallback
+block.
+
 Print-mode evidence is a proxy. It is useful for repeatable regression signal,
 budget/auth failures, transcript excerpts, and rubric scoring, but it is not
 the same as interactive Claude Code TUI evidence. Release-bearing runtime

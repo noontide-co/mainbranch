@@ -110,6 +110,13 @@ Evidence records the profile name, mutations applied, relevant read-only `mb`
 command facts, post-run git state, fresh-session ids, permission-denial summary
 by category, and grounding verdict.
 
+The prompt for each print-mode simulation includes a compact, public-safe
+fixture fact block from the same direct read-only `mb` commands. That block is
+for small status fields only. Claude should use it or run direct read-only `mb`
+commands rather than shell-wrapping `mb status --json --peek`, redirecting
+output, writing temp files, reading local Claude tool-result paths, or running
+Python parsers.
+
 ## Running The Suite
 
 For normal PR runtime smoke:
