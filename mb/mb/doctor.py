@@ -2021,6 +2021,9 @@ def repair_plan(
     codex_status = codex_mod.readiness(target)
     codex_instruction_status = codex_status["instructions"]
     codex_runtime_status = codex_status["runtime"]
+    codex_runtime_relevant = bool(
+        codex_status["executable"]["found"] and codex_instruction_status["ok"]
+    )
     codex_checks = [
         {
             "name": "codex-cli",
@@ -2050,13 +2053,24 @@ def repair_plan(
         },
         {
             "name": "codex-runtime-mb",
-            "state": "ok" if codex_runtime_status["ok"] else "warn",
-            "summary": codex_runtime_status["summary"],
+            "state": (
+                "ok"
+                if codex_runtime_status["ok"]
+                else ("warn" if codex_runtime_relevant else "info")
+            ),
+            "summary": (
+                codex_runtime_status["summary"]
+                if codex_runtime_relevant
+                else (
+                    "Codex runtime mb check waits until Codex CLI is installed "
+                    "and adapter files are current."
+                )
+            ),
             "active_path": codex_runtime_status.get("active_path", ""),
             "active_version": codex_runtime_status.get("active_version", ""),
             "runtime_path": codex_runtime_status.get("path", ""),
             "runtime_version": codex_runtime_status.get("version", ""),
-            "repair": codex_runtime_status.get("repair", ""),
+            "repair": codex_runtime_status.get("repair", "") if codex_runtime_relevant else "",
         },
     ]
     codex_actions: list[dict[str, Any]] = []
@@ -2446,7 +2460,11 @@ def repair_apply(
                 title="Refreshed Codex owner-loop instructions",
                 state="ok" if agents["ok"] else "error",
                 mode="write",
-                command="mb doctor repair --apply",
+                command=(
+                    "mb doctor repair --apply --only codex"
+                    if only == "codex"
+                    else "mb doctor repair --apply"
+                ),
                 safe_to_apply=True,
                 reason=(
                     "wrote the current Codex owner-loop skill, lifecycle workflow "

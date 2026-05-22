@@ -250,6 +250,20 @@ def test_mb_install_diagnostics_reports_multiple_versions(tmp_path: Path, monkey
     mb_a.chmod(0o755)
     mb_b.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_a}:{bin_b}")
+    versions = {
+        str(mb_a): "0.3.22",
+        str(mb_b): "0.3.18",
+    }
+    monkeypatch.setattr(
+        engine_mod,
+        "_mb_binary_version",
+        lambda path: {
+            "ok": True,
+            "version": versions[path],
+            "output": f"mb {versions[path]}",
+            "error": "",
+        },
+    )
 
     result = engine_mod.mb_install_diagnostics()
 
@@ -287,6 +301,29 @@ def test_login_shell_mb_diagnostics_reports_stale_runtime_mb(tmp_path: Path, mon
     assert result["version"] == "0.3.18"
     assert result["active_path"] == str(active_mb)
     assert "different mb" in result["summary"]
+
+
+def test_login_shell_mb_diagnostics_ignores_login_shell_banner(tmp_path: Path, monkeypatch) -> None:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    mb = bin_dir / "mb"
+    mb.write_text("#!/bin/sh\necho 'mb 0.3.29'\n", encoding="utf-8")
+    mb.chmod(0o755)
+    shell = tmp_path / "login-shell"
+    shell.write_text(
+        f'#!/bin/sh\necho welcome-banner\nPATH={bin_dir}:$PATH exec /bin/sh -c "$2"\n',
+        encoding="utf-8",
+    )
+    shell.chmod(0o755)
+    monkeypatch.setenv("PATH", str(bin_dir))
+    monkeypatch.setattr(engine_mod, "__version__", "0.3.29")
+
+    result = engine_mod.login_shell_mb_diagnostics(str(shell))
+
+    assert result["ok"] is True
+    assert result["mismatch"] is False
+    assert result["path"] == str(mb)
+    assert result["version"] == "0.3.29"
 
 
 def test_link_status_explains_stale_engine_path_from_other_install(

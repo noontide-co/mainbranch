@@ -214,7 +214,15 @@ def login_shell_mb_diagnostics(shell: str | None = None, *, timeout: float = 5.0
     """
 
     shell_path = shell or os.environ.get("SHELL") or "/bin/sh"
-    command = "command -v mb && mb --version"
+    command = (
+        "mb_path=$(command -v mb 2>/dev/null || true); "
+        "printf '__MB_PATH__=%s\\n' \"$mb_path\"; "
+        'if [ -n "$mb_path" ]; then '
+        "mb_version=$(mb --version 2>&1); mb_rc=$?; "
+        "else mb_version=''; mb_rc=127; fi; "
+        "printf '__MB_VERSION__=%s\\n' \"$mb_version\"; "
+        'exit "$mb_rc"'
+    )
     active_path = shutil.which("mb") or ""
     result: subprocess.CompletedProcess[str] | None = None
     try:
@@ -245,13 +253,16 @@ def login_shell_mb_diagnostics(shell: str | None = None, *, timeout: float = 5.0
             "safe_to_share": True,
         }
 
-    output_lines = [
-        line.strip()
-        for line in ((result.stdout or "") + "\n" + (result.stderr or "")).splitlines()
-        if line.strip()
-    ]
-    runtime_path = output_lines[0] if output_lines else ""
-    version_output = output_lines[1] if len(output_lines) > 1 else ""
+    output_lines = (result.stdout or "").splitlines() + (result.stderr or "").splitlines()
+    tagged: dict[str, str] = {}
+    for raw_line in output_lines:
+        line = raw_line.strip()
+        if line.startswith("__MB_PATH__="):
+            tagged["path"] = line.removeprefix("__MB_PATH__=").strip()
+        elif line.startswith("__MB_VERSION__="):
+            tagged["version"] = line.removeprefix("__MB_VERSION__=").strip()
+    runtime_path = tagged.get("path", "")
+    version_output = tagged.get("version", "")
     runtime_version = (
         version_output.removeprefix("mb ").strip()
         if version_output.startswith("mb ")
