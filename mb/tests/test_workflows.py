@@ -162,6 +162,8 @@ def test_codex_owner_loop_skill_and_inventory_render() -> None:
     assert '"path": "./.agents/plugins/main-branch-owner-loop"' in marketplace
     assert "Codex plugin files are installed globally" in inventory
     assert "codex plugin list --marketplace main-branch" in inventory
+    assert ".claude/skills/mb-start/SKILL.md" in inventory
+    assert ".claude/skills/mb-skill-review/SKILL.md" in inventory
     assert "codex plugin marketplace add" in inventory_json["plugin"]["install_hint"]
     assert codex_mod.CODEX_PLUGIN_INSTALL_COMMAND in inventory_json["plugin"]["install_hint"]
     assert "`/mb-start`" in inventory
@@ -215,21 +217,44 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
     statuses = set(data["statuses"])
     assert {
         "supported",
+        "slash_command_visibility_unverified",
         "pending_shared_source_migration",
         "generated_shell_pending",
         "intentionally_unsupported",
     }.issubset(statuses)
     by_id = {item["id"]: item for item in data["items"]}
-    assert by_id["think-codify"]["codex_status"] == "supported"
+    assert by_id["think-codify"]["codex_status"] == "slash_command_visibility_unverified"
     assert by_id["think-codify"]["codex_entrypoints"] == ["/mb-think"]
     assert by_id["owner-loop-start-status"]["codex_entrypoints"] == [
         "/mb-start",
         "/mb-status",
     ]
+    assert by_id["owner-loop-start-status"]["claude_skill_sources"] == [
+        ".claude/skills/mb-start/SKILL.md",
+        ".claude/skills/mb-status/SKILL.md",
+    ]
     assert by_id["ads"]["codex_status"] == "pending_shared_source_migration"
     assert by_id["wiki"]["codex_status"] == "intentionally_unsupported"
     assert data["plugin"]["manifest_path"] == codex_mod.CODEX_PLUGIN_MANIFEST_RELATIVE_PATH
     assert "/mb-start" in data["plugin"]["commands"]
+
+
+def test_codex_workflow_inventory_accounts_for_every_bundled_claude_skill() -> None:
+    result = runner.invoke(app, ["workflow", "list", "--runtime", "codex", "--json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.stdout)
+    expected = {
+        str(path.relative_to(REPO_ROOT))
+        for path in sorted((REPO_ROOT / ".claude" / "skills").glob("mb-*/SKILL.md"))
+    }
+    top_level_sources = set(data["claude_skill_sources"])
+    item_sources = {
+        source for item in data["items"] for source in item.get("claude_skill_sources", [])
+    }
+
+    assert top_level_sources == expected
+    assert item_sources == expected
 
 
 def test_codex_workflow_inventory_json_unsupported_runtime_uses_error_envelope() -> None:

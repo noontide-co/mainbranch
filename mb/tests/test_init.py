@@ -111,7 +111,8 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     assert "`runtime.codex_cli.status` is `runtime_mismatch`" in text
     assert "`codex_runtime_mb_mismatch`" in text
     assert "Start the day / what next / get oriented" in text
-    assert "global Codex plugin is installed" in text
+    assert "visible in Codex's slash menu" in text
+    assert "command files do not prove" in text
     assert "Inspect status / what changed / what is stale" in text
     assert "Think / research / decide / codify" in text
     assert "do not claim these workflows are ported to" in text

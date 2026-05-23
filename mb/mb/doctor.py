@@ -2096,11 +2096,34 @@ def repair_plan(
             "summary": codex_plugin_install["summary"],
             "marketplace_registered": codex_plugin_install["marketplace_registered"],
             "marketplace_stale": codex_plugin_install["marketplace_stale"],
+            "global_plugin_installed": codex_plugin_install.get("global_plugin_installed", False),
             "plugin_installed": codex_plugin_install["plugin_installed"],
             "plugin_enabled": codex_plugin_install["plugin_enabled"],
+            "skill_ready": codex_plugin_install.get("skill_ready", False),
+            "command_files_present": codex_plugin_install.get("command_files_present", False),
             "slash_commands_ready": codex_plugin_install["slash_commands_ready"],
+            "slash_commands_state": codex_plugin_install.get("slash_commands_state", "unknown"),
             "install_command": codex_plugin_install["install_command"],
             "repair": codex_plugin_install["repair"],
+        },
+        {
+            "name": "codex-slash-commands",
+            "state": (
+                "ok"
+                if codex_plugin_install["slash_commands_ready"]
+                else ("warn" if codex_plugin_install["ok"] else "info")
+            ),
+            "summary": (
+                "Codex `/mb-*` slash commands are verified visible."
+                if codex_plugin_install["slash_commands_ready"]
+                else codex_plugin_install.get(
+                    "slash_commands_note",
+                    "Codex slash-command visibility is not verified.",
+                )
+            ),
+            "skill_ready": codex_plugin_install.get("skill_ready", False),
+            "command_files_present": codex_plugin_install.get("command_files_present", False),
+            "slash_commands_state": codex_plugin_install.get("slash_commands_state", "unknown"),
         },
     ]
     codex_actions: list[dict[str, Any]] = []

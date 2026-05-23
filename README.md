@@ -231,10 +231,13 @@ Expect Codex to run `mb status --json --peek`, `mb start --json`,
 `mb doctor repair --plan --json`, `mb checkpoint --plan --json`,
 `mb validate --json`, and `mb workflow list --runtime codex --json`, then
 translate those facts into a useful owner briefing. When the plugin is
-installed from `/plugins`, Codex exposes thin owner-loop commands such as
-`/mb-start`, `/mb-status`, `/mb-think`, `/mb-end`, and `/mb-help`. Do not expect
-all Claude Code skills, site, ads, publishing, provider mutation, spend, or
-customer-contact workflows to be ported there.
+installed from `/plugins`, Codex loads the global Main Branch owner-loop skill
+and the generated plugin command files. `mb status` reports slash-command
+visibility separately because installed command files are not proof that Codex
+Desktop exposes `/mb-start`, `/mb-status`, `/mb-think`, `/mb-end`, or
+`/mb-help` in the slash menu. Do not expect all Claude Code skills, site, ads,
+publishing, provider mutation, spend, or customer-contact workflows to be
+ported there.
 
 After installing Codex CLI, test a new repo with:
 
@@ -246,8 +249,9 @@ mb doctor repair --apply --only codex
 codex
 ```
 
-Then run `/mb-start`. If the plugin is not installed yet, ask Codex to start
-the business day from read-only `mb` facts and to ask before writing files.
+Then verify `/mb-start` appears in the slash menu before relying on slash
+commands. If the plugin is not installed yet, ask Codex to start the business
+day from read-only `mb` facts and to ask before writing files.
 
 For a read-only smoke test:
 
