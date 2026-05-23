@@ -67,10 +67,10 @@ Bundled Claude Code skills live in `.claude/skills/`. If you edit a skill:
   in examples.
 
 Claude Code is the first-class slash-skill runtime today. Codex CLI is
-first-class for the proven owner loop through generated `AGENTS.md`,
-`.agents/skills/main-branch-owner-loop`, the repo-scoped
-`.agents/plugins/main-branch-owner-loop` plugin command surface, deterministic
-`mb` facts, and workflow inventory. That is owner-loop plugin command support,
-not full Claude skill parity or full production workflow parity. Other runtimes
-are roadmap targets until an adapter and smoke evidence exist, so do not
-overclaim compatibility in docs.
+first-class for the proven owner loop through generated `AGENTS.md`, a global
+Main Branch Codex plugin installed once per user, deterministic `mb` facts, and
+workflow inventory. That is owner-loop plugin command support, not full Claude
+skill parity or full production workflow parity. Business repos should not carry
+repo-local Codex plugin copies unless a future issue proves that fallback is
+required. Other runtimes are roadmap targets until an adapter and smoke evidence
+exist, so do not overclaim compatibility in docs.

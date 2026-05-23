@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Pivoted Codex owner-loop slash commands to a global Main Branch plugin install
+  model: business repos keep lightweight `AGENTS.md` guidance, while
+  `mb doctor repair --only codex` installs or repairs the global plugin source
+  and Codex marketplace registration. Refs MAIN-431, #703.
+
 ## [0.3.32] - 2026-05-23
 
 v0.3.32 packages the Codex readiness truth cleanup after v0.3.31. It keeps the

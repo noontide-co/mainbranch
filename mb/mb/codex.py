@@ -1,6 +1,6 @@
 """Codex owner-loop adapter helpers.
 
-Codex owner-loop support starts with repo instructions, the repo-scoped plugin
+Codex owner-loop support starts with repo instructions, the global plugin
 surface, and deterministic ``mb`` facts. This module intentionally does not
 invoke Codex or manage model conversation.
 """
@@ -8,6 +8,7 @@ invoke Codex or manage model conversation.
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import shutil
 import subprocess
@@ -26,11 +27,10 @@ CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH = (
     f"{CODEX_SKILL_DIR_RELATIVE_PATH}/references/workflow-inventory.md"
 )
 CODEX_MARKETPLACE_RELATIVE_PATH = ".agents/plugins/marketplace.json"
-CODEX_MARKETPLACE_NAME = "main-branch-local"
+CODEX_MARKETPLACE_NAME = "main-branch"
 CODEX_PLUGIN_NAME = "main-branch-owner-loop"
 CODEX_PLUGIN_SELECTOR = f"{CODEX_PLUGIN_NAME}@{CODEX_MARKETPLACE_NAME}"
 CODEX_PLUGIN_INSTALL_COMMAND = f"codex plugin add {CODEX_PLUGIN_SELECTOR}"
-CODEX_MARKETPLACE_ADD_COMMAND = "codex plugin marketplace add ."
 CODEX_PLUGIN_DIR_RELATIVE_PATH = f".agents/plugins/{CODEX_PLUGIN_NAME}"
 CODEX_PLUGIN_MANIFEST_RELATIVE_PATH = f"{CODEX_PLUGIN_DIR_RELATIVE_PATH}/.codex-plugin/plugin.json"
 CODEX_PLUGIN_SKILL_RELATIVE_PATH = (
@@ -142,9 +142,9 @@ REQUIRED_LIFECYCLE_GUIDANCE = (
     "Shared source required JSON fact paths",
     "Shared source gates",
     "Shared public/private boundaries",
-    "Use `.agents/skills/main-branch-owner-loop`",
+    "Use the global Main Branch Codex plugin",
     "do not claim these workflows are ported to",
-    "generated Codex plugin is installed",
+    "global Codex plugin is installed",
     "/plugins",
 )
 REQUIRED_LIFECYCLE_GUIDANCE_MARKERS = (
@@ -478,6 +478,23 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
 )
 
 
+def global_plugin_source_root() -> Path:
+    """Return the user-local source directory for the global Codex plugin."""
+
+    override = os.environ.get("MAINBRANCH_CODEX_PLUGIN_ROOT", "").strip()
+    if override:
+        return Path(override).expanduser().resolve()
+    if os.name == "nt":
+        base = Path(os.environ.get("LOCALAPPDATA", "") or Path.home() / "AppData" / "Local")
+    else:
+        base = Path(os.environ.get("XDG_DATA_HOME", "") or Path.home() / ".local" / "share")
+    return (base / "mainbranch" / "codex").expanduser().resolve()
+
+
+def codex_marketplace_add_command() -> str:
+    return f"codex plugin marketplace add {shlex.quote(str(global_plugin_source_root()))}"
+
+
 _DEFAULT_AGENTS = """\
 # {{BUSINESS_NAME}}
 
@@ -577,29 +594,28 @@ canonical paths, frontmatter, JSON keys, validator rules, and command names.
 ## Codex Lifecycle Workflow Index
 
 This tracked `AGENTS.md` file is the repo-level Codex bootstrap. The generated
-project-local skill at `.agents/skills/main-branch-owner-loop/SKILL.md` plus
-the repo-scoped plugin at `.agents/plugins/main-branch-owner-loop/` are the
-Codex-native owner-loop discovery surfaces. They are owned by `mb init`,
-`mb onboard`, `mb doctor repair`, and the operator. Keep them compact: route to
-lifecycle workflows and `mb` facts, but do not duplicate the full Main Branch
-skill tree.
+Main Branch Codex plugin is installed globally once per user and supplies the
+`/mb-*` owner-loop commands. Business repos keep this lightweight `AGENTS.md`
+guidance instead of tracked repo-local plugin copies. `mb doctor repair --only
+codex` refreshes this file and installs or repairs the global plugin when
+Codex CLI is available.
 
-Use `.agents/skills/main-branch-owner-loop` for the proven owner loop only. Do
-not create additional Codex plugin manifests, copied Claude skill trees, or
+Use the global Main Branch Codex plugin for the proven owner loop only. Do not
+create repo-local Codex plugin manifests, copied Claude skill trees, or
 symlinked Claude skills unless a future `mb` command or issue says that surface
 is supported for this repo.
 
 Use this index to map natural Codex requests:
 
-- **Start the day / what next / get oriented:** use `/mb-start` when the
-  generated Codex plugin is installed, or the Codex Start Workflow below. Run
+- **Start the day / what next / get oriented:** use `/mb-start` when the global
+  Codex plugin is installed, or the Codex Start Workflow below. Run
   `mb status --json --peek` first, then `mb start --json` when runtime handoff
   or adapter-readiness facts matter.
 - **Inspect status / what changed / what is stale:** use `/mb-status` when the
-  generated Codex plugin is installed, or the Codex Status Workflow below.
+  global Codex plugin is installed, or the Codex Status Workflow below.
   Answer from `ranked_actions`, `since_last_check`, `journal`, `money_path`,
   `content_strategy`, `integrations`, `readiness`, and `drift.items`.
-- **Think / research / decide / codify:** use `/mb-think` when the generated
+- **Think / research / decide / codify:** use `/mb-think` when the global
   Codex plugin is installed, or the Codex Think Route below. Start from `mb`
   facts, choose a research depth, and ask before writing durable business files.
 - **Site, ads, organic production, provider mutation, publishing, spend,
@@ -609,7 +625,7 @@ Use this index to map natural Codex requests:
 The generated plugin also exposes `/mb-setup`, `/mb-update`, `/mb-doctor`,
 `/mb-end`, `/mb-checkpoint`, `/mb-validate`, `/mb-workflows`, and `/mb-help`
 as thin command shims over this owner-loop contract. Use `/plugins` to inspect
-or install the Main Branch Owner Loop plugin from this repo.
+or install the global Main Branch Owner Loop plugin.
 
 ## Codex Start Workflow
 
@@ -937,14 +953,15 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
         "inventory_path": CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
         "plugin": {
             "name": CODEX_PLUGIN_NAME,
+            "marketplace_name": CODEX_MARKETPLACE_NAME,
+            "plugin_selector": CODEX_PLUGIN_SELECTOR,
             "marketplace_path": CODEX_MARKETPLACE_RELATIVE_PATH,
             "manifest_path": CODEX_PLUGIN_MANIFEST_RELATIVE_PATH,
             "skill_path": CODEX_PLUGIN_SKILL_RELATIVE_PATH,
             "command_paths": list(CODEX_PLUGIN_COMMAND_RELATIVE_PATHS),
             "commands": [f"/{name}" for name in CODEX_COMMAND_NAMES],
             "install_hint": (
-                "Run `codex plugin marketplace add .`, open `/plugins`, choose the "
-                "repo marketplace, then install Main Branch Owner Loop."
+                f"Run `{codex_marketplace_add_command()}`, then `{CODEX_PLUGIN_INSTALL_COMMAND}`."
             ),
         },
         "statuses": statuses,
@@ -982,9 +999,10 @@ def render_workflow_inventory_md() -> str:
         "- `generated_shell_pending`: a shared source exists, but a generated Codex "
         "shell still needs implementation and smoke evidence.\n"
         "- `intentionally_unsupported`: outside the current Codex owner-loop target.\n\n"
-        "Codex plugin files live under `.agents/plugins/main-branch-owner-loop/` "
-        "and are listed by `.agents/plugins/marketplace.json`. Register the repo "
-        "first with `codex plugin marketplace add .`, then use `/plugins`.\n\n"
+        "Codex plugin files are installed globally by `mb doctor repair --only codex`; "
+        "business repos keep only lightweight `AGENTS.md` guidance. Use `/plugins` "
+        "or `codex plugin list --marketplace main-branch` to inspect the global "
+        "Main Branch Owner Loop plugin.\n\n"
         "| Workflow | Codex status | Claude Code surface | Codex surface | "
         "Codex commands | Fact commands |\n"
         "|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n\n"
@@ -1060,7 +1078,7 @@ inventory marks that surface `supported`.
 
 
 def render_codex_plugin_manifest() -> str:
-    """Render the repo-scoped Codex plugin manifest."""
+    """Render the global Codex plugin manifest."""
 
     payload = {
         "name": CODEX_PLUGIN_NAME,
@@ -1101,7 +1119,7 @@ def render_codex_plugin_manifest() -> str:
 
 
 def render_codex_marketplace_json() -> str:
-    """Render the repo-scoped Codex plugin marketplace metadata."""
+    """Render the global Codex plugin marketplace metadata."""
 
     payload = {
         "name": CODEX_MARKETPLACE_NAME,
@@ -1202,19 +1220,19 @@ def workflow_inventory_path(repo: str | Path) -> Path:
 
 
 def marketplace_path(repo: str | Path) -> Path:
-    return Path(repo).expanduser().resolve() / CODEX_MARKETPLACE_RELATIVE_PATH
+    return global_plugin_source_root() / CODEX_MARKETPLACE_RELATIVE_PATH
 
 
 def plugin_manifest_path(repo: str | Path) -> Path:
-    return Path(repo).expanduser().resolve() / CODEX_PLUGIN_MANIFEST_RELATIVE_PATH
+    return global_plugin_source_root() / CODEX_PLUGIN_MANIFEST_RELATIVE_PATH
 
 
 def plugin_skill_path(repo: str | Path) -> Path:
-    return Path(repo).expanduser().resolve() / CODEX_PLUGIN_SKILL_RELATIVE_PATH
+    return global_plugin_source_root() / CODEX_PLUGIN_SKILL_RELATIVE_PATH
 
 
 def plugin_command_path(repo: str | Path, name: str) -> Path:
-    return Path(repo).expanduser().resolve() / CODEX_PLUGIN_COMMANDS_RELATIVE_PATH / f"{name}.md"
+    return global_plugin_source_root() / CODEX_PLUGIN_COMMANDS_RELATIVE_PATH / f"{name}.md"
 
 
 def executable_status() -> dict[str, Any]:
@@ -1318,7 +1336,8 @@ def plugin_install_status(repo: str | Path, *, adapter_files_ok: bool = True) ->
     target = Path(repo).expanduser().resolve()
     expected_marketplace_path = marketplace_path(target)
     install_command = CODEX_PLUGIN_INSTALL_COMMAND
-    register_command = CODEX_MARKETPLACE_ADD_COMMAND
+    register_command = codex_marketplace_add_command()
+    source_ok = plugin_status(target)["ok"]
     if not _which("codex"):
         return {
             "checked": False,
@@ -1329,6 +1348,8 @@ def plugin_install_status(repo: str | Path, *, adapter_files_ok: bool = True) ->
             "plugin_selector": CODEX_PLUGIN_SELECTOR,
             "marketplace_registered": False,
             "marketplace_stale": False,
+            "global_source_path": str(global_plugin_source_root()),
+            "global_source_ok": source_ok,
             "plugin_available": False,
             "plugin_installed": False,
             "plugin_enabled": False,
@@ -1344,13 +1365,14 @@ def plugin_install_status(repo: str | Path, *, adapter_files_ok: bool = True) ->
             "ok": False,
             "state": "waiting_for_adapter_files",
             "summary": (
-                "Codex plugin install check waits until generated adapter files "
-                "and marketplace metadata are current."
+                "Codex plugin install check waits until repo AGENTS.md guidance is current."
             ),
             "marketplace_name": CODEX_MARKETPLACE_NAME,
             "plugin_selector": CODEX_PLUGIN_SELECTOR,
             "marketplace_registered": False,
             "marketplace_stale": False,
+            "global_source_path": str(global_plugin_source_root()),
+            "global_source_ok": source_ok,
             "plugin_available": False,
             "plugin_installed": False,
             "plugin_enabled": False,
@@ -1358,6 +1380,31 @@ def plugin_install_status(repo: str | Path, *, adapter_files_ok: bool = True) ->
             "install_command": install_command,
             "register_command": register_command,
             "repair": CODEX_REPAIR_TEXT,
+            "safe_to_share": True,
+        }
+
+    if not source_ok:
+        return {
+            "checked": True,
+            "ok": False,
+            "state": "global_plugin_source_missing",
+            "summary": ("The global Main Branch Codex plugin source is missing or stale."),
+            "marketplace_name": CODEX_MARKETPLACE_NAME,
+            "plugin_selector": CODEX_PLUGIN_SELECTOR,
+            "marketplace_registered": False,
+            "marketplace_stale": False,
+            "marketplace_path": str(expected_marketplace_path),
+            "registered_marketplace_path": "",
+            "global_source_path": str(global_plugin_source_root()),
+            "global_source_ok": False,
+            "plugin_available": False,
+            "plugin_installed": False,
+            "plugin_enabled": False,
+            "slash_commands_ready": False,
+            "plugin_line": "",
+            "install_command": install_command,
+            "register_command": register_command,
+            "repair": "Run `mb doctor repair --apply --only codex` to install the global plugin.",
             "safe_to_share": True,
         }
 
@@ -1375,25 +1422,25 @@ def plugin_install_status(repo: str | Path, *, adapter_files_ok: bool = True) ->
     elif not parsed["marketplace_registered"]:
         state = "marketplace_not_registered"
         summary = (
-            "Generated Codex plugin files are ready, but this repo's Codex "
+            "The global Main Branch Codex plugin source is ready, but its Codex "
             "marketplace is not registered."
         )
         if parsed["marketplace_stale"]:
             summary = (
-                "A `main-branch-local` Codex marketplace is registered, but it "
-                "points at a different repo."
+                "A `main-branch` Codex marketplace is registered, but it "
+                "points at a different Main Branch plugin source."
             )
         repair = f"Run `{register_command}`, then `{install_command}`."
     elif not parsed["plugin_available"]:
         state = "plugin_not_available"
         summary = (
-            "This repo's Codex marketplace is registered, but the Main Branch plugin is missing."
+            "The global Main Branch Codex marketplace is registered, but the plugin is missing."
         )
         repair = f"Run `{register_command}`, then `{install_command}`."
     elif not parsed["plugin_installed"]:
         state = "plugin_not_installed"
         summary = (
-            "Generated Codex plugin files are ready, but the Main Branch plugin "
+            "The global Main Branch Codex plugin source is ready, but the plugin "
             "is not installed in Codex yet."
         )
         repair = f"Run `{install_command}`."
@@ -1410,6 +1457,8 @@ def plugin_install_status(repo: str | Path, *, adapter_files_ok: bool = True) ->
         "marketplace_name": CODEX_MARKETPLACE_NAME,
         "plugin_selector": CODEX_PLUGIN_SELECTOR,
         **parsed,
+        "global_source_path": str(global_plugin_source_root()),
+        "global_source_ok": source_ok,
         "install_command": install_command,
         "register_command": register_command,
         "repair": repair,
@@ -1422,13 +1471,18 @@ def plugin_install_status(repo: str | Path, *, adapter_files_ok: bool = True) ->
 
 def install_plugin(repo: str | Path) -> dict[str, Any]:
     target = Path(repo).expanduser().resolve()
+    source = write_global_plugin_source()
     steps = [
-        _run_codex_plugin_command(target, ["plugin", "marketplace", "add", "."]),
+        _run_codex_plugin_command(
+            target,
+            ["plugin", "marketplace", "add", str(global_plugin_source_root())],
+        ),
         _run_codex_plugin_command(target, ["plugin", "add", CODEX_PLUGIN_SELECTOR]),
     ]
     final = plugin_install_status(target)
     return {
         "ok": bool(final.get("ok")),
+        "source": source,
         "steps": steps,
         "status": final,
         "safe_to_share": True,
@@ -1509,59 +1563,100 @@ def plugin_status(repo: str | Path) -> dict[str, Any]:
     }
 
 
-def skill_status(repo: str | Path) -> dict[str, Any]:
-    target = Path(repo).expanduser().resolve()
-    skill = codex_skill_path(target)
-    inventory = workflow_inventory_path(target)
-    plugin = plugin_status(target)
-    skill_exists = skill.is_file()
-    inventory_exists = inventory.is_file()
-    expected_skill = render_codex_skill_md()
-    expected_inventory = render_workflow_inventory_md()
-    try:
-        skill_text = skill.read_text(encoding="utf-8") if skill_exists else ""
-        inventory_text = inventory.read_text(encoding="utf-8") if inventory_exists else ""
-    except OSError as exc:
-        return {
-            "ok": False,
-            "exists": bool(skill_exists and inventory_exists),
-            "current": False,
-            "path": CODEX_SKILL_RELATIVE_PATH,
-            "inventory_path": CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
-            "missing_markers": list(CODEX_SKILL_REQUIRED_MARKERS),
-            "plugin": plugin,
-            "read_error": str(exc),
-            "repair": CODEX_REPAIR_TEXT,
-            "repair_command": CODEX_REPAIR_COMMAND,
-            "safe_to_share": True,
-        }
-    missing_markers = [
-        marker for marker in CODEX_SKILL_REQUIRED_MARKERS if marker not in skill_text
-    ]
-    template_match = bool(
-        skill_exists
-        and inventory_exists
-        and skill_text == expected_skill
-        and inventory_text == expected_inventory
-    )
-    ok = bool(
-        skill_exists
-        and inventory_exists
-        and not missing_markers
-        and template_match
-        and plugin["ok"]
-    )
+def write_global_plugin_source() -> dict[str, Any]:
+    """Write the global Main Branch Codex plugin source outside business repos."""
+
+    root = global_plugin_source_root()
+    marketplace = marketplace_path(root)
+    manifest = plugin_manifest_path(root)
+    skill = plugin_skill_path(root)
+    expected_marketplace = render_codex_marketplace_json()
+    expected_manifest = render_codex_plugin_manifest()
+    expected_skill = render_codex_plugin_skill_md()
+    expected_commands = {name: render_codex_command_md(name) for name in CODEX_COMMAND_NAMES}
+    writes = {
+        CODEX_MARKETPLACE_RELATIVE_PATH: (marketplace, expected_marketplace),
+        CODEX_PLUGIN_MANIFEST_RELATIVE_PATH: (manifest, expected_manifest),
+        CODEX_PLUGIN_SKILL_RELATIVE_PATH: (skill, expected_skill),
+        **{
+            f"{CODEX_PLUGIN_COMMANDS_RELATIVE_PATH}/{name}.md": (
+                plugin_command_path(root, name),
+                text,
+            )
+            for name, text in expected_commands.items()
+        },
+    }
+    changed_paths: list[str] = []
+    for _relative, (path, text) in writes.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        existing = path.read_text(encoding="utf-8") if path.exists() else ""
+        if existing != text:
+            path.write_text(text, encoding="utf-8")
+            changed_paths.append(str(path))
     return {
-        "ok": ok,
-        "exists": bool(skill_exists and inventory_exists and plugin["exists"]),
-        "current": bool(template_match and plugin["current"]),
+        "ok": True,
+        "path": str(root),
+        "changed": bool(changed_paths),
+        "changed_paths": changed_paths,
+        "relative_paths": list(writes),
+        "safe_to_share": True,
+    }
+
+
+def _remove_generated_tree(path: Path) -> bool:
+    if path.is_dir():
+        shutil.rmtree(path)
+        return True
+    if path.is_file():
+        path.unlink()
+        return True
+    return False
+
+
+def remove_repo_local_codex_plugin_files(repo: str | Path) -> list[str]:
+    """Remove generated repo-local Codex plugin files from the transitional model."""
+
+    target = Path(repo).expanduser().resolve()
+    removed: list[str] = []
+    for relative in (
+        CODEX_PLUGIN_DIR_RELATIVE_PATH,
+        CODEX_MARKETPLACE_RELATIVE_PATH,
+        CODEX_SKILL_DIR_RELATIVE_PATH,
+    ):
+        path = target / relative
+        if _remove_generated_tree(path):
+            removed.append(relative)
+    for maybe_empty in (
+        target / ".agents" / "plugins",
+        target / ".agents" / "skills",
+        target / ".agents",
+    ):
+        try:
+            if maybe_empty.is_dir() and not any(maybe_empty.iterdir()):
+                maybe_empty.rmdir()
+        except OSError:
+            pass
+    return removed
+
+
+def skill_status(repo: str | Path) -> dict[str, Any]:
+    plugin = plugin_status(repo)
+    return {
+        "ok": True,
+        "exists": False,
+        "current": True,
         "path": CODEX_SKILL_RELATIVE_PATH,
         "inventory_path": CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
-        "missing_markers": missing_markers,
+        "missing_markers": [],
         "plugin": plugin,
         "read_error": "",
-        "repair": "" if ok else CODEX_REPAIR_TEXT,
+        "repair": "",
         "repair_command": CODEX_REPAIR_COMMAND,
+        "deprecated": True,
+        "summary": (
+            "Repo-local Codex owner-loop skills are no longer required; the "
+            "Main Branch Codex plugin is installed globally."
+        ),
         "safe_to_share": True,
     }
 
@@ -1589,8 +1684,17 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
         exists and not missing_commands and approval_ok and slash_ok and lifecycle_discovery_ok
     )
     skill = skill_status(target)
+    repo_local_plugin_paths = [
+        relative
+        for relative in (
+            CODEX_SKILL_DIR_RELATIVE_PATH,
+            CODEX_MARKETPLACE_RELATIVE_PATH,
+            CODEX_PLUGIN_DIR_RELATIVE_PATH,
+        )
+        if (target / relative).exists()
+    ]
     template_match = bool(exists and text == expected)
-    current = bool(fact_grounding_ok and skill["ok"])
+    current = bool(fact_grounding_ok and not repo_local_plugin_paths)
     return {
         "ok": current,
         "exists": exists,
@@ -1601,6 +1705,7 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
         "absolute_path": str(path),
         "missing_fact_commands": missing_commands,
         "missing_lifecycle_guidance": missing_lifecycle_guidance,
+        "repo_local_plugin_paths": repo_local_plugin_paths,
         "lifecycle_discovery_ok": lifecycle_discovery_ok,
         "skill": skill,
         "workflow_inventory": workflow_inventory(),
@@ -1714,58 +1819,8 @@ def write_agents_md(
         path.write_text(rendered, encoding="utf-8")
         changed_paths.append(AGENTS_RELATIVE_PATH)
 
-    skill_path = codex_skill_path(target)
-    skill_path.parent.mkdir(parents=True, exist_ok=True)
-    rendered_skill = render_codex_skill_md()
-    existing_skill = skill_path.read_text(encoding="utf-8") if skill_path.exists() else ""
-    if existing_skill != rendered_skill:
-        skill_path.write_text(rendered_skill, encoding="utf-8")
-        changed_paths.append(CODEX_SKILL_RELATIVE_PATH)
-
-    inventory_path = workflow_inventory_path(target)
-    inventory_path.parent.mkdir(parents=True, exist_ok=True)
-    rendered_inventory = render_workflow_inventory_md()
-    existing_inventory = (
-        inventory_path.read_text(encoding="utf-8") if inventory_path.exists() else ""
-    )
-    if existing_inventory != rendered_inventory:
-        inventory_path.write_text(rendered_inventory, encoding="utf-8")
-        changed_paths.append(CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH)
-
-    marketplace = marketplace_path(target)
-    marketplace.parent.mkdir(parents=True, exist_ok=True)
-    rendered_marketplace = render_codex_marketplace_json()
-    existing_marketplace = marketplace.read_text(encoding="utf-8") if marketplace.exists() else ""
-    if existing_marketplace != rendered_marketplace:
-        marketplace.write_text(rendered_marketplace, encoding="utf-8")
-        changed_paths.append(CODEX_MARKETPLACE_RELATIVE_PATH)
-
-    manifest = plugin_manifest_path(target)
-    manifest.parent.mkdir(parents=True, exist_ok=True)
-    rendered_manifest = render_codex_plugin_manifest()
-    existing_manifest = manifest.read_text(encoding="utf-8") if manifest.exists() else ""
-    if existing_manifest != rendered_manifest:
-        manifest.write_text(rendered_manifest, encoding="utf-8")
-        changed_paths.append(CODEX_PLUGIN_MANIFEST_RELATIVE_PATH)
-
-    plugin_skill = plugin_skill_path(target)
-    plugin_skill.parent.mkdir(parents=True, exist_ok=True)
-    rendered_plugin_skill = render_codex_plugin_skill_md()
-    existing_plugin_skill = (
-        plugin_skill.read_text(encoding="utf-8") if plugin_skill.exists() else ""
-    )
-    if existing_plugin_skill != rendered_plugin_skill:
-        plugin_skill.write_text(rendered_plugin_skill, encoding="utf-8")
-        changed_paths.append(CODEX_PLUGIN_SKILL_RELATIVE_PATH)
-
-    for command_name in CODEX_COMMAND_NAMES:
-        command_path = plugin_command_path(target, command_name)
-        command_path.parent.mkdir(parents=True, exist_ok=True)
-        rendered_command = render_codex_command_md(command_name)
-        existing_command = command_path.read_text(encoding="utf-8") if command_path.exists() else ""
-        if existing_command != rendered_command:
-            command_path.write_text(rendered_command, encoding="utf-8")
-            changed_paths.append(f"{CODEX_PLUGIN_COMMANDS_RELATIVE_PATH}/{command_name}.md")
+    removed_paths = remove_repo_local_codex_plugin_files(target)
+    changed_paths.extend(f"removed:{path}" for path in removed_paths)
     return {
         "ok": True,
         "path": AGENTS_RELATIVE_PATH,

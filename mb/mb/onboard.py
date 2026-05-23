@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from mb import checkpoint as checkpoint_mod
+from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import init as init_mod
 from mb.engine import link_skills, link_status
@@ -332,14 +333,7 @@ def _setup_complete(repo: Path, *, github_requested: bool = False) -> dict[str, 
         "github_requested": github_requested,
         "claude_code_handoff_ready": bool(wiring.get("ok")),
         "codex_instructions_present": (repo / "AGENTS.md").is_file(),
-        "codex_plugin_present": (
-            repo
-            / ".agents"
-            / "plugins"
-            / "main-branch-owner-loop"
-            / ".codex-plugin"
-            / "plugin.json"
-        ).is_file(),
+        "codex_plugin_present": bool(codex_mod.plugin_install_status(repo).get("ok")),
         "owner_outcome": (
             "This business folder is created, saved, synced to GitHub, and ready to open "
             "in Claude Code."
@@ -641,9 +635,9 @@ def _next_steps(repo: Path) -> list[str]:
     if _which("codex"):
         steps.extend(
             [
-                f"codex plugin marketplace add {repo}",
+                "mb doctor repair --plan --only codex",
+                "mb doctor repair --apply --only codex",
                 f"codex -C {repo}",
-                "/plugins -> install Main Branch Owner Loop",
                 "/mb-start",
             ]
         )

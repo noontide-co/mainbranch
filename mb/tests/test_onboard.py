@@ -92,7 +92,7 @@ def test_onboard_yes_creates_repo_and_reports_next_steps(tmp_path: Path, monkeyp
     )
 
 
-def test_onboard_next_steps_register_codex_marketplace_when_available(
+def test_onboard_next_steps_offer_global_codex_repair_when_available(
     tmp_path: Path, monkeypatch
 ) -> None:
     monkeypatch.setattr(onboard_mod, "_which", _tool_path_with_codex)
@@ -109,9 +109,9 @@ def test_onboard_next_steps_register_codex_marketplace_when_available(
         f"cd {repo.resolve()}",
         "claude",
         "/mb-start",
-        f"codex plugin marketplace add {repo.resolve()}",
+        "mb doctor repair --plan --only codex",
+        "mb doctor repair --apply --only codex",
         f"codex -C {repo.resolve()}",
-        "/plugins -> install Main Branch Owner Loop",
         "/mb-start",
     ]
 

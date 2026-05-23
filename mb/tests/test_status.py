@@ -43,8 +43,8 @@ def _without_codex(name: str) -> str:
 
 
 def _codex_plugin_list_result(repo: Path, *, installed: bool = True) -> dict[str, Any]:
-    marketplace = repo / codex_mod.CODEX_MARKETPLACE_RELATIVE_PATH
-    plugin = repo / codex_mod.CODEX_PLUGIN_DIR_RELATIVE_PATH
+    marketplace = codex_mod.marketplace_path(repo)
+    plugin = codex_mod.plugin_manifest_path(repo).parent
     status = "installed, enabled" if installed else "not installed"
     return {
         "ok": True,
@@ -58,6 +58,11 @@ def _codex_plugin_list_result(repo: Path, *, installed: bool = True) -> dict[str
         "stderr": "",
         "command": f"codex plugin list --marketplace {codex_mod.CODEX_MARKETPLACE_NAME}",
     }
+
+
+def _prepare_codex_global_plugin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAINBRANCH_CODEX_PLUGIN_ROOT", str(tmp_path / "codex-global"))
+    codex_mod.write_global_plugin_source()
 
 
 def _codex_runtime_ok() -> dict[str, Any]:
@@ -359,6 +364,7 @@ def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) ->
 
 def test_status_money_path_default_repo_stays_low(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    _prepare_codex_global_plugin(tmp_path, monkeypatch)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
     monkeypatch.setattr(
@@ -1455,6 +1461,7 @@ def test_status_marks_codex_not_ready_when_plugin_is_not_installed(
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     monkeypatch.setattr(codex_mod, "_which", _with_codex)
     monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
+    _prepare_codex_global_plugin(tmp_path, monkeypatch)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
     monkeypatch.setattr(
@@ -1486,6 +1493,7 @@ def test_status_marks_codex_ready_when_plugin_is_installed(
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     monkeypatch.setattr(codex_mod, "_which", _with_codex)
     monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
+    _prepare_codex_global_plugin(tmp_path, monkeypatch)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
     monkeypatch.setattr(

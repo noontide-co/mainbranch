@@ -160,13 +160,10 @@ def test_codex_owner_loop_skill_and_inventory_render() -> None:
     assert "Main Branch Owner Loop" in manifest
     assert '"skills": "./skills/"' in manifest
     assert '"path": "./.agents/plugins/main-branch-owner-loop"' in marketplace
-    assert "Codex plugin files live under `.agents/plugins/main-branch-owner-loop/`" in inventory
-    assert "codex plugin marketplace add ." in inventory
-    assert (
-        inventory_json["plugin"]["install_hint"]
-        == "Run `codex plugin marketplace add .`, open `/plugins`, choose the repo "
-        "marketplace, then install Main Branch Owner Loop."
-    )
+    assert "Codex plugin files are installed globally" in inventory
+    assert "codex plugin list --marketplace main-branch" in inventory
+    assert "codex plugin marketplace add" in inventory_json["plugin"]["install_hint"]
+    assert codex_mod.CODEX_PLUGIN_INSTALL_COMMAND in inventory_json["plugin"]["install_hint"]
     assert "`/mb-start`" in inventory
     assert "pending_shared_source_migration" in inventory
     assert "intentionally_unsupported" in inventory
