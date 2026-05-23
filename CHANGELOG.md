@@ -19,6 +19,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Removed unproven Codex command-file shims from the generated global plugin;
   Codex support now starts from the plugin guidance and deterministic `mb`
   facts. Refs MAIN-434, #709.
+- Updated fresh business-repo onboarding and README guidance so Codex users are
+  told to ask Codex for a read-only `mb`-fact start instead of running
+  unsupported `/mb-start` slash commands. Refs MAIN-435, #712.
 - Extended the Codex workflow inventory to account for every bundled Claude
   `mb-*` skill source, keeping full workflow parity as an explicit routing
   ledger instead of an implied owner-loop subset. Refs MAIN-433, #707.

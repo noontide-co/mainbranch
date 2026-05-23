@@ -241,6 +241,7 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "/mb-start" in readme_md
     assert "Codex CLI" in readme_md
     assert "mb doctor repair --apply --only codex" in readme_md
+    assert "/mb-start" not in readme_md.split("Or, in Codex CLI:", 1)[1]
     assert "## Save, Checkpoint, Backup" in readme_md
     assert "A checkpoint is an approved saved point" in readme_md
     assert "GitHub backup/sync is strongly recommended" in readme_md
