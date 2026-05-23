@@ -19,15 +19,15 @@ markdown files in git.
 - A user's business repo is the durable business brain.
 - A user is not met with git speak but instead business speak.
 
-Claude Code is the first-class slash-skill runtime today. Codex CLI is
-first-class for the proven owner loop through generated `AGENTS.md`, a global
-Main Branch Codex plugin, deterministic `mb` facts, generated Codex guidance,
-and workflow inventory. That is daily-loop Codex support, not
-all-skill parity or full production workflow parity. Business repos should not
-carry repo-local Codex plugin copies unless a future issue proves that fallback
-is required. Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and
-local runtimes remain compatibility targets until tested. Do not claim support
-before there is an adapter and smoke evidence for the exact surface.
+Claude Code and Codex CLI are the supported agent runtimes today. Claude Code
+uses project-local slash skills. Codex uses generated `AGENTS.md`, a global Main
+Branch Codex plugin, deterministic `mb` facts, generated Codex guidance, and
+workflow inventory. That is daily-loop Codex support, not all-skill parity or
+full production workflow parity. Business repos should not carry repo-local
+Codex plugin copies unless a future issue proves that fallback is required.
+Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and local runtimes
+remain compatibility targets until tested. Do not claim support before there is
+an adapter and smoke evidence for the exact surface.
 
 The public product frame lives in `docs/ethos.md`, the operator loop taxonomy
 lives in `docs/operator-loops.md`, and release direction lives in

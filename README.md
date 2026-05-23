@@ -13,8 +13,8 @@
   <a href="https://pypi.org/project/mainbranch/"><img alt="PyPI" src="https://img.shields.io/pypi/v/mainbranch?label=PyPI"></a>
   <a href="https://github.com/noontide-co/mainbranch/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/noontide-co/mainbranch/ci.yml?label=CI"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue"></a>
-  <img alt="Runtime" src="https://img.shields.io/badge/Claude%20Code-first--class-black">
-  <img alt="Codex" src="https://img.shields.io/badge/Codex-first--class%20owner--loop-blue">
+  <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-supported-black">
+  <img alt="Codex" src="https://img.shields.io/badge/Codex-supported-blue">
 </p>
 
 <p align="center">
@@ -57,7 +57,7 @@ Open source. Lives on your machine. Bring your own Claude Code plan. That's it.
 ---
 
 <div align="center">
-  <em>Works with</em> <strong>Claude Code</strong> and <strong>Codex CLI for the owner loop</strong>. Cursor, OpenClaw, Hermes, and local runtimes remain compatibility targets — see <a href="docs/compatibility.md">compatibility</a>.
+  <em>Works with</em> <strong>Claude Code</strong> and <strong>Codex CLI</strong>. Cursor, OpenClaw, Hermes, and local runtimes remain compatibility targets — see <a href="docs/compatibility.md">compatibility</a>.
 </div>
 
 ---
@@ -156,7 +156,7 @@ The longer-arc operating-memory model — where multiple business repos, GitHub 
 
 |                                  |                                                                                                |
 | -------------------------------- | ---------------------------------------------------------------------------------------------- |
-| **Not a chat app.**              | The supported chat surfaces are Claude Code and Codex CLI for the owner loop. Main Branch gives agents durable context to read from. |
+| **Not a chat app.**              | The supported chat surfaces are Claude Code and Codex CLI. Main Branch gives agents durable context to read from. |
 | **Not a SaaS dashboard.**        | Your business doesn't live on our servers. It lives in your folder.                            |
 | **Not a connect-every-tool hub.**| We pick boring, inspectable rails: GitHub, Cloudflare, official ads paths. Curated, not sprawl.|
 | **Not a model host.**            | We don't run models. We hand the agent the right context so the model you already use is sharper.|
@@ -219,13 +219,13 @@ You'll need a Claude plan that includes Claude Code. Install Claude Code from [c
 
 ### Using Codex CLI
 
-Codex CLI is first-class for the Main Branch owner loop. Fresh business folders
-include a tracked `AGENTS.md` bootstrap. The Main Branch Codex plugin is
-installed globally once per user and gives Codex generated Main Branch guidance
-that reads the current business repo through deterministic `mb` facts. That lets
-Codex start the day, inspect status, route setup/update/doctor work, think
-through or codify a decision, plan an end/checkpoint/save closeout, validate
-the repo, and list workflow support.
+Codex CLI is supported through generated Main Branch guidance and deterministic
+`mb` facts. Fresh business folders include a tracked `AGENTS.md` bootstrap. The
+Main Branch Codex plugin is installed globally once per user and gives Codex
+generated Main Branch guidance that reads the current business repo through
+deterministic `mb` facts. That lets Codex start the day, inspect status, route
+setup/update/doctor work, think through or codify a decision, plan an
+end/checkpoint/save closeout, validate the repo, and list workflow support.
 
 Expect Codex to run `mb status --json --peek`, `mb start --json`,
 `mb doctor repair --plan --json`, `mb checkpoint --plan --json`,
