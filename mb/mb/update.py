@@ -211,18 +211,25 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
         "static_ok": codex.get("static_ok", False),
         "runtime_ok": codex.get("runtime_ok", False),
         "plugin_ok": codex.get("plugin_ok", False),
+        "command_surface_ok": codex.get("command_surface_ok", False),
+        "slash_commands_ready": codex.get("slash_commands_ready", False),
         "exists": instructions.get("exists", False),
         "current": instructions.get("current", False),
         "repair_command": codex.get("repair", "") or instructions.get("repair_command", ""),
         "plugin_install": plugin_install,
     }
     if not codex["ok"]:
+        next_actions: list[str]
         if not instructions.get("ok", False):
             message = (
                 "Codex AGENTS.md guidance still needs repo repair. Run "
                 "`mb doctor repair --plan --only codex`, review it, then approve "
                 "`mb doctor repair --apply --only codex`."
             )
+            next_actions = [
+                "mb doctor repair --plan --only codex",
+                "mb doctor repair --apply --only codex",
+            ]
         elif not codex.get("plugin_ok", False):
             message = (
                 "The global Main Branch Codex plugin is not ready, so slash commands "
@@ -230,18 +237,28 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
                 "Run `mb doctor repair --plan --only codex`, review it, then approve "
                 "`mb doctor repair --apply --only codex`."
             )
+            next_actions = [
+                "mb doctor repair --plan --only codex",
+                "mb doctor repair --apply --only codex",
+            ]
+        elif not codex.get("slash_commands_ready", False):
+            message = (
+                plugin_install.get("slash_commands_note")
+                or "Codex plugin skill is installed, but `/mb-*` slash-menu visibility "
+                "has not been verified."
+            )
+            next_actions = [
+                "Restart Codex and type `/mb` to verify the Main Branch slash commands.",
+                "If `/mb-*` is still absent, use `/plugins` to inspect the Main Branch plugin.",
+            ]
         else:
             message = (
                 "Codex runtime readiness still needs attention. Run "
                 "`mb status --json --peek` and repair the reported runtime issue."
             )
+            next_actions = ["mb status --json --peek"]
         result["warnings"].append(message)
-        result["next_actions"].extend(
-            [
-                "mb doctor repair --plan --only codex",
-                "mb doctor repair --apply --only codex",
-            ]
-        )
+        result["next_actions"].extend(next_actions)
 
 
 def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:

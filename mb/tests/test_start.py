@@ -103,7 +103,7 @@ def _codex_runtime_ok() -> dict[str, Any]:
     }
 
 
-def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
+def test_start_json_keeps_codex_slash_visibility_honest(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(start_mod, "_which", _with_claude)
     monkeypatch.setattr(codex_mod, "_which", _with_codex)
     monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
@@ -137,7 +137,10 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
     assert report["handoff_ready"] is True
     assert report["runtime"]["found"] is True
     assert report["runtime"]["skill_wiring"]["ok"] is True
-    assert report["runtime"]["codex_cli"]["ok"] is True
+    assert report["runtime"]["codex_cli"]["ok"] is False
+    assert report["runtime"]["codex_cli"]["status"] == "slash_commands_unverified"
+    assert report["runtime"]["codex_cli"]["plugin_ok"] is True
+    assert report["runtime"]["codex_cli"]["slash_commands_ready"] is False
     assert report["runtime"]["codex_cli"]["instructions"]["ok"] is True
     assert report["experimental_runtimes"]["codex_cli"]["command"]["argv"] == [
         "codex",
@@ -145,8 +148,8 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
         str(repo.resolve()),
     ]
     next_actions = "\n".join(report["next_actions"])
-    assert f"codex -C {shlex.quote(str(repo.resolve()))}" in next_actions
-    assert "codex exec --json --ephemeral --sandbox read-only" in next_actions
+    assert "verify `/mb-*` appears in the slash menu" in next_actions
+    assert f"codex -C {shlex.quote(str(repo.resolve()))}" not in next_actions
     assert "Run `claude" not in next_actions
     assert report["command"]["argv"] == ["claude"]
     assert report["command"]["display"].endswith(" && claude")

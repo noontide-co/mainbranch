@@ -11,6 +11,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Stopped treating generated Codex command files as proof that `/mb-*` appears
+  in Codex Desktop: `mb status` and `mb start` now distinguish plugin install,
+  skill readiness, command-file presence, and slash-command visibility. Refs
+  MAIN-433, #707.
+- Extended the Codex workflow inventory to account for every bundled Claude
+  `mb-*` skill source, keeping full workflow parity as an explicit routing
+  ledger instead of an implied owner-loop subset. Refs MAIN-433, #707.
+
 ## [0.3.33] - 2026-05-23
 
 v0.3.33 packages the global-only Codex owner-loop plugin model after v0.3.32.

@@ -3898,6 +3898,36 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
                 "safe_to_share": True,
             }
         )
+    if (
+        codex_executable.get("found")
+        and codex_instructions.get("ok")
+        and codex_runtime.get("ok")
+        and codex_plugin.get("ok")
+        and not codex_plugin.get("slash_commands_ready")
+    ):
+        items.append(
+            {
+                "id": "codex_slash_commands_unverified",
+                "severity": "warn",
+                "summary": (
+                    "Codex plugin skill is installed, but `/mb-*` slash commands "
+                    "are not proven visible."
+                ),
+                "evidence": [
+                    f"skill_ready: {bool(codex_plugin.get('skill_ready'))}",
+                    f"command_files_present: {bool(codex_plugin.get('command_files_present'))}",
+                    (
+                        "slash_commands_state: "
+                        f"{codex_plugin.get('slash_commands_state') or 'unknown'}"
+                    ),
+                ],
+                "repair": str(
+                    codex_plugin.get("slash_commands_note")
+                    or "Restart Codex and verify the `/mb-*` commands in the slash menu."
+                ),
+                "safe_to_share": True,
+            }
+        )
     broken_integrations = [
         item
         for item in (report.get("integrations") or {}).get("providers", [])

@@ -276,6 +276,81 @@ def test_update_points_to_scoped_codex_repair_when_plugin_is_missing(
     )
 
 
+def test_update_reports_manual_codex_slash_visibility_verification(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        if args == ["pipx", "upgrade", "mainbranch"]:
+            return _completed(args, stdout="upgraded package mainbranch")
+        if args == ["mb", "--version"]:
+            return _completed(args, stdout="mb 0.3.34\n")
+        if args[:3] == ["mb", "skill", "link"]:
+            return _completed(
+                args,
+                stdout=json.dumps(
+                    {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
+                ),
+            )
+        return _completed(args, returncode=1, stderr="unexpected")
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(
+        update_mod.shutil,  # type: ignore[attr-defined]
+        "which",
+        lambda name: "/opt/homebrew/bin/pipx",
+    )
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+    monkeypatch.setattr(
+        codex_mod,
+        "readiness",
+        lambda repo: {
+            "ok": False,
+            "status": "slash_commands_unverified",
+            "static_ok": True,
+            "runtime_ok": True,
+            "plugin_ok": True,
+            "command_surface_ok": False,
+            "slash_commands_ready": False,
+            "repair": (
+                "Codex plugin command files are not proof that Codex Desktop exposes "
+                "`/mb-*`; verify the slash menu manually or with a future command registry."
+            ),
+            "instructions": {
+                "ok": True,
+                "exists": True,
+                "current": True,
+                "repair_command": "",
+            },
+            "plugin_install": {
+                "ok": True,
+                "state": "ok",
+                "plugin_installed": True,
+                "plugin_enabled": True,
+                "skill_ready": True,
+                "command_files_present": True,
+                "slash_commands_ready": False,
+                "slash_commands_state": "slash_commands_unverified",
+                "slash_commands_note": (
+                    "Codex plugin command files are not proof that Codex Desktop exposes "
+                    "`/mb-*`; verify the slash menu manually or with a future command registry."
+                ),
+                "repair": "",
+            },
+        },
+    )
+
+    result = update_mod.run(repo=tmp_path / "biz")
+
+    assert result["ok"] is True
+    assert result["codex_adapter"]["plugin_ok"] is True
+    assert result["codex_adapter"]["slash_commands_ready"] is False
+    assert "mb doctor repair --plan --only codex" not in result["next_actions"]
+    assert "mb doctor repair --apply --only codex" not in result["next_actions"]
+    assert any("Restart Codex and type `/mb`" in item for item in result["next_actions"])
+    assert any("command files are not proof" in item for item in result["warnings"])
+
+
 def test_update_check_clone_fetches_before_reading_origin(monkeypatch: Any, tmp_path: Path) -> None:
     root = tmp_path / "engine"
     (root / "mb" / "mb").mkdir(parents=True)
