@@ -638,7 +638,7 @@ def _next_steps(repo: Path) -> list[str]:
                 "mb doctor repair --plan --only codex",
                 "mb doctor repair --apply --only codex",
                 f"codex -C {repo}",
-                "/mb-start",
+                "Ask Codex to start this Main Branch business day from read-only mb facts.",
             ]
         )
     return steps

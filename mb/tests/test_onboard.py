@@ -112,7 +112,7 @@ def test_onboard_next_steps_offer_global_codex_repair_when_available(
         "mb doctor repair --plan --only codex",
         "mb doctor repair --apply --only codex",
         f"codex -C {repo.resolve()}",
-        "/mb-start",
+        "Ask Codex to start this Main Branch business day from read-only mb facts.",
     ]
 
 
