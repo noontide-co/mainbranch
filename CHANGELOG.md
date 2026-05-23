@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.31] - 2026-05-23
+
+v0.3.31 packages the post-v0.3.30 Codex readiness follow-ups. It tightens
+generated Codex guidance around runtime `mb` mismatches and tunes release
+simulation scoring so future release acceptance runs flag real routing misses
+instead of acceptable business-language routing.
+
 ### Changed
 
 - Tightened generated Codex owner-loop guidance so runtime `mb` mismatches
