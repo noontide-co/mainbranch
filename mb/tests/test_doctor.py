@@ -52,6 +52,27 @@ def _codex_runtime_ok() -> dict[str, Any]:
     }
 
 
+def _codex_runtime_path_mismatch_same_version() -> dict[str, Any]:
+    return {
+        "checked": True,
+        "ok": False,
+        "state": "warn",
+        "shell": "/bin/zsh",
+        "command": "command -v mb && mb --version",
+        "path": "/tmp/smoke/bin/mb",
+        "version": "0.3.34",
+        "active_path": "/Users/example/.local/bin/mb",
+        "active_version": "0.3.34",
+        "path_mismatch": True,
+        "version_mismatch": False,
+        "mismatch": True,
+        "error": "",
+        "summary": "Login-shell runtime resolves a different mb than this process.",
+        "repair": "Put the current Main Branch install earlier on the login-shell PATH.",
+        "safe_to_share": True,
+    }
+
+
 def _codex_plugin_list_result(repo: Path, *, installed: bool = True) -> dict[str, Any]:
     marketplace = codex_mod.marketplace_path(repo)
     plugin = codex_mod.plugin_manifest_path(repo).parent
@@ -499,6 +520,44 @@ def test_doctor_repair_plan_installs_missing_codex_plugin(
     assert plugin_check["plugin_installed"] is False
 
 
+def test_doctor_repair_plan_installs_missing_codex_plugin_with_runtime_path_warning(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(codex_mod, "_which", _with_codex)
+    monkeypatch.setattr(
+        codex_mod,
+        "_login_shell_mb_diagnostics",
+        _codex_runtime_path_mismatch_same_version,
+    )
+    _prepare_codex_global_plugin(tmp_path, monkeypatch)
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    monkeypatch.setattr(
+        codex_mod,
+        "_codex_plugin_list",
+        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo), installed=False),
+    )
+
+    result = runner.invoke(
+        app, ["doctor", "repair", "--repo", str(repo), "--plan", "--only", "codex", "--json"]
+    )
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    actions = {action["id"]: action for action in payload["actions"]}
+    assert "codex-plugin-install" in actions
+    section = next(section for section in payload["sections"] if section["id"] == "codex-wiring")
+    runtime_check = next(
+        check for check in section["checks"] if check["name"] == "codex-runtime-mb"
+    )
+    plugin_check = next(
+        check for check in section["checks"] if check["name"] == "codex-plugin-install"
+    )
+    assert runtime_check["state"] == "warn"
+    assert plugin_check["state"] == "warn"
+
+
 def test_doctor_repair_apply_installs_missing_codex_plugin(
     tmp_path: Path,
     monkeypatch,
@@ -543,6 +602,55 @@ def test_doctor_repair_apply_installs_missing_codex_plugin(
     assert "codex-plugin-install" in applied
     assert applied["codex-plugin-install"]["state"] == "ok"
     assert codex_mod.CODEX_PLUGIN_INSTALL_COMMAND in applied["codex-plugin-install"]["command"]
+
+
+def test_doctor_repair_apply_installs_missing_codex_plugin_with_runtime_path_warning(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(codex_mod, "_which", _with_codex)
+    monkeypatch.setattr(
+        codex_mod,
+        "_login_shell_mb_diagnostics",
+        _codex_runtime_path_mismatch_same_version,
+    )
+    _prepare_codex_global_plugin(tmp_path, monkeypatch)
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    monkeypatch.setattr(
+        codex_mod,
+        "_codex_plugin_list",
+        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo), installed=False),
+    )
+    monkeypatch.setattr(
+        codex_mod,
+        "install_plugin",
+        lambda plugin_repo: {
+            "ok": True,
+            "steps": [
+                {"ok": True, "command": codex_mod.codex_marketplace_add_command()},
+                {"ok": True, "command": codex_mod.CODEX_PLUGIN_INSTALL_COMMAND},
+            ],
+            "status": {
+                "ok": True,
+                "state": "ok",
+                "plugin_installed": True,
+                "plugin_enabled": True,
+                "slash_commands_ready": False,
+            },
+            "safe_to_share": True,
+        },
+    )
+
+    result = runner.invoke(
+        app, ["doctor", "repair", "--repo", str(repo), "--apply", "--only", "codex", "--json"]
+    )
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    applied = {action["id"]: action for action in payload["applied_actions"]}
+    assert "codex-plugin-install" in applied
+    assert applied["codex-plugin-install"]["state"] == "ok"
 
 
 def test_doctor_repair_plan_reports_stale_codex_lifecycle_guidance(tmp_path: Path) -> None:
