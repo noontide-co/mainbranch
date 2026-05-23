@@ -3826,6 +3826,7 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
     codex_executable = codex_cli.get("executable") or {}
     codex_instructions = codex_cli.get("instructions") or {}
     codex_runtime = codex_cli.get("runtime") or {}
+    codex_plugin = codex_cli.get("plugin_install") or {}
     if codex_executable.get("found") and not codex_instructions.get("ok"):
         items.append(
             {
@@ -3868,6 +3869,31 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
                 "repair": str(
                     codex_runtime.get("repair")
                     or "Put the current Main Branch install earlier on the runtime PATH."
+                ),
+                "safe_to_share": True,
+            }
+        )
+    if (
+        codex_executable.get("found")
+        and codex_instructions.get("ok")
+        and codex_runtime.get("ok")
+        and not codex_plugin.get("ok")
+    ):
+        items.append(
+            {
+                "id": "codex_plugin_not_installed",
+                "severity": "warn",
+                "summary": str(
+                    codex_plugin.get("summary")
+                    or "Codex plugin files are ready, but slash commands are not installed."
+                ),
+                "evidence": [
+                    f"marketplace: {codex_plugin.get('marketplace_name') or ''}".strip(),
+                    f"plugin: {codex_plugin.get('plugin_selector') or ''}".strip(),
+                    f"state: {codex_plugin.get('state') or 'unknown'}",
+                ],
+                "repair": str(
+                    codex_plugin.get("repair") or f"Run `{codex_mod.CODEX_PLUGIN_INSTALL_COMMAND}`."
                 ),
                 "safe_to_share": True,
             }

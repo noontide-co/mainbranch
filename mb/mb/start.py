@@ -315,6 +315,14 @@ def _codex_next_actions(repo: Path, codex: dict[str, Any]) -> list[str]:
     if not codex.get("runtime_ok"):
         repair = str(runtime.get("repair") or codex.get("repair") or "")
         return [repair] if repair else []
+    if not codex.get("plugin_ok"):
+        plugin_install = codex.get("plugin_install") or {}
+        repair = str(plugin_install.get("repair") or codex.get("repair") or "")
+        actions = []
+        if repair:
+            actions.append(repair)
+        actions.append("Rerun `mb status --json --peek` before using Codex slash commands.")
+        return actions[:3]
     smoke_command = str(codex.get("smoke_command") or "")
     actions = [
         f"Run `{_codex_display_command(repo)}`.",

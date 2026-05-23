@@ -22,12 +22,28 @@ runner = CliRunner()
 def codex_adapter_ready(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         codex_mod,
-        "instructions_status",
+        "readiness",
         lambda repo: {
             "ok": True,
-            "exists": True,
-            "current": True,
-            "repair_command": "",
+            "status": "ready",
+            "static_ok": True,
+            "runtime_ok": True,
+            "plugin_ok": True,
+            "repair": "",
+            "instructions": {
+                "ok": True,
+                "exists": True,
+                "current": True,
+                "repair_command": "",
+            },
+            "plugin_install": {
+                "ok": True,
+                "state": "ok",
+                "plugin_installed": True,
+                "plugin_enabled": True,
+                "slash_commands_ready": True,
+                "repair": "",
+            },
         },
     )
 
@@ -162,12 +178,28 @@ def test_update_points_to_scoped_codex_repair_when_adapter_missing(
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
     monkeypatch.setattr(
         codex_mod,
-        "instructions_status",
+        "readiness",
         lambda repo: {
             "ok": False,
-            "exists": False,
-            "current": False,
-            "repair_command": "mb doctor repair --apply --only codex",
+            "status": "needs_setup",
+            "static_ok": False,
+            "runtime_ok": True,
+            "plugin_ok": False,
+            "repair": "mb doctor repair --apply --only codex",
+            "instructions": {
+                "ok": False,
+                "exists": False,
+                "current": False,
+                "repair_command": "mb doctor repair --apply --only codex",
+            },
+            "plugin_install": {
+                "ok": False,
+                "state": "waiting_for_adapter_files",
+                "plugin_installed": False,
+                "plugin_enabled": False,
+                "slash_commands_ready": False,
+                "repair": "mb doctor repair --apply --only codex",
+            },
         },
     )
 
@@ -179,6 +211,67 @@ def test_update_points_to_scoped_codex_repair_when_adapter_missing(
     assert any(
         "Codex owner-loop files still need repo repair" in item for item in result["warnings"]
     )
+
+
+def test_update_points_to_scoped_codex_repair_when_plugin_is_missing(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        if args == ["pipx", "upgrade", "mainbranch"]:
+            return _completed(args, stdout="upgraded package mainbranch")
+        if args == ["mb", "--version"]:
+            return _completed(args, stdout="mb 0.3.32\n")
+        if args[:3] == ["mb", "skill", "link"]:
+            return _completed(
+                args,
+                stdout=json.dumps(
+                    {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
+                ),
+            )
+        return _completed(args, returncode=1, stderr="unexpected")
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(
+        update_mod.shutil,  # type: ignore[attr-defined]
+        "which",
+        lambda name: "/opt/homebrew/bin/pipx",
+    )
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+    monkeypatch.setattr(
+        codex_mod,
+        "readiness",
+        lambda repo: {
+            "ok": False,
+            "status": "plugin_not_installed",
+            "static_ok": True,
+            "runtime_ok": True,
+            "plugin_ok": False,
+            "repair": f"Run `{codex_mod.CODEX_PLUGIN_INSTALL_COMMAND}`.",
+            "instructions": {
+                "ok": True,
+                "exists": True,
+                "current": True,
+                "repair_command": "",
+            },
+            "plugin_install": {
+                "ok": False,
+                "state": "plugin_not_installed",
+                "plugin_installed": False,
+                "plugin_enabled": False,
+                "slash_commands_ready": False,
+                "repair": f"Run `{codex_mod.CODEX_PLUGIN_INSTALL_COMMAND}`.",
+            },
+        },
+    )
+
+    result = update_mod.run(repo=tmp_path / "biz")
+
+    assert result["ok"] is True
+    assert result["codex_adapter"]["status"] == "plugin_not_installed"
+    assert result["codex_adapter"]["plugin_ok"] is False
+    assert "mb doctor repair --plan --only codex" in result["next_actions"]
+    assert any("slash commands are not ready" in item for item in result["warnings"])
 
 
 def test_update_check_clone_fetches_before_reading_origin(monkeypatch: Any, tmp_path: Path) -> None:

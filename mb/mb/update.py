@@ -202,19 +202,38 @@ def _base_result(repo: Path, *, check: bool, mode: str, root: Path | None) -> di
 
 
 def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
-    codex = codex_mod.instructions_status(repo)
+    codex = codex_mod.readiness(repo)
+    instructions = codex.get("instructions", {})
+    plugin_install = codex.get("plugin_install", {})
     result["codex_adapter"] = {
         "ok": codex["ok"],
-        "exists": codex["exists"],
-        "current": codex["current"],
-        "repair_command": codex.get("repair_command", ""),
+        "status": codex.get("status", ""),
+        "static_ok": codex.get("static_ok", False),
+        "runtime_ok": codex.get("runtime_ok", False),
+        "plugin_ok": codex.get("plugin_ok", False),
+        "exists": instructions.get("exists", False),
+        "current": instructions.get("current", False),
+        "repair_command": codex.get("repair", "") or instructions.get("repair_command", ""),
+        "plugin_install": plugin_install,
     }
     if not codex["ok"]:
-        message = (
-            "Codex owner-loop files still need repo repair. Run "
-            "`mb doctor repair --plan --only codex`, review it, then approve "
-            "`mb doctor repair --apply --only codex`."
-        )
+        if not instructions.get("ok", False):
+            message = (
+                "Codex owner-loop files still need repo repair. Run "
+                "`mb doctor repair --plan --only codex`, review it, then approve "
+                "`mb doctor repair --apply --only codex`."
+            )
+        elif not codex.get("plugin_ok", False):
+            message = (
+                "Codex plugin files are current, but slash commands are not ready. "
+                "Run `mb doctor repair --plan --only codex`, review it, then approve "
+                "`mb doctor repair --apply --only codex`."
+            )
+        else:
+            message = (
+                "Codex runtime readiness still needs attention. Run "
+                "`mb status --json --peek` and repair the reported runtime issue."
+            )
         result["warnings"].append(message)
         result["next_actions"].extend(
             [

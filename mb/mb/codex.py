@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import shlex
 import shutil
+import subprocess
 from importlib import resources
 from pathlib import Path
 from typing import Any
@@ -25,7 +26,11 @@ CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH = (
     f"{CODEX_SKILL_DIR_RELATIVE_PATH}/references/workflow-inventory.md"
 )
 CODEX_MARKETPLACE_RELATIVE_PATH = ".agents/plugins/marketplace.json"
+CODEX_MARKETPLACE_NAME = "main-branch-local"
 CODEX_PLUGIN_NAME = "main-branch-owner-loop"
+CODEX_PLUGIN_SELECTOR = f"{CODEX_PLUGIN_NAME}@{CODEX_MARKETPLACE_NAME}"
+CODEX_PLUGIN_INSTALL_COMMAND = f"codex plugin add {CODEX_PLUGIN_SELECTOR}"
+CODEX_MARKETPLACE_ADD_COMMAND = "codex plugin marketplace add ."
 CODEX_PLUGIN_DIR_RELATIVE_PATH = f".agents/plugins/{CODEX_PLUGIN_NAME}"
 CODEX_PLUGIN_MANIFEST_RELATIVE_PATH = f"{CODEX_PLUGIN_DIR_RELATIVE_PATH}/.codex-plugin/plugin.json"
 CODEX_PLUGIN_SKILL_RELATIVE_PATH = (
@@ -1099,7 +1104,7 @@ def render_codex_marketplace_json() -> str:
     """Render the repo-scoped Codex plugin marketplace metadata."""
 
     payload = {
-        "name": "main-branch-local",
+        "name": CODEX_MARKETPLACE_NAME,
         "interface": {"displayName": "Main Branch"},
         "plugins": [
             {
@@ -1219,6 +1224,214 @@ def executable_status() -> dict[str, Any]:
         "path": path,
         "executable": "codex",
         "repair": "" if path else "Install Codex CLI before using the Codex owner-loop adapter.",
+    }
+
+
+def _run_codex_plugin_command(repo: Path, args: list[str]) -> dict[str, Any]:
+    codex_path = _which("codex")
+    command = [codex_path or "codex", *args]
+    if not codex_path:
+        return {
+            "ok": False,
+            "returncode": 127,
+            "stdout": "",
+            "stderr": "codex not on PATH",
+            "command": " ".join(["codex", *args]),
+        }
+    try:
+        proc = subprocess.run(
+            command,
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "ok": False,
+            "returncode": 124,
+            "stdout": "",
+            "stderr": "codex plugin command timed out",
+            "command": " ".join(["codex", *args]),
+        }
+    except (FileNotFoundError, subprocess.SubprocessError) as exc:
+        return {
+            "ok": False,
+            "returncode": 1,
+            "stdout": "",
+            "stderr": str(exc),
+            "command": " ".join(["codex", *args]),
+        }
+    return {
+        "ok": proc.returncode == 0,
+        "returncode": proc.returncode,
+        "stdout": proc.stdout,
+        "stderr": proc.stderr,
+        "command": " ".join(["codex", *args]),
+    }
+
+
+def _codex_plugin_list(repo: Path) -> dict[str, Any]:
+    return _run_codex_plugin_command(
+        repo,
+        ["plugin", "list", "--marketplace", CODEX_MARKETPLACE_NAME],
+    )
+
+
+def _parse_plugin_install_status(output: str, expected_marketplace_path: Path) -> dict[str, Any]:
+    lines = output.splitlines()
+    actual_marketplace_path = ""
+    for index, line in enumerate(lines):
+        if line.strip() == f"Marketplace `{CODEX_MARKETPLACE_NAME}`":
+            if index + 1 < len(lines):
+                actual_marketplace_path = lines[index + 1].strip()
+            break
+
+    marketplace_registered = bool(
+        actual_marketplace_path
+        and Path(actual_marketplace_path).expanduser().resolve()
+        == expected_marketplace_path.expanduser().resolve()
+    )
+    marketplace_stale = bool(actual_marketplace_path and not marketplace_registered)
+    plugin_line = next((line.strip() for line in lines if CODEX_PLUGIN_SELECTOR in line), "")
+    plugin_available = bool(plugin_line and marketplace_registered)
+    status_text = plugin_line.split(CODEX_PLUGIN_SELECTOR, 1)[1].strip() if plugin_line else ""
+    plugin_installed = bool(
+        plugin_available and "installed" in status_text and "not installed" not in status_text
+    )
+    plugin_enabled = bool(plugin_installed and "enabled" in status_text)
+    return {
+        "marketplace_registered": marketplace_registered,
+        "marketplace_stale": marketplace_stale,
+        "marketplace_path": str(expected_marketplace_path),
+        "registered_marketplace_path": actual_marketplace_path,
+        "plugin_available": plugin_available,
+        "plugin_installed": plugin_installed,
+        "plugin_enabled": plugin_enabled,
+        "slash_commands_ready": bool(plugin_installed and plugin_enabled),
+        "plugin_line": plugin_line,
+    }
+
+
+def plugin_install_status(repo: str | Path, *, adapter_files_ok: bool = True) -> dict[str, Any]:
+    target = Path(repo).expanduser().resolve()
+    expected_marketplace_path = marketplace_path(target)
+    install_command = CODEX_PLUGIN_INSTALL_COMMAND
+    register_command = CODEX_MARKETPLACE_ADD_COMMAND
+    if not _which("codex"):
+        return {
+            "checked": False,
+            "ok": False,
+            "state": "codex_missing",
+            "summary": "Codex CLI is not installed, so plugin install state was not checked.",
+            "marketplace_name": CODEX_MARKETPLACE_NAME,
+            "plugin_selector": CODEX_PLUGIN_SELECTOR,
+            "marketplace_registered": False,
+            "marketplace_stale": False,
+            "plugin_available": False,
+            "plugin_installed": False,
+            "plugin_enabled": False,
+            "slash_commands_ready": False,
+            "install_command": install_command,
+            "register_command": register_command,
+            "repair": "Install Codex CLI before using the Codex owner-loop adapter.",
+            "safe_to_share": True,
+        }
+    if not adapter_files_ok:
+        return {
+            "checked": False,
+            "ok": False,
+            "state": "waiting_for_adapter_files",
+            "summary": (
+                "Codex plugin install check waits until generated adapter files "
+                "and marketplace metadata are current."
+            ),
+            "marketplace_name": CODEX_MARKETPLACE_NAME,
+            "plugin_selector": CODEX_PLUGIN_SELECTOR,
+            "marketplace_registered": False,
+            "marketplace_stale": False,
+            "plugin_available": False,
+            "plugin_installed": False,
+            "plugin_enabled": False,
+            "slash_commands_ready": False,
+            "install_command": install_command,
+            "register_command": register_command,
+            "repair": CODEX_REPAIR_TEXT,
+            "safe_to_share": True,
+        }
+
+    result = _codex_plugin_list(target)
+    parsed = _parse_plugin_install_status(
+        str(result.get("stdout") or ""), expected_marketplace_path
+    )
+    state = "ok"
+    summary = "Codex plugin is installed and enabled; slash commands should be available."
+    repair = ""
+    if not result["ok"]:
+        state = "plugin_state_unverified"
+        summary = "Codex plugin install state could not be checked."
+        repair = f"Run `{register_command}`, then `{install_command}`."
+    elif not parsed["marketplace_registered"]:
+        state = "marketplace_not_registered"
+        summary = (
+            "Generated Codex plugin files are ready, but this repo's Codex "
+            "marketplace is not registered."
+        )
+        if parsed["marketplace_stale"]:
+            summary = (
+                "A `main-branch-local` Codex marketplace is registered, but it "
+                "points at a different repo."
+            )
+        repair = f"Run `{register_command}`, then `{install_command}`."
+    elif not parsed["plugin_available"]:
+        state = "plugin_not_available"
+        summary = (
+            "This repo's Codex marketplace is registered, but the Main Branch plugin is missing."
+        )
+        repair = f"Run `{register_command}`, then `{install_command}`."
+    elif not parsed["plugin_installed"]:
+        state = "plugin_not_installed"
+        summary = (
+            "Generated Codex plugin files are ready, but the Main Branch plugin "
+            "is not installed in Codex yet."
+        )
+        repair = f"Run `{install_command}`."
+    elif not parsed["plugin_enabled"]:
+        state = "plugin_disabled"
+        summary = "The Main Branch Codex plugin is installed but not enabled."
+        repair = f"Enable `{CODEX_PLUGIN_SELECTOR}` in Codex plugins."
+
+    return {
+        "checked": True,
+        "ok": state == "ok",
+        "state": state,
+        "summary": summary,
+        "marketplace_name": CODEX_MARKETPLACE_NAME,
+        "plugin_selector": CODEX_PLUGIN_SELECTOR,
+        **parsed,
+        "install_command": install_command,
+        "register_command": register_command,
+        "repair": repair,
+        "command": result.get("command", ""),
+        "returncode": result.get("returncode"),
+        "error": str(result.get("stderr") or "").strip(),
+        "safe_to_share": True,
+    }
+
+
+def install_plugin(repo: str | Path) -> dict[str, Any]:
+    target = Path(repo).expanduser().resolve()
+    steps = [
+        _run_codex_plugin_command(target, ["plugin", "marketplace", "add", "."]),
+        _run_codex_plugin_command(target, ["plugin", "add", CODEX_PLUGIN_SELECTOR]),
+    ]
+    final = plugin_install_status(target)
+    return {
+        "ok": bool(final.get("ok")),
+        "steps": steps,
+        "status": final,
+        "safe_to_share": True,
     }
 
 
@@ -1410,13 +1623,17 @@ def readiness(repo: str | Path) -> dict[str, Any]:
     static_ok = bool(executable["found"] and instructions["ok"])
     runtime = _login_shell_mb_diagnostics()
     runtime_ok = bool(runtime.get("ok"))
-    ok = bool(static_ok and runtime_ok)
+    plugin_install = plugin_install_status(repo, adapter_files_ok=bool(instructions["ok"]))
+    plugin_ok = bool(plugin_install.get("ok"))
+    ok = bool(static_ok and runtime_ok and plugin_ok)
     if ok:
         status = "ready"
     elif not executable["found"] or not instructions["ok"]:
         status = "needs_setup"
     elif runtime.get("mismatch"):
         status = "runtime_mismatch"
+    elif runtime_ok and not plugin_ok:
+        status = str(plugin_install.get("state") or "plugin_not_installed")
     else:
         status = "runtime_unverified"
     return {
@@ -1425,6 +1642,8 @@ def readiness(repo: str | Path) -> dict[str, Any]:
         "support_level": "first_class_owner_loop",
         "static_ok": static_ok,
         "runtime_ok": runtime_ok,
+        "plugin_ok": plugin_ok,
+        "plugin_install": plugin_install,
         "runtime": runtime,
         "executable": executable,
         "instructions": instructions,
@@ -1437,6 +1656,8 @@ def readiness(repo: str | Path) -> dict[str, Any]:
         else (
             str(runtime.get("repair") or "")
             if static_ok and not runtime_ok
+            else str(plugin_install.get("repair") or "")
+            if static_ok and runtime_ok and not plugin_ok
             else instructions["repair"] or executable["repair"]
         ),
         "start_command": f"codex -C {shlex.quote(str(Path(repo).expanduser().resolve()))}",
@@ -1467,6 +1688,13 @@ def human_readiness_label(readiness_report: dict[str, Any]) -> str:
         return "runtime mismatch"
     if not runtime.get("ok"):
         return "runtime unverified"
+    plugin_install = readiness_report.get("plugin_install") or {}
+    if not plugin_install.get("ok"):
+        if plugin_install.get("state") == "plugin_not_installed":
+            return "plugin not installed"
+        if plugin_install.get("state") == "marketplace_not_registered":
+            return "marketplace missing"
+        return "plugin not ready"
     return "not ready"
 
 
