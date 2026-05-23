@@ -2154,8 +2154,8 @@ def repair_plan(
             "Codex CLI Adapter",
             _max_state([str(item["state"]) for item in codex_checks]),
             (
-                "First-class owner-loop adapter instructions, native skill, plugin "
-                "commands, workflow inventory, global plugin, and executable readiness"
+                "Supported Codex adapter instructions, generated plugin guidance, "
+                "workflow inventory, global plugin, and executable readiness"
             ),
             checks=codex_checks,
             actions=codex_actions,

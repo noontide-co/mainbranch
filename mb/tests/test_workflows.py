@@ -196,6 +196,25 @@ def test_codex_global_plugin_source_removes_unproven_command_shims(
     assert codex_mod.CODEX_PLUGIN_SKILL_RELATIVE_PATH in result["relative_paths"]
 
 
+def test_codex_plugin_status_marks_legacy_command_shims_stale(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MAINBRANCH_CODEX_PLUGIN_ROOT", str(tmp_path / "codex-global"))
+    codex_mod.write_global_plugin_source()
+    old_command = (
+        codex_mod.global_plugin_source_root()
+        / codex_mod.CODEX_PLUGIN_LEGACY_COMMANDS_RELATIVE_PATH
+        / "mb-start.md"
+    )
+    old_command.parent.mkdir(parents=True, exist_ok=True)
+    old_command.write_text("# stale\n", encoding="utf-8")
+
+    status = codex_mod.plugin_status(tmp_path / "business")
+
+    assert status["ok"] is False
+    assert status["current"] is False
+    assert codex_mod.CODEX_PLUGIN_LEGACY_COMMANDS_RELATIVE_PATH in status["stale"]
+    assert status["repair"] == codex_mod.CODEX_REPAIR_TEXT
+
+
 def test_codex_owner_loop_skill_frontmatter_is_valid_yaml() -> None:
     skill = codex_mod.render_codex_skill_md()
     _, frontmatter, _ = skill.split("---", 2)
@@ -210,7 +229,7 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
 
     assert result.exit_code == 0
     data = json.loads(result.stdout)
-    assert data["support_level"] == "first_class_owner_loop"
+    assert data["support_level"] == "supported_generated_guidance"
     statuses = set(data["statuses"])
     assert {
         "supported",

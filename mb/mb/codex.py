@@ -32,10 +32,12 @@ CODEX_PLUGIN_NAME = "main-branch-owner-loop"
 CODEX_PLUGIN_SELECTOR = f"{CODEX_PLUGIN_NAME}@{CODEX_MARKETPLACE_NAME}"
 CODEX_PLUGIN_INSTALL_COMMAND = f"codex plugin add {CODEX_PLUGIN_SELECTOR}"
 CODEX_PLUGIN_DIR_RELATIVE_PATH = f".agents/plugins/{CODEX_PLUGIN_NAME}"
+CODEX_PLUGIN_LEGACY_COMMANDS_RELATIVE_PATH = f"{CODEX_PLUGIN_DIR_RELATIVE_PATH}/commands"
 CODEX_PLUGIN_MANIFEST_RELATIVE_PATH = f"{CODEX_PLUGIN_DIR_RELATIVE_PATH}/.codex-plugin/plugin.json"
 CODEX_PLUGIN_SKILL_RELATIVE_PATH = (
     f"{CODEX_PLUGIN_DIR_RELATIVE_PATH}/skills/main-branch-owner-loop/SKILL.md"
 )
+CODEX_SUPPORT_LEVEL = "supported_generated_guidance"
 CODEX_REPAIR_COMMAND = "mb doctor repair --apply --only codex"
 CODEX_REPAIR_TEXT = (
     "Run `mb doctor repair --plan --only codex`, review, then "
@@ -793,7 +795,7 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
     return {
         "ok": True,
         "runtime": runtime,
-        "support_level": "first_class_owner_loop",
+        "support_level": CODEX_SUPPORT_LEVEL,
         "entrypoint": CODEX_SKILL_RELATIVE_PATH,
         "repo_guidance": AGENTS_RELATIVE_PATH,
         "inventory_path": CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
@@ -1336,6 +1338,9 @@ def plugin_status(repo: str | Path) -> dict[str, Any]:
             missing_markers.extend(
                 marker for marker in CODEX_PLUGIN_REQUIRED_MARKERS if marker not in text
             )
+    legacy_commands = global_plugin_source_root() / CODEX_PLUGIN_LEGACY_COMMANDS_RELATIVE_PATH
+    if legacy_commands.exists():
+        stale.append(CODEX_PLUGIN_LEGACY_COMMANDS_RELATIVE_PATH)
 
     ok = not missing and not stale and not read_errors and not missing_markers
     return {
@@ -1378,7 +1383,7 @@ def write_global_plugin_source() -> dict[str, Any]:
         if existing != text:
             path.write_text(text, encoding="utf-8")
             changed_paths.append(str(path))
-    old_commands = root / CODEX_PLUGIN_DIR_RELATIVE_PATH / "commands"
+    old_commands = root / CODEX_PLUGIN_LEGACY_COMMANDS_RELATIVE_PATH
     if _remove_generated_tree(old_commands):
         changed_paths.append(str(old_commands))
     return {
@@ -1535,7 +1540,7 @@ def readiness(repo: str | Path) -> dict[str, Any]:
     return {
         "ok": ok,
         "status": status,
-        "support_level": "first_class_owner_loop",
+        "support_level": CODEX_SUPPORT_LEVEL,
         "static_ok": static_ok,
         "runtime_ok": runtime_ok,
         "plugin_ok": plugin_ok,
