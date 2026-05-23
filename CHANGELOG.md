@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.33] - 2026-05-23
+
+v0.3.33 packages the global-only Codex owner-loop plugin model after v0.3.32.
+It retires the brief repo-local Codex plugin default so users install one global
+Main Branch plugin while business repos keep lightweight `AGENTS.md` guidance.
+
 ### Changed
 
 - Pivoted Codex owner-loop slash commands to a global Main Branch plugin install
