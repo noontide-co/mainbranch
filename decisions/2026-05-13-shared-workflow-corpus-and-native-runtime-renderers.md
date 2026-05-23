@@ -22,12 +22,13 @@ shape was being chosen. Current product language is **shared workflow source**,
 with **runtime shells**, **runtime guidance**, and **runtime adapters** over
 that source.
 
-> Status note, MAIN-423 / #682: the proven Codex owner loop has since gained a
-> repo-scoped plugin and installed `/mb-*` command surface through
-> `.agents/plugins/main-branch-owner-loop`. That support is still an adapter
-> over shared workflow sources and deterministic `mb` facts, not full Claude
-> skill parity or broad production workflow parity. See
-> [docs/compatibility.md](../docs/compatibility.md) for current claims.
+> Status note, MAIN-434 / #709: the proven Codex path is generated Main Branch
+> guidance delivered by the global Codex plugin and grounded in deterministic
+> `mb` facts. That support is still an adapter over shared workflow sources, not
+> full Claude skill parity or broad production workflow parity. See
+> [docs/compatibility.md](../docs/compatibility.md) for current claims and
+> [Codex Slash-Command Bridge](2026-05-23-codex-slash-command-bridge.md) for the
+> command-bridge decision.
 
 ## Decision
 

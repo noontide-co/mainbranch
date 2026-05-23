@@ -21,11 +21,12 @@ tags: [runtime-adapters, codex, skills, cli, decision-needed]
 > wording lives in
 > [docs/compatibility.md](../docs/compatibility.md).
 >
-> Status note, MAIN-423 / #682: the proven owner loop has since gained a
-> repo-scoped Codex plugin and installed `/mb-*` command surface through
-> `.agents/plugins/main-branch-owner-loop`. This updates the current support
-> boundary without changing this decision's historical staging rationale. See
-> [docs/compatibility.md](../docs/compatibility.md) for current claims.
+> Status note, MAIN-434 / #709: the proven Codex path is generated Main Branch
+> guidance delivered by the global Codex plugin and grounded in deterministic
+> `mb` facts. `/mb-*` remains a desired future command surface. See
+> [docs/compatibility.md](../docs/compatibility.md) for current claims and
+> [Codex Slash-Command Bridge](2026-05-23-codex-slash-command-bridge.md) for the
+> command-bridge decision.
 
 ## Decision
 

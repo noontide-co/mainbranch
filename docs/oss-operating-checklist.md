@@ -66,10 +66,11 @@ that keep Main Branch usable as public infrastructure while it evolves quickly.
 
 ## 5. Runtime Claims
 
-- [ ] Claude Code is described as first-class today.
-- [ ] Codex, Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and
-  local runtimes are described only as roadmap or compatibility targets unless
-  an adapter and smoke evidence exist.
+- [ ] Claude Code and Codex CLI are described as supported only for their proven
+  adapter surfaces.
+- [ ] Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and local
+  runtimes are described only as roadmap or compatibility targets unless an
+  adapter and smoke evidence exist.
 - [ ] Compatibility docs distinguish supported, experimental, and roadmap
   surfaces.
 - [ ] No PR claims runtime support based only on product intent or local hopes.

@@ -232,24 +232,14 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
             ]
         elif not codex.get("plugin_ok", False):
             message = (
-                "The global Main Branch Codex plugin is not ready, so slash commands "
-                "may be unavailable. "
+                "The global Main Branch Codex plugin is not ready, so generated Codex "
+                "guidance may be unavailable. "
                 "Run `mb doctor repair --plan --only codex`, review it, then approve "
                 "`mb doctor repair --apply --only codex`."
             )
             next_actions = [
                 "mb doctor repair --plan --only codex",
                 "mb doctor repair --apply --only codex",
-            ]
-        elif not codex.get("slash_commands_ready", False):
-            message = (
-                plugin_install.get("slash_commands_note")
-                or "Codex plugin skill is installed, but `/mb-*` slash-menu visibility "
-                "has not been verified."
-            )
-            next_actions = [
-                "Restart Codex and type `/mb` to verify the Main Branch slash commands.",
-                "If `/mb-*` is still absent, use `/plugins` to inspect the Main Branch plugin.",
             ]
         else:
             message = (
