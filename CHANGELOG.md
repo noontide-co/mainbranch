@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.34] - 2026-05-23
+
+v0.3.34 packages the Codex live workflow surface after v0.3.33. Codex starts
+from generated Main Branch guidance, the global Codex plugin, and deterministic
+`mb` facts; fresh onboarding now points users at that supported path directly.
+
 ### Changed
 
 - Clarified the supported Codex path as generated Main Branch guidance delivered
@@ -25,6 +31,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Extended the Codex workflow inventory to account for every bundled Claude
   `mb-*` skill source, keeping full workflow parity as an explicit routing
   ledger instead of an implied owner-loop subset. Refs MAIN-433, #707.
+
+### Fixed
+
+- Fixed Codex-only doctor repair so a missing global Main Branch Codex plugin is
+  still installed when repo guidance is current but the Codex runtime PATH has a
+  warning. Refs MAIN-436, #714.
 
 ## [0.3.33] - 2026-05-23
 
