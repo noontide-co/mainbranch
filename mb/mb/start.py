@@ -242,14 +242,14 @@ def _build_checks(
                 "ok": bool(codex_instructions.get("ok")),
                 "severity": "warn" if codex_found else "info",
                 "detail": (
-                    "AGENTS.md, Codex owner-loop skill, plugin commands, and marketplace "
-                    "point Codex to mb facts, lifecycle routes, and workflow inventory"
+                    "AGENTS.md, the global Codex plugin, and generated guidance point "
+                    "Codex to mb facts, lifecycle routes, and workflow inventory"
                 )
                 if codex_instructions.get("ok")
                 else (
-                    "Codex AGENTS.md, owner-loop skill, plugin, marketplace, or command "
-                    "files are missing, stale, or missing required mb fact commands or "
-                    "lifecycle discovery guidance"
+                    "Codex AGENTS.md, plugin, marketplace, or generated guidance is "
+                    "missing, stale, or missing required mb fact commands or lifecycle "
+                    "discovery guidance"
                 ),
                 "repair": codex_instructions.get("repair") if codex_found else "",
             },
@@ -321,24 +321,12 @@ def _codex_next_actions(repo: Path, codex: dict[str, Any]) -> list[str]:
         actions = []
         if repair:
             actions.append(repair)
-        actions.append("Rerun `mb status --json --peek` before using Codex slash commands.")
-        return actions[:3]
-    if not codex.get("slash_commands_ready"):
-        plugin_install = codex.get("plugin_install") or {}
-        actions = [
-            (
-                "Restart Codex and verify `/mb-*` appears in the slash menu "
-                "before relying on slash commands."
-            ),
-        ]
-        note = str(plugin_install.get("slash_commands_note") or "")
-        if note:
-            actions.append(note)
+        actions.append("Rerun `mb status --json --peek` before using Codex.")
         return actions[:3]
     smoke_command = str(codex.get("smoke_command") or "")
     actions = [
         f"Run `{_codex_display_command(repo)}`.",
-        "Use `/mb-start` if the Main Branch Owner Loop plugin is installed.",
+        "Start from generated Codex guidance and read-only `mb` facts.",
     ]
     if smoke_command:
         actions.append(f"For a read-only Codex smoke, run `{smoke_command}`.")
@@ -392,9 +380,8 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "argv": ["codex", "-C", str(repo_path)],
             "display": _codex_display_command(repo_path),
             "startup_prompt": (
-                "Start this Main Branch business day with /mb-start if the Main Branch "
-                "plugin is installed; otherwise run only read-only mb checks before "
-                "advice and ask before writes. Stop if mb status/start reports "
+                "Start this Main Branch business day from generated Codex guidance "
+                "and read-only mb facts. Ask before writes. Stop if mb status/start reports "
                 "runtime.codex_cli.status == runtime_mismatch or drift id "
                 "codex_runtime_mb_mismatch."
             ),

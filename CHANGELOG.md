@@ -13,10 +13,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
-- Stopped treating generated Codex command files as proof that `/mb-*` appears
-  in Codex Desktop: `mb status` and `mb start` now distinguish plugin install,
-  skill readiness, command-file presence, and slash-command visibility. Refs
-  MAIN-433, #707.
+- Clarified the supported Codex path as generated Main Branch guidance delivered
+  by the global Codex plugin and grounded in deterministic `mb` facts. Refs
+  MAIN-434, #709.
+- Removed unproven Codex command-file shims from the generated global plugin;
+  Codex support now starts from the plugin guidance and deterministic `mb`
+  facts. Refs MAIN-434, #709.
 - Extended the Codex workflow inventory to account for every bundled Claude
   `mb-*` skill source, keeping full workflow parity as an explicit routing
   ledger instead of an implied owner-loop subset. Refs MAIN-433, #707.
@@ -91,7 +93,7 @@ adapter path when only Codex wiring needs repair.
 
 v0.3.29 packages the owner-loop hardening batch after v0.3.28. It tightens
 release dogfood grounding, checkpoint subject semantics, public-safe team
-member context, and the repo-scoped Codex owner-loop plugin/command surface
+member context, and the repo-scoped Codex plugin/guidance surface
 while keeping broader Codex slash-command parity, all-skill parity,
 provider-write, publishing, spend, and customer-contact workflows out of scope.
 
@@ -101,10 +103,10 @@ provider-write, publishing, spend, and customer-contact workflows out of scope.
   scaffold, validation for normalized and duplicate GitHub handles, and status
   GitHub activity handle resolution so business repos can name known team
   contributors. Refs MAIN-396, #633.
-- Added a repo-scoped Codex plugin marketplace, owner-loop plugin manifest,
-  plugin-packaged owner-loop skill, and thin `/mb-*` command shims for the
-  supported Main Branch owner loop while keeping deterministic `mb` facts and
-  shared workflow sources as the source of truth. Refs MAIN-423, #682.
+- Added a repo-scoped Codex plugin marketplace, plugin manifest, generated
+  guidance, and command files for the supported Main Branch owner loop while
+  keeping deterministic `mb` facts and shared workflow sources as the source of
+  truth. Refs MAIN-423, #682.
 
 ### Changed
 
@@ -122,15 +124,15 @@ provider-write, publishing, spend, and customer-contact workflows out of scope.
 ## [0.3.28] - 2026-05-19
 
 v0.3.28 packages the Codex owner-loop runtime release after v0.3.27. It makes
-Codex first-class for the proven Main Branch owner loop by adding a generated
-Codex skill surface, workflow inventory, repair/status readiness, and release
+Codex first-class for the proven Main Branch owner loop by adding generated
+Codex guidance, workflow inventory, repair/status readiness, and release
 evidence while keeping slash-command, all-skills, provider-write, publishing,
 spend, and customer-contact parity out of scope.
 
 ### Added
 
-- Added a generated Codex owner-loop skill at
-  `.agents/skills/main-branch-owner-loop`, a generated workflow inventory, and
+- Added generated Codex guidance at `.agents/skills/main-branch-owner-loop`, a
+  generated workflow inventory, and
   `mb workflow list --runtime codex` so Codex can discover supported,
   pending, and intentionally unsupported Main Branch workflow surfaces. Refs
   MAIN-421, #676.

@@ -262,7 +262,7 @@ Sources: [Data-source registry](../data-source-registry.md),
 | Runtime | Status | Contract |
 | --- | --- | --- |
 | Claude Code | Supported. | Slash skills and `mb start` handoff are the reference runtime path. |
-| Codex CLI | First-class owner loop. | Fresh business repos include `AGENTS.md`; the global Main Branch Codex plugin supplies `/mb-*` owner-loop commands; Codex should run deterministic `mb` fact commands, use workflow inventory, and ask before writes. |
+| Codex CLI | First-class owner loop. | Fresh business repos include `AGENTS.md`; the global Main Branch Codex plugin supplies generated guidance; Codex should run deterministic `mb` fact commands, use workflow inventory, and ask before writes. |
 | Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, local runtimes | Roadmap. | No support claim until adapter code, docs, generated-file rules, and fresh-repo smoke evidence exist. |
 
 Source: [Compatibility](../compatibility.md).

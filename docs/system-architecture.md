@@ -621,9 +621,9 @@ and checkpoint. The full surface lives in
 
 Skills own judgment-heavy work: synthesis, writing, review, routing. They call
 `mb` for facts. Claude Code is the supported slash-skill runtime today. Codex
-CLI is supported for the proven owner loop through generated repo guidance and
-a generated owner-loop skill/plugin surface. Other runtimes are compatibility
-targets until adapter code and smoke evidence exist. See
+CLI is supported for the proven owner loop through generated repo guidance, the
+global Main Branch Codex plugin, and deterministic `mb` facts. Other runtimes
+are compatibility targets until adapter code and smoke evidence exist. See
 [compatibility.md](compatibility.md).
 
 Curated rails — GitHub, Cloudflare, Google/Workspace, official ads paths,

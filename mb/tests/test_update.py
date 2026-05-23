@@ -305,17 +305,15 @@ def test_update_reports_manual_codex_slash_visibility_verification(
         codex_mod,
         "readiness",
         lambda repo: {
-            "ok": False,
-            "status": "slash_commands_unverified",
+            "ok": True,
+            "status": "ready",
             "static_ok": True,
             "runtime_ok": True,
             "plugin_ok": True,
-            "command_surface_ok": False,
+            "generated_guidance_ready": True,
+            "command_surface_ok": True,
             "slash_commands_ready": False,
-            "repair": (
-                "Codex plugin command files are not proof that Codex Desktop exposes "
-                "`/mb-*`; verify the slash menu manually or with a future command registry."
-            ),
+            "repair": "",
             "instructions": {
                 "ok": True,
                 "exists": True,
@@ -328,13 +326,7 @@ def test_update_reports_manual_codex_slash_visibility_verification(
                 "plugin_installed": True,
                 "plugin_enabled": True,
                 "skill_ready": True,
-                "command_files_present": True,
                 "slash_commands_ready": False,
-                "slash_commands_state": "slash_commands_unverified",
-                "slash_commands_note": (
-                    "Codex plugin command files are not proof that Codex Desktop exposes "
-                    "`/mb-*`; verify the slash menu manually or with a future command registry."
-                ),
                 "repair": "",
             },
         },
@@ -344,11 +336,12 @@ def test_update_reports_manual_codex_slash_visibility_verification(
 
     assert result["ok"] is True
     assert result["codex_adapter"]["plugin_ok"] is True
+    assert result["codex_adapter"]["ok"] is True
     assert result["codex_adapter"]["slash_commands_ready"] is False
     assert "mb doctor repair --plan --only codex" not in result["next_actions"]
     assert "mb doctor repair --apply --only codex" not in result["next_actions"]
-    assert any("Restart Codex and type `/mb`" in item for item in result["next_actions"])
-    assert any("command files are not proof" in item for item in result["warnings"])
+    assert not any("Codex command API" in item for item in result["next_actions"])
+    assert not any("Codex command API" in item for item in result["warnings"])
 
 
 def test_update_check_clone_fetches_before_reading_origin(monkeypatch: Any, tmp_path: Path) -> None:

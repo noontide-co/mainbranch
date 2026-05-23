@@ -111,16 +111,15 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     assert "`runtime.codex_cli.status` is `runtime_mismatch`" in text
     assert "`codex_runtime_mb_mismatch`" in text
     assert "Start the day / what next / get oriented" in text
-    assert "visible in Codex's slash menu" in text
-    assert "command files do not prove" in text
+    assert "generated Codex guidance over deterministic `mb` facts" in text
     assert "Inspect status / what changed / what is stale" in text
     assert "Think / research / decide / codify" in text
     assert "do not claim these workflows are ported to" in text
     assert "/plugins" in text
     assert "## Codex Start Workflow" in text
-    assert "This is the Codex-native port behind `/mb-start`" in text
+    assert "This is the Codex-native start workflow" in text
     assert "## Codex Status Workflow" in text
-    assert "This is the Codex-native status route behind `/mb-status`" in text
+    assert "This is the Codex-native status workflow" in text
     assert "since_last_check" in text
     assert "## Codex Think Route" in text
     assert "existing `mb-think` shared workflow" in text

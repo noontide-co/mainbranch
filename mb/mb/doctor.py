@@ -1342,13 +1342,13 @@ def run(path: str) -> dict[str, Any]:
             "name": "codex-agents-md",
             "ok": bool(codex_instructions["ok"]),
             "detail": (
-                "AGENTS.md and the Codex owner-loop skill are current and point "
-                "Codex to mb facts, lifecycle routes, and workflow inventory"
+                "AGENTS.md and generated Codex guidance are current and point Codex "
+                "to mb facts, lifecycle routes, and workflow inventory"
             )
             if codex_instructions["ok"]
             else (
-                "Codex AGENTS.md or owner-loop skill files are missing, stale, "
-                "or missing required mb fact commands or lifecycle discovery guidance. "
+                "Codex AGENTS.md or generated guidance is missing, stale, or missing "
+                "required mb fact commands or lifecycle discovery guidance. "
                 "Run `mb doctor repair --plan`, review, then `mb doctor repair --apply`."
             ),
             "severity": "ok" if codex_instructions["ok"] else "warn",
@@ -2100,30 +2100,8 @@ def repair_plan(
             "plugin_installed": codex_plugin_install["plugin_installed"],
             "plugin_enabled": codex_plugin_install["plugin_enabled"],
             "skill_ready": codex_plugin_install.get("skill_ready", False),
-            "command_files_present": codex_plugin_install.get("command_files_present", False),
-            "slash_commands_ready": codex_plugin_install["slash_commands_ready"],
-            "slash_commands_state": codex_plugin_install.get("slash_commands_state", "unknown"),
             "install_command": codex_plugin_install["install_command"],
             "repair": codex_plugin_install["repair"],
-        },
-        {
-            "name": "codex-slash-commands",
-            "state": (
-                "ok"
-                if codex_plugin_install["slash_commands_ready"]
-                else ("warn" if codex_plugin_install["ok"] else "info")
-            ),
-            "summary": (
-                "Codex `/mb-*` slash commands are verified visible."
-                if codex_plugin_install["slash_commands_ready"]
-                else codex_plugin_install.get(
-                    "slash_commands_note",
-                    "Codex slash-command visibility is not verified.",
-                )
-            ),
-            "skill_ready": codex_plugin_install.get("skill_ready", False),
-            "command_files_present": codex_plugin_install.get("command_files_present", False),
-            "slash_commands_state": codex_plugin_install.get("slash_commands_state", "unknown"),
         },
     ]
     codex_actions: list[dict[str, Any]] = []
@@ -2159,7 +2137,7 @@ def repair_plan(
             safe_to_apply=True,
             reason=(
                 "Codex must install and enable the global Main Branch plugin before "
-                "/mb-* slash commands are available"
+                "generated Codex guidance is available"
             ),
             writes=[
                 str(codex_mod.global_plugin_source_root()),
@@ -2574,8 +2552,8 @@ def repair_apply(
                 ),
                 safe_to_apply=True,
                 reason=(
-                    "installed and enabled the global Codex plugin so /mb-* "
-                    "slash commands are available"
+                    "installed and enabled the global Codex plugin so generated "
+                    "Codex guidance is available"
                 ),
                 writes=[
                     str(codex_mod.global_plugin_source_root()),

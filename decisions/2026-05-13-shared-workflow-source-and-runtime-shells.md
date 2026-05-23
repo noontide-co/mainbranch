@@ -19,12 +19,13 @@ tags: [runtime-adapters, codex, claude-code, workflows, shared-workflow-source]
 
 # Shared Workflow Source And Runtime Shells
 
-> Status note, MAIN-423 / #682: the proven Codex owner loop has since gained a
-> repo-scoped plugin and installed `/mb-*` command surface through
-> `.agents/plugins/main-branch-owner-loop`. The generated `AGENTS.md` sections
-> remain fallback shells over shared workflow sources when the plugin is not
-> installed. See [docs/compatibility.md](../docs/compatibility.md) for current
-> support claims.
+> Status note, MAIN-434 / #709: the proven Codex path is generated Main Branch
+> guidance delivered by the global Codex plugin and grounded in deterministic
+> `mb` facts. The generated `AGENTS.md` sections remain runtime shells over
+> shared workflow sources. See [docs/compatibility.md](../docs/compatibility.md)
+> for current support claims and
+> [Codex Slash-Command Bridge](2026-05-23-codex-slash-command-bridge.md) for the
+> command-bridge decision.
 
 ## Decision
 
