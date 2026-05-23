@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.32] - 2026-05-23
+
+v0.3.32 packages the Codex readiness truth cleanup after v0.3.31. It keeps the
+proven Codex owner-loop handoff native and treats installed/enabled Codex plugin
+slash commands as part of readiness, so `mb` no longer reports ready while
+`/mb-*` commands are absent.
+
 ### Changed
 
 - Made `mb start --json` top-level next actions prefer Codex-facing handoff
