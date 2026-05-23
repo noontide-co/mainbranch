@@ -17,6 +17,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   reported by `mb status` or `mb start` stop the session before additional
   owner-loop checks, and added Codex-specific start handoff next actions.
   Refs MAIN-426, #692.
+- Tuned the release-simulation `loop_routing` rubric so release acceptance
+  recognizes clear business-language routing while generic no-routing answers
+  still fail. Refs MAIN-425, #691.
 
 ## [0.3.30] - 2026-05-22
 
