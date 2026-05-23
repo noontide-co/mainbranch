@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Made `mb start --json` top-level next actions prefer Codex-facing handoff
+  and smoke commands when Codex owner-loop readiness is present, while keeping
+  Claude launch details in the Claude command section. Refs MAIN-428, #697.
+
 ## [0.3.31] - 2026-05-23
 
 v0.3.31 packages the post-v0.3.30 Codex readiness follow-ups. It tightens
