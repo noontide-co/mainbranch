@@ -2091,7 +2091,7 @@ def repair_plan(
             "state": (
                 "ok"
                 if codex_plugin_install["ok"]
-                else ("warn" if codex_runtime_relevant and codex_runtime_status["ok"] else "info")
+                else ("warn" if codex_runtime_relevant else "info")
             ),
             "summary": codex_plugin_install["summary"],
             "marketplace_registered": codex_plugin_install["marketplace_registered"],
@@ -2124,7 +2124,7 @@ def repair_plan(
         )
         actions.append(action)
         codex_actions.append(action)
-    if codex_runtime_relevant and codex_runtime_status["ok"] and not codex_plugin_install["ok"]:
+    if codex_runtime_relevant and not codex_plugin_install["ok"]:
         action = _action(
             id="codex-plugin-install",
             title="Install the Main Branch Codex plugin",
@@ -2533,12 +2533,11 @@ def repair_apply(
         )
 
     codex_status = codex_mod.readiness(target)
-    codex_runtime_status = codex_status["runtime"]
     codex_runtime_relevant = bool(
         codex_status["executable"]["found"] and codex_status["instructions"]["ok"]
     )
     codex_plugin_install = codex_status["plugin_install"]
-    if codex_runtime_relevant and codex_runtime_status["ok"] and not codex_plugin_install["ok"]:
+    if codex_runtime_relevant and not codex_plugin_install["ok"]:
         installed = codex_mod.install_plugin(target)
         applied.append(
             _action(
