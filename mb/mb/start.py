@@ -282,8 +282,13 @@ def _next_actions(
     repo: Path,
     checks: list[dict[str, Any]],
     handoff_ready: bool,
+    codex: dict[str, Any] | None = None,
 ) -> list[str]:
     actions = [str(check["repair"]) for check in checks if not check["ok"] and check["repair"]]
+    codex_actions = _codex_next_actions(repo, codex or {})
+    if codex_actions:
+        actions.extend(codex_actions)
+        return actions[:6]
     if handoff_ready:
         actions.extend(
             [f"Run `{_display_command(repo)}`.", "Then type `/mb-start` in Claude Code."]
@@ -310,10 +315,14 @@ def _codex_next_actions(repo: Path, codex: dict[str, Any]) -> list[str]:
     if not codex.get("runtime_ok"):
         repair = str(runtime.get("repair") or codex.get("repair") or "")
         return [repair] if repair else []
-    return [
+    smoke_command = str(codex.get("smoke_command") or "")
+    actions = [
         f"Run `{_codex_display_command(repo)}`.",
         "Use `/mb-start` if the Main Branch Owner Loop plugin is installed.",
     ]
+    if smoke_command:
+        actions.append(f"For a read-only Codex smoke, run `{smoke_command}`.")
+    return actions
 
 
 def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
@@ -408,7 +417,7 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "follow_up": "/mb-start",
         },
         "launch": launch_report,
-        "next_actions": _next_actions(repo_path, checks, handoff_ready),
+        "next_actions": _next_actions(repo_path, checks, handoff_ready, codex),
     }
 
 

@@ -93,6 +93,10 @@ def test_start_json_prints_ready_handoff(tmp_path: Path, monkeypatch) -> None:
         "-C",
         str(repo.resolve()),
     ]
+    next_actions = "\n".join(report["next_actions"])
+    assert f"codex -C {shlex.quote(str(repo.resolve()))}" in next_actions
+    assert "codex exec --json --ephemeral --sandbox read-only" in next_actions
+    assert "Run `claude" not in next_actions
     assert report["command"]["argv"] == ["claude"]
     assert report["command"]["display"].endswith(" && claude")
     assert report["command"]["follow_up"] == "/mb-start"
@@ -179,6 +183,10 @@ def test_start_json_separates_codex_static_and_runtime_readiness(
     assert any(
         "mb status --json --peek" in action for action in codex_handoff["command"]["next_actions"]
     )
+    top_level_actions = "\n".join(report["next_actions"])
+    assert "Run `claude" not in top_level_actions
+    assert "login-shell PATH" in top_level_actions
+    assert "mb status --json --peek" in top_level_actions
 
 
 def test_start_human_labels_missing_codex_without_experimental_copy(
