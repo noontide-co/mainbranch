@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 from typer.testing import CliRunner
 
 from mb import codex as codex_mod
@@ -17,6 +18,56 @@ from mb.doctor import _detect_cloud_paths, _repo_layout_check, run
 from mb.init import run as init_run
 
 runner = CliRunner()
+
+
+@pytest.fixture(autouse=True)
+def codex_missing_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(codex_mod, "_which", lambda name: "" if name == "codex" else None)
+
+
+def _with_codex(name: str) -> str:
+    if name == "codex":
+        return "/usr/local/bin/codex"
+    return ""
+
+
+def _codex_runtime_ok() -> dict[str, Any]:
+    return {
+        "checked": True,
+        "ok": True,
+        "state": "ok",
+        "shell": "/bin/zsh",
+        "command": "command -v mb && mb --version",
+        "path": "/usr/local/bin/mb",
+        "version": "0.3.31",
+        "active_path": "/usr/local/bin/mb",
+        "active_version": "0.3.31",
+        "path_mismatch": False,
+        "version_mismatch": False,
+        "mismatch": False,
+        "error": "",
+        "summary": "Login-shell runtime resolves the active mb.",
+        "repair": "",
+        "safe_to_share": True,
+    }
+
+
+def _codex_plugin_list_result(repo: Path, *, installed: bool = True) -> dict[str, Any]:
+    marketplace = repo / codex_mod.CODEX_MARKETPLACE_RELATIVE_PATH
+    plugin = repo / codex_mod.CODEX_PLUGIN_DIR_RELATIVE_PATH
+    status = "installed, enabled" if installed else "not installed"
+    return {
+        "ok": True,
+        "returncode": 0,
+        "stdout": (
+            f"Marketplace `{codex_mod.CODEX_MARKETPLACE_NAME}`\n"
+            f"{marketplace}\n\n"
+            "PLUGIN                                    STATUS              VERSION  PATH\n"
+            f"{codex_mod.CODEX_PLUGIN_SELECTOR}  {status}  0.1.0  {plugin}\n"
+        ),
+        "stderr": "",
+        "command": f"codex plugin list --marketplace {codex_mod.CODEX_MARKETPLACE_NAME}",
+    }
 
 
 def _write_md(path: Path, text: str) -> None:
@@ -409,6 +460,83 @@ def test_doctor_repair_plan_marks_codex_runtime_info_when_codex_missing(
     assert runtime_check["state"] == "info"
     assert "waits until Codex CLI is installed" in runtime_check["summary"]
     assert runtime_check["repair"] == ""
+
+
+def test_doctor_repair_plan_installs_missing_codex_plugin(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(codex_mod, "_which", _with_codex)
+    monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    monkeypatch.setattr(
+        codex_mod,
+        "_codex_plugin_list",
+        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo), installed=False),
+    )
+
+    result = runner.invoke(
+        app, ["doctor", "repair", "--repo", str(repo), "--plan", "--only", "codex", "--json"]
+    )
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    actions = {action["id"]: action for action in payload["actions"]}
+    assert "codex-plugin-install" in actions
+    assert actions["codex-plugin-install"]["safe_to_apply"] is True
+    assert codex_mod.CODEX_PLUGIN_INSTALL_COMMAND in actions["codex-plugin-install"]["command"]
+    section = next(section for section in payload["sections"] if section["id"] == "codex-wiring")
+    plugin_check = next(
+        check for check in section["checks"] if check["name"] == "codex-plugin-install"
+    )
+    assert plugin_check["state"] == "warn"
+    assert plugin_check["plugin_installed"] is False
+
+
+def test_doctor_repair_apply_installs_missing_codex_plugin(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(codex_mod, "_which", _with_codex)
+    monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    monkeypatch.setattr(
+        codex_mod,
+        "_codex_plugin_list",
+        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo), installed=False),
+    )
+    monkeypatch.setattr(
+        codex_mod,
+        "install_plugin",
+        lambda plugin_repo: {
+            "ok": True,
+            "steps": [
+                {"ok": True, "command": codex_mod.CODEX_MARKETPLACE_ADD_COMMAND},
+                {"ok": True, "command": codex_mod.CODEX_PLUGIN_INSTALL_COMMAND},
+            ],
+            "status": {
+                "ok": True,
+                "state": "ok",
+                "plugin_installed": True,
+                "plugin_enabled": True,
+                "slash_commands_ready": True,
+            },
+            "safe_to_share": True,
+        },
+    )
+
+    result = runner.invoke(
+        app, ["doctor", "repair", "--repo", str(repo), "--apply", "--only", "codex", "--json"]
+    )
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    applied = {action["id"]: action for action in payload["applied_actions"]}
+    assert "codex-plugin-install" in applied
+    assert applied["codex-plugin-install"]["state"] == "ok"
+    assert codex_mod.CODEX_PLUGIN_INSTALL_COMMAND in applied["codex-plugin-install"]["command"]
 
 
 def test_doctor_repair_plan_reports_stale_codex_lifecycle_guidance(tmp_path: Path) -> None:

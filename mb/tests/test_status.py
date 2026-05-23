@@ -42,6 +42,45 @@ def _without_codex(name: str) -> str:
     return shutil.which(name) or ""
 
 
+def _codex_plugin_list_result(repo: Path, *, installed: bool = True) -> dict[str, Any]:
+    marketplace = repo / codex_mod.CODEX_MARKETPLACE_RELATIVE_PATH
+    plugin = repo / codex_mod.CODEX_PLUGIN_DIR_RELATIVE_PATH
+    status = "installed, enabled" if installed else "not installed"
+    return {
+        "ok": True,
+        "returncode": 0,
+        "stdout": (
+            f"Marketplace `{codex_mod.CODEX_MARKETPLACE_NAME}`\n"
+            f"{marketplace}\n\n"
+            "PLUGIN                                    STATUS              VERSION  PATH\n"
+            f"{codex_mod.CODEX_PLUGIN_SELECTOR}  {status}  0.1.0  {plugin}\n"
+        ),
+        "stderr": "",
+        "command": f"codex plugin list --marketplace {codex_mod.CODEX_MARKETPLACE_NAME}",
+    }
+
+
+def _codex_runtime_ok() -> dict[str, Any]:
+    return {
+        "checked": True,
+        "ok": True,
+        "state": "ok",
+        "shell": "/bin/zsh",
+        "command": "command -v mb && mb --version",
+        "path": "/usr/local/bin/mb",
+        "version": "0.3.31",
+        "active_path": "/usr/local/bin/mb",
+        "active_version": "0.3.31",
+        "path_mismatch": False,
+        "version_mismatch": False,
+        "mismatch": False,
+        "error": "",
+        "summary": "Login-shell runtime resolves the active mb.",
+        "repair": "",
+        "safe_to_share": True,
+    }
+
+
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["git", *args],
@@ -322,6 +361,11 @@ def test_status_money_path_default_repo_stays_low(tmp_path: Path, monkeypatch) -
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
+    monkeypatch.setattr(
+        codex_mod,
+        "_codex_plugin_list",
+        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo)),
+    )
 
     report = status_mod.run(path=str(repo), update_marker=False)
 
@@ -1402,6 +1446,64 @@ def test_status_warns_when_codex_runtime_uses_stale_mb(
     )
     assert "different mb" in finding["summary"]
     assert "login-shell PATH" in finding["repair"]
+
+
+def test_status_marks_codex_not_ready_when_plugin_is_not_installed(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setattr(codex_mod, "_which", _with_codex)
+    monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    monkeypatch.setattr(
+        codex_mod,
+        "_codex_plugin_list",
+        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo), installed=False),
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    codex = report["runtime"]["codex_cli"]
+    assert codex["ok"] is False
+    assert codex["status"] == "plugin_not_installed"
+    assert codex["static_ok"] is True
+    assert codex["runtime_ok"] is True
+    assert codex["plugin_ok"] is False
+    assert codex["plugin_install"]["marketplace_registered"] is True
+    assert codex["plugin_install"]["plugin_installed"] is False
+    finding = next(
+        item for item in report["drift"]["items"] if item["id"] == "codex_plugin_not_installed"
+    )
+    assert codex_mod.CODEX_PLUGIN_INSTALL_COMMAND in finding["repair"]
+
+
+def test_status_marks_codex_ready_when_plugin_is_installed(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setattr(codex_mod, "_which", _with_codex)
+    monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    monkeypatch.setattr(
+        codex_mod,
+        "_codex_plugin_list",
+        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo)),
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    codex = report["runtime"]["codex_cli"]
+    assert codex["ok"] is True
+    assert codex["status"] == "ready"
+    assert codex["plugin_ok"] is True
+    assert codex["plugin_install"]["plugin_installed"] is True
+    assert codex["plugin_install"]["plugin_enabled"] is True
+    assert codex["plugin_install"]["slash_commands_ready"] is True
+    assert not any(item["id"] == "codex_plugin_not_installed" for item in report["drift"]["items"])
 
 
 def test_status_json_exposes_push_and_legacy_campaign_facts(tmp_path: Path, monkeypatch) -> None:

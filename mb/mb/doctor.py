@@ -1326,6 +1326,7 @@ def run(path: str) -> dict[str, Any]:
     codex_readiness = codex_mod.readiness(repo)
     codex_executable = codex_readiness["executable"]
     codex_instructions = codex_readiness["instructions"]
+    codex_plugin_install = codex_readiness["plugin_install"]
     checks.append(
         {
             "name": "codex-cli",
@@ -1354,6 +1355,20 @@ def run(path: str) -> dict[str, Any]:
             "repair": codex_instructions["repair"],
             "safe_to_share": True,
             "status": codex_instructions,
+        }
+    )
+    checks.append(
+        {
+            "name": "codex-plugin-install",
+            "ok": bool(codex_plugin_install["ok"]),
+            "detail": codex_plugin_install["summary"],
+            "severity": "ok"
+            if codex_plugin_install["ok"]
+            else ("warn" if codex_executable["found"] and codex_instructions["ok"] else "info"),
+            "repair": codex_plugin_install["repair"],
+            "repair_command": codex_plugin_install["install_command"],
+            "safe_to_share": True,
+            "status": codex_plugin_install,
         }
     )
 
@@ -2021,6 +2036,7 @@ def repair_plan(
     codex_status = codex_mod.readiness(target)
     codex_instruction_status = codex_status["instructions"]
     codex_runtime_status = codex_status["runtime"]
+    codex_plugin_install = codex_status["plugin_install"]
     codex_runtime_relevant = bool(
         codex_status["executable"]["found"] and codex_instruction_status["ok"]
     )
@@ -2072,6 +2088,22 @@ def repair_plan(
             "runtime_version": codex_runtime_status.get("version", ""),
             "repair": codex_runtime_status.get("repair", "") if codex_runtime_relevant else "",
         },
+        {
+            "name": "codex-plugin-install",
+            "state": (
+                "ok"
+                if codex_plugin_install["ok"]
+                else ("warn" if codex_runtime_relevant and codex_runtime_status["ok"] else "info")
+            ),
+            "summary": codex_plugin_install["summary"],
+            "marketplace_registered": codex_plugin_install["marketplace_registered"],
+            "marketplace_stale": codex_plugin_install["marketplace_stale"],
+            "plugin_installed": codex_plugin_install["plugin_installed"],
+            "plugin_enabled": codex_plugin_install["plugin_enabled"],
+            "slash_commands_ready": codex_plugin_install["slash_commands_ready"],
+            "install_command": codex_plugin_install["install_command"],
+            "repair": codex_plugin_install["repair"],
+        },
     ]
     codex_actions: list[dict[str, Any]] = []
     if not codex_instruction_status["ok"]:
@@ -2096,6 +2128,26 @@ def repair_plan(
                 codex_mod.CODEX_PLUGIN_SKILL_RELATIVE_PATH,
                 *codex_mod.CODEX_PLUGIN_COMMAND_RELATIVE_PATHS,
             ],
+        )
+        actions.append(action)
+        codex_actions.append(action)
+    if codex_runtime_relevant and codex_runtime_status["ok"] and not codex_plugin_install["ok"]:
+        action = _action(
+            id="codex-plugin-install",
+            title="Install the Main Branch Codex plugin",
+            state="warn",
+            mode="write",
+            command=(
+                f"{codex_mod.CODEX_MARKETPLACE_ADD_COMMAND} && "
+                f"{codex_mod.CODEX_PLUGIN_INSTALL_COMMAND}"
+            ),
+            safe_to_apply=True,
+            reason=(
+                "Generated Codex plugin files are ready, but Codex must install "
+                "and enable the plugin before /mb-* slash commands are available"
+            ),
+            writes=["~/.codex/config.toml", "~/.codex/plugins/"],
+            result=codex_plugin_install,
         )
         actions.append(action)
         codex_actions.append(action)
@@ -2260,7 +2312,11 @@ def repair_plan(
         if only != "codex":
             raise ValueError(f"unknown repair scope: {only}")
         sections = [section for section in sections if section["id"] in {"codex-wiring", "git"}]
-        actions = [action for action in actions if str(action.get("id")) == "codex-agents-md"]
+        actions = [
+            action
+            for action in actions
+            if str(action.get("id")) in {"codex-agents-md", "codex-plugin-install"}
+        ]
 
     states = [str(section["state"]) for section in sections]
     summary = {
@@ -2482,6 +2538,35 @@ def repair_apply(
                 ],
                 applied=bool(agents["changed"]),
                 result=agents,
+            )
+        )
+
+    codex_status = codex_mod.readiness(target)
+    codex_runtime_status = codex_status["runtime"]
+    codex_runtime_relevant = bool(
+        codex_status["executable"]["found"] and codex_status["instructions"]["ok"]
+    )
+    codex_plugin_install = codex_status["plugin_install"]
+    if codex_runtime_relevant and codex_runtime_status["ok"] and not codex_plugin_install["ok"]:
+        installed = codex_mod.install_plugin(target)
+        applied.append(
+            _action(
+                id="codex-plugin-install",
+                title="Installed the Main Branch Codex plugin",
+                state="ok" if installed["ok"] else "error",
+                mode="write",
+                command=(
+                    f"{codex_mod.CODEX_MARKETPLACE_ADD_COMMAND} && "
+                    f"{codex_mod.CODEX_PLUGIN_INSTALL_COMMAND}"
+                ),
+                safe_to_apply=True,
+                reason=(
+                    "installed and enabled the generated Codex plugin so /mb-* "
+                    "slash commands are available"
+                ),
+                writes=["~/.codex/config.toml", "~/.codex/plugins/"],
+                applied=bool(installed.get("steps")),
+                result=installed,
             )
         )
 
