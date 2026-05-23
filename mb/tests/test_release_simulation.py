@@ -284,6 +284,24 @@ def test_score_transcript_uses_tighter_discovery_and_loop_keywords() -> None:
     assert routed_score["checks"]["loop_routing"]["ok"] is True
 
 
+@pytest.mark.parametrize(
+    "routing_text",
+    [
+        "Routing recommendation: start with the bet, then choose the work.",
+        "This is the offer-launch orchestration path for the operator.",
+        "Suggested order: inspect status, choose the primitive, then ask before writes.",
+        "Recommended next step: route into the launch readiness primitive.",
+        "Route through /mb-think before saving a durable decision.",
+    ],
+)
+def test_score_transcript_accepts_business_language_loop_routing(
+    routing_text: str,
+) -> None:
+    score = release_simulation.score_transcript(routing_text)
+
+    assert score["checks"]["loop_routing"]["ok"] is True
+
+
 def test_score_transcript_checks_bookkeeping_safety_language() -> None:
     generic = "Finance looks fine. Put your books in the repo and continue."
     grounded = """
