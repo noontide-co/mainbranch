@@ -108,6 +108,8 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     assert ".agents/skills/main-branch-owner-loop/SKILL.md" in text
     assert ".agents/plugins/main-branch-owner-loop/" in text
     assert "Use `.agents/skills/main-branch-owner-loop`" in text
+    assert "`runtime.codex_cli.status` is `runtime_mismatch`" in text
+    assert "`codex_runtime_mb_mismatch`" in text
     assert "Start the day / what next / get oriented" in text
     assert "generated Codex plugin is installed" in text
     assert "Inspect status / what changed / what is stale" in text

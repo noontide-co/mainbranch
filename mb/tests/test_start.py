@@ -173,6 +173,12 @@ def test_start_json_separates_codex_static_and_runtime_readiness(
     check = next(item for item in report["checks"] if item["name"] == "codex_runtime_mb")
     assert check["ok"] is False
     assert "different mb" in check["detail"]
+    codex_handoff = report["experimental_runtimes"]["codex_cli"]
+    assert "Run `claude" not in "\n".join(codex_handoff["command"]["next_actions"])
+    assert any("login-shell PATH" in action for action in codex_handoff["command"]["next_actions"])
+    assert any(
+        "mb status --json --peek" in action for action in codex_handoff["command"]["next_actions"]
+    )
 
 
 def test_start_human_labels_missing_codex_without_experimental_copy(

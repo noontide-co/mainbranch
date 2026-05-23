@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Tightened generated Codex owner-loop guidance so runtime `mb` mismatches
+  reported by `mb status` or `mb start` stop the session before additional
+  owner-loop checks, and added Codex-specific start handoff next actions.
+  Refs MAIN-426, #692.
+
 ## [0.3.30] - 2026-05-22
 
 v0.3.30 packages the Codex runtime readiness follow-up after v0.3.29. It

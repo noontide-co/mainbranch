@@ -291,6 +291,31 @@ def _next_actions(
     return actions[:6]
 
 
+def _codex_next_actions(repo: Path, codex: dict[str, Any]) -> list[str]:
+    executable = codex.get("executable") or {}
+    if not executable.get("found"):
+        return []
+    instructions = codex.get("instructions") or {}
+    if not instructions.get("ok"):
+        repair = str(instructions.get("repair") or codex.get("repair") or "")
+        return [repair] if repair else []
+    runtime = codex.get("runtime") or {}
+    if codex.get("status") == "runtime_mismatch" or runtime.get("mismatch"):
+        repair = str(runtime.get("repair") or codex.get("repair") or "")
+        actions = []
+        if repair:
+            actions.append(repair)
+        actions.append("Rerun `mb status --json --peek` before continuing Codex owner-loop work.")
+        return actions[:3]
+    if not codex.get("runtime_ok"):
+        repair = str(runtime.get("repair") or codex.get("repair") or "")
+        return [repair] if repair else []
+    return [
+        f"Run `{_codex_display_command(repo)}`.",
+        "Use `/mb-start` if the Main Branch Owner Loop plugin is installed.",
+    ]
+
+
 def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
     """Build a handoff report and optionally launch Claude Code."""
     repo_path = Path(repo).expanduser().resolve()
@@ -340,8 +365,11 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "startup_prompt": (
                 "Start this Main Branch business day with /mb-start if the Main Branch "
                 "plugin is installed; otherwise run only read-only mb checks before "
-                "advice and ask before writes."
+                "advice and ask before writes. Stop if mb status/start reports "
+                "runtime.codex_cli.status == runtime_mismatch or drift id "
+                "codex_runtime_mb_mismatch."
             ),
+            "next_actions": _codex_next_actions(repo_path, codex),
         }
 
     return {

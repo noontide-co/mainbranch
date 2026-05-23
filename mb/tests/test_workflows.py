@@ -151,6 +151,8 @@ def test_codex_owner_loop_skill_and_inventory_render() -> None:
 
     assert "Main Branch owner loop for Codex" in skill
     assert "mb workflow list --runtime codex --json" in skill
+    assert "runtime.codex_cli.status" in skill
+    assert "codex_runtime_mb_mismatch" in skill
     assert "start/status/setup/update/doctor" in skill
     assert "think/codify" in skill
     assert "end/checkpoint/save" in skill
@@ -194,6 +196,8 @@ def test_codex_plugin_commands_are_thin_owner_loop_shims() -> None:
         assert "customer contact" in text
         assert "Do not claim Claude Code skill parity" in text
         assert "Do not shell-wrap `mb` JSON" in text
+        assert "runtime.codex_cli.status" in text
+        assert "codex_runtime_mb_mismatch" in text
 
 
 def test_codex_owner_loop_skill_frontmatter_is_valid_yaml() -> None:
