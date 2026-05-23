@@ -114,12 +114,11 @@ workflow intent, operator loops, runtime support level, checked runtime
 surfaces, required `mb` fact commands, JSON fact paths, approval gates,
 public/private boundaries, routing rules, handoff shape, and validation
 expectations. Claude Code remains the first-class slash-skill runtime shell
-through `.claude/skills/mb-think/SKILL.md`; Codex uses tracked `AGENTS.md` and
-generated `.agents/skills/main-branch-owner-loop` plus
-`.agents/plugins/main-branch-owner-loop` guidance for the proven owner loop,
-checked against shared workflow sources where migrated. Neither
-`.claude/skills`, `.agents/skills`, nor `.agents/plugins` is the canonical
-source for cross-runtime workflow semantics.
+through `.claude/skills/mb-think/SKILL.md`; Codex uses tracked `AGENTS.md` plus
+the global Main Branch Codex plugin for the proven owner loop, checked against
+shared workflow sources where migrated. Neither `.claude/skills`, generated
+repo guidance, nor runtime plugin files are the canonical source for
+cross-runtime workflow semantics.
 
 `mb` may validate, render snapshots for tests, and repair generated runtime
 guidance. It must not invoke Claude, Codex, or any model.

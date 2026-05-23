@@ -53,8 +53,8 @@ def _codex_runtime_ok() -> dict[str, Any]:
 
 
 def _codex_plugin_list_result(repo: Path, *, installed: bool = True) -> dict[str, Any]:
-    marketplace = repo / codex_mod.CODEX_MARKETPLACE_RELATIVE_PATH
-    plugin = repo / codex_mod.CODEX_PLUGIN_DIR_RELATIVE_PATH
+    marketplace = codex_mod.marketplace_path(repo)
+    plugin = codex_mod.plugin_manifest_path(repo).parent
     status = "installed, enabled" if installed else "not installed"
     return {
         "ok": True,
@@ -68,6 +68,11 @@ def _codex_plugin_list_result(repo: Path, *, installed: bool = True) -> dict[str
         "stderr": "",
         "command": f"codex plugin list --marketplace {codex_mod.CODEX_MARKETPLACE_NAME}",
     }
+
+
+def _prepare_codex_global_plugin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAINBRANCH_CODEX_PLUGIN_ROOT", str(tmp_path / "codex-global"))
+    codex_mod.write_global_plugin_source()
 
 
 def _write_md(path: Path, text: str) -> None:
@@ -375,7 +380,6 @@ def test_doctor_repair_plan_reports_missing_codex_agents_md(tmp_path: Path) -> N
     assert actions["codex-agents-md"]["safe_to_apply"] is True
     assert actions["codex-agents-md"]["command"] == "mb doctor repair --apply --only codex"
     assert "AGENTS.md" in actions["codex-agents-md"]["writes"]
-    assert ".agents/skills/main-branch-owner-loop/SKILL.md" in actions["codex-agents-md"]["writes"]
 
 
 def test_doctor_repair_only_codex_filters_unrelated_related_links(tmp_path: Path) -> None:
@@ -468,6 +472,7 @@ def test_doctor_repair_plan_installs_missing_codex_plugin(
 ) -> None:
     monkeypatch.setattr(codex_mod, "_which", _with_codex)
     monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
+    _prepare_codex_global_plugin(tmp_path, monkeypatch)
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
     monkeypatch.setattr(
@@ -500,6 +505,7 @@ def test_doctor_repair_apply_installs_missing_codex_plugin(
 ) -> None:
     monkeypatch.setattr(codex_mod, "_which", _with_codex)
     monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
+    _prepare_codex_global_plugin(tmp_path, monkeypatch)
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
     monkeypatch.setattr(
@@ -513,7 +519,7 @@ def test_doctor_repair_apply_installs_missing_codex_plugin(
         lambda plugin_repo: {
             "ok": True,
             "steps": [
-                {"ok": True, "command": codex_mod.CODEX_MARKETPLACE_ADD_COMMAND},
+                {"ok": True, "command": codex_mod.codex_marketplace_add_command()},
                 {"ok": True, "command": codex_mod.CODEX_PLUGIN_INSTALL_COMMAND},
             ],
             "status": {
@@ -594,7 +600,6 @@ def test_doctor_repair_plan_reports_pre_engine_source_boundary_codex_guidance(
     actions = {action["id"]: action for action in payload["actions"]}
     assert actions["codex-agents-md"]["safe_to_apply"] is True
     assert "AGENTS.md" in actions["codex-agents-md"]["writes"]
-    assert ".agents/skills/main-branch-owner-loop/SKILL.md" in actions["codex-agents-md"]["writes"]
 
 
 def test_doctor_repair_plan_reports_custom_codex_agents_missing_source_item(
@@ -639,33 +644,15 @@ def test_doctor_repair_apply_refreshes_codex_agents_md(tmp_path: Path) -> None:
     assert "## Codex Status Workflow" in agents_text
     assert "## Codex Think Route" in agents_text
     assert "mb status --json --peek" in agents_text
-    skill_text = (repo / ".agents" / "skills" / "main-branch-owner-loop" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
-    assert "Main Branch owner loop for Codex" in skill_text
-    assert "mb workflow list --runtime codex --json" in skill_text
-    plugin_skill_text = (repo / codex_mod.CODEX_PLUGIN_SKILL_RELATIVE_PATH).read_text(
-        encoding="utf-8"
-    )
-    command_text = (
-        repo / ".agents" / "plugins" / "main-branch-owner-loop" / "commands" / "mb-start.md"
-    ).read_text(encoding="utf-8")
-    marketplace_text = (repo / codex_mod.CODEX_MARKETPLACE_RELATIVE_PATH).read_text(
-        encoding="utf-8"
-    )
-    assert plugin_skill_text == skill_text
-    assert "Main Branch Owner Loop" in (
-        repo / codex_mod.CODEX_PLUGIN_MANIFEST_RELATIVE_PATH
-    ).read_text(encoding="utf-8")
-    assert "thin Codex shim" in command_text
-    assert "mb start --json" in command_text
-    assert "main-branch-owner-loop" in marketplace_text
+    assert not (repo / ".agents" / "plugins").exists()
+    assert not (repo / ".agents" / "skills" / "main-branch-owner-loop").exists()
 
 
-def test_doctor_repair_refreshes_stale_codex_plugin_command(tmp_path: Path) -> None:
+def test_doctor_repair_removes_stale_repo_local_codex_plugin(tmp_path: Path) -> None:
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
     command = repo / ".agents" / "plugins" / "main-branch-owner-loop" / "commands" / "mb-start.md"
+    command.parent.mkdir(parents=True, exist_ok=True)
     command.write_text("# stale\n", encoding="utf-8")
 
     plan_result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
@@ -673,15 +660,12 @@ def test_doctor_repair_refreshes_stale_codex_plugin_command(tmp_path: Path) -> N
     plan = json.loads(plan_result.stdout)
     actions = {action["id"]: action for action in plan["actions"]}
     assert "codex-agents-md" in actions
-    assert str(command.relative_to(repo)) in actions["codex-agents-md"]["writes"]
 
     apply_result = runner.invoke(
         app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"]
     )
     assert apply_result.exit_code in {0, 1}
-    command_text = command.read_text(encoding="utf-8")
-    assert "thin Codex shim" in command_text
-    assert "provider mutation" in command_text
+    assert not command.exists()
 
 
 def test_doctor_repair_preserves_custom_codex_agents_md_when_contract_is_current(

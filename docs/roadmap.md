@@ -69,9 +69,9 @@ Main Branch already ships:
 - initial paid-traffic site readiness checks through `mb site check`.
 
 Claude Code is the supported slash-skill runtime today. Codex CLI is
-first-class for the proven owner loop through generated `AGENTS.md`,
-`.agents/skills/main-branch-owner-loop`, `.agents/plugins/main-branch-owner-loop`,
-deterministic `mb` facts, and workflow inventory. Other runtimes are
+first-class for the proven owner loop through generated `AGENTS.md`, the
+global Main Branch Codex plugin, deterministic `mb` facts, and workflow
+inventory. Other runtimes are
 compatibility targets until adapter code and smoke evidence exist.
 
 ## Current Direction: Chat-First, CLI-Backed Daily Loop

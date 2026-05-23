@@ -2050,14 +2050,12 @@ def repair_plan(
             "name": "AGENTS.md",
             "state": "ok" if codex_instruction_status["ok"] else "warn",
             "summary": (
-                "Codex instructions, owner-loop skill, plugin commands, and marketplace "
-                "are current and include mb fact grounding, lifecycle routes, "
-                "and workflow inventory"
+                "Codex AGENTS.md guidance is current and includes mb fact grounding, "
+                "lifecycle routes, and workflow inventory"
                 if codex_instruction_status["ok"]
                 else (
-                    "Codex instructions, owner-loop skill, plugin, marketplace, or command "
-                    "files are missing, stale, or missing mb fact grounding or lifecycle "
-                    "discovery guidance"
+                    "Codex AGENTS.md guidance is missing, stale, or missing mb fact "
+                    "grounding or lifecycle discovery guidance"
                 )
             ),
             "missing_fact_commands": codex_instruction_status["missing_fact_commands"],
@@ -2115,18 +2113,12 @@ def repair_plan(
             command="mb doctor repair --apply --only codex",
             safe_to_apply=True,
             reason=(
-                "AGENTS.md, .agents/skills, and .agents/plugins are the tracked Codex "
-                "entrypoints; repair writes the current owner-loop plugin, command "
-                "shims, workflow index, fact grounding, and approval boundaries"
+                "AGENTS.md is the repo-local Codex entrypoint; repair writes current "
+                "fact grounding, lifecycle routing, and approval boundaries, and removes "
+                "transitional repo-local plugin copies"
             ),
             writes=[
                 "AGENTS.md",
-                codex_mod.CODEX_SKILL_RELATIVE_PATH,
-                codex_mod.CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
-                codex_mod.CODEX_MARKETPLACE_RELATIVE_PATH,
-                codex_mod.CODEX_PLUGIN_MANIFEST_RELATIVE_PATH,
-                codex_mod.CODEX_PLUGIN_SKILL_RELATIVE_PATH,
-                *codex_mod.CODEX_PLUGIN_COMMAND_RELATIVE_PATHS,
             ],
         )
         actions.append(action)
@@ -2138,15 +2130,19 @@ def repair_plan(
             state="warn",
             mode="write",
             command=(
-                f"{codex_mod.CODEX_MARKETPLACE_ADD_COMMAND} && "
+                f"{codex_mod.codex_marketplace_add_command()} && "
                 f"{codex_mod.CODEX_PLUGIN_INSTALL_COMMAND}"
             ),
             safe_to_apply=True,
             reason=(
-                "Generated Codex plugin files are ready, but Codex must install "
-                "and enable the plugin before /mb-* slash commands are available"
+                "Codex must install and enable the global Main Branch plugin before "
+                "/mb-* slash commands are available"
             ),
-            writes=["~/.codex/config.toml", "~/.codex/plugins/"],
+            writes=[
+                str(codex_mod.global_plugin_source_root()),
+                "~/.codex/config.toml",
+                "~/.codex/plugins/",
+            ],
             result=codex_plugin_install,
         )
         actions.append(action)
@@ -2158,7 +2154,7 @@ def repair_plan(
             _max_state([str(item["state"]) for item in codex_checks]),
             (
                 "First-class owner-loop adapter instructions, native skill, plugin "
-                "commands, workflow inventory, marketplace, and executable readiness"
+                "commands, workflow inventory, global plugin, and executable readiness"
             ),
             checks=codex_checks,
             actions=codex_actions,
@@ -2523,18 +2519,12 @@ def repair_apply(
                 ),
                 safe_to_apply=True,
                 reason=(
-                    "wrote the current Codex owner-loop skill, lifecycle workflow "
-                    "index, fact grounding, and approval boundaries"
+                    "wrote current Codex AGENTS.md fact grounding, lifecycle routing, "
+                    "and approval boundaries"
                 ),
                 writes=list(agents.get("changed_paths", []))
                 or [
                     "AGENTS.md",
-                    codex_mod.CODEX_SKILL_RELATIVE_PATH,
-                    codex_mod.CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
-                    codex_mod.CODEX_MARKETPLACE_RELATIVE_PATH,
-                    codex_mod.CODEX_PLUGIN_MANIFEST_RELATIVE_PATH,
-                    codex_mod.CODEX_PLUGIN_SKILL_RELATIVE_PATH,
-                    *codex_mod.CODEX_PLUGIN_COMMAND_RELATIVE_PATHS,
                 ],
                 applied=bool(agents["changed"]),
                 result=agents,
@@ -2556,15 +2546,19 @@ def repair_apply(
                 state="ok" if installed["ok"] else "error",
                 mode="write",
                 command=(
-                    f"{codex_mod.CODEX_MARKETPLACE_ADD_COMMAND} && "
+                    f"{codex_mod.codex_marketplace_add_command()} && "
                     f"{codex_mod.CODEX_PLUGIN_INSTALL_COMMAND}"
                 ),
                 safe_to_apply=True,
                 reason=(
-                    "installed and enabled the generated Codex plugin so /mb-* "
+                    "installed and enabled the global Codex plugin so /mb-* "
                     "slash commands are available"
                 ),
-                writes=["~/.codex/config.toml", "~/.codex/plugins/"],
+                writes=[
+                    str(codex_mod.global_plugin_source_root()),
+                    "~/.codex/config.toml",
+                    "~/.codex/plugins/",
+                ],
                 applied=bool(installed.get("steps")),
                 result=installed,
             )

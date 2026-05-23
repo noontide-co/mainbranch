@@ -209,7 +209,7 @@ def test_update_points_to_scoped_codex_repair_when_adapter_missing(
     assert result["codex_adapter"]["ok"] is False
     assert "mb doctor repair --plan --only codex" in result["next_actions"]
     assert any(
-        "Codex owner-loop files still need repo repair" in item for item in result["warnings"]
+        "Codex AGENTS.md guidance still needs repo repair" in item for item in result["warnings"]
     )
 
 
@@ -271,7 +271,9 @@ def test_update_points_to_scoped_codex_repair_when_plugin_is_missing(
     assert result["codex_adapter"]["status"] == "plugin_not_installed"
     assert result["codex_adapter"]["plugin_ok"] is False
     assert "mb doctor repair --plan --only codex" in result["next_actions"]
-    assert any("slash commands are not ready" in item for item in result["warnings"])
+    assert any(
+        "global Main Branch Codex plugin is not ready" in item for item in result["warnings"]
+    )
 
 
 def test_update_check_clone_fetches_before_reading_origin(monkeypatch: Any, tmp_path: Path) -> None:

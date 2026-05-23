@@ -219,13 +219,14 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
     if not codex["ok"]:
         if not instructions.get("ok", False):
             message = (
-                "Codex owner-loop files still need repo repair. Run "
+                "Codex AGENTS.md guidance still needs repo repair. Run "
                 "`mb doctor repair --plan --only codex`, review it, then approve "
                 "`mb doctor repair --apply --only codex`."
             )
         elif not codex.get("plugin_ok", False):
             message = (
-                "Codex plugin files are current, but slash commands are not ready. "
+                "The global Main Branch Codex plugin is not ready, so slash commands "
+                "may be unavailable. "
                 "Run `mb doctor repair --plan --only codex`, review it, then approve "
                 "`mb doctor repair --apply --only codex`."
             )
