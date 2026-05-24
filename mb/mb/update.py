@@ -181,6 +181,43 @@ def _link_skills(repo: Path) -> tuple[int, list[str], list[str], dict[str, Any] 
     return _skill_count_from_link_result(payload), [], warnings, payload
 
 
+def _repair_codex_surface(repo: Path) -> tuple[bool, list[str], list[str], dict[str, Any] | None]:
+    result = _run_command(
+        [
+            "mb",
+            "doctor",
+            "repair",
+            "--repo",
+            str(repo),
+            "--apply",
+            "--only",
+            "codex",
+            "--json",
+        ]
+    )
+    if result.returncode != 0:
+        return False, [_command_error("mb doctor repair --only codex", result)], [], None
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return False, ["mb doctor repair --only codex returned invalid JSON"], [], None
+    if not isinstance(payload, dict):
+        return (
+            False,
+            ["mb doctor repair --only codex returned an unexpected JSON payload"],
+            [],
+            None,
+        )
+
+    raw_warnings = payload.get("warnings", [])
+    warnings = [str(item) for item in raw_warnings] if isinstance(raw_warnings, list) else []
+    raw_errors = payload.get("errors", [])
+    errors = [str(item) for item in raw_errors] if isinstance(raw_errors, list) else []
+    if payload.get("ok") is not True:
+        return False, errors or ["mb doctor repair --only codex failed"], warnings, payload
+    return True, [], warnings, payload
+
+
 def _base_result(repo: Path, *, check: bool, mode: str, root: Path | None) -> dict[str, Any]:
     return {
         "ok": True,
@@ -192,6 +229,8 @@ def _base_result(repo: Path, *, check: bool, mode: str, root: Path | None) -> di
         "new_version": None,
         "skills_relinked_count": 0,
         "planned_skills_relink_count": 0,
+        "codex_repaired": False,
+        "codex_repair_result": {},
         "release": {},
         "actions": [],
         "warnings": [],
@@ -218,7 +257,7 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
         "repair_command": codex.get("repair", "") or instructions.get("repair_command", ""),
         "plugin_install": plugin_install,
     }
-    if not codex["ok"]:
+    if not codex["ok"] or not codex.get("slash_commands_ready", False):
         next_actions: list[str]
         if not instructions.get("ok", False):
             message = (
@@ -232,10 +271,20 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
             ]
         elif not codex.get("plugin_ok", False):
             message = (
-                "The global Main Branch Codex plugin is not ready, so generated Codex "
-                "guidance may be unavailable. "
+                "The global Main Branch Codex plugin is not ready, so `/mb-*` "
+                "commands may be missing or stale. "
                 "Run `mb doctor repair --plan --only codex`, review it, then approve "
                 "`mb doctor repair --apply --only codex`."
+            )
+            next_actions = [
+                "mb doctor repair --plan --only codex",
+                "mb doctor repair --apply --only codex",
+            ]
+        elif not codex.get("slash_commands_ready", False):
+            message = (
+                "Main Branch Codex commands are missing or stale. Run "
+                "`mb doctor repair --plan --only codex`, review it, then approve "
+                "`mb doctor repair --apply --only codex`, then restart Codex."
             )
             next_actions = [
                 "mb doctor repair --plan --only codex",
@@ -272,6 +321,7 @@ def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
             result["actions"] = [
                 "would run `pipx upgrade mainbranch`",
                 f"would run `mb skill link --repo {target_repo} --json`",
+                (f"would run `mb doctor repair --repo {target_repo} --apply --only codex --json`"),
             ]
         else:
             if root is None:
@@ -293,6 +343,10 @@ def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
                 [
                     f"would run `git pull --ff-only origin main` in {root}",
                     f"would run `mb skill link --repo {target_repo} --json`",
+                    (
+                        "would run `mb doctor repair --repo "
+                        f"{target_repo} --apply --only codex --json`"
+                    ),
                 ]
             )
         planned_count = len(bundled_skills())
@@ -352,6 +406,18 @@ def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
     if link_errors:
         result["ok"] = False
         result["errors"].extend(link_errors)
+    else:
+        codex_ok, codex_errors, codex_warnings, codex_payload = _repair_codex_surface(target_repo)
+        result["actions"].append(
+            f"ran `mb doctor repair --repo {target_repo} --apply --only codex --json`"
+        )
+        result["codex_repaired"] = codex_ok
+        if codex_payload is not None:
+            result["codex_repair_result"] = codex_payload
+        result["warnings"].extend(codex_warnings)
+        if codex_errors:
+            result["ok"] = False
+            result["errors"].extend(codex_errors)
     _add_codex_follow_up(result, target_repo)
     return result
 
@@ -386,6 +452,8 @@ def render_human(result: dict[str, Any]) -> None:
     elif result.get("ok"):
         print(f"updated Main Branch ({old} -> {new})")
         print(f"refreshed {count} skill link(s)")
+        if result.get("codex_repaired"):
+            print("refreshed Codex command surface")
         for action in result.get("next_actions", []):
             print(f"next: {action}")
 

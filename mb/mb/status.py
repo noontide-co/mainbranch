@@ -3835,10 +3835,6 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
                 "summary": "Codex owner-loop instructions are missing or stale.",
                 "evidence": [
                     str(codex_instructions.get("path") or "AGENTS.md"),
-                    str(
-                        (codex_instructions.get("skill") or {}).get("path")
-                        or codex_mod.CODEX_SKILL_RELATIVE_PATH
-                    ),
                 ],
                 "repair": str(
                     codex_instructions.get("repair")
@@ -3891,6 +3887,7 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
                     f"marketplace: {codex_plugin.get('marketplace_name') or ''}".strip(),
                     f"plugin: {codex_plugin.get('plugin_selector') or ''}".strip(),
                     f"state: {codex_plugin.get('state') or 'unknown'}",
+                    f"commands current: {codex_plugin.get('command_files_current')}",
                 ],
                 "repair": str(
                     codex_plugin.get("repair") or f"Run `{codex_mod.CODEX_PLUGIN_INSTALL_COMMAND}`."

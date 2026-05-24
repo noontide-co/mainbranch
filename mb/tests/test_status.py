@@ -1486,7 +1486,7 @@ def test_status_marks_codex_not_ready_when_plugin_is_not_installed(
     assert codex_mod.CODEX_PLUGIN_INSTALL_COMMAND in finding["repair"]
 
 
-def test_status_does_not_overclaim_codex_slash_commands_when_plugin_is_installed(
+def test_status_marks_codex_ready_when_command_surface_is_installed(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -1510,15 +1510,13 @@ def test_status_does_not_overclaim_codex_slash_commands_when_plugin_is_installed
     assert codex["plugin_ok"] is True
     assert codex["generated_guidance_ready"] is True
     assert codex["command_surface_ok"] is True
-    assert codex["slash_commands_ready"] is False
+    assert codex["slash_commands_ready"] is True
     assert codex["plugin_install"]["plugin_installed"] is True
     assert codex["plugin_install"]["plugin_enabled"] is True
-    assert codex["plugin_install"]["skill_ready"] is True
-    assert codex["plugin_install"]["slash_commands_ready"] is False
+    assert codex["plugin_install"]["skill_ready"] is False
+    assert codex["plugin_install"]["command_files_current"] is True
+    assert codex["plugin_install"]["slash_commands_ready"] is True
     assert not any(item["id"] == "codex_plugin_not_installed" for item in report["drift"]["items"])
-    assert not any(
-        item["id"] == "codex_slash_commands_unsupported" for item in report["drift"]["items"]
-    )
 
 
 def test_status_json_exposes_push_and_legacy_campaign_facts(tmp_path: Path, monkeypatch) -> None:

@@ -1342,7 +1342,7 @@ def run(path: str) -> dict[str, Any]:
             "name": "codex-agents-md",
             "ok": bool(codex_instructions["ok"]),
             "detail": (
-                "AGENTS.md and generated Codex guidance are current and point Codex "
+                "AGENTS.md and Main Branch Codex commands are current and point Codex "
                 "to mb facts, lifecycle routes, and workflow inventory"
             )
             if codex_instructions["ok"]
@@ -2099,7 +2099,16 @@ def repair_plan(
             "global_plugin_installed": codex_plugin_install.get("global_plugin_installed", False),
             "plugin_installed": codex_plugin_install["plugin_installed"],
             "plugin_enabled": codex_plugin_install["plugin_enabled"],
-            "skill_ready": codex_plugin_install.get("skill_ready", False),
+            "skill_available": codex_plugin_install.get("skill_available", False),
+            "command_files_current": codex_plugin_install.get("command_files_current", False),
+            "command_surface_ok": codex_plugin_install.get("command_surface_ok", False),
+            "slash_commands_ready": codex_plugin_install.get("slash_commands_ready", False),
+            "slash_commands_likely_loaded": codex_plugin_install.get(
+                "slash_commands_likely_loaded", False
+            ),
+            "slash_commands_restart_required": codex_plugin_install.get(
+                "slash_commands_restart_required", False
+            ),
             "install_command": codex_plugin_install["install_command"],
             "repair": codex_plugin_install["repair"],
         },
@@ -2137,7 +2146,7 @@ def repair_plan(
             safe_to_apply=True,
             reason=(
                 "Codex must install and enable the global Main Branch plugin before "
-                "generated Codex guidance is available"
+                "the /mb command surface is available"
             ),
             writes=[
                 str(codex_mod.global_plugin_source_root()),
@@ -2151,11 +2160,11 @@ def repair_plan(
     sections.append(
         _section(
             "codex-wiring",
-            "Codex CLI Adapter",
+            "Codex Commands",
             _max_state([str(item["state"]) for item in codex_checks]),
             (
-                "Supported Codex adapter instructions, generated plugin guidance, "
-                "workflow inventory, global plugin, and executable readiness"
+                "Main Branch Codex commands, repo guidance, workflow inventory, "
+                "global plugin, and executable readiness"
             ),
             checks=codex_checks,
             actions=codex_actions,
@@ -2551,8 +2560,8 @@ def repair_apply(
                 ),
                 safe_to_apply=True,
                 reason=(
-                    "installed and enabled the global Codex plugin so generated "
-                    "Codex guidance is available"
+                    "installed and enabled the global Codex plugin so /mb commands "
+                    "are available after restarting Codex"
                 ),
                 writes=[
                     str(codex_mod.global_plugin_source_root()),

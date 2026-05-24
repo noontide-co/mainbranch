@@ -29,6 +29,8 @@ def codex_adapter_ready(monkeypatch: pytest.MonkeyPatch) -> None:
             "static_ok": True,
             "runtime_ok": True,
             "plugin_ok": True,
+            "command_surface_ok": True,
+            "slash_commands_ready": True,
             "repair": "",
             "instructions": {
                 "ok": True,
@@ -41,6 +43,8 @@ def codex_adapter_ready(monkeypatch: pytest.MonkeyPatch) -> None:
                 "state": "ok",
                 "plugin_installed": True,
                 "plugin_enabled": True,
+                "command_files_current": True,
+                "command_surface_ok": True,
                 "slash_commands_ready": True,
                 "repair": "",
             },
@@ -60,6 +64,21 @@ def _completed(
         returncode=returncode,
         stdout=stdout,
         stderr=stderr,
+    )
+
+
+def _codex_repair_completed(args: list[str]) -> subprocess.CompletedProcess[str]:
+    return _completed(
+        args,
+        stdout=json.dumps(
+            {
+                "ok": True,
+                "warnings": [],
+                "errors": [],
+                "actions": [],
+                "applied_actions": [],
+            }
+        ),
     )
 
 
@@ -124,6 +143,8 @@ def test_update_pipx_runs_upgrade_then_relinks(monkeypatch: Any, tmp_path: Path)
                     }
                 ),
             )
+        if args[:3] == ["mb", "doctor", "repair"]:
+            return _codex_repair_completed(args)
         return _completed(args, returncode=1, stderr="unexpected")
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
@@ -148,7 +169,19 @@ def test_update_pipx_runs_upgrade_then_relinks(monkeypatch: Any, tmp_path: Path)
         ["pipx", "upgrade", "mainbranch"],
         ["mb", "--version"],
         ["mb", "skill", "link", "--repo", str(repo.resolve()), "--json"],
+        [
+            "mb",
+            "doctor",
+            "repair",
+            "--repo",
+            str(repo.resolve()),
+            "--apply",
+            "--only",
+            "codex",
+            "--json",
+        ],
     ]
+    assert result["codex_repaired"] is True
 
 
 def test_update_points_to_scoped_codex_repair_when_adapter_missing(
@@ -166,6 +199,8 @@ def test_update_points_to_scoped_codex_repair_when_adapter_missing(
                     {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
                 ),
             )
+        if args[:3] == ["mb", "doctor", "repair"]:
+            return _codex_repair_completed(args)
         return _completed(args, returncode=1, stderr="unexpected")
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
@@ -228,6 +263,8 @@ def test_update_points_to_scoped_codex_repair_when_plugin_is_missing(
                     {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
                 ),
             )
+        if args[:3] == ["mb", "doctor", "repair"]:
+            return _codex_repair_completed(args)
         return _completed(args, returncode=1, stderr="unexpected")
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
@@ -291,6 +328,8 @@ def test_update_reports_manual_codex_slash_visibility_verification(
                     {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
                 ),
             )
+        if args[:3] == ["mb", "doctor", "repair"]:
+            return _codex_repair_completed(args)
         return _completed(args, returncode=1, stderr="unexpected")
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
@@ -313,7 +352,7 @@ def test_update_reports_manual_codex_slash_visibility_verification(
             "generated_guidance_ready": True,
             "command_surface_ok": True,
             "slash_commands_ready": False,
-            "repair": "",
+            "repair": codex_mod.CODEX_REPAIR_TEXT,
             "instructions": {
                 "ok": True,
                 "exists": True,
@@ -325,9 +364,11 @@ def test_update_reports_manual_codex_slash_visibility_verification(
                 "state": "ok",
                 "plugin_installed": True,
                 "plugin_enabled": True,
-                "skill_ready": True,
+                "skill_ready": False,
+                "command_files_current": False,
+                "command_surface_ok": False,
                 "slash_commands_ready": False,
-                "repair": "",
+                "repair": codex_mod.CODEX_REPAIR_TEXT,
             },
         },
     )
@@ -338,8 +379,9 @@ def test_update_reports_manual_codex_slash_visibility_verification(
     assert result["codex_adapter"]["plugin_ok"] is True
     assert result["codex_adapter"]["ok"] is True
     assert result["codex_adapter"]["slash_commands_ready"] is False
-    assert "mb doctor repair --plan --only codex" not in result["next_actions"]
-    assert "mb doctor repair --apply --only codex" not in result["next_actions"]
+    assert "mb doctor repair --plan --only codex" in result["next_actions"]
+    assert "mb doctor repair --apply --only codex" in result["next_actions"]
+    assert any("commands are missing or stale" in item for item in result["warnings"])
     assert not any("Codex command API" in item for item in result["next_actions"])
     assert not any("Codex command API" in item for item in result["warnings"])
 
@@ -416,6 +458,8 @@ def test_update_clone_pulls_engine_root_then_relinks(monkeypatch: Any, tmp_path:
                     }
                 ),
             )
+        if args[:3] == ["mb", "doctor", "repair"]:
+            return _codex_repair_completed(args)
         return _completed(args, returncode=1, stderr="unexpected")
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "clone")
@@ -432,6 +476,17 @@ def test_update_clone_pulls_engine_root_then_relinks(monkeypatch: Any, tmp_path:
         "could not refresh existing non-link skill path(s): .claude/skills/mb-start"
     ]
     assert calls[0] == (["git", "pull", "--ff-only", "origin", "main"], root)
+    assert calls[-1][0] == [
+        "mb",
+        "doctor",
+        "repair",
+        "--repo",
+        str((tmp_path / "biz").resolve()),
+        "--apply",
+        "--only",
+        "codex",
+        "--json",
+    ]
 
 
 def test_update_json_cli_envelope(monkeypatch: Any, tmp_path: Path) -> None:

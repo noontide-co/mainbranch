@@ -7,8 +7,8 @@ Main Branch business repo instructions for Codex.
 Main Branch CLI facts are the source of truth for repo health, setup, runtime
 wiring, updates, graph/status signals, provider readiness, and repair paths.
 When the operator asks to start, begin, get oriented, triage the day, or decide
-what to do next, use this Codex-native start workflow or the generated Codex
-guidance. Do not pretend Claude Code skills work in Codex.
+what to do next, use `/mb-start`, `/mb-status`, or the read-only `mb` fact
+commands below. Do not pretend Claude Code skills work in Codex.
 
 Start in this repo. Before setup, routing, migration, update, or repair advice,
 run the runtime preflight and read-only checks that fit the situation:
@@ -30,7 +30,7 @@ After `mb status --json --peek` or `mb start --json`, stop if
 `runtime.codex_cli.status` is `runtime_mismatch` or any `drift.items[].id`
 equals `codex_runtime_mb_mismatch`. Treat that as a runtime `mb` mismatch: tell
 the operator to fix the runtime/login-shell PATH and rerun read-only checks
-before owner-loop advice, repair planning, or writes.
+before Main Branch advice, repair planning, or writes.
 
 Use `mb status --json --peek` as the default daily briefing before routing the
 operator. It names readiness, drift, onboarding progress, update state, GitHub
@@ -102,14 +102,14 @@ emails, or usernames alone.
 
 ## Codex Lifecycle Workflow Index
 
-This tracked `AGENTS.md` file is the repo-level Codex bootstrap. The generated
-Main Branch Codex plugin is installed globally once per user and supplies
-generated Codex guidance over deterministic `mb` facts. Business repos keep this
-lightweight `AGENTS.md` guidance instead of tracked repo-local plugin copies.
-`mb doctor repair --only codex` refreshes this file and installs or repairs the
-global plugin when Codex CLI is available.
+This tracked `AGENTS.md` file is the repo-level Codex bootstrap. The Main
+Branch Codex plugin is installed globally once per user and supplies `/mb-*`
+commands over deterministic `mb` facts. Business repos keep this lightweight
+`AGENTS.md` guidance instead of tracked repo-local plugin copies. `mb doctor
+repair --only codex` refreshes this file and installs or repairs the global
+plugin when Codex CLI is available.
 
-Use the global Main Branch Codex plugin for the proven owner loop only. Do not
+Use the global Main Branch Codex plugin for Main Branch daily commands only. Do not
 create repo-local Codex plugin manifests, copied Claude skill trees, or
 symlinked Claude skills unless a future `mb` command or issue says that surface
 is supported for this repo.

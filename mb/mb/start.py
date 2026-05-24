@@ -323,10 +323,17 @@ def _codex_next_actions(repo: Path, codex: dict[str, Any]) -> list[str]:
             actions.append(repair)
         actions.append("Rerun `mb status --json --peek` before using Codex.")
         return actions[:3]
+    if not codex.get("slash_commands_ready"):
+        repair = str(codex.get("repair") or "")
+        actions = []
+        if repair:
+            actions.append(repair)
+        actions.append("Restart Codex, then type `/mb` to verify Main Branch commands.")
+        return actions[:3]
     smoke_command = str(codex.get("smoke_command") or "")
     actions = [
         f"Run `{_codex_display_command(repo)}`.",
-        "Start from generated Codex guidance and read-only `mb` facts.",
+        "After Codex restarts, type `/mb-start` or `/mb-status`.",
     ]
     if smoke_command:
         actions.append(f"For a read-only Codex smoke, run `{smoke_command}`.")
@@ -380,8 +387,8 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "argv": ["codex", "-C", str(repo_path)],
             "display": _codex_display_command(repo_path),
             "startup_prompt": (
-                "Start this Main Branch business day from generated Codex guidance "
-                "and read-only mb facts. Ask before writes. Stop if mb status/start reports "
+                "Start this Main Branch business day from `/mb-start` and read-only "
+                "mb facts. Ask before writes. Stop if mb status/start reports "
                 "runtime.codex_cli.status == runtime_mismatch or drift id "
                 "codex_runtime_mb_mismatch."
             ),

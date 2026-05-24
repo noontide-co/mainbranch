@@ -141,7 +141,7 @@ def test_start_json_keeps_codex_slash_visibility_honest(tmp_path: Path, monkeypa
     assert report["runtime"]["codex_cli"]["status"] == "ready"
     assert report["runtime"]["codex_cli"]["plugin_ok"] is True
     assert report["runtime"]["codex_cli"]["generated_guidance_ready"] is True
-    assert report["runtime"]["codex_cli"]["slash_commands_ready"] is False
+    assert report["runtime"]["codex_cli"]["slash_commands_ready"] is True
     assert report["runtime"]["codex_cli"]["instructions"]["ok"] is True
     assert report["experimental_runtimes"]["codex_cli"]["command"]["argv"] == [
         "codex",
@@ -149,14 +149,14 @@ def test_start_json_keeps_codex_slash_visibility_honest(tmp_path: Path, monkeypa
         str(repo.resolve()),
     ]
     next_actions = "\n".join(report["next_actions"])
-    assert "generated Codex guidance" in next_actions
+    assert "/mb-start" in next_actions
     assert f"codex -C {shlex.quote(str(repo.resolve()))}" in next_actions
     assert "Run `claude" not in next_actions
     assert report["command"]["argv"] == ["claude"]
     assert report["command"]["display"].endswith(" && claude")
     assert report["command"]["follow_up"] == "/mb-start"
     codex_prompt = report["experimental_runtimes"]["codex_cli"]["command"]["startup_prompt"]
-    assert "generated Codex guidance" in codex_prompt
+    assert "/mb-start" in codex_prompt
     assert "with /mb-start" not in codex_prompt
     assert report["launch"]["requested"] is False
     assert report["checkpoint"]["pending"]["status"] == "ready"
