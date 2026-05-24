@@ -170,13 +170,14 @@ def test_codex_command_surface_and_inventory_render() -> None:
     assert '"skills": "./skills/"' not in manifest
     assert "main-branch-owner-loop" not in manifest
     assert '"path": "./.agents/plugins/main-branch"' in marketplace
-    assert "Codex plugin files and `/mb-*` command files are installed globally" in inventory
-    assert "codex plugin list --marketplace main-branch" in inventory
+    assert "global Main Branch skill bundle is installed" in inventory
+    assert "codex plugin list --marketplace main-branch" not in inventory
     assert ".claude/skills/mb-start/SKILL.md" in inventory
     assert ".claude/skills/mb-skill-review/SKILL.md" in inventory
-    assert "codex plugin marketplace add" in inventory_json["plugin"]["install_hint"]
-    assert codex_mod.CODEX_PLUGIN_INSTALL_COMMAND in inventory_json["plugin"]["install_hint"]
-    assert "`/mb-start`" in inventory
+    assert "plugin" not in inventory_json
+    assert inventory_json["global_skill"]["install_hint"] == "mb doctor repair --apply --only codex"
+    assert "mb-start" in inventory_json["global_skill"]["routes"]
+    assert "`main-branch mb-start`" in inventory
     assert "pending_shared_source_migration" in inventory
     assert "intentionally_unsupported" in inventory
     assert "Copied Claude" not in "\n".join(commands.values())
@@ -241,7 +242,7 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
 
     assert result.exit_code == 0
     data = json.loads(result.stdout)
-    assert data["support_level"] == "supported_main_branch_slash_commands"
+    assert data["support_level"] == "supported_global_main_branch_skill"
     statuses = set(data["statuses"])
     assert {
         "supported",
@@ -251,10 +252,10 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
     }.issubset(statuses)
     by_id = {item["id"]: item for item in data["items"]}
     assert by_id["think-codify"]["codex_status"] == "supported"
-    assert by_id["think-codify"]["codex_entrypoints"] == ["/mb-think"]
+    assert by_id["think-codify"]["codex_entrypoints"] == ["main-branch mb-think"]
     assert by_id["daily-start-status"]["codex_entrypoints"] == [
-        "/mb-start",
-        "/mb-status",
+        "main-branch mb-start",
+        "main-branch mb-status",
     ]
     assert by_id["daily-start-status"]["claude_skill_sources"] == [
         ".claude/skills/mb-start/SKILL.md",
@@ -262,13 +263,9 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
     ]
     assert by_id["ads"]["codex_status"] == "pending_shared_source_migration"
     assert by_id["wiki"]["codex_status"] == "intentionally_unsupported"
-    assert data["plugin"]["manifest_path"] == codex_mod.CODEX_PLUGIN_MANIFEST_RELATIVE_PATH
-    assert data["plugin"]["commands_path"] == codex_mod.CODEX_PLUGIN_COMMANDS_RELATIVE_PATH
-    assert data["plugin"]["slash_commands_generated"] is True
-    assert data["plugin"]["slash_commands_ready"] is False
-    assert set(data["plugin"]["generated_command_files"]) == set(
-        codex_mod.CODEX_SLASH_COMMAND_RELATIVE_PATHS
-    )
+    assert "plugin" not in data
+    assert data["global_skill"]["path"] == codex_mod.CODEX_GLOBAL_SKILL_RELATIVE_PATH
+    assert "mb-start" in data["global_skill"]["routes"]
 
 
 def test_codex_workflow_inventory_accounts_for_every_bundled_claude_skill() -> None:

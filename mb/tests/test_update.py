@@ -250,7 +250,7 @@ def test_update_points_to_scoped_codex_repair_when_adapter_missing(
     )
 
 
-def test_update_points_to_scoped_codex_repair_when_plugin_is_missing(
+def test_update_points_to_scoped_codex_repair_when_global_skills_are_missing(
     monkeypatch: Any, tmp_path: Path
 ) -> None:
     def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -282,16 +282,22 @@ def test_update_points_to_scoped_codex_repair_when_plugin_is_missing(
         "readiness",
         lambda repo: {
             "ok": False,
-            "status": "plugin_not_installed",
+            "status": "global_skill_missing_or_stale",
             "static_ok": True,
             "runtime_ok": True,
+            "global_skill_ok": False,
             "plugin_ok": False,
-            "repair": f"Run `{codex_mod.CODEX_PLUGIN_INSTALL_COMMAND}`.",
+            "repair": "mb doctor repair --apply --only codex",
             "instructions": {
                 "ok": True,
                 "exists": True,
                 "current": True,
                 "repair_command": "",
+            },
+            "global_skill": {
+                "ok": False,
+                "state": "global_skill_missing_or_stale",
+                "repair": "mb doctor repair --apply --only codex",
             },
             "plugin_install": {
                 "ok": False,
@@ -307,15 +313,15 @@ def test_update_points_to_scoped_codex_repair_when_plugin_is_missing(
     result = update_mod.run(repo=tmp_path / "biz")
 
     assert result["ok"] is True
-    assert result["codex_adapter"]["status"] == "plugin_not_installed"
-    assert result["codex_adapter"]["plugin_ok"] is False
+    assert result["codex_adapter"]["status"] == "global_skill_missing_or_stale"
+    assert result["codex_adapter"]["global_skill_ok"] is False
     assert "mb doctor repair --plan --only codex" in result["next_actions"]
     assert any(
-        "global Main Branch Codex plugin is not ready" in item for item in result["warnings"]
+        "global Main Branch Codex skills are not ready" in item for item in result["warnings"]
     )
 
 
-def test_update_reports_manual_codex_slash_visibility_verification(
+def test_update_does_not_gate_ready_codex_on_slash_commands(
     monkeypatch: Any, tmp_path: Path
 ) -> None:
     def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -350,6 +356,7 @@ def test_update_reports_manual_codex_slash_visibility_verification(
             "status": "ready",
             "static_ok": True,
             "runtime_ok": True,
+            "global_skill_ok": True,
             "plugin_ok": True,
             "generated_guidance_ready": True,
             "command_surface_ok": True,
@@ -360,6 +367,11 @@ def test_update_reports_manual_codex_slash_visibility_verification(
                 "exists": True,
                 "current": True,
                 "repair_command": "",
+            },
+            "global_skill": {
+                "ok": True,
+                "state": "ok",
+                "repair": "",
             },
             "plugin_install": {
                 "ok": True,
@@ -381,14 +393,13 @@ def test_update_reports_manual_codex_slash_visibility_verification(
     assert result["codex_adapter"]["plugin_ok"] is True
     assert result["codex_adapter"]["ok"] is True
     assert result["codex_adapter"]["slash_commands_ready"] is False
-    assert "mb doctor repair --plan --only codex" in result["next_actions"]
-    assert "mb doctor repair --apply --only codex" in result["next_actions"]
-    assert any("commands are missing or stale" in item for item in result["warnings"])
+    assert "mb doctor repair --plan --only codex" not in result["next_actions"]
+    assert not any("missing or stale" in item for item in result["warnings"])
     assert not any("Codex command API" in item for item in result["next_actions"])
     assert not any("Codex command API" in item for item in result["warnings"])
 
 
-def test_update_surfaces_codex_restart_when_commands_were_refreshed(
+def test_update_surfaces_fresh_codex_thread_when_plugin_commands_were_refreshed(
     monkeypatch: Any, tmp_path: Path
 ) -> None:
     def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -456,8 +467,8 @@ def test_update_surfaces_codex_restart_when_commands_were_refreshed(
     assert result["codex_adapter"]["slash_commands_ready"] is True
     assert result["codex_adapter"]["slash_commands_likely_loaded"] is False
     assert result["codex_adapter"]["slash_commands_restart_required"] is True
-    assert "Restart Codex, then type `/mb`." in result["next_actions"]
-    assert any("slash command surface loaded" in item for item in result["warnings"])
+    assert "Open a fresh Codex thread in the business repo." in result["next_actions"]
+    assert any("global Main Branch skill bundle" in item for item in result["warnings"])
 
 
 def test_update_check_clone_fetches_before_reading_origin(monkeypatch: Any, tmp_path: Path) -> None:

@@ -219,13 +219,13 @@ You'll need a Claude plan that includes Claude Code. Install Claude Code from [c
 
 ### Using Codex CLI
 
-Codex CLI is supported through the global Main Branch plugin's `/mb-*` commands
-and deterministic `mb` facts. Fresh business folders include a tracked
-`AGENTS.md` bootstrap. The plugin is installed globally once per user and reads
-the current business repo through deterministic `mb` facts. That lets Codex
-start the day, inspect status, route setup/update/doctor work, think through or
-codify a decision, plan an end/checkpoint/save closeout, validate the repo, and
-list workflow support.
+Codex CLI is supported through global Main Branch `mb-*` skills installed under
+the Codex global skills root and deterministic `mb` facts. Fresh business
+folders include a tracked `AGENTS.md` bootstrap. The skills install globally
+once per user and read the current business repo through deterministic `mb`
+facts. That lets Codex start the day, inspect status, route setup/update/doctor
+work, think through or codify a decision, plan an end/checkpoint/save closeout,
+validate the repo, and list workflow support.
 
 Expect Codex to run `mb status --json --peek`, `mb start --json`,
 `mb doctor repair --plan --json`, `mb checkpoint --plan --json`,
@@ -244,8 +244,8 @@ mb doctor repair --apply --only codex
 codex
 ```
 
-Restart Codex after repair, type `/mb`, then run `/mb-start`. Codex should start
-from read-only `mb` facts and ask before writing files.
+Open a fresh Codex thread after repair and use the `mb-start` skill. Codex
+should start from read-only `mb` facts and ask before writing files.
 
 For a read-only smoke test:
 

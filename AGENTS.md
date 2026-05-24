@@ -20,11 +20,11 @@ markdown files in git.
 - A user is not met with git speak but instead business speak.
 
 Claude Code and Codex CLI are the supported agent runtimes today. Claude Code
-uses project-local slash skills. Codex uses generated `AGENTS.md`, a global Main
-Branch Codex plugin, `/mb-*` commands, deterministic `mb` facts, and workflow
-inventory. That is daily-loop Codex support, not all-skill parity or full
-production workflow parity. Business repos should not carry repo-local Codex
-plugin copies unless a future issue proves that fallback is required.
+uses project-local slash skills. Codex uses generated `AGENTS.md`, global Main
+Branch skills, deterministic `mb` facts, and workflow inventory. That is
+daily-loop Codex support, not full production workflow parity. Business repos
+should not carry repo-local Codex plugin or skill copies unless a future issue
+proves that fallback is required.
 Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and local runtimes
 remain compatibility targets until tested. Do not claim support before there is
 an adapter and smoke evidence for the exact surface.
@@ -38,9 +38,8 @@ lives in `docs/operator-loops.md`, and release direction lives in
 The current product center is the daily owner loop:
 
 1. The operator opens the business repo and starts Claude Code or Codex CLI.
-2. `/mb-start`, the generated repo instructions, or the global Main Branch
-   Codex plugin guidance ground the agent in deterministic `mb` facts before
-   advice.
+2. `/mb-start`, the generated repo instructions, or global Main Branch Codex
+   skills ground the agent in deterministic `mb` facts before advice.
 3. The agent routes thought dumps and requests into business primitives:
    bets, goals, offers, research, decisions, pushes, playbooks, outcomes, and
    checkpoints.

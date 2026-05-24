@@ -96,6 +96,11 @@ def _prepare_codex_global_plugin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     codex_mod.write_global_plugin_source()
 
 
+def _prepare_codex_global_skill_roots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAINBRANCH_CODEX_PLUGIN_ROOT", str(tmp_path / "codex-global"))
+    monkeypatch.setenv("MAINBRANCH_CODEX_SKILLS_ROOT", str(tmp_path / "codex-skills"))
+
+
 def _write_md(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
@@ -429,7 +434,10 @@ def test_doctor_repair_only_codex_filters_unrelated_related_links(tmp_path: Path
     plan = json.loads(plan_result.stdout)
     assert plan["only"] == "codex"
     assert [section["id"] for section in plan["sections"]] == ["codex-wiring", "git"]
-    assert [action["id"] for action in plan["actions"]] == ["codex-agents-md"]
+    assert [action["id"] for action in plan["actions"]] == [
+        "codex-agents-md",
+        "codex-global-skill",
+    ]
 
     apply_result = runner.invoke(
         app,
@@ -487,20 +495,15 @@ def test_doctor_repair_plan_marks_codex_runtime_info_when_codex_missing(
     assert runtime_check["repair"] == ""
 
 
-def test_doctor_repair_plan_installs_missing_codex_plugin(
+def test_doctor_repair_plan_installs_missing_codex_global_skills(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(codex_mod, "_which", _with_codex)
     monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
-    _prepare_codex_global_plugin(tmp_path, monkeypatch)
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
-    monkeypatch.setattr(
-        codex_mod,
-        "_codex_plugin_list",
-        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo), installed=False),
-    )
 
     result = runner.invoke(
         app, ["doctor", "repair", "--repo", str(repo), "--plan", "--only", "codex", "--json"]
@@ -509,18 +512,18 @@ def test_doctor_repair_plan_installs_missing_codex_plugin(
     assert result.exit_code in {0, 1}
     payload = json.loads(result.stdout)
     actions = {action["id"]: action for action in payload["actions"]}
-    assert "codex-plugin-install" in actions
-    assert actions["codex-plugin-install"]["safe_to_apply"] is True
-    assert codex_mod.CODEX_PLUGIN_INSTALL_COMMAND in actions["codex-plugin-install"]["command"]
+    assert "codex-global-skill" in actions
+    assert actions["codex-global-skill"]["safe_to_apply"] is True
+    assert actions["codex-global-skill"]["command"] == "mb doctor repair --apply --only codex"
     section = next(section for section in payload["sections"] if section["id"] == "codex-wiring")
-    plugin_check = next(
-        check for check in section["checks"] if check["name"] == "codex-plugin-install"
+    skill_check = next(
+        check for check in section["checks"] if check["name"] == "codex-global-skill"
     )
-    assert plugin_check["state"] == "warn"
-    assert plugin_check["plugin_installed"] is False
+    assert skill_check["state"] == "warn"
+    assert "mb-start/SKILL.md" in skill_check["missing"]
 
 
-def test_doctor_repair_plan_installs_missing_codex_plugin_with_runtime_path_warning(
+def test_doctor_repair_plan_installs_missing_codex_global_skills_with_runtime_path_warning(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -530,14 +533,9 @@ def test_doctor_repair_plan_installs_missing_codex_plugin_with_runtime_path_warn
         "_login_shell_mb_diagnostics",
         _codex_runtime_path_mismatch_same_version,
     )
-    _prepare_codex_global_plugin(tmp_path, monkeypatch)
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
-    monkeypatch.setattr(
-        codex_mod,
-        "_codex_plugin_list",
-        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo), installed=False),
-    )
 
     result = runner.invoke(
         app, ["doctor", "repair", "--repo", str(repo), "--plan", "--only", "codex", "--json"]
@@ -546,51 +544,27 @@ def test_doctor_repair_plan_installs_missing_codex_plugin_with_runtime_path_warn
     assert result.exit_code in {0, 1}
     payload = json.loads(result.stdout)
     actions = {action["id"]: action for action in payload["actions"]}
-    assert "codex-plugin-install" in actions
+    assert "codex-global-skill" in actions
     section = next(section for section in payload["sections"] if section["id"] == "codex-wiring")
     runtime_check = next(
         check for check in section["checks"] if check["name"] == "codex-runtime-mb"
     )
-    plugin_check = next(
-        check for check in section["checks"] if check["name"] == "codex-plugin-install"
+    skill_check = next(
+        check for check in section["checks"] if check["name"] == "codex-global-skill"
     )
     assert runtime_check["state"] == "warn"
-    assert plugin_check["state"] == "warn"
+    assert skill_check["state"] == "warn"
 
 
-def test_doctor_repair_apply_installs_missing_codex_plugin(
+def test_doctor_repair_apply_installs_missing_codex_global_skills(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(codex_mod, "_which", _with_codex)
     monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
-    _prepare_codex_global_plugin(tmp_path, monkeypatch)
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
-    monkeypatch.setattr(
-        codex_mod,
-        "_codex_plugin_list",
-        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo), installed=False),
-    )
-    monkeypatch.setattr(
-        codex_mod,
-        "install_plugin",
-        lambda plugin_repo: {
-            "ok": True,
-            "steps": [
-                {"ok": True, "command": codex_mod.codex_marketplace_add_command()},
-                {"ok": True, "command": codex_mod.CODEX_PLUGIN_INSTALL_COMMAND},
-            ],
-            "status": {
-                "ok": True,
-                "state": "ok",
-                "plugin_installed": True,
-                "plugin_enabled": True,
-                "slash_commands_ready": True,
-            },
-            "safe_to_share": True,
-        },
-    )
 
     result = runner.invoke(
         app, ["doctor", "repair", "--repo", str(repo), "--apply", "--only", "codex", "--json"]
@@ -599,12 +573,15 @@ def test_doctor_repair_apply_installs_missing_codex_plugin(
     assert result.exit_code in {0, 1}
     payload = json.loads(result.stdout)
     applied = {action["id"]: action for action in payload["applied_actions"]}
-    assert "codex-plugin-install" in applied
-    assert applied["codex-plugin-install"]["state"] == "ok"
-    assert codex_mod.CODEX_PLUGIN_INSTALL_COMMAND in applied["codex-plugin-install"]["command"]
+    assert "codex-global-skill" in applied
+    assert applied["codex-global-skill"]["state"] == "ok"
+    assert applied["codex-global-skill"]["command"] == "mb doctor repair --apply --only codex"
+    status = applied["codex-global-skill"]["result"]["status"]
+    assert status["skills"]["mb-start"]["ok"] is True
+    assert status["skills"]["mb-ads"]["ok"] is True
 
 
-def test_doctor_repair_apply_installs_missing_codex_plugin_with_runtime_path_warning(
+def test_doctor_repair_apply_installs_missing_codex_global_skills_with_runtime_path_warning(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -614,33 +591,9 @@ def test_doctor_repair_apply_installs_missing_codex_plugin_with_runtime_path_war
         "_login_shell_mb_diagnostics",
         _codex_runtime_path_mismatch_same_version,
     )
-    _prepare_codex_global_plugin(tmp_path, monkeypatch)
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
-    monkeypatch.setattr(
-        codex_mod,
-        "_codex_plugin_list",
-        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo), installed=False),
-    )
-    monkeypatch.setattr(
-        codex_mod,
-        "install_plugin",
-        lambda plugin_repo: {
-            "ok": True,
-            "steps": [
-                {"ok": True, "command": codex_mod.codex_marketplace_add_command()},
-                {"ok": True, "command": codex_mod.CODEX_PLUGIN_INSTALL_COMMAND},
-            ],
-            "status": {
-                "ok": True,
-                "state": "ok",
-                "plugin_installed": True,
-                "plugin_enabled": True,
-                "slash_commands_ready": False,
-            },
-            "safe_to_share": True,
-        },
-    )
 
     result = runner.invoke(
         app, ["doctor", "repair", "--repo", str(repo), "--apply", "--only", "codex", "--json"]
@@ -649,8 +602,8 @@ def test_doctor_repair_apply_installs_missing_codex_plugin_with_runtime_path_war
     assert result.exit_code in {0, 1}
     payload = json.loads(result.stdout)
     applied = {action["id"]: action for action in payload["applied_actions"]}
-    assert "codex-plugin-install" in applied
-    assert applied["codex-plugin-install"]["state"] == "ok"
+    assert "codex-global-skill" in applied
+    assert applied["codex-global-skill"]["state"] == "ok"
 
 
 def test_doctor_repair_plan_reports_stale_codex_lifecycle_guidance(tmp_path: Path) -> None:

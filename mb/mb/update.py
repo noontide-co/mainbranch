@@ -243,15 +243,18 @@ def _base_result(repo: Path, *, check: bool, mode: str, root: Path | None) -> di
 def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
     codex = codex_mod.readiness(repo)
     instructions = codex.get("instructions", {})
+    global_skill = codex.get("global_skill", {})
     plugin_install = codex.get("plugin_install", {})
     result["codex_adapter"] = {
         "ok": codex["ok"],
         "status": codex.get("status", ""),
         "static_ok": codex.get("static_ok", False),
         "runtime_ok": codex.get("runtime_ok", False),
+        "global_skill_ok": codex.get("global_skill_ok", False),
         "plugin_ok": codex.get("plugin_ok", False),
         "command_surface_ok": codex.get("command_surface_ok", False),
         "slash_commands_ready": codex.get("slash_commands_ready", False),
+        "global_skill": global_skill,
         "slash_commands_likely_loaded": plugin_install.get("slash_commands_likely_loaded", False),
         "slash_commands_restart_required": plugin_install.get(
             "slash_commands_restart_required", False
@@ -261,7 +264,7 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
         "repair_command": codex.get("repair", "") or instructions.get("repair_command", ""),
         "plugin_install": plugin_install,
     }
-    if not codex["ok"] or not codex.get("slash_commands_ready", False):
+    if not codex["ok"]:
         next_actions: list[str]
         if not instructions.get("ok", False):
             message = (
@@ -273,22 +276,12 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
                 "mb doctor repair --plan --only codex",
                 "mb doctor repair --apply --only codex",
             ]
-        elif not codex.get("plugin_ok", False):
+        elif not codex.get("global_skill_ok", False):
             message = (
-                "The global Main Branch Codex plugin is not ready, so `/mb-*` "
-                "commands may be missing or stale. "
+                "The global Main Branch Codex skills are not ready, so `mb-*` "
+                "routes may be missing or stale. "
                 "Run `mb doctor repair --plan --only codex`, review it, then approve "
                 "`mb doctor repair --apply --only codex`."
-            )
-            next_actions = [
-                "mb doctor repair --plan --only codex",
-                "mb doctor repair --apply --only codex",
-            ]
-        elif not codex.get("slash_commands_ready", False):
-            message = (
-                "Main Branch Codex commands are missing or stale. Run "
-                "`mb doctor repair --plan --only codex`, review it, then approve "
-                "`mb doctor repair --apply --only codex`, then restart Codex."
             )
             next_actions = [
                 "mb doctor repair --plan --only codex",
@@ -304,10 +297,10 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
         result["next_actions"].extend(next_actions)
     elif plugin_install.get("slash_commands_restart_required"):
         result["warnings"].append(
-            "Main Branch Codex commands are installed. Restart Codex, then type `/mb` "
-            "to verify the slash command surface loaded."
+            "Codex may need a fresh thread before it sees the refreshed global "
+            "Main Branch skill bundle."
         )
-        result["next_actions"].append("Restart Codex, then type `/mb`.")
+        result["next_actions"].append("Open a fresh Codex thread in the business repo.")
 
 
 def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
@@ -463,7 +456,7 @@ def render_human(result: dict[str, Any]) -> None:
         print(f"updated Main Branch ({old} -> {new})")
         print(f"refreshed {count} skill link(s)")
         if result.get("codex_repaired"):
-            print("refreshed Codex command surface")
+            print("refreshed Codex global skills")
         for action in result.get("next_actions", []):
             print(f"next: {action}")
 

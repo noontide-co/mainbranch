@@ -226,6 +226,7 @@ def _build_checks(
         )
     codex_executable = codex.get("executable") or {}
     codex_instructions = codex.get("instructions") or {}
+    codex_global_skill = codex.get("global_skill") or {}
     codex_runtime = codex.get("runtime") or {}
     codex_found = bool(codex_executable.get("found"))
     checks.extend(
@@ -242,16 +243,24 @@ def _build_checks(
                 "ok": bool(codex_instructions.get("ok")),
                 "severity": "warn" if codex_found else "info",
                 "detail": (
-                    "AGENTS.md, the global Codex plugin, and generated guidance point "
+                    "AGENTS.md and global Codex skills point "
                     "Codex to mb facts, lifecycle routes, and workflow inventory"
                 )
                 if codex_instructions.get("ok")
                 else (
-                    "Codex AGENTS.md, plugin, marketplace, or generated guidance is "
+                    "Codex AGENTS.md or global skill guidance is "
                     "missing, stale, or missing required mb fact commands or lifecycle "
                     "discovery guidance"
                 ),
                 "repair": codex_instructions.get("repair") if codex_found else "",
+            },
+            {
+                "name": "codex_global_skills",
+                "ok": bool(codex_global_skill.get("ok")),
+                "severity": "warn" if codex_found else "info",
+                "detail": codex_global_skill.get("summary")
+                or "Global Main Branch Codex skills are not installed.",
+                "repair": codex_global_skill.get("repair") if codex_found else "",
             },
             {
                 "name": "codex_runtime_mb",
@@ -310,40 +319,25 @@ def _codex_next_actions(repo: Path, codex: dict[str, Any]) -> list[str]:
         actions = []
         if repair:
             actions.append(repair)
-        actions.append("Rerun `mb status --json --peek` before continuing Codex owner-loop work.")
+        actions.append(
+            "Rerun `mb status --json --peek` before continuing Main Branch work in Codex."
+        )
         return actions[:3]
     if not codex.get("runtime_ok"):
         repair = str(runtime.get("repair") or codex.get("repair") or "")
         return [repair] if repair else []
-    if not codex.get("plugin_ok"):
-        plugin_install = codex.get("plugin_install") or {}
-        repair = str(plugin_install.get("repair") or codex.get("repair") or "")
+    if not codex.get("global_skill_ok"):
+        global_skill = codex.get("global_skill") or {}
+        repair = str(global_skill.get("repair") or codex.get("repair") or "")
         actions = []
         if repair:
             actions.append(repair)
         actions.append("Rerun `mb status --json --peek` before using Codex.")
         return actions[:3]
-    plugin_install = codex.get("plugin_install") or {}
-    if not codex.get("slash_commands_ready"):
-        repair = str(codex.get("repair") or "")
-        actions = []
-        if repair:
-            actions.append(repair)
-        actions.append("Restart Codex, then type `/mb` to verify Main Branch commands.")
-        return actions[:3]
-    if plugin_install.get("slash_commands_restart_required"):
-        actions = [
-            f"Run `{_codex_display_command(repo)}` or restart Codex if it is already open.",
-            "Type `/mb` to verify Main Branch commands.",
-        ]
-        smoke_command = str(codex.get("smoke_command") or "")
-        if smoke_command:
-            actions.append(f"For a read-only Codex smoke, run `{smoke_command}`.")
-        return actions
     smoke_command = str(codex.get("smoke_command") or "")
     actions = [
         f"Run `{_codex_display_command(repo)}`.",
-        "After Codex restarts, type `/mb-start` or `/mb-status`.",
+        "Open a fresh Codex thread and use the global `mb-start` or `mb-status` skill.",
     ]
     if smoke_command:
         actions.append(f"For a read-only Codex smoke, run `{smoke_command}`.")
@@ -397,8 +391,8 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "argv": ["codex", "-C", str(repo_path)],
             "display": _codex_display_command(repo_path),
             "startup_prompt": (
-                "Start this Main Branch business day from `/mb-start` and read-only "
-                "mb facts. Ask before writes. Stop if mb status/start reports "
+                "Start this Main Branch business day from the global `mb-start` "
+                "skill and read-only mb facts. Ask before writes. Stop if mb status/start reports "
                 "runtime.codex_cli.status == runtime_mismatch or drift id "
                 "codex_runtime_mb_mismatch."
             ),
@@ -484,7 +478,7 @@ def render_human(report: dict[str, Any]) -> None:
     codex_label = codex_mod.human_readiness_label(codex)
     codex_style = "green" if codex_label == "ready" else "yellow"
     console.print(
-        "[bold]Codex[/bold]  " + f"[{codex_style}]{codex_label}[/{codex_style}]" + "  owner loop"
+        "[bold]Codex[/bold]  " + f"[{codex_style}]{codex_label}[/{codex_style}]" + "  global skills"
     )
     console.print(
         "[bold]Skills[/bold]  /mb-start "
