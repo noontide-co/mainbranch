@@ -27,7 +27,7 @@ flowchart TB
 
   subgraph runtime["Agent runtime layer"]
     claude["Claude Code<br/>supported runtime"]
-    codex["Codex CLI<br/>first-class owner loop"]
+    codex["Codex CLI<br/>global mb-* skills"]
     future["Cursor / OpenClaw / Hermes / local runtimes<br/>roadmap until adapter + smoke evidence"]
     skills["Bundled mb-* skills<br/>judgment, routing, writing, review, explanation"]
   end
@@ -218,7 +218,7 @@ flowchart TB
 | GitHub is repo, checks, and history. | GitHub issues are durable tasks, PRs are proposals, Actions/checks gate changes, Releases mark package-visible publication. |
 | Cloudflare is site and deploy. | Cloudflare is the adopted site/DNS/Pages rail where evidence exists; GitHub Pages is not the default setup path. |
 | Real private data stays out of broad repos. | Secrets, raw ledgers, account exports, customer/member data, legal records, and machine-specific paths stay in secret stores, private vaults, provider systems, or local ignored state. |
-| Runtime support stays honest. | Claude Code is the first-class slash-skill runtime. Codex CLI is first-class for the proven owner-loop plugin surface only. Other runtimes are roadmap until adapter and smoke evidence exist. |
+| Runtime support stays honest. | Claude Code is the first-class slash-skill runtime. Codex CLI is supported for daily Main Branch routes through generated `AGENTS.md`, global `mb-*` skills, workflow inventory, and deterministic `mb` facts. Other runtimes are roadmap until adapter and smoke evidence exist. |
 
 ## Data And Privacy Boundaries
 
@@ -262,7 +262,7 @@ Sources: [Data-source registry](../data-source-registry.md),
 | Runtime | Status | Contract |
 | --- | --- | --- |
 | Claude Code | Supported. | Slash skills and `mb start` handoff are the reference runtime path. |
-| Codex CLI | First-class owner loop. | Fresh business repos include `AGENTS.md`; the global Main Branch Codex plugin supplies generated guidance; Codex should run deterministic `mb` fact commands, use workflow inventory, and ask before writes. |
+| Codex CLI | Supported daily routes. | Fresh business repos include `AGENTS.md`; `mb doctor repair --only codex` installs global Main Branch `mb-*` skills under the Codex skills root; Codex should run deterministic `mb` fact commands, use workflow inventory, and ask before writes. |
 | Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, local runtimes | Roadmap. | No support claim until adapter code, docs, generated-file rules, and fresh-repo smoke evidence exist. |
 
 Source: [Compatibility](../compatibility.md).

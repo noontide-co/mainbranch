@@ -32,7 +32,8 @@
   HERO VISUAL - ADD BEFORE PUBLISHING
   Best README conversion asset:
     1. Open a sample business folder.
-    2. Open the folder in Claude Code or Codex, then run `/mb-start`.
+    2. Open the folder in Claude Code and run `/mb-start`, or open it in Codex
+       and use the global `mb-start` skill.
     3. Show the agent reading Main Branch facts and naming the next business move.
     4. Flash to `mb checkpoint --plan` or `mb graph --open`.
   Save to docs/assets/hero.gif and uncomment the image below.
@@ -300,10 +301,10 @@ It is a good fit if:
 
 | Objection | Reality |
 | --- | --- |
-| "I'm not technical enough." | Install once. Then open the folder in Claude Code or Codex, run `/mb-start`, and answer plain-language questions. |
+| "I'm not technical enough." | Install once. Then open the folder in Claude Code and run `/mb-start`, or open it in Codex and use the global `mb-start` skill. Answer plain-language questions. |
 | "I'll set it up wrong." | Main Branch checks the folder, explains what is wrong, and shows the repair path. |
 | "I'll lose work." | Approved checkpoints and GitHub backup give you readable history and reviewable changes. |
-| "I need someone to walk me through it." | Open the folder in Claude Code or Codex and run `/mb-start`. The agent explains the next step. |
+| "I need someone to walk me through it." | Open the folder in Claude Code and run `/mb-start`, or open it in Codex and use the global `mb-start` skill. The agent explains the next step. |
 | "I won't maintain it." | Run `/mb-update` when asked. Repair checks tell you if anything needs fixing. |
 
 ---
@@ -313,7 +314,7 @@ It is a good fit if:
 | App | Current support |
 | --- | --- |
 | **Claude Code** | Open or select the business folder, run `/mb-start`, and use the bundled Main Branch skills. |
-| **Codex** | Open or select the business folder, run `/mb-start`, and use the Main Branch Codex plugin and skills. |
+| **Codex** | Open or select the business folder and use the global Main Branch `mb-*` skills. |
 
 Account writes, publishing, spend, customer contact, and account changes remain
 approval-gated everywhere.
@@ -341,9 +342,9 @@ See [docs/compatibility.md](docs/compatibility.md) for the current support list.
 
 ## FAQ
 
-**Do I need to know how to code?** No. Open the folder in Claude Code or Codex,
-run `/mb-start`, and answer questions. The beginner walkthrough shows each
-setup step.
+**Do I need to know how to code?** No. Open the folder in Claude Code and run
+`/mb-start`, or open it in Codex and use the global `mb-start` skill. Answer
+questions. The beginner walkthrough shows each setup step.
 
 **Do I need to know git?** No. Main Branch uses git as the hidden save/history
 layer and speaks in business language: checkpoints, saved history, tasks, and
@@ -362,7 +363,8 @@ boundary, or operating history.
 try, why, by when, and how you will know. An offer is a durable thing you sell.
 A winning bet can graduate into an offer through an accepted decision.
 
-**How do I update?** Type `/mb-update` in Claude Code or Codex.
+**How do I update?** Type `/mb-update` in Claude Code, or use the global
+`mb-update` skill in Codex.
 
 **Can Claude or Codex migrate an old setup for me?** Yes. Open the folder in
 Claude Code or Codex and follow the migration prompt in

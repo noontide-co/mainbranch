@@ -408,7 +408,10 @@ def test_doctor_repair_plan_reports_missing_codex_agents_md(tmp_path: Path) -> N
     assert "AGENTS.md" in actions["codex-agents-md"]["writes"]
 
 
-def test_doctor_repair_only_codex_filters_unrelated_related_links(tmp_path: Path) -> None:
+def test_doctor_repair_only_codex_filters_unrelated_related_links(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
     (repo / "AGENTS.md").write_text("# stale\n\nNo facts here.\n", encoding="utf-8")
