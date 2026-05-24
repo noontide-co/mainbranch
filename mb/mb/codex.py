@@ -833,7 +833,7 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
             "commands_path": CODEX_PLUGIN_COMMANDS_RELATIVE_PATH,
             "generated_command_files": list(CODEX_SLASH_COMMAND_RELATIVE_PATHS),
             "slash_commands_generated": True,
-            "slash_commands_ready": True,
+            "slash_commands_ready": False,
             "install_hint": (
                 f"Run `{codex_marketplace_add_command()}`, then `{CODEX_PLUGIN_INSTALL_COMMAND}`."
             ),
@@ -1332,6 +1332,12 @@ def plugin_install_status(repo: str | Path, *, adapter_files_ok: bool = True) ->
         summary = "Main Branch Codex command files are missing or stale."
         repair = CODEX_REPAIR_TEXT
 
+    installed_enabled_current = bool(
+        state == "ok"
+        and command_files_current
+        and parsed["plugin_installed"]
+        and parsed["plugin_enabled"]
+    )
     return {
         "checked": True,
         "ok": state == "ok",
@@ -1344,18 +1350,11 @@ def plugin_install_status(repo: str | Path, *, adapter_files_ok: bool = True) ->
         "global_source_ok": source_ok,
         "command_files": list(CODEX_SLASH_COMMAND_RELATIVE_PATHS),
         "command_files_current": command_files_current,
-        "command_surface_ok": bool(
-            state == "ok" and parsed["plugin_installed"] and parsed["plugin_enabled"]
-        ),
-        "slash_commands_ready": bool(
-            state == "ok" and parsed["plugin_installed"] and parsed["plugin_enabled"]
-        ),
-        "slash_commands_likely_loaded": bool(
-            state == "ok" and parsed["plugin_installed"] and parsed["plugin_enabled"]
-        ),
-        "slash_commands_restart_required": bool(
-            command_files_current and parsed["plugin_installed"] and parsed["plugin_enabled"]
-        ),
+        "slash_commands_generated": command_files_current,
+        "command_surface_ok": installed_enabled_current,
+        "slash_commands_ready": installed_enabled_current,
+        "slash_commands_likely_loaded": False,
+        "slash_commands_restart_required": installed_enabled_current,
         "install_command": install_command,
         "register_command": register_command,
         "repair": repair,
@@ -1448,8 +1447,9 @@ def plugin_status(repo: str | Path) -> dict[str, Any]:
         "commands_path": CODEX_PLUGIN_COMMANDS_RELATIVE_PATH,
         "command_files": list(CODEX_SLASH_COMMAND_RELATIVE_PATHS),
         "command_files_current": command_files_current,
+        "slash_commands_generated": command_files_current,
         "command_surface_ok": command_files_current,
-        "slash_commands_ready": command_files_current,
+        "slash_commands_ready": False,
         "missing": missing,
         "stale": stale,
         "missing_markers": missing_markers,

@@ -252,6 +252,10 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
         "plugin_ok": codex.get("plugin_ok", False),
         "command_surface_ok": codex.get("command_surface_ok", False),
         "slash_commands_ready": codex.get("slash_commands_ready", False),
+        "slash_commands_likely_loaded": plugin_install.get("slash_commands_likely_loaded", False),
+        "slash_commands_restart_required": plugin_install.get(
+            "slash_commands_restart_required", False
+        ),
         "exists": instructions.get("exists", False),
         "current": instructions.get("current", False),
         "repair_command": codex.get("repair", "") or instructions.get("repair_command", ""),
@@ -298,6 +302,12 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
             next_actions = ["mb status --json --peek"]
         result["warnings"].append(message)
         result["next_actions"].extend(next_actions)
+    elif plugin_install.get("slash_commands_restart_required"):
+        result["warnings"].append(
+            "Main Branch Codex commands are installed. Restart Codex, then type `/mb` "
+            "to verify the slash command surface loaded."
+        )
+        result["next_actions"].append("Restart Codex, then type `/mb`.")
 
 
 def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:

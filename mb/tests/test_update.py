@@ -46,6 +46,8 @@ def codex_adapter_ready(monkeypatch: pytest.MonkeyPatch) -> None:
                 "command_files_current": True,
                 "command_surface_ok": True,
                 "slash_commands_ready": True,
+                "slash_commands_likely_loaded": False,
+                "slash_commands_restart_required": False,
                 "repair": "",
             },
         },
@@ -384,6 +386,78 @@ def test_update_reports_manual_codex_slash_visibility_verification(
     assert any("commands are missing or stale" in item for item in result["warnings"])
     assert not any("Codex command API" in item for item in result["next_actions"])
     assert not any("Codex command API" in item for item in result["warnings"])
+
+
+def test_update_surfaces_codex_restart_when_commands_were_refreshed(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        if args == ["pipx", "upgrade", "mainbranch"]:
+            return _completed(args, stdout="upgraded package mainbranch")
+        if args == ["mb", "--version"]:
+            return _completed(args, stdout="mb 0.3.34\n")
+        if args[:3] == ["mb", "skill", "link"]:
+            return _completed(
+                args,
+                stdout=json.dumps(
+                    {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
+                ),
+            )
+        if args[:3] == ["mb", "doctor", "repair"]:
+            return _codex_repair_completed(args)
+        return _completed(args, returncode=1, stderr="unexpected")
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(
+        update_mod.shutil,  # type: ignore[attr-defined]
+        "which",
+        lambda name: "/opt/homebrew/bin/pipx",
+    )
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+    monkeypatch.setattr(
+        codex_mod,
+        "readiness",
+        lambda repo: {
+            "ok": True,
+            "status": "ready",
+            "static_ok": True,
+            "runtime_ok": True,
+            "plugin_ok": True,
+            "generated_guidance_ready": True,
+            "command_surface_ok": True,
+            "slash_commands_ready": True,
+            "repair": "",
+            "instructions": {
+                "ok": True,
+                "exists": True,
+                "current": True,
+                "repair_command": "",
+            },
+            "plugin_install": {
+                "ok": True,
+                "state": "ok",
+                "plugin_installed": True,
+                "plugin_enabled": True,
+                "skill_ready": False,
+                "command_files_current": True,
+                "command_surface_ok": True,
+                "slash_commands_ready": True,
+                "slash_commands_likely_loaded": False,
+                "slash_commands_restart_required": True,
+                "repair": "",
+            },
+        },
+    )
+
+    result = update_mod.run(repo=tmp_path / "biz")
+
+    assert result["ok"] is True
+    assert result["codex_adapter"]["slash_commands_ready"] is True
+    assert result["codex_adapter"]["slash_commands_likely_loaded"] is False
+    assert result["codex_adapter"]["slash_commands_restart_required"] is True
+    assert "Restart Codex, then type `/mb`." in result["next_actions"]
+    assert any("slash command surface loaded" in item for item in result["warnings"])
 
 
 def test_update_check_clone_fetches_before_reading_origin(monkeypatch: Any, tmp_path: Path) -> None:

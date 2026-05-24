@@ -231,6 +231,7 @@ def test_codex_plugin_status_marks_missing_or_stale_commands_not_ready(
     assert status["current"] is False
     assert codex_mod.CODEX_SLASH_COMMAND_RELATIVE_PATHS[0] in status["stale"]
     assert status["command_files_current"] is False
+    assert status["slash_commands_generated"] is False
     assert status["slash_commands_ready"] is False
     assert status["repair"] == codex_mod.CODEX_REPAIR_TEXT
 
@@ -263,7 +264,8 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
     assert by_id["wiki"]["codex_status"] == "intentionally_unsupported"
     assert data["plugin"]["manifest_path"] == codex_mod.CODEX_PLUGIN_MANIFEST_RELATIVE_PATH
     assert data["plugin"]["commands_path"] == codex_mod.CODEX_PLUGIN_COMMANDS_RELATIVE_PATH
-    assert data["plugin"]["slash_commands_ready"] is True
+    assert data["plugin"]["slash_commands_generated"] is True
+    assert data["plugin"]["slash_commands_ready"] is False
     assert set(data["plugin"]["generated_command_files"]) == set(
         codex_mod.CODEX_SLASH_COMMAND_RELATIVE_PATHS
     )

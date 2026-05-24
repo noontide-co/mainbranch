@@ -149,8 +149,12 @@ def test_start_json_keeps_codex_slash_visibility_honest(tmp_path: Path, monkeypa
         str(repo.resolve()),
     ]
     next_actions = "\n".join(report["next_actions"])
-    assert "/mb-start" in next_actions
     assert f"codex -C {shlex.quote(str(repo.resolve()))}" in next_actions
+    codex_next_actions = "\n".join(
+        report["experimental_runtimes"]["codex_cli"]["command"]["next_actions"]
+    )
+    assert "/mb" in codex_next_actions
+    assert "restart Codex" in codex_next_actions
     assert "Run `claude" not in next_actions
     assert report["command"]["argv"] == ["claude"]
     assert report["command"]["display"].endswith(" && claude")

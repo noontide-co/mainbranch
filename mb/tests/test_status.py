@@ -1516,6 +1516,8 @@ def test_status_marks_codex_ready_when_command_surface_is_installed(
     assert codex["plugin_install"]["skill_ready"] is False
     assert codex["plugin_install"]["command_files_current"] is True
     assert codex["plugin_install"]["slash_commands_ready"] is True
+    assert codex["plugin_install"]["slash_commands_likely_loaded"] is False
+    assert codex["plugin_install"]["slash_commands_restart_required"] is True
     assert not any(item["id"] == "codex_plugin_not_installed" for item in report["drift"]["items"])
 
 

@@ -323,6 +323,7 @@ def _codex_next_actions(repo: Path, codex: dict[str, Any]) -> list[str]:
             actions.append(repair)
         actions.append("Rerun `mb status --json --peek` before using Codex.")
         return actions[:3]
+    plugin_install = codex.get("plugin_install") or {}
     if not codex.get("slash_commands_ready"):
         repair = str(codex.get("repair") or "")
         actions = []
@@ -330,6 +331,15 @@ def _codex_next_actions(repo: Path, codex: dict[str, Any]) -> list[str]:
             actions.append(repair)
         actions.append("Restart Codex, then type `/mb` to verify Main Branch commands.")
         return actions[:3]
+    if plugin_install.get("slash_commands_restart_required"):
+        actions = [
+            f"Run `{_codex_display_command(repo)}` or restart Codex if it is already open.",
+            "Type `/mb` to verify Main Branch commands.",
+        ]
+        smoke_command = str(codex.get("smoke_command") or "")
+        if smoke_command:
+            actions.append(f"For a read-only Codex smoke, run `{smoke_command}`.")
+        return actions
     smoke_command = str(codex.get("smoke_command") or "")
     actions = [
         f"Run `{_codex_display_command(repo)}`.",
