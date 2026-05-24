@@ -21,10 +21,10 @@ markdown files in git.
 
 Claude Code and Codex CLI are the supported agent runtimes today. Claude Code
 uses project-local slash skills. Codex uses generated `AGENTS.md`, a global Main
-Branch Codex plugin, deterministic `mb` facts, generated Codex guidance, and
-workflow inventory. That is daily-loop Codex support, not all-skill parity or
-full production workflow parity. Business repos should not carry repo-local
-Codex plugin copies unless a future issue proves that fallback is required.
+Branch Codex plugin, `/mb-*` commands, deterministic `mb` facts, and workflow
+inventory. That is daily-loop Codex support, not all-skill parity or full
+production workflow parity. Business repos should not carry repo-local Codex
+plugin copies unless a future issue proves that fallback is required.
 Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and local runtimes
 remain compatibility targets until tested. Do not claim support before there is
 an adapter and smoke evidence for the exact surface.

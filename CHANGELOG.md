@@ -11,6 +11,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Added a clean global Codex `/mb-*` command surface for Main Branch: repair now
+  generates command files under the global plugin, removes the old visible
+  `main-branch-owner-loop` skill/plugin source, and readiness only passes when
+  the command files are current and the plugin is installed/enabled. Refs
+  MAIN-437, #717.
+- Updated `mb update` so package/source updates refresh Claude Code skill links
+  and then run the Codex command-surface repair from the upgraded `mb`
+  executable; Codex users still restart Codex to reload `/mb-*` commands.
+
 ## [0.3.34] - 2026-05-23
 
 v0.3.34 packages the Codex live workflow surface after v0.3.33. Codex starts

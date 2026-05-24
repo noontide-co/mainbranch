@@ -111,7 +111,7 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     assert "`runtime.codex_cli.status` is `runtime_mismatch`" in text
     assert "`codex_runtime_mb_mismatch`" in text
     assert "Start the day / what next / get oriented" in text
-    assert "generated Codex guidance over deterministic `mb` facts" in text
+    assert "supplies `/mb-*`" in text
     assert "Inspect status / what changed / what is stale" in text
     assert "Think / research / decide / codify" in text
     assert "do not claim these workflows are ported to" in text
@@ -241,7 +241,7 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "/mb-start" in readme_md
     assert "Codex CLI" in readme_md
     assert "mb doctor repair --apply --only codex" in readme_md
-    assert "/mb-start" not in readme_md.split("Or, in Codex CLI:", 1)[1]
+    assert "/mb-start" in readme_md.split("Or, in Codex CLI:", 1)[1]
     assert "## Save, Checkpoint, Backup" in readme_md
     assert "A checkpoint is an approved saved point" in readme_md
     assert "GitHub backup/sync is strongly recommended" in readme_md
