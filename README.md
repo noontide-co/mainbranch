@@ -4,9 +4,9 @@
 
 <h1 align="center">Main Branch</h1>
 
-<p align="center"><strong>Durable operating memory for AI-assisted businesses.</strong></p>
+<p align="center"><strong>Give your AI the business brain it was missing.</strong></p>
 
-<p align="center"><code>AI should remember your business before it answers.</code></p>
+<p align="center"><em>One folder for your offers, proof, research, decisions, launches, ads, pages, bets, and lessons, readable by Claude Code, Codex, and you.</em></p>
 
 <p align="center">
   <a href="https://github.com/noontide-co/mainbranch/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/noontide-co/mainbranch?style=social"></a>
@@ -18,162 +18,54 @@
 </p>
 
 <p align="center">
-  <strong>Overview:</strong>
-  <a href="#what-is-main-branch">What it is</a> &middot;
-  <a href="#the-operating-loop">Operating loop</a> &middot;
-  <a href="#what-you-can-do-today">Features</a>
-</p>
-
-<p align="center">
-  <strong>Get started:</strong>
   <a href="#quickstart"><strong>Quickstart</strong></a> &middot;
-  <a href="docs/beginner-setup.md"><strong>Beginner setup</strong></a> &middot;
-  <a href="docs/compatibility.md"><strong>Compatibility</strong></a>
-</p>
-
-<p align="center">
-  <strong>Resources:</strong>
-  <a href="docs/ethos.md"><strong>Ethos</strong></a> &middot;
-  <a href="docs/roadmap.md"><strong>Roadmap</strong></a> &middot;
-  <a href="https://skool.com/main"><strong>Community</strong></a>
+  <a href="#what-changes">What changes</a> &middot;
+  <a href="#what-it-actually-does">What it does</a> &middot;
+  <a href="#named-workflows">Workflows</a> &middot;
+  <a href="#works-with">Works with</a> &middot;
+  <a href="docs/beginner-setup.md">Beginner setup</a>
 </p>
 
 ---
 
-## What is Main Branch?
+<!--
+  HERO VISUAL - ADD BEFORE PUBLISHING
+  Best README conversion asset:
+    1. Open a sample business folder.
+    2. Open the folder in Claude Code or Codex, then run `/mb-start`.
+    3. Show the agent reading Main Branch facts and naming the next business move.
+    4. Flash to `mb checkpoint --plan` or `mb graph --open`.
+  Save to docs/assets/hero.gif and uncomment the image below.
+-->
+<!-- <p align="center"><img src="docs/assets/hero.gif" alt="Main Branch in action" width="780" /></p> -->
 
-**You don't need to know git. You don't need to know terminals. You just need a folder.**
+## Why this exists
 
-Main Branch is a folder on your computer that holds your business — offer, audience, voice, team context, decisions, research, bets, launches, meeting notes, fulfillment context, lessons. The agent reads that folder before it answers, so the work it gives you sounds like your business instead of generic AI output. The system saves itself between sessions, so you stop re-explaining who you are every time you open Claude.
+Your business context is probably scattered: a Notion page for the offer, Looms
+for voice, Google Docs for research, a few chats with good ideas, a launch plan
+somewhere, and decisions no one can find when the next AI session starts.
 
-Open source. Lives on your machine. Bring your own Claude Code plan. That's it.
+Main Branch turns one folder on your computer into business memory your agent
+reads before it answers, then saves approved decisions, launches, bets, pages,
+ads, research, and lessons back into files you own.
 
-|        | Step             | What happens                                                                 |
-| ------ | ---------------- | ---------------------------------------------------------------------------- |
-| **01** | Open the folder  | One business, one folder. Your offer, voice, audience, and history live here.|
-| **02** | Talk to the agent| It reads the folder before it speaks. No re-pasting. No re-explaining.       |
-| **03** | The work ships   | Drafts, ad copy, landing pages, decisions. You approve. It saves itself.     |
+It is built for revenue-producing work: sharpening offers, building proof,
+planning launches, writing ads, creating organic content, checking pages,
+tracking bets, and turning what you learn into the next decision.
 
----
+Open the folder. Run `/mb-start`. Tell the agent what you want help with. Main
+Branch checks what changed, what matters, and what to do next.
 
-<div align="center">
-  <em>Works with</em> <strong>Claude Code</strong> and <strong>Codex CLI</strong>. Cursor, OpenClaw, Hermes, and local runtimes remain compatibility targets — see <a href="docs/compatibility.md">compatibility</a>.
-</div>
+| Step | What you do | What happens |
+| --- | --- | --- |
+| **01** | Open the business folder | Your offer, audience, voice, proof, research, bets, pushes, logs, and documents live there. |
+| **02** | Run `/mb-start` | The agent checks current Main Branch facts before giving advice: status, MoneyPath, recent work, connected tools, drift, checkpoints, and next actions. |
+| **03** | Pick the next move | The agent routes the work into an offer, bet, decision, push, playbook, research note, outcome, or checkpoint. |
+| **04** | Approve the work | Writing files, publishing, spending, account changes, and customer contact stay your call. |
+| **05** | Keep the lesson | Approved work becomes durable memory for the next session. |
 
----
-
-## Main Branch is right for you if
-
-- You're a solo founder, small agency owner, course creator, productized-services operator, indie SaaS founder, or small ecom team
-- Your offer lives in Notion, your voice lives in Loom transcripts, your research lives in three Google Docs you can't find
-- Every chat session with your AI starts from zero and the output sounds generic
-- You're paying for SaaS dashboards that get more expensive without getting smarter
-- You want the work to live somewhere you own — not on someone else's server
-- You want a system that gets better the longer you use it, instead of starting fresh every Monday
-
----
-
-## What stops you isn't what you think
-
-| What stops you                                          | What's actually true                                                              |
-| ------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| "I'm not technical enough. I don't know git, terminals, or any of that." | If you can move a file into a folder, the system handles the rest.       |
-| "I'll set it up wrong and not know."                    | The system tells you the next command. It can't get lost.                         |
-| "I'd mess it up and lose everything."                   | Every change can be saved and reviewed. Mistakes don't stick.                     |
-| "I need a clear plan before I start."                   | Start with the folder. The system explains itself in plain English as you go.     |
-| "I need someone to sit down and walk me through it."    | Type `/mb-start` in Claude. The agent explains. You go at your own pace.          |
-| "I won't keep up with the maintenance."                 | When something falls out of date, the system tells you the exact next step.       |
-
----
-
-## What changes vs. just AI
-
-| Just AI                                                 | Main Branch + Claude                                                              |
-| ------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Every chat starts from zero. You re-paste your context. | The agent reads your folder before it answers.                                    |
-| Output sounds like every other AI.                      | Output sounds like you — because the agent reads your voice files first.          |
-| Important decisions live in chat that disappears.       | Decisions live as plain notes you can read on a Tuesday.                          |
-| You build the system yourself: prompts, files, glue.    | The rails are built. Your business folder plugs in.                               |
-| Another rented subscription. Gets more expensive.       | Claude Code + a folder you own forever. Your stuff still works without us.        |
-
----
-
-## The operating loop
-
-Main Branch is chat-first for the operator and CLI-backed under the hood.
-
-1. **Your folder remembers.** Your core files, research, decisions, bets, pushes,
-   logs, documents, and checkpoints hold the business truth.
-2. **`mb` checks facts.** The CLI reads the repo and returns deterministic
-   status, graph, provider, MoneyPath, proof-quality, content-strategy,
-   books-readiness, and checkpoint facts.
-3. **The agent explains.** Claude Code skills turn those facts into plain
-   business guidance, route the work, and ask for the missing decision.
-4. **You approve action.** Writing files, publishing, spending money, mutating
-   provider accounts, and contacting customers stay intentional operator
-   choices.
-5. **The lesson becomes memory.** Accepted work and useful lessons land back in
-   the repo as durable business context for the next session.
-
-Normal users ask the agent. The agent runs `mb` internally. Power users can
-still run the same commands directly when they want to inspect, script, debug,
-or build on the system.
-
----
-
-## What you can do today
-
-- Research a topic and turn it into a decision the system remembers
-- Open, run, close, and narrate business bets so the lessons stick around
-- Plan and run launches, drops, challenges, and promos as repeatable playbooks
-- Generate ad copy, video scripts, organic content (Reels, TikTok, carousels), and page copy in your voice
-- Draft and ship landing pages on Cloudflare from your core files and research
-- Capture meeting transcripts, source material, and fulfillment notes into durable docs
-- Save readable progress points during long agent runs so the next session starts where this one stopped
-- Clean up stale folders, broken links, and old settings before they break a session
-- Turn errors and confusing steps into clean public GitHub issues without leaking your business data
-- Close sessions intentionally with a crystallize moment that updates your durable memory
-
-You don't run any of these commands yourself. You ask the agent. It runs them.
-
----
-
-## What's underneath
-
-Main Branch v0.3 has three layers:
-
-- **Your folder is the source of truth.** Offer, audience, voice, public-safe team roles, decisions, research, bets, launches, logs, documents, links to other repos. Plain markdown files you can read on any computer.
-- **The CLI is the fact and safety layer.** It scaffolds the folder, validates the shape, maps how the business pieces connect, briefs the agent on what's changed, walks through repairs, saves readable checkpoints, and checks that connected accounts are wired up safely. It also exposes shipped facts for MoneyPath readiness, proof quality, content strategy health, books readiness, connected-account health, status, start, graph, and checkpoint workflows. The agent runs it. You don't have to learn it.
-- **The skills are the chat UX and judgment layer.** The agent reads your folder and `mb` facts, asks you the right questions, drafts work, reviews it, and routes approved artifacts back into files.
-
-Agent recommends. You decide what gets shipped, spent, published, or saved.
-
-The longer-arc operating-memory model — where multiple business repos, GitHub teams, structured data, and runtime adapters compose into a full team operating system — is direction, not the v0.3 shape. See [`decisions/2026-05-15-repo-owned-operating-memory.md`](decisions/2026-05-15-repo-owned-operating-memory.md).
-
----
-
-## What Main Branch is not
-
-|                                  |                                                                                                |
-| -------------------------------- | ---------------------------------------------------------------------------------------------- |
-| **Not a chat app.**              | The supported chat surfaces are Claude Code and Codex CLI. Main Branch gives agents durable context to read from. |
-| **Not a SaaS dashboard.**        | Your business doesn't live on our servers. It lives in your folder.                            |
-| **Not a connect-every-tool hub.**| We pick boring, inspectable rails: GitHub, Cloudflare, official ads paths. Curated, not sprawl.|
-| **Not a model host.**            | We don't run models. We hand the agent the right context so the model you already use is sharper.|
-| **Not magic.**                   | The work is still real. The foundation is just the right one to build on.                      |
-
----
-
-## Direction, not promises
-
-The current package is the chat-first daily operating loop: open the folder,
-start Claude Code, let the agent read `mb` facts, choose the next business
-move, ship approved work, and save a readable checkpoint. Next direction
-tightens the same loop, expands curated provider rails, deepens offer and
-market research guidance, and prepares an optional local dashboard that reads
-from repo and CLI facts instead of replacing them.
-
-Mobile thought capture, team views, finance/fulfillment roll-ups, broader Ops/bookkeeping, an optional dashboard, and any future hosted/model-invocation surface are eventual targets in [docs/roadmap.md](docs/roadmap.md), not current behavior.
+If you want AI business memory that stays yours, star this repo so more
+business owners find it.
 
 ---
 
@@ -181,203 +73,397 @@ Mobile thought capture, team views, finance/fulfillment roll-ups, broader Ops/bo
 
 Start with the folder that should become your business brain:
 
+Tell the agent what you are setting up. It should create or connect the business
+folder, not save your note as another document.
+
 ```bash
 pipx install mainbranch
 mb onboard --name "My Business" --path my-business
-cd my-business
-claude
-/mb-start
 ```
 
-That's it. `mb onboard` creates the folder, wires Claude Code, and shows the next step. `/mb-start` reads the folder and tells you what to do.
+`mb onboard` creates the folder, prepares Claude Code and Codex, and shows the next step.
+`/mb-start` reads the folder and Main Branch facts, then tells you what to do.
 
-If you open Claude Code or Codex CLI in an empty folder first, paste the
-folder-first bootstrap from [beginner setup](docs/beginner-setup.md#folder-first-bootstrap).
-It tells the agent this is setup intent, not a document to save, and routes it
-to deterministic `mb onboard` checks before anything writes.
+### Daily use
 
-GitHub backup/sync is strongly recommended for almost everyone. It does not
-need to cost anything, and it gives the business brain cloud backup, readable
-saved history, shared tasks/proposals, and a repo that AI tools with GitHub
-connectors can read. Before choosing the GitHub-backed setup path, install
-GitHub CLI and confirm it is signed in to the account you expect:
+1. Open or select the business folder in Claude Code or Codex.
+2. Run `/mb-start`.
+3. Tell the agent what you want help with: an offer, page, ad, launch, research
+   question, decision, or cleanup.
+
+You do not need to make terminal commands your daily workflow.
+
+Use either Claude Code or Codex. Both start from the same business folder.
+Step-by-step walkthrough: [docs/beginner-setup.md](docs/beginner-setup.md).
+
+### Backup and sync
+
+GitHub backup/sync is strongly recommended. It gives the business brain cloud
+backup, readable saved history, shared tasks/proposals, and a repo that AI tools
+with GitHub connectors can read. Before using the GitHub-backed path, confirm
+GitHub is signed in on your computer:
 
 ```bash
 gh auth status
 gh api user --jq .login
 ```
 
-After the first session, the daily flow is:
+To create the folder, save the first scaffold, create a private GitHub repo,
+and push it in one pass:
 
 ```bash
-cd /path/to/my-business
-claude
-/mb-start
+mb onboard --yes --name "My Business" --path my-business --github owner/my-business --github-visibility private --push
 ```
 
-You'll need a Claude plan that includes Claude Code. Install Claude Code from [claude.ai](https://claude.ai). Step-by-step beginner walkthrough: [docs/beginner-setup.md](docs/beginner-setup.md).
+Tested on macOS and Linux. Windows is experimental; use WSL2 for the closest
+supported path.
 
-### Using Codex CLI
+---
 
-Codex CLI is supported through global Main Branch `mb-*` skills installed under
-the Codex global skills root and deterministic `mb` facts. Fresh business
-folders include a tracked `AGENTS.md` bootstrap. The skills install globally
-once per user and read the current business repo through deterministic `mb`
-facts. That lets Codex start the day, inspect status, route setup/update/doctor
-work, think through or codify a decision, plan an end/checkpoint/save closeout,
-validate the repo, and list workflow support.
+## What changes
 
-Expect Codex to run `mb status --json --peek`, `mb start --json`,
-`mb doctor repair --plan --json`, `mb checkpoint --plan --json`,
-`mb validate --json`, and `mb workflow list --runtime codex --json`, then
-translate those facts into a useful owner briefing. Do not expect all Claude
-Code skills, site, ads, publishing, provider mutation, spend, or
-customer-contact workflows to be ported there.
+| Just AI | Main Branch + Agent |
+| --- | --- |
+| Context lives in chats, projects, docs, and memory you manage manually. | Business truth lives in a folder the agent reads every session. |
+| Output can drift away from your offer, voice, proof, or latest decision. | The agent reads current files and Main Branch facts before acting. |
+| Decisions disappear into conversation history. | Decisions become plain files future sessions can cite. |
+| Long workflows are hard to pause and resume. | Checkpoints preserve approved progress in readable history. |
+| Tool setup breaks silently. | Main Branch checks health and shows repair paths. |
+| Connected accounts can leak secrets or blur authority. | Secrets stay outside tracked files, and account changes stay approval-gated. |
 
-After installing Codex CLI, test a new repo with:
+---
 
-```bash
-mb onboard --yes --name "Codex Smoke Business" --path codex-smoke-business
-cd codex-smoke-business
-mb doctor repair --plan --only codex
-mb doctor repair --apply --only codex
-codex
-```
+## What it actually does
 
-Open a fresh Codex thread after repair and use the `mb-start` skill. Codex
-should start from read-only `mb` facts and ask before writing files.
+The short version: Main Branch makes AI business work durable, inspectable, and
+grounded in the business you are actually running.
 
-For a read-only smoke test:
+### 1. Starts every session from business facts
 
-```bash
-codex exec --json --ephemeral --sandbox read-only -c 'approval_policy="never"' -C . \
-  'Start this Main Branch business day. Run only read-only mb checks and do not edit files.'
-git status --short
-```
+`/mb-start` is the daily entry point. It checks:
 
-The smoke passes when Codex uses the `mb` fact commands and `git status --short`
-stays clean. See [docs/compatibility.md](docs/compatibility.md) for the current
-support boundary.
+- what changed since last time;
+- what is unsaved or needs a checkpoint;
+- whether offer, proof, CTA, page, channel, push, playbook, and outcome
+  feedback are connected;
+- whether content strategy, bookkeeping setup, connected tools, updates, or
+  folder health need attention;
+- the ranked next actions with the signals behind them.
 
-Tested on macOS and Linux. Windows is experimental — use WSL2.
+You ask the agent. Main Branch runs the checks underneath the conversation.
+
+### 2. Saves long AI sessions as readable history
+
+Pause a four-hour research, offer, ad, or site session. Come back Monday. Scan
+your history in plain English.
+
+When you ask to save progress, Main Branch previews the changed files, proposes
+a readable checkpoint, blocks obvious secrets and scratch files, and waits for
+approval. `/mb-end` uses the same save path to close a session.
+
+This is not noisy autosave and not blanket automatic pushing. It is approved
+business memory at meaningful boundaries.
+
+### 3. Runs real business workflows
+
+Main Branch skills run multi-step workflows, not prompt snippets:
+
+- **`/mb-think`** researches, sharpens offers, turns source material into
+  decisions, analyzes sales videos, and cleans up stale claims.
+- **`/mb-ads`** creates paid creative: hooks, static ads, image prompts, video
+  scripts, long-form paid creative, launch plans, optional read-only account
+  checks, and 6-lens P1/P2/P3 compliance review.
+- **`/mb-organic`** creates Reels, TikToks, carousels, static posts, and
+  sales-video repurposing drafts from your voice and content strategy.
+- **`/mb-site`** supports landers, minisites, websites, Cloudflare Pages,
+  concept variations, pitch scripts, VSL-style work, and paid-traffic
+  measurement checks.
+- **`/mb-bet`** opens, updates, closes, lists, and narrates business bets with
+  appetite, metrics, deadlines, evidence, kill/double-down thinking, and
+  graduation paths.
+- **`/mb-end`** closes a session with summary, crystallization, and approved
+  checkpoint options.
+
+Playbooks and push records turn repeatable work into durable business memory.
+They record plans, approval gates, connected-account boundaries, manual steps, and
+outcomes without giving the agent hidden authority to publish, spend, DM, or
+mutate accounts.
+
+### 4. Builds a graph of your business
+
+Main Branch can map how decisions, research, bets, launches, pages, files, and
+connected tools relate. Use the graph to see what the agent is reading from
+instead of trusting a black box.
+
+### 5. Keeps the business folder healthy
+
+Main Branch checks structure, links, setup, updates, connected tools, saved
+history, and business relationships so the agent does not have to guess.
+
+It can show what changed, what needs repair, what is ready to ship, what still
+needs approval, and where the next useful action is.
+
+### 6. Connects real tools safely
+
+Main Branch is not a connect-every-SaaS hub. It connects to real tools only
+where that makes daily business work clearer and safer.
+
+The choices are deliberate. GitHub is for saved history and proposals.
+Cloudflare is the launch rail for domains, DNS, websites, ad landing pages, and
+small always-on tools. Bookkeeping uses plain files so owners have an exit path
+from QuickBooks-style software. Social and ad tools stay narrow until posting,
+spend, or account changes can be handled safely.
+
+| Tool | What Main Branch does |
+| --- | --- |
+| **GitHub** | Backup, saved history, tasks/proposals, folder detection, and privacy-scrubbed public issue drafting. First-run setup can create and push a GitHub repo when you choose that path. |
+| **Cloudflare** | The default web launch path: domain and DNS work, websites, ad landing pages, Cloudflare Pages, and future Workers for small always-on business tasks. Tokens stay out of saved files, and deploys or account changes require approval. |
+| **Google / Workspace** | Planned optional connection for source material and metadata; durable summaries belong back in the folder. |
+| **Google Ads / GTM** | Checks whether a site is ready to measure paid traffic. Publishing tags, creating conversions, uploading data, changing budgets, or launching campaigns requires separate approval. |
+| **Meta Ads** | Read-only account summaries after setup. No campaign editing, budget changes, or launch claim. |
+| **Bookkeeping** | Plain-file bookkeeping for owners who want to stop depending on QuickBooks-style software. Uses hledger under the hood, keeps raw ledgers private, tracks bet exposure, and can show sample monthly reports. |
+| **Apify** | Optional read-only research path. No official X integration, no posting, no DMs, no guaranteed scrape coverage. |
+| **Postiz** | Future path for scheduling and automatically posting approved content to social channels. Today, treat social posting as a draft-and-approve workflow, not an automatic publishing promise. |
+
+Secrets stay out of saved business files. Publishing, spend, customer contact,
+account changes, GTM publication, Google Ads changes, Meta campaign changes, and
+DM automation stay approval-gated or out of scope until there is tested support.
+
+---
+
+## The operating loop
+
+Main Branch is built around four loops every business owner runs whether they
+name them or not.
+
+**Sense -> Decide -> Ship -> Reflect.**
+
+| Loop | The question | What it looks like |
+| --- | --- | --- |
+| **Sense** | What's true right now? | `/mb-start` and `/mb-status` read folder health, recent work, MoneyPath, content strategy, connected-account status, and tasks/proposals. |
+| **Decide** | What do we do next? | `/mb-think`, bets, decisions, and ranked actions help choose the next business move. |
+| **Ship** | What goes out the door? | `/mb-ads`, `/mb-organic`, `/mb-site`, `/mb-bet`, pushes, playbooks, issue drafts, updates, and checkpoints move work forward. |
+| **Reflect** | What sticks? | `/mb-end`, bet close/narrate, outcomes, retros, decisions, and checkpoint history turn lessons into future context. |
+
+Each loop reads your folder before it speaks. Each loop writes back only when
+you approve.
+
+---
+
+## Named workflows
+
+Things you can ask for this week:
+
+- **Start the business day from facts.** Main Branch reads status, MoneyPath,
+  recent work, drift, connected tools, and ranked actions before advice.
+- **Turn research into a decision.** Ask it to turn source material,
+  transcripts, market context, and business files into research, decisions,
+  offer updates, proof context, or stale-source cleanup.
+- **Create paid creative with review gates.** Ask it to draft hooks, static ads,
+  image prompts, video scripts, long-form paid creative, and launch plans, then
+  run 6-lens P1/P2/P3 compliance review before approval.
+- **Create organic content in your voice.** Ask for Reels, TikToks, carousels,
+  static posts, and sales-video repurposing from your content strategy and
+  source material.
+- **Plan and check a landing page.** Ask for a lander, minisite, site pass,
+  pitch script, or paid-traffic measurement check.
+- **Open a bet with a real exit path.** Record the hypothesis, appetite, metric,
+  target, deadline, evidence, and linked work.
+- **Save a long session as readable history.** Close the session, review what
+  happened, preview the checkpoint, and save only after approval.
+- **Draft a public GitHub issue safely.** Turn confusing friction into a scrubbed
+  issue draft you review before anything posts.
+- **See your business as a graph.** Map how decisions, research, bets, pushes,
+  and connected tools relate.
+- **Repair a folder that drifted.** Ask for a repair plan before changing files.
+
+---
+
+## Who it is for
+
+Main Branch is for solo founders, small agencies, course creators,
+productized-service owners, indie SaaS founders, small ecom teams, and
+small teams that want AI help without surrendering their operating memory to
+another SaaS.
+
+It is a good fit if:
+
+- your offer, voice, research, proof, and launch context are scattered;
+- you want AI help with offers, pages, ads, content, launches, and decisions;
+- you want history you can inspect instead of chat output you have to trust;
+- you want private business truth to stay in files you own;
+- you want the system to get sharper the longer you use it.
+
+---
+
+## Common objections
+
+| Objection | Reality |
+| --- | --- |
+| "I'm not technical enough." | Install once. Then open the folder in Claude Code or Codex, run `/mb-start`, and answer plain-language questions. |
+| "I'll set it up wrong." | Main Branch checks the folder, explains what is wrong, and shows the repair path. |
+| "I'll lose work." | Approved checkpoints and GitHub backup give you readable history and reviewable changes. |
+| "I need someone to walk me through it." | Open the folder in Claude Code or Codex and run `/mb-start`. The agent explains the next step. |
+| "I won't maintain it." | Run `/mb-update` when asked. Repair checks tell you if anything needs fixing. |
+
+---
+
+## Works with
+
+| App | Current support |
+| --- | --- |
+| **Claude Code** | Open or select the business folder, run `/mb-start`, and use the bundled Main Branch skills. |
+| **Codex** | Open or select the business folder, run `/mb-start`, and use the Main Branch Codex plugin and skills. |
+
+Account writes, publishing, spend, customer contact, and account changes remain
+approval-gated everywhere.
+
+Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, Windows native, and
+local-only agent setups are not documented as supported until the exact path is
+tested.
+
+See [docs/compatibility.md](docs/compatibility.md) for the current support list.
+
+---
+
+## What Main Branch is not
+
+| | |
+| --- | --- |
+| **Not a chat app.** | Use it inside Claude Code or Codex. Main Branch gives them durable context to read from. |
+| **Not a SaaS dashboard.** | Your business does not live on our servers. It lives in your folder. |
+| **Not a connect-every-tool hub.** | We pick boring, inspectable connections: GitHub, Cloudflare, Meta Ads, bookkeeping, and a few optional tool paths. Curated, not sprawl. |
+| **Not an ad manager or publisher.** | Paid creative and site checks are supported; spend, publishing, account changes, and customer contact require explicit approval and tested support. |
+| **Not a model host.** | `mb` does not run models. It gives the agent the right context so the model you already use is sharper. |
+| **Not magic.** | The work is still real. Main Branch makes the memory and workflow durable. |
 
 ---
 
 ## FAQ
 
-**Do I need to know how to code?** No. You invoke skills with slash prompts and answer questions.
+**Do I need to know how to code?** No. Open the folder in Claude Code or Codex,
+run `/mb-start`, and answer questions. The beginner walkthrough shows each
+setup step.
 
-**What if I have multiple products under one brand?** Use one folder with `core/offers/` when products share brand, team, voice, and access. Move an offer into its own folder if it grows its own team, accounts, site, finance boundary, or operating history.
+**Do I need to know git?** No. Main Branch uses git as the hidden save/history
+layer and speaks in business language: checkpoints, saved history, tasks, and
+proposals.
 
-**What's a bet vs. an offer?** A bet is a time-boxed hypothesis: what you'll try, why, by when, how you'll know. An offer is a durable thing you sell. A good bet can graduate into an offer.
+**Does it push to GitHub automatically?** No. Checkpoints save accepted work
+into local git history. GitHub backup/sync is recommended, and first-run
+onboarding can create and push a GitHub repo when you choose that path.
 
-**What if I have multiple separate businesses?** One folder per brand, legal entity, ad-account boundary, or team-access boundary.
+**What if I have multiple products under one brand?** Use one folder with
+`core/offers/` when products share brand, team, voice, and access. Move an
+offer into its own folder if it grows its own team, accounts, site, finance
+boundary, or operating history.
 
-**How do I update?** Type `/mb-update` in Claude. Power users can run `mb update` from the folder.
+**What's a bet vs. an offer?** A bet is a time-boxed hypothesis: what you will
+try, why, by when, and how you will know. An offer is a durable thing you sell.
+A winning bet can graduate into an offer through an accepted decision.
 
-**Can Claude migrate an old setup for me?** Yes. Start Claude Code anywhere and paste the prompt in [docs/migrating.md](docs/migrating.md#recommended-let-claude-walk-you-through-it).
+**How do I update?** Type `/mb-update` in Claude Code or Codex.
 
-**Can I edit the skills?** You can. You don't need to.
+**Can Claude or Codex migrate an old setup for me?** Yes. Open the folder in
+Claude Code or Codex and follow the migration prompt in
+[docs/migrating.md](docs/migrating.md#recommended-let-claude-walk-you-through-it).
 
-**What makes this different from ChatGPT?** ChatGPT resets between sessions. Main Branch is a folder Claude can re-read every session — your offer, audience, voice, team context, decisions, research, and bets — so the output stays consistent with your business.
+**Can I edit the skills?** You can. You usually do not need to.
+
+**What makes this different from ChatGPT or project memory?** Main Branch is
+not only memory text. It is a structured folder, health checks, validation,
+graphing, repair paths, connected-tool checks, checkpoints, and agent workflows
+that write approved business artifacts back into files you own.
 
 **I'm stuck.** Type `/mb-start` again.
 
 ---
 
-## Help
-
-**In the Skool community:** post in the Main Branch group. Tag @Devon for technical questions.
-
-**Not in the Skool community?** Open an issue at [github.com/noontide-co/mainbranch/issues](https://github.com/noontide-co/mainbranch/issues).
-
-For platform support and security reporting, see [SUPPORT.md](SUPPORT.md), [SECURITY.md](SECURITY.md), and [docs/compatibility.md](docs/compatibility.md).
-
-**Common issues:**
-
-- "404" or "Repository not found" — verify the URL. The repo is public; no access request needed.
-- "Claude doesn't see my files" — make sure you started Claude in your business folder and ran `/mb-start`.
-- "Skills aren't working" — ask Claude to repair the wiring, or run `/mb-setup`.
-- "Output sounds generic" — add more detail to your core files, especially `core/voice.md`.
-- "I edited Main Branch but can't push" — that's expected. Main Branch itself is read-only for most users. Your business files go in your business folder.
-
-Hit a real problem? Ask the agent to draft a clean public issue for you. It scrubs private context before submitting.
-
----
-
 ## Open source and optional community
 
-- **Open-source (MIT)**: the `mb` CLI, bundled skills, schema, framework, docs, and any future local dashboard. Usable without joining the community.
-- **Community ([Skool](https://skool.com/main))**: Watch us build companies live with Main Branch. Live narration, calls, support, and curated examples — not required to use the CLI or skills.
-
-Main Branch is usable on its own. The community is the live narration on top.
+The command-line tool, bundled skills, schema, framework, docs, and any future
+local dashboard are MIT-licensed and usable without joining anything. The
+[Skool community](https://skool.com/main) is the live narration on top: watch
+us build companies with Main Branch in real time.
 
 ---
 
 ## For contributors and power users
 
-The `mb` CLI is the deterministic control plane. The agent runs it for normal users. If you want to inspect, script, or build on it, here's the surface.
+The agent runs `mb` for normal users. If you want to inspect, script, debug, or
+build on it, here is the command list.
 
-| Command                  | What it does |
-|---|---|
-| `mb onboard`             | Human setup flow: create or connect a business folder, wire Claude Code skills, show next steps. |
-| `mb init`                | Quiet scriptable primitive underneath `mb onboard`. |
-| `mb status`              | Local-first daily briefing: ranked next actions, MoneyPath readiness, since-last-check changes, drift, repo health, runtime wiring, recent activity, GitHub tasks/proposals. `--json` and `--peek` for callers. |
-| `mb doctor`              | Check environment, repo shape, frontmatter, settings. `mb doctor repair --plan` / `--apply` walks through guided reconciliation, including migration drift. |
-| `mb connect`             | Register provider credentials, test provider health, inspect repair-safe integration status without committing secrets. |
-| `mb books`               | Check privacy-bounded bookkeeping setup, inspect hledger readiness, and plan safe repairs without reading private ledgers. |
-| `mb site check`          | Local paid-traffic measurement readiness for a site folder: GTM install, dataLayer events, consent posture, Google Ads metadata, operator-review gates. |
-| `mb issue draft` / `open`| Draft a privacy-scrubbed GitHub issue locally, review it, then submit through `gh`. |
-| `mb validate`            | Frontmatter shape check across `core/`, `research/`, `decisions/`, `bets/`, `log/`, `pushes/`, `documents/`. Pass/fail per file. |
-| `mb graph`               | Build a folder graph from frontmatter links, wikilinks, and entity tags. Graphviz DOT, JSON, and PNG outputs. |
-| `mb suggest links`       | Suggest likely frontmatter, inline, tag, data, and context connections for a file without editing it. |
-| `mb checkpoint`          | Plan or save a business-readable git checkpoint during long agent runs. |
-| `mb workflow list`       | List Codex workflow support: supported Main Branch commands, pending shared-source migrations, and intentionally unsupported workflows. |
-| `mb skill list` / `path` / `validate` / `link` / `repair` | Manage and repair the bundled Claude Code skills. |
-| `mb update`              | Update Main Branch in place. |
+<details>
+<summary>CLI commands</summary>
 
-Full list: `mb --help`. JSON output contract: [docs/json-output-contract.md](docs/json-output-contract.md). Provider readiness: [docs/dependency-choices.md](docs/dependency-choices.md).
+| Command | What it does |
+| --- | --- |
+| `mb onboard` | Human setup flow: create or connect a business folder, prepare Claude/Codex setup, show next steps. |
+| `mb init` | Quiet scriptable primitive underneath `mb onboard`. |
+| `mb status` | Local-first daily briefing with ranked next actions, MoneyPath readiness, recent activity, GitHub tasks/proposals, updates, and drift. |
+| `mb doctor` | Check environment, repo shape, frontmatter, settings, app setup, provider state, and repair paths. |
+| `mb connect` | Register connected-account metadata/credentials, test health where supported, inspect repair-safe integration status without committing secrets. |
+| `mb books` | Plain-file bookkeeping setup checks, bookkeeping engine health, safe repair plans, bet exposure, and fake-data sample monthly reporting. |
+| `mb site check` | Local paid-traffic measurement readiness: GTM install, dataLayer events, consent posture, Google Ads metadata, approval gates. |
+| `mb ads meta summary` | Read-only Meta Ads account context through the official Meta CLI path after setup. |
+| `mb issue draft` / `open` | Draft a privacy-scrubbed GitHub issue locally, review it, then submit through `gh`. |
+| `mb validate` | Frontmatter and cross-reference checks across business repo files. |
+| `mb graph` | Build a folder graph from links, tags, connected-tool refs, and repo topology. DOT, JSON, and PNG outputs. |
+| `mb suggest links` | Suggest likely connections for a file without editing it. |
+| `mb checkpoint` | Plan or save a readable git checkpoint during long agent runs. |
+| `mb workflow list` | List workflow support, pending migrations, and intentionally unsupported workflows. |
+| `mb skill list` / `path` / `validate` / `link` / `repair` | Inspect, validate, link, and repair bundled skills and generated app guidance. |
+| `mb update` | Update Main Branch in place. |
 
-**Skills:**
+</details>
 
-| Skill | Loop |
-|---|---|
-| `/mb-start` | Daily entry point — figure out what you need and route there |
-| `/mb-status` | Daily briefing facts and ranked next actions |
-| `/mb-setup` | First-time setup |
-| `/mb-think` | Research, decide, codify |
-| `/mb-bet` | Open, update, close, narrate business bets |
-| `/mb-end` | Close the session — summary, crystallize, checkpoint guidance |
-| `/mb-help` | Get answers, troubleshoot, learn the system |
-| `/mb-update` | Update Main Branch (delegates to `mb update`) |
-| `/mb-ads` `/mb-organic` `/mb-site` | Channel skills (Paid / Organic / Pages). |
-| `/mb-wiki` | Specialty: personal/atomic-notes wiki, not part of the core daily loop |
+<details>
+<summary>Bundled skills</summary>
 
-**Reading order:**
+| Skill | What it does |
+| --- | --- |
+| `/mb-start` | Daily entry point: figure out what you need and route there. |
+| `/mb-status` | Daily briefing facts and ranked next actions. |
+| `/mb-setup` | First-time setup with business-type routing. |
+| `/mb-think` | Research, decide, codify, keyword-gate, sharpen offers, and source cleanup. |
+| `/mb-bet` | Open, update, close, list, and narrate business bets. |
+| `/mb-end` | Close the session: summary, crystallization, checkpoint options. |
+| `/mb-ads` | Paid creative: hooks, ads, image prompts, video scripts, launch plans, compliance review. |
+| `/mb-organic` | Organic content: Reels, TikToks, carousels, static posts, and sales-video repurpose. |
+| `/mb-site` | Lander, minisite, website, Cloudflare Pages, pitch scripts, and measurement checks. |
+| `/mb-wiki` | Specialty personal atomic-notes wiki on Cloudflare Pages. |
+| `/mb-update` | Update Main Branch. |
+| `/mb-help` | Q&A, troubleshooting, and system help. |
 
-- [AGENTS.md](AGENTS.md) — shared operating contract for Codex, Claude Code, and other agents
-- [CLAUDE.md](CLAUDE.md) — Claude Code-specific guidance
-- [CONTRIBUTING.md](CONTRIBUTING.md) — branch / commit / validation discipline
-- [docs/ethos.md](docs/ethos.md) — product principles
-- [docs/operator-loops.md](docs/operator-loops.md) — Sense → Decide → Ship → Reflect taxonomy
-- [docs/business-connections.md](docs/business-connections.md) — how to connect notes, reports, data, and GitHub history without noisy links
-- [docs/roadmap.md](docs/roadmap.md) — release direction
-- [docs/compatibility.md](docs/compatibility.md) — runtime support matrix
-- [docs/release-simulations.md](docs/release-simulations.md) — release evidence ladder
+</details>
+
+Full list: `mb --help`. JSON output contract:
+[docs/json-output-contract.md](docs/json-output-contract.md). Connected-tool
+choices: [docs/dependency-choices.md](docs/dependency-choices.md).
+
+### Reading order
+
+- [AGENTS.md](AGENTS.md) - shared operating contract for Codex, Claude Code, and other agents
+- [CLAUDE.md](CLAUDE.md) - Claude Code-specific guidance
+- [CONTRIBUTING.md](CONTRIBUTING.md) - branch, commit, and validation discipline
+- [docs/ethos.md](docs/ethos.md) - product principles
+- [docs/operator-loops.md](docs/operator-loops.md) - Sense -> Decide -> Ship -> Reflect taxonomy
+- [docs/roadmap.md](docs/roadmap.md) - release direction
+- [docs/compatibility.md](docs/compatibility.md) - runtime support matrix
 
 ---
 
 ## Community
 
-- [Skool community](https://skool.com/main) — watch us build with Main Branch
-- [GitHub Issues](https://github.com/noontide-co/mainbranch/issues) — bugs and feature requests
-- [GitHub Discussions](https://github.com/noontide-co/mainbranch/discussions) — ideas
+- [Skool community](https://skool.com/main) - watch us build with Main Branch
+- [GitHub Issues](https://github.com/noontide-co/mainbranch/issues) - bugs and feature requests
+- [GitHub Discussions](https://github.com/noontide-co/mainbranch/discussions) - ideas
 
 ---
 
 ## License
 
-[MIT](LICENSE) © 2026 Noontide
+[MIT](LICENSE) (c) 2026 Noontide
 
 <p align="center">
   <sub>Open source. Built for people who want to own their business memory, not rent it.</sub>

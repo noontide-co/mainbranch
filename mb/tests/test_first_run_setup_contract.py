@@ -20,21 +20,21 @@ def _setup_section(text: str) -> str:
     return text[start : start + 1400]
 
 
-def test_beginner_setup_uses_folder_first_bootstrap_prompt() -> None:
+def test_beginner_setup_uses_owner_friendly_setup_prompt() -> None:
     text = _read("docs/beginner-setup.md")
     normalized = _normalize(text)
 
     required = [
-        "## Folder-First Bootstrap",
-        "I want to set up Main Branch for this business in the current folder.",
+        "## Setup with an agent",
+        "Open or select the business folder in Claude Code or Codex.",
+        "I want to set up Main Branch for this business in this folder.",
         "Treat this as setup intent, not as a document to save.",
         "check whether `mb` is available",
-        "Use this folder as the business repo location unless I say otherwise.",
+        "Use this folder as the business folder unless I say otherwise.",
         "GitHub CLI is installed, authenticated, and signed in to the account I expect",
-        "GitHub is strongly recommended",
-        "connector-friendly copy of the business brain",
-        "Main Branch can start locally without GitHub",
-        "mb onboard --github <owner/repo> --push",
+        "GitHub does not need to cost anything",
+        "the business brain has cloud backup and readable saved history",
+        "AI tools with GitHub connectors can read the business brain",
         "Do not save that prompt as a markdown document.",
         "A checkpoint is an approved saved point in the business history.",
         "Main Branch updates change the engine and skills",
@@ -84,8 +84,8 @@ def test_readme_points_empty_folder_users_to_bootstrap() -> None:
     normalized = _normalize(text)
 
     assert "Start with the folder that should become your business brain" in normalized
-    assert "folder-first bootstrap" in normalized
-    assert "setup intent, not a document to save" in normalized
+    assert "Tell the agent what you are setting up" in normalized
+    assert "not save your note as another document" in normalized
     assert "GitHub backup/sync is strongly recommended" in normalized
     assert "AI tools with GitHub connectors can read" in normalized
     assert "gh auth status" in normalized
