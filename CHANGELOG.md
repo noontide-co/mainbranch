@@ -11,6 +11,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.35] - 2026-05-24
+
 ### Changed
 
 - Added a clean global Codex `/mb-*` command surface for Main Branch: repair now
