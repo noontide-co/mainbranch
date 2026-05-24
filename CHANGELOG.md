@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.36] - 2026-05-24
+
+v0.3.36 corrects the Codex support surface after v0.3.35. Codex now follows the
+plain global skill bundle model under the Codex skills root instead of treating
+plugin slash commands as readiness.
+
 ### Fixed
 
 - Corrected Codex support to install a global Main Branch skill bundle under
