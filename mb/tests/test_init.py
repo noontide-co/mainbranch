@@ -102,20 +102,20 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     normalized = _normalize(text)
     assert "## Codex Operating Contract" in text
     assert "Do not pretend Claude" in text
-    assert "Code skills work in Codex." in text
+    assert "global Main Branch skill route" in text
     assert "## Codex Lifecycle Workflow Index" in text
     assert "repo-level Codex bootstrap" in text
-    assert "installed globally once per user" in text
-    assert "repo-local plugin copies" in text
-    assert "Use the global Main Branch Codex plugin" in text
+    assert "skill bundle is installed globally once per user" in text
+    assert "repo-local plugin or skill" in text
+    assert "copies" in text
+    assert "Use the global Main Branch skills" in text
     assert "`runtime.codex_cli.status` is `runtime_mismatch`" in text
     assert "`codex_runtime_mb_mismatch`" in text
     assert "Start the day / what next / get oriented" in text
-    assert "supplies `/mb-*`" in text
+    assert "routes `mb-*`" in text
     assert "Inspect status / what changed / what is stale" in text
     assert "Think / research / decide / codify" in text
     assert "do not claim these workflows are ported to" in text
-    assert "/plugins" in text
     assert "## Codex Start Workflow" in text
     assert "This is the Codex-native start workflow" in text
     assert "## Codex Status Workflow" in text
@@ -241,7 +241,9 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "/mb-start" in readme_md
     assert "Codex CLI" in readme_md
     assert "mb doctor repair --apply --only codex" in readme_md
-    assert "/mb-start" in readme_md.split("Or, in Codex CLI:", 1)[1]
+    codex_readme = readme_md.split("Or, in Codex CLI:", 1)[1]
+    assert "global `mb-start` skill" in codex_readme
+    assert "/mb-start" not in codex_readme
     assert "## Save, Checkpoint, Backup" in readme_md
     assert "A checkpoint is an approved saved point" in readme_md
     assert "GitHub backup/sync is strongly recommended" in readme_md

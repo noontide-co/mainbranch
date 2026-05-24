@@ -59,27 +59,10 @@ def _without_codex(name: str) -> str:
     return shutil.which(name) or ""
 
 
-def _codex_plugin_list_result(repo: Path, *, installed: bool = True) -> dict[str, Any]:
-    marketplace = codex_mod.marketplace_path(repo)
-    plugin = codex_mod.plugin_manifest_path(repo).parent
-    status = "installed, enabled" if installed else "not installed"
-    return {
-        "ok": True,
-        "returncode": 0,
-        "stdout": (
-            f"Marketplace `{codex_mod.CODEX_MARKETPLACE_NAME}`\n"
-            f"{marketplace}\n\n"
-            "PLUGIN                                    STATUS              VERSION  PATH\n"
-            f"{codex_mod.CODEX_PLUGIN_SELECTOR}  {status}  0.1.0  {plugin}\n"
-        ),
-        "stderr": "",
-        "command": f"codex plugin list --marketplace {codex_mod.CODEX_MARKETPLACE_NAME}",
-    }
-
-
-def _prepare_codex_global_plugin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MAINBRANCH_CODEX_PLUGIN_ROOT", str(tmp_path / "codex-global"))
-    codex_mod.write_global_plugin_source()
+def _prepare_codex_global_skills(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAINBRANCH_CODEX_SKILLS_ROOT", str(tmp_path / "codex-skills"))
+    monkeypatch.setenv("MAINBRANCH_CODEX_PLUGIN_ROOT", str(tmp_path / "codex-plugin"))
+    codex_mod.write_global_skill_source()
 
 
 def _codex_runtime_ok() -> dict[str, Any]:
@@ -103,18 +86,13 @@ def _codex_runtime_ok() -> dict[str, Any]:
     }
 
 
-def test_start_json_keeps_codex_slash_visibility_honest(tmp_path: Path, monkeypatch) -> None:
+def test_start_json_reports_codex_global_skill_handoff(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(start_mod, "_which", _with_claude)
     monkeypatch.setattr(codex_mod, "_which", _with_codex)
     monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
-    _prepare_codex_global_plugin(tmp_path, monkeypatch)
+    _prepare_codex_global_skills(tmp_path, monkeypatch)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
-    monkeypatch.setattr(
-        codex_mod,
-        "_codex_plugin_list",
-        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo)),
-    )
     (repo / "core" / "vocabulary.md").write_text(
         "---\n"
         "type: vocabulary\n"
@@ -139,9 +117,11 @@ def test_start_json_keeps_codex_slash_visibility_honest(tmp_path: Path, monkeypa
     assert report["runtime"]["skill_wiring"]["ok"] is True
     assert report["runtime"]["codex_cli"]["ok"] is True
     assert report["runtime"]["codex_cli"]["status"] == "ready"
-    assert report["runtime"]["codex_cli"]["plugin_ok"] is True
+    assert report["runtime"]["codex_cli"]["plugin_ok"] is False
+    assert report["runtime"]["codex_cli"]["global_skill_ok"] is True
     assert report["runtime"]["codex_cli"]["generated_guidance_ready"] is True
-    assert report["runtime"]["codex_cli"]["slash_commands_ready"] is True
+    assert report["runtime"]["codex_cli"]["slash_commands_ready"] is False
+    assert report["runtime"]["codex_cli"]["global_skill"]["skills"]["mb-start"]["ok"] is True
     assert report["runtime"]["codex_cli"]["instructions"]["ok"] is True
     assert report["experimental_runtimes"]["codex_cli"]["command"]["argv"] == [
         "codex",
@@ -153,15 +133,15 @@ def test_start_json_keeps_codex_slash_visibility_honest(tmp_path: Path, monkeypa
     codex_next_actions = "\n".join(
         report["experimental_runtimes"]["codex_cli"]["command"]["next_actions"]
     )
-    assert "/mb" in codex_next_actions
-    assert "restart Codex" in codex_next_actions
+    assert "global `mb-start`" in codex_next_actions
+    assert "restart Codex" not in codex_next_actions
     assert "Run `claude" not in next_actions
     assert report["command"]["argv"] == ["claude"]
     assert report["command"]["display"].endswith(" && claude")
     assert report["command"]["follow_up"] == "/mb-start"
     codex_prompt = report["experimental_runtimes"]["codex_cli"]["command"]["startup_prompt"]
-    assert "/mb-start" in codex_prompt
-    assert "with /mb-start" not in codex_prompt
+    assert "`mb-start`" in codex_prompt
+    assert "/mb-start" not in codex_prompt
     assert report["launch"]["requested"] is False
     assert report["checkpoint"]["pending"]["status"] == "ready"
     assert report["books"]["schema_version"] == "1.0"
@@ -204,7 +184,7 @@ def test_start_json_separates_codex_static_and_runtime_readiness(
     monkeypatch.setattr(start_mod, "_which", _with_claude)
     monkeypatch.setattr(codex_mod, "_which", _with_codex)
     monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
-    _prepare_codex_global_plugin(tmp_path, monkeypatch)
+    _prepare_codex_global_skills(tmp_path, monkeypatch)
     monkeypatch.setattr(
         codex_mod,
         "_login_shell_mb_diagnostics",
@@ -229,12 +209,6 @@ def test_start_json_separates_codex_static_and_runtime_readiness(
     )
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
-    monkeypatch.setattr(
-        codex_mod,
-        "_codex_plugin_list",
-        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo)),
-    )
-
     result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
 
     assert result.exit_code == 0
@@ -258,32 +232,29 @@ def test_start_json_separates_codex_static_and_runtime_readiness(
     assert "mb status --json --peek" in top_level_actions
 
 
-def test_start_json_routes_to_codex_plugin_repair_when_plugin_is_missing(
+def test_start_json_routes_to_codex_global_skill_repair_when_skills_are_missing(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(start_mod, "_which", _with_claude)
     monkeypatch.setattr(codex_mod, "_which", _with_codex)
     monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
-    _prepare_codex_global_plugin(tmp_path, monkeypatch)
+    monkeypatch.setenv("MAINBRANCH_CODEX_SKILLS_ROOT", str(tmp_path / "codex-skills"))
+    monkeypatch.setenv("MAINBRANCH_CODEX_PLUGIN_ROOT", str(tmp_path / "codex-plugin"))
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
-    monkeypatch.setattr(
-        codex_mod,
-        "_codex_plugin_list",
-        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo), installed=False),
-    )
 
     result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
 
     assert result.exit_code == 0
     report = json.loads(result.stdout)
     codex = report["runtime"]["codex_cli"]
-    assert codex["status"] == "plugin_not_installed"
+    assert codex["status"] == "global_skill_missing_or_stale"
+    assert codex["global_skill_ok"] is False
     assert codex["plugin_ok"] is False
-    assert codex["plugin_install"]["plugin_installed"] is False
+    assert "mb-start/SKILL.md" in codex["global_skill"]["missing"]
     next_actions = "\n".join(report["next_actions"])
-    assert codex_mod.CODEX_PLUGIN_INSTALL_COMMAND in next_actions
+    assert "mb doctor repair --plan --only codex" in next_actions
     assert f"codex -C {shlex.quote(str(repo.resolve()))}" not in next_actions
     assert "Run `claude" not in next_actions
 
@@ -302,7 +273,7 @@ def test_start_human_labels_missing_codex_without_experimental_copy(
     assert result.exit_code == 0
     assert "Codex" in result.stdout
     assert "missing" in result.stdout
-    assert "owner loop" in result.stdout
+    assert "global skills" in result.stdout
     assert "experimental" not in result.stdout
 
 

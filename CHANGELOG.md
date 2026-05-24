@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- Corrected Codex support to install a global Main Branch skill bundle under
+  the Codex skills root, with one generated skill/playbook folder per supported
+  or inventoried workflow. Codex readiness now requires current global skills,
+  current repo `AGENTS.md`, and the current runtime `mb`; plugin command state
+  is no longer part of readiness. Refs MAIN-439, #721.
+
 ## [0.3.35] - 2026-05-24
 
 ### Changed

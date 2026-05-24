@@ -1326,7 +1326,7 @@ def run(path: str) -> dict[str, Any]:
     codex_readiness = codex_mod.readiness(repo)
     codex_executable = codex_readiness["executable"]
     codex_instructions = codex_readiness["instructions"]
-    codex_plugin_install = codex_readiness["plugin_install"]
+    codex_global_skill = codex_readiness["global_skill"]
     checks.append(
         {
             "name": "codex-cli",
@@ -1342,7 +1342,7 @@ def run(path: str) -> dict[str, Any]:
             "name": "codex-agents-md",
             "ok": bool(codex_instructions["ok"]),
             "detail": (
-                "AGENTS.md and Main Branch Codex commands are current and point Codex "
+                "AGENTS.md and Main Branch Codex skills are current and point Codex "
                 "to mb facts, lifecycle routes, and workflow inventory"
             )
             if codex_instructions["ok"]
@@ -1359,16 +1359,16 @@ def run(path: str) -> dict[str, Any]:
     )
     checks.append(
         {
-            "name": "codex-plugin-install",
-            "ok": bool(codex_plugin_install["ok"]),
-            "detail": codex_plugin_install["summary"],
+            "name": "codex-global-skill",
+            "ok": bool(codex_global_skill["ok"]),
+            "detail": codex_global_skill["summary"],
             "severity": "ok"
-            if codex_plugin_install["ok"]
+            if codex_global_skill["ok"]
             else ("warn" if codex_executable["found"] and codex_instructions["ok"] else "info"),
-            "repair": codex_plugin_install["repair"],
-            "repair_command": codex_plugin_install["install_command"],
+            "repair": codex_global_skill["repair"],
+            "repair_command": codex_global_skill["repair_command"],
             "safe_to_share": True,
-            "status": codex_plugin_install,
+            "status": codex_global_skill,
         }
     )
 
@@ -2036,7 +2036,7 @@ def repair_plan(
     codex_status = codex_mod.readiness(target)
     codex_instruction_status = codex_status["instructions"]
     codex_runtime_status = codex_status["runtime"]
-    codex_plugin_install = codex_status["plugin_install"]
+    codex_global_skill = codex_status["global_skill"]
     codex_runtime_relevant = bool(
         codex_status["executable"]["found"] and codex_instruction_status["ok"]
     )
@@ -2087,30 +2087,18 @@ def repair_plan(
             "repair": codex_runtime_status.get("repair", "") if codex_runtime_relevant else "",
         },
         {
-            "name": "codex-plugin-install",
-            "state": (
-                "ok"
-                if codex_plugin_install["ok"]
-                else ("warn" if codex_runtime_relevant else "info")
-            ),
-            "summary": codex_plugin_install["summary"],
-            "marketplace_registered": codex_plugin_install["marketplace_registered"],
-            "marketplace_stale": codex_plugin_install["marketplace_stale"],
-            "global_plugin_installed": codex_plugin_install.get("global_plugin_installed", False),
-            "plugin_installed": codex_plugin_install["plugin_installed"],
-            "plugin_enabled": codex_plugin_install["plugin_enabled"],
-            "skill_available": codex_plugin_install.get("skill_available", False),
-            "command_files_current": codex_plugin_install.get("command_files_current", False),
-            "command_surface_ok": codex_plugin_install.get("command_surface_ok", False),
-            "slash_commands_ready": codex_plugin_install.get("slash_commands_ready", False),
-            "slash_commands_likely_loaded": codex_plugin_install.get(
-                "slash_commands_likely_loaded", False
-            ),
-            "slash_commands_restart_required": codex_plugin_install.get(
-                "slash_commands_restart_required", False
-            ),
-            "install_command": codex_plugin_install["install_command"],
-            "repair": codex_plugin_install["repair"],
+            "name": "codex-global-skill",
+            "state": ("ok" if codex_global_skill["ok"] else "warn"),
+            "summary": codex_global_skill["summary"],
+            "skill_name": codex_global_skill["name"],
+            "skill_path": codex_global_skill["path"],
+            "skills_root": codex_global_skill["skills_root"],
+            "routes": codex_global_skill["routes"],
+            "stale": codex_global_skill["stale"],
+            "missing": codex_global_skill["missing"],
+            "missing_markers": codex_global_skill["missing_markers"],
+            "slash_commands_ready": codex_status.get("slash_commands_ready", False),
+            "repair": codex_global_skill["repair"],
         },
     ]
     codex_actions: list[dict[str, Any]] = []
@@ -2133,38 +2121,30 @@ def repair_plan(
         )
         actions.append(action)
         codex_actions.append(action)
-    if codex_runtime_relevant and not codex_plugin_install["ok"]:
+    if not codex_global_skill["ok"]:
         action = _action(
-            id="codex-plugin-install",
-            title="Install the Main Branch Codex plugin",
+            id="codex-global-skill",
+            title="Install the global Main Branch Codex skill",
             state="warn",
             mode="write",
-            command=(
-                f"{codex_mod.codex_marketplace_add_command()} && "
-                f"{codex_mod.CODEX_PLUGIN_INSTALL_COMMAND}"
-            ),
+            command="mb doctor repair --apply --only codex",
             safe_to_apply=True,
-            reason=(
-                "Codex must install and enable the global Main Branch plugin before "
-                "the /mb command surface is available"
-            ),
+            reason=("Codex uses one global Main Branch skill for the supported mb-* routes"),
             writes=[
-                str(codex_mod.global_plugin_source_root()),
-                "~/.codex/config.toml",
-                "~/.codex/plugins/",
+                str(codex_mod.global_skill_source_root()),
             ],
-            result=codex_plugin_install,
+            result=codex_global_skill,
         )
         actions.append(action)
         codex_actions.append(action)
     sections.append(
         _section(
             "codex-wiring",
-            "Codex Commands",
+            "Codex Global Skill",
             _max_state([str(item["state"]) for item in codex_checks]),
             (
-                "Main Branch Codex commands, repo guidance, workflow inventory, "
-                "global plugin, and executable readiness"
+                "Main Branch global Codex skill, repo guidance, workflow inventory, "
+                "and executable readiness"
             ),
             checks=codex_checks,
             actions=codex_actions,
@@ -2321,7 +2301,7 @@ def repair_plan(
         actions = [
             action
             for action in actions
-            if str(action.get("id")) in {"codex-agents-md", "codex-plugin-install"}
+            if str(action.get("id")) in {"codex-agents-md", "codex-global-skill"}
         ]
 
     states = [str(section["state"]) for section in sections]
@@ -2519,7 +2499,7 @@ def repair_apply(
         applied.append(
             _action(
                 id="codex-agents-md",
-                title="Refreshed Codex owner-loop instructions",
+                title="Refreshed Codex repo instructions",
                 state="ok" if agents["ok"] else "error",
                 mode="write",
                 command=(
@@ -2545,30 +2525,22 @@ def repair_apply(
     codex_runtime_relevant = bool(
         codex_status["executable"]["found"] and codex_status["instructions"]["ok"]
     )
-    codex_plugin_install = codex_status["plugin_install"]
-    if codex_runtime_relevant and not codex_plugin_install["ok"]:
-        installed = codex_mod.install_plugin(target)
+    codex_global_skill = codex_status["global_skill"]
+    if codex_runtime_relevant and not codex_global_skill["ok"]:
+        installed = codex_mod.install_global_skill(target)
         applied.append(
             _action(
-                id="codex-plugin-install",
-                title="Installed the Main Branch Codex plugin",
+                id="codex-global-skill",
+                title="Installed the global Main Branch Codex skill bundle",
                 state="ok" if installed["ok"] else "error",
                 mode="write",
-                command=(
-                    f"{codex_mod.codex_marketplace_add_command()} && "
-                    f"{codex_mod.CODEX_PLUGIN_INSTALL_COMMAND}"
-                ),
+                command="mb doctor repair --apply --only codex",
                 safe_to_apply=True,
-                reason=(
-                    "installed and enabled the global Codex plugin so /mb commands "
-                    "are available after restarting Codex"
-                ),
+                reason=("installed global Codex skills for the supported Main Branch mb-* routes"),
                 writes=[
-                    str(codex_mod.global_plugin_source_root()),
-                    "~/.codex/config.toml",
-                    "~/.codex/plugins/",
+                    str(codex_mod.global_skill_source_root()),
                 ],
-                applied=bool(installed.get("steps")),
+                applied=bool(installed.get("source", {}).get("changed")),
                 result=installed,
             )
         )

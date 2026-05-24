@@ -65,6 +65,12 @@ def _prepare_codex_global_plugin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     codex_mod.write_global_plugin_source()
 
 
+def _prepare_codex_global_skills(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAINBRANCH_CODEX_PLUGIN_ROOT", str(tmp_path / "codex-global"))
+    monkeypatch.setenv("MAINBRANCH_CODEX_SKILLS_ROOT", str(tmp_path / "codex-skills"))
+    codex_mod.write_global_skill_source()
+
+
 def _codex_runtime_ok() -> dict[str, Any]:
     return {
         "checked": True,
@@ -1454,71 +1460,56 @@ def test_status_warns_when_codex_runtime_uses_stale_mb(
     assert "login-shell PATH" in finding["repair"]
 
 
-def test_status_marks_codex_not_ready_when_plugin_is_not_installed(
+def test_status_marks_codex_not_ready_when_global_skills_are_missing(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     monkeypatch.setattr(codex_mod, "_which", _with_codex)
     monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
-    _prepare_codex_global_plugin(tmp_path, monkeypatch)
+    monkeypatch.setenv("MAINBRANCH_CODEX_PLUGIN_ROOT", str(tmp_path / "codex-global"))
+    monkeypatch.setenv("MAINBRANCH_CODEX_SKILLS_ROOT", str(tmp_path / "codex-skills"))
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
-    monkeypatch.setattr(
-        codex_mod,
-        "_codex_plugin_list",
-        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo), installed=False),
-    )
 
     report = status_mod.run(path=str(repo), update_marker=False)
 
     codex = report["runtime"]["codex_cli"]
     assert codex["ok"] is False
-    assert codex["status"] == "plugin_not_installed"
+    assert codex["status"] == "global_skill_missing_or_stale"
     assert codex["static_ok"] is True
     assert codex["runtime_ok"] is True
-    assert codex["plugin_ok"] is False
-    assert codex["plugin_install"]["marketplace_registered"] is True
-    assert codex["plugin_install"]["plugin_installed"] is False
+    assert codex["global_skill_ok"] is False
+    assert "mb-start/SKILL.md" in codex["global_skill"]["missing"]
     finding = next(
-        item for item in report["drift"]["items"] if item["id"] == "codex_plugin_not_installed"
+        item for item in report["drift"]["items"] if item["id"] == "codex_global_skills_not_ready"
     )
-    assert codex_mod.CODEX_PLUGIN_INSTALL_COMMAND in finding["repair"]
+    assert "mb doctor repair --apply --only codex" in finding["repair"]
 
 
-def test_status_marks_codex_ready_when_command_surface_is_installed(
+def test_status_marks_codex_ready_when_global_skills_are_installed(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     monkeypatch.setattr(codex_mod, "_which", _with_codex)
     monkeypatch.setattr(codex_mod, "_login_shell_mb_diagnostics", _codex_runtime_ok)
-    _prepare_codex_global_plugin(tmp_path, monkeypatch)
+    _prepare_codex_global_skills(tmp_path, monkeypatch)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
-    monkeypatch.setattr(
-        codex_mod,
-        "_codex_plugin_list",
-        lambda plugin_repo: _codex_plugin_list_result(Path(plugin_repo)),
-    )
 
     report = status_mod.run(path=str(repo), update_marker=False)
 
     codex = report["runtime"]["codex_cli"]
     assert codex["ok"] is True
     assert codex["status"] == "ready"
-    assert codex["plugin_ok"] is True
+    assert codex["global_skill_ok"] is True
     assert codex["generated_guidance_ready"] is True
     assert codex["command_surface_ok"] is True
-    assert codex["slash_commands_ready"] is True
-    assert codex["plugin_install"]["plugin_installed"] is True
-    assert codex["plugin_install"]["plugin_enabled"] is True
-    assert codex["plugin_install"]["skill_ready"] is False
-    assert codex["plugin_install"]["command_files_current"] is True
-    assert codex["plugin_install"]["slash_commands_ready"] is True
-    assert codex["plugin_install"]["slash_commands_likely_loaded"] is False
-    assert codex["plugin_install"]["slash_commands_restart_required"] is True
-    assert not any(item["id"] == "codex_plugin_not_installed" for item in report["drift"]["items"])
+    assert codex["slash_commands_ready"] is False
+    assert set(codex["global_skill"]["required_skills"]) == set(codex_mod.CODEX_GLOBAL_SKILL_NAMES)
+    assert codex["global_skill"]["skills"]["mb-start"]["ok"] is True
+    assert codex["global_skill"]["skills"]["mb-ads"]["ok"] is True
 
 
 def test_status_json_exposes_push_and_legacy_campaign_facts(tmp_path: Path, monkeypatch) -> None:
@@ -2138,7 +2129,7 @@ def test_status_human_labels_missing_codex_without_experimental_copy(
     result = runner.invoke(app, ["status", str(repo), "--no-color", "--peek"])
 
     assert result.exit_code == 0
-    assert "Codex: missing owner loop" in result.stdout
+    assert "Codex: missing global skills" in result.stdout
     assert "experimental" not in result.stdout
 
 

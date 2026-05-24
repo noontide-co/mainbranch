@@ -1,6 +1,6 @@
-"""Codex command-surface helpers.
+"""Codex global-skill helpers.
 
-Codex support starts with repo instructions, global plugin commands, and
+Codex support starts with repo instructions, global Main Branch skills, and
 deterministic ``mb`` facts. This module intentionally does not invoke Codex or
 manage model conversation.
 """
@@ -24,6 +24,9 @@ AGENTS_RELATIVE_PATH = "AGENTS.md"
 CODEX_SKILL_DIR_RELATIVE_PATH = ".agents/skills/main-branch-owner-loop"
 CODEX_SKILL_RELATIVE_PATH = f"{CODEX_SKILL_DIR_RELATIVE_PATH}/SKILL.md"
 CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH = AGENTS_RELATIVE_PATH
+CODEX_GLOBAL_SKILL_NAME = "main-branch"
+CODEX_LEGACY_GLOBAL_SKILL_NAME = "main-branch-owner-loop"
+CODEX_GLOBAL_SKILL_RELATIVE_PATH = f"{CODEX_GLOBAL_SKILL_NAME}/SKILL.md"
 CODEX_MARKETPLACE_RELATIVE_PATH = ".agents/plugins/marketplace.json"
 CODEX_MARKETPLACE_NAME = "main-branch"
 CODEX_LEGACY_PLUGIN_NAME = "main-branch-owner-loop"
@@ -39,7 +42,7 @@ CODEX_PLUGIN_MANIFEST_RELATIVE_PATH = f"{CODEX_PLUGIN_DIR_RELATIVE_PATH}/.codex-
 CODEX_PLUGIN_SKILL_RELATIVE_PATH = (
     f"{CODEX_LEGACY_PLUGIN_DIR_RELATIVE_PATH}/skills/main-branch-owner-loop/SKILL.md"
 )
-CODEX_SUPPORT_LEVEL = "supported_main_branch_slash_commands"
+CODEX_SUPPORT_LEVEL = "supported_global_main_branch_skill"
 CODEX_REPAIR_COMMAND = "mb doctor repair --apply --only codex"
 CODEX_REPAIR_TEXT = (
     "Run `mb doctor repair --plan --only codex`, review, then "
@@ -50,7 +53,7 @@ CODEX_RUNTIME_MISMATCH_STOP_TEXT = (
     "`runtime.codex_cli.status` is `runtime_mismatch` or any `drift.items[].id` "
     "equals `codex_runtime_mb_mismatch`. Treat that as a runtime `mb` mismatch: "
     "tell the operator to fix the runtime/login-shell PATH and rerun read-only "
-    "checks before owner-loop advice, repair planning, or writes."
+    "checks before Main Branch advice, repair planning, or writes."
 )
 REQUIRED_FACT_COMMANDS = (
     "mb status --json --peek",
@@ -66,6 +69,48 @@ CODEX_SLASH_COMMAND_NAMES = (
     "mb-think",
     "mb-end",
     "mb-help",
+)
+CLAUDE_SKILL_SOURCE_NAMES = (
+    "mb-start",
+    "mb-status",
+    "mb-setup",
+    "mb-update",
+    "mb-think",
+    "mb-end",
+    "mb-help",
+    "mb-bet",
+    "mb-ads",
+    "mb-organic",
+    "mb-site",
+    "mb-wiki",
+    "mb-skill-concept",
+    "mb-skill-brief-draft",
+    "mb-skill-review",
+)
+CLAUDE_PLAYBOOK_SOURCE_NAMES = (
+    "google-ads-search-launch",
+    "ship-bet",
+    "weekly-review",
+)
+CODEX_GLOBAL_SKILL_NAMES = (
+    CODEX_GLOBAL_SKILL_NAME,
+    "mb-doctor",
+    "mb-start",
+    "mb-status",
+    "mb-setup",
+    "mb-update",
+    "mb-think",
+    "mb-end",
+    "mb-help",
+    "mb-bet",
+    "mb-ads",
+    "mb-organic",
+    "mb-site",
+    "mb-wiki",
+    "mb-skill-concept",
+    "mb-skill-brief-draft",
+    "mb-skill-review",
+    *CLAUDE_PLAYBOOK_SOURCE_NAMES,
 )
 CODEX_SLASH_COMMAND_RELATIVE_PATHS = tuple(
     f"{CODEX_PLUGIN_COMMANDS_RELATIVE_PATH}/{name}.md" for name in CODEX_SLASH_COMMAND_NAMES
@@ -95,6 +140,58 @@ CODEX_SLASH_COMMAND_DESCRIPTIONS = {
     "mb-think": "Think through a Main Branch decision.",
     "mb-end": "End and checkpoint work.",
     "mb-help": "Show Main Branch commands.",
+}
+CODEX_GLOBAL_SKILL_DESCRIPTIONS = {
+    **CODEX_SLASH_COMMAND_DESCRIPTIONS,
+    "main-branch": "Route Main Branch work to the right mb-* skill.",
+    "mb-bet": "Plan and review Main Branch bets.",
+    "mb-ads": "Plan ads and paid creative from Main Branch facts.",
+    "mb-organic": "Plan organic content from Main Branch facts.",
+    "mb-site": "Plan pages and site readiness from Main Branch facts.",
+    "mb-wiki": "Explain wiki support status for Main Branch.",
+    "mb-skill-concept": "Plan a Main Branch skill concept.",
+    "mb-skill-brief-draft": "Draft a Main Branch skill brief.",
+    "mb-skill-review": "Review a Main Branch skill proposal.",
+    "google-ads-search-launch": "Plan a Google Ads search launch playbook.",
+    "ship-bet": "Plan a ship-bet playbook run.",
+    "weekly-review": "Plan a weekly review.",
+}
+CODEX_GLOBAL_SKILL_FACTS: dict[str, tuple[str, ...]] = {
+    **CODEX_SLASH_COMMAND_FACTS,
+    "main-branch": REQUIRED_FACT_COMMANDS,
+    "mb-bet": ("mb status --json --peek", "mb validate --json"),
+    "mb-ads": ("mb status --json --peek", "mb connect doctor --json"),
+    "mb-organic": ("mb status --json --peek",),
+    "mb-site": ("mb status --json --peek", "mb site check --json"),
+    "mb-wiki": ("mb workflow list --runtime codex --json",),
+    "mb-skill-concept": ("mb workflow list --runtime codex --json",),
+    "mb-skill-brief-draft": ("mb workflow list --runtime codex --json",),
+    "mb-skill-review": ("mb workflow list --runtime codex --json",),
+    "google-ads-search-launch": ("mb status --json --peek", "mb connect doctor --json"),
+    "ship-bet": ("mb status --json --peek", "mb checkpoint --plan --json"),
+    "weekly-review": ("mb status --json --peek", "mb validate --json"),
+}
+CODEX_GLOBAL_SKILL_SUPPORT: dict[str, str] = {
+    "main-branch": "supported",
+    "mb-start": "supported",
+    "mb-status": "supported",
+    "mb-setup": "supported",
+    "mb-update": "supported",
+    "mb-doctor": "supported",
+    "mb-think": "supported",
+    "mb-end": "supported",
+    "mb-help": "supported",
+    "mb-bet": "read_only_planning",
+    "mb-ads": "read_only_planning",
+    "mb-organic": "read_only_planning",
+    "mb-site": "read_only_planning",
+    "google-ads-search-launch": "read_only_planning",
+    "ship-bet": "read_only_planning",
+    "weekly-review": "read_only_planning",
+    "mb-wiki": "intentionally_unsupported",
+    "mb-skill-concept": "intentionally_unsupported",
+    "mb-skill-brief-draft": "intentionally_unsupported",
+    "mb-skill-review": "intentionally_unsupported",
 }
 CODEX_THINK_SOURCE_WORKFLOW = "workflows/mb-think/workflow.md"
 CODEX_THINK_REQUIRED_MB_COMMANDS = (
@@ -158,10 +255,10 @@ REQUIRED_LIFECYCLE_GUIDANCE = (
     "Shared source required JSON fact paths",
     "Shared source gates",
     "Shared public/private boundaries",
-    "Use the global Main Branch Codex plugin",
+    "Use the global Main Branch skill",
     "do not claim these workflows are ported to",
-    "supplies `/mb-*`",
-    "/plugins",
+    "global skill",
+    "main-branch",
 )
 REQUIRED_LIFECYCLE_GUIDANCE_MARKERS = (
     *REQUIRED_LIFECYCLE_GUIDANCE,
@@ -175,23 +272,6 @@ CODEX_PLUGIN_REQUIRED_MARKERS = (
     "commands",
     "mb-*",
     "business repos",
-)
-CLAUDE_SKILL_SOURCE_NAMES = (
-    "mb-start",
-    "mb-status",
-    "mb-setup",
-    "mb-update",
-    "mb-think",
-    "mb-end",
-    "mb-help",
-    "mb-bet",
-    "mb-ads",
-    "mb-organic",
-    "mb-site",
-    "mb-wiki",
-    "mb-skill-concept",
-    "mb-skill-brief-draft",
-    "mb-skill-review",
 )
 CODEX_WORKFLOW_STATUS_VOCABULARY = (
     "supported",
@@ -207,8 +287,8 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-start, /mb-status",
         "claude_skill_sources": ("mb-start", "mb-status"),
         "codex_status": "supported",
-        "codex_surface": ("/mb-start and /mb-status"),
-        "codex_entrypoints": ("/mb-start", "/mb-status"),
+        "codex_surface": "main-branch skill routes: mb-start, mb-status",
+        "codex_entrypoints": ("main-branch mb-start", "main-branch mb-status"),
         "commands": ("mb status --json --peek", "mb start --json"),
         "notes": (
             "Codex starts from deterministic status/start facts, translates them "
@@ -221,8 +301,12 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-setup, /mb-update, /mb-start repair routing",
         "claude_skill_sources": ("mb-setup", "mb-update"),
         "codex_status": "supported",
-        "codex_surface": ("/mb-setup, /mb-update, and /mb-doctor"),
-        "codex_entrypoints": ("/mb-setup", "/mb-update", "/mb-doctor"),
+        "codex_surface": "main-branch skill routes: mb-setup, mb-update, mb-doctor",
+        "codex_entrypoints": (
+            "main-branch mb-setup",
+            "main-branch mb-update",
+            "main-branch mb-doctor",
+        ),
         "commands": (
             "mb --version",
             "mb doctor repair --plan --json",
@@ -239,8 +323,8 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-think",
         "claude_skill_sources": ("mb-think",),
         "codex_status": "supported",
-        "codex_surface": ("/mb-think plus AGENTS.md#codex-think-route"),
-        "codex_entrypoints": ("/mb-think",),
+        "codex_surface": "main-branch skill route: mb-think plus AGENTS.md#codex-think-route",
+        "codex_entrypoints": ("main-branch mb-think",),
         "shared_source": CODEX_THINK_SOURCE_WORKFLOW,
         "commands": CODEX_THINK_REQUIRED_MB_COMMANDS,
         "notes": (
@@ -254,8 +338,8 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-end, mb checkpoint",
         "claude_skill_sources": ("mb-end",),
         "codex_status": "supported",
-        "codex_surface": ("/mb-end"),
-        "codex_entrypoints": ("/mb-end",),
+        "codex_surface": "main-branch skill route: mb-end",
+        "codex_entrypoints": ("main-branch mb-end",),
         "commands": ("mb checkpoint --plan --json", "mb validate --json"),
         "notes": (
             "Codex can plan a closeout and propose checkpoint subjects. Creating "
@@ -268,8 +352,8 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-help and docs",
         "claude_skill_sources": ("mb-help",),
         "codex_status": "supported",
-        "codex_surface": ("/mb-help"),
-        "codex_entrypoints": ("/mb-help",),
+        "codex_surface": "main-branch skill route: mb-help",
+        "codex_entrypoints": ("main-branch mb-help",),
         "commands": ("mb workflow list --runtime codex --json",),
         "notes": "Codex users can inspect supported, pending, and unsupported workflow surfaces.",
     },
@@ -330,6 +414,49 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "notes": "Specialty workflow outside the current Codex command target.",
     },
     {
+        "id": "google-ads-search-launch-playbook",
+        "label": "Google Ads search launch playbook",
+        "claude_surface": "google-ads-search-launch playbook",
+        "claude_skill_sources": (),
+        "claude_playbook_sources": ("google-ads-search-launch",),
+        "codex_status": "pending_shared_source_migration",
+        "codex_surface": "Read-only planning only",
+        "codex_entrypoints": ("google-ads-search-launch",),
+        "commands": ("mb status --json --peek", "mb connect doctor --json"),
+        "notes": (
+            "No Google Ads account mutation, spend, upload, or publishing is supported in Codex."
+        ),
+    },
+    {
+        "id": "ship-bet-playbook",
+        "label": "Ship bet playbook",
+        "claude_surface": "ship-bet playbook",
+        "claude_skill_sources": (),
+        "claude_playbook_sources": ("ship-bet",),
+        "codex_status": "pending_shared_source_migration",
+        "codex_surface": "Read-only planning only",
+        "codex_entrypoints": ("ship-bet",),
+        "commands": ("mb status --json --peek", "mb checkpoint --plan --json"),
+        "notes": (
+            "Codex can plan from facts but must ask before changing bet, push, or checkpoint files."
+        ),
+    },
+    {
+        "id": "weekly-review-playbook",
+        "label": "Weekly review playbook",
+        "claude_surface": "weekly-review playbook",
+        "claude_skill_sources": (),
+        "claude_playbook_sources": ("weekly-review",),
+        "codex_status": "pending_shared_source_migration",
+        "codex_surface": "Read-only planning only",
+        "codex_entrypoints": ("weekly-review",),
+        "commands": ("mb status --json --peek", "mb validate --json"),
+        "notes": (
+            "Codex can summarize review inputs but should not update durable "
+            "files without approval."
+        ),
+    },
+    {
         "id": "skill-authoring",
         "label": "Skill concept, draft, and review",
         "claude_surface": "/mb-skill-concept, /mb-skill-brief-draft, /mb-skill-review",
@@ -359,6 +486,23 @@ def global_plugin_source_root() -> Path:
     return (base / "mainbranch" / "codex").expanduser().resolve()
 
 
+def global_skill_source_root() -> Path:
+    """Return the user-local directory where Codex global skills are installed."""
+
+    override = os.environ.get("MAINBRANCH_CODEX_SKILLS_ROOT", "").strip()
+    if override:
+        return Path(override).expanduser().resolve()
+    return (Path.home() / ".codex" / "skills").expanduser().resolve()
+
+
+def global_skill_path() -> Path:
+    return global_skill_source_root() / CODEX_GLOBAL_SKILL_RELATIVE_PATH
+
+
+def global_skill_file_path(name: str) -> Path:
+    return global_skill_source_root() / name / "SKILL.md"
+
+
 def codex_marketplace_add_command() -> str:
     return f"codex plugin marketplace add {shlex.quote(str(global_plugin_source_root()))}"
 
@@ -373,8 +517,9 @@ Main Branch business repo instructions for Codex.
 Main Branch CLI facts are the source of truth for repo health, setup, runtime
 wiring, updates, graph/status signals, provider readiness, and repair paths.
 When the operator asks to start, begin, get oriented, triage the day, or decide
-what to do next, use `/mb-start`, `/mb-status`, or the read-only `mb` fact
-commands below. Do not pretend Claude Code skills work in Codex.
+what to do next, use the global Main Branch skill route (`mb-start`,
+`mb-status`, or the closest `mb-*` route) or the read-only `mb` fact commands
+below. Do not pretend Claude Code slash skills work in Codex.
 
 Start in this repo. Before setup, routing, migration, update, or repair advice,
 run the runtime preflight and read-only checks that fit the situation:
@@ -462,16 +607,18 @@ canonical paths, frontmatter, JSON keys, validator rules, and command names.
 ## Codex Lifecycle Workflow Index
 
 This tracked `AGENTS.md` file is the repo-level Codex bootstrap. The Main
-Branch Codex plugin is installed globally once per user and supplies `/mb-*`
-commands over deterministic `mb` facts. Business repos keep this lightweight
-`AGENTS.md` guidance instead of tracked repo-local plugin copies. `mb doctor
-repair --only codex` refreshes this file and installs or repairs the global
-plugin when Codex CLI is available.
+Branch Codex skill bundle is installed globally once per user and routes `mb-*`
+workflow names over deterministic `mb` facts. Business repos keep this
+lightweight `AGENTS.md` guidance instead of tracked repo-local plugin or skill
+copies. `mb doctor repair --only codex` refreshes this file and installs or
+repairs the global skills.
 
-Use the global Main Branch Codex plugin for Main Branch daily commands only. Do not
+Use the global Main Branch skills for Main Branch daily routes only. Do not
 create repo-local Codex plugin manifests, copied Claude skill trees, or
 symlinked Claude skills unless a future `mb` command or issue says that surface
 is supported for this repo.
+The global `main-branch` skill is an index; named global skills such as
+`mb-start`, `mb-status`, and `mb-think` carry the workflow routes.
 
 Use this index to map natural Codex requests:
 
@@ -489,7 +636,7 @@ Use this index to map natural Codex requests:
   domains, or customer contact:** do not claim these workflows are ported to
   Codex. Use read-only `mb` facts for planning and ask before any action.
 
-Use `/plugins` to inspect or install the global Main Branch plugin.
+Use `mb doctor repair --plan --only codex` to inspect global skill wiring.
 
 ## Codex Start Workflow
 
@@ -797,6 +944,12 @@ def _claude_skill_sources_for_inventory_item(item: dict[str, Any]) -> tuple[str,
     return tuple(f".claude/skills/{name}/SKILL.md" for name in names)
 
 
+def _claude_playbook_sources_for_inventory_item(item: dict[str, Any]) -> tuple[str, ...]:
+    sources = item.get("claude_playbook_sources") or ()
+    names = sources if isinstance(sources, tuple) else tuple(str(source) for source in sources)
+    return tuple(f".claude/playbooks/{name}/SKILL.md" for name in names)
+
+
 def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
     """Return the public-safe Main Branch workflow support inventory."""
 
@@ -805,6 +958,7 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
         copied = dict(item)
         copied["commands"] = list(_commands_for_inventory_item(item))
         copied["claude_skill_sources"] = list(_claude_skill_sources_for_inventory_item(item))
+        copied["claude_playbook_sources"] = list(_claude_playbook_sources_for_inventory_item(item))
         copied["codex_entrypoints"] = [
             str(entrypoint) for entrypoint in item.get("codex_entrypoints", ())
         ]
@@ -817,26 +971,22 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
         "ok": True,
         "runtime": runtime,
         "support_level": CODEX_SUPPORT_LEVEL,
-        "entrypoint": "/mb-start",
+        "entrypoint": "main-branch mb-start",
         "repo_guidance": AGENTS_RELATIVE_PATH,
         "inventory_path": CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
         "claude_skill_sources": [
             f".claude/skills/{name}/SKILL.md" for name in CLAUDE_SKILL_SOURCE_NAMES
         ],
-        "plugin": {
-            "name": CODEX_PLUGIN_NAME,
-            "marketplace_name": CODEX_MARKETPLACE_NAME,
-            "plugin_selector": CODEX_PLUGIN_SELECTOR,
-            "marketplace_path": CODEX_MARKETPLACE_RELATIVE_PATH,
-            "manifest_path": CODEX_PLUGIN_MANIFEST_RELATIVE_PATH,
-            "skill_path": "",
-            "commands_path": CODEX_PLUGIN_COMMANDS_RELATIVE_PATH,
-            "generated_command_files": list(CODEX_SLASH_COMMAND_RELATIVE_PATHS),
-            "slash_commands_generated": True,
-            "slash_commands_ready": False,
-            "install_hint": (
-                f"Run `{codex_marketplace_add_command()}`, then `{CODEX_PLUGIN_INSTALL_COMMAND}`."
-            ),
+        "claude_playbook_sources": [
+            f".claude/playbooks/{name}/SKILL.md" for name in CLAUDE_PLAYBOOK_SOURCE_NAMES
+        ],
+        "global_skill": {
+            "name": CODEX_GLOBAL_SKILL_NAME,
+            "display_name": "Main Branch",
+            "path": CODEX_GLOBAL_SKILL_RELATIVE_PATH,
+            "routes": list(CODEX_GLOBAL_SKILL_NAMES),
+            "support": CODEX_GLOBAL_SKILL_SUPPORT,
+            "install_hint": CODEX_REPAIR_COMMAND,
         },
         "statuses": statuses,
         "items": items,
@@ -852,7 +1002,11 @@ def render_workflow_inventory_md() -> str:
         commands = ", ".join(f"`{command}`" for command in _commands_for_inventory_item(item))
         entrypoints = ", ".join(f"`{entry}`" for entry in item.get("codex_entrypoints", ()))
         claude_sources = ", ".join(
-            f"`{source}`" for source in _claude_skill_sources_for_inventory_item(item)
+            f"`{source}`"
+            for source in (
+                _claude_skill_sources_for_inventory_item(item)
+                + _claude_playbook_sources_for_inventory_item(item)
+            )
         )
         row_template = (
             "| {label} | `{status}` | {claude} | {sources} | {codex} | {entrypoints} | {commands} |"
@@ -871,21 +1025,20 @@ def render_workflow_inventory_md() -> str:
     return (
         "# Main Branch Codex Workflow Inventory\n\n"
         "Generated by `mb`. Do not edit by hand in business repos. This file maps "
-        "Main Branch workflow surfaces to the Codex command support boundary.\n\n"
+        "Main Branch workflow surfaces to the Codex global-skill support boundary.\n\n"
         "Status meanings:\n\n"
-        "- `supported`: Codex can use this surface through `/mb-*` commands "
+        "- `supported`: Codex can use this surface through global Main Branch skills "
         "grounded in deterministic `mb` facts.\n"
         "- `pending_shared_source_migration`: Codex may plan from read-only facts, "
         "but a runtime shell should wait for a shared workflow source.\n"
         "- `generated_shell_pending`: a shared source exists, but a generated Codex "
         "shell still needs implementation and smoke evidence.\n"
         "- `intentionally_unsupported`: outside the current Codex daily-loop target.\n\n"
-        "Codex plugin files and `/mb-*` command files are installed globally by "
+        "The global Main Branch skill bundle is installed by "
         "`mb doctor repair --only codex`; business repos keep only lightweight "
-        "`AGENTS.md` guidance. Use `/plugins` or "
-        "`codex plugin list --marketplace main-branch` to inspect the global "
-        "Main Branch Codex plugin. After repair and a Codex restart, typing `/mb` "
-        "should show the Main Branch commands. Each row names its bundled Claude skill "
+        "`AGENTS.md` guidance. After repair, open a fresh Codex thread in the "
+        "business repo and ask Main Branch to run one of the `mb-*` routes. "
+        "Each row names its bundled Claude skill "
         "source(s); every bundled Claude `mb-*` skill must be accounted for here "
         "until the shared workflow generator owns both runtime shells.\n\n"
         "| Workflow | Codex status | Claude Code surface | Claude source | Codex surface | "
@@ -1059,6 +1212,143 @@ def render_codex_slash_commands() -> dict[str, str]:
     }
 
 
+def render_codex_global_skill_md(name: str = CODEX_GLOBAL_SKILL_NAME) -> str:
+    """Render one global Main Branch Codex skill."""
+
+    route_lines = "\n".join(
+        f"- `{skill}`: {CODEX_GLOBAL_SKILL_DESCRIPTIONS[skill]} "
+        f"({CODEX_GLOBAL_SKILL_SUPPORT[skill]})"
+        for skill in CODEX_GLOBAL_SKILL_NAMES
+        if skill != CODEX_GLOBAL_SKILL_NAME
+    )
+    if name not in CODEX_GLOBAL_SKILL_NAMES:
+        raise ValueError(f"unknown Codex global skill: {name}")
+    description = CODEX_GLOBAL_SKILL_DESCRIPTIONS[name]
+    support_level = CODEX_GLOBAL_SKILL_SUPPORT[name]
+    facts = CODEX_GLOBAL_SKILL_FACTS[name]
+    if name == CODEX_GLOBAL_SKILL_NAME:
+        argument_hint = (
+            "[mb-start|mb-status|mb-setup|mb-update|mb-doctor|mb-think|mb-end|mb-help|other-route]"
+        )
+        title = "Main Branch"
+        route_guidance = (
+            "Choose the closest route below, then follow that route's facts and approval boundary."
+        )
+    else:
+        argument_hint = "[target]"
+        title = name
+        supported_guidance = {
+            "mb-start": (
+                "Summarize the business state, readiness, ranked actions, and one "
+                "clear next route. Use `mb start --json` when runtime handoff or "
+                "Codex readiness matters."
+            ),
+            "mb-status": (
+                "Answer from status facts: readiness, drift, recent work, "
+                "since-last-check, MoneyPath, content strategy, provider signals, "
+                "and ranked actions."
+            ),
+            "mb-setup": (
+                "Treat setup prompts as onboarding intent. Explain the target folder "
+                "and ask before running any command that writes files."
+            ),
+            "mb-update": (
+                "Report whether an update is required or recommended. Ask before "
+                "running update, repair, migration, or package-changing commands."
+            ),
+            "mb-doctor": (
+                "Explain the repair plan in business language first. Quote exact "
+                "safe commands and ask before applying any write action."
+            ),
+            "mb-think": (
+                "Use the Codex Think Route in `AGENTS.md`. Choose the smallest honest "
+                "research depth, read only needed business files, and ask before "
+                "codifying or checkpointing."
+            ),
+            "mb-end": (
+                "Plan the closeout from checkpoint and validation facts. Propose the "
+                "business-readable checkpoint subject and ask before saving it."
+            ),
+            "mb-help": (
+                "Show the supported, pending, and unsupported Codex workflow surfaces. "
+                "Do not claim parity for surfaces the inventory does not mark supported."
+            ),
+        }
+        if name in supported_guidance:
+            route_guidance = supported_guidance[name]
+        elif support_level == "read_only_planning":
+            route_guidance = (
+                "Use this as a read-only planning route in Codex. Ground the answer "
+                "in the facts below, name what Claude Code can do more fully when "
+                "relevant, and ask before writing files or touching providers."
+            )
+        else:
+            route_guidance = (
+                "This workflow is inventoried for completeness but is not a supported "
+                "Codex execution route yet. Explain the support boundary and route "
+                "the operator to Claude Code or another supported Main Branch path."
+            )
+    fact_lines = "\n".join(f"- `{command}`" for command in facts)
+    return f"""---
+name: {name}
+description: "{description}"
+argument-hint: "{argument_hint}"
+user-invocable: true
+---
+
+# {title}
+
+Support level: `{support_level}`.
+
+Use this skill when the operator is in a Main Branch business repo and asks to
+start the day, inspect status, set up, update, repair, think through a decision,
+close a session, get help, or use one of the inventoried Main Branch workflows.
+
+## Routes
+
+{route_lines}
+
+{route_guidance}
+
+Use the route names above as product-facing workflow names. Do not introduce
+`main-branch-owner-loop`, plugin, adapter, or command-surface vocabulary in
+operator-facing answers.
+
+## Grounding
+
+Start in the current repo. Run the read-only facts that fit the route before
+advice:
+
+{fact_lines}
+
+Run `command -v mb` and `mb --version` first when setup, update, repair, or
+runtime readiness is uncertain. If `mb` is missing or reports an unexpected
+version, stop and tell the operator to fix the runtime/login-shell PATH before
+continuing.
+
+Use `mb status --json --peek` as the default daily briefing source. It names
+readiness, drift, onboarding progress, update state, GitHub activity, provider
+signals, recent work, MoneyPath, ranked actions, bets, pushes, and checkpoint
+state. Use `mb start --json` when runtime handoff or repo-boundary facts matter.
+
+Stop before business routing if `runtime.codex_cli.status` is `runtime_mismatch`
+or if any drift item is `codex_runtime_mb_mismatch`.
+
+## Approval
+
+Read-only fact commands can run without asking. Ask before durable writes,
+checkpoints, updates, repairs, migrations, provider mutation, publishing, spend,
+customer contact, destructive operations, or public issue/proposal submission.
+
+## Boundaries
+
+Codex supports the daily Main Branch routes listed here. Do not claim all Claude
+Code skills, provider mutation, ads/site production, publishing, spend, customer
+contact, or slash commands are available unless `mb workflow list --runtime
+codex --json` and current runtime evidence say so.
+"""
+
+
 def agents_path(repo: str | Path) -> Path:
     return Path(repo).expanduser().resolve() / AGENTS_RELATIVE_PATH
 
@@ -1097,7 +1387,7 @@ def executable_status() -> dict[str, Any]:
         "found": bool(path),
         "path": path,
         "executable": "codex",
-        "repair": "" if path else "Install Codex CLI before using Main Branch Codex commands.",
+        "repair": "" if path else "Install Codex CLI before using Main Branch in Codex.",
     }
 
 
@@ -1386,6 +1676,137 @@ def install_plugin(repo: str | Path) -> dict[str, Any]:
     }
 
 
+def global_skill_status(repo: str | Path) -> dict[str, Any]:
+    """Return status for the global Main Branch Codex skill bundle."""
+
+    expected_by_name = {
+        name: render_codex_global_skill_md(name) for name in CODEX_GLOBAL_SKILL_NAMES
+    }
+    path_by_name = {name: global_skill_file_path(name) for name in CODEX_GLOBAL_SKILL_NAMES}
+    missing = [f"{name}/SKILL.md" for name, path in path_by_name.items() if not path.is_file()]
+    read_error = ""
+    stale: list[str] = []
+    missing_markers: list[str] = []
+    skill_reports: dict[str, dict[str, Any]] = {}
+    for skill_name, path in path_by_name.items():
+        exists = path.is_file()
+        text = ""
+        skill_read_error = ""
+        try:
+            text = path.read_text(encoding="utf-8") if exists else ""
+        except OSError as exc:
+            skill_read_error = str(exc)
+            read_error = skill_read_error
+        markers = (
+            f"name: {skill_name}",
+            "user-invocable: true",
+            "mb status --json --peek",
+        )
+        route_missing = [marker for marker in markers if marker not in text]
+        if route_missing:
+            missing_markers.extend(f"{skill_name}: {marker}" for marker in route_missing)
+        if exists and not skill_read_error and text != expected_by_name[skill_name]:
+            stale.append(f"{skill_name}/SKILL.md")
+        skill_reports[skill_name] = {
+            "ok": bool(
+                exists
+                and not route_missing
+                and not skill_read_error
+                and text == expected_by_name[skill_name]
+            ),
+            "exists": exists,
+            "current": bool(exists and text == expected_by_name[skill_name]),
+            "path": f"{skill_name}/SKILL.md",
+            "absolute_path": str(path),
+            "missing_markers": route_missing,
+            "read_error": skill_read_error,
+        }
+    legacy_skill = global_skill_source_root() / CODEX_LEGACY_GLOBAL_SKILL_NAME
+    if legacy_skill.exists():
+        stale.append(CODEX_LEGACY_GLOBAL_SKILL_NAME)
+    legacy_plugin = global_plugin_source_root()
+    if legacy_plugin.exists():
+        stale.append(str(legacy_plugin))
+    ok = bool(not missing and not stale and not read_error and not missing_markers)
+    return {
+        "checked": True,
+        "ok": ok,
+        "state": "ok" if ok else "global_skill_missing_or_stale",
+        "summary": (
+            "The global Main Branch Codex skill bundle is installed and current."
+            if ok
+            else (
+                "The global Main Branch Codex skill bundle is missing, stale, "
+                "or has old plugin artifacts."
+            )
+        ),
+        "name": CODEX_GLOBAL_SKILL_NAME,
+        "display_name": "Main Branch",
+        "path": CODEX_GLOBAL_SKILL_RELATIVE_PATH,
+        "absolute_path": str(global_skill_path()),
+        "skills_root": str(global_skill_source_root()),
+        "exists": not missing,
+        "current": bool(not stale and not missing_markers),
+        "skills": skill_reports,
+        "required_skills": list(CODEX_GLOBAL_SKILL_NAMES),
+        "stale": stale,
+        "missing": missing,
+        "missing_markers": missing_markers,
+        "read_error": read_error,
+        "routes": list(CODEX_SLASH_COMMAND_NAMES),
+        "repair": "" if ok else CODEX_REPAIR_TEXT,
+        "repair_command": CODEX_REPAIR_COMMAND,
+        "safe_to_share": True,
+    }
+
+
+def write_global_skill_source() -> dict[str, Any]:
+    """Write the global Main Branch Codex skill bundle and remove old surfaces."""
+
+    changed_paths: list[str] = []
+    for name in CODEX_GLOBAL_SKILL_NAMES:
+        path = global_skill_file_path(name)
+        expected = render_codex_global_skill_md(name)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        existing = path.read_text(encoding="utf-8") if path.exists() else ""
+        if existing != expected:
+            path.write_text(expected, encoding="utf-8")
+            changed_paths.append(str(path))
+
+    legacy_skill = global_skill_source_root() / CODEX_LEGACY_GLOBAL_SKILL_NAME
+    if _remove_generated_tree(legacy_skill):
+        changed_paths.append(str(legacy_skill))
+
+    plugin_root = global_plugin_source_root()
+    if _remove_generated_tree(plugin_root):
+        changed_paths.append(str(plugin_root))
+
+    return {
+        "ok": True,
+        "path": str(global_skill_source_root()),
+        "skills_root": str(global_skill_source_root()),
+        "changed": bool(changed_paths),
+        "changed_paths": changed_paths,
+        "relative_paths": [f"{name}/SKILL.md" for name in CODEX_GLOBAL_SKILL_NAMES],
+        "status": global_skill_status(Path.cwd()),
+        "safe_to_share": True,
+    }
+
+
+def install_global_skill(repo: str | Path) -> dict[str, Any]:
+    """Install or refresh the primary global Codex skill."""
+
+    source = write_global_skill_source()
+    final = global_skill_status(repo)
+    return {
+        "ok": bool(final.get("ok")),
+        "source": source,
+        "steps": [],
+        "status": final,
+        "safe_to_share": True,
+    }
+
+
 def plugin_status(repo: str | Path) -> dict[str, Any]:
     target = Path(repo).expanduser().resolve()
     marketplace = marketplace_path(target)
@@ -1524,6 +1945,7 @@ def remove_repo_local_codex_plugin_files(repo: str | Path) -> list[str]:
         CODEX_LEGACY_PLUGIN_DIR_RELATIVE_PATH,
         CODEX_MARKETPLACE_RELATIVE_PATH,
         CODEX_SKILL_DIR_RELATIVE_PATH,
+        ".agents/skills/main-branch",
     ):
         path = target / relative
         if _remove_generated_tree(path):
@@ -1542,23 +1964,22 @@ def remove_repo_local_codex_plugin_files(repo: str | Path) -> list[str]:
 
 
 def skill_status(repo: str | Path) -> dict[str, Any]:
-    plugin = plugin_status(repo)
+    skill = global_skill_status(repo)
     return {
-        "ok": True,
-        "exists": False,
-        "current": True,
-        "path": "",
+        "ok": bool(skill["ok"]),
+        "exists": bool(skill["exists"]),
+        "current": bool(skill["current"]),
+        "path": skill["path"],
+        "absolute_path": skill["absolute_path"],
         "inventory_path": CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
-        "missing_markers": [],
-        "plugin": plugin,
-        "read_error": "",
-        "repair": "",
+        "missing_markers": skill["missing_markers"],
+        "global_skill": skill,
+        "plugin": plugin_status(repo),
+        "read_error": skill["read_error"],
+        "repair": skill["repair"],
         "repair_command": CODEX_REPAIR_COMMAND,
-        "deprecated": True,
-        "summary": (
-            "Repo-local Codex plugin files are no longer required; Main Branch "
-            "Codex commands are installed globally."
-        ),
+        "deprecated": False,
+        "summary": ("The global Main Branch Codex skill is the supported Codex surface."),
         "safe_to_share": True,
     }
 
@@ -1577,7 +1998,7 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
         read_error = ""
     missing_commands = [command for command in REQUIRED_FACT_COMMANDS if command not in text]
     approval_ok = "explicit operator approval" in text
-    slash_ok = "Do not pretend Claude Code skills work in Codex." in text
+    slash_ok = "Do not pretend Claude Code slash skills work in Codex." in text
     missing_lifecycle_guidance = [
         marker for marker in REQUIRED_LIFECYCLE_GUIDANCE_MARKERS if marker not in text
     ]
@@ -1590,6 +2011,7 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
         relative
         for relative in (
             CODEX_SKILL_DIR_RELATIVE_PATH,
+            ".agents/skills/main-branch",
             CODEX_MARKETPLACE_RELATIVE_PATH,
             CODEX_PLUGIN_DIR_RELATIVE_PATH,
             CODEX_LEGACY_PLUGIN_DIR_RELATIVE_PATH,
@@ -1631,20 +2053,36 @@ def readiness(repo: str | Path) -> dict[str, Any]:
     static_ok = bool(executable["found"] and instructions["ok"])
     runtime = _login_shell_mb_diagnostics()
     runtime_ok = bool(runtime.get("ok"))
-    plugin_install = plugin_install_status(repo, adapter_files_ok=bool(instructions["ok"]))
-    plugin_ok = bool(plugin_install.get("ok"))
-    slash_commands_ready = bool(plugin_install.get("slash_commands_ready"))
-    command_surface_ok = bool(plugin_ok and plugin_install.get("command_surface_ok"))
-    generated_guidance_ready = command_surface_ok
-    ok = bool(static_ok and runtime_ok and command_surface_ok and slash_commands_ready)
+    global_skill = global_skill_status(repo)
+    global_skill_ok = bool(global_skill.get("ok"))
+    plugin_install = {
+        "checked": False,
+        "ok": False,
+        "state": "legacy_plugin_not_checked",
+        "summary": "Codex plugin commands are legacy/experimental and not part of readiness.",
+        "plugin_installed": False,
+        "plugin_enabled": False,
+        "command_files_current": False,
+        "command_surface_ok": False,
+        "slash_commands_ready": False,
+        "slash_commands_likely_loaded": False,
+        "slash_commands_restart_required": False,
+        "repair": "",
+        "safe_to_share": True,
+    }
+    plugin_ok = False
+    slash_commands_ready = False
+    command_surface_ok = global_skill_ok
+    generated_guidance_ready = bool(instructions["ok"] and global_skill_ok)
+    ok = bool(static_ok and runtime_ok and global_skill_ok)
     if ok:
         status = "ready"
     elif not executable["found"] or not instructions["ok"]:
         status = "needs_setup"
     elif runtime.get("mismatch"):
         status = "runtime_mismatch"
-    elif runtime_ok and not plugin_ok:
-        status = str(plugin_install.get("state") or "plugin_not_installed")
+    elif runtime_ok and not global_skill_ok:
+        status = str(global_skill.get("state") or "global_skill_missing_or_stale")
     else:
         status = "runtime_unverified"
     return {
@@ -1654,9 +2092,11 @@ def readiness(repo: str | Path) -> dict[str, Any]:
         "static_ok": static_ok,
         "runtime_ok": runtime_ok,
         "plugin_ok": plugin_ok,
+        "global_skill_ok": global_skill_ok,
         "generated_guidance_ready": generated_guidance_ready,
         "command_surface_ok": command_surface_ok,
         "slash_commands_ready": slash_commands_ready,
+        "global_skill": global_skill,
         "plugin_install": plugin_install,
         "runtime": runtime,
         "executable": executable,
@@ -1670,8 +2110,8 @@ def readiness(repo: str | Path) -> dict[str, Any]:
         else (
             str(runtime.get("repair") or "")
             if static_ok and not runtime_ok
-            else str(plugin_install.get("repair") or "")
-            if static_ok and runtime_ok and not plugin_ok
+            else str(global_skill.get("repair") or "")
+            if static_ok and runtime_ok and not global_skill_ok
             else instructions["repair"] or executable["repair"]
         ),
         "start_command": f"codex -C {shlex.quote(str(Path(repo).expanduser().resolve()))}",
@@ -1702,13 +2142,12 @@ def human_readiness_label(readiness_report: dict[str, Any]) -> str:
         return "runtime mismatch"
     if not runtime.get("ok"):
         return "runtime unverified"
+    global_skill = readiness_report.get("global_skill") or {}
+    if not global_skill.get("ok"):
+        return "skill not ready"
     plugin_install = readiness_report.get("plugin_install") or {}
     if not plugin_install.get("ok"):
-        if plugin_install.get("state") == "plugin_not_installed":
-            return "plugin not installed"
-        if plugin_install.get("state") == "marketplace_not_registered":
-            return "marketplace missing"
-        return "plugin not ready"
+        return "plugin optional"
     return "not ready"
 
 

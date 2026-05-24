@@ -3826,13 +3826,13 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
     codex_executable = codex_cli.get("executable") or {}
     codex_instructions = codex_cli.get("instructions") or {}
     codex_runtime = codex_cli.get("runtime") or {}
-    codex_plugin = codex_cli.get("plugin_install") or {}
+    codex_global_skill = codex_cli.get("global_skill") or {}
     if codex_executable.get("found") and not codex_instructions.get("ok"):
         items.append(
             {
                 "id": "codex_instructions_not_ready",
                 "severity": "warn",
-                "summary": "Codex owner-loop instructions are missing or stale.",
+                "summary": "Codex repo instructions are missing or stale.",
                 "evidence": [
                     str(codex_instructions.get("path") or "AGENTS.md"),
                 ],
@@ -3873,25 +3873,22 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
         codex_executable.get("found")
         and codex_instructions.get("ok")
         and codex_runtime.get("ok")
-        and not codex_plugin.get("ok")
+        and not codex_global_skill.get("ok")
     ):
         items.append(
             {
-                "id": "codex_plugin_not_installed",
+                "id": "codex_global_skills_not_ready",
                 "severity": "warn",
                 "summary": str(
-                    codex_plugin.get("summary")
-                    or "Codex plugin files are ready, but the plugin is not installed."
+                    codex_global_skill.get("summary")
+                    or "Global Main Branch Codex skills are missing or stale."
                 ),
                 "evidence": [
-                    f"marketplace: {codex_plugin.get('marketplace_name') or ''}".strip(),
-                    f"plugin: {codex_plugin.get('plugin_selector') or ''}".strip(),
-                    f"state: {codex_plugin.get('state') or 'unknown'}",
-                    f"commands current: {codex_plugin.get('command_files_current')}",
+                    f"skills root: {codex_global_skill.get('skills_root') or ''}".strip(),
+                    f"state: {codex_global_skill.get('state') or 'unknown'}",
+                    f"missing: {', '.join(codex_global_skill.get('missing') or [])}",
                 ],
-                "repair": str(
-                    codex_plugin.get("repair") or f"Run `{codex_mod.CODEX_PLUGIN_INSTALL_COMMAND}`."
-                ),
+                "repair": str(codex_global_skill.get("repair") or codex_mod.CODEX_REPAIR_TEXT),
                 "safe_to_share": True,
             }
         )
@@ -4319,7 +4316,7 @@ def render_human(
     skill_mark = "[green]wired[/green]" if skills["ok"] else "[yellow]missing[/yellow]"
     codex_label = codex_mod.human_readiness_label(codex)
     codex_style = "green" if codex_label == "ready" else "yellow"
-    codex_mark = f"[{codex_style}]{codex_label}[/{codex_style}] owner loop"
+    codex_mark = f"[{codex_style}]{codex_label}[/{codex_style}] global skills"
     console.print(
         f"[bold]Runtime[/bold] Claude Code: {claude_mark}  skills: {skill_mark}  "
         f"Codex: {codex_mark}"
