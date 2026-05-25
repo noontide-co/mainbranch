@@ -2253,6 +2253,8 @@ def repair_plan(
             "missing_fact_commands": codex_instruction_status["missing_fact_commands"],
             "missing_lifecycle_guidance": codex_instruction_status["missing_lifecycle_guidance"],
             "lifecycle_discovery_ok": codex_instruction_status["lifecycle_discovery_ok"],
+            "generated_version_ok": codex_instruction_status["generated_version_ok"],
+            "expected_version_marker": codex_instruction_status["expected_version_marker"],
             "skill": codex_instruction_status["skill"],
             "approval_boundary_ok": codex_instruction_status["approval_boundary_ok"],
             "codex_native_ok": codex_instruction_status["codex_native_ok"],
