@@ -21,6 +21,50 @@ dirty-work, readiness, and checkpoint facts as the primary source. Raw git is
 fallback/detail only when `mb` facts are unavailable or a crystallize step needs
 site-code history the CLI does not expose.
 
+**Shared contract markers:** Keep these aligned with the shared source.
+
+Required commands:
+
+- `mb status --json --peek`
+- `mb start --json`
+- `mb doctor repair --plan`
+- `mb checkpoint --plan --json`
+- `mb validate --json`
+
+Required fact paths:
+
+- `money_path`
+- `money_path.objects.proof.quality`
+- `content_strategy`
+- `ranked_actions`
+- `update`
+- `readiness`
+- `drift.items`
+- `runtime.codex_cli`
+- `runtime.claude_code`
+- `journal`
+- `since_last_check`
+- `checkpoint.pending`
+- `checkpoint.pending.changed_files`
+- `checkpoint.pending.blockers`
+- `checkpoint.pending.proposed_subject`
+- `summary.changed_files`
+- `safety.blocks`
+- `proposal.message`
+- `validation`
+
+Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`,
+`provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`,
+`destructive_operations`, and `public_issue_or_proposal`.
+
+Public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
+`no_raw_transcripts`, `no_customer_member_data`,
+`no_private_runtime_settings`, and `no_raw_finance_legal_records`.
+
+Core closeout flow: status scan, checkpoint plan, session summary, final
+thought capture, crystallize, approval-gated save, owner-facing save states,
+and warm close.
+
 ---
 
 ## Philosophy

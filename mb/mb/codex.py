@@ -268,14 +268,17 @@ CODEX_END_REQUIRED_JSON_FACTS = (
     "update",
     "readiness",
     "drift.items",
-    "runtime.codex",
+    "runtime.codex_cli",
     "runtime.claude_code",
     "journal",
     "since_last_check",
-    "checkpoint",
-    "checkpoint.changed_files",
-    "checkpoint.blockers",
-    "checkpoint.proposed_subject",
+    "checkpoint.pending",
+    "checkpoint.pending.changed_files",
+    "checkpoint.pending.blockers",
+    "checkpoint.pending.proposed_subject",
+    "summary.changed_files",
+    "safety.blocks",
+    "proposal.message",
     "validation",
 )
 CODEX_END_APPROVAL_GATES = (
@@ -963,14 +966,17 @@ Shared source required JSON fact paths:
 - `update`
 - `readiness`
 - `drift.items`
-- `runtime.codex`
+- `runtime.codex_cli`
 - `runtime.claude_code`
 - `journal`
 - `since_last_check`
-- `checkpoint`
-- `checkpoint.changed_files`
-- `checkpoint.blockers`
-- `checkpoint.proposed_subject`
+- `checkpoint.pending`
+- `checkpoint.pending.changed_files`
+- `checkpoint.pending.blockers`
+- `checkpoint.pending.proposed_subject`
+- `summary.changed_files`
+- `safety.blocks`
+- `proposal.message`
 - `validation`
 
 Shared source gates: `updates_repairs_migrations`, `file_writes`,

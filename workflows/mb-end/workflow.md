@@ -24,14 +24,17 @@ json_facts:
   - update
   - readiness
   - drift.items
-  - runtime.codex
+  - runtime.codex_cli
   - runtime.claude_code
   - journal
   - since_last_check
-  - checkpoint
-  - checkpoint.changed_files
-  - checkpoint.blockers
-  - checkpoint.proposed_subject
+  - checkpoint.pending
+  - checkpoint.pending.changed_files
+  - checkpoint.pending.blockers
+  - checkpoint.pending.proposed_subject
+  - summary.changed_files
+  - safety.blocks
+  - proposal.message
   - validation
 approval_gates:
   - updates_repairs_migrations
@@ -105,14 +108,17 @@ The runtime shell must preserve these paths from the workflow source:
 - `update`
 - `readiness`
 - `drift.items`
-- `runtime.codex`
+- `runtime.codex_cli`
 - `runtime.claude_code`
 - `journal`
 - `since_last_check`
-- `checkpoint`
-- `checkpoint.changed_files`
-- `checkpoint.blockers`
-- `checkpoint.proposed_subject`
+- `checkpoint.pending`
+- `checkpoint.pending.changed_files`
+- `checkpoint.pending.blockers`
+- `checkpoint.pending.proposed_subject`
+- `summary.changed_files`
+- `safety.blocks`
+- `proposal.message`
 - `validation`
 
 Treat these as facts, not strategy. The runtime may explain what changed,

@@ -24,6 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO_ROOT / "workflows" / "mb-start-money-path" / "workflow.md"
 THINK_WORKFLOW = REPO_ROOT / "workflows" / "mb-think" / "workflow.md"
 END_WORKFLOW = REPO_ROOT / "workflows" / "mb-end" / "workflow.md"
+SHIPPED_END_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-end" / "SKILL.md"
 FIXTURES = REPO_ROOT / "mb" / "tests" / "fixtures" / "workflows"
 AGENTS_TEMPLATE = REPO_ROOT / "mb" / "mb" / "_data" / "templates" / "AGENTS.md.tmpl"
 WORKFLOW_PATHS = [
@@ -111,6 +112,14 @@ def test_generated_end_claude_and_codex_snapshots_match_fixtures() -> None:
     assert render_codex_shell(workflow) == (FIXTURES / "mb-end.codex.md").read_text(
         encoding="utf-8"
     )
+
+
+def test_shipped_claude_end_skill_preserves_shared_workflow_contract() -> None:
+    workflow = load_workflow(END_WORKFLOW)
+    skill_text = SHIPPED_END_SKILL.read_text(encoding="utf-8")
+
+    assert shell_drift_errors(workflow, skill_text) == []
+    assert "workflows/mb-end/workflow.md" in skill_text
 
 
 def test_supported_shells_preserve_required_commands_and_json_facts() -> None:

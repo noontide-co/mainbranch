@@ -28,14 +28,17 @@ This snapshot does not replace shipped `.claude/skills/mb-end/SKILL.md`.
 - `update`
 - `readiness`
 - `drift.items`
-- `runtime.codex`
+- `runtime.codex_cli`
 - `runtime.claude_code`
 - `journal`
 - `since_last_check`
-- `checkpoint`
-- `checkpoint.changed_files`
-- `checkpoint.blockers`
-- `checkpoint.proposed_subject`
+- `checkpoint.pending`
+- `checkpoint.pending.changed_files`
+- `checkpoint.pending.blockers`
+- `checkpoint.pending.proposed_subject`
+- `summary.changed_files`
+- `safety.blocks`
+- `proposal.message`
 - `validation`
 
 ## Routing
