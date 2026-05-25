@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Changed generated Codex `AGENTS.md` freshness to use hidden schema/template
+  metadata instead of a visible exact package version sentence, reducing
+  business-repo diffs for patch releases that do not change the guidance
+  content. Refs #736.
+
 ## [0.3.38] - 2026-05-25
 
 ### Fixed
