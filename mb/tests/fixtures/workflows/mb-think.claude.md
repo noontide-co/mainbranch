@@ -82,4 +82,4 @@ Approval needed before writes: yes.
 ```
 
 Use business language. Do not say an offer is bad, will convert, or will not
-convert. Do not tell Codex users to run Claude slash commands.
+convert. Do not tell Codex users to run Claude Code entrypoints.

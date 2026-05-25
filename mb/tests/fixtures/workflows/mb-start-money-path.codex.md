@@ -6,8 +6,8 @@ Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`, `prov
 Public/private boundaries: `no_secrets`, `no_raw_provider_exports`, `no_customer_member_data`, `no_private_runtime_settings`, `no_private_maintainer_notes`
 
 Codex is first-class for the proven owner loop only. This guidance is a
-generated owner-loop shell; it does not mean `/mb-start` slash commands work
-inside Codex and it does not claim all Main Branch workflow support.
+generated owner-loop shell; it does not mean Claude Code runtime entrypoints
+work inside Codex and it does not claim all Main Branch workflow support.
 
 Start from deterministic `mb` facts before reading business markdown or giving
 path-to-money advice.
@@ -47,7 +47,7 @@ path-to-money advice.
 3. Use `money_path`, `money_path.objects.proof.quality`, `content_strategy`,
    `ranked_actions`, `update`, `readiness`, and `drift.items` as cited facts.
 4. If a thinking/codification step is needed, propose the route in Codex-native
-   language instead of pretending Claude slash commands are available.
+   language instead of pretending Claude Code runtime entrypoints are available.
 5. Ask before writing business files, saving checkpoints, opening public
    issues, publishing, mutating providers, spending money, or contacting
    customers.

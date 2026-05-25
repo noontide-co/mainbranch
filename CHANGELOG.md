@@ -17,6 +17,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   checked Claude and Codex shell snapshots covering status scan, checkpoint
   planning, final thought capture, crystallize, owner-facing save states, and
   approval-gated saves. Refs MAIN-448, #739.
+- Changed generated Codex global skills for shared-source routes to render from
+  the canonical workflow source, with inventory fields distinguishing shared
+  sources, Claude shells, Codex global skills, read-only planning, and pending
+  migrations. Refs MAIN-449, #740.
 - Changed `mb workflow list --json` to expose the canonical workflow
   architecture and a source-of-truth status for each Codex route, distinguishing
   shared workflow sources, temporary source-skill mirrors, pending migrations,
