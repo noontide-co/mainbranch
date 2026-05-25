@@ -98,6 +98,7 @@ Common shipped automation-safe commands include:
 | Runtime handoff metadata | `mb start --repo "$repo" --json` |
 | Repo health | `mb doctor "$repo" --json` |
 | Repair preview | `mb doctor repair --repo "$repo" --plan --json` |
+| Agent-surface repair preview | `mb doctor repair --repo "$repo" --plan --only claude`, `--only codex`, or `--all-agents` |
 | Frontmatter/schema validation | `mb validate "$repo" --json` |
 | Graph/index facts | `mb graph "$repo" --json` |
 | Provider readiness | `mb connect status --repo "$repo" --json` |
@@ -164,7 +165,7 @@ smoke evidence exist.
 | Runtime surface | Status | Invocation | Skill/workflow discovery | Routing and automation | Observability and packaging |
 |---|---|---|---|---|---|
 | Claude Code | Supported | `mb start --repo "$repo"` prints the `claude` handoff; `mb start --launch` may launch after readiness checks. | `mb skill link --repo "$repo"` writes project-local `.claude/skills/mb-*` bridge links and `.claude/settings.local.json`. | Slash commands such as `/mb-start` and `/mb-think` own conversation and judgment; they call deterministic `mb` commands for facts. | `mb doctor`, `mb status --json`, `mb start --json`, `mb skill repair`, and runtime dogfood evidence gate release claims. Skills ship inside the Python package today. |
-| Codex CLI | Supported | Can call deterministic `mb` commands as a subprocess when pointed at a business repo. `AGENTS.md` gives Codex the repo bootstrap, and global Main Branch skills give Codex `mb-*` workflow routes. | Fresh `mb onboard` repos include tracked `AGENTS.md`. `mb doctor repair --plan --only codex` / `--apply --only codex` refresh repo guidance and install or repair the global Codex skill bundle. | Codex `mb-*` skills run `mb status --json --peek`, `mb start --json`, `mb doctor repair --plan --json`, `mb checkpoint --plan --json`, `mb validate --json`, and `mb workflow list --runtime codex --json` as needed, translate facts into business language, and ask before writes. | `mb doctor`, `mb status --json`, `mb start --json`, and `mb workflow list` expose Codex readiness and workflow support. Codex support covers start/status/setup/update/doctor, think/codify, end/checkpoint/save, validate, and workflow discovery. Ads, organic, site, bet, and playbook routes are installed for discovery but remain read-only planning unless their support level says otherwise. |
+| Codex CLI | Supported | Can call deterministic `mb` commands as a subprocess when pointed at a business repo. `AGENTS.md` gives Codex the repo bootstrap, and global Main Branch skills give Codex `mb-*` workflow routes. | Fresh `mb onboard` repos include tracked `AGENTS.md`. `mb doctor repair --plan --only codex` / `--apply --only codex` refresh repo guidance and install or repair the global Codex skill bundle. Use `--all-agents` only after reviewing both Claude and Codex surface writes. | Codex `mb-*` skills run `mb status --json --peek`, `mb start --json`, `mb doctor repair --plan --json`, `mb checkpoint --plan --json`, `mb validate --json`, and `mb workflow list --runtime codex --json` as needed, translate facts into business language, and ask before writes. | `mb doctor`, `mb status --json`, `mb start --json`, and `mb workflow list` expose Codex readiness and workflow support. Codex support covers start/status/setup/update/doctor, think/codify, end/checkpoint/save, validate, and workflow discovery. Ads, organic, site, bet, and playbook routes are installed for discovery but remain read-only planning unless their support level says otherwise. |
 | Cursor | Roadmap | Can call deterministic `mb` commands from terminal/tasks when pointed at a business repo. | No supported Cursor rules/package adapter yet. | No supported Main Branch routing contract. | Needs adapter docs, install/update rules, conflict handling, and smoke evidence. |
 | OpenClaw | Roadmap | Target public runtime surface. It should call `mb` through stable CLI/JSON commands rather than clone-era paths. | No supported OpenClaw adapter yet. | Main Branch should coexist with OpenClaw as the business repo/GitHub memory layer, not replace it. | Needs explicit adapter shape, migration notes, generated-file rules, and smoke evidence. |
 | Hermes | Roadmap | Target runtime/memory surface. It may supervise or host workflows that call packaged `mb` commands. | No supported Hermes adapter yet. | Hermes-specific routing belongs in the Hermes adapter, while `mb` remains deterministic and non-conversational. | Docs may describe internal-package expectations generically, but not as the only blessed public path. Smoke evidence is required before support claims. |
@@ -258,9 +259,11 @@ mb update
 ```
 
 `mb update` detects whether Main Branch is a `pipx` install or source checkout,
-runs the appropriate update path, refreshes Claude Code skill links, and runs
-the Codex global-skill repair from the upgraded `mb` executable. Use
-`mb update --check` for a dry-run and `mb update --json` for automation.
+runs the appropriate update path, and then runs the explicit surface-refresh
+path by default: Claude Code skill links/guidance plus Codex global skills and
+repo `AGENTS.md` from the upgraded `mb` executable. Use `mb update --check` for
+a dry-run, `mb update --json` for automation, and `--no-refresh-surfaces` only
+when deliberately updating the package without touching runtime surfaces.
 Inside Claude Code, `/mb-update` calls `mb update` for this mechanical step and keeps
 ownership of the human-readable "what's new" summary. Codex users should open a
 fresh Codex thread after an update so refreshed global skills are loaded.

@@ -77,6 +77,11 @@ REFERENCE_COMPAT_LINKS = {
 }
 STATE_ORDER = {"ok": 0, "info": 1, "warn": 2, "error": 3}
 AUDIENCE_VALUES = frozenset({"mechanical", "operator_decision", "informational"})
+AGENT_REPAIR_SCOPES = frozenset({"claude", "codex"})
+CLAUDE_ACTION_IDS = frozenset({"skill-link", "skill-shadow-repair", "legacy-claude-link-repair"})
+CODEX_ACTION_IDS = frozenset({"codex-agents-md", "codex-global-skill"})
+AGENT_ACTION_IDS = CLAUDE_ACTION_IDS | CODEX_ACTION_IDS
+AGENT_SECTION_IDS = frozenset({"claude-wiring", "codex-wiring", "git"})
 
 
 def _derive_audience(mode: str, safe_to_apply: bool) -> str:
@@ -245,6 +250,188 @@ def _section(
         "summary": summary,
         "checks": checks or [],
         "actions": actions or [],
+    }
+
+
+def _unique(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
+
+
+def _action_ids_for_scope(only: str = "", *, all_agents: bool = False) -> set[str]:
+    if all_agents:
+        return set(AGENT_ACTION_IDS)
+    if only == "claude":
+        return set(CLAUDE_ACTION_IDS)
+    if only == "codex":
+        return set(CODEX_ACTION_IDS)
+    return set()
+
+
+def _agent_scope_label(only: str = "", *, all_agents: bool = False) -> str:
+    if all_agents:
+        return "all-agents"
+    return only or "default"
+
+
+def _agent_scope_filter(
+    sections: list[dict[str, Any]],
+    actions: list[dict[str, Any]],
+    *,
+    only: str = "",
+    all_agents: bool = False,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    action_ids = _action_ids_for_scope(only, all_agents=all_agents)
+    if not action_ids:
+        return sections, actions
+    section_ids = set(AGENT_SECTION_IDS)
+    if only == "claude":
+        section_ids = {"claude-wiring", "git"}
+    elif only == "codex":
+        section_ids = {"codex-wiring", "git"}
+    filtered_sections = [section for section in sections if str(section.get("id")) in section_ids]
+    filtered_actions = [action for action in actions if str(action.get("id")) in action_ids]
+    return filtered_sections, filtered_actions
+
+
+def _agent_surfaces(
+    sections: list[dict[str, Any]],
+    actions: list[dict[str, Any]],
+    *,
+    only: str = "",
+    all_agents: bool = False,
+) -> dict[str, Any]:
+    by_section = {str(section.get("id")): section for section in sections}
+    by_action = {str(action.get("id")): action for action in actions}
+
+    def surface(
+        *,
+        key: str,
+        section_id: str,
+        action_ids: frozenset[str],
+        label: str,
+        repair_command: str,
+    ) -> dict[str, Any]:
+        section = by_section.get(section_id, {})
+        surface_actions = [
+            by_action[action_id] for action_id in action_ids if action_id in by_action
+        ]
+        return {
+            "id": key,
+            "label": label,
+            "state": str(section.get("state") or "info"),
+            "detected": bool(section),
+            "repair_command": repair_command,
+            "checks": [
+                {
+                    "name": str(check.get("name") or ""),
+                    "state": str(check.get("state") or "info"),
+                    "summary": str(check.get("summary") or ""),
+                }
+                for check in section.get("checks", [])
+            ],
+            "planned_actions": [str(action.get("id")) for action in surface_actions],
+            "touched_files": _unique(
+                [str(path) for action in surface_actions for path in action.get("writes", [])]
+            ),
+        }
+
+    return {
+        "scope": _agent_scope_label(only, all_agents=all_agents),
+        "scope_choices": [
+            "mb doctor repair --plan --only claude",
+            "mb doctor repair --plan --only codex",
+            "mb doctor repair --plan --all-agents",
+        ],
+        "apply_choices": [
+            "mb doctor repair --apply --only claude",
+            "mb doctor repair --apply --only codex",
+            "mb doctor repair --apply --all-agents",
+        ],
+        "surfaces": [
+            surface(
+                key="claude",
+                section_id="claude-wiring",
+                action_ids=CLAUDE_ACTION_IDS,
+                label="Claude Code project-local skills",
+                repair_command="mb doctor repair --apply --only claude",
+            ),
+            surface(
+                key="codex",
+                section_id="codex-wiring",
+                action_ids=CODEX_ACTION_IDS,
+                label="Codex global mb-* skills and repo AGENTS.md",
+                repair_command="mb doctor repair --apply --only codex",
+            ),
+        ],
+    }
+
+
+def _repair_receipt(
+    applied_actions: list[dict[str, Any]],
+    *,
+    only: str = "",
+    all_agents: bool = False,
+) -> dict[str, Any]:
+    touched_files = _unique(
+        [str(path) for action in applied_actions for path in action.get("writes", [])]
+    )
+    installed_skills: list[str] = []
+    for action in applied_actions:
+        if str(action.get("id")) != "codex-global-skill":
+            continue
+        result = action.get("result", {})
+        if not isinstance(result, dict):
+            continue
+        status = result.get("status", {})
+        if isinstance(status, dict):
+            installed_skills.extend(str(name) for name in status.get("required_skills", []))
+        source = result.get("source", {})
+        if isinstance(source, dict) and not installed_skills:
+            installed_skills.extend(
+                str(path).removesuffix("/SKILL.md") for path in source.get("relative_paths", [])
+            )
+    scope = _agent_scope_label(only, all_agents=all_agents)
+    skipped_surfaces: list[str] = []
+    if scope == "default":
+        skipped_surfaces = [
+            "claude: run mb doctor repair --apply --only claude",
+            "codex: run mb doctor repair --apply --only codex",
+        ]
+    elif scope == "claude":
+        skipped_surfaces = ["codex"]
+    elif scope == "codex":
+        skipped_surfaces = ["claude"]
+
+    return {
+        "scope": scope,
+        "installed_skills": _unique(installed_skills),
+        "touched_files": touched_files,
+        "skipped_surfaces": skipped_surfaces,
+        "warnings": [
+            str(action.get("reason") or "")
+            for action in applied_actions
+            if str(action.get("state")) in {"warn", "error"}
+        ],
+        "restart_notes": [
+            "Open a fresh Codex thread after Codex global skills change.",
+            "Restart Claude Code if it was already open while project-local skill links changed.",
+        ],
+        "rollback": [
+            "Review touched files with git diff before committing.",
+            "Use git restore for repo-local generated files you do not want to keep.",
+            "Remove generated Codex skill folders from the Codex skills root if needed.",
+        ],
+        "uninstall": [
+            "Claude: remove project-local .claude/skills links and settings entries after review.",
+            "Codex: remove Main Branch folders under the Codex skills root after review.",
+        ],
     }
 
 
@@ -1571,8 +1758,13 @@ def repair_plan(
     mode: str = "plan",
     applied_actions: list[dict[str, Any]] | None = None,
     only: str = "",
+    all_agents: bool = False,
 ) -> dict[str, Any]:
     """Build the guided reconciliation plan without writing repo status markers."""
+    if only and only not in AGENT_REPAIR_SCOPES:
+        raise ValueError(f"unknown repair scope: {only}")
+    if only and all_agents:
+        raise ValueError("--only cannot be combined with --all-agents")
     target = Path(repo).expanduser().resolve()
     doctor_report = run(str(target))
     actions: list[dict[str, Any]] = []
@@ -1984,7 +2176,7 @@ def repair_plan(
                 title="Restore Main Branch start wiring for Claude Code",
                 state="error",
                 mode="write",
-                command="mb doctor repair --apply",
+                command="mb doctor repair --apply --only claude",
                 safe_to_apply=True,
                 reason=(
                     "restores project-local Main Branch start wiring so Claude Code "
@@ -2004,7 +2196,7 @@ def repair_plan(
                 title="Move stale personal Main Branch skill symlinks to backup",
                 state="warn",
                 mode="write",
-                command="mb skill repair --repo . --apply",
+                command="mb doctor repair --apply --only claude",
                 safe_to_apply=True,
                 reason="only stale or broken Main Branch personal symlinks are moved",
                 writes=[str(shadow_report.get("personal_skills_dir") or "~/.claude/skills")],
@@ -2017,7 +2209,7 @@ def repair_plan(
                 title="Move old clone-path lens/reference symlinks to backup",
                 state="warn",
                 mode="write",
-                command="mb doctor repair --apply",
+                command="mb doctor repair --apply --only claude",
                 safe_to_apply=True,
                 reason="only stale Main Branch clone-path symlinks are moved; user files stay put",
                 writes=[".claude/lenses/", ".claude/reference/", ".mb/backups/"],
@@ -2094,6 +2286,7 @@ def repair_plan(
             "skill_path": codex_global_skill["path"],
             "skills_root": codex_global_skill["skills_root"],
             "routes": codex_global_skill["routes"],
+            "required_skills": codex_global_skill.get("required_skills", []),
             "stale": codex_global_skill["stale"],
             "missing": codex_global_skill["missing"],
             "missing_markers": codex_global_skill["missing_markers"],
@@ -2124,12 +2317,15 @@ def repair_plan(
     if not codex_global_skill["ok"]:
         action = _action(
             id="codex-global-skill",
-            title="Install the global Main Branch Codex skill",
+            title="Install the global Main Branch Codex skill bundle",
             state="warn",
             mode="write",
             command="mb doctor repair --apply --only codex",
             safe_to_apply=True,
-            reason=("Codex uses one global Main Branch skill for the supported mb-* routes"),
+            reason=(
+                "Codex uses a global Main Branch skill bundle for supported and "
+                "discoverable mb-* routes"
+            ),
             writes=[
                 str(codex_mod.global_skill_source_root()),
             ],
@@ -2294,15 +2490,18 @@ def repair_plan(
         )
     )
 
-    if only:
-        if only != "codex":
-            raise ValueError(f"unknown repair scope: {only}")
-        sections = [section for section in sections if section["id"] in {"codex-wiring", "git"}]
-        actions = [
-            action
-            for action in actions
-            if str(action.get("id")) in {"codex-agents-md", "codex-global-skill"}
-        ]
+    agent_surfaces = _agent_surfaces(
+        sections,
+        actions,
+        only=only,
+        all_agents=all_agents,
+    )
+    sections, actions = _agent_scope_filter(
+        sections,
+        actions,
+        only=only,
+        all_agents=all_agents,
+    )
 
     states = [str(section["state"]) for section in sections]
     summary = {
@@ -2322,6 +2521,7 @@ def repair_plan(
         "ok": summary["error"] == 0,
         "mode": mode,
         "only": only,
+        "all_agents": all_agents,
         "read_only": mode == "plan",
         "repo": str(target),
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -2329,6 +2529,12 @@ def repair_plan(
         "sections": sections,
         "actions": actions,
         "applied_actions": applied_actions or [],
+        "agent_surfaces": agent_surfaces,
+        "receipt": _repair_receipt(
+            applied_actions or [],
+            only=only,
+            all_agents=all_agents,
+        ),
         "post_apply": {
             "structural_verification": "mb doctor repair --plan --json",
             "validation_frontmatter_debt": "mb validate --cross-refs",
@@ -2367,17 +2573,23 @@ def repair_apply(
     *,
     include_migration: bool = False,
     only: str = "",
+    all_agents: bool = False,
 ) -> dict[str, Any]:
     """Apply safe doctor repairs and return a fresh reconciliation report."""
-    if only and only != "codex":
+    if only and only not in AGENT_REPAIR_SCOPES:
         raise ValueError(f"unknown repair scope: {only}")
+    if only and all_agents:
+        raise ValueError("--only cannot be combined with --all-agents")
     target = Path(repo).expanduser().resolve()
-    before = repair_plan(target, only=only)
+    before = repair_plan(target, only=only, all_agents=all_agents)
     applied: list[dict[str, Any]] = []
+    apply_non_agent = not only and not all_agents
+    apply_claude = only == "claude" or all_agents
+    apply_codex = only == "codex" or all_agents
 
     missing_gitignore = _missing_gitignore_entries(target)
     tracked_local_state = _tracked_local_state_paths(target)
-    if missing_gitignore and not only:
+    if missing_gitignore and apply_non_agent:
         changed = _append_unique_lines(target / ".gitignore", missing_gitignore)
         applied.append(
             _action(
@@ -2393,7 +2605,7 @@ def repair_apply(
                 result={"added": missing_gitignore},
             )
         )
-    if tracked_local_state and not only:
+    if tracked_local_state and apply_non_agent:
         results = [_untrack_local_state_path(target, rel) for rel in tracked_local_state]
         applied.append(
             _action(
@@ -2414,7 +2626,7 @@ def repair_apply(
         )
 
     checkpoint_hook = checkpoint_mod.hook_status(target)
-    if checkpoint_hook.get("state") in {"missing", "broken"} and not only:
+    if checkpoint_hook.get("state") in {"missing", "broken"} and apply_non_agent:
         installed = checkpoint_mod.install_commit_hook(target)
         applied.append(
             _action(
@@ -2431,8 +2643,8 @@ def repair_apply(
             )
         )
 
-    shadow = engine_mod.inspect_personal_skill_conflicts(target, apply=not bool(only))
-    if int(shadow.get("summary", {}).get("repaired", 0) or 0) and not only:
+    shadow = engine_mod.inspect_personal_skill_conflicts(target, apply=apply_claude)
+    if int(shadow.get("summary", {}).get("repaired", 0) or 0) and apply_claude:
         applied.append(
             _action(
                 id="skill-shadow-repair",
@@ -2448,7 +2660,7 @@ def repair_apply(
             )
         )
 
-    if not link_status(target).get("ok") and not only:
+    if not link_status(target).get("ok") and apply_claude:
         linked = engine_mod.link_skills(target)
         applied.append(
             _action(
@@ -2470,11 +2682,11 @@ def repair_apply(
 
     legacy_links = _legacy_claude_symlinks(target)
     repaired_links = (
-        {"moved": [], "errors": [], "ok": True}
-        if only
-        else _repair_legacy_claude_symlinks(target, legacy_links["findings"])
+        _repair_legacy_claude_symlinks(target, legacy_links["findings"])
+        if apply_claude
+        else {"moved": [], "errors": [], "ok": True}
     )
-    if (repaired_links["moved"] or repaired_links["errors"]) and not only:
+    if (repaired_links["moved"] or repaired_links["errors"]) and apply_claude:
         _append_unique_lines(target / ".gitignore", [".mb/backups/"])
         applied.append(
             _action(
@@ -2483,7 +2695,11 @@ def repair_apply(
                 state="ok" if repaired_links["ok"] else "error",
                 mode="write",
                 command=(
-                    "mb doctor repair --apply --only codex" if only else "mb doctor repair --apply"
+                    "mb doctor repair --apply --only claude"
+                    if only == "claude"
+                    else "mb doctor repair --apply --all-agents"
+                    if all_agents
+                    else "mb doctor repair --apply"
                 ),
                 safe_to_apply=True,
                 reason="moved stale symlink entries, not user-authored files",
@@ -2494,7 +2710,7 @@ def repair_apply(
         )
 
     codex_instruction_status = codex_mod.instructions_status(target)
-    if not codex_instruction_status["ok"]:
+    if not codex_instruction_status["ok"] and apply_codex:
         agents = codex_mod.write_agents_md(target)
         applied.append(
             _action(
@@ -2505,6 +2721,8 @@ def repair_apply(
                 command=(
                     "mb doctor repair --apply --only codex"
                     if only == "codex"
+                    else "mb doctor repair --apply --all-agents"
+                    if all_agents
                     else "mb doctor repair --apply"
                 ),
                 safe_to_apply=True,
@@ -2522,11 +2740,8 @@ def repair_apply(
         )
 
     codex_status = codex_mod.readiness(target)
-    codex_runtime_relevant = bool(
-        codex_status["executable"]["found"] and codex_status["instructions"]["ok"]
-    )
     codex_global_skill = codex_status["global_skill"]
-    if codex_runtime_relevant and not codex_global_skill["ok"]:
+    if not codex_global_skill["ok"] and apply_codex:
         installed = codex_mod.install_global_skill(target)
         applied.append(
             _action(
@@ -2534,7 +2749,11 @@ def repair_apply(
                 title="Installed the global Main Branch Codex skill bundle",
                 state="ok" if installed["ok"] else "error",
                 mode="write",
-                command="mb doctor repair --apply --only codex",
+                command=(
+                    "mb doctor repair --apply --only codex"
+                    if only == "codex"
+                    else "mb doctor repair --apply --all-agents"
+                ),
                 safe_to_apply=True,
                 reason=("installed global Codex skills for the supported Main Branch mb-* routes"),
                 writes=[
@@ -2546,7 +2765,7 @@ def repair_apply(
         )
 
     related_links_result: dict[str, Any] = {"changed": [], "errors": [], "ok": True}
-    if not only:
+    if apply_non_agent:
         related_links_result = related_links_mod.apply(target)
     if related_links_result["changed"] or related_links_result["errors"]:
         applied.append(
@@ -2567,7 +2786,7 @@ def repair_apply(
             )
         )
 
-    if include_migration and not only:
+    if include_migration and apply_non_agent:
         migrated = migrate_mod.apply(target)
         applied.append(
             _action(
@@ -2584,7 +2803,13 @@ def repair_apply(
             )
         )
 
-    after = repair_plan(target, mode="apply", applied_actions=applied, only=only)
+    after = repair_plan(
+        target,
+        mode="apply",
+        applied_actions=applied,
+        only=only,
+        all_agents=all_agents,
+    )
     after["before_summary"] = before["summary"]
     return after
 
@@ -2598,6 +2823,8 @@ def render_repair(report: dict[str, Any]) -> None:
     console.print(f"\n[bold]mb doctor repair[/bold]  {mode}")
     if report.get("only"):
         console.print(f"scope: {report['only']}")
+    elif report.get("all_agents"):
+        console.print("scope: all agent surfaces")
     console.print(f"repo: {report['repo']}\n")
     for section in report["sections"]:
         state = str(section["state"])
@@ -2623,6 +2850,23 @@ def render_repair(report: dict[str, Any]) -> None:
         console.print("\n[bold]Applied safe repairs[/bold]")
         for action in report["applied_actions"]:
             console.print(f"  - {action['title']}: {action['command']}")
+        receipt = report.get("receipt", {})
+        touched = receipt.get("touched_files", []) if isinstance(receipt, dict) else []
+        installed = receipt.get("installed_skills", []) if isinstance(receipt, dict) else []
+        if touched:
+            console.print("  touched: " + ", ".join(str(item) for item in touched[:8]))
+        if installed:
+            console.print("  installed Codex skills: " + ", ".join(str(item) for item in installed))
+    if report.get("agent_surfaces"):
+        console.print("\n[bold]Agent surfaces[/bold]")
+        for surface in report["agent_surfaces"].get("surfaces", []):
+            files = surface.get("touched_files", [])
+            console.print(
+                f"  - {surface['label']}: {surface['state']} "
+                f"({len(surface.get('planned_actions', []))} action(s))"
+            )
+            if files:
+                console.print("    would touch: " + ", ".join(str(item) for item in files[:8]))
     if report["actions"]:
         console.print("\n[bold]Repair plan[/bold]")
         for action in report["actions"]:

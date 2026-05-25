@@ -378,10 +378,10 @@ def test_doctor_repair_apply_restores_missing_claude_worktree_start_wiring(
         "mb doctor repair --plan",
         "mb doctor repair --apply",
     ]
-    assert actions["skill-link"]["command"] == "mb doctor repair --apply"
+    assert actions["skill-link"]["command"] == "mb doctor repair --apply --only claude"
     assert "/mb-start" in actions["skill-link"]["reason"]
 
-    applied = doctor_mod.repair_apply(repo=worktree)
+    applied = doctor_mod.repair_apply(repo=worktree, only="claude")
     applied_actions = {action["id"]: action for action in applied["applied_actions"]}
 
     assert "skill-link" in applied_actions
@@ -450,9 +450,121 @@ def test_doctor_repair_only_codex_filters_unrelated_related_links(
     assert apply_result.exit_code in {0, 1}
     payload = json.loads(apply_result.stdout)
     applied = {action["id"]: action for action in payload["applied_actions"]}
-    assert set(applied) == {"codex-agents-md"}
+    assert set(applied) == {"codex-agents-md", "codex-global-skill"}
     assert applied["codex-agents-md"]["command"] == "mb doctor repair --apply --only codex"
     assert "## Related links" not in decision.read_text(encoding="utf-8")
+
+
+def test_doctor_repair_plan_lists_agent_surfaces_and_scope_choices(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    (repo / "AGENTS.md").write_text("# stale\n\nNo facts here.\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    surfaces = {surface["id"]: surface for surface in payload["agent_surfaces"]["surfaces"]}
+    assert payload["agent_surfaces"]["scope_choices"] == [
+        "mb doctor repair --plan --only claude",
+        "mb doctor repair --plan --only codex",
+        "mb doctor repair --plan --all-agents",
+    ]
+    assert surfaces["claude"]["label"] == "Claude Code project-local skills"
+    assert surfaces["codex"]["label"] == "Codex global mb-* skills and repo AGENTS.md"
+    assert "codex-agents-md" in surfaces["codex"]["planned_actions"]
+    assert "codex-global-skill" in surfaces["codex"]["planned_actions"]
+    assert "AGENTS.md" in surfaces["codex"]["touched_files"]
+    assert str(tmp_path / "codex-skills") in surfaces["codex"]["touched_files"]
+
+
+def test_doctor_repair_only_claude_filters_codex_actions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    (repo / "AGENTS.md").write_text("# stale\n\nNo facts here.\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app, ["doctor", "repair", "--repo", str(repo), "--plan", "--only", "claude", "--json"]
+    )
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    assert payload["only"] == "claude"
+    assert [section["id"] for section in payload["sections"]] == ["claude-wiring", "git"]
+    assert all(not action["id"].startswith("codex-") for action in payload["actions"])
+
+
+def test_doctor_repair_rejects_mixed_agent_scope(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "doctor",
+            "repair",
+            "--repo",
+            str(tmp_path),
+            "--plan",
+            "--only",
+            "codex",
+            "--all-agents",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "--only cannot be combined with --all-agents" in result.stderr
+
+
+def test_doctor_repair_apply_all_agents_installs_codex_without_codex_cli(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
+    monkeypatch.setattr(codex_mod, "_which", lambda name: "" if name == "codex" else None)
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    (repo / "AGENTS.md").write_text("# stale\n\nNo facts here.\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app, ["doctor", "repair", "--repo", str(repo), "--apply", "--all-agents", "--json"]
+    )
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    applied = {action["id"]: action for action in payload["applied_actions"]}
+    assert "codex-agents-md" in applied
+    assert "codex-global-skill" in applied
+    receipt = payload["receipt"]
+    assert "mb-start" in receipt["installed_skills"]
+    assert "weekly-review" in receipt["installed_skills"]
+    assert "main-branch-owner-loop" not in receipt["installed_skills"]
+    assert str(tmp_path / "codex-skills") in receipt["touched_files"]
+    assert (tmp_path / "codex-skills" / "mb-start" / "SKILL.md").is_file()
+
+
+def test_doctor_repair_apply_default_does_not_silently_write_agent_surfaces(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    (repo / "AGENTS.md").write_text("# stale\n\nNo facts here.\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    applied_ids = {action["id"] for action in payload["applied_actions"]}
+    assert "codex-agents-md" not in applied_ids
+    assert "codex-global-skill" not in applied_ids
+    assert not (tmp_path / "codex-skills" / "mb-start" / "SKILL.md").exists()
+    assert payload["receipt"]["skipped_surfaces"] == [
+        "claude: run mb doctor repair --apply --only claude",
+        "codex: run mb doctor repair --apply --only codex",
+    ]
 
 
 def test_doctor_repair_plan_marks_codex_runtime_info_when_codex_missing(
@@ -696,7 +808,9 @@ def test_doctor_repair_apply_refreshes_codex_agents_md(tmp_path: Path) -> None:
     init_run(path=str(repo), name="Acme")
     (repo / "AGENTS.md").write_text("# stale\n\nNo facts here.\n", encoding="utf-8")
 
-    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"])
+    result = runner.invoke(
+        app, ["doctor", "repair", "--repo", str(repo), "--apply", "--only", "codex", "--json"]
+    )
 
     assert result.exit_code in {0, 1}
     payload = json.loads(result.stdout)
@@ -726,7 +840,7 @@ def test_doctor_repair_removes_stale_repo_local_codex_plugin(tmp_path: Path) -> 
     assert "codex-agents-md" in actions
 
     apply_result = runner.invoke(
-        app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"]
+        app, ["doctor", "repair", "--repo", str(repo), "--apply", "--only", "codex", "--json"]
     )
     assert apply_result.exit_code in {0, 1}
     assert not command.exists()
@@ -1405,7 +1519,9 @@ def test_doctor_repair_apply_moves_old_clone_symlink_to_backup(tmp_path: Path) -
     stale_link.parent.mkdir(parents=True, exist_ok=True)
     stale_link.symlink_to(old_lens, target_is_directory=True)
 
-    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--apply", "--json"])
+    result = runner.invoke(
+        app, ["doctor", "repair", "--repo", str(repo), "--apply", "--only", "claude", "--json"]
+    )
 
     assert result.exit_code in {0, 1}
     payload = json.loads(result.stdout)

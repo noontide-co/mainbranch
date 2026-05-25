@@ -673,6 +673,7 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
     apply_changes = False
     include_migration = False
     only = ""
+    all_agents = False
     local_json = json_out
     idx = 0
     while idx < len(args):
@@ -680,7 +681,7 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
         if arg == "--help":
             typer.echo(
                 "Usage: mb doctor repair [--repo PATH] [--plan | --apply] "
-                "[--only codex] [--include-migration] [--json]"
+                "[--only claude|codex | --all-agents] [--include-migration] [--json]"
             )
             typer.echo("")
             typer.echo("Plan or apply guided business-repo reconciliation repairs.")
@@ -702,6 +703,8 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
             apply_changes = True
         elif arg == "--include-migration":
             include_migration = True
+        elif arg == "--all-agents":
+            all_agents = True
         elif arg == "--only":
             idx += 1
             if idx >= len(args):
@@ -726,19 +729,29 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
             err=True,
         )
         raise typer.Exit(2)
-    if only and only != "codex":
-        typer.echo("mb doctor repair: --only currently supports only `codex`", err=True)
+    if only and only not in {"claude", "codex"}:
+        typer.echo("mb doctor repair: --only supports `claude` or `codex`", err=True)
+        raise typer.Exit(2)
+    if only and all_agents:
+        typer.echo("mb doctor repair: --only cannot be combined with --all-agents", err=True)
         raise typer.Exit(2)
     if only and include_migration:
         typer.echo("mb doctor repair: --only cannot be combined with --include-migration", err=True)
         raise typer.Exit(2)
+    if all_agents and include_migration:
+        typer.echo(
+            "mb doctor repair: --all-agents cannot be combined with --include-migration",
+            err=True,
+        )
+        raise typer.Exit(2)
 
     if apply_changes:
-        if only:
+        if only or all_agents:
             report = doctor_mod.repair_apply(
                 repo=repo,
                 include_migration=include_migration,
                 only=only,
+                all_agents=all_agents,
             )
         else:
             report = doctor_mod.repair_apply(
@@ -747,8 +760,8 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
             )
     else:
         report = (
-            doctor_mod.repair_plan(repo=repo, only=only)
-            if only
+            doctor_mod.repair_plan(repo=repo, only=only, all_agents=all_agents)
+            if only or all_agents
             else doctor_mod.repair_plan(repo=repo)
         )
 
@@ -777,7 +790,7 @@ def _doctor_help() -> None:
     typer.echo("Repair:")
     typer.echo(
         "  mb doctor repair [--repo PATH] [--plan | --apply] "
-        "[--only codex] [--include-migration] [--json]"
+        "[--only claude|codex | --all-agents] [--include-migration] [--json]"
     )
     typer.echo("  Note: --include-migration is valid only with --apply after plan review.")
 
@@ -1761,10 +1774,15 @@ def educational_cmd(
 def update_cmd(
     repo: str = typer.Option(".", "--repo", help="Business repo whose skill links refresh."),
     check: bool = typer.Option(False, "--check", help="Dry-run only; do not upgrade or relink."),
+    refresh_surfaces: bool = typer.Option(
+        True,
+        "--refresh-surfaces/--no-refresh-surfaces",
+        help="Refresh Claude links/guidance, Codex global skills, and AGENTS.md after update.",
+    ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Refresh Main Branch according to its install mode."""
-    result = update_mod.run(repo=repo, check=check)
+    result = update_mod.run(repo=repo, check=check, refresh_surfaces=refresh_surfaces)
     if json_out:
         typer.echo(json.dumps(result, indent=2))
     else:
