@@ -11,6 +11,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.37] - 2026-05-25
+
 ### Changed
 
 - Made `mb doctor repair` agent-surface writes explicit: operators can plan or
