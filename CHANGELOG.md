@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed Codex guidance freshness checks so `mb doctor repair --plan --only
+  codex` detects stale generated `AGENTS.md` version markers and refreshes the
+  repo guidance after package updates. Refs #731.
+
 ## [0.3.37] - 2026-05-25
 
 ### Changed
