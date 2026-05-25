@@ -11,6 +11,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Made `mb doctor repair` agent-surface writes explicit: operators can plan or
+  apply Claude-only, Codex-only, or reviewed all-agent repairs, and JSON reports
+  now include detected surfaces, touched files, receipts, skipped surfaces, and
+  refresh notes. Refs MAIN-440, #722.
+- Clarified `mb update` surface refresh behavior and added an explicit
+  `--no-refresh-surfaces` escape hatch for package-only updates. Refs MAIN-440,
+  #722.
+
 ## [0.3.36] - 2026-05-24
 
 v0.3.36 corrects the Codex support surface after v0.3.35. Codex now follows the

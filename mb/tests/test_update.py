@@ -123,6 +123,81 @@ def test_update_check_pipx_does_not_run_commands(monkeypatch: Any, tmp_path: Pat
     assert calls == []
 
 
+def test_update_check_exposes_surface_refresh_plan(monkeypatch: Any, tmp_path: Path) -> None:
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
+    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start", "mb-status"])
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    assert result["refresh_surfaces"] is True
+    assert result["surface_refresh"]["enabled"] is True
+    assert result["surface_refresh"]["claude"]["skill_count"] == 2
+    assert result["surface_refresh"]["claude"]["command"].startswith("mb skill link")
+    assert "--only codex" in result["surface_refresh"]["codex"]["command"]
+    assert any("would run `mb skill link" in action for action in result["actions"])
+    assert any("would run `mb doctor repair" in action for action in result["actions"])
+
+
+def test_update_can_skip_surface_refresh_explicitly(monkeypatch: Any, tmp_path: Path) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        if args == ["pipx", "upgrade", "mainbranch"]:
+            return _completed(args, stdout="upgraded package mainbranch")
+        if args == ["mb", "--version"]:
+            return _completed(args, stdout="mb 0.2.0\n")
+        return _completed(args, returncode=1, stderr="unexpected")
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(
+        update_mod.shutil,  # type: ignore[attr-defined]
+        "which",
+        lambda name: "/opt/homebrew/bin/pipx",
+    )
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(repo=tmp_path / "biz", refresh_surfaces=False)
+
+    assert result["ok"] is True
+    assert result["refresh_surfaces"] is False
+    assert result["surface_refresh"]["skipped"] == ["claude", "codex"]
+    assert "skipped agent surface refresh" in result["actions"]
+    assert calls == [["pipx", "upgrade", "mainbranch"], ["mb", "--version"]]
+
+
+def test_update_cli_accepts_no_refresh_surfaces(monkeypatch: Any, tmp_path: Path) -> None:
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(
+        update_mod.shutil,  # type: ignore[attr-defined]
+        "which",
+        lambda name: "/opt/homebrew/bin/pipx",
+    )
+    monkeypatch.setattr(
+        update_mod,
+        "_run_command",
+        lambda args, cwd=None: (
+            _completed(args, stdout="mb 0.2.0\n")
+            if args == ["mb", "--version"]
+            else _completed(args, stdout="upgraded package mainbranch")
+        ),
+    )
+
+    result = runner.invoke(
+        app,
+        ["update", "--repo", str(tmp_path / "biz"), "--no-refresh-surfaces", "--json"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["refresh_surfaces"] is False
+    assert payload["surface_refresh"]["skipped"] == ["claude", "codex"]
+
+
 def test_update_pipx_runs_upgrade_then_relinks(monkeypatch: Any, tmp_path: Path) -> None:
     calls: list[list[str]] = []
 

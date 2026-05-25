@@ -218,11 +218,19 @@ def _repair_codex_surface(repo: Path) -> tuple[bool, list[str], list[str], dict[
     return True, [], warnings, payload
 
 
-def _base_result(repo: Path, *, check: bool, mode: str, root: Path | None) -> dict[str, Any]:
+def _base_result(
+    repo: Path,
+    *,
+    check: bool,
+    mode: str,
+    root: Path | None,
+    refresh_surfaces: bool,
+) -> dict[str, Any]:
     return {
         "ok": True,
         "mode": mode,
         "check": check,
+        "refresh_surfaces": refresh_surfaces,
         "repo": str(repo),
         "engine_root": str(root) if root is not None else None,
         "old_version": _engine_version(root),
@@ -237,6 +245,13 @@ def _base_result(repo: Path, *, check: bool, mode: str, root: Path | None) -> di
         "errors": [],
         "next_actions": [],
         "codex_adapter": {},
+        "surface_refresh": {
+            "enabled": refresh_surfaces,
+            "claude": {},
+            "codex": {},
+            "commands": [],
+            "skipped": [] if refresh_surfaces else ["claude", "codex"],
+        },
     }
 
 
@@ -303,12 +318,23 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
         result["next_actions"].append("Open a fresh Codex thread in the business repo.")
 
 
-def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
+def run(
+    repo: str | Path = ".",
+    *,
+    check: bool = False,
+    refresh_surfaces: bool = True,
+) -> dict[str, Any]:
     """Update the active Main Branch install and refresh business-repo skills."""
     target_repo = Path(repo).resolve()
     mode = install_mode()
     root = engine_root()
-    result = _base_result(target_repo, check=check, mode=mode, root=root)
+    result = _base_result(
+        target_repo,
+        check=check,
+        mode=mode,
+        root=root,
+        refresh_surfaces=refresh_surfaces,
+    )
 
     if mode not in {"pipx", "clone"}:
         result["ok"] = False
@@ -323,8 +349,6 @@ def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
             result["new_version"] = _latest_pypi_version() or result["old_version"]
             result["actions"] = [
                 "would run `pipx upgrade mainbranch`",
-                f"would run `mb skill link --repo {target_repo} --json`",
-                (f"would run `mb doctor repair --repo {target_repo} --apply --only codex --json`"),
             ]
         else:
             if root is None:
@@ -345,16 +369,29 @@ def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
             result["actions"].extend(
                 [
                     f"would run `git pull --ff-only origin main` in {root}",
-                    f"would run `mb skill link --repo {target_repo} --json`",
-                    (
-                        "would run `mb doctor repair --repo "
-                        f"{target_repo} --apply --only codex --json`"
-                    ),
                 ]
             )
-        planned_count = len(bundled_skills())
-        result["skills_relinked_count"] = planned_count
-        result["planned_skills_relink_count"] = planned_count
+        if refresh_surfaces:
+            surface_commands = [
+                f"mb skill link --repo {target_repo} --json",
+                f"mb doctor repair --repo {target_repo} --apply --only codex --json",
+            ]
+            result["surface_refresh"]["commands"] = surface_commands
+            result["actions"].extend(f"would run `{command}`" for command in surface_commands)
+            planned_count = len(bundled_skills())
+            result["skills_relinked_count"] = planned_count
+            result["planned_skills_relink_count"] = planned_count
+            result["surface_refresh"]["claude"] = {
+                "planned": True,
+                "skill_count": planned_count,
+                "command": surface_commands[0],
+            }
+            result["surface_refresh"]["codex"] = {
+                "planned": True,
+                "command": surface_commands[1],
+            }
+        else:
+            result["actions"].append("would skip agent surface refresh")
         new_version = str(result.get("new_version") or "")
         old_version = str(result.get("old_version") or "")
         if new_version and version_key(new_version) > version_key(old_version):
@@ -402,25 +439,43 @@ def run(repo: str | Path = ".", *, check: bool = False) -> dict[str, Any]:
             return result
         result["new_version"] = _engine_version(root)
 
-    linked_count, link_errors, link_warnings, _link_payload = _link_skills(target_repo)
-    result["actions"].append(f"ran `mb skill link --repo {target_repo} --json`")
-    result["skills_relinked_count"] = linked_count
-    result["warnings"].extend(link_warnings)
-    if link_errors:
-        result["ok"] = False
-        result["errors"].extend(link_errors)
-    else:
-        codex_ok, codex_errors, codex_warnings, codex_payload = _repair_codex_surface(target_repo)
-        result["actions"].append(
-            f"ran `mb doctor repair --repo {target_repo} --apply --only codex --json`"
-        )
-        result["codex_repaired"] = codex_ok
-        if codex_payload is not None:
-            result["codex_repair_result"] = codex_payload
-        result["warnings"].extend(codex_warnings)
-        if codex_errors:
+    if refresh_surfaces:
+        linked_count, link_errors, link_warnings, link_payload = _link_skills(target_repo)
+        claude_command = f"mb skill link --repo {target_repo} --json"
+        result["actions"].append(f"ran `{claude_command}`")
+        result["surface_refresh"]["commands"].append(claude_command)
+        result["surface_refresh"]["claude"] = {
+            "ok": not link_errors,
+            "skill_count": linked_count,
+            "command": claude_command,
+            "result": link_payload or {},
+        }
+        result["skills_relinked_count"] = linked_count
+        result["warnings"].extend(link_warnings)
+        if link_errors:
             result["ok"] = False
-            result["errors"].extend(codex_errors)
+            result["errors"].extend(link_errors)
+        else:
+            codex_ok, codex_errors, codex_warnings, codex_payload = _repair_codex_surface(
+                target_repo
+            )
+            codex_command = f"mb doctor repair --repo {target_repo} --apply --only codex --json"
+            result["actions"].append(f"ran `{codex_command}`")
+            result["surface_refresh"]["commands"].append(codex_command)
+            result["surface_refresh"]["codex"] = {
+                "ok": codex_ok,
+                "command": codex_command,
+                "result": codex_payload or {},
+            }
+            result["codex_repaired"] = codex_ok
+            if codex_payload is not None:
+                result["codex_repair_result"] = codex_payload
+            result["warnings"].extend(codex_warnings)
+            if codex_errors:
+                result["ok"] = False
+                result["errors"].extend(codex_errors)
+    else:
+        result["actions"].append("skipped agent surface refresh")
     _add_codex_follow_up(result, target_repo)
     return result
 
@@ -431,6 +486,7 @@ def render_human(result: dict[str, Any]) -> None:
     new = result.get("new_version") or "unknown"
     mode = result.get("mode") or "unknown"
     count = result.get("skills_relinked_count", 0)
+    refresh_surfaces = result.get("refresh_surfaces", True)
 
     if result.get("check"):
         print(f"install mode: {mode}")
@@ -452,11 +508,16 @@ def render_human(result: dict[str, Any]) -> None:
             print(f"next: {action}")
         if count:
             print(f"would refresh {count} skill link(s)")
+        if not refresh_surfaces:
+            print("would skip agent surface refresh")
     elif result.get("ok"):
         print(f"updated Main Branch ({old} -> {new})")
-        print(f"refreshed {count} skill link(s)")
-        if result.get("codex_repaired"):
-            print("refreshed Codex global skills")
+        if refresh_surfaces:
+            print(f"refreshed {count} skill link(s)")
+            if result.get("codex_repaired"):
+                print("refreshed Codex global skills")
+        else:
+            print("skipped agent surface refresh")
         for action in result.get("next_actions", []):
             print(f"next: {action}")
 
