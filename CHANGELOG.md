@@ -11,6 +11,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.38] - 2026-05-25
+
 ### Fixed
 
 - Fixed Codex guidance freshness checks so `mb doctor repair --plan --only
