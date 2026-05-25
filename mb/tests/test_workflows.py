@@ -23,11 +23,14 @@ runner = CliRunner()
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO_ROOT / "workflows" / "mb-start-money-path" / "workflow.md"
 THINK_WORKFLOW = REPO_ROOT / "workflows" / "mb-think" / "workflow.md"
+END_WORKFLOW = REPO_ROOT / "workflows" / "mb-end" / "workflow.md"
+SHIPPED_END_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-end" / "SKILL.md"
 FIXTURES = REPO_ROOT / "mb" / "tests" / "fixtures" / "workflows"
 AGENTS_TEMPLATE = REPO_ROOT / "mb" / "mb" / "_data" / "templates" / "AGENTS.md.tmpl"
 WORKFLOW_PATHS = [
     WORKFLOW,
     THINK_WORKFLOW,
+    END_WORKFLOW,
 ]
 
 
@@ -100,6 +103,25 @@ def test_generated_think_claude_and_codex_snapshots_match_fixtures() -> None:
     )
 
 
+def test_generated_end_claude_and_codex_snapshots_match_fixtures() -> None:
+    workflow = load_workflow(END_WORKFLOW)
+
+    assert render_claude_shell(workflow) == (FIXTURES / "mb-end.claude.md").read_text(
+        encoding="utf-8"
+    )
+    assert render_codex_shell(workflow) == (FIXTURES / "mb-end.codex.md").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_shipped_claude_end_skill_preserves_shared_workflow_contract() -> None:
+    workflow = load_workflow(END_WORKFLOW)
+    skill_text = SHIPPED_END_SKILL.read_text(encoding="utf-8")
+
+    assert shell_drift_errors(workflow, skill_text) == []
+    assert "workflows/mb-end/workflow.md" in skill_text
+
+
 def test_supported_shells_preserve_required_commands_and_json_facts() -> None:
     for path in WORKFLOW_PATHS:
         workflow = load_workflow(path)
@@ -138,6 +160,18 @@ def test_codex_contract_markers_match_think_workflow_source() -> None:
     assert tuple(workflow.approval_gates) == codex_mod.CODEX_THINK_APPROVAL_GATES
     assert (
         tuple(workflow.public_private_boundaries) == codex_mod.CODEX_THINK_PUBLIC_PRIVATE_BOUNDARIES
+    )
+
+
+def test_codex_contract_markers_match_end_workflow_source() -> None:
+    workflow = load_workflow(END_WORKFLOW)
+
+    assert codex_mod.CODEX_END_SOURCE_WORKFLOW == "workflows/mb-end/workflow.md"
+    assert tuple(workflow.required_mb_commands) == codex_mod.CODEX_END_REQUIRED_MB_COMMANDS
+    assert tuple(workflow.json_facts) == codex_mod.CODEX_END_REQUIRED_JSON_FACTS
+    assert tuple(workflow.approval_gates) == codex_mod.CODEX_END_APPROVAL_GATES
+    assert (
+        tuple(workflow.public_private_boundaries) == codex_mod.CODEX_END_PUBLIC_PRIVATE_BOUNDARIES
     )
 
 
@@ -280,8 +314,14 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
     ]
     assert by_id["daily-start-status"]["source_status"] == "temporary_source_skill_mirror"
     assert by_id["daily-start-status"]["source_of_truth"]["shared_source"] is None
-    assert by_id["end-checkpoint-save"]["source_status"] == "temporary_source_skill_mirror"
-    assert by_id["end-checkpoint-save"]["source_of_truth"]["follow_up_issue"] == "MAIN-448"
+    assert by_id["end-checkpoint-save"]["source_status"] == "shared_workflow_source"
+    assert (
+        by_id["end-checkpoint-save"]["source_of_truth"]["shared_source"]
+        == "workflows/mb-end/workflow.md"
+    )
+    assert (
+        "save_state_language" in by_id["end-checkpoint-save"]["source_of_truth"]["contract_checks"]
+    )
     assert by_id["daily-start-status"]["claude_skill_sources"] == [
         ".claude/skills/mb-start/SKILL.md",
         ".claude/skills/mb-status/SKILL.md",
@@ -460,6 +500,37 @@ def test_think_codex_policy_flags_forbidden_support_language() -> None:
     assert (
         "Codex shell contains forbidden support phrase: Claude Code skills work in Codex" in errors
     )
+
+
+def test_end_runtime_shells_surface_closeout_save_state_contract() -> None:
+    workflow = load_workflow(END_WORKFLOW)
+
+    for shell in (render_claude_shell(workflow), render_codex_shell(workflow)):
+        normalized = " ".join(shell.split())
+        assert "status scan" in normalized
+        assert "checkpoint plan" in normalized
+        assert "session summary" in normalized
+        assert "final thought" in normalized
+        assert "crystallize" in normalized
+        assert "approval-gated save" in normalized
+        assert "drafted" in normalized
+        assert "saved locally" in normalized
+        assert "ready to send up" in normalized
+        assert "sent for review" in normalized
+        assert "landed in main" in normalized
+        assert "blocked by unrelated cleanup" in normalized
+        assert "warm close" in normalized
+
+
+def test_end_codex_shell_does_not_claim_slash_command_or_skill_parity() -> None:
+    workflow = load_workflow(END_WORKFLOW)
+    shell = render_codex_shell(workflow)
+
+    assert codex_shell_policy_errors(workflow, shell) == []
+    assert "Run `/mb-end`" not in shell
+    assert "Claude Code skills work in Codex" not in shell
+    assert "not need to contain `workflows/mb-end/workflow.md`" in shell
+    assert "as the Codex shell for natural-language closeout tasks" in shell
 
 
 def test_think_runtime_shells_stay_thin_and_currently_named() -> None:
