@@ -10,6 +10,10 @@ Close your session intentionally. The bookend to `/mb-start`.
 
 **You only run this when you choose to.** It is never auto-invoked.
 
+**Shared source:** The portable workflow contract lives in
+`workflows/mb-end/workflow.md`. This Claude skill is the Claude Code shell over
+that source.
+
 **CLI facts first:** After finding the business repo, run
 `mb status --json --peek` and `mb checkpoint --plan --json` before summarizing
 the session or offering to save. Use status `journal`, `since_last_check`,
@@ -54,7 +58,11 @@ This is not an audit. It is a thoughtful friend helping you close the session.
 6. Checkpoint & close
 ```
 
-Step 4 is optional. **Step 5 is NOT optional** -- if meaningful activity happened (decisions, research, core changes), you MUST spawn the crystallize agent. Do not try to do the crystallize analysis inline. Do not skip it. The subagent gets a fresh context window and spends real tokens reading the day's files. That depth is the whole point.
+Step 4 is optional. Step 5 is required when meaningful activity happened
+(decisions, research, core changes) unless the user explicitly asks for a quick
+close or the runtime cannot support it. In Claude Code, use the Task subagent
+for deep crystallize. In runtimes without that surface, the shared workflow
+still requires crystallize-lite instead of silently skipping the ritual.
 
 A quick `/mb-end` (user says "just commit and close") can be steps 1-3 and 6. But if there is meaningful activity and the user did not explicitly skip, always run Step 5.
 
@@ -286,6 +294,20 @@ If an insight was substantial enough to update reference directly (soul.md, offe
 
 Run `mb checkpoint --plan --json` from the business repo. Summarize the changed
 surfaces/files, proposed message, and any blockers.
+
+Lead with owner-facing save state before technical detail:
+
+- `drafted` -- work exists but is not yet saved as durable business memory.
+- `saved locally` -- work is saved in local business history.
+- `ready to send up` -- work is saved locally and ready for shared backup or
+  review.
+- `sent for review` -- work has been sent to the shared proposal/review lane.
+- `landed in main` -- work is accepted in the main business area.
+- `blocked by unrelated cleanup` -- session work is ready, but separate cleanup
+  or drift blocks a clean save or handoff.
+
+Use these states when the user asks "is that it?" Put branch, pull request,
+merge, and working-tree detail second unless the user asks for plumbing.
 
 **If there are unsaved changes:**
 

@@ -132,7 +132,13 @@ CODEX_SLASH_COMMAND_FACTS: dict[str, tuple[str, ...]] = {
         "mb connect doctor --json",
         "mb checkpoint --plan --json",
     ),
-    "mb-end": ("mb checkpoint --plan --json", "mb validate --json"),
+    "mb-end": (
+        "mb status --json --peek",
+        "mb start --json",
+        "mb doctor repair --plan",
+        "mb checkpoint --plan --json",
+        "mb validate --json",
+    ),
     "mb-help": ("mb workflow list --runtime codex --json", "mb status --json --peek"),
 }
 CODEX_SLASH_COMMAND_DESCRIPTIONS = {
@@ -246,11 +252,58 @@ CODEX_THINK_PUBLIC_PRIVATE_BOUNDARIES = (
     "no_private_dms_or_gated_communities",
     "no_raw_finance_legal_records",
 )
+CODEX_END_SOURCE_WORKFLOW = "workflows/mb-end/workflow.md"
+CODEX_END_REQUIRED_MB_COMMANDS = (
+    "mb status --json --peek",
+    "mb start --json",
+    "mb doctor repair --plan",
+    "mb checkpoint --plan --json",
+    "mb validate --json",
+)
+CODEX_END_REQUIRED_JSON_FACTS = (
+    "money_path",
+    "money_path.objects.proof.quality",
+    "content_strategy",
+    "ranked_actions",
+    "update",
+    "readiness",
+    "drift.items",
+    "runtime.codex",
+    "runtime.claude_code",
+    "journal",
+    "since_last_check",
+    "checkpoint",
+    "checkpoint.changed_files",
+    "checkpoint.blockers",
+    "checkpoint.proposed_subject",
+    "validation",
+)
+CODEX_END_APPROVAL_GATES = (
+    "updates_repairs_migrations",
+    "file_writes",
+    "checkpoint",
+    "provider_mutation",
+    "publishing_or_spend",
+    "customer_contact",
+    "private_data",
+    "destructive_operations",
+    "public_issue_or_proposal",
+)
+CODEX_END_PUBLIC_PRIVATE_BOUNDARIES = (
+    "no_secrets",
+    "no_raw_provider_exports",
+    "no_raw_transcripts",
+    "no_customer_member_data",
+    "no_private_runtime_settings",
+    "no_raw_finance_legal_records",
+)
 REQUIRED_LIFECYCLE_GUIDANCE = (
     "## Codex Lifecycle Workflow Index",
     "## Codex Status Workflow",
     "## Codex Think Route",
+    "## Codex End Route",
     f"Engine source workflow: `{CODEX_THINK_SOURCE_WORKFLOW}`",
+    f"Engine source workflow: `{CODEX_END_SOURCE_WORKFLOW}`",
     "does not need to contain that engine source file",
     "Shared source required `mb` commands",
     "runtime/login-shell PATH",
@@ -264,12 +317,26 @@ REQUIRED_LIFECYCLE_GUIDANCE = (
     "global skill",
     "main-branch",
 )
-REQUIRED_LIFECYCLE_GUIDANCE_MARKERS = (
-    *REQUIRED_LIFECYCLE_GUIDANCE,
-    *(f"- `{command}`" for command in CODEX_THINK_REQUIRED_MB_COMMANDS),
-    *(f"- `{fact}`" for fact in CODEX_THINK_REQUIRED_JSON_FACTS),
-    *(f"`{gate}`" for gate in CODEX_THINK_APPROVAL_GATES),
-    *(f"`{boundary}`" for boundary in CODEX_THINK_PUBLIC_PRIVATE_BOUNDARIES),
+REQUIRED_LIFECYCLE_GUIDANCE_MARKERS = (*REQUIRED_LIFECYCLE_GUIDANCE,)
+REQUIRED_LIFECYCLE_SECTION_MARKERS = (
+    (
+        "## Codex Think Route",
+        (
+            *(f"- `{command}`" for command in CODEX_THINK_REQUIRED_MB_COMMANDS),
+            *(f"- `{fact}`" for fact in CODEX_THINK_REQUIRED_JSON_FACTS),
+            *(f"`{gate}`" for gate in CODEX_THINK_APPROVAL_GATES),
+            *(f"`{boundary}`" for boundary in CODEX_THINK_PUBLIC_PRIVATE_BOUNDARIES),
+        ),
+    ),
+    (
+        "## Codex End Route",
+        (
+            *(f"- `{command}`" for command in CODEX_END_REQUIRED_MB_COMMANDS),
+            *(f"- `{fact}`" for fact in CODEX_END_REQUIRED_JSON_FACTS),
+            *(f"`{gate}`" for gate in CODEX_END_APPROVAL_GATES),
+            *(f"`{boundary}`" for boundary in CODEX_END_PUBLIC_PRIVATE_BOUNDARIES),
+        ),
+    ),
 )
 CODEX_PLUGIN_REQUIRED_MARKERS = (
     "Main Branch",
@@ -388,21 +455,26 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-end, mb checkpoint",
         "claude_skill_sources": ("mb-end",),
         "codex_status": "supported",
-        "source_status": "temporary_source_skill_mirror",
+        "source_status": "shared_workflow_source",
         "codex_surface": "main-branch skill route: mb-end",
         "codex_entrypoints": ("main-branch mb-end",),
-        "commands": ("mb checkpoint --plan --json", "mb validate --json"),
+        "shared_source": CODEX_END_SOURCE_WORKFLOW,
+        "commands": CODEX_END_REQUIRED_MB_COMMANDS,
         "contract_checks": (
+            "intent",
             "required_mb_commands",
+            "required_json_facts",
             "approval_gates",
-            "read_before_write_boundary",
-            "closeout_plan_core_flow",
+            "read_boundaries",
+            "write_boundaries",
+            "core_flow",
+            "public_private_boundaries",
+            "save_state_language",
         ),
-        "follow_up_issue": "MAIN-448",
         "notes": (
-            "Codex can plan a closeout and propose checkpoint subjects. Creating "
-            "a checkpoint or editing files requires explicit approval. MAIN-448 "
-            "owns the shared closeout workflow source."
+            "Codex uses the shared mb-end contract for status scan, checkpoint "
+            "plan, final thought capture, crystallize-lite/deep when available, "
+            "owner-facing save states, approval-gated save, and warm close."
         ),
     },
     {
@@ -863,6 +935,63 @@ checkpointing business files. Ask before publishing, opening a public issue,
 submitting a proposal, spending money, mutating provider state, or contacting
 customers.
 
+## Codex End Route
+
+This is Codex-native guidance for the existing `mb-end` shared workflow source.
+Treat this section as the natural-language Codex route. It does not mean all
+Main Branch skills work in Codex.
+
+Engine source workflow: `workflows/mb-end/workflow.md`. This business repo does
+not need to contain that engine source file. Treat this generated `AGENTS.md`
+section as the Codex shell for that source unless you are explicitly working
+inside the Main Branch engine repo.
+
+Shared source required `mb` commands:
+
+- `mb status --json --peek`
+- `mb start --json`
+- `mb doctor repair --plan`
+- `mb checkpoint --plan --json`
+- `mb validate --json`
+
+Shared source required JSON fact paths:
+
+- `money_path`
+- `money_path.objects.proof.quality`
+- `content_strategy`
+- `ranked_actions`
+- `update`
+- `readiness`
+- `drift.items`
+- `runtime.codex`
+- `runtime.claude_code`
+- `journal`
+- `since_last_check`
+- `checkpoint`
+- `checkpoint.changed_files`
+- `checkpoint.blockers`
+- `checkpoint.proposed_subject`
+- `validation`
+
+Shared source gates: `updates_repairs_migrations`, `file_writes`,
+`checkpoint`, `provider_mutation`, `publishing_or_spend`, `customer_contact`,
+`private_data`, `destructive_operations`, `public_issue_or_proposal`.
+
+Shared public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
+`no_raw_transcripts`, `no_customer_member_data`,
+`no_private_runtime_settings`, `no_raw_finance_legal_records`.
+
+Use it when the operator is done, pausing, saving progress, checkpointing, or
+asking whether the work is saved. Run a status scan first, build the checkpoint
+plan, summarize the session, ask once for a final thought, run crystallize-lite
+in-thread or use available subagent tooling, name the owner-facing save state,
+and ask before saving.
+
+Owner-facing save states are `drafted`, `saved locally`, `ready to send up`,
+`sent for review`, `landed in main`, and `blocked by unrelated cleanup`.
+Technical branch, proposal, merge, and working-tree details come second unless
+the operator asks for plumbing.
+
 ## Routing Rules
 
 - If `ranked_actions` has entries, lead with the first action, its reason, and
@@ -1041,6 +1170,16 @@ def parse_guidance_metadata(text: str) -> dict[str, str]:
         key, value = item.split("=", 1)
         pairs[key.strip()] = value.strip().strip('"')
     return pairs
+
+
+def _markdown_section(text: str, heading: str) -> str:
+    start = text.find(heading)
+    if start == -1:
+        return ""
+    next_heading = text.find("\n## ", start + len(heading))
+    if next_heading == -1:
+        return text[start:]
+    return text[start:next_heading]
 
 
 def _commands_for_inventory_item(item: dict[str, Any]) -> tuple[str, ...]:
@@ -1315,8 +1454,10 @@ def render_codex_slash_command_md(name: str) -> str:
             "codifying or checkpointing."
         ),
         "mb-end": (
-            "Plan the closeout from checkpoint and validation facts. Propose the "
-            "business-readable checkpoint subject and ask before saving it."
+            "Use the shared closeout workflow. Run the status scan and checkpoint "
+            "plan, summarize the session, capture a final thought, do "
+            "crystallize-lite or an available subagent pass, name the owner-facing "
+            "save state, and ask before saving."
         ),
         "mb-help": (
             "Show the supported, pending, and unsupported Codex workflow surfaces. "
@@ -1425,8 +1566,10 @@ def render_codex_global_skill_md(name: str = CODEX_GLOBAL_SKILL_NAME) -> str:
                 "codifying or checkpointing."
             ),
             "mb-end": (
-                "Plan the closeout from checkpoint and validation facts. Propose the "
-                "business-readable checkpoint subject and ask before saving it."
+                "Use the shared closeout workflow. Run the status scan and checkpoint "
+                "plan, summarize the session, capture a final thought, do "
+                "crystallize-lite or an available subagent pass, name the owner-facing "
+                "save state, and ask before saving."
             ),
             "mb-help": (
                 "Show the supported, pending, and unsupported Codex workflow surfaces. "
@@ -2161,6 +2304,10 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
     missing_lifecycle_guidance = [
         marker for marker in REQUIRED_LIFECYCLE_GUIDANCE_MARKERS if marker not in text
     ]
+    for heading, markers in REQUIRED_LIFECYCLE_SECTION_MARKERS:
+        section = _markdown_section(text, heading)
+        missing_lifecycle_guidance.extend(marker for marker in markers if marker not in section)
+    missing_lifecycle_guidance = list(dict.fromkeys(missing_lifecycle_guidance))
     lifecycle_discovery_ok = bool(exists and not missing_lifecycle_guidance)
     guidance_metadata = parse_guidance_metadata(text) if exists else {}
     expected_template_hash = guidance_template_hash()

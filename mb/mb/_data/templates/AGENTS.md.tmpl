@@ -294,6 +294,63 @@ checkpointing business files. Ask before publishing, opening a public issue,
 submitting a proposal, spending money, mutating provider state, or contacting
 customers.
 
+## Codex End Route
+
+This is Codex-native guidance for the existing `mb-end` shared workflow source.
+Treat this section as the natural-language Codex route. It does not mean all
+Main Branch skills work in Codex.
+
+Engine source workflow: `workflows/mb-end/workflow.md`. This business repo does
+not need to contain that engine source file. Treat this generated `AGENTS.md`
+section as the Codex shell for that source unless you are explicitly working
+inside the Main Branch engine repo.
+
+Shared source required `mb` commands:
+
+- `mb status --json --peek`
+- `mb start --json`
+- `mb doctor repair --plan`
+- `mb checkpoint --plan --json`
+- `mb validate --json`
+
+Shared source required JSON fact paths:
+
+- `money_path`
+- `money_path.objects.proof.quality`
+- `content_strategy`
+- `ranked_actions`
+- `update`
+- `readiness`
+- `drift.items`
+- `runtime.codex`
+- `runtime.claude_code`
+- `journal`
+- `since_last_check`
+- `checkpoint`
+- `checkpoint.changed_files`
+- `checkpoint.blockers`
+- `checkpoint.proposed_subject`
+- `validation`
+
+Shared source gates: `updates_repairs_migrations`, `file_writes`,
+`checkpoint`, `provider_mutation`, `publishing_or_spend`, `customer_contact`,
+`private_data`, `destructive_operations`, `public_issue_or_proposal`.
+
+Shared public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
+`no_raw_transcripts`, `no_customer_member_data`,
+`no_private_runtime_settings`, `no_raw_finance_legal_records`.
+
+Use it when the operator is done, pausing, saving progress, checkpointing, or
+asking whether the work is saved. Run a status scan first, build the checkpoint
+plan, summarize the session, ask once for a final thought, run crystallize-lite
+in-thread or use available subagent tooling, name the owner-facing save state,
+and ask before saving.
+
+Owner-facing save states are `drafted`, `saved locally`, `ready to send up`,
+`sent for review`, `landed in main`, and `blocked by unrelated cleanup`.
+Technical branch, proposal, merge, and working-tree details come second unless
+the operator asks for plumbing.
+
 ## Routing Rules
 
 - If `ranked_actions` has entries, lead with the first action, its reason, and

@@ -81,12 +81,28 @@ REQUIRED_SHELL_PHRASES_BY_WORKFLOW: dict[str, dict[str, str]] = {
         "checkpoint approval": "checkpoint",
         "Codex slash-command boundary": "Do not tell Codex users to run Claude slash commands.",
     },
+    "mb-end": {
+        "status scan": "status scan",
+        "checkpoint plan": "checkpoint plan",
+        "session summary": "session summary",
+        "final thought capture": "final thought",
+        "crystallize": "crystallize",
+        "approval-gated save": "approval-gated save",
+        "save states": "drafted",
+        "warm close": "warm close",
+    },
 }
 CODEX_FORBIDDEN_PHRASES_BY_WORKFLOW: dict[str, tuple[str, ...]] = {
     "mb-think": (
         "Run `/mb-think`",
         "Claude Code skills work in Codex",
         "slash-command parity",
+    ),
+    "mb-end": (
+        "Run `/mb-end`",
+        "Claude Code skills work in Codex",
+        "slash-command parity",
+        "skip crystallize",
     ),
 }
 PUBLIC_PRIVATE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -351,6 +367,8 @@ def render_claude_shell(workflow: WorkflowSource) -> str:
 
     if workflow.name == "mb-think":
         return _render_think_claude_shell(workflow)
+    if workflow.name == "mb-end":
+        return _render_end_claude_shell(workflow)
     return _render_start_money_path_claude_shell(workflow)
 
 
@@ -419,6 +437,8 @@ def render_codex_shell(workflow: WorkflowSource) -> str:
 
     if workflow.name == "mb-think":
         return _render_think_codex_shell(workflow)
+    if workflow.name == "mb-end":
+        return _render_end_codex_shell(workflow)
     return _render_start_money_path_codex_shell(workflow)
 
 
@@ -625,5 +645,136 @@ Approval needed before writes: yes.
 ```
 Do not tell Codex users to run Claude slash commands. Runtime smoke is required
 before docs say this selected workflow is supported or available in Codex.
+"""
+    return output
+
+
+def _render_end_claude_shell(workflow: WorkflowSource) -> str:
+    """Render a Claude Code shell snapshot for the closeout workflow."""
+
+    output = f"""# Generated Claude Shell: {workflow.title}
+
+Source workflow: `{_display_path(workflow.path)}`
+Runtime support: `claude_code: supported_shell`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
+
+Use from `/mb-end` when the operator is done, pausing, closing a work block, or
+asking whether the work is saved. Preserve slash-command-native language for
+Claude Code only.
+
+This snapshot does not replace shipped `.claude/skills/mb-end/SKILL.md`.
+
+## Required mb Commands
+
+{_bullet_list(workflow.required_mb_commands)}
+
+## Required JSON Fact Paths
+
+{_bullet_list(workflow.json_facts)}
+
+## Routing
+
+1. Run a status scan first. Use deterministic status, checkpoint, validation,
+   readiness, drift, recent-work, and runtime facts before reading raw git
+   details.
+2. Build the checkpoint plan from `mb checkpoint --plan --json`; use
+   `mb validate --json` for blockers and cite `mb doctor repair --plan` when
+   repairs are needed.
+3. Give a short session summary in business language: decisions, research,
+   offers, pushes, outcomes, changed core truth, and unsaved work.
+4. Ask once for final thought capture before closeout. Offer to save a brief
+   research note only after operator approval.
+5. Run crystallize when meaningful activity happened. Claude may use a Task
+   subagent for deep crystallize; light sessions may use crystallize-lite.
+6. Present save state before plumbing: drafted, saved locally, ready to send
+   up, sent for review, landed in main, or blocked by unrelated cleanup.
+7. Make checkpointing an approval-gated save. Validate the subject, ask before
+   saving, and use `mb checkpoint`, not raw git commands.
+8. End with a warm close: one sentence naming the most important saved or
+   drafted business outcome, without tomorrow planning.
+
+## Handoff Shape
+
+```text
+Closeout state: <one owner-facing save state>.
+Status scan: <status/checkpoint/validate facts read>.
+Session summary: <3-6 bullets or one compact paragraph>.
+Final thought: <none, captured, or approved research note target>.
+Crystallize: <deep, lite, skipped with reason>.
+Checkpoint plan: <subject, changed surfaces, blockers, approval needed>.
+Warm close: <one sentence>.
+```
+
+Use business language first. Git, branch, pull request, merge, and working-tree
+details are secondary unless the operator asks for plumbing.
+"""
+    return output
+
+
+def _render_end_codex_shell(workflow: WorkflowSource) -> str:
+    """Render Codex CLI guidance for the closeout workflow."""
+
+    output = f"""# Generated Codex Workflow Guidance: {workflow.title}
+
+Source workflow: `{_display_path(workflow.path)}`
+Runtime support: `codex_cli: {workflow.runtime_support.get("codex_cli", "")}`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
+
+Codex is first-class for the proven owner loop only. This guidance is generated
+from the engine workflow source for business-repo `AGENTS.md`; the business repo
+does not need to contain `{_display_path(workflow.path)}`. Treat this rendered
+route as the Codex shell for natural-language closeout tasks. It does not claim
+Claude Code slash commands work inside Codex or that all Main Branch workflows
+are available in Codex.
+
+## Required mb Commands
+
+{_bullet_list(workflow.required_mb_commands)}
+
+## Required JSON Fact Paths
+
+{_bullet_list(workflow.json_facts)}
+
+## Codex Route
+
+1. Run a status scan first. Use deterministic status, checkpoint, validation,
+   readiness, drift, recent-work, and runtime facts before reading raw git
+   details.
+2. Build the checkpoint plan from `mb checkpoint --plan --json`; use
+   `mb validate --json` for blockers and cite `mb doctor repair --plan` when
+   repairs are needed.
+3. Give a short session summary in business language: decisions, research,
+   offers, pushes, outcomes, changed core truth, and unsaved work.
+4. Ask once for final thought capture before closeout. Offer to save a brief
+   research note only after operator approval.
+5. Run crystallize-lite in-thread when meaningful activity happened, or use
+   available subagent tooling when the current Codex session supports it. If
+   neither is available, name the limitation and still ask one specific
+   crystallize question from the day's facts.
+6. Present save state before plumbing: drafted, saved locally, ready to send
+   up, sent for review, landed in main, or blocked by unrelated cleanup.
+7. Make checkpointing an approval-gated save. Validate the subject, ask before
+   saving, and use `mb checkpoint`, not raw git commands.
+8. End with a warm close: one sentence naming the most important saved or
+   drafted business outcome, without tomorrow planning.
+
+## Handoff Shape
+
+```text
+Closeout state: <one owner-facing save state>.
+Status scan: <status/checkpoint/validate facts read>.
+Session summary: <3-6 bullets or one compact paragraph>.
+Final thought: <none, captured, or approved research note target>.
+Crystallize: <lite, subagent, or limitation named>.
+Checkpoint plan: <subject, changed surfaces, blockers, approval needed>.
+Warm close: <one sentence>.
+```
+
+Use business language first. Git, branch, pull request, merge, and working-tree
+details are secondary unless the operator asks for plumbing. Do not tell Codex
+users to run Claude slash commands. Runtime smoke is required before docs say
+this selected workflow is supported or available in Codex.
 """
     return output
