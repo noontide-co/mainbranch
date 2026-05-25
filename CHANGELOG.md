@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Changed `mb workflow list --json` to expose the canonical workflow
+  architecture and a source-of-truth status for each Codex route, distinguishing
+  shared workflow sources, temporary source-skill mirrors, pending migrations,
+  and intentionally unsupported surfaces. Refs MAIN-447, #738.
 - Changed generated Codex `AGENTS.md` freshness to use hidden schema/template
   metadata instead of a visible exact package version sentence, reducing
   business-repo diffs for patch releases that do not change the guidance

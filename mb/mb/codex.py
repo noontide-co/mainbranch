@@ -283,6 +283,27 @@ CODEX_WORKFLOW_STATUS_VOCABULARY = (
     "generated_shell_pending",
     "intentionally_unsupported",
 )
+CODEX_SOURCE_STATUS_VOCABULARY = (
+    "shared_workflow_source",
+    "temporary_source_skill_mirror",
+    "pending_shared_source_migration",
+    "intentionally_unsupported",
+)
+CODEX_SOURCE_STATUS_DESCRIPTIONS = {
+    "shared_workflow_source": (
+        "portable workflow semantics live in workflows/<name>/workflow.md and "
+        "the checked Claude/Codex shells must preserve that contract"
+    ),
+    "temporary_source_skill_mirror": (
+        "Codex mirrors existing Claude skill or CLI guidance until a shared "
+        "workflow source owns both runtime shells"
+    ),
+    "pending_shared_source_migration": (
+        "Codex may use read-only facts or planning guidance, but runtime shells "
+        "must wait for a shared source migration"
+    ),
+    "intentionally_unsupported": "outside the current Codex daily-loop target",
+}
 
 CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
     {
@@ -291,9 +312,16 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-start, /mb-status",
         "claude_skill_sources": ("mb-start", "mb-status"),
         "codex_status": "supported",
+        "source_status": "temporary_source_skill_mirror",
         "codex_surface": "main-branch skill routes: mb-start, mb-status",
         "codex_entrypoints": ("main-branch mb-start", "main-branch mb-status"),
         "commands": ("mb status --json --peek", "mb start --json"),
+        "contract_checks": (
+            "required_mb_commands",
+            "runtime_mismatch_gate",
+            "read_before_write_boundary",
+            "one_next_route_core_flow",
+        ),
         "notes": (
             "Codex starts from deterministic status/start facts, translates them "
             "into business language, and routes one next Main Branch move."
@@ -305,6 +333,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-setup, /mb-update, /mb-start repair routing",
         "claude_skill_sources": ("mb-setup", "mb-update"),
         "codex_status": "supported",
+        "source_status": "temporary_source_skill_mirror",
         "codex_surface": "main-branch skill routes: mb-setup, mb-update, mb-doctor",
         "codex_entrypoints": (
             "main-branch mb-setup",
@@ -315,6 +344,12 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
             "mb --version",
             "mb doctor repair --plan --json",
             "mb update --check --json",
+        ),
+        "contract_checks": (
+            "required_mb_commands",
+            "approval_gates",
+            "read_before_write_boundary",
+            "repair_plan_core_flow",
         ),
         "notes": (
             "Codex may inspect plans and explain next steps. Applying updates, "
@@ -327,10 +362,21 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-think",
         "claude_skill_sources": ("mb-think",),
         "codex_status": "supported",
+        "source_status": "shared_workflow_source",
         "codex_surface": "main-branch skill route: mb-think plus AGENTS.md#codex-think-route",
         "codex_entrypoints": ("main-branch mb-think",),
         "shared_source": CODEX_THINK_SOURCE_WORKFLOW,
         "commands": CODEX_THINK_REQUIRED_MB_COMMANDS,
+        "contract_checks": (
+            "intent",
+            "required_mb_commands",
+            "required_json_facts",
+            "approval_gates",
+            "read_boundaries",
+            "write_boundaries",
+            "core_flow",
+            "public_private_boundaries",
+        ),
         "notes": (
             "Codex uses the shared mb-think contract for research depth, source "
             "privacy, decision routing, codification, and approval gates."
@@ -342,12 +388,21 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-end, mb checkpoint",
         "claude_skill_sources": ("mb-end",),
         "codex_status": "supported",
+        "source_status": "temporary_source_skill_mirror",
         "codex_surface": "main-branch skill route: mb-end",
         "codex_entrypoints": ("main-branch mb-end",),
         "commands": ("mb checkpoint --plan --json", "mb validate --json"),
+        "contract_checks": (
+            "required_mb_commands",
+            "approval_gates",
+            "read_before_write_boundary",
+            "closeout_plan_core_flow",
+        ),
+        "follow_up_issue": "MAIN-448",
         "notes": (
             "Codex can plan a closeout and propose checkpoint subjects. Creating "
-            "a checkpoint or editing files requires explicit approval."
+            "a checkpoint or editing files requires explicit approval. MAIN-448 "
+            "owns the shared closeout workflow source."
         ),
     },
     {
@@ -356,9 +411,11 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-help and docs",
         "claude_skill_sources": ("mb-help",),
         "codex_status": "supported",
+        "source_status": "temporary_source_skill_mirror",
         "codex_surface": "main-branch skill route: mb-help",
         "codex_entrypoints": ("main-branch mb-help",),
         "commands": ("mb workflow list --runtime codex --json",),
+        "contract_checks": ("inventory_json_schema", "support_boundary_copy"),
         "notes": "Codex users can inspect supported, pending, and unsupported workflow surfaces.",
     },
     {
@@ -367,6 +424,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-bet",
         "claude_skill_sources": ("mb-bet",),
         "codex_status": "pending_shared_source_migration",
+        "source_status": "pending_shared_source_migration",
         "codex_surface": "Read-only facts and business-file planning only",
         "commands": ("mb status --json --peek", "mb validate --json"),
         "notes": (
@@ -380,6 +438,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-ads",
         "claude_skill_sources": ("mb-ads",),
         "codex_status": "pending_shared_source_migration",
+        "source_status": "pending_shared_source_migration",
         "codex_surface": "Read-only planning only",
         "commands": ("mb status --json --peek", "mb connect doctor --json"),
         "notes": "No provider mutation, spend, upload, or publishing is supported in Codex.",
@@ -390,6 +449,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-organic and related playbooks",
         "claude_skill_sources": ("mb-organic",),
         "codex_status": "pending_shared_source_migration",
+        "source_status": "pending_shared_source_migration",
         "codex_surface": "Read-only planning only",
         "commands": ("mb status --json --peek",),
         "notes": (
@@ -403,6 +463,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-site",
         "claude_skill_sources": ("mb-site",),
         "codex_status": "pending_shared_source_migration",
+        "source_status": "pending_shared_source_migration",
         "codex_surface": "Read-only planning and site readiness facts only",
         "commands": ("mb status --json --peek", "mb site check --json"),
         "notes": "Codex must not claim site build, deploy, domain, or publishing parity.",
@@ -413,6 +474,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-wiki",
         "claude_skill_sources": ("mb-wiki",),
         "codex_status": "intentionally_unsupported",
+        "source_status": "intentionally_unsupported",
         "codex_surface": "None",
         "commands": (),
         "notes": "Specialty workflow outside the current Codex command target.",
@@ -424,6 +486,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_skill_sources": (),
         "claude_playbook_sources": ("google-ads-search-launch",),
         "codex_status": "pending_shared_source_migration",
+        "source_status": "pending_shared_source_migration",
         "codex_surface": "Read-only planning only",
         "codex_entrypoints": ("google-ads-search-launch",),
         "commands": ("mb status --json --peek", "mb connect doctor --json"),
@@ -438,6 +501,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_skill_sources": (),
         "claude_playbook_sources": ("ship-bet",),
         "codex_status": "pending_shared_source_migration",
+        "source_status": "pending_shared_source_migration",
         "codex_surface": "Read-only planning only",
         "codex_entrypoints": ("ship-bet",),
         "commands": ("mb status --json --peek", "mb checkpoint --plan --json"),
@@ -452,6 +516,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_skill_sources": (),
         "claude_playbook_sources": ("weekly-review",),
         "codex_status": "pending_shared_source_migration",
+        "source_status": "pending_shared_source_migration",
         "codex_surface": "Read-only planning only",
         "codex_entrypoints": ("weekly-review",),
         "commands": ("mb status --json --peek", "mb validate --json"),
@@ -470,6 +535,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
             "mb-skill-review",
         ),
         "codex_status": "intentionally_unsupported",
+        "source_status": "intentionally_unsupported",
         "codex_surface": "None",
         "commands": (),
         "notes": "Engine-contributor workflow, not a business runtime surface.",
@@ -996,6 +1062,22 @@ def _claude_playbook_sources_for_inventory_item(item: dict[str, Any]) -> tuple[s
     return tuple(f".claude/playbooks/{name}/SKILL.md" for name in names)
 
 
+def _source_of_truth_for_inventory_item(item: dict[str, Any]) -> dict[str, Any]:
+    status = str(item["source_status"])
+    return {
+        "status": status,
+        "description": CODEX_SOURCE_STATUS_DESCRIPTIONS[status],
+        "shared_source": item.get("shared_source"),
+        "claude_sources": list(
+            _claude_skill_sources_for_inventory_item(item)
+            + _claude_playbook_sources_for_inventory_item(item)
+        ),
+        "codex_sources": [str(entrypoint) for entrypoint in item.get("codex_entrypoints", ())],
+        "contract_checks": [str(check) for check in item.get("contract_checks", ())],
+        "follow_up_issue": item.get("follow_up_issue"),
+    }
+
+
 def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
     """Return the public-safe Main Branch workflow support inventory."""
 
@@ -1008,10 +1090,15 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
         copied["codex_entrypoints"] = [
             str(entrypoint) for entrypoint in item.get("codex_entrypoints", ())
         ]
+        copied["source_of_truth"] = _source_of_truth_for_inventory_item(item)
         items.append(copied)
     statuses = sorted(
         {*CODEX_WORKFLOW_STATUS_VOCABULARY}
         | {str(item["codex_status"]) for item in CODEX_WORKFLOW_INVENTORY}
+    )
+    source_statuses = sorted(
+        {*CODEX_SOURCE_STATUS_VOCABULARY}
+        | {str(item["source_status"]) for item in CODEX_WORKFLOW_INVENTORY}
     )
     return {
         "ok": True,
@@ -1020,6 +1107,17 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
         "entrypoint": "main-branch mb-start",
         "repo_guidance": AGENTS_RELATIVE_PATH,
         "inventory_path": CODEX_WORKFLOW_INVENTORY_RELATIVE_PATH,
+        "architecture": {
+            "canonical_flow": (
+                "shared workflow source -> Claude Code shell -> Codex shell -> inventory/tests"
+            ),
+            "shared_source_root": "workflows/<workflow>/workflow.md",
+            "runtime_shells": {
+                "claude_code": ".claude/skills/<name>/SKILL.md",
+                "codex_cli": "global main-branch skills plus AGENTS.md guidance",
+            },
+            "status_field": "items[].source_of_truth.status",
+        },
         "claude_skill_sources": [
             f".claude/skills/{name}/SKILL.md" for name in CLAUDE_SKILL_SOURCE_NAMES
         ],
@@ -1035,6 +1133,8 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
             "install_hint": CODEX_REPAIR_COMMAND,
         },
         "statuses": statuses,
+        "source_statuses": source_statuses,
+        "source_status_descriptions": CODEX_SOURCE_STATUS_DESCRIPTIONS,
         "items": items,
         "safe_to_share": True,
     }
@@ -1055,12 +1155,14 @@ def render_workflow_inventory_md() -> str:
             )
         )
         row_template = (
-            "| {label} | `{status}` | {claude} | {sources} | {codex} | {entrypoints} | {commands} |"
+            "| {label} | `{status}` | `{source_status}` | {claude} | {sources} | "
+            "{codex} | {entrypoints} | {commands} |"
         )
         rows.append(
             row_template.format(
                 label=item["label"],
                 status=item["codex_status"],
+                source_status=item["source_status"],
                 claude=item["claude_surface"],
                 sources=claude_sources or "None",
                 codex=item["codex_surface"],
@@ -1080,6 +1182,17 @@ def render_workflow_inventory_md() -> str:
         "- `generated_shell_pending`: a shared source exists, but a generated Codex "
         "shell still needs implementation and smoke evidence.\n"
         "- `intentionally_unsupported`: outside the current Codex daily-loop target.\n\n"
+        "Source-of-truth meanings:\n\n"
+        "- `shared_workflow_source`: `workflows/<workflow>/workflow.md` owns "
+        "the portable workflow contract and tests check runtime shells against it.\n"
+        "- `temporary_source_skill_mirror`: Codex mirrors existing Claude skill "
+        "or CLI guidance until a shared source owns both runtime shells.\n"
+        "- `pending_shared_source_migration`: Codex may use read-only facts or "
+        "planning guidance, but runtime shells wait for a shared source migration.\n"
+        "- `intentionally_unsupported`: outside the current Codex daily-loop target.\n\n"
+        "Canonical architecture: shared workflow source -> Claude Code shell -> "
+        "Codex shell -> inventory/tests. Temporary mirrors are explicit so "
+        "reviewers can see which routes still need migration.\n\n"
         "The global Main Branch skill bundle is installed by "
         "`mb doctor repair --only codex`; business repos keep only lightweight "
         "`AGENTS.md` guidance. After repair, open a fresh Codex thread in the "
@@ -1087,9 +1200,9 @@ def render_workflow_inventory_md() -> str:
         "Each row names its bundled Claude skill "
         "source(s); every bundled Claude `mb-*` skill must be accounted for here "
         "until the shared workflow generator owns both runtime shells.\n\n"
-        "| Workflow | Codex status | Claude Code surface | Claude source | Codex surface | "
-        "Codex route | Fact commands |\n"
-        "|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n\n"
+        "| Workflow | Codex status | Source of truth | Claude Code surface | Claude source | "
+        "Codex surface | Codex route | Fact commands |\n"
+        "|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n\n"
         "Codex must ask before durable writes, checkpoints, repairs, updates, "
         "migrations, provider mutation, publishing, spend, customer contact, or "
         "public issue/proposal submission.\n"
@@ -1357,7 +1470,7 @@ close a session, get help, or use one of the inventoried Main Branch workflows.
 {route_guidance}
 
 Use the route names above as product-facing workflow names. Do not introduce
-`main-branch-owner-loop`, plugin, adapter, or command-surface vocabulary in
+legacy adapter names, installation internals, or command-surface vocabulary in
 operator-facing answers.
 
 ## Grounding
@@ -1390,8 +1503,8 @@ customer contact, destructive operations, or public issue/proposal submission.
 
 Codex supports the daily Main Branch routes listed here. Do not claim all Claude
 Code skills, provider mutation, ads/site production, publishing, spend, customer
-contact, or slash commands are available unless `mb workflow list --runtime
-codex --json` and current runtime evidence say so.
+contact, or Claude Code command surfaces are available unless `mb workflow list
+--runtime codex --json` and current runtime evidence say so.
 """
 
 

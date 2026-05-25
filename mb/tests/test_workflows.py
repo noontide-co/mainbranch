@@ -174,6 +174,11 @@ def test_codex_command_surface_and_inventory_render() -> None:
     assert "codex plugin list --marketplace main-branch" not in inventory
     assert ".claude/skills/mb-start/SKILL.md" in inventory
     assert ".claude/skills/mb-skill-review/SKILL.md" in inventory
+    assert "Source-of-truth meanings" in inventory
+    assert (
+        "shared workflow source -> Claude Code shell -> Codex shell -> inventory/tests" in inventory
+    )
+    assert "temporary_source_skill_mirror" in inventory
     assert "plugin" not in inventory_json
     assert inventory_json["global_skill"]["install_hint"] == "mb doctor repair --apply --only codex"
     assert "mb-start" in inventory_json["global_skill"]["routes"]
@@ -252,20 +257,101 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
     }.issubset(statuses)
     by_id = {item["id"]: item for item in data["items"]}
     assert by_id["think-codify"]["codex_status"] == "supported"
+    assert by_id["think-codify"]["source_status"] == "shared_workflow_source"
+    assert by_id["think-codify"]["source_of_truth"]["status"] == "shared_workflow_source"
+    assert (
+        by_id["think-codify"]["source_of_truth"]["shared_source"]
+        == "workflows/mb-think/workflow.md"
+    )
+    assert {
+        "intent",
+        "required_mb_commands",
+        "required_json_facts",
+        "approval_gates",
+        "read_boundaries",
+        "write_boundaries",
+        "core_flow",
+        "public_private_boundaries",
+    }.issubset(set(by_id["think-codify"]["source_of_truth"]["contract_checks"]))
     assert by_id["think-codify"]["codex_entrypoints"] == ["main-branch mb-think"]
     assert by_id["daily-start-status"]["codex_entrypoints"] == [
         "main-branch mb-start",
         "main-branch mb-status",
     ]
+    assert by_id["daily-start-status"]["source_status"] == "temporary_source_skill_mirror"
+    assert by_id["daily-start-status"]["source_of_truth"]["shared_source"] is None
+    assert by_id["end-checkpoint-save"]["source_status"] == "temporary_source_skill_mirror"
+    assert by_id["end-checkpoint-save"]["source_of_truth"]["follow_up_issue"] == "MAIN-448"
     assert by_id["daily-start-status"]["claude_skill_sources"] == [
         ".claude/skills/mb-start/SKILL.md",
         ".claude/skills/mb-status/SKILL.md",
     ]
     assert by_id["ads"]["codex_status"] == "pending_shared_source_migration"
+    assert by_id["ads"]["source_status"] == "pending_shared_source_migration"
     assert by_id["wiki"]["codex_status"] == "intentionally_unsupported"
+    assert by_id["wiki"]["source_status"] == "intentionally_unsupported"
+    assert data["architecture"] == {
+        "canonical_flow": (
+            "shared workflow source -> Claude Code shell -> Codex shell -> inventory/tests"
+        ),
+        "shared_source_root": "workflows/<workflow>/workflow.md",
+        "runtime_shells": {
+            "claude_code": ".claude/skills/<name>/SKILL.md",
+            "codex_cli": "global main-branch skills plus AGENTS.md guidance",
+        },
+        "status_field": "items[].source_of_truth.status",
+    }
+    assert {
+        "shared_workflow_source",
+        "temporary_source_skill_mirror",
+        "pending_shared_source_migration",
+        "intentionally_unsupported",
+    }.issubset(set(data["source_statuses"]))
     assert "plugin" not in data
     assert data["global_skill"]["path"] == codex_mod.CODEX_GLOBAL_SKILL_RELATIVE_PATH
     assert "mb-start" in data["global_skill"]["routes"]
+
+
+def test_codex_workflow_inventory_source_status_contract_is_explicit() -> None:
+    inventory = codex_mod.workflow_inventory(runtime="codex")
+    items = inventory["items"]
+
+    for item in items:
+        source = item["source_of_truth"]
+        assert source["status"] == item["source_status"]
+        assert source["description"]
+        assert isinstance(source["claude_sources"], list)
+        assert isinstance(source["codex_sources"], list)
+        assert isinstance(source["contract_checks"], list)
+        if item["codex_status"] == "supported":
+            assert item["source_status"] in {
+                "shared_workflow_source",
+                "temporary_source_skill_mirror",
+            }
+            assert source["contract_checks"]
+        if item["source_status"] == "shared_workflow_source":
+            assert source["shared_source"] in {
+                path.relative_to(REPO_ROOT).as_posix() for path in WORKFLOW_PATHS
+            }
+            assert "required_mb_commands" in source["contract_checks"]
+            assert "approval_gates" in source["contract_checks"]
+            assert "write_boundaries" in source["contract_checks"]
+            assert "core_flow" in source["contract_checks"]
+        else:
+            assert not source["shared_source"]
+
+
+def test_codex_global_skills_hide_legacy_plugin_and_fake_slash_claims() -> None:
+    texts = [
+        codex_mod.render_codex_global_skill_md(name) for name in codex_mod.CODEX_GLOBAL_SKILL_NAMES
+    ]
+    combined = "\n".join(texts)
+
+    assert "main-branch-owner-loop" not in combined
+    assert "plugin readiness" not in combined.lower()
+    assert "slash commands are available" not in combined.lower()
+    assert "slash-command parity" not in combined.lower()
+    assert "Claude Code command surfaces are available" in combined
 
 
 def test_codex_workflow_inventory_accounts_for_every_bundled_claude_skill() -> None:
