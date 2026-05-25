@@ -41,6 +41,16 @@ def _copy_generated_data(target_root: Path) -> None:
         if plugin_target.exists():
             shutil.rmtree(plugin_target)
         shutil.copytree(plugin_source, plugin_target)
+    workflow_source = REPO_ROOT / "workflows"
+    if workflow_source.exists():
+        workflow_target = engine_root / "workflows"
+        if workflow_target.exists():
+            shutil.rmtree(workflow_target)
+        shutil.copytree(
+            workflow_source,
+            workflow_target,
+            ignore=shutil.ignore_patterns("__pycache__", ".DS_Store"),
+        )
 
 
 class build_py(_build_py):

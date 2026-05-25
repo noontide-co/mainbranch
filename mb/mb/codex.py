@@ -20,6 +20,7 @@ from typing import Any
 
 from mb import __version__
 from mb import engine as engine_mod
+from mb.workflows import WorkflowSource, load_workflow, render_codex_shell
 
 AGENTS_TEMPLATE = "AGENTS.md.tmpl"
 AGENTS_RELATIVE_PATH = "AGENTS.md"
@@ -300,6 +301,10 @@ CODEX_END_PUBLIC_PRIVATE_BOUNDARIES = (
     "no_private_runtime_settings",
     "no_raw_finance_legal_records",
 )
+CODEX_SHARED_WORKFLOW_SKILLS = {
+    "mb-think": CODEX_THINK_SOURCE_WORKFLOW,
+    "mb-end": CODEX_END_SOURCE_WORKFLOW,
+}
 REQUIRED_LIFECYCLE_GUIDANCE = (
     "## Codex Lifecycle Workflow Index",
     "## Codex Status Workflow",
@@ -349,10 +354,29 @@ CODEX_PLUGIN_REQUIRED_MARKERS = (
 )
 CODEX_WORKFLOW_STATUS_VOCABULARY = (
     "supported",
+    "read_only_planning",
     "pending_shared_source_migration",
     "generated_shell_pending",
     "intentionally_unsupported",
 )
+CODEX_SURFACE_KIND_VOCABULARY = (
+    "shared_source",
+    "claude_skill",
+    "codex_global_skill",
+    "read_only_planning",
+    "pending_shared_source_migration",
+    "intentionally_unsupported",
+)
+CODEX_SURFACE_KIND_DESCRIPTIONS = {
+    "shared_source": "canonical workflow source under workflows/<workflow>/workflow.md",
+    "claude_skill": "Claude Code runtime shell under .claude/skills/<name>/SKILL.md",
+    "codex_global_skill": "generated Codex global skill shell under the Codex skills root",
+    "read_only_planning": (
+        "Codex may inspect facts and plan, but must not claim full workflow parity"
+    ),
+    "pending_shared_source_migration": "workflow substance still needs a shared source migration",
+    "intentionally_unsupported": "outside the current Codex daily-loop support target",
+}
 CODEX_SOURCE_STATUS_VOCABULARY = (
     "shared_workflow_source",
     "temporary_source_skill_mirror",
@@ -498,9 +522,10 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "label": "Bet lifecycle",
         "claude_surface": "/mb-bet",
         "claude_skill_sources": ("mb-bet",),
-        "codex_status": "pending_shared_source_migration",
+        "codex_status": "read_only_planning",
         "source_status": "pending_shared_source_migration",
         "codex_surface": "Read-only facts and business-file planning only",
+        "codex_entrypoints": ("main-branch mb-bet",),
         "commands": ("mb status --json --peek", "mb validate --json"),
         "notes": (
             "Codex may inspect and discuss bets. A generated Codex shell should "
@@ -512,9 +537,10 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "label": "Ads and paid creative",
         "claude_surface": "/mb-ads",
         "claude_skill_sources": ("mb-ads",),
-        "codex_status": "pending_shared_source_migration",
+        "codex_status": "read_only_planning",
         "source_status": "pending_shared_source_migration",
         "codex_surface": "Read-only planning only",
+        "codex_entrypoints": ("main-branch mb-ads",),
         "commands": ("mb status --json --peek", "mb connect doctor --json"),
         "notes": "No provider mutation, spend, upload, or publishing is supported in Codex.",
     },
@@ -523,9 +549,10 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "label": "Organic content and newsletter planning",
         "claude_surface": "/mb-organic and related playbooks",
         "claude_skill_sources": ("mb-organic",),
-        "codex_status": "pending_shared_source_migration",
+        "codex_status": "read_only_planning",
         "source_status": "pending_shared_source_migration",
         "codex_surface": "Read-only planning only",
+        "codex_entrypoints": ("main-branch mb-organic",),
         "commands": ("mb status --json --peek",),
         "notes": (
             "Codex may route content strategy questions through think/codify, "
@@ -537,9 +564,10 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "label": "Site and page production",
         "claude_surface": "/mb-site",
         "claude_skill_sources": ("mb-site",),
-        "codex_status": "pending_shared_source_migration",
+        "codex_status": "read_only_planning",
         "source_status": "pending_shared_source_migration",
         "codex_surface": "Read-only planning and site readiness facts only",
+        "codex_entrypoints": ("main-branch mb-site",),
         "commands": ("mb status --json --peek", "mb site check --json"),
         "notes": "Codex must not claim site build, deploy, domain, or publishing parity.",
     },
@@ -560,7 +588,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "google-ads-search-launch playbook",
         "claude_skill_sources": (),
         "claude_playbook_sources": ("google-ads-search-launch",),
-        "codex_status": "pending_shared_source_migration",
+        "codex_status": "read_only_planning",
         "source_status": "pending_shared_source_migration",
         "codex_surface": "Read-only planning only",
         "codex_entrypoints": ("google-ads-search-launch",),
@@ -575,7 +603,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "ship-bet playbook",
         "claude_skill_sources": (),
         "claude_playbook_sources": ("ship-bet",),
-        "codex_status": "pending_shared_source_migration",
+        "codex_status": "read_only_planning",
         "source_status": "pending_shared_source_migration",
         "codex_surface": "Read-only planning only",
         "codex_entrypoints": ("ship-bet",),
@@ -590,7 +618,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "weekly-review playbook",
         "claude_skill_sources": (),
         "claude_playbook_sources": ("weekly-review",),
-        "codex_status": "pending_shared_source_migration",
+        "codex_status": "read_only_planning",
         "source_status": "pending_shared_source_migration",
         "codex_surface": "Read-only planning only",
         "codex_entrypoints": ("weekly-review",),
@@ -1195,6 +1223,22 @@ def _commands_for_inventory_item(item: dict[str, Any]) -> tuple[str, ...]:
     return tuple(str(command) for command in commands)
 
 
+def _workflow_source_path(relative_path: str) -> Path:
+    root = engine_mod.engine_root()
+    if root is not None:
+        candidate = root / relative_path
+        if candidate.is_file():
+            return candidate
+    return Path(__file__).resolve().parents[2] / relative_path
+
+
+def _load_shared_workflow_for_skill(name: str) -> WorkflowSource | None:
+    relative_path = CODEX_SHARED_WORKFLOW_SKILLS.get(name)
+    if relative_path is None:
+        return None
+    return load_workflow(_workflow_source_path(relative_path))
+
+
 def _claude_skill_sources_for_inventory_item(item: dict[str, Any]) -> tuple[str, ...]:
     sources = item.get("claude_skill_sources") or ()
     names = sources if isinstance(sources, tuple) else tuple(str(source) for source in sources)
@@ -1209,10 +1253,12 @@ def _claude_playbook_sources_for_inventory_item(item: dict[str, Any]) -> tuple[s
 
 def _source_of_truth_for_inventory_item(item: dict[str, Any]) -> dict[str, Any]:
     status = str(item["source_status"])
+    surface_kinds = _surface_kinds_for_inventory_item(item)
     return {
         "status": status,
         "description": CODEX_SOURCE_STATUS_DESCRIPTIONS[status],
         "shared_source": item.get("shared_source"),
+        "surface_kinds": surface_kinds,
         "claude_sources": list(
             _claude_skill_sources_for_inventory_item(item)
             + _claude_playbook_sources_for_inventory_item(item)
@@ -1221,6 +1267,25 @@ def _source_of_truth_for_inventory_item(item: dict[str, Any]) -> dict[str, Any]:
         "contract_checks": [str(check) for check in item.get("contract_checks", ())],
         "follow_up_issue": item.get("follow_up_issue"),
     }
+
+
+def _surface_kinds_for_inventory_item(item: dict[str, Any]) -> list[str]:
+    kinds: list[str] = []
+    if item.get("shared_source"):
+        kinds.append("shared_source")
+    if item.get("claude_skill_sources") or item.get("claude_playbook_sources"):
+        kinds.append("claude_skill")
+    if item.get("codex_entrypoints"):
+        kinds.append("codex_global_skill")
+    codex_status = str(item.get("codex_status", ""))
+    source_status = str(item.get("source_status", ""))
+    if codex_status == "read_only_planning":
+        kinds.append("read_only_planning")
+    if source_status == "pending_shared_source_migration":
+        kinds.append("pending_shared_source_migration")
+    if codex_status == "intentionally_unsupported":
+        kinds.append("intentionally_unsupported")
+    return kinds
 
 
 def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
@@ -1235,6 +1300,7 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
         copied["codex_entrypoints"] = [
             str(entrypoint) for entrypoint in item.get("codex_entrypoints", ())
         ]
+        copied["surface_kinds"] = _surface_kinds_for_inventory_item(item)
         copied["source_of_truth"] = _source_of_truth_for_inventory_item(item)
         items.append(copied)
     statuses = sorted(
@@ -1280,6 +1346,8 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
         "statuses": statuses,
         "source_statuses": source_statuses,
         "source_status_descriptions": CODEX_SOURCE_STATUS_DESCRIPTIONS,
+        "surface_kinds": list(CODEX_SURFACE_KIND_VOCABULARY),
+        "surface_kind_descriptions": CODEX_SURFACE_KIND_DESCRIPTIONS,
         "items": items,
         "safe_to_share": True,
     }
@@ -1322,6 +1390,8 @@ def render_workflow_inventory_md() -> str:
         "Status meanings:\n\n"
         "- `supported`: Codex can use this surface through global Main Branch skills "
         "grounded in deterministic `mb` facts.\n"
+        "- `read_only_planning`: Codex can inspect facts and help plan, but must "
+        "not claim full workflow parity until a shared source migration lands.\n"
         "- `pending_shared_source_migration`: Codex may plan from read-only facts, "
         "but a runtime shell should wait for a shared workflow source.\n"
         "- `generated_shell_pending`: a shared source exists, but a generated Codex "
@@ -1338,6 +1408,9 @@ def render_workflow_inventory_md() -> str:
         "Canonical architecture: shared workflow source -> Claude Code shell -> "
         "Codex shell -> inventory/tests. Temporary mirrors are explicit so "
         "reviewers can see which routes still need migration.\n\n"
+        "Surface kinds in `mb workflow list --json`: `shared_source`, "
+        "`claude_skill`, `codex_global_skill`, `read_only_planning`, "
+        "`pending_shared_source_migration`, and `intentionally_unsupported`.\n\n"
         "The global Main Branch skill bundle is installed by "
         "`mb doctor repair --only codex`; business repos keep only lightweight "
         "`AGENTS.md` guidance. After repair, open a fresh Codex thread in the "
@@ -1518,6 +1591,16 @@ def render_codex_slash_commands() -> dict[str, str]:
     }
 
 
+def _render_shared_workflow_global_skill_adapter(workflow: WorkflowSource) -> str:
+    rendered_shell = render_codex_shell(workflow).strip()
+    return (
+        "Follow the generated Codex shell below. It is rendered from the canonical "
+        "shared workflow source, so workflow substance belongs in that source and "
+        "Codex differences stay in this adapter layer.\n\n"
+        f"{rendered_shell}"
+    )
+
+
 def render_codex_global_skill_md(name: str = CODEX_GLOBAL_SKILL_NAME) -> str:
     """Render one global Main Branch Codex skill."""
 
@@ -1531,7 +1614,8 @@ def render_codex_global_skill_md(name: str = CODEX_GLOBAL_SKILL_NAME) -> str:
         raise ValueError(f"unknown Codex global skill: {name}")
     description = CODEX_GLOBAL_SKILL_DESCRIPTIONS[name]
     support_level = CODEX_GLOBAL_SKILL_SUPPORT[name]
-    facts = CODEX_GLOBAL_SKILL_FACTS[name]
+    workflow = _load_shared_workflow_for_skill(name)
+    facts = tuple(workflow.required_mb_commands) if workflow else CODEX_GLOBAL_SKILL_FACTS[name]
     if name == CODEX_GLOBAL_SKILL_NAME:
         argument_hint = (
             "[mb-start|mb-status|mb-setup|mb-update|mb-doctor|mb-think|mb-end|mb-help|other-route]"
@@ -1543,59 +1627,64 @@ def render_codex_global_skill_md(name: str = CODEX_GLOBAL_SKILL_NAME) -> str:
     else:
         argument_hint = "[target]"
         title = name
-        supported_guidance = {
-            "mb-start": (
-                "Summarize the business state, readiness, ranked actions, and one "
-                "clear next route. Use `mb start --json` when runtime handoff or "
-                "Codex readiness matters."
-            ),
-            "mb-status": (
-                "Answer from status facts: readiness, drift, recent work, "
-                "since-last-check, MoneyPath, content strategy, provider signals, "
-                "and ranked actions."
-            ),
-            "mb-setup": (
-                "Treat setup prompts as onboarding intent. Explain the target folder "
-                "and ask before running any command that writes files."
-            ),
-            "mb-update": (
-                "Report whether an update is required or recommended. Ask before "
-                "running update, repair, migration, or package-changing commands."
-            ),
-            "mb-doctor": (
-                "Explain the repair plan in business language first. Quote exact "
-                "safe commands and ask before applying any write action."
-            ),
-            "mb-think": (
-                "Use the Codex Think Route in `AGENTS.md`. Choose the smallest honest "
-                "research depth, read only needed business files, and ask before "
-                "codifying or checkpointing."
-            ),
-            "mb-end": (
-                "Use the shared closeout workflow. Run the status scan and checkpoint "
-                "plan, summarize the session, capture a final thought, do "
-                "crystallize-lite or an available subagent pass, name the owner-facing "
-                "save state, and ask before saving."
-            ),
-            "mb-help": (
-                "Show the supported, pending, and unsupported Codex workflow surfaces. "
-                "Do not claim parity for surfaces the inventory does not mark supported."
-            ),
-        }
-        if name in supported_guidance:
-            route_guidance = supported_guidance[name]
-        elif support_level == "read_only_planning":
-            route_guidance = (
-                "Use this as a read-only planning route in Codex. Ground the answer "
-                "in the facts below, name what Claude Code can do more fully when "
-                "relevant, and ask before writing files or touching providers."
-            )
+        if workflow is not None:
+            route_guidance = _render_shared_workflow_global_skill_adapter(workflow)
         else:
-            route_guidance = (
-                "This workflow is inventoried for completeness but is not a supported "
-                "Codex execution route yet. Explain the support boundary and route "
-                "the operator to Claude Code or another supported Main Branch path."
-            )
+            supported_guidance = {
+                "mb-start": (
+                    "Summarize the business state, readiness, ranked actions, and one "
+                    "clear next route. Use `mb start --json` when runtime handoff or "
+                    "Codex readiness matters."
+                ),
+                "mb-status": (
+                    "Answer from status facts: readiness, drift, recent work, "
+                    "since-last-check, MoneyPath, content strategy, provider signals, "
+                    "and ranked actions."
+                ),
+                "mb-setup": (
+                    "Treat setup prompts as onboarding intent. Explain the target folder "
+                    "and ask before running any command that writes files."
+                ),
+                "mb-update": (
+                    "Report whether an update is required or recommended. Ask before "
+                    "running update, repair, migration, or package-changing commands."
+                ),
+                "mb-doctor": (
+                    "Explain the repair plan in business language first. Quote exact "
+                    "safe commands and ask before applying any write action."
+                ),
+                "mb-think": (
+                    "Use the Codex Think Route in `AGENTS.md`. Choose the smallest honest "
+                    "research depth, read only needed business files, and ask before "
+                    "codifying or checkpointing."
+                ),
+                "mb-end": (
+                    "Use the shared closeout workflow. Run the status scan and checkpoint "
+                    "plan, summarize the session, capture a final thought, do "
+                    "crystallize-lite or an available subagent pass, name the owner-facing "
+                    "save state, and ask before saving."
+                ),
+                "mb-help": (
+                    "Show the supported, pending, and unsupported Codex workflow surfaces. "
+                    "Do not claim parity for surfaces the inventory does not mark supported."
+                ),
+            }
+            if name in supported_guidance:
+                route_guidance = supported_guidance[name]
+            elif support_level == "read_only_planning":
+                route_guidance = (
+                    "Use this as a read-only planning route in Codex. Ground the answer "
+                    "in the facts below, name what Claude Code can do more fully when "
+                    "relevant, and ask before writing files or touching providers. This "
+                    "route is pending shared source migration and is not full workflow "
+                    "parity."
+                )
+            else:
+                route_guidance = (
+                    "This workflow is inventoried for completeness but is not a supported "
+                    "Codex execution route yet. Explain the support boundary and route "
+                    "the operator to Claude Code or another supported Main Branch path."
+                )
     fact_lines = "\n".join(f"- `{command}`" for command in facts)
     return f"""---
 name: {name}

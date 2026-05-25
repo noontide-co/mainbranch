@@ -79,7 +79,9 @@ REQUIRED_SHELL_PHRASES_BY_WORKFLOW: dict[str, dict[str, str]] = {
         "public/private boundary": "public/private",
         "approval gates": "approval",
         "checkpoint approval": "checkpoint",
-        "Codex slash-command boundary": "Do not tell Codex users to run Claude slash commands.",
+        "Codex runtime-entrypoint boundary": (
+            "Do not tell Codex users to run Claude Code entrypoints."
+        ),
     },
     "mb-end": {
         "status scan": "status scan",
@@ -96,11 +98,15 @@ CODEX_FORBIDDEN_PHRASES_BY_WORKFLOW: dict[str, tuple[str, ...]] = {
     "mb-think": (
         "Run `/mb-think`",
         "Claude Code skills work in Codex",
+        "Claude Code slash commands work inside Codex",
+        "Claude slash commands",
         "slash-command parity",
     ),
     "mb-end": (
         "Run `/mb-end`",
         "Claude Code skills work in Codex",
+        "Claude Code slash commands work inside Codex",
+        "Claude slash commands",
         "slash-command parity",
         "skip crystallize",
     ),
@@ -453,8 +459,8 @@ Approval gates: {_inline_code_list(workflow.approval_gates)}
 Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
 
 Codex is first-class for the proven owner loop only. This guidance is a
-generated owner-loop shell; it does not mean `/mb-start` slash commands work
-inside Codex and it does not claim all Main Branch workflow support.
+generated owner-loop shell; it does not mean Claude Code runtime entrypoints
+work inside Codex and it does not claim all Main Branch workflow support.
 
 Start from deterministic `mb` facts before reading business markdown or giving
 path-to-money advice.
@@ -478,7 +484,7 @@ path-to-money advice.
 3. Use `money_path`, `money_path.objects.proof.quality`, `content_strategy`,
    `ranked_actions`, `update`, `readiness`, and `drift.items` as cited facts.
 4. If a thinking/codification step is needed, propose the route in Codex-native
-   language instead of pretending Claude slash commands are available.
+   language instead of pretending Claude Code runtime entrypoints are available.
 5. Ask before writing business files, saving checkpoints, opening public
    issues, publishing, mutating providers, spending money, or contacting
    customers.
@@ -569,7 +575,7 @@ Approval needed before writes: yes.
 ```
 
 Use business language. Do not say an offer is bad, will convert, or will not
-convert. Do not tell Codex users to run Claude slash commands.
+convert. Do not tell Codex users to run Claude Code entrypoints.
 """
     return output
 
@@ -588,8 +594,8 @@ Codex is first-class for the proven owner loop only. This guidance is generated
 from the engine workflow source for business-repo `AGENTS.md`; the business repo
 does not need to contain `{_display_path(workflow.path)}`. Treat this rendered
 route as the Codex shell for natural-language thinking tasks. It does not claim
-Claude Code slash commands work inside Codex or that all Main Branch workflows
-are available in Codex.
+Claude Code runtime entrypoints work inside Codex or that all Main Branch
+workflows are available in Codex.
 
 ## Required mb Commands
 
@@ -643,8 +649,8 @@ Stop condition: <what is enough signal>.
 Durable targets: <research/, decisions/, core/, bets/, pushes/, log/, or documents/>.
 Approval needed before writes: yes.
 ```
-Do not tell Codex users to run Claude slash commands. Runtime smoke is required
-before docs say this selected workflow is supported or available in Codex.
+Do not tell Codex users to run Claude Code entrypoints. Runtime smoke is
+required before docs say this selected workflow is supported in Codex.
 """
     return output
 
@@ -726,8 +732,8 @@ Codex is first-class for the proven owner loop only. This guidance is generated
 from the engine workflow source for business-repo `AGENTS.md`; the business repo
 does not need to contain `{_display_path(workflow.path)}`. Treat this rendered
 route as the Codex shell for natural-language closeout tasks. It does not claim
-Claude Code slash commands work inside Codex or that all Main Branch workflows
-are available in Codex.
+Claude Code runtime entrypoints work inside Codex or that all Main Branch
+workflows are available in Codex.
 
 ## Required mb Commands
 
@@ -774,7 +780,7 @@ Warm close: <one sentence>.
 
 Use business language first. Git, branch, pull request, merge, and working-tree
 details are secondary unless the operator asks for plumbing. Do not tell Codex
-users to run Claude slash commands. Runtime smoke is required before docs say
+users to run Claude Code entrypoints. Runtime smoke is required before docs say
 this selected workflow is supported or available in Codex.
 """
     return output

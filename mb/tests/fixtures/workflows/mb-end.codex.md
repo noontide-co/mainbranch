@@ -9,8 +9,8 @@ Codex is first-class for the proven owner loop only. This guidance is generated
 from the engine workflow source for business-repo `AGENTS.md`; the business repo
 does not need to contain `workflows/mb-end/workflow.md`. Treat this rendered
 route as the Codex shell for natural-language closeout tasks. It does not claim
-Claude Code slash commands work inside Codex or that all Main Branch workflows
-are available in Codex.
+Claude Code runtime entrypoints work inside Codex or that all Main Branch
+workflows are available in Codex.
 
 ## Required mb Commands
 
@@ -79,5 +79,5 @@ Warm close: <one sentence>.
 
 Use business language first. Git, branch, pull request, merge, and working-tree
 details are secondary unless the operator asks for plumbing. Do not tell Codex
-users to run Claude slash commands. Runtime smoke is required before docs say
+users to run Claude Code entrypoints. Runtime smoke is required before docs say
 this selected workflow is supported or available in Codex.
