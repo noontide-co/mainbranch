@@ -11,6 +11,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.39] - 2026-05-26
+
 ### Changed
 
 - Changed `mb workflow list --json` to classify business workflow and playbook
