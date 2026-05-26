@@ -8,6 +8,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from mb import codex as codex_mod
+from mb import site as site_mod
 from mb.cli import app
 from mb.workflows import (
     codex_shell_policy_errors,
@@ -50,6 +51,33 @@ WORKFLOW_PATHS = [
     ORGANIC_WORKFLOW,
     SITE_WORKFLOW,
 ]
+SITE_STATUS_JSON_FACTS = {
+    "measurement",
+    "measurement.available",
+    "measurement.state",
+    "measurement.facts.expected_events",
+    "measurement.blocked_count",
+    "measurement.manual_count",
+}
+SITE_CHECK_JSON_FACTS = {
+    "state",
+    "blocked",
+    "manual",
+    "evidence",
+    "facts.expected_events",
+    "facts.provider_state",
+    "source",
+    "child_descriptor",
+}
+
+
+def _json_path_exists(payload: object, path: str) -> bool:
+    current = payload
+    for part in path.split("."):
+        if not isinstance(current, dict) or part not in current:
+            return False
+        current = current[part]
+    return True
 
 
 def test_start_money_path_workflow_source_validates() -> None:
@@ -441,6 +469,20 @@ def test_codex_contract_markers_match_site_workflow_source() -> None:
     assert (
         tuple(workflow.public_private_boundaries) == codex_mod.CODEX_SITE_PUBLIC_PRIVATE_BOUNDARIES
     )
+
+
+def test_site_workflow_json_facts_match_status_and_site_check_shapes(tmp_path: Path) -> None:
+    workflow = load_workflow(SITE_WORKFLOW)
+    facts = set(workflow.json_facts)
+
+    assert SITE_STATUS_JSON_FACTS.issubset(facts)
+    assert SITE_CHECK_JSON_FACTS.issubset(facts)
+    assert not any(fact.startswith("site_check.") for fact in facts)
+    assert "child_repo" not in facts
+
+    site_check = site_mod.check(tmp_path)
+    for fact in SITE_CHECK_JSON_FACTS:
+        assert _json_path_exists(site_check, fact), fact
 
 
 def test_codex_command_surface_and_inventory_render() -> None:
@@ -982,7 +1024,9 @@ def test_site_runtime_shells_surface_site_contract_and_provider_boundaries() -> 
         assert "plan, brief, build, preview, check, publish, iterate, graduate, or recover" in shell
         assert "lander, minisite, website" in shell
         assert "sales-video surface" in shell
-        assert "site_check.state" in shell
+        assert "facts.expected_events" in shell
+        assert "child_descriptor" in shell
+        assert "measurement.*" in shell
         assert "ready_for_operator_review" in shell
         assert "mb site check" in shell
         assert ".mainbranch/repo.json" in shell

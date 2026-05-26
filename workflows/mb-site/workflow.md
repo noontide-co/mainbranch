@@ -36,19 +36,24 @@ json_facts:
   - drift.items
   - integrations
   - measurement
+  - measurement.available
+  - measurement.state
+  - measurement.facts.expected_events
+  - measurement.blocked_count
+  - measurement.manual_count
   - relationship_health.gaps
   - checkpoint.pending
   - checkpoint.pending.blockers
   - runtime.codex_cli
   - runtime.claude_code
-  - site_check.state
-  - site_check.blocked
-  - site_check.manual
-  - site_check.evidence
-  - site_check.facts.expected_events
-  - site_check.facts.provider_state
-  - site_check.source
-  - site_check.child_repo
+  - state
+  - blocked
+  - manual
+  - evidence
+  - facts.expected_events
+  - facts.provider_state
+  - source
+  - child_descriptor
 approval_gates:
   - updates_repairs_migrations
   - file_writes
@@ -142,25 +147,32 @@ paid-traffic readiness or publish guidance once a site repo exists.
 - `drift.items`
 - `integrations`
 - `measurement`
+- `measurement.available`
+- `measurement.state`
+- `measurement.facts.expected_events`
+- `measurement.blocked_count`
+- `measurement.manual_count`
 - `relationship_health.gaps`
 - `checkpoint.pending`
 - `checkpoint.pending.blockers`
 - `runtime.codex_cli`
 - `runtime.claude_code`
-- `site_check.state`
-- `site_check.blocked`
-- `site_check.manual`
-- `site_check.evidence`
-- `site_check.facts.expected_events`
-- `site_check.facts.provider_state`
-- `site_check.source`
-- `site_check.child_repo`
+- `state`
+- `blocked`
+- `manual`
+- `evidence`
+- `facts.expected_events`
+- `facts.provider_state`
+- `source`
+- `child_descriptor`
 
 Use `money_path.objects.cta_path`, channel strategy, active push, proof quality,
-content strategy, integrations, measurement, and readiness facts before giving
-site or launch-readiness advice. Use `site_check.state`, blocked/manual/evidence
-items, expected events, provider state, source links, and child repo descriptor
-facts as the readiness source for site repos. Do not invent `ready_for_launch`.
+content strategy, integrations, readiness, and `measurement.*` facts from
+`mb status --json --peek` before giving business-repo site or launch-readiness
+advice. Use top-level `state`, `blocked`, `manual`, `evidence`,
+`facts.expected_events`, `facts.provider_state`, `source`, and
+`child_descriptor` from `mb site check ... --json` as the readiness source for
+site repos. Do not invent `ready_for_launch`.
 
 ## Routing Rules
 

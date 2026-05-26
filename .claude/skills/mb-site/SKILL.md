@@ -50,19 +50,24 @@ Required fact paths:
 - `drift.items`
 - `integrations`
 - `measurement`
+- `measurement.available`
+- `measurement.state`
+- `measurement.facts.expected_events`
+- `measurement.blocked_count`
+- `measurement.manual_count`
 - `relationship_health.gaps`
 - `checkpoint.pending`
 - `checkpoint.pending.blockers`
 - `runtime.codex_cli`
 - `runtime.claude_code`
-- `site_check.state`
-- `site_check.blocked`
-- `site_check.manual`
-- `site_check.evidence`
-- `site_check.facts.expected_events`
-- `site_check.facts.provider_state`
-- `site_check.source`
-- `site_check.child_repo`
+- `state`
+- `blocked`
+- `manual`
+- `evidence`
+- `facts.expected_events`
+- `facts.provider_state`
+- `source`
+- `child_descriptor`
 
 Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`,
 `provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`,

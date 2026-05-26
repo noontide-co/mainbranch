@@ -41,19 +41,24 @@ This snapshot does not replace shipped `.claude/skills/mb-site/SKILL.md`.
 - `drift.items`
 - `integrations`
 - `measurement`
+- `measurement.available`
+- `measurement.state`
+- `measurement.facts.expected_events`
+- `measurement.blocked_count`
+- `measurement.manual_count`
 - `relationship_health.gaps`
 - `checkpoint.pending`
 - `checkpoint.pending.blockers`
 - `runtime.codex_cli`
 - `runtime.claude_code`
-- `site_check.state`
-- `site_check.blocked`
-- `site_check.manual`
-- `site_check.evidence`
-- `site_check.facts.expected_events`
-- `site_check.facts.provider_state`
-- `site_check.source`
-- `site_check.child_repo`
+- `state`
+- `blocked`
+- `manual`
+- `evidence`
+- `facts.expected_events`
+- `facts.provider_state`
+- `source`
+- `child_descriptor`
 
 ## Routing
 
@@ -66,9 +71,10 @@ This snapshot does not replace shipped `.claude/skills/mb-site/SKILL.md`.
 3. Support plan, brief, build, preview, check, publish, iterate, graduate, or
    recover modes across lander, minisite, website, and sales-video surface
    shapes.
-4. For site or launch readiness, use `site_check.state`, `site_check.blocked`,
-   `site_check.manual`, `site_check.evidence`, expected events, provider state,
-   source links, and child repo facts. Use exact readiness states such as
+4. For business-repo site readiness, use `measurement.*` facts from status. For
+   site-repo readiness, use top-level `state`, `blocked`, `manual`, `evidence`,
+   `facts.expected_events`, `facts.provider_state`, `source`, and
+   `child_descriptor` from `mb site check`. Use exact readiness states such as
    ready_for_operator_review; do not invent ready_for_launch.
 5. Draft from active offer, audience, voice, content strategy, proof facts,
    relevant research, decisions, active pushes, and MoneyPath facts. Route thin

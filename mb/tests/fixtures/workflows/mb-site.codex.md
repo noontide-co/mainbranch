@@ -39,19 +39,24 @@ entrypoints in Codex.
 - `drift.items`
 - `integrations`
 - `measurement`
+- `measurement.available`
+- `measurement.state`
+- `measurement.facts.expected_events`
+- `measurement.blocked_count`
+- `measurement.manual_count`
 - `relationship_health.gaps`
 - `checkpoint.pending`
 - `checkpoint.pending.blockers`
 - `runtime.codex_cli`
 - `runtime.claude_code`
-- `site_check.state`
-- `site_check.blocked`
-- `site_check.manual`
-- `site_check.evidence`
-- `site_check.facts.expected_events`
-- `site_check.facts.provider_state`
-- `site_check.source`
-- `site_check.child_repo`
+- `state`
+- `blocked`
+- `manual`
+- `evidence`
+- `facts.expected_events`
+- `facts.provider_state`
+- `source`
+- `child_descriptor`
 
 ## Codex Route
 
@@ -67,9 +72,10 @@ entrypoints in Codex.
 4. Guide plan, brief, build, preview, check, publish, iterate, graduate, or
    recover modes across lander, minisite, website, and sales-video surface
    shapes from the shared contract.
-5. For site or launch readiness, use `site_check.state`, `site_check.blocked`,
-   `site_check.manual`, `site_check.evidence`, expected events, provider state,
-   source links, and child repo facts. Use exact readiness states such as
+5. For business-repo site readiness, use `measurement.*` facts from status. For
+   site-repo readiness, use top-level `state`, `blocked`, `manual`, `evidence`,
+   `facts.expected_events`, `facts.provider_state`, `source`, and
+   `child_descriptor` from `mb site check`. Use exact readiness states such as
    ready_for_operator_review; do not invent ready_for_launch.
 6. Codex may draft patch-shaped recommendations, sample copy, review notes,
    readiness summaries, and exact file targets, then stop before changing files

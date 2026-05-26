@@ -144,7 +144,7 @@ REQUIRED_SHELL_PHRASES_BY_WORKFLOW: dict[str, dict[str, str]] = {
         "site modes": "plan, brief, build, preview, check, publish, iterate, graduate, or recover",
         "site shapes": "lander, minisite, website",
         "sales-video surfaces": "sales-video surface",
-        "site readiness facts": "site_check.state",
+        "site readiness facts": "facts.expected_events",
         "readiness states": "ready_for_operator_review",
         "site check command": "mb site check",
         "repo descriptor": ".mainbranch/repo.json",
@@ -1367,9 +1367,10 @@ This snapshot does not replace shipped `.claude/skills/mb-site/SKILL.md`.
 3. Support plan, brief, build, preview, check, publish, iterate, graduate, or
    recover modes across lander, minisite, website, and sales-video surface
    shapes.
-4. For site or launch readiness, use `site_check.state`, `site_check.blocked`,
-   `site_check.manual`, `site_check.evidence`, expected events, provider state,
-   source links, and child repo facts. Use exact readiness states such as
+4. For business-repo site readiness, use `measurement.*` facts from status. For
+   site-repo readiness, use top-level `state`, `blocked`, `manual`, `evidence`,
+   `facts.expected_events`, `facts.provider_state`, `source`, and
+   `child_descriptor` from `mb site check`. Use exact readiness states such as
    ready_for_operator_review; do not invent ready_for_launch.
 5. Draft from active offer, audience, voice, content strategy, proof facts,
    relevant research, decisions, active pushes, and MoneyPath facts. Route thin
@@ -1449,9 +1450,10 @@ entrypoints in Codex.
 4. Guide plan, brief, build, preview, check, publish, iterate, graduate, or
    recover modes across lander, minisite, website, and sales-video surface
    shapes from the shared contract.
-5. For site or launch readiness, use `site_check.state`, `site_check.blocked`,
-   `site_check.manual`, `site_check.evidence`, expected events, provider state,
-   source links, and child repo facts. Use exact readiness states such as
+5. For business-repo site readiness, use `measurement.*` facts from status. For
+   site-repo readiness, use top-level `state`, `blocked`, `manual`, `evidence`,
+   `facts.expected_events`, `facts.provider_state`, `source`, and
+   `child_descriptor` from `mb site check`. Use exact readiness states such as
    ready_for_operator_review; do not invent ready_for_launch.
 6. Codex may draft patch-shaped recommendations, sample copy, review notes,
    readiness summaries, and exact file targets, then stop before changing files
