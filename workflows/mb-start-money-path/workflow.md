@@ -216,13 +216,13 @@ skill validation and runtime evidence.
 
 ### Codex CLI
 
-Codex is first-class for the proven owner loop only. Rendered Codex shell
+Codex is first-class for the proven daily loop only. Rendered Codex shell
 snapshots must start from generated `AGENTS.md` style grounding and
 deterministic `mb` facts.
 
-When the generated Main Branch Owner Loop plugin is installed, `/mb-start` is
-the Codex owner-loop command for this route. Without the plugin, use the
-generated Codex shell fallback in `AGENTS.md` and natural-language routing from
-read-only `mb` facts. Do not claim broader Codex workflow support until a fresh
-fixture repo and read-only `codex exec --json --ephemeral --sandbox read-only
--C <repo>` smoke prove the generated shell or plugin route is actually used.
+When the global Main Branch Codex skills are installed, `mb-start` is the Codex
+skill route for this workflow. Without current global skills, use the generated
+Codex shell fallback in `AGENTS.md` and natural-language routing from read-only
+`mb` facts. Do not claim broader Codex workflow support until a fresh fixture
+repo and read-only `codex exec --json --ephemeral --sandbox read-only -C <repo>`
+smoke prove the generated shell or global-skill route is actually used.

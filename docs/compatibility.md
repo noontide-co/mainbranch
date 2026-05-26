@@ -210,13 +210,13 @@ For the Codex staging plan, see
 [Codex Adapter Plan](../decisions/2026-05-08-codex-adapter-plan.md). The current
 implementation is the daily Main Branch slice: generated `AGENTS.md`, global
 Main Branch Codex skills, deterministic readiness facts, doctor repair coverage,
-`mb workflow list`, and
-compact workflow discovery for start/status/setup/update/doctor, think/codify,
-end/checkpoint/save, validate, and workflow inventory. The think route is checked against
-`workflows/mb-think/workflow.md` as the first official shared workflow source
-pattern, and fresh read-only Codex smoke covers the supported skill surface from a
-business repo. It does not claim all-skill parity, copied Claude skill parity,
-provider/publishing workflow support, spend, or customer-contact support.
+`mb workflow list`, and compact workflow discovery for
+start/status/setup/update/doctor, think/codify, end/checkpoint/save, validate,
+and workflow inventory. Shared workflow sources now back the supported daily
+routes, with fresh read-only Codex smoke covering the supported global-skill
+surface from a business repo. It does not claim all-skill parity, copied Claude
+skill parity, provider/publishing workflow support, spend, or customer-contact
+support.
 Codex plugin slash commands are not the readiness path until runtime smoke proves
 they load in Codex Desktop.
 
