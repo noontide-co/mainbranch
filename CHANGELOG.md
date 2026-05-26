@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Changed daily start/status, setup, update, and repair Codex routes to use
+  canonical shared workflow sources, with checked Claude and Codex shell
+  snapshots and workflow inventory entries naming the source files. Refs
+  MAIN-451, #742.
 - Changed `mb-end` to use a canonical shared closeout workflow source, with
   checked Claude and Codex shell snapshots covering status scan, checkpoint
   planning, final thought capture, crystallize, owner-facing save states, and

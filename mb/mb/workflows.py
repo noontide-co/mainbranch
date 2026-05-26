@@ -93,6 +93,24 @@ REQUIRED_SHELL_PHRASES_BY_WORKFLOW: dict[str, dict[str, str]] = {
         "save states": "drafted",
         "warm close": "warm close",
     },
+    "mb-start-status": {
+        "ranked next route": "ranked_actions",
+        "runtime mismatch gate": "runtime mismatch",
+        "status marker approval": "status marker",
+        "owner-facing state": "business language first",
+    },
+    "mb-setup": {
+        "setup intent": "setup intent",
+        "target folder confirmation": "target folder",
+        "approval-gated writes": "ask before running a write command",
+        "owner outcome": "owner outcome",
+    },
+    "mb-maintenance-repair": {
+        "repair plan": "repair plan",
+        "package update approval": "package updates are explicit operator actions",
+        "safe-to-apply state": "safe-to-apply",
+        "post-repair status": "rerun `mb status --json --peek`",
+    },
 }
 CODEX_FORBIDDEN_PHRASES_BY_WORKFLOW: dict[str, tuple[str, ...]] = {
     "mb-think": (
@@ -109,6 +127,29 @@ CODEX_FORBIDDEN_PHRASES_BY_WORKFLOW: dict[str, tuple[str, ...]] = {
         "Claude slash commands",
         "slash-command parity",
         "skip crystallize",
+    ),
+    "mb-start-status": (
+        "Run `/mb-start`",
+        "Run `/mb-status`",
+        "Claude Code skills work in Codex",
+        "Claude Code slash commands work inside Codex",
+        "Claude slash commands",
+        "slash-command parity",
+    ),
+    "mb-setup": (
+        "Run `/mb-setup`",
+        "Claude Code skills work in Codex",
+        "Claude Code slash commands work inside Codex",
+        "Claude slash commands",
+        "slash-command parity",
+    ),
+    "mb-maintenance-repair": (
+        "Run `/mb-update`",
+        "Run `/mb-doctor`",
+        "Claude Code skills work in Codex",
+        "Claude Code slash commands work inside Codex",
+        "Claude slash commands",
+        "slash-command parity",
     ),
 }
 PUBLIC_PRIVATE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -375,7 +416,186 @@ def render_claude_shell(workflow: WorkflowSource) -> str:
         return _render_think_claude_shell(workflow)
     if workflow.name == "mb-end":
         return _render_end_claude_shell(workflow)
+    if workflow.name in {"mb-start-status", "mb-setup", "mb-maintenance-repair"}:
+        return _render_daily_claude_shell(workflow)
     return _render_start_money_path_claude_shell(workflow)
+
+
+def _daily_claude_use_text(workflow: WorkflowSource) -> str:
+    if workflow.name == "mb-start-status":
+        return (
+            "Use from `/mb-start` or `/mb-status` when the operator starts the day, "
+            "returns to a repo, asks what changed, or asks what to do next. Preserve "
+            "fact-first routing, update/repair gates, one clear next route, and "
+            "business language first."
+        )
+    if workflow.name == "mb-setup":
+        return (
+            "Use from `/mb-setup` when the operator wants to create or connect a "
+            "business repo. Treat pasted setup prompts as setup intent, confirm the "
+            "target folder, and ask before running a write command."
+        )
+    return (
+        "Use from `/mb-update`, `/mb-start` repair routing, or doctor guidance when "
+        "the operator needs update, repair, migration, or runtime wiring help. Explain "
+        "the repair plan in business language first and ask before apply commands."
+    )
+
+
+def _daily_codex_route_text(workflow: WorkflowSource) -> str:
+    if workflow.name == "mb-start-status":
+        return (
+            "1. Use the business repo `AGENTS.md` bootstrap posture: read facts first, "
+            "keep writes approval-gated, and translate git/provider details into business "
+            "language.\n"
+            "2. Run hard gates before routing: required updates, runtime mismatch, repair "
+            "blockers, readiness blockers, private-data boundaries, unsafe provider "
+            "operations, and destructive-operation requests.\n"
+            "3. Use `ranked_actions`, `since_last_check`, `journal`, `money_path`, "
+            "`content_strategy`, `onboarding`, `readiness`, `update`, and `drift.items` "
+            "as cited facts.\n"
+            "4. Present one clear business route and the signal behind it. Mutate the "
+            "status marker only when the operator explicitly approves recording the "
+            "daily check-in.\n"
+            "5. Ask before business-file writes, checkpoints, repairs, updates, migrations, "
+            "provider mutation, publishing, spend, customer contact, destructive operations, "
+            "or public issue/proposal submission."
+        )
+    if workflow.name == "mb-setup":
+        return (
+            "1. Treat setup prompts as setup intent and onboarding intent, not as documents "
+            "to save.\n"
+            "2. Confirm the target folder and inspect setup capability before writes.\n"
+            "3. If `mb` is missing, stop and give the install command. If GitHub backup "
+            "is requested, check GitHub CLI auth before any GitHub write.\n"
+            "4. Ask before running a write command such as onboarding, repo creation, "
+            "file scaffolding, GitHub remote/push, repair apply, migration apply, or "
+            "checkpoint save.\n"
+            "5. After approved setup, rerun status/start facts and report the owner "
+            "outcome before command receipts."
+        )
+    return (
+        "1. Inspect update and repair state before advice: version, status, start, "
+        "update check, and repair plan facts.\n"
+        "2. Stop on runtime mismatch or missing `mb` before business routing.\n"
+        "3. Explain what is stale, why it matters, affected surface, write set, and "
+        "safe-to-apply state before exact commands.\n"
+        "4. Package updates are explicit operator actions. Repair applies, migrations, "
+        "global skill writes, skill links, gitignore changes, and untracking require "
+        "approval.\n"
+        "5. After an approved update or repair, rerun `mb status --json --peek` before "
+        "routing back into business work."
+    )
+
+
+def _daily_claude_route_text(workflow: WorkflowSource) -> str:
+    if workflow.name == "mb-start-status":
+        return (
+            "1. Start from status facts before raw markdown: readiness, drift, "
+            "runtime wiring, update state, ranked actions, and since-last-check context.\n"
+            "2. Run hard gates before routing: required updates, runtime mismatch, repair "
+            "blockers, readiness blockers, private-data boundaries, unsafe provider "
+            "operations, and destructive-operation requests.\n"
+            "3. Use `ranked_actions`, `since_last_check`, `journal`, `money_path`, "
+            "`content_strategy`, `onboarding`, `readiness`, `update`, and `drift.items` "
+            "as cited facts.\n"
+            "4. Present one clear business route and the signal behind it. Mutate the "
+            "status marker only when the operator explicitly approves recording the "
+            "daily check-in.\n"
+            "5. Ask before business-file writes, checkpoints, repairs, updates, migrations, "
+            "provider mutation, publishing, spend, customer contact, destructive operations, "
+            "or public issue/proposal submission."
+        )
+    if workflow.name == "mb-setup":
+        return (
+            "1. Treat setup prompts as setup intent and onboarding intent, not as documents "
+            "to save.\n"
+            "2. Confirm the target folder and inspect setup capability before writes.\n"
+            "3. If `mb` is missing, stop and give the install command. If GitHub backup "
+            "is requested, check GitHub CLI auth before any GitHub write.\n"
+            "4. Ask before running a write command such as onboarding, repo creation, "
+            "file scaffolding, GitHub remote/push, repair apply, migration apply, or "
+            "checkpoint save.\n"
+            "5. After approved setup, rerun status/start facts and report the owner "
+            "outcome before command receipts."
+        )
+    return (
+        "1. Inspect update and repair state before advice: version, status, start, "
+        "update check, and repair plan facts.\n"
+        "2. Stop on runtime mismatch or missing `mb` before business routing.\n"
+        "3. Explain what is stale, why it matters, affected surface, write set, and "
+        "safe-to-apply state before exact commands.\n"
+        "4. Package updates are explicit operator actions. Repair applies, migrations, "
+        "skill links, gitignore changes, and untracking require approval.\n"
+        "5. After an approved update or repair, rerun `mb status --json --peek` before "
+        "routing back into business work."
+    )
+
+
+def _daily_handoff_template(workflow: WorkflowSource) -> str:
+    if workflow.name == "mb-start-status":
+        return """Daily state: <ready, needs attention, blocked, or not a Main Branch repo>.
+Facts read: <status/start/repair facts used>.
+What changed: <since-last-check or journal summary>.
+Main signal: <ranked action, readiness, drift, MoneyPath, content strategy, or onboarding fact>.
+Recommended route: <one business route and why>.
+Approval needed before writes: <yes/no and what action>."""
+    if workflow.name == "mb-setup":
+        return """Setup state: <not started, target confirmed, created, connected, ready,
+or blocked>.
+Target folder: <business folder or needs confirmation>.
+Facts read: <version/help/status/start/repair facts used>.
+Created or planned: <folders, guidance, GitHub backup, checkpoint, or none>.
+Owner outcome: <business brain ready, needs approval, or blocked reason>.
+Next safe action: <one command or route>.
+Approval needed before writes: <yes/no and what action>."""
+    return """Maintenance state: <current, update available, repair needed, blocked, or applied>.
+Facts read: <version/status/start/update/repair facts used>.
+Affected surface: <install, Claude wiring, Codex guidance, migration,
+validation, gitignore, or checkpoint hook>.
+Plan: <read-only command, write command, files touched, and safe-to-apply state>.
+Owner impact: <why this matters in business language>.
+Next safe action: <one command or route>.
+Approval needed before writes: <yes/no and what action>."""
+
+
+def _render_daily_claude_shell(workflow: WorkflowSource) -> str:
+    """Render a Claude Code shell snapshot for daily operating workflows."""
+
+    output = f"""# Generated Claude Shell: {workflow.title}
+
+Source workflow: `{_display_path(workflow.path)}`
+Runtime support: `claude_code: supported_shell`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
+
+{_daily_claude_use_text(workflow)}
+
+This snapshot does not replace shipped `.claude/skills` prose.
+
+## Required mb Commands
+
+{_bullet_list(workflow.required_mb_commands)}
+
+## Required JSON Fact Paths
+
+{_bullet_list(workflow.json_facts)}
+
+## Routing
+
+{_daily_claude_route_text(workflow)}
+
+## Handoff Shape
+
+```text
+{_daily_handoff_template(workflow)}
+```
+
+Use business language first. Technical commands, runtime wiring, provider refs,
+and file paths are receipts after the owner-facing state unless the operator asks
+for plumbing.
+"""
+    return output
 
 
 def _render_start_money_path_claude_shell(workflow: WorkflowSource) -> str:
@@ -445,7 +665,52 @@ def render_codex_shell(workflow: WorkflowSource) -> str:
         return _render_think_codex_shell(workflow)
     if workflow.name == "mb-end":
         return _render_end_codex_shell(workflow)
+    if workflow.name in {"mb-start-status", "mb-setup", "mb-maintenance-repair"}:
+        return _render_daily_codex_shell(workflow)
     return _render_start_money_path_codex_shell(workflow)
+
+
+def _render_daily_codex_shell(workflow: WorkflowSource) -> str:
+    """Render Codex CLI guidance for daily operating workflows."""
+
+    output = f"""# Generated Codex Workflow Guidance: {workflow.title}
+
+Source workflow: `{_display_path(workflow.path)}`
+Runtime support: `codex_cli: {workflow.runtime_support.get("codex_cli", "")}`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
+
+Codex is first-class for the proven owner loop only. This guidance is generated
+from the engine workflow source for business-repo `AGENTS.md`; the business repo
+does not need to contain `{_display_path(workflow.path)}`. Treat this rendered
+route as the Codex shell for natural-language daily operating tasks. It does not
+claim Claude Code runtime entrypoints work inside Codex or that all Main Branch
+workflows are available in Codex.
+
+## Required mb Commands
+
+{_bullet_list(workflow.required_mb_commands)}
+
+## Required JSON Fact Paths
+
+{_bullet_list(workflow.json_facts)}
+
+## Codex Route
+
+{_daily_codex_route_text(workflow)}
+
+## Handoff Shape
+
+```text
+{_daily_handoff_template(workflow)}
+```
+
+Use business language first. Technical commands, runtime wiring, provider refs,
+and file paths are receipts after the owner-facing state unless the operator asks
+for plumbing. Do not tell Codex users to run Claude Code entrypoints. Runtime
+smoke is required before docs say this selected workflow is supported in Codex.
+"""
+    return output
 
 
 def _render_start_money_path_codex_shell(workflow: WorkflowSource) -> str:

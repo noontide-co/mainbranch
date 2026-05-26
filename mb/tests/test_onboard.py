@@ -6,7 +6,6 @@ import json
 import os
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
@@ -744,7 +743,7 @@ def test_onboard_cli_github_push_fixture_leaves_generated_mb_state_clean(
     fake_gh = fake_bin / "gh"
     remote = tmp_path / "remote.git"
     fake_gh.write_text(
-        f"""#!{sys.executable}
+        """#!/usr/bin/env python3
 import json
 import os
 import subprocess

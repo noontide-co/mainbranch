@@ -205,6 +205,9 @@ CODEX_GLOBAL_SKILL_SUPPORT: dict[str, str] = {
     "mb-skill-review": "intentionally_unsupported",
 }
 CODEX_THINK_SOURCE_WORKFLOW = "workflows/mb-think/workflow.md"
+CODEX_START_STATUS_SOURCE_WORKFLOW = "workflows/mb-start-status/workflow.md"
+CODEX_SETUP_SOURCE_WORKFLOW = "workflows/mb-setup/workflow.md"
+CODEX_MAINTENANCE_REPAIR_SOURCE_WORKFLOW = "workflows/mb-maintenance-repair/workflow.md"
 CODEX_THINK_REQUIRED_MB_COMMANDS = (
     "mb status --json --peek",
     "mb start --json",
@@ -302,6 +305,11 @@ CODEX_END_PUBLIC_PRIVATE_BOUNDARIES = (
     "no_raw_finance_legal_records",
 )
 CODEX_SHARED_WORKFLOW_SKILLS = {
+    "mb-start": CODEX_START_STATUS_SOURCE_WORKFLOW,
+    "mb-status": CODEX_START_STATUS_SOURCE_WORKFLOW,
+    "mb-setup": CODEX_SETUP_SOURCE_WORKFLOW,
+    "mb-update": CODEX_MAINTENANCE_REPAIR_SOURCE_WORKFLOW,
+    "mb-doctor": CODEX_MAINTENANCE_REPAIR_SOURCE_WORKFLOW,
     "mb-think": CODEX_THINK_SOURCE_WORKFLOW,
     "mb-end": CODEX_END_SOURCE_WORKFLOW,
 }
@@ -406,15 +414,24 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-start, /mb-status",
         "claude_skill_sources": ("mb-start", "mb-status"),
         "codex_status": "supported",
-        "source_status": "temporary_source_skill_mirror",
+        "source_status": "shared_workflow_source",
         "codex_surface": "main-branch skill routes: mb-start, mb-status",
         "codex_entrypoints": ("main-branch mb-start", "main-branch mb-status"),
-        "commands": ("mb status --json --peek", "mb start --json"),
+        "shared_source": CODEX_START_STATUS_SOURCE_WORKFLOW,
+        "commands": ("mb status --json --peek", "mb start --json", "mb doctor repair --plan"),
         "contract_checks": (
+            "intent",
             "required_mb_commands",
+            "required_json_facts",
+            "approval_gates",
+            "read_boundaries",
+            "write_boundaries",
             "runtime_mismatch_gate",
             "read_before_write_boundary",
             "one_next_route_core_flow",
+            "status_marker_approval",
+            "core_flow",
+            "public_private_boundaries",
         ),
         "notes": (
             "Codex starts from deterministic status/start facts, translates them "
@@ -422,28 +439,73 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         ),
     },
     {
-        "id": "daily-setup-repair-update",
-        "label": "Setup, update, doctor, and repair planning",
-        "claude_surface": "/mb-setup, /mb-update, /mb-start repair routing",
-        "claude_skill_sources": ("mb-setup", "mb-update"),
+        "id": "daily-setup",
+        "label": "Setup and onboarding",
+        "claude_surface": "/mb-setup",
+        "claude_skill_sources": ("mb-setup",),
         "codex_status": "supported",
-        "source_status": "temporary_source_skill_mirror",
-        "codex_surface": "main-branch skill routes: mb-setup, mb-update, mb-doctor",
+        "source_status": "shared_workflow_source",
+        "codex_surface": "main-branch skill route: mb-setup",
+        "codex_entrypoints": ("main-branch mb-setup",),
+        "shared_source": CODEX_SETUP_SOURCE_WORKFLOW,
+        "commands": (
+            "mb --version",
+            "mb onboard --help",
+            "mb status --json --peek",
+            "mb start --json",
+            "mb doctor repair --plan",
+        ),
+        "contract_checks": (
+            "intent",
+            "required_mb_commands",
+            "required_json_facts",
+            "approval_gates",
+            "read_boundaries",
+            "write_boundaries",
+            "target_folder_confirmation",
+            "setup_intent_boundary",
+            "core_flow",
+            "public_private_boundaries",
+        ),
+        "notes": (
+            "Codex treats setup prompts as onboarding intent, confirms the target "
+            "folder, and asks before setup writes, GitHub creation, or checkpoints."
+        ),
+    },
+    {
+        "id": "daily-maintenance-repair",
+        "label": "Update, doctor, and repair planning",
+        "claude_surface": "/mb-update, /mb-start repair routing",
+        "claude_skill_sources": ("mb-update",),
+        "codex_status": "supported",
+        "source_status": "shared_workflow_source",
+        "codex_surface": "main-branch skill routes: mb-update, mb-doctor",
         "codex_entrypoints": (
-            "main-branch mb-setup",
             "main-branch mb-update",
             "main-branch mb-doctor",
         ),
+        "shared_source": CODEX_MAINTENANCE_REPAIR_SOURCE_WORKFLOW,
         "commands": (
             "mb --version",
+            "mb status --json --peek",
+            "mb start --json",
+            "mb doctor repair --plan",
             "mb doctor repair --plan --json",
             "mb update --check --json",
         ),
         "contract_checks": (
+            "intent",
             "required_mb_commands",
+            "required_json_facts",
             "approval_gates",
+            "read_boundaries",
+            "write_boundaries",
             "read_before_write_boundary",
             "repair_plan_core_flow",
+            "safe_to_apply_state",
+            "runtime_mismatch_gate",
+            "core_flow",
+            "public_private_boundaries",
         ),
         "notes": (
             "Codex may inspect plans and explain next steps. Applying updates, "
