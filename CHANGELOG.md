@@ -13,6 +13,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Migrated the mb-bet lifecycle to a shared workflow source with checked Claude
+  and Codex shells, preserving read-only Codex boundaries until runtime smoke
+  proves write support. Closes #751.
 - Purged retired folder-taxonomy vocabulary from current agent-facing guidance
   and generated business-repo instructions, keeping old `reference/*`,
   `campaigns/`, and `outputs/` handling in explicit migration/repair contexts.

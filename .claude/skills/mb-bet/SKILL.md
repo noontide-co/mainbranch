@@ -6,6 +6,64 @@ loops: [decide, reflect, ship]
 
 # Bet
 
+**Shared source:** The portable workflow contract lives in
+`workflows/mb-bet/workflow.md`. This Claude skill is the Claude Code shell over
+that source.
+
+**Shared contract markers:** Keep these aligned with the shared source.
+
+Required commands:
+
+- `mb status --json --peek`
+- `mb start --json`
+- `mb doctor repair --plan`
+- `mb validate --cross-refs --json`
+- `mb checkpoint --plan --json`
+- `mb similar-bets "<thesis>" --repo . --json`
+- `mb books exposure --repo . --bet bets/YYYY-MM-DD-slug.md --json`
+- `mb books exposure --repo . --active --json`
+
+Required fact paths:
+
+- `money_path`
+- `money_path.objects.proof.quality`
+- `validation.file_contracts`
+- `content_strategy`
+- `ranked_actions`
+- `update`
+- `readiness`
+- `drift.items`
+- `brain.bets`
+- `brain.bets.active`
+- `brain.bets.due_soon`
+- `brain.bets.overdue`
+- `brain.bets.exit_criteria`
+- `relationship_health.sections.bets`
+- `relationship_health.gaps`
+- `checkpoint.pending`
+- `checkpoint.pending.blockers`
+- `books`
+- `runtime.codex_cli`
+- `runtime.claude_code`
+
+Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`,
+`provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`,
+`destructive_operations`, `structured_collection`, and
+`public_issue_or_proposal`.
+
+Public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
+`no_raw_transcripts`, `no_customer_member_data`,
+`no_private_runtime_settings`, `no_private_dms_or_gated_communities`,
+`no_raw_finance_legal_records`, and `no_raw_ledger_rows`.
+
+Core flow: Bet is a time-boxed wager, not an offer or push. Preserve new,
+update, close, list, and narrate modes.
+Marker phrase: new, update, close, list, and narrate.
+Keep `bets/YYYY-MM-DD-slug.md` and the strict contract for typed links and
+reverse `linked_bets`; aggregate exposure privacy; public-safe narration;
+`mb validate --cross-refs`; checkpoint plan; and the Codex support boundary of
+read-only planning until runtime smoke proves lifecycle writes.
+
 Business bets are hub nodes in `bets/`. They connect decisions, research,
 pushes, logs, documents, and outcomes without replacing any of them. Legacy
 `campaigns/` records may still be linked for old repos, but new coordinated
