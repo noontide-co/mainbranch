@@ -436,6 +436,8 @@ def _add_playbook_actions(actions: list[dict[str, Any]], report: dict[str, Any])
 
 
 def _add_file_contract_actions(actions: list[dict[str, Any]], report: dict[str, Any]) -> None:
+    if _has_validation_blocker(report):
+        return
     validation = _dict(report.get("validation"))
     file_contracts = _dict(validation.get("file_contracts"))
     findings = [_dict(item) for item in _list(file_contracts.get("findings"))]
@@ -480,6 +482,18 @@ def _add_file_contract_actions(actions: list[dict[str, Any]], report: dict[str, 
             ),
         )
     )
+
+
+def _has_validation_blocker(report: dict[str, Any]) -> bool:
+    drift = _dict(report.get("drift"))
+    for item in _list(drift.get("items")):
+        drift_item = _dict(item)
+        if (
+            str(drift_item.get("id") or "") == "validation_debt"
+            and str(drift_item.get("severity") or "") == "error"
+        ):
+            return True
+    return False
 
 
 def _add_money_path_actions(actions: list[dict[str, Any]], report: dict[str, Any]) -> None:

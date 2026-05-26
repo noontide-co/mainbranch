@@ -30,7 +30,7 @@ slice.
 | Research | `research/*.md` | Specified, deferred | `mb-think` |
 | Bet | `bets/*.md` | Specified, deferred | `mb-bet` |
 | Push | `pushes/<date-slug>/push.md` | Specified, deferred | `mb-start` |
-| Playbook run | `pushes/<date-slug>/playbooks/*.md` | Specified, deferred | Owning workflow |
+| Playbook run | `pushes/<date-slug>/playbooks/*.md` | Specified, deferred | `mb-start` |
 | Log | `log/*.md` | Specified, deferred | `mb-end` |
 | Document | `documents/*.md` | Specified, deferred | `mb-think` |
 | Provider/data source | `data/*/source.md`, `provider_refs` | Existing schema/readiness checks | `mb-start`, `mb-ads`, `mb-site` |
@@ -64,8 +64,8 @@ yet tell a qualified buyer what to do next," not "missing H2: CTA."
 ## Current Paths And Legacy Repos
 
 Contracts document current Main Branch paths only: `core/`,
-`core/offers/`, `research/`, `decisions/`, `bets/`, `pushes/`, `playbooks/`,
-`log/`, and `documents/`.
+`core/offers/`, `research/`, `decisions/`, `bets/`, `pushes/`,
+`pushes/<date-slug>/playbooks/`, `log/`, and `documents/`.
 
 Runtime compatibility remains an engine responsibility. If old repo shapes are
 present, `mb status`, `mb doctor`, and migration checks can detect them, label
@@ -324,7 +324,7 @@ exports, spend authority, secrets, and customer contact lists are not.
 
 **Severity:** warning for body gaps; existing schema errors stay errors.
 
-**Route:** `mb-start` for routing, then the owning workflow such as `mb-ads`,
+**Route:** `mb-start` for routing, then a supported route such as `mb-ads`,
 `mb-organic`, `mb-site`, or `mb-end`.
 
 ### Playbook Run
@@ -343,8 +343,10 @@ mutation, publishing, or account writes without an accepted provider rail.
 
 **Severity:** warning or error depending on the provider boundary.
 
-**Route:** owning workflow. `google-ads-search-launch` remains draft/manual
-behind `mb-ads`; retired `ship-bet` and `weekly-review` are not routes.
+**Route:** `mb-start` for routing. For channel work, use a concrete supported
+route such as `mb-ads`, `mb-organic`, `mb-site`, or `mb-end`.
+`google-ads-search-launch` remains draft/manual behind `mb-ads`; retired
+`ship-bet` and `weekly-review` are not routes.
 
 ### Log
 
@@ -378,7 +380,8 @@ material and keep secrets out.
 
 **Severity:** warning.
 
-**Route:** `mb-think` unless another workflow owns the artifact.
+**Route:** `mb-think` unless a concrete supported route such as `mb-site`,
+`mb-organic`, `mb-ads`, or `mb-end` matches the artifact.
 
 ## JSON Shape
 

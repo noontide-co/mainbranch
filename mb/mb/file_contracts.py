@@ -182,7 +182,7 @@ DEFERRED_CONTRACTS: tuple[dict[str, Any], ...] = (
     {
         "id": "playbook_run",
         "paths": ["pushes/<date-slug>/playbooks/*.md"],
-        "route": "mb-ads or owning workflow",
+        "route": "mb-start",
         "status": "specified_deferred",
     },
     {

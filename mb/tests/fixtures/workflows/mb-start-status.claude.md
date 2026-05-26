@@ -39,9 +39,10 @@ This snapshot does not replace shipped `.claude/skills` prose.
 
 1. Start from status facts before raw markdown: readiness, drift, runtime wiring, update state, ranked actions, and since-last-check context.
 2. Run hard gates before routing: required updates, runtime mismatch, repair blockers, readiness blockers, private-data boundaries, unsafe provider operations, and destructive-operation requests.
-3. Use `ranked_actions`, `since_last_check`, `journal`, `money_path`, `content_strategy`, `onboarding`, `readiness`, `update`, and `drift.items` as cited facts.
-4. Present one clear business route and the signal behind it. Mutate the status marker only when the operator explicitly approves recording the daily check-in.
-5. Ask before business-file writes, checkpoints, repairs, updates, migrations, provider mutation, publishing, spend, customer contact, destructive operations, or public issue/proposal submission.
+3. Use `ranked_actions`, `since_last_check`, `journal`, `money_path`, `content_strategy`, `validation.file_contracts`, `onboarding`, `readiness`, `update`, and `drift.items` as cited facts.
+4. Route offer-shape gaps from `validation.file_contracts` to `/mb-think` after hard gates, and ask before durable writes.
+5. Present one clear business route and the signal behind it. Mutate the status marker only when the operator explicitly approves recording the daily check-in.
+6. Ask before business-file writes, checkpoints, repairs, updates, migrations, provider mutation, publishing, spend, customer contact, destructive operations, or public issue/proposal submission.
 
 ## Handoff Shape
 
