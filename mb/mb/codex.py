@@ -92,12 +92,12 @@ CLAUDE_SKILL_SOURCE_NAMES = (
     "mb-skill-brief-draft",
     "mb-skill-review",
 )
-CLAUDE_PLAYBOOK_SOURCE_NAMES = (
+CLAUDE_PLAYBOOK_SOURCE_NAMES = ("google-ads-search-launch",)
+CODEX_RETIRED_GLOBAL_SKILL_NAMES = (
     "google-ads-search-launch",
     "ship-bet",
     "weekly-review",
 )
-CODEX_RETIRED_GLOBAL_SKILL_NAMES = CLAUDE_PLAYBOOK_SOURCE_NAMES
 CODEX_RETIRED_GLOBAL_SKILL_MARKERS: dict[str, tuple[str, ...]] = {
     "google-ads-search-launch": (
         "name: google-ads-search-launch",
@@ -733,51 +733,6 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/750",
         "notes": (
             "No Google Ads account mutation, spend, upload, or publishing is supported in Codex."
-        ),
-    },
-    {
-        "id": "ship-bet-playbook",
-        "label": "Ship bet playbook",
-        "surface_type": "playbook",
-        "playbook_status": "internal_provisional",
-        "claude_surface": "ship-bet playbook",
-        "claude_skill_sources": (),
-        "claude_playbook_sources": ("ship-bet",),
-        "codex_status": "internal_composable",
-        "source_status": "internal_composable",
-        "codex_surface": "Hidden from default user-facing Codex global skills",
-        "commands": ("mb status --json --peek", "mb checkpoint --plan --json"),
-        "status_reason": (
-            "Provisional skeleton that may compose bet and checkpoint workflows; "
-            "it is not an intentional product playbook yet."
-        ),
-        "next_required_issue": "#753",
-        "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/753",
-        "notes": (
-            "Codex can plan from facts but must ask before changing bet, push, or checkpoint files."
-        ),
-    },
-    {
-        "id": "weekly-review-playbook",
-        "label": "Weekly review playbook",
-        "surface_type": "playbook",
-        "playbook_status": "internal_provisional",
-        "claude_surface": "weekly-review playbook",
-        "claude_skill_sources": (),
-        "claude_playbook_sources": ("weekly-review",),
-        "codex_status": "internal_composable",
-        "source_status": "internal_composable",
-        "codex_surface": "Hidden from default user-facing Codex global skills",
-        "commands": ("mb status --json --peek", "mb validate --json"),
-        "status_reason": (
-            "Provisional skeleton that may compose status, validate, and reflect "
-            "workflows; it is not an intentional product playbook yet."
-        ),
-        "next_required_issue": "#753",
-        "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/753",
-        "notes": (
-            "Codex can summarize review inputs but should not update durable "
-            "files without approval."
         ),
     },
     {

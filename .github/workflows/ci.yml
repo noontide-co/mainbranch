@@ -132,8 +132,8 @@ jobs:
             || { echo "::error::bundled skills missing from wheel"; exit 1; }
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/skills/mb-update/SKILL\.md([[:space:]]|$)' \
             || { echo "::error::bundled mb-update skill missing from wheel"; exit 1; }
-          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/playbooks/ship-bet/SKILL\.md([[:space:]]|$)' \
-            || { echo "::error::bundled playbooks missing from wheel"; exit 1; }
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/playbooks/google-ads-search-launch/SKILL\.md([[:space:]]|$)' \
+            || { echo "::error::bundled draft/manual playbook missing from wheel"; exit 1; }
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/reference/engine-path-resolution\.md([[:space:]]|$)' \
             || { echo "::error::bundled reference files missing from wheel"; exit 1; }
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude-plugin/plugin\.json([[:space:]]|$)' \
