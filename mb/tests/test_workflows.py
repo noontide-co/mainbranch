@@ -306,6 +306,8 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
         "supported",
         "read_only_planning",
         "pending_shared_source_migration",
+        "blocked_by_provider_gates",
+        "internal_composable",
         "generated_shell_pending",
         "intentionally_unsupported",
     }.issubset(statuses)
@@ -369,7 +371,23 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
         ".claude/skills/mb-update/SKILL.md",
     ]
     assert by_id["ads"]["codex_status"] == "read_only_planning"
-    assert by_id["ads"]["source_status"] == "pending_shared_source_migration"
+    assert by_id["ads"]["source_status"] == "blocked_by_provider_gates"
+    assert by_id["ads"]["source_of_truth"]["next_required_issue"] == "#750"
+    assert by_id["ads"]["source_of_truth"]["follow_up_issue"].endswith("/issues/750")
+    assert by_id["bets"]["source_of_truth"]["next_required_issue"] == "#751"
+    assert by_id["organic-content"]["source_of_truth"]["next_required_issue"] == "#752"
+    assert by_id["site"]["source_of_truth"]["next_required_issue"] == "#749"
+    assert by_id["google-ads-search-launch-playbook"]["surface_type"] == "playbook"
+    assert by_id["google-ads-search-launch-playbook"]["playbook_status"] == "draft_manual"
+    assert by_id["google-ads-search-launch-playbook"]["codex_entrypoints"] == []
+    assert by_id["google-ads-search-launch-playbook"]["codex_status"] == (
+        "blocked_by_provider_gates"
+    )
+    assert by_id["ship-bet-playbook"]["codex_status"] == "internal_composable"
+    assert by_id["ship-bet-playbook"]["codex_entrypoints"] == []
+    assert by_id["ship-bet-playbook"]["source_of_truth"]["next_required_issue"] == "#753"
+    assert by_id["weekly-review-playbook"]["codex_status"] == "internal_composable"
+    assert by_id["weekly-review-playbook"]["codex_entrypoints"] == []
     assert by_id["wiki"]["codex_status"] == "intentionally_unsupported"
     assert by_id["wiki"]["source_status"] == "intentionally_unsupported"
     assert data["architecture"] == {
@@ -387,14 +405,19 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
         "shared_workflow_source",
         "temporary_source_skill_mirror",
         "pending_shared_source_migration",
+        "blocked_by_provider_gates",
+        "internal_composable",
         "intentionally_unsupported",
     }.issubset(set(data["source_statuses"]))
     assert {
         "shared_source",
         "claude_skill",
+        "playbook",
         "codex_global_skill",
         "read_only_planning",
         "pending_shared_source_migration",
+        "blocked_by_provider_gates",
+        "internal_composable",
     }.issubset(set(data["surface_kinds"]))
     assert {"shared_source", "claude_skill", "codex_global_skill"}.issubset(
         set(by_id["think-codify"]["surface_kinds"])
@@ -402,11 +425,20 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
     assert {
         "codex_global_skill",
         "read_only_planning",
-        "pending_shared_source_migration",
+        "blocked_by_provider_gates",
     }.issubset(set(by_id["ads"]["surface_kinds"]))
+    assert {"playbook", "blocked_by_provider_gates"}.issubset(
+        set(by_id["google-ads-search-launch-playbook"]["surface_kinds"])
+    )
+    assert {"playbook", "internal_composable"}.issubset(
+        set(by_id["weekly-review-playbook"]["surface_kinds"])
+    )
     assert "plugin" not in data
     assert data["global_skill"]["path"] == codex_mod.CODEX_GLOBAL_SKILL_RELATIVE_PATH
     assert "mb-start" in data["global_skill"]["routes"]
+    assert "google-ads-search-launch" not in data["global_skill"]["routes"]
+    assert "ship-bet" not in data["global_skill"]["routes"]
+    assert "weekly-review" not in data["global_skill"]["routes"]
 
 
 def test_codex_workflow_inventory_source_status_contract_is_explicit() -> None:
@@ -417,10 +449,18 @@ def test_codex_workflow_inventory_source_status_contract_is_explicit() -> None:
         source = item["source_of_truth"]
         assert source["status"] == item["source_status"]
         assert source["description"]
+        assert source["surface_type"] in {"workflow", "skill", "playbook"}
         assert isinstance(source["claude_sources"], list)
         assert isinstance(source["codex_sources"], list)
         assert isinstance(source["contract_checks"], list)
         assert isinstance(source["surface_kinds"], list)
+        if item["source_status"] in {
+            "pending_shared_source_migration",
+            "blocked_by_provider_gates",
+        }:
+            assert source["status_reason"]
+            assert source["next_required_issue"]
+            assert source["follow_up_issue"]
         if item["codex_status"] == "supported":
             assert item["source_status"] in {
                 "shared_workflow_source",

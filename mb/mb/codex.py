@@ -115,7 +115,6 @@ CODEX_GLOBAL_SKILL_NAMES = (
     "mb-skill-concept",
     "mb-skill-brief-draft",
     "mb-skill-review",
-    *CLAUDE_PLAYBOOK_SOURCE_NAMES,
 )
 CODEX_SLASH_COMMAND_RELATIVE_PATHS = tuple(
     f"{CODEX_PLUGIN_COMMANDS_RELATIVE_PATH}/{name}.md" for name in CODEX_SLASH_COMMAND_NAMES
@@ -364,31 +363,43 @@ CODEX_WORKFLOW_STATUS_VOCABULARY = (
     "supported",
     "read_only_planning",
     "pending_shared_source_migration",
+    "blocked_by_provider_gates",
+    "internal_composable",
     "generated_shell_pending",
     "intentionally_unsupported",
 )
 CODEX_SURFACE_KIND_VOCABULARY = (
     "shared_source",
     "claude_skill",
+    "playbook",
     "codex_global_skill",
     "read_only_planning",
     "pending_shared_source_migration",
+    "blocked_by_provider_gates",
+    "internal_composable",
     "intentionally_unsupported",
 )
 CODEX_SURFACE_KIND_DESCRIPTIONS = {
     "shared_source": "canonical workflow source under workflows/<workflow>/workflow.md",
     "claude_skill": "Claude Code runtime shell under .claude/skills/<name>/SKILL.md",
+    "playbook": "reusable business recipe under .claude/playbooks/<name>/SKILL.md",
     "codex_global_skill": "generated Codex global skill shell under the Codex skills root",
     "read_only_planning": (
         "Codex may inspect facts and plan, but must not claim full workflow parity"
     ),
     "pending_shared_source_migration": "workflow substance still needs a shared source migration",
+    "blocked_by_provider_gates": (
+        "full execution waits for provider, publishing, spend, or account-mutation gates"
+    ),
+    "internal_composable": "internal or provisional surface hidden from default user-facing routes",
     "intentionally_unsupported": "outside the current Codex daily-loop support target",
 }
 CODEX_SOURCE_STATUS_VOCABULARY = (
     "shared_workflow_source",
     "temporary_source_skill_mirror",
     "pending_shared_source_migration",
+    "blocked_by_provider_gates",
+    "internal_composable",
     "intentionally_unsupported",
 )
 CODEX_SOURCE_STATUS_DESCRIPTIONS = {
@@ -403,6 +414,14 @@ CODEX_SOURCE_STATUS_DESCRIPTIONS = {
     "pending_shared_source_migration": (
         "Codex may use read-only facts or planning guidance, but runtime shells "
         "must wait for a shared source migration"
+    ),
+    "blocked_by_provider_gates": (
+        "planning or review may be useful, but execution waits for explicit provider, "
+        "publishing, spend, customer-contact, or account-mutation gates"
+    ),
+    "internal_composable": (
+        "internal or provisional surface that may compose other workflows but is not "
+        "a default user-facing route"
     ),
     "intentionally_unsupported": "outside the current Codex daily-loop target",
 }
@@ -582,6 +601,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
     {
         "id": "bets",
         "label": "Bet lifecycle",
+        "surface_type": "skill",
         "claude_surface": "/mb-bet",
         "claude_skill_sources": ("mb-bet",),
         "codex_status": "read_only_planning",
@@ -589,6 +609,12 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "codex_surface": "Read-only facts and business-file planning only",
         "codex_entrypoints": ("main-branch mb-bet",),
         "commands": ("mb status --json --peek", "mb validate --json"),
+        "status_reason": (
+            "Bet creation, update, close, and narrate write durable business memory; "
+            "Codex execution needs a shared bet workflow source first."
+        ),
+        "next_required_issue": "#751",
+        "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/751",
         "notes": (
             "Codex may inspect and discuss bets. A generated Codex shell should "
             "wait for a shared bet workflow source."
@@ -597,18 +623,26 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
     {
         "id": "ads",
         "label": "Ads and paid creative",
+        "surface_type": "skill",
         "claude_surface": "/mb-ads",
         "claude_skill_sources": ("mb-ads",),
         "codex_status": "read_only_planning",
-        "source_status": "pending_shared_source_migration",
+        "source_status": "blocked_by_provider_gates",
         "codex_surface": "Read-only planning only",
         "codex_entrypoints": ("main-branch mb-ads",),
         "commands": ("mb status --json --peek", "mb connect doctor --json"),
+        "status_reason": (
+            "Paid creative can be planned from facts, but provider mutation, upload, "
+            "spend, publishing, and customer/contact writes need explicit gates."
+        ),
+        "next_required_issue": "#750",
+        "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/750",
         "notes": "No provider mutation, spend, upload, or publishing is supported in Codex.",
     },
     {
         "id": "organic-content",
         "label": "Organic content and newsletter planning",
+        "surface_type": "skill",
         "claude_surface": "/mb-organic and related playbooks",
         "claude_skill_sources": ("mb-organic",),
         "codex_status": "read_only_planning",
@@ -616,6 +650,12 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "codex_surface": "Read-only planning only",
         "codex_entrypoints": ("main-branch mb-organic",),
         "commands": ("mb status --json --peek",),
+        "status_reason": (
+            "Codex can plan from content strategy facts, but drafting/review/routing "
+            "needs a shared organic workflow source before parity claims."
+        ),
+        "next_required_issue": "#752",
+        "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/752",
         "notes": (
             "Codex may route content strategy questions through think/codify, "
             "but publishing and newsletter dogfood remain outside this parity slice."
@@ -624,37 +664,54 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
     {
         "id": "site",
         "label": "Site and page production",
+        "surface_type": "skill",
         "claude_surface": "/mb-site",
         "claude_skill_sources": ("mb-site",),
         "codex_status": "read_only_planning",
-        "source_status": "pending_shared_source_migration",
+        "source_status": "blocked_by_provider_gates",
         "codex_surface": "Read-only planning and site readiness facts only",
         "codex_entrypoints": ("main-branch mb-site",),
         "commands": ("mb status --json --peek", "mb site check --json"),
+        "status_reason": (
+            "Codex can inspect site readiness, but build, deploy, domain, DNS, and "
+            "publishing behavior need shared workflow gates and runtime smoke."
+        ),
+        "next_required_issue": "#749",
+        "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/749",
         "notes": "Codex must not claim site build, deploy, domain, or publishing parity.",
     },
     {
         "id": "wiki",
         "label": "Wiki and personal atomic notes",
+        "surface_type": "skill",
         "claude_surface": "/mb-wiki",
         "claude_skill_sources": ("mb-wiki",),
         "codex_status": "intentionally_unsupported",
         "source_status": "intentionally_unsupported",
         "codex_surface": "None",
         "commands": (),
+        "status_reason": "Specialty personal-wiki workflow outside the current Codex target.",
         "notes": "Specialty workflow outside the current Codex command target.",
     },
     {
         "id": "google-ads-search-launch-playbook",
         "label": "Google Ads search launch playbook",
+        "surface_type": "playbook",
+        "playbook_status": "draft_manual",
         "claude_surface": "google-ads-search-launch playbook",
         "claude_skill_sources": (),
         "claude_playbook_sources": ("google-ads-search-launch",),
-        "codex_status": "read_only_planning",
-        "source_status": "pending_shared_source_migration",
-        "codex_surface": "Read-only planning only",
-        "codex_entrypoints": ("google-ads-search-launch",),
+        "codex_status": "blocked_by_provider_gates",
+        "source_status": "blocked_by_provider_gates",
+        "codex_surface": "Draft/manual playbook behind mb-ads; no direct Codex global skill",
         "commands": ("mb status --json --peek", "mb connect doctor --json"),
+        "status_reason": (
+            "This is a reusable launch recipe, not a first-class skill. It stays "
+            "manual behind mb-ads until provider/spend/publish gates and a real "
+            "playbook source shape land."
+        ),
+        "next_required_issue": "#750",
+        "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/750",
         "notes": (
             "No Google Ads account mutation, spend, upload, or publishing is supported in Codex."
         ),
@@ -662,14 +719,21 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
     {
         "id": "ship-bet-playbook",
         "label": "Ship bet playbook",
+        "surface_type": "playbook",
+        "playbook_status": "internal_provisional",
         "claude_surface": "ship-bet playbook",
         "claude_skill_sources": (),
         "claude_playbook_sources": ("ship-bet",),
-        "codex_status": "read_only_planning",
-        "source_status": "pending_shared_source_migration",
-        "codex_surface": "Read-only planning only",
-        "codex_entrypoints": ("ship-bet",),
+        "codex_status": "internal_composable",
+        "source_status": "internal_composable",
+        "codex_surface": "Hidden from default user-facing Codex global skills",
         "commands": ("mb status --json --peek", "mb checkpoint --plan --json"),
+        "status_reason": (
+            "Provisional skeleton that may compose bet and checkpoint workflows; "
+            "it is not an intentional product playbook yet."
+        ),
+        "next_required_issue": "#753",
+        "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/753",
         "notes": (
             "Codex can plan from facts but must ask before changing bet, push, or checkpoint files."
         ),
@@ -677,14 +741,21 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
     {
         "id": "weekly-review-playbook",
         "label": "Weekly review playbook",
+        "surface_type": "playbook",
+        "playbook_status": "internal_provisional",
         "claude_surface": "weekly-review playbook",
         "claude_skill_sources": (),
         "claude_playbook_sources": ("weekly-review",),
-        "codex_status": "read_only_planning",
-        "source_status": "pending_shared_source_migration",
-        "codex_surface": "Read-only planning only",
-        "codex_entrypoints": ("weekly-review",),
+        "codex_status": "internal_composable",
+        "source_status": "internal_composable",
+        "codex_surface": "Hidden from default user-facing Codex global skills",
         "commands": ("mb status --json --peek", "mb validate --json"),
+        "status_reason": (
+            "Provisional skeleton that may compose status, validate, and reflect "
+            "workflows; it is not an intentional product playbook yet."
+        ),
+        "next_required_issue": "#753",
+        "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/753",
         "notes": (
             "Codex can summarize review inputs but should not update durable "
             "files without approval."
@@ -693,6 +764,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
     {
         "id": "skill-authoring",
         "label": "Skill concept, draft, and review",
+        "surface_type": "skill",
         "claude_surface": "/mb-skill-concept, /mb-skill-brief-draft, /mb-skill-review",
         "claude_skill_sources": (
             "mb-skill-concept",
@@ -703,6 +775,7 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "source_status": "intentionally_unsupported",
         "codex_surface": "None",
         "commands": (),
+        "status_reason": "Engine-contributor workflow, not a business runtime surface.",
         "notes": "Engine-contributor workflow, not a business runtime surface.",
     },
 )
@@ -1319,6 +1392,9 @@ def _source_of_truth_for_inventory_item(item: dict[str, Any]) -> dict[str, Any]:
     return {
         "status": status,
         "description": CODEX_SOURCE_STATUS_DESCRIPTIONS[status],
+        "surface_type": item.get("surface_type", "workflow"),
+        "playbook_status": item.get("playbook_status"),
+        "status_reason": item.get("status_reason"),
         "shared_source": item.get("shared_source"),
         "surface_kinds": surface_kinds,
         "claude_sources": list(
@@ -1327,6 +1403,7 @@ def _source_of_truth_for_inventory_item(item: dict[str, Any]) -> dict[str, Any]:
         ),
         "codex_sources": [str(entrypoint) for entrypoint in item.get("codex_entrypoints", ())],
         "contract_checks": [str(check) for check in item.get("contract_checks", ())],
+        "next_required_issue": item.get("next_required_issue"),
         "follow_up_issue": item.get("follow_up_issue"),
     }
 
@@ -1335,8 +1412,10 @@ def _surface_kinds_for_inventory_item(item: dict[str, Any]) -> list[str]:
     kinds: list[str] = []
     if item.get("shared_source"):
         kinds.append("shared_source")
-    if item.get("claude_skill_sources") or item.get("claude_playbook_sources"):
+    if item.get("claude_skill_sources"):
         kinds.append("claude_skill")
+    if item.get("claude_playbook_sources"):
+        kinds.append("playbook")
     if item.get("codex_entrypoints"):
         kinds.append("codex_global_skill")
     codex_status = str(item.get("codex_status", ""))
@@ -1345,6 +1424,10 @@ def _surface_kinds_for_inventory_item(item: dict[str, Any]) -> list[str]:
         kinds.append("read_only_planning")
     if source_status == "pending_shared_source_migration":
         kinds.append("pending_shared_source_migration")
+    if codex_status == "blocked_by_provider_gates" or source_status == "blocked_by_provider_gates":
+        kinds.append("blocked_by_provider_gates")
+    if codex_status == "internal_composable" or source_status == "internal_composable":
+        kinds.append("internal_composable")
     if codex_status == "intentionally_unsupported":
         kinds.append("intentionally_unsupported")
     return kinds
@@ -1356,6 +1439,9 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
     items = []
     for item in CODEX_WORKFLOW_INVENTORY:
         copied = dict(item)
+        copied["surface_type"] = str(item.get("surface_type", "workflow"))
+        if item.get("playbook_status"):
+            copied["playbook_status"] = str(item["playbook_status"])
         copied["commands"] = list(_commands_for_inventory_item(item))
         copied["claude_skill_sources"] = list(_claude_skill_sources_for_inventory_item(item))
         copied["claude_playbook_sources"] = list(_claude_playbook_sources_for_inventory_item(item))
@@ -1402,7 +1488,9 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
             "display_name": "Main Branch",
             "path": CODEX_GLOBAL_SKILL_RELATIVE_PATH,
             "routes": list(CODEX_GLOBAL_SKILL_NAMES),
-            "support": CODEX_GLOBAL_SKILL_SUPPORT,
+            "support": {
+                name: CODEX_GLOBAL_SKILL_SUPPORT[name] for name in CODEX_GLOBAL_SKILL_NAMES
+            },
             "install_hint": CODEX_REPAIR_COMMAND,
         },
         "statuses": statuses,
@@ -1422,6 +1510,7 @@ def render_workflow_inventory_md() -> str:
     for item in CODEX_WORKFLOW_INVENTORY:
         commands = ", ".join(f"`{command}`" for command in _commands_for_inventory_item(item))
         entrypoints = ", ".join(f"`{entry}`" for entry in item.get("codex_entrypoints", ()))
+        next_issue = item.get("next_required_issue") or item.get("follow_up_issue") or "None"
         claude_sources = ", ".join(
             f"`{source}`"
             for source in (
@@ -1430,14 +1519,17 @@ def render_workflow_inventory_md() -> str:
             )
         )
         row_template = (
-            "| {label} | `{status}` | `{source_status}` | {claude} | {sources} | "
-            "{codex} | {entrypoints} | {commands} |"
+            "| {label} | `{surface_type}` | `{status}` | `{source_status}` | {reason} | "
+            "{next_issue} | {claude} | {sources} | {codex} | {entrypoints} | {commands} |"
         )
         rows.append(
             row_template.format(
                 label=item["label"],
+                surface_type=item.get("surface_type", "workflow"),
                 status=item["codex_status"],
                 source_status=item["source_status"],
+                reason=item.get("status_reason", item["notes"]),
+                next_issue=next_issue,
                 claude=item["claude_surface"],
                 sources=claude_sources or "None",
                 codex=item["codex_surface"],
@@ -1456,6 +1548,11 @@ def render_workflow_inventory_md() -> str:
         "not claim full workflow parity until a shared source migration lands.\n"
         "- `pending_shared_source_migration`: Codex may plan from read-only facts, "
         "but a runtime shell should wait for a shared workflow source.\n"
+        "- `blocked_by_provider_gates`: Codex may plan or review, but provider "
+        "mutation, publishing, spend, customer contact, or account changes wait "
+        "for explicit gates and runtime evidence.\n"
+        "- `internal_composable`: internal or provisional route hidden from "
+        "default user-facing Codex global skills.\n"
         "- `generated_shell_pending`: a shared source exists, but a generated Codex "
         "shell still needs implementation and smoke evidence.\n"
         "- `intentionally_unsupported`: outside the current Codex daily-loop target.\n\n"
@@ -1466,13 +1563,19 @@ def render_workflow_inventory_md() -> str:
         "or CLI guidance until a shared source owns both runtime shells.\n"
         "- `pending_shared_source_migration`: Codex may use read-only facts or "
         "planning guidance, but runtime shells wait for a shared source migration.\n"
+        "- `blocked_by_provider_gates`: planning or review may be useful, but "
+        "execution waits for provider, publishing, spend, customer-contact, or "
+        "account-mutation gates.\n"
+        "- `internal_composable`: provisional surface that may compose other "
+        "workflows but is not a default user-facing route.\n"
         "- `intentionally_unsupported`: outside the current Codex daily-loop target.\n\n"
         "Canonical architecture: shared workflow source -> Claude Code shell -> "
         "Codex shell -> inventory/tests. Temporary mirrors are explicit so "
         "reviewers can see which routes still need migration.\n\n"
         "Surface kinds in `mb workflow list --json`: `shared_source`, "
-        "`claude_skill`, `codex_global_skill`, `read_only_planning`, "
-        "`pending_shared_source_migration`, and `intentionally_unsupported`.\n\n"
+        "`claude_skill`, `playbook`, `codex_global_skill`, `read_only_planning`, "
+        "`pending_shared_source_migration`, `blocked_by_provider_gates`, "
+        "`internal_composable`, and `intentionally_unsupported`.\n\n"
         "The global Main Branch skill bundle is installed by "
         "`mb doctor repair --only codex`; business repos keep only lightweight "
         "`AGENTS.md` guidance. After repair, open a fresh Codex thread in the "
@@ -1480,9 +1583,9 @@ def render_workflow_inventory_md() -> str:
         "Each row names its bundled Claude skill "
         "source(s); every bundled Claude `mb-*` skill must be accounted for here "
         "until the shared workflow generator owns both runtime shells.\n\n"
-        "| Workflow | Codex status | Source of truth | Claude Code surface | Claude source | "
-        "Codex surface | Codex route | Fact commands |\n"
-        "|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n\n"
+        "| Workflow | Type | Codex status | Source of truth | Reason | Next issue | "
+        "Claude Code surface | Claude source | Codex surface | Codex route | Fact commands |\n"
+        "|---|---|---|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n\n"
         "Codex must ask before durable writes, checkpoints, repairs, updates, "
         "migrations, provider mutation, publishing, spend, customer contact, or "
         "public issue/proposal submission.\n"

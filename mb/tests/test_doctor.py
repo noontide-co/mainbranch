@@ -539,7 +539,7 @@ def test_doctor_repair_apply_all_agents_installs_codex_without_codex_cli(
     assert "codex-global-skill" in applied
     receipt = payload["receipt"]
     assert "mb-start" in receipt["installed_skills"]
-    assert "weekly-review" in receipt["installed_skills"]
+    assert "weekly-review" not in receipt["installed_skills"]
     assert "main-branch-owner-loop" not in receipt["installed_skills"]
     assert str(tmp_path / "codex-skills") in receipt["touched_files"]
     assert (tmp_path / "codex-skills" / "mb-start" / "SKILL.md").is_file()
