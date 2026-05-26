@@ -527,6 +527,9 @@ def test_doctor_repair_apply_all_agents_installs_codex_without_codex_cli(
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
     (repo / "AGENTS.md").write_text("# stale\n\nNo facts here.\n", encoding="utf-8")
+    old_playbook_skill = tmp_path / "codex-skills" / "weekly-review" / "SKILL.md"
+    old_playbook_skill.parent.mkdir(parents=True, exist_ok=True)
+    old_playbook_skill.write_text("# stale weekly review\n", encoding="utf-8")
 
     result = runner.invoke(
         app, ["doctor", "repair", "--repo", str(repo), "--apply", "--all-agents", "--json"]
@@ -543,6 +546,7 @@ def test_doctor_repair_apply_all_agents_installs_codex_without_codex_cli(
     assert "main-branch-owner-loop" not in receipt["installed_skills"]
     assert str(tmp_path / "codex-skills") in receipt["touched_files"]
     assert (tmp_path / "codex-skills" / "mb-start" / "SKILL.md").is_file()
+    assert not old_playbook_skill.exists()
 
 
 def test_doctor_repair_apply_default_does_not_silently_write_agent_surfaces(

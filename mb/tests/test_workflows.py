@@ -295,6 +295,32 @@ def test_codex_plugin_status_marks_missing_or_stale_commands_not_ready(
     assert status["repair"] == codex_mod.CODEX_REPAIR_TEXT
 
 
+def test_codex_global_skill_upgrade_removes_retired_playbook_skills(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("MAINBRANCH_CODEX_PLUGIN_ROOT", str(tmp_path / "codex-global"))
+    monkeypatch.setenv("MAINBRANCH_CODEX_SKILLS_ROOT", str(tmp_path / "codex-skills"))
+    codex_mod.write_global_skill_source()
+    for name in codex_mod.CODEX_RETIRED_GLOBAL_SKILL_NAMES:
+        stale_skill = codex_mod.global_skill_source_root() / name / "SKILL.md"
+        stale_skill.parent.mkdir(parents=True, exist_ok=True)
+        stale_skill.write_text(f"# stale {name}\n", encoding="utf-8")
+
+    before = codex_mod.global_skill_status(tmp_path / "business")
+
+    assert before["ok"] is False
+    for name in codex_mod.CODEX_RETIRED_GLOBAL_SKILL_NAMES:
+        assert name in before["stale"]
+
+    result = codex_mod.write_global_skill_source()
+
+    assert result["ok"] is True
+    assert result["status"]["ok"] is True
+    for name in codex_mod.CODEX_RETIRED_GLOBAL_SKILL_NAMES:
+        assert not (codex_mod.global_skill_source_root() / name).exists()
+        assert str(codex_mod.global_skill_source_root() / name) in result["changed_paths"]
+
+
 def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces() -> None:
     result = runner.invoke(app, ["workflow", "list", "--runtime", "codex", "--json"])
 

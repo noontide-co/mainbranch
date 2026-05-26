@@ -97,6 +97,7 @@ CLAUDE_PLAYBOOK_SOURCE_NAMES = (
     "ship-bet",
     "weekly-review",
 )
+CODEX_RETIRED_GLOBAL_SKILL_NAMES = CLAUDE_PLAYBOOK_SOURCE_NAMES
 CODEX_GLOBAL_SKILL_NAMES = (
     CODEX_GLOBAL_SKILL_NAME,
     "mb-doctor",
@@ -2286,6 +2287,10 @@ def global_skill_status(repo: str | Path) -> dict[str, Any]:
     legacy_skill = global_skill_source_root() / CODEX_LEGACY_GLOBAL_SKILL_NAME
     if legacy_skill.exists():
         stale.append(CODEX_LEGACY_GLOBAL_SKILL_NAME)
+    for retired_name in CODEX_RETIRED_GLOBAL_SKILL_NAMES:
+        retired_path = global_skill_source_root() / retired_name
+        if retired_path.exists():
+            stale.append(retired_name)
     legacy_plugin = global_plugin_source_root()
     if legacy_plugin.exists():
         stale.append(str(legacy_plugin))
@@ -2338,6 +2343,11 @@ def write_global_skill_source() -> dict[str, Any]:
     legacy_skill = global_skill_source_root() / CODEX_LEGACY_GLOBAL_SKILL_NAME
     if _remove_generated_tree(legacy_skill):
         changed_paths.append(str(legacy_skill))
+
+    for retired_name in CODEX_RETIRED_GLOBAL_SKILL_NAMES:
+        retired_path = global_skill_source_root() / retired_name
+        if _remove_generated_tree(retired_path):
+            changed_paths.append(str(retired_path))
 
     plugin_root = global_plugin_source_root()
     if _remove_generated_tree(plugin_root):
