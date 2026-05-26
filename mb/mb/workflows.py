@@ -41,6 +41,10 @@ REQUIRED_RUNTIME_SUPPORT = {
     "claude_code": "supported_shell",
     "codex_cli": "owner_loop_shell",
 }
+ALLOWED_RUNTIME_SUPPORT_VALUES = {
+    "claude_code": {"supported_shell"},
+    "codex_cli": {"owner_loop_shell", "read_only_planning"},
+}
 MINIMUM_MB_COMMANDS = {
     "mb status --json --peek",
     "mb start --json",
@@ -111,6 +115,18 @@ REQUIRED_SHELL_PHRASES_BY_WORKFLOW: dict[str, dict[str, str]] = {
         "safe-to-apply state": "safe-to-apply",
         "post-repair status": "rerun `mb status --json --peek`",
     },
+    "mb-bet": {
+        "bet lifecycle modes": "new, update, close, list, and narrate",
+        "bet file contract": "bets/YYYY-MM-DD-slug.md",
+        "bet not offer or push": "Bet is a time-boxed wager",
+        "strict bet contract": "strict contract",
+        "reverse links": "linked_bets",
+        "cross-ref validation": "mb validate --cross-refs",
+        "exposure privacy": "aggregate exposure",
+        "public narration": "public-safe narration",
+        "checkpoint boundary": "checkpoint plan",
+        "Codex support boundary": "read-only planning",
+    },
 }
 CODEX_FORBIDDEN_PHRASES_BY_WORKFLOW: dict[str, tuple[str, ...]] = {
     "mb-think": (
@@ -150,6 +166,15 @@ CODEX_FORBIDDEN_PHRASES_BY_WORKFLOW: dict[str, tuple[str, ...]] = {
         "Claude Code slash commands work inside Codex",
         "Claude slash commands",
         "slash-command parity",
+    ),
+    "mb-bet": (
+        "Run `/mb-bet`",
+        "Claude Code skills work in Codex",
+        "Claude Code slash commands work inside Codex",
+        "Claude slash commands",
+        "slash-command parity",
+        "Codex can create bets",
+        "Codex can close bets",
     ),
 }
 PUBLIC_PRIVATE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -279,8 +304,15 @@ def validate_workflow(path: Path) -> list[str]:
     else:
         for runtime, expected in REQUIRED_RUNTIME_SUPPORT.items():
             actual = runtime_support.get(runtime)
-            if actual != expected:
-                errors.append(f"runtime_support.{runtime} must be {expected!r}, got {actual!r}")
+            allowed = ALLOWED_RUNTIME_SUPPORT_VALUES.get(runtime, {expected})
+            if actual not in allowed:
+                if len(allowed) == 1:
+                    errors.append(f"runtime_support.{runtime} must be {expected!r}, got {actual!r}")
+                else:
+                    errors.append(
+                        f"runtime_support.{runtime} must be one of "
+                        f"{sorted(allowed)!r}, got {actual!r}"
+                    )
 
     runtime_surfaces = frontmatter.get("runtime_surfaces")
     if not isinstance(runtime_surfaces, dict):
@@ -416,6 +448,8 @@ def render_claude_shell(workflow: WorkflowSource) -> str:
         return _render_think_claude_shell(workflow)
     if workflow.name == "mb-end":
         return _render_end_claude_shell(workflow)
+    if workflow.name == "mb-bet":
+        return _render_bet_claude_shell(workflow)
     if workflow.name in {"mb-start-status", "mb-setup", "mb-maintenance-repair"}:
         return _render_daily_claude_shell(workflow)
     return _render_start_money_path_claude_shell(workflow)
@@ -669,6 +703,8 @@ def render_codex_shell(workflow: WorkflowSource) -> str:
         return _render_think_codex_shell(workflow)
     if workflow.name == "mb-end":
         return _render_end_codex_shell(workflow)
+    if workflow.name == "mb-bet":
+        return _render_bet_codex_shell(workflow)
     if workflow.name in {"mb-start-status", "mb-setup", "mb-maintenance-repair"}:
         return _render_daily_codex_shell(workflow)
     return _render_start_money_path_codex_shell(workflow)
@@ -919,6 +955,156 @@ Approval needed before writes: yes.
 ```
 Do not tell Codex users to run Claude Code entrypoints. Runtime smoke is
 required before docs say this selected workflow is supported in Codex.
+"""
+    return output
+
+
+def _render_bet_claude_shell(workflow: WorkflowSource) -> str:
+    """Render a Claude Code shell snapshot for the bet lifecycle workflow."""
+
+    output = f"""# Generated Claude Shell: {workflow.title}
+
+Source workflow: `{_display_path(workflow.path)}`
+Runtime support: `claude_code: supported_shell`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
+
+Use from `/mb-bet` when the operator wants to create, update, close, list, or
+narrate bets. Preserve the existing Claude skill's mode language, approval
+gates, artifact routing, and finance/privacy boundaries.
+
+This snapshot does not replace shipped `.claude/skills/mb-bet/SKILL.md`.
+
+## Required mb Commands
+
+{_bullet_list(workflow.required_mb_commands)}
+
+## Required JSON Fact Paths
+
+{_bullet_list(workflow.json_facts)}
+
+## Routing
+
+1. Read deterministic facts first: status, start when runtime facts matter,
+   repair plan when blockers appear, validation, relationship health,
+   checkpoint plan, similar-bets for repeated material theses, and aggregate
+   exposure for financially material bets.
+2. Bet is a time-boxed wager, not an offer or push. Offers are durable things
+   sold; pushes coordinate execution. Bets carry hypothesis, appetite, target,
+   deadline, evidence, kill or double-down logic, and verdict.
+3. Support new, update, close, list, and narrate modes. Create or edit
+   `bets/YYYY-MM-DD-slug.md` only after approval, and keep the strict contract:
+   frontmatter fields, body sections, typed links, reverse `linked_bets`, and
+   `## Related links`.
+4. For updates, append dated evidence and links without filling `result` unless
+   there is a measured result. For close, record verdict, learning, outcomes,
+   and graduation route without rewriting failed bets as success.
+5. Use `mb validate --cross-refs --json` after bet or link edits. Use the
+   checkpoint plan before offering an approval-gated save.
+6. For financially material bets, use aggregate exposure only. Never paste raw
+   ledger rows, payees, account names, vault paths, transaction memos, provider
+   exports, customer/member records, or secrets.
+7. Public-safe narration must come from accepted repo truth. Do not invent
+   metrics, results, testimonials, channels, or proof. If `public: false`, ask
+   before drafting public copy.
+8. Do not publish, spend, contact customers, mutate providers, create dashboard
+   work, or promote bet learning into offer truth without accepted evidence,
+   an accepted decision, and explicit approval.
+
+## Handoff Shape
+
+```text
+Bet mode: <new, update, close, list, or narrate>.
+Facts read: <status/start/validate/relationship/exposure/similar-bets facts>.
+Bet: <path, status, deadline, appetite, metric, target>.
+Evidence: <new evidence, missing evidence, or measured result>.
+Exit posture: <kill, double-down, continue, close, or unclear>.
+Connections: <decisions, research, pushes, outcomes, offers, or none>.
+Public posture: <public-safe, private, needs approval, or not narration>.
+Write plan: <files to create/edit or none>.
+Approval needed before writes: <yes/no and exact action>.
+Next business action: <one clear owner-facing step>.
+```
+
+Use business language first. Keep legacy campaign links compatibility-only;
+new execution routes through pushes. Codex support stays read-only planning
+until runtime smoke proves bet lifecycle writes.
+"""
+    return output
+
+
+def _render_bet_codex_shell(workflow: WorkflowSource) -> str:
+    """Render Codex CLI guidance for the bet lifecycle workflow."""
+
+    output = f"""# Generated Codex Workflow Guidance: {workflow.title}
+
+Source workflow: `{_display_path(workflow.path)}`
+Runtime support: `codex_cli: {workflow.runtime_support.get("codex_cli", "")}`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
+
+Codex uses the global Main Branch `mb-bet` skill as a read-only planning and
+file-guidance route. This guidance is generated from the engine workflow source
+and does not claim supported lifecycle writes or Claude Code entrypoints in
+Codex.
+
+## Required mb Commands
+
+{_bullet_list(workflow.required_mb_commands)}
+
+## Required JSON Fact Paths
+
+{_bullet_list(workflow.json_facts)}
+
+## Codex Route
+
+1. Use the business repo `AGENTS.md` bootstrap posture: read facts first, keep
+   writes approval-gated, and translate git/provider details into business
+   language.
+2. Read deterministic facts before raw markdown: status, start when runtime
+   facts matter, repair plan when blockers appear, validation, relationship
+   health, checkpoint plan, similar-bets for repeated material theses, and
+   aggregate exposure for financially material bets.
+3. Bet is a time-boxed wager, not an offer or push. Offers are durable things
+   sold; pushes coordinate execution. Bets carry hypothesis, appetite, target,
+   deadline, evidence, kill or double-down logic, and verdict.
+4. Guide new, update, close, list, and narrate modes from the shared contract.
+   Codex may draft patch-shaped recommendations and exact file targets, then
+   stop before changing files.
+5. Keep the strict contract for `bets/YYYY-MM-DD-slug.md`: frontmatter fields,
+   body sections, typed links, reverse `linked_bets`, and `## Related links`.
+6. If the operator wants the proposed changes applied, route them to Claude
+   Code `/mb-bet` or another supported write surface until Codex lifecycle-write
+   smoke proves this route. Do not run checkpoint commands or post-change
+   validation as if Codex edited files.
+7. For financially material bets, use aggregate exposure only. Never paste raw
+   ledger rows, payees, account names, vault paths, transaction memos, provider
+   exports, customer/member records, or secrets.
+8. Public-safe narration must come from accepted repo truth. Do not invent
+   metrics, results, testimonials, channels, or proof. If `public: false`, ask
+   before drafting public copy.
+9. Do not publish, spend, contact customers, mutate providers, create dashboard
+   work, or promote bet learning into offer truth without accepted evidence,
+   an accepted decision, and explicit approval.
+
+## Handoff Shape
+
+```text
+Bet mode: <new, update, close, list, or narrate>.
+Facts read: <status/start/validate/relationship/exposure/similar-bets facts>.
+Bet: <path, status, deadline, appetite, metric, target>.
+Evidence: <new evidence, missing evidence, or measured result>.
+Exit posture: <kill, double-down, continue, close, or unclear>.
+Connections: <decisions, research, pushes, outcomes, offers, or none>.
+Public posture: <public-safe, private, needs approval, or not narration>.
+Write plan: <files to create/edit or none>.
+Approval needed before writes: <yes/no and exact action>.
+Next business action: <one clear owner-facing step>.
+```
+
+Use business language first. Keep legacy campaign links compatibility-only;
+new execution routes through pushes. Runtime smoke is required before docs say
+this lifecycle is supported for Codex writes.
 """
     return output
 

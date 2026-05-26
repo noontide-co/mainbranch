@@ -193,7 +193,12 @@ CODEX_GLOBAL_SKILL_DESCRIPTIONS = {
 CODEX_GLOBAL_SKILL_FACTS: dict[str, tuple[str, ...]] = {
     **CODEX_SLASH_COMMAND_FACTS,
     "main-branch": REQUIRED_FACT_COMMANDS,
-    "mb-bet": ("mb status --json --peek", "mb validate --json"),
+    "mb-bet": (
+        "mb status --json --peek",
+        "mb start --json",
+        "mb validate --cross-refs --json",
+        "mb checkpoint --plan --json",
+    ),
     "mb-ads": ("mb status --json --peek", "mb connect doctor --json"),
     "mb-organic": ("mb status --json --peek",),
     "mb-site": ("mb status --json --peek", "mb site check --json"),
@@ -225,6 +230,7 @@ CODEX_THINK_SOURCE_WORKFLOW = "workflows/mb-think/workflow.md"
 CODEX_START_STATUS_SOURCE_WORKFLOW = "workflows/mb-start-status/workflow.md"
 CODEX_SETUP_SOURCE_WORKFLOW = "workflows/mb-setup/workflow.md"
 CODEX_MAINTENANCE_REPAIR_SOURCE_WORKFLOW = "workflows/mb-maintenance-repair/workflow.md"
+CODEX_BET_SOURCE_WORKFLOW = "workflows/mb-bet/workflow.md"
 CODEX_THINK_REQUIRED_MB_COMMANDS = (
     "mb status --json --peek",
     "mb start --json",
@@ -323,6 +329,60 @@ CODEX_END_PUBLIC_PRIVATE_BOUNDARIES = (
     "no_private_runtime_settings",
     "no_raw_finance_legal_records",
 )
+CODEX_BET_REQUIRED_MB_COMMANDS = (
+    "mb status --json --peek",
+    "mb start --json",
+    "mb doctor repair --plan",
+    "mb validate --cross-refs --json",
+    "mb checkpoint --plan --json",
+    'mb similar-bets "<thesis>" --repo . --json',
+    "mb books exposure --repo . --bet bets/YYYY-MM-DD-slug.md --json",
+    "mb books exposure --repo . --active --json",
+)
+CODEX_BET_REQUIRED_JSON_FACTS = (
+    "money_path",
+    "money_path.objects.proof.quality",
+    "validation.file_contracts",
+    "content_strategy",
+    "ranked_actions",
+    "update",
+    "readiness",
+    "drift.items",
+    "brain.bets",
+    "brain.bets.active",
+    "brain.bets.due_soon",
+    "brain.bets.overdue",
+    "brain.bets.exit_criteria",
+    "relationship_health.sections.bets",
+    "relationship_health.gaps",
+    "checkpoint.pending",
+    "checkpoint.pending.blockers",
+    "books",
+    "runtime.codex_cli",
+    "runtime.claude_code",
+)
+CODEX_BET_APPROVAL_GATES = (
+    "updates_repairs_migrations",
+    "file_writes",
+    "checkpoint",
+    "provider_mutation",
+    "publishing_or_spend",
+    "customer_contact",
+    "private_data",
+    "destructive_operations",
+    "structured_collection",
+    "public_issue_or_proposal",
+)
+CODEX_BET_PUBLIC_PRIVATE_BOUNDARIES = (
+    "no_secrets",
+    "no_raw_provider_exports",
+    "no_raw_transcripts",
+    "no_customer_member_data",
+    "no_private_runtime_settings",
+    "no_private_dms_or_gated_communities",
+    "no_raw_finance_legal_records",
+    "no_raw_ledger_rows",
+)
 CODEX_SHARED_WORKFLOW_SKILLS = {
     "mb-start": CODEX_START_STATUS_SOURCE_WORKFLOW,
     "mb-status": CODEX_START_STATUS_SOURCE_WORKFLOW,
@@ -331,6 +391,7 @@ CODEX_SHARED_WORKFLOW_SKILLS = {
     "mb-doctor": CODEX_MAINTENANCE_REPAIR_SOURCE_WORKFLOW,
     "mb-think": CODEX_THINK_SOURCE_WORKFLOW,
     "mb-end": CODEX_END_SOURCE_WORKFLOW,
+    "mb-bet": CODEX_BET_SOURCE_WORKFLOW,
 }
 REQUIRED_LIFECYCLE_GUIDANCE = (
     "## Codex Lifecycle Workflow Index",
@@ -625,20 +686,34 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-bet",
         "claude_skill_sources": ("mb-bet",),
         "codex_status": "read_only_planning",
-        "source_status": "pending_shared_source_migration",
-        "codex_surface": "Read-only facts and business-file planning only",
+        "source_status": "shared_workflow_source",
+        "codex_surface": "Read-only planning and file guidance through global mb-bet skill",
         "codex_entrypoints": ("main-branch mb-bet",),
-        "commands": ("mb status --json --peek", "mb validate --json"),
+        "shared_source": CODEX_BET_SOURCE_WORKFLOW,
+        "commands": CODEX_BET_REQUIRED_MB_COMMANDS,
+        "contract_checks": (
+            "intent",
+            "required_mb_commands",
+            "required_json_facts",
+            "approval_gates",
+            "read_boundaries",
+            "write_boundaries",
+            "bet_lifecycle_modes",
+            "bet_file_contract",
+            "typed_links_and_reverse_links",
+            "cross_ref_validation",
+            "aggregate_exposure_privacy",
+            "public_narration_boundary",
+            "codex_read_only_planning_boundary",
+            "core_flow",
+            "public_private_boundaries",
+        ),
         "status_reason": (
-            "Bet creation, update, close, and narrate write durable business memory; "
-            "Codex execution needs a shared bet workflow source first."
+            "Bet lifecycle substance has a shared source, but Codex remains "
+            "read-only planning and file guidance until runtime smoke proves "
+            "lifecycle writes."
         ),
-        "next_required_issue": "#751",
-        "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/751",
-        "notes": (
-            "Codex may inspect and discuss bets. A generated Codex shell should "
-            "wait for a shared bet workflow source."
-        ),
+        "notes": "Codex may inspect bet facts, explain contract gaps, and propose guarded edits.",
     },
     {
         "id": "ads",

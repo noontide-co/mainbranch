@@ -27,7 +27,9 @@ SETUP_WORKFLOW = REPO_ROOT / "workflows" / "mb-setup" / "workflow.md"
 MAINTENANCE_REPAIR_WORKFLOW = REPO_ROOT / "workflows" / "mb-maintenance-repair" / "workflow.md"
 THINK_WORKFLOW = REPO_ROOT / "workflows" / "mb-think" / "workflow.md"
 END_WORKFLOW = REPO_ROOT / "workflows" / "mb-end" / "workflow.md"
+BET_WORKFLOW = REPO_ROOT / "workflows" / "mb-bet" / "workflow.md"
 SHIPPED_END_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-end" / "SKILL.md"
+SHIPPED_BET_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-bet" / "SKILL.md"
 FIXTURES = REPO_ROOT / "mb" / "tests" / "fixtures" / "workflows"
 AGENTS_TEMPLATE = REPO_ROOT / "mb" / "mb" / "_data" / "templates" / "AGENTS.md.tmpl"
 WORKFLOW_PATHS = [
@@ -37,6 +39,7 @@ WORKFLOW_PATHS = [
     MAINTENANCE_REPAIR_WORKFLOW,
     THINK_WORKFLOW,
     END_WORKFLOW,
+    BET_WORKFLOW,
 ]
 
 
@@ -133,12 +136,31 @@ def test_generated_end_claude_and_codex_snapshots_match_fixtures() -> None:
     )
 
 
+def test_generated_bet_claude_and_codex_snapshots_match_fixtures() -> None:
+    workflow = load_workflow(BET_WORKFLOW)
+
+    assert render_claude_shell(workflow) == (FIXTURES / "mb-bet.claude.md").read_text(
+        encoding="utf-8"
+    )
+    assert render_codex_shell(workflow) == (FIXTURES / "mb-bet.codex.md").read_text(
+        encoding="utf-8"
+    )
+
+
 def test_shipped_claude_end_skill_preserves_shared_workflow_contract() -> None:
     workflow = load_workflow(END_WORKFLOW)
     skill_text = SHIPPED_END_SKILL.read_text(encoding="utf-8")
 
     assert shell_drift_errors(workflow, skill_text) == []
     assert "workflows/mb-end/workflow.md" in skill_text
+
+
+def test_shipped_claude_bet_skill_preserves_shared_workflow_contract() -> None:
+    workflow = load_workflow(BET_WORKFLOW)
+    skill_text = SHIPPED_BET_SKILL.read_text(encoding="utf-8")
+
+    assert shell_drift_errors(workflow, skill_text) == []
+    assert "workflows/mb-bet/workflow.md" in skill_text
 
 
 def test_supported_shells_preserve_required_commands_and_json_facts() -> None:
@@ -191,6 +213,18 @@ def test_codex_contract_markers_match_end_workflow_source() -> None:
     assert tuple(workflow.approval_gates) == codex_mod.CODEX_END_APPROVAL_GATES
     assert (
         tuple(workflow.public_private_boundaries) == codex_mod.CODEX_END_PUBLIC_PRIVATE_BOUNDARIES
+    )
+
+
+def test_codex_contract_markers_match_bet_workflow_source() -> None:
+    workflow = load_workflow(BET_WORKFLOW)
+
+    assert codex_mod.CODEX_BET_SOURCE_WORKFLOW == "workflows/mb-bet/workflow.md"
+    assert tuple(workflow.required_mb_commands) == codex_mod.CODEX_BET_REQUIRED_MB_COMMANDS
+    assert tuple(workflow.json_facts) == codex_mod.CODEX_BET_REQUIRED_JSON_FACTS
+    assert tuple(workflow.approval_gates) == codex_mod.CODEX_BET_APPROVAL_GATES
+    assert (
+        tuple(workflow.public_private_boundaries) == codex_mod.CODEX_BET_PUBLIC_PRIVATE_BOUNDARIES
     )
 
 
@@ -454,7 +488,14 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
     assert by_id["ads"]["source_status"] == "blocked_by_provider_gates"
     assert by_id["ads"]["source_of_truth"]["next_required_issue"] == "#750"
     assert by_id["ads"]["source_of_truth"]["follow_up_issue"].endswith("/issues/750")
-    assert by_id["bets"]["source_of_truth"]["next_required_issue"] == "#751"
+    assert by_id["bets"]["codex_status"] == "read_only_planning"
+    assert by_id["bets"]["source_status"] == "shared_workflow_source"
+    assert by_id["bets"]["source_of_truth"]["shared_source"] == "workflows/mb-bet/workflow.md"
+    assert by_id["bets"]["source_of_truth"]["next_required_issue"] is None
+    assert by_id["bets"]["codex_entrypoints"] == ["main-branch mb-bet"]
+    assert (
+        "codex_read_only_planning_boundary" in by_id["bets"]["source_of_truth"]["contract_checks"]
+    )
     assert by_id["organic-content"]["source_of_truth"]["next_required_issue"] == "#752"
     assert by_id["site"]["source_of_truth"]["next_required_issue"] == "#749"
     assert by_id["google-ads-search-launch-playbook"]["surface_type"] == "playbook"
@@ -616,6 +657,7 @@ def test_codex_shared_global_skills_are_rendered_from_workflow_sources() -> None
         (MAINTENANCE_REPAIR_WORKFLOW, "mb-doctor"),
         (THINK_WORKFLOW, "mb-think"),
         (END_WORKFLOW, "mb-end"),
+        (BET_WORKFLOW, "mb-bet"),
     ):
         workflow = load_workflow(path)
         text = codex_mod.render_codex_global_skill_md(name)
@@ -628,6 +670,66 @@ def test_codex_shared_global_skills_are_rendered_from_workflow_sources() -> None
         assert "main-branch-owner-loop" not in text
         assert "plugin" not in text.lower()
         assert "slash" not in text.lower()
+
+
+def test_bet_runtime_shells_surface_lifecycle_contract_and_boundaries() -> None:
+    workflow = load_workflow(BET_WORKFLOW)
+
+    for shell in (render_claude_shell(workflow), render_codex_shell(workflow)):
+        assert "Bet is a time-boxed wager" in shell
+        assert "new, update, close, list, and narrate" in shell
+        assert "bets/YYYY-MM-DD-slug.md" in shell
+        assert "linked_bets" in shell
+        assert "aggregate exposure" in shell
+        assert "public-safe narration" in shell.lower()
+        assert "provider" in shell
+        assert "customer" in shell
+        assert "dashboard" in shell
+        assert "ledger rows" in shell
+
+
+def test_bet_codex_shell_keeps_read_only_planning_boundary() -> None:
+    workflow = load_workflow(BET_WORKFLOW)
+    shell = render_codex_shell(workflow)
+
+    assert codex_shell_policy_errors(workflow, shell) == []
+    assert "Runtime support: `codex_cli: read_only_planning`" in shell
+    assert "owner_loop_shell" not in shell
+    assert "read-only planning" in shell
+    assert "file-guidance route" in shell
+    assert "does not claim supported lifecycle writes" in shell
+    assert "Runtime smoke is required before docs say" in shell
+    assert "this lifecycle is supported for Codex writes" in shell
+    assert "patch-shaped recommendations" in shell
+    assert "stop before changing files" in shell
+    assert "supported write surface" in shell
+    assert "Run `/mb-bet`" not in shell
+    assert "slash" not in shell.lower()
+
+
+def test_read_only_planning_codex_shells_do_not_execute_write_language() -> None:
+    workflow = load_workflow(BET_WORKFLOW)
+    shell = render_codex_shell(workflow).lower()
+
+    forbidden = (
+        "approved durable write",
+        "approved bet edits",
+        "approved bet or link edits",
+        "after approved edits",
+        "after approved bet",
+        "before any durable write",
+        "after any durable write",
+        "checkpoint save",
+        "approval-gated save",
+        "offering a save",
+        "offering an approval-gated save",
+        "after bet or link edits",
+        "after approved bet or link edits",
+        "use the checkpoint plan before offering",
+    )
+
+    for phrase in forbidden:
+        assert phrase not in shell
 
 
 def test_codex_workflow_inventory_accounts_for_every_bundled_claude_skill() -> None:
