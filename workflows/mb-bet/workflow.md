@@ -8,7 +8,7 @@ loops:
   - ship
 runtime_support:
   claude_code: supported_shell
-  codex_cli: owner_loop_shell
+  codex_cli: read_only_planning
 runtime_surfaces:
   claude_code: .claude/skills/mb-bet/SKILL.md
   codex_cli: global Main Branch mb-bet skill
@@ -299,6 +299,6 @@ gates, artifact routing, and finance/privacy boundaries from that shell.
 Codex uses the global Main Branch `mb-bet` skill generated from this workflow
 source. Codex support remains read-only planning and file guidance until runtime
 smoke proves lifecycle writes. It may inspect deterministic facts, explain bet
-contract gaps, propose edits, and ask for approval, but it must not claim
-supported lifecycle execution, provider mutation, publishing, spend, customer
-contact, or Claude Code entrypoints.
+contract gaps, propose guarded edits, and ask for approval, but it must not
+claim supported lifecycle execution, provider mutation, publishing, spend,
+customer contact, dashboard work, or Claude Code entrypoints.

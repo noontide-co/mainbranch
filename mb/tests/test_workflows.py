@@ -693,6 +693,8 @@ def test_bet_codex_shell_keeps_read_only_planning_boundary() -> None:
     shell = render_codex_shell(workflow)
 
     assert codex_shell_policy_errors(workflow, shell) == []
+    assert "Runtime support: `codex_cli: read_only_planning`" in shell
+    assert "owner_loop_shell" not in shell
     assert "read-only planning" in shell
     assert "file-guidance route" in shell
     assert "does not claim supported lifecycle writes" in shell

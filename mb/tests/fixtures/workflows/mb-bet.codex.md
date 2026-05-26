@@ -1,7 +1,7 @@
 # Generated Codex Workflow Guidance: Bet Lifecycle
 
 Source workflow: `workflows/mb-bet/workflow.md`
-Runtime support: `codex_cli: owner_loop_shell`
+Runtime support: `codex_cli: read_only_planning`
 Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`, `provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`, `destructive_operations`, `structured_collection`, `public_issue_or_proposal`
 Public/private boundaries: `no_secrets`, `no_raw_provider_exports`, `no_raw_transcripts`, `no_customer_member_data`, `no_private_runtime_settings`, `no_private_dms_or_gated_communities`, `no_raw_finance_legal_records`, `no_raw_ledger_rows`
 

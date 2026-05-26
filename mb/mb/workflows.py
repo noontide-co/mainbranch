@@ -41,6 +41,10 @@ REQUIRED_RUNTIME_SUPPORT = {
     "claude_code": "supported_shell",
     "codex_cli": "owner_loop_shell",
 }
+ALLOWED_RUNTIME_SUPPORT_VALUES = {
+    "claude_code": {"supported_shell"},
+    "codex_cli": {"owner_loop_shell", "read_only_planning"},
+}
 MINIMUM_MB_COMMANDS = {
     "mb status --json --peek",
     "mb start --json",
@@ -300,8 +304,15 @@ def validate_workflow(path: Path) -> list[str]:
     else:
         for runtime, expected in REQUIRED_RUNTIME_SUPPORT.items():
             actual = runtime_support.get(runtime)
-            if actual != expected:
-                errors.append(f"runtime_support.{runtime} must be {expected!r}, got {actual!r}")
+            allowed = ALLOWED_RUNTIME_SUPPORT_VALUES.get(runtime, {expected})
+            if actual not in allowed:
+                if len(allowed) == 1:
+                    errors.append(f"runtime_support.{runtime} must be {expected!r}, got {actual!r}")
+                else:
+                    errors.append(
+                        f"runtime_support.{runtime} must be one of "
+                        f"{sorted(allowed)!r}, got {actual!r}"
+                    )
 
     runtime_surfaces = frontmatter.get("runtime_surfaces")
     if not isinstance(runtime_surfaces, dict):
