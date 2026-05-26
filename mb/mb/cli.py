@@ -405,7 +405,8 @@ def _render_workflow_inventory_human(result: dict[str, Any]) -> None:
         commands = ", ".join(item.get("commands") or [])
         suffix = f"  facts: {commands}" if commands else ""
         console.print(
-            f"- {item['label']}  [{item['codex_status']}]\n  Codex: {item['codex_surface']}{suffix}"
+            f"- {item['label']}  status: {item['codex_status']}\n"
+            f"  Codex: {item['codex_surface']}{suffix}"
         )
     console.print()
 

@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Changed `mb workflow list --json` to classify business workflow and playbook
+  surfaces with explicit reason and next-issue metadata, while hiding
+  provisional playbooks from default user-facing Codex global skills. Refs
+  MAIN-452, #743.
 - Changed daily start/status, setup, update, and repair Codex routes to use
   canonical shared workflow sources, with checked Claude and Codex shell
   snapshots and workflow inventory entries naming the source files. Refs
@@ -33,6 +37,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   metadata instead of a visible exact package version sentence, reducing
   business-repo diffs for patch releases that do not change the guidance
   content. Refs #736.
+
+### Fixed
+
+- Fixed `mb workflow list` human output so workflow status labels render
+  visibly, and made retired Codex playbook skill cleanup remove only generated
+  Main Branch skill directories. Refs MAIN-452, #743.
 
 ## [0.3.38] - 2026-05-25
 
