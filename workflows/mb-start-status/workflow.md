@@ -1,0 +1,214 @@
+---
+name: mb-start-status
+title: Daily Start And Status
+description: Ground daily start, status, what changed, and next-route prompts in deterministic Main Branch facts before business routing.
+loops: [sense, decide, ship]
+runtime_support:
+  claude_code: supported_shell
+  codex_cli: owner_loop_shell
+  future: planned
+runtime_surfaces:
+  claude_code: .claude/skills/mb-start/SKILL.md and .claude/skills/mb-status/SKILL.md
+  codex_cli: global main-branch mb-start and mb-status skills
+required_mb_commands:
+  - mb status --json --peek
+  - mb start --json
+  - mb doctor repair --plan
+json_facts:
+  - money_path
+  - money_path.objects.proof.quality
+  - content_strategy
+  - ranked_actions
+  - update
+  - readiness
+  - drift.items
+  - runtime.codex_cli
+  - runtime.claude_code
+  - since_last_check
+  - journal
+  - checkpoint
+  - onboarding
+  - integrations
+  - github
+  - vocabulary
+approval_gates:
+  - updates_repairs_migrations
+  - file_writes
+  - checkpoint
+  - provider_mutation
+  - publishing_or_spend
+  - customer_contact
+  - private_data
+  - destructive_operations
+  - status_marker
+public_private_boundaries:
+  - no_secrets
+  - no_raw_provider_exports
+  - no_customer_member_data
+  - no_private_runtime_settings
+  - no_raw_finance_legal_records
+writes_business_files: false
+provider_mutation: false
+publishing_or_spend: false
+---
+
+# Daily Start And Status
+
+This workflow source is the portable contract for the normal daily Main Branch
+entry point: start from facts, explain what changed, surface readiness and
+drift, then route one clear next business move.
+
+## Intent And Triggers
+
+Use this workflow when the operator starts the day, returns to a business repo,
+asks what to do next, asks what changed, asks for status, asks whether anything
+is stale, or asks whether the repo is ready for work.
+
+Do not use this workflow for a full research run, setup write, repair apply,
+package update, checkpoint save, provider mutation, publishing, spend, customer
+contact, or direct model execution from `mb`.
+
+## Required Mb Commands
+
+Run or preserve these deterministic facts before interpreting business files:
+
+- `mb status --json --peek`
+- `mb start --json`
+- `mb doctor repair --plan`
+
+`mb status --json --peek` is the default first read. Use `mb start --json` when
+runtime handoff, repo-boundary, or adapter-readiness facts matter. Use
+`mb doctor repair --plan` when status reports drift, stale guidance, broken
+wiring, or setup/repair blockers.
+
+## Required JSON Fact Paths
+
+The runtime shell must preserve these paths from the workflow source:
+
+- `money_path`
+- `money_path.objects.proof.quality`
+- `content_strategy`
+- `ranked_actions`
+- `update`
+- `readiness`
+- `drift.items`
+- `runtime.codex_cli`
+- `runtime.claude_code`
+- `since_last_check`
+- `journal`
+- `checkpoint`
+- `onboarding`
+- `integrations`
+- `github`
+- `vocabulary`
+
+Treat these as facts, not strategy. The runtime may recommend the next route,
+but it must not claim conversion quality, provider readiness, checkpoint state,
+or runtime support beyond the facts.
+
+## Routing Rules
+
+Hard gates win before business routing: required updates, runtime mismatch,
+broken repo wiring, repair blockers, validation blockers, private-data
+boundaries, unsafe provider operations, destructive-operation requests, and
+approval-gated status marker writes.
+
+After hard gates, lead with the top `ranked_actions` entry when the operator
+asks what to do next. Use `since_last_check` and `journal` when the operator
+asks what changed. Use `money_path` for customer progress, offer, proof, CTA,
+channel, push, page readiness, playbook, and outcome feedback questions. Use
+`content_strategy` for content strategy, channel, account, freshness, or
+disconnected-layer questions. Use `onboarding` to resume setup without
+inventing a new interview.
+
+Give one clear route: frame a bet, think through a decision, advance a push,
+draft a playbook, repair the repo, review provider readiness, inspect a
+specific offer, or plan a checkpoint. In status mode, do not mutate the
+last-check marker unless the operator explicitly says this is the daily
+check-in and wants it recorded.
+
+## Read Boundaries
+
+Read deterministic `mb` facts before raw markdown. After the fact pass, read
+only the business files needed for the route:
+
+- active offer, audience, proof, product ladder, CTA, and content strategy;
+- relevant decisions, research, bets, pushes, logs, and documents;
+- safe provider-readiness summaries when status says a provider affects the
+  route.
+
+Do not inspect secrets, raw provider exports, raw finance/legal records,
+customer/member records, local runtime settings, private maintainer notes, or
+credentials.
+
+## Write Boundaries
+
+This workflow does not write business files by itself. It may hand off to a
+workflow that writes business files after operator approval. The status marker
+is local operational state and may be updated only when the operator explicitly
+approves recording the daily check-in.
+
+The workflow source does not authorize setup writes, repair applies, package
+updates, migrations, checkpoints, provider writes, public issue/proposal
+submission, publishing, spend, customer contact, or Main Branch engine edits.
+
+## Approval Gates
+
+Ask before:
+
+- applying updates, repairs, migrations, setup writes, or provider setup;
+- creating, editing, moving, deleting, or archiving business files;
+- saving a checkpoint;
+- mutating the status marker;
+- publishing, opening a public issue, submitting a proposal, spending money,
+  mutating provider state, or contacting customers;
+- reading or moving private, restricted, local-only, finance, legal, customer,
+  member, credential, or raw provider data.
+
+Never ask the operator to paste secrets into repo files or workflow sources.
+
+## Handoff Format
+
+When handing off from start or status, include a compact snapshot:
+
+```text
+Daily state: <ready, needs attention, blocked, or not a Main Branch repo>.
+Facts read: <status/start/repair facts used>.
+What changed: <since-last-check or journal summary>.
+Main signal: <ranked action, readiness, drift, MoneyPath, content strategy, or onboarding fact>.
+Recommended route: <one business route and why>.
+Approval needed before writes: <yes/no and what action>.
+```
+
+Use business language first. Git, branches, runtime wiring, provider refs, and
+repair commands are details after the owner-facing state unless the operator
+asks for plumbing.
+
+## Validation Commands
+
+Before changing this workflow or its runtime shells, run:
+
+```bash
+cd mb
+python -m pytest tests/test_workflows.py -q
+```
+
+For repo-level validation, run:
+
+```bash
+scripts/check.sh
+```
+
+If generated global Codex skills, repo guidance, or runtime discovery changes,
+add package/install and runtime/manual smoke evidence.
+
+## Runtime-Specific Notes
+
+Claude Code may use slash-command-native language for `/mb-start` and
+`/mb-status`. Preserve the fact-first status preamble, update and repair gates,
+session-scoped offer selection, numbered options, and compaction recovery.
+
+Codex uses global Main Branch skills and natural-language routes. Codex should
+use the generated global `mb-start` and `mb-status` skills, start from read-only
+`mb` facts, stop on runtime mismatch, and avoid claiming Claude Code entrypoints
+or broader workflow parity.

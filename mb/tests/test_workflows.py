@@ -22,6 +22,9 @@ from mb.workflows import (
 runner = CliRunner()
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO_ROOT / "workflows" / "mb-start-money-path" / "workflow.md"
+START_STATUS_WORKFLOW = REPO_ROOT / "workflows" / "mb-start-status" / "workflow.md"
+SETUP_WORKFLOW = REPO_ROOT / "workflows" / "mb-setup" / "workflow.md"
+MAINTENANCE_REPAIR_WORKFLOW = REPO_ROOT / "workflows" / "mb-maintenance-repair" / "workflow.md"
 THINK_WORKFLOW = REPO_ROOT / "workflows" / "mb-think" / "workflow.md"
 END_WORKFLOW = REPO_ROOT / "workflows" / "mb-end" / "workflow.md"
 SHIPPED_END_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-end" / "SKILL.md"
@@ -29,6 +32,9 @@ FIXTURES = REPO_ROOT / "mb" / "tests" / "fixtures" / "workflows"
 AGENTS_TEMPLATE = REPO_ROOT / "mb" / "mb" / "_data" / "templates" / "AGENTS.md.tmpl"
 WORKFLOW_PATHS = [
     WORKFLOW,
+    START_STATUS_WORKFLOW,
+    SETUP_WORKFLOW,
+    MAINTENANCE_REPAIR_WORKFLOW,
     THINK_WORKFLOW,
     END_WORKFLOW,
 ]
@@ -90,6 +96,19 @@ def test_generated_start_money_path_claude_and_codex_snapshots_match_fixtures() 
     assert render_codex_shell(workflow) == (FIXTURES / "mb-start-money-path.codex.md").read_text(
         encoding="utf-8"
     )
+
+
+def test_generated_daily_claude_and_codex_snapshots_match_fixtures() -> None:
+    for path in (START_STATUS_WORKFLOW, SETUP_WORKFLOW, MAINTENANCE_REPAIR_WORKFLOW):
+        workflow = load_workflow(path)
+        fixture_stem = path.parent.name
+
+        assert render_claude_shell(workflow) == (FIXTURES / f"{fixture_stem}.claude.md").read_text(
+            encoding="utf-8"
+        )
+        assert render_codex_shell(workflow) == (FIXTURES / f"{fixture_stem}.codex.md").read_text(
+            encoding="utf-8"
+        )
 
 
 def test_generated_think_claude_and_codex_snapshots_match_fixtures() -> None:
@@ -313,8 +332,24 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
         "main-branch mb-start",
         "main-branch mb-status",
     ]
-    assert by_id["daily-start-status"]["source_status"] == "temporary_source_skill_mirror"
-    assert by_id["daily-start-status"]["source_of_truth"]["shared_source"] is None
+    assert by_id["daily-start-status"]["source_status"] == "shared_workflow_source"
+    assert (
+        by_id["daily-start-status"]["source_of_truth"]["shared_source"]
+        == "workflows/mb-start-status/workflow.md"
+    )
+    assert by_id["daily-setup"]["source_status"] == "shared_workflow_source"
+    assert (
+        by_id["daily-setup"]["source_of_truth"]["shared_source"] == "workflows/mb-setup/workflow.md"
+    )
+    assert by_id["daily-maintenance-repair"]["source_status"] == "shared_workflow_source"
+    assert (
+        by_id["daily-maintenance-repair"]["source_of_truth"]["shared_source"]
+        == "workflows/mb-maintenance-repair/workflow.md"
+    )
+    assert by_id["daily-maintenance-repair"]["codex_entrypoints"] == [
+        "main-branch mb-update",
+        "main-branch mb-doctor",
+    ]
     assert by_id["end-checkpoint-save"]["source_status"] == "shared_workflow_source"
     assert (
         by_id["end-checkpoint-save"]["source_of_truth"]["shared_source"]
@@ -326,6 +361,12 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
     assert by_id["daily-start-status"]["claude_skill_sources"] == [
         ".claude/skills/mb-start/SKILL.md",
         ".claude/skills/mb-status/SKILL.md",
+    ]
+    assert by_id["daily-setup"]["claude_skill_sources"] == [
+        ".claude/skills/mb-setup/SKILL.md",
+    ]
+    assert by_id["daily-maintenance-repair"]["claude_skill_sources"] == [
+        ".claude/skills/mb-update/SKILL.md",
     ]
     assert by_id["ads"]["codex_status"] == "read_only_planning"
     assert by_id["ads"]["source_status"] == "pending_shared_source_migration"
@@ -413,12 +454,20 @@ def test_codex_global_skills_hide_legacy_plugin_and_fake_slash_claims() -> None:
 
 
 def test_codex_shared_global_skills_are_rendered_from_workflow_sources() -> None:
-    for path, name in ((THINK_WORKFLOW, "mb-think"), (END_WORKFLOW, "mb-end")):
+    for path, name in (
+        (START_STATUS_WORKFLOW, "mb-start"),
+        (START_STATUS_WORKFLOW, "mb-status"),
+        (SETUP_WORKFLOW, "mb-setup"),
+        (MAINTENANCE_REPAIR_WORKFLOW, "mb-update"),
+        (MAINTENANCE_REPAIR_WORKFLOW, "mb-doctor"),
+        (THINK_WORKFLOW, "mb-think"),
+        (END_WORKFLOW, "mb-end"),
+    ):
         workflow = load_workflow(path)
         text = codex_mod.render_codex_global_skill_md(name)
 
         assert "Follow the generated Codex shell below" in text
-        assert f"Source workflow: `workflows/{name}/workflow.md`" in text
+        assert f"Source workflow: `{path.relative_to(REPO_ROOT).as_posix()}`" in text
         assert render_codex_shell(workflow).strip() in text
         assert shell_drift_errors(workflow, text) == []
         assert codex_shell_policy_errors(workflow, text) == []
