@@ -8,6 +8,68 @@ loops: [ship]
 
 Create organic content scripts in your voice — Reels, TikToks, carousels, static posts.
 
+**Shared source:** The portable workflow contract lives in
+`workflows/mb-organic/workflow.md`. This Claude skill is the Claude Code shell
+over that source.
+
+**Shared contract markers:** Keep these aligned with the shared source.
+
+Required commands:
+
+- `mb status --json --peek`
+- `mb start --json`
+- `mb doctor repair --plan`
+- `mb validate --cross-refs --json`
+- `mb checkpoint --plan --json`
+
+Required fact paths:
+
+- `money_path`
+- `money_path.objects.proof.quality`
+- `money_path.objects.channel_strategy`
+- `money_path.objects.active_push`
+- `validation.file_contracts`
+- `content_strategy`
+- `content_strategy.overall_state`
+- `content_strategy.simple_entry_point`
+- `content_strategy.layers`
+- `content_strategy.layers.distribution`
+- `content_strategy.layers.channels`
+- `content_strategy.layers.accounts`
+- `content_strategy.layers.people`
+- `content_strategy.findings`
+- `ranked_actions`
+- `update`
+- `readiness`
+- `drift.items`
+- `relationship_health.gaps`
+- `checkpoint.pending`
+- `checkpoint.pending.blockers`
+- `runtime.codex_cli`
+- `runtime.claude_code`
+
+Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`,
+`provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`,
+`destructive_operations`, `structured_collection`, and
+`public_issue_or_proposal`.
+
+Public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
+`no_raw_transcripts`, `no_customer_member_data`,
+`no_private_runtime_settings`, `no_private_dms_or_gated_communities`, and
+`no_raw_finance_legal_records`.
+
+Core flow: support plan, video, carousel, static, sales-video-repurpose, or
+review.
+Marker phrase: plan, video, carousel, static, sales-video-repurpose, or review.
+If the operator wants mining or source collection, route to `mb-think`.
+Use `content_strategy.overall_state` and
+`money_path.objects.proof.quality` before drafting; keep source/privacy
+boundaries visible; route coordinated drafts to
+`pushes/<YYYY-MM-DD-slug>/organic-batch-001.md`; Do not publish, schedule,
+upload, mutate provider accounts, spend, auto-DM, auto-reply, or contact
+customers. Codex support stays read-only planning until runtime smoke proves
+organic drafting writes.
+
 **Need help?** Type `/mb-help` + your question anytime. If conversation compacts, `/mb-help` reloads fresh context.
 
 **CLI facts first:** Run `mb status --json --peek` from the business repo before
