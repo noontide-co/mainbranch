@@ -127,6 +127,17 @@ REQUIRED_SHELL_PHRASES_BY_WORKFLOW: dict[str, dict[str, str]] = {
         "checkpoint boundary": "checkpoint plan",
         "Codex support boundary": "read-only planning",
     },
+    "mb-organic": {
+        "organic modes": "plan, video, carousel, static, sales-video-repurpose, or review",
+        "mining handoff": "route to `mb-think`",
+        "content strategy paths": "content_strategy.overall_state",
+        "artifact routing": "pushes/<YYYY-MM-DD-slug>/organic-batch-001.md",
+        "proof quality boundary": "money_path.objects.proof.quality",
+        "source privacy boundary": "source/privacy",
+        "publishing boundary": "Do not publish",
+        "account mutation boundary": "mutate provider accounts",
+        "Codex support boundary": "read-only planning",
+    },
 }
 CODEX_FORBIDDEN_PHRASES_BY_WORKFLOW: dict[str, tuple[str, ...]] = {
     "mb-think": (
@@ -175,6 +186,17 @@ CODEX_FORBIDDEN_PHRASES_BY_WORKFLOW: dict[str, tuple[str, ...]] = {
         "slash-command parity",
         "Codex can create bets",
         "Codex can close bets",
+    ),
+    "mb-organic": (
+        "Run `/mb-organic`",
+        "Claude Code skills work in Codex",
+        "Claude Code slash commands work inside Codex",
+        "Claude slash commands",
+        "slash-command parity",
+        "Codex can publish",
+        "Codex can schedule",
+        "Codex can mutate provider accounts",
+        "Codex can contact customers",
     ),
 }
 PUBLIC_PRIVATE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -450,6 +472,8 @@ def render_claude_shell(workflow: WorkflowSource) -> str:
         return _render_end_claude_shell(workflow)
     if workflow.name == "mb-bet":
         return _render_bet_claude_shell(workflow)
+    if workflow.name == "mb-organic":
+        return _render_organic_claude_shell(workflow)
     if workflow.name in {"mb-start-status", "mb-setup", "mb-maintenance-repair"}:
         return _render_daily_claude_shell(workflow)
     return _render_start_money_path_claude_shell(workflow)
@@ -705,6 +729,8 @@ def render_codex_shell(workflow: WorkflowSource) -> str:
         return _render_end_codex_shell(workflow)
     if workflow.name == "mb-bet":
         return _render_bet_codex_shell(workflow)
+    if workflow.name == "mb-organic":
+        return _render_organic_codex_shell(workflow)
     if workflow.name in {"mb-start-status", "mb-setup", "mb-maintenance-repair"}:
         return _render_daily_codex_shell(workflow)
     return _render_start_money_path_codex_shell(workflow)
@@ -1105,6 +1131,161 @@ Next business action: <one clear owner-facing step>.
 Use business language first. Keep legacy campaign links compatibility-only;
 new execution routes through pushes. Runtime smoke is required before docs say
 this lifecycle is supported for Codex writes.
+"""
+    return output
+
+
+def _render_organic_claude_shell(workflow: WorkflowSource) -> str:
+    """Render a Claude Code shell snapshot for the organic content workflow."""
+
+    output = f"""# Generated Claude Shell: {workflow.title}
+
+Source workflow: `{_display_path(workflow.path)}`
+Runtime support: `claude_code: supported_shell`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
+
+Use from `/mb-organic` when the operator wants organic content planning,
+scripts, carousels, static posts, sales-video repurposing, or content review.
+Preserve the existing Claude skill's mode language, mining handoff, voice
+adaptation, content strategy integration, artifact routing, and source/privacy
+boundaries.
+
+This snapshot does not replace shipped `.claude/skills/mb-organic/SKILL.md`.
+
+## Required mb Commands
+
+{_bullet_list(workflow.required_mb_commands)}
+
+## Required JSON Fact Paths
+
+{_bullet_list(workflow.json_facts)}
+
+## Routing
+
+1. Read deterministic facts first: status, start when runtime facts matter,
+   repair plan when blockers appear, content strategy health, proof quality,
+   relationship gaps, validation, and checkpoint plan.
+2. For mining handoff, route to `mb-think` for mining, scraping, competitor
+   research, transcript extraction, and outside source collection. Organic drafts from accepted
+   `research/` handoffs, operator excerpts, approved transcripts, and current
+   business truth.
+3. Support plan, video, carousel, static, sales-video-repurpose, or review
+   modes. Use content_strategy.overall_state, content_strategy.simple_entry_point,
+   content_strategy.layers, and content_strategy.findings before parsing raw
+   strategy files.
+4. Draft from active offer, audience, voice, content strategy, relevant
+   channel/account/person layers, research, sales-video notes, active pushes,
+   and money_path.objects.proof.quality. Do not call proof good, bad,
+   persuasive, high-converting, or ready to win.
+5. Route coordinated content to `pushes/<YYYY-MM-DD-slug>/push.md`, draft
+   batches to `pushes/<YYYY-MM-DD-slug>/organic-batch-001.md`, and provider
+   mechanics to `pushes/<YYYY-MM-DD-slug>/playbooks/<playbook>.md` as plans.
+6. Use `mb validate --cross-refs --json` after approved push, draft, playbook,
+   typed-link, or related-link edits. Use the checkpoint plan before offering
+   an approval-gated save.
+7. Keep source/privacy boundaries explicit. Never paste raw provider exports,
+   private DMs, gated community threads, raw customer/member records, raw
+   transcripts, account details, session cookies, finance/legal records, or
+   secrets.
+8. Do not publish, schedule, upload to accounts, mutate provider accounts,
+   spend, auto-DM, auto-reply, contact customers, or execute provider setup.
+
+## Handoff Shape
+
+```text
+Organic mode: <plan, video, carousel, static, sales-video-repurpose, or review>.
+Facts read: <status/start/content-strategy/proof/checkpoint facts>.
+Source base: <offer, audience, voice, research, sales video, push, account, or missing>.
+Channel/account: <platform/account/person layer or not selected>.
+Content strategy: <healthy, thin, stale, disconnected, or missing>.
+Proof/privacy posture: <public-safe, internal-only, missing permission, or needs summary>.
+Artifact route: <push path, batch path, playbook path, or none>.
+Write plan: <files to create/edit or planning only>.
+Approval needed before writes: <yes/no and exact action>.
+Next business action: <one clear owner-facing step>.
+```
+
+Use business language first. New coordinated work uses pushes. Legacy content
+structures are migration input only. Codex support stays read-only planning
+until runtime smoke proves organic drafting writes.
+"""
+    return output
+
+
+def _render_organic_codex_shell(workflow: WorkflowSource) -> str:
+    """Render Codex CLI guidance for the organic content workflow."""
+
+    output = f"""# Generated Codex Workflow Guidance: {workflow.title}
+
+Source workflow: `{_display_path(workflow.path)}`
+Runtime support: `codex_cli: {workflow.runtime_support.get("codex_cli", "")}`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
+
+Codex uses the global Main Branch `mb-organic` skill as a read-only planning
+and file-guidance route. This guidance is generated from the engine workflow
+source and does not claim supported organic drafting writes, publishing,
+account mutation, customer contact, or Claude Code entrypoints in Codex.
+
+## Required mb Commands
+
+{_bullet_list(workflow.required_mb_commands)}
+
+## Required JSON Fact Paths
+
+{_bullet_list(workflow.json_facts)}
+
+## Codex Route
+
+1. Use the business repo `AGENTS.md` bootstrap posture: read facts first, keep
+   writes approval-gated, and translate git/provider details into business
+   language.
+2. Read deterministic facts before raw markdown: status, start when runtime
+   facts matter, repair plan when blockers appear, content strategy health,
+   proof quality, relationship gaps, validation, and checkpoint plan.
+3. For mining handoff, route to `mb-think` in Codex-native language for mining,
+   scraping, competitor research, transcript extraction, and outside source
+   collection. Organic may plan from accepted `research/` handoffs, operator
+   excerpts, approved transcripts, and current business truth.
+4. Guide plan, video, carousel, static, sales-video-repurpose, or review modes
+   from the shared contract. Use content_strategy.overall_state,
+   content_strategy.simple_entry_point, content_strategy.layers, and
+   content_strategy.findings before parsing raw strategy files.
+5. Codex may draft patch-shaped recommendations, sample copy, review notes,
+   and exact file targets, then stop before changing files.
+6. Name artifact routes as plans only: `pushes/<YYYY-MM-DD-slug>/push.md`,
+   `pushes/<YYYY-MM-DD-slug>/organic-batch-001.md`, and
+   `pushes/<YYYY-MM-DD-slug>/playbooks/<playbook>.md`.
+7. If the operator wants the proposed content applied, route them to Claude
+   Code `/mb-organic` or another supported write surface until Codex
+   organic-write smoke proves this route. Do not run checkpoint commands or
+   post-change validation as if Codex edited files.
+8. Keep source/privacy boundaries explicit. Never paste raw provider exports,
+   private DMs, gated community threads, raw customer/member records, raw
+   transcripts, account details, session cookies, finance/legal records, or
+   secrets.
+9. Do not publish, schedule, upload to accounts, mutate provider accounts,
+   spend, auto-DM, auto-reply, contact customers, or execute provider setup.
+
+## Handoff Shape
+
+```text
+Organic mode: <plan, video, carousel, static, sales-video-repurpose, or review>.
+Facts read: <status/start/content-strategy/proof/checkpoint facts>.
+Source base: <offer, audience, voice, research, sales video, push, account, or missing>.
+Channel/account: <platform/account/person layer or not selected>.
+Content strategy: <healthy, thin, stale, disconnected, or missing>.
+Proof/privacy posture: <public-safe, internal-only, missing permission, or needs summary>.
+Artifact route: <push path, batch path, playbook path, or none>.
+Write plan: <files to create/edit or planning only>.
+Approval needed before writes: <yes/no and exact action>.
+Next business action: <one clear owner-facing step>.
+```
+
+Use business language first. New coordinated work uses pushes. Legacy content
+structures are migration input only. Runtime smoke is required before docs say
+this workflow is supported for Codex writes.
 """
     return output
 

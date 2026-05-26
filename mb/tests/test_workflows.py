@@ -28,8 +28,10 @@ MAINTENANCE_REPAIR_WORKFLOW = REPO_ROOT / "workflows" / "mb-maintenance-repair" 
 THINK_WORKFLOW = REPO_ROOT / "workflows" / "mb-think" / "workflow.md"
 END_WORKFLOW = REPO_ROOT / "workflows" / "mb-end" / "workflow.md"
 BET_WORKFLOW = REPO_ROOT / "workflows" / "mb-bet" / "workflow.md"
+ORGANIC_WORKFLOW = REPO_ROOT / "workflows" / "mb-organic" / "workflow.md"
 SHIPPED_END_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-end" / "SKILL.md"
 SHIPPED_BET_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-bet" / "SKILL.md"
+SHIPPED_ORGANIC_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-organic" / "SKILL.md"
 FIXTURES = REPO_ROOT / "mb" / "tests" / "fixtures" / "workflows"
 AGENTS_TEMPLATE = REPO_ROOT / "mb" / "mb" / "_data" / "templates" / "AGENTS.md.tmpl"
 WORKFLOW_PATHS = [
@@ -40,6 +42,7 @@ WORKFLOW_PATHS = [
     THINK_WORKFLOW,
     END_WORKFLOW,
     BET_WORKFLOW,
+    ORGANIC_WORKFLOW,
 ]
 
 
@@ -147,6 +150,17 @@ def test_generated_bet_claude_and_codex_snapshots_match_fixtures() -> None:
     )
 
 
+def test_generated_organic_claude_and_codex_snapshots_match_fixtures() -> None:
+    workflow = load_workflow(ORGANIC_WORKFLOW)
+
+    assert render_claude_shell(workflow) == (FIXTURES / "mb-organic.claude.md").read_text(
+        encoding="utf-8"
+    )
+    assert render_codex_shell(workflow) == (FIXTURES / "mb-organic.codex.md").read_text(
+        encoding="utf-8"
+    )
+
+
 def test_shipped_claude_end_skill_preserves_shared_workflow_contract() -> None:
     workflow = load_workflow(END_WORKFLOW)
     skill_text = SHIPPED_END_SKILL.read_text(encoding="utf-8")
@@ -161,6 +175,14 @@ def test_shipped_claude_bet_skill_preserves_shared_workflow_contract() -> None:
 
     assert shell_drift_errors(workflow, skill_text) == []
     assert "workflows/mb-bet/workflow.md" in skill_text
+
+
+def test_shipped_claude_organic_skill_preserves_shared_workflow_contract() -> None:
+    workflow = load_workflow(ORGANIC_WORKFLOW)
+    skill_text = SHIPPED_ORGANIC_SKILL.read_text(encoding="utf-8")
+
+    assert shell_drift_errors(workflow, skill_text) == []
+    assert "workflows/mb-organic/workflow.md" in skill_text
 
 
 def test_supported_shells_preserve_required_commands_and_json_facts() -> None:
@@ -225,6 +247,19 @@ def test_codex_contract_markers_match_bet_workflow_source() -> None:
     assert tuple(workflow.approval_gates) == codex_mod.CODEX_BET_APPROVAL_GATES
     assert (
         tuple(workflow.public_private_boundaries) == codex_mod.CODEX_BET_PUBLIC_PRIVATE_BOUNDARIES
+    )
+
+
+def test_codex_contract_markers_match_organic_workflow_source() -> None:
+    workflow = load_workflow(ORGANIC_WORKFLOW)
+
+    assert codex_mod.CODEX_ORGANIC_SOURCE_WORKFLOW == "workflows/mb-organic/workflow.md"
+    assert tuple(workflow.required_mb_commands) == codex_mod.CODEX_ORGANIC_REQUIRED_MB_COMMANDS
+    assert tuple(workflow.json_facts) == codex_mod.CODEX_ORGANIC_REQUIRED_JSON_FACTS
+    assert tuple(workflow.approval_gates) == codex_mod.CODEX_ORGANIC_APPROVAL_GATES
+    assert (
+        tuple(workflow.public_private_boundaries)
+        == codex_mod.CODEX_ORGANIC_PUBLIC_PRIVATE_BOUNDARIES
     )
 
 
@@ -496,7 +531,18 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
     assert (
         "codex_read_only_planning_boundary" in by_id["bets"]["source_of_truth"]["contract_checks"]
     )
-    assert by_id["organic-content"]["source_of_truth"]["next_required_issue"] == "#752"
+    assert by_id["organic-content"]["codex_status"] == "read_only_planning"
+    assert by_id["organic-content"]["source_status"] == "shared_workflow_source"
+    assert (
+        by_id["organic-content"]["source_of_truth"]["shared_source"]
+        == "workflows/mb-organic/workflow.md"
+    )
+    assert by_id["organic-content"]["source_of_truth"]["next_required_issue"] is None
+    assert by_id["organic-content"]["codex_entrypoints"] == ["main-branch mb-organic"]
+    assert (
+        "source_privacy_boundaries"
+        in by_id["organic-content"]["source_of_truth"]["contract_checks"]
+    )
     assert by_id["site"]["source_of_truth"]["next_required_issue"] == "#749"
     assert by_id["google-ads-search-launch-playbook"]["surface_type"] == "playbook"
     assert by_id["google-ads-search-launch-playbook"]["playbook_status"] == "draft_manual"
@@ -658,6 +704,7 @@ def test_codex_shared_global_skills_are_rendered_from_workflow_sources() -> None
         (THINK_WORKFLOW, "mb-think"),
         (END_WORKFLOW, "mb-end"),
         (BET_WORKFLOW, "mb-bet"),
+        (ORGANIC_WORKFLOW, "mb-organic"),
     ):
         workflow = load_workflow(path)
         text = codex_mod.render_codex_global_skill_md(name)
@@ -704,6 +751,41 @@ def test_bet_codex_shell_keeps_read_only_planning_boundary() -> None:
     assert "stop before changing files" in shell
     assert "supported write surface" in shell
     assert "Run `/mb-bet`" not in shell
+    assert "slash" not in shell.lower()
+
+
+def test_organic_runtime_shells_surface_content_contract_and_boundaries() -> None:
+    workflow = load_workflow(ORGANIC_WORKFLOW)
+
+    for shell in (render_claude_shell(workflow), render_codex_shell(workflow)):
+        assert "plan, video, carousel, static, sales-video-repurpose, or review" in shell
+        assert "route to `mb-think`" in shell
+        assert "content_strategy.overall_state" in shell
+        assert "money_path.objects.proof.quality" in shell
+        assert "pushes/<YYYY-MM-DD-slug>/organic-batch-001.md" in shell
+        assert "source/privacy" in shell.lower()
+        assert "Do not publish" in shell
+        assert "mutate provider accounts" in shell
+        assert "contact customers" in shell
+
+
+def test_organic_codex_shell_keeps_read_only_planning_boundary() -> None:
+    workflow = load_workflow(ORGANIC_WORKFLOW)
+    shell = render_codex_shell(workflow)
+
+    assert codex_shell_policy_errors(workflow, shell) == []
+    assert "Runtime support: `codex_cli: read_only_planning`" in shell
+    assert "read-only planning" in shell
+    assert "file-guidance route" in shell
+    assert "does not claim supported organic drafting writes" in shell
+    assert "Runtime smoke is required before docs say" in shell
+    assert "this workflow is supported for Codex writes" in shell
+    assert "patch-shaped recommendations" in shell
+    assert "stop before changing files" in shell
+    assert "supported write surface" in shell
+    assert "Do not publish" in shell
+    assert "mutate provider accounts" in shell
+    assert "Run `/mb-organic`" not in shell
     assert "slash" not in shell.lower()
 
 

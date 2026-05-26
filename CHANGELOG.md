@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Migrated `mb-organic` to a shared workflow source with checked Claude and
+  Codex shells, preserving read-only Codex boundaries for planning, source
+  privacy, publishing, account mutation, and customer-contact gates. Closes
+  #752.
 - Migrated the mb-bet lifecycle to a shared workflow source with checked Claude
   and Codex shells, preserving read-only Codex boundaries until runtime smoke
   proves write support. Closes #751.

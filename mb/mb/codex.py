@@ -231,6 +231,7 @@ CODEX_START_STATUS_SOURCE_WORKFLOW = "workflows/mb-start-status/workflow.md"
 CODEX_SETUP_SOURCE_WORKFLOW = "workflows/mb-setup/workflow.md"
 CODEX_MAINTENANCE_REPAIR_SOURCE_WORKFLOW = "workflows/mb-maintenance-repair/workflow.md"
 CODEX_BET_SOURCE_WORKFLOW = "workflows/mb-bet/workflow.md"
+CODEX_ORGANIC_SOURCE_WORKFLOW = "workflows/mb-organic/workflow.md"
 CODEX_THINK_REQUIRED_MB_COMMANDS = (
     "mb status --json --peek",
     "mb start --json",
@@ -383,6 +384,59 @@ CODEX_BET_PUBLIC_PRIVATE_BOUNDARIES = (
     "no_raw_finance_legal_records",
     "no_raw_ledger_rows",
 )
+CODEX_ORGANIC_REQUIRED_MB_COMMANDS = (
+    "mb status --json --peek",
+    "mb start --json",
+    "mb doctor repair --plan",
+    "mb validate --cross-refs --json",
+    "mb checkpoint --plan --json",
+)
+CODEX_ORGANIC_REQUIRED_JSON_FACTS = (
+    "money_path",
+    "money_path.objects.proof.quality",
+    "money_path.objects.channel_strategy",
+    "money_path.objects.active_push",
+    "validation.file_contracts",
+    "content_strategy",
+    "content_strategy.overall_state",
+    "content_strategy.simple_entry_point",
+    "content_strategy.layers",
+    "content_strategy.layers.distribution",
+    "content_strategy.layers.channels",
+    "content_strategy.layers.accounts",
+    "content_strategy.layers.people",
+    "content_strategy.findings",
+    "ranked_actions",
+    "update",
+    "readiness",
+    "drift.items",
+    "relationship_health.gaps",
+    "checkpoint.pending",
+    "checkpoint.pending.blockers",
+    "runtime.codex_cli",
+    "runtime.claude_code",
+)
+CODEX_ORGANIC_APPROVAL_GATES = (
+    "updates_repairs_migrations",
+    "file_writes",
+    "checkpoint",
+    "provider_mutation",
+    "publishing_or_spend",
+    "customer_contact",
+    "private_data",
+    "destructive_operations",
+    "structured_collection",
+    "public_issue_or_proposal",
+)
+CODEX_ORGANIC_PUBLIC_PRIVATE_BOUNDARIES = (
+    "no_secrets",
+    "no_raw_provider_exports",
+    "no_raw_transcripts",
+    "no_customer_member_data",
+    "no_private_runtime_settings",
+    "no_private_dms_or_gated_communities",
+    "no_raw_finance_legal_records",
+)
 CODEX_SHARED_WORKFLOW_SKILLS = {
     "mb-start": CODEX_START_STATUS_SOURCE_WORKFLOW,
     "mb-status": CODEX_START_STATUS_SOURCE_WORKFLOW,
@@ -392,6 +446,7 @@ CODEX_SHARED_WORKFLOW_SKILLS = {
     "mb-think": CODEX_THINK_SOURCE_WORKFLOW,
     "mb-end": CODEX_END_SOURCE_WORKFLOW,
     "mb-bet": CODEX_BET_SOURCE_WORKFLOW,
+    "mb-organic": CODEX_ORGANIC_SOURCE_WORKFLOW,
 }
 REQUIRED_LIFECYCLE_GUIDANCE = (
     "## Codex Lifecycle Workflow Index",
@@ -741,19 +796,40 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-organic and related playbooks",
         "claude_skill_sources": ("mb-organic",),
         "codex_status": "read_only_planning",
-        "source_status": "pending_shared_source_migration",
-        "codex_surface": "Read-only planning only",
+        "source_status": "shared_workflow_source",
+        "codex_surface": "Read-only planning and file guidance through global mb-organic skill",
         "codex_entrypoints": ("main-branch mb-organic",),
-        "commands": ("mb status --json --peek",),
-        "status_reason": (
-            "Codex can plan from content strategy facts, but drafting/review/routing "
-            "needs a shared organic workflow source before parity claims."
+        "shared_source": CODEX_ORGANIC_SOURCE_WORKFLOW,
+        "commands": CODEX_ORGANIC_REQUIRED_MB_COMMANDS,
+        "contract_checks": (
+            "intent",
+            "required_mb_commands",
+            "required_json_facts",
+            "approval_gates",
+            "read_boundaries",
+            "write_boundaries",
+            "organic_modes",
+            "content_strategy_json_paths",
+            "mining_handoff",
+            "source_privacy_boundaries",
+            "artifact_routing",
+            "proof_quality_boundary",
+            "publishing_boundary",
+            "account_mutation_boundary",
+            "codex_read_only_planning_boundary",
+            "core_flow",
+            "public_private_boundaries",
         ),
-        "next_required_issue": "#752",
-        "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/752",
+        "status_reason": (
+            "Organic workflow substance has a shared source, but Codex remains "
+            "read-only planning and file guidance until runtime smoke proves "
+            "organic drafting writes."
+        ),
         "notes": (
-            "Codex may route content strategy questions through think/codify, "
-            "but publishing and newsletter dogfood remain outside this parity slice."
+            "Codex may inspect content strategy and proof facts, propose guarded "
+            "drafts, review existing drafts, and name exact file targets. No "
+            "publishing, scheduling, upload, account mutation, spend, or customer "
+            "contact is supported."
         ),
     },
     {
