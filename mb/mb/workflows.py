@@ -1068,14 +1068,15 @@ Codex.
 3. Bet is a time-boxed wager, not an offer or push. Offers are durable things
    sold; pushes coordinate execution. Bets carry hypothesis, appetite, target,
    deadline, evidence, kill or double-down logic, and verdict.
-4. Guide new, update, close, list, and narrate modes from the shared contract,
-   but do not claim Codex can perform lifecycle writes until runtime smoke
-   proves that surface. Present proposed file edits and ask for explicit
-   approval before any durable write.
+4. Guide new, update, close, list, and narrate modes from the shared contract.
+   Codex may draft patch-shaped recommendations and exact file targets, then
+   stop before changing files.
 5. Keep the strict contract for `bets/YYYY-MM-DD-slug.md`: frontmatter fields,
    body sections, typed links, reverse `linked_bets`, and `## Related links`.
-6. Use `mb validate --cross-refs --json` after approved bet or link edits. Use
-   the checkpoint plan before offering an approval-gated save.
+6. If the operator wants the proposed changes applied, route them to Claude
+   Code `/mb-bet` or another supported write surface until Codex lifecycle-write
+   smoke proves this route. Do not run checkpoint commands or post-change
+   validation as if Codex edited files.
 7. For financially material bets, use aggregate exposure only. Never paste raw
    ledger rows, payees, account names, vault paths, transaction memos, provider
    exports, customer/member records, or secrets.

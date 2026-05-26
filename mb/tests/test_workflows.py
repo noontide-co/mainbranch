@@ -700,8 +700,36 @@ def test_bet_codex_shell_keeps_read_only_planning_boundary() -> None:
     assert "does not claim supported lifecycle writes" in shell
     assert "Runtime smoke is required before docs say" in shell
     assert "this lifecycle is supported for Codex writes" in shell
+    assert "patch-shaped recommendations" in shell
+    assert "stop before changing files" in shell
+    assert "supported write surface" in shell
     assert "Run `/mb-bet`" not in shell
     assert "slash" not in shell.lower()
+
+
+def test_read_only_planning_codex_shells_do_not_execute_write_language() -> None:
+    workflow = load_workflow(BET_WORKFLOW)
+    shell = render_codex_shell(workflow).lower()
+
+    forbidden = (
+        "approved durable write",
+        "approved bet edits",
+        "approved bet or link edits",
+        "after approved edits",
+        "after approved bet",
+        "before any durable write",
+        "after any durable write",
+        "checkpoint save",
+        "approval-gated save",
+        "offering a save",
+        "offering an approval-gated save",
+        "after bet or link edits",
+        "after approved bet or link edits",
+        "use the checkpoint plan before offering",
+    )
+
+    for phrase in forbidden:
+        assert phrase not in shell
 
 
 def test_codex_workflow_inventory_accounts_for_every_bundled_claude_skill() -> None:
