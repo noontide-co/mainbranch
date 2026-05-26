@@ -80,7 +80,7 @@ reference-file reads sit here.
   topology-drift previews)
 - `mb graph` (with `repo` nodes and hub/child relationship edges)
 - `mb connect status`
-- `core/`, `research/`, `decisions/`, `pushes/`, legacy `campaigns/`, `log/`, `documents/`
+- `core/`, `research/`, `decisions/`, `pushes/`, `log/`, `documents/`
 - GitHub issues, pull requests, release history
 - linked business, site, offer, finance, ops, and client repos when the team
   chooses separate operating boundaries, surfaced through topology facts

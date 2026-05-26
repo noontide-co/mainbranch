@@ -23,7 +23,7 @@ decision passes through this filter.
 | Layer | Archetype | Job |
 | --- | --- | --- |
 | **The system itself** (CLI, validate, status, doctor, graph) | YC + Linear taste — opinionated minimalism, sharp primitives, refuses bad defaults | Quiet, fast, decisive. Earns trust through restraint. |
-| **The operator's daily push** (campaigns, ads, organic, sites) | ClickFunnels + Hormozi craft — volume, reps, offer-discipline, double down on winners | The system makes shipping easier, not slower. Reps are the unit. |
+| **The operator's daily push** (pushes, ads, organic, sites) | ClickFunnels + Hormozi craft — volume, reps, offer-discipline, double down on winners | The system makes shipping easier, not slower. Reps are the unit. |
 | **The operator's identity** (bets, soul, voice, weekly state) | Robbins / Naval / Buffett — long-arc vision, identity-level commitment, one-paragraph state of the business | The system protects this from the noise. Identity is reference, not a goal. |
 
 **The rule when they fight:** taste wins on the system surface, volume wins
@@ -63,14 +63,14 @@ them.
 
 4. **Lifecycle includes doubling down.** Most systems treat "completed" as
    the end. Real operators find a winner and pour fuel. This is a
-   first-class state, not an implicit "start a new campaign."
+   first-class state, not an implicit "start another push."
 
 5. **Surface what matters most this week.** Not everything you could do.
    One push, one lever, one number. `mb status` is a triage, not a
    dashboard.
 
 6. **Identity is reference, not a goal.** `core/soul.md` is who the
-   operator is. `bets/` are what they're trying. `campaigns/` are what
+   operator is. `bets/` are what they're trying. `pushes/` are what
    they're shipping. The system does not blur these layers, and it
    writes `core/` files in timeless language.
 

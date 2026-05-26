@@ -152,6 +152,6 @@ Once you have the three core files:
 
 The skill will guide you from there.
 
-If the repo has no `core/` folder, use legacy `reference/core/` as a temporary
-read fallback until the repo is migrated. In current repos, `reference/core` is
-a compatibility bridge to `core/`, not a second file to edit.
+If the repo has no `core/` folder, run `mb doctor repair --plan` and use
+legacy `reference/*` only as migration input until the repo is migrated. Do not
+edit old paths as a second source of truth.

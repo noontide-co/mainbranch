@@ -33,9 +33,9 @@ are not duplicated in the business repo.
 Reverse references from the site repo should use the role-neutral
 `.mainbranch/repo.json` descriptor with engine push paths
 (`linked.pushes: ["pushes/<...>/push.md"]`). Existing site repos may still use
-`.mainbranch/source.json`; its `campaign_path` compatibility key should point
-at the current push record when possible. Legacy repos that still have
-`campaigns/` continue to resolve via compatibility read.
+`.mainbranch/source.json`; its historical `campaign_path` key should point
+at the current push record when possible. Treat old `campaigns/` records as
+migration input and run `mb migrate campaigns --plan` before relying on them.
 
 If `core/vocabulary.md` defines display words (e.g. `terms.push.singular:
 launch`), speak the operator's word in conversation while still writing
@@ -124,7 +124,7 @@ code commits still use that site's normal git flow.
 
 Use [`references/site-repo-workflow.md`](references/site-repo-workflow.md).
 
-- **Business repo mode:** CWD has `core/` or legacy `reference/core/`. Say: "I'm reading business context here and will create or select a site repo."
+- **Business repo mode:** CWD has `core/`. Say: "I'm reading business context here and will create or select a site repo." If old `reference/*` paths appear without `core/`, run `mb doctor repair --plan` before relying on them.
 - **Site repo mode:** CWD has `.mainbranch/repo.json` or legacy `.mainbranch/source.json`. Say: "I'm editing the site here and reading business context from the linked business repo."
 
 Business repo mode plans, researches, drafts the brief, picks an offer, records push/site state, and creates or selects the site repo. Site repo mode edits code, reviews pages, previews, deploys, and runs `mb site check`.

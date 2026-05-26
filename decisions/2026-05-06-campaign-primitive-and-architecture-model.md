@@ -2,6 +2,7 @@
 type: decision
 date: 2026-05-06
 status: accepted
+agent_visibility: historical_context_only
 topic: Campaign primitive and architecture model
 linked_issues:
   - https://github.com/noontide-co/mainbranch/issues/321

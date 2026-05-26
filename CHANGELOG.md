@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Purged retired folder-taxonomy vocabulary from current agent-facing guidance
+  and generated business-repo instructions, keeping old `reference/*`,
+  `campaigns/`, and `outputs/` handling in explicit migration/repair contexts.
+  Refs MAIN-460, #759.
+
 ### Removed
 
 - Retired the provisional `ship-bet` and `weekly-review` skeletons from bundled

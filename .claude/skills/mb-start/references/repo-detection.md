@@ -1,8 +1,8 @@
 # Repo Detection (Step 2)
 
-CWD-first detection of the business repo, with legacy fallback only when CWD is
-not a business repo. The user starts Claude in their business repo — check CWD
-first before falling back to old local config.
+CWD-first detection of the business repo. The user starts Claude in their
+business repo — check current `core/` first before falling back to old local
+config.
 
 ---
 
@@ -10,7 +10,7 @@ first before falling back to old local config.
 
 ```
 1. Check CWD for business repo fingerprint:
-   test -d "core" || test -d "reference/core"
+   test -d "core"
    ├── YES → This IS the business repo. Use CWD. Skip to config loading.
    └── NO → Continue to step 2.
 
@@ -61,9 +61,10 @@ config:
 
 **Validate EVERY path before showing it to the user.** Never present a dead
 path as an option. For each path in `default_repo` and `recent_repos`, check
-`test -d "[path]/core" || test -d "[path]/reference/core"`. If invalid, hide
-it for this session and explain that the old local fallback may be stale. Do
-not rewrite legacy config during repo detection. See
+`test -d "[path]/core"`. If invalid, hide it for this session and explain that
+the old local fallback may be stale. If old `reference/*` paths appear without
+`core/`, run `mb doctor repair --plan` before relying on them. Do not rewrite
+legacy config during repo detection. See
 [config-system.md](config-system.md) for fallback rules.
 
 **ALWAYS present numbered options** — even with ONE repo found:
@@ -85,14 +86,14 @@ not rewrite legacy config during repo detection. See
 
 Use fallbacks in order:
 
-1. **Scan additionalDirectories** for paths containing `core/` or legacy `reference/core/`
+1. **Scan additionalDirectories** for paths containing current `core/`
 2. **Use bash to find repos** (if step 1 fails)
    ```bash
    find ~/Documents/GitHub -maxdepth 3 -type d \( -name "reference" -o -name "core" \) -print 2>/dev/null
    ```
 3. **Ask the user** (if nothing found)
 
-**Verify with Read, not Glob:** Use `Read` on `[path]/core/soul.md` or legacy `[path]/reference/core/soul.md` to confirm it's a business repo. `soul.md` belongs in `core/` for current repos.
+**Verify with Read, not Glob:** Use `Read` on `[path]/core/soul.md` to confirm it's a business repo. `soul.md` belongs in `core/` for current repos.
 
 **Skip the Main Branch source checkout** - any path containing `.claude/skills/mb-start/SKILL.md` is not the operator's business folder.
 

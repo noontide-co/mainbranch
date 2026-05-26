@@ -100,7 +100,7 @@ Gather these in main and pass as structured text in each agent's prompt:
 | Past triage file names | `ls research/*-start-triage.md 2>/dev/null` | ~5 lines | Agent 3 |
 | Past crystallize file names | `ls research/*-end-of-day-crystallize.md 2>/dev/null` | ~5 lines | Agent 3 |
 | active offer | From a future `mb` JSON active-offer field if present, otherwise explicit session/user selection | 1 line | All 3 agents |
-| Push lifecycle listing | `grep -rl "status: draft\|status: planned\|status: active" pushes/ campaigns/ 2>/dev/null` | ~10 lines | Agent 2 |
+| Push lifecycle listing | `grep -rl "status: draft\|status: planned\|status: active" pushes/ 2>/dev/null`; use status/doctor facts for old migrated records | ~10 lines | Agent 2 |
 | Primitive map | File lists grouped by the map below | ~40 lines | All 3 agents |
 
 **What agents may read themselves (in their own context, NOT in main):**
@@ -117,8 +117,8 @@ sanitized file for the current task.
   `core/offers/<slug>/audience.md`, and offer-specific proof or angles.
 - Bet truth: `bets/*.md`, especially status, deadline, metric, target,
   linked files, result, and verdict.
-- Execution truth: `pushes/<slug>/push.md` and artifacts. Read `campaigns/`
-  only as legacy compatibility and name it that way.
+- Execution truth: `pushes/<slug>/push.md` and artifacts. If status or doctor
+  reports old migrated records, treat them as legacy migration input.
 - Evidence: `research/`, `decisions/`, `core/proof/`, offer proof, `log/`,
   and `documents/`.
 - Relationship checks: `mb status --json --peek`; add `mb graph`,
@@ -260,14 +260,13 @@ frontmatter and first 10 lines of each.]
 
 === PUSH LIFECYCLE STATE ===
 
-[Files in pushes/ (and legacy campaigns/) grouped by frontmatter status:
+[Files in pushes/ grouped by frontmatter status:
 draft, planned, active, paused, completed,
-canceled, archived. Stale legacy statuses like "scheduled" or
-"published" come from pre-push records and signal that the operator
-should run `mb migrate campaigns --plan`.
-Use: grep -rl "status: draft" pushes/ campaigns/ 2>/dev/null
+canceled, archived. If status or doctor reports old records with stale states
+such as "scheduled" or "published", the operator should run the migration plan.
+Use: grep -rl "status: draft" pushes/ 2>/dev/null
 or "No pushes with lifecycle status" if none have status field.
-Also list most recent 5 items in pushes/ (or campaigns/ on legacy repos).]
+Also list most recent 5 items in pushes/.]
 
 === PRIMITIVE MAP ===
 
@@ -302,7 +301,7 @@ Analyze these dimensions:
    Long gap between core updates and push generation = missed opportunity.
 
 5. **Velocity pattern:** What's the ratio of enrichment work (research/,
-   core/ changes) to push work (pushes/, or legacy campaigns/)? All
+   core/ changes) to push work (pushes/)? All
    enrichment with no push output = stuck in thinking. All push output
    with no enrichment = running on stale context.
 

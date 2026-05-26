@@ -81,8 +81,8 @@ legacy repos.
 If a legacy `source.json` has `business_repo`, that path must point to a
 business repo with current `core/` files. A new `.mainbranch/repo.json`
 descriptor should use safe GitHub handles and, at most, an optional relative
-`parent.local_checkout` hint. Legacy `reference/core` and `reference/offers`
-paths are compatibility bridges only.
+`parent.local_checkout` hint. If old `reference/*` paths appear without
+`core/`, run `mb doctor repair --plan` before relying on them.
 
 ## Site Looks Generic Or AI-Written
 

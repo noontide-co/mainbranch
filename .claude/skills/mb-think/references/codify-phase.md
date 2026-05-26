@@ -181,11 +181,10 @@ when testimonials should be detectable by `mb status`. If the change is still
 being tested, update or open a bet instead of rewriting durable offer truth. If
 unsure, ask the user.
 
-**Compatibility bridges:** In current repos, `reference/core` points at
-`core/` and `reference/offers` points at `core/offers/`. These are aliases for
-older skill paths, not duplicate files. Write once to the current `core/` or
-`core/offers/` target. Only use `reference/core/` or `reference/offers/` as a
-legacy fallback when `core/` is absent.
+**Legacy paths:** Write once to the current `core/` or `core/offers/` target.
+If old `reference/*` paths appear without `core/`, run
+`mb doctor repair --plan` and treat them as migration input before relying on
+them.
 
 ---
 

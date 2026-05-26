@@ -230,9 +230,9 @@ mkdir -p research decisions bets log pushes documents
 ```
 
 Do not create a new `reference/` folder in new repos. If an old repo
-already has `reference/core` or `reference/offers`, treat those paths as legacy
-compatibility aliases and write user context once under `core/` or
-`core/offers/`.
+already has `reference/core` or `reference/offers`, treat those paths as
+legacy migration input and run `mb doctor repair --plan` before relying on
+them. Write user context once under `core/` or `core/offers/`.
 
 **Multi-offer only (if user has multiple offers from Step 2.5):**
 
@@ -433,7 +433,7 @@ If conversation compacts mid-setup:
 - "You created the folder structure but we haven't sorted content"
 
 **For Claude:** When resuming:
-1. Check if business repo exists (look for `core/`, with legacy `reference/core/` fallback)
+1. Check if business repo exists (look for current `core/`; if old `reference/*` paths exist, run `mb doctor repair --plan`)
 2. If exists, check which files are populated vs empty
 3. Resume from the appropriate step based on what's done
 4. Confirm with user: "I see [business-name] with [X] files. Looks like we're at step [N]. Continue?"

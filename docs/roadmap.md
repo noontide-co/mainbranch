@@ -118,10 +118,10 @@ The work clusters into a few durable buckets:
 - **Business-readable history.** Checkpoints should feel like saved business
   progress, not developer ceremony. The git journal should become a readable
   timeline for status, handoff, retros, and future dashboards.
-- **Pushes and growth workflows.** Ads, organic content, sales videos, sites, research,
-  bets, and coordinated pushes remain the strongest shipped wedge. `pushes/` is
-  the official folder for coordinated work; `campaigns/` remains a
-  compatibility read for older repos.
+- **Pushes and growth workflows.** Ads, organic content, sales videos, sites,
+  research, bets, and coordinated pushes remain the strongest shipped wedge.
+  `pushes/` is the official folder for coordinated work; old structural paths
+  surface through migration and repair facts when present.
 - **Research depth.** Offer, market, and content work should escalate source
   collection deliberately: memory first when enough, repo context next, public
   research when the answer depends on current outside facts, and deeper

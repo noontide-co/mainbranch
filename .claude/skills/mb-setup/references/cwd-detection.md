@@ -32,7 +32,7 @@ reported but not changed.
 ## Detect Where We Are
 
 ```bash
-test -d "core" -o -d "reference/core" && echo "IS_BUSINESS_REPO"
+test -d "core" && echo "IS_BUSINESS_REPO"
 test -f ".claude/skills/mb-setup/SKILL.md" && echo "IS_MAINBRANCH_SOURCE"
 ```
 

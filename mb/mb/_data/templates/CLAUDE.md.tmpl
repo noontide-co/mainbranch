@@ -120,10 +120,9 @@ detail:" line after the owner meaning.
 - `pushes/` — coordinated pushes (launches, drops, challenges, promos, etc.)
 - `documents/` — anything that doesn't belong above
 
-If your repo has a legacy `campaigns/` folder from before the push primitive
-decision, `mb` continues to read it. New coordinated work should land in
-`pushes/`. Run `mb doctor` to see whether your repo is on the current shape
-and `mb migrate campaigns --plan` to preview a safe move.
+Use current Main Branch paths for new work. If `mb status` or `mb doctor`
+reports old structural paths, treat them as migration input and follow the
+repair plan before relying on them.
 
 ## Hub and child repos
 

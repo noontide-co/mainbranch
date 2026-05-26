@@ -81,7 +81,7 @@ git push -u origin main
 - **Cloudflare Pages (default):** `python3 .claude/skills/mb-site/scripts/pages.py create-project <name> --repo-owner <owner> --repo-name <repo> --branch main` — git-connected, auto-deploys on push. Configure build command (`pnpm build`) + output directory (`out` or `dist`) in the CF dashboard once.
 - **Netlify (legacy):** see [`deployment.md`](deployment.md). Key settings: Build command = `pnpm build`, Publish directory = `out`, NODE_VERSION = `20`.
 
-**10. Detect business repo.** Ask: "Where is your business repo with core business files?" Confirm the path has `core/` files, with legacy `reference/core/` fallback only if `core/` is absent. If the business repo has `core/offers/`, ask which offer this site is for. Treat `reference/core` and `reference/offers` as compatibility bridges, not duplicate files.
+**10. Detect business repo.** Ask: "Where is your business repo with core business files?" Confirm the path has `core/` files. If old `reference/*` paths appear without `core/`, run `mb doctor repair --plan` before relying on them. If the business repo has `core/offers/`, ask which offer this site is for.
 
 **11. Save config.** Prefer repo-local `.mainbranch/repo.json`:
 

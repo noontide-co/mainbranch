@@ -103,13 +103,9 @@ with `.claude/reference/business-primitives/offer-bet-push-proof.md`:
 3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
 4. If no offer is selected AND `core/offers/` exists: ask which offer.
 5. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
-6. Legacy fallback: if the repo does not have `core/`, read the old
-   `reference/core/` and `reference/offers/` paths.
-
-In current repos, `reference/core` and `reference/offers` are compatibility
-bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
-files: write once to the current `core/` path and never ask the user to edit
-both.
+6. If the repo does not have `core/`, do not infer current offer context from
+   old paths. Run `mb doctor repair --plan`; use `reference/*` only as legacy
+   migration input.
 
 **Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`. See [codify-phase.md](references/codify-phase.md) for content strategy layers.
 **Offer-aware files:** `offer.md`, `audience.md`

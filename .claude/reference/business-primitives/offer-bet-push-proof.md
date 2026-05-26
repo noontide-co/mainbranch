@@ -44,9 +44,10 @@ Business-readable explanation:
 | Per-push playbook run | `pushes/<slug>/playbooks/<playbook>.md` |
 | Rationale for changing truth | `decisions/YYYY-MM-DD-slug.md` |
 
-Older repos may have `reference/` compatibility bridges or offer-specific files
-such as `core/offers/<slug>/testimonials.md`. Read those as legacy context, but
-write new proof under `core/proof/` or `core/offers/<slug>/proof/`.
+Older repos may have `reference/` migration input or offer-specific files such
+as `core/offers/<slug>/testimonials.md`. Run `mb doctor repair --plan` before
+relying on old paths, and write new proof under `core/proof/` or
+`core/offers/<slug>/proof/`.
 
 Primary proof targets:
 
