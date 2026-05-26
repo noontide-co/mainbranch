@@ -17,6 +17,7 @@ required_mb_commands:
 json_facts:
   - money_path
   - money_path.objects.proof.quality
+  - validation.file_contracts
   - content_strategy
   - ranked_actions
   - update
@@ -87,6 +88,7 @@ The runtime shell must preserve these paths from the workflow source:
 
 - `money_path`
 - `money_path.objects.proof.quality`
+- `validation.file_contracts`
 - `content_strategy`
 - `ranked_actions`
 - `update`
@@ -115,11 +117,13 @@ approval-gated status marker writes.
 
 After hard gates, lead with the top `ranked_actions` entry when the operator
 asks what to do next. Use `since_last_check` and `journal` when the operator
-asks what changed. Use `money_path` for customer progress, offer, proof, CTA,
-channel, push, page readiness, playbook, and outcome feedback questions. Use
-`content_strategy` for content strategy, channel, account, freshness, or
-disconnected-layer questions. Use `onboarding` to resume setup without
-inventing a new interview.
+asks what changed. Use `validation.file_contracts` when a file has the right
+place in the repo but is missing the business shape needed for the next
+workflow; route offer-shape gaps to `mb-think` and ask before durable writes.
+Use `money_path` for customer progress, offer, proof, CTA, channel, push, page
+readiness, playbook, and outcome feedback questions. Use `content_strategy` for
+content strategy, channel, account, freshness, or disconnected-layer questions.
+Use `onboarding` to resume setup without inventing a new interview.
 
 Give one clear route: frame a bet, think through a decision, advance a push,
 draft a playbook, repair the repo, review provider readiness, inspect a

@@ -899,8 +899,7 @@ workflows are available in Codex.
    checkpoint only after approval.
 9. Ask for approval before creating or editing business files, promoting
    research into core truth, using structured collection, opening public
-   issues, publishing, mutating providers, spending money, contacting
-   customers, or saving a checkpoint.
+   issues, publishing, provider mutation, spend, customer contact, or checkpoint.
 
 ## Handoff Shape
 

@@ -51,8 +51,8 @@ If the operator asks where to edit, point them to the business folder. If they
 ask how to repair, route to `/mb-start`, `/mb-setup`, `/mb-update`, or the
 underlying `mb` command named by status or doctor output.
 
-For old clone-era installs, stale skill links, or `reference/core/` layouts,
-use `docs/migrating.md` as the source of truth. Normal help should teach the
+For old clone-era installs, stale skill links, or old repo layouts, use
+`docs/migrating.md` as the source of truth. Normal help should teach the
 current business-folder, CLI, and skills model. Migration is readiness work:
 current skills depend on `mb` CLI facts, so old wiring and reported repair
 errors should be fixed before serious skill use.

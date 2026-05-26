@@ -23,6 +23,7 @@ This snapshot does not replace shipped `.claude/skills/mb-end/SKILL.md`.
 
 - `money_path`
 - `money_path.objects.proof.quality`
+- `validation.file_contracts`
 - `content_strategy`
 - `ranked_actions`
 - `update`

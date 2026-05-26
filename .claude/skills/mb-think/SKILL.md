@@ -114,6 +114,9 @@ with `.claude/reference/business-primitives/offer-bet-push-proof.md`:
 uses matching files under `core/offers/<slug>/proof/`.
 When codifying proof, make permission, offer-link, outcome, timeframe, metric, and typicality facts explicit so `money_path.objects.proof.quality` can see them; use `permissioned_public: false` for internal proof awaiting public permission.
 If status reports `money_path.objects.proof.quality.public_marketing.status: blocked`, collect permission before ads, pages, or public claims use that proof.
+When `validation.file_contracts` reports offer gaps, use the findings as the
+intake checklist and fill missing audience, promise, mechanism, proof,
+price/value, or next-step context only after operator approval.
 
 For a live idea, ask whether it is something to keep selling or something to
 test before deciding. Use `bets/` for the time-boxed wager, offer files for

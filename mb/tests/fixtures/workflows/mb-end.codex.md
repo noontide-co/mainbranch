@@ -24,6 +24,7 @@ workflows are available in Codex.
 
 - `money_path`
 - `money_path.objects.proof.quality`
+- `validation.file_contracts`
 - `content_strategy`
 - `ranked_actions`
 - `update`

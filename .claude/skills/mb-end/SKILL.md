@@ -35,6 +35,7 @@ Required fact paths:
 
 - `money_path`
 - `money_path.objects.proof.quality`
+- `validation.file_contracts`
 - `content_strategy`
 - `ranked_actions`
 - `update`

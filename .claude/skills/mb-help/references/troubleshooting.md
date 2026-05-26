@@ -266,9 +266,9 @@ mb doctor repair --repo /path/to/your/repo --plan --json
 | `.vip/config.yaml` exists | Audit it with `mb doctor repair --plan --json`; do not treat it as current team settings |
 
 **Migration from old system:**
-Use `docs/migrating.md` for clone-era installs, old `reference/core/` layouts,
-or stale `~/.claude/settings.json` paths. Keep troubleshooting focused on the
-current business-folder flow.
+Use `docs/migrating.md` for clone-era installs, old repo layouts, or stale
+`~/.claude/settings.json` paths. Keep troubleshooting focused on the current
+business-folder flow.
 
 ---
 
