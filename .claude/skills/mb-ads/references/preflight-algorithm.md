@@ -49,9 +49,8 @@ offer and audience files:
 2. If an offer is selected and `core/offers/{offer}/offer.md` exists, score that file
 3. Otherwise fall back to `core/offer.md`
 4. Same resolution for `audience.md`
-5. Legacy fallback: if `core/` is absent, read old `reference/core/` and
-   `reference/offers/` paths. In current repos, those are compatibility bridges
-   to current `core/` paths, not duplicate files.
+5. If `core/` is absent, run `mb doctor repair --plan` and treat old
+   `reference/*` paths as migration input before relying on them.
 
 See `docs/system-architecture.md` (current path resolution) for the full algorithm.
 

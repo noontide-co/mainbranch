@@ -79,7 +79,7 @@ provider checks that `mb` already owns.
 
 **NEVER search the filesystem. NEVER use Explore or Task agents to find repos. NEVER scan ~/Documents/GitHub/.**
 
-**CWD-first:** If `core/` or legacy `reference/core/` exists in CWD, you're already in the business repo — use it.
+**CWD-first:** If current Main Branch markers exist in CWD, use it. If CWD looks like an old Main Branch repo, run `mb status --json --peek` and/or `mb doctor repair --plan` before saved config or discovery. Do not write to old repo structure.
 
 If CWD is NOT a business repo:
 
@@ -332,13 +332,9 @@ Before loading reference files, resolve active offer context with
 3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
 4. If no offer is selected AND `core/offers/` exists: ask which offer.
 5. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
-6. Legacy fallback: if the repo does not have `core/`, read the old
-   `reference/core/` and `reference/offers/` paths.
-
-In current repos, `reference/core` and `reference/offers` are compatibility
-bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
-files: read through them only as fallback, and never ask the user to update both
-paths.
+6. If the repo does not have `core/`, do not infer current offer context from
+   old paths. Run `mb doctor repair --plan`; use `reference/*` only as legacy
+   migration input.
 
 **Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
 **Content strategy layers:** when present, use
@@ -486,7 +482,7 @@ If context was compacted mid-task, check:
 1. **Which offer?** Use a future `mb` JSON active-offer field if present; otherwise ask the user to restore offer context. Do not silently route from `.vip/local.yaml`.
 2. **What entry point?** Full pipeline, copy only, hook library, video scripts, review, account check
 3. **What stage?** Planning angles, writing hooks, generating prompts, reviewing, pulling account data
-4. **What's done?** Check `pushes/` (and legacy `campaigns/` on unmigrated repos) for partial work
+4. **What's done?** Check `pushes/` for partial work. If old `campaigns/` records exist, run `mb migrate campaigns --plan` before relying on them.
 5. **Ad account status?** Re-run `mb status --json --peek`; if needed, run `mb connect doctor --json`
 6. **Resume:** Continue from the last completed step
 

@@ -137,13 +137,9 @@ Before loading reference files, resolve active offer context with
 3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
 4. If no offer is selected AND `core/offers/` exists: ask which offer.
 5. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
-6. Legacy fallback: if the repo does not have `core/`, read the old
-   `reference/core/` and `reference/offers/` paths.
-
-In current repos, `reference/core` and `reference/offers` are compatibility
-bridges to `core/` and `core/offers/`. Treat them as aliases, not duplicate
-files. Read through them only as fallback, and write once to the current
-`core/` path when reference updates are needed.
+6. If the repo does not have `core/`, do not infer current offer context from
+   old paths. Run `mb doctor repair --plan`; use `reference/*` only as legacy
+   migration input.
 
 **Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
 **Content strategy layers:** read `core/marketing/distribution-strategy.md`,
@@ -181,7 +177,7 @@ perfectly without them.
 
 **Congruence check:** If `core/operations/funnel/skool-surfaces.md` exists, read it. Organic content should echo the same positioning and claims visible on the Skool about page and pricing cards. No contradictions between organic and the landing experience.
 
-**CWD-first:** If `core/` or legacy `reference/core/` exists in CWD, you're already in the business repo. Otherwise, run `mb status --json --peek` and use its repo/readiness facts if available. If status cannot identify a repo, ask the user or run `/mb-setup`.
+**CWD-first:** If current Main Branch markers exist in CWD, use it. If CWD looks like an old Main Branch repo, run `mb status --json --peek` and/or `mb doctor repair --plan` before saved config or discovery. Do not write to old repo structure. Otherwise, run `mb status --json --peek` and use its repo/readiness facts if available. If status cannot identify a repo, ask the user or run `/mb-setup`.
 
 Missing files? See [references/first-time-setup.md](references/first-time-setup.md).
 
@@ -351,7 +347,7 @@ See [references/static-template.md](references/static-template.md).
 
 ## Voice Adaptation
 
-Read `core/voice.md` (or legacy `reference/core/voice.md` only when `core/` is absent). Match tone, use their vocabulary, avoid their "never say" list.
+Read current voice context. If CWD looks like an old Main Branch repo, run `mb status --json --peek` and/or `mb doctor repair --plan` before relying on it. Match tone, use their vocabulary, avoid their "never say" list.
 
 **Authenticity:** Sounds like creator (not copywriter). Uses contractions. Matches energy. No AI tells ("dive into", "unlock", "game-changer").
 

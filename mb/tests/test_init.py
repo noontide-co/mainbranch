@@ -261,10 +261,22 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "Never commit API keys" in claude_md
     assert "`bets/`" in claude_md
     # CLAUDE.md teaches the canonical push primitive and the optional
-    # vocabulary file; legacy campaigns/ appears only as compatibility.
+    # vocabulary file without carrying retired folder vocabulary into every
+    # fresh repo.
     assert "`pushes/`" in claude_md
     assert "core/vocabulary.md" in claude_md
-    assert "legacy `campaigns/`" in claude_md
+    retired_generated_terms = (
+        "reference/core",
+        "reference/offers",
+        "reference/domain",
+        "campaigns/",
+        "outputs/",
+        "ship-bet",
+        "weekly-review",
+    )
+    for term in retired_generated_terms:
+        assert term not in claude_md
+        assert term not in agents_md
     _assert_claude_md_cli_first_contract(claude_md)
     _assert_claude_md_primitive_routing_contract(claude_md)
     _assert_agents_md_codex_start_contract(agents_md)

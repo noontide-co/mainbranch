@@ -105,8 +105,8 @@ Check recent `research/` and `decisions/` files for offer-specific prefixes
 Confirm with user: "Were you working on [offer]?"
 
 If the repo has `core/offers/` but no active offer is clear, ask before
-proceeding: "Which offer are you working on?" Use legacy `reference/offers/`
-only when `core/` is absent.
+proceeding: "Which offer are you working on?" If old `reference/*` paths appear
+without `core/`, run `mb doctor repair --plan` before relying on them.
 
 ---
 

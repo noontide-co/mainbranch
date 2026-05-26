@@ -27,7 +27,7 @@ mb --version
 | `mb doctor` | Diagnostic. Checks Claude Code, gh auth, network, librsvg, runtime wiring, and package freshness. Warns on cloud-backed finance paths and offers educational triage. |
 | `mb status` | Daily briefing. Summarizes repo shape, install/runtime readiness, recent brain files, recent git activity, and GitHub tasks/proposals when `gh` is authenticated. Supports `--json`. |
 | `mb start` | Runtime handoff. Verifies the current business repo, git, Claude Code, and `/mb-start` skill wiring, then prints the exact `claude` command or launches it with `--launch`. Supports `--json`. |
-| `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `bets/`, `log/`, `pushes/`, legacy `campaigns/`, and `documents/`. Exit 1 on any fail. |
+| `mb validate` | Frontmatter shape check across current business repo folders, with compatibility reads for old migrated surfaces where needed. Exit 1 on any fail. |
 | `mb graph` | Walk linked_research / linked_decisions / supersedes; emit Graphviz DOT to stdout. `--open` shells to `dot` + `open`. |
 | `mb similar-bets` | Find similar past bets and offer outcomes from repo truth. |
 | `mb checkpoint` | Plan or save a business-readable git checkpoint. |

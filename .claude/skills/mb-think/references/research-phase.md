@@ -17,8 +17,8 @@ Use `.claude/reference/business-primitives/offer-bet-push-proof.md` before
 starting research. If a future `mb` JSON field exposes active offer state, use
 it. Otherwise, if `core/offers/` exists but no active offer is selected, ask
 which offer this research relates to or whether it is brand-level work; do not
-silently route from `.vip/local.yaml`. Use legacy `reference/offers/` only when
-`core/` is absent.
+silently route from `.vip/local.yaml`. If old `reference/*` paths appear without
+`core/`, run `mb doctor repair --plan` before relying on them.
 
 ---
 

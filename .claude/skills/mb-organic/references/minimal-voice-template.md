@@ -2,8 +2,8 @@
 
 Copy this template to `core/voice.md` and fill in your details.
 
-If this is an old repo without `core/`, `reference/core/voice.md` is the legacy
-fallback. In current repos, `reference/core` points at `core/`; do not maintain
+If this is an old repo without `core/`, run `mb doctor repair --plan` before
+relying on `reference/core/voice.md`. Do not maintain
 both paths separately.
 
 ---

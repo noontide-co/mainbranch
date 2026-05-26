@@ -17,7 +17,7 @@ for repair facts before giving prose-only advice.
 ## Workflow
 
 1. **Triage** — Parse user's question/brain-dump
-2. **Detect business type** — Check `core/*.md` (Skool? Ecommerce?), with legacy `reference/core/*.md` fallback only if `core/` is absent
+2. **Detect business type** — Check current business files (Skool? Ecommerce?). If CWD looks like an old Main Branch repo, treat it as migration input and run `mb status --json --peek` and/or `mb doctor repair --plan` before relying on it.
 3. **Load reference** — Find topic in references/ table below
 4. **Answer** — Explain "why" not just "what"
 5. **Route** — End with next skill or action
@@ -84,7 +84,7 @@ for repair facts before giving prose-only advice.
 | How do I close a session? | Run `/mb-end`. It summarizes what happened, asks if you have final thoughts, offers a crystallize moment if you made decisions, and guides an approved checkpoint instead of raw git commits. Bookend to `/mb-start`. |
 | What is multi-offer? | Multiple products under one brand, one business folder. Each offer gets its own `core/offers/[name]/offer.md`. Soul and voice stay in `core/` because they're brand-level. Use when you sell multiple things (community + newsletter + done-for-you). If you have no `core/offers/` folder, you're in single-offer mode — everything reads from `core/` and nothing changes. |
 | How do I switch offers? | Say `/mb-start [offer-name]` or answer when /mb-start prompts. The choice is session-scoped unless you explicitly approve saving it as local active-offer state. |
-| Where do offer files go? | In a single-offer repo, `core/offer.md` is the durable offer truth. In a multi-offer repo, `core/offer.md` is the portfolio thesis and `core/offers/[name]/offer.md` holds offer-specific details. Legacy `reference/offers` and `reference/core` may point at those folders as compatibility bridges; do not edit both. |
+| Where do offer files go? | In a single-offer repo, `core/offer.md` is the durable offer truth. In a multi-offer repo, `core/offer.md` is the portfolio thesis and `core/offers/[name]/offer.md` holds offer-specific details. Use current paths only; if CWD looks like an old Main Branch repo, run the repair/migration plan before relying on it. |
 | What stays in core with multiple offers? | `soul.md` (always), `voice.md` (always), `audience.md` (base, with optional per-offer overrides), `content-strategy.md` (business-level content strategy), and optional `core/marketing/` / `core/people/` layers. |
 | Where does proof go? | Company-wide testimonials go in `core/proof/testimonials.md`, average-case context in `core/proof/typicality.md`, and angles in `core/proof/angles/`. Offer-specific proof uses matching files under `core/offers/[name]/proof/`. Use structured permission and offer-link fields when proof should be detectable by `mb status`. |
 | Can I delete or rename an old offer folder? | Ask first. Offer folders are durable business history. Rename, delete, merge, or move them only after an accepted decision, approved migration plan, or explicit operator instruction. |

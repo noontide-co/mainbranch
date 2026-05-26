@@ -2,6 +2,7 @@
 type: decision
 date: 2026-04-29
 status: superseded
+agent_visibility: historical_context_only
 topic: mb-vip v0.1.0 — engine-side master decision (skill composition, repo shape, PyPI packaging, /mb-site upgrade, conductor preferences)
 mirrors: noontide-projects/decisions/2026-04-29-main-branch-v0-1-0-master.md
 superseded_by:

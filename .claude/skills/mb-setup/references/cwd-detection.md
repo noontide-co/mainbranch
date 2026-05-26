@@ -31,8 +31,13 @@ reported but not changed.
 
 ## Detect Where We Are
 
+Detect current repos first, then old repo migration input, then source
+checkouts:
+
 ```bash
-test -d "core" -o -d "reference/core" && echo "IS_BUSINESS_REPO"
+test -d "core" && echo "IS_BUSINESS_REPO"
+# Old repo migration input, not current paths.
+if test ! -d "core" && { test -d "reference/core" || test -d "reference/offers" || test -d "reference/domain"; }; then echo "IS_OLD_BUSINESS_REPO"; fi
 test -f ".claude/skills/mb-setup/SKILL.md" && echo "IS_MAINBRANCH_SOURCE"
 ```
 
@@ -54,7 +59,25 @@ pipx install mainbranch
 
 Then re-run the preferred repair path.
 
-### Case 2: CWD Is The Main Branch Source Checkout
+### Case 2: CWD Is an Old Main Branch Repo
+
+Say:
+
+> "You're in an old Main Branch repo. I'll read it as migration input, then
+> show the repair plan before any normal workflow."
+
+Run from this CWD before falling back to saved config or discovery:
+
+```bash
+mb status --json --peek
+mb doctor repair --plan
+```
+
+Do not call `reference/core`, `reference/offers`, or `reference/domain`
+current paths. Do not write new business truth there. Tell the operator to
+follow the repair/migration plan.
+
+### Case 3: CWD Is The Main Branch Source Checkout
 
 Say:
 
@@ -73,7 +96,7 @@ mb start --repo /absolute/path/to/business-repo --json
 If direct writes are blocked by the runtime sandbox, tell the user to open a
 workspace rooted at the business repo and run the same commands there.
 
-### Case 3: CWD Is Neither
+### Case 4: CWD Is Neither
 
 Ask whether the user wants to create a new business repo or connect an existing
 one.
