@@ -529,7 +529,10 @@ def test_doctor_repair_apply_all_agents_installs_codex_without_codex_cli(
     (repo / "AGENTS.md").write_text("# stale\n\nNo facts here.\n", encoding="utf-8")
     old_playbook_skill = tmp_path / "codex-skills" / "weekly-review" / "SKILL.md"
     old_playbook_skill.parent.mkdir(parents=True, exist_ok=True)
-    old_playbook_skill.write_text("# stale weekly review\n", encoding="utf-8")
+    old_playbook_skill.write_text(
+        "\n".join(codex_mod.CODEX_RETIRED_GLOBAL_SKILL_MARKERS["weekly-review"]) + "\n",
+        encoding="utf-8",
+    )
 
     result = runner.invoke(
         app, ["doctor", "repair", "--repo", str(repo), "--apply", "--all-agents", "--json"]

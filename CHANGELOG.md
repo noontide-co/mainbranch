@@ -38,6 +38,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   business-repo diffs for patch releases that do not change the guidance
   content. Refs #736.
 
+### Fixed
+
+- Fixed `mb workflow list` human output so workflow status labels render
+  visibly, and made retired Codex playbook skill cleanup remove only generated
+  Main Branch skill directories. Refs MAIN-452, #743.
+
 ## [0.3.38] - 2026-05-25
 
 ### Fixed

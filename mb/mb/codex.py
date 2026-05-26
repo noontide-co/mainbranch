@@ -98,6 +98,32 @@ CLAUDE_PLAYBOOK_SOURCE_NAMES = (
     "weekly-review",
 )
 CODEX_RETIRED_GLOBAL_SKILL_NAMES = CLAUDE_PLAYBOOK_SOURCE_NAMES
+CODEX_RETIRED_GLOBAL_SKILL_MARKERS: dict[str, tuple[str, ...]] = {
+    "google-ads-search-launch": (
+        "name: google-ads-search-launch",
+        'description: "Plan a Google Ads search launch playbook."',
+        "user-invocable: true",
+        "Support level: `read_only_planning`.",
+        "Use this skill when the operator is in a Main Branch business repo",
+        "`mb connect doctor --json`",
+    ),
+    "ship-bet": (
+        "name: ship-bet",
+        'description: "Plan a ship-bet playbook run."',
+        "user-invocable: true",
+        "Support level: `read_only_planning`.",
+        "Use this skill when the operator is in a Main Branch business repo",
+        "`mb checkpoint --plan --json`",
+    ),
+    "weekly-review": (
+        "name: weekly-review",
+        'description: "Plan a weekly review."',
+        "user-invocable: true",
+        "Support level: `read_only_planning`.",
+        "Use this skill when the operator is in a Main Branch business repo",
+        "`mb validate --json`",
+    ),
+}
 CODEX_GLOBAL_SKILL_NAMES = (
     CODEX_GLOBAL_SKILL_NAME,
     "mb-doctor",
@@ -163,9 +189,6 @@ CODEX_GLOBAL_SKILL_DESCRIPTIONS = {
     "mb-skill-concept": "Plan a Main Branch skill concept.",
     "mb-skill-brief-draft": "Draft a Main Branch skill brief.",
     "mb-skill-review": "Review a Main Branch skill proposal.",
-    "google-ads-search-launch": "Plan a Google Ads search launch playbook.",
-    "ship-bet": "Plan a ship-bet playbook run.",
-    "weekly-review": "Plan a weekly review.",
 }
 CODEX_GLOBAL_SKILL_FACTS: dict[str, tuple[str, ...]] = {
     **CODEX_SLASH_COMMAND_FACTS,
@@ -178,9 +201,6 @@ CODEX_GLOBAL_SKILL_FACTS: dict[str, tuple[str, ...]] = {
     "mb-skill-concept": ("mb workflow list --runtime codex --json",),
     "mb-skill-brief-draft": ("mb workflow list --runtime codex --json",),
     "mb-skill-review": ("mb workflow list --runtime codex --json",),
-    "google-ads-search-launch": ("mb status --json --peek", "mb connect doctor --json"),
-    "ship-bet": ("mb status --json --peek", "mb checkpoint --plan --json"),
-    "weekly-review": ("mb status --json --peek", "mb validate --json"),
 }
 CODEX_GLOBAL_SKILL_SUPPORT: dict[str, str] = {
     "main-branch": "supported",
@@ -196,9 +216,6 @@ CODEX_GLOBAL_SKILL_SUPPORT: dict[str, str] = {
     "mb-ads": "read_only_planning",
     "mb-organic": "read_only_planning",
     "mb-site": "read_only_planning",
-    "google-ads-search-launch": "read_only_planning",
-    "ship-bet": "read_only_planning",
-    "weekly-review": "read_only_planning",
     "mb-wiki": "intentionally_unsupported",
     "mb-skill-concept": "intentionally_unsupported",
     "mb-skill-brief-draft": "intentionally_unsupported",
@@ -689,7 +706,8 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_skill_sources": ("mb-wiki",),
         "codex_status": "intentionally_unsupported",
         "source_status": "intentionally_unsupported",
-        "codex_surface": "None",
+        "codex_surface": "Boundary explainer only; no Codex execution route",
+        "codex_entrypoints": ("main-branch mb-wiki",),
         "commands": (),
         "status_reason": "Specialty personal-wiki workflow outside the current Codex target.",
         "notes": "Specialty workflow outside the current Codex command target.",
@@ -774,7 +792,12 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         ),
         "codex_status": "intentionally_unsupported",
         "source_status": "intentionally_unsupported",
-        "codex_surface": "None",
+        "codex_surface": "Boundary explainer only; no Codex execution route",
+        "codex_entrypoints": (
+            "main-branch mb-skill-concept",
+            "main-branch mb-skill-brief-draft",
+            "main-branch mb-skill-review",
+        ),
         "commands": (),
         "status_reason": "Engine-contributor workflow, not a business runtime surface.",
         "notes": "Engine-contributor workflow, not a business runtime surface.",
@@ -810,6 +833,15 @@ def global_skill_path() -> Path:
 
 def global_skill_file_path(name: str) -> Path:
     return global_skill_source_root() / name / "SKILL.md"
+
+
+def _is_retired_mainbranch_global_skill(path: Path, name: str) -> bool:
+    skill_file = path / "SKILL.md" if path.is_dir() else path
+    try:
+        text = skill_file.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return all(marker in text for marker in CODEX_RETIRED_GLOBAL_SKILL_MARKERS[name])
 
 
 def codex_marketplace_add_command() -> str:
@@ -2289,7 +2321,9 @@ def global_skill_status(repo: str | Path) -> dict[str, Any]:
         stale.append(CODEX_LEGACY_GLOBAL_SKILL_NAME)
     for retired_name in CODEX_RETIRED_GLOBAL_SKILL_NAMES:
         retired_path = global_skill_source_root() / retired_name
-        if retired_path.exists():
+        if retired_path.exists() and _is_retired_mainbranch_global_skill(
+            retired_path, retired_name
+        ):
             stale.append(retired_name)
     legacy_plugin = global_plugin_source_root()
     if legacy_plugin.exists():
@@ -2346,7 +2380,9 @@ def write_global_skill_source() -> dict[str, Any]:
 
     for retired_name in CODEX_RETIRED_GLOBAL_SKILL_NAMES:
         retired_path = global_skill_source_root() / retired_name
-        if _remove_generated_tree(retired_path):
+        if _is_retired_mainbranch_global_skill(
+            retired_path, retired_name
+        ) and _remove_generated_tree(retired_path):
             changed_paths.append(str(retired_path))
 
     plugin_root = global_plugin_source_root()
