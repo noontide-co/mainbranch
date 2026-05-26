@@ -22,6 +22,7 @@ WEIGHTS: dict[str, int] = {
     "assigned_tasks": 65,
     "blocked_or_stale_tasks": 60,
     "playbook_health_gaps": 84,
+    "file_contract_gaps": 86,
     "relationship_health_gaps": 82,
     "money_path_gaps": 72,
     "due_bets": 58,
@@ -53,6 +54,7 @@ def rank_status_report(
     actions: list[dict[str, Any]] = []
     _add_readiness_actions(actions, report)
     _add_drift_actions(actions, report)
+    _add_file_contract_actions(actions, report)
     _add_playbook_actions(actions, report)
     _add_relationship_actions(actions, report)
     _add_money_path_actions(actions, report)
@@ -429,6 +431,53 @@ def _add_playbook_actions(actions: list[dict[str, Any]], report: dict[str, Any])
                     safe_to_share=all(bool(item.get("safe_to_share", True)) for item in gaps),
                 )
             ],
+        )
+    )
+
+
+def _add_file_contract_actions(actions: list[dict[str, Any]], report: dict[str, Any]) -> None:
+    validation = _dict(report.get("validation"))
+    file_contracts = _dict(validation.get("file_contracts"))
+    findings = [_dict(item) for item in _list(file_contracts.get("findings"))]
+    if not findings:
+        return
+    first = findings[0]
+    contract_id = str(first.get("contract_id") or "business_file")
+    route = str(first.get("recommended_route") or "mb-think")
+    severity = str(first.get("severity") or "warn")
+    score = WEIGHTS["file_contract_gaps"] + min(len(findings) * 2, 16)
+    actions.append(
+        _action(
+            action_id=f"review_file_contract_{contract_id}",
+            title=f"Clarify {str(first.get('contract_label') or 'business file')} shape",
+            command=route,
+            severity="error" if severity == "error" else "warn",
+            score=score,
+            confidence="high",
+            reason=str(
+                first.get("owner_message")
+                or first.get("message")
+                or "A business file is missing context needed for the next workflow."
+            ),
+            signals=[
+                _signal(
+                    "validation.file_contracts.findings",
+                    severity="error" if severity == "error" else "warn",
+                    summary=str(first.get("route_reason") or "business file contract gap"),
+                    evidence=[
+                        str(item.get("path") or "")
+                        + (f":{item.get('section')}" if item.get("section") else "")
+                        for item in findings[:5]
+                    ],
+                    weight=WEIGHTS["file_contract_gaps"],
+                    safe_to_share=all(bool(item.get("safe_to_share", True)) for item in findings),
+                )
+            ],
+            audience="operator_decision",
+            operator_summary=str(
+                first.get("owner_message")
+                or "A business file is missing context needed for the next workflow."
+            ),
         )
     )
 

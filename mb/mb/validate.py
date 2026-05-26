@@ -15,7 +15,15 @@ from typing import Any
 
 import yaml
 
-from mb import content_strategy, github_activity, migration_lint, related_links, relationships, team
+from mb import (
+    content_strategy,
+    file_contracts,
+    github_activity,
+    migration_lint,
+    related_links,
+    relationships,
+    team,
+)
 from mb import pushes as pushes_mod
 
 DECISION_STATUS = {"proposed", "accepted", "rejected", "superseded", "running"}
@@ -162,6 +170,12 @@ VALIDATION_CATEGORY_REPAIR: dict[str, str] = {
     ),
     "missing_reverse_link": "Add the suggested reverse relationship field after operator approval.",
     "migration_drift": "Run `mb doctor repair --plan --json` and review stale layout guidance.",
+    "file_contract_missing_section": (
+        "Use the recommended Main Branch route to fill the missing business shape."
+    ),
+    "file_contract_empty_section": (
+        "Add enough detail for this section to guide the next business workflow."
+    ),
     "other_error": "Review the validation message and repair the affected record.",
     "other_warning": (
         "Review the warning and decide whether the relationship or file shape is intentional."
@@ -198,10 +212,21 @@ VALIDATION_CATEGORY_OPERATOR_SUMMARY: dict[str, str] = {
     "migration_drift": (
         "Main Branch can repair this automatically — run `mb doctor repair --plan` then `--apply`."
     ),
+    "file_contract_missing_section": (
+        "A business file is missing context needed for the next workflow."
+    ),
+    "file_contract_empty_section": (
+        "A business file has the right section name, but not enough useful detail."
+    ),
     "other_error": "Read the validation message and decide how to fix the file.",
     "other_warning": "Decide whether the relationship or shape is intentional, or change it.",
     "duplicate_github_handle": "One GitHub handle points to more than one team member.",
     "unnormalized_github_handle": "Normalize the GitHub handle before agents rely on it.",
+}
+
+VALIDATION_CATEGORY_ROUTE: dict[str, str] = {
+    "file_contract_missing_section": "mb-think",
+    "file_contract_empty_section": "mb-think",
 }
 
 DECISION_STATUS_ORDER = {
@@ -1353,6 +1378,14 @@ def _add_team_handle_duplicate_errors(repo: Path, files_by_path: dict[str, dict[
 
 def _validation_category(message: str, *, severity: str, schema: str) -> str:
     lowered = message.lower()
+    if schema == "file-contracts" and "empty" in lowered:
+        return "file_contract_empty_section"
+    if schema == "file-contracts":
+        return "file_contract_missing_section"
+    if lowered.startswith("your offer") and "empty" in lowered:
+        return "file_contract_empty_section"
+    if lowered.startswith("your offer"):
+        return "file_contract_missing_section"
     if schema == "team-members" and "duplicate github handle" in lowered:
         return "duplicate_github_handle"
     if schema == "team-members" and "must be normalized as" in lowered:
@@ -1421,6 +1454,7 @@ def _validation_categories(files: list[dict[str, Any]]) -> dict[str, Any]:
                         "operator_summary": VALIDATION_CATEGORY_OPERATOR_SUMMARY.get(
                             category, repair_text
                         ),
+                        "recommended_route": VALIDATION_CATEGORY_ROUTE.get(category, ""),
                     },
                 )
                 entry["count"] += 1
@@ -1431,7 +1465,11 @@ def _validation_categories(files: list[dict[str, Any]]) -> dict[str, Any]:
     ordered = dict(
         sorted(
             categories.items(),
-            key=lambda item: (-int(item[1]["count"]), item[0]),
+            key=lambda item: (
+                -int(item[1].get("errors", 0)),
+                -int(item[1]["count"]),
+                item[0],
+            ),
         )
     )
     top_category = next(iter(ordered), "")
@@ -1842,6 +1880,32 @@ def run(
             files_by_path[r["path"]] = r
     files_by_path.update(content_strategy.validation_results(repo))
     _add_team_handle_duplicate_errors(repo, files_by_path)
+    file_contract_report = file_contracts.evaluate(repo)
+    for finding in file_contract_report.get("findings", []):
+        rel = str(finding.get("path") or "")
+        if not rel:
+            continue
+        severity = str(finding.get("severity") or "warn")
+        message = str(finding.get("owner_message") or finding.get("message") or "")
+        if not message:
+            continue
+        file_entry = files_by_path.setdefault(
+            rel,
+            {
+                "path": rel,
+                "ok": True,
+                "errors": [],
+                "warnings": [],
+                "schema": "file-contracts",
+            },
+        )
+        if file_entry.get("errors"):
+            continue
+        if severity == "error":
+            file_entry.setdefault("errors", []).append(message)
+            file_entry["ok"] = False
+        else:
+            file_entry.setdefault("warnings", []).append(message)
 
     if migration_drift_report is None:
         migration_drift_report = migration_lint.run(repo)
@@ -1868,6 +1932,7 @@ def run(
         "cross_refs": cross_ref_report,
         "legacy_repair": _legacy_frontmatter_repair(repo, error_count),
         "migration_drift": migration_drift_report,
+        "file_contracts": file_contract_report,
         "validation_categories": categories,
         "by_category": categories["by_category"],
         "summary": {"errors": error_count, "warnings": warning_count},

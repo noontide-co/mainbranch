@@ -3683,6 +3683,7 @@ def _validation_status(repo: Path, *, cross_refs: bool = True) -> dict[str, Any]
         "state": "error" if errors else ("warn" if warnings else "ok"),
         "summary": summary,
         "validation_categories": report.get("validation_categories") or {},
+        "file_contracts": report.get("file_contracts") or {},
         "legacy_repair": report.get("legacy_repair"),
         "cross_refs": {
             "enabled": bool((report.get("cross_refs") or {}).get("enabled")),

@@ -263,6 +263,7 @@
     ],
     "validation": [
       "cross_refs",
+      "file_contracts",
       "legacy_repair",
       "migration_drift",
       "ok",
