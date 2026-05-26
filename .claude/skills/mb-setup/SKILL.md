@@ -70,9 +70,9 @@ For first-time setup, do not default to "switch workspace now." Prefer option 1 
 
 ### Check Main Branch Updates and Detect CWD (FIRST)
 
-**Repair Main Branch wiring + detect CWD before context gathering.** Three cases: CWD is the business folder (happy path), CWD is the Main Branch source checkout (migration), or CWD is neither (ask user).
+**Repair Main Branch wiring + detect CWD before context gathering.** Four cases: CWD is the business folder (happy path), CWD is an old Main Branch repo needing repair/migration, CWD is the Main Branch source checkout (engine migration), or CWD is neither (ask user).
 
-See **[references/cwd-detection.md](references/cwd-detection.md)** for the full repair path and all three cases (Case 1 happy path, Case 2 engine migration, Case 3 ask). This must happen BEFORE any context gathering — if conversation compacts later, the essential config is already saved.
+See **[references/cwd-detection.md](references/cwd-detection.md)** for the full repair path and all four cases (Case 1 happy path, Case 2 old repo repair, Case 3 engine migration, Case 4 ask). This must happen BEFORE any context gathering — if conversation compacts later, the essential config is already saved.
 
 ---
 
@@ -229,10 +229,10 @@ mkdir -p core core/offers core/finance core/brand core/proof/angles core/operati
 mkdir -p research decisions bets log pushes documents
 ```
 
-Do not create a new `reference/` folder in new repos. If an old repo
-already has `reference/core` or `reference/offers`, treat those paths as
-legacy migration input and run `mb doctor repair --plan` before relying on
-them. Write user context once under `core/` or `core/offers/`.
+Do not create old repo structure in new repos. If an existing folder looks like
+an old Main Branch repo, treat that structure as migration input and run
+`mb doctor repair --plan` before relying on it. Write user context once under
+current business files.
 
 **Multi-offer only (if user has multiple offers from Step 2.5):**
 
@@ -412,7 +412,7 @@ See `references/git-workflow.md` for the full guide.
 ## References
 
 - **Repo Visibility Rubric:** `references/repo-visibility-rubric.md` — Private-by-default, the one visibility question for site repos, and what visibility does not decide
-- **CWD Detection:** `references/cwd-detection.md` — Check Main Branch updates + Case 1/2/3 flows for detecting where the user is
+- **CWD Detection:** `references/cwd-detection.md` — Check Main Branch updates + Case 1/2/3/4 flows for detecting where the user is
 - **File Education:** `references/file-education.md` — What to teach the user about each core file, priority order, visual style scaffolding
 - **Context Gathering:** `references/context-gathering.md` — Checklists by business type, completeness criteria
 - **Templates:** `references/templates.md` — All file templates
@@ -433,7 +433,7 @@ If conversation compacts mid-setup:
 - "You created the folder structure but we haven't sorted content"
 
 **For Claude:** When resuming:
-1. Check if business repo exists (look for current `core/`; if old `reference/*` paths exist, run `mb doctor repair --plan`)
+1. Check if business repo exists (look for current markers; if CWD looks like an old Main Branch repo, run `mb status --json --peek` and `mb doctor repair --plan` from CWD before fallback)
 2. If exists, check which files are populated vs empty
 3. Resume from the appropriate step based on what's done
 4. Confirm with user: "I see [business-name] with [X] files. Looks like we're at step [N]. Continue?"

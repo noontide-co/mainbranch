@@ -1,8 +1,8 @@
 # Repo Detection (Step 2)
 
 CWD-first detection of the business repo. The user starts Claude in their
-business repo — check current `core/` first before falling back to old local
-config.
+business repo — check current `core/` first, then old repo migration
+fingerprints, before falling back to old local config.
 
 ---
 
@@ -14,12 +14,19 @@ config.
    ├── YES → This IS the business repo. Use CWD. Skip to config loading.
    └── NO → Continue to step 2.
 
-2. Check CWD for Main Branch source-checkout fingerprint (old workflow):
-   test -f ".claude/skills/mb-start/SKILL.md"
-   ├── YES → User is in a Main Branch source checkout (old workflow). Trigger migration guidance.
+2. Check CWD for old Main Branch repo fingerprints:
+   test -d "reference/core" / "reference/offers" / "reference/domain"
+   ├── YES → This is an old Main Branch repo. Use CWD as migration input.
+   │          Run mb status --json --peek and mb doctor repair --plan.
+   │          Do not call old paths current. Do not write to them.
    └── NO → Continue to step 3.
 
-3. Fall back to legacy machine-local config:
+3. Check CWD for Main Branch source-checkout fingerprint (old workflow):
+   test -f ".claude/skills/mb-start/SKILL.md"
+   ├── YES → User is in a Main Branch source checkout (old workflow). Trigger migration guidance.
+   └── NO → Continue to step 4.
+
+4. Fall back to legacy machine-local config:
    Read ~/.config/vip/local.yaml → default_repo + recent_repos
    ├── Found valid repo(s)? → Present options (see below)
    └── Nothing valid? → Discovery or /mb-setup
@@ -50,21 +57,27 @@ facts through `mb`:
 2. If legacy .vip YAML exists
    ├── Run mb doctor repair --plan --json to audit key families
    └── Do not treat .vip/config.yaml as current team settings
+
+3. If CWD was selected because old reference paths exist without core/
+   ├── Keep CWD as the migration input for mb status/doctor
+   ├── Tell the operator to follow the repair/migration plan
+   └── Do not write new business truth into reference/*
 ```
 
 ---
 
 ## Multi-Repo Selection (When CWD Is NOT a Business Repo)
 
-If CWD detection fails (step 3 above), present options from legacy local
+If CWD detection fails (step 4 above), present options from legacy local
 config:
 
 **Validate EVERY path before showing it to the user.** Never present a dead
 path as an option. For each path in `default_repo` and `recent_repos`, check
-`test -d "[path]/core"`. If invalid, hide it for this session and explain that
-the old local fallback may be stale. If old `reference/*` paths appear without
-`core/`, run `mb doctor repair --plan` before relying on them. Do not rewrite
-legacy config during repo detection. See
+`test -d "[path]/core"`. If invalid, check for old `reference/core`,
+`reference/offers`, or `reference/domain`; if present, describe the path as an
+old Main Branch repo that needs the repair/migration plan before use. Hide
+other invalid paths for this session and explain that the old local fallback
+may be stale. Do not rewrite legacy config during repo detection. See
 [config-system.md](config-system.md) for fallback rules.
 
 **ALWAYS present numbered options** — even with ONE repo found:
@@ -93,7 +106,7 @@ Use fallbacks in order:
    ```
 3. **Ask the user** (if nothing found)
 
-**Verify with Read, not Glob:** Use `Read` on `[path]/core/soul.md` to confirm it's a business repo. `soul.md` belongs in `core/` for current repos.
+**Verify with Read, not Glob:** Use `Read` on `[path]/core/soul.md` to confirm it's a current business repo. `soul.md` belongs in `core/` for current repos. If only old `reference/core`, `reference/offers`, or `reference/domain` exists, treat the folder as migration input and run the repair plan before any normal workflow.
 
 **Skip the Main Branch source checkout** - any path containing `.claude/skills/mb-start/SKILL.md` is not the operator's business folder.
 

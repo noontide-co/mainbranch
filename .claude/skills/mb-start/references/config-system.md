@@ -262,10 +262,16 @@ That pattern can silently delete fields (like `user.*`, `vip_path`, or future ke
 Config is always optional. Skills work without it.
 
 ```
-1. Try legacy local.yaml only when CWD and current settings do not identify a repo.
-2. Use `mb status --json --peek`, `mb connect`, and repo files for current facts
-3. Path invalid? → attempt session-only recovery, then rediscover
-4. Parse error? → warn, then rediscover
+1. If CWD has current `core/`, use CWD and current repo facts.
+2. If CWD has old `reference/core`, `reference/offers`, or `reference/domain`
+   without `core/`, run `mb status --json --peek` and `mb doctor repair --plan`
+   from that CWD before saved config or discovery. Treat old paths as
+   migration input only.
+3. Try legacy local.yaml only when CWD and current settings do not identify a
+   current repo or old repo migration input.
+4. Use `mb status --json --peek`, `mb connect`, and repo files for current facts
+5. Path invalid? → attempt session-only recovery, then rediscover
+6. Parse error? → warn, then rediscover
 ```
 
 **Principle:** Config is a speed optimization, not a requirement.
@@ -281,7 +287,13 @@ Users rename folders, move repos, or clone to new locations. Config paths go sta
 **Before presenting ANY repo as a numbered option, verify the path exists:**
 
 ```bash
-if test -d "[path]/core"; then echo "valid"; else echo "invalid"; fi
+if test -d "[path]/core"; then
+  echo "current"
+elif test -d "[path]/reference/core" || test -d "[path]/reference/offers" || test -d "[path]/reference/domain"; then
+  echo "old-repo-needs-repair"
+else
+  echo "invalid"
+fi
 ```
 
 Never show a dead path. Never load a dead path and show "0/18 EMPTY" for a repo that simply moved.

@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from mb import codex as codex_mod
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 CURRENT_GUIDANCE_FILES = [
@@ -11,6 +13,8 @@ CURRENT_GUIDANCE_FILES = [
     REPO_ROOT / "docs" / "roadmap.md",
     REPO_ROOT / "mb" / "README.md",
 ]
+
+PRIMARY_SKILL_FILES = sorted((REPO_ROOT / ".claude" / "skills").glob("*/SKILL.md"))
 
 GENERATED_GUIDANCE_FILES = [
     REPO_ROOT / "mb" / "mb" / "_data" / "templates" / "CLAUDE.md.tmpl",
@@ -25,6 +29,12 @@ RETIRED_STRUCTURAL_TERMS = (
     "outputs/",
     "ship-bet",
     "weekly-review",
+)
+
+RETIRED_REPO_STRUCTURE_TERMS = (
+    "reference/core",
+    "reference/offers",
+    "reference/domain",
 )
 
 EXPLICIT_LEGACY_CONTEXT = (
@@ -55,6 +65,24 @@ def _window(lines: list[str], line_number: int) -> str:
     return " ".join(lines[start:end]).lower()
 
 
+def _generated_guidance_texts() -> list[tuple[str, str]]:
+    rendered_global_skills = [
+        (
+            f"render_codex_global_skill_md:{skill_name}",
+            codex_mod.render_codex_global_skill_md(skill_name),
+        )
+        for skill_name in codex_mod.CODEX_GLOBAL_SKILL_NAMES
+    ]
+    return [
+        *[
+            (str(path.relative_to(REPO_ROOT)), path.read_text())
+            for path in GENERATED_GUIDANCE_FILES
+        ],
+        ("render_agents_md", codex_mod.render_agents_md(REPO_ROOT)),
+        *rendered_global_skills,
+    ]
+
+
 def test_current_guidance_uses_retired_paths_only_in_explicit_legacy_context() -> None:
     violations: list[str] = []
     for path in CURRENT_GUIDANCE_FILES:
@@ -68,6 +96,18 @@ def test_current_guidance_uses_retired_paths_only_in_explicit_legacy_context() -
             if not any(marker in context for marker in EXPLICIT_LEGACY_CONTEXT):
                 rel = path.relative_to(REPO_ROOT)
                 violations.append(f"{rel}:{index}: {line.strip()}")
+
+    assert violations == []
+
+
+def test_primary_skills_do_not_name_retired_repo_structure() -> None:
+    violations: list[str] = []
+    for path in PRIMARY_SKILL_FILES:
+        text = path.read_text().lower()
+        for term in RETIRED_REPO_STRUCTURE_TERMS:
+            if term in text:
+                rel = path.relative_to(REPO_ROOT)
+                violations.append(f"{rel}: {term}")
 
     assert violations == []
 
@@ -86,11 +126,10 @@ def test_current_guidance_does_not_teach_legacy_aliases() -> None:
 
 def test_generated_guidance_omits_retired_structural_terms() -> None:
     violations: list[str] = []
-    for path in GENERATED_GUIDANCE_FILES:
-        text = path.read_text().lower()
+    for name, rendered_text in _generated_guidance_texts():
+        text = rendered_text.lower()
         for term in RETIRED_STRUCTURAL_TERMS:
             if term in text:
-                rel = path.relative_to(REPO_ROOT)
-                violations.append(f"{rel}: {term}")
+                violations.append(f"{name}: {term}")
 
     assert violations == []

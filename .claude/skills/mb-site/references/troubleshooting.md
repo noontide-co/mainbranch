@@ -81,8 +81,9 @@ legacy repos.
 If a legacy `source.json` has `business_repo`, that path must point to a
 business repo with current `core/` files. A new `.mainbranch/repo.json`
 descriptor should use safe GitHub handles and, at most, an optional relative
-`parent.local_checkout` hint. If old `reference/*` paths appear without
-`core/`, run `mb doctor repair --plan` before relying on them.
+`parent.local_checkout` hint. If CWD looks like an old Main Branch repo, treat
+it as migration input and run `mb status --json --peek` and/or
+`mb doctor repair --plan` before relying on it.
 
 ## Site Looks Generic Or AI-Written
 

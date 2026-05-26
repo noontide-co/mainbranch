@@ -177,7 +177,7 @@ perfectly without them.
 
 **Congruence check:** If `core/operations/funnel/skool-surfaces.md` exists, read it. Organic content should echo the same positioning and claims visible on the Skool about page and pricing cards. No contradictions between organic and the landing experience.
 
-**CWD-first:** If `core/` exists in CWD, you're already in the business repo. Otherwise, run `mb status --json --peek` and use its repo/readiness facts if available. If status cannot identify a repo, ask the user or run `/mb-setup`. If old `reference/*` paths appear without `core/`, run `mb doctor repair --plan` before relying on them.
+**CWD-first:** If current Main Branch markers exist in CWD, use it. If CWD looks like an old Main Branch repo, run `mb status --json --peek` and/or `mb doctor repair --plan` before saved config or discovery. Do not write to old repo structure. Otherwise, run `mb status --json --peek` and use its repo/readiness facts if available. If status cannot identify a repo, ask the user or run `/mb-setup`.
 
 Missing files? See [references/first-time-setup.md](references/first-time-setup.md).
 
@@ -347,7 +347,7 @@ See [references/static-template.md](references/static-template.md).
 
 ## Voice Adaptation
 
-Read `core/voice.md`. If old `reference/*` paths appear without `core/`, run `mb doctor repair --plan` before relying on them. Match tone, use their vocabulary, avoid their "never say" list.
+Read current voice context. If CWD looks like an old Main Branch repo, run `mb status --json --peek` and/or `mb doctor repair --plan` before relying on it. Match tone, use their vocabulary, avoid their "never say" list.
 
 **Authenticity:** Sounds like creator (not copywriter). Uses contractions. Matches energy. No AI tells ("dive into", "unlock", "game-changer").
 

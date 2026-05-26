@@ -79,7 +79,7 @@ provider checks that `mb` already owns.
 
 **NEVER search the filesystem. NEVER use Explore or Task agents to find repos. NEVER scan ~/Documents/GitHub/.**
 
-**CWD-first:** If `core/` exists in CWD, you're already in the business repo — use it. If old `reference/*` paths appear without `core/`, run `mb doctor repair --plan` and treat them as migration input before relying on them.
+**CWD-first:** If current Main Branch markers exist in CWD, use it. If CWD looks like an old Main Branch repo, run `mb status --json --peek` and/or `mb doctor repair --plan` before saved config or discovery. Do not write to old repo structure.
 
 If CWD is NOT a business repo:
 

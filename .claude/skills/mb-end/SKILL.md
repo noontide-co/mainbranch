@@ -114,7 +114,7 @@ A quick `/mb-end` (user says "just commit and close") can be steps 1-3 and 6. Bu
 
 ## Step 1: Find the Business Repo
 
-**CWD-first:** If `core/` exists in CWD, you're already in the business repo — use it. If old `reference/*` paths appear without `core/`, run `mb doctor repair --plan` before relying on them. Otherwise, read `~/.config/vip/local.yaml` for `default_repo` only as a legacy machine-local fallback.
+**CWD-first:** If current Main Branch markers exist in CWD, use it. If CWD looks like an old Main Branch repo, run `mb status --json --peek` and `mb doctor repair --plan` before saved config or discovery. Do not write to old repo structure; tell the operator to follow the repair/migration plan. Otherwise, read `~/.config/vip/local.yaml` for `default_repo` only as a legacy machine-local fallback.
 
 **If no repo found:** Skip to a simple close. No business repo means no git activity to scan.
 

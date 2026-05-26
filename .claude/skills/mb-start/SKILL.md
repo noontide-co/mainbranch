@@ -88,7 +88,7 @@ providers, spending money, changing topology, or creating checkpoints.
 
 ## CRITICAL: Repo Selection Rules
 
-**CWD-first wins.** If `core/` exists in CWD, the user is already in their business repo — no selection needed. Just confirm: "Working in **[repo-name]**." If old `reference/*` paths appear without `core/`, run `mb doctor repair --plan` and treat them as migration input before relying on them.
+**CWD-first wins.** If current Main Branch markers exist in CWD, the user is already in their business repo — no selection needed. Just confirm: "Working in **[repo-name]**." If CWD looks like an old Main Branch repo, keep CWD as migration input. Run `mb status --json --peek` and `mb doctor repair --plan` before fallback config or discovery. Do not write to old repo structure; tell the operator to follow the repair/migration plan.
 
 **Only ask which repo when CWD is NOT a business repo** (fallback to config). In that case, list ALL validated repos from `recent_repos`:
 
@@ -110,10 +110,6 @@ providers, spending money, changing topology, or creating checkpoints.
 > (hit a number)"
 
 **DO NOT skip this question when in fallback mode.** Users have multiple repos. The saved default is a suggestion, not automatic.
-
-**Exceptions (skip selection entirely):**
-- CWD has `core/` — user chose their repo by cd'ing into it
-- User explicitly ran `/mb-start [repo-name]` with a specific path
 
 **After user selects a repo from legacy fallback config:** Treat the selected
 repo as session-scoped unless a current `mb` command exposes an explicit
@@ -221,8 +217,10 @@ The user starts Claude in their business repo. Check CWD first before falling ba
 
 ```
 1. test -d "core"  → THIS IS the business repo. Skip to config.
-2. test -f ".claude/skills/mb-start/SKILL.md"  → user is in a Main Branch source checkout; migrate.
-3. Otherwise → fall back to `~/.config/vip/local.yaml` only as legacy
+2. old Main Branch repo markers without current markers → old repo; run
+   `mb status --json --peek` and `mb doctor repair --plan` from CWD.
+3. test -f ".claude/skills/mb-start/SKILL.md"  → user is in a Main Branch source checkout; migrate.
+4. Otherwise → fall back to `~/.config/vip/local.yaml` only as legacy
    machine-local repo memory.
 ```
 
@@ -373,8 +371,9 @@ find "$REPO_PATH/core/offers" -mindepth 2 -maxdepth 2 -name "offer.md" 2>/dev/nu
 ```
 
 If `core/offers` is absent and `core/` is also absent, do not infer the offer
-from old paths. Run `mb doctor repair --plan` and treat any `reference/*`
-content as migration input.
+from old paths. If CWD looks like an old Main Branch repo, run
+`mb status --json --peek` and/or `mb doctor repair --plan` from CWD and treat
+it as migration input.
 
 **If no offers/ folder:** Single-offer mode. Skip to Step 2. Read from `core/`.
 
@@ -413,8 +412,8 @@ Use `readiness`, `onboarding`, `drift.items`, `money_path`, and `ranked_actions`
 from status first. Prefer `money_path.ranked_actions` for path gaps unless the
 top-level ranked action already incorporates it.
 
-Fallback: check `core/*.md`. If `core/` is absent but old `reference/*` paths
-exist, run `mb doctor repair --plan` before routing. No folder → `/mb-setup`. If two or more
+Fallback: check `core/*.md`. If CWD looks like an old Main Branch repo, run
+`mb status --json --peek` and/or `mb doctor repair --plan` before routing. No folder → `/mb-setup`. If two or more
 core files are missing/thin, route to `/mb-think codify`; otherwise route by
 intent. Use [readiness-assessment.md](references/readiness-assessment.md) for
 the exact fallback thresholds.
