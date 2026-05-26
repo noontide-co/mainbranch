@@ -37,6 +37,8 @@ Main Branch already ships:
   daily status can show whether customer progress, offer, proof, CTA, channel,
   push, playbook, page, and outcome feedback are legible and connected without
   turning CLI output into strategic judgment;
+- the first business-file contract system, with a public contract map and an
+  enforced offer contract that routes missing offer shape to `mb-think`;
 - content strategy health facts for simple and layered strategy files, channel
   and account layers, freshness, indexing, and disconnected marketing context;
 - compact books readiness in `mb status --json --peek` and `mb start --json`,
@@ -235,6 +237,8 @@ Likely directions:
 - [dependency-choices.md](dependency-choices.md) for dependency, integration,
   sidecar, CLI, MCP server, and provider-adapter judgment.
 - [compatibility.md](compatibility.md) for runtime support status.
+- [business-file-contracts.md](business-file-contracts.md) for file-contract
+  shape, guided-route findings, and covered/deferred contracts.
 - [CHANGELOG.md](../CHANGELOG.md) for what actually shipped.
 - [GitHub issues](https://github.com/noontide-co/mainbranch/issues) for
   durable public work threads.

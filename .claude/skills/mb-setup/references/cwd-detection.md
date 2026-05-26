@@ -73,9 +73,8 @@ mb status --json --peek
 mb doctor repair --plan
 ```
 
-Do not call `reference/core`, `reference/offers`, or `reference/domain`
-current paths. Do not write new business truth there. Tell the operator to
-follow the repair/migration plan.
+Do not call the old repo shape current paths. Do not write new business truth
+there. Tell the operator to follow the repair/migration plan.
 
 ### Case 3: CWD Is The Main Branch Source Checkout
 

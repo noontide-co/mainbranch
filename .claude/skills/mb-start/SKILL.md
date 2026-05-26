@@ -31,9 +31,10 @@ actual file paths in commands.
 `mb status --json --peek` before asking setup or routing questions. Treat JSON
 as source of truth for update severity, readiness, drift, onboarding,
 integrations, GitHub, team, bets, dirty git, since-last-check,
-`content_strategy`, `money_path`, and `ranked_actions`. Use GitHub activity
-`author_display` / `author_known` fields when naming people. Parse the full
-JSON once; do not slice status output with `head` or `sed` in the normal path.
+`content_strategy`, `money_path`, `validation.file_contracts`, and
+`ranked_actions`. Use GitHub activity `author_display` / `author_known` when
+naming people. Parse the full JSON once; do not slice status output with `head`
+or `sed` in the normal path.
 **Continuity facts:** Use `since_last_check.journal`, top-level `journal`,
 GitHub activity, and `checkpoint` from status to explain "where we left off."
 Do not run raw `git log` unless status says journal facts are unavailable. If
@@ -164,15 +165,14 @@ After repo selection, run:
 mb status --json --peek
 ```
 
-Use this report before asking additional questions:
-
 - `ranked_actions` is the deterministic list of one to three business moves.
   Surface the first action as the recommendation, including its reason and
   cited signal summaries.
 - `money_path` maps customer progress, offer, proof, CTA, channel, push,
   playbook, page readiness, and outcome feedback. Use levels, objects, and
   ranked actions as evidence; do not call the offer "good" or "will convert."
-  For proof, cite `money_path.objects.proof.quality` facts: generic testimonials, outcomes, offer linkage, typicality, and outcome feedback.
+  Cite `money_path.objects.proof.quality` facts: generic testimonials, outcomes, offer linkage, typicality, and outcome feedback.
+- `validation.file_contracts` maps business-file shape gaps. For offer gaps, route to `/mb-think` and ask before editing durable offer files.
 - `content_strategy` maps the simple file and optional layers before markdown parsing.
 - `readiness` gates whether setup/repair work must happen before output skills.
 - `drift.items` names stale or broken status signals and repair commands.

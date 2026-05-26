@@ -126,6 +126,43 @@ def test_ranker_surfaces_playbook_health() -> None:
     assert actions[0]["signals"][0]["evidence"] == ["pushes_without_playbook"]
 
 
+def test_ranker_suppresses_file_contract_route_until_validation_blockers_clear() -> None:
+    report = _base_report()
+    report["drift"] = {
+        "items": [
+            {
+                "id": "validation_debt",
+                "severity": "error",
+                "summary": "Validation findings need repair.",
+                "evidence": ["core/offer.md: missing required frontmatter"],
+            }
+        ]
+    }
+    report["validation"] = {
+        "file_contracts": {
+            "findings": [
+                {
+                    "contract_id": "offer",
+                    "contract_label": "offer",
+                    "severity": "warn",
+                    "recommended_route": "mb-think",
+                    "owner_message": "Your offer needs more buyer context.",
+                    "route_reason": "Offer shape gaps route through mb-think.",
+                    "path": "core/offer.md",
+                    "section": "Proof",
+                    "safe_to_share": True,
+                }
+                for _ in range(6)
+            ]
+        }
+    }
+
+    actions = ranker.rank_status_report(report)
+
+    assert actions[0]["id"] == "repair_validation_debt"
+    assert "review_file_contract_offer" not in {action["id"] for action in actions}
+
+
 def test_ranker_surfaces_money_path_below_repair_blockers() -> None:
     report = _base_report()
     report["update"] = {

@@ -19,6 +19,7 @@ required_mb_commands:
 json_facts:
   - money_path
   - money_path.objects.proof.quality
+  - validation.file_contracts
   - content_strategy
   - ranked_actions
   - update
@@ -103,6 +104,7 @@ The runtime shell must preserve these paths from the workflow source:
 
 - `money_path`
 - `money_path.objects.proof.quality`
+- `validation.file_contracts`
 - `content_strategy`
 - `ranked_actions`
 - `update`

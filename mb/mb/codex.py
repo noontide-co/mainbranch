@@ -243,6 +243,7 @@ CODEX_THINK_REQUIRED_JSON_FACTS = (
     "money_path.objects.active_push",
     "money_path.objects.outcome_feedback_loop",
     "money_path.ranked_actions",
+    "validation.file_contracts",
     "content_strategy",
     "ranked_actions",
     "update",
@@ -284,6 +285,7 @@ CODEX_END_REQUIRED_MB_COMMANDS = (
 CODEX_END_REQUIRED_JSON_FACTS = (
     "money_path",
     "money_path.objects.proof.quality",
+    "validation.file_contracts",
     "content_strategy",
     "ranked_actions",
     "update",
@@ -927,7 +929,8 @@ Use this index to map natural Codex requests:
 - **Inspect status / what changed / what is stale:** use the Codex Status
   Workflow below.
   Answer from `ranked_actions`, `since_last_check`, `journal`, `money_path`,
-  `content_strategy`, `integrations`, `readiness`, and `drift.items`.
+  `validation.file_contracts`, `content_strategy`, `integrations`,
+  `readiness`, and `drift.items`.
 - **Think / research / decide / codify:** use the Codex Think Route below. Start
   from `mb` facts, choose a research depth, and ask before writing durable
   business files.
@@ -977,8 +980,8 @@ This is the Codex-native status workflow.
 1. Run `mb status --json --peek`.
 2. Treat the JSON as the source of truth for setup, update, drift, GitHub,
    onboarding, integrations, bets, recent work, since-last-check,
-   `content_strategy`, `money_path`, vocabulary, checkpoint state, and
-   `ranked_actions`.
+   `content_strategy`, `money_path`, `validation.file_contracts`, vocabulary,
+   checkpoint state, and `ranked_actions`.
 3. Stop before business routing if `runtime.codex_cli.status` is
    `runtime_mismatch` or `drift.items` includes `codex_runtime_mb_mismatch`.
    Tell the operator to fix the runtime/login-shell PATH and rerun the
@@ -993,7 +996,10 @@ This is the Codex-native status workflow.
 7. Use `money_path` for customer progress, offer, proof, CTA, channel, push,
    playbook, page readiness, and outcome feedback questions. Keep language
    evidence-based: legible, supported, connected, instrumented.
-8. Use `content_strategy` for content strategy health, layered channel/account
+8. Use `validation.file_contracts` when a business file exists but is missing
+   the shape needed for the next workflow. Route offer-shape gaps to
+   `mb-think`; ask before editing files.
+9. Use `content_strategy` for content strategy health, layered channel/account
    files, stale platform rules, or disconnected content layers.
 
 Do not mutate the last-check marker unless the operator explicitly says this is

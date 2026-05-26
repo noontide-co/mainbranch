@@ -18,6 +18,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `campaigns/`, and `outputs/` handling in explicit migration/repair contexts.
   Refs MAIN-460, #759.
 
+### Added
+
+- Added a public business-file contract spec and the first reusable
+  file-contract engine slice. `mb validate --json` and `mb status --json
+  --peek` now expose offer-shape findings with owner-facing messages and
+  guided routes to existing Main Branch workflows. Refs MAIN-459, #756.
+
 ### Removed
 
 - Retired the provisional `ship-bet` and `weekly-review` skeletons from bundled

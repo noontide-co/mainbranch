@@ -27,6 +27,7 @@ json_facts:
   - money_path.objects.active_push
   - money_path.objects.outcome_feedback_loop
   - money_path.ranked_actions
+  - validation.file_contracts
   - content_strategy
   - ranked_actions
   - update
@@ -115,6 +116,7 @@ The runtime shell must preserve these paths from the workflow source:
 - `money_path.objects.active_push`
 - `money_path.objects.outcome_feedback_loop`
 - `money_path.ranked_actions`
+- `validation.file_contracts`
 - `content_strategy`
 - `ranked_actions`
 - `update`

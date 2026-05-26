@@ -103,6 +103,19 @@ business language is direction, not current behavior; see
 
 ## Primitive Contracts
 
+### Business File Contracts
+
+Business file contracts define the owner-facing shape of useful business
+records: purpose, required frontmatter, required body sections, privacy
+boundary, lifecycle, severity, approval rules, and the recommended `mb-*` route.
+See [business-file-contracts.md](business-file-contracts.md).
+
+These contracts sit above frontmatter schema validation. Frontmatter checks make
+files machine-readable; file contracts explain whether the file has enough
+business context to route work safely. Contract findings are deterministic `mb`
+facts for `mb validate`, `mb status`, Claude Code, Codex, and future workflow
+migrations.
+
 ### Shared Workflow Source
 
 Portable workflow semantics live in `workflows/<workflow>/workflow.md`.

@@ -32,6 +32,7 @@ workflows are available in Codex.
 - `money_path.objects.active_push`
 - `money_path.objects.outcome_feedback_loop`
 - `money_path.ranked_actions`
+- `validation.file_contracts`
 - `content_strategy`
 - `ranked_actions`
 - `update`
@@ -70,8 +71,7 @@ workflows are available in Codex.
    checkpoint only after approval.
 9. Ask for approval before creating or editing business files, promoting
    research into core truth, using structured collection, opening public
-   issues, publishing, mutating providers, spending money, contacting
-   customers, or saving a checkpoint.
+   issues, publishing, provider mutation, spend, customer contact, or checkpoint.
 
 ## Handoff Shape
 

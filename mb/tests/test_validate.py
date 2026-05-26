@@ -21,6 +21,28 @@ def _write(p: Path, body: str) -> None:
     p.write_text(body, encoding="utf-8")
 
 
+def _offer(slug: str = "workshop") -> str:
+    return (
+        "---\n"
+        f"slug: {slug}\n"
+        "status: running\n"
+        "---\n"
+        "# Workshop\n\n"
+        "## Who this is for\n"
+        "Solo operators with launch work scattered across tools.\n\n"
+        "## Promise\n"
+        "A clear business brain for deciding what to ship next.\n\n"
+        "## Mechanism\n"
+        "Main Branch turns offers, proof, decisions, and pushes into linked files.\n\n"
+        "## Proof\n"
+        "Approved outcome notes and testimonials live under core/proof/.\n\n"
+        "## Price Or Value\n"
+        "The value exchange is a focused setup sprint.\n\n"
+        "## Next Step\n"
+        "Book a review before writing launch copy.\n"
+    )
+
+
 def test_validate_passes_well_formed(tmp_path: Path) -> None:
     _write(
         tmp_path / "decisions" / "2026-04-29-ok.md",
@@ -1583,7 +1605,7 @@ def test_cross_refs_resolve_linked_pushes_field(tmp_path: Path) -> None:
     """linked_pushes is recognized as a graph link field and must resolve."""
     _write(
         tmp_path / "core" / "offers" / "workshop" / "offer.md",
-        "---\nslug: workshop\nstatus: running\n---\n# Workshop\n",
+        _offer(),
     )
     _write(
         tmp_path / "pushes" / "2026-05-06-target" / "push.md",
@@ -1616,7 +1638,7 @@ def test_cross_refs_resolve_linked_pushes_field(tmp_path: Path) -> None:
 def test_cross_refs_validate_push_offer_relationship(tmp_path: Path) -> None:
     _write(
         tmp_path / "core" / "offers" / "workshop" / "offer.md",
-        "---\nslug: workshop\nstatus: running\n---\n# Workshop\n",
+        _offer(),
     )
     _write(
         tmp_path / "pushes" / "2026-05-06-target" / "push.md",
@@ -1743,7 +1765,7 @@ def _repo_topology(extra_repo_fields: str = "") -> str:
 def test_validate_accepts_repo_topology_schema_and_links(tmp_path: Path) -> None:
     _write(
         tmp_path / "core" / "offers" / "workshop" / "offer.md",
-        "---\nslug: workshop\nstatus: running\n---\n# Workshop\n",
+        _offer(),
     )
     _write(
         tmp_path / "pushes" / "2026-05-06-target" / "push.md",
