@@ -26,6 +26,8 @@ Main Branch already ships:
   active-write folders, stale Claude settings, wrong push/playbook paths, and
   legacy bet campaign links;
 - Claude Code skill wiring with `mb-` prefixed bundled skills;
+- Codex global `mb-*` skills for the supported daily loop, rendered from shared
+  workflow sources where supported and grounded in deterministic `mb` facts;
 - beginner setup, migration, repair, and update paths;
 - local-first provider metadata and secret-safe connection checks;
 - graph, status, and topology primitives (including repo-topology facts in
