@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Removed
+
+- Retired the provisional `ship-bet` and `weekly-review` skeletons from bundled
+  reusable playbook packaging while preserving marker-driven cleanup for stale
+  generated Codex global skill directories. The concepts remain future workflow
+  candidates, not rejected product ideas. Refs MAIN-458, #753.
+
 ## [0.3.39] - 2026-05-26
 
 ### Changed
