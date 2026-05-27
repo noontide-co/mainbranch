@@ -85,6 +85,44 @@ def _command_error(label: str, result: subprocess.CompletedProcess[str]) -> str:
     return f"{label} failed with exit code {result.returncode}: {details or 'no output'}"
 
 
+def _command_output(result: subprocess.CompletedProcess[str]) -> str:
+    return "\n".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
+
+
+def _looks_like_pipx_package_spec_parse_failure(
+    result: subprocess.CompletedProcess[str],
+) -> bool:
+    output = _command_output(result).lower()
+    if "package spec" not in output:
+        return False
+    parse_phrases = ("unable to parse", "could not parse", "cannot parse")
+    if not any(phrase in output for phrase in parse_phrases):
+        return False
+    return ".whl" in output or "/" in output or "\\" in output
+
+
+def _pipx_force_install_recovery_command() -> str:
+    latest = (_latest_pypi_version() or "").strip()
+    if latest:
+        return f"pipx install --force mainbranch=={latest}"
+    return "pipx install --force mainbranch"
+
+
+def _add_pipx_package_spec_recovery(
+    result: dict[str, Any],
+    upgrade: subprocess.CompletedProcess[str],
+) -> None:
+    if not _looks_like_pipx_package_spec_parse_failure(upgrade):
+        return
+    command = _pipx_force_install_recovery_command()
+    result["warnings"].append(
+        "pipx could not parse the saved Main Branch install spec. This can happen "
+        "after installing from a local wheel path. Approve a forced pipx reinstall "
+        "to reset the saved install source."
+    )
+    result["next_actions"].append(command)
+
+
 def _list_field(result: dict[str, Any], key: str) -> list[str]:
     value = result.get(key, [])
     return [str(item) for item in value] if isinstance(value, list) else []
@@ -422,6 +460,7 @@ def run(
             result["ok"] = False
             result["new_version"] = result["old_version"]
             result["errors"].append(_command_error("pipx upgrade mainbranch", upgrade))
+            _add_pipx_package_spec_recovery(result, upgrade)
             return result
         result["new_version"] = _version_from_mb_command() or result["old_version"]
     else:
@@ -527,3 +566,6 @@ def render_human(result: dict[str, Any]) -> None:
     if result.get("warnings"):
         for warning in result["warnings"]:
             print(f"warning: {warning}")
+    if not result.get("check") and not result.get("ok"):
+        for action in result.get("next_actions", []):
+            print(f"next: {action}")

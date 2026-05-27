@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- Added a guided `pipx install --force mainbranch==<latest>` recovery step when
+  `mb update` detects that `pipx upgrade mainbranch` failed because pipx could
+  not parse a saved local wheel/package spec. Closes #778.
+
 ## [0.3.40] - 2026-05-27
 
 v0.3.40 packages the shared workflow migration batch for the daily Main Branch
