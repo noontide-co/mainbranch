@@ -634,7 +634,7 @@ REQUIRED_LIFECYCLE_GUIDANCE = (
     "Shared source gates",
     "Shared public/private boundaries",
     "Use the global Main Branch skill",
-    "do not claim these workflows are ported to",
+    "route to the matching global",
     "global skill",
     "main-branch",
 )
@@ -1289,7 +1289,8 @@ create repo-local Codex plugin manifests, copied Claude skill trees, or
 symlinked Claude skills unless a future `mb` command or issue says that surface
 is supported for this repo.
 The global `main-branch` skill is an index; named global skills such as
-`mb-start`, `mb-status`, and `mb-think` carry the workflow routes.
+`mb-start`, `mb-status`, `mb-think`, `mb-bet`, `mb-ads`, `mb-organic`, and
+`mb-site` carry the workflow routes.
 
 Use this index to map natural Codex requests:
 
@@ -1304,9 +1305,13 @@ Use this index to map natural Codex requests:
 - **Think / research / decide / codify:** use the Codex Think Route below. Start
   from `mb` facts, choose a research depth, and ask before writing durable
   business files.
-- **Site, ads, organic production, provider mutation, publishing, spend,
-  domains, or customer contact:** do not claim these workflows are ported to
-  Codex. Use read-only `mb` facts for planning and ask before any action.
+- **Bets, ads, organic, or site work:** route to the matching global
+  `mb-bet`, `mb-ads`, `mb-organic`, or `mb-site` skill for read-only planning
+  and file guidance. Do not claim full Codex workflow parity or make lifecycle
+  writes, site writes/builds/deploys, provider mutations, publishing, spend,
+  domains/DNS changes, uploads, account changes, or customer contact unless a
+  future `mb workflow list --runtime codex --json` support level and runtime
+  smoke evidence explicitly allow that action.
 
 Use `mb doctor repair --plan --only codex` to inspect global skill wiring.
 
