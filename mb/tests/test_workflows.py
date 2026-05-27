@@ -30,6 +30,7 @@ END_WORKFLOW = REPO_ROOT / "workflows" / "mb-end" / "workflow.md"
 BET_WORKFLOW = REPO_ROOT / "workflows" / "mb-bet" / "workflow.md"
 ORGANIC_WORKFLOW = REPO_ROOT / "workflows" / "mb-organic" / "workflow.md"
 SHIPPED_START_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-start" / "SKILL.md"
+SHIPPED_STATUS_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-status" / "SKILL.md"
 SHIPPED_THINK_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-think" / "SKILL.md"
 SHIPPED_END_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-end" / "SKILL.md"
 SHIPPED_BET_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-bet" / "SKILL.md"
@@ -171,6 +172,14 @@ def test_shipped_claude_start_skill_preserves_shared_workflow_contract() -> None
     assert "workflows/mb-start-status/workflow.md" in skill_text
 
 
+def test_shipped_claude_status_skill_preserves_shared_workflow_contract() -> None:
+    workflow = load_workflow(START_STATUS_WORKFLOW)
+    skill_text = SHIPPED_STATUS_SKILL.read_text(encoding="utf-8")
+
+    assert shell_drift_errors(workflow, skill_text) == []
+    assert "workflows/mb-start-status/workflow.md" in skill_text
+
+
 def test_shipped_claude_think_skill_preserves_shared_workflow_contract() -> None:
     workflow = load_workflow(THINK_WORKFLOW)
     skill_text = SHIPPED_THINK_SKILL.read_text(encoding="utf-8")
@@ -233,6 +242,7 @@ def test_start_status_preserves_bet_trigger_fact_paths() -> None:
         render_claude_shell(workflow),
         render_codex_shell(workflow),
         SHIPPED_START_SKILL.read_text(encoding="utf-8"),
+        SHIPPED_STATUS_SKILL.read_text(encoding="utf-8"),
     ]
 
     assert required.issubset(set(workflow.json_facts))
