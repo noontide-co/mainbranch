@@ -201,7 +201,15 @@ CODEX_GLOBAL_SKILL_FACTS: dict[str, tuple[str, ...]] = {
     ),
     "mb-ads": ("mb status --json --peek", "mb connect doctor --json"),
     "mb-organic": ("mb status --json --peek",),
-    "mb-site": ("mb status --json --peek", "mb site check --json"),
+    "mb-site": (
+        "mb status --json --peek",
+        "mb start --json",
+        "mb doctor repair --plan",
+        "mb connect doctor --json",
+        'mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json',
+        "mb validate --cross-refs --json",
+        "mb checkpoint --plan --json",
+    ),
     "mb-wiki": ("mb workflow list --runtime codex --json",),
     "mb-skill-concept": ("mb workflow list --runtime codex --json",),
     "mb-skill-brief-draft": ("mb workflow list --runtime codex --json",),
@@ -232,6 +240,7 @@ CODEX_SETUP_SOURCE_WORKFLOW = "workflows/mb-setup/workflow.md"
 CODEX_MAINTENANCE_REPAIR_SOURCE_WORKFLOW = "workflows/mb-maintenance-repair/workflow.md"
 CODEX_BET_SOURCE_WORKFLOW = "workflows/mb-bet/workflow.md"
 CODEX_ORGANIC_SOURCE_WORKFLOW = "workflows/mb-organic/workflow.md"
+CODEX_SITE_SOURCE_WORKFLOW = "workflows/mb-site/workflow.md"
 CODEX_THINK_REQUIRED_MB_COMMANDS = (
     "mb status --json --peek",
     "mb start --json",
@@ -437,6 +446,79 @@ CODEX_ORGANIC_PUBLIC_PRIVATE_BOUNDARIES = (
     "no_private_dms_or_gated_communities",
     "no_raw_finance_legal_records",
 )
+CODEX_SITE_REQUIRED_MB_COMMANDS = (
+    "mb status --json --peek",
+    "mb start --json",
+    "mb doctor repair --plan",
+    "mb connect doctor --json",
+    'mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json',
+    "mb validate --cross-refs --json",
+    "mb checkpoint --plan --json",
+)
+CODEX_SITE_REQUIRED_JSON_FACTS = (
+    "money_path",
+    "money_path.objects.proof.quality",
+    "money_path.objects.cta_path",
+    "money_path.objects.channel_strategy",
+    "money_path.objects.active_push",
+    "validation.file_contracts",
+    "content_strategy",
+    "content_strategy.overall_state",
+    "content_strategy.simple_entry_point",
+    "content_strategy.layers",
+    "ranked_actions",
+    "update",
+    "readiness",
+    "drift.items",
+    "integrations",
+    "measurement",
+    "measurement.available",
+    "measurement.state",
+    "measurement.facts.expected_events",
+    "measurement.blocked_count",
+    "measurement.manual_count",
+    "relationship_health.gaps",
+    "checkpoint.pending",
+    "checkpoint.pending.blockers",
+    "runtime.codex_cli",
+    "runtime.claude_code",
+    "state",
+    "blocked",
+    "manual",
+    "evidence",
+    "facts.expected_events",
+    "facts.provider_state",
+    "source",
+    "child_descriptor",
+)
+CODEX_SITE_APPROVAL_GATES = (
+    "updates_repairs_migrations",
+    "file_writes",
+    "checkpoint",
+    "provider_mutation",
+    "publishing_or_spend",
+    "customer_contact",
+    "private_data",
+    "destructive_operations",
+    "structured_collection",
+    "public_issue_or_proposal",
+    "domain_purchase",
+    "dns_change",
+    "pages_project",
+    "custom_domain_attach",
+    "deploy_or_push",
+    "account_change",
+)
+CODEX_SITE_PUBLIC_PRIVATE_BOUNDARIES = (
+    "no_secrets",
+    "no_raw_provider_exports",
+    "no_raw_transcripts",
+    "no_customer_member_data",
+    "no_private_runtime_settings",
+    "no_private_dms_or_gated_communities",
+    "no_raw_finance_legal_records",
+    "no_absolute_local_paths_in_committed_descriptors",
+)
 CODEX_SHARED_WORKFLOW_SKILLS = {
     "mb-start": CODEX_START_STATUS_SOURCE_WORKFLOW,
     "mb-status": CODEX_START_STATUS_SOURCE_WORKFLOW,
@@ -447,6 +529,7 @@ CODEX_SHARED_WORKFLOW_SKILLS = {
     "mb-end": CODEX_END_SOURCE_WORKFLOW,
     "mb-bet": CODEX_BET_SOURCE_WORKFLOW,
     "mb-organic": CODEX_ORGANIC_SOURCE_WORKFLOW,
+    "mb-site": CODEX_SITE_SOURCE_WORKFLOW,
 }
 REQUIRED_LIFECYCLE_GUIDANCE = (
     "## Codex Lifecycle Workflow Index",
@@ -839,17 +922,41 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-site",
         "claude_skill_sources": ("mb-site",),
         "codex_status": "read_only_planning",
-        "source_status": "blocked_by_provider_gates",
-        "codex_surface": "Read-only planning and site readiness facts only",
+        "source_status": "shared_workflow_source",
+        "codex_surface": "Read-only planning and file guidance through global mb-site skill",
         "codex_entrypoints": ("main-branch mb-site",),
-        "commands": ("mb status --json --peek", "mb site check --json"),
-        "status_reason": (
-            "Codex can inspect site readiness, but build, deploy, domain, DNS, and "
-            "publishing behavior need shared workflow gates and runtime smoke."
+        "shared_source": CODEX_SITE_SOURCE_WORKFLOW,
+        "commands": CODEX_SITE_REQUIRED_MB_COMMANDS,
+        "contract_checks": (
+            "intent",
+            "required_mb_commands",
+            "required_json_facts",
+            "approval_gates",
+            "read_boundaries",
+            "write_boundaries",
+            "site_modes",
+            "site_shapes",
+            "site_readiness_json_shape",
+            "repo_descriptor_boundary",
+            "provider_gates",
+            "domain_dns_deploy_boundary",
+            "publishing_boundary",
+            "account_mutation_boundary",
+            "codex_read_only_planning_boundary",
+            "core_flow",
+            "public_private_boundaries",
         ),
-        "next_required_issue": "#749",
-        "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/749",
-        "notes": "Codex must not claim site build, deploy, domain, or publishing parity.",
+        "status_reason": (
+            "Site workflow substance has a shared source, but Codex remains read-only "
+            "planning and file guidance until runtime smoke proves site writes, builds, "
+            "deploys, and publishing."
+        ),
+        "notes": (
+            "Codex may inspect site readiness, descriptors, and business facts, then "
+            "propose guarded file targets. No site writes, build, deploy, DNS, domain, "
+            "publishing, provider mutation, account changes, spend, or customer contact "
+            "is supported."
+        ),
     },
     {
         "id": "wiki",

@@ -17,6 +17,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `runtime.codex_cli` fact path, daily start/status preserves explicit bet
   trigger facts, and `/mb-end` crystallize writes remain approval-gated.
   Closes #767.
+- Migrated `mb-site` to a shared workflow source with checked Claude and Codex
+  shells, preserving read-only Codex boundaries for site writes, builds,
+  deploys, publishing, domain/DNS changes, provider mutation, account changes,
+  spend, and customer contact. Closes #749.
 - Migrated `mb-organic` to a shared workflow source with checked Claude and
   Codex shells, preserving read-only Codex boundaries for planning, source
   privacy, publishing, account mutation, and customer-contact gates. Closes

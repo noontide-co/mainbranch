@@ -16,6 +16,81 @@ loops: [ship]
 
 Pick a site shape, build it from business context, and ship it through a linked site repo. Cloudflare Pages with git auto-deploy is the default deploy path.
 
+**Shared source:** The portable workflow contract lives in
+`workflows/mb-site/workflow.md`. This Claude skill is the Claude Code shell over
+that source.
+
+**Shared contract markers:** Keep these aligned with the shared source.
+
+Required commands:
+
+- `mb status --json --peek`
+- `mb start --json`
+- `mb doctor repair --plan`
+- `mb connect doctor --json`
+- `mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json`
+- `mb validate --cross-refs --json`
+- `mb checkpoint --plan --json`
+
+Required fact paths:
+
+- `money_path`
+- `money_path.objects.proof.quality`
+- `money_path.objects.cta_path`
+- `money_path.objects.channel_strategy`
+- `money_path.objects.active_push`
+- `validation.file_contracts`
+- `content_strategy`
+- `content_strategy.overall_state`
+- `content_strategy.simple_entry_point`
+- `content_strategy.layers`
+- `ranked_actions`
+- `update`
+- `readiness`
+- `drift.items`
+- `integrations`
+- `measurement`
+- `measurement.available`
+- `measurement.state`
+- `measurement.facts.expected_events`
+- `measurement.blocked_count`
+- `measurement.manual_count`
+- `relationship_health.gaps`
+- `checkpoint.pending`
+- `checkpoint.pending.blockers`
+- `runtime.codex_cli`
+- `runtime.claude_code`
+- `state`
+- `blocked`
+- `manual`
+- `evidence`
+- `facts.expected_events`
+- `facts.provider_state`
+- `source`
+- `child_descriptor`
+
+Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`,
+`provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`,
+`destructive_operations`, `structured_collection`, `public_issue_or_proposal`,
+`domain_purchase`, `dns_change`, `pages_project`, `custom_domain_attach`,
+`deploy_or_push`, and `account_change`.
+
+Public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
+`no_raw_transcripts`, `no_customer_member_data`,
+`no_private_runtime_settings`, `no_private_dms_or_gated_communities`,
+`no_raw_finance_legal_records`, and
+`no_absolute_local_paths_in_committed_descriptors`.
+
+Core flow: support plan, brief, build, preview, check, publish, iterate, graduate, or recover modes.
+Marker phrase: plan, brief, build, preview, check, publish, iterate, graduate, or recover.
+Preserve lander, minisite, website, sales-video surface, and site repo modes;
+use `mb site check` readiness states including `ready_for_operator_review`; keep
+domain, DNS, Cloudflare Pages, custom-domain, deploy, publishing, provider
+mutation, account changes, spend, and customer contact behind explicit gates.
+Provider boundary phrase: provider mutation.
+Codex support stays read-only planning until runtime smoke proves site writes,
+builds, deploys, and publishing.
+
 **CLI facts first:** In business repo mode, run `mb status --json --peek`
 before setup/provider/launch-readiness advice. In site repo mode or whenever a
 site repo is known, run `mb site check "$SITE_REPO" --business-repo

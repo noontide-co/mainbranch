@@ -140,6 +140,21 @@ REQUIRED_SHELL_PHRASES_BY_WORKFLOW: dict[str, dict[str, str]] = {
         "account mutation boundary": "mutate provider accounts",
         "Codex support boundary": "read-only planning",
     },
+    "mb-site": {
+        "site modes": "plan, brief, build, preview, check, publish, iterate, graduate, or recover",
+        "site shapes": "lander, minisite, website",
+        "sales-video surfaces": "sales-video surface",
+        "site readiness facts": "facts.expected_events",
+        "readiness states": "ready_for_operator_review",
+        "site check command": "mb site check",
+        "repo descriptor": ".mainbranch/repo.json",
+        "legacy source descriptor": ".mainbranch/source.json",
+        "Cloudflare gate": "Cloudflare Pages",
+        "provider boundary": "provider mutation",
+        "DNS boundary": "DNS",
+        "deploy boundary": "deploy",
+        "Codex support boundary": "read-only planning",
+    },
 }
 CODEX_FORBIDDEN_PHRASES_BY_WORKFLOW: dict[str, tuple[str, ...]] = {
     "mb-think": (
@@ -198,6 +213,19 @@ CODEX_FORBIDDEN_PHRASES_BY_WORKFLOW: dict[str, tuple[str, ...]] = {
         "Codex can publish",
         "Codex can schedule",
         "Codex can mutate provider accounts",
+        "Codex can contact customers",
+    ),
+    "mb-site": (
+        "Run `/mb-site`",
+        "Claude Code skills work in Codex",
+        "Claude Code slash commands work inside Codex",
+        "Claude slash commands",
+        "slash-command parity",
+        "Codex can build sites",
+        "Codex can deploy",
+        "Codex can publish",
+        "Codex can mutate provider accounts",
+        "Codex can change DNS",
         "Codex can contact customers",
     ),
 }
@@ -476,6 +504,8 @@ def render_claude_shell(workflow: WorkflowSource) -> str:
         return _render_bet_claude_shell(workflow)
     if workflow.name == "mb-organic":
         return _render_organic_claude_shell(workflow)
+    if workflow.name == "mb-site":
+        return _render_site_claude_shell(workflow)
     if workflow.name in {"mb-start-status", "mb-setup", "mb-maintenance-repair"}:
         return _render_daily_claude_shell(workflow)
     return _render_start_money_path_claude_shell(workflow)
@@ -739,6 +769,8 @@ def render_codex_shell(workflow: WorkflowSource) -> str:
         return _render_bet_codex_shell(workflow)
     if workflow.name == "mb-organic":
         return _render_organic_codex_shell(workflow)
+    if workflow.name == "mb-site":
+        return _render_site_codex_shell(workflow)
     if workflow.name in {"mb-start-status", "mb-setup", "mb-maintenance-repair"}:
         return _render_daily_codex_shell(workflow)
     return _render_start_money_path_codex_shell(workflow)
@@ -1294,6 +1326,169 @@ Next business action: <one clear owner-facing step>.
 Use business language first. New coordinated work uses pushes. Legacy content
 structures are migration input only. Runtime smoke is required before docs say
 this workflow is supported for Codex writes.
+"""
+    return output
+
+
+def _render_site_claude_shell(workflow: WorkflowSource) -> str:
+    """Render a Claude Code shell snapshot for the site workflow."""
+
+    output = f"""# Generated Claude Shell: {workflow.title}
+
+Source workflow: `{_display_path(workflow.path)}`
+Runtime support: `claude_code: supported_shell`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
+
+Use from `/mb-site` when the operator wants to plan, brief, build, preview,
+check, publish, iterate, graduate, or recover an owned conversion surface.
+Preserve the existing Claude skill's lander, minisite, website, sales-video
+surface, business-repo mode, site-repo mode, Cloudflare gate, and checkpoint
+contract.
+
+This snapshot does not replace shipped `.claude/skills/mb-site/SKILL.md`.
+
+## Required mb Commands
+
+{_bullet_list(workflow.required_mb_commands)}
+
+## Required JSON Fact Paths
+
+{_bullet_list(workflow.json_facts)}
+
+## Routing
+
+1. Read deterministic facts first: status, start when runtime facts matter,
+   repair plan when blockers appear, Cloudflare/provider readiness, site-check
+   readiness, relationship gaps, validation, and checkpoint plan.
+2. Detect business repo mode or site repo mode. Use `.mainbranch/repo.json` as
+   the preferred site descriptor and legacy `.mainbranch/source.json` only as
+   compatibility.
+3. Support plan, brief, build, preview, check, publish, iterate, graduate, or
+   recover modes across lander, minisite, website, and sales-video surface
+   shapes.
+4. For business-repo site readiness, use `measurement.*` facts from status. For
+   site-repo readiness, use top-level `state`, `blocked`, `manual`, `evidence`,
+   `facts.expected_events`, `facts.provider_state`, `source`, and
+   `child_descriptor` from `mb site check`. Use exact readiness states such as
+   ready_for_operator_review; do not invent ready_for_launch.
+5. Draft from active offer, audience, voice, content strategy, proof facts,
+   relevant research, decisions, active pushes, and MoneyPath facts. Route thin
+   offers or unsupported claims to `mb-think` before page copy.
+6. Route coordinated site work to `pushes/<YYYY-MM-DD-slug>/push.md`, site
+   records to `pushes/<YYYY-MM-DD-slug>/site.md` or the relevant offer note,
+   research to `research/`, locked briefs to `decisions/`, and descriptors to
+   `.mainbranch/repo.json` in the site repo after approval.
+7. Use `mb validate --cross-refs --json` after approved business-repo link,
+   push, site, brief, or related-link edits. Use `mb site check` for site repo
+   readiness and the checkpoint plan before offering an approval-gated save.
+8. Keep provider gates explicit. Do not buy domains, change DNS, create
+   Cloudflare Pages projects, attach custom domains, deploy, git push, publish,
+   spend, perform provider mutation, mutate provider accounts, or contact
+   customers. Do not contact customers or execute account changes without
+   explicit approval and runtime evidence for that surface.
+
+## Handoff Shape
+
+```text
+Site mode: <plan, brief, build, preview, check, publish, iterate, graduate, or recover>.
+Repo mode: <business repo, site repo, both linked, or unclear>.
+Facts read: <status/start/connect/site-check/validation/checkpoint facts>.
+Shape: <lander, minisite, website, sales-video surface, or unknown>.
+Offer/CTA: <resolved, thin, blocked, or needs decision>.
+Readiness: <missing, blocked, ready_for_preview, ready_for_operator_review, ready, or not checked>.
+Provider posture: <read-only, connected, blocked, approval needed, or unsupported>.
+Artifact route: <business push/site/decision/research path, site repo target, or none>.
+Write plan: <files to create/edit or planning only>.
+Approval needed before writes/provider action: <yes/no and exact action>.
+Next business action: <one clear owner-facing step>.
+```
+
+Use business language first. Site code commits still use the site repo's normal
+git flow; business-repo saves use `mb checkpoint`. Codex support stays
+read-only planning until runtime smoke proves site writes, builds, deploys, and
+publishing.
+"""
+    return output
+
+
+def _render_site_codex_shell(workflow: WorkflowSource) -> str:
+    """Render Codex CLI guidance for the site workflow."""
+
+    output = f"""# Generated Codex Workflow Guidance: {workflow.title}
+
+Source workflow: `{_display_path(workflow.path)}`
+Runtime support: `codex_cli: {workflow.runtime_support.get("codex_cli", "")}`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
+
+Codex uses the global Main Branch `mb-site` skill as a read-only planning and
+site-readiness route. This guidance is generated from the engine workflow
+source and does not claim supported site writes, builds, deploys, publishing,
+provider mutation, account changes, customer contact, or Claude Code
+entrypoints in Codex.
+
+## Required mb Commands
+
+{_bullet_list(workflow.required_mb_commands)}
+
+## Required JSON Fact Paths
+
+{_bullet_list(workflow.json_facts)}
+
+## Codex Route
+
+1. Use the business repo `AGENTS.md` bootstrap posture: read facts first, keep
+   writes approval-gated, and translate git/provider details into business
+   language.
+2. Read deterministic facts before raw markdown: status, start when runtime
+   facts matter, repair plan when blockers appear, provider readiness,
+   site-check readiness, relationship gaps, validation, and checkpoint plan.
+3. Detect business repo mode or site repo mode. Use `.mainbranch/repo.json` as
+   the preferred site descriptor and legacy `.mainbranch/source.json` only as
+   compatibility.
+4. Guide plan, brief, build, preview, check, publish, iterate, graduate, or
+   recover modes across lander, minisite, website, and sales-video surface
+   shapes from the shared contract.
+5. For business-repo site readiness, use `measurement.*` facts from status. For
+   site-repo readiness, use top-level `state`, `blocked`, `manual`, `evidence`,
+   `facts.expected_events`, `facts.provider_state`, `source`, and
+   `child_descriptor` from `mb site check`. Use exact readiness states such as
+   ready_for_operator_review; do not invent ready_for_launch.
+6. Codex may draft patch-shaped recommendations, sample copy, review notes,
+   readiness summaries, and exact file targets, then stop before changing files
+   or running build/deploy actions.
+7. Name artifact routes as plans only: `pushes/<YYYY-MM-DD-slug>/push.md`,
+   `pushes/<YYYY-MM-DD-slug>/site.md`, `research/`, `decisions/`, and
+   `.mainbranch/repo.json`.
+8. If the operator wants proposed site changes applied, route them to Claude
+   Code `/mb-site` or another supported write surface until Codex site-write
+   and build/deploy smoke proves this route. Do not run post-change validation,
+   checkpoint commands, git pushes, deploys, or provider tools as if Codex
+   edited files.
+9. Keep provider gates explicit. Do not buy domains, change DNS, create
+   Cloudflare Pages projects, attach custom domains, deploy, git push, publish,
+   spend, mutate provider accounts, contact customers, or execute account
+   changes.
+
+## Handoff Shape
+
+```text
+Site mode: <plan, brief, build, preview, check, publish, iterate, graduate, or recover>.
+Repo mode: <business repo, site repo, both linked, or unclear>.
+Facts read: <status/start/connect/site-check/validation/checkpoint facts>.
+Shape: <lander, minisite, website, sales-video surface, or unknown>.
+Offer/CTA: <resolved, thin, blocked, or needs decision>.
+Readiness: <missing, blocked, ready_for_preview, ready_for_operator_review, ready, or not checked>.
+Provider posture: <read-only, connected, blocked, approval needed, or unsupported>.
+Artifact route: <business push/site/decision/research path, site repo target, or none>.
+Write plan: <files to create/edit or planning only>.
+Approval needed before writes/provider action: <yes/no and exact action>.
+Next business action: <one clear owner-facing step>.
+```
+
+Use business language first. Runtime smoke is required before docs say this
+workflow is supported for Codex site writes, builds, deploys, or publishing.
 """
     return output
 

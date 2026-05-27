@@ -8,6 +8,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from mb import codex as codex_mod
+from mb import site as site_mod
 from mb.cli import app
 from mb.workflows import (
     codex_shell_policy_errors,
@@ -29,12 +30,14 @@ THINK_WORKFLOW = REPO_ROOT / "workflows" / "mb-think" / "workflow.md"
 END_WORKFLOW = REPO_ROOT / "workflows" / "mb-end" / "workflow.md"
 BET_WORKFLOW = REPO_ROOT / "workflows" / "mb-bet" / "workflow.md"
 ORGANIC_WORKFLOW = REPO_ROOT / "workflows" / "mb-organic" / "workflow.md"
+SITE_WORKFLOW = REPO_ROOT / "workflows" / "mb-site" / "workflow.md"
 SHIPPED_START_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-start" / "SKILL.md"
 SHIPPED_STATUS_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-status" / "SKILL.md"
 SHIPPED_THINK_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-think" / "SKILL.md"
 SHIPPED_END_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-end" / "SKILL.md"
 SHIPPED_BET_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-bet" / "SKILL.md"
 SHIPPED_ORGANIC_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-organic" / "SKILL.md"
+SHIPPED_SITE_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-site" / "SKILL.md"
 FIXTURES = REPO_ROOT / "mb" / "tests" / "fixtures" / "workflows"
 AGENTS_TEMPLATE = REPO_ROOT / "mb" / "mb" / "_data" / "templates" / "AGENTS.md.tmpl"
 WORKFLOW_PATHS = [
@@ -46,7 +49,35 @@ WORKFLOW_PATHS = [
     END_WORKFLOW,
     BET_WORKFLOW,
     ORGANIC_WORKFLOW,
+    SITE_WORKFLOW,
 ]
+SITE_STATUS_JSON_FACTS = {
+    "measurement",
+    "measurement.available",
+    "measurement.state",
+    "measurement.facts.expected_events",
+    "measurement.blocked_count",
+    "measurement.manual_count",
+}
+SITE_CHECK_JSON_FACTS = {
+    "state",
+    "blocked",
+    "manual",
+    "evidence",
+    "facts.expected_events",
+    "facts.provider_state",
+    "source",
+    "child_descriptor",
+}
+
+
+def _json_path_exists(payload: object, path: str) -> bool:
+    current = payload
+    for part in path.split("."):
+        if not isinstance(current, dict) or part not in current:
+            return False
+        current = current[part]
+    return True
 
 
 def test_start_money_path_workflow_source_validates() -> None:
@@ -190,6 +221,17 @@ def test_shipped_claude_think_skill_preserves_shared_workflow_contract() -> None
     assert "- `runtime.codex`" not in skill_text
 
 
+def test_generated_site_claude_and_codex_snapshots_match_fixtures() -> None:
+    workflow = load_workflow(SITE_WORKFLOW)
+
+    assert render_claude_shell(workflow) == (FIXTURES / "mb-site.claude.md").read_text(
+        encoding="utf-8"
+    )
+    assert render_codex_shell(workflow) == (FIXTURES / "mb-site.codex.md").read_text(
+        encoding="utf-8"
+    )
+
+
 def test_shipped_claude_end_skill_preserves_shared_workflow_contract() -> None:
     workflow = load_workflow(END_WORKFLOW)
     skill_text = SHIPPED_END_SKILL.read_text(encoding="utf-8")
@@ -267,6 +309,14 @@ def test_shipped_claude_organic_skill_preserves_shared_workflow_contract() -> No
 
     assert shell_drift_errors(workflow, skill_text) == []
     assert "workflows/mb-organic/workflow.md" in skill_text
+
+
+def test_shipped_claude_site_skill_preserves_shared_workflow_contract() -> None:
+    workflow = load_workflow(SITE_WORKFLOW)
+    skill_text = SHIPPED_SITE_SKILL.read_text(encoding="utf-8")
+
+    assert shell_drift_errors(workflow, skill_text) == []
+    assert "workflows/mb-site/workflow.md" in skill_text
 
 
 def test_shipped_claude_start_skill_preserves_core_trigger_markers() -> None:
@@ -407,6 +457,32 @@ def test_codex_contract_markers_match_organic_workflow_source() -> None:
         tuple(workflow.public_private_boundaries)
         == codex_mod.CODEX_ORGANIC_PUBLIC_PRIVATE_BOUNDARIES
     )
+
+
+def test_codex_contract_markers_match_site_workflow_source() -> None:
+    workflow = load_workflow(SITE_WORKFLOW)
+
+    assert codex_mod.CODEX_SITE_SOURCE_WORKFLOW == "workflows/mb-site/workflow.md"
+    assert tuple(workflow.required_mb_commands) == codex_mod.CODEX_SITE_REQUIRED_MB_COMMANDS
+    assert tuple(workflow.json_facts) == codex_mod.CODEX_SITE_REQUIRED_JSON_FACTS
+    assert tuple(workflow.approval_gates) == codex_mod.CODEX_SITE_APPROVAL_GATES
+    assert (
+        tuple(workflow.public_private_boundaries) == codex_mod.CODEX_SITE_PUBLIC_PRIVATE_BOUNDARIES
+    )
+
+
+def test_site_workflow_json_facts_match_status_and_site_check_shapes(tmp_path: Path) -> None:
+    workflow = load_workflow(SITE_WORKFLOW)
+    facts = set(workflow.json_facts)
+
+    assert SITE_STATUS_JSON_FACTS.issubset(facts)
+    assert SITE_CHECK_JSON_FACTS.issubset(facts)
+    assert not any(fact.startswith("site_check.") for fact in facts)
+    assert "child_repo" not in facts
+
+    site_check = site_mod.check(tmp_path)
+    for fact in SITE_CHECK_JSON_FACTS:
+        assert _json_path_exists(site_check, fact), fact
 
 
 def test_codex_command_surface_and_inventory_render() -> None:
@@ -689,7 +765,12 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
         "source_privacy_boundaries"
         in by_id["organic-content"]["source_of_truth"]["contract_checks"]
     )
-    assert by_id["site"]["source_of_truth"]["next_required_issue"] == "#749"
+    assert by_id["site"]["codex_status"] == "read_only_planning"
+    assert by_id["site"]["source_status"] == "shared_workflow_source"
+    assert by_id["site"]["source_of_truth"]["shared_source"] == "workflows/mb-site/workflow.md"
+    assert by_id["site"]["source_of_truth"]["next_required_issue"] is None
+    assert by_id["site"]["codex_entrypoints"] == ["main-branch mb-site"]
+    assert "provider_gates" in by_id["site"]["source_of_truth"]["contract_checks"]
     assert by_id["google-ads-search-launch-playbook"]["surface_type"] == "playbook"
     assert by_id["google-ads-search-launch-playbook"]["playbook_status"] == "draft_manual"
     assert by_id["google-ads-search-launch-playbook"]["codex_entrypoints"] == []
@@ -851,6 +932,7 @@ def test_codex_shared_global_skills_are_rendered_from_workflow_sources() -> None
         (END_WORKFLOW, "mb-end"),
         (BET_WORKFLOW, "mb-bet"),
         (ORGANIC_WORKFLOW, "mb-organic"),
+        (SITE_WORKFLOW, "mb-site"),
     ):
         workflow = load_workflow(path)
         text = codex_mod.render_codex_global_skill_md(name)
@@ -932,6 +1014,47 @@ def test_organic_codex_shell_keeps_read_only_planning_boundary() -> None:
     assert "Do not publish" in shell
     assert "mutate provider accounts" in shell
     assert "Run `/mb-organic`" not in shell
+    assert "slash" not in shell.lower()
+
+
+def test_site_runtime_shells_surface_site_contract_and_provider_boundaries() -> None:
+    workflow = load_workflow(SITE_WORKFLOW)
+
+    for shell in (render_claude_shell(workflow), render_codex_shell(workflow)):
+        assert "plan, brief, build, preview, check, publish, iterate, graduate, or recover" in shell
+        assert "lander, minisite, website" in shell
+        assert "sales-video surface" in shell
+        assert "facts.expected_events" in shell
+        assert "child_descriptor" in shell
+        assert "measurement.*" in shell
+        assert "ready_for_operator_review" in shell
+        assert "mb site check" in shell
+        assert ".mainbranch/repo.json" in shell
+        assert ".mainbranch/source.json" in shell
+        assert "Cloudflare Pages" in shell
+        assert "DNS" in shell
+        assert "deploy" in shell
+        assert "provider mutation" in shell
+        assert "contact customers" in shell
+
+
+def test_site_codex_shell_keeps_read_only_planning_boundary() -> None:
+    workflow = load_workflow(SITE_WORKFLOW)
+    shell = render_codex_shell(workflow)
+
+    assert codex_shell_policy_errors(workflow, shell) == []
+    assert "Runtime support: `codex_cli: read_only_planning`" in shell
+    assert "read-only planning" in shell
+    assert "site-readiness route" in shell
+    assert "does not claim supported site writes" in shell
+    assert "Runtime smoke is required before docs say" in shell
+    assert "workflow is supported for Codex site writes" in shell
+    assert "patch-shaped recommendations" in shell
+    assert "stop before changing files" in shell
+    assert "Do not buy domains" in shell
+    assert "change DNS" in shell
+    assert "deploy" in shell
+    assert "Run `/mb-site`" not in shell
     assert "slash" not in shell.lower()
 
 
