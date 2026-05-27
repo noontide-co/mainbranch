@@ -38,7 +38,7 @@ This snapshot does not replace shipped `.claude/skills/mb-think/SKILL.md`.
 - `readiness`
 - `drift.items`
 - `books`
-- `runtime.codex`
+- `runtime.codex_cli`
 - `runtime.claude_code`
 
 ## Routing

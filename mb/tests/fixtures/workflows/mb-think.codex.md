@@ -39,7 +39,7 @@ workflows are available in Codex.
 - `readiness`
 - `drift.items`
 - `books`
-- `runtime.codex`
+- `runtime.codex_cli`
 - `runtime.claude_code`
 
 ## Codex Route

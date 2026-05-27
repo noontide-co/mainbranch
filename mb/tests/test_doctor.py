@@ -838,7 +838,7 @@ def test_doctor_repair_plan_reports_custom_codex_agents_missing_source_item(
     init_run(path=str(repo), name="Acme")
     agents = repo / "AGENTS.md"
     agents.write_text(
-        agents.read_text(encoding="utf-8").replace("- `runtime.codex`\n", "", 1)
+        agents.read_text(encoding="utf-8").replace("- `runtime.codex_cli`\n", "", 1)
         + "\n## Local Notes\n\nKeep this operator-specific note.\n",
         encoding="utf-8",
     )
@@ -851,7 +851,7 @@ def test_doctor_repair_plan_reports_custom_codex_agents_missing_source_item(
     agents_check = next(check for check in section["checks"] if check["name"] == "AGENTS.md")
     assert agents_check["state"] == "warn"
     assert agents_check["lifecycle_discovery_ok"] is False
-    assert "- `runtime.codex`" in agents_check["missing_lifecycle_guidance"]
+    assert "- `runtime.codex_cli`" in agents_check["missing_lifecycle_guidance"]
     actions = {action["id"]: action for action in payload["actions"]}
     assert "codex-agents-md" in actions
 

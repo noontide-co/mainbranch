@@ -29,6 +29,8 @@ THINK_WORKFLOW = REPO_ROOT / "workflows" / "mb-think" / "workflow.md"
 END_WORKFLOW = REPO_ROOT / "workflows" / "mb-end" / "workflow.md"
 BET_WORKFLOW = REPO_ROOT / "workflows" / "mb-bet" / "workflow.md"
 ORGANIC_WORKFLOW = REPO_ROOT / "workflows" / "mb-organic" / "workflow.md"
+SHIPPED_START_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-start" / "SKILL.md"
+SHIPPED_THINK_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-think" / "SKILL.md"
 SHIPPED_END_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-end" / "SKILL.md"
 SHIPPED_BET_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-bet" / "SKILL.md"
 SHIPPED_ORGANIC_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-organic" / "SKILL.md"
@@ -161,12 +163,84 @@ def test_generated_organic_claude_and_codex_snapshots_match_fixtures() -> None:
     )
 
 
+def test_shipped_claude_start_skill_preserves_shared_workflow_contract() -> None:
+    workflow = load_workflow(START_STATUS_WORKFLOW)
+    skill_text = SHIPPED_START_SKILL.read_text(encoding="utf-8")
+
+    assert shell_drift_errors(workflow, skill_text) == []
+    assert "workflows/mb-start-status/workflow.md" in skill_text
+
+
+def test_shipped_claude_think_skill_preserves_shared_workflow_contract() -> None:
+    workflow = load_workflow(THINK_WORKFLOW)
+    skill_text = SHIPPED_THINK_SKILL.read_text(encoding="utf-8")
+
+    assert shell_drift_errors(workflow, skill_text) == []
+    assert "workflows/mb-think/workflow.md" in skill_text
+    assert "- `runtime.codex_cli`" in skill_text
+    assert "- `runtime.codex`" not in skill_text
+
+
 def test_shipped_claude_end_skill_preserves_shared_workflow_contract() -> None:
     workflow = load_workflow(END_WORKFLOW)
     skill_text = SHIPPED_END_SKILL.read_text(encoding="utf-8")
 
     assert shell_drift_errors(workflow, skill_text) == []
     assert "workflows/mb-end/workflow.md" in skill_text
+
+
+def test_shipped_claude_end_skill_keeps_crystallize_writes_approval_gated() -> None:
+    skill_text = SHIPPED_END_SKILL.read_text(encoding="utf-8")
+    forbidden = (
+        "### 5f. Always Save the Crystallize Output",
+        "This is not optional.",
+        "Every crystallize moment gets saved as a research file",
+        "If an insight was substantial enough to update reference directly",
+    )
+
+    for phrase in forbidden:
+        assert phrase not in skill_text
+    assert "explicit operator approval before writing" in skill_text
+    assert "ask for approval before\nediting" in skill_text
+
+
+def test_think_runtime_guidance_uses_codex_cli_fact_path() -> None:
+    workflow = load_workflow(THINK_WORKFLOW)
+    texts = [
+        workflow.path.read_text(encoding="utf-8"),
+        AGENTS_TEMPLATE.read_text(encoding="utf-8"),
+        render_claude_shell(workflow),
+        render_codex_shell(workflow),
+        SHIPPED_THINK_SKILL.read_text(encoding="utf-8"),
+    ]
+
+    for text in texts:
+        assert "- `runtime.codex_cli`" in text
+        assert "- `runtime.codex`" not in text
+
+
+def test_start_status_preserves_bet_trigger_fact_paths() -> None:
+    workflow = load_workflow(START_STATUS_WORKFLOW)
+    required = {
+        "brain.bets",
+        "brain.bets.active",
+        "brain.bets.due_soon",
+        "brain.bets.overdue",
+        "brain.bets.exit_criteria",
+    }
+    shells = [
+        workflow.path.read_text(encoding="utf-8"),
+        render_claude_shell(workflow),
+        render_codex_shell(workflow),
+        SHIPPED_START_SKILL.read_text(encoding="utf-8"),
+    ]
+
+    assert required.issubset(set(workflow.json_facts))
+    for text in shells:
+        for fact in sorted(required):
+            assert f"- `{fact}`" in text
+    assert "triggered kill" in workflow.path.read_text(encoding="utf-8")
+    assert "triggered double-down" in workflow.path.read_text(encoding="utf-8")
 
 
 def test_shipped_claude_bet_skill_preserves_shared_workflow_contract() -> None:
