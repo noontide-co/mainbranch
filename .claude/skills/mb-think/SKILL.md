@@ -8,8 +8,6 @@ loops: [sense, decide, ship]
 
 Research, decide, and codify knowledge into reference files.
 
-**Shared source:** `workflows/mb-think/workflow.md`; preserve `runtime.codex_cli`, research depth recommendation, source-specific research files, decision/codify routing, public/private handling, and checkpoint approval. Do not tell Codex users to run Claude Code entrypoints.
-
 ## Don't Overthink Think
 
 This skill is for: **"I don't know what happens next. I just need to start."**
@@ -71,9 +69,11 @@ Public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
 `no_private_runtime_settings`, `no_private_dms_or_gated_communities`, and
 `no_raw_finance_legal_records`.
 
-Core route: research depth recommendation, parallel research files when multiple
-source types are needed, decision, codify, stale source cleanup,
-public/private handling, checkpoint approval, and explicit write approval. Do not tell Codex users to run Claude Code entrypoints.
+Core route: research depth recommendation, parallel research files for
+source-specific research files when multiple source types are needed, decision,
+codify, stale source cleanup, public/private handling, checkpoint plan,
+checkpoint approval, and explicit write approval.
+Do not tell Codex users to run Claude Code entrypoints.
 
 When research identifies a reusable growth mechanic such as a comment-keyword,
 DM-keyword, public reply/link, resource delivery, provider setup recipe, or
