@@ -47,6 +47,9 @@ Required fact paths:
 - `brain.bets.due_soon`
 - `brain.bets.overdue`
 - `brain.bets.exit_criteria`
+- `brain.bets.exit_criteria.missing`
+- `brain.bets.exit_criteria.triggered_failure_signals`
+- `brain.bets.exit_criteria.triggered_double_down_signals`
 - `vocabulary`
 
 Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`,
