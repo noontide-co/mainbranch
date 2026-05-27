@@ -34,7 +34,7 @@ json_facts:
   - readiness
   - drift.items
   - books
-  - runtime.codex
+  - runtime.codex_cli
   - runtime.claude_code
 approval_gates:
   - updates_repairs_migrations
@@ -123,7 +123,7 @@ The runtime shell must preserve these paths from the workflow source:
 - `readiness`
 - `drift.items`
 - `books`
-- `runtime.codex`
+- `runtime.codex_cli`
 - `runtime.claude_code`
 
 Treat these as facts, not strategy. The CLI reports legibility, connection,

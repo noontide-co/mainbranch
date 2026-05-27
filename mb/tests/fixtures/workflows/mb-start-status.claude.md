@@ -33,6 +33,11 @@ This snapshot does not replace shipped `.claude/skills` prose.
 - `onboarding`
 - `integrations`
 - `github`
+- `brain.bets`
+- `brain.bets.active`
+- `brain.bets.due_soon`
+- `brain.bets.overdue`
+- `brain.bets.exit_criteria`
 - `vocabulary`
 
 ## Routing

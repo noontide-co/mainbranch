@@ -36,6 +36,11 @@ workflows are available in Codex.
 - `onboarding`
 - `integrations`
 - `github`
+- `brain.bets`
+- `brain.bets.active`
+- `brain.bets.due_soon`
+- `brain.bets.overdue`
+- `brain.bets.exit_criteria`
 - `vocabulary`
 
 ## Codex Route

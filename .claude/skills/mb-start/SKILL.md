@@ -35,6 +35,56 @@ integrations, GitHub, team, bets, dirty git, since-last-check,
 `ranked_actions`. Use GitHub activity `author_display` / `author_known` when
 naming people. Parse the full JSON once; do not slice status output with `head`
 or `sed` in the normal path.
+
+**Shared source:** The portable daily start/status workflow contract lives in
+`workflows/mb-start-status/workflow.md`. This Claude skill is the Claude Code
+shell over that source.
+
+**Shared contract markers:** Keep these aligned with the shared source.
+
+Required commands:
+
+- `mb status --json --peek`
+- `mb start --json`
+- `mb doctor repair --plan`
+
+Required fact paths:
+
+- `money_path`
+- `money_path.objects.proof.quality`
+- `validation.file_contracts`
+- `content_strategy`
+- `ranked_actions`
+- `update`
+- `readiness`
+- `drift.items`
+- `runtime.codex_cli`
+- `runtime.claude_code`
+- `since_last_check`
+- `journal`
+- `checkpoint`
+- `onboarding`
+- `integrations`
+- `github`
+- `brain.bets`
+- `brain.bets.active`
+- `brain.bets.due_soon`
+- `brain.bets.overdue`
+- `brain.bets.exit_criteria`
+- `vocabulary`
+
+Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`,
+`provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`,
+`destructive_operations`, and `status_marker`.
+
+Public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
+`no_customer_member_data`, `no_private_runtime_settings`, and
+`no_raw_finance_legal_records`.
+
+Core route: status facts first, runtime mismatch gates before business routing,
+one owner-facing recommendation, business language first, and explicit approval
+before mutating the status marker or doing durable writes.
+
 **Continuity facts:** Use `since_last_check.journal`, top-level `journal`,
 GitHub activity, and `checkpoint` from status to explain "where we left off."
 Do not run raw `git log` unless status says journal facts are unavailable. If
@@ -87,35 +137,18 @@ providers, spending money, changing topology, or creating checkpoints.
 
 ---
 
-## CRITICAL: Repo Selection Rules
+## Repo Selection Rules
 
-**CWD-first wins.** If current Main Branch markers exist in CWD, the user is already in their business repo — no selection needed. Just confirm: "Working in **[repo-name]**." If CWD looks like an old Main Branch repo, keep CWD as migration input. Run `mb status --json --peek` and `mb doctor repair --plan` before fallback config or discovery. Do not write to old repo structure; tell the operator to follow the repair/migration plan.
+CWD-first wins. If current Main Branch markers exist in CWD, confirm the repo and
+continue. If CWD looks like old repo shape, keep CWD as migration input and run
+`mb status --json --peek` plus `mb doctor repair --plan` before discovery.
 
-**Only ask which repo when CWD is NOT a business repo** (fallback to config). In that case, list ALL validated repos from `recent_repos`:
-
-> "Found your repos:
->
-> 1. [default-repo-name] (saved default)
-> 2. [other-repo-name]
-> 3. Switch to different repo
->
-> (hit a number)"
-
-**If only one repo in config:**
-
-> "Found your saved repo:
->
-> 1. [saved-repo-name] (saved)
-> 2. Switch to different repo
->
-> (hit a number)"
-
-**DO NOT skip this question when in fallback mode.** Users have multiple repos. The saved default is a suggestion, not automatic.
-
-**After user selects a repo from legacy fallback config:** Treat the selected
-repo as session-scoped unless a current `mb` command exposes an explicit
-persistence path. Do not write `default_repo` into `~/.config/vip/local.yaml`,
-and do not create or update `.vip/config.yaml`.
+Only ask which repo when CWD is not a business repo. In fallback mode, list all
+validated `recent_repos`, include a switch option, and do not treat the saved
+default as automatic. Treat legacy config selections as session-scoped unless a
+current `mb` command exposes an explicit persistence path. Do not write
+`default_repo` into `~/.config/vip/local.yaml`, and do not create or update
+`.vip/config.yaml`.
 
 ---
 
@@ -125,16 +158,9 @@ Always use numbered lists for multi-choice: business repo selection, skill
 routing, launch blockers, and provider setup.
 
 Use one active choice namespace per turn. If top recommendations are numbered,
-do not also number offers or skill routes in the same response. Use offer
-slugs/names (`community`, `newsletter`, `all`) or letters for the secondary
-set, and make the prompt explicit:
-
-> "Reply `1` for the top recommendation, or reply with an offer slug like
-> `community`."
-
-Never present two visible choices where the same number means different
-actions. If the operator replies with an ambiguous number, ask what they meant
-before taking action.
+use offer slugs/names or letters for secondary choices. Never present two
+visible choices where the same number means different actions; ask when a reply
+is ambiguous.
 
 ---
 
@@ -168,19 +194,21 @@ mb status --json --peek
 - `ranked_actions` is the deterministic list of one to three business moves.
   Surface the first action as the recommendation, including its reason and
   cited signal summaries.
+- `brain.bets.active`, `brain.bets.due_soon`, `brain.bets.overdue`, and
+  `brain.bets.exit_criteria` are the deterministic bet trigger facts. Use them
+  for active, due-soon, overdue, missing-exit, triggered kill, triggered
+  double-down, close, update, and narrate moments before inventing bet state
+  from prose.
 - `money_path` maps customer progress, offer, proof, CTA, channel, push,
-  playbook, page readiness, and outcome feedback. Use levels, objects, and
-  ranked actions as evidence; do not call the offer "good" or "will convert."
-  Cite `money_path.objects.proof.quality` facts: generic testimonials, outcomes, offer linkage, typicality, and outcome feedback.
-- `validation.file_contracts` maps business-file shape gaps. For offer gaps, route to `/mb-think` and ask before editing durable offer files.
-- `content_strategy` maps the simple file and optional layers before markdown parsing.
-- `readiness` gates whether setup/repair work must happen before output skills.
-- `drift.items` names stale or broken status signals and repair commands.
+  playbook, page readiness, and outcome feedback. Use it as evidence; cite
+  `money_path.objects.proof.quality` facts instead of claiming an offer will
+  convert.
+- `validation.file_contracts`, `content_strategy`, `readiness`, and
+  `drift.items` map file gaps, content layers, setup gates, and repair commands.
 - `onboarding.summary` and `onboarding.checklist` replace separate onboarding
   probes unless the status report is unavailable.
-- `journal`, `since_last_check.journal`, `integrations.github`,
-  `integrations.providers`, `github.sections`, `measurement`, and
-  `brain.bets` supply continuity facts for routing and triage.
+- `journal`, `since_last_check.journal`, `integrations`, `github`,
+  `measurement`, and `brain.bets` supply continuity facts for routing.
 
 Only run a narrower fallback command such as `mb onboard status --json`,
 `mb doctor`, `mb validate --cross-refs`, or `mb connect doctor --json` when status
@@ -341,13 +369,10 @@ without making the repo feel audited or behind.
 
 ## Step 7: Defer Full Context Loading
 
-**Do NOT read full reference files into main.** Readiness (Step 6) already scored them — that's enough for routing. Full context loading happens in the selected skill or triage agents, not here.
-
-**Why:** Reading soul.md + offer.md + audience.md + voice.md into main burns 15-30K tokens that get duplicated when the skill re-reads them. The triage test showed /mb-start hitting 61% context before any work began. Main stays lean; skills/agents load what they need.
-
-**What main knows after Step 6:** Readiness scores, which files exist, composite score, gaps. That's enough to present the menu and gate routing.
-
-**Exception:** Read `[repo]/CLAUDE.md` (the business brain) — it's small and needed for personality/routing awareness. Skip the 4 full core files.
+Do not read full reference files into main. Status readiness already names the
+scores, files, and gaps needed for routing. The selected skill or triage agent
+loads deep context. Exception: read `[repo]/CLAUDE.md` when present because it
+is small and helps with routing tone.
 
 **Onboarding exception:** When onboarding is incomplete and current `core/`
 files already exist, read enough of those files to avoid asking for facts the
@@ -371,38 +396,15 @@ find "$REPO_PATH/core/offers" -mindepth 2 -maxdepth 2 -name "offer.md" 2>/dev/nu
 ```
 
 If `core/offers` is absent and `core/` is also absent, do not infer the offer
-from old paths. If CWD looks like an old Main Branch repo, run
-`mb status --json --peek` and/or `mb doctor repair --plan` from CWD and treat
-it as migration input.
+from old paths; treat old shape as migration input after `mb status --json
+--peek` or `mb doctor repair --plan`.
 
-**If no offers/ folder:** Single-offer mode. Skip to Step 2. Read from `core/`.
-
-**If offers/ found:** Multi-offer mode.
-1. Check current CLI status facts first. If a future `mb` JSON field exposes
-   active-offer local state, prefer that. Do not silently route from
-   `.vip/local.yaml`.
-2. If legacy active-offer state is present, do not treat it as the source of truth. Say:
-   "This repo has old active-offer session state. Continue with that offer,
-   work brand-level, or switch?" Avoid echoing raw `.vip` values unless the
-   user asks to inspect the file.
-3. If no active offer is set, present offers by slug/name, not numbers when
-   ranked actions or routes are already numbered:
-   - `community` — paid community
-   - `newsletter` — newsletter
-   - `all` — brand-level work from `core/`
-4. Treat the user's selection as session-scoped until they explicitly confirm
-   persistence. Say what will happen before writing local state:
-   "For this session I'll use **[offer]**. Save that as the active offer for
-   future sessions too?"
-5. Keep the selection session-scoped. Do not write `.vip/local.yaml` as the
-   active-offer mechanism. If a future `mb` command exposes an explicit
-   session-state contract, use that only after confirmation.
-
-**Shortcut:** `/mb-start [offer-name]` selects that offer for this session after
-validating the folder exists. Ask before saving future active-offer state.
-
-**"all" selection:** Use brand-level `core/` context for this session. Ask
-before persisting any future local state that clears an active offer.
+No `core/offers/` means single-offer mode. If offers exist, use current CLI
+status facts first, never silently route from `.vip/local.yaml`, present choices
+by slug/name when route numbers are already visible, and keep selection
+session-scoped unless the operator approves a current `mb` persistence command.
+`/mb-start [offer-name]` can select a validated offer for this session. `all`
+means brand-level `core/` context.
 
 ---
 
@@ -495,5 +497,4 @@ treat business `.vip/local.yaml` as audit input only, and do not write it.
 - [references/launch-orchestration.md](references/launch-orchestration.md) — guided offer-launch path
 
 ## Remember
-
 Router, not worker. Detect → route → let the skill do the work. One clarifying question max. Skill loads its own context — main stays lean.

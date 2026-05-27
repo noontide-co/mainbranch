@@ -99,7 +99,7 @@ This is not an audit. It is a thoughtful friend helping you close the session.
    5c. Spawn crystallize agent (Task tool)
    5d. Present output to user as-is
    5e. If user engages: stay with it (engagement protocol)
-   5f. Always save crystallize output as research file
+   5f. Propose saving crystallize output as a research file
 6. Checkpoint & close
 ```
 
@@ -303,9 +303,11 @@ If the user engages with the crystallize question, the main conversation handles
 
 See [references/crystallize-agent.md](references/crystallize-agent.md) for the full engagement protocol with examples.
 
-### 5f. Always Save the Crystallize Output
+### 5f. Propose Saving the Crystallize Output
 
-**This is not optional.** Every crystallize moment gets saved as a research file. Future crystallize agents read these for temporal pattern recognition.
+Crystallize output can help future sessions see what keeps coming up, but it is
+still a business-file write. Offer to save it as a research file and wait for
+explicit operator approval before writing.
 
 ```markdown
 ---
@@ -329,9 +331,11 @@ status: complete
 [Which files were updated as a result, or "None"]
 ```
 
-Save to: `research/YYYY-MM-DD-end-of-day-crystallize.md`
+Proposed save target: `research/YYYY-MM-DD-end-of-day-crystallize.md`
 
-If an insight was substantial enough to update reference directly (soul.md, offer.md, etc.), do so and note it in the crystallize file.
+If an insight is substantial enough to update reference directly (`core/soul.md`,
+`core/offer.md`, etc.), name the proposed target and ask for approval before
+editing. If approved, note the updated file in the crystallize file.
 
 ---
 
@@ -366,7 +370,8 @@ If yes:
 - Validate the intended subject with `mb checkpoint --validate "..." --json`.
 - After approval, save with `mb checkpoint --message "..." --yes`.
 - Use beginner-safe language: "saved checkpoint," not "ran git commit."
-- Include the crystallize research file in the checkpoint if one was created.
+- Include the crystallize research file in the checkpoint if the operator
+  approved creating one.
 Do not run raw `git add` or `git commit`.
 
 If no: Leave the work unchanged. Some people prefer to checkpoint at the start

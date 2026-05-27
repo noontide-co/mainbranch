@@ -26,6 +26,55 @@ Something came your way — a video, a voice memo, a vague feeling, a problem to
 decision, codify pass, or major reference-file update, ask whether to checkpoint.
 Run `mb checkpoint --plan --json`, show the proposed message, validate with `mb checkpoint --validate "..." --json`, then save with `mb checkpoint --message "..." --yes` only after approval; no hidden checkpoints.
 
+**Shared source:** The portable thinking workflow contract lives in
+`workflows/mb-think/workflow.md`. This Claude skill is the Claude Code shell
+over that source.
+
+**Shared contract markers:** Keep these aligned with the shared source.
+
+Required commands:
+
+- `mb status --json --peek`
+- `mb start --json`
+- `mb doctor repair --plan`
+- `mb connect doctor --json`
+- `mb checkpoint --plan --json`
+
+Required fact paths:
+
+- `money_path`
+- `money_path.objects.offer`
+- `money_path.objects.proof`
+- `money_path.objects.proof.quality`
+- `money_path.objects.product_ladder`
+- `money_path.objects.cta_path`
+- `money_path.objects.channel_strategy`
+- `money_path.objects.active_push`
+- `money_path.objects.outcome_feedback_loop`
+- `money_path.ranked_actions`
+- `validation.file_contracts`
+- `content_strategy`
+- `ranked_actions`
+- `update`
+- `readiness`
+- `drift.items`
+- `books`
+- `runtime.codex_cli`
+- `runtime.claude_code`
+
+Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`,
+`provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`,
+`destructive_operations`, `structured_collection`, and `public_issue_or_proposal`.
+
+Public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
+`no_raw_transcripts`, `no_customer_member_data`,
+`no_private_runtime_settings`, `no_private_dms_or_gated_communities`, and
+`no_raw_finance_legal_records`.
+
+Core route: research depth recommendation, parallel research files when multiple
+source types are needed, decision, codify, stale source cleanup,
+public/private handling, checkpoint approval, and explicit write approval. Do not tell Codex users to run Claude Code entrypoints.
+
 When research identifies a reusable growth mechanic such as a comment-keyword,
 DM-keyword, public reply/link, resource delivery, provider setup recipe, or
 approval gate, route the durable plan into
@@ -201,37 +250,12 @@ When routing to research mode, detect research TYPE from user intent:
 6. Never block on missing optional tools
 ```
 
-### Fallback Examples
+### Fallback Principle
 
-**YouTube without Apify:**
-> "YouTube transcript mining needs Apify MCP. Options:
-> 1. Set up Apify now (5 min)
-> 2. Paste transcript manually
-> 3. Skip this video"
-
-**X/Twitter without Grok:**
-> "X sentiment research is best with Grok, but I can use web search instead. Results will be less real-time. Proceed with web search?"
-
-**Deep research without Gemini:**
-> "Running comprehensive research using Claude Code web search. This may take longer than Gemini deep research."
-
-**Local file without whisper:**
-> "Local transcription needs a whisper variant. Check: `which mlx_whisper` or `which whisper-cli`. Or upload to a transcription service and paste the result."
-
-**Ad account data without connection:**
-> "Ad account research works best with live Meta ad account context. It is optional and only available after `mb connect` reports the official Meta path ready. Options:
-> 1. Run `mb connect plan`
-> 2. Check Ads Manager manually and paste what you find
-> 3. Skip account data, research from reference files only"
-
-**Winning-ad research without optional tools:**
-> "Winning-ad research can still run from manual exports, screenshots, pasted
-> reviews, or transcripts. Apify/Grok can speed up public comment and X research
-> when configured, but they are optional."
-
-### Key Principle
-
-**Never block on missing tools.** WebSearch + codebase search are ALWAYS available. External tools enhance but don't gate research.
+Never block on missing optional tools. Use web/codebase search, pasted source
+material, manual exports, or the provider repair command from `mb connect`.
+See [references/tool-detection.md](references/tool-detection.md) for exact
+tool-specific fallback wording.
 
 ---
 
@@ -290,23 +314,10 @@ Gather from codebase, web, user input, local recordings.
 
 **Do NOT run research agents in background** (`run_in_background: true`) — background agents cannot access MCP tools (Apify, etc.) and cannot prompt for permissions.
 
-**Mining sources:**
-
-| Source | How | Output suffix |
-|--------|-----|---------------|
-| YouTube videos | Apify transcript MCP | `-yt-mining.md` |
-| X/Twitter sentiment | Grok X Insights MCP ([grok-social.md](references/grok-social.md)) | `-x-social.md` |
-| Local video/audio | whisper-cpp ([local-transcription.md](references/local-transcription.md)) | `-local-mining.md` |
-| Voice memos | whisper-cpp | `-voice-mining.md` |
-| Authenticated community, calls, Drive/provider exports, mixed private sources | Source inventory + manifest-first filters ([source-ingestion.md](references/source-ingestion.md)) | `-source-mining.md` |
-| Instagram mining | Apify or manual | `-ig-mining.md` |
-| Ad account data | Verified Meta Ads account context | `-ad-account.md` |
-| Competitor sites | Browser MCP or web fetch | `-competitor-mining.md` |
-| Keyword gate | SERP/search sidecar, planner CSV, or WebSearch | `-keyword-gate.md` |
-| Your own emails/DMs | Paste into conversation | `-internal-mining.md` |
-| Deep research | Build prompt → Gemini/GPT | `-gemini.md` or `-gpt.md` |
-| Codebase exploration | Grep, read, subagents | `-claude-code.md` |
-| Documents (PDF, DOCX, PPTX) | markitdown / pandoc / marker ([document-ingestion.md](references/document-ingestion.md)) | `-doc-extraction.md` |
+**Mining sources:** Use [research-routing-quick-ref.md](references/research-routing-quick-ref.md)
+and the source-specific references for tool choice and output suffixes.
+Authenticated community, calls, Drive/provider exports, and other private
+source mixes route through [source-ingestion.md](references/source-ingestion.md).
 
 ### 3. Synthesize (Required)
 
@@ -480,19 +491,6 @@ Use `/mb-think` when the answer requires investigation and the choice needs docu
 
 ## Why This Matters
 
-The repo is a precision instrument. The think cycle exists to filter — not to cram everything in. Research gets synthesized, decisions get distilled, and only the sharpest insights survive into reference. Curation over collection.
-
-Reference files aren't just documentation. They're how you stay connected to why you do this.
-
-Angles evolve. Each research session may surface a new emotional entry point, a new enemy to name, a new lifestyle aspiration. The angle library in `core/proof/angles/` is additive — it grows as understanding deepens. Treating angles as locked is an anti-pattern.
-
-When AI makes information infinite, curation is the moat. The think cycle is curation in action — filtering signal from noise, codifying what matters, discarding what doesn't. Every reference file update is a curation decision.
-
-The act of researching, deciding, and codifying forces you to articulate:
-- **Why you do this** — Not the marketing reason. The real reason.
-- **Who actually benefits** — Not demographics. Real people whose lives change.
-- **What transformation you enable** — Not features. The before/after.
-
-Research and decisions go stale. Reference files compound. Every update makes all downstream content better.
-
-If the overlaps between your interests and your offer don't make sense, maybe you have the wrong offer. The think cycle should feel like pull, not push.
+Keep what changes the business. Leave the rest in research. Reference files get
+stronger when each accepted decision makes the offer, proof, audience, voice, or
+content strategy clearer.

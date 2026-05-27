@@ -12,6 +12,55 @@ repo-health checks in prose.
 **CLI facts first:** Run `mb status --json --peek` before answering, then use
 that JSON as the source of truth.
 
+**Shared source:** The portable daily start/status workflow contract lives in
+`workflows/mb-start-status/workflow.md`. This Claude skill is the Claude Code
+status shell over that source.
+
+**Shared contract markers:** Keep these aligned with the shared source.
+
+Required commands:
+
+- `mb status --json --peek`
+- `mb start --json`
+- `mb doctor repair --plan`
+
+Required fact paths:
+
+- `money_path`
+- `money_path.objects.proof.quality`
+- `validation.file_contracts`
+- `content_strategy`
+- `ranked_actions`
+- `update`
+- `readiness`
+- `drift.items`
+- `runtime.codex_cli`
+- `runtime.claude_code`
+- `since_last_check`
+- `journal`
+- `checkpoint`
+- `onboarding`
+- `integrations`
+- `github`
+- `brain.bets`
+- `brain.bets.active`
+- `brain.bets.due_soon`
+- `brain.bets.overdue`
+- `brain.bets.exit_criteria`
+- `vocabulary`
+
+Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`,
+`provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`,
+`destructive_operations`, and `status_marker`.
+
+Public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
+`no_customer_member_data`, `no_private_runtime_settings`, and
+`no_raw_finance_legal_records`.
+
+Core route: status facts first, runtime mismatch gates before business routing,
+one owner-facing recommendation, business language first, and explicit approval
+before mutating the status marker or doing durable writes.
+
 ## Workflow
 
 1. Confirm you are in the business repo. If not, ask the operator to `cd` into
@@ -44,6 +93,10 @@ mb status --json --peek
    layered channel/account/person files, stale platform rules, or disconnected
    content layers. Do not infer that health by parsing markdown yourself unless
    status says the section is unavailable.
+   Use `brain.bets.active`, `brain.bets.due_soon`, `brain.bets.overdue`, and
+   `brain.bets.exit_criteria` for active, due-soon, overdue, missing-exit,
+   triggered kill, triggered double-down, close, update, and narrate moments
+   before inventing bet state from prose.
    If `vocabulary.terms.push` defines display words, use them in
    operator-facing prose without changing current paths, frontmatter, JSON
    keys, validator rules, or command names.

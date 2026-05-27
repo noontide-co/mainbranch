@@ -616,7 +616,7 @@ status: complete
 [Whether the recommendation was followed -- updated at /mb-end if possible]
 ```
 
-**Why save:** Future triage agents read these for temporal pattern recognition. "Last time we recommended voice.md work and you chose /mb-ads instead -- did that work out?" Prevents repetitive recommendations and enables the system to learn user preferences.
+**Why save:** Future triage agents read these to spot what keeps happening over time. "Last time we recommended voice.md work and you chose /mb-ads instead -- did that work out?" This prevents repeated recommendations and helps the system learn user preferences.
 
 ---
 

@@ -257,7 +257,7 @@ CODEX_THINK_REQUIRED_JSON_FACTS = (
     "readiness",
     "drift.items",
     "books",
-    "runtime.codex",
+    "runtime.codex_cli",
     "runtime.claude_code",
 )
 CODEX_THINK_APPROVAL_GATES = (
@@ -1193,7 +1193,7 @@ Shared source required JSON fact paths:
 - `readiness`
 - `drift.items`
 - `books`
-- `runtime.codex`
+- `runtime.codex_cli`
 - `runtime.claude_code`
 
 Shared source gates: `updates_repairs_migrations`, `file_writes`,
