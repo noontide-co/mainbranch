@@ -102,6 +102,8 @@ REQUIRED_SHELL_PHRASES_BY_WORKFLOW: dict[str, dict[str, str]] = {
         "runtime mismatch gate": "runtime mismatch",
         "status marker approval": "status marker",
         "owner-facing state": "business language first",
+        "bet trigger facts": "brain.bets",
+        "bet lifecycle routing": "double-down",
     },
     "mb-setup": {
         "setup intent": "setup intent",
@@ -511,13 +513,16 @@ def _daily_codex_route_text(workflow: WorkflowSource) -> str:
             "operations, and destructive-operation requests.\n"
             "3. Use `ranked_actions`, `since_last_check`, `journal`, `money_path`, "
             "`content_strategy`, `validation.file_contracts`, `onboarding`, "
-            "`readiness`, `update`, and `drift.items` as cited facts.\n"
+            "`readiness`, `update`, `drift.items`, and `brain.bets` as cited facts.\n"
             "4. Route offer-shape gaps from `validation.file_contracts` to `mb-think` "
             "after hard gates, and ask before durable writes.\n"
-            "5. Present one clear business route and the signal behind it. Mutate the "
+            "5. Use due-soon and overdue bet deadlines, missing exit criteria, triggered "
+            "failure signals, and triggered double-down signals for update, kill, close, "
+            "double-down, or narrate routing.\n"
+            "6. Present one clear business route and the signal behind it. Mutate the "
             "status marker only when the operator explicitly approves recording the "
             "daily check-in.\n"
-            "6. Ask before business-file writes, checkpoints, repairs, updates, migrations, "
+            "7. Ask before business-file writes, checkpoints, repairs, updates, migrations, "
             "provider mutation, publishing, spend, customer contact, destructive operations, "
             "or public issue/proposal submission."
         )
@@ -558,13 +563,16 @@ def _daily_claude_route_text(workflow: WorkflowSource) -> str:
             "operations, and destructive-operation requests.\n"
             "3. Use `ranked_actions`, `since_last_check`, `journal`, `money_path`, "
             "`content_strategy`, `validation.file_contracts`, `onboarding`, "
-            "`readiness`, `update`, and `drift.items` as cited facts.\n"
+            "`readiness`, `update`, `drift.items`, and `brain.bets` as cited facts.\n"
             "4. Route offer-shape gaps from `validation.file_contracts` to `/mb-think` "
             "after hard gates, and ask before durable writes.\n"
-            "5. Present one clear business route and the signal behind it. Mutate the "
+            "5. Use due-soon and overdue bet deadlines, missing exit criteria, triggered "
+            "failure signals, and triggered double-down signals for update, kill, close, "
+            "double-down, or narrate routing.\n"
+            "6. Present one clear business route and the signal behind it. Mutate the "
             "status marker only when the operator explicitly approves recording the "
             "daily check-in.\n"
-            "6. Ask before business-file writes, checkpoints, repairs, updates, migrations, "
+            "7. Ask before business-file writes, checkpoints, repairs, updates, migrations, "
             "provider mutation, publishing, spend, customer contact, destructive operations, "
             "or public issue/proposal submission."
         )

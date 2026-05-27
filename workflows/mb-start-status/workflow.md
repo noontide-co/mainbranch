@@ -36,6 +36,9 @@ json_facts:
   - brain.bets.due_soon
   - brain.bets.overdue
   - brain.bets.exit_criteria
+  - brain.bets.exit_criteria.missing
+  - brain.bets.exit_criteria.triggered_failure_signals
+  - brain.bets.exit_criteria.triggered_double_down_signals
   - vocabulary
 approval_gates:
   - updates_repairs_migrations
@@ -112,6 +115,9 @@ The runtime shell must preserve these paths from the workflow source:
 - `brain.bets.due_soon`
 - `brain.bets.overdue`
 - `brain.bets.exit_criteria`
+- `brain.bets.exit_criteria.missing`
+- `brain.bets.exit_criteria.triggered_failure_signals`
+- `brain.bets.exit_criteria.triggered_double_down_signals`
 - `vocabulary`
 
 Treat these as facts, not strategy. The runtime may recommend the next route,
@@ -133,10 +139,10 @@ workflow; route offer-shape gaps to `mb-think` and ask before durable writes.
 Use `money_path` for customer progress, offer, proof, CTA, channel, push, page
 readiness, playbook, and outcome feedback questions. Use `content_strategy` for
 content strategy, channel, account, freshness, or disconnected-layer questions.
-Use `brain.bets` for active, due-soon, overdue, missing-exit, triggered kill,
-triggered double-down, close, update, and narrate moments before inventing bet
-state from prose. Use `onboarding` to resume setup without inventing a new
-interview.
+Use `brain.bets` for active, due-soon, overdue, missing exit criteria,
+triggered kill, triggered double-down, close, update, and narrate moments
+before inventing bet state from prose. Use `onboarding` to resume setup without
+inventing a new interview.
 
 Give one clear route: frame a bet, think through a decision, advance a push,
 draft a playbook, repair the repo, review provider readiness, inspect a

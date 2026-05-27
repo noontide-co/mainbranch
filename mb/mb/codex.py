@@ -1187,6 +1187,7 @@ Shared source required JSON fact paths:
 - `money_path.objects.active_push`
 - `money_path.objects.outcome_feedback_loop`
 - `money_path.ranked_actions`
+- `validation.file_contracts`
 - `content_strategy`
 - `ranked_actions`
 - `update`

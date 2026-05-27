@@ -41,16 +41,20 @@ workflows are available in Codex.
 - `brain.bets.due_soon`
 - `brain.bets.overdue`
 - `brain.bets.exit_criteria`
+- `brain.bets.exit_criteria.missing`
+- `brain.bets.exit_criteria.triggered_failure_signals`
+- `brain.bets.exit_criteria.triggered_double_down_signals`
 - `vocabulary`
 
 ## Codex Route
 
 1. Use the business repo `AGENTS.md` bootstrap posture: read facts first, keep writes approval-gated, and translate git/provider details into business language.
 2. Run hard gates before routing: required updates, runtime mismatch, repair blockers, readiness blockers, private-data boundaries, unsafe provider operations, and destructive-operation requests.
-3. Use `ranked_actions`, `since_last_check`, `journal`, `money_path`, `content_strategy`, `validation.file_contracts`, `onboarding`, `readiness`, `update`, and `drift.items` as cited facts.
+3. Use `ranked_actions`, `since_last_check`, `journal`, `money_path`, `content_strategy`, `validation.file_contracts`, `onboarding`, `readiness`, `update`, `drift.items`, and `brain.bets` as cited facts.
 4. Route offer-shape gaps from `validation.file_contracts` to `mb-think` after hard gates, and ask before durable writes.
-5. Present one clear business route and the signal behind it. Mutate the status marker only when the operator explicitly approves recording the daily check-in.
-6. Ask before business-file writes, checkpoints, repairs, updates, migrations, provider mutation, publishing, spend, customer contact, destructive operations, or public issue/proposal submission.
+5. Use due-soon and overdue bet deadlines, missing exit criteria, triggered failure signals, and triggered double-down signals for update, kill, close, double-down, or narrate routing.
+6. Present one clear business route and the signal behind it. Mutate the status marker only when the operator explicitly approves recording the daily check-in.
+7. Ask before business-file writes, checkpoints, repairs, updates, migrations, provider mutation, publishing, spend, customer contact, destructive operations, or public issue/proposal submission.
 
 ## Handoff Shape
 

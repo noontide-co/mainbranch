@@ -269,6 +269,68 @@ def test_shipped_claude_organic_skill_preserves_shared_workflow_contract() -> No
     assert "workflows/mb-organic/workflow.md" in skill_text
 
 
+def test_shipped_claude_start_skill_preserves_core_trigger_markers() -> None:
+    workflow = load_workflow(START_STATUS_WORKFLOW)
+    skill_text = SHIPPED_START_SKILL.read_text(encoding="utf-8")
+
+    assert "workflows/mb-start-status/workflow.md" in skill_text
+    for marker in (
+        "brain.bets",
+        "due-soon",
+        "overdue",
+        "kill",
+        "double-down",
+        "close",
+        "narrate",
+    ):
+        assert marker in skill_text
+        if marker != "Do not tell Codex users to run Claude Code entrypoints.":
+            assert marker.lower() in workflow.body.lower() or marker in workflow.json_facts
+    assert "missing-exit" in skill_text
+    assert "missing exit criteria" in workflow.body
+    assert "status marker" in skill_text
+    assert "status_marker" in workflow.approval_gates
+
+
+def test_shipped_claude_think_skill_preserves_core_workflow_markers() -> None:
+    workflow = load_workflow(THINK_WORKFLOW)
+    skill_text = SHIPPED_THINK_SKILL.read_text(encoding="utf-8")
+
+    assert "workflows/mb-think/workflow.md" in skill_text
+    for marker in (
+        "runtime.codex_cli",
+        "research depth recommendation",
+        "source-specific research files",
+        "decision",
+        "codify",
+        "public/private",
+        "checkpoint approval",
+        "Do not tell Codex users to run Claude Code entrypoints.",
+    ):
+        assert marker in skill_text
+        if marker != "Do not tell Codex users to run Claude Code entrypoints.":
+            assert marker.lower() in workflow.body.lower() or marker in workflow.json_facts
+
+
+def test_think_guidance_uses_codex_cli_runtime_fact_path() -> None:
+    workflow = load_workflow(THINK_WORKFLOW)
+    stale_fact = "runtime." + "codex"
+    texts = [
+        workflow.body,
+        "\n".join(workflow.json_facts),
+        "\n".join(codex_mod.CODEX_THINK_REQUIRED_JSON_FACTS),
+        AGENTS_TEMPLATE.read_text(encoding="utf-8"),
+        (FIXTURES / "mb-think.claude.md").read_text(encoding="utf-8"),
+        (FIXTURES / "mb-think.codex.md").read_text(encoding="utf-8"),
+        SHIPPED_THINK_SKILL.read_text(encoding="utf-8"),
+    ]
+
+    for text in texts:
+        assert "runtime.codex_cli" in text
+        assert f"- `{stale_fact}`" not in text
+        assert f"  - {stale_fact}\n" not in text
+
+
 def test_supported_shells_preserve_required_commands_and_json_facts() -> None:
     for path in WORKFLOW_PATHS:
         workflow = load_workflow(path)

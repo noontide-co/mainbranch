@@ -43,13 +43,11 @@ shell over that source.
 **Shared contract markers:** Keep these aligned with the shared source.
 
 Required commands:
-
 - `mb status --json --peek`
 - `mb start --json`
 - `mb doctor repair --plan`
 
 Required fact paths:
-
 - `money_path`
 - `money_path.objects.proof.quality`
 - `validation.file_contracts`
@@ -71,8 +69,10 @@ Required fact paths:
 - `brain.bets.due_soon`
 - `brain.bets.overdue`
 - `brain.bets.exit_criteria`
+- `brain.bets.exit_criteria.missing`
+- `brain.bets.exit_criteria.triggered_failure_signals`
+- `brain.bets.exit_criteria.triggered_double_down_signals`
 - `vocabulary`
-
 Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`,
 `provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`,
 `destructive_operations`, and `status_marker`.

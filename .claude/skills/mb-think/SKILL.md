@@ -8,7 +8,7 @@ loops: [sense, decide, ship]
 
 Research, decide, and codify knowledge into reference files.
 
----
+**Shared source:** `workflows/mb-think/workflow.md`; preserve `runtime.codex_cli`, research depth recommendation, source-specific research files, decision/codify routing, public/private handling, and checkpoint approval. Do not tell Codex users to run Claude Code entrypoints.
 
 ## Don't Overthink Think
 
