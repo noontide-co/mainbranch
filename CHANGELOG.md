@@ -11,6 +11,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.40] - 2026-05-27
+
+v0.3.40 packages the shared workflow migration batch for the daily Main Branch
+routes and the first canonical Google Ads launch playbook source.
+
+### Added
+
+- Added a public business-file contract spec and the first reusable
+  file-contract engine slice. `mb validate --json` and `mb status --json
+  --peek` now expose offer-shape findings with owner-facing messages and
+  guided routes to existing Main Branch workflows. Refs MAIN-459, #756.
+
 ### Changed
 
 - Migrated `mb-ads` to a shared workflow source with checked Claude and Codex
@@ -37,13 +49,6 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   and generated business-repo instructions, keeping old `reference/*`,
   `campaigns/`, and `outputs/` handling in explicit migration/repair contexts.
   Refs MAIN-460, #759.
-
-### Added
-
-- Added a public business-file contract spec and the first reusable
-  file-contract engine slice. `mb validate --json` and `mb status --json
-  --peek` now expose offer-shape findings with owner-facing messages and
-  guided routes to existing Main Branch workflows. Refs MAIN-459, #756.
 
 ### Fixed
 
