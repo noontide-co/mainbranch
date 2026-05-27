@@ -12,8 +12,8 @@ The contract system keeps three promises:
 
 - `mb` reports deterministic facts and owner-facing gaps.
 - Claude Code and Codex route from the same JSON facts and workflow names.
-- Skills plus current and future workflow sources reuse one contract vocabulary
-  instead of inventing file rules one by one.
+- Skills and workflow sources (current and future) reuse one contract
+  vocabulary instead of inventing file rules one by one.
 
 ## Status
 

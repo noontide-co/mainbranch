@@ -10,7 +10,7 @@ Main Branch uses two related meanings:
   `playbooks/<name>/playbook.md`. It describes a repeatable method, its
   defaults, its source, and the skills or checks it calls. Runtime shells such
   as `.claude/playbooks/<name>/SKILL.md` adapt that source for a specific
-  agent.
+  runtime.
 - **Push playbook:** a business repo run record under
   `pushes/<push>/playbooks/<playbook>.md`. It records what happened for one
   offer, push, launch, campaign, resource drop, or operating run.

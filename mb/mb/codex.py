@@ -1307,11 +1307,11 @@ Use this index to map natural Codex requests:
   business files.
 - **Bets, ads, organic, or site work:** route to the matching global
   `mb-bet`, `mb-ads`, `mb-organic`, or `mb-site` skill for read-only planning
-  and file guidance. Do not claim full Codex workflow parity or make lifecycle
-  writes, site writes/builds/deploys, provider mutations, publishing, spend,
-  domains/DNS changes, uploads, account changes, or customer contact unless a
-  future `mb workflow list --runtime codex --json` support level and runtime
-  smoke evidence explicitly allow that action.
+  and file guidance. Do not claim full Codex workflow parity. Do not perform
+  lifecycle writes, site writes/builds/deploys, provider mutations,
+  publishing, spend, domain/DNS changes, uploads, account changes, or
+  customer contact unless `mb workflow list --runtime codex --json` reports a
+  support level and runtime smoke evidence that explicitly allows the action.
 
 Use `mb doctor repair --plan --only codex` to inspect global skill wiring.
 

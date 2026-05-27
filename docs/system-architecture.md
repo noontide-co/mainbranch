@@ -124,7 +124,7 @@ not the canonical truth.
 
 Shared workflow sources now cover the daily start/status, setup,
 maintenance/repair, think, closeout/checkpoint, bet, ads, organic, and site
-families. Each source declares the workflow intent, operator loops, runtime
+workflows. Each source declares the workflow intent, operator loops, runtime
 support level, checked runtime surfaces, required `mb` fact commands, JSON fact
 paths, approval gates, public/private boundaries, routing rules, handoff shape,
 and validation expectations. Claude Code remains the first-class slash-skill
@@ -434,7 +434,7 @@ Two layers:
 - A **reusable playbook** is an engine-packaged operating recipe under
   `playbooks/<name>/playbook.md`. Public, sanitized, opinionated, runnable by
   many businesses. Runtime shells such as
-  `.claude/playbooks/<name>/SKILL.md` adapt that source for a specific agent.
+  `.claude/playbooks/<name>/SKILL.md` adapt that source for a specific runtime.
 - A **push playbook** is a per-run business repo record under
   `pushes/<push>/playbooks/<playbook>.md`.
 

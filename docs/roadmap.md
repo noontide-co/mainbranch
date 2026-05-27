@@ -60,9 +60,10 @@ Main Branch already ships:
 - `mb checkpoint` as the first hidden GitOps save layer for long agent runs;
 - canonical shared workflow sources for daily start/status, setup,
   maintenance/repair, think, closeout/checkpoint, bet, ads, organic, and site
-  routes, with checked Claude/Codex shell snapshots and read-only Codex
-  boundaries where output or provider workflows are not yet full runtime
-  support;
+  routes;
+- checked Claude and Codex shell snapshots over those shared sources, with
+  read-only Codex boundaries where output or provider workflows are not yet
+  full runtime support;
 - the first reusable Google Ads Search launch playbook source packaged with the
   engine, with planning support kept separate from provider mutation, uploads,
   publishing, spend, account changes, and customer contact;
