@@ -45,6 +45,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   --peek` now expose offer-shape findings with owner-facing messages and
   guided routes to existing Main Branch workflows. Refs MAIN-459, #756.
 
+### Fixed
+
+- Packaged root reusable playbook sources into the wheel `_engine` payload so
+  `mb workflow list --runtime codex --json` source paths resolve for installed
+  `mainbranch` users. Refs #750.
+
 ### Removed
 
 - Retired the provisional `ship-bet` and `weekly-review` skeletons from bundled

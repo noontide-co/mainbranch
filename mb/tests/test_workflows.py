@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import importlib
+import importlib.util
 import json
 from pathlib import Path
+from typing import Any
 
 from typer.testing import CliRunner
 
@@ -73,6 +76,21 @@ SITE_CHECK_JSON_FACTS = {
     "source",
     "child_descriptor",
 }
+
+
+def _load_setup_module(monkeypatch: Any) -> Any:
+    setuptools = importlib.import_module("setuptools")
+
+    monkeypatch.setattr(setuptools, "setup", lambda **_kwargs: None)
+    spec = importlib.util.spec_from_file_location(
+        "_mainbranch_setup_for_tests",
+        REPO_ROOT / "mb" / "setup.py",
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _json_path_exists(payload: object, path: str) -> bool:
@@ -1118,6 +1136,32 @@ def test_google_ads_search_launch_playbook_source_shape_exists() -> None:
     )
     assert by_id["google-ads-search-launch-playbook"]["codex_entrypoints"] == []
     assert "google-ads-search-launch" not in inventory["global_skill"]["routes"]
+
+
+def test_packaged_engine_payload_includes_inventory_source_paths(
+    tmp_path: Path, monkeypatch
+) -> None:
+    build_root = tmp_path / "build"
+    setup_mod = _load_setup_module(monkeypatch)
+    setup_mod._copy_generated_data(build_root)
+    engine_root = build_root / "mb" / "_engine"
+    inventory = codex_mod.workflow_inventory(runtime="codex")
+
+    for item in inventory["items"]:
+        shared_source = item["source_of_truth"].get("shared_source")
+        if shared_source:
+            assert (engine_root / shared_source).is_file()
+    for source in inventory["playbook_sources"]:
+        assert (engine_root / source).is_file()
+
+    by_id = {item["id"]: item for item in inventory["items"]}
+    playbook_source = by_id["google-ads-search-launch-playbook"]["playbook_source"]
+    assert (engine_root / playbook_source).is_file()
+    assert (engine_root / "playbooks/google-ads-search-launch/templates/push-playbook.md").is_file()
+    assert (
+        engine_root / "playbooks/google-ads-search-launch/references/noontide-approach.md"
+    ).is_file()
+    assert (engine_root / ".claude/playbooks/google-ads-search-launch/SKILL.md").is_file()
 
 
 def test_organic_runtime_shells_surface_content_contract_and_boundaries() -> None:

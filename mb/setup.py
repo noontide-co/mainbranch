@@ -19,6 +19,11 @@ ENGINE_SUBDIRS = (
     "skills",
 )
 
+ROOT_ENGINE_SUBDIRS = (
+    "workflows",
+    "playbooks",
+)
+
 
 def _copy_generated_data(target_root: Path) -> None:
     engine_root = target_root / "mb" / "_engine"
@@ -41,14 +46,16 @@ def _copy_generated_data(target_root: Path) -> None:
         if plugin_target.exists():
             shutil.rmtree(plugin_target)
         shutil.copytree(plugin_source, plugin_target)
-    workflow_source = REPO_ROOT / "workflows"
-    if workflow_source.exists():
-        workflow_target = engine_root / "workflows"
-        if workflow_target.exists():
-            shutil.rmtree(workflow_target)
+    for name in ROOT_ENGINE_SUBDIRS:
+        source = REPO_ROOT / name
+        if not source.exists():
+            continue
+        target = engine_root / name
+        if target.exists():
+            shutil.rmtree(target)
         shutil.copytree(
-            workflow_source,
-            workflow_target,
+            source,
+            target,
             ignore=shutil.ignore_patterns("__pycache__", ".DS_Store"),
         )
 
