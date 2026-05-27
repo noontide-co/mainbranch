@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import importlib
 import importlib.util
 import json
+import sys
+import types
 from pathlib import Path
 from typing import Any
 
@@ -79,9 +80,32 @@ SITE_CHECK_JSON_FACTS = {
 
 
 def _load_setup_module(monkeypatch: Any) -> Any:
-    setuptools = importlib.import_module("setuptools")
+    setuptools = types.ModuleType("setuptools")
+    setuptools_any: Any = setuptools
+    setuptools_any.setup = lambda **_kwargs: None
 
-    monkeypatch.setattr(setuptools, "setup", lambda **_kwargs: None)
+    setuptools_command = types.ModuleType("setuptools.command")
+    build_py_mod = types.ModuleType("setuptools.command.build_py")
+    sdist_mod = types.ModuleType("setuptools.command.sdist")
+    build_py_any: Any = build_py_mod
+    sdist_any: Any = sdist_mod
+
+    class FakeBuildPy:
+        def run(self) -> None:
+            pass
+
+    class FakeSdist:
+        def make_release_tree(self, base_dir: str, files: list[str]) -> None:
+            pass
+
+    build_py_any.build_py = FakeBuildPy
+    sdist_any.sdist = FakeSdist
+
+    monkeypatch.setitem(sys.modules, "setuptools", setuptools)
+    monkeypatch.setitem(sys.modules, "setuptools.command", setuptools_command)
+    monkeypatch.setitem(sys.modules, "setuptools.command.build_py", build_py_mod)
+    monkeypatch.setitem(sys.modules, "setuptools.command.sdist", sdist_mod)
+
     spec = importlib.util.spec_from_file_location(
         "_mainbranch_setup_for_tests",
         REPO_ROOT / "mb" / "setup.py",

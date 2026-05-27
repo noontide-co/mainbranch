@@ -134,6 +134,14 @@ jobs:
             || { echo "::error::bundled mb-update skill missing from wheel"; exit 1; }
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/playbooks/google-ads-search-launch/SKILL\.md([[:space:]]|$)' \
             || { echo "::error::bundled draft/manual playbook missing from wheel"; exit 1; }
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/playbooks/google-ads-search-launch/playbook\.md([[:space:]]|$)' \
+            || { echo "::error::canonical Google Ads launch playbook source missing from wheel"; exit 1; }
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/playbooks/google-ads-search-launch/references/noontide-approach\.md([[:space:]]|$)' \
+            || { echo "::error::Google Ads launch playbook references missing from wheel"; exit 1; }
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/playbooks/google-ads-search-launch/templates/push-playbook\.md([[:space:]]|$)' \
+            || { echo "::error::Google Ads launch playbook template missing from wheel"; exit 1; }
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/workflows/mb-ads/workflow\.md([[:space:]]|$)' \
+            || { echo "::error::canonical mb-ads workflow source missing from wheel"; exit 1; }
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude/reference/engine-path-resolution\.md([[:space:]]|$)' \
             || { echo "::error::bundled reference files missing from wheel"; exit 1; }
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude-plugin/plugin\.json([[:space:]]|$)' \
