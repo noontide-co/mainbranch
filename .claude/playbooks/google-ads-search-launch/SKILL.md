@@ -8,6 +8,9 @@ description: "Reusable Noontide draft playbook for validating an offer with a ti
 
 # google-ads-search-launch
 
+Source playbook: `playbooks/google-ads-search-launch/playbook.md`. This file
+is the Claude Code playbook shell over that runtime-agnostic source.
+
 This is a reusable draft operating playbook, not a one-off ad checklist. Use it
 with manual operator judgment when the operator wants to test whether a real
 offer can turn paid search intent into leads, calls, bookings, deposits, trials,

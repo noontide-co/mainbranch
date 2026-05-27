@@ -140,6 +140,19 @@ REQUIRED_SHELL_PHRASES_BY_WORKFLOW: dict[str, dict[str, str]] = {
         "account mutation boundary": "mutate provider accounts",
         "Codex support boundary": "read-only planning",
     },
+    "mb-ads": {
+        "ads modes": "account-context modes",
+        "research handoff": "route to `mb-think`",
+        "site readiness handoff": "route to `mb-site`",
+        "proof quality boundary": "money_path.objects.proof.quality",
+        "artifact routing": "pushes/<YYYY-MM-DD-slug>/ads-batch-001.md",
+        "Google Ads playbook": "google-ads-search-launch",
+        "provider boundary": "provider mutation",
+        "upload boundary": "upload assets",
+        "spend boundary": "spend",
+        "GTM boundary": "GTM",
+        "Codex support boundary": "read-only planning",
+    },
     "mb-site": {
         "site modes": "plan, brief, build, preview, check, publish, iterate, graduate, or recover",
         "site shapes": "lander, minisite, website",
@@ -213,6 +226,19 @@ CODEX_FORBIDDEN_PHRASES_BY_WORKFLOW: dict[str, tuple[str, ...]] = {
         "Codex can publish",
         "Codex can schedule",
         "Codex can mutate provider accounts",
+        "Codex can contact customers",
+    ),
+    "mb-ads": (
+        "Run `/mb-ads`",
+        "Claude Code skills work in Codex",
+        "Claude Code slash commands work inside Codex",
+        "Claude slash commands",
+        "slash-command parity",
+        "Codex can publish ads",
+        "Codex can upload assets",
+        "Codex can mutate ad accounts",
+        "Codex can change budgets",
+        "Codex can start spend",
         "Codex can contact customers",
     ),
     "mb-site": (
@@ -504,6 +530,8 @@ def render_claude_shell(workflow: WorkflowSource) -> str:
         return _render_bet_claude_shell(workflow)
     if workflow.name == "mb-organic":
         return _render_organic_claude_shell(workflow)
+    if workflow.name == "mb-ads":
+        return _render_ads_claude_shell(workflow)
     if workflow.name == "mb-site":
         return _render_site_claude_shell(workflow)
     if workflow.name in {"mb-start-status", "mb-setup", "mb-maintenance-repair"}:
@@ -769,6 +797,8 @@ def render_codex_shell(workflow: WorkflowSource) -> str:
         return _render_bet_codex_shell(workflow)
     if workflow.name == "mb-organic":
         return _render_organic_codex_shell(workflow)
+    if workflow.name == "mb-ads":
+        return _render_ads_codex_shell(workflow)
     if workflow.name == "mb-site":
         return _render_site_codex_shell(workflow)
     if workflow.name in {"mb-start-status", "mb-setup", "mb-maintenance-repair"}:
@@ -1326,6 +1356,178 @@ Next business action: <one clear owner-facing step>.
 Use business language first. New coordinated work uses pushes. Legacy content
 structures are migration input only. Runtime smoke is required before docs say
 this workflow is supported for Codex writes.
+"""
+    return output
+
+
+def _render_ads_claude_shell(workflow: WorkflowSource) -> str:
+    """Render a Claude Code shell snapshot for the ads workflow."""
+
+    output = f"""# Generated Claude Shell: {workflow.title}
+
+Source workflow: `{_display_path(workflow.path)}`
+Runtime support: `claude_code: supported_shell`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
+
+Use from `/mb-ads` when the operator wants paid creative planning, ad copy,
+image prompts, video scripts, long-form paid creative, compliance review,
+launch plans, launch checks, optional read-only account context, or Google Ads
+Search planning. Preserve the existing Claude skill's mode language, proof
+discipline, review workflow, paid-search launch-plan path, and provider gates.
+
+This snapshot does not replace shipped `.claude/skills/mb-ads/SKILL.md`.
+
+## Required mb Commands
+
+{_bullet_list(workflow.required_mb_commands)}
+
+## Required JSON Fact Paths
+
+{_bullet_list(workflow.json_facts)}
+
+## Routing
+
+1. Read deterministic facts first: status, start when runtime facts matter,
+   repair plan when blockers appear, provider readiness, measurement readiness,
+   site-check readiness, relationship gaps, validation, and checkpoint plan.
+2. For mining, scraping, competitor research, transcript extraction, outside
+   source collection, thin offers, or unsupported claims, route to `mb-think`
+   before drafting paid creative.
+3. For landing-page, conversion endpoint, GTM/dataLayer, consent, or paid
+   measurement readiness, route to `mb-site` and use `mb site check` before
+   describing traffic as locally ready for operator review.
+4. Support static, copy-only, image-only, hook-library, video-scripts,
+   long-form-video, review, launch-plan, check, or account-context modes.
+5. Draft from active offer, audience, voice, content strategy, proof facts,
+   relevant research, decisions, active pushes, playbooks, and
+   money_path.objects.proof.quality. Do not turn unapproved proof into public
+   ad claims.
+6. Route coordinated paid work to `pushes/<YYYY-MM-DD-slug>/push.md`, draft
+   batches to `pushes/<YYYY-MM-DD-slug>/ads-batch-001.md`, provider or launch
+   plans to `pushes/<YYYY-MM-DD-slug>/playbooks/<playbook>.md`, research to
+   `research/`, and accepted tradeoffs to `decisions/`.
+7. For Google Ads Search, use the google-ads-search-launch playbook source and
+   official Google Ads docs for load-bearing limits, policy, targeting, and
+   feature mechanics. The playbook is a manual recipe, not provider authority.
+8. Keep provider gates explicit. Do not publish ads, schedule ads, upload assets,
+   perform provider mutation, mutate provider accounts, change budgets, start
+   spend, publish GTM, upload conversions, change billing, or contact customers.
+   Execution needs explicit approval and runtime evidence for that exact surface.
+
+## Handoff Shape
+
+```text
+Ads mode: <static, copy-only, image-only, hook-library, video-scripts,
+long-form-video, review, launch-plan, check, or account-context>.
+Facts read: <status/start/connect/site-check/validation/checkpoint facts>.
+Source base: <offer, audience, voice, proof, research, push, playbook, account summary, or missing>.
+Provider posture: <not needed, read-only, connected, blocked, unsupported, or approval needed>.
+Measurement posture: <missing, blocked, ready_for_preview,
+ready_for_operator_review, ready, or not checked>.
+Proof/privacy posture: <public-safe, internal-only, missing permission,
+unsupported claim, or needs summary>.
+Artifact route: <push path, ads batch path, playbook run path, research path,
+decision path, or none>.
+Write plan: <files to create/edit or planning only>.
+Approval needed before writes/provider action: <yes/no and exact action>.
+Next business action: <one clear owner-facing step>.
+```
+
+Use business language first. New coordinated work uses pushes. Provider
+mutation, publishing, spend, uploads, account changes, GTM publishes,
+conversion uploads, and customer contact stay approval-gated and manual unless
+the exact adapter surface has shipped evidence. Codex support: read-only planning.
+Runtime smoke must prove ads writes or provider execution.
+"""
+    return output
+
+
+def _render_ads_codex_shell(workflow: WorkflowSource) -> str:
+    """Render Codex CLI guidance for the ads workflow."""
+
+    output = f"""# Generated Codex Workflow Guidance: {workflow.title}
+
+Source workflow: `{_display_path(workflow.path)}`
+Runtime support: `codex_cli: {workflow.runtime_support.get("codex_cli", "")}`
+Approval gates: {_inline_code_list(workflow.approval_gates)}
+Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
+
+Codex uses the global Main Branch `mb-ads` skill as a read-only planning and
+file-guidance route. This guidance is generated from the engine workflow source
+and does not claim supported paid creative writes, provider mutation, asset
+uploads, publishing, spend, account changes, GTM publishes, conversion uploads,
+customer contact, or Claude Code entrypoints in Codex.
+
+## Required mb Commands
+
+{_bullet_list(workflow.required_mb_commands)}
+
+## Required JSON Fact Paths
+
+{_bullet_list(workflow.json_facts)}
+
+## Codex Route
+
+1. Use the business repo `AGENTS.md` bootstrap posture: read facts first, keep
+   writes approval-gated, and translate provider details into business language.
+2. Read deterministic facts before raw markdown: status, start when runtime
+   facts matter, repair plan when blockers appear, provider readiness,
+   measurement readiness, site-check readiness, relationship gaps, validation,
+   and checkpoint plan.
+3. For mining, scraping, competitor research, transcript extraction, outside
+   source collection, thin offers, or unsupported claims, route to `mb-think`
+   in Codex-native language before drafting paid creative.
+4. For landing-page, conversion endpoint, GTM/dataLayer, consent, or paid
+   measurement readiness, route to `mb-site` in Codex-native language and use
+   `mb site check` before describing traffic as locally ready for operator
+   review.
+5. Guide static, copy-only, image-only, hook-library, video-scripts,
+   long-form-video, review, launch-plan, check, or account-context modes from
+   the shared contract. Codex may draft patch-shaped recommendations, sample
+   copy, review notes, and launch-plan specs. Name exact file targets, then
+   stop before changing files or running provider tools.
+6. Name artifact routes as plans only: `pushes/<YYYY-MM-DD-slug>/push.md`,
+   `pushes/<YYYY-MM-DD-slug>/ads-batch-001.md`,
+   `pushes/<YYYY-MM-DD-slug>/playbooks/<playbook>.md`, `research/`, and
+   `decisions/`.
+7. For Google Ads Search, use the google-ads-search-launch playbook source and
+   official Google Ads docs for load-bearing limits, policy, targeting, and
+   feature mechanics. The playbook remains draft/manual and blocked from direct
+   Codex execution by provider gates.
+8. If the operator wants proposed ad or launch-plan files applied, route them
+   to Claude Code `/mb-ads` or another supported write surface until Codex
+   ads-write smoke proves this route. Do not run checkpoint commands,
+   post-change validation, provider tools, upload steps, campaign actions, GTM
+   actions, budget changes, or customer contact as if Codex edited or executed
+   the work.
+9. Keep provider gates explicit. Do not publish ads, schedule ads, upload assets,
+   mutate provider accounts, change budgets, start spend, publish GTM, upload
+   conversions, change billing, or contact customers.
+
+## Handoff Shape
+
+```text
+Ads mode: <static, copy-only, image-only, hook-library, video-scripts,
+long-form-video, review, launch-plan, check, or account-context>.
+Facts read: <status/start/connect/site-check/validation/checkpoint facts>.
+Source base: <offer, audience, voice, proof, research, push, playbook, account summary, or missing>.
+Provider posture: <not needed, read-only, connected, blocked, unsupported, or approval needed>.
+Measurement posture: <missing, blocked, ready_for_preview,
+ready_for_operator_review, ready, or not checked>.
+Proof/privacy posture: <public-safe, internal-only, missing permission,
+unsupported claim, or needs summary>.
+Artifact route: <push path, ads batch path, playbook run path, research path,
+decision path, or none>.
+Write plan: <files to create/edit or planning only>.
+Approval needed before writes/provider action: <yes/no and exact action>.
+Next business action: <one clear owner-facing step>.
+```
+
+Use business language first. Runtime smoke is required before docs say this
+workflow is supported for Codex paid creative writes, provider mutation,
+uploads, publishing, spend, account changes, GTM publishes, conversion uploads,
+or customer contact.
 """
     return output
 

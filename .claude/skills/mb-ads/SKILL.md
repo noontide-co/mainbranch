@@ -12,6 +12,83 @@ Create ads, generate creative variations, review for compliance, and check ad ac
 then use status readiness, drift, integrations, measurement, and ranked actions
 before scoring creative depth or asking setup/provider questions.
 
+## Shared Workflow Contract
+
+Engine source workflow: `workflows/mb-ads/workflow.md`. This skill is the
+Claude Code shell over that source. Preserve the shared source's fact-first
+routing, launch-plan boundaries, provider gates, and read/write rules.
+
+Shared source required `mb` commands:
+
+- `mb status --json --peek`
+- `mb start --json`
+- `mb doctor repair --plan`
+- `mb connect doctor --json`
+- `mb connect plan`
+- `mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json`
+- `mb validate --cross-refs --json`
+- `mb checkpoint --plan --json`
+
+Shared source required JSON fact paths:
+
+- `money_path`
+- `money_path.objects.proof.quality`
+- `money_path.objects.cta_path`
+- `money_path.objects.channel_strategy`
+- `money_path.objects.active_push`
+- `validation.file_contracts`
+- `content_strategy`
+- `content_strategy.overall_state`
+- `content_strategy.simple_entry_point`
+- `content_strategy.layers`
+- `ranked_actions`
+- `update`
+- `readiness`
+- `drift.items`
+- `integrations`
+- `measurement`
+- `measurement.available`
+- `measurement.state`
+- `measurement.facts.expected_events`
+- `measurement.blocked_count`
+- `measurement.manual_count`
+- `relationship_health.gaps`
+- `checkpoint.pending`
+- `checkpoint.pending.blockers`
+- `runtime.codex_cli`
+- `runtime.claude_code`
+- `state`
+- `blocked`
+- `manual`
+- `evidence`
+- `facts.expected_events`
+- `facts.provider_state`
+- `source`
+- `child_descriptor`
+
+Shared source gates: `updates_repairs_migrations`, `file_writes`,
+`checkpoint`, `provider_mutation`, `publishing_or_spend`, `customer_contact`,
+`private_data`, `destructive_operations`, `structured_collection`,
+`public_issue_or_proposal`, `account_change`, `upload_assets`,
+`budget_change`, `campaign_publish`, `conversion_upload`, `gtm_publish`.
+
+Shared public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
+`no_raw_transcripts`, `no_customer_member_data`,
+`no_private_runtime_settings`, `no_private_dms_or_gated_communities`,
+`no_raw_finance_legal_records`, `no_oauth_tokens`, `no_conversion_uploads`,
+`no_account_identifiers_in_public_examples`.
+
+Shared modes: static, copy-only, image-only, hook-library, video-scripts,
+long-form-video, review, launch-plan, check, or account-context.
+These are the account-context modes and paid creative modes for this shared source.
+Use this routing language exactly when needed: route to `mb-think`; route to `mb-site`.
+Durable paid artifacts use
+`pushes/<YYYY-MM-DD-slug>/ads-batch-001.md`, push playbook runs, research, or
+decisions after approval. Google Ads Search uses the google-ads-search-launch
+playbook source. Upload assets, provider mutation, spend, publishing, account
+changes, GTM publishes, conversion uploads, and customer contact remain gated.
+Codex support is read-only planning until runtime smoke proves more.
+
 ## Output destinations and operator vocabulary
 
 This skill writes new coordinated work to `pushes/<YYYY-MM-DD-slug>/` (the
@@ -204,23 +281,10 @@ Manager notes.
 
 ### User-Facing Display
 
-In user-facing messages, describe the capability: connecting a Meta ad account,
-pulling a compact read-only account summary, or auditing active campaigns. Do
-not mention connector vendor names or unsupported setup paths.
-
-**Pre-flight status line (add after image-provider check):**
-
-If ready:
-> `Ad account:   ✓ connected (I can pull a compact read-only summary before we create)`
-
-If not ready:
-> `Ad account:   — not connected (optional — lets me use live Meta context to inform new ads)`
-
-**Never say:** "provider tool not configured" or name an implementation detail
-the user does not need. Keep the status line capability-first.
-
-**If user asks what this means:**
-> "You can optionally connect your Meta/Facebook ad account so I can pull a compact read-only summary before making recommendations. This helps me see account readiness, broad activity, and useful next steps without saving raw account data. Want to run `mb connect plan`, or skip and work from your reference files?"
+Describe the capability: connecting a Meta ad account, pulling a compact
+read-only account summary, or auditing active campaigns. Keep status
+capability-first and do not name connector vendor details. If the user asks,
+offer `mb connect plan` or continuing from reference files.
 
 ---
 
@@ -305,87 +369,27 @@ If **Employment** (job training, career coaching, hiring, job boards):
 2. **Warn user:** "Employment category has strict restrictions. I'll avoid salary assertions, 'if you've been...' patterns, and job-seeking status claims."
 3. **Tag the output:** Add `special_ad_category: employment` to frontmatter
 
-### Employment Category Quick Rules
-
-These patterns that work in standard ads will get rejected in Employment:
-
-| Pattern | Why It Fails | Alternative |
-|---------|--------------|-------------|
-| "If you've been stuck at £30k..." | Asserts current employment status | "DevOps engineers can reach £60k+" |
-| "Still getting rejected after interviews?" | Personal attribute (job-seeking status) | "Interview preparation that works" |
-| "Tired of your dead-end job?" | Asserts job dissatisfaction | "Career advancement strategies" |
-| Salary numbers as pain (£30k, $50k) | Implies current salary = personal attribute | Salary as aspiration only |
-
-**The rule:** In Employment, ANY assertion about current status (job, salary, employment state) = Personal Attributes violation. Aspirational framing only.
+For Employment, avoid any assertion about current status such as job,
+salary, employment state, job-seeking status, or dissatisfaction. Use
+aspirational framing only.
 
 ---
 
-## Offer Context Resolution
+## Offer Context And Required Reference
 
 Before loading reference files, resolve active offer context with
-`.claude/reference/business-primitives/offer-bet-push-proof.md`:
+`.claude/reference/business-primitives/offer-bet-push-proof.md` and the
+file list in [references/preflight-algorithm.md](references/preflight-algorithm.md).
+Use current `core/` paths first; treat old paths as migration input only.
 
-1. If a future `mb` JSON field exposes active offer state, use it.
-2. Do not treat `.vip/local.yaml` as the source of truth for active-offer
-   state. If legacy state exists, confirm the offer with the user instead of
-   silently routing.
-3. If an offer is selected and `core/offers/[offer]/offer.md` exists, load it as the active offer.
-4. If no offer is selected AND `core/offers/` exists: ask which offer.
-5. If no `core/offers/` folder: use `core/offer.md` (single-offer mode)
-6. If the repo does not have `core/`, do not infer current offer context from
-   old paths. Run `mb doctor repair --plan`; use `reference/*` only as legacy
-   migration input.
+Before outcome-claim or substantiation recommendations, read
+`money_path.objects.proof.quality`. If `quality.public_marketing.status` is
+`blocked`, do not draft proof-backed public ad claims; route to `/mb-think` for
+permission collection before ads, pages, or public claims use that proof.
 
-**Always-core files:** `soul.md`, `voice.md`, `content-strategy.md`
-**Content strategy layers:** when present, use
-`core/marketing/distribution-strategy.md`,
-`core/marketing/channels/<channel>.md`,
-`core/marketing/accounts/<platform>-<account>.md`, and
-`core/people/<person>.md` to understand where paid amplification fits after
-owned or organic assets have a clear job.
-**Offer-aware files:** `offer.md`, `audience.md`
-**Proof files:** company-wide proof in `core/proof/testimonials.md`,
-`core/proof/typicality.md`, and `core/proof/angles/`; offer-specific proof in
-matching files under `core/offers/[active]/proof/`. Read older offer
-testimonial files as compatibility context only.
-Before outcome-claim or substantiation recommendations, read `money_path.objects.proof.quality`.
-Treat proof fields as factual signals, not scores; generic testimonials are proof material but not specific, offer-linked, typicality-aware, or outcome-backed unless those signals exist.
-If `quality.public_marketing.status` is `blocked`, do not draft proof-backed public ad claims from those testimonials.
-Route to `/mb-think` to collect permission or reframe the proof as internal strategy unless the operator explicitly approves an internal-only use.
-
-**Offer argument:** `/mb-ads [mode] [offer] [campaign]` — e.g., `/mb-ads static community january-launch`
-If offer specified, it selects the offer for this run only.
-
----
-
-## Reference Required (All Modes)
-
-Before creating ads, the business repo must have:
-
-| File | Path | Required |
-|------|------|----------|
-| Offer | `core/offers/[active]/offer.md` or `core/offer.md` (resolved via path resolution) | Yes |
-| Audience | `core/offers/[active]/audience.md` or `core/audience.md` (resolved via path resolution) | Yes |
-| Voice | `core/voice.md` (always core) | Yes |
-| Testimonials/proof | `core/proof/testimonials.md` + offer-specific proof + `money_path.objects.proof.quality` | Yes |
-| Typicality | `core/proof/typicality.md` + offer-specific typicality + `quality.typicality` facts | Recommended |
-| Angles | `core/proof/angles/*.md` | Yes (at least 1) |
-| Visual Style | `core/brand/visual-style.md` | Optional (affects image gen) |
-| Content Strategy | `core/content-strategy.md` plus relevant `core/marketing/...` and `core/people/...` layers | Optional (improves topic and amplification fit) |
-| Skool Surfaces | `core/operations/funnel/skool-surfaces.md` | Optional (congruence check) |
-| Ad Account Access | `mb status --json --peek` + `mb connect doctor --json` | Optional (enables compact read-only account context) |
-
-If required files are missing, Step 0 pre-flight catches this and routes appropriately.
-
-**Content funnel awareness:** Ads are the immediate ROI pillar beside owned and
-organic content. If content strategy files exist, use the known-for target,
-pillars, asset jobs, channel/account strategy, and performance notes to decide
-whether paid work should create demand, amplify proven organic/owned assets, or
-drive a direct conversion path.
-
-**Skool surface congruence:** If `core/operations/funnel/skool-surfaces.md` exists, check it before finalizing any batch. Ad copy must not promise anything not visible on the Skool about page or pricing cards. Pricing mentioned in ads must match current tier structure. Language and framing should echo (not contradict) the about page positioning. The about page is the FIXED surface — ads are the VARIABLE surface.
-
-**Angle library note:** Angles are NOT locked. They evolve as understanding deepens. Every `/mb-think` session may surface new angles. The angle library is additive — new angles supplement, never replace. When selecting angles for a batch, mix established angles with any newly codified ones.
+If content strategy layers or Skool surface notes exist, use them to decide the
+paid role and keep ads congruent with visible offer, pricing, and proof. Angles
+are additive; mix established angles with any newly codified ones.
 
 ---
 

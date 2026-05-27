@@ -29,6 +29,7 @@ MAINTENANCE_REPAIR_WORKFLOW = REPO_ROOT / "workflows" / "mb-maintenance-repair" 
 THINK_WORKFLOW = REPO_ROOT / "workflows" / "mb-think" / "workflow.md"
 END_WORKFLOW = REPO_ROOT / "workflows" / "mb-end" / "workflow.md"
 BET_WORKFLOW = REPO_ROOT / "workflows" / "mb-bet" / "workflow.md"
+ADS_WORKFLOW = REPO_ROOT / "workflows" / "mb-ads" / "workflow.md"
 ORGANIC_WORKFLOW = REPO_ROOT / "workflows" / "mb-organic" / "workflow.md"
 SITE_WORKFLOW = REPO_ROOT / "workflows" / "mb-site" / "workflow.md"
 SHIPPED_START_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-start" / "SKILL.md"
@@ -36,8 +37,10 @@ SHIPPED_STATUS_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-status" / "SKILL.m
 SHIPPED_THINK_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-think" / "SKILL.md"
 SHIPPED_END_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-end" / "SKILL.md"
 SHIPPED_BET_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-bet" / "SKILL.md"
+SHIPPED_ADS_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-ads" / "SKILL.md"
 SHIPPED_ORGANIC_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-organic" / "SKILL.md"
 SHIPPED_SITE_SKILL = REPO_ROOT / ".claude" / "skills" / "mb-site" / "SKILL.md"
+GOOGLE_ADS_PLAYBOOK = REPO_ROOT / "playbooks" / "google-ads-search-launch" / "playbook.md"
 FIXTURES = REPO_ROOT / "mb" / "tests" / "fixtures" / "workflows"
 AGENTS_TEMPLATE = REPO_ROOT / "mb" / "mb" / "_data" / "templates" / "AGENTS.md.tmpl"
 WORKFLOW_PATHS = [
@@ -48,6 +51,7 @@ WORKFLOW_PATHS = [
     THINK_WORKFLOW,
     END_WORKFLOW,
     BET_WORKFLOW,
+    ADS_WORKFLOW,
     ORGANIC_WORKFLOW,
     SITE_WORKFLOW,
 ]
@@ -184,6 +188,17 @@ def test_generated_bet_claude_and_codex_snapshots_match_fixtures() -> None:
     )
 
 
+def test_generated_ads_claude_and_codex_snapshots_match_fixtures() -> None:
+    workflow = load_workflow(ADS_WORKFLOW)
+
+    assert render_claude_shell(workflow) == (FIXTURES / "mb-ads.claude.md").read_text(
+        encoding="utf-8"
+    )
+    assert render_codex_shell(workflow) == (FIXTURES / "mb-ads.codex.md").read_text(
+        encoding="utf-8"
+    )
+
+
 def test_generated_organic_claude_and_codex_snapshots_match_fixtures() -> None:
     workflow = load_workflow(ORGANIC_WORKFLOW)
 
@@ -301,6 +316,14 @@ def test_shipped_claude_bet_skill_preserves_shared_workflow_contract() -> None:
 
     assert shell_drift_errors(workflow, skill_text) == []
     assert "workflows/mb-bet/workflow.md" in skill_text
+
+
+def test_shipped_claude_ads_skill_preserves_shared_workflow_contract() -> None:
+    workflow = load_workflow(ADS_WORKFLOW)
+    skill_text = SHIPPED_ADS_SKILL.read_text(encoding="utf-8")
+
+    assert shell_drift_errors(workflow, skill_text) == []
+    assert "workflows/mb-ads/workflow.md" in skill_text
 
 
 def test_shipped_claude_organic_skill_preserves_shared_workflow_contract() -> None:
@@ -443,6 +466,18 @@ def test_codex_contract_markers_match_bet_workflow_source() -> None:
     assert tuple(workflow.approval_gates) == codex_mod.CODEX_BET_APPROVAL_GATES
     assert (
         tuple(workflow.public_private_boundaries) == codex_mod.CODEX_BET_PUBLIC_PRIVATE_BOUNDARIES
+    )
+
+
+def test_codex_contract_markers_match_ads_workflow_source() -> None:
+    workflow = load_workflow(ADS_WORKFLOW)
+
+    assert codex_mod.CODEX_ADS_SOURCE_WORKFLOW == "workflows/mb-ads/workflow.md"
+    assert tuple(workflow.required_mb_commands) == codex_mod.CODEX_ADS_REQUIRED_MB_COMMANDS
+    assert tuple(workflow.json_facts) == codex_mod.CODEX_ADS_REQUIRED_JSON_FACTS
+    assert tuple(workflow.approval_gates) == codex_mod.CODEX_ADS_APPROVAL_GATES
+    assert (
+        tuple(workflow.public_private_boundaries) == codex_mod.CODEX_ADS_PUBLIC_PRIVATE_BOUNDARIES
     )
 
 
@@ -742,9 +777,11 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
         ".claude/skills/mb-update/SKILL.md",
     ]
     assert by_id["ads"]["codex_status"] == "read_only_planning"
-    assert by_id["ads"]["source_status"] == "blocked_by_provider_gates"
-    assert by_id["ads"]["source_of_truth"]["next_required_issue"] == "#750"
-    assert by_id["ads"]["source_of_truth"]["follow_up_issue"].endswith("/issues/750")
+    assert by_id["ads"]["source_status"] == "shared_workflow_source"
+    assert by_id["ads"]["source_of_truth"]["shared_source"] == "workflows/mb-ads/workflow.md"
+    assert by_id["ads"]["source_of_truth"]["next_required_issue"] is None
+    assert by_id["ads"]["codex_entrypoints"] == ["main-branch mb-ads"]
+    assert "provider_gates" in by_id["ads"]["source_of_truth"]["contract_checks"]
     assert by_id["bets"]["codex_status"] == "read_only_planning"
     assert by_id["bets"]["source_status"] == "shared_workflow_source"
     assert by_id["bets"]["source_of_truth"]["shared_source"] == "workflows/mb-bet/workflow.md"
@@ -773,6 +810,14 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
     assert "provider_gates" in by_id["site"]["source_of_truth"]["contract_checks"]
     assert by_id["google-ads-search-launch-playbook"]["surface_type"] == "playbook"
     assert by_id["google-ads-search-launch-playbook"]["playbook_status"] == "draft_manual"
+    assert (
+        by_id["google-ads-search-launch-playbook"]["playbook_source"]
+        == "playbooks/google-ads-search-launch/playbook.md"
+    )
+    assert (
+        by_id["google-ads-search-launch-playbook"]["source_of_truth"]["playbook_source"]
+        == "playbooks/google-ads-search-launch/playbook.md"
+    )
     assert by_id["google-ads-search-launch-playbook"]["codex_entrypoints"] == []
     assert by_id["google-ads-search-launch-playbook"]["codex_status"] == (
         "blocked_by_provider_gates"
@@ -812,15 +857,17 @@ def test_codex_workflow_inventory_command_lists_supported_and_pending_surfaces()
         set(by_id["think-codify"]["surface_kinds"])
     )
     assert {
+        "shared_source",
+        "claude_skill",
         "codex_global_skill",
         "read_only_planning",
-        "blocked_by_provider_gates",
     }.issubset(set(by_id["ads"]["surface_kinds"]))
     assert {"playbook", "blocked_by_provider_gates"}.issubset(
         set(by_id["google-ads-search-launch-playbook"]["surface_kinds"])
     )
     assert "plugin" not in data
     assert data["global_skill"]["path"] == codex_mod.CODEX_GLOBAL_SKILL_RELATIVE_PATH
+    assert "playbooks/google-ads-search-launch/playbook.md" in data["playbook_sources"]
     assert "mb-start" in data["global_skill"]["routes"]
     assert "google-ads-search-launch" not in data["global_skill"]["routes"]
     assert "ship-bet" not in data["global_skill"]["routes"]
@@ -855,7 +902,7 @@ def test_codex_workflow_inventory_source_status_contract_is_explicit() -> None:
         if item["source_status"] in {
             "pending_shared_source_migration",
             "blocked_by_provider_gates",
-        }:
+        } and not item.get("playbook_source"):
             assert source["status_reason"]
             assert source["next_required_issue"]
             assert source["follow_up_issue"]
@@ -875,6 +922,8 @@ def test_codex_workflow_inventory_source_status_contract_is_explicit() -> None:
             assert "core_flow" in source["contract_checks"]
         else:
             assert not source["shared_source"]
+            if item.get("playbook_source"):
+                assert item["playbook_source"] == source["playbook_source"]
 
 
 def test_codex_workflow_inventory_static_metadata_is_complete() -> None:
@@ -901,7 +950,7 @@ def test_codex_workflow_inventory_static_metadata_is_complete() -> None:
             "pending_shared_source_migration",
             "blocked_by_provider_gates",
             "internal_composable",
-        }:
+        } and not item.get("playbook_source"):
             assert item.get("status_reason")
             assert item.get("next_required_issue")
             assert item.get("follow_up_issue")
@@ -931,6 +980,7 @@ def test_codex_shared_global_skills_are_rendered_from_workflow_sources() -> None
         (THINK_WORKFLOW, "mb-think"),
         (END_WORKFLOW, "mb-end"),
         (BET_WORKFLOW, "mb-bet"),
+        (ADS_WORKFLOW, "mb-ads"),
         (ORGANIC_WORKFLOW, "mb-organic"),
         (SITE_WORKFLOW, "mb-site"),
     ):
@@ -980,6 +1030,94 @@ def test_bet_codex_shell_keeps_read_only_planning_boundary() -> None:
     assert "supported write surface" in shell
     assert "Run `/mb-bet`" not in shell
     assert "slash" not in shell.lower()
+
+
+def test_ads_runtime_shells_surface_paid_contract_and_provider_boundaries() -> None:
+    workflow = load_workflow(ADS_WORKFLOW)
+    required_gates = {
+        "provider_mutation",
+        "publishing_or_spend",
+        "account_change",
+        "customer_contact",
+        "private_data",
+        "public_issue_or_proposal",
+    }
+
+    for shell in (render_claude_shell(workflow), render_codex_shell(workflow)):
+        for gate in required_gates:
+            assert f"`{gate}`" in shell
+        assert "static, copy-only, image-only, hook-library, video-scripts" in shell
+        assert "review, launch-plan, check, or account-context" in shell
+        assert "route to `mb-think`" in shell
+        assert "route to `mb-site`" in shell
+        assert "money_path.objects.proof.quality" in shell
+        assert "pushes/<YYYY-MM-DD-slug>/ads-batch-001.md" in shell
+        assert "google-ads-search-launch" in shell
+        assert "provider mutation" in shell
+        assert "upload assets" in shell
+        assert "spend" in shell
+        assert "GTM" in shell
+        assert "contact customers" in shell
+
+
+def test_ads_codex_shell_keeps_read_only_planning_boundary() -> None:
+    workflow = load_workflow(ADS_WORKFLOW)
+    shell = render_codex_shell(workflow)
+
+    assert codex_shell_policy_errors(workflow, shell) == []
+    assert "Runtime support: `codex_cli: read_only_planning`" in shell
+    assert "read-only planning" in shell
+    assert "file-guidance route" in shell
+    assert "does not claim supported paid creative writes" in shell
+    assert "Runtime smoke is required before docs say" in shell
+    assert "workflow is supported for Codex paid creative writes" in shell
+    assert "patch-shaped recommendations" in shell
+    assert "stop before changing files" in shell
+    assert "supported write surface" in shell
+    assert "upload assets" in shell
+    assert "change budgets" in shell
+    assert "publish GTM" in shell
+    forbidden_agent_actions = (
+        "Codex can create campaign",
+        "Codex can create campaigns",
+        "Codex can upload",
+        "Codex can publish",
+        "Codex can change budget",
+        "Codex can change budgets",
+        "Codex can launch",
+        "Codex can contact customers",
+        "create campaigns without approval",
+        "upload assets without approval",
+        "publish ads without approval",
+        "change budgets without approval",
+        "launch campaigns without approval",
+    )
+    for phrase in forbidden_agent_actions:
+        assert phrase.lower() not in shell.lower()
+    assert "Run `/mb-ads`" not in shell
+    assert "slash" not in shell.lower()
+
+
+def test_google_ads_search_launch_playbook_source_shape_exists() -> None:
+    text = GOOGLE_ADS_PLAYBOOK.read_text(encoding="utf-8")
+
+    assert "status: draft_manual" in text
+    assert "provider_mutation: false" in text
+    assert "publishing_or_spend: false" in text
+    assert "claude_code: manual_recipe" in text
+    assert "codex_cli: blocked_by_provider_gates" in text
+    assert "`templates/push-playbook.md`" in text
+    assert "references/noontide-approach.md" in text
+    assert "references/b2b-local-services-field-notes.md" in text
+    assert "It does not publish campaigns, change budgets, upload conversions, publish GTM" in text
+    inventory = codex_mod.workflow_inventory(runtime="codex")
+    by_id = {item["id"]: item for item in inventory["items"]}
+    assert (
+        "No Google Ads account mutation, spend, upload, or publishing is supported in Codex."
+        in (by_id["google-ads-search-launch-playbook"]["notes"])
+    )
+    assert by_id["google-ads-search-launch-playbook"]["codex_entrypoints"] == []
+    assert "google-ads-search-launch" not in inventory["global_skill"]["routes"]
 
 
 def test_organic_runtime_shells_surface_content_contract_and_boundaries() -> None:

@@ -13,6 +13,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Migrated `mb-ads` to a shared workflow source with checked Claude and Codex
+  shells, preserving read-only Codex boundaries for paid creative planning,
+  Google Ads launch planning, provider mutation, uploads, publishing, spend,
+  account changes, GTM publishes, conversion uploads, and customer contact.
+  Closes #750.
 - Tightened core lifecycle skill guidance so `mb-think` uses the real
   `runtime.codex_cli` fact path, daily start/status preserves explicit bet
   trigger facts, and `/mb-end` crystallize writes remain approval-gated.
