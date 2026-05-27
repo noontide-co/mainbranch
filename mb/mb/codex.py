@@ -199,7 +199,16 @@ CODEX_GLOBAL_SKILL_FACTS: dict[str, tuple[str, ...]] = {
         "mb validate --cross-refs --json",
         "mb checkpoint --plan --json",
     ),
-    "mb-ads": ("mb status --json --peek", "mb connect doctor --json"),
+    "mb-ads": (
+        "mb status --json --peek",
+        "mb start --json",
+        "mb doctor repair --plan",
+        "mb connect doctor --json",
+        "mb connect plan",
+        'mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json',
+        "mb validate --cross-refs --json",
+        "mb checkpoint --plan --json",
+    ),
     "mb-organic": ("mb status --json --peek",),
     "mb-site": (
         "mb status --json --peek",
@@ -239,6 +248,7 @@ CODEX_START_STATUS_SOURCE_WORKFLOW = "workflows/mb-start-status/workflow.md"
 CODEX_SETUP_SOURCE_WORKFLOW = "workflows/mb-setup/workflow.md"
 CODEX_MAINTENANCE_REPAIR_SOURCE_WORKFLOW = "workflows/mb-maintenance-repair/workflow.md"
 CODEX_BET_SOURCE_WORKFLOW = "workflows/mb-bet/workflow.md"
+CODEX_ADS_SOURCE_WORKFLOW = "workflows/mb-ads/workflow.md"
 CODEX_ORGANIC_SOURCE_WORKFLOW = "workflows/mb-organic/workflow.md"
 CODEX_SITE_SOURCE_WORKFLOW = "workflows/mb-site/workflow.md"
 CODEX_THINK_REQUIRED_MB_COMMANDS = (
@@ -393,6 +403,82 @@ CODEX_BET_PUBLIC_PRIVATE_BOUNDARIES = (
     "no_raw_finance_legal_records",
     "no_raw_ledger_rows",
 )
+CODEX_ADS_REQUIRED_MB_COMMANDS = (
+    "mb status --json --peek",
+    "mb start --json",
+    "mb doctor repair --plan",
+    "mb connect doctor --json",
+    "mb connect plan",
+    'mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json',
+    "mb validate --cross-refs --json",
+    "mb checkpoint --plan --json",
+)
+CODEX_ADS_REQUIRED_JSON_FACTS = (
+    "money_path",
+    "money_path.objects.proof.quality",
+    "money_path.objects.cta_path",
+    "money_path.objects.channel_strategy",
+    "money_path.objects.active_push",
+    "validation.file_contracts",
+    "content_strategy",
+    "content_strategy.overall_state",
+    "content_strategy.simple_entry_point",
+    "content_strategy.layers",
+    "ranked_actions",
+    "update",
+    "readiness",
+    "drift.items",
+    "integrations",
+    "measurement",
+    "measurement.available",
+    "measurement.state",
+    "measurement.facts.expected_events",
+    "measurement.blocked_count",
+    "measurement.manual_count",
+    "relationship_health.gaps",
+    "checkpoint.pending",
+    "checkpoint.pending.blockers",
+    "runtime.codex_cli",
+    "runtime.claude_code",
+    "state",
+    "blocked",
+    "manual",
+    "evidence",
+    "facts.expected_events",
+    "facts.provider_state",
+    "source",
+    "child_descriptor",
+)
+CODEX_ADS_APPROVAL_GATES = (
+    "updates_repairs_migrations",
+    "file_writes",
+    "checkpoint",
+    "provider_mutation",
+    "publishing_or_spend",
+    "customer_contact",
+    "private_data",
+    "destructive_operations",
+    "structured_collection",
+    "public_issue_or_proposal",
+    "account_change",
+    "upload_assets",
+    "budget_change",
+    "campaign_publish",
+    "conversion_upload",
+    "gtm_publish",
+)
+CODEX_ADS_PUBLIC_PRIVATE_BOUNDARIES = (
+    "no_secrets",
+    "no_raw_provider_exports",
+    "no_raw_transcripts",
+    "no_customer_member_data",
+    "no_private_runtime_settings",
+    "no_private_dms_or_gated_communities",
+    "no_raw_finance_legal_records",
+    "no_oauth_tokens",
+    "no_conversion_uploads",
+    "no_account_identifiers_in_public_examples",
+)
 CODEX_ORGANIC_REQUIRED_MB_COMMANDS = (
     "mb status --json --peek",
     "mb start --json",
@@ -528,6 +614,7 @@ CODEX_SHARED_WORKFLOW_SKILLS = {
     "mb-think": CODEX_THINK_SOURCE_WORKFLOW,
     "mb-end": CODEX_END_SOURCE_WORKFLOW,
     "mb-bet": CODEX_BET_SOURCE_WORKFLOW,
+    "mb-ads": CODEX_ADS_SOURCE_WORKFLOW,
     "mb-organic": CODEX_ORGANIC_SOURCE_WORKFLOW,
     "mb-site": CODEX_SITE_SOURCE_WORKFLOW,
 }
@@ -860,17 +947,43 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "claude_surface": "/mb-ads",
         "claude_skill_sources": ("mb-ads",),
         "codex_status": "read_only_planning",
-        "source_status": "blocked_by_provider_gates",
-        "codex_surface": "Read-only planning only",
+        "source_status": "shared_workflow_source",
+        "codex_surface": "Read-only planning and file guidance through global mb-ads skill",
         "codex_entrypoints": ("main-branch mb-ads",),
-        "commands": ("mb status --json --peek", "mb connect doctor --json"),
-        "status_reason": (
-            "Paid creative can be planned from facts, but provider mutation, upload, "
-            "spend, publishing, and customer/contact writes need explicit gates."
+        "shared_source": CODEX_ADS_SOURCE_WORKFLOW,
+        "commands": CODEX_ADS_REQUIRED_MB_COMMANDS,
+        "contract_checks": (
+            "intent",
+            "required_mb_commands",
+            "required_json_facts",
+            "approval_gates",
+            "read_boundaries",
+            "write_boundaries",
+            "ads_modes",
+            "research_handoff",
+            "site_readiness_handoff",
+            "proof_quality_boundary",
+            "artifact_routing",
+            "google_ads_playbook",
+            "provider_gates",
+            "upload_spend_publish_boundary",
+            "gtm_conversion_boundary",
+            "codex_read_only_planning_boundary",
+            "core_flow",
+            "public_private_boundaries",
         ),
-        "next_required_issue": "#750",
-        "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/750",
-        "notes": "No provider mutation, spend, upload, or publishing is supported in Codex.",
+        "status_reason": (
+            "Ads workflow substance has a shared source, but Codex remains read-only "
+            "planning and file guidance until runtime smoke proves paid creative writes, "
+            "provider mutation, uploads, publishing, spend, account changes, GTM publishes, "
+            "conversion uploads, and customer contact."
+        ),
+        "notes": (
+            "Codex may inspect ads, provider, measurement, and proof facts, propose "
+            "guarded drafts and launch plans, and name exact file targets. No provider "
+            "mutation, spend, upload, publishing, account change, GTM publish, conversion "
+            "upload, or customer contact is supported."
+        ),
     },
     {
         "id": "organic-content",
@@ -983,14 +1096,13 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
         "codex_status": "blocked_by_provider_gates",
         "source_status": "blocked_by_provider_gates",
         "codex_surface": "Draft/manual playbook behind mb-ads; no direct Codex global skill",
+        "playbook_source": "playbooks/google-ads-search-launch/playbook.md",
         "commands": ("mb status --json --peek", "mb connect doctor --json"),
         "status_reason": (
             "This is a reusable launch recipe, not a first-class skill. It stays "
-            "manual behind mb-ads until provider/spend/publish gates and a real "
-            "playbook source shape land."
+            "manual behind mb-ads until provider/spend/publish gates and runtime "
+            "smoke support more than planning."
         ),
-        "next_required_issue": "#750",
-        "follow_up_issue": "https://github.com/noontide-co/mainbranch/issues/750",
         "notes": (
             "No Google Ads account mutation, spend, upload, or publishing is supported in Codex."
         ),
@@ -1650,6 +1762,7 @@ def _source_of_truth_for_inventory_item(item: dict[str, Any]) -> dict[str, Any]:
         "playbook_status": item.get("playbook_status"),
         "status_reason": item.get("status_reason"),
         "shared_source": item.get("shared_source"),
+        "playbook_source": item.get("playbook_source"),
         "surface_kinds": surface_kinds,
         "claude_sources": list(
             _claude_skill_sources_for_inventory_item(item)
@@ -1696,6 +1809,8 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
         copied["surface_type"] = str(item.get("surface_type", "workflow"))
         if item.get("playbook_status"):
             copied["playbook_status"] = str(item["playbook_status"])
+        if item.get("playbook_source"):
+            copied["playbook_source"] = str(item["playbook_source"])
         copied["commands"] = list(_commands_for_inventory_item(item))
         copied["claude_skill_sources"] = list(_claude_skill_sources_for_inventory_item(item))
         copied["claude_playbook_sources"] = list(_claude_playbook_sources_for_inventory_item(item))
@@ -1737,6 +1852,11 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
         "claude_playbook_sources": [
             f".claude/playbooks/{name}/SKILL.md" for name in CLAUDE_PLAYBOOK_SOURCE_NAMES
         ],
+        "playbook_sources": sorted(
+            str(item["playbook_source"])
+            for item in CODEX_WORKFLOW_INVENTORY
+            if item.get("playbook_source")
+        ),
         "global_skill": {
             "name": CODEX_GLOBAL_SKILL_NAME,
             "display_name": "Main Branch",
