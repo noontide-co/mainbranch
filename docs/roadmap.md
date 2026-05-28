@@ -58,10 +58,15 @@ Main Branch already ships:
   business work;
 - `bets/` and `/mb-bet` as the first Reflect primitive;
 - `mb checkpoint` as the first hidden GitOps save layer for long agent runs;
-- the first official shared workflow source pattern in
-  `workflows/mb-think/workflow.md`, with checked Claude/Codex runtime shell
-  snapshots and generated Codex lifecycle guidance that avoids overclaiming
-  runtime parity;
+- canonical shared workflow sources for daily start/status, setup,
+  maintenance/repair, think, closeout/checkpoint, bet, ads, organic, and site
+  routes;
+- checked Claude and Codex shell snapshots over those shared sources, with
+  read-only Codex boundaries where output or provider workflows are not yet
+  full runtime support;
+- the first reusable Google Ads Search launch playbook source packaged with the
+  engine, with planning support kept separate from provider mutation, uploads,
+  publishing, spend, account changes, and customer contact;
 - materialized release-simulation fixtures and the package-visible release
   evidence ladder (PR smoke, pre-release candidate, release acceptance);
 - release and local-state boundary hardening for package publishing and

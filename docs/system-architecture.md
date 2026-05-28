@@ -122,16 +122,18 @@ Portable workflow semantics live in `workflows/<workflow>/workflow.md`.
 Runtime-specific files are runtime shells or runtime guidance over that source,
 not the canonical truth.
 
-The first official pattern is `workflows/mb-think/workflow.md`. It declares the
-workflow intent, operator loops, runtime support level, checked runtime
-surfaces, required `mb` fact commands, JSON fact paths, approval gates,
-public/private boundaries, routing rules, handoff shape, and validation
-expectations. Claude Code remains the first-class slash-skill runtime shell
-through `.claude/skills/mb-think/SKILL.md`; Codex uses tracked `AGENTS.md` plus
-global Main Branch `mb-*` skills under the Codex skills root for daily routes,
-checked against shared workflow sources where migrated. Neither `.claude/skills`,
-generated repo guidance, nor runtime skill files are the canonical source for
-cross-runtime workflow semantics.
+Shared workflow sources now cover the daily start/status, setup,
+maintenance/repair, think, closeout/checkpoint, bet, ads, organic, and site
+workflows. Each source declares the workflow intent, operator loops, runtime
+support level, checked runtime surfaces, required `mb` fact commands, JSON fact
+paths, approval gates, public/private boundaries, routing rules, handoff shape,
+and validation expectations. Claude Code remains the first-class slash-skill
+runtime shell through `.claude/skills/<name>/SKILL.md`; Codex uses tracked
+`AGENTS.md` plus global Main Branch `mb-*` skills under the Codex skills root,
+with output and provider workflows kept at read-only planning until runtime
+smoke proves write support. Neither `.claude/skills`, generated repo guidance,
+nor runtime skill files are the canonical source for cross-runtime workflow
+semantics.
 
 `mb` may validate, render snapshots for tests, and repair generated runtime
 guidance. It must not invoke Claude, Codex, or any model.
@@ -430,8 +432,9 @@ Push status maps to operator loops:
 Two layers:
 
 - A **reusable playbook** is an engine-packaged operating recipe under
-  `.claude/playbooks/<name>/`. Public, sanitized, opinionated, runnable by
-  many businesses.
+  `playbooks/<name>/playbook.md`. Public, sanitized, opinionated, runnable by
+  many businesses. Runtime shells such as
+  `.claude/playbooks/<name>/SKILL.md` adapt that source for a specific runtime.
 - A **push playbook** is a per-run business repo record under
   `pushes/<push>/playbooks/<playbook>.md`.
 

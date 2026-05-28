@@ -413,7 +413,7 @@ build on it, here is the command list.
 | `mb graph` | Build a folder graph from links, tags, connected-tool refs, and repo topology. DOT, JSON, and PNG outputs. |
 | `mb suggest links` | Suggest likely connections for a file without editing it. |
 | `mb checkpoint` | Plan or save a readable git checkpoint during long agent runs. |
-| `mb workflow list` | List workflow support, pending migrations, and intentionally unsupported workflows. |
+| `mb workflow list` | List workflow surfaces by support level (supported, read-only planning, shared-source, pending, unsupported). |
 | `mb skill list` / `path` / `validate` / `link` / `repair` | Inspect, validate, link, and repair bundled skills and generated app guidance. |
 | `mb update` | Update Main Branch in place. |
 
