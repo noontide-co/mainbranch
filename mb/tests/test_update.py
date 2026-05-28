@@ -745,6 +745,71 @@ def test_update_pipx_upgrade_failure_skips_relink(monkeypatch: Any, tmp_path: Pa
     assert result["skills_relinked_count"] == 0
     assert calls == [["pipx", "upgrade", "mainbranch"]]
     assert "network down" in result["errors"][0]
+    assert result["warnings"] == []
+    assert result["next_actions"] == []
+
+
+def test_update_pipx_local_wheel_parse_failure_surfaces_force_install(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        return _completed(
+            args,
+            returncode=1,
+            stderr=(
+                "Unable to parse package spec: /tmp/Main Branch/dist/"
+                "mainbranch-0.3.39-py3-none-any.whl"
+            ),
+        )
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "0.3.40")
+    monkeypatch.setattr(
+        update_mod.shutil,  # type: ignore[attr-defined]
+        "which",
+        lambda name: "/opt/homebrew/bin/pipx",
+    )
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(repo=tmp_path / "biz")
+
+    assert result["ok"] is False
+    assert result["new_version"] == result["old_version"]
+    assert result["skills_relinked_count"] == 0
+    assert calls == [["pipx", "upgrade", "mainbranch"]]
+    assert "Unable to parse package spec" in result["errors"][0]
+    assert result["warnings"] == [
+        "pipx could not parse the saved Main Branch install spec. This can happen "
+        "after installing from a local wheel path. Approve a forced pipx reinstall "
+        "to reset the saved install source."
+    ]
+    assert result["next_actions"] == ["pipx install --force mainbranch==0.3.40"]
+
+
+def test_update_render_human_failure_prints_next_action(capsys: Any) -> None:
+    update_mod.render_human(
+        {
+            "ok": False,
+            "check": False,
+            "old_version": "0.3.39",
+            "new_version": "0.3.39",
+            "mode": "pipx",
+            "skills_relinked_count": 0,
+            "errors": ["pipx upgrade mainbranch failed with exit code 1"],
+            "warnings": ["Approve a forced pipx reinstall to reset the saved install source."],
+            "next_actions": ["pipx install --force mainbranch==0.3.40"],
+        }
+    )
+
+    output = capsys.readouterr().out
+
+    assert "error: pipx upgrade mainbranch failed with exit code 1" in output
+    assert "warning: Approve a forced pipx reinstall" in output
+    assert "next: pipx install --force mainbranch==0.3.40" in output
 
 
 def test_update_relink_invalid_json_is_reported(monkeypatch: Any, tmp_path: Path) -> None:
