@@ -486,6 +486,56 @@ def onboard_cmd(
         "--desired-outcome",
         help="Short target outcome for onboarding progress.",
     ),
+    operating_currency: str = typer.Option(
+        "",
+        "--operating-currency",
+        help="Safe MoneyPath currency code, such as USD.",
+    ),
+    books_storage_mode: str = typer.Option(
+        "",
+        "--books-storage-mode",
+        help="Books storage mode: solo-local, team-private-repo, advanced-vault.",
+    ),
+    monthly_experiment_budget_band: str = typer.Option(
+        "",
+        "--monthly-experiment-budget-band",
+        help="Safe budget band: under-500, 500-2k, 2k-10k, over-10k, private.",
+    ),
+    threshold_privacy: str = typer.Option(
+        "",
+        "--threshold-privacy",
+        help="Threshold posture: declared, private, unknown, or blank.",
+    ),
+    trivial_max_amount: str = typer.Option(
+        "",
+        "--trivial-max-amount",
+        help="Optional safe max amount for trivial bets.",
+    ),
+    small_max_amount: str = typer.Option(
+        "",
+        "--small-max-amount",
+        help="Optional safe max amount for small bets.",
+    ),
+    material_max_amount: str = typer.Option(
+        "",
+        "--material-max-amount",
+        help="Optional safe max amount for material bets.",
+    ),
+    strategic_min_amount: str = typer.Option(
+        "",
+        "--strategic-min-amount",
+        help="Optional safe min amount for strategic bets.",
+    ),
+    approval_required_for_material: str = typer.Option(
+        "",
+        "--approval-required-for-material",
+        help="Whether material bets need accepted-decision approval: yes/no.",
+    ),
+    ledger_anchor_default: str = typer.Option(
+        "",
+        "--ledger-anchor-default",
+        help="Whether non-trivial bets need ledger anchors by default: yes/no.",
+    ),
     github_repo: str = typer.Option(
         "",
         "--github",
@@ -558,6 +608,16 @@ def onboard_cmd(
             business_type=business_type,
             success_stage=success_stage,
             desired_outcome=desired_outcome,
+            operating_currency=operating_currency,
+            books_storage_mode=books_storage_mode,
+            monthly_experiment_budget_band=monthly_experiment_budget_band,
+            threshold_privacy=threshold_privacy,
+            trivial_max_amount=trivial_max_amount,
+            small_max_amount=small_max_amount,
+            material_max_amount=material_max_amount,
+            strategic_min_amount=strategic_min_amount,
+            approval_required_for_material=approval_required_for_material,
+            ledger_anchor_default=ledger_anchor_default,
             github_repo=github_repo,
             github_visibility=github_visibility,
             github_push=github_push,
@@ -640,6 +700,40 @@ def onboard_plan_cmd(
         help="Current success stage: prelaunch, working, successful, scaling, or unknown.",
     ),
     desired_outcome: str = typer.Option("", "--desired-outcome", help="Short target outcome."),
+    operating_currency: str = typer.Option(
+        "",
+        "--operating-currency",
+        help="Safe MoneyPath currency code, such as USD.",
+    ),
+    books_storage_mode: str = typer.Option(
+        "",
+        "--books-storage-mode",
+        help="Books storage mode: solo-local, team-private-repo, advanced-vault.",
+    ),
+    monthly_experiment_budget_band: str = typer.Option(
+        "",
+        "--monthly-experiment-budget-band",
+        help="Safe budget band: under-500, 500-2k, 2k-10k, over-10k, private.",
+    ),
+    threshold_privacy: str = typer.Option(
+        "",
+        "--threshold-privacy",
+        help="Threshold posture: declared, private, unknown, or blank.",
+    ),
+    trivial_max_amount: str = typer.Option("", "--trivial-max-amount"),
+    small_max_amount: str = typer.Option("", "--small-max-amount"),
+    material_max_amount: str = typer.Option("", "--material-max-amount"),
+    strategic_min_amount: str = typer.Option("", "--strategic-min-amount"),
+    approval_required_for_material: str = typer.Option(
+        "",
+        "--approval-required-for-material",
+        help="Whether material bets need accepted-decision approval: yes/no.",
+    ),
+    ledger_anchor_default: str = typer.Option(
+        "",
+        "--ledger-anchor-default",
+        help="Whether non-trivial bets need ledger anchors by default: yes/no.",
+    ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Create or update the lightweight onboarding progress plan."""
@@ -651,6 +745,16 @@ def onboard_plan_cmd(
             business_type=business_type,
             success_stage=success_stage,
             desired_outcome=desired_outcome,
+            operating_currency=operating_currency,
+            books_storage_mode=books_storage_mode,
+            monthly_experiment_budget_band=monthly_experiment_budget_band,
+            threshold_privacy=threshold_privacy,
+            trivial_max_amount=trivial_max_amount,
+            small_max_amount=small_max_amount,
+            material_max_amount=material_max_amount,
+            strategic_min_amount=strategic_min_amount,
+            approval_required_for_material=approval_required_for_material,
+            ledger_anchor_default=ledger_anchor_default,
         )
     except ValueError as exc:
         typer.echo(f"mb onboard plan: {exc}", err=True)

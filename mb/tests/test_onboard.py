@@ -341,6 +341,106 @@ def test_onboard_plan_updates_profile_without_raw_business_state(
     assert "chat transcripts" in " ".join(state["contract"]["never_store_here"])
 
 
+def test_onboard_plan_stores_safe_moneypath_threshold_context_without_books_write(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "solo"
+    onboard_mod.run(path=str(repo), name="Solo Co", mode="new", level="power")
+
+    result = runner.invoke(
+        app,
+        [
+            "onboard",
+            "plan",
+            "--repo",
+            str(repo),
+            "--operating-currency",
+            "usd",
+            "--books-storage-mode",
+            "solo-local",
+            "--monthly-experiment-budget-band",
+            "500-2k",
+            "--trivial-max-amount",
+            "100",
+            "--small-max-amount",
+            "1000",
+            "--threshold-privacy",
+            "declared",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["money_path"]["operating_currency"] == "USD"
+    assert payload["money_path"]["monthly_experiment_budget_band"] == "500-2k"
+    assert payload["money_path"]["trivial_max_amount"] == 100
+    assert not (repo / "core" / "finance" / "books.md").exists()
+    state_text = (repo / ".mb" / "onboarding.json").read_text(encoding="utf-8")
+    assert "revenue" not in state_text
+    assert "balance" not in state_text
+    assert ".mb/onboarding.json" in (repo / ".gitignore").read_text(encoding="utf-8")
+
+
+def test_onboard_yes_writes_confirmed_safe_moneypath_thresholds_to_books_policy(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "acme"
+
+    result = onboard_mod.run(
+        path=str(repo),
+        name="Acme",
+        mode="new",
+        level="power",
+        operating_currency="usd",
+        books_storage_mode="solo-local",
+        trivial_max_amount="100",
+        small_max_amount="1000",
+        material_max_amount="5000",
+        strategic_min_amount="5000",
+        approval_required_for_material="yes",
+        ledger_anchor_default="yes",
+    )
+
+    assert result["ok"] is True
+    assert "core/finance/books.md" in result["created"]
+    books_text = (repo / "core" / "finance" / "books.md").read_text(encoding="utf-8")
+    assert "operating_currency: USD" in books_text
+    assert "appetite_thresholds:" in books_text
+    assert "material:" in books_text
+    assert "approval: accepted_decision" in books_text
+    assert "requires_exit_rubric: true" in books_text
+    assert "payee" not in books_text
+    assert "balance" not in books_text
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+    assert report["money_path"]["policy"]["thresholds_declared"] is True
+
+
+def test_onboard_private_threshold_choice_keeps_thresholds_optional(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "private"
+    onboard_mod.run(
+        path=str(repo),
+        name="Private Co",
+        mode="new",
+        level="power",
+        threshold_privacy="private",
+    )
+
+    payload = onboard_mod.onboarding_status(repo)
+    threshold_step = next(
+        step for step in payload["checklist"] if step["id"] == "money_path_thresholds"
+    )
+    assert threshold_step["status"] == "complete"
+    assert threshold_step["required"] is False
+    assert not (repo / "core" / "finance" / "books.md").exists()
+
+
 def test_onboard_yes_does_not_overwrite_existing_team_size(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(onboard_mod, "_which", _tool_path)
     monkeypatch.setattr(onboard_mod, "is_interactive", lambda: False)

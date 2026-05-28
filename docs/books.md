@@ -172,6 +172,30 @@ payees, account names, or balances. Leave the thresholds blank until the
 operator chooses them; Main Branch should then ask before material execution
 spend.
 
+`mb onboard` can collect this policy during setup when the operator chooses to
+declare it. The safe fields are currency, storage mode, a broad experiment
+budget band, appetite threshold amounts, material-approval posture, and whether
+non-trivial bets should require ledger anchors by default:
+
+```bash
+mb onboard --yes --name "My Business" --path my-business \
+  --operating-currency USD \
+  --books-storage-mode solo-local \
+  --monthly-experiment-budget-band 500-2k \
+  --trivial-max-amount 100 \
+  --small-max-amount 1000 \
+  --material-max-amount 5000 \
+  --strategic-min-amount 5000 \
+  --approval-required-for-material yes \
+  --ledger-anchor-default yes
+```
+
+Interim answers live in gitignored `.mb/onboarding.json`. Confirmed thresholds
+are written to `core/finance/books.md` because they are policy declarations, not
+raw finances. If even threshold policy is private for a business, use
+`--threshold-privacy private` or leave thresholds blank; Main Branch will keep
+running and ask before material bets instead of inventing numbers.
+
 `core/finance/chart-of-accounts.md` describes the account roots the
 operator uses (`assets`, `liabilities`, `equity`, `income`,
 `expenses`) and the naming convention beneath them. It does not list
