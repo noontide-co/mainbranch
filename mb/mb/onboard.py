@@ -832,6 +832,8 @@ def _frontmatter_and_body(path: Path) -> tuple[dict[str, Any], str]:
 
 
 def _write_books_policy_from_onboarding(repo: Path, money_path: dict[str, Any]) -> bool:
+    if money_path.get("threshold_privacy") == "private":
+        return False
     tiers = _threshold_tiers_from_inputs(money_path)
     if not tiers:
         return False
@@ -848,7 +850,10 @@ def _write_books_policy_from_onboarding(repo: Path, money_path: dict[str, Any]) 
     fm["storage_mode"] = (
         money_path.get("books_storage_mode") or fm.get("storage_mode") or "solo-local"
     )
-    fm.setdefault("vault_location", ".mb/private/books/")
+    if fm["storage_mode"] in books_mod.NON_LOCAL_STORAGE_MODES:
+        fm.setdefault("vault_location", "")
+    else:
+        fm.setdefault("vault_location", ".mb/private/books/")
     fm.setdefault("github_backup", False)
     fm.setdefault("encrypted_backup", False)
     fm.setdefault("class_b_data", True)
@@ -856,7 +861,9 @@ def _write_books_policy_from_onboarding(repo: Path, money_path: dict[str, Any]) 
     money: dict[str, Any] = raw_money if isinstance(raw_money, dict) else {}
     money.setdefault("scale_basis", "rolling_30_day_gross_outflow")
     money.setdefault("exposure_window_days", 7)
-    money["appetite_thresholds"] = tiers
+    raw_existing_tiers = money.get("appetite_thresholds")
+    existing_tiers = raw_existing_tiers if isinstance(raw_existing_tiers, dict) else {}
+    money["appetite_thresholds"] = {**existing_tiers, **tiers}
     fm["money_path"] = money
     path.write_text(
         "---\n" + yaml.safe_dump(fm, sort_keys=False) + "---\n\n" + body.lstrip("\n"),

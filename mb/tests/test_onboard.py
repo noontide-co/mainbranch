@@ -441,6 +441,81 @@ def test_onboard_private_threshold_choice_keeps_thresholds_optional(
     assert not (repo / "core" / "finance" / "books.md").exists()
 
 
+def test_onboard_private_threshold_choice_does_not_commit_amounts(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "private-amount"
+
+    onboard_mod.run(
+        path=str(repo),
+        name="Private Amount Co",
+        mode="new",
+        level="power",
+        threshold_privacy="private",
+        trivial_max_amount="100",
+    )
+
+    assert not (repo / "core" / "finance" / "books.md").exists()
+    state_text = (repo / ".mb" / "onboarding.json").read_text(encoding="utf-8")
+    assert '"threshold_privacy": "private"' in state_text
+    assert '"trivial_max_amount": 100' in state_text
+
+
+def test_onboard_non_local_books_storage_does_not_fake_local_vault(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "team-books"
+
+    onboard_mod.run(
+        path=str(repo),
+        name="Team Books Co",
+        mode="new",
+        level="power",
+        books_storage_mode="team-private-repo",
+        trivial_max_amount="100",
+    )
+
+    books_text = (repo / "core" / "finance" / "books.md").read_text(encoding="utf-8")
+    assert "storage_mode: team-private-repo" in books_text
+    assert "vault_location: ''" in books_text
+    assert ".mb/private/books/" not in books_text
+
+
+def test_onboard_partial_threshold_rerun_preserves_existing_tiers(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "tier-merge"
+
+    onboard_mod.run(
+        path=str(repo),
+        name="Tier Merge Co",
+        mode="new",
+        level="power",
+        trivial_max_amount="100",
+        small_max_amount="1000",
+        material_max_amount="5000",
+        strategic_min_amount="5000",
+    )
+    onboard_mod.run(
+        path=str(repo),
+        name="Tier Merge Co",
+        mode="connect",
+        level="power",
+        trivial_max_amount="200",
+    )
+
+    books_text = (repo / "core" / "finance" / "books.md").read_text(encoding="utf-8")
+    assert "trivial:" in books_text
+    assert "max_amount: 200" in books_text
+    assert "small:" in books_text
+    assert "max_amount: 1000" in books_text
+    assert "material:" in books_text
+    assert "strategic:" in books_text
+
+
 def test_onboard_yes_does_not_overwrite_existing_team_size(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(onboard_mod, "_which", _tool_path)
     monkeypatch.setattr(onboard_mod, "is_interactive", lambda: False)
