@@ -24,6 +24,8 @@ Required commands:
 - `mb start --json`
 - `mb doctor repair --plan`
 
+`mb doctor repair --plan` is read-only. If it exits nonzero while returning `plan_interpretation` and `actions`, treat that as findings to review, not as an opaque command failure.
+
 Required fact paths:
 
 - `money_path`
@@ -38,6 +40,8 @@ Required fact paths:
 - `ranked_actions`
 - `update`
 - `readiness`
+- `readiness.dimensions.repo_runtime`
+- `readiness.dimensions.business_memory`
 - `drift.items`
 - `runtime.codex_cli`
 - `runtime.claude_code`
@@ -82,8 +86,9 @@ mb status --json --peek
 
 3. Treat the JSON as the source of truth for setup, update, drift, GitHub,
    onboarding, integrations, team, bets, journal activity, since-last-check,
-   readiness, vocabulary, content_strategy, money_path,
-   validation.file_contracts, and ranked actions.
+   readiness, `readiness.dimensions.repo_runtime`,
+   `readiness.dimensions.business_memory`, vocabulary, content_strategy,
+   money_path, validation.file_contracts, and ranked actions.
 4. Summarize the top `ranked_actions` first. For each one, include:
    - title
    - command or slash command

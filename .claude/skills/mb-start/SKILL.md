@@ -13,7 +13,6 @@ Single entry point for Main Branch. Detect business state, intent, save/sync pos
 This skill routes; it is not the worker for coordinated output. Use
 [references/router-and-language.md](references/router-and-language.md) as the
 business router before presenting a menu.
-
 Business language comes first. Say saved checkpoint, unsaved local work, catch
 up, sync, reconcile, shared repo, workspace, and provider readiness. Keep raw
 git terms, checkpoint ids, branch names, `origin`, `ahead`, `behind`, `rebase`,
@@ -43,7 +42,6 @@ Required commands:
 - `mb status --json --peek`
 - `mb start --json`
 - `mb doctor repair --plan`
-
 Required fact paths:
 - `money_path`
 - `money_path.policy`
@@ -57,6 +55,8 @@ Required fact paths:
 - `ranked_actions`
 - `update`
 - `readiness`
+- `readiness.dimensions.repo_runtime`
+- `readiness.dimensions.business_memory`
 - `drift.items`
 - `runtime.codex_cli`
 - `runtime.claude_code`

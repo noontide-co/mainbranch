@@ -4043,7 +4043,7 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
     if (
         codex_executable.get("found")
         and codex_instructions.get("ok")
-        and not codex_runtime.get("ok")
+        and codex_runtime.get("mismatch")
     ):
         items.append(
             {
@@ -4127,6 +4127,94 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
             "info": len([item for item in items if item["severity"] == "info"]),
         },
         "items": items,
+    }
+
+
+def _business_memory_readiness(report: dict[str, Any]) -> dict[str, Any]:
+    repo = report.get("repo") or {}
+    if not repo.get("looks_like_mainbranch_repo"):
+        return {
+            "state": "not_ready",
+            "summary": (
+                "Business memory is not available until this folder is a Main Branch business repo."
+            ),
+            "signals": ["repo.looks_like_mainbranch_repo=false"],
+            "safe_to_share": True,
+        }
+
+    signals: list[str] = []
+    validation = report.get("validation") or {}
+    validation_summary = validation.get("summary") or {}
+    if validation_summary.get("errors", 0):
+        signals.append("validation.errors")
+        return {
+            "state": "blocked",
+            "summary": (
+                "Business memory has validation blockers; repo/runtime readiness does "
+                "not mean the business context is complete."
+            ),
+            "signals": signals,
+            "safe_to_share": True,
+        }
+
+    onboarding_summary = (report.get("onboarding") or {}).get("summary") or {}
+    if onboarding_summary.get("status") == "in_progress":
+        missing = list(onboarding_summary.get("missing_inputs") or [])[:5]
+        signals.append("onboarding.summary.status=in_progress")
+        return {
+            "state": "needs_input",
+            "summary": (
+                f"{onboarding_summary.get('completed_required', 0)}/"
+                f"{onboarding_summary.get('total_required', 0)} required onboarding "
+                "inputs are complete; runtime can be ready while business memory still "
+                "needs profile inputs."
+            ),
+            "signals": [*signals, *[str(item) for item in missing]],
+            "next_action": str(
+                onboarding_summary.get("next_recommended_action")
+                or "Run `mb onboard status` to resume onboarding."
+            ),
+            "safe_to_share": True,
+        }
+
+    file_contracts = (validation.get("file_contracts") or {}).get("findings") or []
+    if file_contracts:
+        first = file_contracts[0]
+        signals.append("validation.file_contracts.findings")
+        return {
+            "state": "needs_context",
+            "summary": str(
+                first.get("owner_message")
+                or first.get("message")
+                or "A business file is present but still needs clearer operating context."
+            ),
+            "signals": signals,
+            "next_action": str(first.get("recommended_route") or "mb-think"),
+            "safe_to_share": bool(first.get("safe_to_share", True)),
+        }
+
+    drift = report.get("drift") or {}
+    drift_summary = drift.get("summary") or {}
+    if drift_summary.get("warnings", 0) or drift_summary.get("info", 0):
+        signals.append("drift.items")
+        return {
+            "state": "needs_attention",
+            "summary": (
+                "Repo/runtime checks are usable, but business memory still has drift or "
+                "follow-up signals to review."
+            ),
+            "signals": signals,
+            "safe_to_share": True,
+        }
+
+    return {
+        "state": "ready",
+        "summary": (
+            "Business memory has no onboarding, validation, or drift blockers in the "
+            "current status facts."
+        ),
+        "signals": [],
+        "safe_to_share": True,
     }
 
 
@@ -4237,9 +4325,23 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
         level = "needs_attention"
     else:
         level = "not_ready"
+    business_memory = _business_memory_readiness(report)
     return {
         "score": percent,
         "level": level,
+        "summary": (
+            f"Repo/runtime readiness is {level} at {percent}/100. "
+            f"Business memory is {business_memory['state']}."
+        ),
+        "dimensions": {
+            "repo_runtime": {
+                "score": percent,
+                "level": level,
+                "summary": "Repo shape, git, install, and runtime handoff checks.",
+                "safe_to_share": True,
+            },
+            "business_memory": business_memory,
+        },
         "checks": checks,
         "next_actions": next_actions[:5],
     }
@@ -4390,6 +4492,13 @@ def render_human(
     console.print(
         f"[bold]{readiness['level'].replace('_', ' ')}[/bold]  {readiness['score']}/100\n"
     )
+    business_memory = (readiness.get("dimensions") or {}).get("business_memory") or {}
+    if business_memory:
+        console.print(
+            "[bold]Business memory[/bold] "
+            f"{business_memory.get('state', 'unknown')}: "
+            f"{business_memory.get('summary', '')}"
+        )
 
     since_summary = since.get("summary") or {}
     if since.get("first_run"):

@@ -269,6 +269,11 @@ def test_doctor_repair_plan_is_read_only_for_status_marker(tmp_path: Path) -> No
     payload = json.loads(result.stdout)
     assert payload["schema"] == "mb.doctor.repair"
     assert payload["read_only"] is True
+    assert payload["plan_interpretation"]["state"] in {
+        "clear",
+        "plan_produced_with_findings",
+        "plan_produced_with_blockers",
+    }
     assert not marker.exists()
 
 
@@ -1610,6 +1615,27 @@ def test_doctor_repair_exits_nonzero_when_json_report_is_red(tmp_path: Path, mon
     assert result.exit_code == 1
     payload = json.loads(result.stdout)
     assert payload["ok"] is False
+
+
+def test_doctor_repair_plan_json_frames_nonzero_plan_as_usable_findings(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Biz")
+    (repo / "AGENTS.md").write_text("# stale\n\nNo facts here.\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    interpretation = payload["plan_interpretation"]
+    assert interpretation["read_only_plan"] is True
+    if payload["actions"]:
+        assert interpretation["nonzero_exit_can_still_include_usable_plan"] is True
+        assert interpretation["state"] in {
+            "plan_produced_with_findings",
+            "plan_produced_with_blockers",
+        }
 
 
 def test_doctor_legacy_symlink_keeps_current_active_engine_root(
