@@ -27,6 +27,8 @@ json_facts:
   - runtime.codex_cli
   - runtime.claude_code
   - onboarding
+  - onboarding.repo_boundary
+  - topology.repo_boundary
   - checkpoint
   - vocabulary
 approval_gates:
@@ -95,6 +97,8 @@ The runtime shell must preserve these paths from the workflow source:
 - `runtime.codex_cli`
 - `runtime.claude_code`
 - `onboarding`
+- `onboarding.repo_boundary`
+- `topology.repo_boundary`
 - `checkpoint`
 - `vocabulary`
 
@@ -114,6 +118,10 @@ target folder is an existing Main Branch repo, use `onboarding`, `readiness`,
 `drift.items`, and `mb doctor repair --plan` to resume setup or repair instead
 of starting over. If the operator requests GitHub backup or push setup, check
 GitHub CLI authentication and account identity before any GitHub write.
+Use `onboarding.repo_boundary` or `topology.repo_boundary` when the operator is
+unsure whether related work belongs in this repo, a separate business repo, or
+a child/lightweight repo. Do not build repo profiles here; explain the
+boundary choice and ask before setup writes.
 
 After approved setup, run `mb status --json --peek` and `mb start --json`.
 Summarize the owner outcome first: folder created or connected, business brain

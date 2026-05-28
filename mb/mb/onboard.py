@@ -15,6 +15,7 @@ from mb import checkpoint as checkpoint_mod
 from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import init as init_mod
+from mb import topology as topology_mod
 from mb.engine import link_skills, link_status
 
 LEVELS = {"beginner", "intermediate", "power"}
@@ -830,6 +831,7 @@ def onboarding_status(repo: str | Path = ".") -> dict[str, Any]:
     state = loaded or _initial_state(repo=target)
     markers = _repo_markers(target)
     checklist = _checklist(target, state, markers)
+    topology = topology_mod.collect(target)
     required = [step for step in checklist if step.get("required", True)]
     complete = [step for step in required if step["status"] == "complete"]
     next_step = next((step for step in checklist if step["status"] != "complete"), None)
@@ -842,6 +844,7 @@ def onboarding_status(repo: str | Path = ".") -> dict[str, Any]:
         "profile": state.get("profile") or {},
         "contract": state.get("contract") or {},
         "boundaries": state.get("boundaries") or BOUNDARIES,
+        "repo_boundary": topology["repo_boundary"],
         "checklist": checklist,
         "summary": {
             "status": "ready" if len(complete) == len(required) else "in_progress",

@@ -176,5 +176,16 @@ and checkpoint context. Agents should switch to the child repo when editing
 that child repo's code, site, product, client deliverable, sidecar, or ops
 files.
 
+`mb status --json --peek`, `mb start --json`, and onboarding expose a
+`repo_boundary` helper that keeps the choice small:
+
+- use the same business repo when brand, team, voice, access, accounts, and
+  operating history are shared;
+- create a separate business repo when the work has its own entity, team,
+  accounts, audience, brand, or operating history;
+- create a child/lightweight repo when the work is an execution surface for
+  the business, such as a site, product, client deliverable, finance/legal
+  boundary, ops repo, or integration sidecar.
+
 Before deleting, renaming, merging, or moving an offer folder, child repo, or
 topology entry, ask the operator for an explicit decision or migration plan.

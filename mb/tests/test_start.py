@@ -146,6 +146,8 @@ def test_start_json_reports_codex_global_skill_handoff(tmp_path: Path, monkeypat
     assert report["checkpoint"]["pending"]["status"] == "ready"
     assert report["books"]["schema_version"] == "1.0"
     assert report["books"]["safe_to_share"] is True
+    assert report["topology"]["repo_boundary"]["schema"] == "mb.repo_boundary_helper.v0"
+    assert report["topology"]["repo_boundary"]["recommended_choice"] == "same_business_repo"
     assert report["push_count"] == 0
     assert report["deprecated_campaign_keys"] is True
     assert report["push_compatibility"]["legacy_campaigns_read"] is True

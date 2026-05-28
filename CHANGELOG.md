@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added deterministic repo-boundary helper facts to `mb status --json --peek`,
+  `mb start --json`, and onboarding status so agents can guide same-repo,
+  separate-business-repo, or child/lightweight-repo setup decisions without
+  inventing repo profiles. Closes #631.
+
 ### Fixed
 
 - Added a guided `pipx install --force mainbranch==<latest>` recovery step when

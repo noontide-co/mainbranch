@@ -29,6 +29,8 @@ This snapshot does not replace shipped `.claude/skills` prose.
 - `runtime.codex_cli`
 - `runtime.claude_code`
 - `onboarding`
+- `onboarding.repo_boundary`
+- `topology.repo_boundary`
 - `checkpoint`
 - `vocabulary`
 

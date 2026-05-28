@@ -3285,6 +3285,8 @@ def test_status_exposes_topology_section_when_registry_missing(tmp_path: Path, m
     assert topology["summary"]["registry_found"] is False
     assert topology["summary"]["warnings"] == 0
     assert topology["current_repo"]["matched"] is False
+    assert topology["repo_boundary"]["state"] == "single_business_repo"
+    assert topology["repo_boundary"]["recommended_choice"] == "same_business_repo"
     assert topology["registry"]["found"] is False
     assert topology["registry"]["ok"] is False
     assert topology["local"]["repo_path"] == str(repo.resolve())
@@ -3304,6 +3306,8 @@ def test_status_exposes_topology_section_with_valid_registry(tmp_path: Path, mon
 
     assert topology["summary"]["registry_ok"] is True
     assert topology["summary"]["child_repo_count"] >= 1
+    assert topology["repo_boundary"]["schema"] == "mb.repo_boundary_helper.v0"
+    assert topology["repo_boundary"]["recommended_choice"] == "same_business_repo"
     # The hub itself should match by github_owner/repo_name fall-through (no
     # remote configured in tmp git), or fall through to descriptor. Either way
     # the registry recorded the hub role for this owner/repo pair.

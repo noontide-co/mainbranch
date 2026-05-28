@@ -32,6 +32,8 @@ workflows are available in Codex.
 - `runtime.codex_cli`
 - `runtime.claude_code`
 - `onboarding`
+- `onboarding.repo_boundary`
+- `topology.repo_boundary`
 - `checkpoint`
 - `vocabulary`
 

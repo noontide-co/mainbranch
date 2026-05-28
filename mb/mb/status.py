@@ -4129,6 +4129,7 @@ def run(
         "registry": topology_payload["registry"],
         "descriptor": topology_payload["descriptor"],
         "current_repo": topology_payload["current_repo"],
+        "repo_boundary": topology_payload["repo_boundary"],
         "child_counts": topology_payload["child_counts"],
         "restricted_repos": topology_payload["restricted_repos"],
         "findings": topology_payload["findings"],

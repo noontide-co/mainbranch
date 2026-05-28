@@ -36,6 +36,7 @@ workflows are available in Codex.
 - `onboarding`
 - `integrations`
 - `github`
+- `topology.repo_boundary`
 - `brain.bets`
 - `brain.bets.active`
 - `brain.bets.due_soon`

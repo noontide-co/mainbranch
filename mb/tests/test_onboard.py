@@ -216,6 +216,8 @@ def test_onboard_cli_yes_json_smoke(tmp_path: Path, monkeypatch) -> None:
     assert payload["setup_complete"]["github_requested"] is False
     assert (repo / ".mb" / "onboarding.json").exists()
     assert payload["onboarding"]["summary"]["status"] == "in_progress"
+    assert payload["onboarding"]["repo_boundary"]["schema"] == "mb.repo_boundary_helper.v0"
+    assert payload["onboarding"]["repo_boundary"]["recommended_choice"] == "same_business_repo"
     assert ".mb/onboarding.json" in (repo / ".gitignore").read_text(encoding="utf-8")
     assert ".vip/local.yaml" in (repo / ".gitignore").read_text(encoding="utf-8")
 
