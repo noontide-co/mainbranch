@@ -17,6 +17,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `mb start --json`, and onboarding status so agents can guide same-repo,
   separate-business-repo, or child/lightweight-repo setup decisions without
   inventing repo profiles. Closes #631.
+- Added MoneyPath appetite-threshold and active-bet exposure facts to
+  `mb status --json --peek`, with safe aggregate routing for missing
+  thresholds, unanchored bets, and over-cap bets. Closes #645.
 
 ### Fixed
 

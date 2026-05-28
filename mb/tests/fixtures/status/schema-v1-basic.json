@@ -124,9 +124,11 @@
       "summary"
     ],
     "money_path": [
+      "active_bets",
       "objects",
       "overall_label",
       "overall_level",
+      "policy",
       "ranked_actions",
       "safe_to_share",
       "schema_version",

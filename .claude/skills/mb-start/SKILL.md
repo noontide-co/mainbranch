@@ -6,9 +6,7 @@ loops: [sense, decide]
 
 # Start
 
-Single entry point for Main Branch. Detect business state, current intent, save/sync posture, and the smallest useful next route.
-
-**Recommended workflow:** Start Claude in your business repo, run `/mb-start`. It handles everything. Claude Code discovers Main Branch through project-local `.claude/skills/mb-*` bridge links; `additionalDirectories` grants file access to the installed package or source checkout.
+Single entry point for Main Branch. Detect business state, intent, save/sync posture, and the smallest useful next route.
 
 ## Router and language contract
 
@@ -22,10 +20,9 @@ git terms, checkpoint ids, branch names, `origin`, `ahead`, `behind`, `rebase`,
 and `commit` out of the first response unless the user asks for technical detail
 or the exact command must be shown.
 
-When summarizing repo state, count records under `pushes/` (current) and flag
-`campaigns/` separately as legacy compatibility. If `core/vocabulary.md` defines
-display words, speak the operator's word in conversation while still using
-actual file paths in commands.
+When summarizing repo state, count `pushes/` records and flag `campaigns/`
+only as legacy compatibility. Use `core/vocabulary.md` display words in
+conversation while preserving actual paths in commands.
 
 **CLI facts first:** Once the business repo path is known, run
 `mb status --json --peek` before asking setup or routing questions. Treat JSON
@@ -49,6 +46,11 @@ Required commands:
 
 Required fact paths:
 - `money_path`
+- `money_path.policy`
+- `money_path.policy.thresholds_declared`
+- `money_path.active_bets`
+- `money_path.active_bets.unanchored`
+- `money_path.active_bets.over_cap`
 - `money_path.objects.proof.quality`
 - `validation.file_contracts`
 - `content_strategy`
@@ -496,5 +498,3 @@ treat business `.vip/local.yaml` as audit input only, and do not write it.
 - [references/tool-status-audit.md](references/tool-status-audit.md) — Step 5 provider/readiness audit
 - [references/triage-agent.md](references/triage-agent.md) — Triage agent prompts and synthesis
 - [references/launch-orchestration.md](references/launch-orchestration.md) — guided offer-launch path
-## Remember
-Router, not worker. Detect → route → let the skill do the work. One clarifying question max. Skill loads its own context — main stays lean.

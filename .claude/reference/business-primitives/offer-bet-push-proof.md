@@ -66,6 +66,16 @@ Create or update a **bet** when the operator is testing a direction with a
 deadline, appetite, target, evidence, or verdict. Examples: "test Petaluma HVAC
 for two weeks," "see if founder calls beat async audits," "try a $49 workshop."
 
+Apply **MoneyPath gates** before execution spend:
+
+- time-boxed test with money at risk -> route to `/mb-bet` and require a
+  MoneyPath anchor before execution;
+- durable offer truth only -> update offer files; no ledger anchor is required;
+- offer sharpening that causes spend -> open or link a bet and require
+  MoneyPath before execution;
+- material or strategic appetite -> require an accepted decision and kill
+  rubric before execution.
+
 Create or update an **offer** only when the business is ready to preserve what
 it sells or may sell repeatedly. Examples: confirmed promise, pricing,
 mechanism, deliverables, guarantee, qualification rules, or checkout/fulfillment

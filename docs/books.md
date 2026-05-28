@@ -135,6 +135,27 @@ vault_location: ".mb/private/books/"
 github_backup: false
 encrypted_backup: false
 class_b_data: true
+money_path:
+  scale_basis: rolling_30_day_gross_outflow
+  exposure_window_days: 7
+  appetite_thresholds:
+    trivial:
+      max_amount: 100
+      approval: operator
+      ledger_required: false
+    small:
+      max_amount: 1000
+      approval: operator
+      ledger_required: true
+    material:
+      max_amount: 5000
+      approval: accepted_decision
+      ledger_required: true
+    strategic:
+      min_amount: 5000
+      approval: accepted_decision
+      ledger_required: true
+      requires_exit_rubric: true
 ---
 
 # Bookkeeping
@@ -143,6 +164,13 @@ This business uses an hledger journal kept in a private bookkeeping vault.
 This file is the public-safe pointer. The journal itself is not
 committed here.
 ```
+
+The optional `money_path.appetite_thresholds` block declares decision
+thresholds only. It lets `mb status --json --peek` summarize active bet
+exposure, unanchored bets, and over-cap bets without exposing raw ledger rows,
+payees, account names, or balances. Leave the thresholds blank until the
+operator chooses them; Main Branch should then ask before material execution
+spend.
 
 `core/finance/chart-of-accounts.md` describes the account roots the
 operator uses (`assets`, `liabilities`, `equity`, `income`,

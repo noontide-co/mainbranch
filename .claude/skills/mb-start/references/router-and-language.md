@@ -174,6 +174,12 @@ hledger, receipts, tax, payroll, revenue report.
 Route:
 
 - Run `mb books check "$REPO_PATH" --json` before inventing structure.
+- For betting, spend, or risk intent, start from `mb status --json --peek`.
+  Read `money_path.policy` and `money_path.active_bets` before recommending
+  execution. If an active bet is unanchored, over cap, or thresholds are
+  missing, route to `/mb-bet` or `/mb-think` before spend.
+- For offer or pricing work that would cause spend, use the offer/bet/push/proof
+  rubric before deciding whether this is durable offer truth or a MoneyPath bet.
 - Keep raw ledgers, statements, credentials, account numbers, payroll rows, tax
   IDs, and exact private numbers out of the public/team-safe business repo.
 - Preserve public topology terms: hub repo, child repo, hub registry

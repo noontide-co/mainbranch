@@ -9,6 +9,27 @@ vault_location: ".mb/private/books/"
 github_backup: false
 encrypted_backup: false
 class_b_data: true
+money_path:
+  scale_basis: rolling_30_day_gross_outflow
+  exposure_window_days: 7
+  appetite_thresholds:
+    trivial:
+      max_amount: 100
+      approval: operator
+      ledger_required: false
+    small:
+      max_amount: 1000
+      approval: operator
+      ledger_required: true
+    material:
+      max_amount: 5000
+      approval: accepted_decision
+      ledger_required: true
+    strategic:
+      min_amount: 5000
+      approval: accepted_decision
+      ledger_required: true
+      requires_exit_rubric: true
 ---
 
 # Bookkeeping — Sample
