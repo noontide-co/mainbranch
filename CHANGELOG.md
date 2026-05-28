@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.41] - 2026-05-28
+
+v0.3.41 packages the fact-grounded, owner-facing next-action intelligence train.
+It makes `mb status` / `mb start` and the core lifecycle routes better at
+surfacing one useful next move from deterministic facts without widening into
+repo profiles, provider mutation, scraping, export, or collaborator handoff.
+
 ### Added
 
 - Added deterministic repo-boundary helper facts to `mb status --json --peek`,
@@ -20,12 +27,30 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Added MoneyPath appetite-threshold and active-bet exposure facts to
   `mb status --json --peek`, with safe aggregate routing for missing
   thresholds, unanchored bets, and over-cap bets. Closes #645.
+- Added optional safe MoneyPath threshold inputs to `mb onboard` and
+  `mb onboard plan`, preserving interim answers in gitignored
+  `.mb/onboarding.json` and writing confirmed policy to `core/finance/books.md`.
+  Closes #646.
+- Added a public-safe MoneyPath archetype dogfood report covering solo
+  founder/creator, agency/service, and product/SaaS repos. The report records
+  MoneyPath levels, top actions, recommendation interpretation, false
+  positives, false negatives, and follow-up calibration notes. Closes #532.
+
+### Changed
+
+- Changed daily start/status guidance to preserve `brain.bets.*` trigger facts
+  for active, overdue, due-soon, missing-exit, failure-signal, and
+  double-down-signal routing. Closes #763.
+- Changed `mb-think` guidance to use the current `runtime.codex_cli` fact path
+  instead of the stale `runtime.codex` path. Closes #763.
 
 ### Fixed
 
 - Added a guided `pipx install --force mainbranch==<latest>` recovery step when
   `mb update` detects that `pipx upgrade mainbranch` failed because pipx could
   not parse a saved local wheel/package spec. Closes #778.
+- Fixed Claude `/mb-end` crystallize guidance so durable write language remains
+  approval-gated. Closes #763.
 
 ## [0.3.40] - 2026-05-27
 
