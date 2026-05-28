@@ -668,6 +668,121 @@ def restricted_repo_summary(registry: dict[str, Any]) -> list[dict[str, Any]]:
     return notes
 
 
+def repo_boundary_decision_helper(
+    *,
+    registry: dict[str, Any],
+    descriptor: dict[str, Any],
+    current_view: dict[str, Any],
+    child_counts: dict[str, Any],
+) -> dict[str, Any]:
+    """Return the owner-facing repo-boundary decision helper.
+
+    This is a decision aid, not a repo-profile schema. It gives setup/start
+    surfaces a stable way to explain whether work belongs in the current
+    business repo, a separate business repo, or a child/lightweight repo.
+    """
+    choices = [
+        {
+            "id": "same_business_repo",
+            "label": "same business repo",
+            "use_when": ("brand, team, voice, access, accounts, and operating history are shared"),
+            "owner_language": (
+                "Keep the work here when future sessions should read the same "
+                "business memory before deciding."
+            ),
+            "next_step": "Use this business repo and continue with `mb-start`.",
+        },
+        {
+            "id": "separate_business_repo",
+            "label": "separate business repo",
+            "use_when": (
+                "the work has its own entity, team, accounts, audience, brand, or operating history"
+            ),
+            "owner_language": (
+                "Create a separate Main Branch business repo when mixing the "
+                "memory would make either business harder to reason about."
+            ),
+            "next_step": (
+                "Run `mb onboard --name <business> --path <folder>` in the new business folder."
+            ),
+        },
+        {
+            "id": "child_lightweight_repo",
+            "label": "child/lightweight repo",
+            "use_when": (
+                "the work is an execution surface for this business, such as "
+                "a site, product, client deliverable, finance/legal boundary, "
+                "ops repo, or integration sidecar"
+            ),
+            "owner_language": (
+                "Use a child repo when the files or access boundary differ, "
+                "but the strategy still reports back to this business brain."
+            ),
+            "next_step": (
+                "Record the relationship in `core/operations/repo-topology.md` "
+                "and add `.mainbranch/repo.json` in the child when useful."
+            ),
+        },
+    ]
+
+    current_role = str(current_view.get("role") or "")
+    descriptor_found = bool(descriptor.get("found"))
+    descriptor_safe = bool(descriptor.get("safe_to_share", True))
+    registry_found = bool(registry.get("found"))
+    child_total = int(child_counts.get("total", 0) or 0)
+    if current_view.get("is_hub"):
+        state = "hub_business_repo"
+        recommended_choice = "same_business_repo"
+        next_action = (
+            "Use this repo for strategy, offers, bets, pushes, decisions, and "
+            "checkpoint context. Create or link child repos only when an "
+            "execution surface needs a separate file or access boundary."
+        )
+    elif descriptor_found or (current_role and current_role != "business"):
+        state = "child_or_execution_repo"
+        recommended_choice = "child_lightweight_repo"
+        next_action = (
+            "Do execution work in this repo, but return to the hub business repo "
+            "for strategy, offers, bets, pushes, decisions, and checkpoints."
+        )
+        parent = ""
+        if descriptor_safe:
+            parent = current_view.get("parent_remote_full_name") or descriptor.get(
+                "parent", {}
+            ).get("remote_full_name", "")
+        if parent:
+            next_action += f" Hub handle: {parent}."
+    elif registry_found or child_total:
+        state = "business_repo_with_topology"
+        recommended_choice = "same_business_repo"
+        next_action = (
+            "Use this repo as the hub business brain. Check the topology "
+            "registry before creating or editing child repos."
+        )
+    else:
+        state = "single_business_repo"
+        recommended_choice = "same_business_repo"
+        next_action = (
+            "Use one business repo by default. Split only when brand, team, "
+            "accounts, access, or operating history diverge; use a child repo "
+            "for execution files that still report to this business."
+        )
+
+    return {
+        "schema": "mb.repo_boundary_helper.v0",
+        "state": state,
+        "recommended_choice": recommended_choice,
+        "choices": choices,
+        "next_action": next_action,
+        "docs": [
+            "docs/child-repo-descriptors.md",
+            "docs/repo-visibility-rubric.md",
+            "core/operations/repo-topology.md",
+        ],
+        "safe_to_share": descriptor_safe,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Drift findings
 # ---------------------------------------------------------------------------
@@ -973,6 +1088,12 @@ def collect(
     exclude_slug = str(view.get("slug") or "") if view.get("matched") and view.get("is_hub") else ""
     counts = child_role_counts(registry, exclude_slug=exclude_slug)
     boundary_notes = restricted_repo_summary(registry)
+    repo_boundary = repo_boundary_decision_helper(
+        registry=registry,
+        descriptor=descriptor,
+        current_view=view,
+        child_counts=counts,
+    )
     findings = drift_findings(
         registry=registry,
         descriptor=descriptor,
@@ -1007,6 +1128,7 @@ def collect(
         },
         "descriptor": descriptor,
         "current_repo": view,
+        "repo_boundary": repo_boundary,
         "child_counts": counts,
         "restricted_repos": boundary_notes,
         "findings": findings,

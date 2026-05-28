@@ -31,6 +31,7 @@ json_facts:
   - onboarding
   - integrations
   - github
+  - topology.repo_boundary
   - brain.bets
   - brain.bets.active
   - brain.bets.due_soon
@@ -110,6 +111,7 @@ The runtime shell must preserve these paths from the workflow source:
 - `onboarding`
 - `integrations`
 - `github`
+- `topology.repo_boundary`
 - `brain.bets`
 - `brain.bets.active`
 - `brain.bets.due_soon`
@@ -139,6 +141,9 @@ workflow; route offer-shape gaps to `mb-think` and ask before durable writes.
 Use `money_path` for customer progress, offer, proof, CTA, channel, push, page
 readiness, playbook, and outcome feedback questions. Use `content_strategy` for
 content strategy, channel, account, freshness, or disconnected-layer questions.
+Use `topology.repo_boundary` when the operator is unsure whether work belongs
+in this business repo, a separate business repo, or a child/lightweight repo;
+route from the helper instead of inventing a repo-profile answer.
 Use `brain.bets` for active, due-soon, overdue, missing exit criteria,
 triggered kill, triggered double-down, close, update, and narrate moments
 before inventing bet state from prose. Use `onboarding` to resume setup without

@@ -33,6 +33,7 @@ This snapshot does not replace shipped `.claude/skills` prose.
 - `onboarding`
 - `integrations`
 - `github`
+- `topology.repo_boundary`
 - `brain.bets`
 - `brain.bets.active`
 - `brain.bets.due_soon`

@@ -64,6 +64,7 @@ Required fact paths:
 - `onboarding`
 - `integrations`
 - `github`
+- `topology.repo_boundary`
 - `brain.bets`
 - `brain.bets.active`
 - `brain.bets.due_soon`
@@ -495,6 +496,5 @@ treat business `.vip/local.yaml` as audit input only, and do not write it.
 - [references/tool-status-audit.md](references/tool-status-audit.md) — Step 5 provider/readiness audit
 - [references/triage-agent.md](references/triage-agent.md) — Triage agent prompts and synthesis
 - [references/launch-orchestration.md](references/launch-orchestration.md) — guided offer-launch path
-
 ## Remember
 Router, not worker. Detect → route → let the skill do the work. One clarifying question max. Skill loads its own context — main stays lean.

@@ -1,6 +1,244 @@
 {
-  "schema_version": "1.0",
   "schema_name": "mainbranch.status",
+  "schema_version": "1.0",
+  "section_keys": {
+    "books": [
+      "chart_of_accounts",
+      "configured",
+      "hledger",
+      "ignore",
+      "mention",
+      "next_command",
+      "policy",
+      "recommended_route",
+      "safe_to_share",
+      "schema_version",
+      "source",
+      "state",
+      "summary",
+      "unsafe_artifacts",
+      "vault"
+    ],
+    "brain": [
+      "bets",
+      "counts",
+      "pushes",
+      "recent_decisions",
+      "recent_research",
+      "stale_decisions",
+      "stale_research"
+    ],
+    "content_strategy": [
+      "counts",
+      "findings",
+      "index",
+      "layers",
+      "overall_state",
+      "safe_to_share",
+      "schema_version",
+      "simple_entry_point",
+      "summary"
+    ],
+    "drift": [
+      "items",
+      "ok",
+      "summary"
+    ],
+    "git": [
+      "ahead",
+      "available",
+      "behind",
+      "branch",
+      "commit",
+      "default_branch",
+      "dirty",
+      "dirty_count",
+      "dirty_files",
+      "error",
+      "inside_work_tree",
+      "remote",
+      "summary",
+      "upstream",
+      "workflow_mode",
+      "worktree_root"
+    ],
+    "git_activity": [
+      "available",
+      "error",
+      "items"
+    ],
+    "github": [
+      "assigned_issues",
+      "authenticated",
+      "available",
+      "context",
+      "degraded",
+      "errors",
+      "recent_merged_prs",
+      "repo",
+      "review_requests",
+      "sections",
+      "source",
+      "summary"
+    ],
+    "install": [
+      "detail",
+      "mode",
+      "ok",
+      "version"
+    ],
+    "integrations": [
+      "config_path",
+      "github",
+      "ok",
+      "providers",
+      "repo",
+      "repo_id",
+      "safe_to_share",
+      "summary",
+      "user_scope_path"
+    ],
+    "journal": [
+      "available",
+      "error",
+      "events",
+      "groups",
+      "ok",
+      "repo",
+      "safe_to_share",
+      "schema_version",
+      "summary"
+    ],
+    "marker_update": [
+      "attempted",
+      "ok",
+      "path",
+      "reason"
+    ],
+    "measurement": [
+      "available",
+      "repair",
+      "repair_command",
+      "safe_to_share",
+      "state",
+      "summary"
+    ],
+    "money_path": [
+      "objects",
+      "overall_label",
+      "overall_level",
+      "ranked_actions",
+      "safe_to_share",
+      "schema_version",
+      "summary"
+    ],
+    "onboarding": [
+      "boundaries",
+      "checklist",
+      "contract",
+      "ok",
+      "profile",
+      "repo",
+      "repo_boundary",
+      "state_exists",
+      "state_path",
+      "state_valid",
+      "summary"
+    ],
+    "playbook_health": [
+      "gaps",
+      "ok",
+      "safe_to_share",
+      "sections",
+      "source",
+      "summary"
+    ],
+    "readiness": [
+      "checks",
+      "level",
+      "next_actions",
+      "score"
+    ],
+    "relationship_health": [
+      "gaps",
+      "ok",
+      "registry_version",
+      "safe_to_share",
+      "sections",
+      "source",
+      "summary"
+    ],
+    "repo": [
+      "looks_like_mainbranch_repo",
+      "markers",
+      "missing_markers",
+      "path"
+    ],
+    "runtime": [
+      "claude_code",
+      "codex_cli",
+      "skill_wiring"
+    ],
+    "since_last_check": [
+      "brain_count_changes",
+      "current_seen_at",
+      "error",
+      "first_run",
+      "git",
+      "journal",
+      "marker_gitignore",
+      "marker_path",
+      "ok",
+      "previous_seen_at",
+      "safe_to_share",
+      "summary"
+    ],
+    "team": [
+      "github",
+      "members",
+      "ok",
+      "path",
+      "safe_to_share",
+      "schema_version",
+      "summary"
+    ],
+    "update": [
+      "checked_at",
+      "command",
+      "installed",
+      "latest",
+      "latest_source",
+      "minimum_supported",
+      "post_update_commands",
+      "reason",
+      "release_notes_url",
+      "severity",
+      "update_check_command"
+    ],
+    "validation": [
+      "cross_refs",
+      "file_contracts",
+      "legacy_repair",
+      "migration_drift",
+      "ok",
+      "safe_to_share",
+      "state",
+      "summary",
+      "validation_categories"
+    ],
+    "vocabulary": [
+      "errors",
+      "exists",
+      "ok",
+      "path",
+      "source",
+      "status",
+      "summary",
+      "terms",
+      "type",
+      "warnings"
+    ]
+  },
   "top_level_keys": [
     "active_campaigns",
     "active_pushes",
@@ -41,242 +279,5 @@
     "update",
     "validation",
     "vocabulary"
-  ],
-  "section_keys": {
-    "repo": [
-      "looks_like_mainbranch_repo",
-      "markers",
-      "missing_markers",
-      "path"
-    ],
-    "install": [
-      "detail",
-      "mode",
-      "ok",
-      "version"
-    ],
-    "update": [
-      "checked_at",
-      "command",
-      "installed",
-      "latest",
-      "latest_source",
-      "minimum_supported",
-      "post_update_commands",
-      "reason",
-      "release_notes_url",
-      "severity",
-      "update_check_command"
-    ],
-    "runtime": [
-      "claude_code",
-      "codex_cli",
-      "skill_wiring"
-    ],
-    "git": [
-      "ahead",
-      "available",
-      "behind",
-      "branch",
-      "commit",
-      "default_branch",
-      "dirty",
-      "dirty_count",
-      "dirty_files",
-      "error",
-      "inside_work_tree",
-      "remote",
-      "summary",
-      "upstream",
-      "workflow_mode",
-      "worktree_root"
-    ],
-    "git_activity": [
-      "available",
-      "error",
-      "items"
-    ],
-    "journal": [
-      "available",
-      "error",
-      "events",
-      "groups",
-      "ok",
-      "repo",
-      "safe_to_share",
-      "schema_version",
-      "summary"
-    ],
-    "brain": [
-      "bets",
-      "counts",
-      "pushes",
-      "recent_decisions",
-      "recent_research",
-      "stale_decisions",
-      "stale_research"
-    ],
-    "books": [
-      "chart_of_accounts",
-      "configured",
-      "hledger",
-      "ignore",
-      "mention",
-      "next_command",
-      "policy",
-      "recommended_route",
-      "safe_to_share",
-      "schema_version",
-      "source",
-      "state",
-      "summary",
-      "unsafe_artifacts",
-      "vault"
-    ],
-    "vocabulary": [
-      "errors",
-      "exists",
-      "ok",
-      "path",
-      "source",
-      "status",
-      "summary",
-      "terms",
-      "type",
-      "warnings"
-    ],
-    "team": [
-      "github",
-      "members",
-      "ok",
-      "path",
-      "safe_to_share",
-      "schema_version",
-      "summary"
-    ],
-    "onboarding": [
-      "boundaries",
-      "checklist",
-      "contract",
-      "ok",
-      "profile",
-      "repo",
-      "state_exists",
-      "state_path",
-      "state_valid",
-      "summary"
-    ],
-    "integrations": [
-      "config_path",
-      "github",
-      "ok",
-      "providers",
-      "repo",
-      "repo_id",
-      "safe_to_share",
-      "summary",
-      "user_scope_path"
-    ],
-    "measurement": [
-      "available",
-      "repair",
-      "repair_command",
-      "safe_to_share",
-      "state",
-      "summary"
-    ],
-    "github": [
-      "assigned_issues",
-      "authenticated",
-      "available",
-      "context",
-      "degraded",
-      "errors",
-      "recent_merged_prs",
-      "repo",
-      "review_requests",
-      "sections",
-      "source",
-      "summary"
-    ],
-    "content_strategy": [
-      "counts",
-      "findings",
-      "index",
-      "layers",
-      "overall_state",
-      "safe_to_share",
-      "schema_version",
-      "simple_entry_point",
-      "summary"
-    ],
-    "money_path": [
-      "objects",
-      "overall_label",
-      "overall_level",
-      "ranked_actions",
-      "safe_to_share",
-      "schema_version",
-      "summary"
-    ],
-    "since_last_check": [
-      "brain_count_changes",
-      "current_seen_at",
-      "error",
-      "first_run",
-      "git",
-      "journal",
-      "marker_gitignore",
-      "marker_path",
-      "ok",
-      "previous_seen_at",
-      "safe_to_share",
-      "summary"
-    ],
-    "drift": [
-      "items",
-      "ok",
-      "summary"
-    ],
-    "readiness": [
-      "checks",
-      "level",
-      "next_actions",
-      "score"
-    ],
-    "relationship_health": [
-      "gaps",
-      "ok",
-      "registry_version",
-      "safe_to_share",
-      "sections",
-      "source",
-      "summary"
-    ],
-    "playbook_health": [
-      "gaps",
-      "ok",
-      "safe_to_share",
-      "sections",
-      "source",
-      "summary"
-    ],
-    "validation": [
-      "cross_refs",
-      "file_contracts",
-      "legacy_repair",
-      "migration_drift",
-      "ok",
-      "safe_to_share",
-      "state",
-      "summary",
-      "validation_categories"
-    ],
-    "marker_update": [
-      "attempted",
-      "ok",
-      "path",
-      "reason"
-    ]
-  }
+  ]
 }

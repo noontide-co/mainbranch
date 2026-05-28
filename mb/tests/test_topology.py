@@ -531,6 +531,15 @@ def test_collect_returns_safe_payload(tmp_path: Path) -> None:
     assert payload["summary"]["current_repo_matched"] is True
     assert payload["summary"]["child_repo_count"] == 2
     assert payload["current_repo"]["slug"] == "example"
+    helper = payload["repo_boundary"]
+    assert helper["schema"] == "mb.repo_boundary_helper.v0"
+    assert helper["state"] == "hub_business_repo"
+    assert helper["recommended_choice"] == "same_business_repo"
+    assert {choice["id"] for choice in helper["choices"]} == {
+        "same_business_repo",
+        "separate_business_repo",
+        "child_lightweight_repo",
+    }
     # public-safe payload must not embed any absolute paths
     assert "/Users/" not in json.dumps(payload)
 
@@ -541,5 +550,60 @@ def test_collect_handles_missing_registry(tmp_path: Path) -> None:
     assert payload["summary"]["registry_ok"] is False
     assert payload["current_repo"]["matched"] is False
     assert payload["restricted_repos"] == []
+    assert payload["repo_boundary"]["state"] == "single_business_repo"
+    assert payload["repo_boundary"]["recommended_choice"] == "same_business_repo"
     # missing registry alone is informational, not a warning
     assert payload["summary"]["warnings"] == 0
+
+
+def test_repo_boundary_helper_recognizes_child_descriptor(tmp_path: Path) -> None:
+    _write_repo_json(
+        tmp_path,
+        {
+            "schema": topology.CHILD_REPO_SCHEMA,
+            "role": "site",
+            "display_name": "Workshop site",
+            "github_owner": "example-co",
+            "repo_name": "workshop-site",
+            "parent": {
+                "github_owner": "example-co",
+                "repo_name": "example",
+                "remote": "github:example-co/example",
+            },
+        },
+    )
+
+    payload = topology.collect(tmp_path)
+
+    helper = payload["repo_boundary"]
+    assert helper["state"] == "child_or_execution_repo"
+    assert helper["recommended_choice"] == "child_lightweight_repo"
+    assert "return to the hub business repo" in helper["next_action"]
+
+
+def test_repo_boundary_helper_redacts_unsafe_child_parent_handle(tmp_path: Path) -> None:
+    _write_repo_json(
+        tmp_path,
+        {
+            "schema": topology.CHILD_REPO_SCHEMA,
+            "role": "site",
+            "display_name": "Private client site",
+            "github_owner": "client-co",
+            "repo_name": "private-site",
+            "safe_to_share": False,
+            "parent": {
+                "github_owner": "example-co",
+                "repo_name": "example",
+                "remote": "github:example-co/example",
+            },
+        },
+    )
+
+    payload = topology.collect(tmp_path)
+
+    helper = payload["repo_boundary"]
+    assert helper["state"] == "child_or_execution_repo"
+    assert helper["recommended_choice"] == "child_lightweight_repo"
+    assert helper["safe_to_share"] is False
+    assert "Hub handle:" not in helper["next_action"]
+    assert "example-co/example" not in json.dumps(helper)

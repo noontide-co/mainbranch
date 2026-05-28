@@ -14,6 +14,7 @@ from mb import books as books_mod
 from mb import checkpoint as checkpoint_mod
 from mb import codex as codex_mod
 from mb import journal as journal_mod
+from mb import topology as topology_mod
 from mb import vocabulary
 from mb.engine import install_mode, link_status
 from mb.freshness import format_update_alert, package_update_status
@@ -84,6 +85,7 @@ def _git_status(repo: Path) -> dict[str, Any]:
 
     branch = _run_command(["git", "branch", "--show-current"], cwd=repo)
     status = _run_command(["git", "status", "--porcelain"], cwd=repo)
+    remote = _run_command(["git", "config", "--get", "remote.origin.url"], cwd=repo)
     dirty_lines = (
         [line for line in status["stdout"].splitlines() if line.strip()] if status["ok"] else []
     )
@@ -94,6 +96,7 @@ def _git_status(repo: Path) -> dict[str, Any]:
         "dirty": bool(dirty_lines),
         "dirty_count": len(dirty_lines),
         "dirty_files": dirty_lines[:10],
+        "remote": remote["stdout"].strip() if remote["ok"] else "",
         "error": "" if status["ok"] else status["stderr"].strip(),
     }
 
@@ -358,6 +361,7 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
     push_report = push_facts(repo_path)
     vocabulary_report = vocabulary.facts(repo_path)
     books = books_mod.readiness(repo_path)
+    topology = topology_mod.collect(repo_path, git_remote=str(git.get("remote") or ""))
     checks = _build_checks(repo_shape, git, claude_path, wiring, codex, update)
     hard_failures = _hard_failures(checks)
     handoff_ready = not hard_failures
@@ -407,6 +411,16 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
         "checkpoint": checkpoint,
         "journal": journal,
         "books": books,
+        "topology": {
+            "schema": topology["schema"],
+            "safe_to_share": True,
+            "summary": topology["summary"],
+            "current_repo": topology["current_repo"],
+            "repo_boundary": topology["repo_boundary"],
+            "child_counts": topology["child_counts"],
+            "restricted_repos": topology["restricted_repos"],
+            "findings": topology["findings"],
+        },
         "pushes": push_report["records"],
         "active_pushes": push_report["active"],
         "push_count": push_report["count"],

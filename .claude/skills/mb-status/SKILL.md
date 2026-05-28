@@ -42,6 +42,7 @@ Required fact paths:
 - `onboarding`
 - `integrations`
 - `github`
+- `topology.repo_boundary`
 - `brain.bets`
 - `brain.bets.active`
 - `brain.bets.due_soon`
@@ -100,6 +101,9 @@ mb status --json --peek
    `brain.bets.exit_criteria` for active, due-soon, overdue, missing-exit,
    triggered kill, triggered double-down, close, update, and narrate moments
    before inventing bet state from prose.
+   Use `topology.repo_boundary` when the operator is deciding whether work
+   belongs in this business repo, a separate business repo, or a
+   child/lightweight repo.
    If `vocabulary.terms.push` defines display words, use them in
    operator-facing prose without changing current paths, frontmatter, JSON
    keys, validator rules, or command names.
