@@ -851,7 +851,10 @@ def _write_books_policy_from_onboarding(repo: Path, money_path: dict[str, Any]) 
         money_path.get("books_storage_mode") or fm.get("storage_mode") or "solo-local"
     )
     if fm["storage_mode"] in books_mod.NON_LOCAL_STORAGE_MODES:
-        fm.setdefault("vault_location", "")
+        if str(fm.get("vault_location") or "").strip() == ".mb/private/books/":
+            fm["vault_location"] = ""
+        else:
+            fm.setdefault("vault_location", "")
     else:
         fm.setdefault("vault_location", ".mb/private/books/")
     fm.setdefault("github_backup", False)

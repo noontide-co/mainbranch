@@ -483,6 +483,35 @@ def test_onboard_non_local_books_storage_does_not_fake_local_vault(
     assert ".mb/private/books/" not in books_text
 
 
+def test_onboard_non_local_storage_switch_clears_generated_local_vault(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "storage-switch"
+
+    onboard_mod.run(
+        path=str(repo),
+        name="Storage Switch Co",
+        mode="new",
+        level="power",
+        books_storage_mode="solo-local",
+        trivial_max_amount="100",
+    )
+    onboard_mod.run(
+        path=str(repo),
+        name="Storage Switch Co",
+        mode="connect",
+        level="power",
+        books_storage_mode="team-private-repo",
+        small_max_amount="1000",
+    )
+
+    books_text = (repo / "core" / "finance" / "books.md").read_text(encoding="utf-8")
+    assert "storage_mode: team-private-repo" in books_text
+    assert "vault_location: ''" in books_text
+    assert ".mb/private/books/" not in books_text
+
+
 def test_onboard_partial_threshold_rerun_preserves_existing_tiers(
     tmp_path: Path, monkeypatch
 ) -> None:
