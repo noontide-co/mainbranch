@@ -395,7 +395,7 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
     status_report = status_mod.run(
         path=str(repo_path),
         update_marker=False,
-        validation_cross_refs=True,
+        validation_cross_refs=False,
     )
     checks = _build_checks(repo_shape, git, claude_path, wiring, codex, update)
     hard_failures = _hard_failures(checks)

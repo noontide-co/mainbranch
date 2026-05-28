@@ -15,6 +15,7 @@ from typer.testing import CliRunner
 
 from mb import codex as codex_mod
 from mb import start as start_mod
+from mb import status as status_mod
 from mb.cli import app
 from mb.init import run as init_run
 
@@ -479,6 +480,14 @@ def test_start_reads_status_ranked_actions_without_updating_marker(
     tmp_path: Path, monkeypatch
 ) -> None:
     monkeypatch.setattr(start_mod, "_which", _with_claude)
+    status_calls: list[dict[str, Any]] = []
+    original_status_run = status_mod.run
+
+    def capture_status_run(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        status_calls.append(dict(kwargs))
+        return original_status_run(*args, **kwargs)
+
+    monkeypatch.setattr(status_mod, "run", capture_status_run)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
     marker = repo / ".mb" / "last-status-seen.json"
@@ -490,6 +499,14 @@ def test_start_reads_status_ranked_actions_without_updating_marker(
     report = json.loads(result.stdout)
     assert report["ranked_actions"]
     assert report["daily_state"]["top_ranked_action"] == report["ranked_actions"][0]
+    assert report["daily_state"]["source_command"] == "mb status --json --peek"
+    assert status_calls == [
+        {
+            "path": str(repo.resolve()),
+            "update_marker": False,
+            "validation_cross_refs": False,
+        }
+    ]
     assert not marker.exists()
 
 
