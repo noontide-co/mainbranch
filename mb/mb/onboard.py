@@ -11,6 +11,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import yaml
+
+from mb import books as books_mod
 from mb import checkpoint as checkpoint_mod
 from mb import codex as codex_mod
 from mb import connect as connect_mod
@@ -24,6 +27,15 @@ ONBOARDING_STATE_RELATIVE_PATH = Path(".mb") / "onboarding.json"
 ONBOARDING_STATE_VERSION = 1
 TEAM_SIZES = {"unknown", "solo", "small_team", "larger_team"}
 SUCCESS_STAGES = {"unknown", "prelaunch", "working", "successful", "scaling"}
+BOOKS_STORAGE_MODES = {"", "solo-local", "team-private-repo", "advanced-vault"}
+BUDGET_BANDS = {"", "under-500", "500-2k", "2k-10k", "over-10k", "private"}
+THRESHOLD_PRIVACY = {"", "declared", "private", "unknown"}
+AMOUNT_FIELDS = (
+    "trivial_max_amount",
+    "small_max_amount",
+    "material_max_amount",
+    "strategic_min_amount",
+)
 
 BOUNDARIES = {
     "collect_now": [
@@ -434,6 +446,7 @@ def _initial_state(
     business_type: str = "",
     success_stage: str = "unknown",
     desired_outcome: str = "",
+    money_path: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     now = _now()
     return {
@@ -448,6 +461,7 @@ def _initial_state(
             "success_stage": _normalize_success_stage(success_stage),
             "desired_outcome": desired_outcome.strip(),
         },
+        "money_path": money_path or {},
         "contract": {
             "state_path": str(ONBOARDING_STATE_RELATIVE_PATH),
             "canonical_business_truth": [
@@ -491,6 +505,13 @@ def _merge_state(existing: dict[str, Any] | None, updates: dict[str, Any]) -> di
             else:
                 profile.setdefault(key, value)
         state["profile"] = profile
+        money_path = dict(state.get("money_path") or {})
+        for key, value in (updates.get("money_path") or {}).items():
+            if value not in {"", None}:
+                money_path[key] = value
+            else:
+                money_path.setdefault(key, value)
+        state["money_path"] = money_path
         state["source"] = updates.get("source", "mb onboard")
     return state
 
@@ -503,6 +524,16 @@ def write_plan(
     business_type: str = "",
     success_stage: str = "unknown",
     desired_outcome: str = "",
+    operating_currency: str = "",
+    books_storage_mode: str = "",
+    monthly_experiment_budget_band: str = "",
+    threshold_privacy: str = "",
+    trivial_max_amount: float | int | str | None = None,
+    small_max_amount: float | int | str | None = None,
+    material_max_amount: float | int | str | None = None,
+    strategic_min_amount: float | int | str | None = None,
+    approval_required_for_material: bool | str | None = None,
+    ledger_anchor_default: bool | str | None = None,
 ) -> dict[str, Any]:
     """Create or update the lightweight onboarding progress plan."""
     target = Path(repo).expanduser().resolve()
@@ -515,6 +546,18 @@ def write_plan(
         business_type=business_type,
         success_stage=success_stage,
         desired_outcome=desired_outcome,
+        money_path=_money_path_inputs(
+            operating_currency=operating_currency,
+            books_storage_mode=books_storage_mode,
+            monthly_experiment_budget_band=monthly_experiment_budget_band,
+            threshold_privacy=threshold_privacy,
+            trivial_max_amount=trivial_max_amount,
+            small_max_amount=small_max_amount,
+            material_max_amount=material_max_amount,
+            strategic_min_amount=strategic_min_amount,
+            approval_required_for_material=approval_required_for_material,
+            ledger_anchor_default=ledger_anchor_default,
+        ),
     )
     state = _merge_state(existing, updates)
     path = _state_path(target)
@@ -616,6 +659,220 @@ def _normalize_level(level: str) -> str:
     if normalized and normalized not in LEVELS and normalized != "auto":
         raise ValueError("level must be beginner, intermediate, power, or auto")
     return normalized or "auto"
+
+
+def _normalize_currency(value: str) -> str:
+    currency = (value or "").strip().upper()
+    if not currency:
+        return ""
+    if not re.fullmatch(r"[A-Z]{3}", currency):
+        raise ValueError("operating-currency must be a 3-letter currency code such as USD")
+    return currency
+
+
+def _normalize_budget_band(value: str) -> str:
+    normalized = (value or "").strip().lower().replace("$", "").replace(",", "")
+    normalized = normalized.replace(" ", "-").replace("_", "-")
+    aliases = {
+        "under-500": "under-500",
+        "<500": "under-500",
+        "500-2000": "500-2k",
+        "500-to-2k": "500-2k",
+        "2k-10k": "2k-10k",
+        "2000-10000": "2k-10k",
+        "over-10000": "over-10k",
+        "over-10k": "over-10k",
+    }
+    normalized = aliases.get(normalized, normalized)
+    if normalized not in BUDGET_BANDS:
+        raise ValueError(
+            "monthly-experiment-budget-band must be under-500, 500-2k, "
+            "2k-10k, over-10k, private, or blank"
+        )
+    return normalized
+
+
+def _normalize_threshold_privacy(value: str) -> str:
+    normalized = (value or "").strip().lower()
+    if normalized not in THRESHOLD_PRIVACY:
+        raise ValueError("threshold-privacy must be declared, private, unknown, or blank")
+    return normalized
+
+
+def _parse_optional_amount(value: float | int | str | None, *, field: str) -> float | None:
+    if value in {None, ""}:
+        return None
+    if isinstance(value, bool):
+        raise ValueError(f"{field} must be a positive number")
+    try:
+        amount = float(str(value).replace(",", "").strip())
+    except ValueError as exc:
+        raise ValueError(f"{field} must be a positive number") from exc
+    if amount <= 0:
+        raise ValueError(f"{field} must be a positive number")
+    return int(amount) if amount.is_integer() else amount
+
+
+def _parse_optional_bool(value: bool | str | None, *, field: str) -> bool | None:
+    if value in {None, ""}:
+        return None
+    if isinstance(value, bool):
+        return value
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return False
+    raise ValueError(f"{field} must be yes, no, true, false, or blank")
+
+
+def _money_path_inputs(
+    *,
+    operating_currency: str = "",
+    books_storage_mode: str = "",
+    monthly_experiment_budget_band: str = "",
+    threshold_privacy: str = "",
+    trivial_max_amount: float | int | str | None = None,
+    small_max_amount: float | int | str | None = None,
+    material_max_amount: float | int | str | None = None,
+    strategic_min_amount: float | int | str | None = None,
+    approval_required_for_material: bool | str | None = None,
+    ledger_anchor_default: bool | str | None = None,
+) -> dict[str, Any]:
+    storage_mode = (books_storage_mode or "").strip()
+    if storage_mode not in BOOKS_STORAGE_MODES:
+        raise ValueError(
+            "books-storage-mode must be solo-local, team-private-repo, advanced-vault, or blank"
+        )
+    amounts = {
+        "trivial_max_amount": _parse_optional_amount(
+            trivial_max_amount, field="trivial-max-amount"
+        ),
+        "small_max_amount": _parse_optional_amount(small_max_amount, field="small-max-amount"),
+        "material_max_amount": _parse_optional_amount(
+            material_max_amount, field="material-max-amount"
+        ),
+        "strategic_min_amount": _parse_optional_amount(
+            strategic_min_amount, field="strategic-min-amount"
+        ),
+    }
+    approval_required = _parse_optional_bool(
+        approval_required_for_material,
+        field="approval-required-for-material",
+    )
+    ledger_default = _parse_optional_bool(ledger_anchor_default, field="ledger-anchor-default")
+    money_path = {
+        "operating_currency": _normalize_currency(operating_currency),
+        "books_storage_mode": storage_mode,
+        "monthly_experiment_budget_band": _normalize_budget_band(monthly_experiment_budget_band),
+        "threshold_privacy": _normalize_threshold_privacy(threshold_privacy),
+        "approval_required_for_material": approval_required,
+        "ledger_anchor_default": ledger_default,
+        **amounts,
+    }
+    return {key: value for key, value in money_path.items() if value not in {"", None}}
+
+
+def _has_threshold_amounts(money_path: dict[str, Any]) -> bool:
+    return any(money_path.get(field) not in {"", None} for field in AMOUNT_FIELDS)
+
+
+def _threshold_tiers_from_inputs(money_path: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    ledger_default = bool(money_path.get("ledger_anchor_default", True))
+    approval_required = bool(money_path.get("approval_required_for_material", True))
+    tiers: dict[str, dict[str, Any]] = {}
+    if money_path.get("trivial_max_amount") is not None:
+        tiers["trivial"] = {
+            "max_amount": money_path["trivial_max_amount"],
+            "approval": "operator",
+            "ledger_required": False,
+        }
+    if money_path.get("small_max_amount") is not None:
+        tiers["small"] = {
+            "max_amount": money_path["small_max_amount"],
+            "approval": "operator",
+            "ledger_required": ledger_default,
+        }
+    if money_path.get("material_max_amount") is not None:
+        tiers["material"] = {
+            "max_amount": money_path["material_max_amount"],
+            "approval": "accepted_decision" if approval_required else "operator",
+            "ledger_required": ledger_default,
+        }
+    if money_path.get("strategic_min_amount") is not None:
+        tiers["strategic"] = {
+            "min_amount": money_path["strategic_min_amount"],
+            "approval": "accepted_decision",
+            "ledger_required": ledger_default,
+            "requires_exit_rubric": True,
+        }
+    return tiers
+
+
+def _books_policy_has_thresholds(repo: Path) -> bool:
+    fm, err = books_mod._read_frontmatter(repo / "core" / "finance" / "books.md")
+    if err or not fm:
+        return False
+    policy = books_mod._money_path_policy_from_frontmatter(fm)
+    return bool(policy.get("thresholds_declared"))
+
+
+def _frontmatter_and_body(path: Path) -> tuple[dict[str, Any], str]:
+    if not path.exists():
+        return {}, "# Bookkeeping\n\nThis file declares public-safe MoneyPath policy only.\n"
+    text = path.read_text(encoding="utf-8")
+    if not text.startswith("---"):
+        return {}, text
+    end = text.find("\n---", 3)
+    if end == -1:
+        return {}, text
+    parsed = yaml.safe_load(text[3:end].strip()) or {}
+    body = text[end + 4 :].lstrip("\n")
+    return parsed if isinstance(parsed, dict) else {}, body
+
+
+def _write_books_policy_from_onboarding(repo: Path, money_path: dict[str, Any]) -> bool:
+    if money_path.get("threshold_privacy") == "private":
+        return False
+    tiers = _threshold_tiers_from_inputs(money_path)
+    if not tiers:
+        return False
+    path = repo / "core" / "finance" / "books.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fm, body = _frontmatter_and_body(path)
+    fm.setdefault("type", "books")
+    fm.setdefault("ledger", "hledger")
+    fm["operating_currency"] = (
+        money_path.get("operating_currency") or fm.get("operating_currency") or "USD"
+    )
+    fm.setdefault("fiscal_year_start", "01-01")
+    fm.setdefault("reporting_cadence", "monthly")
+    fm["storage_mode"] = (
+        money_path.get("books_storage_mode") or fm.get("storage_mode") or "solo-local"
+    )
+    if fm["storage_mode"] in books_mod.NON_LOCAL_STORAGE_MODES:
+        if str(fm.get("vault_location") or "").strip() == ".mb/private/books/":
+            fm["vault_location"] = ""
+        else:
+            fm.setdefault("vault_location", "")
+    else:
+        fm.setdefault("vault_location", ".mb/private/books/")
+    fm.setdefault("github_backup", False)
+    fm.setdefault("encrypted_backup", False)
+    fm.setdefault("class_b_data", True)
+    raw_money = fm.get("money_path")
+    money: dict[str, Any] = raw_money if isinstance(raw_money, dict) else {}
+    money.setdefault("scale_basis", "rolling_30_day_gross_outflow")
+    money.setdefault("exposure_window_days", 7)
+    raw_existing_tiers = money.get("appetite_thresholds")
+    existing_tiers = raw_existing_tiers if isinstance(raw_existing_tiers, dict) else {}
+    money["appetite_thresholds"] = {**existing_tiers, **tiers}
+    fm["money_path"] = money
+    path.write_text(
+        "---\n" + yaml.safe_dump(fm, sort_keys=False) + "---\n\n" + body.lstrip("\n"),
+        encoding="utf-8",
+    )
+    return True
 
 
 def _normalize_mode(mode: str, existing: bool) -> str:
@@ -767,10 +1024,16 @@ def _step(
 
 def _checklist(repo: Path, state: dict[str, Any], markers: dict[str, bool]) -> list[dict[str, Any]]:
     profile = dict(state.get("profile") or {})
+    money_path = dict(state.get("money_path") or {})
     core_inputs = _core_inputs(repo)
     missing_core = [key for key, ok in core_inputs.items() if not ok]
     wiring = link_status(repo)
     checkpoint_hook = checkpoint_mod.hook_status(repo)
+    threshold_status = (
+        money_path.get("threshold_privacy") == "private"
+        or _has_threshold_amounts(money_path)
+        or _books_policy_has_thresholds(repo)
+    )
     return [
         _step(
             step_id="repo_scaffold",
@@ -802,6 +1065,20 @@ def _checklist(repo: Path, state: dict[str, Any], markers: dict[str, bool]) -> l
             ),
         ),
         _team_step(profile, repo),
+        _step(
+            step_id="money_path_thresholds",
+            title="MoneyPath appetite thresholds",
+            complete=threshold_status,
+            missing_inputs=[]
+            if threshold_status
+            else ["money_path.appetite_thresholds or private threshold choice"],
+            next_action=(
+                "Optionally collect safe appetite thresholds; never collect revenue, "
+                "balances, payees, payroll, raw ledger rows, or customer payments."
+            ),
+            owner="agent",
+            required=False,
+        ),
         _step(
             step_id="runtime_handoff",
             title="Runtime handoff",
@@ -842,6 +1119,7 @@ def onboarding_status(repo: str | Path = ".") -> dict[str, Any]:
         "state_exists": loaded is not None,
         "state_valid": loaded is not None or not _state_path(target).exists(),
         "profile": state.get("profile") or {},
+        "money_path": state.get("money_path") or {},
         "contract": state.get("contract") or {},
         "boundaries": state.get("boundaries") or BOUNDARIES,
         "repo_boundary": topology["repo_boundary"],
@@ -871,12 +1149,34 @@ def run(
     business_type: str = "",
     success_stage: str = "unknown",
     desired_outcome: str = "",
+    operating_currency: str = "",
+    books_storage_mode: str = "",
+    monthly_experiment_budget_band: str = "",
+    threshold_privacy: str = "",
+    trivial_max_amount: float | int | str | None = None,
+    small_max_amount: float | int | str | None = None,
+    material_max_amount: float | int | str | None = None,
+    strategic_min_amount: float | int | str | None = None,
+    approval_required_for_material: bool | str | None = None,
+    ledger_anchor_default: bool | str | None = None,
     github_repo: str = "",
     github_visibility: str = "private",
     github_push: bool = False,
 ) -> dict[str, Any]:
     """Create or connect a business repo and verify the Claude Code handoff."""
     target = Path(path).expanduser().resolve()
+    money_path_inputs = _money_path_inputs(
+        operating_currency=operating_currency,
+        books_storage_mode=books_storage_mode,
+        monthly_experiment_budget_band=monthly_experiment_budget_band,
+        threshold_privacy=threshold_privacy,
+        trivial_max_amount=trivial_max_amount,
+        small_max_amount=small_max_amount,
+        material_max_amount=material_max_amount,
+        strategic_min_amount=strategic_min_amount,
+        approval_required_for_material=approval_required_for_material,
+        ledger_anchor_default=ledger_anchor_default,
+    )
     before = _repo_markers(target)
     normalized_mode = _normalize_mode(mode, _looks_initialized(before))
 
@@ -918,6 +1218,13 @@ def run(
             action = "repaired"
         else:
             action = "created"
+
+    if (
+        target.exists()
+        and not errors
+        and _write_books_policy_from_onboarding(target, money_path_inputs)
+    ):
+        created.append("core/finance/books.md")
 
     after = _repo_markers(target)
     wiring = link_status(target)
@@ -976,6 +1283,16 @@ def run(
             business_type=business_type,
             success_stage=success_stage,
             desired_outcome=desired_outcome,
+            operating_currency=operating_currency,
+            books_storage_mode=books_storage_mode,
+            monthly_experiment_budget_band=monthly_experiment_budget_band,
+            threshold_privacy=threshold_privacy,
+            trivial_max_amount=trivial_max_amount,
+            small_max_amount=small_max_amount,
+            material_max_amount=material_max_amount,
+            strategic_min_amount=strategic_min_amount,
+            approval_required_for_material=approval_required_for_material,
+            ledger_anchor_default=ledger_anchor_default,
         )
         if target.exists() and not errors
         else onboarding_status(target)
