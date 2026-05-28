@@ -196,6 +196,32 @@ def test_ranker_surfaces_money_path_below_repair_blockers() -> None:
     assert money_path["score"] < actions[0]["score"]
 
 
+def test_ranker_preserves_money_path_action_source() -> None:
+    report = _base_report()
+    report["money_path"] = {
+        "ranked_actions": [
+            {
+                "id": "declare-appetite-thresholds",
+                "title": "Declare MoneyPath appetite thresholds",
+                "reason": "Thresholds are missing.",
+                "route": "/mb-think",
+                "component": "financial_exposure",
+                "source": "money_path.policy.thresholds_declared",
+                "confidence": "medium",
+                "missing": ["core/finance/books.md money_path.appetite_thresholds"],
+                "safe_to_share": True,
+            }
+        ]
+    }
+
+    actions = ranker.rank_status_report(report)
+
+    money_path = next(
+        action for action in actions if action["id"] == "review_money_path_financial_exposure"
+    )
+    assert money_path["signals"][0]["id"] == "money_path.policy.thresholds_declared"
+
+
 def test_ranker_action_carries_audience_and_operator_summary() -> None:
     action = ranker._action(
         action_id="any.id",

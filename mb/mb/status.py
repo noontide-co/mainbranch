@@ -2903,6 +2903,187 @@ def _money_path_overall_level(objects: dict[str, dict[str, Any]]) -> int:
     return 4
 
 
+def _money_amount(
+    *, commodity: str = "USD", decimal_mantissa: int = 0, decimal_places: int = 2
+) -> dict[str, Any]:
+    scale = 10**decimal_places
+    whole = abs(decimal_mantissa) // scale
+    fraction = abs(decimal_mantissa) % scale
+    sign = "-" if decimal_mantissa < 0 else ""
+    if commodity == "USD" and decimal_places == 2:
+        display = f"{sign}${whole:,}.{fraction:02d}"
+    elif decimal_places > 0:
+        display = f"{sign}{whole:,}.{fraction:0{decimal_places}d} {commodity}".strip()
+    else:
+        display = f"{sign}{whole:,} {commodity}".strip()
+    return {
+        "commodity": commodity,
+        "decimal_mantissa": decimal_mantissa,
+        "decimal_places": decimal_places,
+        "display": display,
+    }
+
+
+def _money_path_active_bet_exposure(repo: Path, report: dict[str, Any]) -> dict[str, Any]:
+    raw_brain = report.get("brain")
+    brain = raw_brain if isinstance(raw_brain, dict) else {}
+    raw_bets = brain.get("bets")
+    bets = raw_bets if isinstance(raw_bets, dict) else {}
+    active = [item for item in bets.get("active", []) if isinstance(item, dict)]
+    books = report.get("books") if isinstance(report.get("books"), dict) else {}
+    policy = (
+        ((books.get("policy") or {}).get("money_path") or {}) if isinstance(books, dict) else {}
+    )
+    currency = str(policy.get("currency") or "USD")
+    exposure_window_days = int(policy.get("exposure_window_days") or 7)
+    summary: dict[str, Any] = {
+        "count": len(active),
+        "anchored": 0,
+        "unanchored": 0,
+        "gross_exposure": _money_amount(commodity=currency),
+        "this_week_at_risk": _money_amount(commodity=currency),
+        "over_cap": [],
+        "ledger_unavailable": False,
+        "checked": False,
+    }
+    if not active:
+        return summary
+    try:
+        exposure_report = books_mod.exposure(repo=repo, active=True)
+    except Exception:
+        return {**summary, "ledger_unavailable": True}
+    if not exposure_report.get("ok") and not exposure_report.get("exposures"):
+        return {**summary, "ledger_unavailable": True}
+    exposures = [item for item in exposure_report.get("exposures", []) if isinstance(item, dict)]
+    total_mantissa = 0
+    total_places = 2
+    week_mantissa = 0
+    today = date.today()
+    for item in exposures:
+        raw_anchor = item.get("anchor")
+        anchor = raw_anchor if isinstance(raw_anchor, dict) else {}
+        if anchor.get("present"):
+            summary["anchored"] += 1
+        raw_money_path = item.get("money_path")
+        money_path = raw_money_path if isinstance(raw_money_path, dict) else {}
+        if not anchor.get("present") and money_path.get("required"):
+            summary["unanchored"] += 1
+        raw_totals = item.get("totals")
+        totals = raw_totals if isinstance(raw_totals, dict) else {}
+        raw_gross = totals.get("gross_outflow")
+        gross = raw_gross if isinstance(raw_gross, dict) else {}
+        if gross.get("commodity") == currency:
+            total_places = int(gross.get("decimal_places") or total_places)
+            total_mantissa += int(gross.get("decimal_mantissa") or 0)
+            deadline = str(
+                next(
+                    (bet.get("deadline") for bet in active if bet.get("path") == item.get("path")),
+                    "",
+                )
+            )
+            try:
+                deadline_date = date.fromisoformat(deadline)
+            except ValueError:
+                deadline_date = None
+            if (
+                deadline_date is not None
+                and 0 <= (deadline_date - today).days <= exposure_window_days
+            ):
+                week_mantissa += int(gross.get("decimal_mantissa") or 0)
+        raw_scale_gate = item.get("scale_gate")
+        scale_gate = raw_scale_gate if isinstance(raw_scale_gate, dict) else {}
+        if scale_gate.get("over_cap"):
+            summary["over_cap"].append(
+                {
+                    "path": str(item.get("path") or ""),
+                    "title": str(item.get("title") or ""),
+                    "appetite_tier": str(scale_gate.get("appetite_tier") or ""),
+                    "gross_exposure": gross,
+                    "threshold": scale_gate.get("threshold_amount"),
+                    "safe_to_share": True,
+                }
+            )
+    summary["checked"] = True
+    summary["gross_exposure"] = _money_amount(
+        commodity=currency, decimal_mantissa=total_mantissa, decimal_places=total_places
+    )
+    summary["this_week_at_risk"] = _money_amount(
+        commodity=currency, decimal_mantissa=week_mantissa, decimal_places=total_places
+    )
+    return summary
+
+
+def _money_path_finance_actions(
+    *, policy: dict[str, Any], active_bets: dict[str, Any], policy_present: bool
+) -> list[dict[str, Any]]:
+    actions: list[dict[str, Any]] = []
+    active_count = int(active_bets.get("count") or 0)
+    if (policy_present or active_count) and not policy.get("thresholds_declared"):
+        actions.append(
+            {
+                "id": "declare-appetite-thresholds",
+                "title": "Declare MoneyPath appetite thresholds",
+                "reason": (
+                    "MoneyPath cannot compare active bet exposure to your appetite until "
+                    "core/finance/books.md declares thresholds."
+                ),
+                "route": "/mb-think",
+                "component": "financial_exposure",
+                "source": "money_path.policy.thresholds_declared",
+                "confidence": "medium",
+                "missing": ["core/finance/books.md money_path.appetite_thresholds"],
+                "safe_to_share": True,
+            }
+        )
+    if active_bets.get("ledger_unavailable") and active_count:
+        actions.append(
+            {
+                "id": "repair-books-exposure",
+                "title": "Repair books exposure checks",
+                "reason": "Active bets exist, but Main Branch cannot check private ledger anchors.",
+                "route": "mb books doctor --plan --json",
+                "component": "financial_exposure",
+                "source": "money_path.active_bets.ledger_unavailable",
+                "confidence": "medium",
+                "missing": ["hledger exposure check"],
+                "safe_to_share": True,
+            }
+        )
+    if int(active_bets.get("unanchored") or 0):
+        actions.append(
+            {
+                "id": "anchor-active-bet-exposure",
+                "title": "Anchor active bet exposure",
+                "reason": (
+                    "One or more active bets require MoneyPath anchors before execution spend."
+                ),
+                "route": "/mb-bet",
+                "component": "financial_exposure",
+                "source": "money_path.active_bets.unanchored",
+                "confidence": "high",
+                "missing": ["ledger bet anchors"],
+                "safe_to_share": True,
+            }
+        )
+    if active_bets.get("over_cap"):
+        actions.append(
+            {
+                "id": "review-over-cap-bets",
+                "title": "Review bets over appetite",
+                "reason": "One or more active bets are over the configured MoneyPath appetite cap.",
+                "route": "/mb-bet",
+                "component": "financial_exposure",
+                "source": "money_path.active_bets.over_cap",
+                "confidence": "high",
+                "missing": [
+                    str(item.get("path") or "") for item in active_bets.get("over_cap", [])
+                ],
+                "safe_to_share": True,
+            }
+        )
+    return actions
+
+
 def _money_path(repo: Path, report: dict[str, Any]) -> dict[str, Any]:
     brain = report.get("brain") or {}
     push_report = brain.get("pushes") or {}
@@ -2959,6 +3140,19 @@ def _money_path(repo: Path, report: dict[str, Any]) -> dict[str, Any]:
     }
     objects = {component: collected_objects[component] for component in MONEY_PATH_COMPONENTS}
     overall_level = _money_path_overall_level(objects)
+    books = report.get("books") if isinstance(report.get("books"), dict) else {}
+    policy = (
+        ((books.get("policy") or {}).get("money_path") or {}) if isinstance(books, dict) else {}
+    )
+    policy_present = (
+        bool((books.get("policy") or {}).get("present")) if isinstance(books, dict) else False
+    )
+    active_bets = _money_path_active_bet_exposure(repo, report)
+    finance_actions = _money_path_finance_actions(
+        policy=policy,
+        active_bets=active_bets,
+        policy_present=policy_present,
+    )
     return {
         "schema_version": MONEY_PATH_SCHEMA_VERSION,
         "overall_level": overall_level,
@@ -2967,8 +3161,10 @@ def _money_path(repo: Path, report: dict[str, Any]) -> dict[str, Any]:
             "MoneyPath reports legibility, support, connection, and instrumentation "
             "from repo facts."
         ),
+        "policy": policy,
+        "active_bets": active_bets,
         "objects": objects,
-        "ranked_actions": _money_path_ranked_actions(objects, overall_level),
+        "ranked_actions": [*finance_actions, *_money_path_ranked_actions(objects, overall_level)],
         "safe_to_share": True,
     }
 

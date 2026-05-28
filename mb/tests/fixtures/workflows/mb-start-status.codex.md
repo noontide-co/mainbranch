@@ -21,6 +21,11 @@ workflows are available in Codex.
 ## Required JSON Fact Paths
 
 - `money_path`
+- `money_path.policy`
+- `money_path.policy.thresholds_declared`
+- `money_path.active_bets`
+- `money_path.active_bets.unanchored`
+- `money_path.active_bets.over_cap`
 - `money_path.objects.proof.quality`
 - `validation.file_contracts`
 - `content_strategy`

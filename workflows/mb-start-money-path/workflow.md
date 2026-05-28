@@ -16,6 +16,11 @@ required_mb_commands:
   - mb doctor repair --plan
 json_facts:
   - money_path
+  - money_path.policy
+  - money_path.policy.thresholds_declared
+  - money_path.active_bets
+  - money_path.active_bets.unanchored
+  - money_path.active_bets.over_cap
   - money_path.objects.offer
   - money_path.objects.proof
   - money_path.objects.proof.quality
@@ -89,6 +94,11 @@ broken wiring.
 The runtime shell must preserve these paths from the workflow source:
 
 - `money_path`
+- `money_path.policy`
+- `money_path.policy.thresholds_declared`
+- `money_path.active_bets`
+- `money_path.active_bets.unanchored`
+- `money_path.active_bets.over_cap`
 - `money_path.objects.offer`
 - `money_path.objects.proof`
 - `money_path.objects.proof.quality`

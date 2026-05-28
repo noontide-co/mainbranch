@@ -504,6 +504,7 @@ def _add_money_path_actions(actions: list[dict[str, Any]], report: dict[str, Any
     first = money_actions[0]
     score = WEIGHTS["money_path_gaps"]
     component = str(first.get("component") or "money_path")
+    signal_id = str(first.get("source") or f"money_path.objects.{component}")
     missing = [str(item) for item in _list(first.get("missing"))]
     actions.append(
         _action(
@@ -516,7 +517,7 @@ def _add_money_path_actions(actions: list[dict[str, Any]], report: dict[str, Any
             reason=str(first.get("reason") or "MoneyPath found a business-path gap."),
             signals=[
                 _signal(
-                    f"money_path.objects.{component}",
+                    signal_id,
                     severity="info",
                     summary=str(first.get("reason") or "MoneyPath component needs review."),
                     evidence=missing,

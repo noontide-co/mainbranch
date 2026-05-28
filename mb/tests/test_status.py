@@ -459,6 +459,110 @@ def test_status_books_readiness_redacts_private_paths_and_contents(
     assert "PRIVATE_LEDGER_CONTENT" not in payload
 
 
+def test_status_money_path_reports_active_bet_exposure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "core/finance/books.md").write_text(
+        """---
+type: books
+ledger: hledger
+storage_mode: solo-local
+vault_location: ".mb/private/books/"
+money_path:
+  appetite_thresholds:
+    small:
+      max_amount: 100
+      approval: operator
+      ledger_required: true
+---
+
+# Books
+""",
+        encoding="utf-8",
+    )
+    (repo / ".mb/private/books").mkdir(parents=True)
+    (repo / ".mb/private/books/main.journal").write_text("; PRIVATE\n", encoding="utf-8")
+    (repo / ".gitignore").write_text(".mb/private/\n", encoding="utf-8")
+    deadline = date.today()
+    (repo / "bets").mkdir(exist_ok=True)
+    (repo / "bets/2026-05-16-offer-test.md").write_text(
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-16\n"
+            f"deadline: {deadline.isoformat()}\n"
+            "appetite_tier: small\n"
+            "money_path:\n"
+            "  required: true\n"
+            "  bet_id: 2026-05-16-offer-test\n"
+            "linked_decisions: []\n"
+            "linked_research: []\n"
+            "linked_pushes: []\n"
+            "linked_outcomes: []\n"
+            "public: false\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n\n# Offer test\n"
+        ),
+        encoding="utf-8",
+    )
+
+    class _FakeCompleted:
+        def __init__(self, stdout: str = "", returncode: int = 0) -> None:
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = ""
+
+    real_run = subprocess.run
+
+    def _fake_hledger(args: Any, *rest: Any, **kwargs: Any) -> Any:
+        argv = list(args) if isinstance(args, (list, tuple)) else [args]
+        if argv and Path(str(argv[0])).name == "hledger":
+            if "check" in argv:
+                return _FakeCompleted()
+            if "print" in argv:
+                return _FakeCompleted(
+                    json.dumps(
+                        [
+                            {
+                                "tpostings": [
+                                    {
+                                        "paccount": "Expenses:Marketing",
+                                        "pamount": [
+                                            {
+                                                "acommodity": "USD",
+                                                "aquantity": {
+                                                    "decimalMantissa": 12500,
+                                                    "decimalPlaces": 2,
+                                                },
+                                            }
+                                        ],
+                                    }
+                                ]
+                            }
+                        ]
+                    )
+                )
+        return real_run(args, *rest, **kwargs)
+
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "/fake/hledger")
+    monkeypatch.setattr("mb.books.subprocess.run", _fake_hledger)
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    money_path = report["money_path"]
+    assert money_path["policy"]["thresholds_declared"] is True
+    assert money_path["active_bets"]["count"] == 1
+    assert money_path["active_bets"]["anchored"] == 1
+    assert money_path["active_bets"]["gross_exposure"]["display"] == "$125.00"
+    assert money_path["active_bets"]["this_week_at_risk"]["display"] == "$125.00"
+    assert money_path["active_bets"]["over_cap"][0]["path"] == "bets/2026-05-16-offer-test.md"
+    assert money_path["ranked_actions"][0]["id"] == "review-over-cap-bets"
+
+
 def test_status_money_path_single_offer_structured_caps_without_proof(
     tmp_path: Path, monkeypatch
 ) -> None:

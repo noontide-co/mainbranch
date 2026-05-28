@@ -111,6 +111,38 @@ ledger: hledger
     assert report["errors"] == []
 
 
+def test_books_check_reports_money_path_thresholds(tmp_path: Path) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write(
+        repo / "core/finance/books.md",
+        """---
+type: books
+ledger: hledger
+operating_currency: USD
+storage_mode: solo-local
+vault_location: ".mb/private/books/"
+money_path:
+  scale_basis: rolling_30_day_gross_outflow
+  exposure_window_days: 7
+  appetite_thresholds:
+    small:
+      max_amount: 1000
+      approval: operator
+      ledger_required: true
+---
+
+# Books
+""",
+    )
+    _write(repo / ".gitignore", ".mb/private/\n")
+    report = books_mod.run(repo=str(repo))
+
+    assert report["money_path_policy"]["thresholds_declared"] is True
+    assert report["money_path_policy"]["tiers"]["small"]["max_amount"] == 1000.0
+    findings = _findings_by_id(report)
+    assert findings["books-money-path-thresholds-ok"]["state"] == "ok"
+
+
 def test_books_check_flags_committed_ledger_file(tmp_path: Path) -> None:
     repo = _init_business_repo(tmp_path)
     _write(repo / "core/finance/notes.md", "# notes\n")
@@ -569,6 +601,80 @@ tags: []
     assert "PRIVATE_LEDGER_CONTENT" not in result.output
     assert str(repo) not in result.output
     assert str(repo / ".mb/private/books") not in result.output
+
+
+def test_books_exposure_flags_over_appetite_threshold(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write(
+        repo / "core/finance/books.md",
+        """---
+type: books
+ledger: hledger
+storage_mode: solo-local
+vault_location: ".mb/private/books/"
+money_path:
+  appetite_thresholds:
+    small:
+      max_amount: 100
+      approval: operator
+      ledger_required: true
+---
+
+# Books
+""",
+    )
+    _write(repo / ".mb/private/books/main.journal", "; PRIVATE_LEDGER_CONTENT\n")
+    _write(
+        repo / "bets/2026-05-16-offer-test.md",
+        """---
+status: open
+opened: 2026-05-16
+deadline: 2026-05-30
+appetite_tier: small
+money_path:
+  required: true
+  bet_id: 2026-05-16-offer-test
+linked_decisions: []
+linked_research: []
+linked_pushes: []
+linked_outcomes: []
+public: false
+channels: []
+tags: []
+---
+# Offer test
+""",
+    )
+    transactions = [
+        {
+            "tpostings": [
+                {
+                    "paccount": "Expenses:Marketing",
+                    "pamount": [
+                        {
+                            "acommodity": "USD",
+                            "aquantity": {"decimalMantissa": 12500, "decimalPlaces": 2},
+                        }
+                    ],
+                }
+            ],
+        }
+    ]
+    monkeypatch.setattr("mb.books.shutil.which", lambda name: "/fake/hledger")
+    _hledger_exposure_dispatcher(monkeypatch, transactions)
+
+    result = runner.invoke(app, ["books", "exposure", "--repo", str(repo), "--active", "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    exposure = payload["exposures"][0]
+    assert exposure["scale_gate"]["over_cap"] is True
+    assert exposure["scale_gate"]["threshold_amount"]["display"] == "$100.00"
+    assert "bet-exposure-over-appetite-threshold" in {
+        finding["id"] for finding in payload["findings"]
+    }
 
 
 def test_books_exposure_active_warns_when_required_anchor_missing(

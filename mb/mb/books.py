@@ -53,6 +53,7 @@ BOOKS_IGNORE_ENTRIES = (
 
 VALID_STORAGE_MODES = frozenset({"solo-local", "team-private-repo", "advanced-vault"})
 NON_LOCAL_STORAGE_MODES = frozenset({"team-private-repo", "advanced-vault"})
+APPETITE_TIERS = ("trivial", "small", "material", "strategic")
 
 BUNDLED_FIXTURE_NAME = "acme-fixture.journal"
 DOCS_BOOKS_PATH = "docs/books.md"
@@ -238,6 +239,91 @@ def _safe_bool(value: Any) -> bool:
     if isinstance(value, str):
         return value.strip().lower() in {"1", "true", "yes", "on"}
     return bool(value)
+
+
+def _number_or_none(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value.replace(",", "").strip())
+        except ValueError:
+            return None
+    return None
+
+
+def _money_path_policy_from_frontmatter(fm: dict[str, Any]) -> dict[str, Any]:
+    raw = fm.get("money_path")
+    money_path = raw if isinstance(raw, dict) else {}
+    thresholds = money_path.get("appetite_thresholds")
+    raw_thresholds = thresholds if isinstance(thresholds, dict) else {}
+    tiers: dict[str, dict[str, Any]] = {}
+    for tier in APPETITE_TIERS:
+        raw_tier = raw_thresholds.get(tier)
+        if not isinstance(raw_tier, dict):
+            continue
+        tiers[tier] = {
+            "min_amount": _number_or_none(raw_tier.get("min_amount")),
+            "max_amount": _number_or_none(raw_tier.get("max_amount")),
+            "approval": str(raw_tier.get("approval") or "").strip(),
+            "ledger_required": _safe_bool(raw_tier.get("ledger_required")),
+            "requires_exit_rubric": _safe_bool(raw_tier.get("requires_exit_rubric")),
+        }
+    currency = str(
+        money_path.get("currency") or fm.get("operating_currency") or fm.get("currency") or "USD"
+    ).strip()
+    exposure_window = money_path.get("exposure_window_days")
+    return {
+        "path": "core/finance/books.md",
+        "currency": currency or "USD",
+        "scale_basis": str(money_path.get("scale_basis") or "rolling_30_day_gross_outflow").strip(),
+        "exposure_window_days": int(exposure_window)
+        if isinstance(exposure_window, int) and exposure_window > 0
+        else 7,
+        "thresholds_declared": bool(tiers),
+        "tier_names": list(tiers),
+        "tiers": tiers,
+    }
+
+
+def _money_path_threshold_findings(policy: dict[str, Any]) -> list[dict[str, Any]]:
+    if policy.get("thresholds_declared"):
+        return [
+            _finding(
+                id="books-money-path-thresholds-ok",
+                title="MoneyPath appetite thresholds are declared",
+                state="ok",
+                detail="core/finance/books.md declares MoneyPath appetite thresholds.",
+                audience="informational",
+                operator_summary="MoneyPath appetite thresholds are declared.",
+            )
+        ]
+    return [
+        _finding(
+            id="books-money-path-thresholds-missing",
+            title="MoneyPath appetite thresholds are missing",
+            state="ok",
+            detail=(
+                "core/finance/books.md does not declare money_path.appetite_thresholds. "
+                "Main Branch can still run, but material bets should ask for thresholds "
+                "before execution spend."
+            ),
+            audience="operator_decision",
+            operator_summary=(
+                "Declare MoneyPath appetite thresholds before treating material spend as routed."
+            ),
+            repair="Add money_path.appetite_thresholds to core/finance/books.md.",
+        )
+    ]
+
+
+def _threshold_for_appetite(policy: dict[str, Any], appetite_tier: str) -> dict[str, Any] | None:
+    raw_tiers = policy.get("tiers")
+    tiers: dict[str, Any] = raw_tiers if isinstance(raw_tiers, dict) else {}
+    threshold = tiers.get(appetite_tier)
+    return threshold if isinstance(threshold, dict) else None
 
 
 def _vault_info(repo: Path, fm: dict[str, Any]) -> dict[str, Any]:
@@ -576,6 +662,7 @@ def _detect_books_policy(repo: Path) -> tuple[dict[str, Any], list[dict[str, Any
                 operator_summary=(f"Books policy in place; storage mode is {storage_mode}."),
             )
         )
+    findings.extend(_money_path_threshold_findings(_money_path_policy_from_frontmatter(fm)))
     return fm, findings
 
 
@@ -1087,6 +1174,14 @@ def _money_path_for_bet(path: Path, fm: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _bet_appetite_tier(fm: dict[str, Any]) -> str:
+    direct = str(fm.get("appetite_tier") or "").strip().lower()
+    if direct in APPETITE_TIERS:
+        return direct
+    appetite = str(fm.get("appetite") or "").strip().lower()
+    return appetite if appetite in APPETITE_TIERS else ""
+
+
 def _decimal_mantissa_from_number(value: Any, places: int = 2) -> int | None:
     if isinstance(value, bool):
         return None
@@ -1255,7 +1350,7 @@ def _exposure_error(
 
 
 def _bet_exposure(
-    repo: Path, journal: Path, bet_path: Path
+    repo: Path, journal: Path, bet_path: Path, policy: dict[str, Any]
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     fm, frontmatter_error = _bet_frontmatter(repo, bet_path)
     if frontmatter_error is not None:
@@ -1263,6 +1358,8 @@ def _bet_exposure(
     resolved = bet_path if bet_path.is_absolute() else repo / bet_path
     rel = resolved.resolve().relative_to(repo.resolve()).as_posix()
     money_path = _money_path_for_bet(resolved, fm)
+    appetite_tier = _bet_appetite_tier(fm)
+    threshold = _threshold_for_appetite(policy, appetite_tier) if appetite_tier else None
     bet_id = str(money_path.get("bet_id") or resolved.stem)
     findings: list[dict[str, Any]] = []
     if not money_path["declared"]:
@@ -1352,11 +1449,49 @@ def _bet_exposure(
                         ),
                     )
                 )
+    threshold_amount = None
+    over_appetite_threshold = False
+    if threshold is not None and threshold.get("max_amount") is not None:
+        threshold_mantissa = _decimal_mantissa_from_number(threshold.get("max_amount"), places or 2)
+        if threshold_mantissa is not None:
+            threshold_amount = _amount_from_parts(
+                commodity=str(policy.get("currency") or commodity or "USD"),
+                mantissa=threshold_mantissa,
+                places=places or 2,
+            )
+            if str(policy.get("currency") or commodity or "USD") == commodity:
+                over_appetite_threshold = gross_mantissa > threshold_mantissa
+                if over_appetite_threshold:
+                    findings.append(
+                        _finding(
+                            id="bet-exposure-over-appetite-threshold",
+                            title="Bet exposure is over its MoneyPath appetite threshold",
+                            state="warn",
+                            detail=(
+                                f"{rel} gross exposure is over the configured "
+                                f"{appetite_tier} appetite threshold."
+                            ),
+                            audience="operator_decision",
+                            operator_summary=(
+                                "Review this bet before more execution spend; exposure is over cap."
+                            ),
+                        )
+                    )
     exposure = {
         "path": rel,
         "title": str(fm.get("title") or resolved.stem),
         "status": str(fm.get("status") or ""),
+        "appetite_tier": appetite_tier,
         "money_path": money_path,
+        "scale_gate": {
+            "appetite_tier": appetite_tier,
+            "threshold": threshold,
+            "threshold_amount": threshold_amount,
+            "approval": str((threshold or {}).get("approval") or ""),
+            "ledger_required": bool((threshold or {}).get("ledger_required")),
+            "requires_exit_rubric": bool((threshold or {}).get("requires_exit_rubric")),
+            "over_cap": over_appetite_threshold,
+        },
         "anchor": {
             "tag": f"bet:{bet_id}",
             "query": f"tag:bet={bet_id}",
@@ -1386,6 +1521,7 @@ def exposure(
     repo_path = Path(repo).resolve()
     mode = "active" if active else "single"
     fm, policy_findings = _detect_books_policy(repo_path)
+    money_path_policy = _money_path_policy_from_frontmatter(fm)
     error_findings = [finding for finding in policy_findings if finding["state"] == "error"]
     if error_findings:
         return _exposure_error(repo=repo_path, mode=mode, findings=error_findings)
@@ -1456,7 +1592,7 @@ def exposure(
         )
     ]
     for bet_path in bet_paths:
-        exposure_item, bet_findings = _bet_exposure(repo_path, journal, bet_path)
+        exposure_item, bet_findings = _bet_exposure(repo_path, journal, bet_path, money_path_policy)
         if exposure_item:
             exposures.append(exposure_item)
         findings.extend(bet_findings)
@@ -1477,6 +1613,9 @@ def exposure(
             f"Checked {len(exposures)} bet exposure record(s); "
             f"{transaction_count} anchored transaction(s) found."
         ),
+        "policy": {
+            "money_path": money_path_policy,
+        },
         "exposures": exposures,
         "findings": findings,
         "errors": errors,
@@ -1894,6 +2033,7 @@ def run(
         "state": state,
         "repo": str(repo_path),
         "storage_mode": storage_mode,
+        "money_path_policy": _money_path_policy_from_frontmatter(fm),
         "fixture_validated": validate_fixture,
         "summary": summary,
         "findings": findings,
@@ -1924,6 +2064,7 @@ def status(repo: str | Path = ".") -> dict[str, Any]:
     missing_ignore = _books_ignore_missing(entries)
     vault = _vault_info(repo_path, fm)
     storage_mode = check_report.get("storage_mode") or _policy_storage_mode(fm)
+    money_path_policy = _money_path_policy_from_frontmatter(fm)
     status_summary = "Books setup passed." if state == "ok" else _summary(state, findings)
 
     return {
@@ -1941,6 +2082,8 @@ def status(repo: str | Path = ".") -> dict[str, Any]:
             "path": "core/finance/books.md",
             "storage_mode": storage_mode,
             "valid_storage_mode": bool(storage_mode in VALID_STORAGE_MODES),
+            "currency": money_path_policy["currency"],
+            "money_path": money_path_policy,
         },
         "vault": vault,
         "ignore": {
@@ -2050,6 +2193,7 @@ def readiness(repo: str | Path = ".") -> dict[str, Any]:
             "present": bool(policy.get("present")),
             "storage_mode": str(policy.get("storage_mode") or ""),
             "valid_storage_mode": bool(policy.get("valid_storage_mode")),
+            "money_path": policy.get("money_path") or {},
         },
         "vault": {
             "configured": bool(vault.get("configured")),
