@@ -1833,6 +1833,18 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
         {*CODEX_SOURCE_STATUS_VOCABULARY}
         | {str(item["source_status"]) for item in CODEX_WORKFLOW_INVENTORY}
     )
+    counts = {
+        "items": len(items),
+        "workflows": len(items),
+        "codex_global_skill_routes": len(CODEX_GLOBAL_SKILL_NAMES),
+        "shared_source": sum(1 for item in items if "shared_source" in item["surface_kinds"]),
+        "read_only_planning": sum(
+            1 for item in items if "read_only_planning" in item["surface_kinds"]
+        ),
+        "intentionally_unsupported": sum(
+            1 for item in items if "intentionally_unsupported" in item["surface_kinds"]
+        ),
+    }
     return {
         "ok": True,
         "runtime": runtime,
@@ -1877,7 +1889,18 @@ def workflow_inventory(*, runtime: str = "codex") -> dict[str, Any]:
         "source_status_descriptions": CODEX_SOURCE_STATUS_DESCRIPTIONS,
         "surface_kinds": list(CODEX_SURFACE_KIND_VOCABULARY),
         "surface_kind_descriptions": CODEX_SURFACE_KIND_DESCRIPTIONS,
+        "json_shape": {
+            "canonical_items": "items",
+            "compatibility_alias": "workflows",
+            "summary_count": "counts.items",
+            "note": (
+                "`items` is canonical; `workflows` is an alias for agents that "
+                "expect workflow inventories under that key."
+            ),
+        },
+        "counts": counts,
         "items": items,
+        "workflows": items,
         "safe_to_share": True,
     }
 
@@ -1951,6 +1974,9 @@ def render_workflow_inventory_md() -> str:
         "Canonical architecture: shared workflow source -> Claude Code shell -> "
         "Codex shell -> inventory/tests. Temporary mirrors are explicit so "
         "reviewers can see which routes still need migration.\n\n"
+        "`mb workflow list --runtime codex --json` returns workflow inventory "
+        "under canonical `items`, with `workflows` as a compatibility alias and "
+        "`counts.items` as the top-level count.\n\n"
         "Surface kinds in `mb workflow list --json`: `shared_source`, "
         "`claude_skill`, `playbook`, `codex_global_skill`, `read_only_planning`, "
         "`pending_shared_source_migration`, `blocked_by_provider_gates`, "
@@ -2287,6 +2313,8 @@ Codex supports the daily Main Branch routes listed here. Do not claim all Claude
 Code skills, provider mutation, ads/site production, publishing, spend, customer
 contact, or Claude Code command surfaces are available unless `mb workflow list
 --runtime codex --json` and current runtime evidence say so.
+Read workflow inventory from canonical `items`; `workflows` is a compatibility
+alias and `counts.items` is the top-level count.
 """
 
 

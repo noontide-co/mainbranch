@@ -14,6 +14,7 @@ from mb import books as books_mod
 from mb import checkpoint as checkpoint_mod
 from mb import codex as codex_mod
 from mb import journal as journal_mod
+from mb import status as status_mod
 from mb import topology as topology_mod
 from mb import vocabulary
 from mb.engine import install_mode, link_status
@@ -268,7 +269,10 @@ def _build_checks(
             {
                 "name": "codex_runtime_mb",
                 "ok": bool(
-                    not codex_found or not codex_instructions.get("ok") or codex_runtime.get("ok")
+                    not codex_found
+                    or not codex_instructions.get("ok")
+                    or codex_runtime.get("ok")
+                    or not codex_runtime.get("mismatch")
                 ),
                 "severity": "warn",
                 "detail": str(
@@ -295,11 +299,15 @@ def _next_actions(
     checks: list[dict[str, Any]],
     handoff_ready: bool,
     codex: dict[str, Any] | None = None,
+    ranked_actions: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     actions = [str(check["repair"]) for check in checks if not check["ok"] and check["repair"]]
-    codex_actions = _codex_next_actions(repo, codex or {})
+    codex_actions = _codex_next_actions(repo, codex or {}, include_ready_handoff=False)
     if codex_actions:
         actions.extend(codex_actions)
+        return actions[:6]
+    if ranked_actions:
+        actions.extend(_ranked_action_next_actions(ranked_actions))
         return actions[:6]
     if handoff_ready:
         actions.extend(
@@ -308,7 +316,27 @@ def _next_actions(
     return actions[:6]
 
 
-def _codex_next_actions(repo: Path, codex: dict[str, Any]) -> list[str]:
+def _ranked_action_next_actions(ranked_actions: list[dict[str, Any]]) -> list[str]:
+    actions: list[str] = []
+    for action in ranked_actions[:3]:
+        title = str(action.get("title") or action.get("id") or "Review next action")
+        reason = str(action.get("reason") or "").strip()
+        command = str(action.get("command") or "").strip()
+        text = title
+        if reason:
+            text = f"{text}: {reason}"
+        if command:
+            text = f"{text} Next: `{command}`."
+        actions.append(text)
+    return actions
+
+
+def _codex_next_actions(
+    repo: Path,
+    codex: dict[str, Any],
+    *,
+    include_ready_handoff: bool = True,
+) -> list[str]:
     executable = codex.get("executable") or {}
     if not executable.get("found"):
         return []
@@ -337,6 +365,8 @@ def _codex_next_actions(repo: Path, codex: dict[str, Any]) -> list[str]:
             actions.append(repair)
         actions.append("Rerun `mb status --json --peek` before using Codex.")
         return actions[:3]
+    if not include_ready_handoff:
+        return []
     smoke_command = str(codex.get("smoke_command") or "")
     actions = [
         f"Run `{_codex_display_command(repo)}`.",
@@ -362,6 +392,11 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
     vocabulary_report = vocabulary.facts(repo_path)
     books = books_mod.readiness(repo_path)
     topology = topology_mod.collect(repo_path, git_remote=str(git.get("remote") or ""))
+    status_report = status_mod.run(
+        path=str(repo_path),
+        update_marker=False,
+        validation_cross_refs=False,
+    )
     checks = _build_checks(repo_shape, git, claude_path, wiring, codex, update)
     hard_failures = _hard_failures(checks)
     handoff_ready = not hard_failures
@@ -403,6 +438,25 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "next_actions": _codex_next_actions(repo_path, codex),
         }
 
+    ranked_actions = list(status_report.get("ranked_actions") or [])
+    readiness = status_report.get("readiness") or {}
+    readiness_dimensions = readiness.get("dimensions") or {}
+    business_memory = readiness_dimensions.get("business_memory") or {}
+    daily_state = {
+        "runtime_handoff": {
+            "ready": handoff_ready,
+            "summary": (
+                "Runtime handoff checks are ready."
+                if handoff_ready
+                else "Runtime handoff checks need repair before agent handoff."
+            ),
+        },
+        "business_memory": business_memory,
+        "top_ranked_action": ranked_actions[0] if ranked_actions else {},
+        "source_command": "mb status --json --peek",
+        "safe_to_share": True,
+    }
+
     return {
         "ok": ok,
         "handoff_ready": handoff_ready,
@@ -441,6 +495,9 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "codex_cli": codex,
         },
         "experimental_runtimes": {"codex_cli": codex_runtime},
+        "readiness": readiness,
+        "daily_state": daily_state,
+        "ranked_actions": ranked_actions,
         "checks": checks,
         "command": {
             "cwd": str(repo_path),
@@ -449,7 +506,13 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "follow_up": "/mb-start",
         },
         "launch": launch_report,
-        "next_actions": _next_actions(repo_path, checks, handoff_ready, codex),
+        "next_actions": _next_actions(
+            repo_path,
+            checks,
+            handoff_ready,
+            codex,
+            ranked_actions=ranked_actions,
+        ),
     }
 
 

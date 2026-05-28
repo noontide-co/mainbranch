@@ -1564,6 +1564,49 @@ def test_status_warns_when_codex_runtime_uses_stale_mb(
     assert "login-shell PATH" in finding["repair"]
 
 
+def test_status_does_not_treat_non_mismatch_codex_runtime_context_as_mismatch(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setattr(codex_mod, "_which", _with_codex)
+    monkeypatch.setattr(
+        codex_mod,
+        "_login_shell_mb_diagnostics",
+        lambda: {
+            "checked": True,
+            "ok": False,
+            "state": "info",
+            "shell": "/bin/zsh",
+            "command": "command -v mb && mb --version",
+            "path": "/inactive/old/mb",
+            "version": "0.3.18",
+            "active_path": "/current/bin/mb",
+            "active_version": "0.3.41",
+            "path_mismatch": False,
+            "version_mismatch": False,
+            "mismatch": False,
+            "error": "",
+            "summary": (
+                "An inactive old mb install was observed, but active/runtime mismatch "
+                "flags are false."
+            ),
+            "repair": "",
+            "safe_to_share": True,
+        },
+    )
+    _prepare_codex_global_skills(tmp_path, monkeypatch)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    codex = report["runtime"]["codex_cli"]
+    assert codex["runtime"]["mismatch"] is False
+    assert codex["status"] == "runtime_unverified"
+    assert not any(item["id"] == "codex_runtime_mb_mismatch" for item in report["drift"]["items"])
+
+
 def test_status_marks_codex_not_ready_when_global_skills_are_missing(
     tmp_path: Path,
     monkeypatch,
@@ -1614,6 +1657,26 @@ def test_status_marks_codex_ready_when_global_skills_are_installed(
     assert set(codex["global_skill"]["required_skills"]) == set(codex_mod.CODEX_GLOBAL_SKILL_NAMES)
     assert codex["global_skill"]["skills"]["mb-start"]["ok"] is True
     assert codex["global_skill"]["skills"]["mb-ads"]["ok"] is True
+
+
+def test_status_readiness_separates_repo_runtime_from_business_memory(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    dimensions = report["readiness"]["dimensions"]
+    assert dimensions["repo_runtime"]["level"] == report["readiness"]["level"]
+    assert dimensions["business_memory"]["state"] in {
+        "needs_input",
+        "needs_attention",
+        "ready",
+    }
+    assert "Business memory is" in report["readiness"]["summary"]
 
 
 def test_status_json_exposes_push_and_legacy_campaign_facts(tmp_path: Path, monkeypatch) -> None:

@@ -2525,6 +2525,25 @@ def repair_plan(
             1 for action in actions if action["mode"] == "write" and action["safe_to_apply"]
         ),
     }
+    if mode == "plan":
+        if summary["error"]:
+            plan_state = "plan_produced_with_blockers"
+            plan_summary = (
+                "`mb doctor repair --plan` produced a read-only plan with blockers. "
+                "Treat the nonzero exit as findings to review, not as an opaque command failure."
+            )
+        elif actions:
+            plan_state = "plan_produced_with_findings"
+            plan_summary = (
+                "`mb doctor repair --plan` produced a read-only plan with findings. "
+                "Review the actions before approving any apply command."
+            )
+        else:
+            plan_state = "clear"
+            plan_summary = "`mb doctor repair --plan` found no repair actions."
+    else:
+        plan_state = "apply_summary"
+        plan_summary = "`mb doctor repair --apply` returned an apply summary."
     return {
         "schema": REPAIR_SCHEMA,
         "schema_version": REPAIR_SCHEMA_VERSION,
@@ -2536,6 +2555,13 @@ def repair_plan(
         "repo": str(target),
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "summary": summary,
+        "plan_interpretation": {
+            "state": plan_state,
+            "summary": plan_summary,
+            "read_only_plan": mode == "plan",
+            "nonzero_exit_can_still_include_usable_plan": bool(mode == "plan" and actions),
+            "safe_to_share": True,
+        },
         "sections": sections,
         "actions": actions,
         "applied_actions": applied_actions or [],

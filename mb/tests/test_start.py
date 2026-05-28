@@ -129,7 +129,15 @@ def test_start_json_reports_codex_global_skill_handoff(tmp_path: Path, monkeypat
         str(repo.resolve()),
     ]
     next_actions = "\n".join(report["next_actions"])
-    assert f"codex -C {shlex.quote(str(repo.resolve()))}" in next_actions
+    assert f"codex -C {shlex.quote(str(repo.resolve()))}" not in next_actions
+    assert report["ranked_actions"]
+    assert report["daily_state"]["source_command"] == "mb status --json --peek"
+    assert report["daily_state"]["runtime_handoff"]["ready"] is True
+    assert report["daily_state"]["business_memory"]["state"] in {
+        "needs_input",
+        "needs_attention",
+        "ready",
+    }
     codex_next_actions = "\n".join(
         report["experimental_runtimes"]["codex_cli"]["command"]["next_actions"]
     )
@@ -155,7 +163,7 @@ def test_start_json_reports_codex_global_skill_handoff(tmp_path: Path, monkeypat
     assert report["vocabulary"]["terms"]["push"] == {"singular": "drop", "plural": "drops"}
     assert report["vocabulary"]["terms"]["statuses"]["active"] == "live"
     assert "update" in report
-    assert "ranked_actions" not in report
+    assert "ranked_actions" in report
     assert report["result_status"] == "ok"
     assert "status" not in report
 
@@ -468,19 +476,38 @@ def test_start_recommended_update_keeps_handoff_ready(tmp_path: Path, monkeypatc
     assert update_check["severity"] == "warn"
 
 
-def test_start_does_not_run_full_status_pipeline(tmp_path: Path, monkeypatch) -> None:
+def test_start_reads_status_ranked_actions_without_updating_marker(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.setattr(start_mod, "_which", _with_claude)
+    status_calls: list[dict[str, Any]] = []
+    original_status_run = status_mod.run
+
+    def capture_status_run(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        status_calls.append(dict(kwargs))
+        return original_status_run(*args, **kwargs)
+
+    monkeypatch.setattr(status_mod, "run", capture_status_run)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
-
-    def fail_github(*args: object, **kwargs: object) -> object:
-        raise AssertionError("mb start should not collect full status facts")
-
-    monkeypatch.setattr(status_mod, "_github", fail_github)
+    marker = repo / ".mb" / "last-status-seen.json"
+    assert not marker.exists()
 
     result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
 
     assert result.exit_code == 0
+    report = json.loads(result.stdout)
+    assert report["ranked_actions"]
+    assert report["daily_state"]["top_ranked_action"] == report["ranked_actions"][0]
+    assert report["daily_state"]["source_command"] == "mb status --json --peek"
+    assert status_calls == [
+        {
+            "path": str(repo.resolve()),
+            "update_marker": False,
+            "validation_cross_refs": False,
+        }
+    ]
+    assert not marker.exists()
 
 
 def test_start_surfaces_recent_checkpoint_history(tmp_path: Path, monkeypatch) -> None:

@@ -158,9 +158,11 @@
     ],
     "readiness": [
       "checks",
+      "dimensions",
       "level",
       "next_actions",
-      "score"
+      "score",
+      "summary"
     ],
     "relationship_health": [
       "gaps",

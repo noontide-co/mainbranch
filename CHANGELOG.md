@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- Changed daily start/status JSON to separate repo/runtime readiness from
+  business-memory completeness, align `mb start --json` next actions with
+  status-ranked owner actions when runtime handoff is ready, clarify Codex
+  workflow inventory shape, and frame read-only repair plans with findings as
+  usable plans. Closes #788.
+
 ## [0.3.41] - 2026-05-28
 
 v0.3.41 packages the fact-grounded, owner-facing next-action intelligence train.

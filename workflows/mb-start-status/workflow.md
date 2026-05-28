@@ -27,6 +27,8 @@ json_facts:
   - ranked_actions
   - update
   - readiness
+  - readiness.dimensions.repo_runtime
+  - readiness.dimensions.business_memory
   - drift.items
   - runtime.codex_cli
   - runtime.claude_code
@@ -96,6 +98,10 @@ runtime handoff, repo-boundary, or adapter-readiness facts matter. Use
 `mb doctor repair --plan` when status reports drift, stale guidance, broken
 wiring, or setup/repair blockers.
 
+`mb doctor repair --plan` is read-only. A nonzero plan exit can still include a
+usable plan; inspect `plan_interpretation`, `summary`, `sections`, and
+`actions` before describing it as a failed command.
+
 ## Required JSON Fact Paths
 
 The runtime shell must preserve these paths from the workflow source:
@@ -112,6 +118,8 @@ The runtime shell must preserve these paths from the workflow source:
 - `ranked_actions`
 - `update`
 - `readiness`
+- `readiness.dimensions.repo_runtime`
+- `readiness.dimensions.business_memory`
 - `drift.items`
 - `runtime.codex_cli`
 - `runtime.claude_code`
@@ -142,6 +150,11 @@ Hard gates win before business routing: required updates, runtime mismatch,
 broken repo wiring, repair blockers, validation blockers, private-data
 boundaries, unsafe provider operations, destructive-operation requests, and
 approval-gated status marker writes.
+
+Keep repo/runtime readiness separate from business-memory completeness.
+`readiness.level` and `readiness.score` describe repo shape, install, git, and
+runtime handoff. `readiness.dimensions.business_memory` describes onboarding,
+validation, file-contract, and drift signals that may still need owner input.
 
 After hard gates, lead with the top `ranked_actions` entry when the operator
 asks what to do next. Use `since_last_check` and `journal` when the operator

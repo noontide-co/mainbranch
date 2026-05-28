@@ -603,6 +603,9 @@ def test_codex_command_surface_and_inventory_render() -> None:
     assert "plugin" not in inventory_json
     assert inventory_json["global_skill"]["install_hint"] == "mb doctor repair --apply --only codex"
     assert "mb-start" in inventory_json["global_skill"]["routes"]
+    assert inventory_json["json_shape"]["canonical_items"] == "items"
+    assert inventory_json["workflows"] == inventory_json["items"]
+    assert inventory_json["counts"]["items"] == len(inventory_json["items"])
     assert "`main-branch mb-start`" in inventory
     assert "pending_shared_source_migration" in inventory
     assert "intentionally_unsupported" in inventory
