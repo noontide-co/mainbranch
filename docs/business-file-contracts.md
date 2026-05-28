@@ -12,8 +12,8 @@ The contract system keeps three promises:
 
 - `mb` reports deterministic facts and owner-facing gaps.
 - Claude Code and Codex route from the same JSON facts and workflow names.
-- Skills and future workflow migrations reuse one contract vocabulary instead
-  of inventing file rules one by one.
+- Skills and workflow sources (current and future) reuse one contract
+  vocabulary instead of inventing file rules one by one.
 
 ## Status
 
@@ -418,6 +418,6 @@ blockers, unsafe provider operations, and approval gates.
 
 ## Future Work
 
-Later workflow migrations should plug into this contract system. They should
-not revive `ship-bet` or `weekly-review`, invent new route names, or define
-parallel file-shape language in skill prose.
+Future contract-enforcement slices and workflow migrations should plug into
+this contract system. They should not revive `ship-bet` or `weekly-review`,
+invent new route names, or define parallel file-shape language in skill prose.

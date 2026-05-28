@@ -120,7 +120,8 @@ def _assert_agents_md_codex_start_contract(text: str) -> None:
     assert "routes `mb-*`" in text
     assert "Inspect status / what changed / what is stale" in text
     assert "Think / research / decide / codify" in text
-    assert "do not claim these workflows are ported to" in text
+    assert "route to the matching global" in text
+    assert "Do not claim full Codex workflow parity" in text
     assert "## Codex Start Workflow" in text
     assert "This is the Codex-native start workflow" in text
     assert "## Codex Status Workflow" in text

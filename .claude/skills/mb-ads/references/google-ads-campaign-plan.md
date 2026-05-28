@@ -22,9 +22,9 @@ Use this route:
 If the work is repeatable or has approval state, write a plan-only playbook at
 `pushes/<push>/playbooks/google-ads-launch-plan.md` with `type: playbook`.
 When the operator wants the reusable Noontide paid-search recipe, use the
-`google-ads-search-launch` playbook under `.claude/playbooks/`; that playbook
-instantiates the push playbook run record and calls this skill for campaign
-planning.
+`google-ads-search-launch` source under `playbooks/` or its Claude shell under
+`.claude/playbooks/`; that playbook instantiates the push playbook run record
+and calls this skill for campaign planning.
 For B2B local-services lead-form launches, load that playbook's field notes for
 GA4/GTM/Ads import order, Search-only defaults, UI gotchas, negative categories,
 and volume calibration.
