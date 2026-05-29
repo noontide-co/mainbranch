@@ -84,7 +84,6 @@ TOPOLOGY_STATUS = {"proposed", "active", "paused", "superseded", "archived"}
 # Single source of truth: the topology reader owns these vocabularies and the
 # unsafe-key/secret matchers. Aliased here so validate and topology never drift.
 TOPOLOGY_ROLE = topology.TOPOLOGY_ROLES
-TOPOLOGY_PROFILE = topology.TOPOLOGY_PROFILES
 TOPOLOGY_VISIBILITY = topology.TOPOLOGY_VISIBILITIES
 TOPOLOGY_RELATIONSHIP = {
     "hub_for",
@@ -1064,22 +1063,6 @@ def _check_repo_topology_frontmatter(
         role = _require_topology_repo_string(repo_entry, "role", errors, prefix=prefix)
         if role and role not in TOPOLOGY_ROLE:
             errors.append(f"{prefix}.role={role!r} not in {sorted(TOPOLOGY_ROLE)}")
-
-        # profile is optional; it overrides role-derived inference for CLI checks.
-        profile = repo_entry.get("profile")
-        if profile is not None:
-            if not isinstance(profile, str) or profile not in TOPOLOGY_PROFILE:
-                errors.append(f"{prefix}.profile={profile!r} not in {sorted(TOPOLOGY_PROFILE)}")
-            elif (
-                role
-                and topology.role_to_profile(role)
-                and topology.role_to_profile(role) != profile
-            ):
-                warnings.append(
-                    f"{prefix}.profile={profile!r} overrides the role-derived profile "
-                    f"{topology.role_to_profile(role)!r} for role {role!r}; keep this only "
-                    "when the CLI contract really differs from the role default"
-                )
 
         lifecycle = _require_topology_repo_string(repo_entry, "lifecycle", errors, prefix=prefix)
         if lifecycle == "graduated":
