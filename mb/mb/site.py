@@ -504,11 +504,12 @@ def check(
     explicit_business_repo = bool(business_repo)
     business_value = business_repo or source_business
     business = Path(business_value).resolve() if business_value else None
-    site_profile = topology_mod.resolve_profile(
-        descriptor=topology_mod.read_child_descriptor(site),
-        current_view={},
-        repo_path=site,
-    ).get("profile", "")
+    # Repo role for this checkout: declared in the descriptor, else inferred
+    # from on-disk signals (suggestion only).
+    site_descriptor = topology_mod.read_child_descriptor(site)
+    site_role = _string_value(site_descriptor.get("role")) or topology_mod.infer_role_from_signals(
+        site
+    )
     conversion, conversion_error = _read_json(site / CONVERSION_RELATIVE_PATH)
     offer = _merged_offer_metadata(business)
     provider_status = connect_mod.status_all(business or site, include_all=True)
@@ -528,7 +529,7 @@ def check(
             "expected_events": expected_events,
             "conversion_path": CONVERSION_RELATIVE_PATH.as_posix(),
             "provider_state": _provider_summary(providers),
-            "repo_profile": site_profile,
+            "repo_role": site_role,
         }
     )
 
@@ -615,22 +616,33 @@ def check(
             }
         )
 
-    if site_profile == "website":
+    if site_role in {"site", "offer"}:
         evidence.append(
             {
-                "kind": "repo_profile",
+                "kind": "repo_role",
                 "state": "passed",
-                "summary": "Repo profile is website.",
+                "summary": f"Repo role is {site_role}.",
             }
         )
-    elif site_profile:
+    elif site_role:
         evidence.append(
             {
-                "kind": "repo_profile",
+                "kind": "repo_role",
                 "state": "manual",
                 "summary": (
-                    f"This checkout looks like a {site_profile} repo, not a website; "
-                    "mb site check expects a website repo."
+                    f"This checkout looks like a {site_role} repo, not a site; "
+                    "mb site check expects a site/offer repo."
+                ),
+            }
+        )
+    else:
+        evidence.append(
+            {
+                "kind": "repo_role",
+                "state": "manual",
+                "summary": (
+                    "This repo has no topology role declared; "
+                    "declare role in .mainbranch/repo.json."
                 ),
             }
         )

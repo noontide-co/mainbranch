@@ -4467,7 +4467,6 @@ def run(
         "current_repo": topology_payload["current_repo"],
         "repo_boundary": topology_payload["repo_boundary"],
         "child_counts": topology_payload["child_counts"],
-        "child_profile_counts": topology_payload["child_profile_counts"],
         "restricted_repos": topology_payload["restricted_repos"],
         "findings": topology_payload["findings"],
         "local": {
@@ -4639,28 +4638,25 @@ def render_human(
         console.print(
             f"[bold]Business map[/bold] {display_name} — {total_children} child repo(s){suffix}"
         )
-    profile = topology_current.get("profile") or ""
-    profile_source = topology_current.get("profile_source") or ""
+    role = topology_current.get("role") or ""
+    role_suggestion = topology_current.get("role_suggestion") or ""
     if topology_current.get("matched"):
         identifier = topology_current.get("slug") or topology_current.get("remote_full_name") or "?"
-        role = topology_current.get("role") or "?"
-        profile_suffix = f", profile {profile}" if profile else ""
-        console.print(f"  this repo: {role}{profile_suffix} ({identifier})")
-    elif profile:
-        src = f" (by {profile_source})" if profile_source and profile_source != "role" else ""
-        console.print(f"  this repo: profile {profile}{src}")
-    if profile and profile != "hub":
-        if profile in {"private", "archive"}:
-            note = (
-                "strategy and operating memory (core/, bets/, pushes/) "
-                "live in the parent hub, not here"
+        console.print(f"  this repo: {role or '?'} ({identifier})")
+        if role and role != "business":
+            console.print(
+                "  [dim]child repo — strategy and operating memory "
+                "(core/, bets/, pushes/) live in the parent hub[/dim]"
             )
-        else:
-            note = (
-                "execution surface — full business memory (core/, bets/, pushes/) "
-                "lives in the parent hub, not here"
-            )
-        console.print(f"  [dim]{note}[/dim]")
+    elif role:
+        console.print(f"  this repo: {role}")
+    elif not topology_current.get("is_hub"):
+        hint = f" (looks like a {role_suggestion} repo)" if role_suggestion else ""
+        console.print(f"  [yellow]this repo has no topology role declared{hint}[/yellow]")
+        console.print(
+            "  [dim]set role in .mainbranch/repo.json or the hub registry — "
+            "see docs/child-repo-descriptors.md[/dim]"
+        )
     if verbose:
         topology_findings = topology.get("findings") or []
         shown = 0
