@@ -13,6 +13,7 @@ WEIGHTS: dict[str, int] = {
     "skill_wiring_broken": 110,
     "git_repo_missing": 105,
     "onboarding_incomplete": 95,
+    "onboarding_incomplete_operational": 56,
     "overdue_bets": 90,
     "unhealthy_integrations": 85,
     "github_context_repair": 80,
@@ -66,7 +67,91 @@ def rank_status_report(
     ranked = sorted(actions, key=_action_sort_key)
     if not ranked:
         ranked = [_low_signal_action(report)]
+    ranked = _ensure_money_path_visible(ranked, report, limit)
     return ranked[:limit]
+
+
+def _repo_operational(report: dict[str, Any]) -> bool:
+    """True when the repo is already a working Main Branch business repo.
+
+    Operational means the safe-blocker preconditions are met: the folder has the
+    business-repo markers, git is initialized, skill wiring (if present) is
+    healthy, and no update is required. In that state onboarding completion is a
+    polish item, not a gate, and path-to-money guidance should be visible.
+    """
+
+    repo = _dict(report.get("repo"))
+    git = _dict(report.get("git"))
+    runtime = _dict(report.get("runtime"))
+    skill_wiring = _dict(runtime.get("skill_wiring"))
+    update = _dict(report.get("update"))
+    return (
+        bool(repo.get("looks_like_mainbranch_repo"))
+        and bool(git.get("inside_work_tree"))
+        and (not skill_wiring or bool(skill_wiring.get("ok")))
+        and str(update.get("severity") or "") != "required"
+    )
+
+
+# Soft onboarding / repo-operation / hygiene actions that may yield a top slot to
+# the leading MoneyPath bottleneck on an operational repo. Required safe blockers
+# and business-pressure signals (bets, overdue/due bets, money finance) are not
+# here, so they are never displaced.
+_MONEY_PATH_DISPLACEABLE_IDS = frozenset(
+    {
+        "resume_onboarding",
+        "review_playbook_health",
+        "review_relationship_health",
+        "review_local_git_changes",
+        "review_since_last_check",
+        "review_stale_decisions",
+        "refresh_stale_research",
+        "review_github_attention",
+        "work_assigned_github_tasks",
+        "unstick_blocked_or_stale_tasks",
+    }
+)
+
+
+def _ensure_money_path_visible(
+    ranked: list[dict[str, Any]],
+    report: dict[str, Any],
+    limit: int,
+) -> list[dict[str, Any]]:
+    """Reserve a top slot for the leading MoneyPath action on operational repos.
+
+    When the repo is operational and the top MoneyPath bottleneck would otherwise
+    fall below ``limit``, it takes the slot of the weakest soft onboarding /
+    repo-operation / hygiene action in the top band so a path-to-money question
+    surfaces it alongside, not underneath, those actions. Required safe blockers
+    and business-pressure signals (bets, money finance) keep their slots.
+    """
+
+    if limit <= 0 or not _repo_operational(report):
+        return ranked
+    money = next(
+        (
+            action
+            for action in ranked
+            if str(action.get("id") or "").startswith("review_money_path")
+        ),
+        None,
+    )
+    if money is None or money in ranked[:limit]:
+        return ranked
+    top = ranked[:limit]
+    displaceable = [
+        action for action in top if str(action.get("id") or "") in _MONEY_PATH_DISPLACEABLE_IDS
+    ]
+    if not displaceable:
+        # Top band is all blockers/business signals. Leave them; money path is not
+        # buried under hygiene, it simply ranks below higher-pressure work.
+        return ranked
+    victim = min(displaceable, key=lambda action: _as_int(action.get("score")))
+    new_top = [action for action in top if action is not victim] + [money]
+    new_top_ids = {id(action) for action in new_top}
+    rest = [action for action in ranked if id(action) not in new_top_ids]
+    return sorted(new_top, key=_action_sort_key) + sorted(rest, key=_action_sort_key)
 
 
 def _add_readiness_actions(actions: list[dict[str, Any]], report: dict[str, Any]) -> None:
@@ -196,6 +281,15 @@ def _add_readiness_actions(actions: list[dict[str, Any]], report: dict[str, Any]
     onboarding_summary = _dict(onboarding.get("summary"))
     if onboarding_summary.get("status") == "in_progress":
         missing_inputs = [str(item) for item in _list(onboarding_summary.get("missing_inputs"))]
+        # Onboarding is a soft warn. Once the repo is already operational, finishing
+        # remaining onboarding inputs should not automatically bury path-to-money,
+        # validation, bet, or active-push signals, so demote it below the
+        # business-pressure band while keeping it leading on fresh/unshaped repos.
+        onboarding_weight = (
+            WEIGHTS["onboarding_incomplete_operational"]
+            if _repo_operational(report)
+            else WEIGHTS["onboarding_incomplete"]
+        )
         actions.append(
             _action(
                 action_id="resume_onboarding",
@@ -204,7 +298,7 @@ def _add_readiness_actions(actions: list[dict[str, Any]], report: dict[str, Any]
                     onboarding_summary.get("next_recommended_action") or "mb onboard status"
                 ),
                 severity="warn",
-                score=WEIGHTS["onboarding_incomplete"] + min(len(missing_inputs), 10),
+                score=onboarding_weight + min(len(missing_inputs), 10),
                 reason=(
                     f"{_as_int(onboarding_summary.get('completed_required'))}/"
                     f"{_as_int(onboarding_summary.get('total_required'))} required onboarding "
