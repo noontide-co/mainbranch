@@ -607,3 +607,183 @@ def test_repo_boundary_helper_redacts_unsafe_child_parent_handle(tmp_path: Path)
     assert helper["safe_to_share"] is False
     assert "Hub handle:" not in helper["next_action"]
     assert "example-co/example" not in json.dumps(helper)
+
+
+# ---------------------------------------------------------------------------
+# Repo profiles (MAIN-463)
+# ---------------------------------------------------------------------------
+
+
+def test_role_to_profile_maps_known_roles() -> None:
+    assert topology.role_to_profile("business") == "hub"
+    assert topology.role_to_profile("site") == "website"
+    assert topology.role_to_profile("offer") == "website"
+    assert topology.role_to_profile("product") == "product"
+    assert topology.role_to_profile("client") == "product"
+    assert topology.role_to_profile("finance") == "private"
+    assert topology.role_to_profile("legal") == "private"
+    assert topology.role_to_profile("ops") == "private"
+    assert topology.role_to_profile("integration_sidecar") == "integration"
+    assert topology.role_to_profile("archive") == "archive"
+
+
+def test_role_to_profile_experiment_is_unknown() -> None:
+    assert topology.role_to_profile("experiment") == ""
+    assert topology.role_to_profile("nonsense") == ""
+
+
+def test_profile_vocabulary_is_direct() -> None:
+    assert {
+        "hub",
+        "website",
+        "product",
+        "private",
+        "integration",
+        "archive",
+    } == topology.TOPOLOGY_PROFILES
+
+
+def test_infer_profile_from_signals_website_via_conversion(tmp_path: Path) -> None:
+    (tmp_path / ".mainbranch").mkdir()
+    (tmp_path / ".mainbranch" / "conversion.json").write_text("{}", encoding="utf-8")
+    assert topology.infer_profile_from_signals(tmp_path) == "website"
+
+
+def test_infer_profile_from_signals_website_via_product_design(tmp_path: Path) -> None:
+    (tmp_path / "PRODUCT.md").write_text("# product", encoding="utf-8")
+    (tmp_path / "DESIGN.md").write_text("# design", encoding="utf-8")
+    assert topology.infer_profile_from_signals(tmp_path) == "website"
+
+
+def test_infer_profile_from_signals_hub(tmp_path: Path) -> None:
+    (tmp_path / "core").mkdir()
+    (tmp_path / ".mb").mkdir()
+    assert topology.infer_profile_from_signals(tmp_path) == "hub"
+
+
+def test_infer_profile_from_signals_unknown(tmp_path: Path) -> None:
+    (tmp_path / "README.md").write_text("# nothing", encoding="utf-8")
+    assert topology.infer_profile_from_signals(tmp_path) == ""
+
+
+def test_resolve_profile_explicit_descriptor_wins() -> None:
+    descriptor = {"found": True, "role": "site", "profile": "archive"}
+    out = topology.resolve_profile(descriptor=descriptor, current_view={})
+    assert out == {"profile": "archive", "profile_source": "descriptor_explicit"}
+
+
+def test_resolve_profile_falls_back_to_role() -> None:
+    descriptor = {"found": True, "role": "finance", "profile": ""}
+    out = topology.resolve_profile(descriptor=descriptor, current_view={})
+    assert out == {"profile": "private", "profile_source": "role"}
+
+
+def test_resolve_profile_signal_when_no_descriptor(tmp_path: Path) -> None:
+    (tmp_path / ".mainbranch").mkdir()
+    (tmp_path / ".mainbranch" / "conversion.json").write_text("{}", encoding="utf-8")
+    out = topology.resolve_profile(descriptor={"found": False}, current_view={}, repo_path=tmp_path)
+    assert out == {"profile": "website", "profile_source": "signal"}
+
+
+def test_resolve_profile_unknown() -> None:
+    out = topology.resolve_profile(descriptor={"found": False}, current_view={})
+    assert out == {"profile": "", "profile_source": "unknown"}
+
+
+def test_repo_json_reads_explicit_profile(tmp_path: Path) -> None:
+    _write_repo_json(
+        tmp_path,
+        {
+            "schema": topology.CHILD_REPO_SCHEMA,
+            "role": "product",
+            "profile": "archive",
+            "display_name": "Old product",
+        },
+    )
+    result = topology.read_child_descriptor(tmp_path)
+    assert result["profile"] == "archive"
+    assert result["profile_explicit"] is True
+
+
+def test_repo_json_invalid_profile_ignored(tmp_path: Path) -> None:
+    _write_repo_json(
+        tmp_path,
+        {
+            "schema": topology.CHILD_REPO_SCHEMA,
+            "role": "site",
+            "profile": "lightweight_website",
+            "display_name": "Site",
+        },
+    )
+    result = topology.read_child_descriptor(tmp_path)
+    # Unrecognized profile falls back to role-derived inference.
+    assert result["profile"] == "website"
+    assert result["profile_explicit"] is False
+
+
+def test_legacy_source_infers_website_profile(tmp_path: Path) -> None:
+    _write_legacy_source(tmp_path, {"business_repo": "../example"})
+    result = topology.read_child_descriptor(tmp_path)
+    assert result["role"] == "site"
+    assert result["profile"] == "website"
+
+
+def test_collect_surfaces_profile_for_website(tmp_path: Path) -> None:
+    (tmp_path / ".mainbranch").mkdir()
+    (tmp_path / ".mainbranch" / "conversion.json").write_text("{}", encoding="utf-8")
+    view = topology.collect(tmp_path)
+    assert view["current_repo"]["profile"] == "website"
+    assert view["current_repo"]["profile_source"] == "signal"
+    assert view["summary"]["current_repo_profile"] == "website"
+
+
+def test_collect_child_profile_counts(tmp_path: Path) -> None:
+    _write_registry(tmp_path, _valid_registry())
+    view = topology.collect(tmp_path)
+    counts = view["child_profile_counts"]
+    # workshop-site -> website, finance -> private; hub excluded.
+    assert counts.get("website") == 1
+    assert counts.get("private") == 1
+    assert "hub" not in counts
+
+
+def test_drift_flags_private_profile_with_public_visibility(tmp_path: Path) -> None:
+    _write_registry(
+        tmp_path,
+        _valid_registry(
+            extra_repos=(
+                "- slug: books\n"
+                "  display_name: Books\n"
+                "  role: finance\n"
+                "  lifecycle: active\n"
+                "  parent: example\n"
+                "  github_owner: example-co\n"
+                "  repo_name: books\n"
+                "  remote: github:example-co/books\n"
+                "  visibility: public\n"
+            )
+        ),
+    )
+    registry = topology.read_registry(tmp_path)
+    findings = topology.drift_findings(
+        registry=registry, descriptor=topology._empty_descriptor(), current_view={}
+    )
+    codes = {f["code"] for f in findings}
+    assert "topology_private_profile_public_visibility" in codes
+
+
+def test_role_to_profile_targets_are_valid() -> None:
+    for role, profile in topology.ROLE_TO_PROFILE.items():
+        assert role in topology.TOPOLOGY_ROLES
+        assert profile in topology.TOPOLOGY_PROFILES
+
+
+def test_docs_document_every_profile_and_no_fluffy_names() -> None:
+    doc = (Path(__file__).resolve().parents[2] / "docs" / "child-repo-descriptors.md").read_text(
+        encoding="utf-8"
+    )
+    for profile in topology.TOPOLOGY_PROFILES:
+        assert f"`{profile}`" in doc, f"profile {profile!r} not documented"
+    # The retired fluffy names must never become canonical vocabulary.
+    for retired in ("lightweight_website", "business_hub", "code_product", "private_source"):
+        assert retired not in doc
