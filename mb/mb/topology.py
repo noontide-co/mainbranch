@@ -282,16 +282,19 @@ def resolve_profile(
     Precedence: explicit descriptor profile -> explicit registry-entry profile ->
     role-derived (descriptor or matched registry role) -> on-disk file signals ->
     unknown. Explicit declarations win over inference.
+
+    Normalized descriptor/registry payloads always carry a ``profile`` (the
+    role-derived value when nothing was declared), so "explicit" is decided by
+    the ``profile_explicit`` flag, never by the value alone.
     """
-    if descriptor.get("found"):
+    if descriptor.get("found") and descriptor.get("profile_explicit"):
         explicit = _explicit_profile(descriptor.get("profile"))
         if explicit:
             return {"profile": explicit, "profile_source": "descriptor_explicit"}
-    if current_view.get("matched") and _explicit_profile(current_view.get("registry_profile")):
-        return {
-            "profile": _explicit_profile(current_view.get("registry_profile")),
-            "profile_source": "registry_explicit",
-        }
+    if current_view.get("matched") and current_view.get("registry_profile_explicit"):
+        explicit = _explicit_profile(current_view.get("registry_profile"))
+        if explicit:
+            return {"profile": explicit, "profile_source": "registry_explicit"}
     role = _string(current_view.get("role"))
     if not role and descriptor.get("found"):
         role = _string(descriptor.get("role"))
@@ -686,6 +689,7 @@ def current_repo_view(
             "slug": matched_entry.get("slug", ""),
             "role": matched_entry.get("role", ""),
             "registry_profile": matched_entry.get("profile", ""),
+            "registry_profile_explicit": bool(matched_entry.get("profile_explicit")),
             "lifecycle": matched_entry.get("lifecycle", ""),
             "visibility": matched_entry.get("visibility", ""),
             "display_name": matched_entry.get("display_name", ""),

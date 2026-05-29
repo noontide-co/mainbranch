@@ -667,15 +667,62 @@ def test_infer_profile_from_signals_unknown(tmp_path: Path) -> None:
 
 
 def test_resolve_profile_explicit_descriptor_wins() -> None:
-    descriptor = {"found": True, "role": "site", "profile": "archive"}
+    # Normalized descriptors set profile_explicit when the owner declared one.
+    descriptor = {"found": True, "role": "site", "profile": "archive", "profile_explicit": True}
     out = topology.resolve_profile(descriptor=descriptor, current_view={})
     assert out == {"profile": "archive", "profile_source": "descriptor_explicit"}
 
 
+def test_resolve_profile_role_derived_descriptor_is_not_explicit() -> None:
+    # A role-only descriptor carries a role-derived profile but profile_explicit
+    # is False; the source must be "role", not "descriptor_explicit".
+    descriptor = {"found": True, "role": "site", "profile": "website", "profile_explicit": False}
+    out = topology.resolve_profile(descriptor=descriptor, current_view={})
+    assert out == {"profile": "website", "profile_source": "role"}
+
+
 def test_resolve_profile_falls_back_to_role() -> None:
-    descriptor = {"found": True, "role": "finance", "profile": ""}
+    descriptor = {"found": True, "role": "finance", "profile": "private", "profile_explicit": False}
     out = topology.resolve_profile(descriptor=descriptor, current_view={})
     assert out == {"profile": "private", "profile_source": "role"}
+
+
+def test_resolve_profile_role_derived_via_read_child_descriptor(tmp_path: Path) -> None:
+    # End-to-end through the normalization layer: a role-only repo.json must
+    # report profile_source "role", never "descriptor_explicit".
+    _write_repo_json(
+        tmp_path,
+        {
+            "schema": topology.CHILD_REPO_SCHEMA,
+            "role": "site",
+            "display_name": "Workshop site",
+        },
+    )
+    descriptor = topology.read_child_descriptor(tmp_path)
+    assert descriptor["profile"] == "website"
+    assert descriptor["profile_explicit"] is False
+    out = topology.resolve_profile(descriptor=descriptor, current_view={})
+    assert out == {"profile": "website", "profile_source": "role"}
+
+
+def test_resolve_profile_registry_explicit_requires_flag() -> None:
+    # Matched registry entry whose profile is only role-derived must not be
+    # labeled registry_explicit.
+    derived_view = {"matched": True, "role": "site", "registry_profile": "website"}
+    assert topology.resolve_profile(descriptor={"found": False}, current_view=derived_view) == {
+        "profile": "website",
+        "profile_source": "role",
+    }
+    explicit_view = {
+        "matched": True,
+        "role": "site",
+        "registry_profile": "archive",
+        "registry_profile_explicit": True,
+    }
+    assert topology.resolve_profile(descriptor={"found": False}, current_view=explicit_view) == {
+        "profile": "archive",
+        "profile_source": "registry_explicit",
+    }
 
 
 def test_resolve_profile_signal_when_no_descriptor(tmp_path: Path) -> None:

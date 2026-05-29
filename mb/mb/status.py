@@ -4650,10 +4650,17 @@ def render_human(
         src = f" (by {profile_source})" if profile_source and profile_source != "role" else ""
         console.print(f"  this repo: profile {profile}{src}")
     if profile and profile != "hub":
-        console.print(
-            "  [dim]execution surface — full business memory (core/, bets/, pushes/) "
-            "lives in the parent hub, not here[/dim]"
-        )
+        if profile in {"private", "archive"}:
+            note = (
+                "strategy and operating memory (core/, bets/, pushes/) "
+                "live in the parent hub, not here"
+            )
+        else:
+            note = (
+                "execution surface — full business memory (core/, bets/, pushes/) "
+                "lives in the parent hub, not here"
+            )
+        console.print(f"  [dim]{note}[/dim]")
     if verbose:
         topology_findings = topology.get("findings") or []
         shown = 0
