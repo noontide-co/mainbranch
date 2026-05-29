@@ -13,6 +13,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added a repo `profile` lens over topology `role` so `mb` treats the current
+  checkout for what it is instead of assuming every repo is a business hub.
+  Profiles are `hub`, `website`, `product`, `private`, `integration`, and
+  `archive`, derived from `role`, overridable by an explicit `profile` in
+  `.mainbranch/repo.json` or the hub registry, and inferred from on-disk signals
+  (`.mainbranch/conversion.json`, `PRODUCT.md` + `DESIGN.md`, or a site framework
+  config) when no descriptor exists. `mb status` surfaces the current profile and
+  notes execution-surface repos, `mb site check` reports the repo profile and
+  flags non-website checkouts, `mb validate` checks the optional `profile` enum
+  and warns on role-divergent overrides, and a new drift finding flags a
+  `private` profile with public visibility. This is the repo descriptor profile,
+  unrelated to the onboarding profile block. Refs #765.
 - Added a `tighten_bet_exit_criteria` ranked action so active bets without
   predeclared kill/double-down criteria surface as an owner-facing next move in
   `mb status --json --peek` instead of staying buried in raw `brain.bets` facts.
