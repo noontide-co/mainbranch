@@ -538,7 +538,7 @@ def test_collect_returns_safe_payload(tmp_path: Path) -> None:
     assert {choice["id"] for choice in helper["choices"]} == {
         "same_business_repo",
         "separate_business_repo",
-        "child_lightweight_repo",
+        "child_repo",
     }
     # public-safe payload must not embed any absolute paths
     assert "/Users/" not in json.dumps(payload)
@@ -577,7 +577,7 @@ def test_repo_boundary_helper_recognizes_child_descriptor(tmp_path: Path) -> Non
 
     helper = payload["repo_boundary"]
     assert helper["state"] == "child_or_execution_repo"
-    assert helper["recommended_choice"] == "child_lightweight_repo"
+    assert helper["recommended_choice"] == "child_repo"
     assert "return to the hub business repo" in helper["next_action"]
 
 
@@ -603,234 +603,100 @@ def test_repo_boundary_helper_redacts_unsafe_child_parent_handle(tmp_path: Path)
 
     helper = payload["repo_boundary"]
     assert helper["state"] == "child_or_execution_repo"
-    assert helper["recommended_choice"] == "child_lightweight_repo"
+    assert helper["recommended_choice"] == "child_repo"
     assert helper["safe_to_share"] is False
     assert "Hub handle:" not in helper["next_action"]
     assert "example-co/example" not in json.dumps(helper)
 
 
 # ---------------------------------------------------------------------------
-# Repo profiles (MAIN-463)
+# Role inference + enforcement (MAIN-463)
 # ---------------------------------------------------------------------------
 
 
-def test_role_to_profile_maps_known_roles() -> None:
-    assert topology.role_to_profile("business") == "hub"
-    assert topology.role_to_profile("site") == "website"
-    assert topology.role_to_profile("offer") == "website"
-    assert topology.role_to_profile("product") == "product"
-    assert topology.role_to_profile("client") == "product"
-    assert topology.role_to_profile("finance") == "private"
-    assert topology.role_to_profile("legal") == "private"
-    assert topology.role_to_profile("ops") == "private"
-    assert topology.role_to_profile("integration_sidecar") == "integration"
-    assert topology.role_to_profile("archive") == "archive"
-
-
-def test_role_to_profile_experiment_is_unknown() -> None:
-    assert topology.role_to_profile("experiment") == ""
-    assert topology.role_to_profile("nonsense") == ""
-
-
-def test_profile_vocabulary_is_direct() -> None:
-    assert {
-        "hub",
-        "website",
-        "product",
-        "private",
-        "integration",
-        "archive",
-    } == topology.TOPOLOGY_PROFILES
-
-
-def test_infer_profile_from_signals_website_via_conversion(tmp_path: Path) -> None:
+def test_infer_role_from_signals_site_via_conversion(tmp_path: Path) -> None:
     (tmp_path / ".mainbranch").mkdir()
     (tmp_path / ".mainbranch" / "conversion.json").write_text("{}", encoding="utf-8")
-    assert topology.infer_profile_from_signals(tmp_path) == "website"
+    assert topology.infer_role_from_signals(tmp_path) == "site"
 
 
-def test_infer_profile_from_signals_website_via_product_design(tmp_path: Path) -> None:
+def test_infer_role_from_signals_site_via_product_design(tmp_path: Path) -> None:
     (tmp_path / "PRODUCT.md").write_text("# product", encoding="utf-8")
     (tmp_path / "DESIGN.md").write_text("# design", encoding="utf-8")
-    assert topology.infer_profile_from_signals(tmp_path) == "website"
+    assert topology.infer_role_from_signals(tmp_path) == "site"
 
 
-def test_infer_profile_from_signals_hub(tmp_path: Path) -> None:
+def test_infer_role_from_signals_business(tmp_path: Path) -> None:
     (tmp_path / "core").mkdir()
     (tmp_path / ".mb").mkdir()
-    assert topology.infer_profile_from_signals(tmp_path) == "hub"
+    assert topology.infer_role_from_signals(tmp_path) == "business"
 
 
-def test_infer_profile_from_signals_unknown(tmp_path: Path) -> None:
+def test_infer_role_from_signals_unknown(tmp_path: Path) -> None:
     (tmp_path / "README.md").write_text("# nothing", encoding="utf-8")
-    assert topology.infer_profile_from_signals(tmp_path) == ""
+    assert topology.infer_role_from_signals(tmp_path) == ""
 
 
-def test_resolve_profile_explicit_descriptor_wins() -> None:
-    # Normalized descriptors set profile_explicit when the owner declared one.
-    descriptor = {"found": True, "role": "site", "profile": "archive", "profile_explicit": True}
-    out = topology.resolve_profile(descriptor=descriptor, current_view={})
-    assert out == {"profile": "archive", "profile_source": "descriptor_explicit"}
-
-
-def test_resolve_profile_role_derived_descriptor_is_not_explicit() -> None:
-    # A role-only descriptor carries a role-derived profile but profile_explicit
-    # is False; the source must be "role", not "descriptor_explicit".
-    descriptor = {"found": True, "role": "site", "profile": "website", "profile_explicit": False}
-    out = topology.resolve_profile(descriptor=descriptor, current_view={})
-    assert out == {"profile": "website", "profile_source": "role"}
-
-
-def test_resolve_profile_falls_back_to_role() -> None:
-    descriptor = {"found": True, "role": "finance", "profile": "private", "profile_explicit": False}
-    out = topology.resolve_profile(descriptor=descriptor, current_view={})
-    assert out == {"profile": "private", "profile_source": "role"}
-
-
-def test_resolve_profile_role_derived_via_read_child_descriptor(tmp_path: Path) -> None:
-    # End-to-end through the normalization layer: a role-only repo.json must
-    # report profile_source "role", never "descriptor_explicit".
-    _write_repo_json(
-        tmp_path,
-        {
-            "schema": topology.CHILD_REPO_SCHEMA,
-            "role": "site",
-            "display_name": "Workshop site",
-        },
-    )
-    descriptor = topology.read_child_descriptor(tmp_path)
-    assert descriptor["profile"] == "website"
-    assert descriptor["profile_explicit"] is False
-    out = topology.resolve_profile(descriptor=descriptor, current_view={})
-    assert out == {"profile": "website", "profile_source": "role"}
-
-
-def test_resolve_profile_registry_explicit_requires_flag() -> None:
-    # Matched registry entry whose profile is only role-derived must not be
-    # labeled registry_explicit.
-    derived_view = {"matched": True, "role": "site", "registry_profile": "website"}
-    assert topology.resolve_profile(descriptor={"found": False}, current_view=derived_view) == {
-        "profile": "website",
-        "profile_source": "role",
-    }
-    explicit_view = {
-        "matched": True,
-        "role": "site",
-        "registry_profile": "archive",
-        "registry_profile_explicit": True,
-    }
-    assert topology.resolve_profile(descriptor={"found": False}, current_view=explicit_view) == {
-        "profile": "archive",
-        "profile_source": "registry_explicit",
-    }
-
-
-def test_resolve_profile_signal_when_no_descriptor(tmp_path: Path) -> None:
+def test_collect_flags_missing_role_with_suggestion(tmp_path: Path) -> None:
+    # A site-shaped checkout with no declared role and no registry: flag + suggest.
     (tmp_path / ".mainbranch").mkdir()
     (tmp_path / ".mainbranch" / "conversion.json").write_text("{}", encoding="utf-8")
-    out = topology.resolve_profile(descriptor={"found": False}, current_view={}, repo_path=tmp_path)
-    assert out == {"profile": "website", "profile_source": "signal"}
+    view = topology.collect(tmp_path)
+    assert view["summary"]["current_repo_role"] == ""
+    assert view["summary"]["current_repo_role_identified"] is False
+    assert view["summary"]["current_repo_role_suggestion"] == "site"
+    flag = [f for f in view["findings"] if f["code"] == "topology_role_not_identified"]
+    assert flag and flag[0]["severity"] == "warn"
+    assert flag[0]["role_suggestion"] == "site"
+    assert "docs/child-repo-descriptors.md" in flag[0]["detail"]
 
 
-def test_resolve_profile_unknown() -> None:
-    out = topology.resolve_profile(descriptor={"found": False}, current_view={})
-    assert out == {"profile": "", "profile_source": "unknown"}
-
-
-def test_repo_json_reads_explicit_profile(tmp_path: Path) -> None:
+def test_collect_does_not_flag_declared_role(tmp_path: Path) -> None:
     _write_repo_json(
         tmp_path,
-        {
-            "schema": topology.CHILD_REPO_SCHEMA,
-            "role": "product",
-            "profile": "archive",
-            "display_name": "Old product",
-        },
+        {"schema": topology.CHILD_REPO_SCHEMA, "role": "site", "display_name": "Site"},
     )
-    result = topology.read_child_descriptor(tmp_path)
-    assert result["profile"] == "archive"
-    assert result["profile_explicit"] is True
+    view = topology.collect(tmp_path)
+    assert view["summary"]["current_repo_role"] == "site"
+    codes = {f["code"] for f in view["findings"]}
+    assert "topology_role_not_identified" not in codes
 
 
-def test_repo_json_invalid_profile_ignored(tmp_path: Path) -> None:
-    _write_repo_json(
-        tmp_path,
-        {
-            "schema": topology.CHILD_REPO_SCHEMA,
-            "role": "site",
-            "profile": "lightweight_website",
-            "display_name": "Site",
-        },
-    )
-    result = topology.read_child_descriptor(tmp_path)
-    # Unrecognized profile falls back to role-derived inference.
-    assert result["profile"] == "website"
-    assert result["profile_explicit"] is False
+def test_collect_does_not_flag_hub(tmp_path: Path) -> None:
+    # A hub (core/ + registry naming itself) should not be flagged for missing role.
+    _write_registry(tmp_path, _valid_registry())
+    (tmp_path / "core").mkdir(exist_ok=True)
+    view = topology.collect(tmp_path, git_remote="github:example-co/example")
+    codes = {f["code"] for f in view["findings"]}
+    assert "topology_role_not_identified" not in codes
 
 
-def test_legacy_source_infers_website_profile(tmp_path: Path) -> None:
+def test_collect_no_flag_outside_mainbranch(tmp_path: Path) -> None:
+    # A plain repo with no Main Branch markers is not flagged.
+    (tmp_path / "README.md").write_text("# plain", encoding="utf-8")
+    view = topology.collect(tmp_path)
+    codes = {f["code"] for f in view["findings"]}
+    assert "topology_role_not_identified" not in codes
+
+
+def test_legacy_source_role_is_site(tmp_path: Path) -> None:
     _write_legacy_source(tmp_path, {"business_repo": "../example"})
     result = topology.read_child_descriptor(tmp_path)
     assert result["role"] == "site"
-    assert result["profile"] == "website"
+    assert "profile" not in result
 
 
-def test_collect_surfaces_profile_for_website(tmp_path: Path) -> None:
+def test_boundary_helper_treats_inferred_site_as_child(tmp_path: Path) -> None:
+    # No descriptor, no registry, but site signals -> child, not its own hub.
     (tmp_path / ".mainbranch").mkdir()
     (tmp_path / ".mainbranch" / "conversion.json").write_text("{}", encoding="utf-8")
     view = topology.collect(tmp_path)
-    assert view["current_repo"]["profile"] == "website"
-    assert view["current_repo"]["profile_source"] == "signal"
-    assert view["summary"]["current_repo_profile"] == "website"
+    assert view["repo_boundary"]["state"] == "child_or_execution_repo"
 
 
-def test_collect_child_profile_counts(tmp_path: Path) -> None:
-    _write_registry(tmp_path, _valid_registry())
-    view = topology.collect(tmp_path)
-    counts = view["child_profile_counts"]
-    # workshop-site -> website, finance -> private; hub excluded.
-    assert counts.get("website") == 1
-    assert counts.get("private") == 1
-    assert "hub" not in counts
-
-
-def test_drift_flags_private_profile_with_public_visibility(tmp_path: Path) -> None:
-    _write_registry(
-        tmp_path,
-        _valid_registry(
-            extra_repos=(
-                "- slug: books\n"
-                "  display_name: Books\n"
-                "  role: finance\n"
-                "  lifecycle: active\n"
-                "  parent: example\n"
-                "  github_owner: example-co\n"
-                "  repo_name: books\n"
-                "  remote: github:example-co/books\n"
-                "  visibility: public\n"
-            )
-        ),
-    )
-    registry = topology.read_registry(tmp_path)
-    findings = topology.drift_findings(
-        registry=registry, descriptor=topology._empty_descriptor(), current_view={}
-    )
-    codes = {f["code"] for f in findings}
-    assert "topology_private_profile_public_visibility" in codes
-
-
-def test_role_to_profile_targets_are_valid() -> None:
-    for role, profile in topology.ROLE_TO_PROFILE.items():
-        assert role in topology.TOPOLOGY_ROLES
-        assert profile in topology.TOPOLOGY_PROFILES
-
-
-def test_docs_document_every_profile_and_no_fluffy_names() -> None:
-    doc = (Path(__file__).resolve().parents[2] / "docs" / "child-repo-descriptors.md").read_text(
-        encoding="utf-8"
-    )
-    for profile in topology.TOPOLOGY_PROFILES:
-        assert f"`{profile}`" in doc, f"profile {profile!r} not documented"
-    # The retired fluffy names must never become canonical vocabulary.
-    for retired in ("lightweight_website", "business_hub", "code_product", "private_source"):
-        assert retired not in doc
+def test_no_profile_surface_remains() -> None:
+    # The profile concept is fully removed.
+    assert not hasattr(topology, "TOPOLOGY_PROFILES")
+    assert not hasattr(topology, "ROLE_TO_PROFILE")
+    assert not hasattr(topology, "resolve_profile")
+    assert not hasattr(topology, "child_profile_counts")
