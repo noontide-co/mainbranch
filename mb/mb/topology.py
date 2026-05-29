@@ -59,6 +59,38 @@ TOPOLOGY_RELATIONSHIPS = frozenset(
     }
 )
 
+# Repo profiles are the CLI-contract lens layered on top of the business-meaning
+# ``role`` axis: they tell ``mb`` what to check, scaffold, and suggest in the
+# current checkout. They are intentionally a small, derived view of ``role`` and
+# never a second stored taxonomy. See ``docs/child-repo-descriptors.md``.
+TOPOLOGY_PROFILES = frozenset(
+    {
+        "hub",
+        "website",
+        "product",
+        "private",
+        "integration",
+        "archive",
+    }
+)
+
+# Default role -> profile inference. ``role`` stays the source of truth; an
+# explicit ``profile`` in the descriptor or registry entry overrides this. Roles
+# with no clear single CLI contract (e.g. ``experiment``) infer no profile and
+# are treated as unknown until a profile is declared explicitly.
+ROLE_TO_PROFILE: dict[str, str] = {
+    "business": "hub",
+    "site": "website",
+    "offer": "website",
+    "product": "product",
+    "client": "product",
+    "finance": "private",
+    "legal": "private",
+    "ops": "private",
+    "integration_sidecar": "integration",
+    "archive": "archive",
+}
+
 LINKED_FIELDS: tuple[str, ...] = (
     "linked_offers",
     "linked_pushes",
@@ -78,10 +110,12 @@ SECRET_KEY_RE = re.compile(
     r"client[_-]?secret|password|private[_-]?key|session|cookie|secret)",
     re.IGNORECASE,
 )
+# Canonical unsafe-key matcher shared with :mod:`mb.validate`. ``path`` also
+# matches ``local_path``/``absolute_path``; kept broad on purpose because no
+# legitimate topology/descriptor key contains "path".
 UNSAFE_KEY_RE = re.compile(
     r"(ledger|bank|payroll|tax|contract|legal[_-]?advice|dispute|customer|member|"
-    r"account[_-]?number|raw[_-]?(?:data|export|cache|metric)|provider[_-]?cache|"
-    r"local[_-]?path|absolute[_-]?path)",
+    r"account[_-]?number|raw[_-]?(?:data|export|cache|metric)|provider[_-]?cache|path)",
     re.IGNORECASE,
 )
 KNOWN_TOPOLOGY_KEYS = frozenset(
@@ -89,6 +123,7 @@ KNOWN_TOPOLOGY_KEYS = frozenset(
         "slug",
         "display_name",
         "role",
+        "profile",
         "lifecycle",
         "status",
         "visibility",
@@ -176,6 +211,101 @@ def normalize_remote(value: Any) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Profile helpers
+# ---------------------------------------------------------------------------
+
+
+def role_to_profile(role: Any) -> str:
+    """Return the inferred profile for a topology role, or "" when ambiguous."""
+    return ROLE_TO_PROFILE.get(_string(role), "")
+
+
+def _explicit_profile(value: Any) -> str:
+    """Return a declared profile only when it is a recognized enum value."""
+    profile = _string(value)
+    return profile if profile in TOPOLOGY_PROFILES else ""
+
+
+def _entry_profile(entry: dict[str, Any]) -> tuple[str, bool]:
+    """Resolve (profile, explicit) for a registry entry or descriptor payload."""
+    explicit = _explicit_profile(entry.get("profile"))
+    if explicit:
+        return explicit, True
+    return role_to_profile(entry.get("role")), False
+
+
+# Lightweight, read-only signals for repos that carry no descriptor and no
+# registry match. Conservative on purpose: only claim a profile on strong
+# evidence so unrelated checkouts stay "unknown" rather than getting wrong
+# guidance.
+_SITE_CONFIG_FILES: tuple[str, ...] = (
+    "astro.config.mjs",
+    "astro.config.ts",
+    "wrangler.toml",
+    "wrangler.jsonc",
+    "next.config.js",
+    "next.config.mjs",
+)
+
+
+def infer_profile_from_signals(repo_path: Path) -> str:
+    """Infer a profile from on-disk file signals when no descriptor exists."""
+    try:
+        has_hub_marker = (repo_path / REGISTRY_RELATIVE_PATH).exists() or (
+            repo_path / ".mb"
+        ).is_dir()
+        if has_hub_marker and (repo_path / "core").is_dir():
+            return "hub"
+        # A Main Branch site descriptor is the strongest signal; it is present
+        # even on plain static sites (e.g. Cloudflare Pages) that carry no
+        # PRODUCT.md/DESIGN.md or framework config.
+        if (repo_path / ".mainbranch" / "conversion.json").exists():
+            return "website"
+        has_product = (repo_path / "PRODUCT.md").exists()
+        has_design = (repo_path / "DESIGN.md").exists()
+        has_site_config = any((repo_path / name).exists() for name in _SITE_CONFIG_FILES)
+        if (has_product and has_design) or (has_site_config and (has_product or has_design)):
+            return "website"
+    except OSError:
+        return ""
+    return ""
+
+
+def resolve_profile(
+    *,
+    descriptor: dict[str, Any],
+    current_view: dict[str, Any],
+    repo_path: Path | None = None,
+) -> dict[str, Any]:
+    """Resolve the current checkout's profile and where the answer came from.
+
+    Precedence: explicit descriptor profile -> explicit registry-entry profile ->
+    role-derived (descriptor or matched registry role) -> on-disk file signals ->
+    unknown. Explicit declarations win over inference.
+    """
+    if descriptor.get("found"):
+        explicit = _explicit_profile(descriptor.get("profile"))
+        if explicit:
+            return {"profile": explicit, "profile_source": "descriptor_explicit"}
+    if current_view.get("matched") and _explicit_profile(current_view.get("registry_profile")):
+        return {
+            "profile": _explicit_profile(current_view.get("registry_profile")),
+            "profile_source": "registry_explicit",
+        }
+    role = _string(current_view.get("role"))
+    if not role and descriptor.get("found"):
+        role = _string(descriptor.get("role"))
+    derived = role_to_profile(role)
+    if derived:
+        return {"profile": derived, "profile_source": "role"}
+    if repo_path is not None:
+        signal = infer_profile_from_signals(repo_path)
+        if signal:
+            return {"profile": signal, "profile_source": "signal"}
+    return {"profile": "", "profile_source": "unknown"}
+
+
+# ---------------------------------------------------------------------------
 # Registry reader
 # ---------------------------------------------------------------------------
 
@@ -192,10 +322,13 @@ def _normalize_repo_entry(entry: dict[str, Any]) -> dict[str, Any]:
     role = _string(entry.get("role"))
     is_hub = role == "business" or "hub_for" in relationships
     domain = _string(entry.get("domain"))
+    profile, profile_explicit = _entry_profile(entry)
     return {
         "slug": _string(entry.get("slug")),
         "display_name": _string(entry.get("display_name")),
         "role": role,
+        "profile": profile,
+        "profile_explicit": profile_explicit,
         "lifecycle": _string(entry.get("lifecycle")),
         "visibility": _string(entry.get("visibility")),
         "purpose": _string(entry.get("purpose")),
@@ -340,6 +473,8 @@ def _empty_descriptor() -> dict[str, Any]:
         "error": "missing",
         "schema": "",
         "role": "",
+        "profile": "",
+        "profile_explicit": False,
         "display_name": "",
         "github_owner": "",
         "repo_name": "",
@@ -382,6 +517,7 @@ def _normalize_repo_json(payload: dict[str, Any], rel: str) -> dict[str, Any]:
     else:
         local_checkout = local_checkout_raw
     role = _string(payload.get("role"))
+    profile, profile_explicit = _entry_profile(payload)
     return {
         "found": True,
         "kind": "repo_json",
@@ -390,6 +526,8 @@ def _normalize_repo_json(payload: dict[str, Any], rel: str) -> dict[str, Any]:
         "error": error,
         "schema": schema,
         "role": role,
+        "profile": profile,
+        "profile_explicit": profile_explicit,
         "display_name": _string(payload.get("display_name")),
         "github_owner": _string(payload.get("github_owner")),
         "repo_name": _string(payload.get("repo_name")),
@@ -430,6 +568,8 @@ def _normalize_legacy_source(payload: dict[str, Any], rel: str) -> dict[str, Any
         "error": "",
         "schema": "legacy.site_source",
         "role": "site",
+        "profile": "website",
+        "profile_explicit": False,
         "display_name": "",
         "github_owner": "",
         "repo_name": "",
@@ -545,6 +685,7 @@ def current_repo_view(
             "match_source": match_source,
             "slug": matched_entry.get("slug", ""),
             "role": matched_entry.get("role", ""),
+            "registry_profile": matched_entry.get("profile", ""),
             "lifecycle": matched_entry.get("lifecycle", ""),
             "visibility": matched_entry.get("visibility", ""),
             "display_name": matched_entry.get("display_name", ""),
@@ -637,6 +778,28 @@ def child_role_counts(
         by_lifecycle[lifecycle] = by_lifecycle.get(lifecycle, 0) + 1
         total += 1
     return {"by_role": by_role, "by_lifecycle": by_lifecycle, "total": total}
+
+
+def child_profile_counts(
+    registry: dict[str, Any],
+    *,
+    exclude_slug: str = "",
+) -> dict[str, int]:
+    """Count child repos by resolved profile (hub excluded).
+
+    Mirrors :func:`child_role_counts` but keys on the CLI-contract profile so
+    status/doctor can say "you operate 2 website repos" in owner
+    language. Repos with no inferable profile are bucketed under ``unknown``.
+    """
+    by_profile: dict[str, int] = {}
+    if not registry.get("ok"):
+        return by_profile
+    for entry in registry.get("repos", []):
+        if entry.get("slug") == exclude_slug or entry.get("role") == "business":
+            continue
+        profile = _string(entry.get("profile")) or "unknown"
+        by_profile[profile] = by_profile.get(profile, 0) + 1
+    return by_profile
 
 
 def restricted_repo_summary(registry: dict[str, Any]) -> list[dict[str, Any]]:
@@ -943,6 +1106,21 @@ def drift_findings(
                     "safe_to_share": True,
                 }
             )
+        if entry.get("profile") == "private" and entry.get("visibility") == "public":
+            findings.append(
+                {
+                    "code": "topology_private_profile_public_visibility",
+                    "severity": "warn",
+                    "summary": (f"{prefix} has profile 'private' but public visibility"),
+                    "detail": (
+                        "finance/legal/ops source-of-record repos should use "
+                        "restricted or local_only visibility, not public"
+                    ),
+                    "repair_command": "mb validate --json",
+                    "path": registry.get("path", ""),
+                    "safe_to_share": True,
+                }
+            )
         if entry.get("linked_playbook_blueprints"):
             findings.append(
                 {
@@ -1085,8 +1263,10 @@ def collect(
         descriptor=descriptor,
         git_remote=git_remote,
     )
+    view.update(resolve_profile(descriptor=descriptor, current_view=view, repo_path=repo_path))
     exclude_slug = str(view.get("slug") or "") if view.get("matched") and view.get("is_hub") else ""
     counts = child_role_counts(registry, exclude_slug=exclude_slug)
+    profile_counts = child_profile_counts(registry, exclude_slug=exclude_slug)
     boundary_notes = restricted_repo_summary(registry)
     repo_boundary = repo_boundary_decision_helper(
         registry=registry,
@@ -1105,6 +1285,8 @@ def collect(
         "descriptor_found": bool(descriptor.get("found")),
         "descriptor_kind": descriptor.get("kind", ""),
         "current_repo_matched": bool(view.get("matched")),
+        "current_repo_profile": view.get("profile", ""),
+        "current_repo_profile_source": view.get("profile_source", "unknown"),
         "child_repo_count": counts.get("total", 0),
         "restricted_repo_count": len(boundary_notes),
         "findings": len(findings),
@@ -1130,6 +1312,7 @@ def collect(
         "current_repo": view,
         "repo_boundary": repo_boundary,
         "child_counts": counts,
+        "child_profile_counts": profile_counts,
         "restricted_repos": boundary_notes,
         "findings": findings,
         "safe_to_share": True,
