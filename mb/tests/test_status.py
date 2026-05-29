@@ -1259,6 +1259,130 @@ def test_status_money_path_level_five_proof_requires_outcome_feedback(
     )
 
 
+def test_status_money_path_strong_proof_ranks_below_channel(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    # Shaped offer/audience/customer-progress, field-tested proof, but no channel
+    # or active push yet -- the agency archetype shape from the dogfood.
+    _write_money_path_core(repo)
+    proof = repo / "core" / "proof"
+    proof.mkdir(parents=True, exist_ok=True)
+    (proof / "testimonials.md").write_text(
+        (
+            "# Testimonials\n\n"
+            "## Founder A\n"
+            "Permissioned public source: sales call. Before: stuck rebuilding context. "
+            "Outcome: booked 3 calls within 2 weeks using the workflow. "
+            "Objection: worried about time.\n\n"
+            "## Founder B\n"
+            "Approved for public source: interview. Previously scattered launches. "
+            "Result: saved 5 hours in 10 days through the process.\n"
+        ),
+        encoding="utf-8",
+    )
+    (proof / "typicality.md").write_text(
+        (
+            "# Typicality\n\n"
+            "Average case: most users need one setup week before speed improves. "
+            "Caveat: outcomes vary. Common failure context: poor fit when no offer "
+            "exists. Time to outcome is usually 2 weeks.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    assert report["money_path"]["objects"]["proof"]["level"] == 4
+    ids = [action["id"] for action in report["money_path"]["ranked_actions"]]
+    # Field-tested proof should not bury packaging/channel moves. Channel gap ranks
+    # ahead of polishing already-strong proof.
+    assert "connect-channel-strategy" in ids
+    assert "strengthen-proof-quality" in ids
+    assert ids.index("connect-channel-strategy") < ids.index("strengthen-proof-quality")
+
+
+def _write_active_bet(repo: Path, slug: str, *, committed: bool) -> None:
+    money_path_block = "money_path:\n  required: true\n  bet_id: launch\n" if committed else ""
+    (repo / "bets" / f"{slug}.md").write_text(
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-16\n"
+            "deadline: 2026-12-01\n"
+            "appetite: 2 weeks\n"
+            f"{money_path_block}"
+            "hypothesis: A pricing test creates calls.\n"
+            "metric: calls\n"
+            "target: 3 calls\n"
+            "result: ''\n"
+            "public: false\n"
+            "channels: []\n"
+            "tags: []\n"
+            "exit_criteria:\n"
+            "  kill: drop if under 1 call\n"
+            "  double_down: scale past 5 calls\n"
+            "---\n\n"
+            "# Active bet\n"
+        ),
+        encoding="utf-8",
+    )
+
+
+def _raise_exposure(**_kwargs: object) -> dict[str, object]:
+    raise RuntimeError("ledger unavailable")
+
+
+def test_status_money_path_books_repair_skips_exploratory_bets(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setattr(
+        status_mod.books_mod,  # type: ignore[attr-defined]
+        "exposure",
+        _raise_exposure,
+    )
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_active_bet(repo, "2026-05-16-explore", committed=False)
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    active_bets = report["money_path"]["active_bets"]
+    assert active_bets["ledger_unavailable"] is True
+    assert active_bets["requires_anchor"] is False
+    ids = {action["id"] for action in report["money_path"]["ranked_actions"]}
+    # An exploratory bet that has not committed spend should not trigger an eager
+    # ledger-repair nudge.
+    assert "repair-books-exposure" not in ids
+
+
+def test_status_money_path_books_repair_fires_for_committed_bet(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setattr(
+        status_mod.books_mod,  # type: ignore[attr-defined]
+        "exposure",
+        _raise_exposure,
+    )
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    _write_active_bet(repo, "2026-05-16-committed", committed=True)
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    active_bets = report["money_path"]["active_bets"]
+    assert active_bets["ledger_unavailable"] is True
+    assert active_bets["requires_anchor"] is True
+    repair = next(
+        action
+        for action in report["money_path"]["ranked_actions"]
+        if action["id"] == "repair-books-exposure"
+    )
+    # Owner-facing reason names the committed-anchor trigger; no private amounts.
+    assert "requires MoneyPath anchoring" in repair["reason"]
+    assert repair["safe_to_share"] is True
+
+
 def test_status_money_path_detects_multi_offer_product_ladder(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     repo = tmp_path / "acme"
