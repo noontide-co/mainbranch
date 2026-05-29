@@ -52,6 +52,7 @@ Fields:
 | --- | --- |
 | `schema` | Descriptor schema. Use `mb.child_repo.v0`. |
 | `role` | One of the repo roles from the topology decision: `site`, `offer`, `product`, `client`, `finance`, `legal`, `ops`, `integration_sidecar`, `experiment`, or `archive`. |
+| `profile` | Optional. The CLI-contract profile (see [Repo Profiles](#repo-profiles)). Omit it and `mb` derives the profile from `role`; set it only to override that default. |
 | `display_name` | Human-readable child repo name. This is not the GitHub repo name. |
 | `github_owner` / `repo_name` | Durable technical handle for this child repo. |
 | `safe_purpose` | Public-safe reason the child repo exists. |
@@ -60,6 +61,41 @@ Fields:
 | `linked` | Safe handles to hub business primitives. Use repo-relative hub paths. |
 | `return_to_hub_command` | Optional exact command when a sibling checkout makes it safe and useful. Prefer relative paths. |
 | `safe_to_share` | Whether this descriptor is intended to be safe for the child repo's normal audience. This does not grant access. |
+
+## Repo Profiles
+
+`role` is business meaning. `profile` is the CLI contract: it tells `mb` what to
+check, scaffold, and suggest in the current checkout. A website repo should not
+be checked like a full business brain, so `mb` reads a profile instead of
+assuming every repo has `core/`, `bets/`, and `pushes/`.
+
+Profiles are a small, derived view of `role`, not a second taxonomy. There are
+six:
+
+| Profile | Meaning | Default roles |
+| --- | --- | --- |
+| `hub` | The business brain: strategy, offers, bets, pushes, decisions. | `business` |
+| `website` | A site/lander/conversion surface. | `site`, `offer` |
+| `product` | An app, package, or client deliverable with its own build. | `product`, `client` |
+| `private` | A source-of-record repo to protect: finance, legal, ops/admin. | `finance`, `legal`, `ops` |
+| `integration` | A provider/integration sidecar that emits approved summaries. | `integration_sidecar` |
+| `archive` | A frozen or superseded repo. | `archive` |
+
+How `mb` resolves the current checkout's profile, in order:
+
+1. an explicit `profile` in `.mainbranch/repo.json`;
+2. an explicit `profile` on the hub registry entry for this repo;
+3. the role-derived default from the table above;
+4. on-disk signals (`.mainbranch/conversion.json`, `PRODUCT.md` + `DESIGN.md`,
+   or a site framework config) when there is no descriptor;
+5. otherwise `unknown` — `mb` stays quiet rather than guess.
+
+`role` keeps the fine distinction (finance vs legal vs ops); `profile` collapses
+them to one behavior bucket. The `experiment` role infers no profile until one
+is declared, because its CLI contract is genuinely ambiguous.
+
+This is the repo descriptor profile. It is unrelated to the onboarding `profile`
+block stored in `.mb/onboarding-plan.json`.
 
 ## Relation To Hub Topology
 
