@@ -13,18 +13,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
-- Added a repo `profile` lens over topology `role` so `mb` treats the current
-  checkout for what it is instead of assuming every repo is a business hub.
-  Profiles are `hub`, `website`, `product`, `private`, `integration`, and
-  `archive`, derived from `role`, overridable by an explicit `profile` in
-  `.mainbranch/repo.json` or the hub registry, and inferred from on-disk signals
-  (`.mainbranch/conversion.json`, `PRODUCT.md` + `DESIGN.md`, or a site framework
-  config) when no descriptor exists. `mb status` surfaces the current profile and
-  notes execution-surface repos, `mb site check` reports the repo profile and
-  flags non-website checkouts, `mb validate` checks the optional `profile` enum
-  and warns on role-divergent overrides, and a new drift finding flags a
-  `private` profile with public visibility. This is the repo descriptor profile,
-  unrelated to the onboarding profile block. Refs #765.
+- Made repo `role` the single intentional classifier and started enforcing it.
+  `mb status` / `mb doctor` now flag a Main Branch checkout that has not declared
+  its topology role (`topology_role_not_identified`) and point at
+  `docs/child-repo-descriptors.md`; when on-disk signals look like a `site` or
+  `business` repo the flag carries that as a *suggestion* the agent can confirm —
+  the CLI never sets the role silently. `mb site check` reports `repo_role` and
+  flags a checkout that is not a site/offer repo. The repo-boundary helper now
+  recognizes a non-hub child even when its role is only inferred (fixing a site
+  repo being treated as its own hub), and `docs/child-repo-descriptors.md`
+  documents the repo tree: every repo has a `role` (what it is) and a `parent`
+  (what it hangs under), the hub is the root, children can have children. Refs #765.
 - Added a `tighten_bet_exit_criteria` ranked action so active bets without
   predeclared kill/double-down criteria surface as an owner-facing next move in
   `mb status --json --peek` instead of staying buried in raw `brain.bets` facts.
