@@ -78,10 +78,12 @@ SECRET_KEY_RE = re.compile(
     r"client[_-]?secret|password|private[_-]?key|session|cookie|secret)",
     re.IGNORECASE,
 )
+# Canonical unsafe-key matcher shared with :mod:`mb.validate`. ``path`` also
+# matches ``local_path``/``absolute_path``; kept broad on purpose because no
+# legitimate topology/descriptor key contains "path".
 UNSAFE_KEY_RE = re.compile(
     r"(ledger|bank|payroll|tax|contract|legal[_-]?advice|dispute|customer|member|"
-    r"account[_-]?number|raw[_-]?(?:data|export|cache|metric)|provider[_-]?cache|"
-    r"local[_-]?path|absolute[_-]?path)",
+    r"account[_-]?number|raw[_-]?(?:data|export|cache|metric)|provider[_-]?cache|path)",
     re.IGNORECASE,
 )
 KNOWN_TOPOLOGY_KEYS = frozenset(
@@ -172,6 +174,50 @@ def normalize_remote(value: Any) -> str:
         parts = candidate.split("/")
         if len(parts) == 2 and parts[0] and parts[1]:
             return f"{parts[0]}/{parts[1]}"
+    return ""
+
+
+# ---------------------------------------------------------------------------
+# Role inference (suggestion only)
+# ---------------------------------------------------------------------------
+
+# Lightweight, read-only signals used ONLY to SUGGEST a role when a checkout has
+# no declared role. The CLI never adopts the guess silently; it flags the
+# missing role and offers this as a hint the agent can confirm with the operator.
+# Conservative on purpose: stay "" unless the evidence is strong.
+_SITE_CONFIG_FILES: tuple[str, ...] = (
+    "astro.config.mjs",
+    "astro.config.ts",
+    "wrangler.toml",
+    "wrangler.jsonc",
+    "next.config.js",
+    "next.config.mjs",
+)
+
+
+def infer_role_from_signals(repo_path: Path) -> str:
+    """Suggest a topology role from on-disk signals, or "" when unsure.
+
+    Returns a real ``role`` value (``business`` or ``site``) so the rest of the
+    system has one vocabulary. Used to populate a *suggestion*, never to set the
+    role.
+    """
+    try:
+        # The topology registry is the unambiguous hub marker. ``.mb`` is a
+        # local vault that non-hub repos also carry, so it is not used here.
+        if (repo_path / REGISTRY_RELATIVE_PATH).exists() and (repo_path / "core").is_dir():
+            return "business"
+        # A Main Branch site descriptor is the strongest site signal; present
+        # even on plain static sites (e.g. Cloudflare Pages) with no PRODUCT.md.
+        if (repo_path / ".mainbranch" / "conversion.json").exists():
+            return "site"
+        has_product = (repo_path / "PRODUCT.md").exists()
+        has_design = (repo_path / "DESIGN.md").exists()
+        has_site_config = any((repo_path / name).exists() for name in _SITE_CONFIG_FILES)
+        if (has_product and has_design) or (has_site_config and (has_product or has_design)):
+            return "site"
+    except OSError:
+        return ""
     return ""
 
 
@@ -677,9 +723,9 @@ def repo_boundary_decision_helper(
 ) -> dict[str, Any]:
     """Return the owner-facing repo-boundary decision helper.
 
-    This is a decision aid, not a repo-profile schema. It gives setup/start
+    This is a decision aid, not a repo classifier. It gives setup/start
     surfaces a stable way to explain whether work belongs in the current
-    business repo, a separate business repo, or a child/lightweight repo.
+    business repo, a separate business repo, or a child repo.
     """
     choices = [
         {
@@ -707,8 +753,8 @@ def repo_boundary_decision_helper(
             ),
         },
         {
-            "id": "child_lightweight_repo",
-            "label": "child/lightweight repo",
+            "id": "child_repo",
+            "label": "child repo",
             "use_when": (
                 "the work is an execution surface for this business, such as "
                 "a site, product, client deliverable, finance/legal boundary, "
@@ -716,16 +762,24 @@ def repo_boundary_decision_helper(
             ),
             "owner_language": (
                 "Use a child repo when the files or access boundary differ, "
-                "but the strategy still reports back to this business brain."
+                "but the strategy still reports back to this business brain. "
+                "A child repo can itself have children (e.g. a site under an offer)."
             ),
             "next_step": (
                 "Record the relationship in `core/operations/repo-topology.md` "
-                "and add `.mainbranch/repo.json` in the child when useful."
+                "and add `.mainbranch/repo.json` in the child with its role and parent."
             ),
         },
     ]
 
     current_role = str(current_view.get("role") or "")
+    # A checkout with no declared role but a non-business signal (e.g. a site
+    # repo whose role only lives in the hub registry) is still a child, not its
+    # own hub.
+    inferred_role = str(current_view.get("role_suggestion") or "")
+    looks_like_child = (current_role and current_role != "business") or (
+        inferred_role and inferred_role != "business"
+    )
     descriptor_found = bool(descriptor.get("found"))
     descriptor_safe = bool(descriptor.get("safe_to_share", True))
     registry_found = bool(registry.get("found"))
@@ -738,9 +792,9 @@ def repo_boundary_decision_helper(
             "checkpoint context. Create or link child repos only when an "
             "execution surface needs a separate file or access boundary."
         )
-    elif descriptor_found or (current_role and current_role != "business"):
+    elif descriptor_found or looks_like_child:
         state = "child_or_execution_repo"
-        recommended_choice = "child_lightweight_repo"
+        recommended_choice = "child_repo"
         next_action = (
             "Do execution work in this repo, but return to the hub business repo "
             "for strategy, offers, bets, pushes, decisions, and checkpoints."
@@ -1061,6 +1115,33 @@ def drift_findings(
     return findings
 
 
+def _role_not_identified_finding(role_suggestion: str) -> dict[str, Any]:
+    """Build the flag for a Main Branch checkout that has not declared its role."""
+    if role_suggestion:
+        detail = (
+            f"On-disk signals look like a {role_suggestion!r} repo. Confirm with the "
+            "operator and declare it. Set `role` in `.mainbranch/repo.json` (child) or "
+            "in the hub's `core/operations/repo-topology.md` entry. "
+            "See docs/child-repo-descriptors.md."
+        )
+    else:
+        detail = (
+            "Declare what kind of repo this is: set `role` in `.mainbranch/repo.json` "
+            "(child) or in the hub's `core/operations/repo-topology.md` entry. "
+            "See docs/child-repo-descriptors.md."
+        )
+    return {
+        "code": "topology_role_not_identified",
+        "severity": "warn",
+        "summary": "this repo has no topology role declared",
+        "detail": detail,
+        "repair_command": "",
+        "path": CHILD_REPO_RELATIVE_PATH.as_posix(),
+        "role_suggestion": role_suggestion,
+        "safe_to_share": True,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Top-level view used by status / graph / doctor
 # ---------------------------------------------------------------------------
@@ -1085,6 +1166,10 @@ def collect(
         descriptor=descriptor,
         git_remote=git_remote,
     )
+    role = _string(view.get("role"))
+    role_suggestion = "" if role else infer_role_from_signals(repo_path)
+    view["role_identified"] = bool(role)
+    view["role_suggestion"] = role_suggestion
     exclude_slug = str(view.get("slug") or "") if view.get("matched") and view.get("is_hub") else ""
     counts = child_role_counts(registry, exclude_slug=exclude_slug)
     boundary_notes = restricted_repo_summary(registry)
@@ -1099,12 +1184,27 @@ def collect(
         descriptor=descriptor,
         current_view=view,
     )
+    # Enforcement: flag a checkout that looks like a CHILD repo but has not
+    # declared its role. Stay quiet on hubs (which own the registry or look like
+    # a business repo) and on plain non-Main-Branch repos. The flag carries a
+    # suggestion the agent can confirm; it never sets the role silently.
+    looks_like_hub = (
+        bool(view.get("is_hub")) or bool(registry.get("found")) or role_suggestion == "business"
+    )
+    has_child_evidence = bool(descriptor.get("found")) or (
+        bool(role_suggestion) and role_suggestion != "business"
+    )
+    if not role and not looks_like_hub and has_child_evidence:
+        findings.append(_role_not_identified_finding(role_suggestion))
     summary = {
         "registry_found": bool(registry.get("found")),
         "registry_ok": bool(registry.get("ok")),
         "descriptor_found": bool(descriptor.get("found")),
         "descriptor_kind": descriptor.get("kind", ""),
         "current_repo_matched": bool(view.get("matched")),
+        "current_repo_role": role,
+        "current_repo_role_identified": bool(role),
+        "current_repo_role_suggestion": role_suggestion,
         "child_repo_count": counts.get("total", 0),
         "restricted_repo_count": len(boundary_notes),
         "findings": len(findings),

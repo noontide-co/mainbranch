@@ -10,6 +10,7 @@ from typing import Any
 import yaml
 
 from mb import connect as connect_mod
+from mb import topology as topology_mod
 
 CONVERSION_RELATIVE_PATH = Path(".mainbranch") / "conversion.json"
 SOURCE_RELATIVE_PATH = Path(".mainbranch") / "source.json"
@@ -503,6 +504,12 @@ def check(
     explicit_business_repo = bool(business_repo)
     business_value = business_repo or source_business
     business = Path(business_value).resolve() if business_value else None
+    # Repo role for this checkout: declared in the descriptor, else inferred
+    # from on-disk signals (suggestion only).
+    site_descriptor = topology_mod.read_child_descriptor(site)
+    site_role = _string_value(site_descriptor.get("role")) or topology_mod.infer_role_from_signals(
+        site
+    )
     conversion, conversion_error = _read_json(site / CONVERSION_RELATIVE_PATH)
     offer = _merged_offer_metadata(business)
     provider_status = connect_mod.status_all(business or site, include_all=True)
@@ -522,6 +529,7 @@ def check(
             "expected_events": expected_events,
             "conversion_path": CONVERSION_RELATIVE_PATH.as_posix(),
             "provider_state": _provider_summary(providers),
+            "repo_role": site_role,
         }
     )
 
@@ -605,6 +613,37 @@ def check(
                 "kind": "child_repo_descriptor",
                 "state": "passed",
                 "summary": f"Child repo descriptor declares role {role}.",
+            }
+        )
+
+    if site_role in {"site", "offer"}:
+        evidence.append(
+            {
+                "kind": "repo_role",
+                "state": "passed",
+                "summary": f"Repo role is {site_role}.",
+            }
+        )
+    elif site_role:
+        evidence.append(
+            {
+                "kind": "repo_role",
+                "state": "manual",
+                "summary": (
+                    f"This checkout looks like a {site_role} repo, not a site; "
+                    "mb site check expects a site/offer repo."
+                ),
+            }
+        )
+    else:
+        evidence.append(
+            {
+                "kind": "repo_role",
+                "state": "manual",
+                "summary": (
+                    "This repo has no topology role declared; "
+                    "declare role in .mainbranch/repo.json."
+                ),
             }
         )
 

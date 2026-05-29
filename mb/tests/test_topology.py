@@ -538,7 +538,7 @@ def test_collect_returns_safe_payload(tmp_path: Path) -> None:
     assert {choice["id"] for choice in helper["choices"]} == {
         "same_business_repo",
         "separate_business_repo",
-        "child_lightweight_repo",
+        "child_repo",
     }
     # public-safe payload must not embed any absolute paths
     assert "/Users/" not in json.dumps(payload)
@@ -577,7 +577,7 @@ def test_repo_boundary_helper_recognizes_child_descriptor(tmp_path: Path) -> Non
 
     helper = payload["repo_boundary"]
     assert helper["state"] == "child_or_execution_repo"
-    assert helper["recommended_choice"] == "child_lightweight_repo"
+    assert helper["recommended_choice"] == "child_repo"
     assert "return to the hub business repo" in helper["next_action"]
 
 
@@ -603,7 +603,107 @@ def test_repo_boundary_helper_redacts_unsafe_child_parent_handle(tmp_path: Path)
 
     helper = payload["repo_boundary"]
     assert helper["state"] == "child_or_execution_repo"
-    assert helper["recommended_choice"] == "child_lightweight_repo"
+    assert helper["recommended_choice"] == "child_repo"
     assert helper["safe_to_share"] is False
     assert "Hub handle:" not in helper["next_action"]
     assert "example-co/example" not in json.dumps(helper)
+
+
+# ---------------------------------------------------------------------------
+# Role inference + enforcement (MAIN-463)
+# ---------------------------------------------------------------------------
+
+
+def test_infer_role_from_signals_site_via_conversion(tmp_path: Path) -> None:
+    (tmp_path / ".mainbranch").mkdir()
+    (tmp_path / ".mainbranch" / "conversion.json").write_text("{}", encoding="utf-8")
+    assert topology.infer_role_from_signals(tmp_path) == "site"
+
+
+def test_infer_role_from_signals_site_via_product_design(tmp_path: Path) -> None:
+    (tmp_path / "PRODUCT.md").write_text("# product", encoding="utf-8")
+    (tmp_path / "DESIGN.md").write_text("# design", encoding="utf-8")
+    assert topology.infer_role_from_signals(tmp_path) == "site"
+
+
+def test_infer_role_from_signals_business(tmp_path: Path) -> None:
+    # The registry (not .mb) is the hub marker.
+    _write_registry(tmp_path, _valid_registry())
+    (tmp_path / "core").mkdir(exist_ok=True)
+    assert topology.infer_role_from_signals(tmp_path) == "business"
+
+
+def test_infer_role_from_signals_mb_dir_alone_is_not_business(tmp_path: Path) -> None:
+    (tmp_path / "core").mkdir()
+    (tmp_path / ".mb").mkdir()
+    assert topology.infer_role_from_signals(tmp_path) == ""
+
+
+def test_infer_role_from_signals_unknown(tmp_path: Path) -> None:
+    (tmp_path / "README.md").write_text("# nothing", encoding="utf-8")
+    assert topology.infer_role_from_signals(tmp_path) == ""
+
+
+def test_collect_flags_missing_role_with_suggestion(tmp_path: Path) -> None:
+    # A site-shaped checkout with no declared role and no registry: flag + suggest.
+    (tmp_path / ".mainbranch").mkdir()
+    (tmp_path / ".mainbranch" / "conversion.json").write_text("{}", encoding="utf-8")
+    view = topology.collect(tmp_path)
+    assert view["summary"]["current_repo_role"] == ""
+    assert view["summary"]["current_repo_role_identified"] is False
+    assert view["summary"]["current_repo_role_suggestion"] == "site"
+    flag = [f for f in view["findings"] if f["code"] == "topology_role_not_identified"]
+    assert flag and flag[0]["severity"] == "warn"
+    assert flag[0]["role_suggestion"] == "site"
+    assert "docs/child-repo-descriptors.md" in flag[0]["detail"]
+
+
+def test_collect_does_not_flag_declared_role(tmp_path: Path) -> None:
+    _write_repo_json(
+        tmp_path,
+        {"schema": topology.CHILD_REPO_SCHEMA, "role": "site", "display_name": "Site"},
+    )
+    view = topology.collect(tmp_path)
+    assert view["summary"]["current_repo_role"] == "site"
+    codes = {f["code"] for f in view["findings"]}
+    assert "topology_role_not_identified" not in codes
+
+
+def test_collect_does_not_flag_hub(tmp_path: Path) -> None:
+    # A hub (core/ + registry naming itself) should not be flagged for missing role.
+    _write_registry(tmp_path, _valid_registry())
+    (tmp_path / "core").mkdir(exist_ok=True)
+    view = topology.collect(tmp_path, git_remote="github:example-co/example")
+    codes = {f["code"] for f in view["findings"]}
+    assert "topology_role_not_identified" not in codes
+
+
+def test_collect_no_flag_outside_mainbranch(tmp_path: Path) -> None:
+    # A plain repo with no Main Branch markers is not flagged.
+    (tmp_path / "README.md").write_text("# plain", encoding="utf-8")
+    view = topology.collect(tmp_path)
+    codes = {f["code"] for f in view["findings"]}
+    assert "topology_role_not_identified" not in codes
+
+
+def test_legacy_source_role_is_site(tmp_path: Path) -> None:
+    _write_legacy_source(tmp_path, {"business_repo": "../example"})
+    result = topology.read_child_descriptor(tmp_path)
+    assert result["role"] == "site"
+    assert "profile" not in result
+
+
+def test_boundary_helper_treats_inferred_site_as_child(tmp_path: Path) -> None:
+    # No descriptor, no registry, but site signals -> child, not its own hub.
+    (tmp_path / ".mainbranch").mkdir()
+    (tmp_path / ".mainbranch" / "conversion.json").write_text("{}", encoding="utf-8")
+    view = topology.collect(tmp_path)
+    assert view["repo_boundary"]["state"] == "child_or_execution_repo"
+
+
+def test_no_profile_surface_remains() -> None:
+    # The profile concept is fully removed.
+    assert not hasattr(topology, "TOPOLOGY_PROFILES")
+    assert not hasattr(topology, "ROLE_TO_PROFILE")
+    assert not hasattr(topology, "resolve_profile")
+    assert not hasattr(topology, "child_profile_counts")

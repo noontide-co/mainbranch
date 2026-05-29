@@ -626,3 +626,49 @@ def test_status_follows_business_repo_site_record_for_measurement(
     assert payload["measurement"]["site_repo"] == str(site.resolve())
     assert payload["measurement"]["business_repo"] == str(business.resolve())
     assert payload["measurement"]["source_record"] == "pushes/paid-site.md"
+
+
+def test_site_check_reports_repo_role_site_from_signals(tmp_path: Path) -> None:
+    from mb import site as site_mod
+
+    site = tmp_path / "rankedhvac"
+    site.mkdir()
+    # conversion.json is a site signal; no repo.json role declared.
+    _write_conversion(site, {"kind": "lead_form", "url": "https://example.com"})
+
+    result = site_mod.check(str(site))
+
+    assert result["facts"]["repo_role"] == "site"
+    role_ev = next(item for item in result["evidence"] if item["kind"] == "repo_role")
+    assert role_ev["state"] == "passed"
+
+
+def test_site_check_flags_non_site_repo_role(tmp_path: Path) -> None:
+    from mb import site as site_mod
+
+    site = tmp_path / "ledger"
+    (site / ".mainbranch").mkdir(parents=True)
+    (site / ".mainbranch" / "repo.json").write_text(
+        json.dumps({"schema": "mb.child_repo.v0", "role": "finance"}), encoding="utf-8"
+    )
+
+    result = site_mod.check(str(site))
+
+    assert result["facts"]["repo_role"] == "finance"
+    role_ev = next(item for item in result["evidence"] if item["kind"] == "repo_role")
+    assert role_ev["state"] == "manual"
+    assert "not a site" in role_ev["summary"]
+
+
+def test_site_check_flags_missing_repo_role(tmp_path: Path) -> None:
+    from mb import site as site_mod
+
+    site = tmp_path / "bare"
+    site.mkdir()
+
+    result = site_mod.check(str(site))
+
+    assert result["facts"]["repo_role"] == ""
+    role_ev = next(item for item in result["evidence"] if item["kind"] == "repo_role")
+    assert role_ev["state"] == "manual"
+    assert "no topology role" in role_ev["summary"]

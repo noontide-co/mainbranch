@@ -51,7 +51,7 @@ Fields:
 | Field | Meaning |
 | --- | --- |
 | `schema` | Descriptor schema. Use `mb.child_repo.v0`. |
-| `role` | One of the repo roles from the topology decision: `site`, `offer`, `product`, `client`, `finance`, `legal`, `ops`, `integration_sidecar`, `experiment`, or `archive`. |
+| `role` | What the repo *is* (see [The repo tree](#the-repo-tree)): `business`, `site`, `offer`, `product`, `client`, `finance`, `legal`, `ops`, `integration_sidecar`, `experiment`, or `archive`. |
 | `display_name` | Human-readable child repo name. This is not the GitHub repo name. |
 | `github_owner` / `repo_name` | Durable technical handle for this child repo. |
 | `safe_purpose` | Public-safe reason the child repo exists. |
@@ -60,6 +60,59 @@ Fields:
 | `linked` | Safe handles to hub business primitives. Use repo-relative hub paths. |
 | `return_to_hub_command` | Optional exact command when a sibling checkout makes it safe and useful. Prefer relative paths. |
 | `safe_to_share` | Whether this descriptor is intended to be safe for the child repo's normal audience. This does not grant access. |
+
+## The repo tree
+
+One sentence holds the whole model:
+
+> Every repo has a **`role`** (what it is) and a **`parent`** (what it hangs
+> under). The hub is the root. Children can have children.
+
+`role` is the single classifier — it answers "what kind of repo is this?" There
+is no separate "profile"; `mb` reads `role` to decide what to check.
+
+`parent` is a position, not a kind. "Child repo" is **not** a role — any role
+can be a child of any other. Repos form a tree:
+
+```
+hub (role: business, no parent)
+└── offer repo        (role: offer,  parent: hub)
+    └── offer's site  (role: site,   parent: offer repo)
+└── finance repo      (role: finance, parent: hub, visibility: restricted)
+```
+
+So a graduated offer is a child of the hub, and the website you build for that
+offer is a child of the offer repo — arbitrary depth, each node a `role` + a
+`parent`.
+
+The roles:
+
+| Role | What it is |
+| --- | --- |
+| `business` | The hub: strategy, offers, bets, pushes, decisions, the root of the tree. |
+| `site` | A deployed website, lander, minisite, or docs/bet feed. |
+| `offer` | A durable offer or productized service with its own operating history. |
+| `product` | A software product, tool, template, or course with its own build lifecycle. |
+| `client` | Fulfillment/deliverables with a separate confidentiality boundary. |
+| `finance` | Ledgers, bookkeeping, tax, payroll, P&L sources. Private. |
+| `legal` | Contracts, disputes, entity docs, legal review. Private. |
+| `ops` | Infrastructure, runbooks, internal routines, provider setup. |
+| `integration_sidecar` | A helper repo that emits approved provider/analytics summaries. |
+| `experiment` | Exploratory work that may graduate, pause, or die. |
+| `archive` | Retired or historical material kept for reference. |
+
+`role`, `lifecycle`, `visibility`, and `relationship` are independent axes — a
+`site` can be public or private; a `finance` repo is private regardless of
+lifecycle.
+
+### Declaring the role is required
+
+`mb status` / `mb doctor` flag a Main Branch checkout that has **no role**
+declared (finding `topology_role_not_identified`) and point here. If on-disk
+signals look like a site or a hub, the flag includes that as a *suggestion* — the
+CLI never sets the role silently; the operator (with the agent's help) declares
+it in `.mainbranch/repo.json` (child) or the hub's
+`core/operations/repo-topology.md` entry.
 
 ## Relation To Hub Topology
 
@@ -183,9 +236,10 @@ files.
   operating history are shared;
 - create a separate business repo when the work has its own entity, team,
   accounts, audience, brand, or operating history;
-- create a child/lightweight repo when the work is an execution surface for
-  the business, such as a site, product, client deliverable, finance/legal
-  boundary, ops repo, or integration sidecar.
+- create a child repo when the work is an execution surface for the business,
+  such as a site, product, client deliverable, finance/legal boundary, ops repo,
+  or integration sidecar. A child repo can itself have children (e.g. a site
+  under an offer); each declares its own `role` and `parent`.
 
 Before deleting, renaming, merging, or moving an offer folder, child repo, or
 topology entry, ask the operator for an explicit decision or migration plan.
