@@ -10,7 +10,7 @@ from typer.testing import CliRunner
 
 from mb import relationships
 from mb.cli import app
-from mb.validate import render_human, run
+from mb.validate import _owner_summary, render_human, run
 
 runner = CliRunner()
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -2248,8 +2248,7 @@ def test_many_mirror_warnings_keep_grouped_summary_small(tmp_path: Path) -> None
     assert categories["blocker_count"] == 0
     assert categories["mechanical_warning_count"] == 40
     assert categories["operator_warning_count"] == 0
-    assert "bulk-repairable" in categories["owner_summary"]
-    assert "40" in categories["owner_summary"]
+    assert "40 bulk-repairable warning(s)" in categories["owner_summary"]
 
 
 def test_owner_summary_splits_blockers_from_mechanical(tmp_path: Path) -> None:
@@ -2267,7 +2266,16 @@ def test_owner_summary_splits_blockers_from_mechanical(tmp_path: Path) -> None:
     assert categories["mechanical_warning_count"] == 5
     summary = categories["owner_summary"]
     assert "blocker(s) to fix" in summary
-    assert "bulk-repairable related-link mirror" in summary
+    assert "5 bulk-repairable warning(s)" in summary
+
+
+def test_owner_summary_label_is_generic_for_all_mechanical_warnings() -> None:
+    # `mechanical` covers related-link mirrors AND migration drift, so the rollup
+    # label must not claim every mechanical warning is a related-link mirror.
+    summary = _owner_summary(0, 1, 0)
+    assert summary == "1 bulk-repairable warning(s)."
+    assert "mirror" not in summary
+    assert _owner_summary(0, 0, 0) == "No validation issues."
 
 
 def test_render_human_collapses_warnings_by_default(tmp_path: Path, capsys) -> None:
@@ -2280,8 +2288,8 @@ def test_render_human_collapses_warnings_by_default(tmp_path: Path, capsys) -> N
     # (rich may wrap long warning text, so assert on the stable path token).
     assert default_out.count("2026-04-29-link-") == 0
     # The grouped summary still names the cluster and the bulk-repair framing.
-    assert "Bulk-repairable mirrors" in default_out
-    assert "bulk-repairable" in default_out
+    assert "Bulk-repairable (mechanical)" in default_out
+    assert "bulk-repairable warning(s)" in default_out
 
     render_human(report, verbose=True)
     verbose_out = capsys.readouterr().out

@@ -1508,12 +1508,17 @@ def _owner_summary(
     mechanical_warning_count: int,
     operator_warning_count: int,
 ) -> str:
-    """One-line owner framing that separates blockers from bulk mirror noise."""
+    """One-line owner framing that separates blockers from bulk-repairable noise.
+
+    Mechanical warnings cover both related-link mirrors and migration drift, so
+    the rollup label stays generic; per-category ``operator_summary`` carries the
+    specific mirror vs migration repair guidance.
+    """
     parts: list[str] = []
     if blocker_count:
         parts.append(f"{blocker_count} blocker(s) to fix")
     if mechanical_warning_count:
-        parts.append(f"{mechanical_warning_count} bulk-repairable related-link mirror warning(s)")
+        parts.append(f"{mechanical_warning_count} bulk-repairable warning(s)")
     if operator_warning_count:
         parts.append(f"{operator_warning_count} warning(s) to review")
     if not parts:
@@ -2035,7 +2040,7 @@ def render_human(report: dict[str, Any], verbose: bool = False) -> None:
                     f" — {item.get('operator_summary', '')}"
                 )
         if mechanical:
-            console.print("  [yellow]Bulk-repairable mirrors[/yellow]:")
+            console.print("  [yellow]Bulk-repairable (mechanical)[/yellow]:")
             for name, item in mechanical[:3]:
                 console.print(
                     f"    - {name}: {item.get('warnings', 0)} warning(s)"
