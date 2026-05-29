@@ -24,6 +24,7 @@ WEIGHTS: dict[str, int] = {
     "playbook_health_gaps": 84,
     "file_contract_gaps": 86,
     "relationship_health_gaps": 82,
+    "bets_missing_exit_criteria": 80,
     "money_path_gaps": 72,
     "due_bets": 58,
     "stale_decisions": 50,
@@ -321,6 +322,40 @@ def _add_drift_actions(actions: list[dict[str, Any]], report: dict[str, Any]) ->
 
 def _add_bet_actions(actions: list[dict[str, Any]], report: dict[str, Any]) -> None:
     bets = _dict(_dict(report.get("brain")).get("bets"))
+
+    missing_exit = [_dict(item) for item in _list(_dict(bets.get("exit_criteria")).get("missing"))]
+    if missing_exit:
+        score = WEIGHTS["bets_missing_exit_criteria"] + min(len(missing_exit) * 3, 12)
+        safe_to_share = all(bool(item.get("public")) for item in missing_exit)
+        actions.append(
+            _action(
+                action_id="tighten_bet_exit_criteria",
+                title="Tighten active bet exit criteria",
+                command="/mb-bet update",
+                severity="warn",
+                score=score,
+                reason=(
+                    f"{len(missing_exit)} active bet(s) have no kill or double-down criteria. "
+                    "Tighten the bet before launching more work."
+                ),
+                operator_summary=(
+                    f"{len(missing_exit)} active bet(s) are running without a predeclared exit "
+                    "rubric. Add kill and double-down criteria so the bet can be cut or scaled on "
+                    "evidence instead of gut feel."
+                ),
+                signals=[
+                    _signal(
+                        "brain.bets.exit_criteria.missing",
+                        severity="warn",
+                        summary="active bets are missing predeclared exit criteria",
+                        evidence=[_bet_evidence(item) for item in missing_exit[:5]],
+                        weight=WEIGHTS["bets_missing_exit_criteria"],
+                        safe_to_share=safe_to_share,
+                    )
+                ],
+            )
+        )
+
     overdue = [_dict(item) for item in _list(bets.get("overdue"))]
     if overdue:
         score = WEIGHTS["overdue_bets"] + min(len(overdue) * 3, 15)

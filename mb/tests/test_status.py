@@ -2680,6 +2680,104 @@ def test_status_brain_flags_active_bets_without_predeclared_exit_criteria(
     assert brain["bets"]["exit_criteria"]["missing"][0]["path"] == "bets/2026-05-16-open.md"
 
 
+def test_status_ranks_active_bets_missing_exit_criteria(tmp_path: Path, monkeypatch) -> None:
+    """Active bets without a kill/double-down rubric should surface as a ranked
+    action that routes to /mb-bet, not stay buried in raw brain.bets facts."""
+    monkeypatch.setattr(status_mod, "_which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(
+        status_mod,
+        "_git_info",
+        lambda repo: {
+            "available": True,
+            "inside_work_tree": True,
+            "branch": "main",
+            "commit": "abc123",
+            "dirty": False,
+            "dirty_count": 0,
+            "dirty_files": [],
+            "remote": "https://github.com/example/acme.git",
+            "error": "",
+        },
+    )
+    monkeypatch.setattr(
+        status_mod,
+        "_git_recent_activity",
+        lambda repo, git: {"available": True, "items": [], "error": ""},
+    )
+    monkeypatch.setattr(
+        status_mod,
+        "_github",
+        lambda repo, git, **kwargs: {
+            "available": True,
+            "authenticated": True,
+            "degraded": False,
+            "source": "gh",
+            "repo": "example/acme",
+            "summary": {
+                "assigned_tasks": 0,
+                "attention_requests": 0,
+                "open_proposals": 0,
+                "shipped_this_week": 0,
+                "recently_closed_tasks": 0,
+                "blocked_or_stale_tasks": 0,
+            },
+            "sections": {
+                "assigned_tasks": [],
+                "attention_requests": [],
+                "open_proposals": [],
+                "shipped_this_week": [],
+                "recently_closed_tasks": [],
+                "blocked_or_stale_tasks": [],
+            },
+            "errors": [],
+            "assigned_issues": [],
+            "review_requests": [],
+            "recent_merged_prs": [],
+            "context": {"ok": True, "state": "ready"},
+        },
+    )
+    monkeypatch.setattr(
+        status_mod.onboard_mod,  # type: ignore[attr-defined]
+        "onboarding_status",
+        lambda repo: {"summary": {"status": "ready"}, "checklist": []},
+    )
+    repo = tmp_path / "repo"
+    init_run(path=str(repo), name="Acme")
+    # Future deadline so only the missing-exit-criteria signal fires (not due/overdue).
+    (repo / "bets" / "2026-05-16-open.md").write_text(
+        (
+            "---\n"
+            "status: open\n"
+            "opened: 2026-05-16\n"
+            "deadline: 2026-12-01\n"
+            "appetite: 2 weeks\n"
+            "hypothesis: A test creates calls.\n"
+            "metric: calls\n"
+            "target: 3 calls\n"
+            "result: ''\n"
+            "public: false\n"
+            "channels: []\n"
+            "tags: []\n"
+            "---\n\n"
+            "# Open bet\n"
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["status", str(repo), "--json", "--peek"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    actions = {action["id"]: action for action in payload["ranked_actions"]}
+    assert "tighten_bet_exit_criteria" in actions
+    action = actions["tighten_bet_exit_criteria"]
+    assert action["command"] == "/mb-bet update"
+    assert action["audience"] == "operator_decision"
+    assert action["operator_summary"]
+    # Private bet, so the action must not be marked safe to share publicly.
+    assert action["safe_to_share"] is False
+
+
 def test_status_frontmatter_reader_accepts_delimiter_whitespace(tmp_path: Path) -> None:
     path = tmp_path / "note.md"
     path.write_text("--- \nstatus: open\n--- \n# Note\n", encoding="utf-8")
@@ -2807,6 +2905,15 @@ def test_status_ranker_mentions_due_bets(tmp_path: Path, monkeypatch) -> None:
             "metric: replies\n"
             "target: 3 replies\n"
             "result: ''\n"
+            "kill_rubric:\n"
+            "  failure_signals:\n"
+            "    - metric: replies\n"
+            "      comparator: '<'\n"
+            "      threshold: 1\n"
+            "  double_down_signals:\n"
+            "    - metric: replies\n"
+            "      comparator: '>='\n"
+            "      threshold: 5\n"
             "linked_decisions: []\n"
             "linked_research: []\n"
             "linked_campaigns: []\n"
