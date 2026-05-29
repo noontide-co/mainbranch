@@ -2883,6 +2883,10 @@ def _money_path_ranked_actions(
             }
         )
     if deferred_strong_proof is not None:
+        # Re-insert just above the page-readiness/outcome tail. With 5+ higher
+        # priority moves ahead of it (and no tail action to anchor against), the
+        # final [:5] cut can drop strong-proof polish entirely -- by design, it is
+        # the lowest-urgency move once proof is already field-tested.
         tail_components = {"page_readiness", "outcome_feedback_loop"}
         insert_at = next(
             (
