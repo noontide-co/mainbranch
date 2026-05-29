@@ -349,6 +349,152 @@ def test_ranker_bet_exit_criteria_stays_below_repair_blockers() -> None:
     assert tighten["score"] < actions[0]["score"]
 
 
+def _onboarding_in_progress() -> dict[str, object]:
+    return {
+        "summary": {
+            "status": "in_progress",
+            "missing_inputs": ["offer"],
+            "completed_required": 1,
+            "total_required": 3,
+            "next_recommended_action": "mb onboard status",
+        }
+    }
+
+
+def _money_path_cta_action() -> dict[str, object]:
+    return {
+        "ranked_actions": [
+            {
+                "id": "define-cta-path",
+                "title": "Define the CTA path",
+                "reason": "Offer and audience facts need a next step.",
+                "route": "/mb-think",
+                "component": "cta_path",
+                "confidence": "high",
+                "missing": ["conversion_endpoint"],
+                "safe_to_share": True,
+            }
+        ]
+    }
+
+
+def test_ranker_demotes_onboarding_below_money_path_when_operational() -> None:
+    report = _base_report()
+    report["onboarding"] = _onboarding_in_progress()
+    report["money_path"] = _money_path_cta_action()
+
+    actions = ranker.rank_status_report(report)
+    ids = [action["id"] for action in actions]
+
+    assert "review_money_path_cta_path" in ids
+    assert "resume_onboarding" in ids
+    money_path = next(a for a in actions if a["id"] == "review_money_path_cta_path")
+    onboarding = next(a for a in actions if a["id"] == "resume_onboarding")
+    # On an operational repo, finishing onboarding inputs must not outrank the
+    # path-to-money bottleneck.
+    assert money_path["score"] > onboarding["score"]
+    assert ids.index("review_money_path_cta_path") < ids.index("resume_onboarding")
+
+
+def test_ranker_keeps_onboarding_leading_when_repo_not_operational() -> None:
+    report = _base_report()
+    report["repo"] = {"looks_like_mainbranch_repo": False, "missing_markers": ["core/"]}
+    report["onboarding"] = _onboarding_in_progress()
+
+    actions = ranker.rank_status_report(report)
+    onboarding = next(a for a in actions if a["id"] == "resume_onboarding")
+
+    # Not operational: onboarding keeps its full weight band (>= 95) so a fresh or
+    # unshaped repo still leads with finishing setup.
+    assert onboarding["score"] >= ranker.WEIGHTS["onboarding_incomplete"]
+
+
+def test_ranker_surfaces_money_path_over_hygiene_but_keeps_blocker() -> None:
+    report = _base_report()
+    report["drift"] = {
+        "items": [
+            {
+                "id": "validation_debt",
+                "severity": "error",
+                "summary": "Validation findings need repair.",
+                "evidence": ["core/offer.md: missing required frontmatter"],
+            }
+        ]
+    }
+    report["playbook_health"] = {
+        "gaps": [
+            {
+                "id": "pushes_without_playbook",
+                "severity": "warn",
+                "summary": "1 active push needs a playbook run.",
+                "safe_to_share": True,
+            }
+        ]
+    }
+    report["relationship_health"] = {
+        "gaps": [
+            {
+                "id": "bet_without_push",
+                "severity": "warn",
+                "summary": "An active bet has no linked push.",
+                "safe_to_share": True,
+            }
+        ]
+    }
+    report["money_path"] = _money_path_cta_action()
+
+    actions = ranker.rank_status_report(report)
+    ids = {action["id"] for action in actions}
+
+    # The validation error blocker is preserved; the path-to-money bottleneck
+    # surfaces by displacing the weakest hygiene action, not the blocker.
+    assert "repair_validation_debt" in ids
+    assert "review_money_path_cta_path" in ids
+    assert "review_relationship_health" not in ids
+
+
+def test_ranker_never_displaces_business_pressure_for_money_path() -> None:
+    report = _base_report()
+    report["drift"] = {
+        "items": [
+            {
+                "id": "validation_debt",
+                "severity": "error",
+                "summary": "Validation findings need repair.",
+                "evidence": ["core/offer.md: missing required frontmatter"],
+            }
+        ]
+    }
+    report["brain"] = {
+        "bets": {
+            "overdue": [{"title": "Stale bet", "deadline": "2026-05-01", "days_overdue": 5}],
+            "due_soon": [],
+            "exit_criteria": {
+                "missing": [
+                    {
+                        "path": "bets/2026-05-16-launch.md",
+                        "title": "Launch the cohort",
+                        "deadline": "2026-06-30",
+                        "public": False,
+                    }
+                ]
+            },
+        }
+    }
+    report["money_path"] = _money_path_cta_action()
+
+    actions = ranker.rank_status_report(report)
+    ids = {action["id"] for action in actions}
+
+    # Operational repo, but the top band is a validation blocker plus two bet
+    # signals with no hygiene action to yield. Money path must not displace any of
+    # them; blockers and business pressure keep their slots.
+    assert "repair_validation_debt" in ids
+    assert "tighten_bet_exit_criteria" in ids
+    assert "update_overdue_bets" in ids
+    assert "review_money_path_cta_path" not in ids
+
+
 def test_ranker_surfaces_missing_exit_criteria_even_with_overdue_bets() -> None:
     report = _base_report()
     report["brain"] = {

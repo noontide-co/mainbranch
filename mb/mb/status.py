@@ -2792,6 +2792,10 @@ def _money_path_ranked_actions(
         ),
     ]
     actions: list[dict[str, Any]] = []
+    # Strong proof (level >= 4) with only quality nits should not outrank
+    # packaging/channel/push moves. Hold its strengthen action and re-insert it
+    # below those moves, just above the page-readiness/outcome tail.
+    deferred_strong_proof: dict[str, Any] | None = None
     for action_id, title, key, fallback_reason, route in candidates:
         component = objects.get(key) or {}
         level = int(component.get("level") or 0)
@@ -2840,23 +2844,27 @@ def _money_path_ranked_actions(
                 proof_quality_gaps.append("outcome_feedback")
             if not proof_quality_gaps:
                 continue
-            actions.append(
-                {
-                    "id": "strengthen-proof-quality",
-                    "title": "Strengthen proof quality",
-                    "reason": (
-                        "Proof exists, but testimonials are generic or not linked to an "
-                        "offer, outcome, typicality, or claim."
-                    ),
-                    "route": "/mb-think",
-                    "source": "money_path.objects.proof.quality",
-                    "component": "proof",
-                    "confidence": "medium",
-                    "effort_hint": "medium",
-                    "missing": proof_quality_gaps[:5],
-                    "safe_to_share": True,
-                }
-            )
+            strengthen_proof = {
+                "id": "strengthen-proof-quality",
+                "title": "Strengthen proof quality",
+                "reason": (
+                    "Proof exists, but testimonials are generic or not linked to an "
+                    "offer, outcome, typicality, or claim."
+                ),
+                "route": "/mb-think",
+                "source": "money_path.objects.proof.quality",
+                "component": "proof",
+                "confidence": "medium",
+                "effort_hint": "medium",
+                "missing": proof_quality_gaps[:5],
+                "safe_to_share": True,
+            }
+            if level >= 4:
+                # Proof is already field-tested. Polishing it ranks below
+                # packaging/channel/push moves; hold it for the tail.
+                deferred_strong_proof = strengthen_proof
+            else:
+                actions.append(strengthen_proof)
             continue
         elif level >= 2:
             continue
@@ -2874,6 +2882,21 @@ def _money_path_ranked_actions(
                 "safe_to_share": True,
             }
         )
+    if deferred_strong_proof is not None:
+        # Re-insert just above the page-readiness/outcome tail. With 5+ higher
+        # priority moves ahead of it (and no tail action to anchor against), the
+        # final [:5] cut can drop strong-proof polish entirely -- by design, it is
+        # the lowest-urgency move once proof is already field-tested.
+        tail_components = {"page_readiness", "outcome_feedback_loop"}
+        insert_at = next(
+            (
+                index
+                for index, action in enumerate(actions)
+                if action.get("component") in tail_components
+            ),
+            len(actions),
+        )
+        actions.insert(insert_at, deferred_strong_proof)
     return actions[:5]
 
 
@@ -2936,10 +2959,18 @@ def _money_path_active_bet_exposure(repo: Path, report: dict[str, Any]) -> dict[
     )
     currency = str(policy.get("currency") or "USD")
     exposure_window_days = int(policy.get("exposure_window_days") or 7)
+    # A bet that declares MoneyPath anchoring as required has committed (or is
+    # about to commit) execution spend. Exploratory pricing/product bets that
+    # have not done so should not trigger eager ledger-repair nudges.
+    requires_anchor = any(
+        isinstance(item.get("money_path"), dict) and bool(item["money_path"].get("required"))
+        for item in active
+    )
     summary: dict[str, Any] = {
         "count": len(active),
         "anchored": 0,
         "unanchored": 0,
+        "requires_anchor": requires_anchor,
         "gross_exposure": _money_amount(commodity=currency),
         "this_week_at_risk": _money_amount(commodity=currency),
         "over_cap": [],
@@ -3035,12 +3066,19 @@ def _money_path_finance_actions(
                 "safe_to_share": True,
             }
         )
-    if active_bets.get("ledger_unavailable") and active_count:
+    if (
+        active_bets.get("ledger_unavailable")
+        and active_count
+        and active_bets.get("requires_anchor")
+    ):
         actions.append(
             {
                 "id": "repair-books-exposure",
                 "title": "Repair books exposure checks",
-                "reason": "Active bets exist, but Main Branch cannot check private ledger anchors.",
+                "reason": (
+                    "An active bet requires MoneyPath anchoring, but Main Branch "
+                    "cannot check private ledger anchors."
+                ),
                 "route": "mb books doctor --plan --json",
                 "component": "financial_exposure",
                 "source": "money_path.active_bets.ledger_unavailable",
