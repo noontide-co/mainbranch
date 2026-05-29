@@ -1474,16 +1474,51 @@ def _validation_categories(files: list[dict[str, Any]]) -> dict[str, Any]:
     )
     top_category = next(iter(ordered), "")
     top_entry = ordered.get(top_category, {})
+    blocker_count = sum(int(item.get("errors", 0)) for item in ordered.values())
+    mechanical_warning_count = sum(
+        int(item.get("warnings", 0))
+        for item in ordered.values()
+        if item.get("audience") == "mechanical"
+    )
+    operator_warning_count = sum(
+        int(item.get("warnings", 0))
+        for item in ordered.values()
+        if item.get("audience") != "mechanical"
+    )
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "total_categories": len(ordered),
         "top_category": top_category,
         "top_repair": top_entry.get("repair", ""),
         "top_audience": top_entry.get("audience", ""),
         "top_operator_summary": top_entry.get("operator_summary", ""),
+        "blocker_count": blocker_count,
+        "mechanical_warning_count": mechanical_warning_count,
+        "operator_warning_count": operator_warning_count,
+        "owner_summary": _owner_summary(
+            blocker_count, mechanical_warning_count, operator_warning_count
+        ),
         "by_category": ordered,
         "safe_to_share": True,
     }
+
+
+def _owner_summary(
+    blocker_count: int,
+    mechanical_warning_count: int,
+    operator_warning_count: int,
+) -> str:
+    """One-line owner framing that separates blockers from bulk mirror noise."""
+    parts: list[str] = []
+    if blocker_count:
+        parts.append(f"{blocker_count} blocker(s) to fix")
+    if mechanical_warning_count:
+        parts.append(f"{mechanical_warning_count} bulk-repairable related-link mirror warning(s)")
+    if operator_warning_count:
+        parts.append(f"{operator_warning_count} warning(s) to review")
+    if not parts:
+        return "No validation issues."
+    return ", ".join(parts) + "."
 
 
 def _check_status_transition(
@@ -1951,8 +1986,16 @@ def render_human(report: dict[str, Any], verbose: bool = False) -> None:
     for f in report["files"]:
         by_schema.setdefault(f["schema"], []).append(f)
     for schema, items in by_schema.items():
-        console.print(f"\n[bold]{schema}[/bold]")
+        ok_n = sum(1 for f in items if not f["errors"] and not f.get("warnings"))
+        warn_n = sum(1 for f in items if not f["errors"] and f.get("warnings"))
+        fail_n = sum(1 for f in items if f["errors"])
+        console.print(f"\n[bold]{schema}[/bold]  {ok_n} ok, {warn_n} warn, {fail_n} fail")
         for f in items:
+            if not verbose and not f["errors"]:
+                # Collapse warning-only and ok files by default; the grouped
+                # summary below carries compact examples and repair guidance so
+                # a few thousand cross-ref/mirror warnings never flood the loop.
+                continue
             if f["errors"]:
                 mark = "[red]fail[/red]"
             elif f.get("warnings"):
@@ -1960,24 +2003,58 @@ def render_human(report: dict[str, Any], verbose: bool = False) -> None:
             else:
                 mark = "[green]ok[/green]"
             console.print(f"  {mark}  {f['path']}")
-            if f["errors"] or f.get("warnings") or verbose:
-                for e in f["errors"]:
-                    console.print(f"        - {e}")
+            for e in f["errors"]:
+                console.print(f"        - {e}")
+            if verbose:
                 for warning in f.get("warnings", []):
                     console.print(f"        - {warning}")
     legacy_repair = report.get("legacy_repair")
     categories = report.get("validation_categories") or {}
     by_category = categories.get("by_category") or {}
     if by_category:
-        console.print("\n[bold yellow]Validation categories[/bold yellow]")
-        for name, item in list(by_category.items())[:6]:
-            console.print(
-                f"  - {name}: {item.get('count', 0)} "
-                f"({item.get('errors', 0)} error(s), {item.get('warnings', 0)} warning(s))"
-            )
+        console.print("\n[bold yellow]Validation summary[/bold yellow]")
+        owner_summary = categories.get("owner_summary")
+        if owner_summary:
+            console.print(f"  {owner_summary}")
+        blockers = [(n, i) for n, i in by_category.items() if i.get("errors")]
+        mechanical = [
+            (n, i)
+            for n, i in by_category.items()
+            if not i.get("errors") and i.get("warnings") and i.get("audience") == "mechanical"
+        ]
+        other = [
+            (n, i)
+            for n, i in by_category.items()
+            if not i.get("errors") and i.get("warnings") and i.get("audience") != "mechanical"
+        ]
+        if blockers:
+            console.print("  [red]Blockers (fix these)[/red]:")
+            for name, item in blockers[:5]:
+                console.print(
+                    f"    - {name}: {item.get('errors', 0)} error(s)"
+                    f" — {item.get('operator_summary', '')}"
+                )
+        if mechanical:
+            console.print("  [yellow]Bulk-repairable mirrors[/yellow]:")
+            for name, item in mechanical[:3]:
+                console.print(
+                    f"    - {name}: {item.get('warnings', 0)} warning(s)"
+                    f" — {item.get('operator_summary', '')}"
+                )
+        if other:
+            console.print("  Other warnings:")
+            for name, item in other[:5]:
+                console.print(
+                    f"    - {name}: {item.get('warnings', 0)} warning(s)"
+                    f" — {item.get('operator_summary', '')}"
+                )
         top_repair = categories.get("top_repair")
         if top_repair:
             console.print(f"  next: {top_repair}")
+        if not verbose and (mechanical or other):
+            console.print(
+                "  Run `mb validate --cross-refs -v` or `--json` for the full per-file list."
+            )
     if legacy_repair:
         console.print("\n[bold yellow]Legacy frontmatter repair[/bold yellow]")
         console.print(f"  {legacy_repair['message']}")
