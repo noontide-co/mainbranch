@@ -23,6 +23,7 @@ from mb import (
     related_links,
     relationships,
     team,
+    topology,
 )
 from mb import pushes as pushes_mod
 
@@ -80,20 +81,11 @@ TEAM_MEMBER_TYPE = "team_member"
 
 TOPOLOGY_SCHEMA = {"mb.repo_topology.v0"}
 TOPOLOGY_STATUS = {"proposed", "active", "paused", "superseded", "archived"}
-TOPOLOGY_ROLE = {
-    "business",
-    "site",
-    "offer",
-    "product",
-    "client",
-    "finance",
-    "legal",
-    "ops",
-    "integration_sidecar",
-    "experiment",
-    "archive",
-}
-TOPOLOGY_VISIBILITY = {"public", "team_private", "restricted", "local_only"}
+# Single source of truth: the topology reader owns these vocabularies and the
+# unsafe-key/secret matchers. Aliased here so validate and topology never drift.
+TOPOLOGY_ROLE = topology.TOPOLOGY_ROLES
+TOPOLOGY_PROFILE = topology.TOPOLOGY_PROFILES
+TOPOLOGY_VISIBILITY = topology.TOPOLOGY_VISIBILITIES
 TOPOLOGY_RELATIONSHIP = {
     "hub_for",
     "child_of",
@@ -135,17 +127,8 @@ DOMAIN_RE = re.compile(
     r"^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,}$"
 )
 LOCAL_ABSOLUTE_PATH_RE = re.compile(r"^(?:/|~[/\\]|[A-Za-z]:[/\\])")
-TOPOLOGY_UNSAFE_KEY_RE = re.compile(
-    r"(ledger|bank|payroll|tax|contract|legal[_-]?advice|dispute|customer|member|"
-    r"account[_-]?number|raw[_-]?(?:data|export|cache|metric)|provider[_-]?cache|"
-    r"local[_-]?path|path)",
-    re.IGNORECASE,
-)
-SECRET_KEY_RE = re.compile(
-    r"(api[_-]?key|access[_-]?token|refresh[_-]?token|bearer|credential|"
-    r"client[_-]?secret|password|private[_-]?key|session|cookie|secret)",
-    re.IGNORECASE,
-)
+TOPOLOGY_UNSAFE_KEY_RE = topology.UNSAFE_KEY_RE
+SECRET_KEY_RE = topology.SECRET_KEY_RE
 SECRET_VALUE_RE = re.compile(
     r"(-----BEGIN [A-Z ]*PRIVATE KEY-----|bearer\s+[A-Za-z0-9._~+/=-]{10,}|"
     r"gh[pousr]_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{10,}|"
@@ -1081,6 +1064,22 @@ def _check_repo_topology_frontmatter(
         role = _require_topology_repo_string(repo_entry, "role", errors, prefix=prefix)
         if role and role not in TOPOLOGY_ROLE:
             errors.append(f"{prefix}.role={role!r} not in {sorted(TOPOLOGY_ROLE)}")
+
+        # profile is optional; it overrides role-derived inference for CLI checks.
+        profile = repo_entry.get("profile")
+        if profile is not None:
+            if not isinstance(profile, str) or profile not in TOPOLOGY_PROFILE:
+                errors.append(f"{prefix}.profile={profile!r} not in {sorted(TOPOLOGY_PROFILE)}")
+            elif (
+                role
+                and topology.role_to_profile(role)
+                and topology.role_to_profile(role) != profile
+            ):
+                warnings.append(
+                    f"{prefix}.profile={profile!r} overrides the role-derived profile "
+                    f"{topology.role_to_profile(role)!r} for role {role!r}; keep this only "
+                    "when the CLI contract really differs from the role default"
+                )
 
         lifecycle = _require_topology_repo_string(repo_entry, "lifecycle", errors, prefix=prefix)
         if lifecycle == "graduated":
