@@ -248,3 +248,129 @@ def test_ranker_action_carries_audience_and_operator_summary() -> None:
     )
     assert overridden["audience"] == "informational"
     assert overridden["operator_summary"] == "Just a status note."
+
+
+def test_ranker_surfaces_active_bets_missing_exit_criteria() -> None:
+    report = _base_report()
+    report["brain"] = {
+        "bets": {
+            "overdue": [],
+            "due_soon": [],
+            "exit_criteria": {
+                "missing": [
+                    {
+                        "path": "bets/2026-05-16-launch.md",
+                        "title": "Launch the cohort",
+                        "deadline": "2026-06-30",
+                        "public": False,
+                    },
+                    {
+                        "path": "bets/2026-05-18-ads.md",
+                        "title": "Paid acquisition test",
+                        "deadline": "",
+                        "public": False,
+                    },
+                ]
+            },
+        }
+    }
+
+    actions = ranker.rank_status_report(report)
+    action = next(action for action in actions if action["id"] == "tighten_bet_exit_criteria")
+
+    assert action["command"] == "/mb-bet update"
+    assert action["priority"] == "high"
+    assert action["audience"] == "operator_decision"
+    assert action["operator_summary"]
+    assert action["signals"][0]["id"] == "brain.bets.exit_criteria.missing"
+    assert action["signals"][0]["evidence"] == [
+        "Launch the cohort (2026-06-30)",
+        "Paid acquisition test (no deadline)",
+    ]
+    # Private bet names must not be marked shareable.
+    assert action["safe_to_share"] is False
+
+
+def test_ranker_bet_exit_criteria_shareable_only_when_all_public() -> None:
+    report = _base_report()
+    report["brain"] = {
+        "bets": {
+            "overdue": [],
+            "due_soon": [],
+            "exit_criteria": {
+                "missing": [
+                    {
+                        "path": "bets/2026-05-16-launch.md",
+                        "title": "Launch the cohort",
+                        "deadline": "2026-06-30",
+                        "public": True,
+                    }
+                ]
+            },
+        }
+    }
+
+    actions = ranker.rank_status_report(report)
+    action = next(action for action in actions if action["id"] == "tighten_bet_exit_criteria")
+
+    assert action["safe_to_share"] is True
+
+
+def test_ranker_bet_exit_criteria_stays_below_repair_blockers() -> None:
+    report = _base_report()
+    report["update"] = {
+        "severity": "required",
+        "command": "pipx upgrade mainbranch",
+        "reason": "Installed version is below the supported floor.",
+        "installed": "0.1.0",
+        "latest": "0.2.6",
+    }
+    report["brain"] = {
+        "bets": {
+            "overdue": [],
+            "due_soon": [],
+            "exit_criteria": {
+                "missing": [
+                    {
+                        "path": "bets/2026-05-16-launch.md",
+                        "title": "Launch the cohort",
+                        "deadline": "2026-06-30",
+                        "public": False,
+                    }
+                ]
+            },
+        }
+    }
+
+    actions = ranker.rank_status_report(report)
+
+    assert actions[0]["id"] == "mainbranch_update_required"
+    tighten = next(action for action in actions if action["id"] == "tighten_bet_exit_criteria")
+    assert tighten["score"] < actions[0]["score"]
+
+
+def test_ranker_surfaces_missing_exit_criteria_even_with_overdue_bets() -> None:
+    report = _base_report()
+    report["brain"] = {
+        "bets": {
+            "overdue": [{"title": "Stale bet", "deadline": "2026-05-01", "days_overdue": 5}],
+            "due_soon": [],
+            "exit_criteria": {
+                "missing": [
+                    {
+                        "path": "bets/2026-05-16-launch.md",
+                        "title": "Launch the cohort",
+                        "deadline": "2026-06-30",
+                        "public": False,
+                    }
+                ]
+            },
+        }
+    }
+
+    actions = ranker.rank_status_report(report)
+    ids = {action["id"] for action in actions}
+
+    # The overdue early-return must not suppress the missing-criteria action.
+    assert "tighten_bet_exit_criteria" in ids
+    assert "update_overdue_bets" in ids

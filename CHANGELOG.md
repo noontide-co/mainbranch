@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Added a `tighten_bet_exit_criteria` ranked action so active bets without
+  predeclared kill/double-down criteria surface as an owner-facing next move in
+  `mb status --json --peek` instead of staying buried in raw `brain.bets` facts.
+  Routes to `/mb-bet` and keeps writes approval-gated. Closes #789.
+
 ### Changed
 
 - Grouped cross-reference and related-link validation warnings into owner-facing
