@@ -20,6 +20,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Grouped cross-reference and related-link validation warnings into owner-facing
+  clusters: `mb validate` JSON now carries `blocker_count`,
+  `mechanical_warning_count`, `operator_warning_count`, and an `owner_summary`
+  one-liner that separates blockers from bulk-repairable related-link mirror
+  noise. `mb validate` human output no longer dumps hundreds/thousands of
+  warnings by default — it shows blockers plus the grouped summary, and `-v`
+  restores the full per-file detail. Full machine-readable detail stays in
+  `--json` for power users and repair commands. Closes #790.
 - Changed daily start/status JSON to separate repo/runtime readiness from
   business-memory completeness, align `mb start --json` next actions with
   status-ranked owner actions when runtime handoff is ready, clarify Codex
