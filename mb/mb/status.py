@@ -4467,6 +4467,7 @@ def run(
         "current_repo": topology_payload["current_repo"],
         "repo_boundary": topology_payload["repo_boundary"],
         "child_counts": topology_payload["child_counts"],
+        "child_profile_counts": topology_payload["child_profile_counts"],
         "restricted_repos": topology_payload["restricted_repos"],
         "findings": topology_payload["findings"],
         "local": {
@@ -4638,10 +4639,21 @@ def render_human(
         console.print(
             f"[bold]Business map[/bold] {display_name} — {total_children} child repo(s){suffix}"
         )
+    profile = topology_current.get("profile") or ""
+    profile_source = topology_current.get("profile_source") or ""
     if topology_current.get("matched"):
         identifier = topology_current.get("slug") or topology_current.get("remote_full_name") or "?"
         role = topology_current.get("role") or "?"
-        console.print(f"  this repo: {role} ({identifier})")
+        profile_suffix = f", profile {profile}" if profile else ""
+        console.print(f"  this repo: {role}{profile_suffix} ({identifier})")
+    elif profile:
+        src = f" (by {profile_source})" if profile_source and profile_source != "role" else ""
+        console.print(f"  this repo: profile {profile}{src}")
+    if profile and profile != "hub":
+        console.print(
+            "  [dim]execution surface — full business memory (core/, bets/, pushes/) "
+            "lives in the parent hub, not here[/dim]"
+        )
     if verbose:
         topology_findings = topology.get("findings") or []
         shown = 0
