@@ -20,6 +20,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Calibrated MoneyPath action prominence so a path-to-money question is not
+  buried under safe onboarding or repo-operation actions. On an operational repo
+  (`mb status` ranker), finishing onboarding inputs no longer outranks
+  validation, bet, active-push, or path-to-money signals, and the top MoneyPath
+  bottleneck reserves a `ranked_actions` slot by displacing only the weakest
+  hygiene action — required repair/update/validation blockers always keep their
+  slots. Field-tested proof (level >= 4) now ranks `strengthen-proof-quality`
+  below packaging/channel moves instead of ahead of them, and
+  `repair-books-exposure` only fires when an active bet declares MoneyPath
+  anchoring (committed spend) rather than for exploratory bets. No private
+  financial values are added to reports or JSON. Closes #785.
 - Grouped cross-reference and related-link validation warnings into owner-facing
   clusters: `mb validate` JSON now carries `blocker_count`,
   `mechanical_warning_count`, `operator_warning_count`, and an `owner_summary`
