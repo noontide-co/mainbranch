@@ -10,7 +10,7 @@ from typer.testing import CliRunner
 
 from mb import relationships
 from mb.cli import app
-from mb.validate import run
+from mb.validate import render_human, run
 
 runner = CliRunner()
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -2202,3 +2202,88 @@ def test_validation_categories_carry_audience_and_operator_summary(tmp_path: Pat
     assert entry["audience"] == "operator_decision"
     assert entry["operator_summary"]
     assert entry["repair"]  # legacy field still present
+
+
+def _many_missing_mirrors(tmp_path: Path, count: int) -> None:
+    """Write one shared research target plus `count` decisions that link it
+    without mirroring the link in ## Related links — one mirror warning each."""
+    _write(
+        tmp_path / "research" / "2026-04-29-topic-source.md",
+        "---\ndate: 2026-04-29\ntopic: topic\nsource: source\n---\n# Topic\n",
+    )
+    for index in range(count):
+        _write(
+            tmp_path / "decisions" / f"2026-04-29-link-{index:03d}.md",
+            (
+                "---\n"
+                "date: 2026-04-29\n"
+                "status: accepted\n"
+                "linked_research:\n"
+                "  - research/2026-04-29-topic-source.md\n"
+                "---\n"
+                f"# Link {index}\n"
+            ),
+        )
+
+
+def test_many_mirror_warnings_keep_grouped_summary_small(tmp_path: Path) -> None:
+    _many_missing_mirrors(tmp_path, 40)
+
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    # Full machine-readable detail is preserved for power users / repair commands.
+    assert report["summary"]["warnings"] == 40
+    assert len(report["cross_refs"]["warnings"]) == 40
+
+    categories = report["validation_categories"]
+    by_category = categories["by_category"]
+    # All 40 warnings collapse into a single grouped cluster with capped examples.
+    assert set(by_category) == {"missing_related_link_mirror"}
+    cluster = by_category["missing_related_link_mirror"]
+    assert cluster["count"] == 40
+    assert cluster["audience"] == "mechanical"
+    assert len(cluster["examples"]) <= 5
+
+    # New owner-facing rollup separates blockers from bulk-repairable mirrors.
+    assert categories["blocker_count"] == 0
+    assert categories["mechanical_warning_count"] == 40
+    assert categories["operator_warning_count"] == 0
+    assert "bulk-repairable" in categories["owner_summary"]
+    assert "40" in categories["owner_summary"]
+
+
+def test_owner_summary_splits_blockers_from_mechanical(tmp_path: Path) -> None:
+    _many_missing_mirrors(tmp_path, 5)
+    # A blocking frontmatter error: offer missing required slug.
+    _write(
+        tmp_path / "core" / "offers" / "broken" / "offer.md",
+        "---\nstatus: running\n---\n# Offer\n",
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True)
+    categories = report["validation_categories"]
+
+    assert categories["blocker_count"] >= 1
+    assert categories["mechanical_warning_count"] == 5
+    summary = categories["owner_summary"]
+    assert "blocker(s) to fix" in summary
+    assert "bulk-repairable related-link mirror" in summary
+
+
+def test_render_human_collapses_warnings_by_default(tmp_path: Path, capsys) -> None:
+    _many_missing_mirrors(tmp_path, 40)
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    render_human(report, verbose=False)
+    default_out = capsys.readouterr().out
+    # No per-file warning lines for the 40 warning-only files by default
+    # (rich may wrap long warning text, so assert on the stable path token).
+    assert default_out.count("2026-04-29-link-") == 0
+    # The grouped summary still names the cluster and the bulk-repair framing.
+    assert "Bulk-repairable mirrors" in default_out
+    assert "bulk-repairable" in default_out
+
+    render_human(report, verbose=True)
+    verbose_out = capsys.readouterr().out
+    # Verbose restores the full per-file detail for power users.
+    assert verbose_out.count("2026-04-29-link-") == 40
