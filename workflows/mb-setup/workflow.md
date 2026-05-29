@@ -120,8 +120,8 @@ of starting over. If the operator requests GitHub backup or push setup, check
 GitHub CLI authentication and account identity before any GitHub write.
 Use `onboarding.repo_boundary` or `topology.repo_boundary` when the operator is
 unsure whether related work belongs in this repo, a separate business repo, or
-a child/lightweight repo. Do not build repo profiles here; explain the
-boundary choice and ask before setup writes.
+a child repo. Do not invent a repo role here; explain the boundary choice and
+ask before setup writes.
 
 After approved setup, run `mb status --json --peek` and `mb start --json`.
 Summarize the owner outcome first: folder created or connected, business brain

@@ -113,7 +113,7 @@ mb status --json --peek
    before inventing bet state from prose.
    Use `topology.repo_boundary` when the operator is deciding whether work
    belongs in this business repo, a separate business repo, or a
-   child/lightweight repo.
+   child repo.
    If `vocabulary.terms.push` defines display words, use them in
    operator-facing prose without changing current paths, frontmatter, JSON
    keys, validator rules, or command names.

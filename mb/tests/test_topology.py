@@ -627,9 +627,16 @@ def test_infer_role_from_signals_site_via_product_design(tmp_path: Path) -> None
 
 
 def test_infer_role_from_signals_business(tmp_path: Path) -> None:
+    # The registry (not .mb) is the hub marker.
+    _write_registry(tmp_path, _valid_registry())
+    (tmp_path / "core").mkdir(exist_ok=True)
+    assert topology.infer_role_from_signals(tmp_path) == "business"
+
+
+def test_infer_role_from_signals_mb_dir_alone_is_not_business(tmp_path: Path) -> None:
     (tmp_path / "core").mkdir()
     (tmp_path / ".mb").mkdir()
-    assert topology.infer_role_from_signals(tmp_path) == "business"
+    assert topology.infer_role_from_signals(tmp_path) == ""
 
 
 def test_infer_role_from_signals_unknown(tmp_path: Path) -> None:

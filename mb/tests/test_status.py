@@ -3691,6 +3691,27 @@ def test_status_exposes_topology_section_when_registry_missing(tmp_path: Path, m
     assert topology["local"]["safe_to_share"] is False
 
 
+def test_status_flags_missing_role_for_child_checkout(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    # Drop the hub registry and add a site signal with no declared role so the
+    # checkout looks like an un-roled child.
+    registry_path = repo / "core" / "operations" / "repo-topology.md"
+    if registry_path.exists():
+        registry_path.unlink()
+    (repo / ".mainbranch").mkdir(exist_ok=True)
+    (repo / ".mainbranch" / "conversion.json").write_text("{}", encoding="utf-8")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+    topology = report["topology"]
+
+    assert topology["summary"]["current_repo_role"] == ""
+    assert topology["summary"]["current_repo_role_suggestion"] == "site"
+    codes = {f["code"] for f in topology["findings"]}
+    assert "topology_role_not_identified" in codes
+
+
 def test_status_exposes_topology_section_with_valid_registry(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     repo = tmp_path / "acme"

@@ -203,10 +203,9 @@ def infer_role_from_signals(repo_path: Path) -> str:
     role.
     """
     try:
-        has_hub_marker = (repo_path / REGISTRY_RELATIVE_PATH).exists() or (
-            repo_path / ".mb"
-        ).is_dir()
-        if has_hub_marker and (repo_path / "core").is_dir():
+        # The topology registry is the unambiguous hub marker. ``.mb`` is a
+        # local vault that non-hub repos also carry, so it is not used here.
+        if (repo_path / REGISTRY_RELATIVE_PATH).exists() and (repo_path / "core").is_dir():
             return "business"
         # A Main Branch site descriptor is the strongest site signal; present
         # even on plain static sites (e.g. Cloudflare Pages) with no PRODUCT.md.
@@ -726,7 +725,7 @@ def repo_boundary_decision_helper(
 
     This is a decision aid, not a repo classifier. It gives setup/start
     surfaces a stable way to explain whether work belongs in the current
-    business repo, a separate business repo, or a child/lightweight repo.
+    business repo, a separate business repo, or a child repo.
     """
     choices = [
         {
@@ -1136,7 +1135,7 @@ def _role_not_identified_finding(role_suggestion: str) -> dict[str, Any]:
         "severity": "warn",
         "summary": "this repo has no topology role declared",
         "detail": detail,
-        "repair_command": "mb status --json --peek",
+        "repair_command": "",
         "path": CHILD_REPO_RELATIVE_PATH.as_posix(),
         "role_suggestion": role_suggestion,
         "safe_to_share": True,
