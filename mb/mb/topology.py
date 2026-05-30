@@ -1130,11 +1130,22 @@ def _role_not_identified_finding(role_suggestion: str) -> dict[str, Any]:
             "(child) or in the hub's `core/operations/repo-topology.md` entry. "
             "See docs/child-repo-descriptors.md."
         )
+    example_role = role_suggestion or "site"
+    example = (
+        "{\n"
+        f'  "schema": "{CHILD_REPO_SCHEMA}",\n'
+        f'  "role": "{example_role}",\n'
+        '  "display_name": "<this repo>",\n'
+        '  "parent": { "github_owner": "<hub-owner>", "repo_name": "<hub-repo>" }\n'
+        "}"
+    )
     return {
         "code": "topology_role_not_identified",
         "severity": "warn",
         "summary": "this repo has no topology role declared",
         "detail": detail,
+        "example_path": CHILD_REPO_RELATIVE_PATH.as_posix(),
+        "example": example,
         "repair_command": "",
         "path": CHILD_REPO_RELATIVE_PATH.as_posix(),
         "role_suggestion": role_suggestion,

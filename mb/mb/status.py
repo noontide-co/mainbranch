@@ -4640,16 +4640,21 @@ def render_human(
         )
     role = topology_current.get("role") or ""
     role_suggestion = topology_current.get("role_suggestion") or ""
+    parent_handle = (
+        topology_current.get("parent_remote_full_name") or topology_current.get("parent_slug") or ""
+    )
     if topology_current.get("matched"):
         identifier = topology_current.get("slug") or topology_current.get("remote_full_name") or "?"
-        console.print(f"  this repo: {role or '?'} ({identifier})")
+        parent_txt = f", parent {parent_handle}" if parent_handle and role != "business" else ""
+        console.print(f"  this repo: role {role or '?'}{parent_txt} ({identifier})")
         if role and role != "business":
             console.print(
                 "  [dim]child repo — strategy and operating memory "
                 "(core/, bets/, pushes/) live in the parent hub[/dim]"
             )
     elif role:
-        console.print(f"  this repo: {role}")
+        parent_txt = f", parent {parent_handle}" if parent_handle else ""
+        console.print(f"  this repo: role {role}{parent_txt}")
     elif not topology_current.get("is_hub"):
         hint = f" (looks like a {role_suggestion} repo)" if role_suggestion else ""
         console.print(f"  [yellow]this repo has no topology role declared{hint}[/yellow]")

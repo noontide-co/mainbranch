@@ -707,3 +707,14 @@ def test_no_profile_surface_remains() -> None:
     assert not hasattr(topology, "ROLE_TO_PROFILE")
     assert not hasattr(topology, "resolve_profile")
     assert not hasattr(topology, "child_profile_counts")
+
+
+def test_role_not_identified_finding_carries_example_snippet(tmp_path: Path) -> None:
+    (tmp_path / ".mainbranch").mkdir()
+    (tmp_path / ".mainbranch" / "conversion.json").write_text("{}", encoding="utf-8")
+    view = topology.collect(tmp_path)
+    flag = next(f for f in view["findings"] if f["code"] == "topology_role_not_identified")
+    assert flag["example_path"] == ".mainbranch/repo.json"
+    assert '"role": "site"' in flag["example"]
+    assert '"parent"' in flag["example"]
+    assert topology.CHILD_REPO_SCHEMA in flag["example"]
