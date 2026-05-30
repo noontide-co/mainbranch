@@ -71,8 +71,13 @@ One sentence holds the whole model:
 `role` is the single classifier — it answers "what kind of repo is this?" There
 is no separate "profile"; `mb` reads `role` to decide what to check.
 
+**Glossary:** the *hub* is a repo with `role: business` — the root of the tree.
+There is no `role: hub`; "hub" is the word for the business root. "Child repo"
+is likewise a position (it has a `parent`), not a role.
+
 `parent` is a position, not a kind. "Child repo" is **not** a role — any role
-can be a child of any other. Repos form a tree:
+can be a child of any other. `mb graph --tree` prints the actual shape. Repos
+form a tree:
 
 ```
 hub (role: business, no parent)

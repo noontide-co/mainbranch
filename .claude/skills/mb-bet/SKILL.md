@@ -72,7 +72,10 @@ work uses `pushes/`.
 A bet is not an offer. An offer is a durable thing the business sells. A bet is
 a time-boxed operating hypothesis with appetite, target, deadline, evidence,
 and a verdict. A successful bet may graduate into an offer, workflow, content
-pillar, push, or decision; a failed bet should be closed with learning.
+pillar, push, or decision; a failed bet should be closed with learning. If the
+graduated work earns its own repo, declare that repo's `role` and `parent` in
+`.mainbranch/repo.json` (e.g. `role: offer`, parent the hub) so it joins the
+repo tree instead of looking like its own hub.
 For the full offer/bet/push/proof routing rubric, use
 `.claude/reference/business-primitives/offer-bet-push-proof.md`.
 

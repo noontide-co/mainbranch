@@ -182,8 +182,10 @@ Route:
   rubric before deciding whether this is durable offer truth or a MoneyPath bet.
 - Keep raw ledgers, statements, credentials, account numbers, payroll rows, tax
   IDs, and exact private numbers out of the public/team-safe business repo.
-- Preserve public topology terms: hub repo, child repo, hub registry
-  `core/operations/repo-topology.md`, child descriptor `.mainbranch/repo.json`,
+- Preserve public topology terms: the hub (a repo with `role: business`, the
+  tree root), a child repo (any repo with a `parent` — "child" is a position,
+  not a kind), hub registry `core/operations/repo-topology.md`,
+  child descriptor `.mainbranch/repo.json` (carries `role` + `parent`),
   role `finance`, and visibility `restricted` or `local_only`.
 - Use the books contract fields, especially `storage_mode`, and the repo
   topology role `finance` with visibility `restricted` or `local_only` to
