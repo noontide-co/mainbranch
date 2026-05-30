@@ -11,6 +11,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.42] - 2026-05-29
+
 ### Added
 
 - Made repo `role` the single intentional classifier and started enforcing it.
