@@ -1747,7 +1747,12 @@ def validate_cmd(
         "--repo",
         help="Repo to validate. Alias for the positional PATH used by older scripts.",
     ),
-    verbose: bool = typer.Option(False, "-v", "--verbose"),
+    verbose: bool = typer.Option(
+        False,
+        "-v",
+        "--verbose",
+        help="Show full per-file detail; by default warnings-only files collapse into the summary.",
+    ),
     cross_refs: bool = typer.Option(
         False,
         "--cross-refs",
