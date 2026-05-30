@@ -331,3 +331,31 @@ def test_init_requires_name(tmp_path: Path, monkeypatch) -> None:
     target = tmp_path / "noname"
     result = run(path=str(target), name="")
     assert result["status"] == "error"
+
+
+def test_init_child_repo_writes_role_descriptor(tmp_path: Path) -> None:
+    target = tmp_path / "workshop-site"
+    result = run(path=str(target), name="Workshop Site", role="site", parent="example-co/example")
+    assert result["status"] == "ok"
+    assert result["mode"] == "child"
+    assert result["role"] == "site"
+    # lean child: descriptor written, NO business folder tree
+    import json
+
+    descriptor = json.loads((target / ".mainbranch" / "repo.json").read_text())
+    assert descriptor["role"] == "site"
+    assert descriptor["parent"]["remote"] == "github:example-co/example"
+    assert not (target / "core").exists()
+    assert not (target / "CLAUDE.md").exists()
+
+
+def test_init_child_repo_canonicalizes_legacy_role(tmp_path: Path) -> None:
+    result = run(path=str(tmp_path / "sidecar"), name="Ads data", role="integration_sidecar")
+    assert result["status"] == "ok"
+    assert result["role"] == "integration"
+
+
+def test_init_child_repo_rejects_unknown_role(tmp_path: Path) -> None:
+    result = run(path=str(tmp_path / "bad"), name="X", role="bogus")
+    assert result["status"] == "error"
+    assert "not in" in result["error"]

@@ -105,8 +105,11 @@ and the site record is typically `pushes/<YYYY-MM-DD-slug>/site.md`. Site
 files themselves live in the linked site repo (Cloudflare Pages, etc.) and
 are not duplicated in the business repo.
 
-Reverse references from the site repo should use the role-neutral
-`.mainbranch/repo.json` descriptor with engine push paths
+When creating a new site repo, scaffold its descriptor with
+`mb init <site-path> --role site --parent <hub-owner>/<hub-repo>` so the
+`.mainbranch/repo.json` declares `role: site` and the parent hub — a site repo
+must carry a role, never be left unidentified. Reverse references from the site
+repo use that `.mainbranch/repo.json` descriptor with engine push paths
 (`linked.pushes: ["pushes/<...>/push.md"]`). Existing site repos may still use
 `.mainbranch/source.json`; its historical `campaign_path` key should point
 at the current push record when possible. Treat old `campaigns/` records as

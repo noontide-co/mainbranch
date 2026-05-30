@@ -254,15 +254,42 @@ def init_cmd(
         "--owner-github",
         help="GitHub handle for the owner file, without @.",
     ),
+    role: str = typer.Option(
+        "",
+        "--role",
+        help="Scaffold a child repo with this topology role (e.g. site, offer) "
+        "instead of a full business hub. Writes .mainbranch/repo.json.",
+    ),
+    parent: str = typer.Option(
+        "",
+        "--parent",
+        help="Parent hub handle (owner/repo or github:owner/repo) for a child repo.",
+    ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
-    """Set up a fresh business repo (business folders, CLAUDE.md, git init)."""
-    result = init_mod.run(path=path, name=name, owner_name=owner_name, owner_github=owner_github)
+    """Set up a fresh business repo, or a child repo with --role (+ --parent)."""
+    result = init_mod.run(
+        path=path,
+        name=name,
+        owner_name=owner_name,
+        owner_github=owner_github,
+        role=role,
+        parent=parent,
+    )
     if json_out:
         typer.echo(json.dumps(result, indent=2))
     else:
         if result["status"] == "already-initialized":
             typer.echo(f"already set up at {result['path']} — nothing to do.")
+        elif result.get("mode") == "child":
+            parent_full = (result.get("parent") or {}).get("remote", "")
+            parent_txt = f" (parent {parent_full})" if parent_full else ""
+            typer.echo(f"set up child repo: role {result['role']}{parent_txt}.")
+            typer.echo("")
+            for line in result["created"]:
+                typer.echo(f"  + {line}")
+            typer.echo("")
+            typer.echo("next: edit content here; return to the hub for strategy and decisions.")
         elif result["status"] == "ok":
             typer.echo(f"set up {result['business_name']}.")
             typer.echo("")

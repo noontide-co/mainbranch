@@ -18,6 +18,7 @@ from typing import Any
 from mb import checkpoint as checkpoint_mod
 from mb import codex as codex_mod
 from mb import team as team_mod
+from mb import topology as topology_mod
 from mb.engine import link_skills
 from mb.migrate import LATEST_SCHEMA_VERSION, SCHEMA_MARKER
 
@@ -124,20 +125,61 @@ def _owner_slug(owner_name: str, github_handle: str) -> str:
     return slug or "owner"
 
 
+def _init_child_repo(target: Path, *, name: str, role: str, parent: str) -> dict[str, Any]:
+    """Scaffold a lean child repo: write the role descriptor + git-init only."""
+    try:
+        payload = topology_mod.write_child_descriptor(
+            target, role=role, display_name=name, parent_remote=parent
+        )
+    except ValueError as exc:
+        return {"status": "error", "path": str(target), "error": str(exc)}
+    created = [topology_mod.CHILD_REPO_RELATIVE_PATH.as_posix()]
+
+    if shutil.which("git") and not (target / ".git").exists():
+        try:
+            subprocess.run(
+                ["git", "init", "-q", "-b", "main"],
+                cwd=target,
+                check=True,
+                timeout=10,
+            )
+            created.append(".git/")
+        except subprocess.SubprocessError:
+            pass
+
+    return {
+        "status": "ok",
+        "path": str(target),
+        "created": created,
+        "role": payload["role"],
+        "parent": payload.get("parent", {}),
+        "mode": "child",
+    }
+
+
 def run(
     path: str,
     name: str,
     *,
     owner_name: str = "",
     owner_github: str = "",
+    role: str = "",
+    parent: str = "",
 ) -> dict[str, Any]:
     """Scaffold ``path`` as a Main Branch business repo.
+
+    When ``role`` is given and is not ``business``, scaffold a lean CHILD repo
+    instead: write ``.mainbranch/repo.json`` declaring the role (and ``parent``
+    hub when given) and git-init, without the full business folder tree.
 
     Returns a dict with ``status`` ∈ {ok, already-initialized, error},
     ``path`` (absolute), and ``created`` (list of relative paths created).
     """
     target = Path(path).resolve()
     target.mkdir(parents=True, exist_ok=True)
+
+    if role and topology_mod.canonical_role(role) != "business":
+        return _init_child_repo(target, name=name, role=role, parent=parent)
 
     if (target / "CLAUDE.md").exists():
         link_result = link_skills(target)
