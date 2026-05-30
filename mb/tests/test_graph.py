@@ -562,3 +562,71 @@ def test_linked_data_sources_become_edges(tmp_path: Path) -> None:
     assert "linked_data_sources" in edge_types
     registry = index["registry"]["relationships"]
     assert any(entry["canonical_type"] == "data_source" for entry in registry)
+
+
+def _write_tree_registry(repo: Path) -> None:
+    reg = repo / "core" / "operations" / "repo-topology.md"
+    reg.parent.mkdir(parents=True, exist_ok=True)
+    reg.write_text(
+        "---\n"
+        "type: repo_topology\n"
+        "schema: mb.repo_topology.v0\n"
+        "business_display_name: Example\n"
+        "repos:\n"
+        "  - slug: hub\n"
+        "    display_name: Hub\n"
+        "    role: business\n"
+        "    relationship: hub_for\n"
+        "  - slug: workshop-offer\n"
+        "    display_name: Workshop offer\n"
+        "    role: offer\n"
+        "    parent: hub\n"
+        "  - slug: workshop-site\n"
+        "    display_name: Workshop site\n"
+        "    role: site\n"
+        "    parent: workshop-offer\n"
+        "  - slug: books\n"
+        "    display_name: Books\n"
+        "    role: finance\n"
+        "    visibility: restricted\n"
+        "    parent: hub\n"
+        "---\n# topo\n",
+        encoding="utf-8",
+    )
+
+
+def test_repo_tree_renders_nested_parents(tmp_path: Path) -> None:
+    from mb.graph import build_repo_tree_text
+
+    _write_tree_registry(tmp_path)
+    tree = build_repo_tree_text(str(tmp_path))
+    lines = tree.splitlines()
+    assert lines[0] == "hub (role: business)"
+    # site is a grandchild of the hub (child of the offer), shown indented under it.
+    assert any("workshop-offer (role: offer)" in line for line in lines)
+    assert any("workshop-site (role: site)" in line for line in lines)
+    assert any("books (role: finance) [restricted]" in line for line in lines)
+    offer_idx = next(i for i, line in enumerate(lines) if "workshop-offer" in line)
+    site_idx = next(i for i, line in enumerate(lines) if "workshop-site" in line)
+    assert site_idx > offer_idx
+    assert len(lines[site_idx]) - len(lines[site_idx].lstrip()) > (
+        len(lines[offer_idx]) - len(lines[offer_idx].lstrip())
+    )
+
+
+def test_repo_tree_empty_when_no_registry(tmp_path: Path) -> None:
+    from mb.graph import build_repo_tree_text
+
+    assert "No repo topology registry" in build_repo_tree_text(str(tmp_path))
+
+
+def test_graph_tree_cli_flag(tmp_path: Path) -> None:
+    _write_tree_registry(tmp_path)
+    result = runner.invoke(app, ["graph", str(tmp_path), "--tree"])
+    assert result.exit_code == 0
+    assert "hub (role: business)" in result.stdout
+
+
+def test_graph_tree_flag_conflicts_with_json(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["graph", str(tmp_path), "--tree", "--json"])
+    assert result.exit_code != 0

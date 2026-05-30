@@ -1781,10 +1781,16 @@ def graph_cmd(
     path: str = typer.Argument(".", help="Repo to graph."),
     open_after: bool = typer.Option(False, "--open", help="Render to PNG and open."),
     json_out: bool = typer.Option(False, "--json", help="Emit the machine-readable graph index."),
+    tree: bool = typer.Option(
+        False, "--tree", help="Print the repo tree (role + parent) as owner-facing text."
+    ),
 ) -> None:
-    """Build the repo graph index; emit DOT by default or JSON with --json."""
-    if json_out and open_after:
-        raise typer.BadParameter("--open cannot be combined with --json")
+    """Build the repo graph index; emit DOT by default, the repo tree with --tree, or JSON."""
+    if sum(bool(flag) for flag in (json_out, open_after, tree)) > 1:
+        raise typer.BadParameter("--tree, --json, and --open cannot be combined")
+    if tree:
+        typer.echo(graph_mod.build_repo_tree_text(path))
+        return
     index = graph_mod.build_index(path=path)
     if json_out:
         typer.echo(json.dumps(index, indent=2))

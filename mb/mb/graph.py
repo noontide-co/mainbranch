@@ -845,3 +845,56 @@ def open_dot(dot: str) -> None:
         raise RuntimeError(f"dot failed: {proc.stderr}")
     opener = "open" if platform.system() == "Darwin" else "xdg-open"
     subprocess.run([opener, png_path], check=False)
+
+
+def build_repo_tree_text(path: str | Path) -> str:
+    """Render the repo topology as an owner-facing ASCII tree.
+
+    Walks ``parent`` pointers from the registry so the operator sees the actual
+    shape — hub at the root, children (and children of children) underneath —
+    instead of a DOT graph. Role is the label; non-public visibility is noted.
+    """
+    registry = topology_mod.read_registry(Path(path))
+    if not registry.get("found"):
+        return "No repo topology registry yet (core/operations/repo-topology.md)."
+    if not registry.get("ok"):
+        return f"Repo topology registry is unusable: {registry.get('error') or 'unknown error'}"
+
+    repos = registry.get("repos") or []
+    slugs = {str(r.get("slug")) for r in repos if r.get("slug")}
+    children: dict[str, list[dict[str, Any]]] = {}
+    roots: list[dict[str, Any]] = []
+    for entry in repos:
+        parent = str(entry.get("parent") or "")
+        if parent and parent in slugs:
+            children.setdefault(parent, []).append(entry)
+        else:
+            roots.append(entry)
+    # Hub(s) first, then by slug for stable output.
+    roots.sort(key=lambda r: (0 if r.get("is_hub") else 1, str(r.get("slug"))))
+    for kids in children.values():
+        kids.sort(key=lambda r: str(r.get("slug")))
+
+    def label(entry: dict[str, Any]) -> str:
+        slug = str(entry.get("slug") or "?")
+        role = str(entry.get("role") or "?")
+        visibility = str(entry.get("visibility") or "")
+        suffix = f" [{visibility}]" if visibility and visibility != "public" else ""
+        return f"{slug} (role: {role}){suffix}"
+
+    lines: list[str] = []
+
+    def walk(entry: dict[str, Any], prefix: str, is_last: bool) -> None:
+        connector = "└── " if is_last else "├── "
+        lines.append(prefix + connector + label(entry))
+        kids = children.get(str(entry.get("slug")), [])
+        child_prefix = prefix + ("    " if is_last else "│   ")
+        for index, kid in enumerate(kids):
+            walk(kid, child_prefix, index == len(kids) - 1)
+
+    for root in roots:
+        lines.append(label(root))
+        kids = children.get(str(root.get("slug")), [])
+        for index, kid in enumerate(kids):
+            walk(kid, "", index == len(kids) - 1)
+    return "\n".join(lines)
