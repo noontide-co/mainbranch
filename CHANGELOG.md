@@ -11,6 +11,26 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Stretched repo `role` across the CLI, docs, and skills as the single repo
+  classifier (MAIN-475). `mb status` now shows the current repo's `role` and
+  `parent`; `mb graph --tree` renders the repo tree (hub → children, walking
+  `parent`); the `topology_role_not_identified` finding carries a copy-pasteable
+  `.mainbranch/repo.json` example. `mb init --role <role> --parent <owner/repo>`
+  scaffolds a lean child repo (writes the role descriptor + git-init, no
+  business-folder tree) so a freshly created site repo passes `mb status` with no
+  missing-role flag; `/mb-site` uses it to declare `role: site`. Docs/skills now
+  teach the model (hub = `role: business` root; "child" is a position, not a
+  kind; children can have children) and a glossary rules out `role: hub`.
+
+### Changed
+
+- Renamed the `integration_sidecar` topology role to `integration`. The old
+  spelling is accepted as a legacy alias and normalized to `integration` on
+  read, so existing descriptors and registries stay valid; `mb validate` nudges
+  toward the canonical name. Refs #796.
+
 ## [0.3.42] - 2026-05-29
 
 ### Added

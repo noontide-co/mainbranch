@@ -51,7 +51,7 @@ Fields:
 | Field | Meaning |
 | --- | --- |
 | `schema` | Descriptor schema. Use `mb.child_repo.v0`. |
-| `role` | What the repo *is* (see [The repo tree](#the-repo-tree)): `business`, `site`, `offer`, `product`, `client`, `finance`, `legal`, `ops`, `integration_sidecar`, `experiment`, or `archive`. |
+| `role` | What the repo *is* (see [The repo tree](#the-repo-tree)): `business`, `site`, `offer`, `product`, `client`, `finance`, `legal`, `ops`, `integration`, `experiment`, or `archive`. |
 | `display_name` | Human-readable child repo name. This is not the GitHub repo name. |
 | `github_owner` / `repo_name` | Durable technical handle for this child repo. |
 | `safe_purpose` | Public-safe reason the child repo exists. |
@@ -102,7 +102,7 @@ The roles:
 | `finance` | Ledgers, bookkeeping, tax, payroll, P&L sources. Private. |
 | `legal` | Contracts, disputes, entity docs, legal review. Private. |
 | `ops` | Infrastructure, runbooks, internal routines, provider setup. |
-| `integration_sidecar` | A helper repo that emits approved provider/analytics summaries. |
+| `integration` | A helper repo that emits approved provider/analytics summaries. |
 | `experiment` | Exploratory work that may graduate, pause, or die. |
 | `archive` | Retired or historical material kept for reference. |
 
@@ -204,7 +204,7 @@ Integration sidecars may declare what they safely produce:
 ```json
 {
   "schema": "mb.child_repo.v0",
-  "role": "integration_sidecar",
+  "role": "integration",
   "display_name": "Example analytics sidecar",
   "github_owner": "example-co",
   "repo_name": "example-analytics",

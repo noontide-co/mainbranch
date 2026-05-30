@@ -13,6 +13,12 @@ linked_decisions:
 tags: [v0-3, topology, dashboard, graph, status, state-model]
 ---
 
+> **Amendment (2026-05-30, MAIN-475):** the role formerly written
+> `integration_sidecar` is now `integration`. The engine accepts the old
+> spelling as a legacy alias (normalized to `integration` on read), so existing
+> descriptors stay valid. The "repo profile" layer explored in MAIN-463 was
+> rejected; `role` is the single repo classifier.
+
 # Business Repo Topology Map
 
 ## Decision
@@ -62,7 +68,7 @@ in operator copy.
 | `finance` | Finance repo | Ledgers, bookkeeping exports, tax docs, payroll, or sensitive P&L sources require private access. |
 | `legal` | Legal repo | Contracts, disputes, entity docs, or legal reviews require private access. |
 | `ops` | Ops repo | Infrastructure, runbooks, internal routines, or provider setup has a separate authority boundary. |
-| `integration_sidecar` | Integration sidecar | A helper repo/tool produces structured provider, analytics, enrichment, deployment data, raw provider caches, metrics databases, connector glue, or large exports. |
+| `integration` | Integration sidecar | A helper repo/tool produces structured provider, analytics, enrichment, deployment data, raw provider caches, metrics databases, connector glue, or large exports. |
 | `experiment` | Experiment repo | Work is exploratory and may graduate, pause, or die without becoming core truth. |
 | `archive` | Archive repo | Inert imports, retired projects, or historical material are kept for reference only. |
 
@@ -472,7 +478,7 @@ admin repo exists only if that is safe for the hub repo's audience.
 
 ```text
 github.com/example-co/example           # role: business, private/team
-github.com/example-co/example-cli       # role: product or integration_sidecar, public OSS
+github.com/example-co/example-cli       # role: product or integration, public OSS
 github.com/example-co/example-site      # role: site, public deployable surface
 github.com/example-co/example-admin     # role: finance/legal, restricted
 ```
@@ -514,7 +520,7 @@ or decision that explains the graduation.
 ```text
 github.com/example-co/example           # role: business
 github.com/example-co/example-site      # role: site
-github.com/example-co/example-ads-data  # role: integration_sidecar, restricted
+github.com/example-co/example-ads-data  # role: integration, restricted
 ```
 
 The business repo stores the offer, bet, push, playbook run record, approval
