@@ -1061,7 +1061,12 @@ def _check_repo_topology_frontmatter(
         _require_topology_repo_string(repo_entry, "display_name", errors, prefix=prefix)
 
         role = _require_topology_repo_string(repo_entry, "role", errors, prefix=prefix)
-        if role and role not in TOPOLOGY_ROLE:
+        if role and role in topology.ROLE_ALIASES:
+            warnings.append(
+                f"{prefix}.role={role!r} is a legacy alias; use "
+                f"{topology.ROLE_ALIASES[role]!r} instead"
+            )
+        elif role and role not in TOPOLOGY_ROLE:
             errors.append(f"{prefix}.role={role!r} not in {sorted(TOPOLOGY_ROLE)}")
 
         lifecycle = _require_topology_repo_string(repo_entry, "lifecycle", errors, prefix=prefix)

@@ -38,11 +38,23 @@ TOPOLOGY_ROLES = frozenset(
         "finance",
         "legal",
         "ops",
-        "integration_sidecar",
+        "integration",
         "experiment",
         "archive",
     }
 )
+
+# Legacy role spellings normalized to the canonical role on read. Existing
+# descriptors/registries stay valid; new writes use the canonical name.
+ROLE_ALIASES: dict[str, str] = {"integration_sidecar": "integration"}
+
+
+def canonical_role(role: Any) -> str:
+    """Return the canonical role, mapping legacy aliases (e.g. integration_sidecar)."""
+    value = _string(role)
+    return ROLE_ALIASES.get(value, value)
+
+
 TOPOLOGY_LIFECYCLES = frozenset({"proposed", "active", "paused", "superseded", "archived"})
 TOPOLOGY_VISIBILITIES = frozenset({"public", "team_private", "restricted", "local_only"})
 TOPOLOGY_RELATIONSHIPS = frozenset(
@@ -235,7 +247,7 @@ def _normalize_repo_entry(entry: dict[str, Any]) -> dict[str, Any]:
     extras = sorted(
         str(key) for key in entry if isinstance(key, str) and key not in KNOWN_TOPOLOGY_KEYS
     )
-    role = _string(entry.get("role"))
+    role = canonical_role(entry.get("role"))
     is_hub = role == "business" or "hub_for" in relationships
     domain = _string(entry.get("domain"))
     return {
@@ -427,7 +439,7 @@ def _normalize_repo_json(payload: dict[str, Any], rel: str) -> dict[str, Any]:
         local_checkout = ""
     else:
         local_checkout = local_checkout_raw
-    role = _string(payload.get("role"))
+    role = canonical_role(payload.get("role"))
     return {
         "found": True,
         "kind": "repo_json",
@@ -535,6 +547,39 @@ def read_child_descriptor(repo: Path) -> dict[str, Any]:
             return empty
         return _normalize_legacy_source(payload, LEGACY_SITE_RELATIVE_PATH.as_posix())
     return _empty_descriptor()
+
+
+def write_child_descriptor(
+    repo: Path,
+    *,
+    role: str,
+    display_name: str = "",
+    parent_remote: str = "",
+) -> dict[str, Any]:
+    """Write ``.mainbranch/repo.json`` declaring this repo's role (and parent).
+
+    The role is the single classifier; the optional parent links the child back
+    to its hub. Raises ``ValueError`` for an unknown role. Returns the public
+    payload that was written.
+    """
+    role_value = canonical_role(role)
+    if role_value not in TOPOLOGY_ROLES:
+        raise ValueError(f"role {role!r} not in {sorted(TOPOLOGY_ROLES)}")
+    payload: dict[str, Any] = {"schema": CHILD_REPO_SCHEMA, "role": role_value}
+    if display_name.strip():
+        payload["display_name"] = display_name.strip()
+    parent_full = normalize_remote(parent_remote)
+    if parent_full:
+        owner, _, name = parent_full.partition("/")
+        payload["parent"] = {
+            "github_owner": owner,
+            "repo_name": name,
+            "remote": f"github:{parent_full}",
+        }
+    target = repo / CHILD_REPO_RELATIVE_PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return payload
 
 
 # ---------------------------------------------------------------------------

@@ -2295,3 +2295,24 @@ def test_render_human_collapses_warnings_by_default(tmp_path: Path, capsys) -> N
     verbose_out = capsys.readouterr().out
     # Verbose restores the full per-file detail for power users.
     assert verbose_out.count("2026-04-29-link-") == 40
+
+
+def test_validate_accepts_integration_role(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "core" / "operations" / "repo-topology.md",
+        _repo_topology().replace("    role: site\n", "    role: integration\n"),
+    )
+    report = run(path=str(tmp_path))
+    bad = [f for f in report["files"] if f["schema"] == "repo-topology"][0]
+    assert not any("role='integration'" in e for e in bad["errors"])
+
+
+def test_validate_warns_on_legacy_integration_sidecar_alias(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "core" / "operations" / "repo-topology.md",
+        _repo_topology().replace("    role: site\n", "    role: integration_sidecar\n"),
+    )
+    report = run(path=str(tmp_path))
+    topo = [f for f in report["files"] if f["schema"] == "repo-topology"][0]
+    assert not any("integration_sidecar" in e and "not in" in e for e in topo["errors"])
+    assert any("legacy alias" in w for w in topo["warnings"])

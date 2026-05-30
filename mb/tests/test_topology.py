@@ -718,3 +718,50 @@ def test_role_not_identified_finding_carries_example_snippet(tmp_path: Path) -> 
     assert '"role": "site"' in flag["example"]
     assert '"parent"' in flag["example"]
     assert topology.CHILD_REPO_SCHEMA in flag["example"]
+
+
+# ---------------------------------------------------------------------------
+# Role rename (integration) + write_child_descriptor (MAIN-475)
+# ---------------------------------------------------------------------------
+
+
+def test_integration_is_canonical_and_legacy_alias_normalizes() -> None:
+    assert "integration" in topology.TOPOLOGY_ROLES
+    assert "integration_sidecar" not in topology.TOPOLOGY_ROLES
+    assert topology.canonical_role("integration_sidecar") == "integration"
+    assert topology.canonical_role("integration") == "integration"
+    assert topology.canonical_role("site") == "site"
+
+
+def test_read_child_descriptor_normalizes_legacy_integration_role(tmp_path: Path) -> None:
+    _write_repo_json(
+        tmp_path,
+        {"schema": topology.CHILD_REPO_SCHEMA, "role": "integration_sidecar"},
+    )
+    assert topology.read_child_descriptor(tmp_path)["role"] == "integration"
+
+
+def test_write_child_descriptor_writes_role_and_parent(tmp_path: Path) -> None:
+    payload = topology.write_child_descriptor(
+        tmp_path, role="site", display_name="Workshop site", parent_remote="example-co/example"
+    )
+    assert payload["role"] == "site"
+    assert payload["parent"]["github_owner"] == "example-co"
+    on_disk = json.loads((tmp_path / ".mainbranch" / "repo.json").read_text())
+    assert on_disk["schema"] == topology.CHILD_REPO_SCHEMA
+    assert on_disk["role"] == "site"
+    assert on_disk["parent"]["remote"] == "github:example-co/example"
+    # round-trips with no missing-role flag
+    view = topology.collect(tmp_path)
+    assert view["summary"]["current_repo_role"] == "site"
+    assert "topology_role_not_identified" not in {f["code"] for f in view["findings"]}
+
+
+def test_write_child_descriptor_canonicalizes_and_rejects_bad_role(tmp_path: Path) -> None:
+    assert topology.write_child_descriptor(tmp_path, role="integration_sidecar")["role"] == (
+        "integration"
+    )
+    import pytest
+
+    with pytest.raises(ValueError):
+        topology.write_child_descriptor(tmp_path, role="bogus")
