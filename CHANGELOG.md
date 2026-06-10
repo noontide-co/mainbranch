@@ -11,6 +11,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- Made the fixture-safe image rail provider-pluggable behind an explicit
+  provider registry in `image_rail.py`. `mb image smoke-openai` keeps
+  byte-identical default behavior, and a new `mb image smoke-fal` surface
+  smokes the fal.ai FLUX sync endpoint (`fal-ai/flux/dev`) with the same
+  approval gate, review board, media-storage boundary, and committed
+  `image-index.md` record. Provider selection is explicit config only — a
+  local `FAL_KEY` (read environment-first, never printed or committed) never
+  auto-selects fal.ai, and the concept-review/safety/placement logic stays
+  provider-agnostic.
+
 ### Fixed
 
 - Fixed `bundled_skills()` treating any directory under the engine root's

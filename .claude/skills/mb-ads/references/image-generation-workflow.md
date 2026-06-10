@@ -584,15 +584,16 @@ Use the provider and model verified for this run. Do not hard-code a private
 environment file, assume a provider is configured, or claim Main Branch supports
 image generation because this reference exists.
 
-Current provider notes checked 2026-05-13 against the accepted creative media
-generation decision:
+Current provider notes checked 2026-05-13 (fal.ai row checked 2026-06-10)
+against the accepted creative media generation decision:
 `decisions/2026-05-13-creative-media-generation-rails.md`.
 
 | Provider | Model family | Use |
 | --- | --- | --- |
-| OpenAI Image API / Responses API | `gpt-image-2` | First readiness target for fixture-safe static image generation/editing. Use only when configured for the run and record the exact model/snapshot. |
+| OpenAI Image API / Responses API | `gpt-image-2` | Default smoked rail for fixture-safe static image generation/editing. Use only when configured for the run and record the exact model/snapshot. |
+| fal.ai sync API (`fal.run`) | `fal-ai/flux/dev` (FLUX) | Explicitly selected alternative smoked rail with the same approval, credential, review, and `image-index.md` boundary as the OpenAI rail. Selection is explicit config; a local `FAL_KEY` never auto-selects fal.ai. |
 | Google Gemini API | Nano Banana image-model family | Candidate comparison rail for future work. Do not treat it as proven ad-grade output until a smoke/test run records the current exact model ID, prompt, output, review notes, and final asset quality. |
-| BFL FLUX.2 / ComfyUI | FLUX.2 family | Candidate local/private or heavy-reference rail after the OpenAI rail and metadata contract are stable. |
+| BFL FLUX.2 / ComfyUI | FLUX.2 family | Candidate local/private or heavy-reference rail beyond the smoked fal.ai FLUX endpoint, after the metadata contract proves out. |
 | Manual provider use | `manual` | Safe fallback when no approved provider is configured. Save prompts and asset records for the operator to use manually. |
 
 If model names or pricing matter to the recommendation, check the provider's
@@ -706,18 +707,27 @@ claim. The first shipped smoke surface is narrower:
 ```bash
 mb image smoke-openai --repo "$BUSINESS_REPO" --json
 mb image smoke-openai --repo "$BUSINESS_REPO" --generate --json
+mb image smoke-fal --repo "$BUSINESS_REPO" --json
+mb image smoke-fal --repo "$BUSINESS_REPO" --generate --json
 ```
 
 Run without `--generate` to create a safe blocked record. Add `--generate` only
-after the operator approves one fixture-safe provider call and local OpenAI
+after the operator approves one fixture-safe provider call and local provider
 credentials are available outside chat and tracked repo files.
+
+Provider selection is explicit: each smoke command names exactly one provider,
+and the OpenAI rail stays the default. `mb image smoke-fal` uses the fal.run
+sync endpoint with a local `FAL_KEY` (environment-first); the presence of a
+`FAL_KEY` never switches the OpenAI surfaces to fal.ai.
 
 ---
 
 ## Generation via Python SDK
 
-The `mb image smoke-openai` command owns the first fixture-safe smoke path.
-When generation is approved, it uses the OpenAI Python SDK shape below and
+The `mb image smoke-openai` command owns the default fixture-safe smoke path;
+`mb image smoke-fal` follows the same record and storage boundary over the
+fal.run REST endpoint without an extra SDK dependency.
+When generation is approved, the OpenAI rail uses the Python SDK shape below and
 writes the binary to configured media storage while committing only the
 push-local `image-index.md` record. MCP servers, runtime-native image tools, or
 another SDK can be used only when they are configured for the run and the
