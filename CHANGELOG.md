@@ -22,6 +22,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   local `FAL_KEY` (read environment-first, never printed or committed) never
   auto-selects fal.ai, and the concept-review/safety/placement logic stays
   provider-agnostic.
+- Added an SEO reference layer to the bundled `/mb-site` skill
+  (`.claude/skills/mb-site/references/seo.md`): the content-silo ranking model
+  (service × location pages rank, the homepage converts), low-volume/
+  low-competition keyword selection math, PageSpeed thresholds (sub-1.5 s,
+  90+), blog-with-purpose and backlink-cadence rules (5-10/mo, directories
+  first), case-studies-are-conversion-not-ranking, AI search as traditional
+  SEO plus reputation signals, an API-first data layer (Google Ads
+  `KeywordPlanIdeaService` + DataForSEO SERP/Labs + GSC Search Analytics,
+  framed as future `mb connect` providers; enterprise tool APIs explicitly
+  skipped), and the monthly fulfillment loop with the 6-12 month horizon.
+  `/mb-site` routes to the reference when a site goal includes ranking or
+  organic search traffic.
 
 ### Fixed
 
