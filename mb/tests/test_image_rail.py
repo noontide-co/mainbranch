@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import base64
 import json
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
 import yaml
 from typer.testing import CliRunner
 
@@ -438,6 +440,295 @@ def test_openai_image_smoke_provider_failure_writes_sanitized_blocker(
     assert "RuntimeError" in text
     assert "secret-bearing provider details" not in text
     assert "test-key-not-written" not in text
+
+
+def test_fal_image_smoke_writes_safe_blocked_record(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.delenv("FAL_KEY", raising=False)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        [
+            "image",
+            "smoke-fal",
+            "--repo",
+            str(repo),
+            "--push-slug",
+            "2026-06-10-fake-fal-smoke",
+            "--docs-checked",
+            "2026-06-10",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["provider"] == "fal"
+    assert payload["model"] == "fal-ai/flux/dev"
+    assert payload["state"] == "blocked"
+    assert payload["blocker_code"] == "generation_not_approved"
+    assert payload["candidate_count"] == 9
+    assert payload["generated_count"] == 0
+    assert payload["output_record_written"] is True
+    assert payload["review_board_written"] is True
+    assert payload["binary_committed"] is False
+
+    index_path = repo / "pushes" / "2026-06-10-fake-fal-smoke" / "image-index.md"
+    record = _record_from_index(index_path)
+    asset = record["assets"][0]
+
+    assert record["schema"] == "mainbranch.image_index.v0"
+    assert record["visual_calibration_result"]["provider"] == "fal"
+    assert record["visual_calibration_result"]["model"] == "fal-ai/flux/dev"
+    assert record["dashboard_readiness"]["provider_readiness"]["provider"] == "fal"
+    assert "confirm_fal_image_credential_state" in record["dashboard_readiness"]["next_actions"]
+    assert "rerun_smoke_fal_with_generate" in record["dashboard_readiness"]["next_actions"]
+    assert asset["provider"] == "fal"
+    assert asset["model"] == "fal-ai/flux/dev"
+    assert asset["model_snapshot"] is None
+    assert asset["endpoint"] == "fal.run/fal-ai/flux/dev"
+    assert asset["credential_ref"] == "fal:image-generation"
+    assert asset["credential_state"] == "missing_env"
+    assert asset["asset_id"] == image_rail_mod.DEFAULT_FAL_ASSET_ID
+
+    text = index_path.read_text(encoding="utf-8")
+    assert "# Image Index - fal.ai Image Rail Smoke" in text
+    assert str(tmp_path) not in text
+    assert "FAL_KEY=" not in text
+    assert not list((repo / ".mb" / "media").rglob("*.png"))
+
+
+def test_fal_image_smoke_generate_without_key_blocks_cleanly(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.delenv("FAL_KEY", raising=False)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        [
+            "image",
+            "smoke-fal",
+            "--repo",
+            str(repo),
+            "--push-slug",
+            "2026-06-10-fake-fal-smoke",
+            "--docs-checked",
+            "2026-06-10",
+            "--generate",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["state"] == "blocked"
+    assert payload["blocker_code"] == "missing_fal_key"
+    assert payload["generated_count"] == 0
+
+    index_path = repo / "pushes" / "2026-06-10-fake-fal-smoke" / "image-index.md"
+    record = _record_from_index(index_path)
+    asset = record["assets"][0]
+    assert asset["blocker_code"] == "missing_fal_key"
+    assert "Do not paste provider keys" in asset["blocker"]
+
+
+def test_fal_image_smoke_generated_path_keeps_binary_in_media_cache(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    monkeypatch.setenv("FAL_KEY", "test-fal-key-not-written")
+    monkeypatch.setattr(image_rail_mod, "_fal_provider_blocker", lambda generate: ("", ""))
+    monkeypatch.setattr(
+        image_rail_mod,
+        "_generate_fal_image",
+        lambda prompt, *, model, size, quality: (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x04\x00\x00\x00\x06\x00fake-png-tail"
+        ),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "image",
+            "smoke-fal",
+            "--repo",
+            str(repo),
+            "--push-slug",
+            "2026-06-10-fake-fal-smoke",
+            "--docs-checked",
+            "2026-06-10",
+            "--generate",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["state"] == "generated"
+    assert payload["provider"] == "fal"
+    assert payload["candidate_count"] == 9
+    assert payload["generated_count"] == 9
+    assert payload["best_candidate"] == image_rail_mod.DEFAULT_FAL_ASSET_ID
+    assert payload["generated_dimensions"] == {"width": 1024, "height": 1536}
+    assert payload["binary_written"] is True
+    assert payload["binary_committed"] is False
+
+    media_path = (
+        repo
+        / ".mb"
+        / "media"
+        / "pushes"
+        / "2026-06-10-fake-fal-smoke"
+        / "images"
+        / "fake-fal-image-001.png"
+    )
+    assert media_path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+
+    index_path = repo / "pushes" / "2026-06-10-fake-fal-smoke" / "image-index.md"
+    record = _record_from_index(index_path)
+    assert all(asset["state"] == "generated" for asset in record["assets"])
+    text = index_path.read_text(encoding="utf-8")
+    assert str(media_path) not in text
+    assert "test-fal-key-not-written" not in text
+
+
+def test_fal_key_presence_does_not_auto_select_fal_provider(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("FAL_KEY", "test-fal-key-not-written")
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        [
+            "image",
+            "smoke-openai",
+            "--repo",
+            str(repo),
+            "--push-slug",
+            "2026-05-13-fake-openai-smoke",
+            "--docs-checked",
+            "2026-06-10",
+            "--generate",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["provider"] == "openai"
+    assert payload["blocker_code"] == "missing_openai_api_key"
+
+
+def test_image_provider_factory_rejects_unknown_provider() -> None:
+    with pytest.raises(ValueError) as excinfo:
+        image_rail_mod.image_provider("midjourney")
+
+    message = str(excinfo.value)
+    assert "midjourney" in message
+    assert "fal" in message
+    assert "openai" in message
+    assert "explicit" in message
+
+
+def test_generate_fal_image_decodes_data_uri_response(monkeypatch) -> None:
+    monkeypatch.setenv("FAL_KEY", "test-fal-key-not-written")
+    png_bytes = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x04\x00\x00\x00\x06\x00fake"
+    encoded = base64.b64encode(png_bytes).decode("ascii")
+    captured: dict[str, Any] = {}
+
+    class _FakeResponse:
+        def __init__(self, body: bytes) -> None:
+            self._body = body
+
+        def read(self) -> bytes:
+            return self._body
+
+        def __enter__(self) -> _FakeResponse:
+            return self
+
+        def __exit__(self, *exc_info: object) -> None:
+            return None
+
+    def fake_urlopen(request, timeout=None):
+        captured["request"] = request
+        captured["timeout"] = timeout
+        body = json.dumps({"images": [{"url": f"data:image/png;base64,{encoded}"}]})
+        return _FakeResponse(body.encode("utf-8"))
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+
+    image_bytes = image_rail_mod._generate_fal_image(
+        "fixture-safe fal prompt",
+        model="fal-ai/flux/dev",
+        size="1024x1536",
+        quality="default",
+    )
+
+    assert image_bytes == png_bytes
+    request = captured["request"]
+    assert request.full_url == "https://fal.run/fal-ai/flux/dev"
+    assert request.get_header("Authorization") == "Key test-fal-key-not-written"
+    request_payload = json.loads(request.data.decode("utf-8"))
+    assert request_payload["prompt"] == "fixture-safe fal prompt"
+    assert request_payload["image_size"] == {"width": 1024, "height": 1536}
+    assert request_payload["num_images"] == 1
+
+
+def test_generate_fal_image_rejects_missing_or_insecure_image_url(monkeypatch) -> None:
+    monkeypatch.setenv("FAL_KEY", "test-fal-key-not-written")
+
+    class _FakeResponse:
+        def __init__(self, body: bytes) -> None:
+            self._body = body
+
+        def read(self) -> bytes:
+            return self._body
+
+        def __enter__(self) -> _FakeResponse:
+            return self
+
+        def __exit__(self, *exc_info: object) -> None:
+            return None
+
+    responses = iter(
+        [
+            json.dumps({"images": []}).encode("utf-8"),
+            json.dumps({"images": [{"url": "http://insecure.example/fake.png"}]}).encode("utf-8"),
+        ]
+    )
+
+    monkeypatch.setattr(
+        "urllib.request.urlopen",
+        lambda request, timeout=None: _FakeResponse(next(responses)),
+    )
+
+    with pytest.raises(RuntimeError, match="did not include an image url"):
+        image_rail_mod._generate_fal_image(
+            "fixture-safe fal prompt",
+            model="fal-ai/flux/dev",
+            size="1024x1536",
+            quality="default",
+        )
+    with pytest.raises(RuntimeError, match="non-https image url"):
+        image_rail_mod._generate_fal_image(
+            "fixture-safe fal prompt",
+            model="fal-ai/flux/dev",
+            size="1024x1536",
+            quality="default",
+        )
 
 
 def test_image_concept_review_catches_unsafe_fixture_case() -> None:

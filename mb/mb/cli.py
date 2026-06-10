@@ -1767,6 +1767,69 @@ def image_smoke_openai_cmd(
     raise typer.Exit(0)
 
 
+@image_app.command("smoke-fal")
+def image_smoke_fal_cmd(
+    repo: str = typer.Option(
+        ".",
+        "--repo",
+        help="Business repo where the fake push-local image-index.md should be written.",
+    ),
+    push_slug: str = typer.Option(
+        image_rail_mod.DEFAULT_FAL_PUSH_SLUG,
+        "--push-slug",
+        help="Fake push slug for the fixture-safe smoke record.",
+    ),
+    docs_checked: str = typer.Option(
+        "",
+        "--docs-checked",
+        help="Provider docs checked date. Defaults to today in UTC.",
+    ),
+    media_root: str = typer.Option(
+        ".mb/media",
+        "--media-root",
+        help=(
+            "Private media storage root for the review board and any approved "
+            "9-candidate --generate batch binaries."
+        ),
+    ),
+    generate: bool = typer.Option(
+        False,
+        "--generate",
+        help=("Call fal.ai only when a local FAL_KEY exists and the operator approved generation."),
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Smoke the explicitly selected fal.ai FLUX rail with fake fixture context."""
+    result = image_rail_mod.smoke_fal(
+        repo=repo,
+        push_slug=push_slug,
+        docs_checked=docs_checked or _today_utc(),
+        media_root=media_root,
+        generate=generate,
+    )
+    if json_out:
+        typer.echo(
+            _json_payload(
+                result,
+                command="image smoke-fal",
+                schema_name="mainbranch.image.smoke_fal.v1",
+            )
+        )
+    elif result["state"] == "generated":
+        typer.echo("fal.ai image rail smoke generated a fixture-safe asset.")
+        typer.echo(f"record: {result['record_path']}")
+        typer.echo(f"review board: {result['review_board_path']}")
+        typer.echo(f"media:  {result['output_reference']}")
+        typer.echo("binary committed: false")
+    else:
+        typer.echo("fal.ai image rail smoke blocked safely.")
+        typer.echo(f"record: {result['record_path']}")
+        typer.echo(f"review board: {result['review_board_path']}")
+        typer.echo(f"reason: {result['blocker_code']}")
+        typer.echo("I will not ask you to paste provider keys into chat or repo files.")
+    raise typer.Exit(0)
+
+
 @app.command("validate")
 def validate_cmd(
     path: str = typer.Argument(".", help="Repo to validate."),
