@@ -11,6 +11,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed `bundled_skills()` treating any directory under the engine root's
+  `.claude/skills/` as a bundled skill. Leftover renamed or scratch
+  directories without a `SKILL.md` (for example pre-rename `start/` residue
+  holding only `.DS_Store`) are no longer linked into business repos,
+  gitignored, or re-created after legacy project symlink removal. This also
+  protects locally built wheels from packaging rename leftovers.
+
 ## [0.3.42] - 2026-05-29
 
 ### Added

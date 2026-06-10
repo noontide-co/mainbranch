@@ -98,11 +98,17 @@ def skills_dir(root: Path | None = None) -> Path | None:
 
 
 def bundled_skills() -> list[str]:
-    """Names of bundled skills, alphabetically."""
+    """Names of bundled skills, alphabetically.
+
+    Only directories carrying a ``SKILL.md`` count. A source checkout's engine
+    root is a live working tree, so leftover renamed or scratch directories
+    under ``.claude/skills/`` (for example a pre-rename ``start/`` holding only
+    ``.DS_Store``) must not be linked into business repos as skills.
+    """
     root = skills_dir()
     if root is None:
         return []
-    return sorted(d.name for d in root.iterdir() if d.is_dir())
+    return sorted(d.name for d in root.iterdir() if d.is_dir() and (d / "SKILL.md").is_file())
 
 
 def legacy_skill_name(name: str) -> str:
