@@ -559,6 +559,18 @@ def _check_push_frontmatter(path: Path, fm: dict[str, Any], errors: list[str]) -
     promise = fm.get("promise")
     if isinstance(promise, str) and len(promise.strip()) > 140:
         errors.append("promise must be 140 characters or fewer")
+    media_location = fm.get("media_location")
+    if "media_location" in fm and not (isinstance(media_location, str) and media_location.strip()):
+        errors.append("media_location must be a non-empty string when present")
+    if "media_backend" in fm:
+        media_backend = fm.get("media_backend")
+        if not (isinstance(media_backend, str) and media_backend.strip()):
+            errors.append("media_backend must be a non-empty string when present")
+        elif not (isinstance(media_location, str) and media_location.strip()):
+            errors.append(
+                "media_backend is set but media_location is missing — "
+                "record where the finished creative lives"
+            )
     goal = fm.get("goal")
     if "goal" not in fm:
         return

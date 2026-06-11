@@ -173,7 +173,12 @@ Canon (read on first iteration of a fresh session):
   where its conclusions codify") landed in mb-think research-phase +
   codify-phase references and docs/business-file-contracts.md: codify-up
   invariant, rebuild-tomorrow test, offer frontmatter in multi-offer
-  repos. This PR.
+  repos (#849 merged).
+- 2026-06-11: #803 slice — push frontmatter gains optional
+  media_location + media_backend (pushes.py parses them into facts;
+  validator: non-empty when present, backend requires location; mb-ads
+  push template asks "where do the finished files live?"). Full
+  contract promotion + lock/reconcile semantics stay on #803. This PR.
 
 ## Next intent
 

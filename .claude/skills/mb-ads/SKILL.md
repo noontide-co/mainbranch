@@ -111,7 +111,10 @@ The word "campaign" elsewhere in this skill refers to Meta Ads campaigns
 (the provider's term for its object) — not the Main Branch primitive.
 
 When creating `push.md`, include the validator-required frontmatter and fill
-the values from repo truth or operator answers:
+the values from repo truth or operator answers. When finished creative
+already exists outside git (a Drive folder, an export), ask "where do the
+finished files live?" and record `media_location` plus a `media_backend`
+hint (google-drive, r2, local, mb-media):
 
 ```yaml
 ---
@@ -125,31 +128,31 @@ owner: ""
 audience: ""
 offer: core/offers/<offer>/offer.md
 promise: ""
+media_location: ""   # optional — where binary creative lives
+media_backend: ""    # optional hint; requires media_location
 ---
 ```
 
-If the push is tied to a bet, decision, research file, playbook, or outcome,
-add the appropriate typed frontmatter link (`linked_bets`,
-`linked_decisions`, `linked_research`, `linked_playbooks`,
-`linked_outcomes`). Mirror frontmatter links in `## Related links` with
-Markdown relative links, or preview `mb doctor repair --plan` and ask before
-applying the repair. Use the connection decision matrix in
-docs/business-connections.md before adding typed links. Do not infer
-frontmatter links from body-only references.
+If the push ties to a bet, decision, research file, playbook, or outcome,
+add the typed frontmatter link (`linked_bets`, `linked_decisions`,
+`linked_research`, `linked_playbooks`, `linked_outcomes`) and mirror it in
+`## Related links` as Markdown relative links, or preview
+`mb doctor repair --plan` and ask first. Use the connection matrix in
+docs/business-connections.md; never infer links from body-only references.
 
 When an ad-adjacent workflow needs a resource-delivery plan, provider setup
-recipe, launch checklist, or external automation approval record, draft it as
-`pushes/<YYYY-MM-DD-slug>/playbooks/<playbook>.md` with `type: playbook`.
-Treat playbooks as plans and approval records only. Do not publish, schedule,
-DM, reply, mutate ad accounts, or claim a provider is supported unless `mb`
-and a shipped provider adapter prove that path with docs, tests, approval
-gates, and smoke evidence.
+recipe, launch checklist, or external automation approval record, draft it
+as `pushes/<YYYY-MM-DD-slug>/playbooks/<playbook>.md` with `type: playbook`
+— plans and approval records only. Do not publish, schedule, DM, reply,
+mutate ad accounts, or claim a provider is supported unless `mb` and a
+shipped provider adapter prove that path with docs, tests, approval gates,
+and smoke evidence.
 
 ## Step 0: Pre-Flight Readiness
 
-**Before triage, find the business repo, read deterministic Main Branch facts,
-then score ad-specific reference depth only when needed.** This prevents
-generating generic ads from thin reference without duplicating repo-health or
+**Before triage, find the business repo, read deterministic Main Branch
+facts, then score ad-specific reference depth only when needed.** This
+prevents generic ads from thin reference without duplicating repo-health or
 provider checks that `mb` already owns.
 
 ### 0a. Find Business Repo (REQUIRED — do this first)
@@ -158,27 +161,24 @@ provider checks that `mb` already owns.
 
 **CWD-first:** If current Main Branch markers exist in CWD, use it. If CWD looks like an old Main Branch repo, run `mb status --json --peek` and/or `mb doctor repair --plan` before saved config or discovery. Do not write to old repo structure.
 
-If CWD is NOT a business repo:
-
-Run:
+If CWD is NOT a business repo, run:
 
 ```bash
 mb status --json --peek
 ```
 
 - If status identifies a usable business repo, ask the user to confirm it.
-- If status cannot identify a repo, ask: "Which business repo should I use?
-  Give me the path."
+- If status cannot identify one, ask: "Which business repo should I use?"
 - If `/mb-ads` was invoked from `/mb-start`, the repo is already identified —
   use it without asking.
 
 **Always confirm the repo before proceeding.** Never assume.
 
-After the repo is confirmed, run `mb status --json --peek` from that repo. Use
-`readiness`, `drift.items`, `integrations`, `measurement`, and `ranked_actions`
-as the source of truth for setup, stale context, GitHub, provider readiness, and
-repair commands. Only run the direct scoring below for ad-specific creative
-depth when status is unavailable or lacks the needed ad-specific detail.
+After confirming, run `mb status --json --peek` from that repo. Use
+`readiness`, `drift.items`, `integrations`, `measurement`, and
+`ranked_actions` as the source of truth for setup, stale context, GitHub,
+provider readiness, and repair commands. Only run the direct scoring below
+when status is unavailable or lacks the needed ad-specific detail.
 
 When the request depends on a new, thin, or underperforming offer, load
 `.claude/reference/conversion/offer-sharpening.md` before writing hooks or
