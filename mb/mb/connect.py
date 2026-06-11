@@ -1282,16 +1282,72 @@ def hydrate(
     }
 
 
-def _stored_secret(provider: Provider, entry: dict[str, Any]) -> str:
+def _entry_secret_value(entry: dict[str, Any], field: str) -> str:
     stored_secrets = entry.get("secrets") if isinstance(entry.get("secrets"), dict) else {}
-    if not provider.required_secrets:
-        return ""
-    primary = provider.required_secrets[0]
-    raw = stored_secrets.get(primary) if isinstance(stored_secrets, dict) else None
+    raw = stored_secrets.get(field) if isinstance(stored_secrets, dict) else None
     raw = raw if isinstance(raw, dict) else {}
     ref = str(raw.get("ref") or "")
     backend = str(raw.get("backend") or "local-file")
     return SecretStore(backend).get(ref) if ref else ""
+
+
+def _stored_secret(provider: Provider, entry: dict[str, Any]) -> str:
+    if not provider.required_secrets:
+        return ""
+    return _entry_secret_value(entry, provider.required_secrets[0])
+
+
+def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
+    """Resolve the stored primary credential for scripted consumers.
+
+    The returned ``token`` exists to be written to stdout exactly once;
+    callers must never log it, persist it, or embed it in shareable output.
+    Falls back to user scope when the repo config has no entry, so worktrees
+    and scheduled tasks resolve the same credential as the primary checkout.
+    """
+    provider = normalize_provider(provider_id)
+    if not provider.required_secrets:
+        raise ValueError(f"provider {provider.id!r} stores no secrets")
+    field = provider.required_secrets[0]
+    target = Path(repo).resolve()
+    config = _read_config(target)
+    identity = _repo_identity(target)
+    repo_id = str(config.get("repo_id") or identity["repo_id"])
+    entry = config["providers"].get(provider.id)
+    source = "repo"
+    if not isinstance(entry, dict):
+        entry = _user_scope_provider_entry(repo_id, provider.id)
+        source = "user"
+    if not isinstance(entry, dict):
+        return {
+            "ok": False,
+            "provider": provider.id,
+            "field": field,
+            "source": "",
+            "token": "",
+            "error": f"{provider.name} is not connected",
+            "repair_command": f"mb connect {provider.id} --token-stdin",
+        }
+    token = _entry_secret_value(entry, field)
+    if not token:
+        return {
+            "ok": False,
+            "provider": provider.id,
+            "field": field,
+            "source": source,
+            "token": "",
+            "error": f"{provider.name} credential is missing or unreadable from the secret store",
+            "repair_command": f"mb connect {provider.id} --token-stdin",
+        }
+    return {
+        "ok": True,
+        "provider": provider.id,
+        "field": field,
+        "source": source,
+        "token": token,
+        "error": "",
+        "repair_command": "",
+    }
 
 
 def _provider_error_summary(provider_name: str, upstream: dict[str, Any]) -> str:

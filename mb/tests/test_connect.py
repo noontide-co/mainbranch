@@ -1565,3 +1565,87 @@ def test_macos_keychain_backend_uses_security(monkeypatch) -> None:
     assert calls
     assert calls[0][:3] == ["security", "add-generic-password", "-a"]
     assert "cf-token" in calls[0]
+
+
+def test_connect_token_prints_secret_to_stdout(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+
+    result = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
+
+    assert result.exit_code == 0
+    assert result.stdout == "cf-test-token\n"
+
+
+def test_connect_token_falls_back_to_user_scope(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-user-token", scope="user")
+    (repo / ".mb" / "connect.yaml").unlink()
+
+    result = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
+
+    assert result.exit_code == 0
+    assert result.stdout == "cf-user-token\n"
+
+
+def test_connect_token_not_connected_fails(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
+
+    assert result.exit_code == 1
+    assert result.stdout == ""
+    assert "not connected" in result.stderr
+    assert "mb connect cloudflare --token-stdin" in result.stderr
+
+
+def test_connect_token_missing_stored_secret_fails(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo)
+
+    result = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
+
+    assert result.exit_code == 1
+    assert result.stdout == ""
+    assert "missing or unreadable" in result.stderr
+
+
+def test_connect_token_requires_provider(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+
+    result = runner.invoke(app, ["connect", "token"])
+
+    assert result.exit_code == 2
+    assert "provider required" in result.stderr
+
+
+def test_connect_token_rejects_json(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+
+    result = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 2
+    assert result.stdout == ""
+    assert "--json is not supported" in result.stderr
+
+
+def test_connect_token_rejects_secretless_provider(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(app, ["connect", "token", "hledger", "--repo", str(repo)])
+
+    assert result.exit_code == 2
+    assert "stores no secrets" in result.stderr

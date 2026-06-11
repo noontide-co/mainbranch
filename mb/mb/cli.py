@@ -1070,7 +1070,10 @@ def issue_open_cmd(
 def connect_cmd(
     target: str = typer.Argument(
         "",
-        help="Provider to connect, or `list` / `plan` / `status` / `doctor` / `test` / `hydrate`.",
+        help=(
+            "Provider to connect, or `list` / `plan` / `status` / `doctor` / `test` / "
+            "`token` / `hydrate`."
+        ),
     ),
     provider: str = typer.Argument(
         "",
@@ -1170,6 +1173,31 @@ def connect_cmd(
         else:
             connect_mod.render_hydrate_result(result)
         raise typer.Exit(0 if result["ok"] else 1)
+    if target == "token":
+        if not provider:
+            typer.echo("mb connect token: provider required", err=True)
+            raise typer.Exit(2)
+        if json_out:
+            typer.echo(
+                "mb connect token: --json is not supported; the token is printed raw to stdout",
+                err=True,
+            )
+            raise typer.Exit(2)
+        try:
+            result = connect_mod.read_token(provider, repo)
+        except ValueError as exc:
+            typer.echo(f"mb connect token: {exc}", err=True)
+            raise typer.Exit(2) from exc
+        except connect_mod.ConfigBoundaryError as exc:
+            _connect_boundary_exit("mb connect token", exc)
+        if not result["ok"]:
+            typer.echo(f"mb connect token: {result['error']}", err=True)
+            if result["repair_command"]:
+                typer.echo(f"repair: {result['repair_command']}", err=True)
+            raise typer.Exit(1)
+        # The token is the entire stdout contract; nothing else may print here.
+        typer.echo(result["token"])
+        raise typer.Exit(0)
     if target == "test":
         if not provider:
             typer.echo("mb connect test: provider required", err=True)
