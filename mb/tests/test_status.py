@@ -1977,12 +1977,18 @@ def test_status_relationship_health_flags_active_bet_and_offer_gaps(
         "---\nslug: coaching\nstatus: running\n---\n\n# Coaching\n",
         encoding="utf-8",
     )
+    # Time-stable deadline (same convention as the brain-payload test below): the
+    # hardcoded 2026-05-31 deadline made this bet OVERDUE once real time passed it,
+    # and the overdue-bet action then outranked review_relationship_health out of
+    # the MAX_ACTIONS=3 cap — failing the ranked_actions assertion on every PR
+    # after that date. The bet must stay active-but-not-overdue forever.
+    deadline = date.today().replace(year=date.today().year + 1)
     (repo / "bets" / "2026-05-01-launch.md").write_text(
         (
             "---\n"
             "status: open\n"
             "opened: 2026-05-01\n"
-            "deadline: 2026-05-31\n"
+            f"deadline: {deadline.isoformat()}\n"
             "appetite: 2 weeks\n"
             "hypothesis: A launch push will create calls.\n"
             "metric: calls\n"
