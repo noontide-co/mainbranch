@@ -76,19 +76,16 @@ Canon (read on first iteration of a fresh session):
 ## Flagged for Devon
 
 - (10 open questions live in the 2026-06-11 decision; loop appends new ones here)
-- Open PRs #809, #810 (your feature branches) still fail Python CI on
-  pre-#822 runs; likely fixed by rebase. Loop rebased #811 (Devon asked
-  about symlinks) and triggered @dependabot rebase on #801/#802 — want the
-  loop to rebase + babysit #809/#810 too, or leave them to you?
 - First-win definition for the README "Set up with AI" prompt: loop chose
   "business folder with offer/audience/voice drafted and a clean `mb
   status`, then stop and show." Confirm or sharpen.
-- RESOLVED 2026-06-11: the local `test_link_skills_removes_legacy_project_
-  symlink` failure was a real engine bug (`bundled_skills()` trusted residue
-  dirs), not environment-specific — fixed by #811.
-- Priority order after the 2026-06-11 chat steering: loop is treating the
-  audit (PRs/CI/post-release) + session-log-mining as the next slices ahead
-  of #804, since Devon called the audit "first-class." Confirm or reorder.
+- Backlog audit 2026-06-11 (Devon: "be ruthless"): 15 issues closed with
+  rationale + reopen condition (#662 #649 #408 #647 #661 #774 #632 #515
+  #615 #613 #772 #775 #159 #735 #189). #152 (Joel lane) untouched per
+  guardrail. Skim the closures; reopen anything you disagree with.
+- RESOLVED: #809/#810 validated (agent merge-gate reviews), fixed where
+  needed (fal-rail FAL_KEY guard + HTTPError sanitization on #809),
+  rebased, merged. #801 closed by dependabot itself; #802 merged.
 
 ## Shipped
 
@@ -114,26 +111,35 @@ Canon (read on first iteration of a fresh session):
   verdict: steal; six-move paste-prompt anatomy documented.
 - 2026-06-11: README "Set up with AI (recommended)" section merged (#824) —
   the Morning Paper six-move paste-prompt adapted to Main Branch.
-- 2026-06-11: CI hardening — concurrency cancel-in-progress on PR re-push,
-  job timeouts (25/15/30/5 min), docs-lint job mirroring check.sh's docs
-  naming gate. This PR.
+- 2026-06-11: CI hardening merged (#825) — concurrency cancel-in-progress,
+  job timeouts (25/15/30/5 min), docs-lint job mirroring check.sh.
+- 2026-06-11: Devon granted merge autonomy ("validated → keep merging") +
+  directed issue-tracker use + ruthless backlog audit. Merge train cleared:
+  #809 (fal image rail, hardened per review), #802 (dependabot), #810
+  (mb-site SEO reference) all merged. Issue queue refreshed: #826 (release
+  preflight), #827 (docs-lint required-check flip), #828 (setup-prompt
+  canonicalization, absorbed #632), #829 (BOR session mining) filed;
+  15 misaligned issues closed; #735 folded into #741; #764 rescoped to
+  "integrate impeccable/Corey as curated dependencies."
+- 2026-06-11: test prompts handed to Devon for the BOR / Awake Happy /
+  Morning Paper loop sessions (worktree-skill repair field test, setup-
+  prompt cold read, plugin Stage 1 smoke after v0.3.43). This PR.
 
 ## Next intent
 
-- CI hardening remainder: `scripts/release-preflight.sh` (3-file version
-  sync + manifest pytest) referenced from release-agent-contract.md.
-- After the docs-lint job proves green on a real PR: add "Docs naming
-  convention" to required status checks in branch protection (admin
-  mutation — loop will do it unless Devon objects).
-- Setup-prompt follow-through: canonicalize the prompt (replace the
-  defensive one in docs/beginner-setup.md lines 51–77) + teach
-  mb-setup/mb-start to recognize the pasted README prompt as setup intent.
-- #804 via #811 Stage 2: plugin-aware `link_status()` + tracked
-  `.claude/settings.json` wiring; auto-heal hint on `mb start`/`mb doctor`.
-- BOR session mining workflow: 12 day-chunks of `f29d63c5…` + the
-  crazy-albattani closer; distiller pass first (drop tool_result bodies,
-  redact token patterns), then fan-out extraction (intents, friction,
-  primitives coverage, mb/skill invocations, AskUserQuestion decisions),
-  then synthesis: timeline + friction leaderboard + primitives map.
-- Migrate the BOR daily-brief keychain block to `mb connect token` once #812
-  ships in a release (read-only change in the bookedoutroofers repo).
+Working practice (from Devon's 2026-06-11 grants): validate → merge without
+asking; every slice references its issue and closes it via PR body; new
+findings become issues (LOOP-STATE keeps ordering, issues keep content).
+
+- #603 (dashboard PR, month old): staleness review in flight — merge after
+  rebase, fix, or close-and-salvage into #599 per verdict.
+- Release prep v0.3.43: today's merges (#823 #811 #824 #825 #809 #802 #810)
+  are unreleased; cut the release so the business loops can `mb update`
+  into them. Build `scripts/release-preflight.sh` (#826) as part of prep.
+- #827: docs-lint ran green on real PRs today — flip to required check.
+- #828 setup-prompt canonicalization; #804 via #811 Stage 2 (plugin-aware
+  `link_status()`, tracked settings wiring, auto-heal hint).
+- #829 BOR session mining workflow: distill 12 day-chunks (drop tool_result
+  bodies, redact token patterns), fan-out extraction, synthesis report.
+- Migrate the BOR daily-brief keychain block to `mb connect token` once
+  v0.3.43 ships (read-only change in the bookedoutroofers repo).
