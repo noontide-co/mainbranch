@@ -851,6 +851,12 @@ def build(repo: str | Path = ".", output: str | Path | None = None) -> dict[str,
     html_text = render_html(data)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(html_text, encoding="utf-8")
+    # Self-ignoring output dir: the rendered dashboard is local-only state,
+    # and "committed_by_default: False" must be enforced by git, not prose.
+    if _is_relative_to(output_path, root):
+        ignore_path = output_path.parent / ".gitignore"
+        if not ignore_path.exists():
+            ignore_path.write_text("*\n", encoding="utf-8")
     return {
         "ok": True,
         "schema_version": DASHBOARD_SCHEMA_VERSION,

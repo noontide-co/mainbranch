@@ -40,6 +40,9 @@ def test_dashboard_builds_static_html_without_ad_context(tmp_path: Path) -> None
     assert "Read-only visual map" in html
     assert str(repo) not in html
 
+    ignore_path = repo / ".mb" / "dashboard" / ".gitignore"
+    assert ignore_path.read_text(encoding="utf-8") == "*\n"
+
 
 def test_dashboard_reads_image_index_candidate_state(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
