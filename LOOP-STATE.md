@@ -138,8 +138,12 @@ Canon (read on first iteration of a fresh session):
   day), unverified provider writes (live money), save-state not
   worktree-real. Meta-signal: on the days the business shipped most,
   mb was used least — the deterministic plane must meet operators
-  inside worktrees/fleets/dashboards. New issues filed from the
-  report's [new] items. This PR.
+  inside worktrees/fleets/dashboards. Eleven new issues filed from the
+  report's [new] items; evidence comments on #803/#818/#820 (#832).
+- 2026-06-11: #828 done — beginner-setup.md now carries the canonical
+  README paste-prompt (one prompt, two doors; new lockstep test keeps
+  them byte-identical), mb-setup recognizes the README prompt and
+  follows its arc (interview → first win → stop-and-show). This PR.
 
 ## Next intent
 

@@ -23,11 +23,15 @@ durable readiness contract. Explain providers as business capabilities, not
 developer config, and end with exact commands.
 
 **Pasted setup guide = setup intent.** If the user pastes this guide, the
-beginner setup guide, or a bootstrap prompt with business/folder intent, treat
-it as setup intent, not as a document to save. Do not offer to save it as a
-document. Check `mb --version`; if missing, stop with `pipx install
-mainbranch`. If present, inspect `mb onboard --help`, explain the target
-folder, and ask before any write.
+beginner setup guide, the README "Set up with AI" prompt ("I want Main
+Branch: AI business memory I own as files..."), or any bootstrap prompt with
+business/folder intent, treat it as setup intent, not as a document to save.
+Do not offer to save it as a document. Check `mb --version`; if missing, stop
+with `pipx install mainbranch`. If present, inspect `mb onboard --help`,
+explain the target folder, and ask before any write. When the pasted prompt
+carries its own arc (brief interview, then install → doctor → onboard → seed
+core files → teach the daily loop), follow that arc: interview first, stop at
+the named first win, and show what was set up.
 
 **GitHub-backed setup preflight.** GitHub is strongly recommended because it
 gives Main Branch a free cloud backup, shared history, task/proposal layer, and
