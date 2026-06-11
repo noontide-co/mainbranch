@@ -43,12 +43,16 @@ every version-bearing release file in one pass:
 - `mb/mb/__init__.py` `__version__` matches the release version;
 - `.claude-plugin/plugin.json` `version` matches the release version.
 
-Then run the cheapest targeted guard for those sites:
+All of that is automated:
 
 ```bash
-cd mb
-python3 -m pytest tests/test_smoke_coverage.py::test_claude_plugin_manifest_points_at_prefixed_skills -q
+scripts/release-preflight.sh oe-vX.Y.Z   # or bare X.Y.Z; no arg = files must agree
 ```
+
+The script asserts the three version files agree (and agree with the tag when
+passed), checks `CHANGELOG.md` has the dated section, and runs the targeted
+manifest guard
+(`tests/test_smoke_coverage.py::test_claude_plugin_manifest_points_at_prefixed_skills`).
 
 If this preflight fails, fix the release files before the full gate. Do not
 spend a full `scripts/check.sh` run discovering a mismatched release version.

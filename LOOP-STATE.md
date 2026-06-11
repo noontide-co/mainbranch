@@ -123,7 +123,14 @@ Canon (read on first iteration of a fresh session):
   "integrate impeccable/Corey as curated dependencies."
 - 2026-06-11: test prompts handed to Devon for the BOR / Awake Happy /
   Morning Paper loop sessions (worktree-skill repair field test, setup-
-  prompt cold read, plugin Stage 1 smoke after v0.3.43). This PR.
+  prompt cold read, plugin Stage 1 smoke after v0.3.43).
+- 2026-06-11: #603 dashboard validated + merged after month-old staleness
+  review (read-only verified, redaction tested; fix added: `.mb/dashboard/`
+  now self-ignores so generated HTML can't be committed). Closes the #599
+  implementation; dup #189 closed earlier.
+- 2026-06-11: release prep v0.3.43 — version bumps, CHANGELOG section
+  (incl. backfilled `mb connect token` entry that #823 missed),
+  `scripts/release-preflight.sh` (#826) + contract pointer. This PR.
 
 ## Next intent
 
@@ -131,11 +138,10 @@ Working practice (from Devon's 2026-06-11 grants): validate → merge without
 asking; every slice references its issue and closes it via PR body; new
 findings become issues (LOOP-STATE keeps ordering, issues keep content).
 
-- #603 (dashboard PR, month old): staleness review in flight — merge after
-  rebase, fix, or close-and-salvage into #599 per verdict.
-- Release prep v0.3.43: today's merges (#823 #811 #824 #825 #809 #802 #810)
-  are unreleased; cut the release so the business loops can `mb update`
-  into them. Build `scripts/release-preflight.sh` (#826) as part of prep.
+- After the v0.3.43 prep PR merges: create the `oe-v0.3.43` GitHub release
+  (CHANGELOG body auto-extracts). **PyPI publish then waits at the `pypi`
+  environment approval gate — Devon clicks approve.** Post-publish: verify
+  per docs/post-release-alignment.md, then run the post-release prompts.
 - #827: docs-lint ran green on real PRs today — flip to required check.
 - #828 setup-prompt canonicalization; #804 via #811 Stage 2 (plugin-aware
   `link_status()`, tracked settings wiring, auto-heal hint).

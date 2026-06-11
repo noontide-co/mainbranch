@@ -11,8 +11,24 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.43] - 2026-06-11
+
 ### Added
 
+- Added `mb connect token <provider>` as the scripted credential read path:
+  prints the stored primary credential to stdout (and nothing else), errors
+  and repair hints to stderr, falls back from repo config to user scope so
+  worktrees and scheduled tasks resolve the same credential as the primary
+  checkout. `--json` is rejected — the raw-token-on-stdout contract is the
+  pipe-safety guarantee. Collectors and scheduled tasks should consume
+  credentials through this instead of walking user-scope.yaml and calling
+  `security` directly. Closes #812.
+- Added a "Set up with AI (recommended)" README section: paste-one-prompt
+  onboarding (read the repo, brief interview, install → doctor → onboard →
+  seed core files → teach the daily loop, stop at a named first win),
+  modeled on the Morning Paper install pattern.
+- Added `scripts/release-preflight.sh` automating the release-file version
+  preflight from the release agent contract. Closes #826.
 - Added `mb dashboard build/open` as a local read-only dashboard surface over
   safe repo, status, provider, push, and image-index facts, including business
   readiness, ad readiness, creative candidate state, provider readiness, and
