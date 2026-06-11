@@ -8,6 +8,7 @@ import importlib.util
 import json
 import os
 import struct
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -315,6 +316,9 @@ def _fal_provider_blocker(generate: bool) -> tuple[str, str]:
 
 def _generate_fal_image(prompt: str, *, model: str, size: str, quality: str) -> bytes:
     del quality  # fal FLUX endpoints tune steps/guidance, not an OpenAI-style quality knob.
+    fal_key = os.environ.get("FAL_KEY", "")
+    if not fal_key:
+        raise RuntimeError("FAL_KEY is not set in the local runtime")
     width_text, _, height_text = size.partition("x")
     request_body = json.dumps(
         {
@@ -328,13 +332,18 @@ def _generate_fal_image(prompt: str, *, model: str, size: str, quality: str) -> 
         f"https://fal.run/{model}",
         data=request_body,
         headers={
-            "Authorization": f"Key {os.environ['FAL_KEY']}",
+            "Authorization": f"Key {fal_key}",
             "Content-Type": "application/json",
         },
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=DEFAULT_TIMEOUT_SECONDS) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(request, timeout=DEFAULT_TIMEOUT_SECONDS) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        # `from None` drops the HTTPError, whose response body may echo
+        # request details; only the status code may reach logs or records.
+        raise RuntimeError(f"fal.ai request failed with HTTP {exc.code}") from None
     images = payload.get("images") if isinstance(payload, dict) else None
     image_url = ""
     if isinstance(images, list) and images and isinstance(images[0], dict):
@@ -346,8 +355,11 @@ def _generate_fal_image(prompt: str, *, model: str, size: str, quality: str) -> 
         return base64.b64decode(encoded)
     if not image_url.startswith("https://"):
         raise RuntimeError("fal.ai image response returned a non-https image url")
-    with urllib.request.urlopen(image_url, timeout=DEFAULT_TIMEOUT_SECONDS) as image_response:
-        return bytes(image_response.read())
+    try:
+        with urllib.request.urlopen(image_url, timeout=DEFAULT_TIMEOUT_SECONDS) as image_response:
+            return bytes(image_response.read())
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(f"fal.ai image download failed with HTTP {exc.code}") from None
 
 
 def _png_dimensions(image_bytes: bytes) -> dict[str, int] | None:
