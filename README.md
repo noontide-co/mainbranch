@@ -18,7 +18,8 @@
 </p>
 
 <p align="center">
-  <a href="#quickstart"><strong>Quickstart</strong></a> &middot;
+  <a href="#set-up-with-ai-recommended"><strong>Set up with AI</strong></a> &middot;
+  <a href="#quickstart">Quickstart</a> &middot;
   <a href="#what-changes">What changes</a> &middot;
   <a href="#what-it-actually-does">What it does</a> &middot;
   <a href="#named-workflows">Workflows</a> &middot;
@@ -69,6 +70,30 @@ If you want AI business memory that stays yours, star this repo so more
 business owners find it.
 
 ---
+
+## Set up with AI (recommended)
+
+Open your strongest model — Claude Fable with the 1M context window works
+great; on Codex, pick the strongest model with extra reasoning — and paste
+this:
+
+```text
+I want Main Branch: AI business memory I own as files in one folder
+(https://github.com/noontide-co/mainbranch). First read the entire README,
+then explore the repo enough to understand the architecture (the mb CLI is
+the deterministic control plane; skills are the judgment layer; my business
+lives in its own folder, never in the engine; bets, research, decisions,
+pushes, playbooks, outcomes, and checkpoints are the primitives; writing
+files, publishing, spending, and customer contact stay my call). Then
+interview me briefly about my business, my offer, and my audience. Then:
+install the engine, run `mb doctor` and fix anything it flags, run
+`mb onboard` to create my business folder, seed my core files from the
+interview, and teach me the daily loop — /mb-start to open, /mb-end to
+close. Get me to a business folder with offer, audience, and voice drafted
+and a clean `mb status`, then stop and show me what you set up.
+```
+
+Prefer to drive it yourself? Everything below is the manual path.
 
 ## Quickstart
 
