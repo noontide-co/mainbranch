@@ -150,7 +150,13 @@ Canon (read on first iteration of a fresh session):
   `is_linked_worktree`, and when wiring is broken in a worktree the
   summary explains that worktrees never inherit the machine-local
   wiring and names `mb skill link --repo .` — flows through to
-  `mb start`, `mb status` ranked actions, and `mb doctor` untouched.
+  `mb start`, `mb status` ranked actions, and `mb doctor` untouched
+  (#845 merged).
+- 2026-06-11: #833 slice — Stripe and Resend are first-class mb connect
+  providers (api_key slot, env-var fallbacks, identity metadata: Stripe
+  `mode` records test-vs-live intent, Resend `sender_domain` makes
+  identity a recorded fact). Roundtrip-tested through SecretStore +
+  `mb connect token`. Next #833 slice: key-shape validation at intake.
   This PR.
 
 ## Next intent

@@ -43,12 +43,20 @@ def test_provider_registry_includes_initial_foundation() -> None:
         "google",
         "meta",
         "cloudflare",
+        "stripe",
+        "resend",
         "postiz",
         "apify",
         "hledger",
         "transcription",
     }.issubset(providers)
     assert "beancount" not in providers
+    assert providers["stripe"]["required_secrets"] == ["api_key"]
+    assert "STRIPE_SECRET_KEY" in providers["stripe"]["env_vars"]
+    assert "mode" in providers["stripe"]["metadata_fields"]
+    assert providers["resend"]["required_secrets"] == ["api_key"]
+    assert "RESEND_API_KEY" in providers["resend"]["env_vars"]
+    assert "sender_domain" in providers["resend"]["metadata_fields"]
     assert providers["cloudflare"]["required_secrets"] == ["api_token"]
     assert providers["meta"]["auth"] == "meta_ads_cli_read_only"
     assert providers["meta"]["required_secrets"] == ["access_token"]
@@ -1649,3 +1657,37 @@ def test_connect_token_rejects_secretless_provider(tmp_path: Path, monkeypatch) 
 
     assert result.exit_code == 2
     assert "stores no secrets" in result.stderr
+
+
+def test_connect_stripe_and_resend_store_and_read_back(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    connect_mod.connect_provider(
+        "stripe",
+        repo=repo,
+        token="sk_test_fixture_not_real",
+        metadata_pairs=["mode=test", "account_id=acct_fixture"],
+    )
+    connect_mod.connect_provider(
+        "resend",
+        repo=repo,
+        token="re_fixture_not_real",
+        metadata_pairs=["sender_domain=example.com"],
+    )
+
+    config_text = (repo / ".mb" / "connect.yaml").read_text(encoding="utf-8")
+    assert "sk_test_fixture_not_real" not in config_text
+    assert "re_fixture_not_real" not in config_text
+
+    stripe_token = runner.invoke(app, ["connect", "token", "stripe", "--repo", str(repo)])
+    assert stripe_token.exit_code == 0
+    assert stripe_token.stdout == "sk_test_fixture_not_real\n"
+
+    resend_token = runner.invoke(app, ["connect", "token", "resend", "--repo", str(repo)])
+    assert resend_token.exit_code == 0
+    assert resend_token.stdout == "re_fixture_not_real\n"
+
+    status = connect_mod.status_provider("stripe", repo)
+    assert status["metadata"]["mode"] == "test"

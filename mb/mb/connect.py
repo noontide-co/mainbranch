@@ -106,6 +106,35 @@ PROVIDERS: tuple[Provider, ...] = (
         env_vars=("CLOUDFLARE_API_TOKEN",),
     ),
     Provider(
+        id="stripe",
+        name="Stripe",
+        category="payments",
+        auth="api_key",
+        required_secrets=("api_key",),
+        metadata_fields=("account_id", "mode"),
+        description=(
+            "Stripe payments: checkout, products, customers, and webhook "
+            "configuration. Store the secret or restricted key locally; keys "
+            "never enter chat or committed repo files. Record `mode` metadata "
+            "(test or live) so agents can verify the key matches the intent."
+        ),
+        env_vars=("STRIPE_SECRET_KEY", "STRIPE_API_KEY"),
+    ),
+    Provider(
+        id="resend",
+        name="Resend",
+        category="email",
+        auth="api_key",
+        required_secrets=("api_key",),
+        metadata_fields=("sender_domain", "audience_id"),
+        description=(
+            "Resend transactional and lifecycle email: sending, domains, and "
+            "audiences. The sender domain lives in metadata so agents read "
+            "identity from recorded facts instead of live provider state."
+        ),
+        env_vars=("RESEND_API_KEY",),
+    ),
+    Provider(
         id="postiz",
         name="Postiz",
         category="social",
