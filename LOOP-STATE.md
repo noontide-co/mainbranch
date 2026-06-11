@@ -112,15 +112,19 @@ Canon (read on first iteration of a fresh session):
   683 operator prompts, 06-01→06-11) with a 12-day-chunk mining plan +
   privacy-guard distiller spec. (c) Morning Paper install pattern —
   verdict: steal; six-move paste-prompt anatomy documented.
-- 2026-06-11: README "Set up with AI (recommended)" section added — the
-  Morning Paper six-move paste-prompt adapted to Main Branch. This PR.
+- 2026-06-11: README "Set up with AI (recommended)" section merged (#824) —
+  the Morning Paper six-move paste-prompt adapted to Main Branch.
+- 2026-06-11: CI hardening — concurrency cancel-in-progress on PR re-push,
+  job timeouts (25/15/30/5 min), docs-lint job mirroring check.sh's docs
+  naming gate. This PR.
 
 ## Next intent
 
-- CI hardening slices from the audit, one small PR each: (1) docs-lint job
-  in CI (mirrors check.sh lines 30–56), (2) concurrency cancel-in-progress,
-  (3) job timeouts, (4) `scripts/release-preflight.sh` (3-file version sync
-  + manifest pytest) referenced from release-agent-contract.md.
+- CI hardening remainder: `scripts/release-preflight.sh` (3-file version
+  sync + manifest pytest) referenced from release-agent-contract.md.
+- After the docs-lint job proves green on a real PR: add "Docs naming
+  convention" to required status checks in branch protection (admin
+  mutation — loop will do it unless Devon objects).
 - Setup-prompt follow-through: canonicalize the prompt (replace the
   defensive one in docs/beginner-setup.md lines 51–77) + teach
   mb-setup/mb-start to recognize the pasted README prompt as setup intent.
