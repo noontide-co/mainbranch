@@ -128,9 +128,18 @@ Canon (read on first iteration of a fresh session):
   review (read-only verified, redaction tested; fix added: `.mb/dashboard/`
   now self-ignores so generated HTML can't be committed). Closes the #599
   implementation; dup #189 closed earlier.
-- 2026-06-11: release prep v0.3.43 — version bumps, CHANGELOG section
-  (incl. backfilled `mb connect token` entry that #823 missed),
-  `scripts/release-preflight.sh` (#826) + contract pointer. This PR.
+- 2026-06-11: release prep v0.3.43 merged (#831); `oe-v0.3.43` release
+  created; publish waiting at the pypi environment gate for Devon.
+- 2026-06-11: #827 done — "Docs naming convention" added to required
+  status checks after five green real-PR runs.
+- 2026-06-11: #829 done — BOR session mined (13 distilled day-chunks,
+  14-agent workflow): docs/reports/2026-06-11-bor-session-mining.md.
+  Ten friction themes ranked; top three: credential/scope tax (every
+  day), unverified provider writes (live money), save-state not
+  worktree-real. Meta-signal: on the days the business shipped most,
+  mb was used least — the deterministic plane must meet operators
+  inside worktrees/fleets/dashboards. New issues filed from the
+  report's [new] items. This PR.
 
 ## Next intent
 
@@ -138,14 +147,13 @@ Working practice (from Devon's 2026-06-11 grants): validate → merge without
 asking; every slice references its issue and closes it via PR body; new
 findings become issues (LOOP-STATE keeps ordering, issues keep content).
 
-- After the v0.3.43 prep PR merges: create the `oe-v0.3.43` GitHub release
-  (CHANGELOG body auto-extracts). **PyPI publish then waits at the `pypi`
-  environment approval gate — Devon clicks approve.** Post-publish: verify
-  per docs/post-release-alignment.md, then run the post-release prompts.
-- #827: docs-lint ran green on real PRs today — flip to required check.
-- #828 setup-prompt canonicalization; #804 via #811 Stage 2 (plugin-aware
-  `link_status()`, tracked settings wiring, auto-heal hint).
-- #829 BOR session mining workflow: distill 12 day-chunks (drop tool_result
-  bodies, redact token patterns), fan-out extraction, synthesis report.
+- **Waiting on Devon: pypi environment approval for v0.3.43** (build done,
+  notes synced). Post-publish: verify per docs/post-release-alignment.md.
+- Re-rank priority order against the mining report's leaderboard: top
+  recommendation cluster is credentials (generic provider path + Stripe/
+  Resend first-class, scope manifests, refresh tokens) and verification
+  (provider-write receipts) — both currently mid-list as #807/#817/#656.
+  Proposed next slices: #828 setup-prompt canonicalization (in flight
+  queue), then #804 Stage 2, then the credentials cluster.
 - Migrate the BOR daily-brief keychain block to `mb connect token` once
-  v0.3.43 ships (read-only change in the bookedoutroofers repo).
+  v0.3.43 publishes (read-only change in the bookedoutroofers repo).
