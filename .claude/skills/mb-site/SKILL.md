@@ -168,7 +168,10 @@ Say `/mb-site` again after compaction, context loss, or switching focus. It relo
    recognition strategy, read `core/content-strategy.md` and relevant
    `core/marketing/` files if present. Owned site content should support the
    same known-for target, asset jobs, channel plan, and CTA path rather than
-   duplicating publishable site copy into the business repo.
+   duplicating publishable site copy into the business repo. When the goal
+   includes ranking, organic search traffic, keyword research, blogging for
+   SEO, backlinks, or AI-search visibility, load
+   [`references/seo.md`](references/seo.md) before promising SEO outcomes.
 8. Ask what the operator is building, then load only the shape reference needed next.
 
 ## Operating Principles
@@ -246,6 +249,7 @@ If the operator cannot articulate the shape, ask: "What goal are you trying to h
   channel, account, person, push, and results model.
 - [`references/sales-video.md`](references/sales-video.md) - sales video, VSL, about-page video, lander video, and embedded pitch scripts for owned surfaces.
 - [`references/site-measurement.md`](references/site-measurement.md) - `mb site check` and paid-traffic readiness states.
+- [`references/seo.md`](references/seo.md) - SEO doctrine: content silos, keyword selection math, PageSpeed thresholds, blog/backlink rules, AI search, the API-first data layer, and the fulfillment loop.
 - [`references/site-recovery.md`](references/site-recovery.md) - compaction recovery and scope boundaries.
 
 **Shape flows**
