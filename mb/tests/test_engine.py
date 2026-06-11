@@ -127,6 +127,49 @@ def test_link_skills_auto_repairs_broken_legacy_personal_symlink(
     assert (repo / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
 
 
+def test_bundled_skills_ignores_directories_without_skill_md(tmp_path: Path, monkeypatch) -> None:
+    engine = tmp_path / "engine"
+    _write_skill(engine, "mb-start")
+    leftover = engine / ".claude" / "skills" / "start"
+    leftover.mkdir(parents=True)
+    (leftover / ".DS_Store").write_bytes(b"")
+    (engine / ".claude" / "skills" / "setup").mkdir()
+
+    monkeypatch.setattr(engine_mod, "skills_dir", lambda root=None: engine / ".claude" / "skills")
+
+    assert engine_mod.bundled_skills() == ["mb-start"]
+
+
+def test_link_skills_does_not_relink_engine_leftover_without_skill_md(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A removed legacy project symlink stays removed even when the engine root
+    still carries a leftover same-named directory with no SKILL.md (rename
+    residue). Regression for link_skills re-creating `.claude/skills/start`."""
+    repo = tmp_path / "biz"
+    engine = tmp_path / "engine"
+    _write_skill(engine, "mb-start")
+    leftover = engine / ".claude" / "skills" / "start"
+    leftover.mkdir(parents=True)
+    (leftover / ".DS_Store").write_bytes(b"")
+    legacy = repo / ".claude" / "skills" / "start"
+    legacy.parent.mkdir(parents=True)
+    legacy.symlink_to(leftover, target_is_directory=True)
+
+    monkeypatch.setattr(engine_mod, "engine_root", lambda: engine)
+    monkeypatch.setattr(engine_mod, "skills_dir", lambda root=None: engine / ".claude" / "skills")
+
+    result = engine_mod.link_skills(repo)
+
+    assert result["ok"] is True
+    assert ".claude/skills/start" in result["removed_legacy"]
+    assert not legacy.exists()
+    assert not legacy.is_symlink()
+    assert (repo / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
+    gitignore = (repo / ".gitignore").read_text(encoding="utf-8")
+    assert ".claude/skills/start" not in gitignore.splitlines()
+
+
 def test_link_skills_removes_legacy_project_symlink(tmp_path: Path) -> None:
     repo = tmp_path / "biz"
     old_engine = tmp_path / "old-engine"
