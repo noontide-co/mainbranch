@@ -140,10 +140,18 @@ Canon (read on first iteration of a fresh session):
   mb was used least — the deterministic plane must meet operators
   inside worktrees/fleets/dashboards. Eleven new issues filed from the
   report's [new] items; evidence comments on #803/#818/#820 (#832).
-- 2026-06-11: #828 done — beginner-setup.md now carries the canonical
-  README paste-prompt (one prompt, two doors; new lockstep test keeps
-  them byte-identical), mb-setup recognizes the README prompt and
-  follows its arc (interview → first win → stop-and-show). This PR.
+- 2026-06-11: #828 done (#844 merged) — beginner-setup.md carries the
+  README paste-prompt (one prompt, two doors; lockstep test keeps them
+  byte-identical), mb-setup recognizes the README prompt and follows
+  its arc. CI's operator-docs language gate caught one word ("canonical")
+  — the business-language rule working as designed.
+- 2026-06-11: #804 slice — `link_status()` is now worktree-aware:
+  detects a linked worktree (git-dir vs git-common-dir), exposes
+  `is_linked_worktree`, and when wiring is broken in a worktree the
+  summary explains that worktrees never inherit the machine-local
+  wiring and names `mb skill link --repo .` — flows through to
+  `mb start`, `mb status` ranked actions, and `mb doctor` untouched.
+  This PR.
 
 ## Next intent
 

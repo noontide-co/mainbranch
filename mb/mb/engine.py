@@ -754,6 +754,38 @@ def link_skills(repo: str | Path) -> dict[str, Any]:
     }
 
 
+def _is_linked_worktree(target: Path) -> bool:
+    """True when ``target`` is a linked git worktree (not the primary checkout)."""
+
+    def _rev_parse(arg: str) -> str:
+        try:
+            proc = subprocess.run(
+                ["git", "rev-parse", arg],
+                cwd=target,
+                capture_output=True,
+                text=True,
+                timeout=3,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return ""
+        return proc.stdout.strip() if proc.returncode == 0 else ""
+
+    git_dir = _rev_parse("--git-dir")
+    common_dir = _rev_parse("--git-common-dir")
+    if not git_dir or not common_dir:
+        return False
+    git_dir_path = (
+        (target / git_dir).resolve() if not Path(git_dir).is_absolute() else Path(git_dir).resolve()
+    )
+    common_dir_path = (
+        (target / common_dir).resolve()
+        if not Path(common_dir).is_absolute()
+        else Path(common_dir).resolve()
+    )
+    return git_dir_path != common_dir_path
+
+
 def link_status(repo: str | Path) -> dict[str, Any]:
     """Return whether ``repo`` can discover Main Branch skills."""
     target = Path(repo).resolve()
@@ -798,14 +830,24 @@ def link_status(repo: str | Path) -> dict[str, Any]:
         missing.append("project-local /mb-start bridge")
     if not shadow_report["ok"]:
         missing.append("personal Claude skill shadow")
-    summary = (
-        "Main Branch start wiring is ready."
-        if not missing
-        else "Missing Main Branch start wiring: " + ", ".join(missing) + "."
-    )
+    is_linked_worktree = _is_linked_worktree(target)
+    if not missing:
+        summary = "Main Branch start wiring is ready."
+    elif is_linked_worktree:
+        # The wiring is gitignored, so a fresh worktree never carries it.
+        # Name that explicitly: operators read this as "skills disappeared".
+        summary = (
+            "This is a git worktree, and Main Branch wiring is machine-local "
+            "state that worktrees do not inherit — every fresh worktree starts "
+            "without it. Missing: " + ", ".join(missing) + ". "
+            "Run `mb skill link --repo .` here, then reload skills."
+        )
+    else:
+        summary = "Missing Main Branch start wiring: " + ", ".join(missing) + "."
 
     return {
         "ok": settings_has_engine and start_link_ok and shadow_report["ok"],
+        "is_linked_worktree": is_linked_worktree,
         "repo": str(target),
         "engine_root": root_str or None,
         "settings_path": str(settings_path),
