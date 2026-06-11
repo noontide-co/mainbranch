@@ -51,7 +51,7 @@ If that account is wrong, stop before creating the GitHub-backed setup and run
 ## Setup with an agent
 
 This is the same prompt as the README's "Set up with AI (recommended)"
-section — one canonical prompt, two doors. Open your strongest model
+section — the same prompt, two doors. Open your strongest model
 (Claude Fable with the 1M context window works great; on Codex, pick the
 strongest model with extra reasoning) and paste this:
 
