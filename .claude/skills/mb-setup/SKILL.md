@@ -328,6 +328,8 @@ Use templates from `references/templates.md`.
 
 See **[references/file-education.md](references/file-education.md)** for the educational blurbs to present before writing each core file (team, soul, offer, audience, voice, multi-offer additions), the priority order, and the visual style scaffolding questions.
 
+When the operator asks how the business should build and operate day to day, point at the engine's `docs/operating-principles.md` — the twelve principles, the decision rule, and the subagent operating contract, proven on a live business.
+
 ### 6. Apply Business Setup Pattern
 
 Based on business type, create useful operating folders:

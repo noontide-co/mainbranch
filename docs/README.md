@@ -47,6 +47,7 @@ Pick the route that matches what you are doing.
 - [`child-repo-descriptors.md`](child-repo-descriptors.md) — `.mainbranch/repo.json`.
 - [`checks-and-review-model.md`](checks-and-review-model.md) — local + CI + agent checks.
 - [`delivery-truth.md`](delivery-truth.md) — acceptance ≠ delivery: message ids, delivery_state, webhook + reconcile, page on failure.
+- [`operating-principles.md`](operating-principles.md) — the twelve principles, the decision rule, and the subagent operating contract.
 - [`claude-code-invocation-contract.md`](claude-code-invocation-contract.md) — supported Claude Code path.
 - [`release-simulations.md`](release-simulations.md) — release simulation manifest contract.
 

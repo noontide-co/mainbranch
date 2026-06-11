@@ -178,7 +178,15 @@ Canon (read on first iteration of a fresh session):
   media_location + media_backend (pushes.py parses them into facts;
   validator: non-empty when present, backend requires location; mb-ads
   push template asks "where do the finished files live?"). Full
-  contract promotion + lock/reconcile semantics stay on #803. This PR.
+  contract promotion + lock/reconcile semantics stay on #803
+  (#850 merged).
+- 2026-06-11: #820 done — docs/operating-principles.md: the twelve
+  principles generalized business-agnostic from the hub source (which
+  carried graduation_candidate: mb-vip), plus the decision rule and the
+  subagent operating contract (mining rec 19's doctrine home:
+  commit-before-return verified, worktree-per-agent, liveness,
+  auditor/builder separation, docs-first + stale-doc cleanup).
+  mb-setup points operators at it. This PR.
 
 ## Next intent
 
