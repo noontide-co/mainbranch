@@ -162,7 +162,13 @@ Canon (read on first iteration of a fresh session):
   shape, never echoes the value), and Stripe mode-vs-key cross-check
   catches mode=live with a TEST key (and vice versa) at connect time —
   the BOR live-vs-test mixup class, now an intake error. Metadata-only
-  connects still allowed. This PR.
+  connects still allowed (#847 merged).
+- 2026-06-11: #815 done — docs/delivery-truth.md: acceptance ≠ delivery
+  doctrine (provider message id at send, separate delivery_state,
+  webhook fast-path + GET ceiling, page on money-path failure, never
+  trust the 200) + channel-agnostic send-function template; suppression
+  named as the keystone case. Indexed in docs/README.md, cross-linked
+  to #814/#656. This PR.
 
 ## Next intent
 
