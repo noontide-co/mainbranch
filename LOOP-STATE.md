@@ -156,8 +156,13 @@ Canon (read on first iteration of a fresh session):
   providers (api_key slot, env-var fallbacks, identity metadata: Stripe
   `mode` records test-vs-live intent, Resend `sender_domain` makes
   identity a recorded fact). Roundtrip-tested through SecretStore +
-  `mb connect token`. Next #833 slice: key-shape validation at intake.
-  This PR.
+  `mb connect token` (#846 merged).
+- 2026-06-11: #833 slice 2 — key-shape validation at intake: malformed
+  Stripe/Resend keys refused before storage (error names the expected
+  shape, never echoes the value), and Stripe mode-vs-key cross-check
+  catches mode=live with a TEST key (and vice versa) at connect time —
+  the BOR live-vs-test mixup class, now an intake error. Metadata-only
+  connects still allowed. This PR.
 
 ## Next intent
 

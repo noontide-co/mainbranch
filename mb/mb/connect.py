@@ -69,6 +69,10 @@ class Provider:
     metadata_fields: tuple[str, ...]
     description: str
     env_vars: tuple[str, ...] = ()
+    # Expected prefixes for the primary secret. Empty = no shape check.
+    # Used to refuse malformed credentials at intake without ever echoing
+    # the value itself.
+    key_prefixes: tuple[str, ...] = ()
 
 
 PROVIDERS: tuple[Provider, ...] = (
@@ -119,6 +123,7 @@ PROVIDERS: tuple[Provider, ...] = (
             "(test or live) so agents can verify the key matches the intent."
         ),
         env_vars=("STRIPE_SECRET_KEY", "STRIPE_API_KEY"),
+        key_prefixes=("sk_", "rk_"),
     ),
     Provider(
         id="resend",
@@ -133,6 +138,7 @@ PROVIDERS: tuple[Provider, ...] = (
             "identity from recorded facts instead of live provider state."
         ),
         env_vars=("RESEND_API_KEY",),
+        key_prefixes=("re_",),
     ),
     Provider(
         id="postiz",
@@ -948,6 +954,35 @@ def _meta_setup() -> dict[str, Any]:
     }
 
 
+def _validate_key_shape(provider: Provider, token: str, metadata: dict[str, str]) -> None:
+    """Refuse malformed credentials at intake.
+
+    Error messages must never echo the credential value — only its expected
+    shape and, for Stripe, whether it is a test or live key.
+    """
+    if not token or not provider.key_prefixes:
+        return
+    if not token.startswith(provider.key_prefixes):
+        shapes = ", ".join(f"{prefix}…" for prefix in provider.key_prefixes)
+        slot = provider.required_secrets[0] if provider.required_secrets else "credential"
+        raise ValueError(
+            f"the {provider.name} {slot} does not match the expected key shape "
+            f"({shapes}). Nothing was stored; check the value and reconnect."
+        )
+    if provider.id == "stripe":
+        mode = str(metadata.get("mode") or "").strip().lower()
+        if mode == "live" and token.startswith(("sk_test_", "rk_test_")):
+            raise ValueError(
+                "metadata says mode=live but the key is a Stripe TEST key. "
+                "Nothing was stored; fix the mode or the key and reconnect."
+            )
+        if mode == "test" and token.startswith(("sk_live_", "rk_live_")):
+            raise ValueError(
+                "metadata says mode=test but the key is a Stripe LIVE key. "
+                "Nothing was stored; fix the mode or the key and reconnect."
+            )
+
+
 def connect_provider(
     provider_id: str,
     repo: str | Path = ".",
@@ -965,9 +1000,10 @@ def connect_provider(
     if normalized_scope not in CONNECT_SCOPES:
         raise ValueError("scope must be repo or user")
     target = Path(repo).resolve()
+    metadata = _parse_metadata(metadata_pairs or [])
+    _validate_key_shape(provider, token, metadata)
     config = _read_config(target)
     repo_id = _ensure_repo_id(config, target)
-    metadata = _parse_metadata(metadata_pairs or [])
     store = SecretStore(secret_backend)
 
     secrets: dict[str, dict[str, str]] = {}
