@@ -140,6 +140,8 @@ def _summarize_record(repo: Path, path: Path, *, legacy: bool) -> dict[str, Any]
         "offer": _string(meta.get("offer")),
         "promise": _string(meta.get("promise")),
         "channels": _strings(meta.get("channels")),
+        "media_location": _string(meta.get("media_location")),
+        "media_backend": _string(meta.get("media_backend")),
         "started": _date_string(meta.get("started")),
         "review_on": _date_string(meta.get("review_on")),
         "date": _record_date(meta, path),

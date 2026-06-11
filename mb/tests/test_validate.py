@@ -2295,3 +2295,37 @@ def test_render_human_collapses_warnings_by_default(tmp_path: Path, capsys) -> N
     verbose_out = capsys.readouterr().out
     # Verbose restores the full per-file detail for power users.
     assert verbose_out.count("2026-04-29-link-") == 40
+
+
+def test_validate_push_media_fields(tmp_path: Path) -> None:
+    base = _push("active")
+
+    with_media = base.replace(
+        "promise: Own the launch memory in git.\n",
+        "promise: Own the launch memory in git.\n"
+        "media_location: https://drive.google.com/drive/folders/fixture\n"
+        "media_backend: google-drive\n",
+    )
+    _write(tmp_path / "pushes" / "2026-05-07-with-media" / "push.md", with_media)
+
+    backend_only = base.replace(
+        "promise: Own the launch memory in git.\n",
+        "promise: Own the launch memory in git.\nmedia_backend: google-drive\n",
+    )
+    _write(tmp_path / "pushes" / "2026-05-08-backend-only" / "push.md", backend_only)
+
+    empty_location = base.replace(
+        "promise: Own the launch memory in git.\n",
+        "promise: Own the launch memory in git.\nmedia_location: ''\n",
+    )
+    _write(tmp_path / "pushes" / "2026-05-09-empty-loc" / "push.md", empty_location)
+
+    report = run(str(tmp_path))
+
+    by_path = {f["path"]: f for f in report["files"]}
+    good = by_path["pushes/2026-05-07-with-media/push.md"]
+    assert good["ok"], good["errors"]
+    backend = by_path["pushes/2026-05-08-backend-only/push.md"]
+    assert any("media_location is missing" in e for e in backend["errors"])
+    empty = by_path["pushes/2026-05-09-empty-loc/push.md"]
+    assert any("media_location must be a non-empty string" in e for e in empty["errors"])
