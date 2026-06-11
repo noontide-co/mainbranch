@@ -228,8 +228,8 @@ for ad readiness, source bites, playbook routing, review boards, and
 mb connect doctor --json
 ```
 
-Use status/connect facts first for Google/Workspace readiness. For the first
-OpenAI rail smoke, use `mb image smoke-openai --repo "$BUSINESS_REPO" --json`; see [references/image-generation-workflow.md](references/image-generation-workflow.md)
+Use status/connect facts first for Google/Workspace readiness. For provider rail
+smokes, use `mb image smoke-openai --repo "$BUSINESS_REPO" --json` (default rail) or `mb image smoke-fal` (explicitly selected fal.ai rail); see [references/image-generation-workflow.md](references/image-generation-workflow.md)
 for the `--generate`, credential, media-storage, and `image-index.md` boundary.
 Never ask the operator to paste API keys into chat or public issue text.
 

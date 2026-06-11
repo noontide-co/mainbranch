@@ -5,8 +5,12 @@ from __future__ import annotations
 import base64
 import importlib
 import importlib.util
+import json
 import os
 import struct
+import urllib.error
+import urllib.request
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
@@ -22,6 +26,10 @@ DEFAULT_MODEL_SNAPSHOT = "gpt-image-2-2026-04-21"
 DEFAULT_SIZE = "1024x1536"
 DEFAULT_QUALITY = "medium"
 DEFAULT_TIMEOUT_SECONDS = 60
+DEFAULT_FAL_PUSH_SLUG = "2026-06-10-fal-image-rail-smoke"
+DEFAULT_FAL_ASSET_ID = "fake-fal-image-001"
+DEFAULT_FAL_MODEL = "fal-ai/flux/dev"
+DEFAULT_FAL_QUALITY = "default"
 DEFAULT_PROMPT = """\
 Create a fixture-safe Facebook feed image-ad base for a fictional business
 operating system called Northstar Ledger. Visualize the customer phrase
@@ -119,6 +127,94 @@ PLACEMENT_PRESETS: dict[str, dict[str, Any]] = {
 SmokeState = Literal["generated", "blocked"]
 
 
+@dataclass(frozen=True)
+class ImageProvider:
+    """Image rail provider registry entry.
+
+    Provider selection is explicit: each smoke surface names exactly one
+    provider id, and ``openai`` stays the default rail. Local credential
+    presence (for example ``FAL_KEY``) never auto-selects a provider.
+    ``blocker_fn`` and ``generate_fn`` name module attributes so tests can
+    patch the same seams the OpenAI rail already exposes.
+    """
+
+    id: str
+    name: str
+    model: str
+    model_snapshot: str | None
+    size: str
+    quality: str
+    endpoint: str
+    credential_env: str
+    credential_ref: str
+    default_push_slug: str
+    default_asset_id: str
+    index_lede: str
+    failure_hint: str
+    blocker_fn: str
+    generate_fn: str
+
+
+IMAGE_PROVIDERS: dict[str, ImageProvider] = {
+    "openai": ImageProvider(
+        id="openai",
+        name="OpenAI",
+        model=DEFAULT_MODEL,
+        model_snapshot=DEFAULT_MODEL_SNAPSHOT,
+        size=DEFAULT_SIZE,
+        quality=DEFAULT_QUALITY,
+        endpoint="v1/images/generations",
+        credential_env="OPENAI_API_KEY",
+        credential_ref="openai:image-generation",
+        default_push_slug=DEFAULT_PUSH_SLUG,
+        default_asset_id=DEFAULT_ASSET_ID,
+        index_lede="the first narrow OpenAI image rail",
+        failure_hint=(
+            "Check the local provider account, organization verification, quota, "
+            "model access, and network state."
+        ),
+        blocker_fn="_provider_blocker",
+        generate_fn="_generate_openai_image",
+    ),
+    "fal": ImageProvider(
+        id="fal",
+        name="fal.ai",
+        model=DEFAULT_FAL_MODEL,
+        model_snapshot=None,
+        size=DEFAULT_SIZE,
+        quality=DEFAULT_FAL_QUALITY,
+        endpoint="fal.run/fal-ai/flux/dev",
+        credential_env="FAL_KEY",
+        credential_ref="fal:image-generation",
+        default_push_slug=DEFAULT_FAL_PUSH_SLUG,
+        default_asset_id=DEFAULT_FAL_ASSET_ID,
+        index_lede="the narrow fal.ai FLUX image rail",
+        failure_hint=("Check the local fal.ai account, quota, model access, and network state."),
+        blocker_fn="_fal_provider_blocker",
+        generate_fn="_generate_fal_image",
+    ),
+}
+
+
+def image_provider(provider_id: str) -> ImageProvider:
+    """Return the explicitly selected provider spec; unknown ids fail loudly."""
+
+    spec = IMAGE_PROVIDERS.get(provider_id)
+    if spec is None:
+        known = ", ".join(sorted(IMAGE_PROVIDERS))
+        raise ValueError(
+            f"Unknown image provider {provider_id!r}. Configured providers: {known}. "
+            "Provider selection is explicit; local credentials never auto-select a provider."
+        )
+    return spec
+
+
+def _provider_fn(name: str) -> Any:
+    """Resolve a provider hook through module globals so test patches apply."""
+
+    return globals()[name]
+
+
 def _utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
@@ -196,6 +292,74 @@ def _generate_openai_image(prompt: str, *, model: str, size: str, quality: str) 
     if not encoded:
         raise RuntimeError("OpenAI image response did not include b64_json output")
     return base64.b64decode(encoded)
+
+
+def _fal_provider_blocker(generate: bool) -> tuple[str, str]:
+    if not generate:
+        return (
+            "generation_not_approved",
+            (
+                "Provider generation was not requested. Re-run with --generate only after "
+                "the operator approves the provider call and local credential boundary."
+            ),
+        )
+    if not os.environ.get("FAL_KEY"):
+        return (
+            "missing_fal_key",
+            (
+                "FAL_KEY is not set in the local runtime. Do not paste provider "
+                "keys into chat or committed repo files."
+            ),
+        )
+    return "", ""
+
+
+def _generate_fal_image(prompt: str, *, model: str, size: str, quality: str) -> bytes:
+    del quality  # fal FLUX endpoints tune steps/guidance, not an OpenAI-style quality knob.
+    fal_key = os.environ.get("FAL_KEY", "")
+    if not fal_key:
+        raise RuntimeError("FAL_KEY is not set in the local runtime")
+    width_text, _, height_text = size.partition("x")
+    request_body = json.dumps(
+        {
+            "prompt": prompt,
+            "image_size": {"width": int(width_text), "height": int(height_text)},
+            "num_images": 1,
+            "output_format": "png",
+        }
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        f"https://fal.run/{model}",
+        data=request_body,
+        headers={
+            "Authorization": f"Key {fal_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=DEFAULT_TIMEOUT_SECONDS) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        # `from None` drops the HTTPError, whose response body may echo
+        # request details; only the status code may reach logs or records.
+        raise RuntimeError(f"fal.ai request failed with HTTP {exc.code}") from None
+    images = payload.get("images") if isinstance(payload, dict) else None
+    image_url = ""
+    if isinstance(images, list) and images and isinstance(images[0], dict):
+        image_url = str(images[0].get("url") or "")
+    if not image_url:
+        raise RuntimeError("fal.ai image response did not include an image url")
+    if image_url.startswith("data:"):
+        _, _, encoded = image_url.partition(",")
+        return base64.b64decode(encoded)
+    if not image_url.startswith("https://"):
+        raise RuntimeError("fal.ai image response returned a non-https image url")
+    try:
+        with urllib.request.urlopen(image_url, timeout=DEFAULT_TIMEOUT_SECONDS) as image_response:
+            return bytes(image_response.read())
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(f"fal.ai image download failed with HTTP {exc.code}") from None
 
 
 def _png_dimensions(image_bytes: bytes) -> dict[str, int] | None:
@@ -1731,6 +1895,7 @@ def _candidate_score(concept: dict[str, Any]) -> int:
 
 def _visual_calibration_result(
     *,
+    spec: ImageProvider,
     concepts: list[dict[str, Any]],
     assets: list[dict[str, Any]],
     generated_count: int,
@@ -1774,8 +1939,8 @@ def _visual_calibration_result(
     return {
         "state": state,
         "generated_count": generated_count,
-        "provider": "openai",
-        "model": DEFAULT_MODEL,
+        "provider": spec.id,
+        "model": spec.model,
         "binary_committed": False,
         "review_board_written": True,
         "review_board_path": review_board_path,
@@ -1795,6 +1960,7 @@ def _visual_calibration_result(
 
 def _dashboard_readiness(
     *,
+    spec: ImageProvider,
     push_slug: str,
     ad_readiness: dict[str, Any],
     image_generation_gate: dict[str, Any],
@@ -1823,9 +1989,9 @@ def _dashboard_readiness(
     if int(visual_calibration.get("generated_count") or 0) == 0:
         next_actions.extend(
             [
-                "confirm_openai_image_credential_state",
+                f"confirm_{spec.id}_image_credential_state",
                 "get_operator_approval_for_live_provider_call",
-                "rerun_smoke_openai_with_generate",
+                f"rerun_smoke_{spec.id}_with_generate",
             ]
         )
     elif visual_calibration.get("all_rejected") is True:
@@ -1884,8 +2050,8 @@ def _dashboard_readiness(
             "next_actions": "dashboard_readiness.next_actions",
         },
         "provider_readiness": {
-            "provider": "openai",
-            "model": DEFAULT_MODEL,
+            "provider": spec.id,
+            "model": spec.model,
             "credential_states": credential_states,
             "blocker_codes": blocker_codes,
             "required_before_generation": image_generation_gate[
@@ -1908,6 +2074,7 @@ def _dashboard_readiness(
 
 def _asset_record(
     *,
+    spec: ImageProvider,
     push_slug: str,
     asset_id: str,
     concept_id: str,
@@ -1929,15 +2096,15 @@ def _asset_record(
         "asset_id": asset_id,
         "concept_id": concept_id,
         "rail": "provider",
-        "provider": "openai",
+        "provider": spec.id,
         "model": model,
-        "model_snapshot": DEFAULT_MODEL_SNAPSHOT,
-        "endpoint": "v1/images/generations",
+        "model_snapshot": spec.model_snapshot,
+        "endpoint": spec.endpoint,
         "docs_checked": docs_checked,
         "state": state,
         "blocker_code": blocker_code or None,
         "blocker": blocker or None,
-        "credential_ref": "openai:image-generation",
+        "credential_ref": spec.credential_ref,
         "credential_state": credential_state,
         "prompt_key": prompt_key,
         "prompt": prompt.strip(),
@@ -1990,7 +2157,7 @@ def _asset_record(
         "safe_to_share": True,
         "generated_at": generated_at,
         "operator_notes": (
-            "Fixture-safe OpenAI image rail smoke. Commit this record only; keep any "
+            f"Fixture-safe {spec.name} image rail smoke. Commit this record only; keep any "
             "generated binary in configured private media storage."
         ),
     }
@@ -2054,11 +2221,11 @@ def _render_review_board(
     return "\n".join(lines) + "\n"
 
 
-def _render_index(record: dict[str, Any]) -> str:
+def _render_index(record: dict[str, Any], *, spec: ImageProvider) -> str:
     yaml_text = yaml.safe_dump(record, sort_keys=False, allow_unicode=False)
     return (
-        "# Image Index - OpenAI Image Rail Smoke\n\n"
-        "This fixture-safe record proves the first narrow OpenAI image rail "
+        f"# Image Index - {spec.name} Image Rail Smoke\n\n"
+        f"This fixture-safe record proves {spec.index_lede} "
         "with reviewable Facebook image-ad concepts, safe logical media "
         "references, and no generated binaries, secrets, private paths, or "
         "provider request credentials committed.\n\n"
@@ -2068,15 +2235,16 @@ def _render_index(record: dict[str, Any]) -> str:
     )
 
 
-def smoke_openai(
+def _smoke_image_provider(
+    spec: ImageProvider,
     *,
     repo: str,
-    push_slug: str = DEFAULT_PUSH_SLUG,
+    push_slug: str,
     docs_checked: str,
     media_root: str = ".mb/media",
     generate: bool = False,
 ) -> dict[str, Any]:
-    """Run or block the narrow OpenAI image rail smoke and write an asset record."""
+    """Run or block one explicitly selected image rail smoke and write an asset record."""
 
     repo_path = Path(repo).resolve()
     push_dir = repo_path / "pushes" / push_slug
@@ -2085,8 +2253,8 @@ def smoke_openai(
     index_path = push_dir / "image-index.md"
     generated_at = _utc_now()
 
-    blocker_code, blocker = _provider_blocker(generate)
-    credential_state = "configured_env" if os.environ.get("OPENAI_API_KEY") else "missing_env"
+    blocker_code, blocker = _provider_fn(spec.blocker_fn)(generate)
+    credential_state = "configured_env" if os.environ.get(spec.credential_env) else "missing_env"
     default_state: SmokeState = "blocked" if blocker_code else "generated"
 
     concepts = fixture_facebook_image_concepts(push_slug)
@@ -2096,7 +2264,7 @@ def smoke_openai(
     generated_dimensions: dict[str, int] | None = None
     for index, concept in enumerate(concepts, start=1):
         concept_id = str(concept.get("concept_id") or f"candidate-{index:03d}")
-        asset_id = DEFAULT_ASSET_ID if index == 1 else f"{concept_id}-001"
+        asset_id = spec.default_asset_id if index == 1 else f"{concept_id}-001"
         output_reference = _logical_output(push_slug, asset_id)
         concept_state = default_state
         concept_blocker_code = blocker_code
@@ -2106,19 +2274,18 @@ def smoke_openai(
             out_path = _media_path(repo_path, media_root, push_slug, asset_id)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             try:
-                image_bytes = _generate_openai_image(
+                image_bytes = _provider_fn(spec.generate_fn)(
                     str(concept.get("prompt") or DEFAULT_PROMPT),
-                    model=DEFAULT_MODEL,
-                    size=DEFAULT_SIZE,
-                    quality=DEFAULT_QUALITY,
+                    model=spec.model,
+                    size=spec.size,
+                    quality=spec.quality,
                 )
             except Exception as exc:  # noqa: BLE001 - provider errors must become sanitized records.
                 concept_state = "blocked"
                 concept_blocker_code = "provider_request_failed"
                 concept_blocker = (
-                    f"OpenAI image generation failed before a usable image was written "
-                    f"({exc.__class__.__name__}). Check the local provider account, "
-                    f"organization verification, quota, model access, and network state."
+                    f"{spec.name} image generation failed before a usable image was written "
+                    f"({exc.__class__.__name__}). {spec.failure_hint}"
                 )
             else:
                 concept_dimensions = _png_dimensions(image_bytes)
@@ -2128,6 +2295,7 @@ def smoke_openai(
                 binary_written_count += 1
         asset_records.append(
             _asset_record(
+                spec=spec,
                 push_slug=push_slug,
                 asset_id=asset_id,
                 concept_id=concept_id,
@@ -2140,9 +2308,9 @@ def smoke_openai(
                 output_reference=output_reference,
                 prompt=str(concept.get("prompt") or DEFAULT_PROMPT),
                 prompt_key=str(concept.get("prompt_key") or DEFAULT_PROMPT_KEY),
-                model=DEFAULT_MODEL,
-                size=DEFAULT_SIZE,
-                quality=DEFAULT_QUALITY,
+                model=spec.model,
+                size=spec.size,
+                quality=spec.quality,
                 generated_dimensions=concept_dimensions,
             )
         )
@@ -2164,6 +2332,7 @@ def smoke_openai(
         encoding="utf-8",
     )
     visual_calibration = _visual_calibration_result(
+        spec=spec,
         concepts=concepts,
         assets=asset_records,
         generated_count=generated_count,
@@ -2172,6 +2341,7 @@ def smoke_openai(
     ad_readiness = _ad_readiness_gate()
     image_generation_gate = _image_generation_gate()
     dashboard_readiness = _dashboard_readiness(
+        spec=spec,
         push_slug=push_slug,
         ad_readiness=ad_readiness,
         image_generation_gate=image_generation_gate,
@@ -2222,15 +2392,15 @@ def smoke_openai(
         "concepts": concepts,
         "assets": asset_records,
     }
-    index_path.write_text(_render_index(record), encoding="utf-8")
+    index_path.write_text(_render_index(record, spec=spec), encoding="utf-8")
     result_blocker_code = blocker_code or None
     if state == "blocked" and result_blocker_code is None and asset_records:
         result_blocker_code = asset_records[0].get("blocker_code")
 
     return {
         "ok": True,
-        "provider": "openai",
-        "model": DEFAULT_MODEL,
+        "provider": spec.id,
+        "model": spec.model,
         "state": state,
         "blocker_code": result_blocker_code,
         "candidate_count": len(concepts),
@@ -2244,17 +2414,17 @@ def smoke_openai(
         "record_path": _repo_relative(index_path, repo_path),
         "review_board_written": True,
         "review_board_path": review_board_ref,
-        "output_reference": _logical_output(push_slug, DEFAULT_ASSET_ID),
+        "output_reference": _logical_output(push_slug, spec.default_asset_id),
         "storage_backend": "mb-media",
         "dimensions": {
-            "requested_size": DEFAULT_SIZE,
+            "requested_size": spec.size,
             "requested_aspect_ratio": "2:3",
             "placement": "facebook_feed_portrait_4x5",
             "placement_aspect_ratio": PLACEMENT_PRESETS["facebook_feed_portrait_4x5"][
                 "aspect_ratio"
             ],
             "format": "png",
-            "quality": DEFAULT_QUALITY,
+            "quality": spec.quality,
         },
         "generated_dimensions": generated_dimensions,
         "binary_written": binary_written_count > 0,
@@ -2263,3 +2433,43 @@ def smoke_openai(
         "safe_to_share": True,
         "docs_checked": docs_checked,
     }
+
+
+def smoke_openai(
+    *,
+    repo: str,
+    push_slug: str = DEFAULT_PUSH_SLUG,
+    docs_checked: str,
+    media_root: str = ".mb/media",
+    generate: bool = False,
+) -> dict[str, Any]:
+    """Run or block the narrow OpenAI image rail smoke and write an asset record."""
+
+    return _smoke_image_provider(
+        image_provider("openai"),
+        repo=repo,
+        push_slug=push_slug,
+        docs_checked=docs_checked,
+        media_root=media_root,
+        generate=generate,
+    )
+
+
+def smoke_fal(
+    *,
+    repo: str,
+    push_slug: str = DEFAULT_FAL_PUSH_SLUG,
+    docs_checked: str,
+    media_root: str = ".mb/media",
+    generate: bool = False,
+) -> dict[str, Any]:
+    """Run or block the narrow fal.ai FLUX image rail smoke and write an asset record."""
+
+    return _smoke_image_provider(
+        image_provider("fal"),
+        repo=repo,
+        push_slug=push_slug,
+        docs_checked=docs_checked,
+        media_root=media_root,
+        generate=generate,
+    )
