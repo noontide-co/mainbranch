@@ -50,30 +50,32 @@ If that account is wrong, stop before creating the GitHub-backed setup and run
 
 ## Setup with an agent
 
-If you are starting from an empty folder, open or select that folder in Claude
-Code or Codex and paste this:
+This is the same prompt as the README's "Set up with AI (recommended)"
+section — one canonical prompt, two doors. Open your strongest model
+(Claude Fable with the 1M context window works great; on Codex, pick the
+strongest model with extra reasoning) and paste this:
 
 ```text
-I want to set up Main Branch for this business in this folder.
-
-Treat this as setup intent, not as a document to save.
-
-First, check whether `mb` is available. If it is not installed, stop and tell me
-the exact install step. If it is installed, inspect the setup command before
-running it.
-
-Use this folder as the business folder unless I say otherwise. Before any write,
-explain what will be created or changed and ask for approval.
-
-If I ask for GitHub backup or sync, first check whether GitHub CLI is installed,
-authenticated, and signed in to the account I expect.
-
-After setup, run read-only health checks, summarize what was created in plain
-business language, and tell me the next safest action.
+I want Main Branch: AI business memory I own as files in one folder
+(https://github.com/noontide-co/mainbranch). First read the entire README,
+then explore the repo enough to understand the architecture (the mb CLI is
+the deterministic control plane; skills are the judgment layer; my business
+lives in its own folder, never in the engine; bets, research, decisions,
+pushes, playbooks, outcomes, and checkpoints are the primitives; writing
+files, publishing, spending, and customer contact stay my call). Then
+interview me briefly about my business, my offer, and my audience. Then:
+install the engine, run `mb doctor` and fix anything it flags, run
+`mb onboard` to create my business folder, seed my core files from the
+interview, and teach me the daily loop — /mb-start to open, /mb-end to
+close. Get me to a business folder with offer, audience, and voice drafted
+and a clean `mb status`, then stop and show me what you set up.
 ```
 
 Do not save that prompt as a markdown document. It tells the agent to start
-setup.
+setup. The agent keeps the safety rails regardless of the prompt: writes are
+explained and approved first, GitHub-backed setup checks `gh auth status`
+and the signed-in account, and setup ends with read-only health checks in
+plain business language.
 
 ---
 

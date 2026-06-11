@@ -27,11 +27,15 @@ def test_beginner_setup_uses_owner_friendly_setup_prompt() -> None:
     required = [
         "## Setup with an agent",
         "Open or select the business folder in Claude Code or Codex.",
-        "I want to set up Main Branch for this business in this folder.",
-        "Treat this as setup intent, not as a document to save.",
-        "check whether `mb` is available",
-        "Use this folder as the business folder unless I say otherwise.",
-        "GitHub CLI is installed, authenticated, and signed in to the account I expect",
+        # The canonical paste-prompt — one prompt, two doors (README +
+        # beginner setup). Keep these in lockstep with README.md.
+        "I want Main Branch: AI business memory I own as files in one folder",
+        "interview me briefly about my business, my offer, and my audience",
+        "run `mb doctor` and fix anything it flags",
+        "then stop and show me what you set up",
+        # Safety rails stay documented around the prompt.
+        "writes are explained and approved first",
+        "GitHub-backed setup checks `gh auth status`",
         "GitHub does not need to cost anything",
         "the business brain has cloud backup and readable saved history",
         "AI tools with GitHub connectors can read the business brain",
@@ -43,6 +47,20 @@ def test_beginner_setup_uses_owner_friendly_setup_prompt() -> None:
     for phrase in required:
         assert phrase in normalized
     assert "mb onboard --github --push" not in normalized
+
+
+def test_beginner_setup_prompt_matches_readme_prompt() -> None:
+    """One canonical prompt: the README and beginner-setup fenced prompts
+    must stay byte-identical so the two doors never drift."""
+
+    def _fenced_prompt(text: str) -> str:
+        start = text.index("I want Main Branch: AI business memory")
+        end = text.index("```", start)
+        return " ".join(text[start:end].split())
+
+    readme_prompt = _fenced_prompt(_read("README.md"))
+    setup_prompt = _fenced_prompt(_read("docs/beginner-setup.md"))
+    assert readme_prompt == setup_prompt
 
 
 def test_runtime_guidance_routes_pasted_setup_to_onboarding() -> None:
