@@ -16,7 +16,7 @@ Apply decisions to reference files. Merges research findings and decisions into 
 ## Workflow
 
 1. **Read source** — Decision file or research file
-2. **Identify what changes** — Read the `## What Changes` section (or infer from `## Decision` and `## Consequences` if What Changes is missing). Identify which reference files are affected and what the key changes are.
+2. **Identify what changes** — Read the `## What Changes` section (or infer from `## Decision` and `## Consequences` if What Changes is missing). Identify which reference files are affected and what the key changes are. Durable conclusions always codify **up** into the business repo's `core/`, even when the raw research file lives in a product repo (research lives where its conclusions codify — see the research-phase placement rule).
 3. **Propose edits** — For each affected reference file, read it, then propose the specific update to the user.
 4. **Apply with confirmation** — After user confirms, apply each update. Preserve existing content.
 5. **Atomic finalize pass** — In the SAME edit pass as the final reference file update, flip the source decision from `status: accepted` to `status: codified`. This is the most likely dropped step; treat it as part of the final edit unit, never a follow-up.

@@ -61,6 +61,25 @@ Every contract should name:
 Contract findings use business language. They should say "your offer does not
 yet tell a qualified buyer what to do next," not "missing H2: CTA."
 
+## Research Placement Across Repos
+
+When a business runs more than one repo (hub plus product/site repos),
+research lives where its conclusions codify — not where the session happened
+to run:
+
+- conclusions change `core/` (offer, audience, pricing, positioning, bets)
+  → the business repo's `research/`;
+- conclusions land in one product repo's code or docs → that product repo's
+  `research/`;
+- mixed → default up to the business repo, folding build notes into the
+  product repo's docs in the same pass.
+
+Quick test: if the product were rebuilt from scratch tomorrow and this
+research still matters, it belongs in the business repo. Durable conclusions
+always codify up into the business repo's `core/` regardless of where the
+raw file sits, and research files carry `offer:` frontmatter in multi-offer
+repos. `/mb-think` applies this contract in its research and codify phases.
+
 ## Current Paths And Legacy Repos
 
 Contracts document current Main Branch paths only: `core/`,
