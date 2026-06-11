@@ -76,14 +76,16 @@ Canon (read on first iteration of a fresh session):
 ## Flagged for Devon
 
 - (10 open questions live in the 2026-06-11 decision; loop appends new ones here)
-- Open PRs #801, #802, #809, #810, #811 all fail Python CI on runs dated
-  before the #822 time-dependent-test fix merged; likely fixed by rebasing
-  onto main. #809/#810/#811 are your feature branches — want the loop to
-  rebase + babysit them, or leave them to you?
-- `tests/test_engine.py::test_link_skills_removes_legacy_project_symlink`
-  fails on this machine even on clean main (passes in CI) — environment-
-  specific symlink behavior; possibly related territory to #804 worktree
-  skills bug. Loop will look at it alongside #804 unless told otherwise.
+- Open PRs #809, #810 (your feature branches) still fail Python CI on
+  pre-#822 runs; likely fixed by rebase. Loop rebased #811 (Devon asked
+  about symlinks) and triggered @dependabot rebase on #801/#802 — want the
+  loop to rebase + babysit #809/#810 too, or leave them to you?
+- First-win definition for the README "Set up with AI" prompt: loop chose
+  "business folder with offer/audience/voice drafted and a clean `mb
+  status`, then stop and show." Confirm or sharpen.
+- RESOLVED 2026-06-11: the local `test_link_skills_removes_legacy_project_
+  symlink` failure was a real engine bug (`bundled_skills()` trusted residue
+  dirs), not environment-specific — fixed by #811.
 - Priority order after the 2026-06-11 chat steering: loop is treating the
   audit (PRs/CI/post-release) + session-log-mining as the next slices ahead
   of #804, since Devon called the audit "first-class." Confirm or reorder.
@@ -94,15 +96,40 @@ Canon (read on first iteration of a fresh session):
   send-truth (bookedoutroofers#99) + privacy chat disclosure (#98) live;
   unattended-cron allow rules set in ~/.claude/settings.json.
 - 2026-06-11: LOOP-STATE seed merged (#821). 15-min loop live on this machine.
-- 2026-06-11: #812 `mb connect token <provider>` — scripted credential read
-  path (stdout-only token, stderr errors, repo→user-scope fallback, --json
-  rejected as pipe-unsafe). This PR.
+- 2026-06-11: #812 `mb connect token <provider>` shipped (PR #823 merged) —
+  scripted credential read path (stdout-only token, stderr errors,
+  repo→user-scope fallback, --json rejected as pipe-unsafe).
+- 2026-06-11: #811 rebased onto main and set to auto-merge — symlink
+  root-cause fix (`bundled_skills()` requires SKILL.md; clears the
+  local `test_link_skills_removes_legacy_project_symlink` failure) +
+  plugin-first skills-distribution decision doc. Answers Devon's
+  "symlinks aren't durable" steer; #804's fix path is now #811 Stage 2.
+- 2026-06-11: three audits complete (details in loop session):
+  (a) CI/release audit — strong release rail; gaps: docs-lint not in CI,
+  no concurrency cancel, no job timeouts, no automated version-sync
+  preflight; nothing worth tapering. (b) Session-log inventory — BOR
+  week-long session found (`f29d63c5…`, nifty-franklin worktree dir, 120MB,
+  683 operator prompts, 06-01→06-11) with a 12-day-chunk mining plan +
+  privacy-guard distiller spec. (c) Morning Paper install pattern —
+  verdict: steal; six-move paste-prompt anatomy documented.
+- 2026-06-11: README "Set up with AI (recommended)" section added — the
+  Morning Paper six-move paste-prompt adapted to Main Branch. This PR.
 
 ## Next intent
 
-- Audit pass per 2026-06-11 chat steering: (a) inventory CI checks + branch
-  protection + post-release automation and propose strengthen/taper changes;
-  (b) inventory Claude Code session logs on this machine and plan the BOR
-  week-long-session mining (workflow fan-out). Then #804 worktree skills bug.
+- CI hardening slices from the audit, one small PR each: (1) docs-lint job
+  in CI (mirrors check.sh lines 30–56), (2) concurrency cancel-in-progress,
+  (3) job timeouts, (4) `scripts/release-preflight.sh` (3-file version sync
+  + manifest pytest) referenced from release-agent-contract.md.
+- Setup-prompt follow-through: canonicalize the prompt (replace the
+  defensive one in docs/beginner-setup.md lines 51–77) + teach
+  mb-setup/mb-start to recognize the pasted README prompt as setup intent.
+- #804 via #811 Stage 2: plugin-aware `link_status()` + tracked
+  `.claude/settings.json` wiring; auto-heal hint on `mb start`/`mb doctor`.
+- BOR session mining workflow: 12 day-chunks of `f29d63c5…` + the
+  crazy-albattani closer; distiller pass first (drop tool_result bodies,
+  redact token patterns), then fan-out extraction (intents, friction,
+  primitives coverage, mb/skill invocations, AskUserQuestion decisions),
+  then synthesis: timeline + friction leaderboard + primitives map.
 - Migrate the BOR daily-brief keychain block to `mb connect token` once #812
   ships in a release (read-only change in the bookedoutroofers repo).
