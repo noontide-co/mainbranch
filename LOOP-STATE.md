@@ -168,7 +168,12 @@ Canon (read on first iteration of a fresh session):
   webhook fast-path + GET ceiling, page on money-path failure, never
   trust the 200) + channel-agnostic send-function template; suppression
   named as the keystone case. Indexed in docs/README.md, cross-linked
-  to #814/#656. This PR.
+  to #814/#656 (#848 merged).
+- 2026-06-11: #805 done — research-placement contract ("research lives
+  where its conclusions codify") landed in mb-think research-phase +
+  codify-phase references and docs/business-file-contracts.md: codify-up
+  invariant, rebuild-tomorrow test, offer frontmatter in multi-offer
+  repos. This PR.
 
 ## Next intent
 

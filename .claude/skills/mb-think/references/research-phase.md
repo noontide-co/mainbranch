@@ -91,6 +91,25 @@ research/YYYY-MM-DD-[offer]-topic-[source].md
 
 This is optional — standard naming without the offer prefix works fine. Use the offer prefix when researching a topic specific to one offer to make it easy to find later.
 
+### Which Repo Gets the Research File
+
+Research lives where its conclusions codify — not where the session happened
+to run:
+
+- Conclusions change `core/` (offer, audience, pricing, positioning, bets) →
+  the **business repo's** `research/`.
+- Conclusions land in one product repo's code or docs → **that product
+  repo's** `research/`.
+- Mixed → default **up** to the business repo, and fold the build-specific
+  notes into the product repo's docs in the same pass.
+
+Quick test: *if we rebuilt the product from scratch tomorrow, would this
+research still matter?* Yes → business repo. No → product repo.
+
+Two invariants hold regardless of where the raw file sits: durable
+conclusions always codify up into the business repo's `core/`, and research
+files carry `offer:` frontmatter in multi-offer repos.
+
 ---
 
 ## Content Strategy Research Routing
