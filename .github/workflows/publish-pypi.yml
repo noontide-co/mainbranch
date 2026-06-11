@@ -179,7 +179,7 @@ jobs:
           echo "name=${{ needs.release-metadata.outputs.name }}" >> "$GITHUB_OUTPUT"
 
       - name: Sync issues into Linear release
-        uses: linear/linear-release-action@82696627e5661fbea7cf92be2163583a9bae5a28 # v0.13.0
+        uses: linear/linear-release-action@7873d1c5a1f74ef7abc581d72d0d36aa0b5004b5 # v0.14.1
         with:
           access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
           command: sync
@@ -187,7 +187,7 @@ jobs:
           version: ${{ steps.meta.outputs.tag }}
 
       - name: Mark Linear release as released
-        uses: linear/linear-release-action@82696627e5661fbea7cf92be2163583a9bae5a28 # v0.13.0
+        uses: linear/linear-release-action@7873d1c5a1f74ef7abc581d72d0d36aa0b5004b5 # v0.14.1
         with:
           access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
           command: complete
