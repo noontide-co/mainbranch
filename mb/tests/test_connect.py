@@ -1691,3 +1691,88 @@ def test_connect_stripe_and_resend_store_and_read_back(tmp_path: Path, monkeypat
 
     status = connect_mod.status_provider("stripe", repo)
     assert status["metadata"]["mode"] == "test"
+
+
+def test_connect_stripe_refuses_malformed_key_shape(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        ["connect", "stripe", "--repo", str(repo), "--token", "not-a-stripe-key"],
+    )
+
+    assert result.exit_code == 2
+    assert "expected key shape" in result.stderr
+    assert "not-a-stripe-key" not in result.stderr
+    secret_file = tmp_path / "home" / "secrets" / "connect.json"
+    assert not secret_file.exists() or "not-a-stripe-key" not in secret_file.read_text(
+        encoding="utf-8"
+    )
+
+
+def test_connect_stripe_refuses_mode_key_mismatch(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    live_mode_test_key = runner.invoke(
+        app,
+        [
+            "connect",
+            "stripe",
+            "--repo",
+            str(repo),
+            "--token",
+            "sk_test_fixture_not_real",
+            "--metadata",
+            "mode=live",
+        ],
+    )
+    assert live_mode_test_key.exit_code == 2
+    assert "mode=live but the key is a Stripe TEST key" in live_mode_test_key.stderr
+    assert "sk_test_fixture_not_real" not in live_mode_test_key.stderr
+
+    test_mode_live_key = runner.invoke(
+        app,
+        [
+            "connect",
+            "stripe",
+            "--repo",
+            str(repo),
+            "--token",
+            "sk_live_fixture_not_real",
+            "--metadata",
+            "mode=test",
+        ],
+    )
+    assert test_mode_live_key.exit_code == 2
+    assert "mode=test but the key is a Stripe LIVE key" in test_mode_live_key.stderr
+
+
+def test_connect_resend_refuses_malformed_key_shape(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        ["connect", "resend", "--repo", str(repo), "--token", "sk_wrong_provider"],
+    )
+
+    assert result.exit_code == 2
+    assert "expected key shape" in result.stderr
+    assert "re_…" in result.stderr
+
+
+def test_connect_metadata_only_skips_key_shape_check(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = connect_mod.connect_provider(
+        "stripe", repo=repo, metadata_pairs=["account_id=acct_fixture"]
+    )
+
+    assert result["ok"] is False or result["status"]["state"] == "missing_secret"
