@@ -406,3 +406,35 @@ def test_link_status_explains_stale_engine_path_from_other_install(
     assert result["stale_from_other_install"] is True
     assert result["current_mb"]["path"] == "/tmp/new/mb"
     assert result["repair_command"] == "mb skill link --repo ."
+
+
+def test_link_status_explains_worktree_wiring_gap(tmp_path: Path) -> None:
+    import subprocess
+
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    def git(*args: str) -> None:
+        subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+
+    git("init")
+    git("config", "user.email", "test@example.com")
+    git("config", "user.name", "Test User")
+    (repo / "README.md").write_text("hi\n", encoding="utf-8")
+    git("add", "README.md")
+    git("commit", "-m", "baseline")
+    worktree = repo / ".claude" / "worktrees" / "fresh"
+    git("worktree", "add", "-b", "fresh", str(worktree))
+
+    status = engine_mod.link_status(worktree)
+
+    assert status["ok"] is False
+    assert status["is_linked_worktree"] is True
+    assert "git worktree" in status["summary"]
+    assert "worktrees do not inherit" in status["summary"]
+    assert "mb skill link --repo ." in status["summary"]
+
+    primary = engine_mod.link_status(repo)
+    assert primary["is_linked_worktree"] is False
+    if not primary["ok"]:
+        assert "worktree" not in primary["summary"]

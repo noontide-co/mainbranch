@@ -376,7 +376,9 @@ def test_doctor_repair_apply_restores_missing_claude_worktree_start_wiring(
     actions = {action["id"]: action for action in plan["actions"]}
 
     assert section["state"] == "error"
-    assert "Missing Main Branch start wiring" in start_check["summary"]
+    assert "git worktree" in start_check["summary"]
+    assert "worktrees do not inherit" in start_check["summary"]
+    assert "mb skill link --repo ." in start_check["summary"]
     assert "project-local /mb-start bridge" in start_check["summary"]
     assert start_check["fallback_commands"] == [
         "mb start --json",
