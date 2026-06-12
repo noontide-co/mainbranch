@@ -438,3 +438,81 @@ def test_link_status_explains_worktree_wiring_gap(tmp_path: Path) -> None:
     assert primary["is_linked_worktree"] is False
     if not primary["ok"]:
         assert "worktree" not in primary["summary"]
+
+
+def test_plugin_wiring_write_and_status(tmp_path: Path) -> None:
+    import json as json_mod
+
+    status = engine_mod.plugin_wiring_status(tmp_path)
+    assert status["wired"] is False
+
+    result = engine_mod.write_plugin_wiring(tmp_path)
+    assert result["ok"] is True
+    assert result["changed"] is True
+
+    settings = json_mod.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    assert settings["extraKnownMarketplaces"]["mainbranch"]["source"] == {
+        "source": "github",
+        "repo": "noontide-co/mainbranch",
+    }
+    assert settings["enabledPlugins"]["mainbranch@mainbranch"] is True
+
+    again = engine_mod.write_plugin_wiring(tmp_path)
+    assert again["ok"] is True
+    assert again["changed"] is False  # idempotent
+
+    assert engine_mod.plugin_wiring_status(tmp_path)["wired"] is True
+    assert engine_mod.link_status(tmp_path)["plugin"]["wired"] is True
+
+
+def test_plugin_wiring_preserves_existing_settings(tmp_path: Path) -> None:
+    import json as json_mod
+
+    path = tmp_path / ".claude" / "settings.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        json_mod.dumps(
+            {
+                "permissions": {"allow": ["Bash(ls:*)"]},
+                "extraKnownMarketplaces": {
+                    "other": {"source": {"source": "github", "repo": "a/b"}}
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    engine_mod.write_plugin_wiring(tmp_path)
+
+    settings = json_mod.loads(path.read_text(encoding="utf-8"))
+    assert settings["permissions"]["allow"] == ["Bash(ls:*)"]
+    assert settings["extraKnownMarketplaces"]["other"]["source"]["repo"] == "a/b"
+    assert settings["extraKnownMarketplaces"]["mainbranch"]["source"]["repo"] == (
+        "noontide-co/mainbranch"
+    )
+
+
+def test_worktree_summary_mentions_plugin_rail_when_wired(tmp_path: Path) -> None:
+    import subprocess
+
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    def git(*args: str) -> None:
+        subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+
+    git("init")
+    git("config", "user.email", "t@example.com")
+    git("config", "user.name", "T")
+    engine_mod.write_plugin_wiring(repo)
+    (repo / "README.md").write_text("hi\n", encoding="utf-8")
+    git("add", "-A")
+    git("commit", "-m", "baseline")
+    worktree = repo / ".claude" / "worktrees" / "fresh"
+    git("worktree", "add", "-b", "fresh", str(worktree))
+
+    status = engine_mod.link_status(worktree)
+
+    assert status["ok"] is False  # symlink rail still missing in the worktree
+    assert status["plugin"]["wired"] is True  # tracked wiring carried over
+    assert "survives fresh worktrees" in status["summary"]
