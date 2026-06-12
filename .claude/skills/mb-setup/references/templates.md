@@ -698,7 +698,7 @@ secret values, ids, or item names.
 
 ## The storage doctrine
 
-1. **Operator's password manager = canonical, OPERATOR-PRESENT ONLY.**
+1. **Operator's password manager = the source of truth, OPERATOR-PRESENT ONLY.**
    Never put it in an automated or scheduled path. Its uses: one-time moves
    into the keychain while the operator is present, and high-sensitivity
    moments where the operator explicitly wants to be in the loop.
