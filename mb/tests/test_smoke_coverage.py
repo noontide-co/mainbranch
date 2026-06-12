@@ -250,3 +250,25 @@ def test_main_help_describes_engine() -> None:
     assert result.exit_code == 0
     txt = result.stdout.lower()
     assert "main branch" in txt or "engine" in txt
+
+
+def test_marketplace_manifest_makes_plugin_installable() -> None:
+    """The marketplace manifest is the install rail; without it,
+    `claude plugin marketplace add` fails (proven in the Stage 1 smoke)."""
+    import json
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parents[2]
+    manifest = json.loads(
+        (repo_root / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8")
+    )
+    assert manifest["name"] == "mainbranch"
+    plugins = manifest["plugins"]
+    assert len(plugins) == 1
+    assert plugins[0]["name"] == "mainbranch"
+    assert plugins[0]["source"] == "./"
+
+    plugin = json.loads((repo_root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    # Versions travel together; the release preflight checks plugin.json —
+    # the marketplace metadata must not drift from it.
+    assert manifest["metadata"]["version"] == plugin["version"]
