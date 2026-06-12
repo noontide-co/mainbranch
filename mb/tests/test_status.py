@@ -3932,7 +3932,9 @@ def test_git_info_detects_linked_worktree(tmp_path: Path) -> None:
     assert "linked workspace" in info["summary"]
 
 
-def test_core_propagation_drift_flags_identity_newer_than_active_push(tmp_path, monkeypatch):
+def test_core_propagation_drift_flags_identity_newer_than_active_push(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     import subprocess as sp
 
     from mb import status as status_pkg
@@ -3953,7 +3955,7 @@ def test_core_propagation_drift_flags_identity_newer_than_active_push(tmp_path, 
 
     import os
 
-    def git(*args, when=""):
+    def git(*args: str, when: str = "") -> None:
         env = dict(os.environ)
         if when:
             env["GIT_COMMITTER_DATE"] = when
@@ -3997,7 +3999,7 @@ def test_core_propagation_drift_flags_identity_newer_than_active_push(tmp_path, 
     assert status_pkg._core_propagation_drift(repo, report) is None
 
 
-def test_core_propagation_drift_silent_without_active_pushes(tmp_path):
+def test_core_propagation_drift_silent_without_active_pushes(tmp_path: Path) -> None:
     from mb import status as status_pkg
 
     repo = tmp_path / "biz"
