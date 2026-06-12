@@ -4009,3 +4009,45 @@ def test_core_propagation_drift_silent_without_active_pushes(tmp_path: Path) -> 
     report = {"repo": str(repo), "brain": {"pushes": {"records": []}}}
 
     assert status_pkg._core_propagation_drift(repo, report) is None
+
+
+def test_uncodified_decisions_drift(tmp_path: Path) -> None:
+    from mb import status as status_pkg
+
+    repo = tmp_path / "biz"
+    decisions = repo / "decisions"
+    decisions.mkdir(parents=True)
+    (decisions / "2026-05-01-old-accepted.md").write_text(
+        "---\ndate: 2026-05-01\nstatus: accepted\n---\n# old accepted\n",
+        encoding="utf-8",
+    )
+    (decisions / "2026-05-01-applied.md").write_text(
+        "---\ndate: 2026-05-01\nstatus: codified\n---\n# applied\n",
+        encoding="utf-8",
+    )
+
+    brain = status_pkg._brain(repo)
+    uncodified = brain["uncodified_decisions"]
+
+    assert len(uncodified) == 1
+    assert uncodified[0]["path"].endswith("2026-05-01-old-accepted.md")
+
+    report = {
+        "brain": brain,
+        "repo": str(repo),
+        "runtime": {},
+        "validation": {},
+        "relationship_health": {},
+        "playbook_health": {},
+        "integrations": {},
+        "measurement": {},
+        "books": {},
+        "topology": {},
+        "since_last_check": {"marker_gitignore": {"ok": True}},
+    }
+    drift = status_pkg._drift(report)
+    by_id = {item["id"]: item for item in drift["items"]}
+
+    assert "uncodified_decisions" in by_id
+    assert "never" in by_id["uncodified_decisions"]["summary"]
+    assert "codify" in by_id["uncodified_decisions"]["repair"]
