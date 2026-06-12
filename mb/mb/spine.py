@@ -152,3 +152,151 @@ def show(repo: str | Path = ".") -> dict[str, Any]:
             else f"spine: {frontmatter.get('store')}"
         ),
     }
+
+
+OWNED_SCHEMA_SQL = """-- Contact+event spine: the person and their full timeline, owned.
+-- Two tables on purpose (operating-principles §2/§3: right shape first,
+-- leanest durable form). Portable SQLite; Cloudflare D1 instructions in
+-- spine/README.md.
+
+-- contact: the person. Unified by email (lowercased) when known.
+CREATE TABLE IF NOT EXISTS contact (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  email       TEXT UNIQUE,          -- the unifier (lowercase, trimmed); NULL while anonymous
+  phone       TEXT,
+  name        TEXT,
+  company     TEXT,
+  domain      TEXT,                 -- normalized website when relevant
+  city        TEXT,
+  source      TEXT,                 -- first touch: form | chat | paid | ad | import
+  status      TEXT NOT NULL DEFAULT 'lead',  -- lifecycle: lead -> customer -> ...
+  click_id    TEXT,                 -- ad click id for consented attribution
+  browser_id  TEXT,                 -- ad browser id for consented attribution
+  ad_optout   INTEGER NOT NULL DEFAULT 0,  -- consent recorded once, on the person
+  first_seen  TEXT,
+  last_seen   TEXT,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_contact_domain ON contact(domain);
+CREATE INDEX IF NOT EXISTS idx_contact_status ON contact(status);
+
+-- event: the timeline. Every touch is a row; contact_id is nullable so an
+-- anonymous event can be recorded now and linked when the email arrives.
+CREATE TABLE IF NOT EXISTS event (
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  contact_id           INTEGER REFERENCES contact(id),
+  type                 TEXT NOT NULL,   -- e.g. form_submit | chat_turn | paid | email_sent
+  ts                   TEXT NOT NULL,   -- ISO timestamp of the event
+  source               TEXT,            -- channel
+  amount_cents         INTEGER,         -- for paid events
+  payload              TEXT,            -- JSON detail
+  -- Delivery truth (docs/delivery-truth.md): acceptance is not delivery.
+  provider_message_id  TEXT,            -- the send's join key; never skip on send events
+  delivery_state       TEXT,            -- accepted | delivered | bounced | suppressed
+  created_at           TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_event_contact  ON event(contact_id, ts);
+CREATE INDEX IF NOT EXISTS idx_event_type     ON event(type, ts);
+CREATE INDEX IF NOT EXISTS idx_event_delivery ON event(delivery_state)
+  WHERE delivery_state IS NOT NULL;
+"""
+
+OWNED_README = """# The owned contact+event spine
+
+The person and their full timeline, in a store you own. Built when a
+trigger fires (decisions/2026-06-12-spine-levels.md) — never as a default
+migration away from a platform that serves you.
+
+## Setting it up on Cloudflare D1 (the proven path)
+
+```bash
+npx wrangler d1 create <business>-spine
+npx wrangler d1 execute <business>-spine --remote --file spine/schema.sql
+```
+
+Bind it to your workers in wrangler.toml, write server-side behind auth
+(operating-principles §7), and update `core/operations/spine.md` via
+`mb spine declare --force` so the declared position matches reality.
+
+Any SQLite (or Postgres with minor type tweaks) works the same; the schema
+is portable on purpose.
+
+## The rules that keep it a spine
+
+- **One row per person**, unified by lowercased email; anonymous events
+  link later.
+- **Every touch is an event row.** Chats with content, sends, payments —
+  if it happened to a person, it lands here.
+- **Send events carry delivery truth**: record `provider_message_id` at
+  send with `delivery_state = 'accepted'`; flip it from the provider's
+  webhook + a reconcile sweep. Never report "sent" from the API 200
+  (docs/delivery-truth.md).
+- **Platforms become lenses.** Sync TO the email tool and ad platforms
+  from here; never let them become a second source of record.
+
+## Canned queries
+
+Did we actually reach this person?
+```sql
+SELECT type, ts, delivery_state FROM event
+WHERE contact_id = (SELECT id FROM contact WHERE email = ?)
+  AND provider_message_id IS NOT NULL ORDER BY ts DESC;
+```
+
+Real contacts captured but never successfully sent anything (unserved):
+```sql
+SELECT c.email, c.created_at FROM contact c
+WHERE c.email IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM event e WHERE e.contact_id = c.id
+                  AND e.delivery_state = 'delivered');
+```
+
+Warm but never bought:
+```sql
+SELECT c.email, COUNT(e.id) AS touches FROM contact c
+JOIN event e ON e.contact_id = c.id
+WHERE c.status = 'lead' GROUP BY c.id
+HAVING touches >= 3 ORDER BY touches DESC;
+```
+
+One person's full timeline:
+```sql
+SELECT ts, type, source, delivery_state, payload FROM event
+WHERE contact_id = (SELECT id FROM contact WHERE email = ?) ORDER BY ts;
+```
+"""
+
+
+def init_owned(repo: str | Path = ".", *, force: bool = False) -> dict[str, Any]:
+    """Scaffold the owned contact+event schema + instructions."""
+    root = Path(repo).resolve()
+    spine_dir = root / "spine"
+    schema_path = spine_dir / "schema.sql"
+    readme_path = spine_dir / "README.md"
+    existing = [str(p.relative_to(root)) for p in (schema_path, readme_path) if p.exists()]
+    if existing and not force:
+        return {
+            "ok": False,
+            "repo": str(root),
+            "written": [],
+            "skipped": existing,
+            "summary": "spine files already exist; rerun with --force to overwrite",
+        }
+    spine_dir.mkdir(parents=True, exist_ok=True)
+    schema_path.write_text(OWNED_SCHEMA_SQL, encoding="utf-8")
+    readme_path.write_text(OWNED_README, encoding="utf-8")
+    return {
+        "ok": True,
+        "repo": str(root),
+        "written": [
+            str(schema_path.relative_to(root)),
+            str(readme_path.relative_to(root)),
+        ],
+        "skipped": [],
+        "summary": (
+            "owned spine scaffolded — apply spine/schema.sql to your store "
+            "(D1 commands in spine/README.md), then update the declaration "
+            "with `mb spine declare --force`"
+        ),
+    }

@@ -159,3 +159,48 @@ def test_doctor_spine_section_unconnected_store_warns(tmp_path: Path, monkeypatc
 
     assert by_name["agent-queryability"]["state"] == "warn"
     assert "not agent-queryable" in by_name["agent-queryability"]["summary"]
+
+
+def test_spine_init_owned_scaffolds_schema(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["spine", "init", "--owned", "--repo", str(tmp_path), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert "spine/schema.sql" in payload["written"]
+
+    schema = (tmp_path / "spine" / "schema.sql").read_text(encoding="utf-8")
+    assert "CREATE TABLE IF NOT EXISTS contact" in schema
+    assert "CREATE TABLE IF NOT EXISTS event" in schema
+    assert "provider_message_id" in schema
+    assert "delivery_state" in schema
+
+    readme = (tmp_path / "spine" / "README.md").read_text(encoding="utf-8")
+    assert "acceptance is not delivery" in readme.lower() or "delivery-truth" in readme
+    assert "mb spine declare --force" in readme
+    for banned in ("roofer", "booked", "noontide", "bor-data"):
+        assert banned not in schema.lower()
+        assert banned not in readme.lower()
+
+
+def test_spine_init_requires_owned_flag(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["spine", "init", "--repo", str(tmp_path)])
+
+    assert result.exit_code == 2
+    assert "TRIGGERED" in result.stderr
+
+
+def test_spine_init_owned_schema_is_valid_sqlite(tmp_path: Path) -> None:
+    import sqlite3
+
+    spine_mod.init_owned(tmp_path)
+    conn = sqlite3.connect(":memory:")
+    conn.executescript((tmp_path / "spine" / "schema.sql").read_text(encoding="utf-8"))
+    conn.execute("INSERT INTO contact (email, status) VALUES ('a@example.com', 'lead')")
+    conn.execute(
+        "INSERT INTO event (contact_id, type, ts, provider_message_id, delivery_state) "
+        "VALUES (1, 'email_sent', '2026-06-12T00:00:00Z', 'msg_1', 'accepted')"
+    )
+    row = conn.execute(
+        "SELECT delivery_state FROM event WHERE provider_message_id = 'msg_1'"
+    ).fetchone()
+    assert row == ("accepted",)
