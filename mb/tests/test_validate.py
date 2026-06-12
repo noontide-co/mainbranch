@@ -2329,3 +2329,38 @@ def test_validate_push_media_fields(tmp_path: Path) -> None:
     assert any("media_location is missing" in e for e in backend["errors"])
     empty = by_path["pushes/2026-05-09-empty-loc/push.md"]
     assert any("media_location must be a non-empty string" in e for e in empty["errors"])
+
+
+def test_cross_refs_survive_empty_markdown_link_destination(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "decisions" / "2026-06-12-ok.md",
+        (
+            "---\ndate: 2026-06-12\nstatus: accepted\n---\n# ok\n\n"
+            "A placeholder [link with empty destination]() should not crash "
+            "the run, and [another](<>) odd shape survives too.\n"
+        ),
+    )
+
+    report = run(str(tmp_path), cross_refs=True)
+
+    assert isinstance(report["ok"], bool)
+
+
+def test_validate_json_stays_parseable_on_internal_error(tmp_path: Path, monkeypatch) -> None:
+    import json as json_mod
+
+    from typer.testing import CliRunner
+
+    from mb import validate as validate_pkg
+    from mb.cli import app as cli_app
+
+    def boom(**kwargs):
+        raise IndexError("synthetic crash")
+
+    monkeypatch.setattr(validate_pkg, "run", boom)
+    result = CliRunner().invoke(cli_app, ["validate", str(tmp_path), "--json"])
+
+    assert result.exit_code == 2
+    payload = json_mod.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["type"] == "IndexError"

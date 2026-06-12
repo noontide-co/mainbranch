@@ -1961,12 +1961,40 @@ def validate_cmd(
 ) -> None:
     """Check frontmatter shape and optional cross-references."""
     target = repo or path
-    report = validate_mod.run(
-        path=target,
-        verbose=verbose,
-        cross_refs=cross_refs,
-        strict=strict,
-    )
+    try:
+        report = validate_mod.run(
+            path=target,
+            verbose=verbose,
+            cross_refs=cross_refs,
+            strict=strict,
+        )
+    except Exception as exc:  # noqa: BLE001 - --json must stay parseable on any failure.
+        # Agents consume this output programmatically; an unhandled traceback
+        # on stdout makes the enforcement plane untrustworthy (operators
+        # route around it). Emit a valid error envelope instead.
+        if json_out:
+            typer.echo(
+                json.dumps(
+                    {
+                        "ok": False,
+                        "error": {
+                            "type": exc.__class__.__name__,
+                            "message": str(exc),
+                        },
+                        "repo": target,
+                        "files": [],
+                        "summary": {"errors": 1, "warnings": 0},
+                    },
+                    indent=2,
+                )
+            )
+        else:
+            typer.echo(
+                f"mb validate: internal error ({exc.__class__.__name__}: {exc}). "
+                "Please report this with the repo shape that triggered it.",
+                err=True,
+            )
+        raise typer.Exit(2) from exc
     if json_out:
         typer.echo(json.dumps(report, indent=2))
     else:

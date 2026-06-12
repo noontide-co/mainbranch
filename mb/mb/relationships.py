@@ -235,6 +235,10 @@ def markdown_link_target(raw_target: str) -> str:
     """Return the target component from a standard Markdown link destination."""
 
     target = raw_target.strip()
+    if not target:
+        # Empty destinations (`[text]()`) are real in operator repos; they
+        # must surface as findings downstream, never crash the run.
+        return ""
     target = target.split(None, 1)[0].strip()
     if (target.startswith('"') and target.endswith('"')) or (
         target.startswith("'") and target.endswith("'")
