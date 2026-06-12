@@ -1893,15 +1893,48 @@ def _is_folder_doc(path: Path, schema_name: str) -> bool:
     } and (path.name == "README.md")
 
 
+def _normalize_scope_paths(repo: Path, paths: list[str]) -> list[str]:
+    """Normalize --paths entries to repo-relative posix prefixes."""
+    prefixes: list[str] = []
+    for raw in paths:
+        candidate = Path(raw)
+        if candidate.is_absolute():
+            try:
+                rel = candidate.resolve().relative_to(repo)
+            except ValueError:
+                raise ValueError(f"--paths entry {raw!r} is outside the repo") from None
+        else:
+            rel = Path(raw.replace("\\", "/"))
+        text = rel.as_posix().strip("/")
+        if text in {"", "."}:
+            # Whole-repo scope: treat as unscoped.
+            return []
+        if ".." in rel.parts:
+            raise ValueError(f"--paths entry {raw!r} escapes the repo")
+        prefixes.append(text)
+    return prefixes
+
+
+def _path_in_scope(rel: str, prefixes: list[str]) -> bool:
+    return any(rel == prefix or rel.startswith(prefix + "/") for prefix in prefixes)
+
+
 def run(
     path: str,
     verbose: bool = False,
     cross_refs: bool = False,
     strict: bool = False,
     migration_drift_report: dict[str, Any] | None = None,
+    paths: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Run validation across all known schemas. Verbose adds key dumps."""
+    """Run validation across all known schemas. Verbose adds key dumps.
+
+    ``paths`` scopes the report to files under the given repo-relative
+    prefixes — so an agent can validate only what it touched instead of
+    hand-rolling filters against a repo's legacy debt.
+    """
     repo = Path(path).resolve()
+    scope_prefixes = _normalize_scope_paths(repo, paths or [])
     files_by_path: dict[str, dict[str, Any]] = {}
     for schema_name, schema in SCHEMAS.items():
         glob = schema["glob"]
@@ -1949,6 +1982,23 @@ def run(
     if cross_refs:
         cross_ref_report = _check_cross_refs(repo, files_by_path)
 
+    if scope_prefixes:
+        files_by_path = {
+            rel: entry
+            for rel, entry in files_by_path.items()
+            if _path_in_scope(rel, scope_prefixes)
+        }
+        for key in ("warnings", "orphan_offers"):
+            raw_findings = cross_ref_report.get(key)
+            findings_list: list[dict[str, Any]] = (
+                raw_findings if isinstance(raw_findings, list) else []
+            )
+            cross_ref_report[key] = [
+                finding
+                for finding in findings_list
+                if _path_in_scope(str(finding.get("path") or ""), scope_prefixes)
+            ]
+
     files = list(files_by_path.values())
     warning_count = sum(len(f.get("warnings", [])) for f in files)
     error_count = sum(len(f.get("errors", [])) for f in files)
@@ -1962,6 +2012,7 @@ def run(
         "ok": ok,
         "files": files,
         "repo": str(repo),
+        "scoped_paths": scope_prefixes,
         "strict": strict,
         "cross_refs": cross_ref_report,
         "legacy_repair": _legacy_frontmatter_repair(repo, error_count),

@@ -2364,3 +2364,36 @@ def test_validate_json_stays_parseable_on_internal_error(tmp_path: Path, monkeyp
     payload = json_mod.loads(result.stdout)
     assert payload["ok"] is False
     assert payload["error"]["type"] == "IndexError"
+
+
+def test_validate_paths_scopes_report_to_touched_files(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "decisions" / "2026-06-12-mine.md",
+        "---\ndate: 2026-06-12\nstatus: accepted\n---\n# mine\n",
+    )
+    _write(
+        tmp_path / "decisions" / "2026-06-12-legacy-broken.md",
+        "---\nstatus: nonsense\n---\n# legacy\n",
+    )
+    _write(
+        tmp_path / "research" / "2026-06-12-other-claude-code.md",
+        "---\ndate: 2026-06-12\ntopic: t\nsource: claude-code\n---\n# r\n",
+    )
+
+    full = run(str(tmp_path))
+    assert full["ok"] is False  # legacy debt fails the unscoped run
+
+    scoped = run(str(tmp_path), paths=["decisions/2026-06-12-mine.md", "research"])
+    scoped_paths = {f["path"] for f in scoped["files"]}
+    assert "decisions/2026-06-12-mine.md" in scoped_paths
+    assert "research/2026-06-12-other-claude-code.md" in scoped_paths
+    assert "decisions/2026-06-12-legacy-broken.md" not in scoped_paths
+    assert scoped["ok"] is True
+    assert scoped["scoped_paths"] == ["decisions/2026-06-12-mine.md", "research"]
+
+
+def test_validate_paths_rejects_escapes(tmp_path: Path) -> None:
+    import pytest as pytest_mod
+
+    with pytest_mod.raises(ValueError):
+        run(str(tmp_path), paths=["../outside"])
