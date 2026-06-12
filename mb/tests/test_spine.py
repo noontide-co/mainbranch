@@ -102,3 +102,60 @@ def test_spine_show_undeclared_points_at_declare(tmp_path: Path) -> None:
 
     assert result.exit_code == 1
     assert "mb spine declare" in result.stdout
+
+
+def test_doctor_spine_section_grades_declared_position(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    from mb import connect as connect_mod
+    from mb import doctor as doctor_mod
+
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    undeclared = doctor_mod._spine_section(repo)
+    assert undeclared["state"] == "info"
+    assert "mb spine declare" in undeclared["summary"]
+
+    connect_mod.connect_provider("shopify", repo=repo, token="shp-fixture", custom=True)
+    spine_mod.declare(
+        repo,
+        store="shopify",
+        lenses=["klaviyo:email"],
+        gaps=["person-level web journey"],
+        revisit="first unanswerable engagement question",
+    )
+    section = doctor_mod._spine_section(repo)
+    by_name = {check["name"]: check for check in section["checks"]}
+
+    assert by_name["declaration"]["state"] == "ok"
+    assert by_name["agent-queryability"]["state"] == "ok"
+    assert by_name["timeline-completeness"]["state"] == "info"
+    assert "owned event log" in by_name["timeline-completeness"]["summary"]
+    assert by_name["revisit-trigger"]["state"] == "ok"
+
+
+def test_doctor_spine_section_intentional_none_is_ok(tmp_path: Path) -> None:
+    from mb import doctor as doctor_mod
+
+    spine_mod.declare(tmp_path, store="none", intentional_none=True, revisit="public launch")
+
+    section = doctor_mod._spine_section(tmp_path)
+
+    assert section["state"] == "ok"
+    assert "on purpose" in section["summary"]
+    assert "public launch" in section["summary"]
+
+
+def test_doctor_spine_section_unconnected_store_warns(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    from mb import doctor as doctor_mod
+
+    spine_mod.declare(tmp_path, store="cloudflare")
+
+    section = doctor_mod._spine_section(tmp_path)
+    by_name = {check["name"]: check for check in section["checks"]}
+
+    assert by_name["agent-queryability"]["state"] == "warn"
+    assert "not agent-queryable" in by_name["agent-queryability"]["summary"]

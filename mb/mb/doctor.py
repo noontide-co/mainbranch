@@ -31,6 +31,7 @@ from mb import migrate as migrate_mod
 from mb import migration_lint
 from mb import onboard as onboard_mod
 from mb import related_links as related_links_mod
+from mb import spine as spine_mod
 from mb import topology as topology_mod
 from mb import validate as validate_mod
 from mb.engine import install_mode, link_status
@@ -349,6 +350,124 @@ def _dossier_verify_section(repo: Path) -> dict[str, Any]:
         "Agent Access Dossier",
         _max_state([str(check["state"]) for check in checks]) if checks else "ok",
         "capability map verification — mb-owned verify commands only",
+        checks=checks,
+    )
+
+
+def _spine_section(repo: Path) -> dict[str, Any]:
+    """Grade the declared contact+event spine position.
+
+    Honest grading per decisions/2026-06-12-spine-levels.md: report what
+    the engine can verify (declaration present, store queryable through
+    mb connect) and what the operator declared (timeline gaps, revisit
+    trigger) — never infer a maturity score the facts can't support.
+    """
+    shown = spine_mod.show(repo)
+    if not shown.get("declared"):
+        return _section(
+            "contact-event-spine",
+            "Contact+Event Spine",
+            "info",
+            (
+                "no spine declaration — run `mb spine declare --store <provider>` "
+                "(or `--store none --intentional`) so agents read the position "
+                "from facts instead of guessing"
+            ),
+        )
+    declaration = shown.get("declaration") or {}
+    store = str(declaration.get("store") or "")
+    if store == "none":
+        revisit = str(declaration.get("revisit_trigger") or "")
+        return _section(
+            "contact-event-spine",
+            "Contact+Event Spine",
+            "ok",
+            "none, on purpose — a declared product stance"
+            + (f"; revisit when: {revisit}" if revisit else ""),
+        )
+    checks: list[dict[str, Any]] = []
+    lenses = declaration.get("lenses") or []
+    checks.append(
+        {
+            "name": "declaration",
+            "state": "ok",
+            "summary": f"spine: {store}" + (f", {len(lenses)} fan-out lens(es)" if lenses else ""),
+        }
+    )
+    try:
+        status = connect_mod.status_provider(store, repo)
+    except ValueError:
+        checks.append(
+            {
+                "name": "agent-queryability",
+                "state": "info",
+                "summary": (
+                    f"{store!r} is not an mb connect provider — queryability "
+                    "unverified; connect it (or `mb connect <id> --custom`) so "
+                    "the operator's agent can read the spine from the terminal"
+                ),
+            }
+        )
+    else:
+        if status.get("ok") or str(status.get("state")) in {"unvalidated", "ready"}:
+            checks.append(
+                {
+                    "name": "agent-queryability",
+                    "state": "ok",
+                    "summary": (
+                        f"{store} credentialed via mb connect (state: {status.get('state')})"
+                    ),
+                }
+            )
+        else:
+            checks.append(
+                {
+                    "name": "agent-queryability",
+                    "state": "warn",
+                    "summary": (
+                        f"{store} declared as the spine but not agent-queryable "
+                        f"(state: {status.get('state')}); repair: "
+                        f"{status.get('repair_command') or f'mb connect {store}'}"
+                    ),
+                }
+            )
+    gaps = [str(gap) for gap in declaration.get("known_gaps") or []]
+    if gaps:
+        checks.append(
+            {
+                "name": "timeline-completeness",
+                "state": "info",
+                "summary": (
+                    "declared gap(s) the spine does not hold: "
+                    + "; ".join(gaps[:3])
+                    + " — an owned event log alongside the store is the "
+                    "augmented path (see decisions/2026-06-12-spine-levels.md)"
+                ),
+            }
+        )
+    else:
+        checks.append(
+            {
+                "name": "timeline-completeness",
+                "state": "ok",
+                "summary": "no declared timeline gaps",
+            }
+        )
+    revisit = str(declaration.get("revisit_trigger") or "")
+    checks.append(
+        {
+            "name": "revisit-trigger",
+            "state": "ok" if revisit else "info",
+            "summary": f"revisit when: {revisit}"
+            if revisit
+            else "no revisit trigger declared — name the question that should reopen this",
+        }
+    )
+    return _section(
+        "contact-event-spine",
+        "Contact+Event Spine",
+        _max_state([str(check["state"]) for check in checks]),
+        "declared contact+event spine position and what the engine can verify",
         checks=checks,
     )
 
@@ -2484,6 +2603,7 @@ def repair_plan(
     )
 
     sections.append(_dossier_verify_section(target))
+    sections.append(_spine_section(target))
 
     validation = _validation_summary(target, migration_drift_report=migration_drift)
     related_links = related_links_mod.plan(target)
