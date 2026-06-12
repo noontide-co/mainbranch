@@ -2551,12 +2551,24 @@ def skill_validate_cmd(
 @skill_app.command("link")
 def skill_link_cmd(
     repo: str = typer.Option(".", "--repo", help="Business repo to wire for Claude Code."),
+    plugin: bool = typer.Option(
+        False,
+        "--plugin",
+        help=(
+            "Also write the worktree-durable plugin wiring into tracked "
+            ".claude/settings.json (parallel rail; symlinks still written)."
+        ),
+    ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Wire bundled skills into a business repo for Claude Code discovery."""
-    from mb.engine import link_skills
+    from mb.engine import link_skills, write_plugin_wiring
 
     result = link_skills(repo)
+    plugin_result: dict[str, Any] | None = None
+    if plugin:
+        plugin_result = write_plugin_wiring(repo)
+        result["plugin_wiring"] = plugin_result
     if json_out:
         typer.echo(json.dumps(result, indent=2))
     else:
@@ -2569,6 +2581,8 @@ def skill_link_cmd(
                 typer.echo(f"  + copied {len(result['copied'])} skill(s)")
             if result["skipped"]:
                 typer.echo(f"  · {len(result['skipped'])} already wired")
+            if plugin_result is not None:
+                typer.echo(f"  + {plugin_result['summary']}")
             typer.echo("")
             typer.echo("you're set — run `claude` and then /mb-start.")
         else:

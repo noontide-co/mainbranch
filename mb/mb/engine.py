@@ -845,8 +845,15 @@ def link_status(repo: str | Path) -> dict[str, Any]:
     else:
         summary = "Missing Main Branch start wiring: " + ", ".join(missing) + "."
 
+    plugin = plugin_wiring_status(target)
+    if missing and plugin["wired"]:
+        summary += (
+            " Tracked plugin wiring is present — once the plugin is active, "
+            "skill discovery survives fresh worktrees without relinking."
+        )
     return {
         "ok": settings_has_engine and start_link_ok and shadow_report["ok"],
+        "plugin": plugin,
         "is_linked_worktree": is_linked_worktree,
         "repo": str(target),
         "engine_root": root_str or None,
@@ -894,3 +901,81 @@ def install_mode() -> str:
     if (root / ".git").exists():
         return "clone"
     return "source"
+
+
+PLUGIN_MARKETPLACE_NAME = "mainbranch"
+PLUGIN_REPO = "noontide-co/mainbranch"
+PLUGIN_ENABLE_KEY = "mainbranch@mainbranch"
+
+
+def _tracked_settings_path(repo: Path) -> Path:
+    return repo / ".claude" / "settings.json"
+
+
+def plugin_wiring_status(repo: str | Path) -> dict[str, Any]:
+    """Report the worktree-durable plugin wiring in tracked settings.
+
+    Stage 2 of the plugin migration (decisions/2026-06-10): plugin
+    enablement written to TRACKED `.claude/settings.json` survives
+    worktrees, unlike the gitignored symlink wiring. Shape verified live
+    against `claude plugin marketplace add` output.
+    """
+    target = Path(repo).resolve()
+    settings = _read_settings(_tracked_settings_path(target))
+    marketplaces = settings.get("extraKnownMarketplaces")
+    marketplace = (
+        marketplaces.get(PLUGIN_MARKETPLACE_NAME) if isinstance(marketplaces, dict) else None
+    )
+    source = (marketplace or {}).get("source") if isinstance(marketplace, dict) else None
+    marketplace_known = bool(
+        isinstance(source, dict)
+        and source.get("source") == "github"
+        and source.get("repo") == PLUGIN_REPO
+    )
+    enabled_plugins = settings.get("enabledPlugins")
+    plugin_enabled = bool(
+        isinstance(enabled_plugins, dict) and enabled_plugins.get(PLUGIN_ENABLE_KEY) is True
+    )
+    return {
+        "marketplace_known": marketplace_known,
+        "plugin_enabled": plugin_enabled,
+        "wired": marketplace_known and plugin_enabled,
+        "settings_path": str(_tracked_settings_path(target)),
+    }
+
+
+def write_plugin_wiring(repo: str | Path) -> dict[str, Any]:
+    """Write the worktree-durable plugin wiring into tracked settings.
+
+    Merges two keys into `.claude/settings.json` (created if absent),
+    preserving everything else in the file. Idempotent.
+    """
+    target = Path(repo).resolve()
+    path = _tracked_settings_path(target)
+    settings = _read_settings(path)
+    before = plugin_wiring_status(target)
+    marketplaces = settings.setdefault("extraKnownMarketplaces", {})
+    if not isinstance(marketplaces, dict):
+        marketplaces = {}
+        settings["extraKnownMarketplaces"] = marketplaces
+    marketplaces[PLUGIN_MARKETPLACE_NAME] = {"source": {"source": "github", "repo": PLUGIN_REPO}}
+    enabled = settings.setdefault("enabledPlugins", {})
+    if not isinstance(enabled, dict):
+        enabled = {}
+        settings["enabledPlugins"] = enabled
+    enabled[PLUGIN_ENABLE_KEY] = True
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+    after = plugin_wiring_status(target)
+    return {
+        "ok": after["wired"],
+        "changed": before != after,
+        "settings_path": str(path),
+        "wiring": after,
+        "summary": (
+            "plugin wiring written to tracked settings — skill discovery now "
+            "survives fresh worktrees (restart or /reload-skills to pick up)"
+            if after["wired"]
+            else "plugin wiring write did not verify; inspect .claude/settings.json"
+        ),
+    }
