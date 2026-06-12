@@ -11,6 +11,64 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.3.44] - 2026-06-12
+
+### Added
+
+- Claude Code plugin distribution is now a real, installable rail:
+  `.claude-plugin/marketplace.json` ships in the repo and the wheel
+  (`claude plugin marketplace add noontide-co/mainbranch` works), and
+  `mb skill link --plugin` writes worktree-durable plugin wiring into the
+  business repo's tracked `.claude/settings.json` (parallel to the symlink
+  rail). Skill discovery survives fresh worktrees once the plugin is
+  active; `link_status` reports the plugin facts. The release preflight
+  now checks the marketplace manifest version as a fourth release file.
+- `mb spine declare` / `mb spine show` record which system plays the
+  business's contact+event spine role as a committed repo fact (including
+  an intentional no-spine stance via `--store none --intentional`), and
+  `mb doctor` grades the declared position: agent queryability through
+  `mb connect`, declared timeline gaps, and the revisit trigger.
+  `mb spine init --owned` scaffolds the proven portable contact+event
+  schema — delivery-truth columns included — as the triggered build path
+  (see `decisions/2026-06-12-spine-levels.md`).
+- `mb canary init` scaffolds the golden-path smoke harness and alert
+  doctrine (cheap/expensive tiers, WARN never pages, every alert
+  actionable) proven on a real business's money path.
+- `mb connect` grew the credential lifecycle: Stripe and Resend as
+  first-class providers, key-shape and test-vs-live validation at intake,
+  operator-defined providers via `--custom`, and rotation that sweeps
+  sibling keychain refs across repos and worktrees (loudly reporting any
+  ref it could not update).
+- Push records can declare where finished binary creative lives
+  (`media_location` / `media_backend`), validator-enforced.
+- `mb validate --paths <prefix>` scopes validation to the files an agent
+  actually touched; internal failures now emit a parseable JSON error
+  envelope instead of a traceback, and an empty markdown link destination
+  no longer crashes cross-reference checking.
+- `mb status` drift gained two named items: `core_propagation`
+  (offer/audience/voice changed after active push records — derived copy
+  may carry the old identity) and `uncodified_decisions` (accepted
+  decisions never codified into reference files).
+- `mb-setup` scaffolds `core/operations/agent-access-dossier.md` (the
+  capability map: storage doctrine, provider verify table, never-print
+  rules), and `mb doctor` runs the dossier's verify column under a strict
+  whitelist — only `mb connect test <provider>` rows execute, never
+  through a shell.
+- New doctrine pages: the twelve operating principles (with the subagent
+  operating contract), delivery truth (acceptance is not delivery), the
+  research-placement contract, and traffic reconciliation (counting
+  humans, not crawlers).
+
+### Changed
+
+- Both first-class runtimes now teach the same surfaces: mb-help maps
+  every newer command to the business question it answers, mb-start and
+  the generated Codex AGENTS.md route data/ops questions identically, and
+  a runtime-aware CI gate fails any future surface that ships taught on
+  only one rail. mb-ads references resolve engine files relative to the
+  skill's own loaded directory, fixing the silent break under plugin-only
+  installs.
+
 ## [0.3.43] - 2026-06-11
 
 ### Added
