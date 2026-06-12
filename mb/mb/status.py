@@ -43,6 +43,7 @@ STATUS_SCHEMA_VERSION = "1.0"
 LAST_STATUS_SEEN_RELATIVE_PATH = Path(".mb") / "last-status-seen.json"
 LAST_STATUS_SEEN_GITIGNORE_ENTRY = ".mb/last-status-seen.json"
 STALE_DECISION_DAYS = 14
+UNCODIFIED_DECISION_DAYS = 7
 STALE_RESEARCH_DAYS = 45
 ACTIVE_BET_STATUSES = {"open", "paused"}
 BET_APPETITE_TIERS = {"trivial", "small", "material", "strategic"}
@@ -1174,6 +1175,7 @@ def _brain(repo: Path) -> dict[str, Any]:
     decision_files = _relative_markdown_files(repo, "decisions")
     decisions: list[dict[str, Any]] = []
     stale: list[dict[str, Any]] = []
+    uncodified: list[dict[str, Any]] = []
     today = date.today()
 
     for path in decision_files:
@@ -1188,6 +1190,14 @@ def _brain(repo: Path) -> dict[str, Any]:
                 stale_item = dict(item)
                 stale_item["age_days"] = age_days
                 stale.append(stale_item)
+        # Accepted but never codified: the decision happened, the reference
+        # files it should change did not — decision-vs-implementation drift.
+        if status == "accepted" and decision_date is not None:
+            age_days = (today - decision_date).days
+            if age_days > UNCODIFIED_DECISION_DAYS:
+                uncodified_item = dict(item)
+                uncodified_item["age_days"] = age_days
+                uncodified.append(uncodified_item)
 
     research_files = _relative_markdown_files(repo, "research")
     research: list[dict[str, Any]] = []
@@ -1210,6 +1220,7 @@ def _brain(repo: Path) -> dict[str, Any]:
         "counts": counts,
         "recent_decisions": decisions[:5],
         "stale_decisions": stale[:5],
+        "uncodified_decisions": uncodified[:5],
         "recent_research": research[:5],
         "stale_research": stale_research[:5],
         "bets": bets,
@@ -4023,6 +4034,22 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
                 "summary": f"{len(stale_decisions)} proposed/running decision(s) are stale.",
                 "evidence": [item["path"] for item in stale_decisions[:5]],
                 "repair": "Review stale proposed/running decisions in `decisions/`.",
+                "safe_to_share": True,
+            }
+        )
+    uncodified_decisions = report["brain"].get("uncodified_decisions") or []
+    if uncodified_decisions:
+        items.append(
+            {
+                "id": "uncodified_decisions",
+                "severity": "warn",
+                "summary": (
+                    f"{len(uncodified_decisions)} accepted decision(s) were never "
+                    "codified into reference files — decided, but reality unchanged."
+                ),
+                "evidence": [item["path"] for item in uncodified_decisions[:5]],
+                "repair": "Run `/mb-think codify <decision-file>` to apply each, "
+                "then flip its status to codified in the same pass.",
                 "safe_to_share": True,
             }
         )

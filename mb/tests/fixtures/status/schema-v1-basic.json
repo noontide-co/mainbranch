@@ -26,7 +26,8 @@
       "recent_decisions",
       "recent_research",
       "stale_decisions",
-      "stale_research"
+      "stale_research",
+      "uncodified_decisions"
     ],
     "content_strategy": [
       "counts",
