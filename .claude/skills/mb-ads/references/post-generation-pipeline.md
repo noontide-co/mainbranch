@@ -47,7 +47,7 @@ Spawn ALL agents in a single message for parallel execution. Use `subagent_type:
 
 Each compliance agent receives:
 - **Ad content inline** (pass the full batch file content in the prompt -- do NOT just give a file path)
-- **Lens file path** (agent reads its assigned lens from `.claude/lenses/`)
+- **Lens file path** (agent reads its assigned lens from the engine's `lenses/` dir — `../../lenses/` relative to this skill's loaded location, never cwd-relative)
 - **Business context** (only what that lens needs):
   - FTC: offer.md, testimonials.md, typicality.md
   - Meta Policy: offer.md
