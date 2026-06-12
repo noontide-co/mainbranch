@@ -1109,6 +1109,14 @@ def connect_cmd(
         "--from-env",
         help="Read the provider credential from a known environment variable.",
     ),
+    custom: bool = typer.Option(
+        False,
+        "--custom",
+        help=(
+            "Register an operator-defined provider id (lowercase letters, "
+            "digits, hyphens) with an api_key secret slot."
+        ),
+    ),
     metadata: list[str] = CONNECT_METADATA_OPTION,
     all_providers: bool = typer.Option(
         False,
@@ -1225,7 +1233,10 @@ def connect_cmd(
         raise typer.Exit(2)
 
     try:
-        provider_info = connect_mod.normalize_provider(target)
+        if custom:
+            provider_info = connect_mod.normalize_provider(target, allow_custom=True)
+        else:
+            provider_info = connect_mod.resolve_provider(target, repo)
     except ValueError as exc:
         typer.echo(f"mb connect: {exc}", err=True)
         raise typer.Exit(2) from exc
@@ -1265,6 +1276,7 @@ def connect_cmd(
             account_label=account_label,
             metadata_pairs=metadata,
             scope=scope,
+            custom=custom,
         )
         result["credential_source"] = {
             "type": credential_source if secret_value else "missing",
