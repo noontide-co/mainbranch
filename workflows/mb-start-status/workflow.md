@@ -172,6 +172,26 @@ triggered kill, triggered double-down, close, update, and narrate moments
 before inventing bet state from prose. Use `onboarding` to resume setup without
 inventing a new interview.
 
+Data/ops surface routing: whose-data questions route to `mb spine declare` and
+`mb spine show` — the declaration is a committed repo fact that doctor grades,
+and `mb spine init --owned` is the triggered build path only, never a default
+migration. Money-path-overnight worries, once real money or real leads flow
+unattended, route to `mb canary init`. "Show me the business" routes to
+`mb dashboard open` (local, read-only, never committed). Scripts that read
+credentials route to `mb connect token` (token to stdout for scripts and
+agents; never echo the value). Tools missing from the provider list route to
+`mb connect <id> --custom`. Agents validating their own work in repos with
+legacy debt route to `mb validate --paths <prefix>`. Lead with the business
+answer, command second; triggered surfaces stay triggered.
+
+Two named `drift.items` ids carry doctrine the runtime must explain rather
+than re-derive. `core_propagation` means offer/audience/voice identity files
+changed after the active push records were last updated — derived copy such as
+ads, pages, and emails may still carry the old identity; re-check active
+pushes against the updated core files. `uncodified_decisions` means decisions
+accepted more than seven days ago were never codified into reference files —
+decided, but reality unchanged; route repair through the mb-think codify mode.
+
 Give one clear route: frame a bet, think through a decision, advance a push,
 draft a playbook, repair the repo, review provider readiness, inspect a
 specific offer, or plan a checkpoint. In status mode, do not mutate the
