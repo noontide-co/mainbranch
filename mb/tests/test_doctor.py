@@ -1720,7 +1720,7 @@ def _topology_section(payload: dict[str, Any]) -> dict[str, Any]:
 
 def test_doctor_topology_drift_section_info_when_no_registry(tmp_path: Path) -> None:
     repo = tmp_path / "no-topology"
-    repo.mkdir()
+    (repo / "core").mkdir(parents=True)  # minimal business marker (doctor guards bare dirs)
 
     payload = doctor_mod.repair_plan(repo=str(repo))
 
@@ -1909,7 +1909,7 @@ def test_doctor_repair_plan_actions_always_carry_audience_and_summary(
     """Every action emitted by repair_plan must have a valid audience and a
     non-empty operator_summary. Locks the contract agents read against."""
     repo = tmp_path / "fresh"
-    repo.mkdir()
+    (repo / "core").mkdir(parents=True)  # minimal business marker (doctor guards bare dirs)
 
     payload = doctor_mod.repair_plan(repo=str(repo))
 
@@ -1984,3 +1984,36 @@ def test_dossier_verify_reports_connected_provider_ok(tmp_path: Path, monkeypatc
     assert apify["name"] == "Apify"
     assert "mb connect test apify" in apify["summary"]
     assert apify["state"] in {"ok", "warn"}
+
+
+def test_doctor_guard_refuses_writes_outside_business_folder(tmp_path: Path) -> None:
+    (tmp_path / "stray-notes.md").write_text("# not a business\n", encoding="utf-8")
+
+    plan = doctor_mod.repair_plan(tmp_path)
+    assert plan["guard"] == "not_business_folder"
+    assert plan["actions"] == []
+    assert "mb onboard" in plan["plan_interpretation"]["summary"]
+    # Guard payload still honors the repair JSON contract
+    assert plan["schema"] == "mb.doctor.repair"
+    assert plan["schema_version"] == 1
+    assert plan["mode"] == "plan"
+    # No phantom validation of stray markdown
+    assert len(plan["sections"]) == 1
+
+    applied = doctor_mod.repair_apply(tmp_path)
+    assert applied["guard"] == "not_business_folder"
+    assert applied["applied_actions"] == []
+    assert applied["mode"] == "apply"
+    # Nothing scaffolded into the arbitrary cwd
+    assert not (tmp_path / ".claude").exists()
+    assert not (tmp_path / "AGENTS.md").exists()
+    assert not (tmp_path / ".gitignore").exists()
+
+
+def test_doctor_guard_passes_business_folders(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+
+    plan = doctor_mod.repair_plan(repo)
+    assert plan.get("guard") is None
+    assert len(plan["sections"]) > 1
