@@ -207,6 +207,41 @@ def spine_declare_cmd(
     raise typer.Exit(0 if result["ok"] else 1)
 
 
+@spine_app.command("init")
+def spine_init_cmd(
+    owned: bool = typer.Option(
+        False,
+        "--owned",
+        help="Scaffold the owned contact+event schema (the triggered build path).",
+    ),
+    repo: str = typer.Option(".", "--repo", help="Business repo to scaffold."),
+    force: bool = typer.Option(False, "--force", help="Overwrite existing spine files."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Scaffold the owned spine (schema + instructions). Requires --owned."""
+    if not owned:
+        typer.echo(
+            "mb spine init: pass --owned to scaffold the owned contact+event "
+            "schema. Building an owned spine is the TRIGGERED path — declare "
+            "your current position first (`mb spine declare`) and see "
+            "decisions/2026-06-12-spine-levels.md for when a trigger fires.",
+            err=True,
+        )
+        raise typer.Exit(2)
+    result = spine_mod.init_owned(repo, force=force)
+    if json_out:
+        typer.echo(
+            _json_payload(result, command="mb spine init", schema_name="mainbranch.spine.v1")
+        )
+    else:
+        typer.echo(result["summary"])
+        for path in result["written"]:
+            typer.echo(f"  wrote {path}")
+        for path in result["skipped"]:
+            typer.echo(f"  kept  {path}")
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
 @spine_app.command("show")
 def spine_show_cmd(
     repo: str = typer.Option(".", "--repo", help="Business repo to inspect."),
