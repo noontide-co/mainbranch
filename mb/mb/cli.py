@@ -36,6 +36,7 @@ from mb import resolve as resolve_mod
 from mb import similar_bets as similar_bets_mod
 from mb import site as site_mod
 from mb import skill_validate as skill_validate_mod
+from mb import spine as spine_mod
 from mb import start as start_mod
 from mb import status as status_mod
 from mb import suggest as suggest_mod
@@ -141,6 +142,94 @@ canary_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(canary_app, name="canary")
+
+spine_app = typer.Typer(
+    name="spine",
+    help="Declare and inspect the business's contact+event spine position.",
+    no_args_is_help=True,
+)
+app.add_typer(spine_app, name="spine")
+
+SPINE_LENS_OPTION = typer.Option(
+    [],
+    "--lens",
+    help="Fan-out lens as <store> or <store>:<domain> (repeatable).",
+)
+SPINE_GAP_OPTION = typer.Option(
+    [],
+    "--gap",
+    help="Known event/timeline gap the spine does not hold (repeatable).",
+)
+
+
+@spine_app.command("declare")
+def spine_declare_cmd(
+    store: str = typer.Option(
+        ...,
+        "--store",
+        help="System of record for people (a provider id), or `none`.",
+    ),
+    repo: str = typer.Option(".", "--repo", help="Business repo to declare in."),
+    intentional: bool = typer.Option(
+        False,
+        "--intentional",
+        help="With --store none: declare the no-spine position as deliberate.",
+    ),
+    lenses: list[str] = SPINE_LENS_OPTION,
+    gaps: list[str] = SPINE_GAP_OPTION,
+    revisit: str = typer.Option(
+        "", "--revisit", help="The trigger that should reopen this declaration."
+    ),
+    force: bool = typer.Option(False, "--force", help="Replace an existing declaration."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Record which system plays the contact+event spine role (a repo fact)."""
+    try:
+        result = spine_mod.declare(
+            repo,
+            store=store,
+            intentional_none=intentional,
+            lenses=list(lenses),
+            gaps=list(gaps),
+            revisit=revisit,
+            force=force,
+        )
+    except ValueError as exc:
+        typer.echo(f"mb spine declare: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    if json_out:
+        typer.echo(
+            _json_payload(result, command="mb spine declare", schema_name="mainbranch.spine.v1")
+        )
+    else:
+        typer.echo(result["summary"])
+        typer.echo(f"fact: {result['path']}")
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
+@spine_app.command("show")
+def spine_show_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo to inspect."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Read the declared spine position back as facts."""
+    result = spine_mod.show(repo)
+    if json_out:
+        typer.echo(
+            _json_payload(result, command="mb spine show", schema_name="mainbranch.spine.v1")
+        )
+    else:
+        typer.echo(result["summary"])
+        if result.get("declared"):
+            declaration = result["declaration"]
+            for lens in declaration.get("lenses", []):
+                domain = f" ({lens['domain']})" if lens.get("domain") else ""
+                typer.echo(f"  lens: {lens['store']}{domain}")
+            for gap in declaration.get("known_gaps", []):
+                typer.echo(f"  gap:  {gap}")
+            if declaration.get("revisit_trigger"):
+                typer.echo(f"  revisit when: {declaration['revisit_trigger']}")
+    raise typer.Exit(0 if result["ok"] else 1)
 
 
 @canary_app.command("init")
