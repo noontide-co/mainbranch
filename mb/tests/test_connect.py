@@ -1776,3 +1776,68 @@ def test_connect_metadata_only_skips_key_shape_check(tmp_path: Path, monkeypatch
     )
 
     assert result["ok"] is False or result["status"]["state"] == "missing_secret"
+
+
+def test_connect_custom_provider_roundtrip(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            "dataforseo",
+            "--custom",
+            "--repo",
+            str(repo),
+            "--token",
+            "custom-fixture-token",
+        ],
+    )
+    assert result.exit_code == 0
+
+    config_text = (repo / ".mb" / "connect.yaml").read_text(encoding="utf-8")
+    assert "custom-fixture-token" not in config_text
+    assert "dataforseo" in config_text
+
+    token = runner.invoke(app, ["connect", "token", "dataforseo", "--repo", str(repo)])
+    assert token.exit_code == 0
+    assert token.stdout == "custom-fixture-token\n"
+
+    status = connect_mod.status_provider("dataforseo", repo)
+    assert status["provider"] == "dataforseo"
+    assert status["connected"] is True
+
+    reconnect = runner.invoke(
+        app,
+        ["connect", "dataforseo", "--repo", str(repo), "--token", "rotated-fixture-token"],
+    )
+    assert reconnect.exit_code == 0
+    rotated = runner.invoke(app, ["connect", "token", "dataforseo", "--repo", str(repo)])
+    assert rotated.stdout == "rotated-fixture-token\n"
+
+
+def test_connect_unknown_provider_hints_custom(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(app, ["connect", "dataforseo", "--repo", str(repo), "--token", "x"])
+
+    assert result.exit_code == 2
+    assert "rerun with --custom" in result.stderr
+
+
+def test_connect_custom_rejects_bad_slug(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        ["connect", "Bad_Slug!", "--custom", "--repo", str(repo), "--token", "x"],
+    )
+
+    assert result.exit_code == 2
+    assert "lowercase letters, digits, and hyphens" in result.stderr

@@ -317,15 +317,45 @@ def provider_registry() -> list[dict[str, Any]]:
     ]
 
 
-def normalize_provider(provider_id: str) -> Provider:
+CUSTOM_PROVIDER_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,30}$")
+
+
+def _custom_provider(provider_id: str) -> Provider:
+    """Synthesize a registry entry for an operator-named provider.
+
+    Custom providers ride every existing rail (SecretStore, user scope,
+    `mb connect token`, status) with a single `api_key` secret slot.
+    """
+    return Provider(
+        id=provider_id,
+        name=provider_id,
+        category="custom",
+        auth="api_key",
+        required_secrets=("api_key",),
+        metadata_fields=(),
+        description="Operator-defined custom provider.",
+    )
+
+
+def normalize_provider(provider_id: str, *, allow_custom: bool = False) -> Provider:
     key = provider_id.strip().lower().replace("_", "-")
     aliases = {"whisper": "transcription", "cloudflare-pages": "cloudflare"}
     key = aliases.get(key, key)
     providers = provider_map()
-    if key not in providers:
-        supported = ", ".join(sorted(providers))
-        raise ValueError(f"unknown provider {provider_id!r}; supported providers: {supported}")
-    return providers[key]
+    if key in providers:
+        return providers[key]
+    if allow_custom:
+        if not CUSTOM_PROVIDER_RE.fullmatch(key):
+            raise ValueError(
+                f"custom provider id {provider_id!r} must be 2-31 chars of "
+                "lowercase letters, digits, and hyphens"
+            )
+        return _custom_provider(key)
+    supported = ", ".join(sorted(providers))
+    raise ValueError(
+        f"unknown provider {provider_id!r}; supported providers: {supported}. "
+        "For an operator-defined provider, rerun with --custom."
+    )
 
 
 def _now() -> str:
@@ -992,10 +1022,15 @@ def connect_provider(
     metadata_pairs: list[str] | None = None,
     secret_backend: str | None = None,
     scope: str = "repo",
+    custom: bool = False,
 ) -> dict[str, Any]:
     """Connect a provider by writing repo metadata and local secrets."""
 
-    provider = normalize_provider(provider_id)
+    if custom:
+        provider = normalize_provider(provider_id, allow_custom=True)
+    else:
+        # Reconnecting an existing custom provider works without the flag.
+        provider = resolve_provider(provider_id, repo)
     normalized_scope = scope.strip().lower().replace("_", "-") or "repo"
     if normalized_scope not in CONNECT_SCOPES:
         raise ValueError("scope must be repo or user")
@@ -1114,6 +1149,27 @@ def _unhydrated_status(provider: Provider, entry: dict[str, Any]) -> dict[str, A
     }
 
 
+def resolve_provider(provider_id: str, repo: str | Path = ".") -> Provider:
+    """Resolve a provider id against the registry, then connected customs.
+
+    Read paths (status, token, test, hydrate) use this so an already
+    connected custom provider keeps working without re-passing --custom.
+    """
+    try:
+        return normalize_provider(provider_id)
+    except ValueError:
+        key = provider_id.strip().lower().replace("_", "-")
+        if CUSTOM_PROVIDER_RE.fullmatch(key):
+            target = Path(repo).resolve()
+            config = _read_config(target)
+            if isinstance(config["providers"].get(key), dict):
+                return _custom_provider(key)
+            repo_id = str(config.get("repo_id") or _repo_identity(target)["repo_id"])
+            if _user_scope_provider_entry(repo_id, key) is not None:
+                return _custom_provider(key)
+        raise
+
+
 def status_provider(
     provider_id: str,
     repo: str | Path = ".",
@@ -1121,7 +1177,7 @@ def status_provider(
     which_func: Which | None = None,
     command_runner: CommandRunner | None = None,
 ) -> dict[str, Any]:
-    provider = normalize_provider(provider_id)
+    provider = resolve_provider(provider_id, repo)
     target = Path(repo).resolve()
     config = _read_config(target)
     identity = _repo_identity(target)
@@ -1311,7 +1367,7 @@ def hydrate(
     providers = raw_providers if isinstance(raw_providers, dict) else {}
     selected_ids: list[str]
     if provider_id:
-        provider = normalize_provider(provider_id)
+        provider = resolve_provider(provider_id, repo)
         selected_ids = [provider.id]
     else:
         selected_ids = sorted(str(key) for key in providers)
@@ -1370,7 +1426,7 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
     Falls back to user scope when the repo config has no entry, so worktrees
     and scheduled tasks resolve the same credential as the primary checkout.
     """
-    provider = normalize_provider(provider_id)
+    provider = resolve_provider(provider_id, repo)
     if not provider.required_secrets:
         raise ValueError(f"provider {provider.id!r} stores no secrets")
     field = provider.required_secrets[0]
@@ -1913,7 +1969,7 @@ def test_provider(
     which_func: Which | None = None,
     command_runner: CommandRunner | None = None,
 ) -> dict[str, Any]:
-    provider = normalize_provider(provider_id)
+    provider = resolve_provider(provider_id, repo)
     target = Path(repo).resolve()
     config = _read_config(target)
     entry = config["providers"].get(provider.id)

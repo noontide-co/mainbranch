@@ -186,7 +186,14 @@ Canon (read on first iteration of a fresh session):
   subagent operating contract (mining rec 19's doctrine home:
   commit-before-return verified, worktree-per-agent, liveness,
   auditor/builder separation, docs-first + stale-doc cleanup).
-  mb-setup points operators at it. This PR.
+  mb-setup points operators at it (#851 merged).
+- 2026-06-11: #833 done — `mb connect <id> --custom` registers
+  operator-named providers (slug-validated, api_key slot) on the same
+  SecretStore/user-scope/token/status/test rails; once connected,
+  reconnect and all read paths work without the flag
+  (`resolve_provider` checks registry → connected customs). Unknown
+  provider error now hints --custom. Closes the DataForSEO-class gap
+  from mining friction #1. This PR.
 
 ## Next intent
 
