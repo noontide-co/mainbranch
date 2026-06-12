@@ -31,7 +31,9 @@ def test_beginner_setup_uses_owner_friendly_setup_prompt() -> None:
         # beginner setup). Keep these in lockstep with README.md.
         "I want Main Branch: AI business memory I own as files in one folder",
         "interview me briefly about my business, my offer, and my audience",
-        "run `mb doctor` and fix anything it flags",
+        "then run `mb doctor` inside that folder and fix anything it flags",
+        "save the first checkpoint",
+        "treat local-only as a valid",
         "then stop and show me what you set up",
         # Safety rails stay documented around the prompt.
         "writes are explained and approved first",
