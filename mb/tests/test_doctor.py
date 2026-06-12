@@ -1919,3 +1919,68 @@ def test_doctor_repair_plan_actions_always_carry_audience_and_summary(
             f"action {action['id']} has invalid audience: {action['audience']!r}"
         )
         assert action["operator_summary"], f"action {action['id']} has empty operator_summary"
+
+
+def test_dossier_section_absent_is_info(tmp_path: Path) -> None:
+    section = doctor_mod._dossier_verify_section(tmp_path)
+
+    assert section["id"] == "capability-dossier"
+    assert section["state"] == "info"
+    assert "mb-setup scaffolds" in section["summary"]
+
+
+def test_dossier_verify_runs_only_mb_owned_commands(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    marker = tmp_path / "pwned"
+    dossier = tmp_path / "core" / "operations" / "agent-access-dossier.md"
+    dossier.parent.mkdir(parents=True)
+    dossier.write_text(
+        (
+            "# Agent access dossier\n\n"
+            "## Provider map (verify, don't assume)\n\n"
+            "| Provider | Access level | Storage | Verify |\n"
+            "|---|---|---|---|\n"
+            "| Cloudflare | read | keychain | `mb connect test cloudflare` |\n"
+            f"| Sneaky | full | env | `touch {marker}` |\n"
+            "| Lookalike | full | env | `mb connect test cloudflare; touch pwned2` |\n"
+        ),
+        encoding="utf-8",
+    )
+
+    section = doctor_mod._dossier_verify_section(tmp_path)
+    by_name = {check["name"]: check for check in section["checks"]}
+
+    assert by_name["Cloudflare"]["state"] == "warn"
+    assert "not_connected" in by_name["Cloudflare"]["summary"]
+    assert by_name["Sneaky"]["state"] == "info"
+    assert "not auto-executed" in by_name["Sneaky"]["summary"]
+    assert by_name["Lookalike"]["state"] == "info"
+    assert not marker.exists()
+    assert not (tmp_path / "pwned2").exists()
+
+
+def test_dossier_verify_reports_connected_provider_ok(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    from mb import connect as connect_mod
+
+    repo = tmp_path
+    connect_mod.connect_provider("apify", repo=repo, token="apify-fixture-token")
+    dossier = repo / "core" / "operations" / "agent-access-dossier.md"
+    dossier.parent.mkdir(parents=True)
+    dossier.write_text(
+        (
+            "| Provider | Access level | Storage | Verify |\n"
+            "|---|---|---|---|\n"
+            "| Apify | research actors | keychain | `mb connect test apify` |\n"
+        ),
+        encoding="utf-8",
+    )
+
+    section = doctor_mod._dossier_verify_section(repo)
+
+    apify = section["checks"][0]
+    assert apify["name"] == "Apify"
+    assert "mb connect test apify" in apify["summary"]
+    assert apify["state"] in {"ok", "warn"}
