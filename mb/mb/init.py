@@ -130,8 +130,14 @@ def run(
     *,
     owner_name: str = "",
     owner_github: str = "",
+    infer_github_identity: bool = True,
 ) -> dict[str, Any]:
     """Scaffold ``path`` as a Main Branch business repo.
+
+    ``infer_github_identity`` controls whether the machine's gh login may be
+    probed when no explicit ``owner_github`` is given. Callers that let the
+    operator decline GitHub (onboard) must pass False on decline so a shared
+    machine's logged-in account never lands in the scaffold.
 
     Returns a dict with ``status`` ∈ {ok, already-initialized, error},
     ``path`` (absolute), and ``created`` (list of relative paths created).
@@ -158,13 +164,17 @@ def run(
     if not business_name:
         return {"status": "error", "path": str(target), "error": "empty business name"}
 
-    gh_user = (
-        team_mod.normalize_github_handle(owner_github)
-        or team_mod.normalize_github_handle(_gh_username())
-        or "your-gh-username"
+    explicit_handle = team_mod.normalize_github_handle(owner_github)
+    inferred_handle = (
+        team_mod.normalize_github_handle(_gh_username())
+        if not explicit_handle and infer_github_identity
+        else ""
     )
+    gh_handle = explicit_handle or inferred_handle
+    gh_user = gh_handle or "your-gh-username"
     owner_display_name = _owner_display_name(owner_name)
-    owner_slug = _owner_slug(owner_display_name, gh_user)
+    # No real handle → slug from the owner's name, never from the placeholder.
+    owner_slug = _owner_slug(owner_display_name, gh_handle)
 
     created: list[str] = []
     for sub in DATA_FOLDERS:

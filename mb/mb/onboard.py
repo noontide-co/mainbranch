@@ -1210,6 +1210,10 @@ def run(
             name=business_name,
             owner_name=owner_name,
             owner_github=owner_github,
+            # Declining GitHub must not scrape the machine's gh login into
+            # the scaffold (cold-eyes finding, #880) — infer only when the
+            # operator actually chose a GitHub path.
+            infer_github_identity=bool(github_repo.strip()),
         )
         created.extend(str(item) for item in init_result.get("created", []))
         if init_result["status"] == "error":
