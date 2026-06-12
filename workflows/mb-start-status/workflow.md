@@ -176,7 +176,10 @@ Data/ops surface routing: whose-data questions route to `mb spine declare` and
 `mb spine show` — the declaration is a committed repo fact that doctor grades,
 and `mb spine init --owned` is the triggered build path only, never a default
 migration. Money-path-overnight worries, once real money or real leads flow
-unattended, route to `mb canary init`. "Show me the business" routes to
+unattended, route to `mb canary init`. A recurring daily read on the business
+routes to `mb pulse init` (deterministic collectors plus a judgment skill:
+scorecard, anomalies, exactly ONE recommended action, read-only — it consumes
+`mb status` facts rather than re-ranking them). "Show me the business" routes to
 `mb dashboard open` (local, read-only, never committed). Scripts that read
 credentials route to `mb connect token` (token to stdout for scripts and
 agents; never echo the value). Tools missing from the provider list route to

@@ -32,6 +32,7 @@ from mb import init as init_mod
 from mb import issue as issue_mod
 from mb import migrate as migrate_mod
 from mb import onboard as onboard_mod
+from mb import pulse as pulse_mod
 from mb import resolve as resolve_mod
 from mb import similar_bets as similar_bets_mod
 from mb import site as site_mod
@@ -280,6 +281,38 @@ def canary_init_cmd(
     if json_out:
         typer.echo(
             _json_payload(result, command="mb canary init", schema_name="mainbranch.canary.v1")
+        )
+    else:
+        typer.echo(result["summary"])
+        for path in result["written"]:
+            typer.echo(f"  wrote {path}")
+        for path in result["skipped"]:
+            typer.echo(f"  kept  {path}")
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
+pulse_app = typer.Typer(
+    name="pulse",
+    help="Daily business pulse: deterministic collectors + a judgment skill.",
+    no_args_is_help=True,
+)
+app.add_typer(pulse_app, name="pulse")
+
+
+@pulse_app.command("init")
+def pulse_init_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo to scaffold."),
+    slug: str = typer.Option(
+        "", "--slug", help="Short business slug for pulse log filenames (defaults to repo name)."
+    ),
+    force: bool = typer.Option(False, "--force", help="Overwrite existing pulse scaffold files."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Scaffold pulse collectors + the repo-local /mb-pulse judgment skill."""
+    result = pulse_mod.init(repo, slug=slug, force=force)
+    if json_out:
+        typer.echo(
+            _json_payload(result, command="mb pulse init", schema_name="mainbranch.pulse.v1")
         )
     else:
         typer.echo(result["summary"])
