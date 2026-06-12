@@ -19,6 +19,7 @@ import typer
 from mb import __version__
 from mb import ads as ads_mod
 from mb import books as books_mod
+from mb import canary as canary_mod
 from mb import checkpoint as checkpoint_mod
 from mb import codex as codex_mod
 from mb import connect as connect_mod
@@ -133,6 +134,37 @@ dashboard_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(dashboard_app, name="dashboard")
+
+canary_app = typer.Typer(
+    name="canary",
+    help="Golden-path canary scaffold for the business money path.",
+    no_args_is_help=True,
+)
+app.add_typer(canary_app, name="canary")
+
+
+@canary_app.command("init")
+def canary_init_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo to scaffold."),
+    force: bool = typer.Option(
+        False, "--force", help="Overwrite existing canary files (loses your checks)."
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Scaffold canary/smoke.mjs + canary/README.md (harness + alert doctrine)."""
+    result = canary_mod.init(repo, force=force)
+    if json_out:
+        typer.echo(
+            _json_payload(result, command="mb canary init", schema_name="mainbranch.canary.v1")
+        )
+    else:
+        typer.echo(result["summary"])
+        for path in result["written"]:
+            typer.echo(f"  wrote {path}")
+        for path in result["skipped"]:
+            typer.echo(f"  kept  {path}")
+    raise typer.Exit(0 if result["ok"] else 1)
+
 
 suggest_app = typer.Typer(
     name="suggest",
