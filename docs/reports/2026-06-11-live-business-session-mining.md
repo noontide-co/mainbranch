@@ -1,24 +1,20 @@
-# bor session mining — idea to first leads (2026-06-01 → 2026-06-11)
+# the live business session mining — idea to first leads (2026-06-01 → 2026-06-11)
 
-> Source: an 11-day continuous Claude Code operating session. Synthesis date: 2026-06-11. Engine repo: `noontide-co/mainbranch`.
+> Source: an 11-day continuous Claude Code operating session on a real
+> business we built and operate. Business-identifying details are removed;
+> the full named teardown lives in the paid community. Synthesis date: 2026-06-11. Engine repo: `noontide-co/mainbranch`.
 
 ## What this is
 
-Over eleven days (June 1–11, 2026), one operator built the Booked Out Roofers business end-to-end through Main Branch: idea → offer → live site → paid demo pipeline → Stripe checkout → email engine → Meta and Google ads → leadgen webhook → first real ad-sourced lead. This report mines that session for engine signals. Method: the full transcript was distilled into 13 day-chunks (June 10 and 11 each produced two parallel chunks), each extracted for friction moments with verbatim operator quotes, product signals, primitives touched, and actual `mb` CLI / skill usage; quotes are reproduced as typed (typos included) and redacted of credentials, account identifiers, customer names, and machine-specific paths. The findings below are deduplicated across days and ranked. The session was explicitly framed by the operator as dogfooding: "I'm basically building this company to both make money and to strengthen the main branch... you will be creating really solid tickets for the main branch." It produced engine issues #803 and #805–#820 along the way; this report reconciles the rest.
+Over eleven days (June 1–11, 2026), one operator built the live business end-to-end through Main Branch: idea → offer → live site → paid demo pipeline → Stripe checkout → email engine → Meta and Google ads → leadgen webhook → first real ad-sourced lead. This report mines that session for engine signals. Method: the full transcript was distilled into 13 day-chunks (June 10 and 11 each produced two parallel chunks), each extracted for friction moments with verbatim operator quotes, product signals, primitives touched, and actual `mb` CLI / skill usage; quotes are reproduced as typed (typos included) and redacted of credentials, account identifiers, customer names, and machine-specific paths. The findings below are deduplicated across days and ranked. The session was explicitly framed by the operator as dogfooding: "I'm basically building this company to both make money and to strengthen the main branch... you will be creating really solid tickets for the main branch." It produced engine issues #803 and #805–#820 along the way; this report reconciles the rest.
 
-## Timeline
+## The arc (anonymized)
 
-- **06-01** — Offer built in one marathon: domain named and validated, Astro + Cloudflare site forked and live, operator vetoes an agent-invented call-based conversion model, full rethink locks the $100 / ~$1,500 / ~$250/mo ladder. Three stranded-commit incidents on merged hub PRs.
-- **06-02** — Demo pipeline becomes a real engine: durable demo serving, Stripe $100 checkout + HMAC webhook, Resend delivery, per-demo AI chat. Credential plumbing (five token-scope walls, live-vs-test key mixups) dominates friction. Operator declares the version-up wish: Stripe, Resend, and Impeccable "built in."
-- **06-03** — ~23-hour hardening marathon run on subagent fleets: report data integrity, full site overhaul, golden-path lockdown with smoke test + cron canary. Zero `mb` invocations all day.
-- **06-04** — Stress test across 14+ real roofers catches paid reports rendering *other companies'* data; identity-verification keystone fix; gated onboarding designed. A keystone subagent dies mid-verification leaving uncommitted money-path code.
-- **06-05** — Email layer re-architected onto a canonical Resend pattern after the operator catches a subagent's wrong provider-capability claims; `resend-playbook` lands in the hub; go-live blockers reduce to operator-only credential steps.
-- **06-06** — Go-live: Stripe flipped live, first real $100 sale end-to-end; the live-browser walkthrough catches a CSP bug every server-side check missed. A teammate's ad batch is converted from a misplaced GitHub issue into a proper hub push, filing #803.
-- **06-07** — Operator frustration ("What are we even doing right now?") forces a ground-in-reality orchestration reset; `operating-principles.md` codified with `graduation_candidate: mb-vip`; full E2E test with a real charge; Linear fulfillment MVP.
-- **06-08** — Lifecycle email engine (~38 templates, 19 automations) surfaces the keystone bug — marketing unsubscribe silently suppresses transactional sends — forcing a 5-slice money-path refactor across a context compaction; lead-first lander ships. Zero `mb` usage.
-- **06-09** — Campaign-down bug (provider rate limit) fixed; Meta connected via `mb connect meta --token-stdin`; the session's one full `/mb-think` run codifies audience + offer spine and ends in the session's only `mb checkpoint`; issues #805/#806 filed.
-- **06-10** — Pilot Meta ads cracked (5×5 + per-placement creative canon) through a string of silent API failures; overnight `/loop`; issues #807/#808 filed. A parallel CTO-loop chunk ships ten business PRs, three engine PRs (#809–#811 incl. the disappearing-skills root cause), and the "kernel-that-curates" identity ruling.
-- **06-11** — First real ad-sourced lead recovered, enriched, and nurtured with verified delivery; three-layer architecture decision (engine / business brain / business body); engine issues #812–#820 filed; engine CI fixed after being silently red since 05-31 (#822); LOOP-STATE.md seeded (#821). An overnight chunk assembles a paused Google Ads campaign entirely via raw REST.
+Eleven days, one operator, one business built end-to-end through Main
+Branch: idea → offer → live site → paid checkout → email engine → paid ads →
+first real lead. The named, numbers-included teardown of this business
+(offers, pricing, ad structures, day-by-day timeline) lives in the paid
+community; this public report keeps the engine lessons.
 
 ## Friction leaderboard
 
@@ -107,7 +103,7 @@ Engine implication: conversion mechanisms gated and recorded before copy generat
 ### 10. Operator-only steps and capability discovery live in chat scrollback (06-01, 06-05, 06-06, 06-10)
 
 > "Im no longer in front of my computer. What 2 clicks"
-> "Do we have an offer sharpening skill to look at here? Do we have our offer recorded not just in a decision or research in the core of noontide...?"
+> "Do we have an offer sharpening skill to look at here? Do we have our offer recorded not just in a decision or research in the hub's core...?"
 
 What happened: manual human-only actions (legal agreements, credential mints, UI-only toggles) accumulated as renumbered click-lists in chat the operator lost track of. The daily operator couldn't recall which skills exist for offer work, misremembered Impeccable's distill mode as "Instill," and three times in one evening had to ask the agent to translate its own vocabulary ("kernel," "ratify," "frames") into plain language.
 
@@ -119,7 +115,7 @@ Engine implication: a durable needs-operator action queue surfaced in status and
 - **decisions** — the workhorse. Created or amended on 9 of 11 days; the place operator voice memos, pivots, pricing rulings, and architecture calls crystallized. But every one was recorded via raw git + PR; no mb flow mediated a single decision.
 - **research** — extremely heavy (multi-agent fleets, external Grok/Codex dumps, Apify scrapes), with chronic placement confusion (hub vs product repo vs personal repo, one leak into the public hub) that produced #805.
 - **offers** — `offer.md` rewritten or reconciled at least six times as the offer evolved; a per-offer `audience.md` and offer-folder `playbooks/` were invented mid-session because the structure didn't exist.
-- **bets** — the BOR bet framed the whole arc (deadline, kill rubric, $2k spend cap, checkpoint reframe), but hygiene was always retrofitted by hand: no spend cap or milestone until the operator demanded it, stale pricing twice, never touched through `/mb-bet`.
+- **bets** — the business bet framed the whole arc (deadline, kill rubric, spend cap, checkpoint reframe), but hygiene was always retrofitted by hand: no spend cap or milestone until the operator demanded it, stale pricing twice, never touched through `/mb-bet`.
 - **pushes** — used for launches and ad batches, and the source of the richest schema findings: no slot for binary creative location (#803), no enforced contract, unclear locked-record semantics once a push is live/canceled, and push claims drifting from the live ad account.
 
 **Exercised lightly**
