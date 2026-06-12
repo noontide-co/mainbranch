@@ -1992,13 +1992,18 @@ def test_doctor_guard_refuses_writes_outside_business_folder(tmp_path: Path) -> 
     plan = doctor_mod.repair_plan(tmp_path)
     assert plan["guard"] == "not_business_folder"
     assert plan["actions"] == []
-    assert "mb onboard" in plan["summary"]
+    assert "mb onboard" in plan["plan_interpretation"]["summary"]
+    # Guard payload still honors the repair JSON contract
+    assert plan["schema"] == "mb.doctor.repair"
+    assert plan["schema_version"] == 1
+    assert plan["mode"] == "plan"
     # No phantom validation of stray markdown
     assert len(plan["sections"]) == 1
 
     applied = doctor_mod.repair_apply(tmp_path)
     assert applied["guard"] == "not_business_folder"
     assert applied["applied_actions"] == []
+    assert applied["mode"] == "apply"
     # Nothing scaffolded into the arbitrary cwd
     assert not (tmp_path / ".claude").exists()
     assert not (tmp_path / "AGENTS.md").exists()

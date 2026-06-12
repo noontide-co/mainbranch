@@ -1976,7 +1976,7 @@ def run(path: str) -> dict[str, Any]:
     }
 
 
-def _not_business_folder_guard(target: Path) -> dict[str, Any] | None:
+def _not_business_folder_guard(target: Path, *, mode: str = "plan") -> dict[str, Any] | None:
     """Refuse doctor writes (and noisy scans) outside a business folder.
 
     Field-proven failure (cold-eyes install test): pre-onboard doctor in an
@@ -2003,25 +2003,56 @@ def _not_business_folder_guard(target: Path) -> dict[str, Any] | None:
     # repairs — refuse only a directory with no business markers at all.
     if looks_like_business_repo(target) or any((target / m).exists() for m in markers):
         return None
-    summary = (
+    message = (
         "this is not a Main Branch business folder — run `mb onboard` to "
         "create one (doctor checks and repairs run inside it)"
     )
+    # Mirror the full repair payload contract so --json consumers and
+    # render_repair never hit a guard-shaped hole.
     return {
+        "schema": REPAIR_SCHEMA,
+        "schema_version": REPAIR_SCHEMA_VERSION,
         "ok": True,
-        "guard": "not_business_folder",
+        "mode": mode,
+        "only": "",
+        "all_agents": False,
+        # The guard refuses before any write, so even --apply stays read-only.
+        "read_only": True,
         "repo": str(target),
-        "summary": summary,
+        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "guard": "not_business_folder",
+        "summary": {
+            "ok": 0,
+            "info": 1,
+            "warn": 0,
+            "error": 0,
+            "actions": 0,
+            "write_actions": 0,
+            "safe_apply_actions": 0,
+        },
+        "plan_interpretation": {
+            "state": "not_business_folder",
+            "summary": message,
+            "read_only_plan": True,
+            "nonzero_exit_can_still_include_usable_plan": False,
+            "safe_to_share": True,
+        },
         "sections": [
             _section(
                 "business-folder",
                 "Business Folder",
                 "info",
-                summary,
+                message,
             )
         ],
         "actions": [],
         "applied_actions": [],
+        "post_apply": {
+            "structural_verification": "mb onboard",
+            "validation_frontmatter_debt": "mb onboard",
+            "runtime_smoke_required": message,
+            "git_review": [],
+        },
         "safe_to_share": True,
     }
 
@@ -2040,7 +2071,7 @@ def repair_plan(
     if only and all_agents:
         raise ValueError("--only cannot be combined with --all-agents")
     target = Path(repo).expanduser().resolve()
-    guard = _not_business_folder_guard(target)
+    guard = _not_business_folder_guard(target, mode=mode)
     if guard is not None:
         return guard
     doctor_report = run(str(target))
@@ -2897,7 +2928,7 @@ def repair_apply(
     if only and all_agents:
         raise ValueError("--only cannot be combined with --all-agents")
     target = Path(repo).expanduser().resolve()
-    guard = _not_business_folder_guard(target)
+    guard = _not_business_folder_guard(target, mode="apply")
     if guard is not None:
         return guard
     before = repair_plan(target, only=only, all_agents=all_agents)
@@ -3138,6 +3169,11 @@ def render_repair(report: dict[str, Any]) -> None:
     from rich.console import Console
 
     console = Console()
+    if report.get("guard") == "not_business_folder":
+        console.print("\n[bold]mb doctor repair[/bold]")
+        console.print(f"repo: {report['repo']}\n")
+        console.print(f"  [blue]info[/blue]  {report['plan_interpretation']['summary']}")
+        return
     mode = "read-only plan" if report["read_only"] else "apply summary"
     console.print(f"\n[bold]mb doctor repair[/bold]  {mode}")
     if report.get("only"):
