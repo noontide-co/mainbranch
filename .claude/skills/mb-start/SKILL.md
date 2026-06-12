@@ -6,7 +6,7 @@ loops: [sense, decide]
 
 # Start
 
-Single entry point for Main Branch. Detect business state, intent, save/sync posture, and the smallest useful next route.
+Single entry point: detect business state, intent, save/sync posture, and the smallest useful next route.
 
 ## Router and language contract
 
@@ -32,9 +32,8 @@ integrations, GitHub, team, bets, dirty git, since-last-check,
 naming people. Parse the full JSON once; do not slice status output with `head`
 or `sed` in the normal path.
 
-**Shared source:** The portable daily start/status workflow contract lives in
-`workflows/mb-start-status/workflow.md`. This Claude skill is the Claude Code
-shell over that source.
+**Shared source:** The portable daily start/status workflow contract lives
+in `workflows/mb-start-status/workflow.md`; this skill is its Claude shell.
 
 **Shared contract markers:** Keep these aligned with the shared source.
 
@@ -90,39 +89,43 @@ before mutating the status marker or doing durable writes.
 
 **Continuity facts:** Use `since_last_check.journal`, top-level `journal`,
 GitHub activity, and `checkpoint` from status to explain "where we left off."
-Do not run raw `git log` unless status says journal facts are unavailable. If
-the operator asks to save progress, run `mb checkpoint --plan --json`, validate
-with `mb checkpoint --validate "..." --json`, then after approval run
+Do not run raw `git log` unless status says journal facts are unavailable.
+Saving progress: `mb checkpoint --plan --json`, validate, then after approval
 `mb checkpoint --message "..." --yes`.
 
 **Provider facts first:** When setup or routing depends on GitHub, Cloudflare,
 Google/Workspace, Meta Ads, or Apify, read the status `integrations` facts
-first. If the operator needs a provider choice or repair explanation, run
-`mb connect plan` or `mb connect doctor --json` and use the cited
-`next_command` / `repair_command`. Do not ask for tokens or provider setup in
-prose before the CLI has named the missing step.
+first; for a provider choice or repair explanation, run `mb connect plan` or
+`mb connect doctor --json` and use the cited `next_command` /
+`repair_command`. Never ask for tokens or setup in prose before the CLI has
+named the missing step.
 
 **Paid-traffic facts first:** When routing a paid-traffic minisite, Google Ads,
 GTM, retargeting, or "ready to launch" request, load
-`docs/google-ads-gtm-conversion-rubric.md`. If a site repo is known, run
-`mb site check "$SITE_REPO" --business-repo "$REPO_PATH" --json` before routing
-to `/mb-site` or `/mb-ads` launch advice. Treat `blocked` as stop, `ready_for_preview`
-as preview-only, and `ready_for_operator_review` as manual review before
-launch. Do not publish GTM, mutate Google Ads, upload conversions, or ask for
-tokens in prose. Do not invent `ready_for_launch`; the valid readiness states
-are `missing`, `blocked`, `ready_for_preview`, `ready_for_operator_review`, and
-`ready`.
+`docs/google-ads-gtm-conversion-rubric.md`; with a known site repo, run
+`mb site check "$SITE_REPO" --business-repo "$REPO_PATH" --json` before any
+`/mb-site` or `/mb-ads` launch advice. `blocked` = stop; `ready_for_preview` =
+preview-only; `ready_for_operator_review` = manual review first. Never publish
+GTM, mutate Google Ads, upload conversions, or ask for tokens in prose; never
+invent `ready_for_launch` (valid states: `missing`, `blocked`,
+`ready_for_preview`, `ready_for_operator_review`, `ready`).
 
 **Offer launch path:** When the operator asks to launch an offer, use
-[references/launch-orchestration.md](references/launch-orchestration.md).
-The path is skill orchestration: keyword-gate with `/mb-think`, create/select a
-launch push, build/check the lander with `/mb-site`, prepare or check
-ads with `/mb-ads`, and checkpoint approved artifacts.
+[references/launch-orchestration.md](references/launch-orchestration.md):
+keyword-gate with `/mb-think`, create/select a launch push, build/check the
+lander with `/mb-site`, ads with `/mb-ads`, checkpoint approved artifacts.
 
 **Primitive routing:** When a live idea could be a bet, offer, push, proof, or
 decision, load `.claude/reference/business-primitives/offer-bet-push-proof.md`
 and `.claude/reference/business-primitives/setup-patterns.md`; route by business
 meaning before suggesting file moves.
+
+**Data/ops surface routing:** whose-data questions → `mb spine declare`/
+`show`; money-path-overnight worries (real money flowing unattended) →
+`mb canary init`; "show me the business" → `mb dashboard open`; scripts
+reading credentials → `mb connect token` (never echo values). Full map:
+mb-help `references/cli-surfaces.md` — business answer first; triggered
+surfaces stay triggered.
 
 **Books/finance routing:** When the user mentions bookkeeping, books, finance,
 accounting, ledgers, statements, P&L, chart of accounts, tax, payroll, hledger,
@@ -157,13 +160,10 @@ current `mb` command exposes an explicit persistence path. Do not write
 
 ## Numbered Options Pattern
 
-Always use numbered lists for multi-choice: business repo selection, skill
-routing, launch blockers, and provider setup.
-
-Use one active choice namespace per turn. If top recommendations are numbered,
-use offer slugs/names or letters for secondary choices. Never present two
-visible choices where the same number means different actions; ask when a reply
-is ambiguous.
+Always use numbered lists for multi-choice (repo selection, skill routing,
+launch blockers, provider setup). One active choice namespace per turn: if
+top recommendations are numbered, use offer slugs or letters for secondary
+choices; the same number must never mean two actions — ask when ambiguous.
 
 ---
 
