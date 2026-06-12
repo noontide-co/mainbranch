@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -251,6 +252,105 @@ def _section(
         "checks": checks or [],
         "actions": actions or [],
     }
+
+
+DOSSIER_RELATIVE_PATH = Path("core") / "operations" / "agent-access-dossier.md"
+_DOSSIER_VERIFY_RE = re.compile(r"^mb connect test ([a-z0-9][a-z0-9-]{1,30})$")
+
+
+def _dossier_provider_rows(path: Path) -> list[tuple[str, str]]:
+    """Parse (provider, verify) pairs from the dossier's provider table."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    rows: list[tuple[str, str]] = []
+    in_table = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.lower().startswith("| provider |"):
+            in_table = True
+            continue
+        if not in_table:
+            continue
+        if not stripped.startswith("|"):
+            in_table = False
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if not cells or set(cells[0]) <= {"-", ":", " "}:
+            continue
+        if len(cells) >= 2 and cells[0]:
+            rows.append((cells[0], cells[-1]))
+    return rows
+
+
+def _dossier_verify_section(repo: Path) -> dict[str, Any]:
+    """Verify the agent-access dossier's provider table.
+
+    Only mb-owned verify commands run, and never through a shell: the
+    provider id is parsed out of the row text and `mb connect test` is
+    called in-process. Anything else in the verify column is surfaced for
+    the operator to run — repo-listed commands are untrusted input.
+    """
+    path = repo / DOSSIER_RELATIVE_PATH
+    if not path.is_file():
+        return _section(
+            "capability-dossier",
+            "Agent Access Dossier",
+            "info",
+            (
+                "no core/operations/agent-access-dossier.md — mb-setup scaffolds "
+                "the capability map for new businesses"
+            ),
+        )
+    rows = _dossier_provider_rows(path)
+    checks: list[dict[str, Any]] = []
+    if not rows:
+        checks.append(
+            {
+                "name": "provider-table",
+                "state": "warn",
+                "summary": "dossier present but no rows found in the provider table",
+            }
+        )
+    for provider_label, verify in rows:
+        command = verify.strip().strip("`").strip()
+        match = _DOSSIER_VERIFY_RE.fullmatch(command)
+        if match:
+            provider_id = match.group(1)
+            try:
+                result = connect_mod.test_provider(provider_id, repo)
+            except ValueError as exc:
+                checks.append(
+                    {"name": provider_label, "state": "warn", "summary": f"verify failed: {exc}"}
+                )
+                continue
+            ok = bool(result.get("ok"))
+            raw_status = result.get("status")
+            status: dict[str, Any] = raw_status if isinstance(raw_status, dict) else {}
+            state_text = str(status.get("state") or ("ready" if ok else "failed"))
+            checks.append(
+                {
+                    "name": provider_label,
+                    "state": "ok" if ok else "warn",
+                    "summary": f"`mb connect test {provider_id}` → {state_text}",
+                }
+            )
+        else:
+            checks.append(
+                {
+                    "name": provider_label,
+                    "state": "info",
+                    "summary": f"operator-run verify (not auto-executed): {command[:80]}",
+                }
+            )
+    return _section(
+        "capability-dossier",
+        "Agent Access Dossier",
+        _max_state([str(check["state"]) for check in checks]) if checks else "ok",
+        "capability map verification — mb-owned verify commands only",
+        checks=checks,
+    )
 
 
 def _unique(values: list[str]) -> list[str]:
@@ -2382,6 +2482,8 @@ def repair_plan(
             ],
         )
     )
+
+    sections.append(_dossier_verify_section(target))
 
     validation = _validation_summary(target, migration_drift_report=migration_drift)
     related_links = related_links_mod.plan(target)
