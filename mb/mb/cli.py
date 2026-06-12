@@ -187,6 +187,15 @@ CONNECT_METADATA_OPTION = typer.Option(
     help="Non-sensitive provider metadata as key=value. Repeat as needed.",
 )
 
+VALIDATE_PATHS_OPTION = typer.Option(
+    [],
+    "--paths",
+    help=(
+        "Scope the report to repo-relative file or directory prefixes "
+        "(repeatable) — validate only what you touched."
+    ),
+)
+
 
 def _version_callback(value: bool) -> None:
     if value:
@@ -1957,6 +1966,7 @@ def validate_cmd(
         help="Check known frontmatter links and offer directory references.",
     ),
     strict: bool = typer.Option(False, "--strict", help="Fail on warnings."),
+    paths: list[str] = VALIDATE_PATHS_OPTION,
     json_out: bool = typer.Option(False, "--json"),
 ) -> None:
     """Check frontmatter shape and optional cross-references."""
@@ -1967,7 +1977,11 @@ def validate_cmd(
             verbose=verbose,
             cross_refs=cross_refs,
             strict=strict,
+            paths=list(paths),
         )
+    except ValueError as exc:
+        typer.echo(f"mb validate: {exc}", err=True)
+        raise typer.Exit(2) from exc
     except Exception as exc:  # noqa: BLE001 - --json must stay parseable on any failure.
         # Agents consume this output programmatically; an unhandled traceback
         # on stdout makes the enforcement plane untrustworthy (operators
