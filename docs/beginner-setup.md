@@ -57,18 +57,21 @@ strongest model with extra reasoning) and paste this:
 
 ```text
 I want Main Branch: AI business memory I own as files in one folder
-(https://github.com/noontide-co/mainbranch). First read the entire README,
+(https://github.com/noontide-co/mainbranch). First read the entire README (fetch the raw file if your tools summarize),
 then explore the repo enough to understand the architecture (the mb CLI is
 the deterministic control plane; skills are the judgment layer; my business
 lives in its own folder, never in the engine; bets, research, decisions,
 pushes, playbooks, outcomes, and checkpoints are the primitives; writing
 files, publishing, spending, and customer contact stay my call). Then
 interview me briefly about my business, my offer, and my audience. Then:
-install the engine, run `mb doctor` and fix anything it flags, run
-`mb onboard` to create my business folder, seed my core files from the
-interview, and teach me the daily loop — /mb-start to open, /mb-end to
-close. Get me to a business folder with offer, audience, and voice drafted
-and a clean `mb status`, then stop and show me what you set up.
+install the engine, run `mb onboard` to create my business folder,
+then run `mb doctor` inside that folder and fix anything it flags, seed my
+core files from the interview using the templates the folder ships with,
+save the first checkpoint, and teach me the daily loop — /mb-start to
+open, /mb-end to close. If I decline GitHub, treat local-only as a valid
+choice, not something to repair. Get me to a business folder with offer,
+audience, and voice drafted and a clean `mb status`, then stop and show me
+what you set up.
 ```
 
 Do not save that prompt as a markdown document. It tells the agent to start
