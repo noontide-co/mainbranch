@@ -189,6 +189,8 @@ jobs:
             || { echo "::error::bundled reference files missing from wheel"; exit 1; }
           python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude-plugin/plugin\.json([[:space:]]|$)' \
             || { echo "::error::Claude Code plugin prototype missing from wheel"; exit 1; }
+          python -m zipfile -l "$wheel" | grep -E '(^|/)mb/_engine/\.claude-plugin/marketplace\.json([[:space:]]|$)' \
+            || { echo "::error::plugin marketplace manifest missing from wheel — the install rail needs it"; exit 1; }
 
       - name: Create fresh venv and install the wheel
         # Fresh venv means no repo sources on sys.path — a genuine

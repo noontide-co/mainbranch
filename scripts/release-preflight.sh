@@ -20,17 +20,19 @@ expected="${expected#oe-v}"
 pyproject_version="$(sed -n 's/^version = "\(.*\)"$/\1/p' "$ROOT/mb/pyproject.toml" | head -n1)"
 init_version="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' "$ROOT/mb/mb/__init__.py" | head -n1)"
 plugin_version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$ROOT/.claude-plugin/plugin.json")"
+marketplace_version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["metadata"]["version"])' "$ROOT/.claude-plugin/marketplace.json")"
 
 fail=0
 echo "mb/pyproject.toml        version    = $pyproject_version"
 echo "mb/mb/__init__.py        __version__ = $init_version"
 echo ".claude-plugin/plugin.json version  = $plugin_version"
+echo ".claude-plugin/marketplace.json    = $marketplace_version"
 
 if [ -z "$pyproject_version" ] || [ -z "$init_version" ] || [ -z "$plugin_version" ]; then
   echo "release-preflight: could not read all three version strings." >&2
   fail=1
 fi
-if [ "$pyproject_version" != "$init_version" ] || [ "$pyproject_version" != "$plugin_version" ]; then
+if [ "$pyproject_version" != "$init_version" ] || [ "$pyproject_version" != "$plugin_version" ] || [ "$pyproject_version" != "$marketplace_version" ]; then
   echo "release-preflight: version files disagree." >&2
   fail=1
 fi
