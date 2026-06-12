@@ -3929,6 +3929,68 @@ def _validation_status(repo: Path, *, cross_refs: bool = True) -> dict[str, Any]
     }
 
 
+def _file_commit_time(repo: Path, rel: str) -> int:
+    """Last-commit unix time for a repo-relative path; 0 when unknown."""
+    result = _run_command(["git", "log", "-1", "--format=%ct", "--", rel], cwd=repo)
+    if not result["ok"]:
+        return 0
+    text = result["stdout"].strip()
+    return int(text) if text.isdigit() else 0
+
+
+def _core_propagation_drift(repo: Path, report: dict[str, Any]) -> dict[str, Any] | None:
+    """Flag identity changes that never propagated to active push records.
+
+    Field-proven failure: offer/audience/voice change lands, and the ad
+    copy, pages, and emails derived from the OLD identity keep running.
+    Within-repo detectable surface: active push records. Cross-repo
+    surfaces (site repos) are out of scope here.
+    """
+    identity_paths = [
+        rel
+        for rel in ("core/offer.md", "core/audience.md", "core/voice.md")
+        if (repo / rel).is_file()
+    ]
+    for pattern in ("core/offers/*/offer.md", "core/offers/*/audience.md"):
+        identity_paths.extend(
+            path.relative_to(repo).as_posix() for path in sorted(repo.glob(pattern))
+        )
+    if not identity_paths:
+        return None
+    push_report = (report.get("brain") or {}).get("pushes") or {}
+    active = [
+        record
+        for record in push_report.get("records", [])
+        if record.get("status") == "active" and not record.get("legacy")
+    ]
+    if not active:
+        return None
+    identity_times = {rel: _file_commit_time(repo, rel) for rel in identity_paths}
+    newest_identity_rel = max(identity_times, key=lambda rel: identity_times[rel])
+    newest_identity_ts = identity_times[newest_identity_rel]
+    derived_paths = [str(record.get("path") or "") for record in active if record.get("path")]
+    newest_derived_ts = max((_file_commit_time(repo, rel) for rel in derived_paths), default=0)
+    if not newest_identity_ts or not newest_derived_ts:
+        return None
+    if newest_identity_ts <= newest_derived_ts:
+        return None
+    return {
+        "id": "core_propagation",
+        "severity": "warn",
+        "summary": (
+            "offer/audience/voice changed after your active push record(s) "
+            "were last updated — derived copy (ads, pages, emails) may still "
+            "carry the old identity."
+        ),
+        "evidence": [newest_identity_rel] + derived_paths[:4],
+        "repair": (
+            "Re-check the active pushes' copy against the updated core files "
+            "and update the push records in the same pass."
+        ),
+        "safe_to_share": True,
+    }
+
+
 def _drift(report: dict[str, Any]) -> dict[str, Any]:
     items: list[dict[str, Any]] = []
     validation = report.get("validation") or {}
@@ -3979,6 +4041,9 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
                 "safe_to_share": True,
             }
         )
+    propagation = _core_propagation_drift(Path(str(report.get("repo") or ".")), report)
+    if propagation:
+        items.append(propagation)
     relationship_health = report.get("relationship_health") or {}
     relationship_summary = relationship_health.get("summary") or {}
     if relationship_summary.get("gaps", 0):

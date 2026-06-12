@@ -3930,3 +3930,80 @@ def test_git_info_detects_linked_worktree(tmp_path: Path) -> None:
     assert info["default_branch"] == "main"
     assert info["worktree_root"] == str(worktree_path.resolve())
     assert "linked workspace" in info["summary"]
+
+
+def test_core_propagation_drift_flags_identity_newer_than_active_push(tmp_path, monkeypatch):
+    import subprocess as sp
+
+    from mb import status as status_pkg
+
+    repo = tmp_path / "biz"
+    (repo / "core").mkdir(parents=True)
+    (repo / "core" / "offer.md").write_text("# offer v2\n", encoding="utf-8")
+    push_dir = repo / "pushes" / "2026-06-01-launch"
+    push_dir.mkdir(parents=True)
+    (push_dir / "push.md").write_text(
+        (
+            "---\ntype: push\nslug: launch\nkind: launch\nstatus: active\n"
+            "health: on-track\nowner: o\naudience: a\noffer: core/offer.md\n"
+            "promise: p\n---\n# launch\n"
+        ),
+        encoding="utf-8",
+    )
+
+    import os
+
+    def git(*args, when=""):
+        env = dict(os.environ)
+        if when:
+            env["GIT_COMMITTER_DATE"] = when
+            env["GIT_AUTHOR_DATE"] = when
+        sp.run(["git", *args], cwd=repo, check=True, capture_output=True, env=env)
+
+    git("init")
+    git("config", "user.email", "t@example.com")
+    git("config", "user.name", "T")
+    git("add", "pushes")
+    git("commit", "-m", "push first", when="2026-06-01T00:00:00")
+    git("add", "core")
+    git("commit", "-m", "identity later", when="2026-06-10T00:00:00")
+
+    report = {
+        "repo": str(repo),
+        "brain": {
+            "pushes": {
+                "records": [
+                    {
+                        "path": "pushes/2026-06-01-launch/push.md",
+                        "status": "active",
+                        "legacy": False,
+                    }
+                ]
+            }
+        },
+    }
+    item = status_pkg._core_propagation_drift(repo, report)
+
+    assert item is not None
+    assert item["id"] == "core_propagation"
+    assert "core/offer.md" in item["evidence"]
+
+    # Touch the push AFTER the identity change: drift clears.
+    (push_dir / "push.md").write_text(
+        (push_dir / "push.md").read_text(encoding="utf-8") + "\nupdated.\n", encoding="utf-8"
+    )
+    git("add", "pushes")
+    git("commit", "-m", "push refreshed", when="2026-06-11T00:00:00")
+    assert status_pkg._core_propagation_drift(repo, report) is None
+
+
+def test_core_propagation_drift_silent_without_active_pushes(tmp_path):
+    from mb import status as status_pkg
+
+    repo = tmp_path / "biz"
+    (repo / "core").mkdir(parents=True)
+    (repo / "core" / "offer.md").write_text("# offer\n", encoding="utf-8")
+
+    report = {"repo": str(repo), "brain": {"pushes": {"records": []}}}
+
+    assert status_pkg._core_propagation_drift(repo, report) is None
