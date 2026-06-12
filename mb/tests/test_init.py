@@ -311,9 +311,58 @@ def test_init_uses_explicit_owner_name_env_override(tmp_path: Path, monkeypatch)
     result = run(path=str(target), name="Acme Brewing")
 
     assert result["status"] == "ok"
-    owner_file = target / "core" / "team" / "your-gh-username.md"
+    # No real handle anywhere → the file slugs from the owner's name, not
+    # from the your-gh-username placeholder.
+    owner_file = target / "core" / "team" / "env-owner.md"
     assert owner_file.exists()
     assert "name: Env Owner" in owner_file.read_text(encoding="utf-8")
+
+
+def test_init_without_github_identity_never_probes_gh(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MB_OWNER_NAME", "")
+
+    def _explode() -> str:
+        raise AssertionError("gh login probed despite infer_github_identity=False")
+
+    monkeypatch.setattr(init_mod, "_gh_username", _explode)
+    target = tmp_path / "acme"
+
+    result = run(
+        path=str(target),
+        name="Acme Brewing",
+        owner_name="Riley Quinn",
+        infer_github_identity=False,
+    )
+
+    assert result["status"] == "ok"
+    owner_file = target / "core" / "team" / "riley-quinn.md"
+    assert owner_file.exists()
+    text = owner_file.read_text(encoding="utf-8")
+    assert "name: Riley Quinn" in text
+    assert "your-gh-username" in text
+    codeowners = (target / ".github" / "CODEOWNERS").read_text(encoding="utf-8")
+    assert "@your-gh-username" in codeowners
+
+
+def test_init_explicit_owner_github_skips_probe_even_when_inference_off(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        init_mod,
+        "_gh_username",
+        lambda: (_ for _ in ()).throw(AssertionError("probe must not run")),
+    )
+    target = tmp_path / "acme"
+
+    result = run(
+        path=str(target),
+        name="Acme Brewing",
+        owner_github="riley-gh",
+        infer_github_identity=False,
+    )
+
+    assert result["status"] == "ok"
+    assert (target / "core" / "team" / "riley-gh.md").exists()
 
 
 def test_init_idempotent(tmp_path: Path) -> None:

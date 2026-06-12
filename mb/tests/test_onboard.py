@@ -115,6 +115,30 @@ def test_onboard_next_steps_offer_global_codex_repair_when_available(
     ]
 
 
+def test_onboard_without_github_never_scrapes_machine_login(tmp_path: Path, monkeypatch) -> None:
+    from mb import init as init_mod
+
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    monkeypatch.setattr(init_mod, "_gh_username", lambda: "machine-login")
+    repo = tmp_path / "acme"
+
+    result = onboard_mod.run(
+        path=str(repo),
+        name="Acme Brewing",
+        mode="new",
+        owner_name="Riley Quinn",
+    )
+
+    assert result["ok"] is True
+    # The operator declined GitHub (no --github): the machine's gh login
+    # must not appear anywhere in the scaffold (#880, cold-eyes finding).
+    assert not (repo / "core" / "team" / "machine-login.md").exists()
+    assert (repo / "core" / "team" / "riley-quinn.md").exists()
+    for rel in ("CLAUDE.md", "AGENTS.md", ".github/CODEOWNERS", "core/team/riley-quinn.md"):
+        text = (repo / rel).read_text(encoding="utf-8")
+        assert "machine-login" not in text, rel
+
+
 def test_onboard_rerun_is_idempotent(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(onboard_mod, "_which", _tool_path)
     repo = tmp_path / "acme"
