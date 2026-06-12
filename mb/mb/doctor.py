@@ -35,7 +35,12 @@ from mb import spine as spine_mod
 from mb import topology as topology_mod
 from mb import validate as validate_mod
 from mb.engine import install_mode, link_status
-from mb.freshness import format_update_alert, package_update_status, version_key
+from mb.freshness import (
+    format_update_alert,
+    looks_like_business_repo,
+    package_update_status,
+    version_key,
+)
 from mb.migrate import LATEST_SCHEMA_VERSION, pending_migrations, read_schema_version
 from mb.skill_validate import run_all as validate_all_skills
 
@@ -1971,6 +1976,56 @@ def run(path: str) -> dict[str, Any]:
     }
 
 
+def _not_business_folder_guard(target: Path) -> dict[str, Any] | None:
+    """Refuse doctor writes (and noisy scans) outside a business folder.
+
+    Field-proven failure (cold-eyes install test): pre-onboard doctor in an
+    arbitrary cwd emitted seven folder-shaped warnings, validated stray
+    markdown, and repair --apply would have scaffolded .claude/, AGENTS.md,
+    and .gitignore into whatever directory the agent happened to be in.
+    """
+    markers = (
+        "CLAUDE.md",
+        "AGENTS.md",
+        "core",
+        "decisions",
+        "research",
+        "bets",
+        "pushes",
+        ".mb",
+        ".mainbranch",
+        # Legacy shapes are doctor's migration patients, not junk dirs.
+        "reference",
+        ".vip",
+        "campaigns",
+    )
+    # Partially built or broken business folders are exactly what doctor
+    # repairs — refuse only a directory with no business markers at all.
+    if looks_like_business_repo(target) or any((target / m).exists() for m in markers):
+        return None
+    summary = (
+        "this is not a Main Branch business folder — run `mb onboard` to "
+        "create one (doctor checks and repairs run inside it)"
+    )
+    return {
+        "ok": True,
+        "guard": "not_business_folder",
+        "repo": str(target),
+        "summary": summary,
+        "sections": [
+            _section(
+                "business-folder",
+                "Business Folder",
+                "info",
+                summary,
+            )
+        ],
+        "actions": [],
+        "applied_actions": [],
+        "safe_to_share": True,
+    }
+
+
 def repair_plan(
     repo: str | Path = ".",
     *,
@@ -1985,6 +2040,9 @@ def repair_plan(
     if only and all_agents:
         raise ValueError("--only cannot be combined with --all-agents")
     target = Path(repo).expanduser().resolve()
+    guard = _not_business_folder_guard(target)
+    if guard is not None:
+        return guard
     doctor_report = run(str(target))
     actions: list[dict[str, Any]] = []
     sections: list[dict[str, Any]] = []
@@ -2839,6 +2897,9 @@ def repair_apply(
     if only and all_agents:
         raise ValueError("--only cannot be combined with --all-agents")
     target = Path(repo).expanduser().resolve()
+    guard = _not_business_folder_guard(target)
+    if guard is not None:
+        return guard
     before = repair_plan(target, only=only, all_agents=all_agents)
     applied: list[dict[str, Any]] = []
     apply_non_agent = not only and not all_agents
