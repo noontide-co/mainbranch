@@ -208,8 +208,19 @@ Canon (read on first iteration of a fresh session):
   that provider across repos/worktrees (per-ref error isolation; rotated
   + still-stale refs reported, refs are hashes so safe to print; human
   render warns loudly on any stale survivor). The 2026-06-09
-  three-refs-one-updated failure class is closed for the doctrine path.
-  This PR.
+  three-refs-one-updated failure class is closed for the doctrine path
+  (#854 merged).
+- 2026-06-12: **v0.3.43 PUBLISHED** — Devon approved the pypi gate; all
+  publish jobs green (tag validation, build, CHANGELOG sync, PyPI,
+  Linear). Post-release verified: fresh-venv install from PyPI runs
+  `mb 0.3.43`, skill list works, `mb connect token` present. Local pipx
+  upgraded to 0.3.43 — all three business loops now on today's engine.
+- 2026-06-12: BOR daily-brief migrated — the inline user-scope.yaml walk
+  + `security find-generic-password` block in
+  ~/.claude/scheduled-tasks/bor-daily-operator-brief/SKILL.md replaced
+  with `mb connect token meta --repo <site>` (verified live before the
+  edit: exit 0, credential resolved, never printed; graceful skip path
+  if unreadable). The #812 origin story is closed end to end. This PR.
 
 ## Next intent
 
@@ -217,12 +228,12 @@ Working practice (from Devon's 2026-06-11 grants): validate → merge without
 asking; every slice references its issue and closes it via PR body; new
 findings become issues (LOOP-STATE keeps ordering, issues keep content).
 
-- **Waiting on Devon: pypi environment approval for v0.3.43** (build done,
-  notes synced). Post-publish: verify per docs/post-release-alignment.md,
-  then hand Devon the Morning Paper plugin-smoke prompt (prompt 3).
+- Prompt 3 to the Morning Paper loop (Devon pastes): `mb update` →
+  confirm 0.3.43 → plugin Stage 1 smoke → results to #804. That evidence
+  unlocks #804 Stage 2.
 - #817 slice 2: doctor runs the dossier verify column, whitelist-bound
   (design posted on the issue).
 - Heavy tier, wants Devon's priority call or Stage-1 smoke evidence:
   #813 pulse, #814 spine, #816 canary, #806 offer graduate, #804 Stage 2.
-- Migrate the BOR daily-brief keychain block to `mb connect token` once
-  v0.3.43 publishes (read-only change in the bookedoutroofers repo).
+- Watch tomorrow's BOR brief run: first execution on the migrated
+  credential path; confirm the Meta pull works end to end.
