@@ -345,6 +345,10 @@ Branch engine for current setup patterns. Historical engine builds may still
 contain older compatibility notes under paths that use the word "domain"; treat
 those as migration notes only, not the current product model.
 
+Also scaffold `core/operations/agent-access-dossier.md` from
+`references/templates.md` — the capability map (storage doctrine, provider
+verify table, never-print rules); fill rows from what the operator connects.
+
 ### 7. Draft CLAUDE.md
 
 See `references/claude-md-guide.md` for structure.

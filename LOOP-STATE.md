@@ -193,7 +193,16 @@ Canon (read on first iteration of a fresh session):
   reconnect and all read paths work without the flag
   (`resolve_provider` checks registry → connected customs). Unknown
   provider error now hints --custom. Closes the DataForSEO-class gap
-  from mining friction #1. This PR.
+  from mining friction #1 (#852 merged). Friction-#1 cluster complete.
+- 2026-06-11: consolidation check on main after 22 merges: check.sh
+  exit 0, 949 passed, 0 failed (+26 tests today, zero regressions).
+- 2026-06-11: #817 slice 1 — mb-setup scaffolds
+  core/operations/agent-access-dossier.md (generic capability map:
+  storage doctrine, provider verify table, never-print rules; rows
+  filled from connected providers). Slice 2 (doctor runs the verify
+  column) deferred with a whitelist security design commented on #817
+  — repo-listed shell commands are an injection surface; only mb-owned
+  commands auto-run. This PR.
 
 ## Next intent
 

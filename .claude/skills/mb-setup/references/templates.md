@@ -675,6 +675,59 @@ status: complete
 
 ---
 
+## core/operations/agent-access-dossier.md
+
+The capability map for agents operating this business: which providers an
+agent can reach, where each credential lives, and how to verify access.
+States the MODEL only — never secret values, ids, or item names. Scaffold it
+during setup with the providers the operator names; agents keep the table
+current as access changes (verify dates, scope notes).
+
+```markdown
+---
+type: reference
+status: active
+date: YYYY-MM-DD
+---
+
+# Agent access dossier — what an operating agent can reach, and how
+
+The capability map for agents running this business. States the MODEL
+(which provider, which storage class, how to retrieve and verify) — never
+secret values, ids, or item names.
+
+## The storage doctrine
+
+1. **Operator's password manager = canonical, OPERATOR-PRESENT ONLY.**
+   Never put it in an automated or scheduled path. Its uses: one-time moves
+   into the keychain while the operator is present, and high-sensitivity
+   moments where the operator explicitly wants to be in the loop.
+2. **Keychain via `mb connect` = THE agent path** (reliable, unattended).
+   One-time move from the password manager, piped — never printed. Scripts
+   read back with `mb connect token <provider>`.
+3. **Platform runtime secrets** (e.g. Workers/Pages bindings) are
+   write-only — verify by behavior, not read-back.
+4. **Session env file** for anything that must be exported into a shell.
+
+## Provider map (verify, don't assume — run the check command)
+
+| Provider | Access level | Storage | Verify |
+|---|---|---|---|
+| [provider] | [scopes/level + last-verified date] | [keychain via mb connect / env file / runtime] | [e.g. `mb connect test <provider>`] |
+
+## Operating rules
+
+- **Spend and publish stay human.** Agents may stage work paused/drafted;
+  activation is the operator's click.
+- **Never print a credential.** Pipe values directly into the consumer; no
+  echo, no fallback expansions that reveal the value when set.
+- **One-time moves, durable homes.** A credential needed repeatedly moves
+  to the keychain via `mb connect` once; stop depending on operator-present
+  stores for automated paths.
+```
+
+---
+
 ## README.md
 
 ```markdown
