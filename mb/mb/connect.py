@@ -1077,6 +1077,11 @@ def connect_provider(
                 entry=providers[provider.id],
             )
         )
+    rotated_sibling_refs, stale_sibling_refs = (
+        _sync_sibling_refs(provider, token, current_ref=secrets[required[0]]["ref"])
+        if token and required
+        else ([], [])
+    )
     path = _write_config(target, config)
     status = status_provider(provider.id, target)
     return {
@@ -1089,9 +1094,48 @@ def connect_provider(
         "hydrated": normalized_scope == "user",
         "credential_backend": store.backend,
         "credential_boundary": store.boundary(),
+        "rotated_sibling_refs": rotated_sibling_refs,
+        "stale_sibling_refs": stale_sibling_refs,
         "setup": _meta_setup() if provider.id == "meta" else {},
         "status": status,
     }
+
+
+def _sync_sibling_refs(
+    provider: Provider, token: str, *, current_ref: str
+) -> tuple[list[str], list[str]]:
+    """Rotate every sibling keychain ref for ``provider`` to ``token``.
+
+    A provider connected from several repos (main checkout, worktrees, other
+    business repos) holds one keychain ref per repo id. Rotating from one
+    repo previously updated only that repo's ref; scheduled jobs resolving
+    the others kept the stale token silently. Sibling refs are discovered
+    from user scope; refs are hashes and safe to report — the token never
+    is. Returns (rotated, still_stale) ref lists.
+    """
+    rotated: list[str] = []
+    stale: list[str] = []
+    data = _read_user_scope()
+    for raw_repo in data["repos"].values():
+        repo_entry = raw_repo if isinstance(raw_repo, dict) else {}
+        raw_entries = repo_entry.get("providers")
+        entries: dict[str, Any] = raw_entries if isinstance(raw_entries, dict) else {}
+        raw_entry = entries.get(provider.id)
+        entry = raw_entry if isinstance(raw_entry, dict) else {}
+        stored = entry.get("secrets") if isinstance(entry.get("secrets"), dict) else {}
+        for raw_secret in stored.values() if isinstance(stored, dict) else []:
+            secret = raw_secret if isinstance(raw_secret, dict) else {}
+            ref = str(secret.get("ref") or "")
+            backend = str(secret.get("backend") or "local-file")
+            if not ref or ref == current_ref or ref in rotated or ref in stale:
+                continue
+            try:
+                SecretStore(backend).set(ref, token)
+            except RuntimeError:
+                stale.append(ref)
+            else:
+                rotated.append(ref)
+    return rotated, stale
 
 
 def _secret_statuses(provider: Provider, entry: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
@@ -2479,6 +2523,19 @@ def render_connect_result(result: dict[str, Any]) -> None:
     if result.get("scope") == "user":
         print(f"user scope: {result['user_scope_path']}")
     print(f"secrets: {result['credential_boundary']}")
+    rotated = result.get("rotated_sibling_refs") or []
+    if rotated:
+        print(
+            f"rotated {len(rotated)} sibling ref(s) to the new credential (other repos/worktrees)"
+        )
+    stale = result.get("stale_sibling_refs") or []
+    if stale:
+        print(
+            f"WARNING: {len(stale)} sibling ref(s) could not be updated "
+            "and still hold the OLD credential:"
+        )
+        for ref in stale:
+            print(f"  - {ref}")
     source = result.get("credential_source") or {}
     if source.get("type") == "env" and source.get("env_var"):
         print(f"credential source: env {source['env_var']}")

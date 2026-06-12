@@ -202,7 +202,14 @@ Canon (read on first iteration of a fresh session):
   filled from connected providers). Slice 2 (doctor runs the verify
   column) deferred with a whitelist security design commented on #817
   — repo-listed shell commands are an injection surface; only mb-owned
-  commands auto-run. This PR.
+  commands auto-run (#853 merged).
+- 2026-06-12: #807 done — token rotation now sweeps sibling keychain
+  refs: connect with a new credential updates every user-scope ref for
+  that provider across repos/worktrees (per-ref error isolation; rotated
+  + still-stale refs reported, refs are hashes so safe to print; human
+  render warns loudly on any stale survivor). The 2026-06-09
+  three-refs-one-updated failure class is closed for the doctrine path.
+  This PR.
 
 ## Next intent
 
@@ -211,12 +218,11 @@ asking; every slice references its issue and closes it via PR body; new
 findings become issues (LOOP-STATE keeps ordering, issues keep content).
 
 - **Waiting on Devon: pypi environment approval for v0.3.43** (build done,
-  notes synced). Post-publish: verify per docs/post-release-alignment.md.
-- Re-rank priority order against the mining report's leaderboard: top
-  recommendation cluster is credentials (generic provider path + Stripe/
-  Resend first-class, scope manifests, refresh tokens) and verification
-  (provider-write receipts) — both currently mid-list as #807/#817/#656.
-  Proposed next slices: #828 setup-prompt canonicalization (in flight
-  queue), then #804 Stage 2, then the credentials cluster.
+  notes synced). Post-publish: verify per docs/post-release-alignment.md,
+  then hand Devon the Morning Paper plugin-smoke prompt (prompt 3).
+- #817 slice 2: doctor runs the dossier verify column, whitelist-bound
+  (design posted on the issue).
+- Heavy tier, wants Devon's priority call or Stage-1 smoke evidence:
+  #813 pulse, #814 spine, #816 canary, #806 offer graduate, #804 Stage 2.
 - Migrate the BOR daily-brief keychain block to `mb connect token` once
   v0.3.43 publishes (read-only change in the bookedoutroofers repo).

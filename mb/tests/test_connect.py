@@ -1841,3 +1841,43 @@ def test_connect_custom_rejects_bad_slug(tmp_path: Path, monkeypatch) -> None:
 
     assert result.exit_code == 2
     assert "lowercase letters, digits, and hyphens" in result.stderr
+
+
+def test_rotation_syncs_sibling_refs_across_repos(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo_a = tmp_path / "biz-a"
+    repo_b = tmp_path / "biz-b"
+    repo_a.mkdir()
+    repo_b.mkdir()
+
+    connect_mod.connect_provider("cloudflare", repo=repo_a, token="cf-old-token", scope="user")
+    connect_mod.connect_provider("cloudflare", repo=repo_b, token="cf-old-token", scope="user")
+
+    result = connect_mod.connect_provider(
+        "cloudflare", repo=repo_a, token="cf-new-token", scope="user"
+    )
+
+    assert len(result["rotated_sibling_refs"]) == 1
+    assert result["stale_sibling_refs"] == []
+    token_b = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo_b)])
+    assert token_b.exit_code == 0
+    assert token_b.stdout == "cf-new-token\n"
+
+
+def test_rotation_does_not_touch_other_providers(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo_a = tmp_path / "biz-a"
+    repo_b = tmp_path / "biz-b"
+    repo_a.mkdir()
+    repo_b.mkdir()
+
+    connect_mod.connect_provider("cloudflare", repo=repo_a, token="cf-token", scope="user")
+    connect_mod.connect_provider("apify", repo=repo_b, token="apify-token", scope="user")
+
+    result = connect_mod.connect_provider(
+        "cloudflare", repo=repo_a, token="cf-rotated", scope="user"
+    )
+
+    assert result["rotated_sibling_refs"] == []
+    token_b = runner.invoke(app, ["connect", "token", "apify", "--repo", str(repo_b)])
+    assert token_b.stdout == "apify-token\n"
