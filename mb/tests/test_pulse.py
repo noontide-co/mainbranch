@@ -98,3 +98,82 @@ def test_pulse_init_explicit_slug_wins(tmp_path: Path) -> None:
     pulse_mod.init(tmp_path, slug="My Biz!!")
     skill = (tmp_path / ".claude/skills/mb-pulse/SKILL.md").read_text(encoding="utf-8")
     assert "log/<date>-my-biz-pulse.md" in skill
+
+
+# --- mb pulse install (operator-owned scheduler wrapper) -------------------
+
+
+def test_pulse_install_requires_collectors_first(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    result = pulse_mod.install(repo)
+    assert result["ok"] is False
+    assert "mb pulse init" in result["summary"]
+
+
+def test_pulse_install_writes_wrapper_and_cron_line(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    pulse_mod.init(repo)
+
+    result = pulse_mod.install(repo, at="07:13")
+    assert result["ok"] is True
+    assert "core/operations/pulse/run-pulse.sh" in result["written"]
+    wrapper = repo / "core/operations/pulse/run-pulse.sh"
+    assert wrapper.exists()
+    assert os.access(wrapper, os.X_OK)
+    # cron line carries the requested time (minute hour) and never auto-enables
+    assert result["cron_line"].startswith("13 7 * * *")
+    assert result["run_at"] == "07:13"
+    assert any("yours to enable" in line.lower() for line in result["activation"])
+
+
+def test_pulse_install_rejects_bad_time(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    pulse_mod.init(repo)
+    result = pulse_mod.install(repo, at="25:00")
+    assert result["ok"] is False
+    assert "out of range" in result["summary"] or "HH:MM" in result["summary"]
+
+
+def test_pulse_install_refuses_overwrite_without_force(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    pulse_mod.init(repo)
+    pulse_mod.install(repo)
+    again = pulse_mod.install(repo)
+    assert again["ok"] is False
+    forced = pulse_mod.install(repo, force=True)
+    assert forced["ok"] is True
+
+
+def test_pulse_install_wrapper_is_valid_bash(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    pulse_mod.init(repo)
+    pulse_mod.install(repo)
+    wrapper = repo / "core/operations/pulse/run-pulse.sh"
+    proc = subprocess.run(["bash", "-n", str(wrapper)], capture_output=True, text=True, timeout=15)
+    assert proc.returncode == 0, proc.stderr
+
+
+def test_pulse_install_wrapper_assembles_bundle_from_collectors(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    pulse_mod.init(repo)
+    pulse_mod.install(repo)
+    # the example collector is a real, contract-following collector
+    proc = subprocess.run(
+        ["bash", str(repo / "core/operations/pulse/run-pulse.sh"), "2026-06-13"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert proc.returncode == 0, proc.stderr
+    bundle_path = repo / "core/operations/pulse/data/2026-06-13.json"
+    assert bundle_path.exists()
+    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+    assert bundle["date"] == "2026-06-13"
+    assert "example" in bundle["collectors"]
+    assert bundle["collectors"]["example"]["date"] == "2026-06-13"

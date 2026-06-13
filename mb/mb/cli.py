@@ -323,6 +323,30 @@ def pulse_init_cmd(
     raise typer.Exit(0 if result["ok"] else 1)
 
 
+@pulse_app.command("install")
+def pulse_install_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo to scaffold."),
+    at: str = typer.Option("08:00", "--at", help="Daily run time, HH:MM (24-hour, local)."),
+    force: bool = typer.Option(False, "--force", help="Overwrite an existing run-pulse.sh."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Emit an operator-owned daily pulse wrapper + the cron line to activate it."""
+    result = pulse_mod.install(repo, at=at, force=force)
+    if json_out:
+        typer.echo(
+            _json_payload(result, command="mb pulse install", schema_name="mainbranch.pulse.v1")
+        )
+    else:
+        typer.echo(result["summary"])
+        for path in result.get("written", []):
+            typer.echo(f"  wrote {path}")
+        for path in result.get("skipped", []):
+            typer.echo(f"  kept  {path}")
+        for line in result.get("activation", []):
+            typer.echo(f"  {line}")
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
 suggest_app = typer.Typer(
     name="suggest",
     help="Suggest read-only business repo improvements.",
