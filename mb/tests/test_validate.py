@@ -1294,6 +1294,57 @@ def test_validate_categorizes_malformed_push_goal_shape(tmp_path: Path) -> None:
     assert report["validation_categories"]["by_category"]["schema_shape_error"]["count"] == 1
 
 
+def test_validate_flags_media_backend_without_location(tmp_path: Path) -> None:
+    # #803: a media-bearing push must say where the finished creative lives.
+    _write(
+        tmp_path / "pushes" / "2026-05-06-ads-batch" / "push.md",
+        _push("active", slug="ads-batch").replace(
+            "promise: Own the launch memory in git.\n",
+            "promise: Own the launch memory in git.\nmedia_backend: google-drive\n",
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is False
+    bad = [file for file in report["files"] if file["path"].endswith("push.md")][0]
+    assert any("media_backend is set but media_location is missing" in e for e in bad["errors"])
+
+
+def test_validate_accepts_push_with_both_media_fields(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-ads-batch" / "push.md",
+        _push("active", slug="ads-batch").replace(
+            "promise: Own the launch memory in git.\n",
+            (
+                "promise: Own the launch memory in git.\n"
+                "media_location: https://drive.google.com/drive/folders/abc123\n"
+                "media_backend: google-drive\n"
+            ),
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["path"].endswith("push.md")][0]
+    assert not any("media_" in e for e in bad["errors"]), bad["errors"]
+
+
+def test_validate_flags_blank_media_location(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "pushes" / "2026-05-06-ads-batch" / "push.md",
+        _push("active", slug="ads-batch").replace(
+            "promise: Own the launch memory in git.\n",
+            'promise: Own the launch memory in git.\nmedia_location: ""\n',
+        ),
+    )
+
+    report = run(path=str(tmp_path))
+
+    bad = [file for file in report["files"] if file["path"].endswith("push.md")][0]
+    assert any("media_location must be a non-empty string" in e for e in bad["errors"])
+
+
 def test_validate_categorizes_large_frontmatter_repairs(tmp_path: Path) -> None:
     for index in range(3):
         _write(
