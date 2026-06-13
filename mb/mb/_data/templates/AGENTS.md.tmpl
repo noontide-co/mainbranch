@@ -396,7 +396,11 @@ the operator asks for plumbing.
   discovery first, a sanitized plan (provider + object count + risk, no
   private rows), explicit approval, minimal-scope apply, verify + a
   private-safe record (docs/provider-mutation-contract.md); reads and writes
-  are separate surfaces. Agents validating their own work in repos with
+  are separate surfaces. Taking real money / an offer going live ->
+  `mb production plan` (read-only: the branch-protection gap — PR required,
+  CI + canary as status checks, force-push/deletion blocked — and the exact
+  gh apply commands the operator runs; `--solo` records a deliberate skip).
+  Agents validating their own work in repos with
   legacy debt -> `mb validate --paths <prefix>`. Filing work upstream or in
   the business repo without leaking private detail -> `mb issue` (privacy-safe
   GitHub issue drafting). "What should we improve in this repo?" ->

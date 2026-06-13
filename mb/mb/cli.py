@@ -32,6 +32,7 @@ from mb import init as init_mod
 from mb import issue as issue_mod
 from mb import migrate as migrate_mod
 from mb import onboard as onboard_mod
+from mb import production as production_mod
 from mb import pulse as pulse_mod
 from mb import resolve as resolve_mod
 from mb import similar_bets as similar_bets_mod
@@ -344,6 +345,77 @@ def pulse_install_cmd(
             typer.echo(f"  kept  {path}")
         for line in result.get("activation", []):
             typer.echo(f"  {line}")
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
+production_app = typer.Typer(
+    name="production",
+    help="Plan the money-taking branch-protection posture (read-only).",
+    no_args_is_help=True,
+)
+app.add_typer(production_app, name="production")
+
+
+def _gh_protection(branch: str) -> tuple[str, dict[str, Any] | None]:
+    """Resolve repo slug + current branch protection via gh (best-effort)."""
+    import shutil
+    import subprocess
+
+    if not shutil.which("gh"):
+        return "", None
+    slug = ""
+    try:
+        nwo = subprocess.run(
+            ["gh", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if nwo.returncode == 0:
+            slug = nwo.stdout.strip()
+    except (FileNotFoundError, subprocess.SubprocessError):
+        return "", None
+    if not slug:
+        return "", None
+    try:
+        prot = subprocess.run(
+            ["gh", "api", f"repos/{slug}/branches/{branch}/protection"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except subprocess.SubprocessError:
+        return slug, None
+    if prot.returncode != 0:
+        return slug, None  # 404 = unprotected
+    try:
+        return slug, json.loads(prot.stdout)
+    except json.JSONDecodeError:
+        return slug, None
+
+
+@production_app.command("plan")
+def production_plan_cmd(
+    branch: str = typer.Option("main", "--branch", help="Default branch to inspect."),
+    solo: bool = typer.Option(
+        False, "--solo", help="Solo-on-main: record protection as a deliberate skip."
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Report the money-taking protection gap and the operator-applies commands."""
+    if solo:
+        result = production_mod.plan("", branch=branch, solo=True)
+    else:
+        slug, protection = _gh_protection(branch)
+        result = production_mod.plan(slug, branch=branch, current_protection=protection)
+    if json_out:
+        typer.echo(
+            _json_payload(
+                result, command="mb production plan", schema_name="mainbranch.production.v1"
+            )
+        )
+    else:
+        production_mod.render_plan(result)
     raise typer.Exit(0 if result["ok"] else 1)
 
 
