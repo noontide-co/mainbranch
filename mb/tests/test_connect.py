@@ -1881,3 +1881,126 @@ def test_rotation_does_not_touch_other_providers(tmp_path: Path, monkeypatch) ->
     assert result["rotated_sibling_refs"] == []
     token_b = runner.invoke(app, ["connect", "token", "apify", "--repo", str(repo_b)])
     assert token_b.stdout == "apify-token\n"
+
+
+# --- credential hygiene (mb connect hygiene) -------------------------------
+
+# A sentinel that must NEVER appear in any hygiene output (value redaction).
+_SECRET_SENTINEL = "fal-SUPERSECRETVALUE0123456789abcdef"
+
+
+def _write_claude_config(home: Path) -> Path:
+    home.mkdir(parents=True, exist_ok=True)
+    config = {
+        "mcpServers": {
+            "google-ads-mcp": {
+                "env": {
+                    # plaintext, secret-named key -> flagged
+                    "GOOGLE_ADS_DEVELOPER_TOKEN": "abc123DEVTOKENplaintext",
+                    # correctly externalized -> NOT flagged
+                    "GOOGLE_ADS_CLIENT_ID": "${GOOGLE_ADS_CLIENT_ID}",
+                },
+            },
+            "fal-ai": {
+                # plaintext by value-prefix, even though key isn't "secret" named
+                "env": {"FAL_KEY": _SECRET_SENTINEL},
+            },
+            "safe-server": {
+                "command": "node",
+                "args": ["server.js"],
+                "env": {"PORT": "8080", "API_KEY": "${MY_API_KEY}"},
+            },
+        }
+    }
+    path = home / ".claude.json"
+    path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+    return path
+
+
+def test_hygiene_flags_plaintext_and_spares_env_refs(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    _write_claude_config(home)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = connect_mod.scan_credential_hygiene(repo, home=home)
+
+    assert result["ok"] is False
+    locations = {f["location"] for f in result["findings"]}
+    assert "mcpServers.google-ads-mcp.env.GOOGLE_ADS_DEVELOPER_TOKEN" in locations
+    assert "mcpServers.fal-ai.env.FAL_KEY" in locations
+    # env-referenced and placeholder-shaped values are correctly externalized
+    assert all("CLIENT_ID" not in loc for loc in locations)
+    assert all(not loc.endswith("API_KEY") for loc in locations)
+    assert all(not loc.endswith(".PORT") for loc in locations)
+
+
+def test_hygiene_never_emits_the_secret_value(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    _write_claude_config(home)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = connect_mod.scan_credential_hygiene(repo, home=home)
+    blob = json.dumps(result)
+    assert _SECRET_SENTINEL not in blob
+    assert "abc123DEVTOKENplaintext" not in blob
+    # mask reports length only
+    fal = next(f for f in result["findings"] if f["location"].endswith("FAL_KEY"))
+    assert fal["mask"] == f"••• ({len(_SECRET_SENTINEL)} chars)"
+    assert "remediation" in fal
+
+
+def test_hygiene_clean_when_all_externalized(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    home.mkdir(parents=True)
+    (home / ".claude.json").write_text(
+        json.dumps({"mcpServers": {"x": {"env": {"TOKEN": "${X_TOKEN}"}}}}),
+        encoding="utf-8",
+    )
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = connect_mod.scan_credential_hygiene(repo, home=home)
+    assert result["ok"] is True
+    assert result["findings"] == []
+    assert "~/.claude.json" in result["surfaces_scanned"]
+
+
+def test_hygiene_cli_exit_code_and_redaction(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    _write_claude_config(home)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    # point _home() at our fake home via the documented env override
+    import os
+
+    env = {**os.environ, "HOME": str(home)}
+    result = runner.invoke(app, ["connect", "hygiene", "--repo", str(repo), "--json"], env=env)
+    assert result.exit_code == 1
+    assert _SECRET_SENTINEL not in result.stdout
+
+
+def test_hygiene_scans_repo_mcp_surface(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    home.mkdir(parents=True)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    (repo / ".mcp.json").write_text(
+        json.dumps({"mcpServers": {"y": {"env": {"SECRET": "re_live_plaintextkey123"}}}}),
+        encoding="utf-8",
+    )
+    result = connect_mod.scan_credential_hygiene(repo, home=home)
+    assert result["ok"] is False
+    assert any(f["surface"] == ".mcp.json" for f in result["findings"])
+
+
+def test_hygiene_skips_unparseable_surface(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    home.mkdir(parents=True)
+    (home / ".claude.json").write_text("{ not valid json", encoding="utf-8")
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    result = connect_mod.scan_credential_hygiene(repo, home=home)
+    assert result["ok"] is True
+    assert any(s["reason"] == "not valid JSON" for s in result["surfaces_skipped"])
