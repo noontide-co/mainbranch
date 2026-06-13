@@ -47,6 +47,7 @@ Pick the route that matches what you are doing.
 - [`child-repo-descriptors.md`](child-repo-descriptors.md) — `.mainbranch/repo.json`.
 - [`checks-and-review-model.md`](checks-and-review-model.md) — local + CI + agent checks.
 - [`delivery-truth.md`](delivery-truth.md) — acceptance ≠ delivery: message ids, delivery_state, webhook + reconcile, page on failure.
+- [`provider-mutation-contract.md`](provider-mutation-contract.md) — preview → approve → apply → verify for external-account writes; sanitized plans, minimal scope, no private rows in git.
 - [`operating-principles.md`](operating-principles.md) — the twelve principles, the decision rule, and the subagent operating contract.
 - [`traffic-reconciliation.md`](traffic-reconciliation.md) — counting humans, not crawlers: the three layers, the crawler tell, the recipe.
 - [`claude-code-invocation-contract.md`](claude-code-invocation-contract.md) — supported Claude Code path.

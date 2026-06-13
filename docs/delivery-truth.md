@@ -97,4 +97,7 @@ async function reconcileStale(ceilingMinutes = 30) {
   receipts (issue #656); the delivery state is the receipt.
 
 Related: [checks-and-review-model.md](checks-and-review-model.md) for the
-verify-before-done discipline this belongs to.
+verify-before-done discipline this belongs to, and
+[provider-mutation-contract.md](provider-mutation-contract.md) for the
+preview → approve → apply → verify gate every external-account write runs
+(a send is one such mutation; its delivery receipt is the verify step).
