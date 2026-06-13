@@ -899,6 +899,9 @@ def _next_steps(repo: Path) -> list[str]:
                 "Ask Codex to start this Main Branch business day from read-only mb facts.",
             ]
         )
+    # First checkpoint is the operator's first durable memory; name it
+    # explicitly so a fresh repo's empty-baseline state self-explains (#880).
+    steps.append("Save your first checkpoint once you've made changes: mb checkpoint --plan")
     return steps
 
 
@@ -1237,6 +1240,18 @@ def run(
 
     if not after["git"]:
         warnings.append("Repo is not a git work tree. Run `git init` or `mb doctor` for repair.")
+    # A recorded budget band with no thresholds and no private choice leaves the
+    # MoneyPath checklist silently todo — say what's still missing (#880).
+    if (
+        money_path_inputs.get("monthly_experiment_budget_band")
+        and not _has_threshold_amounts(money_path_inputs)
+        and money_path_inputs.get("threshold_privacy") != "private"
+    ):
+        warnings.append(
+            "Recorded the monthly budget band, but MoneyPath thresholds are still "
+            "open — add trivial/small/material amounts (or pass "
+            "--threshold-privacy private to record that you're keeping them private)."
+        )
     checkpoint_hook = (
         init_result.get("checkpoint_hook")
         if init_result
