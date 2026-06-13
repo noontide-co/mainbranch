@@ -31,6 +31,7 @@ from mb import image_rail as image_rail_mod
 from mb import init as init_mod
 from mb import issue as issue_mod
 from mb import leads as leads_mod
+from mb import ledger as ledger_mod
 from mb import migrate as migrate_mod
 from mb import onboard as onboard_mod
 from mb import production as production_mod
@@ -346,6 +347,31 @@ def pulse_install_cmd(
             typer.echo(f"  kept  {path}")
         for line in result.get("activation", []):
             typer.echo(f"  {line}")
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
+ledger_app = typer.Typer(
+    name="ledger",
+    help="Scaffold the what's-working creative ledger (KEEP/KILL on eligible CPL).",
+    no_args_is_help=True,
+)
+app.add_typer(ledger_app, name="ledger")
+
+
+@ledger_app.command("init")
+def ledger_init_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo to scaffold."),
+    force: bool = typer.Option(False, "--force", help="Overwrite an existing ledger."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Scaffold core/operations/creative-ledger.md (the v1 markdown table)."""
+    result = ledger_mod.init(repo, force=force)
+    if json_out:
+        typer.echo(
+            _json_payload(result, command="mb ledger init", schema_name="mainbranch.ledger.v1")
+        )
+    else:
+        ledger_mod.render_init(result)
     raise typer.Exit(0 if result["ok"] else 1)
 
 
