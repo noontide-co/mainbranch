@@ -288,6 +288,20 @@ def test_checkpoint_validate_rejects_conventional_commit_type() -> None:
     assert payload["validation"]["parsed"]["verb"] is None
 
 
+def test_checkpoint_missing_prefix_enumerates_accepted_verbs() -> None:
+    # #881 item 2: a plain message must show the accepted verbs, not just the
+    # format. The rejection guidance enumerates the registry prefixes.
+    result = runner.invoke(app, ["checkpoint", "--validate", "fixed the offer", "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    missing = next(e for e in payload["validation"]["errors"] if e["code"] == "missing_prefix")
+    assert "Accepted verbs:" in missing["guidance"]
+    # Every registered prefix appears in the enumeration.
+    for entry in verb_registry().values():
+        assert entry.prefix in missing["guidance"]
+
+
 def test_checkpoint_validate_rejects_unknown_bracket_prefix() -> None:
     result = runner.invoke(app, ["checkpoint", "--validate", "[docs] setup guide", "--json"])
 
