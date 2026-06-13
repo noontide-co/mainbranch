@@ -400,6 +400,10 @@ the operator asks for plumbing.
   `mb production plan` (read-only: the branch-protection gap — PR required,
   CI + canary as status checks, force-push/deletion blocked — and the exact
   gh apply commands the operator runs; `--solo` records a deliberate skip).
+  Comparing lead sources or before a CPL-driven budget call ->
+  `mb leads grade --file <leads.json> [--spend N]` (deterministic eligibility
+  per lead — plausible email, valid URL, owner answer — and ELIGIBLE-lead CPL
+  beside raw CPL so the honest metric is the default; no lead data stored).
   Agents validating their own work in repos with
   legacy debt -> `mb validate --paths <prefix>`. Filing work upstream or in
   the business repo without leaking private detail -> `mb issue` (privacy-safe

@@ -30,6 +30,7 @@ from mb import graph as graph_mod
 from mb import image_rail as image_rail_mod
 from mb import init as init_mod
 from mb import issue as issue_mod
+from mb import leads as leads_mod
 from mb import migrate as migrate_mod
 from mb import onboard as onboard_mod
 from mb import production as production_mod
@@ -346,6 +347,56 @@ def pulse_install_cmd(
         for line in result.get("activation", []):
             typer.echo(f"  {line}")
     raise typer.Exit(0 if result["ok"] else 1)
+
+
+leads_app = typer.Typer(
+    name="leads",
+    help="Grade lead eligibility and pair raw CPL with ELIGIBLE-lead CPL.",
+    no_args_is_help=True,
+)
+app.add_typer(leads_app, name="leads")
+
+
+@leads_app.command("grade")
+def leads_grade_cmd(
+    file: str = typer.Option(..., "--file", help="JSON array of lead records to grade."),
+    spend: float = typer.Option(
+        None, "--spend", help="Ad spend for this set; pairs raw CPL with eligible CPL."
+    ),
+    require_url: bool = typer.Option(
+        False, "--require-url", help="Treat a missing/invalid site URL as ineligible."
+    ),
+    no_owner_answer: bool = typer.Option(
+        False, "--no-owner-answer", help="Do not require an owner/qualifying answer."
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Grade a leads JSON for eligibility; honest CPL beside raw CPL."""
+    path = Path(file).expanduser()
+    if not path.exists():
+        typer.echo(f"mb leads grade: file not found: {file}", err=True)
+        raise typer.Exit(2)
+    try:
+        leads = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        typer.echo(f"mb leads grade: {file} is not valid JSON ({exc})", err=True)
+        raise typer.Exit(2) from exc
+    if not isinstance(leads, list):
+        typer.echo("mb leads grade: expected a JSON array of lead records", err=True)
+        raise typer.Exit(2)
+    result = leads_mod.grade_batch(
+        leads,
+        spend=spend,
+        require_url=require_url,
+        require_owner_answer=not no_owner_answer,
+    )
+    if json_out:
+        typer.echo(
+            _json_payload(result, command="mb leads grade", schema_name="mainbranch.leads.v1")
+        )
+    else:
+        leads_mod.render_batch(result)
+    raise typer.Exit(0)
 
 
 production_app = typer.Typer(
