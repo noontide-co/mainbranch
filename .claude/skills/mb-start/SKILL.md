@@ -19,18 +19,17 @@ git terms, checkpoint ids, branch names, `origin`, `ahead`, `behind`, `rebase`,
 and `commit` out of the first response unless the user asks for technical detail
 or the exact command must be shown.
 
-When summarizing repo state, count `pushes/` records and flag `campaigns/`
-only as legacy compatibility. Use `core/vocabulary.md` display words in
-conversation while preserving actual paths in commands.
+When summarizing repo state, count `pushes/` records, flag `campaigns/` as
+legacy only, and use `core/vocabulary.md` display words (real paths in commands).
 
 **CLI facts first:** Once the business repo path is known, run
 `mb status --json --peek` before asking setup or routing questions. Treat JSON
 as source of truth for update severity, readiness, drift, onboarding,
 integrations, GitHub, team, bets, dirty git, since-last-check,
 `content_strategy`, `money_path`, `validation.file_contracts`, and
-`ranked_actions`. Use GitHub activity `author_display` / `author_known` when
-naming people. Parse the full JSON once; do not slice status output with `head`
-or `sed` in the normal path.
+`ranked_actions`. Use GitHub `author_display`/`author_known` when naming
+people. Parse the full JSON once; do not slice status output with `head` or
+`sed`.
 
 **Shared source:** The portable daily start/status workflow contract lives
 in `workflows/mb-start-status/workflow.md`; this skill is its Claude shell.
@@ -90,15 +89,16 @@ before mutating the status marker or doing durable writes.
 **Continuity facts:** Use `since_last_check.journal`, top-level `journal`,
 GitHub activity, and `checkpoint` from status to explain "where we left off."
 Do not run raw `git log` unless status says journal facts are unavailable.
+If `core/operations/pulse/` exists, read today's `log/<date>-*-pulse.md` and
+carry its ONE action into the session open (offer the pulse skill if missing).
 Saving progress: `mb checkpoint --plan --json`, validate, then after approval
 `mb checkpoint --message "..." --yes`.
 
 **Provider facts first:** When setup or routing depends on GitHub, Cloudflare,
 Google/Workspace, Meta Ads, or Apify, read the status `integrations` facts
 first; for a provider choice or repair explanation, run `mb connect plan` or
-`mb connect doctor --json` and use the cited `next_command` /
-`repair_command`. Never ask for tokens or setup in prose before the CLI has
-named the missing step.
+`mb connect doctor --json` and use the cited `next_command`/`repair_command`.
+Never ask for tokens or setup in prose before the CLI names the missing step.
 
 **Paid-traffic facts first:** When routing a paid-traffic minisite, Google Ads,
 GTM, retargeting, or "ready to launch" request, load
@@ -122,10 +122,10 @@ meaning before suggesting file moves.
 
 **Data/ops surface routing:** whose-data questions → `mb spine declare`/
 `show`; money-path-overnight worries (real money flowing unattended) →
-`mb canary init`; "show me the business" → `mb dashboard open`; scripts
-reading credentials → `mb connect token` (never echo values). Full map:
-mb-help `references/cli-surfaces.md` — business answer first; triggered
-surfaces stay triggered.
+`mb canary init`; recurring daily business read → `mb pulse init`; "show me
+the business" → `mb dashboard open`; scripts reading credentials →
+`mb connect token` (never echo values). Full map: mb-help
+`references/cli-surfaces.md` — business answer first; triggered surfaces stay triggered.
 
 **Books/finance routing:** When the user mentions bookkeeping, books, finance,
 accounting, ledgers, statements, P&L, chart of accounts, tax, payroll, hledger,

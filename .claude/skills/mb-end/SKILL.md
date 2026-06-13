@@ -142,6 +142,12 @@ mb checkpoint --plan --json
 | Push artifacts generated | Status/checkpoint changed files under `pushes/` |
 | Unsaved work | Status dirty-work facts and `mb checkpoint --plan` changed files/blockers |
 
+**Pulse check (skip if no `core/operations/pulse/`):** If today's
+`log/<date>-*-pulse.md` exists, compare its ONE recommended action against
+today's activity — done, moved into a lane (bet/issue/decision), or untouched
+— and say which in the session summary. If the scaffold exists but today's
+paper was never written, note it at close so tomorrow opens with a fresh pulse.
+
 **Multi-offer detection (skip if no `core/offers/` folder — single-offer mode,
 everything reads from `core/`):** Use status/checkpoint file paths under
 `core/offers/` to note which offers changed. If those facts are unavailable,
