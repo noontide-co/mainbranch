@@ -832,3 +832,37 @@ def test_checkpoint_status_preserves_legacy_checkpoint_subjects(
     assert payload["ok"] is True
     assert payload["recent"][0]["subject"] == "[checkpoint] Update offer"
     assert payload["recent"][0]["recognized_as"] == "legacy_checkpoint"
+
+
+def test_checkpoint_hook_not_broken_when_mb_path_differs(tmp_path: Path) -> None:
+    # #880: a hook installed from one mb entrypoint (e.g. a venv bin) must not
+    # read as "differs from current template" when checked from another (e.g. a
+    # pipx shim). The baked MB_BIN path varies legitimately; the comparison
+    # must ignore it.
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    _git(repo, "init", "-q", "-b", "main")
+    hook = repo / ".git" / "hooks" / "commit-msg"
+    hook.parent.mkdir(parents=True, exist_ok=True)
+    # Simulate a healthy hook baked with a DIFFERENT absolute mb path.
+    hook.write_text(checkpoint_mod._hook_body("/some/other/venv/bin/mb"), encoding="utf-8")
+    hook.chmod(0o755)
+
+    status = checkpoint_mod.hook_status(repo)
+    assert status["state"] == "installed", status["summary"]
+    assert status["ok"] is True
+
+
+def test_checkpoint_hook_still_broken_when_logic_differs(tmp_path: Path) -> None:
+    # A genuinely altered hook body (not just the MB_BIN path) still flags.
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    _git(repo, "init", "-q", "-b", "main")
+    hook = repo / ".git" / "hooks" / "commit-msg"
+    hook.parent.mkdir(parents=True, exist_ok=True)
+    tampered = checkpoint_mod._hook_body("/path/mb").replace("exit 0", "exit 0  # tampered", 1)
+    hook.write_text(tampered, encoding="utf-8")
+    hook.chmod(0o755)
+
+    status = checkpoint_mod.hook_status(repo)
+    assert status["state"] == "broken"

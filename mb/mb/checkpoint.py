@@ -172,10 +172,26 @@ def _is_managed_hook(text: str) -> bool:
     return HOOK_BEGIN in text and HOOK_END in text
 
 
+def _normalize_hook_for_compare(text: str) -> str:
+    """Blank the baked MB_BIN path so the comparison ignores it.
+
+    The hook bakes ``MB_BIN=<absolute mb path>`` as a fast path, but that path
+    legitimately varies by how mb was invoked (a venv bin, a pipx shim, a
+    `python -m mb` shim). The hook already falls back to `command -v mb` when
+    MB_BIN is not executable, so the path is an optimization, not correctness.
+    Comparing it caused a fresh, healthy hook to read as "differs from the
+    current template" whenever onboard installed it from one entrypoint and a
+    later `mb status` checked it from another (cold-eyes finding, #880).
+    """
+    return re.sub(r"(?m)^MB_BIN=.*$", "MB_BIN=", text)
+
+
 def _hook_state_from_text(text: str, expected: str) -> str:
     if not _is_managed_hook(text):
         return "blocked_existing_hook"
-    return "installed" if text == expected else "broken"
+    if _normalize_hook_for_compare(text) == _normalize_hook_for_compare(expected):
+        return "installed"
+    return "broken"
 
 
 def hook_status(repo: str | Path = ".") -> dict[str, Any]:
