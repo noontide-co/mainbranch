@@ -672,3 +672,138 @@ def test_site_check_flags_missing_repo_role(tmp_path: Path) -> None:
     role_ev = next(item for item in result["evidence"] if item["kind"] == "repo_role")
     assert role_ev["state"] == "manual"
     assert "no topology role" in role_ev["summary"]
+
+
+def _seed_site_for_identity(site: Path) -> None:
+    _write_conversion(
+        site,
+        {
+            "kind": "lead_form",
+            "url": "https://tally.so/r/example",
+            "render": "link_out",
+            "primary_conversions": ["mb_lead_submit"],
+        },
+    )
+    _write_html(site, events=["mb_cta_click", "mb_form_start", "mb_lead_submit"])
+
+
+def _write_business_descriptor(business: Path, owner: str, repo: str) -> None:
+    (business / ".mainbranch").mkdir(parents=True, exist_ok=True)
+    (business / ".mainbranch" / "repo.json").write_text(
+        json.dumps(
+            {
+                "schema": "mb.child_repo.v0",
+                "role": "business",
+                "display_name": repo,
+                "github_owner": owner,
+                "repo_name": repo,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_site_check_blocks_forked_descriptor_github_identity_leak(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business = tmp_path / "business"
+    site = tmp_path / "site"
+    init_run(path=str(business), name="Acme")
+    _write_business_descriptor(business, "acme-co", "acme")
+    site.mkdir()
+    _seed_site_for_identity(site)
+    # Site carries a FORKED descriptor pointing at a different business.
+    (site / ".mainbranch" / "repo.json").write_text(
+        json.dumps(
+            {
+                "schema": "mb.child_repo.v0",
+                "role": "site",
+                "display_name": "Acme site",
+                "parent": {
+                    "display_name": "Previous Co",
+                    "github_owner": "previous-co",
+                    "repo_name": "previous-biz",
+                    "remote": "github:previous-co/previous-biz",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+    payload = json.loads(result.stdout)
+    evidence = {item["kind"]: item for item in payload["evidence"]}
+    assert "descriptor_identity" in evidence
+    assert evidence["descriptor_identity"]["state"] == "blocked"
+    assert payload["state"] == "blocked"
+
+
+def test_site_check_passes_descriptor_identity_when_business_matches(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business = tmp_path / "business"
+    site = tmp_path / "site"
+    init_run(path=str(business), name="Acme")
+    _write_business_descriptor(business, "acme-co", "acme")
+    site.mkdir()
+    _seed_site_for_identity(site)
+    (site / ".mainbranch" / "repo.json").write_text(
+        json.dumps(
+            {
+                "schema": "mb.child_repo.v0",
+                "role": "site",
+                "display_name": "Acme site",
+                "parent": {
+                    "display_name": "Acme",
+                    "github_owner": "acme-co",
+                    "repo_name": "acme",
+                    "remote": "github:acme-co/acme",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+    payload = json.loads(result.stdout)
+    evidence = {item["kind"]: item for item in payload["evidence"]}
+    assert evidence["descriptor_identity"]["state"] == "passed"
+
+
+def test_site_check_blocks_forked_descriptor_parent_path_leak(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business = tmp_path / "business"
+    other = tmp_path / "other-business"
+    site = tmp_path / "site"
+    init_run(path=str(business), name="Acme")
+    other.mkdir()
+    site.mkdir()
+    _seed_site_for_identity(site)
+    # parent.local_checkout resolves to a DIFFERENT business than --business-repo.
+    (site / ".mainbranch" / "repo.json").write_text(
+        json.dumps(
+            {
+                "schema": "mb.child_repo.v0",
+                "role": "site",
+                "display_name": "Acme site",
+                "parent": {
+                    "display_name": "Other",
+                    "local_checkout": "../other-business",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+    payload = json.loads(result.stdout)
+    evidence = {item["kind"]: item for item in payload["evidence"]}
+    assert evidence["descriptor_identity"]["state"] == "blocked"
+    assert payload["state"] == "blocked"
