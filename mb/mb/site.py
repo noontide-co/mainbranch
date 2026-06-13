@@ -130,6 +130,70 @@ def _child_repo_descriptor(child_repo: Path) -> tuple[dict[str, Any], str]:
     return normalized, ""
 
 
+def _descriptor_identity_evidence(
+    child_descriptor: dict[str, Any], business: Path | None
+) -> dict[str, Any] | None:
+    """Verify an inherited descriptor points at the CURRENT business, not a fork.
+
+    A forked site scaffold can carry the previous business's
+    ``.mainbranch/repo.json``, so paid reports render another company's data.
+    When the descriptor's parent identity disagrees with the business this
+    check runs against, that is a cross-business leak — block it. Returns None
+    when there is nothing to verify (no false positives).
+    """
+    if not child_descriptor or business is None:
+        return None
+    parent = child_descriptor.get("parent")
+    parent = parent if isinstance(parent, dict) else {}
+
+    # Strongest signal: the parent's resolved local checkout points elsewhere.
+    resolved = str(parent.get("resolved_local_checkout") or "")
+    if resolved:
+        try:
+            if Path(resolved).resolve() != business:
+                return {
+                    "kind": "descriptor_identity",
+                    "state": "blocked",
+                    "summary": (
+                        "Inherited .mainbranch/repo.json names a different business "
+                        "than this checkout (forked-scaffold leak) — refresh the "
+                        "descriptor for the current business before trusting reports."
+                    ),
+                }
+        except (OSError, ValueError):
+            return None
+
+    # Secondary: parent github identity vs the business's own descriptor.
+    business_descriptor = topology_mod.read_child_descriptor(business)
+    biz_owner = _string_value(business_descriptor.get("github_owner"))
+    biz_repo = _string_value(business_descriptor.get("repo_name"))
+    parent_owner = str(parent.get("github_owner") or "")
+    parent_repo = str(parent.get("repo_name") or "")
+    if biz_owner and biz_repo and parent_owner and parent_repo:
+        if (parent_owner, parent_repo) != (biz_owner, biz_repo):
+            return {
+                "kind": "descriptor_identity",
+                "state": "blocked",
+                "summary": (
+                    f"Inherited descriptor parent is {parent_owner}/{parent_repo}, "
+                    f"but this business is {biz_owner}/{biz_repo} (forked-scaffold "
+                    "leak) — refresh the descriptor before trusting reports."
+                ),
+            }
+        return {
+            "kind": "descriptor_identity",
+            "state": "passed",
+            "summary": "Inherited descriptor points at the current business.",
+        }
+    if resolved:
+        return {
+            "kind": "descriptor_identity",
+            "state": "passed",
+            "summary": "Inherited descriptor's parent checkout matches this business.",
+        }
+    return None
+
+
 def _site_source(site_repo: Path) -> tuple[dict[str, Any], str]:
     source, error = _read_json(site_repo / SOURCE_RELATIVE_PATH)
     if error:
@@ -615,6 +679,10 @@ def check(
                 "summary": f"Child repo descriptor declares role {role}.",
             }
         )
+
+    identity_evidence = _descriptor_identity_evidence(child_descriptor, business)
+    if identity_evidence is not None:
+        evidence.append(identity_evidence)
 
     if site_role in {"site", "offer"}:
         evidence.append(
