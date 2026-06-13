@@ -195,7 +195,13 @@ Mode routing:
    mechanism copy are all shaped by it. Record it on the brief.
 3. For `build`, propose page structure, sections, copy direction, components,
    and file targets. In Codex, stop at planning and patch-shaped guidance until
-   site-build runtime smoke proves writes.
+   site-build runtime smoke proves writes. Click-ID capture invariant
+   (operating-principles §6): any lead-capturing surface snapshots the click
+   IDs and campaign params by default — `gclid`, `gbraid`, `wbraid`, `fbclid`,
+   and the five UTMs (`utm_source`/`utm_medium`/`utm_campaign`/`utm_term`/
+   `utm_content`) — hydrated from the landing querystring and forwarded on
+   submit, even before any campaign runs. Missing the set is permanent,
+   unrecoverable attribution loss the day paid traffic starts.
 4. For `preview` and `check`, run or cite `mb site check` and report the
    readiness state exactly: `missing`, `blocked`, `ready_for_preview`,
    `ready_for_operator_review`, or `ready`.
