@@ -84,7 +84,12 @@ def test_onboard_yes_creates_repo_and_reports_next_steps(tmp_path: Path, monkeyp
     assert result["setup_complete"]["checkpoint_hook_ready"] is True
     assert result["setup_complete"]["claude_code_handoff_ready"] is True
     assert result["setup_complete"]["codex_instructions_present"] is True
-    assert result["next_steps"] == [f"cd {repo.resolve()}", "claude", "/mb-start"]
+    assert result["next_steps"] == [
+        f"cd {repo.resolve()}",
+        "claude",
+        "/mb-start",
+        "Save your first checkpoint once you've made changes: mb checkpoint --plan",
+    ]
     assert any("Claude Code" in warning for warning in result["warnings"])
     assert any(
         "gh auth login" in warning or "GitHub CLI" in warning for warning in result["warnings"]
@@ -112,6 +117,7 @@ def test_onboard_next_steps_offer_global_codex_repair_when_available(
         "mb doctor repair --apply --only codex",
         f"codex -C {repo.resolve()}",
         "Ask Codex to start this Main Branch business day from read-only mb facts.",
+        "Save your first checkpoint once you've made changes: mb checkpoint --plan",
     ]
 
 
@@ -235,7 +241,10 @@ def test_onboard_cli_yes_json_smoke(tmp_path: Path, monkeypatch) -> None:
     payload = json.loads(result.stdout)
     assert payload["ok"] is True
     assert payload["path"] == str(repo.resolve())
-    assert payload["next_steps"][-1] == "/mb-start"
+    assert "/mb-start" in payload["next_steps"]
+    assert payload["next_steps"][-1] == (
+        "Save your first checkpoint once you've made changes: mb checkpoint --plan"
+    )
     assert payload["setup_complete"]["scaffolded"] is True
     assert payload["setup_complete"]["github_requested"] is False
     assert (repo / ".mb" / "onboarding.json").exists()
@@ -1062,3 +1071,54 @@ sys.exit(2)
         check=True,
     )
     assert schema_history.stdout.strip()
+
+
+def test_onboard_budget_band_without_thresholds_warns(tmp_path: Path, monkeypatch) -> None:
+    # #880 item 2: a recorded budget band with no thresholds and no private
+    # choice must say what's still missing, not stay silently todo.
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "acme"
+
+    result = onboard_mod.run(
+        path=str(repo),
+        name="Acme Brewing",
+        mode="new",
+        monthly_experiment_budget_band="500-2k",
+    )
+
+    assert any(
+        "MoneyPath thresholds are still" in w and "trivial/small/material" in w
+        for w in result["warnings"]
+    )
+
+
+def test_onboard_budget_band_with_private_choice_is_quiet(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "acme"
+
+    result = onboard_mod.run(
+        path=str(repo),
+        name="Acme Brewing",
+        mode="new",
+        monthly_experiment_budget_band="500-2k",
+        threshold_privacy="private",
+    )
+
+    assert not any("MoneyPath thresholds are still" in w for w in result["warnings"])
+
+
+def test_onboard_budget_band_with_amounts_is_quiet(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "acme"
+
+    result = onboard_mod.run(
+        path=str(repo),
+        name="Acme Brewing",
+        mode="new",
+        monthly_experiment_budget_band="500-2k",
+        trivial_max_amount="50",
+        small_max_amount="200",
+        material_max_amount="1000",
+    )
+
+    assert not any("MoneyPath thresholds are still" in w for w in result["warnings"])
