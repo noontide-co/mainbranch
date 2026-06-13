@@ -1277,8 +1277,8 @@ def connect_cmd(
     target: str = typer.Argument(
         "",
         help=(
-            "Provider to connect, or `list` / `plan` / `status` / `doctor` / `test` / "
-            "`token` / `hydrate`."
+            "Provider to connect, or `list` / `plan` / `status` / `doctor` / `hygiene` / "
+            "`test` / `token` / `hydrate`."
         ),
     ),
     provider: str = typer.Argument(
@@ -1373,6 +1373,13 @@ def connect_cmd(
             typer.echo(json.dumps(result, indent=2))
         else:
             connect_mod.render_doctor(result)
+        raise typer.Exit(0 if result["ok"] else 1)
+    if target == "hygiene":
+        result = connect_mod.scan_credential_hygiene(repo)
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            connect_mod.render_credential_hygiene(result)
         raise typer.Exit(0 if result["ok"] else 1)
     if target == "hydrate":
         try:

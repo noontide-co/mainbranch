@@ -2417,6 +2417,215 @@ def doctor(repo: str | Path = ".") -> dict[str, Any]:
     }
 
 
+# --- Credential hygiene (mb connect hygiene) -------------------------------
+#
+# Read-only scan of known agent-config surfaces for PLAINTEXT credentials that
+# violate the agent-access-dossier never-print doctrine. The scan reports the
+# surface, the dotted location, and a length-only mask — it NEVER emits the
+# secret value itself. Findings carry a one-line keychain/env remediation.
+
+# Value-shape prefixes that betray a real credential regardless of key name.
+CREDENTIAL_VALUE_PREFIXES: tuple[str, ...] = (
+    "sk_",
+    "rk_",
+    "re_",
+    "sk-",
+    "fal-",
+    "AIza",
+    "ghp_",
+    "gho_",
+    "github_pat_",
+    "xoxb-",
+    "xoxp-",
+    "glpat-",
+    "AKIA",
+)
+_HYGIENE_SECRET_KEY_RE = re.compile(
+    r"(?i)(token|api[_-]?key|secret|password|passwd|bearer|authorization|"
+    r"access[_-]?key|developer[_-]?token|client[_-]?secret|private[_-]?key)"
+)
+# A value that is wholly or partly an env reference (${VAR}, $VAR) is correctly
+# externalized — not a plaintext leak.
+_ENV_REFERENCE_RE = re.compile(r"\$\{?[A-Za-z_][A-Za-z0-9_]*\}?")
+_PLACEHOLDER_VALUES = frozenset(
+    {"", "changeme", "change-me", "todo", "none", "null", "example", "redacted"}
+)
+
+# JSON config surfaces scanned by default. TOML surfaces (e.g. ~/.codex/
+# config.toml) are a follow-up slice (tomllib is 3.11+; the matrix includes
+# 3.10), tracked on the hygiene issue.
+HYGIENE_HOME_SURFACES: tuple[str, ...] = (".claude.json",)
+HYGIENE_REPO_SURFACES: tuple[str, ...] = (
+    ".mcp.json",
+    ".claude/settings.json",
+    ".claude/settings.local.json",
+)
+
+
+def _looks_like_env_reference(value: str) -> bool:
+    stripped = value.strip()
+    if not stripped:
+        return False
+    # Whole value is an env ref, or it embeds one (e.g. "Bearer ${FAL_KEY}").
+    return bool(_ENV_REFERENCE_RE.search(stripped))
+
+
+def _looks_like_placeholder(value: str) -> bool:
+    stripped = value.strip()
+    lowered = stripped.lower()
+    if lowered in _PLACEHOLDER_VALUES:
+        return True
+    if stripped.startswith("<") and stripped.endswith(">"):
+        return True
+    if lowered.startswith(("your_", "your-", "<your", "xxx")):
+        return True
+    return bool(stripped and set(stripped) <= {"x", "X", "*", "•", "."})
+
+
+def _credential_value_prefix(value: str) -> str:
+    candidate = value.strip()
+    if candidate.lower().startswith("bearer "):
+        candidate = candidate[7:].strip()
+    for prefix in CREDENTIAL_VALUE_PREFIXES:
+        if candidate.startswith(prefix):
+            return prefix
+    return ""
+
+
+def _classify_credential_value(key: str, value: str) -> tuple[bool, str]:
+    """Return (flagged, reason) without ever surfacing the value."""
+    if not isinstance(value, str):
+        return False, ""
+    if _looks_like_env_reference(value) or _looks_like_placeholder(value):
+        return False, ""
+    prefix = _credential_value_prefix(value)
+    if prefix:
+        return True, f"value carries the `{prefix}` credential prefix"
+    # A secret-named key holding a non-referenced, non-placeholder literal with
+    # some entropy (a digit or mixed case) reads as a real plaintext credential.
+    if (
+        _HYGIENE_SECRET_KEY_RE.search(key)
+        and len(value.strip()) >= 12
+        and (any(ch.isdigit() for ch in value) or not value.islower())
+    ):
+        return True, f"secret-named key `{key}` holds a plaintext value"
+    return False, ""
+
+
+def _walk_json_for_secrets(
+    node: Any, path: str, surface: str, findings: list[dict[str, Any]]
+) -> None:
+    if isinstance(node, dict):
+        for key, value in node.items():
+            child_path = f"{path}.{key}" if path else str(key)
+            if isinstance(value, str):
+                flagged, reason = _classify_credential_value(str(key), value)
+                if flagged:
+                    findings.append(
+                        {
+                            "surface": surface,
+                            "location": child_path,
+                            "key": str(key),
+                            "reason": reason,
+                            "mask": f"••• ({len(value)} chars)",
+                            "remediation": (
+                                "move the value into the OS keychain "
+                                "(`mb connect <provider> --token-stdin`) or a gitignored "
+                                "env.sh, then reference it as ${ENV_VAR} in this config"
+                            ),
+                            "safe_to_share": True,
+                        }
+                    )
+            else:
+                _walk_json_for_secrets(value, child_path, surface, findings)
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            _walk_json_for_secrets(value, f"{path}[{index}]", surface, findings)
+
+
+def _scan_surface(path: Path, label: str) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """Scan one JSON surface. Returns (findings, skip_record_or_None)."""
+    if not path.exists():
+        return [], None
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError:
+        return [], {"surface": label, "reason": "unreadable"}
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return [], {"surface": label, "reason": "not valid JSON"}
+    findings: list[dict[str, Any]] = []
+    _walk_json_for_secrets(data, "", label, findings)
+    return findings, None
+
+
+def scan_credential_hygiene(
+    repo: str | Path = ".", *, home: str | Path | None = None
+) -> dict[str, Any]:
+    """Flag plaintext credentials in known agent-config surfaces (read-only).
+
+    Never emits a secret value — findings carry the surface, dotted location,
+    a length-only mask, and a keychain/env remediation. ``home`` overrides the
+    home directory (tests, alternate profiles).
+    """
+    repo_path = Path(repo).expanduser().resolve()
+    # Agent configs (~/.claude.json) live in the real home directory, not the
+    # mainbranch secret-store home (_home()).
+    home_path = Path(home).expanduser().resolve() if home is not None else Path.home()
+
+    findings: list[dict[str, Any]] = []
+    scanned: list[str] = []
+    skipped: list[dict[str, Any]] = []
+
+    surfaces: list[tuple[Path, str]] = [
+        (home_path / name, f"~/{name}") for name in HYGIENE_HOME_SURFACES
+    ]
+    surfaces += [(repo_path / name, name) for name in HYGIENE_REPO_SURFACES]
+
+    for path, label in surfaces:
+        if not path.exists():
+            continue
+        surface_findings, skip = _scan_surface(path, label)
+        if skip is not None:
+            skipped.append(skip)
+            continue
+        scanned.append(label)
+        findings.extend(surface_findings)
+
+    ok = not findings
+    if ok:
+        summary = f"no plaintext credentials found across {len(scanned)} scanned config surface(s)"
+    else:
+        summary = (
+            f"{len(findings)} plaintext credential(s) in agent config — move them "
+            "to the keychain/env and reference via ${ENV_VAR}"
+        )
+    return {
+        "ok": ok,
+        "repo": str(repo_path),
+        "home": str(home_path),
+        "surfaces_scanned": scanned,
+        "surfaces_skipped": skipped,
+        "findings": findings,
+        "summary": summary,
+        "safe_to_share": True,
+    }
+
+
+def render_credential_hygiene(result: dict[str, Any]) -> None:
+    print(f"mb connect hygiene  {result['repo']}")
+    print(result["summary"])
+    for finding in result["findings"]:
+        print(f"  warn  {finding['surface']} → {finding['location']}")
+        print(f"        {finding['reason']} {finding['mask']}")
+        print(f"        next: {finding['remediation']}")
+    for skip in result["surfaces_skipped"]:
+        print(f"  skip  {skip['surface']}: {skip['reason']}")
+    if result["ok"]:
+        print("  ok    every scanned surface references secrets indirectly")
+
+
 def render_list(result: dict[str, Any]) -> None:
     for provider in result["providers"]:
         print(
