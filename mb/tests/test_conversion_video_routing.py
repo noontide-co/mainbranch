@@ -141,3 +141,31 @@ def test_conversion_mechanism_gate_present_on_every_rail() -> None:
         assert (
             "page copy" in lowered or "before drafting" in lowered or "before any copy" in lowered
         )
+
+
+def test_click_id_capture_invariant_present_on_both_rails() -> None:
+    """#887: lead-capturing scaffolds snapshot click IDs + UTMs by default.
+
+    A real business captured fbclid + 5 UTMs but zero Google click IDs, so its
+    first Google clicks were permanently unattributable. The capture set must
+    be a scaffold default on both the Claude lead-capture reference and the
+    Codex workflow — not an audit-time retrofit.
+    """
+    conversion = _read(".claude/skills/mb-site/references/minisite-conversion.md")
+    workflow = _read("workflows/mb-site/workflow.md")
+
+    required = ["gclid", "gbraid", "wbraid", "fbclid"]
+    utms = [
+        "utm_source",
+        "utm_medium",
+        "utm_campaign",
+        "utm_term",
+        "utm_content",
+    ]
+    for surface in (conversion, workflow):
+        lowered = surface.lower()
+        for param in required + utms:
+            assert param in lowered, f"missing {param}"
+        # Tied to the own-the-form principle and a scaffold default, not audit.
+        assert "§6" in surface or "principles" in lowered
+        assert "default" in lowered

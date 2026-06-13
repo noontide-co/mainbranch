@@ -91,6 +91,28 @@ Custom webhook:
 }
 ```
 
+## Click-ID capture invariant (lead-capturing surfaces)
+
+Operating-principles §6 — own the form, capture the attribution — is enforced
+by scaffold, not by a later audit. Any surface that captures a lead
+(`lead_form`, `custom_webhook`, or any form that posts) MUST snapshot the
+click IDs and campaign params from the landing URL by default, and forward
+them on submit. A real business we built captured `fbclid` + 5 UTMs but ZERO
+Google click IDs, so its first Google clicks were permanently unattributable —
+caught only by a readiness audit, which is exactly the failure this default
+prevents.
+
+Required capture set (snapshot from the querystring on first load, persist
+across navigation, forward on submit):
+
+- **Google click IDs:** `gclid`, `gbraid`, `wbraid`
+- **Meta click ID:** `fbclid`
+- **UTMs (all five):** `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`
+
+Add `msclkid` (Microsoft) and `ttclid` (TikTok) when those channels are live.
+Capture the params even when no campaign is running yet — the cost of a missing
+column is permanent, unrecoverable attribution loss the day paid traffic starts.
+
 ## Generation Contract
 
 The generation subagent reads `kind`, `render`, and `url`, then renders the home CTA accordingly:
@@ -99,5 +121,11 @@ The generation subagent reads `kind`, `render`, and `url`, then renders the home
 - embedded form;
 - embedded booking iframe;
 - form-POST handler.
+
+For every lead-capturing render, the generated form/handler carries the
+click-ID capture invariant above by default (hidden fields hydrated from the
+landing querystring, forwarded on submit) — never an audit-time retrofit.
+Flagging an existing lead-capturing site that is missing the set is a
+follow-up `/mb-status` check (#887).
 
 After conversion is recorded, move to [`concept-variations.md`](concept-variations.md).
