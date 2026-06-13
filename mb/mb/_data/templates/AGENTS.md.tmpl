@@ -407,7 +407,11 @@ the operator asks for plumbing.
   Tracking which creatives work (keep/kill) -> `mb ledger init` (scaffolds
   the what's-working creative ledger: per-asset spend, raw vs ELIGIBLE CPL,
   downstream event, KEEP/KILL/WATCH — an asset is not working until it makes
-  an eligible lead; graduate to the owned spine past ~50 assets). Agents
+  an eligible lead; graduate to the owned spine past ~50 assets). Running an
+  unattended or steered agent loop with inspectable state ->
+  `mb automation init` (scaffolds the steered-loop contract loop-state.md the
+  loop reads first and updates each run; handoffs render from it; unattended
+  deterministic jobs pair with `mb pulse install`). Agents
   validating their own work in repos with
   legacy debt -> `mb validate --paths <prefix>`. Filing work upstream or in
   the business repo without leaking private detail -> `mb issue` (privacy-safe

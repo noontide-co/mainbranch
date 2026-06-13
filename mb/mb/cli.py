@@ -18,6 +18,7 @@ import typer
 
 from mb import __version__
 from mb import ads as ads_mod
+from mb import automation as automation_mod
 from mb import books as books_mod
 from mb import canary as canary_mod
 from mb import checkpoint as checkpoint_mod
@@ -347,6 +348,33 @@ def pulse_install_cmd(
             typer.echo(f"  kept  {path}")
         for line in result.get("activation", []):
             typer.echo(f"  {line}")
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
+automation_app = typer.Typer(
+    name="automation",
+    help="Scaffold the steered-loop contract (inspectable loop/cron state).",
+    no_args_is_help=True,
+)
+app.add_typer(automation_app, name="automation")
+
+
+@automation_app.command("init")
+def automation_init_cmd(
+    repo: str = typer.Option(".", "--repo", help="Business repo to scaffold."),
+    force: bool = typer.Option(False, "--force", help="Overwrite an existing loop-state."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Scaffold core/operations/loop-state.md (the steered-loop contract)."""
+    result = automation_mod.init(repo, force=force)
+    if json_out:
+        typer.echo(
+            _json_payload(
+                result, command="mb automation init", schema_name="mainbranch.automation.v1"
+            )
+        )
+    else:
+        automation_mod.render_init(result)
     raise typer.Exit(0 if result["ok"] else 1)
 
 
