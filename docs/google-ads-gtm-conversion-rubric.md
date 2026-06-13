@@ -32,6 +32,24 @@ Google Ads, GTM, Cloudflare, consent tools, booking tools, Stripe, and CRMs own
 provider state. Main Branch records the durable plan and evidence, but it does
 not become the provider.
 
+### These are provider mutations — run the contract
+
+Publishing a GTM container, creating a Google Ads conversion action, uploading
+offline conversions, and changing budgets or launching a campaign are all
+**provider mutations**. Each runs the five-step contract in
+[provider-mutation-contract.md](provider-mutation-contract.md): read-only
+discovery first, a sanitized plan (provider + object count + risk, no private
+rows), explicit per-surface approval, minimal-scope apply, then verify and a
+private-safe record. Spend, publish, and upload each need their own approval —
+one does not blanket the next. Default to the conservative form: a draft
+container, a staged offline-conversion record, a campaign left paused.
+
+Provider-side automation that needs live Google API access (Ads conversion
+checks, GTM container reads, conversion upload) is operator-gated: it requires
+Google Ads Basic Access and live/sandbox auth, and Main Branch claims no
+provider automation before live smoke evidence exists. Until then the agent
+plans and hands off; the operator does the Google-UI steps.
+
 ## Default Stack
 
 | Layer | Default | When to choose another path |

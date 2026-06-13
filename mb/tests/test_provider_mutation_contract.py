@@ -50,3 +50,21 @@ def test_provider_mutation_contract_routed_on_codex_rail() -> None:
     assert "provider-mutation-contract.md" in template
     assert "read-only discovery first" in template
     assert "writing to an external provider" in template
+
+
+def test_google_rubric_ties_to_the_mutation_contract() -> None:
+    """#286: Google Ads/GTM writes are governed by the #656 contract, and the
+    live-API automation is honestly gated (no overclaim before smoke evidence).
+    """
+    rubric = _read("docs/google-ads-gtm-conversion-rubric.md")
+    lowered = " ".join(rubric.lower().split())
+    # The Google surfaces are named as provider mutations under the contract.
+    assert "provider-mutation-contract.md" in rubric
+    assert "provider mutations" in lowered
+    for surface in ("gtm container", "conversion action", "offline conversion"):
+        assert surface in lowered
+    # Honest gating: no automation claim before live smoke evidence.
+    assert "basic access" in lowered
+    assert "no provider automation before live smoke evidence" in lowered
+    # Bidirectional link from the contract to the worked instance.
+    assert "google-ads-gtm-conversion-rubric.md" in _read("docs/provider-mutation-contract.md")
