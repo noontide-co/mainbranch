@@ -28,6 +28,8 @@ date: YYYY-MM-DD
 slug: <offer-slug>
 status: proposed
 dial: convert | story | brand
+conversion_mechanism: lead_form | book_call | purchase | other
+takes_calls: true | false
 archetype: ...
 audience_current_archetype: ...
 copy_framework_tag: ...
@@ -38,12 +40,24 @@ voice_anchor_lines: {use: [...], avoid: [...]}
 ---
 ```
 
+`conversion_mechanism` and `takes_calls` are operator-stated facts, not guesses — see the gate in Flow step 0.
+
 Plus the body sections: headline + subhead, value prop, mechanism summary, picked supporting pages, conversion endpoint, adjacency map.
 
 ## Flow
 
+0. **Conversion-mechanism gate (before any copy).** Pin what the visitor does
+   to convert — submit a lead form, book a call, buy — and specifically whether
+   the operator takes calls. This is an operator-stated fact: if it is not
+   already recorded (in `offer.md`, a prior decision, or the operator's own
+   words this session), STOP and ask before drafting. Never assume a model —
+   the headline, value prop, and mechanism summary are all shaped by it, so a
+   wrong guess rewrites the whole brief. A real business we built lost a full
+   day when an agent invented a call-booking flow the operator never chose.
+   Record the answer in `conversion_mechanism` + `takes_calls`.
 1. **Read inputs.** Resolve offer/audience/voice; load picked archetype detail file.
-2. **Compose schema header.** Fill in fields from operator picks.
+2. **Compose schema header.** Fill in fields from operator picks, including the
+   gated `conversion_mechanism` + `takes_calls`.
 3. **Draft headline + subhead.** Apply one of the picked formulas. Aim for ≤ 2 lines.
 4. **Draft value prop.** 3 short reasons OR one extended argument. Match the dial.
 5. **Draft mechanism summary.** For the how-it-works page.

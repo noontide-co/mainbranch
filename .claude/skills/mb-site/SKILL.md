@@ -164,6 +164,13 @@ Say `/mb-site` again after compaction, context loss, or switching focus. It relo
 6. When the page, sales video, or lander depends on a weak offer, load
    `.claude/reference/conversion/offer-sharpening.md` and route to `/mb-think`
    before writing page copy from thin claims.
+6a. **Conversion-mechanism gate (before any page copy):** confirm what the
+   visitor does to convert — submit a lead form, book a call, or buy — and
+   specifically whether the operator takes calls. If the operator has not
+   stated it, STOP and ask; never assume a model. Copy is shaped by the
+   mechanism, so it is pinned before drafting (the brief records it; see
+   `mb-skill-brief-draft`). A real business we built lost a full day when an
+   agent invented a call-booking flow the operator never chose.
 7. When the site, blog, wiki, changelog, or launch page depends on content or
    recognition strategy, read `core/content-strategy.md` and relevant
    `core/marketing/` files if present. Owned site content should support the
