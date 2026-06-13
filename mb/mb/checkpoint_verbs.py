@@ -222,13 +222,15 @@ def validate_subject(message: str) -> dict[str, Any]:
                 )
             )
         elif subject and not prefix:
+            accepted = ", ".join(entry.prefix for entry in registry().values())
             errors.append(
                 _problem(
                     "missing_prefix",
                     "Checkpoint subject must start with an accepted business verb prefix.",
                     (
                         "Use `[verb] object -- result`, for example "
-                        "`[updated] offer.md -- raised price`."
+                        "`[updated] offer.md -- raised price`. Accepted verbs: "
+                        f"{accepted}."
                     ),
                 )
             )
