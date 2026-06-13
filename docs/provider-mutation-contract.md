@@ -84,3 +84,10 @@ the row in the provider.
 mutate a provider. Write surfaces are the ones this contract governs. An agent
 that can read a provider has not been granted permission to write it — the
 write needs its own plan and its own approval, every time.
+
+A worked provider instance lives in
+[google-ads-gtm-conversion-rubric.md](google-ads-gtm-conversion-rubric.md):
+publishing a GTM container, creating a Google Ads conversion action, uploading
+offline conversions, and launching/budget changes are each mutations that run
+this contract, with the live-API automation operator-gated until smoke
+evidence exists.
