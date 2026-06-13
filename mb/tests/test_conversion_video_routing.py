@@ -113,3 +113,31 @@ def test_operator_help_avoids_retired_data_repo_and_public_conductor_framing() -
                 failures.append(f"{relative}: contains retired phrase {term!r}")
 
     assert failures == []
+
+
+def test_conversion_mechanism_gate_present_on_every_rail() -> None:
+    """#840: page copy must wait on a recorded conversion mechanism, all rails.
+
+    A real business lost a day when an agent invented a call-booking model the
+    operator never chose. The gate must live where copy is drafted (brief-draft),
+    in the Claude router (mb-site), and on the Codex workflow source.
+    """
+    brief = _read(".claude/skills/mb-skill-brief-draft/SKILL.md")
+    site = _read(".claude/skills/mb-site/SKILL.md")
+    workflow = _read("workflows/mb-site/workflow.md")
+
+    # Brief-draft records the mechanism as gated, operator-stated facts.
+    assert "conversion_mechanism" in brief
+    assert "takes_calls" in brief
+    assert "before any copy" in brief.lower()
+
+    for surface in (brief, site, workflow):
+        lowered = surface.lower()
+        # The visitor-action choices the operator must pin.
+        assert "book a call" in lowered or "book_call" in lowered
+        assert "lead form" in lowered or "lead_form" in lowered
+        # Stop-and-ask, never-assume intent.
+        assert "never assume" in lowered
+        assert (
+            "page copy" in lowered or "before drafting" in lowered or "before any copy" in lowered
+        )

@@ -188,7 +188,11 @@ Mode routing:
 2. For `brief`, draft from accepted repo truth: offer, audience, voice, content
    strategy, proof facts, active push, research, decisions, and operator
    constraints. If the offer is thin or claims are unsupported, route to
-   `mb-think` before page copy.
+   `mb-think` before page copy. Conversion-mechanism gate: before drafting any
+   page copy, pin what the visitor does to convert (lead form, book a call, or
+   buy) and whether the operator takes calls. If the operator has not stated
+   it, stop and ask — never assume a model; the headline, value prop, and
+   mechanism copy are all shaped by it. Record it on the brief.
 3. For `build`, propose page structure, sections, copy direction, components,
    and file targets. In Codex, stop at planning and patch-shaped guidance until
    site-build runtime smoke proves writes.
