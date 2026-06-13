@@ -1278,7 +1278,7 @@ def connect_cmd(
         "",
         help=(
             "Provider to connect, or `list` / `plan` / `status` / `doctor` / `hygiene` / "
-            "`test` / `token` / `hydrate`."
+            "`identity` / `test` / `token` / `hydrate`."
         ),
     ),
     provider: str = typer.Argument(
@@ -1381,6 +1381,16 @@ def connect_cmd(
         else:
             connect_mod.render_credential_hygiene(result)
         raise typer.Exit(0 if result["ok"] else 1)
+    if target == "identity":
+        try:
+            result = connect_mod.business_identity(repo)
+        except connect_mod.ConfigBoundaryError as exc:
+            _connect_boundary_exit("mb connect identity", exc)
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            connect_mod.render_identity(result)
+        raise typer.Exit(0)
     if target == "hydrate":
         try:
             result = connect_mod.hydrate(repo, provider_id=provider)

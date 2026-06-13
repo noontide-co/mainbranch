@@ -2004,3 +2004,87 @@ def test_hygiene_skips_unparseable_surface(tmp_path: Path) -> None:
     result = connect_mod.scan_credential_hygiene(repo, home=home)
     assert result["ok"] is True
     assert any(s["reason"] == "not valid JSON" for s in result["surfaces_skipped"])
+
+
+# --- canonical business identity (mb connect identity) ---------------------
+
+
+def test_identity_aggregates_recorded_metadata(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "meta",
+        repo=repo,
+        token="meta-secret-token",
+        metadata_pairs=["ad_account_id=act_test", "page_id=12345", "business_id=biz_1"],
+    )
+
+    result = connect_mod.business_identity(repo)
+
+    assert result["ok"] is True
+    assert result["safe_to_share"] is False  # carries business identifiers
+    meta = next(p for p in result["providers"] if p["provider"] == "meta")
+    assert meta["identity"]["ad_account_id"] == "act_test"
+    assert meta["identity"]["page_id"] == "12345"
+    # pixel_id is a registry identity field that was not recorded
+    assert meta["identity"]["pixel_id"] == ""
+    assert "pixel_id" in meta["missing_fields"]
+    assert meta["complete"] is False
+
+
+def test_identity_marks_complete_when_all_fields_recorded(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "resend",
+        repo=repo,
+        token="re_live_key_abc",
+        metadata_pairs=["sender_domain=mail.example.com", "audience_id=aud_1"],
+    )
+
+    result = connect_mod.business_identity(repo)
+    resend = next(p for p in result["providers"] if p["provider"] == "resend")
+    assert resend["complete"] is True
+    assert resend["missing_fields"] == []
+
+
+def test_identity_empty_when_no_providers(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    result = connect_mod.business_identity(repo)
+    assert result["providers"] == []
+    assert "no connected providers" in result["summary"]
+
+
+def test_identity_never_emits_secret_material(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "resend",
+        repo=repo,
+        token="re_live_SECRETTOKEN999",
+        metadata_pairs=["sender_domain=mail.example.com"],
+    )
+    result = connect_mod.business_identity(repo)
+    assert "re_live_SECRETTOKEN999" not in json.dumps(result)
+
+
+def test_identity_cli_json(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "meta",
+        repo=repo,
+        token="meta-secret-token",
+        metadata_pairs=["ad_account_id=act_test"],
+    )
+    result = runner.invoke(app, ["connect", "identity", "--repo", str(repo), "--json"])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["safe_to_share"] is False
+    assert any(p["provider"] == "meta" for p in payload["providers"])

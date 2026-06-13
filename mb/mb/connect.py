@@ -92,7 +92,7 @@ PROVIDERS: tuple[Provider, ...] = (
         category="ads",
         auth="meta_ads_cli_read_only",
         required_secrets=("access_token",),
-        metadata_fields=("ad_account_id", "business_id"),
+        metadata_fields=("ad_account_id", "business_id", "page_id", "pixel_id"),
         description=(
             "Meta Ads account access through Meta's official Ads CLI, with local "
             "credential storage and read-only account smoke before skills use live facts."
@@ -2624,6 +2624,74 @@ def render_credential_hygiene(result: dict[str, Any]) -> None:
         print(f"  skip  {skip['surface']}: {skip['reason']}")
     if result["ok"]:
         print("  ok    every scanned surface references secrets indirectly")
+
+
+# --- Canonical business identity (mb connect identity) ---------------------
+#
+# Agents must read identity (ad account, pixel, page, sender domain, Stripe
+# account/mode) from RECORDED facts, never infer it from live provider state
+# (mining friction #1). Each provider's registry metadata_fields IS the
+# canonical identity schema; this surface aggregates the recorded values and
+# names what's still unrecorded. Output carries business identifiers, so it is
+# operator-facing (safe_to_share=False) — never paste into public artifacts.
+
+
+def business_identity(repo: str | Path = ".") -> dict[str, Any]:
+    """Aggregate recorded business-identity metadata across connected providers."""
+    target = Path(repo).resolve()
+    status = status_all(target)
+    pmap = provider_map()
+    providers_out: list[dict[str, Any]] = []
+    for item in status["providers"]:
+        if not item["connected"]:
+            continue
+        provider = pmap.get(item["provider"])
+        fields = provider.metadata_fields if provider else ()
+        if not fields:
+            continue
+        metadata = item.get("metadata") or {}
+        recorded = {field: str(metadata.get(field, "")) for field in fields}
+        missing = [field for field in fields if not recorded[field]]
+        providers_out.append(
+            {
+                "provider": item["provider"],
+                "name": item["name"],
+                "identity": recorded,
+                "missing_fields": missing,
+                "complete": not missing,
+            }
+        )
+    total_missing = sum(len(item["missing_fields"]) for item in providers_out)
+    if not providers_out:
+        summary = "no connected providers carry identity metadata yet"
+    elif total_missing == 0:
+        summary = f"all {len(providers_out)} connected provider(s) have complete recorded identity"
+    else:
+        summary = (
+            f"{total_missing} identity field(s) unrecorded across "
+            f"{len(providers_out)} connected provider(s) — record them with "
+            "`mb connect <provider> --metadata <field>=<value>` so agents read "
+            "facts, not live state"
+        )
+    return {
+        "ok": True,
+        "repo": str(target),
+        "providers": providers_out,
+        "summary": summary,
+        # Carries ad account / pixel / page / sender-domain identifiers.
+        "safe_to_share": False,
+    }
+
+
+def render_identity(result: dict[str, Any]) -> None:
+    print(f"mb connect identity  {result['repo']}")
+    print(result["summary"])
+    for item in result["providers"]:
+        mark = "ok" if item["complete"] else "warn"
+        print(f"  {mark}  {item['provider']}")
+        for field, value in item["identity"].items():
+            shown = value if value else "(unrecorded)"
+            print(f"        {field}: {shown}")
 
 
 def render_list(result: dict[str, Any]) -> None:
