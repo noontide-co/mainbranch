@@ -179,7 +179,12 @@ migration. Money-path-overnight worries, once real money or real leads flow
 unattended, route to `mb canary init`. A recurring daily read on the business
 routes to `mb pulse init` (deterministic collectors plus a judgment skill:
 scorecard, anomalies, exactly ONE recommended action, read-only — it consumes
-`mb status` facts rather than re-ranking them). "Show me the business" routes to
+`mb status` facts rather than re-ranking them). When `core/operations/pulse/`
+exists, read today's `log/<date>-*-pulse.md` at session open and carry its ONE
+recommended action alongside the status ranked action; if today's paper is
+missing, offer the repo's pulse run before routing. At session close, say
+whether that action was done, moved into a lane, or untouched.
+"Show me the business" routes to
 `mb dashboard open` (local, read-only, never committed). Scripts that read
 credentials route to `mb connect token` (token to stdout for scripts and
 agents; never echo the value). Tools missing from the provider list route to
