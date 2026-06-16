@@ -2612,8 +2612,10 @@ def scan_credential_hygiene(
         scanned.append(label)
         findings.extend(surface_findings)
 
-    ok = not findings
-    if ok:
+    # A surface that could not be scanned was NOT proven clean — it must not
+    # yield a clean machine verdict (gates/automation read ok + the exit code).
+    ok = not findings and not skipped
+    if not findings:
         summary = f"no plaintext credentials found across {len(scanned)} scanned config surface(s)"
     else:
         summary = (

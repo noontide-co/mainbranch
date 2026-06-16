@@ -2021,15 +2021,26 @@ def test_hygiene_scans_repo_mcp_surface(tmp_path: Path) -> None:
     assert any(f["surface"] == ".mcp.json" for f in result["findings"])
 
 
-def test_hygiene_skips_unparseable_surface(tmp_path: Path) -> None:
+def test_hygiene_unparseable_surface_is_not_a_clean_verdict(tmp_path: Path) -> None:
+    # A surface that could not be scanned must NOT return a clean machine
+    # verdict — gates/automation read ok + the exit code (#911 Codex review).
     home = tmp_path / "home"
     home.mkdir(parents=True)
     (home / ".claude.json").write_text("{ not valid json", encoding="utf-8")
     repo = tmp_path / "biz"
     repo.mkdir()
     result = connect_mod.scan_credential_hygiene(repo, home=home)
-    assert result["ok"] is True
+    assert result["ok"] is False
     assert any(s["reason"] == "not valid JSON" for s in result["surfaces_skipped"])
+
+    import os as _os
+
+    cli = runner.invoke(
+        app,
+        ["connect", "hygiene", "--repo", str(repo), "--json"],
+        env={**_os.environ, "HOME": str(home)},
+    )
+    assert cli.exit_code == 1
 
 
 # --- canonical business identity (mb connect identity) ---------------------

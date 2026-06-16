@@ -121,4 +121,21 @@ def test_leads_grade_cli_rejects_negative_spend(tmp_path: Path) -> None:
     leads_file.write_text(json.dumps([{"email": "a@b.co", "owner_answer": "x"}]), encoding="utf-8")
     result = runner.invoke(app, ["leads", "grade", "--file", str(leads_file), "--spend", "-10"])
     assert result.exit_code == 2
-    assert "zero or positive" in result.stderr
+    assert "zero-or-positive" in result.stderr
+
+
+def test_leads_grade_cli_rejects_non_finite_spend(tmp_path: Path) -> None:
+    leads_file = tmp_path / "leads.json"
+    leads_file.write_text(json.dumps([{"email": "a@b.co", "owner_answer": "x"}]), encoding="utf-8")
+    for bad in ("nan", "inf"):
+        result = runner.invoke(app, ["leads", "grade", "--file", str(leads_file), "--spend", bad])
+        assert result.exit_code == 2, bad
+        assert "finite" in result.stderr
+
+
+def test_grade_batch_non_finite_spend_is_not_emitted() -> None:
+    result = leads_mod.grade_batch([{"email": "a@b.co", "owner_answer": "x"}], spend=float("inf"))
+    assert result["raw_cpl"] is None
+    assert result["eligible_cpl"] is None
+    blob = json.dumps(result)
+    assert "Infinity" not in blob and "NaN" not in blob

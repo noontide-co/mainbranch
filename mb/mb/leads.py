@@ -13,6 +13,7 @@ lead dict, and the CLI reads a leads JSON the operator provides.
 
 from __future__ import annotations
 
+import math
 import re
 from typing import Any
 from urllib.parse import urlparse
@@ -105,16 +106,19 @@ def grade_batch(
         for reason in verdict["reasons"]:
             reason_tally[reason] = reason_tally.get(reason, 0) + 1
 
+    # A non-finite spend (nan/inf) would emit invalid JSON constants — treat
+    # it as no spend for the CPL math (the CLI also rejects it up front).
+    spend_value = float(spend) if spend is not None and math.isfinite(float(spend)) else None
     raw_cpl: float | None = None
     eligible_cpl: float | None = None
-    if spend is not None and total:
-        raw_cpl = _round_cents(float(spend) / total)
-    if spend is not None and eligible:
-        eligible_cpl = _round_cents(float(spend) / eligible)
+    if spend_value is not None and total:
+        raw_cpl = _round_cents(spend_value / total)
+    if spend_value is not None and eligible:
+        eligible_cpl = _round_cents(spend_value / eligible)
 
     if total == 0:
         summary = "no leads to grade"
-    elif spend is None:
+    elif spend_value is None:
         summary = f"{eligible}/{total} leads eligible"
     elif eligible == 0:
         summary = (

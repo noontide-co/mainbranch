@@ -78,6 +78,10 @@ of cold-eyes onboard fixes.
 - The discoverability gate verifies top-level commands; it does not yet prove
   leaf/positional surfaces (`mb pulse install`, `mb connect hygiene`, …).
   Those are taught manually; teaching the gate to see them is follow-up work.
+- Plugin installs do not self-update: `mb update` upgrades the package and
+  refreshes symlink + Codex skills, but a Claude **plugin** install must be
+  re-added/restarted to pick up 0.4.0. Verifying the installed plugin version
+  in `mb update` is follow-up work.
 
 ## [0.3.44] - 2026-06-12
 
