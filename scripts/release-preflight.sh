@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Release-file preflight (release-agent-contract.md Rule 0, issue #826).
 #
-# Asserts the three version-bearing release files agree — and agree with the
+# Asserts the version-bearing release files agree — and agree with the
 # release tag when one is passed — then runs the cheapest targeted guard for
 # the plugin manifest. Run this before scripts/check.sh on a release-prep
 # branch; do not spend a 10-minute gate discovering a version mismatch.
@@ -28,8 +28,8 @@ echo "mb/mb/__init__.py        __version__ = $init_version"
 echo ".claude-plugin/plugin.json version  = $plugin_version"
 echo ".claude-plugin/marketplace.json    = $marketplace_version"
 
-if [ -z "$pyproject_version" ] || [ -z "$init_version" ] || [ -z "$plugin_version" ]; then
-  echo "release-preflight: could not read all three version strings." >&2
+if [ -z "$pyproject_version" ] || [ -z "$init_version" ] || [ -z "$plugin_version" ] || [ -z "$marketplace_version" ]; then
+  echo "release-preflight: could not read all version strings." >&2
   fail=1
 fi
 if [ "$pyproject_version" != "$init_version" ] || [ "$pyproject_version" != "$plugin_version" ] || [ "$pyproject_version" != "$marketplace_version" ]; then

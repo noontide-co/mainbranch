@@ -147,7 +147,7 @@ scripts/claude-runtime-dogfood.py --install-mode pypi --pypi-version X.Y.Z --run
 For a pre-tag release acceptance run against a release candidate wheel:
 
 ```bash
-(cd mb && python -m build)
+(cd mb && python3 -m build)
 scripts/claude-runtime-dogfood.py --install-mode wheel --wheel mb/dist/mainbranch-*.whl --run-claude-print --simulation-tier release_acceptance --max-budget-usd 0.75
 ```
 

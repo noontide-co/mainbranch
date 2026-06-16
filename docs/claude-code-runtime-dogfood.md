@@ -91,7 +91,7 @@ first.
 For a wheel smoke:
 
 ```bash
-(cd mb && python -m build)
+(cd mb && python3 -m build)
 scripts/claude-runtime-dogfood.py --install-mode wheel --wheel mb/dist/mainbranch-*.whl
 ```
 

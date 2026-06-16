@@ -134,8 +134,9 @@ Lanes that can usually run concurrently without merge chaos:
 - **Feature CLI**: one command surface owned by one branch. Do not parallel
   two branches that both touch `mb/<module>.py`, `mb/cli.py`, or shared
   packaged data unless the conflict surface is explicitly enumerated.
-- **Release prep**: only the four release files (`CHANGELOG.md`,
-  `mb/pyproject.toml`, `mb/mb/__init__.py`, `.claude-plugin/plugin.json`).
+- **Release prep**: only release files (`CHANGELOG.md`, `mb/pyproject.toml`,
+  `mb/mb/__init__.py`, `.claude-plugin/plugin.json`,
+  `.claude-plugin/marketplace.json`).
   Anything else is its own branch.
 - **Noontide / business-model**: lives in the operator's business repo, not
   in this engine. Never on the same branch as engine changes.

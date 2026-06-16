@@ -85,8 +85,8 @@ human approval over clever automation.
 
 ### Package metadata and dependency surface
 
-- `mb/pyproject.toml` declares three runtime dependencies: `typer`,
-  `pyyaml`, `rich`. Each has a documented floor (`>=`) and no upper
+- `mb/pyproject.toml` declares four runtime dependencies: `openai`, `typer`,
+  `pyyaml`, and `rich`. Each has a documented floor (`>=`) and no upper
   bound. Floors come from the lowest version known to work; upper bounds
   would force premature compatibility breaks.
 - The dev extras (`ruff`, `mypy`, `pytest`, `pytest-cov`,
@@ -120,7 +120,7 @@ human approval over clever automation.
 
 ### No hash-locked install today
 
-- `mb` is a small Typer-shaped CLI with three runtime dependencies.
+- `mb` is a small Typer-shaped CLI with four runtime dependencies.
   Introducing `pip-tools`, `uv`, or `poetry` lockfiles would force a new
   dependency manager on contributors before the surface earns it.
 - This is revisable. If the dependency footprint grows or a specific

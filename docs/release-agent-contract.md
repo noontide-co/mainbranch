@@ -41,7 +41,9 @@ every version-bearing release file in one pass:
   contains only work intentionally left unreleased;
 - `mb/pyproject.toml` `project.version` matches the release version;
 - `mb/mb/__init__.py` `__version__` matches the release version;
-- `.claude-plugin/plugin.json` `version` matches the release version.
+- `.claude-plugin/plugin.json` `version` matches the release version;
+- `.claude-plugin/marketplace.json` `metadata.version` matches the release
+  version.
 
 All of that is automated:
 
@@ -49,7 +51,7 @@ All of that is automated:
 scripts/release-preflight.sh oe-vX.Y.Z   # or bare X.Y.Z; no arg = files must agree
 ```
 
-The script asserts the three version files agree (and agree with the tag when
+The script asserts the version files agree (and agree with the tag when
 passed), checks `CHANGELOG.md` has the dated section, and runs the targeted
 manifest guard
 (`tests/test_smoke_coverage.py::test_claude_plugin_manifest_points_at_prefixed_skills`).
@@ -165,7 +167,7 @@ items were confirmed, rejected, or routed to follow-up issues.
 ### 4. Release PRs stay release-only.
 
 A release-prep PR commits only files that change because of the release:
-package version sites, the dated CHANGELOG section, and the plugin manifest.
+package version sites, the dated CHANGELOG section, and the plugin manifests.
 Process improvements (this file, the post-release playbook, agent rubric
 updates) belong on their own branch. Process documents drafted *during* a
 release flow are committed *after* the release ships, on a separate branch.

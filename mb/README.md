@@ -2,7 +2,12 @@
 
 Engine umbrella for [Main Branch](https://github.com/noontide-co/mainbranch) — scaffolds, validates, and graphs business-as-files repos.
 
-This package is the Python entry point. Workflows, playbooks, educational content, and consumer-repo templates ship as bundled package data. Today, the day-to-day "do work" surfaces are packaged as Claude Code skills (markdown), invoked from inside Claude Code. The `mb` CLI is runtime-agnostic by design: future adapters should let Codex, Cursor, OpenClaw, Hermes, and local runtimes operate against the same business-as-files repo.
+This package is the Python entry point. Workflows, playbooks, educational
+content, and consumer-repo templates ship as bundled package data. Today, the
+day-to-day "do work" surfaces are Claude Code skills and global Codex `mb-*`
+skills grounded in the same deterministic `mb` facts. The `mb` CLI stays
+runtime-agnostic by design so future adapters can operate against the same
+business-as-files repo.
 
 The source tree keeps the engine payload in one place: repo-root `.claude/`. During sdist/wheel builds, `setup.py` copies that tree into `mb/_engine/.claude/` inside the build artifact so installed wheels can resolve skills, playbooks, reference materials, lenses, and educational prompts without a source checkout.
 
@@ -22,18 +27,23 @@ mb --version
 
 | Command | What it does |
 |---|---|
-| `mb onboard` | Human setup flow. Creates or connects a business repo, explains the local files/git/GitHub model, wires Claude Code skills, verifies discovery, and prints the next `/mb-start` step. Supports `--yes` and `--json` for smoke tests. |
-| `mb init` | Scaffold a new business repo (business folders, CLAUDE.md, CODEOWNERS, `git init`) and wire the bundled Claude Code skill adapter. One question only: business name. |
+| `mb onboard` | Human setup flow. Creates or connects a business repo, explains the local files/git/GitHub model, wires Claude Code and Codex guidance, verifies discovery, and prints the next start step. Supports `--yes` and `--json` for smoke tests. |
+| `mb init` | Scaffold a new business repo (business folders, CLAUDE.md, AGENTS.md, CODEOWNERS, `git init`) and wire bundled runtime guidance. One question only: business name. |
 | `mb doctor` | Diagnostic. Checks Claude Code, gh auth, network, librsvg, runtime wiring, and package freshness. Warns on cloud-backed finance paths and offers educational triage. |
 | `mb status` | Daily briefing. Summarizes repo shape, install/runtime readiness, recent brain files, recent git activity, and GitHub tasks/proposals when `gh` is authenticated. Supports `--json`. |
-| `mb start` | Runtime handoff. Verifies the current business repo, git, Claude Code, and `/mb-start` skill wiring, then prints the exact `claude` command or launches it with `--launch`. Supports `--json`. |
+| `mb start` | Runtime handoff. Verifies the current business repo, git, Claude Code, Codex guidance, and start-skill wiring, then prints the exact next step. Supports `--json`. |
 | `mb validate` | Frontmatter shape check across current business repo folders, with compatibility reads for old migrated surfaces where needed. Exit 1 on any fail. |
 | `mb graph` | Walk linked_research / linked_decisions / supersedes; emit Graphviz DOT to stdout. `--open` shells to `dot` + `open`. |
 | `mb similar-bets` | Find similar past bets and offer outcomes from repo truth. |
 | `mb checkpoint` | Plan or save a business-readable git checkpoint. |
 | `mb update` | Refresh the Main Branch engine according to install mode (`pipx` upgrade or clone `git pull`) and repair skill links. `--check` dry-runs; `--json` emits an envelope. |
+| `mb pulse install` | Install an operator-owned daily pulse wrapper. |
+| `mb leads grade` | Grade lead batches and calculate eligible-lead CPL beside raw CPL. |
+| `mb ledger init` | Create the what's-working creative ledger structure. |
+| `mb automation init` | Create an inspectable steered-loop automation contract. |
+| `mb production plan` | Inspect launch/production readiness without mutating providers or repos. |
 | `mb migrate` | Inspect and apply numbered repo schema migrations. `status`, `--check`, and `--apply` support `--json`; `--check` prints privacy-safe summaries by default, with full diffs behind `--diff`. |
-| `mb connect` | Connect provider credentials without committing secrets, test provider health, and inspect repair-safe integration status. |
+| `mb connect` | Connect provider credentials without committing secrets, test provider health, inspect hygiene/identity, and report repair-safe integration status. |
 | `mb site` | Inspect site readiness for launch-adjacent workflows. |
 | `mb issue` | Draft and open privacy-safe GitHub issues from local friction. |
 | `mb think <topic>` | Print the /mb-think workflow invocation hint for the currently supported runtime. |
@@ -49,9 +59,20 @@ Users on early `0.1.x` installs must bootstrap once with
 repos should run `mb skill link --repo .`, then `mb skill repair --repo .` after
 upgrading.
 
+If you installed Main Branch as a Claude Code plugin, package updates do not
+change the plugin that Claude Code has already loaded. After updating, re-add the
+Main Branch plugin (`claude plugin marketplace add noontide-co/mainbranch`) and
+restart Claude Code.
+
 ## Status
 
-Main Branch is **Claude Code first** with a strong CLI front door: `mb onboard`, `mb status`, `mb start`, and `mb update` are public package surfaces. Runtime compatibility for Codex, Cursor, OpenClaw, Hermes, and local runtimes remains roadmap work. The schema is v1 and will evolve. The runtime boundary decision lives at `decisions/2026-05-01-mb-cli-vs-agent-workflows-boundary.md`; the engine master decision lives at `decisions/2026-04-29-mb-vip-v0-1-0-master.md`.
+Main Branch is **Claude Code first** with supported Codex CLI guidance through
+generated `AGENTS.md` and global `mb-*` skills. `mb onboard`, `mb status`,
+`mb start`, and `mb update` are public package surfaces. Cursor, OpenClaw,
+Hermes, and local runtimes remain roadmap work. The schema is v1 and will
+evolve. The runtime boundary decision lives at
+`decisions/2026-05-01-mb-cli-vs-agent-workflows-boundary.md`; the engine master
+decision lives at `decisions/2026-04-29-mb-vip-v0-1-0-master.md`.
 
 ## License
 
