@@ -14,7 +14,7 @@ launches, pages, ads, bets, notes, and lessons in files you own.
 Most of this page is one-time setup. After that, your normal flow is simple:
 
 1. Open or select the business folder in Claude Code or Codex.
-2. Run `/mb-start`.
+2. In Claude Code, run `/mb-start`. In Codex, use the global `mb-start` skill.
 3. Tell the agent what you want help with.
 
 You will use a few terminal commands during setup because Main Branch creates
@@ -186,7 +186,7 @@ work, or private ops when access or lifecycle differs. The full model lives in
 
 Open or select the business folder in Claude Code or Codex.
 
-Then run:
+In Claude Code, run:
 
 ```text
 /mb-start
@@ -196,10 +196,12 @@ Then run:
 you into setup, thinking, ads, organic content, site work, bookkeeping checks,
 repairs, updates, or closing a session.
 
+In Codex, use the global `mb-start` skill instead of typing the slash command.
+
 Daily use is:
 
 1. Open or select the business folder in Claude Code or Codex.
-2. Run `/mb-start`.
+2. In Claude Code, run `/mb-start`. In Codex, use the global `mb-start` skill.
 3. Tell the agent what you want help with: an offer, page, ad, launch, research
    question, decision, bookkeeping check, or cleanup.
 
@@ -237,14 +239,20 @@ mb connect plan
 
 ## Updating Main Branch
 
-When Main Branch says an update matters, run this in Claude Code or Codex:
+When Main Branch says an update matters, run this in Claude Code:
 
 ```text
 /mb-update
 ```
 
-`/mb-update` figures out which install you have and runs the right update path.
-`/mb-start` also checks for important updates at the beginning of a session.
+In Codex, use the global `mb-update` skill. The update path figures out which
+install you have and refreshes the supported surfaces it owns. `/mb-start` also
+checks for important updates at the beginning of a Claude Code session.
+
+If you installed Main Branch as a Claude Code plugin, package updates do not
+change the plugin that Claude Code has already loaded. After updating, re-add the
+Main Branch plugin (`claude plugin marketplace add noontide-co/mainbranch`) and
+restart Claude Code.
 
 Power users can run the same update path from a business folder:
 
@@ -271,12 +279,13 @@ through the confirmation-gated migration prompt from that doc.
 Open Claude Code or Codex and paste:
 
 ```text
-I want to migrate my existing Main Branch setup to the current pipx + /mb-start
-workflow. Please run read-only checks first, find my likely business folders,
-show me the exact changes you recommend, and ask before running anything that
-writes files. If an old `reference/` layout is present, run `mb migrate --check`
-first and do not run `mb migrate --apply` until I approve the dry run. Use
-docs/migrating.md as the source of truth.
+I want to migrate my existing Main Branch setup to the current pipx workflow.
+If we are in Claude Code, use `/mb-start` after repair. If we are in Codex, use
+the global `mb-start` skill after repair. Please run read-only checks first,
+find my likely business folders, show me the exact changes you recommend, and
+ask before running anything that writes files. If an old `reference/` layout is
+present, run `mb migrate --check` first and do not run `mb migrate --apply` until
+I approve the dry run. Use docs/migrating.md as the source of truth.
 ```
 
 The agent may ask you to restart in the business folder after it repairs setup.
@@ -286,7 +295,8 @@ That is normal.
 
 ## What you can ask for
 
-You can ask naturally, or use the slash commands when you know them.
+You can ask naturally. In Claude Code, you can also use slash commands when you
+know them. In Codex, use the matching global skill names without the slash.
 
 | Ask for | What Main Branch does |
 | --- | --- |
@@ -330,14 +340,18 @@ For the full list, run `mb --help`.
 
 ## Common issues
 
-**`/mb-start` does not appear:** ask the agent to repair Main Branch setup in
-this folder. Power users can run:
+**`/mb-start` does not appear in Claude Code:** ask the agent to repair Main
+Branch setup in this folder. Power users can run:
 
 ```bash
 mb doctor repair --plan
 ```
 
 Apply only after reviewing the plan.
+
+If you use the Claude Code plugin, re-add the Main Branch plugin and restart
+Claude Code after updating. If you use Codex, start a fresh Codex thread after
+updating so refreshed global skills are loaded.
 
 **I only see `.mb/`, not `.mb-vip/`:** good. `.mb/` is current. `.mb-vip/` was
 old setup language and is not required.
@@ -355,7 +369,8 @@ the URL spelling.
 
 ## Help
 
-- **In Claude Code or Codex:** run `/mb-help` or describe the issue in plain
+- **In Claude Code:** run `/mb-help` or describe the issue in plain English.
+- **In Codex:** use the global `mb-help` skill or describe the issue in plain
   English.
 - **In the community:** post with a screenshot of the exact error.
 - **For contributors:** open an issue at
@@ -368,6 +383,7 @@ the URL spelling.
 
 You do not need to memorize the commands.
 
-Open or select your business folder in Claude Code or Codex, run `/mb-start`,
-and tell the agent what you want help with. Main Branch keeps the useful work in
-files you own so the next session does not start from scratch.
+Open or select your business folder in Claude Code or Codex. In Claude Code, run
+`/mb-start`; in Codex, use the global `mb-start` skill. Then tell the agent what
+you want help with. Main Branch keeps the useful work in files you own so the
+next session does not start from scratch.

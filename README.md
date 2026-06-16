@@ -55,13 +55,14 @@ It is built for revenue-producing work: sharpening offers, building proof,
 planning launches, writing ads, creating organic content, checking pages,
 tracking bets, and turning what you learn into the next decision.
 
-Open the folder. Run `/mb-start`. Tell the agent what you want help with. Main
-Branch checks what changed, what matters, and what to do next.
+Open the folder. In Claude Code, run `/mb-start`. In Codex, use the global
+`mb-start` skill. Tell the agent what you want help with. Main Branch checks
+what changed, what matters, and what to do next.
 
 | Step | What you do | What happens |
 | --- | --- | --- |
 | **01** | Open the business folder | Your offer, audience, voice, proof, research, bets, pushes, logs, and documents live there. |
-| **02** | Run `/mb-start` | The agent checks current Main Branch facts before giving advice: status, MoneyPath, recent work, connected tools, drift, checkpoints, and next actions. |
+| **02** | Start Main Branch | Claude Code uses `/mb-start`; Codex uses the global `mb-start` skill. The agent checks current Main Branch facts before giving advice: status, MoneyPath, recent work, connected tools, drift, checkpoints, and next actions. |
 | **03** | Pick the next move | The agent routes the work into an offer, bet, decision, push, playbook, research note, outcome, or checkpoint. |
 | **04** | Approve the work | Writing files, publishing, spending, account changes, and customer contact stay your call. |
 | **05** | Keep the lesson | Approved work becomes durable memory for the next session. |
@@ -110,13 +111,14 @@ pipx install mainbranch
 mb onboard --name "My Business" --path my-business
 ```
 
-`mb onboard` creates the folder, prepares Claude Code and Codex, and shows the next step.
-`/mb-start` reads the folder and Main Branch facts, then tells you what to do.
+`mb onboard` creates the folder, prepares Claude Code and Codex, and shows the
+next step. Claude Code uses `/mb-start`; Codex uses the global `mb-start` skill.
+Both read the folder and Main Branch facts before telling you what to do.
 
 ### Daily use
 
 1. Open or select the business folder in Claude Code or Codex.
-2. Run `/mb-start`.
+2. In Claude Code, run `/mb-start`. In Codex, use the global `mb-start` skill.
 3. Tell the agent what you want help with: an offer, page, ad, launch, research
    question, decision, or cleanup.
 
@@ -392,11 +394,13 @@ try, why, by when, and how you will know. An offer is a durable thing you sell.
 A winning bet can graduate into an offer through an accepted decision.
 
 **How do I update?** Type `/mb-update` in Claude Code, or use the global
-`mb-update` skill in Codex.
+`mb-update` skill in Codex. If you installed the Claude Code plugin, update the
+package, re-add the plugin, and restart Claude Code so the loaded skills match
+the new release.
 
 **Can Claude or Codex migrate an old setup for me?** Yes. Open the folder in
 Claude Code or Codex and follow the migration prompt in
-[docs/migrating.md](docs/migrating.md#recommended-let-claude-walk-you-through-it).
+[docs/migrating.md](docs/migrating.md#recommended-let-an-agent-walk-you-through-it).
 
 **Can I edit the skills?** You can. You usually do not need to.
 
@@ -405,7 +409,8 @@ not only memory text. It is a structured folder, health checks, validation,
 graphing, repair paths, connected-tool checks, checkpoints, and agent workflows
 that write approved business artifacts back into files you own.
 
-**I'm stuck.** Type `/mb-start` again.
+**I'm stuck.** In Claude Code, type `/mb-start` again. In Codex, use the global
+`mb-start` skill again.
 
 ---
 

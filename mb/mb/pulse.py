@@ -275,6 +275,7 @@ def init(repo: str | Path = ".", *, slug: str = "", force: bool = False) -> dict
                 "(your collectors keep their own names, so collect-example.sh "
                 "is the only collector at risk)"
             ),
+            "safe_to_share": True,
         }
     collectors_dir.mkdir(parents=True, exist_ok=True)
     skill_path.parent.mkdir(parents=True, exist_ok=True)
@@ -294,4 +295,5 @@ def init(repo: str | Path = ".", *, slug: str = "", force: bool = False) -> dict
             "(see the collectors README for the contract), then run /mb-pulse "
             "for the first paper; `mb pulse install` emits a daily run wrapper"
         ),
+        "safe_to_share": True,
     }

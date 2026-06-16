@@ -8,7 +8,8 @@ hosted Main Branch service in the open-source engine.
 
 | Version | Supported |
 |---|---|
-| 0.3.x | Yes |
+| 0.4.x | Yes |
+| 0.3.x | Security fixes only when practical |
 | 0.2.x | Security fixes only when practical |
 | 0.1.x | No |
 | Older versions | No |

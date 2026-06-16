@@ -8,6 +8,7 @@ because that's the working pattern.
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 from datetime import datetime, timezone
@@ -437,6 +438,12 @@ def leads_grade_cmd(
         raise typer.Exit(2) from exc
     if not isinstance(leads, list):
         typer.echo("mb leads grade: expected a JSON array of lead records", err=True)
+        raise typer.Exit(2)
+    if not all(isinstance(item, dict) for item in leads):
+        typer.echo("mb leads grade: each lead must be a JSON object", err=True)
+        raise typer.Exit(2)
+    if spend is not None and (not math.isfinite(spend) or spend < 0):
+        typer.echo("mb leads grade: --spend must be a finite, zero-or-positive number", err=True)
         raise typer.Exit(2)
     result = leads_mod.grade_batch(
         leads,

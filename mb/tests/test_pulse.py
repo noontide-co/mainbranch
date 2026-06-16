@@ -23,6 +23,8 @@ def test_pulse_init_scaffolds_collectors_and_skill(tmp_path: Path) -> None:
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert payload["ok"] is True
+    # Schema parity with the sibling scaffolds (pulse install, ledger init).
+    assert payload["safe_to_share"] is True
     assert "core/operations/pulse/collectors/README.md" in payload["written"]
     assert "core/operations/pulse/collectors/collect-example.sh" in payload["written"]
     assert ".claude/skills/mb-pulse/SKILL.md" in payload["written"]

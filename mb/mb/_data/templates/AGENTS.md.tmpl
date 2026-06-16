@@ -390,8 +390,12 @@ the operator asks for plumbing.
   "Show me the business" ->
   `mb dashboard open` (local, read-only, never committed). Scripts that read
   credentials -> `mb connect token` (token to stdout for scripts and agents;
-  never echo the value). Tools missing from the provider list ->
-  `mb connect <id> --custom`. Writing to an external provider (CRM, email
+  never echo the value). Plaintext credentials sitting in agent configs ->
+  `mb connect hygiene` (read-only scan; never prints the value). Reading the
+  recorded business identity (ad account, pixel, page, sender domain) instead
+  of inferring it from live state -> `mb connect identity`. Tools missing from
+  the provider list -> `mb connect <id> --custom`. Writing to an external
+  provider (CRM, email
   send, ads, account metadata) -> the provider-mutation contract: read-only
   discovery first, a sanitized plan (provider + object count + risk, no
   private rows), explicit approval, minimal-scope apply, verify + a

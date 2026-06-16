@@ -81,8 +81,8 @@ pytest tests/test_<area>.py -q
 For package/install changes:
 
 ```bash
-(cd mb && python -m build)
-python -m venv /tmp/mainbranch-smoke
+(cd mb && python3 -m build)
+python3 -m venv /tmp/mainbranch-smoke
 /tmp/mainbranch-smoke/bin/pip install mb/dist/*.whl
 /tmp/mainbranch-smoke/bin/mb --version
 /tmp/mainbranch-smoke/bin/mb skill list
@@ -354,8 +354,8 @@ Run when packaging, entrypoints, bundled data, skill discovery, or update paths
 change.
 
 ```bash
-(cd mb && python -m build)
-python -m venv /tmp/mainbranch-smoke
+(cd mb && python3 -m build)
+python3 -m venv /tmp/mainbranch-smoke
 /tmp/mainbranch-smoke/bin/pip install mb/dist/*.whl
 /tmp/mainbranch-smoke/bin/mb --version
 /tmp/mainbranch-smoke/bin/mb skill list

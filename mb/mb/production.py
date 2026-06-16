@@ -38,13 +38,19 @@ def _present_flags(protection: dict[str, Any] | None) -> dict[str, bool]:
         return {key: False for key, _ in DESIRED_POSTURE}
     checks = protection.get("required_status_checks") or {}
     contexts: list[Any] = []
+    strict = False
     if isinstance(checks, dict):
         contexts = checks.get("contexts") or checks.get("checks") or []
+        strict = bool(checks.get("strict"))
     has_canary = any("canary" in str(ctx).lower() for ctx in contexts)
+    # A real CI gate is a non-canary required check; the canary alone is not
+    # "CI + canary". And the apply command sets strict=true, so the posture is
+    # only armed when the existing gate is strict too.
+    has_ci = any("canary" not in str(ctx).lower() for ctx in contexts)
     return {
         "required_pull_request": bool(protection.get("required_pull_request_reviews")),
-        # "required" means there is a status-check gate AND the canary is in it.
-        "required_status_checks": bool(contexts) and has_canary,
+        # Armed only when a CI check AND the canary are required, branch-strict.
+        "required_status_checks": has_ci and has_canary and strict,
         "block_force_push": not _allowed(protection, "allow_force_pushes"),
         "block_deletion": not _allowed(protection, "allow_deletions"),
     }

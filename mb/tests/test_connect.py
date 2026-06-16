@@ -1967,6 +1967,32 @@ def test_hygiene_clean_when_all_externalized(tmp_path: Path) -> None:
     assert "~/.claude.json" in result["surfaces_scanned"]
 
 
+def test_hygiene_ignores_iso_date_housekeeping_fields(tmp_path: Path) -> None:
+    # A secret-named key holding an ISO date (e.g. claudeCodeFirstTokenDate)
+    # is not a credential — it must not inflate the count.
+    home = tmp_path / "home"
+    home.mkdir(parents=True)
+    (home / ".claude.json").write_text(
+        json.dumps(
+            {
+                "claudeCodeFirstTokenDate": "2026-01-15T12:34:56.789Z",
+                "lastTokenRefreshDate": "2026-06-14",
+                "mcpServers": {"real": {"env": {"API_KEY": "sk-live-abc123def456"}}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = connect_mod.scan_credential_hygiene(repo, home=home)
+    locations = {f["location"] for f in result["findings"]}
+    # The real secret is still caught; the two date fields are not.
+    assert "mcpServers.real.env.API_KEY" in locations
+    assert not any("Date" in loc for loc in locations)
+    assert len(result["findings"]) == 1
+
+
 def test_hygiene_cli_exit_code_and_redaction(tmp_path: Path) -> None:
     home = tmp_path / "home"
     _write_claude_config(home)
@@ -1995,15 +2021,26 @@ def test_hygiene_scans_repo_mcp_surface(tmp_path: Path) -> None:
     assert any(f["surface"] == ".mcp.json" for f in result["findings"])
 
 
-def test_hygiene_skips_unparseable_surface(tmp_path: Path) -> None:
+def test_hygiene_unparseable_surface_is_not_a_clean_verdict(tmp_path: Path) -> None:
+    # A surface that could not be scanned must NOT return a clean machine
+    # verdict — gates/automation read ok + the exit code (#911 Codex review).
     home = tmp_path / "home"
     home.mkdir(parents=True)
     (home / ".claude.json").write_text("{ not valid json", encoding="utf-8")
     repo = tmp_path / "biz"
     repo.mkdir()
     result = connect_mod.scan_credential_hygiene(repo, home=home)
-    assert result["ok"] is True
+    assert result["ok"] is False
     assert any(s["reason"] == "not valid JSON" for s in result["surfaces_skipped"])
+
+    import os as _os
+
+    cli = runner.invoke(
+        app,
+        ["connect", "hygiene", "--repo", str(repo), "--json"],
+        env={**_os.environ, "HOME": str(home)},
+    )
+    assert cli.exit_code == 1
 
 
 # --- canonical business identity (mb connect identity) ---------------------
@@ -2088,3 +2125,30 @@ def test_identity_cli_json(tmp_path: Path, monkeypatch) -> None:
     payload = json.loads(result.stdout)
     assert payload["safe_to_share"] is False
     assert any(p["provider"] == "meta" for p in payload["providers"])
+
+
+def test_hygiene_flags_literal_secret_mixed_with_env_ref(tmp_path: Path) -> None:
+    # "${ENV}sk-realsecret" must NOT pass as externalized (false-negative fix).
+    home = tmp_path / "home"
+    home.mkdir(parents=True)
+    (home / ".claude.json").write_text(
+        json.dumps({"mcpServers": {"m": {"env": {"API_KEY": "${BASE}sk-live-realsecret999"}}}}),
+        encoding="utf-8",
+    )
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    result = connect_mod.scan_credential_hygiene(repo, home=home)
+    assert result["ok"] is False
+    assert any(f["location"].endswith("API_KEY") for f in result["findings"])
+
+
+def test_hygiene_surfaces_unscannable_files_loudly(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    home.mkdir(parents=True)
+    (home / ".claude.json").write_text("{ not valid json", encoding="utf-8")
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    result = connect_mod.scan_credential_hygiene(repo, home=home)
+    # Skipped surface must be called out, not silently treated as clean.
+    assert "could not be scanned" in result["summary"]
+    assert result["surfaces_skipped"]

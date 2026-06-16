@@ -56,10 +56,11 @@ You do **not** need a `.mb-vip/` folder. That name belongs to old clone-based
 setup language and the former internal repo name. The current pipx setup does
 not require a local Main Branch source checkout inside your business repo.
 
-Open Claude Code in the business repo folder, not in an old Main Branch clone.
-If slash commands are missing, ask Claude to repair the skill wiring instead of
-creating a `.mb-vip/` folder. These are the underlying commands Claude or a
-power user may run:
+Open Claude Code or Codex in the business repo folder, not in an old Main Branch
+clone. Claude Code uses slash commands such as `/mb-start`; Codex uses global
+Main Branch skills such as `mb-start`. If skills are missing, ask the agent to
+repair Main Branch setup instead of creating a `.mb-vip/` folder. These are the
+underlying commands an agent or power user may run:
 
 ```bash
 mb update --repo .
@@ -69,15 +70,16 @@ mb doctor
 mb status --peek
 ```
 
-## Recommended: Let Claude Walk You Through It
+## Recommended: Let An Agent Walk You Through It
 
 If you are already using Main Branch and do not want to reason about old
-symlinks, clone paths, or repo shapes, start Claude Code anywhere and paste this
-prompt:
+symlinks, clone paths, plugins, or repo shapes, start Claude Code or Codex
+anywhere and paste this prompt:
 
 ```text
-I want to migrate my existing Main Branch setup to the current pipx + /mb-start
-workflow.
+I want to migrate my existing Main Branch setup to the current pipx workflow.
+If this is Claude Code, use `/mb-start` after repair. If this is Codex, use the
+global `mb-start` skill after repair.
 
 Please go slowly, but treat the Main Branch update as required before repo
 repair. I may be new to Terminal, Git, branches, and GitHub.
@@ -100,7 +102,8 @@ fully, not as optional cleanup.
    updates the tool installed on your computer, not your business files. Should
    I run the update now?"
 3. After I confirm, update Main Branch immediately through the Main Branch
-   update path. If `/mb-update` is available, use it. Otherwise run
+   update path. If `/mb-update` is available in Claude Code, use it. In Codex,
+   use the global `mb-update` skill. Otherwise run
    `mb update --repo <repo>` from the business repo. Only mention raw package
    commands like `pipx upgrade mainbranch` if `mb update` is unavailable because
    the installed version is too old.
@@ -118,10 +121,13 @@ fully, not as optional cleanup.
 9. If you create or switch to a git branch, explain that it is a safe draft copy
    of the work. Do not merge, delete, or rename branches unless I explicitly
    confirm.
-10. If a command says I need to restart Claude, stop and tell me exactly which
-   folder to open next and which slash command to run.
+10. If a command says I need to restart Claude Code, stop and tell me exactly
+   which folder to open next and which slash command to run. If this is Codex,
+   tell me to start a fresh Codex thread in the business folder and use the
+   global `mb-start` skill.
 11. Do not end by giving me a list of internal mb commands to choose from. End
-   with the exact folder to open, the exact `claude` command, and `/mb-start`.
+   with the exact folder to open and the exact next agent step: Claude Code
+   `claude` + `/mb-start`, or Codex + the global `mb-start` skill.
 ```
 
 After the user confirms the update and one repo repair, Claude should get the
@@ -143,6 +149,9 @@ Then restart Claude Code from that business repo and run:
 ```text
 /mb-start
 ```
+
+If you use Codex instead, start a fresh Codex thread from that business repo and
+use the global `mb-start` skill.
 
 This flow is intentionally confirmation-gated. `mb skill link` and
 `mb skill repair --apply` only move stale Main Branch symlinks and broken links
@@ -310,6 +319,11 @@ not keep access to stale Main Branch paths after a clone-to-pipx migration. Duri
 that link step, Main Branch also moves provably stale or broken personal
 symlinks with Main Branch skill names into a timestamped backup.
 
+If you use the Claude Code plugin rail, also re-add the Main Branch plugin after
+updating (`claude plugin marketplace add noontide-co/mainbranch`) and restart
+Claude Code. The symlink repair path remains the fallback and repair path; the
+plugin is the more durable route for fresh Claude Code worktrees.
+
 `mb skill repair --repo .` checks your personal `~/.claude/skills/` directory
 for entries that can beat the project-local Main Branch skills in Claude Code.
 It reports the resolved target for each finding. If the entry is a provably
@@ -348,9 +362,11 @@ mb skill link --repo /path/to/your-business
 mb skill repair --repo /path/to/your-business
 ```
 
-For beginners, Claude should run that sequence after confirmation and translate
-the result into the simple restart flow: open the business folder, run
-`claude`, then type `/mb-start`.
+For beginners, the agent should run that sequence after confirmation and
+translate the result into the simple restart flow: open the business folder, then
+use the right start surface. In Claude Code, run `claude` and type `/mb-start`.
+In Codex, start a fresh thread from the business folder and use the global
+`mb-start` skill.
 
 ## Automated Layout Migration
 

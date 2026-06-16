@@ -2447,8 +2447,18 @@ _HYGIENE_SECRET_KEY_RE = re.compile(
 # A value that is wholly or partly an env reference (${VAR}, $VAR) is correctly
 # externalized — not a plaintext leak.
 _ENV_REFERENCE_RE = re.compile(r"\$\{?[A-Za-z_][A-Za-z0-9_]*\}?")
+# A value is "externalized" only if it is WHOLLY env reference(s) (optionally a
+# Bearer prefix) — not a literal secret with an env ref tacked on. Matching a
+# bare .search() let "${ENV}sk-realsecret" pass as safe (false negative).
+_ENV_REFERENCE_FULL_RE = re.compile(r"(?i)^(bearer\s+)?(\$\{?[A-Za-z_][A-Za-z0-9_]*\}?)+$")
 _PLACEHOLDER_VALUES = frozenset(
     {"", "changeme", "change-me", "todo", "none", "null", "example", "redacted"}
+)
+# An ISO-8601 date or timestamp is not a secret. Housekeeping fields like
+# `claudeCodeFirstTokenDate` match the secret-named-key heuristic ("Token")
+# but hold a date string — excluding the shape keeps the count honest.
+_ISO_DATETIME_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$"
 )
 
 # JSON config surfaces scanned by default. TOML surfaces (e.g. ~/.codex/
@@ -2466,8 +2476,13 @@ def _looks_like_env_reference(value: str) -> bool:
     stripped = value.strip()
     if not stripped:
         return False
-    # Whole value is an env ref, or it embeds one (e.g. "Bearer ${FAL_KEY}").
-    return bool(_ENV_REFERENCE_RE.search(stripped))
+    # Safe only if the WHOLE value is env reference(s) (e.g. "Bearer ${FAL_KEY}").
+    # A literal secret mixed with an env ref is NOT safe.
+    return bool(_ENV_REFERENCE_FULL_RE.match(stripped))
+
+
+def _looks_like_iso_datetime(value: str) -> bool:
+    return bool(_ISO_DATETIME_RE.match(value.strip()))
 
 
 def _looks_like_placeholder(value: str) -> bool:
@@ -2496,7 +2511,11 @@ def _classify_credential_value(key: str, value: str) -> tuple[bool, str]:
     """Return (flagged, reason) without ever surfacing the value."""
     if not isinstance(value, str):
         return False, ""
-    if _looks_like_env_reference(value) or _looks_like_placeholder(value):
+    if (
+        _looks_like_env_reference(value)
+        or _looks_like_placeholder(value)
+        or _looks_like_iso_datetime(value)
+    ):
         return False, ""
     prefix = _credential_value_prefix(value)
     if prefix:
@@ -2593,13 +2612,23 @@ def scan_credential_hygiene(
         scanned.append(label)
         findings.extend(surface_findings)
 
-    ok = not findings
-    if ok:
+    # A surface that could not be scanned was NOT proven clean — it must not
+    # yield a clean machine verdict (gates/automation read ok + the exit code).
+    ok = not findings and not skipped
+    if not findings:
         summary = f"no plaintext credentials found across {len(scanned)} scanned config surface(s)"
     else:
         summary = (
             f"{len(findings)} plaintext credential(s) in agent config — move them "
             "to the keychain/env and reference via ${ENV_VAR}"
+        )
+    # Surface unscannable files loudly — a config that could not be parsed was
+    # NOT proven clean; silence there would be a false all-clear.
+    if skipped:
+        labels = ", ".join(str(item["surface"]) for item in skipped)
+        summary += (
+            f" — WARNING: {len(skipped)} surface(s) could not be scanned "
+            f"(not proven clean): {labels}"
         )
     return {
         "ok": ok,
