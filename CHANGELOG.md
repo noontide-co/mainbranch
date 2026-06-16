@@ -11,6 +11,74 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-14
+
+This release graduates the patterns proven across the live dogfood businesses
+into engine primitives — the daily-pulse observability loop, honest-metric
+lead/creative tracking, provider-write safety, site-integrity gates, and a set
+of cold-eyes onboard fixes.
+
+### Added
+
+- **Daily business pulse** — `mb pulse init` scaffolds deterministic
+  per-source collectors (date in → one JSON object out, honest
+  `{"unavailable": true}` + non-zero exit on failure) plus a repo-local pulse
+  skill (scorecard → anomalies → exactly one recommended action → sub-60-line
+  log). `mb pulse install` emits an operator-owned `run-pulse.sh` wrapper and
+  the cron line to activate it (never enables a schedule itself).
+  `/mb-start` and `/mb-end` now read the day's pulse.
+- **Honest-metric tracking** — `mb leads grade` scores lead eligibility with
+  deterministic checks (plausible email, valid URL, owner answer) and reports
+  ELIGIBLE-lead CPL beside raw CPL so budget calls use the honest number.
+  `mb ledger init` scaffolds the what's-working creative ledger (KEEP/KILL on
+  eligible CPL + downstream event, never raw CPL).
+- **Provider-write safety** — `docs/provider-mutation-contract.md` defines the
+  preview → approve → apply → verify gate for every external-account write;
+  the Google Ads/GTM rubric ties its publish/spend/upload steps to it.
+  `mb production plan` reports the money-taking branch-protection gap (require
+  PR, CI + canary as status checks, block force-push/deletion) and prints the
+  operator-applied `gh` commands.
+- **Credential plane** — `mb connect hygiene` scans agent configs
+  (`~/.claude.json`, project MCP/settings) for plaintext credentials
+  (value-redacted; ISO-date housekeeping fields excluded). `mb connect
+  identity` reads recorded business identity (ad account, pixel, page, sender
+  domain) so agents read identity from facts, not live state.
+- **Inspectable automation** — `mb automation init` scaffolds the steered-loop
+  contract (`loop-state.md`): the loop reads it first, updates it each run,
+  and renders handoffs from it.
+- **mb-site integrity gates** — a conversion-mechanism gate before page copy,
+  a click-ID capture invariant (gclid/gbraid/wbraid/fbclid + 5 UTMs) on
+  lead-capturing scaffolds, and `mb site check` blocks a forked descriptor
+  whose parent points at a different business (cross-business leak).
+
+### Changed
+
+- `mb doctor repair` refuses repair-writes outside a recognized business
+  folder (points marker-free directories at `mb onboard`).
+- `mb onboard` no longer scrapes the machine's GitHub login when GitHub is
+  declined; warns when a budget band is recorded without MoneyPath
+  thresholds; and ends its Next block with the first-checkpoint hint.
+
+### Fixed
+
+- The checkpoint commit-message hook no longer reads as "differs from the
+  current template" when installed via one `mb` entrypoint and checked via
+  another (the baked `MB_BIN` path is normalized before comparison).
+- The checkpoint message gate enumerates the accepted verb prefixes when it
+  rejects a prefix-less subject.
+
+### Known limitations
+
+- The new CLI surfaces run on both runtimes and are routed in the generated
+  `AGENTS.md`, but the Codex workflow support inventory
+  (`mb workflow list --runtime codex`) does not yet enumerate them, and the
+  daily pulse *paper* is written by the Claude `/mb-pulse` skill (Codex can
+  run the deterministic `mb pulse init/install` but has no paper-writing
+  route yet). Codex parity for these is tracked as follow-up work.
+- The discoverability gate verifies top-level commands; it does not yet prove
+  leaf/positional surfaces (`mb pulse install`, `mb connect hygiene`, …).
+  Those are taught manually; teaching the gate to see them is follow-up work.
+
 ## [0.3.44] - 2026-06-12
 
 ### Added

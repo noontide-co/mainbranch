@@ -76,3 +76,27 @@ def test_production_plan_cli_solo_json() -> None:
     payload = json.loads(result.stdout)
     assert payload["solo_on_main"] is True
     assert payload["safe_to_share"] is True
+
+
+def test_plan_canary_without_ci_check_is_not_armed() -> None:
+    # A canary alone is not "CI + canary" — must not report the posture armed.
+    canary_only = {
+        "required_pull_request_reviews": {"required_approving_review_count": 1},
+        "required_status_checks": {"strict": True, "contexts": ["money-path canary"]},
+        "allow_force_pushes": {"enabled": False},
+        "allow_deletions": {"enabled": False},
+    }
+    result = production_mod.plan("owner/repo", current_protection=canary_only)
+    assert result["ok"] is False
+    assert any("status checks" in m for m in result["missing"])
+
+
+def test_plan_status_checks_require_strict() -> None:
+    not_strict = {
+        "required_pull_request_reviews": {"required_approving_review_count": 1},
+        "required_status_checks": {"strict": False, "contexts": ["ci", "canary"]},
+        "allow_force_pushes": {"enabled": False},
+        "allow_deletions": {"enabled": False},
+    }
+    result = production_mod.plan("owner/repo", current_protection=not_strict)
+    assert any("status checks" in m for m in result["missing"])

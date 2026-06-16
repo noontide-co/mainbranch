@@ -112,7 +112,9 @@ def grade_batch(
     if spend is not None and eligible:
         eligible_cpl = _round_cents(float(spend) / eligible)
 
-    if spend is None:
+    if total == 0:
+        summary = "no leads to grade"
+    elif spend is None:
         summary = f"{eligible}/{total} leads eligible"
     elif eligible == 0:
         summary = (

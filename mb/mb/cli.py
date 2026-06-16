@@ -438,6 +438,12 @@ def leads_grade_cmd(
     if not isinstance(leads, list):
         typer.echo("mb leads grade: expected a JSON array of lead records", err=True)
         raise typer.Exit(2)
+    if not all(isinstance(item, dict) for item in leads):
+        typer.echo("mb leads grade: each lead must be a JSON object", err=True)
+        raise typer.Exit(2)
+    if spend is not None and spend < 0:
+        typer.echo("mb leads grade: --spend must be zero or positive", err=True)
+        raise typer.Exit(2)
     result = leads_mod.grade_batch(
         leads,
         spend=spend,

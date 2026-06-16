@@ -99,3 +99,26 @@ def test_leads_grade_cli_rejects_non_array(tmp_path: Path) -> None:
     bad.write_text(json.dumps({"not": "an array"}), encoding="utf-8")
     result = runner.invoke(app, ["leads", "grade", "--file", str(bad)])
     assert result.exit_code == 2
+
+
+def test_grade_batch_empty_is_not_raw_cpl_none() -> None:
+    result = leads_mod.grade_batch([], spend=40)
+    assert result["total"] == 0
+    assert result["summary"] == "no leads to grade"
+    assert "None" not in result["summary"]
+
+
+def test_leads_grade_cli_rejects_scalar_item(tmp_path: Path) -> None:
+    bad = tmp_path / "bad.json"
+    bad.write_text(json.dumps([{"email": "a@b.co"}, "oops"]), encoding="utf-8")
+    result = runner.invoke(app, ["leads", "grade", "--file", str(bad)])
+    assert result.exit_code == 2
+    assert "must be a JSON object" in result.stderr
+
+
+def test_leads_grade_cli_rejects_negative_spend(tmp_path: Path) -> None:
+    leads_file = tmp_path / "leads.json"
+    leads_file.write_text(json.dumps([{"email": "a@b.co", "owner_answer": "x"}]), encoding="utf-8")
+    result = runner.invoke(app, ["leads", "grade", "--file", str(leads_file), "--spend", "-10"])
+    assert result.exit_code == 2
+    assert "zero or positive" in result.stderr
