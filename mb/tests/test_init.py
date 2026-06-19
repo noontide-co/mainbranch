@@ -402,6 +402,7 @@ def test_init_wires_plugin_by_default(tmp_path: Path) -> None:
     assert status["plugin_enabled"] is True
     # Tracked settings (committed), not the gitignored local file.
     assert (target / ".claude" / "settings.json").exists()
+    assert ".claude/settings.json" in result["created"]
 
 
 def test_init_already_initialized_backfills_plugin_wiring(tmp_path: Path) -> None:
@@ -414,3 +415,4 @@ def test_init_already_initialized_backfills_plugin_wiring(tmp_path: Path) -> Non
     second = run(path=str(target), name="Acme")
     assert second["status"] == "already-initialized"
     assert engine_mod.plugin_wiring_status(target)["wired"] is True
+    assert ".claude/settings.json" in second["created"]

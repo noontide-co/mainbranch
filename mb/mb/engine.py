@@ -952,6 +952,27 @@ def write_plugin_wiring(repo: str | Path) -> dict[str, Any]:
     """
     target = Path(repo).resolve()
     path = _tracked_settings_path(target)
+    # Never clobber a hand-edited-but-broken settings file. `_read_settings`
+    # returns {} for BOTH "absent" and "unparseable"; writing from {} on the
+    # unparseable case would silently destroy the operator's other keys
+    # (permissions, hooks, ...). Refuse and report instead.
+    if path.exists():
+        raw = path.read_text(encoding="utf-8")
+        if raw.strip():
+            try:
+                json.loads(raw)
+            except json.JSONDecodeError as exc:
+                return {
+                    "ok": False,
+                    "changed": False,
+                    "settings_path": str(path),
+                    "wiring": plugin_wiring_status(target),
+                    "summary": (
+                        f".claude/settings.json is not valid JSON ({exc.msg}); refused "
+                        "to write plugin wiring to avoid clobbering your settings — fix "
+                        "the JSON, then re-run."
+                    ),
+                }
     settings = _read_settings(path)
     before = plugin_wiring_status(target)
     marketplaces = settings.setdefault("extraKnownMarketplaces", {})

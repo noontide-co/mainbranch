@@ -85,7 +85,9 @@ REFERENCE_COMPAT_LINKS = {
 STATE_ORDER = {"ok": 0, "info": 1, "warn": 2, "error": 3}
 AUDIENCE_VALUES = frozenset({"mechanical", "operator_decision", "informational"})
 AGENT_REPAIR_SCOPES = frozenset({"claude", "codex"})
-CLAUDE_ACTION_IDS = frozenset({"skill-link", "skill-shadow-repair", "legacy-claude-link-repair"})
+CLAUDE_ACTION_IDS = frozenset(
+    {"skill-link", "plugin-wiring", "skill-shadow-repair", "legacy-claude-link-repair"}
+)
 CODEX_ACTION_IDS = frozenset({"codex-agents-md", "codex-global-skill"})
 AGENT_ACTION_IDS = CLAUDE_ACTION_IDS | CODEX_ACTION_IDS
 AGENT_SECTION_IDS = frozenset({"claude-wiring", "codex-wiring", "git"})
@@ -2502,6 +2504,27 @@ def repair_plan(
                     ".claude/skills/",
                     ".gitignore",
                 ],
+            )
+        )
+    if not engine_mod.plugin_wiring_status(target).get("wired"):
+        # Plan/apply parity: repair_apply writes plugin wiring when unwired
+        # (gated on apply_claude), so the plan must surface it too — otherwise
+        # `--plan` shows nothing while `--apply` writes a tracked file, breaking
+        # the review-before-apply contract precisely on the Stage-3 migration.
+        actions.append(
+            _action(
+                id="plugin-wiring",
+                title="Wire the Main Branch plugin into tracked settings",
+                state="warn",
+                mode="write",
+                command="mb skill link --repo . --plugin --json",
+                safe_to_apply=True,
+                reason=(
+                    "wires the worktree-durable, cross-surface plugin rail (Claude "
+                    "Desktop + CLI + IDEs) so skill discovery survives worktrees; "
+                    "symlinks remain the fallback (decision 2026-06-10, Stage 3)"
+                ),
+                writes=[".claude/settings.json"],
             )
         )
     if int(shadow_report.get("summary", {}).get("repairable", 0) or 0):

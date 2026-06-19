@@ -492,6 +492,25 @@ def test_plugin_wiring_preserves_existing_settings(tmp_path: Path) -> None:
     )
 
 
+def test_plugin_wiring_refuses_to_clobber_malformed_settings(tmp_path: Path) -> None:
+    # A hand-edited-but-broken settings file (trailing comma) must NOT be
+    # overwritten — that would silently destroy the operator's other keys.
+    path = tmp_path / ".claude" / "settings.json"
+    path.parent.mkdir(parents=True)
+    malformed = '{\n  "permissions": {"allow": ["Bash(ls:*)"]},\n}\n'
+    path.write_text(malformed, encoding="utf-8")
+
+    result = engine_mod.write_plugin_wiring(tmp_path)
+
+    assert result["ok"] is False
+    assert result["changed"] is False
+    assert "not valid JSON" in result["summary"]
+    # File is untouched: bytes unchanged, no plugin keys injected.
+    assert path.read_text(encoding="utf-8") == malformed
+    assert "enabledPlugins" not in path.read_text(encoding="utf-8")
+    assert engine_mod.plugin_wiring_status(tmp_path)["wired"] is False
+
+
 def test_worktree_summary_mentions_plugin_rail_when_wired(tmp_path: Path) -> None:
     import subprocess
 
