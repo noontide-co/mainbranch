@@ -100,7 +100,10 @@ gh auth login
 ```
 
 Install Claude Code, Codex, or both from their official instructions. Main
-Branch works from the same business folder in either app.
+Branch works from the same business folder in either app. In Claude Code, Main
+Branch installs as a plugin that works in both the Claude Desktop app and the
+terminal — `mb onboard` (next step) wires it for you, so you usually do not
+install it by hand.
 
 ### Linux
 
@@ -197,6 +200,11 @@ you into setup, thinking, ads, organic content, site work, bookkeeping checks,
 repairs, updates, or closing a session.
 
 In Codex, use the global `mb-start` skill instead of typing the slash command.
+
+If `/mb-start` does not appear in Claude Code, the Main Branch plugin is not
+installed or enabled yet. Add it with `claude plugin marketplace add
+noontide-co/mainbranch`, enable it, and restart Claude Code from this folder.
+The plugin works in both the Claude Desktop app and the terminal.
 
 Daily use is:
 

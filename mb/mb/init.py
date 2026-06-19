@@ -303,7 +303,13 @@ Your business as files. Claude reads these; you edit them; git remembers them.
 
 Main Branch CLI facts are the source of truth for repo health, setup, runtime
 wiring, updates, graph/status signals, provider readiness, and repair paths.
-The normal runtime path is: open a terminal in this repo, run `claude`, then
+Main Branch installs as a Claude Code plugin
+(`claude plugin marketplace add noontide-co/mainbranch`, then enable it). The
+plugin is the primary rail: it makes `/mb-start` and the other skills available
+in the Claude Desktop app and the terminal alike, and it survives git
+worktrees. `mb init` and `mb onboard` wire it by default; project-local
+symlinks are the fallback. The normal runtime path is: open this repo in
+Claude Code — the Claude Desktop app, or run `claude` in a terminal — then
 type `/mb-start` inside Claude Code. From the terminal, `mb start --json`
 checks the handoff and `mb start --launch` can open Claude Code when available.
 Before giving setup, routing, migration, update, or repair advice, run the
@@ -362,13 +368,18 @@ baseline saved, GitHub backup connected when requested, checkpoint state, and
 next safe action. Put commands and git/GitHub details second.
 
 If `/mb-start` is not discoverable or Claude Code reports `Unknown command:
-/mb-start`, do not improvise from memory. From this business repo, check
-`mb --version`, run `mb start --json` and `mb status --json --peek`, inspect
-repair options with `mb doctor repair --plan`, then ask before running any
-write/apply command such as `mb skill link --repo .`, `mb skill repair --repo .
---apply`, `mb doctor repair --apply`, or `mb update`. After repairing skill
-wiring, tell the operator: "I repaired missing Main Branch start wiring in this
-business folder; restart Claude Code from this repo and try `/mb-start` again."
+/mb-start`, do not improvise from memory. The most common cause is that the
+Main Branch plugin is not installed or enabled — install it with
+`claude plugin marketplace add noontide-co/mainbranch` and enable it (this
+works in the Claude Desktop app and the terminal). If you are in a cloud/web
+session, plugins are unavailable there — use the Claude Desktop app or the
+`claude` CLI. From this business repo, check `mb --version`, run
+`mb start --json` and `mb status --json --peek`, inspect repair options with
+`mb doctor repair --plan`, then ask before running any write/apply command
+such as `mb skill link --repo .`, `mb skill repair --repo . --apply`,
+`mb doctor repair --apply`, or `mb update`. After repairing skill wiring, tell
+the operator: "I repaired missing Main Branch start wiring in this business
+folder; restart Claude Code from this repo and try `/mb-start` again."
 
 If `mb status --json --peek` reports `update.severity` as `recommended` or
 `required`, make that the only recommendation before business routing. Name the

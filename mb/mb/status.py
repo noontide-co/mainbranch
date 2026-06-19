@@ -3550,7 +3550,18 @@ def _runtime(repo: Path) -> dict[str, Any]:
         "claude_code": {
             "found": bool(claude_path),
             "path": claude_path,
-            "repair": "" if claude_path else "Install Claude Code: https://claude.ai/install",
+            # Plugin-first repair (#924): the plugin is the cross-surface rail
+            # (Claude Desktop + terminal). A missing `claude` CLI is fine for
+            # Desktop users, so point them at the plugin first.
+            "repair": ""
+            if claude_path
+            else (
+                "The `claude` CLI is not on PATH — fine for the Claude Desktop app: "
+                "install the Main Branch plugin from + -> Plugins -> "
+                "`noontide-co/mainbranch`. For terminal use, install the CLI "
+                "(https://claude.ai/install), then "
+                "`claude plugin marketplace add noontide-co/mainbranch`."
+            ),
         },
         "skill_wiring": {
             **wiring,

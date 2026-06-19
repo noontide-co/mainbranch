@@ -343,7 +343,7 @@ It is a good fit if:
 
 | App | Current support |
 | --- | --- |
-| **Claude Code** | Open or select the business folder, run `/mb-start`, and use the bundled Main Branch skills. |
+| **Claude Code** | Open or select the business folder in the Claude Desktop app or the terminal, run `/mb-start`, and use the bundled Main Branch skills. They install as a plugin that works on both surfaces; `mb onboard` wires it for you. |
 | **Codex** | Open or select the business folder and use the global Main Branch `mb-*` skills. |
 
 Account writes, publishing, spend, customer contact, and account changes remain
@@ -410,7 +410,10 @@ graphing, repair paths, connected-tool checks, checkpoints, and agent workflows
 that write approved business artifacts back into files you own.
 
 **I'm stuck.** In Claude Code, type `/mb-start` again. In Codex, use the global
-`mb-start` skill again.
+`mb-start` skill again. If `/mb-start` is not found at all, the Main Branch
+plugin may not be installed — add it with `claude plugin marketplace add
+noontide-co/mainbranch`, enable it, and restart Claude Code. The plugin works in
+both the Claude Desktop app and the terminal.
 
 ---
 

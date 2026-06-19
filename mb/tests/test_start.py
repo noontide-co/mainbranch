@@ -407,7 +407,13 @@ def test_start_degrades_when_claude_is_missing(tmp_path: Path, monkeypatch) -> N
     assert report["handoff_ready"] is False
     claude_check = next(check for check in report["checks"] if check["name"] == "claude_code")
     assert claude_check["ok"] is False
-    assert "Install Claude Code" in claude_check["repair"]
+    # Plugin-first repair (#924): names the cross-surface plugin (Desktop +
+    # terminal). Still blocks the terminal handoff, but no longer claims a bare
+    # "Install Claude Code" CLI step is the only path.
+    repair = claude_check["repair"]
+    assert "noontide-co/mainbranch" in repair
+    assert "Claude Desktop" in repair
+    assert "plugin" in repair.lower()
 
 
 def test_start_required_update_blocks_handoff_and_surfaces_json(

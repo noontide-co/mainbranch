@@ -14,7 +14,7 @@ for those surfaces.
 | Python | 3.10, 3.11, 3.12 | CI gates all three versions. |
 | Install mode | `pipx install mainbranch` | Official public install path. |
 | Developer mode | Git clone | For contributors who want to edit the engine or skills. |
-| Agent runtime | Claude Code | Supported through project-local slash skills. |
+| Agent runtime | Claude Code | Supported through the Main Branch plugin (`claude plugin marketplace add noontide-co/mainbranch`, then enable). The plugin is the primary rail and works in both the Claude Desktop app and the terminal `claude` CLI; it survives git worktrees. Project-local slash-skill wiring remains a fallback. Cloud/web Claude sessions cannot load plugins. |
 | Codex CLI | Supported | Fresh business repos include `AGENTS.md`; global Main Branch `mb-*` skills install once per user under `~/.codex/skills` and route through deterministic `mb` facts. `mb workflow list --runtime codex` exposes supported, pending, and unsupported workflow surfaces. |
 | Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, local LLMs | Roadmap | `mb` is runtime-agnostic by design, but these adapters are not supported yet. |
 
