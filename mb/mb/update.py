@@ -13,7 +13,7 @@ from typing import Any
 
 from mb import __version__
 from mb import codex as codex_mod
-from mb.engine import bundled_skills, engine_root, install_mode
+from mb.engine import bundled_skills, engine_root, install_mode, plugin_wiring_status
 from mb.freshness import (
     latest_pypi_version as _latest_pypi_version,
 )
@@ -356,6 +356,32 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
         result["next_actions"].append("Open a fresh Codex thread in the business repo.")
 
 
+def _add_plugin_follow_up(result: dict[str, Any], repo: Path) -> None:
+    """Surface plugin-rail migration guidance for symlink-era repos (#931).
+
+    `mb update` refreshes the symlink wiring but does not write the tracked
+    plugin wiring, so a repo created before the plugin default stays on
+    symlinks even though the plugin is the default cross-surface rail. Name the
+    one-command migration as post-update guidance — never an automatic write.
+    """
+    status = plugin_wiring_status(repo)
+    result["plugin_rail"] = {
+        "wired": status.get("wired", False),
+        "marketplace_known": status.get("marketplace_known", False),
+        "plugin_enabled": status.get("plugin_enabled", False),
+        "settings_path": status.get("settings_path", ""),
+    }
+    if not status.get("wired", False):
+        result["warnings"].append(
+            "This repo is on symlink-only skill wiring. The Main Branch plugin is "
+            "the default cross-surface rail (Claude Desktop and the terminal, and "
+            "it survives git worktrees). Migrate when you're ready with "
+            "`mb skill link --repo . --plugin` (or `mb doctor repair --apply "
+            "--all-agents`), then restart Claude Code."
+        )
+        result["next_actions"].append("mb skill link --repo . --plugin --json")
+
+
 def run(
     repo: str | Path = ".",
     *,
@@ -446,6 +472,7 @@ def run(
                 "source": "not_newer",
             }
         _add_codex_follow_up(result, target_repo)
+        _add_plugin_follow_up(result, target_repo)
         return result
 
     if mode == "pipx":
@@ -516,6 +543,7 @@ def run(
     else:
         result["actions"].append("skipped agent surface refresh")
     _add_codex_follow_up(result, target_repo)
+    _add_plugin_follow_up(result, target_repo)
     return result
 
 
