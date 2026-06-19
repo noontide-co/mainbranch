@@ -1730,7 +1730,14 @@ def run(path: str) -> dict[str, Any]:
         {
             "name": "claude-code",
             "ok": bool(cc_path),
-            "detail": cc_path or "claude not on PATH (https://claude.ai/install)",
+            "detail": cc_path
+            or (
+                "claude CLI not on PATH. Main Branch runs as a Claude Code plugin "
+                "in the Claude Desktop app too — install it (+ -> Plugins -> "
+                "noontide-co/mainbranch), or for terminal use install the CLI "
+                "(https://claude.ai/install) then "
+                "`claude plugin marketplace add noontide-co/mainbranch`."
+            ),
         }
     )
 

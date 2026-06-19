@@ -407,7 +407,13 @@ def test_start_degrades_when_claude_is_missing(tmp_path: Path, monkeypatch) -> N
     assert report["handoff_ready"] is False
     claude_check = next(check for check in report["checks"] if check["name"] == "claude_code")
     assert claude_check["ok"] is False
-    assert "Install Claude Code" in claude_check["repair"]
+    # Plugin-first repair (#924): names the cross-surface plugin (Desktop +
+    # terminal). Still blocks the terminal handoff, but no longer claims a bare
+    # "Install Claude Code" CLI step is the only path.
+    repair = claude_check["repair"]
+    assert "noontide-co/mainbranch" in repair
+    assert "Claude Desktop" in repair
+    assert "plugin" in repair.lower()
 
 
 def test_start_required_update_blocks_handoff_and_surfaces_json(
@@ -634,3 +640,18 @@ def test_start_display_command_is_os_aware(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(start_mod.os, "name", "nt")  # type: ignore[attr-defined]
     assert start_mod._display_command(repo).startswith("cd /d ")
     assert start_mod._display_command(repo).endswith(" && claude")
+
+
+def test_start_runtime_guidance_is_plugin_first(tmp_path: Path, monkeypatch) -> None:
+    # #924: the handoff payload carries an always-on plugin-first grounding fact
+    # so an agent reading `mb start --json` knows how to make /mb-start appear.
+    monkeypatch.setattr(start_mod, "_which", _with_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
+
+    report = json.loads(result.stdout)
+    guidance = report["runtime"]["guidance"]
+    assert "claude plugin marketplace add noontide-co/mainbranch" in guidance
+    assert "cloud" in guidance.lower()

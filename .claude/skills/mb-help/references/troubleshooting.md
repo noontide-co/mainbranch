@@ -78,6 +78,26 @@ https://github.com/noontide-co/mainbranch
 
 If skill prompts like `/mb-start` or `/mb-ads` aren't showing in the dropdown:
 
+**Check 0: Is the Main Branch plugin installed and enabled?**
+
+Main Branch ships as a Claude Code plugin — this is the most common reason the
+skills are missing. Install it once and enable it:
+
+```bash
+claude plugin marketplace add noontide-co/mainbranch
+```
+
+The plugin works in both the Claude Desktop app and the terminal `claude` CLI,
+and it survives git worktrees. (Cloud/web Claude sessions cannot load plugins —
+use Desktop or the terminal.) `mb onboard` and `mb init` wire it for you, so a
+freshly onboarded repo usually has it already; the manual step above is for
+repos that predate plugin wiring. Skills load at startup — restart Claude Code
+after enabling.
+
+If the plugin loads but the bare `/mb-start` still doesn't resolve, try the
+namespaced form `/mainbranch:mb-start` (some builds expose plugin skills under
+the plugin name). Use whichever form your build shows in the slash-command list.
+
 **Check 1: Does the local bridge exist?**
 ```bash
 test -e .claude/skills/mb-start && echo "START_BRIDGE_OK"

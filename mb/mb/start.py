@@ -194,8 +194,19 @@ def _build_checks(
             "name": "claude_code",
             "ok": bool(claude_path),
             "severity": "error",
-            "detail": claude_path or "claude not on PATH",
-            "repair": "Install Claude Code: https://claude.ai/install",
+            "detail": claude_path or "claude CLI not on PATH",
+            # Plugin-first repair (#924): the plugin is the cross-surface rail
+            # (Claude Desktop + terminal). A terminal handoff still needs the
+            # claude CLI, so this stays blocking for `mb start --launch`, but the
+            # message points Desktop users at the plugin too.
+            "repair": ""
+            if claude_path
+            else (
+                "Install Main Branch as a Claude Code plugin. Claude Desktop app: "
+                "+ -> Plugins -> `noontide-co/mainbranch`. Terminal: install the "
+                "claude CLI (https://claude.ai/install), then `claude plugin "
+                "marketplace add noontide-co/mainbranch`."
+            ),
         },
         {
             "name": "skill_wiring",
@@ -491,6 +502,15 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "executable": "claude",
             "found": bool(claude_path),
             "path": claude_path,
+            # Plugin-first handoff fact (#924): the plugin is the cross-surface
+            # rail (Claude Desktop + terminal). Name it so an agent grounding in
+            # this payload — or a user who can't find /mb-start — knows the fix.
+            "guidance": (
+                "Main Branch runs as a Claude Code plugin (Claude Desktop or the "
+                "terminal) or via the Codex CLI; cloud/web sessions do not support "
+                "plugins. If /mb-start is missing, install the plugin: "
+                "`claude plugin marketplace add noontide-co/mainbranch`."
+            ),
             "skill_wiring": wiring,
             "codex_cli": codex,
         },

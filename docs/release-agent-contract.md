@@ -211,6 +211,27 @@ For a package-visible release, the validation evidence must record both
 modes — or, if only one was run, explicitly call out the missing mode as a
 pre-tag blocker, not a soft note in the PR description.
 
+### 7. Plugin-load smoke is a manual pre-publish gate when the diff touches the plugin rail.
+
+The Claude Code plugin is the default skill-distribution rail, but no automated
+gate loads it — `scripts/claude-runtime-dogfood.py` exercises the installed
+package and project-local wiring, not a real plugin install. So when a release
+diff touches plugin wiring, the marketplace/plugin manifests, or the runtime
+guidance that routes operators to the plugin, the release driver must run a
+manual plugin-load smoke before publishing and record it as a validation line:
+
+- `claude plugin marketplace add noontide-co/mainbranch`, enable the plugin,
+  then confirm `/mb-start` (and one other `/mb-*` skill) resolves in **both**
+  the Claude Desktop app **and** the terminal `claude` CLI;
+- record the exact invocation observed — `/mb-start` vs `/mainbranch:mb-start`.
+  If the plugin namespaces skills, the bare-name guidance in `CLAUDE.md`,
+  README, beginner setup, and the skill prose is stale and must be reconciled
+  (or the invocation contract updated) before the tag.
+
+This is the one true pre-publish gate that lives only here: a green CI run does
+not cover it. "Skipped because no Claude Code build was available" is a valid
+recorded reason only for a diff that does not touch the plugin rail.
+
 ## Where this lives
 
 This file is the protocol. The simulation-tier matrix (`pr_smoke`,

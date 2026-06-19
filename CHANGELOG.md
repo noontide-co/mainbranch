@@ -11,6 +11,21 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- **The plugin is the default Claude Code rail.** `mb init` and `mb onboard`
+  now wire the Main Branch plugin by default (tracked `.claude/settings.json`),
+  and `mb doctor repair` migrates symlink-era repos to it. The plugin works in
+  both the Claude Desktop app and the terminal `claude` CLI and survives git
+  worktrees; project-local slash-skill wiring remains a fallback. (#929)
+- **Plugin-first runtime guidance everywhere `/mb-start` is explained.** When
+  the skills aren't discoverable, `mb status`, `mb start`, `mb doctor`, the
+  generated `CLAUDE.md`, `/mb-help`, the README, the beginner setup guide, and
+  the compatibility page now point users at the plugin — installed and working
+  in both the Claude Desktop app and the terminal — instead of assuming a
+  missing `claude` CLI. Cloud/web Claude sessions cannot load plugins.
+  (#930, closes #924)
+
 ## [0.4.0] - 2026-06-14
 
 This release graduates the patterns proven across the live dogfood businesses

@@ -26,6 +26,10 @@ def _assert_claude_md_cli_first_contract(text: str) -> None:
     assert "Main Branch CLI facts are the source of truth" in text
     assert "run `claude`" in text
     assert "`/mb-start` inside Claude Code" in text
+    # Plugin-first, cross-surface framing (Stage 3 / #924): the plugin is the
+    # primary rail and works in Claude Desktop + the terminal.
+    assert "claude plugin marketplace add noontide-co/mainbranch" in text
+    assert "Claude Desktop" in text
     assert "mb start --launch" in text
     assert "mb --version" in text
     assert "mb status --json --peek" in text
@@ -61,7 +65,8 @@ def _assert_claude_md_cli_first_contract(text: str) -> None:
     assert "no connected GitHub backup" in text
     assert "`PR and issue facts`" in text
     assert "GitHub task and proposal context" in text
-    assert "Claude Desktop" not in text
+    # CLAUDE.md is the Claude-runtime contract; Codex has its own AGENTS.md,
+    # and other runtimes remain roadmap — keep them out of this file.
     for unsupported_runtime in ("Codex", "Cursor", "OpenClaw", "Hermes"):
         assert unsupported_runtime not in text
 
