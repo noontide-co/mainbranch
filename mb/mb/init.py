@@ -18,7 +18,7 @@ from typing import Any
 from mb import checkpoint as checkpoint_mod
 from mb import codex as codex_mod
 from mb import team as team_mod
-from mb.engine import link_skills
+from mb.engine import link_skills, write_plugin_wiring
 from mb.migrate import LATEST_SCHEMA_VERSION, SCHEMA_MARKER
 
 # The canonical business folders. Keep these stable unless a schema migration lands.
@@ -147,11 +147,19 @@ def run(
 
     if (target / "CLAUDE.md").exists():
         link_result = link_skills(target)
+        # Plugin is the primary, worktree-durable, cross-surface rail (works in
+        # Claude Desktop + the CLI + IDEs); symlinks remain the fallback. Wire
+        # it by default (decision 2026-06-10, Stage 3). Idempotent.
+        plugin_wiring = write_plugin_wiring(target)
+        already_created = list(link_result["created"])
+        if plugin_wiring.get("changed"):
+            already_created.append(".claude/settings.json")
         return {
             "status": "already-initialized",
             "path": str(target),
-            "created": link_result["created"],
+            "created": already_created,
             "skill_link": link_result,
+            "plugin_wiring": plugin_wiring,
             "checkpoint_hook": checkpoint_mod.hook_status(target),
         }
 
@@ -245,6 +253,13 @@ def run(
     link_result = link_skills(target)
     created.extend(path for path in link_result["created"] if path not in created)
 
+    # Plugin is the primary, worktree-durable, cross-surface rail (Claude
+    # Desktop + CLI + IDEs); symlinks are the fallback. Wire by default
+    # (decision 2026-06-10, Stage 3). Idempotent; lands in tracked settings.
+    plugin_wiring = write_plugin_wiring(target)
+    if plugin_wiring.get("changed") and ".claude/settings.json" not in created:
+        created.append(".claude/settings.json")
+
     if shutil.which("git") and not (target / ".git").exists():
         try:
             subprocess.run(
@@ -272,6 +287,7 @@ def run(
         "created": created,
         "business_name": business_name,
         "skill_link": link_result,
+        "plugin_wiring": plugin_wiring,
         "checkpoint_hook": checkpoint_hook,
     }
 

@@ -19,7 +19,7 @@ from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import init as init_mod
 from mb import topology as topology_mod
-from mb.engine import link_skills, link_status
+from mb.engine import link_skills, link_status, write_plugin_wiring
 
 LEVELS = {"beginner", "intermediate", "power"}
 MODES = {"new", "connect", "auto"}
@@ -1204,6 +1204,11 @@ def run(
         created.extend(str(item) for item in link_result.get("created", []))
         if not link_result.get("ok"):
             errors.extend(str(item) for item in link_result.get("errors", []))
+        # Wire the plugin (primary cross-surface rail) by default on connect
+        # too (decision 2026-06-10, Stage 3). Idempotent.
+        plugin_wiring = write_plugin_wiring(target)
+        if plugin_wiring.get("changed") and ".claude/settings.json" not in created:
+            created.append(".claude/settings.json")
         action = "repaired" if before["claude_md"] else "connected"
     else:
         business_name = name.strip() or target.name.replace("-", " ").title()
