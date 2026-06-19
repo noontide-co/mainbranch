@@ -380,3 +380,32 @@ def test_init_requires_name(tmp_path: Path, monkeypatch) -> None:
     target = tmp_path / "noname"
     result = run(path=str(target), name="")
     assert result["status"] == "error"
+
+
+def test_init_wires_plugin_by_default(tmp_path: Path) -> None:
+    # Stage 3 (decision 2026-06-10): plugin is the primary cross-surface rail;
+    # a fresh repo must be wired by default, not symlink-only.
+    from mb import engine as engine_mod
+
+    target = tmp_path / "acme"
+    result = run(path=str(target), name="Acme")
+    assert result["status"] == "ok"
+    assert result["plugin_wiring"]["ok"] is True
+    status = engine_mod.plugin_wiring_status(target)
+    assert status["wired"] is True
+    assert status["marketplace_known"] is True
+    assert status["plugin_enabled"] is True
+    # Tracked settings (committed), not the gitignored local file.
+    assert (target / ".claude" / "settings.json").exists()
+
+
+def test_init_already_initialized_backfills_plugin_wiring(tmp_path: Path) -> None:
+    from mb import engine as engine_mod
+
+    target = tmp_path / "acme"
+    run(path=str(target), name="Acme")
+    # Simulate a symlink-era repo: drop the plugin wiring, keep CLAUDE.md.
+    (target / ".claude" / "settings.json").unlink()
+    second = run(path=str(target), name="Acme")
+    assert second["status"] == "already-initialized"
+    assert engine_mod.plugin_wiring_status(target)["wired"] is True

@@ -3030,6 +3030,27 @@ def repair_apply(
             )
         )
 
+    if apply_claude and not engine_mod.plugin_wiring_status(target).get("wired"):
+        plugin_wiring = engine_mod.write_plugin_wiring(target)
+        applied.append(
+            _action(
+                id="plugin-wiring",
+                title="Wired the Main Branch plugin into tracked settings",
+                state="ok" if plugin_wiring["ok"] else "error",
+                mode="write",
+                command="mb skill link --repo . --plugin --json",
+                safe_to_apply=True,
+                reason=(
+                    "wired the worktree-durable, cross-surface plugin rail (Claude "
+                    "Desktop + CLI + IDEs) so skill discovery survives worktrees; "
+                    "symlinks remain the fallback (decision 2026-06-10, Stage 3)"
+                ),
+                writes=[".claude/settings.json"],
+                applied=True,
+                result=plugin_wiring,
+            )
+        )
+
     legacy_links = _legacy_claude_symlinks(target)
     repaired_links = (
         _repair_legacy_claude_symlinks(target, legacy_links["findings"])

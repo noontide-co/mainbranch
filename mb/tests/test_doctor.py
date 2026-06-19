@@ -2017,3 +2017,18 @@ def test_doctor_guard_passes_business_folders(tmp_path: Path) -> None:
     plan = doctor_mod.repair_plan(repo)
     assert plan.get("guard") is None
     assert len(plan["sections"]) > 1
+
+
+def test_doctor_repair_apply_migrates_symlink_era_repo_to_plugin(tmp_path: Path) -> None:
+    # Stage 3 (decision 2026-06-10): doctor repair backfills the plugin rail on
+    # a symlink-era repo that has no plugin wiring yet.
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    # Simulate symlink-era: remove the plugin wiring init now writes by default.
+    (repo / ".claude" / "settings.json").unlink()
+    assert engine_mod.plugin_wiring_status(repo)["wired"] is False
+
+    applied = doctor_mod.repair_apply(repo=repo, only="claude")
+    applied_actions = {action["id"]: action for action in applied["applied_actions"]}
+    assert "plugin-wiring" in applied_actions
+    assert engine_mod.plugin_wiring_status(repo)["wired"] is True
