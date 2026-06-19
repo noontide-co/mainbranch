@@ -184,6 +184,34 @@ def test_onboard_connect_repairs_existing_initialized_repo(tmp_path: Path, monke
     assert result["skill_wiring"]["ok"] is True
 
 
+def test_onboard_connect_backfills_plugin_wiring(tmp_path: Path, monkeypatch) -> None:
+    # The connect path is how a symlink-era repo gets migrated when the operator
+    # runs `mb onboard` rather than `mb doctor`. Lock that it wires the plugin.
+    from mb import engine as engine_mod
+
+    monkeypatch.setattr(onboard_mod, "_which", _tool_path)
+    repo = tmp_path / "acme"
+    onboard_mod.run(
+        path=str(repo),
+        name="Acme",
+        mode="new",
+        level="power",
+        team_size="solo",
+        business_type="coaching",
+        success_stage="working",
+        desired_outcome="usable core files",
+    )
+    # Simulate symlink-era: drop the tracked plugin wiring.
+    (repo / ".claude" / "settings.json").unlink()
+    assert engine_mod.plugin_wiring_status(repo)["wired"] is False
+
+    result = onboard_mod.run(path=str(repo), name="", mode="connect", level="power")
+
+    assert result["ok"] is True
+    assert engine_mod.plugin_wiring_status(repo)["wired"] is True
+    assert ".claude/settings.json" in result["created"]
+
+
 def test_onboard_connect_missing_repo_routes_to_doctor(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(onboard_mod, "_which", _tool_path)
     repo = tmp_path / "missing"
