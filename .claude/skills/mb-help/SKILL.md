@@ -37,7 +37,8 @@ for repair facts before giving prose-only advice.
 | Error, command not found, MCP, Apify setup, GitHub issue | [troubleshooting.md](references/troubleshooting.md) |
 | Provider readiness, GitHub setup, Cloudflare, Google Workspace, Meta Ads, Apify | [provider-readiness.md](references/provider-readiness.md) |
 | Getting started, setup | Route to `/mb-setup` or `/mb-start` |
-| Which skill, when to use | [skills-guide.md](references/skills-guide.md) |
+| Which skill, when to use, list skills, what skills do I have, skills inventory, what can you do, which skills are we using | [skills-guide.md](references/skills-guide.md) |
+| Pre-publish review, UI pass, design pass, design critique, review the page before publish | Route to `/mb-skill-review` (see [skills-guide.md](references/skills-guide.md)) |
 | Create skill, Notion export, custom | [skills-guide.md](references/skills-guide.md) |
 | Migrate from GPT, ChatGPT | [gpt-migration.md](references/gpt-migration.md) |
 | Reels, TikTok, organic, /mb-organic | [organic-help.md](references/organic-help.md) |

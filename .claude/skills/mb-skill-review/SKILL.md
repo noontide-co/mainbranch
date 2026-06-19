@@ -2,7 +2,7 @@
 name: mb-skill-review
 tier: skill
 calls: []
-description: "Run dial-gated Seven Sweeps + auxiliary gates against a brief or copy draft. Returns synthesized findings to the operator. Used by /mb-site at pre-lock and pre-publish moments. Reusable by /mb-ads and sales-video workflows."
+description: "Pre-publish review / UI pass / design pass / design critique for a brief or copy draft: runs dial-gated Seven Sweeps + auxiliary gates and returns synthesized findings. Use when: the operator asks for a pre-publish review, a UI pass, a design pass, a design critique, or to review a page before publishing. Called by /mb-site at pre-lock and pre-publish; reusable by /mb-ads and sales-video workflows."
 loops: [reflect]
 ---
 
