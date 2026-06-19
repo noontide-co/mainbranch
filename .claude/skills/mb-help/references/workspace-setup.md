@@ -1,5 +1,10 @@
 # Workspace-Isolated Tool Setup
 
+In normal Claude Code — the Claude Desktop app or the terminal — the Main Branch
+plugin handles skill discovery and you do not need this page. It covers
+workspace-isolated tools where the plugin (and the installed package) are not
+reachable, so bridge links and `settings.local.json` file access are the fallback.
+
 Some workspace tools start Claude inside an isolated folder. When that happens,
 Claude may not see the installed Main Branch skills until the workspace has
 local bridge links and `settings.local.json` file access.

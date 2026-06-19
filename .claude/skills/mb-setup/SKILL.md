@@ -470,7 +470,7 @@ Once setup is complete, tell the user:
 > claude
 > /mb-start
 > ```
-> Main Branch linkage is managed by setup (`settings.local.json` + compatibility bridge links) — no need to touch the Main Branch package or source-checkout folder.
+> Main Branch loads as a Claude Code plugin (Desktop or terminal); setup also writes a `settings.local.json` + bridge-link fallback — no need to touch the Main Branch package or source-checkout folder.
 >
 > **Key skills to try:**
 > - `/mb-think` — Research topics, make decisions, update reference
