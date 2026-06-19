@@ -1721,6 +1721,12 @@ This snapshot does not replace shipped `.claude/skills/mb-end/SKILL.md`.
 
 ## Routing
 
+Mid-session save vs close: if the operator only wants to save progress and keep
+working — "save", "checkpoint this", "yes save" mid-flow — this is a save, not a
+close. Run `mb checkpoint --plan`, save on approval through `mb checkpoint`, and
+return them to work. Never save with raw git. Use the full closeout below only
+when the session is actually ending or pausing.
+
 1. Run a status scan first. Use deterministic status, checkpoint, validation,
    readiness, drift, recent-work, and runtime facts before reading raw git
    details.
@@ -1784,6 +1790,12 @@ workflows are available in Codex.
 {_bullet_list(workflow.json_facts)}
 
 ## Codex Route
+
+Mid-session save vs close: if the operator only wants to save progress and keep
+working — "save", "checkpoint this", "yes save" mid-flow — this is a save, not a
+close. Run `mb checkpoint --plan`, save on approval through `mb checkpoint`, and
+return them to work. Never save with raw git. Use the full closeout below only
+when the session is actually ending or pausing.
 
 1. Run a status scan first. Use deterministic status, checkpoint, validation,
    readiness, drift, recent-work, and runtime facts before reading raw git

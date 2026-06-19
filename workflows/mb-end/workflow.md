@@ -75,6 +75,13 @@ whether the work is saved.
 This is the bookend to start/status. It is not a daily standup, task planner,
 or autosave. It closes the current session and keeps business memory durable.
 
+A mid-session save where the operator keeps working -- "save", "save my
+progress", "checkpoint this", "yes save", "should we checkpoint everything" -- is
+a save, not a close. Run `mb checkpoint --plan`, save on approval through `mb
+checkpoint`, and return them to their work, without the crystallize-and-close
+sequence. Never save with raw git. Use the full closeout only for an actual end
+or pause of the session.
+
 Do not use this workflow for provider mutation, publishing, spend, customer
 contact, broad research, ad/site production, or automatic model execution from
 `mb`.
@@ -133,7 +140,14 @@ Hard gates win before closeout: required updates, broken repo wiring, repair
 blockers, validation blockers, private-data boundaries, destructive-operation
 requests, provider mutation, publishing, spend, and customer contact.
 
-After hard gates, close the session in this order:
+Mid-session save branch: after hard gates, if the intent is a save while the
+operator keeps working (not an end or pause), run only the status scan plus `mb
+checkpoint --plan`, save on approval through `mb checkpoint`, and stop. Do not run
+crystallize, the final-thought prompt, or the warm close, and never save with raw
+git.
+
+After hard gates, when the operator is ending or pausing, close the session in
+this order:
 
 1. Status scan: read `mb status --json --peek`, then `mb checkpoint --plan
    --json`, then `mb validate --json`.
