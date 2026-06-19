@@ -94,6 +94,10 @@ freshly onboarded repo usually has it already; the manual step above is for
 repos that predate plugin wiring. Skills load at startup — restart Claude Code
 after enabling.
 
+If the plugin loads but the bare `/mb-start` still doesn't resolve, try the
+namespaced form `/mainbranch:mb-start` (some builds expose plugin skills under
+the plugin name). Use whichever form your build shows in the slash-command list.
+
 **Check 1: Does the local bridge exist?**
 ```bash
 test -e .claude/skills/mb-start && echo "START_BRIDGE_OK"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -2032,3 +2033,32 @@ def test_doctor_repair_apply_migrates_symlink_era_repo_to_plugin(tmp_path: Path)
     applied_actions = {action["id"]: action for action in applied["applied_actions"]}
     assert "plugin-wiring" in applied_actions
     assert engine_mod.plugin_wiring_status(repo)["wired"] is True
+
+
+def test_doctor_claude_code_detail_is_plugin_first_when_missing(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # #924: a missing `claude` CLI should point at the plugin (Desktop + terminal).
+    monkeypatch.setattr(
+        doctor_mod,
+        "_which",
+        lambda name: "" if name == "claude" else (shutil.which(name) or ""),
+    )
+    report = run(path=str(tmp_path))
+
+    check = next(c for c in report["checks"] if c["name"] == "claude-code")
+    assert check["ok"] is False
+    assert "noontide-co/mainbranch" in check["detail"]
+
+
+def test_doctor_claude_code_detail_is_path_when_present(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        doctor_mod,
+        "_which",
+        lambda name: "/usr/local/bin/claude" if name == "claude" else (shutil.which(name) or ""),
+    )
+    report = run(path=str(tmp_path))
+
+    check = next(c for c in report["checks"] if c["name"] == "claude-code")
+    assert check["ok"] is True
+    assert check["detail"] == "/usr/local/bin/claude"

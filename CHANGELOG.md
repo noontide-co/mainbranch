@@ -23,7 +23,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   generated `CLAUDE.md`, `/mb-help`, the README, the beginner setup guide, and
   the compatibility page now point users at the plugin — installed and working
   in both the Claude Desktop app and the terminal — instead of assuming a
-  missing `claude` CLI. Cloud/web Claude sessions cannot load plugins. (#924)
+  missing `claude` CLI. Cloud/web Claude sessions cannot load plugins.
+  (#930, closes #924)
 
 ## [0.4.0] - 2026-06-14
 

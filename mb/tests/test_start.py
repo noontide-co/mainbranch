@@ -640,3 +640,18 @@ def test_start_display_command_is_os_aware(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(start_mod.os, "name", "nt")  # type: ignore[attr-defined]
     assert start_mod._display_command(repo).startswith("cd /d ")
     assert start_mod._display_command(repo).endswith(" && claude")
+
+
+def test_start_runtime_guidance_is_plugin_first(tmp_path: Path, monkeypatch) -> None:
+    # #924: the handoff payload carries an always-on plugin-first grounding fact
+    # so an agent reading `mb start --json` knows how to make /mb-start appear.
+    monkeypatch.setattr(start_mod, "_which", _with_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
+
+    report = json.loads(result.stdout)
+    guidance = report["runtime"]["guidance"]
+    assert "claude plugin marketplace add noontide-co/mainbranch" in guidance
+    assert "cloud" in guidance.lower()

@@ -4051,3 +4051,36 @@ def test_uncodified_decisions_drift(tmp_path: Path) -> None:
     assert "uncodified_decisions" in by_id
     assert "never" in by_id["uncodified_decisions"]["summary"]
     assert "codify" in by_id["uncodified_decisions"]["repair"]
+
+
+def test_status_runtime_claude_repair_is_plugin_first_when_missing(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # #924: with no `claude` CLI on PATH the repair must point at the plugin
+    # (Desktop + terminal), not assume the only fix is installing the CLI.
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    claude_code = report["runtime"]["claude_code"]
+    assert claude_code["found"] is False
+    assert "noontide-co/mainbranch" in claude_code["repair"]
+    assert "Claude Desktop" in claude_code["repair"]
+
+
+def test_status_runtime_claude_repair_empty_when_present(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        status_mod,
+        "_which",
+        lambda name: "/usr/local/bin/claude" if name == "claude" else (shutil.which(name) or ""),
+    )
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    report = status_mod.run(path=str(repo), update_marker=False)
+
+    claude_code = report["runtime"]["claude_code"]
+    assert claude_code["found"] is True
+    assert claude_code["repair"] == ""
