@@ -3678,6 +3678,7 @@ def _measurement_payload(result: dict[str, Any], *, repair_command: str) -> dict
             "gtm_container_id_present": bool(result["facts"].get("gtm_container_id")),
             "google_ads_customer_id_present": bool(result["facts"].get("google_ads_customer_id")),
             "primary_conversions": result["facts"].get("primary_conversions") or [],
+            "instrumentation": result["facts"].get("instrumentation") or {},
         },
         "blocked_count": len(result.get("blocked") or []),
         "manual_count": len(result.get("manual") or []),

@@ -64,6 +64,7 @@ SITE_STATUS_JSON_FACTS = {
     "measurement.available",
     "measurement.state",
     "measurement.facts.expected_events",
+    "measurement.facts.instrumentation",
     "measurement.blocked_count",
     "measurement.manual_count",
 }
@@ -73,6 +74,7 @@ SITE_CHECK_JSON_FACTS = {
     "manual",
     "evidence",
     "facts.expected_events",
+    "facts.instrumentation",
     "facts.provider_state",
     "source",
     "child_descriptor",

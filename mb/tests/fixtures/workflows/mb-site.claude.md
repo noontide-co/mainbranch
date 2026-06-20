@@ -6,7 +6,9 @@ Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`, `prov
 Public/private boundaries: `no_secrets`, `no_raw_provider_exports`, `no_raw_transcripts`, `no_customer_member_data`, `no_private_runtime_settings`, `no_private_dms_or_gated_communities`, `no_raw_finance_legal_records`, `no_absolute_local_paths_in_committed_descriptors`
 
 Use from `/mb-site` when the operator wants to plan, brief, build, preview,
-check, publish, iterate, graduate, or recover an owned conversion surface.
+check, publish, iterate, graduate, or recover an owned conversion surface,
+including analytics/instrumentation checks.
+Modes: plan, brief, build, preview, check, publish, iterate, graduate, or recover.
 Preserve the existing Claude skill's lander, minisite, website, sales-video
 surface, business-repo mode, site-repo mode, Cloudflare gate, and checkpoint
 contract.
@@ -44,6 +46,7 @@ This snapshot does not replace shipped `.claude/skills/mb-site/SKILL.md`.
 - `measurement.available`
 - `measurement.state`
 - `measurement.facts.expected_events`
+- `measurement.facts.instrumentation`
 - `measurement.blocked_count`
 - `measurement.manual_count`
 - `relationship_health.gaps`
@@ -56,6 +59,7 @@ This snapshot does not replace shipped `.claude/skills/mb-site/SKILL.md`.
 - `manual`
 - `evidence`
 - `facts.expected_events`
+- `facts.instrumentation`
 - `facts.provider_state`
 - `source`
 - `child_descriptor`
@@ -70,12 +74,13 @@ This snapshot does not replace shipped `.claude/skills/mb-site/SKILL.md`.
    compatibility.
 3. Support plan, brief, build, preview, check, publish, iterate, graduate, or
    recover modes across lander, minisite, website, and sales-video surface
-   shapes.
+   shapes. Treat instrumentation as the check mode for analytics, tags,
+   booking/form widgets, and event mapping.
 4. For business-repo site readiness, use `measurement.*` facts from status. For
    site-repo readiness, use top-level `state`, `blocked`, `manual`, `evidence`,
-   `facts.expected_events`, `facts.provider_state`, `source`, and
-   `child_descriptor` from `mb site check`. Use exact readiness states such as
-   ready_for_operator_review; do not invent ready_for_launch.
+   `facts.expected_events`, `facts.instrumentation`, `facts.provider_state`,
+   `source`, and `child_descriptor` from `mb site check`. Use exact readiness
+   states such as ready_for_operator_review; do not invent ready_for_launch.
 5. Draft from active offer, audience, voice, content strategy, proof facts,
    relevant research, decisions, active pushes, and MoneyPath facts. Route thin
    offers or unsupported claims to `mb-think` before page copy.
@@ -95,7 +100,8 @@ This snapshot does not replace shipped `.claude/skills/mb-site/SKILL.md`.
 ## Handoff Shape
 
 ```text
-Site mode: <plan, brief, build, preview, check, publish, iterate, graduate, or recover>.
+Site mode: <plan, brief, build, preview, check, publish, iterate, graduate,
+or recover; instrumentation is a check sub-mode>.
 Repo mode: <business repo, site repo, both linked, or unclear>.
 Facts read: <status/start/connect/site-check/validation/checkpoint facts>.
 Shape: <lander, minisite, website, sales-video surface, or unknown>.

@@ -1,7 +1,7 @@
 ---
 name: mb-site
 title: Site And Page Production
-description: "Plan owned pages, landers, minisites, websites, sales-video surfaces, site readiness checks, and provider-gated deployment paths from deterministic Main Branch facts."
+description: "Plan owned pages, landers, minisites, websites, sales-video surfaces, analytics/instrumentation checks, site readiness checks, and provider-gated deployment paths from deterministic Main Branch facts."
 loops:
   - sense
   - ship
@@ -39,6 +39,7 @@ json_facts:
   - measurement.available
   - measurement.state
   - measurement.facts.expected_events
+  - measurement.facts.instrumentation
   - measurement.blocked_count
   - measurement.manual_count
   - relationship_health.gaps
@@ -51,6 +52,7 @@ json_facts:
   - manual
   - evidence
   - facts.expected_events
+  - facts.instrumentation
   - facts.provider_state
   - source
   - child_descriptor
@@ -92,7 +94,8 @@ publishing_or_spend: false
 Use this workflow when the operator wants to plan, create, review, preview, or
 prepare owned conversion surfaces: a lander, minisite, full website, page
 update, site graduation, sales video, VSL, about-page video, landing-page video,
-or embedded pitch script. Site work is Ship work, but this shared contract
+embedded pitch script, analytics/instrumentation check, booking-link wiring, or
+form-submit readiness. Site work is Ship work, but this shared contract
 separates planning and readiness checks from domain, DNS, Cloudflare Pages,
 deploy, publishing, provider mutation, account changes, spend, and customer
 contact.
@@ -103,6 +106,8 @@ Supported modes:
 - `brief`: draft or review a durable site brief from accepted business truth.
 - `build`: plan page structure, copy, components, and implementation targets.
 - `preview`: inspect local readiness and remaining review work.
+- `instrumentation`: check GA4, GTM, Meta pixel, booking widgets, CRM/form
+  widgets, conversion-event mapping, and submit/booking smoke requirements.
 - `check`: run paid-traffic and conversion-readiness facts from `mb site check`.
 - `publish`: prepare a provider-gated publish plan without bypassing approval.
 - `iterate`: update an existing site from accepted evidence or operator edits.
@@ -150,6 +155,7 @@ paid-traffic readiness or publish guidance once a site repo exists.
 - `measurement.available`
 - `measurement.state`
 - `measurement.facts.expected_events`
+- `measurement.facts.instrumentation`
 - `measurement.blocked_count`
 - `measurement.manual_count`
 - `relationship_health.gaps`
@@ -162,6 +168,7 @@ paid-traffic readiness or publish guidance once a site repo exists.
 - `manual`
 - `evidence`
 - `facts.expected_events`
+- `facts.instrumentation`
 - `facts.provider_state`
 - `source`
 - `child_descriptor`
@@ -177,14 +184,14 @@ site repos. Do not invent `ready_for_launch`.
 ## Routing Rules
 
 Start with deterministic facts, then read only the business and site files
-needed for the requested shape, offer, push, page, sales-video surface, or site
-repo.
+needed for the requested shape, offer, push, page, sales-video surface,
+instrumentation question, or site repo.
 
 Mode routing:
 
 1. For `plan`, identify business repo mode or site repo mode, then choose one
    route: lander, minisite, website, iteration, graduation, sales-video surface,
-   readiness check, or recovery.
+   instrumentation check, readiness check, or recovery.
 2. For `brief`, draft from accepted repo truth: offer, audience, voice, content
    strategy, proof facts, active push, research, decisions, and operator
    constraints. If the offer is thin or claims are unsupported, route to
@@ -202,7 +209,10 @@ Mode routing:
    `utm_content`) — hydrated from the landing querystring and forwarded on
    submit, even before any campaign runs. Missing the set is permanent,
    unrecoverable attribution loss the day paid traffic starts.
-4. For `preview` and `check`, run or cite `mb site check` and report the
+4. For `preview`, `instrumentation`, and `check`, run or cite `mb site check`
+   and report `facts.instrumentation`: GA4/GTM/Meta pixel identifiers,
+   booking widgets, CRM/form widgets, conversion-surface state, and whether a
+   submit/booking smoke is still required. Then report the
    readiness state exactly: `missing`, `blocked`, `ready_for_preview`,
    `ready_for_operator_review`, or `ready`.
 5. For `publish`, separate local readiness from provider execution. A ready

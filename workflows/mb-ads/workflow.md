@@ -1,7 +1,7 @@
 ---
 name: mb-ads
 title: Ads And Paid Creative
-description: "Plan and review paid creative, launch plans, account-readiness checks, and provider-safe Google Ads search plans from deterministic Main Branch facts."
+description: "Plan and review paid creative, launch plans, launch instrumentation checks, account-readiness checks, and provider-safe Google Ads search plans from deterministic Main Branch facts."
 loops:
   - sense
   - ship
@@ -41,6 +41,7 @@ json_facts:
   - measurement.available
   - measurement.state
   - measurement.facts.expected_events
+  - measurement.facts.instrumentation
   - measurement.blocked_count
   - measurement.manual_count
   - relationship_health.gaps
@@ -53,6 +54,7 @@ json_facts:
   - manual
   - evidence
   - facts.expected_events
+  - facts.instrumentation
   - facts.provider_state
   - source
   - child_descriptor
@@ -95,11 +97,11 @@ publishing_or_spend: false
 
 Use this workflow when the operator wants paid creative, ad copy, image prompts,
 video scripts, long-form paid creative, creative variations, compliance review,
-launch planning, launch checks, read-only account context, or a Google Ads
-Search launch plan. Ads work is Ship work, but this shared contract separates
-planning, drafting, review, and read-only checks from provider mutation,
-publishing, uploads, spend, account changes, GTM publishes, conversion uploads,
-and customer contact.
+launch planning, launch instrumentation checks, launch checks, read-only
+account context, or a Google Ads Search launch plan. Ads work is Ship work, but
+this shared contract separates planning, drafting, review, and read-only checks
+from provider mutation, publishing, uploads, spend, account changes, GTM
+publishes, conversion uploads, and customer contact.
 
 Supported modes:
 
@@ -111,6 +113,9 @@ Supported modes:
 - `long-form-video`: draft paid sales video or VSL-style paid creative.
 - `review`: run quality, proof, policy, visual, voice, and substantiation review.
 - `launch-plan`: prepare provider-safe launch plans, including Google Ads Search.
+- `instrumentation`: route GA4, GTM, Meta pixel, booking links, HubSpot/form
+  tests, conversion-event mapping, and traffic-quality questions to `mb-site`
+  / `mb site check` before campaign launch claims.
 - `check`: review outcomes, operator exports, or read-only account facts.
 - `account-context`: optionally pull compact read-only account context when a
   shipped provider path and operator approval exist.
@@ -162,6 +167,7 @@ part of the request.
 - `measurement.available`
 - `measurement.state`
 - `measurement.facts.expected_events`
+- `measurement.facts.instrumentation`
 - `measurement.blocked_count`
 - `measurement.manual_count`
 - `relationship_health.gaps`
@@ -174,6 +180,7 @@ part of the request.
 - `manual`
 - `evidence`
 - `facts.expected_events`
+- `facts.instrumentation`
 - `facts.provider_state`
 - `source`
 - `child_descriptor`
@@ -183,9 +190,10 @@ claims. Use `content_strategy.*` and active push facts to decide whether paid
 work should create demand, amplify a proven owned/organic asset, or drive a
 direct conversion path. Use `integrations` and `measurement.*` from status as
 business-repo readiness facts. Use top-level `state`, `blocked`, `manual`,
-`evidence`, `facts.expected_events`, `facts.provider_state`, `source`, and
-`child_descriptor` from `mb site check ... --json` for site-repo readiness.
-Do not invent `ready_for_launch`.
+`evidence`, `facts.expected_events`, `facts.instrumentation`,
+`facts.provider_state`, `source`, and `child_descriptor` from
+`mb site check ... --json` for site-repo readiness. Do not invent
+`ready_for_launch`.
 
 ## Routing Rules
 
@@ -209,7 +217,10 @@ Mode routing:
 4. For `review`, report P1/P2/P3 quality, policy, proof, voice, visual, and
    substantiation findings. Proposed edits are drafts until the operator
    approves file changes.
-5. For `launch-plan`, separate campaign materials from provider execution.
+5. For `launch-plan` and `instrumentation`, separate campaign materials from
+   provider execution. Analytics tags, booking widgets, HubSpot/forms, and
+   conversion events may be detectable in local markup, but launch still needs
+   submit/booking smoke, provider review, and explicit approval.
    Include settings, keywords, negatives, ad assets, sitelinks, callouts,
    structured snippets, manual provider steps, approval gates, budget cap,
    review window, and continue/change/stop criteria.
@@ -308,7 +319,7 @@ publishes, conversion uploads, or budget/spend changes.
 ## Handoff Format
 
 ```text
-Ads mode: <static, copy-only, image-only, hook-library, video-scripts, long-form-video, review, launch-plan, check, or account-context>.
+Ads mode: <static, copy-only, image-only, hook-library, video-scripts, long-form-video, review, launch-plan, instrumentation, check, or account-context>.
 Facts read: <status/start/connect/site-check/validation/checkpoint facts>.
 Source base: <offer, audience, voice, proof, research, push, playbook, account summary, or missing>.
 Provider posture: <not needed, read-only, connected, blocked, unsupported, or approval needed>.

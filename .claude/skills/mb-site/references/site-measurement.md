@@ -1,6 +1,9 @@
 # Site Measurement Readiness
 
-Load this when the operator mentions paid traffic, Google Ads, GTM, conversion tracking, retargeting, or launch readiness.
+Load this when the operator mentions paid traffic, Google Ads, Google
+Analytics/GA4, GTM, Meta pixel, conversion tracking, booking links, HubSpot or
+CRM forms, form-submit testing, retargeting, instrumentation, or launch
+readiness.
 
 ## Source Of Truth
 
@@ -29,6 +32,33 @@ Use the JSON as the readiness source of truth:
 The readiness states are exactly `missing`, `blocked`, `ready_for_preview`, `ready_for_operator_review`, and `ready`.
 
 Do not invent `ready_for_launch` or say Main Branch can launch a campaign.
+
+## Instrumentation Facts
+
+Use `facts.instrumentation` from `mb site check` when the operator asks "what
+about analytics?" or "is tracking set up?"
+
+- `declared` means repo-safe metadata records a planned ID or conversion.
+- `detected` means static markup contains a tag, widget, form, or platform
+  signal.
+- `conversion_surface.state == "planned"` means `.mainbranch/conversion.json`
+  owns the conversion path.
+- `conversion_surface.state == "detectable_unplanned"` means a form, booking
+  widget, or CRM widget exists but Main Branch has not recorded the conversion
+  plan yet.
+
+Detected is not the same as ready. A Calendly, HubSpot, Shopify, or form widget
+can be detectable while delivery, attribution, and conversion-event mapping are
+still unproven.
+
+## Submit And Traffic Quality Smokes
+
+Before paid launch, name the manual smoke that remains:
+
+- submit a test form or booking and confirm the operator receives the lead;
+- verify the expected `mb_*` dataLayer events fire in GTM Preview/Tag Assistant;
+- reconcile provider-reported human clicks with site telemetry when live traffic
+  looks crawler-heavy or inflated.
 
 ## Secrets Boundary
 

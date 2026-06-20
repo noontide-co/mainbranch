@@ -192,6 +192,113 @@ def test_site_check_inspects_dist_build_output(tmp_path: Path, monkeypatch) -> N
     assert payload["html"]["html_files"] == ["dist/index.html"]
 
 
+def test_site_check_reports_astro_launch_instrumentation_widgets(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business = tmp_path / "business"
+    site = tmp_path / "astro-site"
+    init_run(path=str(business), name="Acme")
+    (site / "dist").mkdir(parents=True)
+    (business / "core" / "offer.md").write_text(
+        (
+            "---\n"
+            "gtm_container_id: GTM-ABC1234\n"
+            "ga4_measurement_id: G-ABC123DEF\n"
+            "meta_pixel_id: '123456789012345'\n"
+            "google_ads_customer_id: '0000000000'\n"
+            "consent_posture: standard_tag_consent_reviewed\n"
+            "privacy_policy_url: https://example.com/privacy\n"
+            "---\n\n"
+            "# Offer\n"
+        ),
+        encoding="utf-8",
+    )
+    _write_conversion(
+        site,
+        {
+            "kind": "appointment_booking",
+            "url": "https://calendly.com/acme/demo",
+            "render": "link_out",
+            "primary_conversions": ["mb_booked_call"],
+        },
+    )
+    (site / "dist" / "index.html").write_text(
+        """<!doctype html>
+<html>
+<head>
+<script>window.dataLayer = window.dataLayer || [];</script>
+<script src="https://www.googletagmanager.com/gtm.js?id=GTM-ABC1234"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ABC123DEF"></script>
+<script>
+fbq('init', '123456789012345');
+window.dataLayer.push({event: "mb_calendar_click", mb_event_id: "test"});
+window.dataLayer.push({event: "mb_booked_call", mb_event_id: "test"});
+</script>
+<script src="https://assets.calendly.com/assets/external/widget.js"></script>
+<script src="https://js.hs-scripts.com/123456.js"></script>
+</head>
+<body>
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-ABC1234"></iframe></noscript>
+<div class="calendly-inline-widget" data-url="https://calendly.com/acme/demo"></div>
+<form action="/thanks"><button>Book</button></form>
+</body>
+</html>
+""",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["site", "check", str(site), "--business-repo", str(business), "--json"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    instrumentation = payload["facts"]["instrumentation"]
+    assert instrumentation["declared"]["ga4_measurement_id"] is True
+    assert instrumentation["declared"]["meta_pixel_id"] is True
+    assert instrumentation["detected"]["ga4_ids"] == ["G-ABC123DEF"]
+    assert instrumentation["detected"]["meta_pixel_ids"] == ["123456789012345"]
+    assert instrumentation["detected"]["booking_widgets"] == ["calendly"]
+    assert instrumentation["detected"]["crm_widgets"] == ["hubspot"]
+    assert instrumentation["detected"]["form_count"] == 1
+    assert instrumentation["conversion_surface"]["state"] == "planned"
+    assert any(item["kind"] == "form_booking_smoke" for item in payload["manual"])
+
+
+def test_site_check_classifies_detectable_widget_without_conversion_plan(tmp_path: Path) -> None:
+    site = tmp_path / "site"
+    site.mkdir()
+    (site / "index.html").write_text(
+        """<!doctype html>
+<html>
+<body>
+<script src="https://js.hsforms.net/forms/embed/v2.js"></script>
+<script>hbspt.forms.create({region: "na1", portalId: "123", formId: "abc"});</script>
+<form action="https://example.com/private-lead?token=secret"><button>Submit</button></form>
+</body>
+</html>
+""",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["site", "check", str(site), "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    instrumentation = payload["facts"]["instrumentation"]
+    assert instrumentation["conversion_surface"]["state"] == "detectable_unplanned"
+    assert instrumentation["conversion_surface"]["detected_only"] is True
+    assert instrumentation["detected"]["crm_widgets"] == ["hubspot"]
+    assert instrumentation["detected"]["form_actions"] == ["https://example.com/private-lead"]
+    conversion_surface = next(
+        item for item in payload["evidence"] if item["kind"] == "conversion_surface"
+    )
+    assert conversion_surface["state"] == "manual"
+
+
 def test_site_check_uses_source_link_when_business_repo_is_omitted(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -581,6 +688,10 @@ def test_status_includes_measurement_summary_when_conversion_plan_exists(
     assert payload["measurement"]["available"] is True
     assert payload["measurement"]["state"] == "ready_for_operator_review"
     assert payload["measurement"]["facts"]["primary_conversions"] == ["mb_lead_submit"]
+    assert (
+        payload["measurement"]["facts"]["instrumentation"]["conversion_surface"]["state"]
+        == "planned"
+    )
 
 
 def test_status_follows_business_repo_site_record_for_measurement(
