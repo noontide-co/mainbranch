@@ -11,6 +11,20 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-06-20
+
+This release makes the Claude Code plugin the durable default rail while keeping
+the friendly `/mb-*` project-local commands as the operator-facing bridge.
+
+### Added
+
+- `mb update` now surfaces plugin-rail migration guidance for symlink-era repos
+  after package updates, pointing users at `mb skill link --repo . --plugin`
+  when the plugin is not wired. (#938)
+- `/mb-help` and the skills guide now make `mb-status`, `mb-update`, and
+  `mb-skill-review` discoverable; `mb-skill-review` also responds to natural
+  pre-publish/UI/design-review phrases. (#937)
+
 ### Changed
 
 - **The plugin is the default Claude Code rail.** `mb init` and `mb onboard`
@@ -25,6 +39,24 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   in both the Claude Desktop app and the terminal — instead of assuming a
   missing `claude` CLI. Cloud/web Claude sessions cannot load plugins.
   (#930, closes #924)
+- **Hybrid slash-command contract.** User-facing docs keep the friendly
+  `/mb-start` command through the project-local bridge, while release smoke and
+  diagnostics now name the plugin-native `/mainbranch:mb-start` command that
+  proves the plugin itself loaded. (#940)
+- Mid-session "save this progress" language now routes to the lightweight
+  `mb checkpoint` path instead of the full `/mb-end` closeout ceremony. (#934)
+- Beginner-facing references now describe the plugin as the primary Claude Code
+  rail and `settings.local.json` bridge links as the fallback. (#939, closes
+  #932)
+
+### Fixed
+
+- Plugin wiring now refuses to overwrite a malformed-but-nonempty
+  `.claude/settings.json`, avoiding accidental loss of existing Claude
+  permissions, hooks, or user settings. (#933)
+- `mb doctor repair --plan` now previews plugin-wiring migrations before
+  `--apply` writes `.claude/settings.json`, so plan/apply agree for symlink-era
+  repos. (#933)
 
 ## [0.4.0] - 2026-06-14
 

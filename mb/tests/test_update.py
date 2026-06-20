@@ -54,6 +54,22 @@ def codex_adapter_ready(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
+@pytest.fixture(autouse=True)
+def plugin_rail_wired(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Default: repo is already on the plugin rail, so the #931 follow-up stays
+    # quiet. Tests that exercise the symlink-era path override this.
+    monkeypatch.setattr(
+        update_mod,
+        "plugin_wiring_status",
+        lambda repo: {
+            "wired": True,
+            "marketplace_known": True,
+            "plugin_enabled": True,
+            "settings_path": str(Path(repo) / ".claude" / "settings.json"),
+        },
+    )
+
+
 def _completed(
     args: list[str],
     *,
@@ -960,3 +976,44 @@ def test_update_render_human_success(capsys: Any) -> None:
 
     assert "updated Main Branch (0.1.2 -> 0.2.0)" in output
     assert "refreshed 4 skill link(s)" in output
+
+
+def test_update_reports_plugin_rail_wired_without_warning(monkeypatch: Any, tmp_path: Path) -> None:
+    # Default fixture: repo already on the plugin rail -> no migration warning.
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
+    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start", "mb-status"])
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    assert result["plugin_rail"]["wired"] is True
+    assert not any("symlink-only skill wiring" in w for w in result["warnings"])
+    assert "mb skill link --repo . --plugin --json" not in result["next_actions"]
+
+
+def test_update_surfaces_plugin_migration_for_symlink_era_repo(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    # #931: a repo that predates the plugin default stays on symlinks after
+    # `mb update`; the post-update follow-up names the one-command migration.
+    monkeypatch.setattr(
+        update_mod,
+        "plugin_wiring_status",
+        lambda repo: {
+            "wired": False,
+            "marketplace_known": False,
+            "plugin_enabled": False,
+            "settings_path": str(tmp_path / "biz" / ".claude" / "settings.json"),
+        },
+    )
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
+    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start", "mb-status"])
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    assert result["plugin_rail"]["wired"] is False
+    assert any("symlink-only skill wiring" in w for w in result["warnings"])
+    assert "mb skill link --repo . --plugin --json" in result["next_actions"]

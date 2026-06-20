@@ -164,7 +164,7 @@ smoke evidence exist.
 
 | Runtime surface | Status | Invocation | Skill/workflow discovery | Routing and automation | Observability and packaging |
 |---|---|---|---|---|---|
-| Claude Code | Supported | `mb start --repo "$repo"` prints the `claude` handoff; `mb start --launch` may launch after readiness checks. | `mb skill link --repo "$repo"` writes project-local `.claude/skills/mb-*` bridge links and `.claude/settings.local.json`. | Slash commands such as `/mb-start` and `/mb-think` own conversation and judgment; they call deterministic `mb` commands for facts. | `mb doctor`, `mb status --json`, `mb start --json`, `mb skill repair`, and runtime dogfood evidence gate release claims. Skills ship inside the Python package today. |
+| Claude Code | Supported | `mb start --repo "$repo"` prints the `claude` handoff; `mb start --launch` may launch after readiness checks. The normal user command stays `/mb-start` through the project-local bridge. Plugin-native skills are namespaced, so `/mainbranch:mb-start` is the direct plugin smoke command. | `mb init`, `mb onboard`, and scoped Claude repair write the shared plugin wiring in `.claude/settings.json` and keep project-local `.claude/skills/mb-*` bridge links for friendly slash commands. `mb skill link --repo "$repo"` refreshes the bridge fallback and `.claude/settings.local.json`. | Slash skills such as `/mb-start` own conversation and judgment; they call deterministic `mb` commands for facts. Release smoke also proves the namespaced plugin command. | `mb doctor`, `mb status --json`, `mb start --json`, `mb skill repair`, and runtime dogfood evidence gate release claims. The plugin is the durable distribution rail; packaged project-local skill links keep the friendly compatibility command. |
 | Codex CLI | Supported | Can call deterministic `mb` commands as a subprocess when pointed at a business repo. `AGENTS.md` gives Codex the repo bootstrap, and global Main Branch skills give Codex `mb-*` workflow routes. | Fresh `mb onboard` repos include tracked `AGENTS.md`. `mb doctor repair --plan --only codex` / `--apply --only codex` refresh repo guidance and install or repair the global Codex skill bundle. Use `--all-agents` only after reviewing both Claude and Codex surface writes. | Codex `mb-*` skills run `mb status --json --peek`, `mb start --json`, `mb doctor repair --plan --json`, `mb checkpoint --plan --json`, `mb validate --json`, and `mb workflow list --runtime codex --json` as needed, translate facts into business language, and ask before writes. | `mb doctor`, `mb status --json`, `mb start --json`, and `mb workflow list` expose Codex readiness and workflow support. Codex support covers start/status/setup/update/doctor, think/codify, end/checkpoint/save, validate, and workflow discovery. Ads, organic, site, and bet routes remain read-only planning unless their support level says otherwise. Draft/manual playbooks are inventory-only or surfaced behind first-class routes such as `mb-ads`; retired provisional playbook skeletons are not default Codex routes, and stale generated global skill dirs are cleaned up only when Main Branch markers prove ownership. |
 | Cursor | Roadmap | Can call deterministic `mb` commands from terminal/tasks when pointed at a business repo. | No supported Cursor rules/package adapter yet. | No supported Main Branch routing contract. | Needs adapter docs, install/update rules, conflict handling, and smoke evidence. |
 | OpenClaw | Roadmap | Target public runtime surface. It should call `mb` through stable CLI/JSON commands rather than clone-era paths. | No supported OpenClaw adapter yet. | Main Branch should coexist with OpenClaw as the business repo/GitHub memory layer, not replace it. | Needs explicit adapter shape, migration notes, generated-file rules, and smoke evidence. |
@@ -187,7 +187,7 @@ support still requires an adapter and smoke evidence for that runtime.
 |---|---|---|
 | Deterministic CLI facts (`mb status --json`, `mb validate --json`, `mb graph --json`, `mb connect status --json`) | Supported when `mb` is installed and pointed at a business repo. | Callable as packaged CLI subprocesses, but this does not make the hosting runtime supported. |
 | Runtime handoff (`mb start --json`, `mb start --launch`) | Supported for Claude Code handoff and launch readiness. | Codex CLI handoff metadata is supported for global skill readiness: `mb start --json` reports Codex executable, `AGENTS.md`, global skills, and runtime `mb` readiness. `mb` does not launch Codex. |
-| Lifecycle slash skills (`/mb-start`, `/mb-status`, `/mb-setup`, `/mb-update`, `/mb-end`, `/mb-help`) | Supported through Claude Code project-local skill discovery. | Codex supports matching global skills (`mb-start`, `mb-status`, `mb-setup`, `mb-update`, `mb-doctor`, `mb-end`, `mb-help`) grounded in deterministic `mb` facts. |
+| Lifecycle slash skills (`/mb-start`, `/mb-status`, `/mb-setup`, `/mb-update`, `/mb-end`, `/mb-help`) | Supported through the hybrid Claude Code rail: plugin wiring for durability, project-local bridge links for friendly bare slash commands, and namespaced `/mainbranch:mb-*` commands for direct plugin smoke. | Codex supports matching global skills (`mb-start`, `mb-status`, `mb-setup`, `mb-update`, `mb-doctor`, `mb-end`, `mb-help`) grounded in deterministic `mb` facts. |
 | Production slash skills (`/mb-think`, `/mb-ads`, `/mb-organic`, `/mb-site`, `/mb-wiki`, `/mb-bet`) | Supported through Claude Code skills, subject to each skill's provider and workflow limits. Conversion scripts route through the owning workflow instead of a standalone primitive or skill. | Codex supports `mb-think` through shared workflow source and global skills. Ads, organic/newsletter, site, and bet routes now have shared workflow sources and generated global skills, but their Codex support remains read-only planning unless `mb workflow list --runtime codex --json` reports a higher support level. Playbooks are inventory-only or surfaced behind first-class routes such as `mb-ads`; provisional playbook skills are hidden from the default global skill bundle. Wiki and skill-authoring workflows are intentionally unsupported for the current Codex target. |
 | Automation routines | May call CLI commands before handing judgment work to Claude Code. | May call shipped deterministic CLI commands against an explicit repo path. Conversation, retries, routing, and model invocation belong to the runtime adapter, not `mb`. |
 
@@ -285,21 +285,27 @@ mb doctor
 
 ## Known Limits
 
-- Claude Code is supported through project-local slash skills.
+- Claude Code is supported through a hybrid rail: the Main Branch plugin is the
+  durable distribution path, and project-local slash skills keep the friendly
+  `/mb-start` user command. Plugin-native skills use the `mainbranch:`
+  namespace, such as `/mainbranch:mb-start`, and are release-smoked directly.
 - Codex CLI is supported through global Main Branch `mb-*` skills and
   deterministic `mb` facts. Main Branch does not claim all-skill parity, copied Claude skill
   parity, provider writes, publishing, spend, or customer-contact workflows.
 - Windows is experimental.
-- Skills are bundled into the installed Python package, so public users update
-  skills by upgrading `mainbranch`.
+- Skills are distributed through the Claude Code plugin as the primary rail and
+  bundled into the installed Python package for project-local bridge fallback,
+  so public users update both by upgrading `mainbranch` and reloading or
+  restarting Claude Code.
 - The CLI scaffolds, validates, graphs, resolves, and links the current Claude
   Code skill adapter. Most business workflows still happen through Claude Code
   slash commands.
-- Claude Code slash-command discovery depends on project-local
-  `.claude/skills/mb-*` bridge links in the business repo. The
-  `.claude/settings.local.json` `additionalDirectories` entry grants engine
-  file access, but it is not enough by itself for reliable `/mb-start`
-  discovery.
+- Claude Code plugin discovery depends on the shared plugin wiring in
+  `.claude/settings.json`; plugin changes require restart or `/reload-plugins`.
+  The project-local `.claude/skills/mb-*` bridge is intentionally kept so users
+  can type `/mb-start`. The `.claude/settings.local.json` `additionalDirectories`
+  entry grants engine file access, but it is not enough by itself for reliable
+  skill discovery.
 - Cursor, OpenClaw, Hermes, Paperclip-adjacent orchestration, and local
   runtimes remain roadmap surfaces until each has a documented adapter and
   smoke evidence. Codex support is limited to the skill surface above.

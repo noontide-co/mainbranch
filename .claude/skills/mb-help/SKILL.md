@@ -37,7 +37,8 @@ for repair facts before giving prose-only advice.
 | Error, command not found, MCP, Apify setup, GitHub issue | [troubleshooting.md](references/troubleshooting.md) |
 | Provider readiness, GitHub setup, Cloudflare, Google Workspace, Meta Ads, Apify | [provider-readiness.md](references/provider-readiness.md) |
 | Getting started, setup | Route to `/mb-setup` or `/mb-start` |
-| Which skill, when to use | [skills-guide.md](references/skills-guide.md) |
+| Which skill, when to use, list skills, what skills do I have, skills inventory, what can you do, which skills are we using | [skills-guide.md](references/skills-guide.md) |
+| Pre-publish review, UI pass, design pass, design critique, review the page before publish | Route to `/mb-skill-review` (see [skills-guide.md](references/skills-guide.md)) |
 | Create skill, Notion export, custom | [skills-guide.md](references/skills-guide.md) |
 | Migrate from GPT, ChatGPT | [gpt-migration.md](references/gpt-migration.md) |
 | Reels, TikTok, organic, /mb-organic | [organic-help.md](references/organic-help.md) |
@@ -82,7 +83,8 @@ for repair facts before giving prose-only advice.
 | What's the content pipeline? | Strategy first, then distribution. Owned assets, email, social, communities, wiki, changelog, and paid amplification should point at the same offer and recognition target. Specific execution lives in `pushes/`; results land in `log/`. |
 | What are subagents? | Claude can spawn parallel agents to research or review simultaneously. You'll see it happen automatically in `/mb-think` (multi-source research) and `/mb-ads review` (6 compliance lenses). Each agent gets its own context window so your main conversation stays clean. |
 | How do I manage context/tokens? | Context management is a skill that develops over time. Your files (`core/`, `research/`, `decisions/`) survive compaction — only conversation memory compresses. After compaction, help Claude rebuild by pointing it at recent files or running /mb-start. Save insights to research files early — if it's in a file, it's safe. |
-| How do I close a session? | Run `/mb-end`. It summarizes what happened, asks if you have final thoughts, offers a crystallize moment if you made decisions, and guides an approved checkpoint instead of raw git commits. Bookend to `/mb-start`. |
+| How do I just save my progress mid-session? | Say "save" or "checkpoint this" — the agent runs `mb checkpoint`, shows the planned save, and saves on your approval, then you keep working. No need to close the session. Saves always go through `mb checkpoint`, never raw git. |
+| How do I close a session? | Run `/mb-end`. It summarizes what happened, asks if you have final thoughts, offers a crystallize moment if you made decisions, and guides an approved checkpoint instead of raw git commits. Bookend to `/mb-start`. A quick mid-work save is just `mb checkpoint` (above) — `/mb-end` is the full close. |
 | What is multi-offer? | Multiple products under one brand, one business folder. Each offer gets its own `core/offers/[name]/offer.md`. Soul and voice stay in `core/` because they're brand-level. Use when you sell multiple things (community + newsletter + done-for-you). If you have no `core/offers/` folder, you're in single-offer mode — everything reads from `core/` and nothing changes. |
 | How do I switch offers? | Say `/mb-start [offer-name]` or answer when /mb-start prompts. The choice is session-scoped unless you explicitly approve saving it as local active-offer state. |
 | Where do offer files go? | In a single-offer repo, `core/offer.md` is the durable offer truth. In a multi-offer repo, `core/offer.md` is the portfolio thesis and `core/offers/[name]/offer.md` holds offer-specific details. Use current paths only; if CWD looks like an old Main Branch repo, run the repair/migration plan before relying on it. |

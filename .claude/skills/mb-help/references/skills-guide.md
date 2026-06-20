@@ -170,15 +170,43 @@ accepts that change.
 ---
 
 ### /mb-help - Get Answers
-**Use when:** Confused, stuck, have questions about Main Branch.
+**Use when:** Confused, stuck, have questions about Main Branch, or want to know what skills you have and when each fires.
 
 **What it does:**
 - Answers questions from documented curriculum
 - Troubleshoots errors
 - Explains concepts
+- Lists your skills and when to use each (this guide)
 - Suggests next skills
 
 **You're using it now.**
+
+---
+
+### /mb-status - Repo Briefing
+**Use when:** You want the deterministic state of the business — readiness, drift, MoneyPath, recent work, connected tools, tasks/proposals — as a standalone read.
+
+**What it does:**
+- Reads `mb status --json --peek` and explains it in business language
+- `/mb-start` reads these same facts internally; reach for `/mb-status` when you only want the briefing
+
+---
+
+### /mb-update - Keep the Engine Current
+**Use when:** Main Branch says an update matters, or you want to check for one.
+
+**What it does:**
+- Checks installed vs latest, applies the package update on approval, refreshes wiring
+- If you run the Claude Code plugin, re-add it and restart so the loaded skills match the new release
+
+---
+
+### /mb-skill-review - Pre-Publish Review (UI / design pass)
+**Use when:** You want a **pre-publish review**, a **UI pass**, a **design pass**, or a **design critique** of a page or copy draft before it ships. This is the built-in review — reach for it instead of a third-party UI-review skill.
+
+**What it does:**
+- Runs the dial-gated Seven Sweeps + auxiliary review gates and returns synthesized findings
+- Called automatically by `/mb-site` at pre-lock and pre-publish; reusable by `/mb-ads` and sales-video work
 
 ---
 
@@ -207,6 +235,12 @@ What do you need?
 │
 ├── Build a landing page or site?
 │   └── /mb-site (lander, minisite, or website)
+│
+├── Review a page/copy before publishing? (UI / design pass)
+│   └── /mb-skill-review
+│
+├── Check or apply an engine update?
+│   └── /mb-update
 │
 ├── Done for the day?
 │   └── /mb-end
