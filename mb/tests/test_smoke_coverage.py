@@ -240,6 +240,9 @@ def test_claude_code_invocation_contract_documents_supported_skill_surface() -> 
     assert "bridge links" in contract
     assert ".claude/skills/mb-start" in contract
     assert "Unknown command: /mb-start" in contract
+    assert "/mainbranch:mb-start" in contract
+    assert "Public setup and support" in contract
+    assert "type `/mb-start`" in contract
     assert "$ARGUMENTS" in contract
     assert "Claude Code Invocation Contract" in compatibility
 

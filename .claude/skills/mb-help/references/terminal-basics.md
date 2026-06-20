@@ -57,7 +57,7 @@ This tells Terminal: "Go to the my-business folder inside GitHub inside Document
 
 **The `~` symbol means "my home folder."**
 
-After running this, you're now "in" your business repo folder. If you type `claude`, Claude starts with access to everything in that folder. Main Branch is linked through `.claude/settings.local.json`, with bridge links as a compatibility fallback for skill discovery.
+After running this, you're now "in" your business repo folder. If you type `claude`, Claude starts with access to everything in that folder. Main Branch loads as a Claude Code plugin — the same plugin works in the Claude Desktop app and the terminal — and a project-local `.claude/settings.local.json` with bridge links is the compatibility fallback for skill discovery.
 
 ---
 
@@ -69,7 +69,7 @@ When someone says "start Claude in your business repo," they mean:
 2. Type `cd ~/Documents/GitHub/[your-business]` and press Enter
 3. Type `claude` and press Enter
 
-Now Claude is running AND it can see all the files in your business repo. Main Branch is linked via `.claude/settings.local.json` (and bridge links when needed).
+Now Claude is running AND it can see all the files in your business repo. Main Branch loads as a Claude Code plugin, with a project-local `.claude/settings.local.json` and bridge links as the fallback.
 
 **Why this matters:** Claude Code can only see files in folders you give it access to. Starting in your business repo means Claude sees your reference files directly. Main Branch is linked by setup so you don't have to wire this manually.
 
@@ -87,7 +87,7 @@ claude
 That's it. Three lines. Copy and paste them if needed.
 
 1. `cd ~/Documents/GitHub/[your-business]` - Go to your business repo folder
-2. `claude` - Start Claude Code (Main Branch linkage comes from `.claude/settings.local.json`)
+2. `claude` - Start Claude Code (Main Branch loads as a plugin; `.claude/settings.local.json` is the fallback)
 3. `/mb-start` - Tell Claude to check your setup and get ready
 
 ---

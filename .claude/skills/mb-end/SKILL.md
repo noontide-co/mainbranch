@@ -111,6 +111,15 @@ still requires crystallize-lite instead of silently skipping the ritual.
 
 A quick `/mb-end` (user says "just commit and close") can be steps 1-3 and 6. But if there is meaningful activity and the user did not explicitly skip, always run Step 5.
 
+**Mid-session save vs session close.** When the operator only wants to save
+progress and keep working -- "save", "save my progress", "checkpoint this", "yes
+save" mid-flow, "should we checkpoint everything" -- this is a save, not a close.
+Run `mb checkpoint --plan --json`, show the planned save, save on approval through
+`mb checkpoint`, and return them to their work. Do not run the crystallize/summary
+closeout, and never save with raw `git add`/`git commit` -- the save always goes
+through `mb checkpoint`. Reserve the full flow (crystallize, final thought, warm
+close) for an actual end or pause of the session.
+
 ---
 
 ## Step 1: Find the Business Repo
