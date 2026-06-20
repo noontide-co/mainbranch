@@ -6,9 +6,10 @@ description: "Triage and build any site shape -- lander (1 page), minisite (~4 p
   (3) Updating / iterating on an existing site
   (4) Graduating a site to a new shape (lander -> minisite -> website -> website + CMS)
   (5) Writing a sales video, VSL, about-page video, landing-page video, or embedded pitch script for an owned conversion surface
-  (6) Previewing or publishing changes
+  (6) Checking analytics/instrumentation, GA4, GTM/dataLayer, Meta pixel, booking links, HubSpot/forms, conversion-event mapping, form-submit smoke, or paid-traffic readiness
+  (7) Previewing or publishing changes
 
-  Triggered by: /mb-site, 'build a site', 'landing page', 'lander', 'minisite', 'website', 'I need a site', 'spin up a site', 'put this online', 'publish site', 'deploy site', 'update my site', 'graduate my site', 'add a CMS to my site', 'write a VSL', 'sales video', 'about page video', 'landing page video', 'pitch script'"
+  Triggered by: /mb-site, 'build a site', 'landing page', 'lander', 'minisite', 'website', 'I need a site', 'spin up a site', 'put this online', 'publish site', 'deploy site', 'update my site', 'graduate my site', 'add a CMS to my site', 'analytics', 'instrumentation', 'Google Analytics', 'GA4', 'GTM', 'Meta pixel', 'HubSpot form', 'Calendly', 'booking link', 'form test', 'write a VSL', 'sales video', 'about page video', 'landing page video', 'pitch script'"
 loops: [ship]
 ---
 
@@ -53,6 +54,7 @@ Required fact paths:
 - `measurement.available`
 - `measurement.state`
 - `measurement.facts.expected_events`
+- `measurement.facts.instrumentation`
 - `measurement.blocked_count`
 - `measurement.manual_count`
 - `relationship_health.gaps`
@@ -65,6 +67,7 @@ Required fact paths:
 - `manual`
 - `evidence`
 - `facts.expected_events`
+- `facts.instrumentation`
 - `facts.provider_state`
 - `source`
 - `child_descriptor`
@@ -242,6 +245,7 @@ If the operator cannot articulate the shape, ask: "What goal are you trying to h
 | build | Generate or edit content | Current shape build ref |
 | preview | Local server/dev environment | Current shape preview step |
 | publish | Stage, commit, push | Current shape publish step |
+| instrumentation | Analytics, tags, booking/form widgets, and event mapping | [`references/site-measurement.md`](references/site-measurement.md) |
 | check | Paid-traffic readiness | [`references/site-measurement.md`](references/site-measurement.md) |
 | recover | Resume after compaction | [`references/site-recovery.md`](references/site-recovery.md) |
 

@@ -10,6 +10,7 @@ site-readiness route. This guidance is generated from the engine workflow
 source and does not claim supported site writes, builds, deploys, publishing,
 provider mutation, account changes, customer contact, or Claude Code
 entrypoints in Codex.
+Modes: plan, brief, build, preview, check, publish, iterate, graduate, or recover.
 
 ## Required mb Commands
 
@@ -42,6 +43,7 @@ entrypoints in Codex.
 - `measurement.available`
 - `measurement.state`
 - `measurement.facts.expected_events`
+- `measurement.facts.instrumentation`
 - `measurement.blocked_count`
 - `measurement.manual_count`
 - `relationship_health.gaps`
@@ -54,6 +56,7 @@ entrypoints in Codex.
 - `manual`
 - `evidence`
 - `facts.expected_events`
+- `facts.instrumentation`
 - `facts.provider_state`
 - `source`
 - `child_descriptor`
@@ -71,12 +74,13 @@ entrypoints in Codex.
    compatibility.
 4. Guide plan, brief, build, preview, check, publish, iterate, graduate, or
    recover modes across lander, minisite, website, and sales-video surface
-   shapes from the shared contract.
+   shapes from the shared contract. Treat instrumentation as the check mode for
+   analytics, tags, booking/form widgets, and event mapping.
 5. For business-repo site readiness, use `measurement.*` facts from status. For
    site-repo readiness, use top-level `state`, `blocked`, `manual`, `evidence`,
-   `facts.expected_events`, `facts.provider_state`, `source`, and
-   `child_descriptor` from `mb site check`. Use exact readiness states such as
-   ready_for_operator_review; do not invent ready_for_launch.
+   `facts.expected_events`, `facts.instrumentation`, `facts.provider_state`,
+   `source`, and `child_descriptor` from `mb site check`. Use exact readiness
+   states such as ready_for_operator_review; do not invent ready_for_launch.
 6. Codex may draft patch-shaped recommendations, sample copy, review notes,
    readiness summaries, and exact file targets, then stop before changing files
    or running build/deploy actions.
@@ -96,7 +100,8 @@ entrypoints in Codex.
 ## Handoff Shape
 
 ```text
-Site mode: <plan, brief, build, preview, check, publish, iterate, graduate, or recover>.
+Site mode: <plan, brief, build, preview, check, publish, iterate, graduate,
+or recover; instrumentation is a check sub-mode>.
 Repo mode: <business repo, site repo, both linked, or unclear>.
 Facts read: <status/start/connect/site-check/validation/checkpoint facts>.
 Shape: <lander, minisite, website, sales-video surface, or unknown>.

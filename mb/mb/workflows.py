@@ -1372,9 +1372,10 @@ Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries
 
 Use from `/mb-ads` when the operator wants paid creative planning, ad copy,
 image prompts, video scripts, long-form paid creative, compliance review,
-launch plans, launch checks, optional read-only account context, or Google Ads
-Search planning. Preserve the existing Claude skill's mode language, proof
-discipline, review workflow, paid-search launch-plan path, and provider gates.
+launch plans, launch instrumentation checks, launch checks, optional read-only
+account context, or Google Ads Search planning. Preserve the existing Claude
+skill's mode language, proof discipline, review workflow, paid-search
+launch-plan path, and provider gates.
 
 This snapshot does not replace shipped `.claude/skills/mb-ads/SKILL.md`.
 
@@ -1394,11 +1395,14 @@ This snapshot does not replace shipped `.claude/skills/mb-ads/SKILL.md`.
 2. For mining, scraping, competitor research, transcript extraction, outside
    source collection, thin offers, or unsupported claims, route to `mb-think`
    before drafting paid creative.
-3. For landing-page, conversion endpoint, GTM/dataLayer, consent, or paid
+3. For landing-page, conversion endpoint, GA4, GTM/dataLayer, Meta pixel,
+   booking links, HubSpot/forms, consent, form-submit smoke, or paid
    measurement readiness, route to `mb-site` and use `mb site check` before
    describing traffic as locally ready for operator review.
 4. Support static, copy-only, image-only, hook-library, video-scripts,
    long-form-video, review, launch-plan, check, or account-context modes.
+   Treat instrumentation as the launch-readiness sub-mode for GA4/GTM/pixels,
+   booking links, HubSpot/forms, and submit/booking smoke.
 5. Draft from active offer, audience, voice, content strategy, proof facts,
    relevant research, decisions, active pushes, playbooks, and
    money_path.objects.proof.quality. Do not turn unapproved proof into public
@@ -1419,7 +1423,7 @@ This snapshot does not replace shipped `.claude/skills/mb-ads/SKILL.md`.
 
 ```text
 Ads mode: <static, copy-only, image-only, hook-library, video-scripts,
-long-form-video, review, launch-plan, check, or account-context>.
+long-form-video, review, launch-plan, instrumentation, check, or account-context>.
 Facts read: <status/start/connect/site-check/validation/checkpoint facts>.
 Source base: <offer, audience, voice, proof, research, push, playbook, account summary, or missing>.
 Provider posture: <not needed, read-only, connected, blocked, unsupported, or approval needed>.
@@ -1478,15 +1482,17 @@ customer contact, or Claude Code entrypoints in Codex.
 3. For mining, scraping, competitor research, transcript extraction, outside
    source collection, thin offers, or unsupported claims, route to `mb-think`
    in Codex-native language before drafting paid creative.
-4. For landing-page, conversion endpoint, GTM/dataLayer, consent, or paid
+4. For landing-page, conversion endpoint, GA4, GTM/dataLayer, Meta pixel,
+   booking links, HubSpot/forms, consent, form-submit smoke, or paid
    measurement readiness, route to `mb-site` in Codex-native language and use
    `mb site check` before describing traffic as locally ready for operator
    review.
 5. Guide static, copy-only, image-only, hook-library, video-scripts,
    long-form-video, review, launch-plan, check, or account-context modes from
-   the shared contract. Codex may draft patch-shaped recommendations, sample
-   copy, review notes, and launch-plan specs. Name exact file targets, then
-   stop before changing files or running provider tools.
+   the shared contract. Treat instrumentation as the launch-readiness sub-mode.
+   Codex may draft patch-shaped recommendations, sample copy, review notes, and
+   launch-plan specs. Name exact file targets, then stop before changing files
+   or running provider tools.
 6. Name artifact routes as plans only: `pushes/<YYYY-MM-DD-slug>/push.md`,
    `pushes/<YYYY-MM-DD-slug>/ads-batch-001.md`,
    `pushes/<YYYY-MM-DD-slug>/playbooks/<playbook>.md`, `research/`, and
@@ -1509,7 +1515,7 @@ customer contact, or Claude Code entrypoints in Codex.
 
 ```text
 Ads mode: <static, copy-only, image-only, hook-library, video-scripts,
-long-form-video, review, launch-plan, check, or account-context>.
+long-form-video, review, launch-plan, instrumentation, check, or account-context>.
 Facts read: <status/start/connect/site-check/validation/checkpoint facts>.
 Source base: <offer, audience, voice, proof, research, push, playbook, account summary, or missing>.
 Provider posture: <not needed, read-only, connected, blocked, unsupported, or approval needed>.
@@ -1543,7 +1549,9 @@ Approval gates: {_inline_code_list(workflow.approval_gates)}
 Public/private boundaries: {_inline_code_list(workflow.public_private_boundaries)}
 
 Use from `/mb-site` when the operator wants to plan, brief, build, preview,
-check, publish, iterate, graduate, or recover an owned conversion surface.
+check, publish, iterate, graduate, or recover an owned conversion surface,
+including analytics/instrumentation checks.
+Modes: plan, brief, build, preview, check, publish, iterate, graduate, or recover.
 Preserve the existing Claude skill's lander, minisite, website, sales-video
 surface, business-repo mode, site-repo mode, Cloudflare gate, and checkpoint
 contract.
@@ -1568,12 +1576,13 @@ This snapshot does not replace shipped `.claude/skills/mb-site/SKILL.md`.
    compatibility.
 3. Support plan, brief, build, preview, check, publish, iterate, graduate, or
    recover modes across lander, minisite, website, and sales-video surface
-   shapes.
+   shapes. Treat instrumentation as the check mode for analytics, tags,
+   booking/form widgets, and event mapping.
 4. For business-repo site readiness, use `measurement.*` facts from status. For
    site-repo readiness, use top-level `state`, `blocked`, `manual`, `evidence`,
-   `facts.expected_events`, `facts.provider_state`, `source`, and
-   `child_descriptor` from `mb site check`. Use exact readiness states such as
-   ready_for_operator_review; do not invent ready_for_launch.
+   `facts.expected_events`, `facts.instrumentation`, `facts.provider_state`,
+   `source`, and `child_descriptor` from `mb site check`. Use exact readiness
+   states such as ready_for_operator_review; do not invent ready_for_launch.
 5. Draft from active offer, audience, voice, content strategy, proof facts,
    relevant research, decisions, active pushes, and MoneyPath facts. Route thin
    offers or unsupported claims to `mb-think` before page copy.
@@ -1593,7 +1602,8 @@ This snapshot does not replace shipped `.claude/skills/mb-site/SKILL.md`.
 ## Handoff Shape
 
 ```text
-Site mode: <plan, brief, build, preview, check, publish, iterate, graduate, or recover>.
+Site mode: <plan, brief, build, preview, check, publish, iterate, graduate,
+or recover; instrumentation is a check sub-mode>.
 Repo mode: <business repo, site repo, both linked, or unclear>.
 Facts read: <status/start/connect/site-check/validation/checkpoint facts>.
 Shape: <lander, minisite, website, sales-video surface, or unknown>.
@@ -1629,6 +1639,7 @@ site-readiness route. This guidance is generated from the engine workflow
 source and does not claim supported site writes, builds, deploys, publishing,
 provider mutation, account changes, customer contact, or Claude Code
 entrypoints in Codex.
+Modes: plan, brief, build, preview, check, publish, iterate, graduate, or recover.
 
 ## Required mb Commands
 
@@ -1651,12 +1662,13 @@ entrypoints in Codex.
    compatibility.
 4. Guide plan, brief, build, preview, check, publish, iterate, graduate, or
    recover modes across lander, minisite, website, and sales-video surface
-   shapes from the shared contract.
+   shapes from the shared contract. Treat instrumentation as the check mode for
+   analytics, tags, booking/form widgets, and event mapping.
 5. For business-repo site readiness, use `measurement.*` facts from status. For
    site-repo readiness, use top-level `state`, `blocked`, `manual`, `evidence`,
-   `facts.expected_events`, `facts.provider_state`, `source`, and
-   `child_descriptor` from `mb site check`. Use exact readiness states such as
-   ready_for_operator_review; do not invent ready_for_launch.
+   `facts.expected_events`, `facts.instrumentation`, `facts.provider_state`,
+   `source`, and `child_descriptor` from `mb site check`. Use exact readiness
+   states such as ready_for_operator_review; do not invent ready_for_launch.
 6. Codex may draft patch-shaped recommendations, sample copy, review notes,
    readiness summaries, and exact file targets, then stop before changing files
    or running build/deploy actions.
@@ -1676,7 +1688,8 @@ entrypoints in Codex.
 ## Handoff Shape
 
 ```text
-Site mode: <plan, brief, build, preview, check, publish, iterate, graduate, or recover>.
+Site mode: <plan, brief, build, preview, check, publish, iterate, graduate,
+or recover; instrumentation is a check sub-mode>.
 Repo mode: <business repo, site repo, both linked, or unclear>.
 Facts read: <status/start/connect/site-check/validation/checkpoint facts>.
 Shape: <lander, minisite, website, sales-video surface, or unknown>.

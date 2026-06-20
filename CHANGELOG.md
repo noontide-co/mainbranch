@@ -17,6 +17,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   against the package version and warns when Claude is still loading an older,
   disabled, or missing plugin cache, with a repair command and restart guidance.
   (#923)
+- `mb site check` now reports launch instrumentation facts for GA4/GTM/Meta
+  pixel, booking widgets, CRM/form widgets, Shopify/Liquid-style markup, and
+  form/booking smoke requirements so analytics and paid-traffic readiness
+  questions route through a durable check. (#926)
 
 ## [0.4.1] - 2026-06-20
 

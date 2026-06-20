@@ -7,9 +7,10 @@ Public/private boundaries: `no_secrets`, `no_raw_provider_exports`, `no_raw_tran
 
 Use from `/mb-ads` when the operator wants paid creative planning, ad copy,
 image prompts, video scripts, long-form paid creative, compliance review,
-launch plans, launch checks, optional read-only account context, or Google Ads
-Search planning. Preserve the existing Claude skill's mode language, proof
-discipline, review workflow, paid-search launch-plan path, and provider gates.
+launch plans, launch instrumentation checks, launch checks, optional read-only
+account context, or Google Ads Search planning. Preserve the existing Claude
+skill's mode language, proof discipline, review workflow, paid-search
+launch-plan path, and provider gates.
 
 This snapshot does not replace shipped `.claude/skills/mb-ads/SKILL.md`.
 
@@ -45,6 +46,7 @@ This snapshot does not replace shipped `.claude/skills/mb-ads/SKILL.md`.
 - `measurement.available`
 - `measurement.state`
 - `measurement.facts.expected_events`
+- `measurement.facts.instrumentation`
 - `measurement.blocked_count`
 - `measurement.manual_count`
 - `relationship_health.gaps`
@@ -57,6 +59,7 @@ This snapshot does not replace shipped `.claude/skills/mb-ads/SKILL.md`.
 - `manual`
 - `evidence`
 - `facts.expected_events`
+- `facts.instrumentation`
 - `facts.provider_state`
 - `source`
 - `child_descriptor`
@@ -69,11 +72,14 @@ This snapshot does not replace shipped `.claude/skills/mb-ads/SKILL.md`.
 2. For mining, scraping, competitor research, transcript extraction, outside
    source collection, thin offers, or unsupported claims, route to `mb-think`
    before drafting paid creative.
-3. For landing-page, conversion endpoint, GTM/dataLayer, consent, or paid
+3. For landing-page, conversion endpoint, GA4, GTM/dataLayer, Meta pixel,
+   booking links, HubSpot/forms, consent, form-submit smoke, or paid
    measurement readiness, route to `mb-site` and use `mb site check` before
    describing traffic as locally ready for operator review.
 4. Support static, copy-only, image-only, hook-library, video-scripts,
    long-form-video, review, launch-plan, check, or account-context modes.
+   Treat instrumentation as the launch-readiness sub-mode for GA4/GTM/pixels,
+   booking links, HubSpot/forms, and submit/booking smoke.
 5. Draft from active offer, audience, voice, content strategy, proof facts,
    relevant research, decisions, active pushes, playbooks, and
    money_path.objects.proof.quality. Do not turn unapproved proof into public
@@ -94,7 +100,7 @@ This snapshot does not replace shipped `.claude/skills/mb-ads/SKILL.md`.
 
 ```text
 Ads mode: <static, copy-only, image-only, hook-library, video-scripts,
-long-form-video, review, launch-plan, check, or account-context>.
+long-form-video, review, launch-plan, instrumentation, check, or account-context>.
 Facts read: <status/start/connect/site-check/validation/checkpoint facts>.
 Source base: <offer, audience, voice, proof, research, push, playbook, account summary, or missing>.
 Provider posture: <not needed, read-only, connected, blocked, unsupported, or approval needed>.

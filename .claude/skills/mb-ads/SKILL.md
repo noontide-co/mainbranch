@@ -1,6 +1,6 @@
 ---
 name: mb-ads
-description: "Create and review ads, and prepare provider-safe launch plans/checks. Flexible entry points: full pipeline (copy + images), copy only, images only, creative variations (hook library), video scripts, long-form video ads/VSL-style paid creative, video repurpose, compliance review, launch-plan, check, or optional Meta ad account check. Use when asked to create ads, ad copy, image prompts, video ad scripts, paid sales videos, creative variations, review ads, plan paid traffic, or check launch performance. Say /mb-ads or describe what you need."
+description: "Create and review ads, and prepare provider-safe launch plans/checks. Flexible entry points: full pipeline (copy + images), copy only, images only, creative variations (hook library), video scripts, long-form video ads/VSL-style paid creative, video repurpose, compliance review, launch-plan, instrumentation, check, or optional Meta ad account check. Use when asked to create ads, ad copy, image prompts, video ad scripts, paid sales videos, creative variations, review ads, plan paid traffic, check analytics/GA4/GTM/pixels/booking/form readiness, or check launch performance. Say /mb-ads or describe what you need."
 loops: [ship, reflect]
 ---
 
@@ -50,6 +50,7 @@ Shared source required JSON fact paths:
 - `measurement.available`
 - `measurement.state`
 - `measurement.facts.expected_events`
+- `measurement.facts.instrumentation`
 - `measurement.blocked_count`
 - `measurement.manual_count`
 - `relationship_health.gaps`
@@ -62,6 +63,7 @@ Shared source required JSON fact paths:
 - `manual`
 - `evidence`
 - `facts.expected_events`
+- `facts.instrumentation`
 - `facts.provider_state`
 - `source`
 - `child_descriptor`
@@ -306,6 +308,7 @@ Detect what the user wants from natural language. Route internally to the right 
 | "I want ideas for an ad", "brainstorm" | Ideation | Account check (if available) + concept generation |
 | "research winning ads", "mine reviews", "analyze competitors first" | Research / Mining | Route to `/mb-think` winning-ad research before generation |
 | "launch ads", "paid traffic plan", "Google Ads launch", "$X/day for Y days" | Launch Plan | Provider-safe plan/check mode, no account mutation |
+| "analytics", "instrumentation", "GA4", "Google Analytics", "GTM", "Meta pixel", "HubSpot form", "Calendly", "booking link", "form test" | Instrumentation | Route through `/mb-site` and `mb site check`; no provider mutation |
 | "check launch", "how are ads doing", "continue or kill" | Launch Check | Read status/outcomes/operator exports, recommend continue/change/stop |
 | "Check my ad performance", "what's working" | Account Check | Read-only Meta Ads context if `mb connect` and runtime tools are ready |
 | "Give me 5 variations of this winning ad" | Performance Iteration | Pull winner + generate variants if account context is ready |
@@ -442,8 +445,6 @@ See **[references/post-generation-pipeline.md](references/post-generation-pipeli
 **"While You Wait" pattern:** When spawning parallel agents that take >30 seconds, show a brief note so the user knows what's happening:
 > "Running compliance review across 6 lenses + generating images in parallel. This takes about 2-3 minutes. These run as sub-agents so they won't eat into your session context."
 
----
-
 ## Compliance (All Modes)
 
 **Never say:**
@@ -456,8 +457,6 @@ See **[references/post-generation-pipeline.md](references/post-generation-pipeli
 - Supports/complements existing approach
 - Framework for understanding
 - Education and guidance
-
----
 
 ## Quality Checklist (All Copy Modes)
 
@@ -476,8 +475,6 @@ Before saving any batch, verify:
 | **Skool congruence** | Claims match live about page + pricing cards (if `skool-surfaces.md` exists) |
 | **Save-ability** | Would someone save this ad to reference later? Educational, actionable hooks drive purchase intent |
 | **Enemy framing** | Does at least one concept use a named enemy from voice.md? Enemy-driven contrast creates identity alignment |
-
----
 
 ## Recovery from Compaction
 

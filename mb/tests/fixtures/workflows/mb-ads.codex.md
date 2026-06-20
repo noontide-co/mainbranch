@@ -43,6 +43,7 @@ customer contact, or Claude Code entrypoints in Codex.
 - `measurement.available`
 - `measurement.state`
 - `measurement.facts.expected_events`
+- `measurement.facts.instrumentation`
 - `measurement.blocked_count`
 - `measurement.manual_count`
 - `relationship_health.gaps`
@@ -55,6 +56,7 @@ customer contact, or Claude Code entrypoints in Codex.
 - `manual`
 - `evidence`
 - `facts.expected_events`
+- `facts.instrumentation`
 - `facts.provider_state`
 - `source`
 - `child_descriptor`
@@ -70,15 +72,17 @@ customer contact, or Claude Code entrypoints in Codex.
 3. For mining, scraping, competitor research, transcript extraction, outside
    source collection, thin offers, or unsupported claims, route to `mb-think`
    in Codex-native language before drafting paid creative.
-4. For landing-page, conversion endpoint, GTM/dataLayer, consent, or paid
+4. For landing-page, conversion endpoint, GA4, GTM/dataLayer, Meta pixel,
+   booking links, HubSpot/forms, consent, form-submit smoke, or paid
    measurement readiness, route to `mb-site` in Codex-native language and use
    `mb site check` before describing traffic as locally ready for operator
    review.
 5. Guide static, copy-only, image-only, hook-library, video-scripts,
    long-form-video, review, launch-plan, check, or account-context modes from
-   the shared contract. Codex may draft patch-shaped recommendations, sample
-   copy, review notes, and launch-plan specs. Name exact file targets, then
-   stop before changing files or running provider tools.
+   the shared contract. Treat instrumentation as the launch-readiness sub-mode.
+   Codex may draft patch-shaped recommendations, sample copy, review notes, and
+   launch-plan specs. Name exact file targets, then stop before changing files
+   or running provider tools.
 6. Name artifact routes as plans only: `pushes/<YYYY-MM-DD-slug>/push.md`,
    `pushes/<YYYY-MM-DD-slug>/ads-batch-001.md`,
    `pushes/<YYYY-MM-DD-slug>/playbooks/<playbook>.md`, `research/`, and
@@ -101,7 +105,7 @@ customer contact, or Claude Code entrypoints in Codex.
 
 ```text
 Ads mode: <static, copy-only, image-only, hook-library, video-scripts,
-long-form-video, review, launch-plan, check, or account-context>.
+long-form-video, review, launch-plan, instrumentation, check, or account-context>.
 Facts read: <status/start/connect/site-check/validation/checkpoint facts>.
 Source base: <offer, audience, voice, proof, research, push, playbook, account summary, or missing>.
 Provider posture: <not needed, read-only, connected, blocked, unsupported, or approval needed>.

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 import yaml
 
@@ -27,8 +29,13 @@ HTML_EXCLUDED_DIRS = {
 REUSABLE_SOURCE_DIRS = {
     "app",
     "components",
+    "content",
+    "layout",
     "layouts",
     "pages",
+    "public",
+    "sections",
+    "snippets",
     "src",
     "templates",
 }
@@ -36,6 +43,20 @@ PLACEHOLDER_GTM_IDS = {"GTM-XXXXXXX", "GTM-XXXXXX", "GTM-PLACEHOLDER"}
 GTM_ID_RE = re.compile(r"\bGTM-[A-Z0-9]{5,}\b")
 GA4_ID_RE = re.compile(r"\bG-[A-Z0-9]{6,}\b")
 META_PIXEL_RE = re.compile(r"\b\d{10,20}\b")
+META_PIXEL_INIT_RE = re.compile(r"\bfbq\(\s*['\"]init['\"]\s*,\s*['\"](\d{10,20})['\"]")
+FORM_OPEN_RE = re.compile(r"<form\b[^>]*>", re.IGNORECASE)
+FORM_ACTION_RE = re.compile(r"\baction\s*=\s*(['\"])(.*?)\1", re.IGNORECASE)
+HTML_MARKUP_GLOBS = ("*.html", "*.liquid")
+BOOKING_WIDGET_MARKERS = {
+    "calendly": ("calendly.com", "assets.calendly.com", "calendly-inline-widget"),
+    "cal.com": ("cal.com/", "app.cal.com", "cal-embed", "data-cal-link"),
+}
+CRM_WIDGET_MARKERS = {
+    "hubspot": ("js.hs-scripts.com", "forms.hsforms.com", "hbspt.forms.create", "hubspot"),
+}
+COMMERCE_PLATFORM_MARKERS = {
+    "shopify": ("cdn.shopify.com", "Shopify.theme", "myshopify.com"),
+}
 
 EVENTS_BY_KIND: dict[str, list[str]] = {
     "stripe_payment_page": ["mb_cta_click", "mb_purchase"],
@@ -332,11 +353,12 @@ def _is_placeholder_gtm(value: str) -> bool:
 
 def _html_files(site_repo: Path) -> list[Path]:
     files: list[Path] = []
-    for path in site_repo.rglob("*.html"):
-        if any(part in HTML_EXCLUDED_DIRS for part in path.relative_to(site_repo).parts):
-            continue
-        if path.is_file():
-            files.append(path)
+    for pattern in HTML_MARKUP_GLOBS:
+        for path in site_repo.rglob(pattern):
+            if any(part in HTML_EXCLUDED_DIRS for part in path.relative_to(site_repo).parts):
+                continue
+            if path.is_file():
+                files.append(path)
     return sorted(files)
 
 
@@ -355,6 +377,41 @@ def _read_many(paths: list[Path]) -> list[tuple[Path, str]]:
         except OSError:
             continue
     return items
+
+
+def _safe_url_label(value: str) -> str:
+    value = value.strip()
+    if not value:
+        return ""
+    if value.startswith(("#", "/", "./", "../")):
+        return value.split("?", 1)[0][:120]
+    try:
+        parsed = urlsplit(value)
+    except ValueError:
+        return value.split("?", 1)[0][:120]
+    if parsed.scheme and parsed.netloc:
+        return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))[:160]
+    return value.split("?", 1)[0][:120]
+
+
+def _markers_present(text: str, markers: Mapping[str, Sequence[str]]) -> list[str]:
+    lowered = text.lower()
+    found: list[str] = []
+    for name, values in markers.items():
+        if any(value.lower() in lowered for value in values):
+            found.append(name)
+    return sorted(found)
+
+
+def _detect_form_actions(text: str) -> list[str]:
+    actions: list[str] = []
+    for match in FORM_OPEN_RE.finditer(text):
+        action_match = FORM_ACTION_RE.search(match.group(0))
+        if action_match is None:
+            actions.append("")
+            continue
+        actions.append(_safe_url_label(action_match.group(2)))
+    return actions
 
 
 def _has_google_manager_url(text: str, *, script_name: str, gtm_container_id: str) -> bool:
@@ -382,6 +439,14 @@ def _check_html(
         "html_file_count": len(html_files),
         "missing_events": [],
         "reusable_template_live_gtm_ids": [],
+        "detected_gtm_ids": [],
+        "detected_ga4_ids": [],
+        "detected_meta_pixel_ids": [],
+        "detected_booking_widgets": [],
+        "detected_crm_widgets": [],
+        "detected_commerce_platforms": [],
+        "detected_form_count": 0,
+        "detected_form_actions": [],
     }
 
     if not html_files:
@@ -389,10 +454,27 @@ def _check_html(
             {
                 "kind": "static_html",
                 "state": "blocked",
-                "summary": "No built HTML files were found to inspect.",
+                "summary": "No built HTML or Shopify Liquid files were found to inspect.",
             }
         )
         return evidence, details
+
+    detected_gtm_ids = sorted({match.group(0) for match in GTM_ID_RE.finditer(combined)})
+    detected_ga4_ids = sorted({match.group(0) for match in GA4_ID_RE.finditer(combined)})
+    detected_meta_pixel_ids = sorted(set(META_PIXEL_INIT_RE.findall(combined)))
+    form_actions = _detect_form_actions(combined)
+    details.update(
+        {
+            "detected_gtm_ids": detected_gtm_ids,
+            "detected_ga4_ids": detected_ga4_ids,
+            "detected_meta_pixel_ids": detected_meta_pixel_ids,
+            "detected_booking_widgets": _markers_present(combined, BOOKING_WIDGET_MARKERS),
+            "detected_crm_widgets": _markers_present(combined, CRM_WIDGET_MARKERS),
+            "detected_commerce_platforms": _markers_present(combined, COMMERCE_PLATFORM_MARKERS),
+            "detected_form_count": len(form_actions),
+            "detected_form_actions": [action for action in form_actions if action][:10],
+        }
+    )
 
     has_gtm_script = _has_google_manager_url(
         combined, script_name="gtm.js", gtm_container_id=gtm_container_id
@@ -525,6 +607,130 @@ def _provider_summary(providers: list[dict[str, Any]]) -> dict[str, Any]:
         }
         for provider_id in wanted
     }
+
+
+def _instrumentation_facts(
+    facts: dict[str, Any],
+    conversion: dict[str, Any],
+    html_details: dict[str, Any],
+) -> dict[str, Any]:
+    booking_widgets = _list_value(html_details.get("detected_booking_widgets"))
+    crm_widgets = _list_value(html_details.get("detected_crm_widgets"))
+    form_count = int(html_details.get("detected_form_count") or 0)
+    conversion_kind = str(facts.get("conversion_kind") or "")
+    conversion_url = _string_value(conversion.get("url"))
+    planned_surface = bool(conversion_kind and conversion_url)
+    detectable_surface = bool(booking_widgets or crm_widgets or form_count)
+    if planned_surface:
+        surface_state = "planned"
+    elif detectable_surface:
+        surface_state = "detectable_unplanned"
+    else:
+        surface_state = "missing"
+    return {
+        "declared": {
+            "gtm_container_id": bool(facts.get("gtm_container_id")),
+            "ga4_measurement_id": bool(facts.get("ga4_measurement_id")),
+            "meta_pixel_id": bool(facts.get("meta_pixel_id")),
+            "google_ads_customer_id": bool(facts.get("google_ads_customer_id")),
+            "primary_conversions": bool(facts.get("primary_conversions")),
+        },
+        "detected": {
+            "gtm_ids": _list_value(html_details.get("detected_gtm_ids")),
+            "ga4_ids": _list_value(html_details.get("detected_ga4_ids")),
+            "meta_pixel_ids": _list_value(html_details.get("detected_meta_pixel_ids")),
+            "booking_widgets": booking_widgets,
+            "crm_widgets": crm_widgets,
+            "commerce_platforms": _list_value(html_details.get("detected_commerce_platforms")),
+            "form_count": form_count,
+            "form_actions": _list_value(html_details.get("detected_form_actions")),
+        },
+        "conversion_surface": {
+            "state": surface_state,
+            "kind": conversion_kind,
+            "render": _string_value(conversion.get("render")),
+            "planned": planned_surface,
+            "detected_only": detectable_surface and not planned_surface,
+            "requires_submit_or_booking_smoke": bool(planned_surface or detectable_surface),
+        },
+    }
+
+
+def _instrumentation_evidence(instrumentation: dict[str, Any]) -> list[dict[str, Any]]:
+    declared = instrumentation.get("declared")
+    declared = declared if isinstance(declared, dict) else {}
+    detected = instrumentation.get("detected")
+    detected = detected if isinstance(detected, dict) else {}
+    surface = instrumentation.get("conversion_surface")
+    surface = surface if isinstance(surface, dict) else {}
+    evidence: list[dict[str, Any]] = []
+
+    analytics_found = bool(
+        declared.get("gtm_container_id")
+        or declared.get("ga4_measurement_id")
+        or declared.get("meta_pixel_id")
+        or detected.get("gtm_ids")
+        or detected.get("ga4_ids")
+        or detected.get("meta_pixel_ids")
+    )
+    if analytics_found:
+        evidence.append(
+            {
+                "kind": "analytics_instrumentation",
+                "state": "passed",
+                "summary": "Analytics/tag identifiers are declared or detected for review.",
+            }
+        )
+    else:
+        evidence.append(
+            {
+                "kind": "analytics_instrumentation",
+                "state": "manual",
+                "summary": "No GA4, GTM, or Meta pixel identifiers were detected.",
+            }
+        )
+
+    surface_state = str(surface.get("state") or "missing")
+    if surface_state == "planned":
+        evidence.append(
+            {
+                "kind": "conversion_surface",
+                "state": "passed",
+                "summary": "Conversion endpoint is recorded in .mainbranch/conversion.json.",
+            }
+        )
+    elif surface_state == "detectable_unplanned":
+        evidence.append(
+            {
+                "kind": "conversion_surface",
+                "state": "manual",
+                "summary": (
+                    "A form, booking widget, or CRM widget is detectable, but no "
+                    ".mainbranch/conversion.json plan records ownership."
+                ),
+            }
+        )
+    else:
+        evidence.append(
+            {
+                "kind": "conversion_surface",
+                "state": "missing",
+                "summary": "No planned or detectable conversion surface was found.",
+            }
+        )
+
+    if surface.get("requires_submit_or_booking_smoke"):
+        evidence.append(
+            {
+                "kind": "form_booking_smoke",
+                "state": "manual",
+                "summary": (
+                    "Run a form-submit or booking-link smoke before paid traffic; "
+                    "detecting the widget is not proof of delivered leads."
+                ),
+            }
+        )
+    return evidence
 
 
 def _state(evidence: list[dict[str, Any]], facts: dict[str, Any]) -> str:
@@ -747,6 +953,9 @@ def check(
         expected_events=expected_events,
     )
     evidence.extend(html_evidence)
+    instrumentation = _instrumentation_facts(facts, conversion, html_details)
+    facts["instrumentation"] = instrumentation
+    evidence.extend(_instrumentation_evidence(instrumentation))
 
     if facts["consent_posture"] and facts["privacy_policy_url"]:
         evidence.append(
@@ -880,6 +1089,8 @@ def render_check(result: dict[str, Any]) -> None:
     for key in [
         "conversion_kind",
         "gtm_container_id",
+        "ga4_measurement_id",
+        "meta_pixel_id",
         "google_ads_customer_id",
         "primary_conversions",
         "consent_posture",
@@ -887,6 +1098,16 @@ def render_check(result: dict[str, Any]) -> None:
     ]:
         value = facts.get(key)
         print(f"  {key}: {value if value else '-'}")
+    instrumentation = facts.get("instrumentation") if isinstance(facts, dict) else {}
+    if isinstance(instrumentation, dict):
+        surface = instrumentation.get("conversion_surface")
+        surface = surface if isinstance(surface, dict) else {}
+        detected = instrumentation.get("detected")
+        detected = detected if isinstance(detected, dict) else {}
+        print(f"  conversion_surface: {surface.get('state') or '-'}")
+        print(f"  booking_widgets: {detected.get('booking_widgets') or []}")
+        print(f"  crm_widgets: {detected.get('crm_widgets') or []}")
+        print(f"  forms_detected: {detected.get('form_count') or 0}")
     print("")
     print("evidence:")
     for item in result["evidence"]:
