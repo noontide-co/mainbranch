@@ -44,6 +44,7 @@ for repair facts before giving prose-only advice.
 | Reels, TikTok, organic, /mb-organic | [organic-help.md](references/organic-help.md) |
 | Skool, community | [skool-help.md](references/skool-help.md) |
 | Wiki, atomic notes, publish, WikiLinks | Route to `/mb-wiki` |
+| Launch readiness, Cloudflare, Wrangler, Shopify, Resend, smoke test, form test, booking link | Route to `/mb-site`; run `mb launch check` before launch-readiness advice |
 | Site, landing page, lander, minisite, website, about page video, deploy site, publish site, conversion endpoint, concept variations | Route to `/mb-site` (see [skills-guide.md](references/skills-guide.md) for the full one-flow walkthrough) |
 | Done, wrapping up, closing, end session, end of day | Route to `/mb-end` |
 | multi-offer, product ladder, offers, switch offer | Multi-Offer FAQ (below) |
@@ -103,6 +104,7 @@ for repair facts before giving prose-only advice.
 | We're taking real money — is my repo protected? | `mb production plan` reports the branch-protection gap (PR required, CI + canary gates, force-push/deletion blocked) and prints the exact `gh` apply commands; applying is yours to run. See [cli-surfaces.md](references/cli-surfaces.md). |
 | This ad set is cheapest per lead — but are the leads real? | `mb leads grade --file leads.json --spend N` grades each lead (email, URL, owner answer) and shows ELIGIBLE-lead CPL beside raw CPL, so budget calls use the honest number. See [cli-surfaces.md](references/cli-surfaces.md). |
 | Which ad creatives are working — keep or kill? | `mb ledger init` scaffolds the creative ledger (per-asset spend, raw vs eligible CPL, downstream event, KEEP/KILL/WATCH) — an asset isn't working until it makes an eligible lead. See [cli-surfaces.md](references/cli-surfaces.md). |
+| Is my site ready to launch? | Use `/mb-site`; the agent runs `mb launch check` for app/deploy/commerce/email/smoke posture and `mb site check` for paid-traffic measurement detail. Publishing, spend, provider changes, and customer contact still need your explicit approval. |
 | I run an overnight loop but can't see its state. | `mb automation init` scaffolds the steered-loop contract (`loop-state.md`): one inspectable file the loop reads first and updates each run; handoffs render from it. See [cli-surfaces.md](references/cli-surfaces.md). |
 | How do scripts read credentials safely? | `mb connect token <provider>` prints the credential to stdout for the consumer only — built for scheduled tasks and agents, never for chat. Custom tools: `mb connect <id> --custom`. |
 | Are any of my keys sitting in plaintext? | `mb connect hygiene` scans agent configs (`~/.claude.json`, project MCP/settings) for plaintext credentials and shows where to move each one (keychain/env). Read-only; never prints the value. |

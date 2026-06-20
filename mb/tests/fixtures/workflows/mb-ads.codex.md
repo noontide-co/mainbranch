@@ -18,6 +18,7 @@ customer contact, or Claude Code entrypoints in Codex.
 - `mb doctor repair --plan`
 - `mb connect doctor --json`
 - `mb connect plan`
+- `mb launch check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json`
 - `mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json`
 - `mb validate --cross-refs --json`
 - `mb checkpoint --plan --json`
@@ -58,6 +59,12 @@ customer contact, or Claude Code entrypoints in Codex.
 - `facts.expected_events`
 - `facts.instrumentation`
 - `facts.provider_state`
+- `facts.app_stack`
+- `facts.deploy`
+- `facts.commerce`
+- `facts.email`
+- `facts.measurement`
+- `recommended_action`
 - `source`
 - `child_descriptor`
 

@@ -443,6 +443,7 @@ build on it, here is the command list.
 | `mb doctor` | Check environment, repo shape, frontmatter, settings, app setup, provider state, and repair paths. |
 | `mb connect` | Register connected-account metadata/credentials, test health where supported, inspect repair-safe integration status without committing secrets. |
 | `mb books` | Plain-file bookkeeping setup checks, bookkeeping engine health, safe repair plans, bet exposure, and fake-data sample monthly reporting. |
+| `mb launch check` | Read-only launch readiness across app stack, deploy rail, commerce, email, local smoke scripts, and measurement posture. |
 | `mb site check` | Local paid-traffic measurement readiness: GTM install, dataLayer events, consent posture, Google Ads metadata, approval gates. |
 | `mb ads meta summary` | Read-only Meta Ads account context through the official Meta CLI path after setup. |
 | `mb issue draft` / `open` | Draft a privacy-scrubbed GitHub issue locally, review it, then submit through `gh`. |
