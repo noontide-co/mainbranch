@@ -906,6 +906,10 @@ def install_mode() -> str:
 PLUGIN_MARKETPLACE_NAME = "mainbranch"
 PLUGIN_REPO = "noontide-co/mainbranch"
 PLUGIN_ENABLE_KEY = "mainbranch@mainbranch"
+PLUGIN_INSTALL_COMMAND = (
+    "claude plugin marketplace update mainbranch && "
+    "claude plugin install mainbranch@mainbranch --scope user"
+)
 
 
 def _tracked_settings_path(repo: Path) -> Path:
@@ -942,6 +946,165 @@ def plugin_wiring_status(repo: str | Path) -> dict[str, Any]:
         "wired": marketplace_known and plugin_enabled,
         "settings_path": str(_tracked_settings_path(target)),
     }
+
+
+def _plugin_entry_summary(entry: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": str(entry.get("id") or ""),
+        "version": str(entry.get("version") or ""),
+        "scope": str(entry.get("scope") or ""),
+        "enabled": entry.get("enabled") is True,
+        "install_path": str(entry.get("installPath") or entry.get("install_path") or ""),
+    }
+
+
+def _run_claude_plugin_list(*, timeout: float = 5.0) -> subprocess.CompletedProcess[str] | None:
+    claude = shutil.which("claude")
+    if not claude:
+        return None
+    try:
+        return subprocess.run(
+            [claude, "plugin", "list", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return subprocess.CompletedProcess(
+            args=[claude, "plugin", "list", "--json"],
+            returncode=1,
+            stdout="",
+            stderr="could not run `claude plugin list --json`",
+        )
+
+
+def claude_mainbranch_plugin_status(
+    *, expected_version: str | None = None, timeout: float = 5.0
+) -> dict[str, Any]:
+    """Report the installed Claude Code Main Branch plugin version.
+
+    `mb update` can refresh packaged project-local bridge links, but Claude
+    Code plugin installs are loaded by the runtime and do not self-update just
+    because the `mainbranch` package changed. This probe is best-effort: if
+    Claude Code is not installed or does not support JSON plugin listing, the
+    caller gets an unchecked status instead of a hard failure.
+    """
+    expected = (expected_version or __version__).strip()
+    base: dict[str, Any] = {
+        "checked": False,
+        "ok": False,
+        "state": "unchecked",
+        "expected_version": expected,
+        "installed_version": "",
+        "installed_versions": [],
+        "enabled_versions": [],
+        "entries": [],
+        "command": "claude plugin list --json",
+        "repair": PLUGIN_INSTALL_COMMAND,
+        "summary": "Claude Code plugin version was not checked.",
+    }
+    result = _run_claude_plugin_list(timeout=timeout)
+    if result is None:
+        base.update(
+            {
+                "state": "claude_missing",
+                "summary": "Claude Code CLI is not on PATH; plugin version was not checked.",
+            }
+        )
+        return base
+    base["checked"] = True
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        base.update(
+            {
+                "state": "error",
+                "summary": detail or "`claude plugin list --json` failed.",
+            }
+        )
+        return base
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        base.update(
+            {"state": "invalid_json", "summary": "Claude plugin list returned invalid JSON."}
+        )
+        return base
+    if not isinstance(payload, list):
+        base.update(
+            {
+                "state": "invalid_json",
+                "summary": "Claude plugin list returned an unexpected JSON shape.",
+            }
+        )
+        return base
+
+    entries = [
+        _plugin_entry_summary(entry)
+        for entry in payload
+        if isinstance(entry, dict) and str(entry.get("id") or "") == PLUGIN_ENABLE_KEY
+    ]
+    installed_versions = sorted({entry["version"] for entry in entries if entry["version"]})
+    enabled_entries = [entry for entry in entries if entry["enabled"]]
+    enabled_versions = sorted({entry["version"] for entry in enabled_entries if entry["version"]})
+    preferred = next(
+        (entry for entry in enabled_entries if expected and entry["version"] == expected),
+        enabled_entries[0] if enabled_entries else (entries[0] if entries else {}),
+    )
+    installed_version = str(preferred.get("version") or "")
+    base.update(
+        {
+            "installed_version": installed_version,
+            "installed_versions": installed_versions,
+            "enabled_versions": enabled_versions,
+            "entries": entries,
+        }
+    )
+    if not entries:
+        base.update(
+            {
+                "state": "not_installed",
+                "summary": "The Main Branch Claude Code plugin is not installed.",
+            }
+        )
+        return base
+    if expected and expected in enabled_versions:
+        base.update(
+            {
+                "ok": True,
+                "state": "current",
+                "summary": f"Main Branch Claude Code plugin is enabled at {expected}.",
+            }
+        )
+        return base
+    if expected and expected in installed_versions:
+        base.update(
+            {
+                "state": "installed_not_enabled",
+                "summary": (
+                    f"Main Branch Claude Code plugin {expected} is installed but not enabled."
+                ),
+            }
+        )
+        return base
+    if enabled_versions:
+        base.update(
+            {
+                "state": "stale",
+                "summary": (
+                    "Main Branch Claude Code plugin is enabled at "
+                    f"{', '.join(enabled_versions)}, expected {expected or 'the current package'}."
+                ),
+            }
+        )
+        return base
+    base.update(
+        {
+            "state": "disabled",
+            "summary": "The Main Branch Claude Code plugin is installed but disabled.",
+        }
+    )
+    return base
 
 
 def write_plugin_wiring(repo: str | Path) -> dict[str, Any]:

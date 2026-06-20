@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,7 @@ from typer.testing import CliRunner
 
 from mb import __version__
 from mb import codex as codex_mod
+from mb import engine as engine_mod
 from mb import update as update_mod
 from mb.cli import app
 
@@ -66,6 +68,23 @@ def plugin_rail_wired(monkeypatch: pytest.MonkeyPatch) -> None:
             "marketplace_known": True,
             "plugin_enabled": True,
             "settings_path": str(Path(repo) / ".claude" / "settings.json"),
+        },
+    )
+    monkeypatch.setattr(
+        update_mod,
+        "claude_mainbranch_plugin_status",
+        lambda *, expected_version=None, timeout=5.0: {
+            "checked": True,
+            "ok": True,
+            "state": "current",
+            "expected_version": expected_version or __version__,
+            "installed_version": expected_version or __version__,
+            "installed_versions": [expected_version or __version__],
+            "enabled_versions": [expected_version or __version__],
+            "entries": [],
+            "command": "claude plugin list --json",
+            "repair": engine_mod.PLUGIN_INSTALL_COMMAND,
+            "summary": "Main Branch Claude Code plugin is enabled.",
         },
     )
 
@@ -1017,3 +1036,87 @@ def test_update_surfaces_plugin_migration_for_symlink_era_repo(
     assert result["plugin_rail"]["wired"] is False
     assert any("symlink-only skill wiring" in w for w in result["warnings"])
     assert "mb skill link --repo . --plugin --json" in result["next_actions"]
+
+
+def test_update_warns_when_installed_claude_plugin_is_stale(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        if args == ["pipx", "upgrade", "mainbranch"]:
+            return _completed(args)
+        if args == ["mb", "--version"]:
+            return _completed(args, stdout="mb 0.4.2\n")
+        if args[:3] == ["mb", "skill", "link"]:
+            return _completed(args, stdout=json.dumps({"ok": True, "linked": ["mb-start"]}))
+        if args[:4] == ["mb", "doctor", "repair", "--repo"]:
+            return _codex_repair_completed(args)
+        return _completed(args)
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(shutil, "which", lambda name: "/opt/homebrew/bin/pipx")
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+    monkeypatch.setattr(
+        update_mod,
+        "claude_mainbranch_plugin_status",
+        lambda *, expected_version=None, timeout=5.0: {
+            "checked": True,
+            "ok": False,
+            "state": "stale",
+            "expected_version": expected_version,
+            "installed_version": "0.4.1",
+            "installed_versions": ["0.4.1"],
+            "enabled_versions": ["0.4.1"],
+            "entries": [],
+            "command": "claude plugin list --json",
+            "repair": engine_mod.PLUGIN_INSTALL_COMMAND,
+            "summary": "Main Branch Claude Code plugin is enabled at 0.4.1, expected 0.4.2.",
+        },
+    )
+
+    result = update_mod.run(repo=tmp_path / "biz")
+
+    assert result["ok"] is True
+    assert result["new_version"] == "0.4.2"
+    assert result["plugin_rail"]["install"]["state"] == "stale"
+    assert result["plugin_rail"]["install"]["expected_version"] == "0.4.2"
+    assert engine_mod.PLUGIN_INSTALL_COMMAND in result["next_actions"]
+    assert any("older Main Branch plugin" in warning for warning in result["warnings"])
+    assert any("/reload-plugins" in warning for warning in result["warnings"])
+
+
+def test_update_check_uses_planned_version_for_plugin_status(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    expected_versions: list[str | None] = []
+
+    def fake_status(*, expected_version=None, timeout=5.0) -> dict[str, Any]:
+        expected_versions.append(expected_version)
+        return {
+            "checked": True,
+            "ok": False,
+            "state": "stale",
+            "expected_version": expected_version,
+            "installed_version": "0.4.1",
+            "installed_versions": ["0.4.1"],
+            "enabled_versions": ["0.4.1"],
+            "entries": [],
+            "command": "claude plugin list --json",
+            "repair": engine_mod.PLUGIN_INSTALL_COMMAND,
+            "summary": (
+                f"Main Branch Claude Code plugin is enabled at 0.4.1, expected {expected_version}."
+            ),
+        }
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
+    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start", "mb-status"])
+    monkeypatch.setattr(update_mod, "claude_mainbranch_plugin_status", fake_status)
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    assert expected_versions == ["9.9.9"]
+    assert result["plugin_rail"]["install"]["expected_version"] == "9.9.9"
+    assert any("expects 9.9.9" in warning for warning in result["warnings"])
+    assert engine_mod.PLUGIN_INSTALL_COMMAND in result["next_actions"]

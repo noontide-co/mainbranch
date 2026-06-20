@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 from mb import engine as engine_mod
@@ -510,6 +511,123 @@ def test_plugin_wiring_refuses_to_clobber_malformed_settings(tmp_path: Path) -> 
     assert path.read_text(encoding="utf-8") == malformed
     assert "enabledPlugins" not in path.read_text(encoding="utf-8")
     assert engine_mod.plugin_wiring_status(tmp_path)["wired"] is False
+
+
+def test_claude_plugin_status_reports_current_enabled_plugin(monkeypatch) -> None:
+    payload = [
+        {
+            "id": "mainbranch@mainbranch",
+            "version": "0.4.2",
+            "scope": "user",
+            "enabled": True,
+            "installPath": "/tmp/mainbranch/0.4.2",
+        }
+    ]
+
+    monkeypatch.setattr(
+        engine_mod,
+        "_run_claude_plugin_list",
+        lambda timeout=5.0: subprocess.CompletedProcess(
+            ["claude", "plugin", "list", "--json"],
+            0,
+            stdout=json.dumps(payload),
+            stderr="",
+        ),
+    )
+
+    status = engine_mod.claude_mainbranch_plugin_status(expected_version="0.4.2")
+
+    assert status["checked"] is True
+    assert status["ok"] is True
+    assert status["state"] == "current"
+    assert status["installed_version"] == "0.4.2"
+    assert status["enabled_versions"] == ["0.4.2"]
+
+
+def test_claude_plugin_status_reports_stale_enabled_plugin(monkeypatch) -> None:
+    payload = [
+        {
+            "id": "mainbranch@mainbranch",
+            "version": "0.4.1",
+            "scope": "user",
+            "enabled": True,
+            "installPath": "/tmp/mainbranch/0.4.1",
+        }
+    ]
+
+    monkeypatch.setattr(
+        engine_mod,
+        "_run_claude_plugin_list",
+        lambda timeout=5.0: subprocess.CompletedProcess(
+            ["claude", "plugin", "list", "--json"],
+            0,
+            stdout=json.dumps(payload),
+            stderr="",
+        ),
+    )
+
+    status = engine_mod.claude_mainbranch_plugin_status(expected_version="0.4.2")
+
+    assert status["ok"] is False
+    assert status["state"] == "stale"
+    assert status["installed_version"] == "0.4.1"
+    assert "expected 0.4.2" in status["summary"]
+
+
+def test_claude_plugin_status_prefers_current_enabled_among_multiple_scopes(monkeypatch) -> None:
+    payload = [
+        {
+            "id": "mainbranch@mainbranch",
+            "version": "0.4.1",
+            "scope": "project",
+            "enabled": True,
+            "installPath": "/tmp/mainbranch/0.4.1",
+        },
+        {
+            "id": "mainbranch@mainbranch",
+            "version": "0.4.2",
+            "scope": "user",
+            "enabled": True,
+            "installPath": "/tmp/mainbranch/0.4.2",
+        },
+    ]
+
+    monkeypatch.setattr(
+        engine_mod,
+        "_run_claude_plugin_list",
+        lambda timeout=5.0: subprocess.CompletedProcess(
+            ["claude", "plugin", "list", "--json"],
+            0,
+            stdout=json.dumps(payload),
+            stderr="",
+        ),
+    )
+
+    status = engine_mod.claude_mainbranch_plugin_status(expected_version="0.4.2")
+
+    assert status["state"] == "current"
+    assert status["installed_version"] == "0.4.2"
+    assert status["enabled_versions"] == ["0.4.1", "0.4.2"]
+    assert status["installed_versions"] == ["0.4.1", "0.4.2"]
+
+
+def test_claude_plugin_status_reports_not_installed(monkeypatch) -> None:
+    monkeypatch.setattr(
+        engine_mod,
+        "_run_claude_plugin_list",
+        lambda timeout=5.0: subprocess.CompletedProcess(
+            ["claude", "plugin", "list", "--json"],
+            0,
+            stdout=json.dumps([{"id": "other@market", "version": "1.0.0"}]),
+            stderr="",
+        ),
+    )
+
+    status = engine_mod.claude_mainbranch_plugin_status(expected_version="0.4.2")
+
+    assert status["state"] == "not_installed"
+    assert status["entries"] == []
+    assert status["repair"].startswith("claude plugin marketplace update")
 
 
 def test_worktree_summary_mentions_plugin_rail_when_wired(tmp_path: Path) -> None:

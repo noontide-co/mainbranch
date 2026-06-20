@@ -78,6 +78,12 @@ after repairing links. In `--check --json` output, treat
 `planned_skills_relink_count` as a dry-run preview, not proof that links already
 changed.
 
+If `plugin_rail.install.state` is `stale`, `installed_not_enabled`, `disabled`,
+or `not_installed`, tell the user the Claude Code plugin cache needs attention
+too. Quote the warning, include the plugin repair command from `next_actions`,
+and say to restart Claude Code or run `/reload-plugins` before relying on new
+slash-skill behavior.
+
 ---
 
 ## Step 4: What Changed
