@@ -11,6 +11,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-06-20
+
+Field thanks to Aneesh for the real-session dogfood that sharpened this one.
+Aneesh, you are an absolute baller.
+
 ### Added
 
 - `mb update` now checks the installed Claude Code Main Branch plugin version
@@ -24,6 +29,7 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - `mb launch check` now summarizes read-only launch readiness across local app
   stack, Cloudflare/Wrangler deployment, Shopify commerce, Resend/email code,
   smoke scripts, and measurement posture before an agent gives launch advice.
+  (#945)
 
 ## [0.4.1] - 2026-06-20
 
