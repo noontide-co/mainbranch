@@ -644,7 +644,8 @@ def test_start_display_command_is_os_aware(tmp_path: Path, monkeypatch) -> None:
 
 def test_start_runtime_guidance_is_plugin_first(tmp_path: Path, monkeypatch) -> None:
     # #924: the handoff payload carries an always-on plugin-first grounding fact
-    # so an agent reading `mb start --json` knows how to make /mb-start appear.
+    # so an agent reading `mb start --json` knows both the user command and the
+    # official plugin smoke command.
     monkeypatch.setattr(start_mod, "_which", _with_claude)
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
@@ -653,5 +654,7 @@ def test_start_runtime_guidance_is_plugin_first(tmp_path: Path, monkeypatch) -> 
 
     report = json.loads(result.stdout)
     guidance = report["runtime"]["guidance"]
+    assert "normal Claude Code command remains /mb-start" in guidance
+    assert "/mainbranch:mb-start" in guidance
     assert "claude plugin marketplace add noontide-co/mainbranch" in guidance
     assert "cloud" in guidance.lower()

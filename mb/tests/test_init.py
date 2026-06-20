@@ -26,9 +26,13 @@ def _assert_claude_md_cli_first_contract(text: str) -> None:
     assert "Main Branch CLI facts are the source of truth" in text
     assert "run `claude`" in text
     assert "`/mb-start` inside Claude Code" in text
-    # Plugin-first, cross-surface framing (Stage 3 / #924): the plugin is the
-    # primary rail and works in Claude Desktop + the terminal.
+    # Hybrid plugin rail (Stage 3 / #924): the plugin is durable across Claude
+    # Desktop + terminal, while the project-local bridge preserves the friendly
+    # `/mb-start` user command.
     assert "claude plugin marketplace add noontide-co/mainbranch" in text
+    assert "normal user command stays `/mb-start`" in text
+    assert "/mainbranch:mb-start" in text
+    assert "plugin smoke/diagnostic command" in text
     assert "Claude Desktop" in text
     assert "mb start --launch" in text
     assert "mb --version" in text

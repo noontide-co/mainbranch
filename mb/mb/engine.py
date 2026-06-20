@@ -995,7 +995,7 @@ def write_plugin_wiring(repo: str | Path) -> dict[str, Any]:
         "wiring": after,
         "summary": (
             "plugin wiring written to tracked settings — skill discovery now "
-            "survives fresh worktrees (restart or /reload-skills to pick up)"
+            "survives fresh worktrees (restart or /reload-plugins to pick up)"
             if after["wired"]
             else "plugin wiring write did not verify; inspect .claude/settings.json"
         ),
