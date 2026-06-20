@@ -508,7 +508,9 @@ def run(repo: str = ".", launch: bool = False) -> dict[str, Any]:
             "guidance": (
                 "Main Branch runs as a Claude Code plugin (Claude Desktop or the "
                 "terminal) or via the Codex CLI; cloud/web sessions do not support "
-                "plugins. If /mb-start is missing, install the plugin: "
+                "plugins. The normal Claude Code command remains /mb-start via "
+                "the project-local bridge; the direct plugin smoke command is "
+                "/mainbranch:mb-start. If neither appears, install the plugin: "
                 "`claude plugin marketplace add noontide-co/mainbranch`."
             ),
             "skill_wiring": wiring,

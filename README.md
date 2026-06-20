@@ -412,8 +412,9 @@ that write approved business artifacts back into files you own.
 **I'm stuck.** In Claude Code, type `/mb-start` again. In Codex, use the global
 `mb-start` skill again. If `/mb-start` is not found at all, the Main Branch
 plugin may not be installed — add it with `claude plugin marketplace add
-noontide-co/mainbranch`, enable it, and restart Claude Code. The plugin works in
-both the Claude Desktop app and the terminal.
+noontide-co/mainbranch`, enable it, and restart Claude Code. The plugin-native
+diagnostic command is `/mainbranch:mb-start`; the friendly `/mb-start` command
+comes from the project-local bridge Main Branch keeps wired for users.
 
 ---
 

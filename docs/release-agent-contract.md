@@ -221,12 +221,12 @@ guidance that routes operators to the plugin, the release driver must run a
 manual plugin-load smoke before publishing and record it as a validation line:
 
 - `claude plugin marketplace add noontide-co/mainbranch`, enable the plugin,
-  then confirm `/mb-start` (and one other `/mb-*` skill) resolves in **both**
-  the Claude Desktop app **and** the terminal `claude` CLI;
-- record the exact invocation observed — `/mb-start` vs `/mainbranch:mb-start`.
-  If the plugin namespaces skills, the bare-name guidance in `CLAUDE.md`,
-  README, beginner setup, and the skill prose is stale and must be reconciled
-  (or the invocation contract updated) before the tag.
+  then confirm the plugin-native `/mainbranch:mb-start` (and one other
+  `/mainbranch:mb-*` skill) resolves in **both** the Claude Desktop app
+  **and** the terminal `claude` CLI;
+- separately record whether the legacy project-local bridge also exposes
+  `/mb-start`. The bridge is allowed as a compatibility path, but the plugin
+  smoke must prove the namespaced plugin command before the tag.
 
 This is the one true pre-publish gate that lives only here: a green CI run does
 not cover it. "Skipped because no Claude Code build was available" is a valid

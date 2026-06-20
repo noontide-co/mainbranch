@@ -449,6 +449,7 @@ def test_plugin_wiring_write_and_status(tmp_path: Path) -> None:
     result = engine_mod.write_plugin_wiring(tmp_path)
     assert result["ok"] is True
     assert result["changed"] is True
+    assert "/reload-plugins" in result["summary"]
 
     settings = json_mod.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
     assert settings["extraKnownMarketplaces"]["mainbranch"]["source"] == {

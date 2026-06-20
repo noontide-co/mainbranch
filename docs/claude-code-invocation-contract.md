@@ -2,7 +2,7 @@
 
 This is the supported Claude Code invocation contract for Main Branch. It is
 based on Claude Code 2.1.126 runtime smoke from a fresh `mb onboard` business
-repo on May 7, 2026.
+repo on May 7, 2026, plus the Stage 3 plugin rail contract from June 2026.
 
 ## Supported Path
 
@@ -22,7 +22,20 @@ Then type:
 Main Branch skills are Claude Code skills under `.claude/skills/<name>/SKILL.md`.
 `mb onboard`, `mb init`, and `mb skill link --repo .` create project-local
 bridge links such as `.claude/skills/mb-start` in the business repo. Those
-bridge links are the supported slash-command discovery surface.
+bridge links keep the supported, friendly slash-command surface.
+
+Main Branch also wires the Claude Code plugin in tracked `.claude/settings.json`
+so skill distribution survives fresh git worktrees and works across the Claude
+Desktop app and the terminal. Claude Code plugin-native skills are namespaced,
+so the direct plugin smoke command is:
+
+```text
+/mainbranch:mb-start
+```
+
+That command is for release validation and diagnostics. Public setup and support
+docs should still tell users to type `/mb-start` for the daily entrypoint while
+Main Branch keeps the project-local bridge wired.
 
 `.claude/settings.local.json` also points Claude Code at the active Main Branch
 engine through `additionalDirectories`. That setting gives the runtime file
@@ -70,6 +83,12 @@ Then restart Claude Code from the business repo and type `/mb-start` again.
 Claude Code loads skill discovery at session start, so relinking usually
 requires a restart before the slash command appears.
 
+If the plugin itself needs verification, install or refresh it with
+`claude plugin marketplace add noontide-co/mainbranch`, enable it, restart or
+run `/reload-plugins`, and check `/mainbranch:mb-start`. Do not replace the
+user-facing `/mb-start` guidance with the namespaced command unless the bridge
+contract is intentionally removed.
+
 `mb skill link --repo .` creates the project-local bridge links and also moves
 known stale or broken Main Branch personal-skill shadows to backups. If
 `/mb-start` is still missing afterward, run `mb skill repair --repo .` to
@@ -97,3 +116,7 @@ Fresh-repo smoke covered:
   `Unknown command: /mb-start`;
 - relink repair: `mb skill link --repo .` restored the project-local bridge and
   `/mb-start` was recognized again.
+
+Plugin-native command discovery (`/mainbranch:mb-start`) is covered by the
+manual plugin-load release gate in `docs/release-agent-contract.md` whenever a
+release changes plugin wiring, manifests, or plugin-first runtime guidance.
