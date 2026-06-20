@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- `mb update` now checks the installed Claude Code Main Branch plugin version
+  against the package version and warns when Claude is still loading an older,
+  disabled, or missing plugin cache, with a repair command and restart guidance.
+  (#923)
+
 ## [0.4.1] - 2026-06-20
 
 This release makes the Claude Code plugin the durable default rail while keeping

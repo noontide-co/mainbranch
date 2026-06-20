@@ -227,6 +227,11 @@ manual plugin-load smoke before publishing and record it as a validation line:
 - separately record whether the legacy project-local bridge also exposes
   `/mb-start`. The bridge is allowed as a compatibility path, but the plugin
   smoke must prove the namespaced plugin command before the tag.
+- if the release changes plugin update/detection behavior, also smoke an
+  old-version plugin cache: install or leave an older Main Branch plugin
+  enabled, update the package to the release candidate, and confirm
+  `mb update --check --json` reports `plugin_rail.install.state == "stale"`
+  with a repair action before publishing.
 
 This is the one true pre-publish gate that lives only here: a green CI run does
 not cover it. "Skipped because no Claude Code build was available" is a valid

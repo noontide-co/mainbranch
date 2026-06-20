@@ -13,7 +13,14 @@ from typing import Any
 
 from mb import __version__
 from mb import codex as codex_mod
-from mb.engine import bundled_skills, engine_root, install_mode, plugin_wiring_status
+from mb.engine import (
+    PLUGIN_INSTALL_COMMAND,
+    bundled_skills,
+    claude_mainbranch_plugin_status,
+    engine_root,
+    install_mode,
+    plugin_wiring_status,
+)
 from mb.freshness import (
     latest_pypi_version as _latest_pypi_version,
 )
@@ -365,11 +372,14 @@ def _add_plugin_follow_up(result: dict[str, Any], repo: Path) -> None:
     one-command migration as post-update guidance — never an automatic write.
     """
     status = plugin_wiring_status(repo)
+    expected_version = str(result.get("new_version") or result.get("old_version") or __version__)
+    install = claude_mainbranch_plugin_status(expected_version=expected_version)
     result["plugin_rail"] = {
         "wired": status.get("wired", False),
         "marketplace_known": status.get("marketplace_known", False),
         "plugin_enabled": status.get("plugin_enabled", False),
         "settings_path": status.get("settings_path", ""),
+        "install": install,
     }
     if not status.get("wired", False):
         result["warnings"].append(
@@ -380,6 +390,35 @@ def _add_plugin_follow_up(result: dict[str, Any], repo: Path) -> None:
             "--all-agents`), then restart Claude Code."
         )
         result["next_actions"].append("mb skill link --repo . --plugin --json")
+
+    install_state = str(install.get("state") or "")
+    if install_state in {"stale", "installed_not_enabled", "disabled", "not_installed"}:
+        expected = str(install.get("expected_version") or expected_version)
+        installed = str(install.get("installed_version") or "")
+        if install_state == "stale":
+            message = (
+                "Claude Code is still loading an older Main Branch plugin "
+                f"({installed or 'unknown'}), while this package expects {expected}. "
+                "Update/reinstall the plugin, then restart Claude Code or run "
+                "`/reload-plugins` before relying on slash-skill changes."
+            )
+        elif install_state == "installed_not_enabled":
+            message = (
+                f"Main Branch plugin {expected} is installed in Claude Code but not enabled. "
+                "Enable it, then restart Claude Code or run `/reload-plugins`."
+            )
+        elif install_state == "disabled":
+            message = (
+                "The Main Branch Claude Code plugin is installed but disabled. Enable it, "
+                "then restart Claude Code or run `/reload-plugins`."
+            )
+        else:
+            message = (
+                "The Main Branch Claude Code plugin is not installed. Install it so Claude "
+                "Desktop and the terminal load the updated slash skills."
+            )
+        result["warnings"].append(message)
+        result["next_actions"].append(PLUGIN_INSTALL_COMMAND)
 
 
 def run(
