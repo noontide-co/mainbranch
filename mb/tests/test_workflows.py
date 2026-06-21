@@ -12,6 +12,7 @@ from typing import Any
 from typer.testing import CliRunner
 
 from mb import codex as codex_mod
+from mb import launch as launch_mod
 from mb import site as site_mod
 from mb.cli import app
 from mb.workflows import (
@@ -78,6 +79,14 @@ SITE_CHECK_JSON_FACTS = {
     "facts.provider_state",
     "source",
     "child_descriptor",
+}
+LAUNCH_CHECK_JSON_FACTS = {
+    "facts.app_stack",
+    "facts.deploy",
+    "facts.commerce",
+    "facts.email",
+    "facts.measurement",
+    "recommended_action",
 }
 
 
@@ -550,18 +559,34 @@ def test_codex_contract_markers_match_site_workflow_source() -> None:
     )
 
 
-def test_site_workflow_json_facts_match_status_and_site_check_shapes(tmp_path: Path) -> None:
+def test_site_workflow_json_facts_match_status_site_and_launch_shapes(tmp_path: Path) -> None:
     workflow = load_workflow(SITE_WORKFLOW)
     facts = set(workflow.json_facts)
 
     assert SITE_STATUS_JSON_FACTS.issubset(facts)
     assert SITE_CHECK_JSON_FACTS.issubset(facts)
+    assert LAUNCH_CHECK_JSON_FACTS.issubset(facts)
     assert not any(fact.startswith("site_check.") for fact in facts)
     assert "child_repo" not in facts
 
     site_check = site_mod.check(tmp_path)
     for fact in SITE_CHECK_JSON_FACTS:
         assert _json_path_exists(site_check, fact), fact
+
+    launch_check = launch_mod.check(tmp_path)
+    for fact in LAUNCH_CHECK_JSON_FACTS:
+        assert _json_path_exists(launch_check, fact), fact
+
+
+def test_ads_workflow_launch_facts_match_launch_check_shape(tmp_path: Path) -> None:
+    workflow = load_workflow(ADS_WORKFLOW)
+    facts = set(workflow.json_facts)
+
+    assert LAUNCH_CHECK_JSON_FACTS.issubset(facts)
+
+    launch_check = launch_mod.check(tmp_path)
+    for fact in LAUNCH_CHECK_JSON_FACTS:
+        assert _json_path_exists(launch_check, fact), fact
 
 
 def test_codex_command_surface_and_inventory_render() -> None:

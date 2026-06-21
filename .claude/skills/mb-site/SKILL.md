@@ -29,6 +29,7 @@ Required commands:
 - `mb start --json`
 - `mb doctor repair --plan`
 - `mb connect doctor --json`
+- `mb launch check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json`
 - `mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json`
 - `mb validate --cross-refs --json`
 - `mb checkpoint --plan --json`
@@ -69,6 +70,12 @@ Required fact paths:
 - `facts.expected_events`
 - `facts.instrumentation`
 - `facts.provider_state`
+- `facts.app_stack`
+- `facts.deploy`
+- `facts.commerce`
+- `facts.email`
+- `facts.measurement`
+- `recommended_action`
 - `source`
 - `child_descriptor`
 
@@ -90,14 +97,17 @@ Preserve lander, minisite, website, sales-video surface, and site repo modes;
 use `mb site check` readiness states including `ready_for_operator_review`; keep
 domain, DNS, Cloudflare Pages, custom-domain, deploy, publishing, provider
 mutation, account changes, spend, and customer contact behind explicit gates.
-Provider boundary phrase: provider mutation.
+Provider boundary phrase: provider mutation. Broad launch readiness uses
+`mb launch check`; paid-traffic measurement detail uses `mb site check`.
 Codex support stays read-only planning until runtime smoke proves site writes,
 builds, deploys, and publishing.
 
 **CLI facts first:** In business repo mode, run `mb status --json --peek`
 before setup/provider/launch-readiness advice. In site repo mode or whenever a
-site repo is known, run `mb site check "$SITE_REPO" --business-repo
-"$BUSINESS_REPO" --json` before paid-traffic readiness or publish guidance.
+site repo is known, run `mb launch check "$SITE_REPO" --business-repo
+"$BUSINESS_REPO" --json` for broad launch truth, then `mb site check
+"$SITE_REPO" --business-repo "$BUSINESS_REPO" --json` for paid-traffic
+readiness or publish guidance.
 
 ## Output destinations and operator vocabulary
 

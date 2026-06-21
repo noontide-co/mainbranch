@@ -18,6 +18,7 @@ required_mb_commands:
   - mb doctor repair --plan
   - mb connect doctor --json
   - mb connect plan
+  - mb launch check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json
   - mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json
   - mb validate --cross-refs --json
   - mb checkpoint --plan --json
@@ -56,6 +57,12 @@ json_facts:
   - facts.expected_events
   - facts.instrumentation
   - facts.provider_state
+  - facts.app_stack
+  - facts.deploy
+  - facts.commerce
+  - facts.email
+  - facts.measurement
+  - recommended_action
   - source
   - child_descriptor
 approval_gates:
@@ -133,6 +140,7 @@ before a launch plan describes traffic as locally ready for operator review.
 - `mb doctor repair --plan`
 - `mb connect doctor --json`
 - `mb connect plan`
+- `mb launch check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json`
 - `mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json`
 - `mb validate --cross-refs --json`
 - `mb checkpoint --plan --json`
@@ -142,9 +150,10 @@ Read `mb status --json --peek` before direct markdown reads. Use `mb start
 `mb doctor repair --plan` when status facts name repair or migration blockers.
 Use `mb connect plan` or `mb connect doctor --json` before provider setup,
 read-only account context, Google/Workspace, Meta Ads, Google Ads, GTM, upload,
-publishing, or account-change discussion. Use `mb site check` when a site repo
-exists and paid traffic, Google Ads, measurement, GTM, or launch readiness is
-part of the request.
+publishing, or account-change discussion. Use `mb launch check` when a site repo
+exists and the request asks broad launch readiness, deploy rail, commerce,
+email, or smoke-test posture. Use `mb site check` when paid traffic, Google
+Ads, measurement, or GTM detail is part of the request.
 
 ## Required JSON Fact Paths
 
@@ -182,6 +191,12 @@ part of the request.
 - `facts.expected_events`
 - `facts.instrumentation`
 - `facts.provider_state`
+- `facts.app_stack`
+- `facts.deploy`
+- `facts.commerce`
+- `facts.email`
+- `facts.measurement`
+- `recommended_action`
 - `source`
 - `child_descriptor`
 
@@ -192,8 +207,10 @@ direct conversion path. Use `integrations` and `measurement.*` from status as
 business-repo readiness facts. Use top-level `state`, `blocked`, `manual`,
 `evidence`, `facts.expected_events`, `facts.instrumentation`,
 `facts.provider_state`, `source`, and `child_descriptor` from
-`mb site check ... --json` for site-repo readiness. Do not invent
-`ready_for_launch`.
+`mb site check ... --json` for site-repo measurement readiness. Use
+`facts.app_stack`, `facts.deploy`, `facts.commerce`, `facts.email`,
+`facts.measurement`, and `recommended_action` from `mb launch check ... --json`
+for broad launch truth. Do not invent `ready_for_launch`.
 
 ## Routing Rules
 

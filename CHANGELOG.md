@@ -21,6 +21,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   pixel, booking widgets, CRM/form widgets, Shopify/Liquid-style markup, and
   form/booking smoke requirements so analytics and paid-traffic readiness
   questions route through a durable check. (#926)
+- `mb launch check` now summarizes read-only launch readiness across local app
+  stack, Cloudflare/Wrangler deployment, Shopify commerce, Resend/email code,
+  smoke scripts, and measurement posture before an agent gives launch advice.
 
 ## [0.4.1] - 2026-06-20
 

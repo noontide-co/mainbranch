@@ -142,6 +142,7 @@ accepts that change.
 - Spins up multiple home-page concepts in parallel on localhost so you pick the design before publishing
 - Wires the conversion endpoint you choose: Stripe payment, lead form, appointment booking, or custom webhook
 - Deploys to Cloudflare Pages with git auto-deploy
+- Checks launch readiness with `mb launch check` across app stack, Cloudflare/Wrangler, Shopify, Resend, local smoke scripts, and measurement posture before any publish guidance.
 
 **Site shapes:**
 - `/mb-site` lander — 1 page (V1 stub; use minisite for now)

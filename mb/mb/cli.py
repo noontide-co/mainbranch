@@ -32,6 +32,7 @@ from mb import graph as graph_mod
 from mb import image_rail as image_rail_mod
 from mb import init as init_mod
 from mb import issue as issue_mod
+from mb import launch as launch_mod
 from mb import leads as leads_mod
 from mb import ledger as ledger_mod
 from mb import migrate as migrate_mod
@@ -99,6 +100,13 @@ site_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(site_app, name="site")
+
+launch_app = typer.Typer(
+    name="launch",
+    help="Summarize read-only launch readiness facts.",
+    no_args_is_help=True,
+)
+app.add_typer(launch_app, name="launch")
 
 books_app = typer.Typer(
     name="books",
@@ -2144,6 +2152,26 @@ def site_check_cmd(
         typer.echo(json.dumps(result, indent=2))
     else:
         site_mod.render_check(result)
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
+@launch_app.command("check")
+def launch_check_cmd(
+    site_repo: str = typer.Argument(".", help="Site/app repo to inspect."),
+    business_repo: str = typer.Option(
+        "",
+        "--business-repo",
+        "--repo",
+        help="Business repo with offer and provider metadata.",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Summarize launch readiness from local files without provider mutation."""
+    result = launch_mod.check(site_repo, business_repo=business_repo or None)
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        launch_mod.render_check(result)
     raise typer.Exit(0 if result["ok"] else 1)
 
 

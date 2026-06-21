@@ -16,6 +16,7 @@ required_mb_commands:
   - mb start --json
   - mb doctor repair --plan
   - mb connect doctor --json
+  - mb launch check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json
   - mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json
   - mb validate --cross-refs --json
   - mb checkpoint --plan --json
@@ -54,6 +55,12 @@ json_facts:
   - facts.expected_events
   - facts.instrumentation
   - facts.provider_state
+  - facts.app_stack
+  - facts.deploy
+  - facts.commerce
+  - facts.email
+  - facts.measurement
+  - recommended_action
   - source
   - child_descriptor
 approval_gates:
@@ -122,6 +129,7 @@ Supported modes:
 - `mb start --json`
 - `mb doctor repair --plan`
 - `mb connect doctor --json`
+- `mb launch check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json`
 - `mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json`
 - `mb validate --cross-refs --json`
 - `mb checkpoint --plan --json`
@@ -131,8 +139,11 @@ mode. Use `mb start --json` when runtime readiness, repo boundary, or handoff
 facts matter. Use `mb doctor repair --plan` when status facts name repair or
 migration blockers. Use `mb connect doctor --json` before any Cloudflare,
 domain, DNS, Pages, custom-domain, deploy, provider, or account-change plan.
-Use `mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json` for
-paid-traffic readiness or publish guidance once a site repo exists.
+Use `mb launch check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json` for
+broad local launch truth: app stack, deploy rail, commerce rail, email rail,
+measurement summary, and one recommended smoke. Use `mb site check
+"$SITE_REPO" --business-repo "$BUSINESS_REPO" --json` for paid-traffic
+measurement detail once a site repo exists.
 
 ## Required JSON Fact Paths
 
@@ -170,6 +181,12 @@ paid-traffic readiness or publish guidance once a site repo exists.
 - `facts.expected_events`
 - `facts.instrumentation`
 - `facts.provider_state`
+- `facts.app_stack`
+- `facts.deploy`
+- `facts.commerce`
+- `facts.email`
+- `facts.measurement`
+- `recommended_action`
 - `source`
 - `child_descriptor`
 
@@ -178,8 +195,11 @@ content strategy, integrations, readiness, and `measurement.*` facts from
 `mb status --json --peek` before giving business-repo site or launch-readiness
 advice. Use top-level `state`, `blocked`, `manual`, `evidence`,
 `facts.expected_events`, `facts.provider_state`, `source`, and
-`child_descriptor` from `mb site check ... --json` as the readiness source for
-site repos. Do not invent `ready_for_launch`.
+`child_descriptor` from `mb site check ... --json` as the measurement source for
+site repos. Use `facts.app_stack`, `facts.deploy`, `facts.commerce`,
+`facts.email`, `facts.measurement`, and `recommended_action` from
+`mb launch check ... --json` for broad local launch truth. Do not invent
+`ready_for_launch`.
 
 ## Routing Rules
 
@@ -209,10 +229,13 @@ Mode routing:
    `utm_content`) — hydrated from the landing querystring and forwarded on
    submit, even before any campaign runs. Missing the set is permanent,
    unrecoverable attribution loss the day paid traffic starts.
-4. For `preview`, `instrumentation`, and `check`, run or cite `mb site check`
-   and report `facts.instrumentation`: GA4/GTM/Meta pixel identifiers,
-   booking widgets, CRM/form widgets, conversion-surface state, and whether a
-   submit/booking smoke is still required. Then report the
+4. For broad launch readiness, run or cite `mb launch check` and report app
+   stack, deploy rail, commerce/email rails, measurement summary, and its one
+   recommended action. For `preview`, `instrumentation`, and paid-traffic
+   `check`, run or cite `mb site check` and report `facts.instrumentation`:
+   GA4/GTM/Meta pixel identifiers, booking widgets, CRM/form widgets,
+   conversion-surface state, and whether a submit/booking smoke is still
+   required. Then report the
    readiness state exactly: `missing`, `blocked`, `ready_for_preview`,
    `ready_for_operator_review`, or `ready`.
 5. For `publish`, separate local readiness from provider execution. A ready
@@ -328,6 +351,7 @@ edits:
 
 1. Run `mb validate --cross-refs --json`.
 2. If a site repo exists, run
+   `mb launch check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json` and
    `mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json`.
 3. If the checkpoint surface is available, run `mb checkpoint --plan --json`.
 4. Show blockers in owner-facing language before offering to save.

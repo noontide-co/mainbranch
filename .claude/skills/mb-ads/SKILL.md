@@ -25,6 +25,7 @@ Shared source required `mb` commands:
 - `mb doctor repair --plan`
 - `mb connect doctor --json`
 - `mb connect plan`
+- `mb launch check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json`
 - `mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json`
 - `mb validate --cross-refs --json`
 - `mb checkpoint --plan --json`
@@ -65,6 +66,12 @@ Shared source required JSON fact paths:
 - `facts.expected_events`
 - `facts.instrumentation`
 - `facts.provider_state`
+- `facts.app_stack`
+- `facts.deploy`
+- `facts.commerce`
+- `facts.email`
+- `facts.measurement`
+- `recommended_action`
 - `source`
 - `child_descriptor`
 
@@ -237,13 +244,14 @@ Never ask the operator to paste API keys into chat or public issue text.
 
 ### 0e. Paid-Traffic Measurement Gate
 
-If this ad work is for Google Ads, paid traffic to a site/minisite/lander, retargeting, or any request that asks whether a campaign is ready to launch, check measurement readiness before saying "launch."
+If this ad work is for Google Ads, paid traffic to a site/minisite/lander, retargeting, or any request that asks whether a campaign is ready to launch, check broad launch truth and measurement readiness before saying "launch."
 
 1. Load `docs/google-ads-gtm-conversion-rubric.md`.
 2. Run `mb connect plan` or `mb connect doctor --json` from the business repo when provider readiness matters.
-3. If a site repo is known, run:
+3. If a site repo is known, run broad launch truth first, then measurement detail:
 
 ```bash
+mb launch check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json
 mb site check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json
 ```
 
@@ -478,18 +486,12 @@ Before saving any batch, verify:
 
 ## Recovery from Compaction
 
-If context was compacted mid-task, check:
-
-1. **Which offer?** Use a future `mb` JSON active-offer field if present; otherwise ask the user to restore offer context. Do not silently route from `.vip/local.yaml`.
-2. **What entry point?** Full pipeline, copy only, hook library, video scripts, review, account check
-3. **What stage?** Planning angles, writing hooks, generating prompts, reviewing, pulling account data
-4. **What's done?** Check `pushes/` for partial work. If old `campaigns/` records exist, run `mb migrate campaigns --plan` before relying on them.
-5. **Ad account status?** Re-run `mb status --json --peek`; if needed, run `mb connect doctor --json`
-6. **Resume:** Continue from the last completed step
-
-For full pipeline: Did we finish image prompts (Part 1) before copy (Part 2)?
-For hook library: How many variations generated out of requested quantity?
-For video: How many of 15-30 scripts are done?
+If context was compacted mid-task, check: offer, entry point, stage, partial
+work in `pushes/`, ad account status (`mb status --json --peek`; then
+`mb connect doctor --json` if needed), and resume from the last completed step.
+If old `campaigns/` records exist, run `mb migrate campaigns --plan` before
+relying on them. Do not silently route from `.vip/local.yaml`. Check unfinished
+counts for full pipeline, hook-library, or video-script work.
 ## Quick Reference
 
 **Full/static:** 5-6 concepts x 5 primaries x 5 headlines x 3 image prompts.
