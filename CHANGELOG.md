@@ -11,6 +11,26 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-06-30
+
+### Added
+
+- `mb connect identity` now surfaces safe recorded metadata for connected
+  custom providers, so finance connections such as Mercury can expose role,
+  access level, data domain, and auth state without exposing credentials.
+- Added connection-model docs covering the provider lifecycle, finance-provider
+  boundaries, safe token use from scripts, and follow-up slices for backend
+  diagnostics and rotation ergonomics.
+
+### Fixed
+
+- `mb connect status --all`, `mb connect doctor`, and `mb connect list` now
+  include configured custom providers from repo and user scope instead of only
+  looping over the built-in provider registry. Provider-specific
+  `mb connect status <provider> --json` now resolves connected custom
+  providers, and missing custom-provider secrets report a runnable
+  `--custom --token-stdin` repair command.
+
 ## [0.4.2] - 2026-06-20
 
 Field thanks to Aneesh for the real-session dogfood that sharpened this one.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import stat
 import sys
@@ -16,6 +17,10 @@ from mb import connect as connect_mod
 from mb.cli import app
 
 runner = CliRunner()
+
+
+def _sha256(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
 
 
 def _local_secret_env(monkeypatch, tmp_path: Path) -> None:
@@ -1782,6 +1787,7 @@ def test_connect_custom_provider_roundtrip(tmp_path: Path, monkeypatch) -> None:
     _local_secret_env(monkeypatch, tmp_path)
     repo = tmp_path / "biz"
     repo.mkdir()
+    secret = "custom-fixture-token"
 
     result = runner.invoke(
         app,
@@ -1792,22 +1798,53 @@ def test_connect_custom_provider_roundtrip(tmp_path: Path, monkeypatch) -> None:
             "--repo",
             str(repo),
             "--token",
-            "custom-fixture-token",
+            secret,
         ],
     )
     assert result.exit_code == 0
 
     config_text = (repo / ".mb" / "connect.yaml").read_text(encoding="utf-8")
-    assert "custom-fixture-token" not in config_text
+    assert secret not in config_text
     assert "dataforseo" in config_text
 
     token = runner.invoke(app, ["connect", "token", "dataforseo", "--repo", str(repo)])
     assert token.exit_code == 0
-    assert token.stdout == "custom-fixture-token\n"
+    assert _sha256(token.stdout.strip()) == _sha256(secret)
 
     status = connect_mod.status_provider("dataforseo", repo)
     assert status["provider"] == "dataforseo"
     assert status["connected"] is True
+    assert status["state"] == "unvalidated"
+
+    tested = connect_mod.test_provider("dataforseo", repo)
+    assert tested["ok"] is True
+    assert tested["status"]["state"] == "ready"
+
+    single_status = runner.invoke(
+        app, ["connect", "status", "dataforseo", "--repo", str(repo), "--json"]
+    )
+    assert single_status.exit_code == 0
+    single_status_payload = json.loads(single_status.stdout)
+    assert single_status_payload["provider"] == "dataforseo"
+    assert single_status_payload["state"] == "ready"
+
+    aggregate = connect_mod.status_all(repo, include_all=True)
+    aggregate_by_id = {item["provider"]: item for item in aggregate["providers"]}
+    assert aggregate_by_id["dataforseo"]["state"] == "ready"
+    assert aggregate["summary"]["configured"] == 1
+    assert aggregate["summary"]["healthy"] == 1
+
+    doctor = connect_mod.doctor(repo)
+    checks = {check["name"]: check for check in doctor["checks"]}
+    assert checks["provider:dataforseo"]["state"] == "ready"
+
+    listed = connect_mod.list_providers(repo)
+    listed_by_id = {provider["id"]: provider for provider in listed["providers"]}
+    assert listed_by_id["cloudflare"]["custom"] is False
+    assert listed_by_id["dataforseo"]["custom"] is True
+    assert listed_by_id["dataforseo"]["category"] == "custom"
+    assert listed_by_id["dataforseo"]["state"] == "ready"
+    assert listed["custom_providers"][0]["id"] == "dataforseo"
 
     reconnect = runner.invoke(
         app,
@@ -1815,7 +1852,131 @@ def test_connect_custom_provider_roundtrip(tmp_path: Path, monkeypatch) -> None:
     )
     assert reconnect.exit_code == 0
     rotated = runner.invoke(app, ["connect", "token", "dataforseo", "--repo", str(repo)])
-    assert rotated.stdout == "rotated-fixture-token\n"
+    assert _sha256(rotated.stdout.strip()) == _sha256("rotated-fixture-token")
+
+
+def test_connect_custom_provider_missing_secret_surfaces_repair(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    (repo / ".mb").mkdir()
+    (repo / ".mb" / "connect.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "version": 1,
+                "repo_id": "repo",
+                "providers": {
+                    "mercury": {
+                        "provider": "mercury",
+                        "connected": True,
+                        "scope": "repo",
+                        "auth": "api_key",
+                        "secrets": {
+                            "api_key": {
+                                "ref": connect_mod._secret_ref("repo", "mercury", "api_key"),
+                                "backend": "local-file",
+                            }
+                        },
+                        "metadata": {"role": "operating_cash_source"},
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    status = runner.invoke(app, ["connect", "status", "--all", "--repo", str(repo), "--json"])
+    assert status.exit_code == 1
+    status_payload = json.loads(status.stdout)
+    mercury = next(item for item in status_payload["providers"] if item["provider"] == "mercury")
+    assert mercury["state"] == "missing_secret"
+    assert mercury["repair_command"] == "mb connect mercury --custom --token-stdin"
+    assert mercury["secrets"]["api_key"]["present"] is False
+    assert status_payload["summary"]["configured"] == 1
+    assert status_payload["summary"]["needs_repair"] == 1
+
+    single_status = runner.invoke(
+        app, ["connect", "status", "mercury", "--repo", str(repo), "--json"]
+    )
+    assert single_status.exit_code == 1
+    single_status_payload = json.loads(single_status.stdout)
+    assert single_status_payload["provider"] == "mercury"
+    assert single_status_payload["state"] == "missing_secret"
+    assert single_status_payload["repair_command"] == ("mb connect mercury --custom --token-stdin")
+
+    token = runner.invoke(app, ["connect", "token", "mercury", "--repo", str(repo)])
+    assert token.exit_code == 1
+    assert token.stdout == ""
+    assert "missing or unreadable" in token.stderr
+    assert "repair: mb connect mercury --custom --token-stdin" in token.stderr
+
+    doctor = runner.invoke(app, ["connect", "doctor", "--repo", str(repo), "--json"])
+    assert doctor.exit_code == 1
+    doctor_payload = json.loads(doctor.stdout)
+    checks = {check["name"]: check for check in doctor_payload["checks"]}
+    assert checks["provider:mercury"]["state"] == "missing_secret"
+    assert checks["provider:mercury"]["repair_command"] == (
+        "mb connect mercury --custom --token-stdin"
+    )
+
+    listed = runner.invoke(app, ["connect", "list", "--repo", str(repo), "--json"])
+    assert listed.exit_code == 0
+    listed_payload = json.loads(listed.stdout)
+    listed_mercury = next(
+        provider for provider in listed_payload["providers"] if provider["id"] == "mercury"
+    )
+    assert listed_mercury["state"] == "missing_secret"
+    assert listed_mercury["custom"] is True
+
+
+def test_connect_user_scope_custom_provider_hydrates_and_reads(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    canonical = tmp_path / "canonical"
+    disposable = tmp_path / "workspace"
+    canonical.mkdir()
+    disposable.mkdir()
+    secret = "mercury-fixture-token"
+
+    def fake_git(repo: Path, args: list[str]) -> str:
+        if args == ["config", "--get", "remote.origin.url"]:
+            return "git@github.com:acme/business.git"
+        return ""
+
+    monkeypatch.setattr(connect_mod, "_git_output", fake_git)
+
+    connected = connect_mod.connect_provider(
+        "mercury",
+        repo=canonical,
+        token=secret,
+        account_label="Mercury Fixture",
+        metadata_pairs=["role=operating_cash_source"],
+        scope="user",
+        custom=True,
+    )
+    assert connected["scope"] == "user"
+    assert Path(connected["user_scope_path"]).exists()
+    assert secret not in Path(connected["user_scope_path"]).read_text(encoding="utf-8")
+
+    before = connect_mod.status_all(disposable)
+    assert before["summary"]["configured"] == 1
+    assert before["providers"][0]["provider"] == "mercury"
+    assert before["providers"][0]["state"] == "needs_hydration"
+    assert before["providers"][0]["repair_command"] == "mb connect hydrate --repo ."
+
+    token = runner.invoke(app, ["connect", "token", "mercury", "--repo", str(disposable)])
+    assert token.exit_code == 0
+    assert _sha256(token.stdout.strip()) == _sha256(secret)
+
+    hydrated = connect_mod.hydrate(disposable, provider_id="mercury")
+    assert hydrated["ok"] is True
+    assert hydrated["hydrated"] == ["mercury"]
+    assert secret not in (disposable / ".mb" / "connect.yaml").read_text(encoding="utf-8")
+
+    tested = connect_mod.test_provider("mercury", disposable)
+    assert tested["ok"] is True
+    assert tested["status"]["state"] == "ready"
 
 
 def test_connect_unknown_provider_hints_custom(tmp_path: Path, monkeypatch) -> None:
@@ -2125,6 +2286,68 @@ def test_identity_cli_json(tmp_path: Path, monkeypatch) -> None:
     payload = json.loads(result.stdout)
     assert payload["safe_to_share"] is False
     assert any(p["provider"] == "meta" for p in payload["providers"])
+
+
+def test_identity_includes_custom_provider_safe_metadata(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "mercury",
+        repo=repo,
+        token="mercury-fixture-token",
+        account_label="Mercury Fixture",
+        metadata_pairs=[
+            "role=operating_cash_source",
+            "access_level=read_only",
+            "data_domain=banking",
+            "auth_state=api_token",
+        ],
+        custom=True,
+    )
+
+    result = connect_mod.business_identity(repo)
+
+    mercury = next(p for p in result["providers"] if p["provider"] == "mercury")
+    assert mercury["custom"] is True
+    assert mercury["identity_schema"] == "custom_metadata"
+    assert mercury["identity"] == {
+        "role": "operating_cash_source",
+        "access_level": "read_only",
+        "data_domain": "banking",
+        "auth_state": "api_token",
+    }
+    assert mercury["missing_fields"] == []
+    assert mercury["complete"] is True
+    assert "mercury-fixture-token" not in json.dumps(result)
+
+
+def test_identity_suppresses_secret_like_custom_metadata(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "mercury",
+        repo=repo,
+        token="mercury-fixture-token",
+        metadata_pairs=["role=operating_cash_source"],
+        custom=True,
+    )
+    config_path = repo / ".mb" / "connect.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["providers"]["mercury"]["metadata"]["api_key"] = "badly-committed-secret"
+    config["providers"]["mercury"]["metadata"]["account_ref"] = "operating-cash"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+
+    result = connect_mod.business_identity(repo)
+
+    mercury = next(p for p in result["providers"] if p["provider"] == "mercury")
+    assert mercury["identity"] == {
+        "role": "operating_cash_source",
+        "account_ref": "operating-cash",
+    }
+    assert "badly-committed-secret" not in json.dumps(result)
+    assert "api_key" not in mercury["identity"]
 
 
 def test_hygiene_flags_literal_secret_mixed_with_env_ref(tmp_path: Path) -> None:

@@ -441,7 +441,7 @@ build on it, here is the command list.
 | `mb init` | Quiet scriptable primitive underneath `mb onboard`. |
 | `mb status` | Local-first daily briefing with ranked next actions, MoneyPath readiness, recent activity, GitHub tasks/proposals, updates, and drift. |
 | `mb doctor` | Check environment, repo shape, frontmatter, settings, app setup, provider state, and repair paths. |
-| `mb connect` | Register connected-account metadata/credentials, test health where supported, inspect repair-safe integration status without committing secrets. |
+| `mb connect` | Register connected-account metadata/credentials, test health where supported, inspect repair-safe integration status without committing secrets. See [docs/connect.md](docs/connect.md). |
 | `mb books` | Plain-file bookkeeping setup checks, bookkeeping engine health, safe repair plans, bet exposure, and fake-data sample monthly reporting. |
 | `mb launch check` | Read-only launch readiness across app stack, deploy rail, commerce, email, local smoke scripts, and measurement posture. |
 | `mb site check` | Local paid-traffic measurement readiness: GTM install, dataLayer events, consent posture, Google Ads metadata, approval gates. |

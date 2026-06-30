@@ -1572,11 +1572,19 @@ def connect_cmd(
         raise typer.Exit(0)
     if target == "status":
         try:
-            result = connect_mod.status_all(repo, include_all=all_providers)
+            if provider:
+                result = connect_mod.status_provider(provider, repo)
+            else:
+                result = connect_mod.status_all(repo, include_all=all_providers)
+        except ValueError as exc:
+            typer.echo(f"mb connect status: {exc}", err=True)
+            raise typer.Exit(2) from exc
         except connect_mod.ConfigBoundaryError as exc:
             _connect_boundary_exit("mb connect status", exc)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
+        elif provider:
+            connect_mod.render_provider_status(result)
         else:
             connect_mod.render_status(result)
         raise typer.Exit(0 if result["ok"] else 1)
