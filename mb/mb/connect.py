@@ -358,6 +358,17 @@ def normalize_provider(provider_id: str, *, allow_custom: bool = False) -> Provi
     )
 
 
+def _is_custom_provider_id(provider_id: str) -> bool:
+    key = provider_id.strip().lower().replace("_", "-")
+    return key not in provider_map() and bool(CUSTOM_PROVIDER_RE.fullmatch(key))
+
+
+def _connect_command(provider: Provider, *, token_stdin: bool = False) -> str:
+    custom_flag = " --custom" if provider.category == "custom" else ""
+    token_flag = " --token-stdin" if token_stdin else ""
+    return f"mb connect {provider.id}{custom_flag}{token_flag}"
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -614,7 +625,7 @@ def _repair(
     if provider.id == "meta":
         return _meta_repair(state, missing)
     missing_fields = ", ".join(missing or provider.required_secrets)
-    connect_command = f"mb connect {provider.id} --token-stdin"
+    connect_command = _connect_command(provider, token_stdin=True)
     if state == "not_connected":
         if provider.required_secrets:
             return {
@@ -1484,6 +1495,7 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
         entry = _user_scope_provider_entry(repo_id, provider.id)
         source = "user"
     if not isinstance(entry, dict):
+        repair_command = _connect_command(provider, token_stdin=True)
         return {
             "ok": False,
             "provider": provider.id,
@@ -1491,10 +1503,11 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
             "source": "",
             "token": "",
             "error": f"{provider.name} is not connected",
-            "repair_command": f"mb connect {provider.id} --token-stdin",
+            "repair_command": repair_command,
         }
     token = _entry_secret_value(entry, field)
     if not token:
+        repair_command = _connect_command(provider, token_stdin=True)
         return {
             "ok": False,
             "provider": provider.id,
@@ -1502,7 +1515,7 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
             "source": source,
             "token": "",
             "error": f"{provider.name} credential is missing or unreadable from the secret store",
-            "repair_command": f"mb connect {provider.id} --token-stdin",
+            "repair_command": repair_command,
         }
     return {
         "ok": True,
@@ -2113,13 +2126,24 @@ def status_all(
     user_repo = _read_user_scope()["repos"].get(repo_id)
     user_repo = user_repo if isinstance(user_repo, dict) else {}
     user_providers = user_repo.get("providers")
-    configured = set(config["providers"].keys())
+    configured = {
+        str(key).strip().lower().replace("_", "-")
+        for key in config["providers"]
+        if str(key).strip()
+    }
     if isinstance(user_providers, dict):
-        configured.update(str(key) for key in user_providers)
+        configured.update(
+            str(key).strip().lower().replace("_", "-") for key in user_providers if str(key).strip()
+        )
     providers = []
     for provider in PROVIDERS:
         if include_all or provider.id in configured:
             providers.append(status_provider(provider.id, target))
+    custom_ids = sorted(
+        provider_id for provider_id in configured if _is_custom_provider_id(provider_id)
+    )
+    for provider_id in custom_ids:
+        providers.append(status_provider(provider_id, target))
     connected = [item for item in providers if item["connected"]]
     broken = [item for item in connected if not item["ok"]]
     unvalidated = [item for item in connected if item["state"] == "unvalidated"]
@@ -2262,11 +2286,40 @@ def list_providers(repo: str | Path = ".") -> dict[str, Any]:
     status = status_all(repo, include_all=True)
     by_id = {item["provider"]: item for item in status["providers"]}
     providers = []
-    for provider in provider_registry():
-        state = by_id[provider["id"]]["state"]
-        guidance = PROVIDER_GUIDANCE.get(provider["id"], {})
-        providers.append({**provider, **guidance, "state": state})
-    return {"ok": True, "providers": providers, "config_path": status["config_path"]}
+    for registry_entry in provider_registry():
+        state = by_id[registry_entry["id"]]["state"]
+        guidance = PROVIDER_GUIDANCE.get(registry_entry["id"], {})
+        providers.append({**registry_entry, **guidance, "state": state, "custom": False})
+    custom_providers = []
+    for item in status["providers"]:
+        if not _is_custom_provider_id(item["provider"]):
+            continue
+        custom_provider = _custom_provider(item["provider"])
+        custom = {
+            "id": custom_provider.id,
+            "name": custom_provider.name,
+            "category": custom_provider.category,
+            "auth": custom_provider.auth,
+            "required_secrets": list(custom_provider.required_secrets),
+            "metadata_fields": list(custom_provider.metadata_fields),
+            "description": custom_provider.description,
+            "env_vars": list(custom_provider.env_vars),
+            "state": item["state"],
+            "custom": True,
+            "connected": bool(item["connected"]),
+            "ready": bool(item["ok"]),
+            "account_label": item.get("account_label", ""),
+            "scope": item.get("scope", "repo"),
+            "repair_command": item.get("repair_command", ""),
+        }
+        providers.append(custom)
+        custom_providers.append(custom)
+    return {
+        "ok": True,
+        "providers": providers,
+        "custom_providers": custom_providers,
+        "config_path": status["config_path"],
+    }
 
 
 def provider_plan(repo: str | Path = ".") -> dict[str, Any]:
@@ -2765,6 +2818,16 @@ def render_status(result: dict[str, Any]) -> None:
         print(f"  {state}  {item['provider']}{label}: {item['state']}")
         if item["repair_command"]:
             print(f"       next: {item['repair_command']}")
+
+
+def render_provider_status(result: dict[str, Any]) -> None:
+    state = "ok" if result["ok"] else "warn"
+    label = f" ({result['account_label']})" if result["account_label"] else ""
+    print(f"mb connect status {result['provider']}{label}: {state} ({result['state']})")
+    if result.get("summary"):
+        print(f"summary: {result['summary']}")
+    if result.get("repair_command"):
+        print(f"next: {result['repair_command']}")
 
 
 def render_doctor(result: dict[str, Any]) -> None:
