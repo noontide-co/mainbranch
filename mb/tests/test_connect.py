@@ -2288,6 +2288,68 @@ def test_identity_cli_json(tmp_path: Path, monkeypatch) -> None:
     assert any(p["provider"] == "meta" for p in payload["providers"])
 
 
+def test_identity_includes_custom_provider_safe_metadata(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "mercury",
+        repo=repo,
+        token="mercury-fixture-token",
+        account_label="Mercury Fixture",
+        metadata_pairs=[
+            "role=operating_cash_source",
+            "access_level=read_only",
+            "data_domain=banking",
+            "auth_state=api_token",
+        ],
+        custom=True,
+    )
+
+    result = connect_mod.business_identity(repo)
+
+    mercury = next(p for p in result["providers"] if p["provider"] == "mercury")
+    assert mercury["custom"] is True
+    assert mercury["identity_schema"] == "custom_metadata"
+    assert mercury["identity"] == {
+        "role": "operating_cash_source",
+        "access_level": "read_only",
+        "data_domain": "banking",
+        "auth_state": "api_token",
+    }
+    assert mercury["missing_fields"] == []
+    assert mercury["complete"] is True
+    assert "mercury-fixture-token" not in json.dumps(result)
+
+
+def test_identity_suppresses_secret_like_custom_metadata(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "mercury",
+        repo=repo,
+        token="mercury-fixture-token",
+        metadata_pairs=["role=operating_cash_source"],
+        custom=True,
+    )
+    config_path = repo / ".mb" / "connect.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["providers"]["mercury"]["metadata"]["api_key"] = "badly-committed-secret"
+    config["providers"]["mercury"]["metadata"]["account_ref"] = "operating-cash"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+
+    result = connect_mod.business_identity(repo)
+
+    mercury = next(p for p in result["providers"] if p["provider"] == "mercury")
+    assert mercury["identity"] == {
+        "role": "operating_cash_source",
+        "account_ref": "operating-cash",
+    }
+    assert "badly-committed-secret" not in json.dumps(result)
+    assert "api_key" not in mercury["identity"]
+
+
 def test_hygiene_flags_literal_secret_mixed_with_env_ref(tmp_path: Path) -> None:
     # "${ENV}sk-realsecret" must NOT pass as externalized (false-negative fix).
     home = tmp_path / "home"

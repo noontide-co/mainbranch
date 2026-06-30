@@ -37,6 +37,9 @@ to stdout and nothing else. Use it only in pipes or local scripts that need the
 credential; do not paste its output into chat, docs, issues, PRs, or tracked
 files.
 
+The product model behind this surface lives in
+[connection-model.md](connection-model.md).
+
 ## Custom Providers
 
 Use `--custom` when the provider is not in the built-in registry yet. Custom
@@ -66,6 +69,7 @@ mb connect status mercury --json
 mb connect status --all --json
 mb connect doctor --json
 mb connect list --json
+mb connect identity --json
 ```
 
 Read the token for a local importer or scheduled collector:
@@ -73,6 +77,27 @@ Read the token for a local importer or scheduled collector:
 ```bash
 mb connect token mercury
 ```
+
+In a shell script, capture the token without echoing it. Keep shell tracing off
+around secret reads.
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+set +x
+
+token="$(mb connect token mercury)"
+curl --fail --silent --show-error \
+  --header "Authorization: Bearer ${token}" \
+  "https://api.example.invalid/accounts" \
+  > /tmp/mercury-accounts.json
+
+unset token
+```
+
+Do not use `set -x`, `echo "$token"`, committed `.env` files, or logs that
+print request headers. Raw exports should go to a private finance workspace or
+an ignored local staging path, not to a public repo.
 
 If metadata exists but the secret is missing or unreadable, Main Branch reports
 `missing_secret` and gives a reconnect command that includes `--custom`, for
@@ -85,6 +110,36 @@ mb connect mercury --custom --token-stdin
 Reconnecting an already configured custom provider also works without
 `--custom`, but keeping the flag in repair output makes the command safe to
 reuse from a fresh or partially repaired repo.
+
+For rotation, run the same command with the new token:
+
+```bash
+MB_CONNECT_SECRET_BACKEND=macos-keychain \
+  mb connect mercury --custom --token-stdin
+```
+
+Then verify readiness without printing the token:
+
+```bash
+mb connect status mercury --json
+mb connect doctor --json
+mb connect identity --json
+```
+
+Recommended custom metadata for finance providers:
+
+```text
+role=operating_cash_source
+access_level=read_only
+data_domain=banking
+auth_state=api_token
+source_system=mercury
+account_ref=operating-cash
+```
+
+Use `account_ref` as a business-readable handle. Do not commit raw account
+numbers, routing numbers, statements, transaction rows, tax records, or provider
+payloads.
 
 ## User Scope
 

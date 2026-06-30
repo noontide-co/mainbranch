@@ -318,6 +318,17 @@ def provider_registry() -> list[dict[str, Any]]:
 
 
 CUSTOM_PROVIDER_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,30}$")
+CUSTOM_IDENTITY_METADATA_ORDER = (
+    "role",
+    "access_level",
+    "data_domain",
+    "auth_state",
+    "environment",
+    "source_system",
+    "account_ref",
+    "workspace",
+    "tenant_id",
+)
 
 
 def _custom_provider(provider_id: str) -> Provider:
@@ -367,6 +378,32 @@ def _connect_command(provider: Provider, *, token_stdin: bool = False) -> str:
     custom_flag = " --custom" if provider.category == "custom" else ""
     token_flag = " --token-stdin" if token_stdin else ""
     return f"mb connect {provider.id}{custom_flag}{token_flag}"
+
+
+def _safe_identity_metadata(metadata: dict[str, Any]) -> dict[str, str]:
+    """Return custom-provider metadata safe enough for identity diagnostics.
+
+    The output is still operator-facing (`safe_to_share: false`), but this
+    avoids echoing hand-edited secret-like metadata keys if a repo config is
+    malformed.
+    """
+
+    recorded: dict[str, str] = {}
+    for key in CUSTOM_IDENTITY_METADATA_ORDER:
+        value = metadata.get(key)
+        if value is not None and value != "":
+            recorded[key] = str(value)
+    for raw_key, value in metadata.items():
+        key = str(raw_key)
+        lowered = key.lower().replace("-", "_")
+        if key in recorded or value is None or value == "":
+            continue
+        if lowered not in SAFE_METADATA_KEYS and any(
+            part in lowered for part in SENSITIVE_KEY_PARTS
+        ):
+            continue
+        recorded[key] = str(value)
+    return recorded
 
 
 def _now() -> str:
@@ -2728,16 +2765,29 @@ def business_identity(repo: str | Path = ".") -> dict[str, Any]:
         if not item["connected"]:
             continue
         provider = pmap.get(item["provider"])
-        fields = provider.metadata_fields if provider else ()
-        if not fields:
-            continue
         metadata = item.get("metadata") or {}
-        recorded = {field: str(metadata.get(field, "")) for field in fields}
-        missing = [field for field in fields if not recorded[field]]
+        metadata = metadata if isinstance(metadata, dict) else {}
+        if provider:
+            fields = provider.metadata_fields
+            if not fields:
+                continue
+            recorded = {field: str(metadata.get(field, "")) for field in fields}
+            missing = [field for field in fields if not recorded[field]]
+            schema = "registry"
+        elif _is_custom_provider_id(str(item["provider"])):
+            recorded = _safe_identity_metadata(metadata)
+            if not recorded:
+                continue
+            missing = []
+            schema = "custom_metadata"
+        else:
+            continue
         providers_out.append(
             {
                 "provider": item["provider"],
                 "name": item["name"],
+                "custom": provider is None,
+                "identity_schema": schema,
                 "identity": recorded,
                 "missing_fields": missing,
                 "complete": not missing,

@@ -11,6 +11,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- `mb connect identity` now surfaces safe recorded metadata for connected
+  custom providers, so finance connections such as Mercury can expose role,
+  access level, data domain, and auth state without exposing credentials.
+- Added connection-model docs covering the provider lifecycle, finance-provider
+  boundaries, safe token use from scripts, and follow-up slices for backend
+  diagnostics and rotation ergonomics.
+
 ### Fixed
 
 - `mb connect status --all`, `mb connect doctor`, and `mb connect list` now
