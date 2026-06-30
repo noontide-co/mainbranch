@@ -11,6 +11,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-06-30
+
 ### Added
 
 - `mb connect identity` now surfaces safe recorded metadata for connected
