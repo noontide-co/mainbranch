@@ -8,12 +8,12 @@ Review ads through 6 compliance and quality lenses before shipping.
 
 | Lens | Location | What It Checks |
 |------|----------|----------------|
-| FTC Compliance | `<engine>/.claude/lenses/ftc-compliance.md` | Federal regulations, earnings claims |
-| Meta Policy | `<engine>/.claude/lenses/meta-policy.md` | Platform triggers, Personal Attributes |
-| Copy Quality | `<engine>/.claude/lenses/copy-quality.md` | Schwartz, Hormozi, Suby frameworks |
-| Visual Standards | `<engine>/.claude/lenses/visual-standards.md` | Safe zones, OCR, prohibited visuals |
-| Voice Authenticity | `<engine>/.claude/lenses/voice-authenticity.md` | AI tells, brand voice |
-| Substantiation | `<engine>/.claude/lenses/substantiation.md` | Claims inventory, proof matching |
+| FTC Compliance | `references/lenses/ftc-compliance.md` | Federal regulations, earnings claims |
+| Meta Policy | `references/lenses/meta-policy.md` | Platform triggers, Personal Attributes |
+| Copy Quality | `references/lenses/copy-quality.md` | Schwartz, Hormozi, Suby frameworks |
+| Visual Standards | `references/lenses/visual-standards.md` | Safe zones, OCR, prohibited visuals |
+| Voice Authenticity | `references/lenses/voice-authenticity.md` | AI tells, brand voice |
+| Substantiation | `references/lenses/substantiation.md` | Claims inventory, proof matching |
 
 ---
 
@@ -23,7 +23,7 @@ Review ads through 6 compliance and quality lenses before shipping.
 2. Run `mb checkpoint --plan --json`, validate a subject such as `[drafted] {type} ad batch`, and save the pre-review checkpoint only after operator approval.
 3. Spawn 6 parallel Task agents — one per lens. Use `subagent_type: "general-purpose"`. Each agent:
    - Reads the ad batch/copy being reviewed
-   - Reads its assigned lens file from the engine's `lenses/` directory — resolve relative to this skill: `../../lenses/` from the skill's own loaded location (works for symlink, additionalDirectories, and plugin-cache installs; never cwd-relative)
+   - Reads its assigned lens file from this skill's bundled `references/lenses/` directory
    - Evaluates every ad against that lens's checklist
    - Returns P1/P2/P3 findings with specific line references
    - Does NOT fix anything — just reports findings (read-only pattern, no write risk)

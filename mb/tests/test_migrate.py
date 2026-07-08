@@ -85,6 +85,35 @@ def test_migrate_status_reports_pending_legacy_schema(tmp_path: Path) -> None:
     assert payload["pending"][0]["name"] == "001_v01_to_v02_path_config"
 
 
+def test_migrate_status_blocks_future_schema(tmp_path: Path) -> None:
+    repo = tmp_path / "future"
+    (repo / ".mb").mkdir(parents=True)
+    (repo / ".mb" / "schema_version").write_text("9.0\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["migrate", "status", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["current_version"] == "9.0"
+    assert payload["pending"] == []
+    assert "newer than this engine supports" in payload["errors"][0]
+
+
+def test_migrate_check_blocks_future_schema_without_plan(tmp_path: Path) -> None:
+    repo = tmp_path / "future"
+    (repo / ".mb").mkdir(parents=True)
+    (repo / ".mb" / "schema_version").write_text("9.0\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["migrate", "--repo", str(repo), "--check", "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["plan"]["has_changes"] is False
+    assert "newer than this engine supports" in payload["errors"][0]
+
+
 def test_migrate_check_prints_privacy_safe_summary_when_pending(tmp_path: Path) -> None:
     repo = _legacy_repo(tmp_path)
 

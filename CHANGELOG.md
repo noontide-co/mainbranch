@@ -11,6 +11,48 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-08
+
+This release hardens Main Branch's local state writes and runtime repair paths
+so owner-loop setup commands fail loudly instead of silently clobbering local
+agent or provider configuration.
+
+### Added
+
+- Added shared durable-write helpers for atomic text/JSON writes and corrupt
+  JSON detection, then moved core runtime wiring, migration writes, init
+  scaffolding, Codex guidance repair, and provider metadata writes onto those
+  safer paths.
+- `mb migrate` and `mb doctor` now detect business repos with a schema version
+  newer than the installed engine and block write plans instead of preparing a
+  downgrade migration.
+- `AGENTS.md` Codex guidance is now maintained inside a Main Branch managed
+  block, preserving operator-owned notes outside the block during repair.
+- `/mb-ads` now bundles its review lenses and compliance references inside the
+  skill so packaged/global skill copies do not depend on sibling engine
+  directories.
+
+### Changed
+
+- `mb connect` now prefers the Python `keyring` backend over the macOS
+  `security -w` CLI when the backend is set to `auto`; explicit
+  `macos-keychain` selection still uses the macOS CLI.
+- Gemini deep-research examples now pass the API key through the
+  `x-goog-api-key` header instead of a query string.
+
+### Fixed
+
+- `mb skill link` refuses to rewrite corrupt `.claude/settings.local.json`
+  instead of resetting Claude Code permissions from an empty object.
+- `mb connect` refuses to update unreadable or invalid `.mb/connect.yaml` /
+  user-scope metadata, writes provider metadata and local-file secrets
+  atomically, and filters hand-edited secret-looking labels or metadata out of
+  safe-to-share status JSON.
+- `mb init` preserves existing `.gitignore` and `.github/CODEOWNERS` files
+  while still appending Main Branch local wiring ignores when needed.
+- `mb update` uses the currently running `mb` entrypoint for version checks and
+  times out subprocess probes instead of hanging indefinitely.
+
 ## [0.4.3] - 2026-06-30
 
 ### Added

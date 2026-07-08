@@ -1545,6 +1545,9 @@ def connect_cmd(
             result = connect_mod.list_providers(repo)
         except connect_mod.ConfigBoundaryError as exc:
             _connect_boundary_exit("mb connect", exc)
+        except ValueError as exc:
+            typer.echo(f"mb connect: {exc}", err=True)
+            raise typer.Exit(2) from exc
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
@@ -1555,6 +1558,9 @@ def connect_cmd(
             result = connect_mod.list_providers(repo)
         except connect_mod.ConfigBoundaryError as exc:
             _connect_boundary_exit("mb connect list", exc)
+        except ValueError as exc:
+            typer.echo(f"mb connect list: {exc}", err=True)
+            raise typer.Exit(2) from exc
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
@@ -1565,6 +1571,9 @@ def connect_cmd(
             result = connect_mod.provider_plan(repo)
         except connect_mod.ConfigBoundaryError as exc:
             _connect_boundary_exit("mb connect plan", exc)
+        except ValueError as exc:
+            typer.echo(f"mb connect plan: {exc}", err=True)
+            raise typer.Exit(2) from exc
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
@@ -1593,6 +1602,9 @@ def connect_cmd(
             result = connect_mod.doctor(repo)
         except connect_mod.ConfigBoundaryError as exc:
             _connect_boundary_exit("mb connect doctor", exc)
+        except ValueError as exc:
+            typer.echo(f"mb connect doctor: {exc}", err=True)
+            raise typer.Exit(2) from exc
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:

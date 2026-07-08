@@ -485,6 +485,26 @@ def test_skill_validate_flags_parent_directory_references(
     assert any("outside the skill directory" in error for error in report["files"][0]["errors"])
 
 
+def test_mb_ads_review_references_are_skill_local() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    skill_root = repo_root / ".claude" / "skills" / "mb-ads"
+    text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            skill_root / "references" / "mode-review.md",
+            skill_root / "references" / "review-workflow.md",
+            skill_root / "references" / "mode-static-ads.md",
+            skill_root / "references" / "post-generation-pipeline.md",
+        ]
+    )
+
+    assert "../../lenses" not in text
+    assert "../../reference/compliance" not in text
+    assert "engine's `lenses" not in text
+    assert (skill_root / "references" / "lenses" / "ftc-compliance.md").is_file()
+    assert (skill_root / "references" / "compliance" / "angle-playbook.md").is_file()
+
+
 def test_skill_validate_flags_line_count(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     body = "\n".join(f"line {i}" for i in range(skill_validate_mod.MAX_SKILL_LINES + 1))
     _skill(tmp_path, "mb-alpha", body=body)

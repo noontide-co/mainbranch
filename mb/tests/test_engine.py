@@ -187,6 +187,25 @@ def test_link_skills_removes_legacy_project_symlink(tmp_path: Path) -> None:
     assert (repo / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
 
 
+def test_link_skills_refuses_to_clobber_corrupt_local_settings(tmp_path: Path, monkeypatch) -> None:
+    repo = tmp_path / "biz"
+    engine = tmp_path / "engine"
+    _write_skill(engine, "mb-start")
+    settings = repo / ".claude" / "settings.local.json"
+    settings.parent.mkdir(parents=True)
+    settings.write_text("{not json", encoding="utf-8")
+
+    monkeypatch.setattr(engine_mod, "engine_root", lambda: engine)
+    monkeypatch.setattr(engine_mod, "skills_dir", lambda root=None: engine / ".claude" / "skills")
+
+    result = engine_mod.link_skills(repo)
+
+    assert result["ok"] is False
+    assert "not valid JSON" in result["errors"][0]
+    assert settings.read_text(encoding="utf-8") == "{not json"
+    assert not (repo / ".claude" / "skills" / "mb-start").exists()
+
+
 def test_link_skills_removes_retired_project_symlinks_and_gitignore_entries(
     tmp_path: Path, monkeypatch
 ) -> None:

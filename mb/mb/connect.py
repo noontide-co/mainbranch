@@ -23,6 +23,8 @@ from typing import Any
 
 import yaml
 
+from mb.durable import atomic_write_text
+
 CONFIG_RELATIVE_PATH = Path(".mb") / "connect.yaml"
 USER_SCOPE_RELATIVE_PATH = Path("connect") / "user-scope.yaml"
 SERVICE_NAME = "mainbranch"
@@ -50,6 +52,10 @@ BEARER_SECRET_RE = re.compile(r"(?i)\bbearer[ \t]+[^\s,;]+")
 
 class ConfigBoundaryError(ValueError):
     """Raised when local connect metadata is outside the selected repo boundary."""
+
+
+class ConfigCorruptError(ValueError):
+    """Raised when local connect metadata cannot be parsed safely."""
 
 
 @dataclass(frozen=True)
@@ -406,6 +412,34 @@ def _safe_identity_metadata(metadata: dict[str, Any]) -> dict[str, str]:
     return recorded
 
 
+def _metadata_key_looks_sensitive(key: str) -> bool:
+    lowered = key.lower().replace("-", "_")
+    return lowered not in SAFE_METADATA_KEYS and any(
+        part in lowered for part in SENSITIVE_KEY_PARTS
+    )
+
+
+def _safe_status_metadata(metadata: dict[str, Any]) -> dict[str, str]:
+    """Filter hand-edited metadata before it enters safe-to-share status JSON."""
+    recorded: dict[str, str] = {}
+    for raw_key, raw_value in metadata.items():
+        key = str(raw_key)
+        if raw_value is None or raw_value == "":
+            continue
+        value = str(raw_value)
+        flagged, _reason = _classify_credential_value(key, value)
+        if flagged or _metadata_key_looks_sensitive(key):
+            continue
+        recorded[key] = value
+    return recorded
+
+
+def _safe_status_label(value: Any) -> str:
+    label = str(value or "")
+    flagged, _reason = _classify_credential_value("account_label", label)
+    return SECRET_REPLACEMENT if flagged else label
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -459,10 +493,16 @@ def _read_config(repo: Path) -> dict[str, Any]:
         return _empty_config()
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except (OSError, yaml.YAMLError):
-        raw = {}
+    except (OSError, yaml.YAMLError) as exc:
+        raise ConfigCorruptError(
+            "Refusing to update .mb/connect.yaml because it is unreadable or invalid YAML. "
+            "Fix or move the file, then rerun the command."
+        ) from exc
     if not isinstance(raw, dict):
-        raw = {}
+        raise ConfigCorruptError(
+            "Refusing to update .mb/connect.yaml because it does not contain a YAML object. "
+            "Fix or move the file, then rerun the command."
+        )
     providers = raw.get("providers")
     if not isinstance(providers, dict):
         providers = {}
@@ -563,7 +603,7 @@ def _write_config(repo: Path, config: dict[str, Any]) -> Path:
     # Re-check after creating .mb so a swapped local-state path cannot escape the repo.
     path = _checked_config_path(repo)
     text = yaml.safe_dump(config, sort_keys=False)
-    path.write_text(text, encoding="utf-8")
+    atomic_write_text(path, text)
     return path
 
 
@@ -581,10 +621,16 @@ def _read_user_scope() -> dict[str, Any]:
         return _empty_user_scope()
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except (OSError, yaml.YAMLError):
-        raw = {}
+    except (OSError, yaml.YAMLError) as exc:
+        raise ConfigCorruptError(
+            "Refusing to update connect user-scope metadata because it is unreadable or "
+            "invalid YAML. Fix or move the file, then rerun the command."
+        ) from exc
     if not isinstance(raw, dict):
-        raw = {}
+        raise ConfigCorruptError(
+            "Refusing to update connect user-scope metadata because it does not contain a YAML "
+            "object. Fix or move the file, then rerun the command."
+        )
     repos = raw.get("repos")
     if not isinstance(repos, dict):
         repos = {}
@@ -600,7 +646,7 @@ def _write_user_scope(data: dict[str, Any]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with suppress(OSError):
         path.parent.chmod(0o700)
-    path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    atomic_write_text(path, yaml.safe_dump(data, sort_keys=False))
     with suppress(OSError):
         path.chmod(0o600)
     return path
@@ -842,10 +888,10 @@ def _select_secret_backend() -> str:
     requested = os.environ.get("MB_CONNECT_SECRET_BACKEND", "auto").strip().lower()
     if requested in {"macos-keychain", "keyring", "local-file"}:
         return requested
-    if platform.system() == "Darwin" and shutil.which("security"):
-        return "macos-keychain"
     if _keyring_module() is not None:
         return "keyring"
+    if platform.system() == "Darwin" and shutil.which("security"):
+        return "macos-keychain"
     return "local-file"
 
 
@@ -914,7 +960,7 @@ def _write_local_secrets(data: dict[str, str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with suppress(OSError):
         path.parent.chmod(0o700)
-    path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    atomic_write_text(path, json.dumps(data, indent=2, sort_keys=True) + "\n")
     with suppress(OSError):
         path.chmod(0o600)
 
@@ -1230,8 +1276,8 @@ def _unhydrated_status(provider: Provider, entry: dict[str, Any]) -> dict[str, A
         "repair": repair["repair"],
         "repair_command": repair["repair_command"],
         "safe_to_share": True,
-        "account_label": str(entry.get("account_label") or ""),
-        "metadata": metadata,
+        "account_label": _safe_status_label(entry.get("account_label")),
+        "metadata": _safe_status_metadata(metadata),
         "secrets": secrets,
         "last_checked_at": str(entry.get("last_checked_at") or ""),
         "scope": "user",
@@ -1343,8 +1389,8 @@ def status_provider(
             "repair": repair["repair"],
             "repair_command": repair["repair_command"],
             "safe_to_share": True,
-            "account_label": str(raw_entry.get("account_label") or ""),
-            "metadata": meta_metadata,
+            "account_label": _safe_status_label(raw_entry.get("account_label")),
+            "metadata": _safe_status_metadata(meta_metadata),
             "secrets": {
                 "access_token": {"present": secret_present, "ref": ref, "backend": backend}
             },
@@ -1421,8 +1467,8 @@ def status_provider(
         "repair": repair["repair"],
         "repair_command": repair["repair_command"],
         "safe_to_share": True,
-        "account_label": str(entry.get("account_label") or ""),
-        "metadata": metadata,
+        "account_label": _safe_status_label(entry.get("account_label")),
+        "metadata": _safe_status_metadata(metadata),
         "secrets": secrets,
         "last_checked_at": str(entry.get("last_checked_at") or ""),
         "scope": str(entry.get("scope") or "repo"),

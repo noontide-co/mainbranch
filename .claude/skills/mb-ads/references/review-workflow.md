@@ -25,7 +25,7 @@ Identify what's being reviewed:
 
 Spawn 6 agents, one per lens. Each agent:
 
-1. Reads its lens file from the engine's `lenses/` dir (`../../lenses/` relative to this skill's loaded location)
+1. Reads its lens file from this skill's bundled `references/lenses/` directory
 2. Applies the checklist to the ad content
 3. Returns findings with severity (P1/P2/P3)
 
@@ -174,11 +174,12 @@ mb checkpoint --message "[updated] {type} ad batch after review" --yes
 
 ## Context Files
 
-**From Main Branch engine:**
-- `../../lenses/` (relative to this skill's loaded directory) — the 6 review lenses
-- `../../reference/compliance/` (same resolution) — shared compliance frameworks
+**Bundled with this skill:**
+- `references/lenses/` — the 6 review lenses
+- `references/compliance/` — shared compliance frameworks
 
-Resolve engine paths relative to THIS skill's loaded directory: the engine root is two levels up (`<this-skill-dir>/../../`), so lenses live at `../../lenses/` and compliance frameworks at `../../reference/compliance/`. This works identically for repo symlinks, additionalDirectories, and plugin-cache installs — never resolve them against the business repo's cwd.
+Resolve these paths relative to the `mb-ads` skill directory. Do not resolve them
+against the business repo's cwd or a sibling engine directory.
 
 **From business repo:**
 - `core/proof/testimonials.md` — Available testimonials for substantiation check

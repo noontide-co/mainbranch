@@ -253,12 +253,14 @@ If !GEMINI_AVAILABLE:
 **Tier 2 REST API Example:**
 ```bash
 # Start research (returns interaction ID)
-curl -s "https://generativelanguage.googleapis.com/v1beta/interactions?key=$GOOGLE_API_KEY" \
+curl -s "https://generativelanguage.googleapis.com/v1beta/interactions" \
+  -H "x-goog-api-key: $GOOGLE_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"input": "Your research question", "agent": "deep-research-pro-preview-12-2025", "background": true, "store": true}'
 
 # Poll for completion
-curl -s "https://generativelanguage.googleapis.com/v1beta/interactions/{id}?key=$GOOGLE_API_KEY"
+curl -s "https://generativelanguage.googleapis.com/v1beta/interactions/{id}" \
+  -H "x-goog-api-key: $GOOGLE_API_KEY"
 ```
 
 **Known issues:** Occasional internal server errors during long-running research. If poll returns 500 after ~10min, start a new request.

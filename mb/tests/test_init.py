@@ -293,6 +293,40 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert codex_mod.instructions_status(target)["ok"] is True
 
 
+def test_init_preserves_existing_gitignore_and_codeowners(tmp_path: Path) -> None:
+    target = tmp_path / "existing"
+    (target / ".github").mkdir(parents=True)
+    (target / ".gitignore").write_text("custom-ignore\n", encoding="utf-8")
+    (target / ".github" / "CODEOWNERS").write_text("* @existing\n", encoding="utf-8")
+
+    result = run(path=str(target), name="Existing Business")
+
+    assert result["status"] == "ok"
+    gitignore = (target / ".gitignore").read_text(encoding="utf-8")
+    assert gitignore.startswith("custom-ignore\n")
+    assert "# Main Branch local Claude wiring" in gitignore
+    assert (target / ".github" / "CODEOWNERS").read_text(encoding="utf-8") == "* @existing\n"
+    assert ".github/CODEOWNERS" not in result["created"]
+
+
+def test_codex_agents_repair_preserves_operator_content(tmp_path: Path) -> None:
+    target = tmp_path / "biz"
+    target.mkdir()
+    (target / "AGENTS.md").write_text(
+        "# Operator Notes\n\nKeep this local note.\n", encoding="utf-8"
+    )
+
+    result = codex_mod.write_agents_md(target, name="Acme")
+
+    text = (target / "AGENTS.md").read_text(encoding="utf-8")
+    assert result["changed"] is True
+    assert text.startswith(codex_mod.AGENTS_MANAGED_BEGIN)
+    assert codex_mod.AGENTS_MANAGED_END in text
+    assert "# Operator Notes\n\nKeep this local note.\n" in text
+    assert "<!-- mainbranch:codex-guidance " in text
+    assert codex_mod.instructions_status(target)["ok"] is True
+
+
 def test_init_defaults_owner_name_without_local_git_identity(
     tmp_path: Path,
     monkeypatch,

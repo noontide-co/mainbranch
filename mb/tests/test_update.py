@@ -119,6 +119,34 @@ def _codex_repair_completed(args: list[str]) -> subprocess.CompletedProcess[str]
     )
 
 
+def test_run_command_returns_124_on_timeout(monkeypatch: Any) -> None:
+    def fake_run(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs["timeout"])
+
+    monkeypatch.setattr("mb.update.subprocess.run", fake_run)
+
+    result = update_mod._run_command(["git", "fetch"], timeout=0.01)
+
+    assert result.returncode == 124
+    assert "timed out after" in result.stderr
+
+
+def test_version_from_mb_command_uses_running_entrypoint(monkeypatch: Any, tmp_path: Path) -> None:
+    mb = tmp_path / "mb"
+    mb.write_text("#!/bin/sh\n", encoding="utf-8")
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        return _completed(args, stdout="mb 0.5.0\n")
+
+    monkeypatch.setattr("mb.update.sys.argv", [str(mb), "update"])
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    assert update_mod._version_from_mb_command() == "0.5.0"
+    assert calls == [[str(mb), "--version"]]
+
+
 def test_update_check_pipx_does_not_run_commands(monkeypatch: Any, tmp_path: Path) -> None:
     calls: list[list[str]] = []
 
