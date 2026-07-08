@@ -14,14 +14,16 @@ When and how to use Gemini for comprehensive research.
 
 **Tested endpoint (Tier 1):**
 ```
-POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$GOOGLE_API_KEY
+POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+Header: x-goog-api-key: $GOOGLE_API_KEY
 ```
 
 **Response format:** `candidates[].content.parts[].text`
 
 **Tested endpoint (Tier 2):**
 ```
-POST https://generativelanguage.googleapis.com/v1beta/interactions?key=$GOOGLE_API_KEY
+POST https://generativelanguage.googleapis.com/v1beta/interactions
+Header: x-goog-api-key: $GOOGLE_API_KEY
 ```
 
 **Tier 2 REST API verified working:**
@@ -112,7 +114,8 @@ There are THREE different things, often confused:
 
 **Start Deep Research:**
 ```bash
-curl -s "https://generativelanguage.googleapis.com/v1beta/interactions?key=$GOOGLE_API_KEY" \
+curl -s "https://generativelanguage.googleapis.com/v1beta/interactions" \
+  -H "x-goog-api-key: $GOOGLE_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "input": "Your research question here",
@@ -134,7 +137,8 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/interactions?key=$GOOG
 
 **Poll for completion:**
 ```bash
-curl -s "https://generativelanguage.googleapis.com/v1beta/interactions/{interaction_id}?key=$GOOGLE_API_KEY"
+curl -s "https://generativelanguage.googleapis.com/v1beta/interactions/{interaction_id}" \
+  -H "x-goog-api-key: $GOOGLE_API_KEY"
 ```
 
 **When complete**, the response includes:

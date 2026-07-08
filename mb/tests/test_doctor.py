@@ -214,6 +214,19 @@ def test_doctor_warns_on_schema_drift(tmp_path: Path) -> None:
     assert "mb migrate --check" in check["detail"]
 
 
+def test_doctor_blocks_future_schema(tmp_path: Path) -> None:
+    repo = tmp_path / "future"
+    (repo / ".mb").mkdir(parents=True)
+    (repo / ".mb" / "schema_version").write_text("9.0\n", encoding="utf-8")
+
+    report = run(path=str(repo))
+
+    check = next(c for c in report["checks"] if c["name"] == "schema-version")
+    assert check["ok"] is False
+    assert check["severity"] == "error"
+    assert "newer than this engine supports" in check["detail"]
+
+
 def test_doctor_json_and_human_output_include_required_update(
     tmp_path: Path, monkeypatch, capsys
 ) -> None:

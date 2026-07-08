@@ -541,6 +541,35 @@ def test_connect_provider_stores_secret_outside_repo(tmp_path: Path, monkeypatch
     assert stat.S_IMODE(secret_file.stat().st_mode) == 0o600
 
 
+def test_connect_status_filters_hand_edited_secret_like_metadata(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "cloudflare",
+        repo=repo,
+        token="cf-test-token",
+        account_label="Acme CF",
+        metadata_pairs=["account_id=acct_123"],
+    )
+    config_path = repo / ".mb" / "connect.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["providers"]["cloudflare"]["account_label"] = "sk-live-label-secret"
+    config["providers"]["cloudflare"]["metadata"]["api_key"] = "sk-live-metadata-secret"
+    config["providers"]["cloudflare"]["metadata"]["zone_id"] = "zone_456"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+
+    status = connect_mod.status_provider("cloudflare", repo=repo)
+
+    assert status["safe_to_share"] is True
+    assert status["account_label"] == connect_mod.SECRET_REPLACEMENT
+    assert status["metadata"] == {"account_id": "acct_123", "zone_id": "zone_456"}
+    assert "sk-live" not in json.dumps(status)
+    assert "api_key" not in status["metadata"]
+
+
 def test_connect_repo_identity_is_stable_across_worktrees(tmp_path: Path, monkeypatch) -> None:
     _local_secret_env(monkeypatch, tmp_path)
     first = tmp_path / "biz-one"
@@ -1412,6 +1441,25 @@ def test_connect_status_tolerates_malformed_config_version(tmp_path: Path, monke
     assert status_payload["summary"]["configured"] == 0
 
 
+def test_connect_refuses_to_clobber_invalid_yaml_config(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    (repo / ".mb").mkdir()
+    config_path = repo / ".mb" / "connect.yaml"
+    config_path.write_text("version: 1\nproviders: [\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["connect", "cloudflare", "--repo", str(repo), "--token", "cf-test-token", "--json"],
+    )
+
+    assert result.exit_code == 2
+    assert "invalid YAML" in result.stderr
+    assert config_path.read_text(encoding="utf-8") == "version: 1\nproviders: [\n"
+    assert not (tmp_path / "secrets" / "connect.json").exists()
+
+
 def test_connect_status_missing_config_still_reports_empty_state(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -1578,6 +1626,18 @@ def test_macos_keychain_backend_uses_security(monkeypatch) -> None:
     assert calls
     assert calls[0][:3] == ["security", "add-generic-password", "-a"]
     assert "cf-token" in calls[0]
+
+
+def test_auto_secret_backend_prefers_keyring_over_macos_security(monkeypatch) -> None:
+    class FakeKeyring:
+        pass
+
+    monkeypatch.delenv("MB_CONNECT_SECRET_BACKEND", raising=False)
+    monkeypatch.setattr("mb.connect.platform.system", lambda: "Darwin")
+    monkeypatch.setattr("mb.connect.shutil.which", lambda name: "/usr/bin/security")
+    monkeypatch.setattr(connect_mod, "_keyring_module", lambda: FakeKeyring())
+
+    assert connect_mod._select_secret_backend() == "keyring"
 
 
 def test_connect_token_prints_secret_to_stdout(tmp_path: Path, monkeypatch) -> None:

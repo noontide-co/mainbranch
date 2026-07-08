@@ -39,7 +39,7 @@ Campaign Batch 001
 
 1. Read project context (offer, audience, proof, angles)
 2. Ask for campaign name (required)
-3. Select 5-6 angles for the batch — **reference the engine's `angle-playbook.md` — `../../reference/compliance/angle-playbook.md` relative to this skill's loaded location** for angle types, compliance burden, and selection matrix
+3. Select 5-6 angles for the batch — reference this skill's bundled `references/compliance/angle-playbook.md` for angle types, compliance burden, and selection matrix
 4. **Write ALL image prompts first** (Part 1)
 5. **Write ALL ad copy second** (Part 2)
 6. **Cold traffic language check:** Every hook must pass the 3-second comprehension test — no insider jargon, no assumed context. Translate community language to customer language. See Joel's cold traffic guidance in [one-liner-methodology.md](one-liner-methodology.md).

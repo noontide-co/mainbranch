@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from mb import __version__
+from mb.durable import CorruptStateError, atomic_write_json, atomic_write_text, read_json_object
 
 SKILL_PREFIX = "mb-"
 PRIMARY_SKILL = "mb-start"
@@ -125,9 +126,11 @@ def skill_path(name: str) -> Path | None:
     return candidate if candidate.is_dir() else None
 
 
-def _read_settings(path: Path) -> dict[str, Any]:
+def _read_settings(path: Path, *, strict: bool = False) -> dict[str, Any]:
     if not path.exists():
         return {}
+    if strict:
+        return read_json_object(path)
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
@@ -368,9 +371,19 @@ def is_stale_engine_path(value: str, active_root: Path) -> bool:
     return _is_stale_engine_path(value, active_root)
 
 
-def _write_settings(repo: Path, root: Path) -> tuple[bool, list[str]]:
+def _write_settings(repo: Path, root: Path) -> tuple[bool, list[str], str]:
     settings_path = repo / ".claude" / "settings.local.json"
-    data = _read_settings(settings_path)
+    try:
+        data = _read_settings(settings_path, strict=True)
+    except CorruptStateError as exc:
+        return (
+            False,
+            [],
+            (
+                f"{settings_path} is not valid JSON ({exc.detail}); refused to "
+                "refresh local Claude wiring to avoid clobbering your settings."
+            ),
+        )
     permissions = data.setdefault("permissions", {})
     if not isinstance(permissions, dict):
         permissions = {}
@@ -394,9 +407,8 @@ def _write_settings(repo: Path, root: Path) -> tuple[bool, list[str]]:
     rendered = json.dumps(data, indent=2, sort_keys=True) + "\n"
     changed = not settings_path.exists() or settings_path.read_text(encoding="utf-8") != rendered
     if changed:
-        settings_path.parent.mkdir(parents=True, exist_ok=True)
-        settings_path.write_text(rendered, encoding="utf-8")
-    return changed, removed_stale
+        atomic_write_text(settings_path, rendered)
+    return changed, removed_stale, ""
 
 
 def _append_unique_gitignore(repo: Path, entries: list[str]) -> bool:
@@ -412,7 +424,7 @@ def _append_unique_gitignore(repo: Path, entries: list[str]) -> bool:
     block = [GITIGNORE_HEADER, *to_add]
     if GITIGNORE_HEADER in existing_lines:
         block = to_add
-    gitignore.write_text(existing_text + prefix + "\n".join(block) + "\n", encoding="utf-8")
+    atomic_write_text(gitignore, existing_text + prefix + "\n".join(block) + "\n")
     return True
 
 
@@ -431,7 +443,7 @@ def _remove_gitignore_entries(repo: Path, entries: list[str]) -> bool:
     rendered = "\n".join(kept)
     if rendered:
         rendered += "\n"
-    gitignore.write_text(rendered, encoding="utf-8")
+    atomic_write_text(gitignore, rendered)
     return True
 
 
@@ -701,7 +713,20 @@ def link_skills(repo: str | Path) -> dict[str, Any]:
     skill_link_dir.mkdir(parents=True, exist_ok=True)
 
     created: list[str] = []
-    settings_changed, removed_stale_engine_paths = _write_settings(target, root)
+    settings_changed, removed_stale_engine_paths, settings_error = _write_settings(target, root)
+    if settings_error:
+        return {
+            "ok": False,
+            "repo": str(target),
+            "engine_root": str(root),
+            "created": [],
+            "linked": [],
+            "copied": [],
+            "skipped": [],
+            "removed_legacy": [],
+            "removed_stale_engine_paths": removed_stale_engine_paths,
+            "errors": [settings_error],
+        }
     if settings_changed:
         created.append(".claude/settings.local.json")
 
@@ -1123,7 +1148,7 @@ def write_plugin_wiring(repo: str | Path) -> dict[str, Any]:
         raw = path.read_text(encoding="utf-8")
         if raw.strip():
             try:
-                json.loads(raw)
+                parsed = json.loads(raw)
             except json.JSONDecodeError as exc:
                 return {
                     "ok": False,
@@ -1136,7 +1161,18 @@ def write_plugin_wiring(repo: str | Path) -> dict[str, Any]:
                         "the JSON, then re-run."
                     ),
                 }
-    settings = _read_settings(path)
+            if not isinstance(parsed, dict):
+                return {
+                    "ok": False,
+                    "changed": False,
+                    "settings_path": str(path),
+                    "wiring": plugin_wiring_status(target),
+                    "summary": (
+                        ".claude/settings.json must be a JSON object; refused to write "
+                        "plugin wiring to avoid clobbering your settings."
+                    ),
+                }
+    settings = _read_settings(path, strict=True)
     before = plugin_wiring_status(target)
     marketplaces = settings.setdefault("extraKnownMarketplaces", {})
     if not isinstance(marketplaces, dict):
@@ -1148,8 +1184,7 @@ def write_plugin_wiring(repo: str | Path) -> dict[str, Any]:
         enabled = {}
         settings["enabledPlugins"] = enabled
     enabled[PLUGIN_ENABLE_KEY] = True
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+    atomic_write_json(path, settings)
     after = plugin_wiring_status(target)
     return {
         "ok": after["wired"],

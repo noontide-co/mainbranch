@@ -6,6 +6,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -31,16 +32,31 @@ CLONE_UPDATE_COMMAND = ["git", "pull", "--ff-only", "origin", "main"]
 GITHUB_RELEASE_API_URL_TEMPLATE = (
     "https://api.github.com/repos/noontide-co/mainbranch/releases/tags/oe-v{version}"
 )
+COMMAND_TIMEOUT_SECONDS = 120.0
 
 
-def _run_command(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        args,
-        cwd=str(cwd) if cwd is not None else None,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+def _run_command(
+    args: list[str],
+    *,
+    cwd: Path | None = None,
+    timeout: float = COMMAND_TIMEOUT_SECONDS,
+) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            args,
+            cwd=str(cwd) if cwd is not None else None,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=124,
+            stdout=exc.stdout if isinstance(exc.stdout, str) else "",
+            stderr=f"timed out after {timeout:g}s",
+        )
 
 
 def _engine_version(root: Path | None = None) -> str:
@@ -79,8 +95,15 @@ def _fetch_origin_main(root: Path) -> tuple[bool, str | None]:
     return False, _command_error("git fetch origin main", result)
 
 
-def _version_from_mb_command() -> str | None:
-    result = _run_command(["mb", "--version"])
+def _current_mb_entrypoint() -> str:
+    candidate = Path(sys.argv[0])
+    if candidate.name == "mb" and candidate.exists():
+        return str(candidate)
+    return "mb"
+
+
+def _version_from_mb_command(command: str | None = None) -> str | None:
+    result = _run_command([command or _current_mb_entrypoint(), "--version"])
     if result.returncode != 0:
         return None
     match = re.search(r"\bmb\s+(.+)\s*$", result.stdout.strip())

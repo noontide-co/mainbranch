@@ -20,10 +20,13 @@ from typing import Any
 
 from mb import __version__
 from mb import engine as engine_mod
+from mb.durable import atomic_write_text
 from mb.workflows import WorkflowSource, load_workflow, render_codex_shell
 
 AGENTS_TEMPLATE = "AGENTS.md.tmpl"
 AGENTS_RELATIVE_PATH = "AGENTS.md"
+AGENTS_MANAGED_BEGIN = "<!-- mainbranch:codex-guidance:begin -->"
+AGENTS_MANAGED_END = "<!-- mainbranch:codex-guidance:end -->"
 CODEX_GUIDANCE_SCHEMA = 1
 CODEX_GUIDANCE_MIN_MB = "0.3.43"
 CODEX_SKILL_DIR_RELATIVE_PATH = ".agents/skills/main-branch-owner-loop"
@@ -1732,6 +1735,38 @@ def parse_guidance_metadata(text: str) -> dict[str, str]:
     return pairs
 
 
+def _managed_agents_block(rendered: str) -> str:
+    return f"{AGENTS_MANAGED_BEGIN}\n{rendered.rstrip()}\n{AGENTS_MANAGED_END}\n"
+
+
+def _managed_agents_content(text: str) -> str:
+    start = text.find(AGENTS_MANAGED_BEGIN)
+    if start == -1:
+        return ""
+    body_start = text.find("\n", start)
+    if body_start == -1:
+        return ""
+    end = text.find(AGENTS_MANAGED_END, body_start)
+    if end == -1:
+        return ""
+    return text[body_start + 1 : end].strip() + "\n"
+
+
+def _merge_agents_md(existing: str, rendered: str) -> str:
+    block = _managed_agents_block(rendered)
+    start = existing.find(AGENTS_MANAGED_BEGIN)
+    if start != -1:
+        end = existing.find(AGENTS_MANAGED_END, start)
+        if end != -1:
+            tail_start = end + len(AGENTS_MANAGED_END)
+            return existing[:start] + block.rstrip("\n") + existing[tail_start:]
+    if not existing.strip():
+        return block
+    if parse_guidance_metadata(existing):
+        return block
+    return block + "\n" + existing
+
+
 def _markdown_section(text: str, heading: str) -> str:
     start = text.find(heading)
     if start == -1:
@@ -2998,18 +3033,20 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
         read_error = str(exc)
     else:
         read_error = ""
-    missing_commands = [command for command in REQUIRED_FACT_COMMANDS if command not in text]
-    approval_ok = "explicit operator approval" in text
-    slash_ok = "Do not pretend Claude Code slash skills work in Codex." in text
+    managed_text = _managed_agents_content(text)
+    status_text = managed_text or text
+    missing_commands = [command for command in REQUIRED_FACT_COMMANDS if command not in status_text]
+    approval_ok = "explicit operator approval" in status_text
+    slash_ok = "Do not pretend Claude Code slash skills work in Codex." in status_text
     missing_lifecycle_guidance = [
-        marker for marker in REQUIRED_LIFECYCLE_GUIDANCE_MARKERS if marker not in text
+        marker for marker in REQUIRED_LIFECYCLE_GUIDANCE_MARKERS if marker not in status_text
     ]
     for heading, markers in REQUIRED_LIFECYCLE_SECTION_MARKERS:
-        section = _markdown_section(text, heading)
+        section = _markdown_section(status_text, heading)
         missing_lifecycle_guidance.extend(marker for marker in markers if marker not in section)
     missing_lifecycle_guidance = list(dict.fromkeys(missing_lifecycle_guidance))
     lifecycle_discovery_ok = bool(exists and not missing_lifecycle_guidance)
-    guidance_metadata = parse_guidance_metadata(text) if exists else {}
+    guidance_metadata = parse_guidance_metadata(status_text) if exists else {}
     expected_template_hash = guidance_template_hash()
     expected_guidance_metadata = guidance_metadata_comment(template_hash=expected_template_hash)
     guidance_schema_ok = guidance_metadata.get("schema") == str(CODEX_GUIDANCE_SCHEMA)
@@ -3033,7 +3070,7 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
         )
         if (target / relative).exists()
     ]
-    template_match = bool(exists and text == expected)
+    template_match = bool(exists and status_text == expected)
     current = bool(fact_grounding_ok and guidance_metadata_ok and not repo_local_plugin_paths)
     return {
         "ok": current,
@@ -3186,10 +3223,11 @@ def write_agents_md(
     path = agents_path(target)
     rendered = render_agents_md(target, name=name, gh_username=gh_username)
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
-    changed = existing != rendered
+    updated = _merge_agents_md(existing, rendered)
+    changed = existing != updated
     changed_paths: list[str] = []
     if changed:
-        path.write_text(rendered, encoding="utf-8")
+        atomic_write_text(path, updated)
         changed_paths.append(AGENTS_RELATIVE_PATH)
 
     removed_paths = remove_repo_local_codex_plugin_files(target)

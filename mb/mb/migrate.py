@@ -14,6 +14,7 @@ from typing import Any
 import yaml
 
 from mb import migrations
+from mb.durable import atomic_write_text
 from mb.migrations.base import MigrationInfo, MigrationPlan, PlannedChange
 
 ENVELOPE_SCHEMA = "mb.migrate"
@@ -58,6 +59,31 @@ def read_schema_version(repo: str | Path) -> str:
     return "unknown"
 
 
+def _schema_key(version: str) -> tuple[int, ...] | None:
+    try:
+        return tuple(int(part) for part in version.strip().split("."))
+    except ValueError:
+        return None
+
+
+def is_future_schema_version(version: str) -> bool:
+    current = _schema_key(version)
+    latest = _schema_key(LATEST_SCHEMA_VERSION)
+    if current is None or latest is None:
+        return False
+    return current > latest
+
+
+def schema_write_blocker(repo: str | Path) -> str:
+    version = read_schema_version(repo)
+    if not is_future_schema_version(version):
+        return ""
+    return (
+        f"schema {version} is newer than this engine supports "
+        f"(latest {LATEST_SCHEMA_VERSION}); upgrade Main Branch before writing."
+    )
+
+
 def _migration_dict(info: MigrationInfo) -> dict[str, str]:
     return {
         "id": info.id,
@@ -71,6 +97,8 @@ def _migration_dict(info: MigrationInfo) -> dict[str, str]:
 def pending_migrations(repo: str | Path) -> list[tuple[MigrationInfo, Any]]:
     """Return registered migrations pending for ``repo``."""
     version = read_schema_version(repo)
+    if is_future_schema_version(version):
+        return []
     pending: list[tuple[MigrationInfo, Any]] = []
     version_map = migrations.version_map()
     for info, module in migrations.registered():
@@ -195,6 +223,8 @@ def _backup_hint(plans: list[MigrationPlan]) -> dict[str, Any]:
 
 
 def _next_after_status(result: dict[str, Any]) -> str:
+    if result.get("errors"):
+        return "Upgrade Main Branch before running migrations or repair writes in this repo."
     if result.get("pending"):
         return "Run `mb migrate --check` to preview the migration before applying it."
     return "No layout migration is pending."
@@ -224,10 +254,11 @@ def _next_after_apply(result: dict[str, Any]) -> str:
 
 def _base_envelope(repo: Path, action: str) -> dict[str, Any]:
     pending = pending_migrations(repo)
+    blocker = schema_write_blocker(repo)
     result = {
         "schema": ENVELOPE_SCHEMA,
         "schema_version": ENVELOPE_SCHEMA_VERSION,
-        "ok": True,
+        "ok": not blocker,
         "action": action,
         "repo": str(repo),
         "current_version": read_schema_version(repo),
@@ -236,7 +267,7 @@ def _base_envelope(repo: Path, action: str) -> dict[str, Any]:
         "plan": None,
         "applied": [],
         "backup": None,
-        "errors": [],
+        "errors": [blocker] if blocker else [],
         "next": "",
     }
     result["next"] = _next_after_status(result)
@@ -253,6 +284,18 @@ def check(repo: str | Path = ".", *, include_diff: bool = False) -> dict[str, An
     """Plan pending migrations without writing files."""
     target = Path(repo).resolve()
     result = _base_envelope(target, "check")
+    if result["errors"]:
+        result["plan"] = {
+            "has_changes": False,
+            "migrations": [],
+            "diff_included": include_diff,
+            "diff": "",
+            "privacy_note": "",
+            "errors": list(result["errors"]),
+        }
+        result["backup"] = _backup_hint([])
+        result["next"] = _next_after_check(result)
+        return result
     pending = pending_migrations(target)
     plans = [migrations.plan_for(info, module, target) for info, module in pending]
     _ensure_gitignore_plan(target, plans)
@@ -365,8 +408,7 @@ def _apply_change(repo: Path, change: PlannedChange) -> None:
             path.unlink()
         return
     if change.kind == "write_file":
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(change.content, encoding="utf-8")
+        atomic_write_text(path, change.content)
         return
     if change.kind == "remove_empty_dir":
         if path.is_dir():
@@ -407,9 +449,9 @@ def apply(repo: str | Path = ".") -> dict[str, Any]:
     backup_dir = _backup_path(target, [plan.migration.id for plan in plans])
     backup_dir.mkdir(parents=True, exist_ok=False)
     copied = _backup_existing_paths(target, backup_dir, plans)
-    (backup_dir / "manifest.json").write_text(
+    atomic_write_text(
+        backup_dir / "manifest.json",
         json.dumps({"schema_version": 1, "copied": copied}, indent=2) + "\n",
-        encoding="utf-8",
     )
 
     for plan in plans:
@@ -424,8 +466,7 @@ def apply(repo: str | Path = ".") -> dict[str, Any]:
                 return result
 
     marker = _marker_path(target)
-    marker.parent.mkdir(parents=True, exist_ok=True)
-    marker.write_text(LATEST_SCHEMA_VERSION + "\n", encoding="utf-8")
+    atomic_write_text(marker, LATEST_SCHEMA_VERSION + "\n")
 
     result["ok"] = True
     result["current_version"] = LATEST_SCHEMA_VERSION

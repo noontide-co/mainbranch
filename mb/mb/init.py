@@ -18,6 +18,7 @@ from typing import Any
 from mb import checkpoint as checkpoint_mod
 from mb import codex as codex_mod
 from mb import team as team_mod
+from mb.durable import atomic_write_text
 from mb.engine import link_skills, write_plugin_wiring
 from mb.migrate import LATEST_SCHEMA_VERSION, SCHEMA_MARKER
 
@@ -191,12 +192,12 @@ def run(
         # .gitkeep so empty folders survive git
         keep = d / ".gitkeep"
         if not keep.exists():
-            keep.write_text("", encoding="utf-8")
+            atomic_write_text(keep, "")
             created.append(f"{sub}/.gitkeep")
 
     marker = target / SCHEMA_MARKER
     marker.parent.mkdir(parents=True, exist_ok=True)
-    marker.write_text(LATEST_SCHEMA_VERSION + "\n", encoding="utf-8")
+    atomic_write_text(marker, LATEST_SCHEMA_VERSION + "\n")
     created.append(SCHEMA_MARKER)
 
     mapping = {
@@ -207,12 +208,12 @@ def run(
     }
 
     claude_tmpl = _read_template("CLAUDE.md.tmpl") or _DEFAULT_CLAUDE
-    (target / "CLAUDE.md").write_text(_render(claude_tmpl, mapping), encoding="utf-8")
+    atomic_write_text(target / "CLAUDE.md", _render(claude_tmpl, mapping))
     created.append("CLAUDE.md")
 
     readme_tmpl = _read_template("README.md.tmpl")
     if readme_tmpl:
-        (target / "README.md").write_text(_render(readme_tmpl, mapping), encoding="utf-8")
+        atomic_write_text(target / "README.md", _render(readme_tmpl, mapping))
         created.append("README.md")
 
     agents_result = codex_mod.write_agents_md(
@@ -229,7 +230,7 @@ def run(
         vocabulary_path = target / "core" / "vocabulary.md"
         vocabulary_path.parent.mkdir(parents=True, exist_ok=True)
         if not vocabulary_path.exists():
-            vocabulary_path.write_text(_render(vocabulary_tmpl, mapping), encoding="utf-8")
+            atomic_write_text(vocabulary_path, _render(vocabulary_tmpl, mapping))
             created.append("core/vocabulary.md")
 
     team_tmpl = _read_template("core_team_member.md.tmpl")
@@ -237,18 +238,22 @@ def run(
         owner_path = target / "core" / "team" / f"{owner_slug}.md"
         owner_path.parent.mkdir(parents=True, exist_ok=True)
         if not owner_path.exists():
-            owner_path.write_text(_render(team_tmpl, mapping), encoding="utf-8")
+            atomic_write_text(owner_path, _render(team_tmpl, mapping))
             created.append(f"core/team/{owner_slug}.md")
 
     codeowners_tmpl = _read_template("CODEOWNERS.tmpl") or f"* @{gh_user}\n"
     github_dir = target / ".github"
     github_dir.mkdir(exist_ok=True)
-    (github_dir / "CODEOWNERS").write_text(_render(codeowners_tmpl, mapping), encoding="utf-8")
-    created.append(".github/CODEOWNERS")
+    codeowners_path = github_dir / "CODEOWNERS"
+    if not codeowners_path.exists():
+        atomic_write_text(codeowners_path, _render(codeowners_tmpl, mapping))
+        created.append(".github/CODEOWNERS")
 
     gitignore_tmpl = _read_template(".gitignore.tmpl") or DEFAULT_GITIGNORE
-    (target / ".gitignore").write_text(_render(gitignore_tmpl, mapping), encoding="utf-8")
-    created.append(".gitignore")
+    gitignore_path = target / ".gitignore"
+    if not gitignore_path.exists():
+        atomic_write_text(gitignore_path, _render(gitignore_tmpl, mapping))
+        created.append(".gitignore")
 
     link_result = link_skills(target)
     created.extend(path for path in link_result["created"] if path not in created)

@@ -41,7 +41,12 @@ from mb.freshness import (
     package_update_status,
     version_key,
 )
-from mb.migrate import LATEST_SCHEMA_VERSION, pending_migrations, read_schema_version
+from mb.migrate import (
+    LATEST_SCHEMA_VERSION,
+    pending_migrations,
+    read_schema_version,
+    schema_write_blocker,
+)
 from mb.skill_validate import run_all as validate_all_skills
 
 CLOUD_PREFIXES = (
@@ -872,6 +877,14 @@ def _legacy_campaigns_check(repo: Path) -> dict[str, Any]:
 
 def _schema_version_check(repo: Path) -> dict[str, Any]:
     current = read_schema_version(repo)
+    future_blocker = schema_write_blocker(repo)
+    if future_blocker:
+        return {
+            "name": "schema-version",
+            "ok": False,
+            "detail": future_blocker,
+            "severity": "error",
+        }
     pending = pending_migrations(repo)
     if pending:
         names = ", ".join(info.name for info, _module in pending)
