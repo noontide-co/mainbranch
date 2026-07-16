@@ -99,13 +99,41 @@ Do not use `set -x`, `echo "$token"`, committed `.env` files, or logs that
 print request headers. Raw exports should go to a private finance workspace or
 an ignored local staging path, not to a public repo.
 
-If metadata exists but the secret is missing or unreadable, Main Branch reports
+If metadata exists but the secret is missing, Main Branch reports
 `missing_secret` and gives a reconnect command that includes `--custom`, for
 example:
 
 ```bash
 mb connect mercury --custom --token-stdin
 ```
+
+## When the credential backend itself is unhealthy
+
+A missing provider secret and an unusable secret backend are different
+problems, and only the first is fixed by reconnecting. When the backend cannot
+answer — most often a locked macOS login Keychain, or one whose password is out
+of sync with the account password — Main Branch reports the provider state as
+`backend_unavailable` rather than `missing_secret`, and `mb connect doctor`
+reports a failed `credential-backend` check with a `keychain_locked` or
+`keychain_auth_failed` state before it suggests reconnecting anything.
+
+Repair the backend first:
+
+```bash
+mb connect doctor --json
+security unlock-keychain ~/Library/Keychains/login.keychain-db
+```
+
+If the login keychain rejects the passphrase, unlock it in Keychain Access with
+the older password and resync it with Edit > Change Password for Keychain
+"login". Do not reset or delete the login keychain — that destroys every
+credential already stored in it, for Main Branch and for every other app.
+
+A connect attempt that fails on the backend stores nothing and leaves repo
+metadata unchanged, so it cannot leave a provider reading `connected: true`
+next to a secret that was never written. Main Branch classifies the failure
+from the `security` exit code and a small set of known phrases; raw `security`
+output is never printed, because it can echo the command's own arguments.
 
 Reconnecting an already configured custom provider also works without
 `--custom`, but keeping the flag in repair output makes the command safe to

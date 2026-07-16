@@ -1628,6 +1628,183 @@ def test_macos_keychain_backend_uses_security(monkeypatch) -> None:
     assert "cf-token" in calls[0]
 
 
+def _fake_security(
+    monkeypatch, *, returncode: int, stderr: str = "", stdout: str = ""
+) -> list[list[str]]:
+    """Drive every `security` call through a failing test double."""
+
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], **kwargs: Any) -> Any:
+        calls.append(args)
+
+        class Result:
+            pass
+
+        Result.returncode = returncode  # type: ignore[attr-defined]
+        Result.stdout = stdout  # type: ignore[attr-defined]
+        Result.stderr = stderr  # type: ignore[attr-defined]
+        return Result()
+
+    monkeypatch.setattr(connect_mod.subprocess, "run", fake_run)  # type: ignore[attr-defined]
+    return calls
+
+
+# `security` echoes its own invocation on failure; the passphrase error below
+# is the shape reported for a login keychain whose password is out of sync.
+_KEYCHAIN_AUTH_STDERR = (
+    "security: SecKeychainAddGenericPassword <NULL>: "
+    "The user name or passphrase you entered is not correct."
+)
+
+
+def test_macos_keychain_write_failure_reports_sanitized_auth_classification(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    _fake_security(monkeypatch, returncode=51, stderr=_KEYCHAIN_AUTH_STDERR)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    with pytest.raises(connect_mod.KeychainError) as excinfo:
+        connect_mod.connect_provider("resend", repo=repo, token="re_secret_token")
+
+    message = str(excinfo.value)
+    assert excinfo.value.reason == "keychain_auth_failed"
+    assert "rejected the unlock passphrase" in message
+    assert "Nothing was stored" in message
+    assert "Do not reset or delete the login keychain" in message
+    assert "re_secret_token" not in message
+    assert "add-generic-password" not in message
+    assert "SecKeychainAddGenericPassword" not in message
+
+
+def test_macos_keychain_write_failure_leaves_no_partial_metadata(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    _fake_security(monkeypatch, returncode=51, stderr=_KEYCHAIN_AUTH_STDERR)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        ["connect", "resend", "--repo", str(repo), "--token-stdin"],
+        input="re_secret_token\n",
+    )
+
+    assert result.exit_code == 1
+    assert "keychain" in result.stderr.lower()
+    assert "re_secret_token" not in result.stderr
+    assert not (repo / ".mb" / "connect.yaml").exists()
+
+
+def test_locked_keychain_status_distinguishes_backend_failure_from_missing_secret(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("resend", repo=repo, token="re_secret_token")
+    config_path = repo / ".mb" / "connect.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["providers"]["resend"]["secrets"]["api_key"]["backend"] = "macos-keychain"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    _fake_security(monkeypatch, returncode=51, stderr=_KEYCHAIN_AUTH_STDERR)
+
+    status = connect_mod.status_provider("resend", repo)
+
+    assert status["state"] == "backend_unavailable"
+    assert status["ok"] is False
+    assert status["secrets"]["api_key"]["backend_ok"] is False
+    assert status["secrets"]["api_key"]["backend_state"] == "keychain_auth_failed"
+    assert "Do not reset or delete the login keychain" in status["repair"]
+    # The old advice — rerun the same connect command — cannot work here.
+    assert "--token-stdin" not in status["repair_command"]
+
+
+def test_missing_keychain_item_still_reports_missing_secret(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("resend", repo=repo, token="re_secret_token")
+    config_path = repo / ".mb" / "connect.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["providers"]["resend"]["secrets"]["api_key"]["backend"] = "macos-keychain"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    _fake_security(
+        monkeypatch,
+        returncode=44,
+        stderr="security: SecKeychainSearchCopyNext: The specified item could not be found.",
+    )
+
+    status = connect_mod.status_provider("resend", repo)
+
+    assert status["state"] == "missing_secret"
+    assert status["secrets"]["api_key"]["backend_ok"] is True
+
+
+def test_doctor_checks_keychain_health_before_provider_reconnect(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("resend", repo=repo, token="re_secret_token")
+    config_path = repo / ".mb" / "connect.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["providers"]["resend"]["secrets"]["api_key"]["backend"] = "macos-keychain"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
+    _fake_security(monkeypatch, returncode=51, stderr=_KEYCHAIN_AUTH_STDERR)
+
+    report = connect_mod.doctor(repo)
+
+    checks = {check["name"]: check for check in report["checks"]}
+    assert checks["credential-backend"]["ok"] is False
+    assert checks["credential-backend"]["state"] == "keychain_auth_failed"
+    assert checks["provider:resend"]["state"] == "backend_unavailable"
+    assert report["ok"] is False
+    payload = json.dumps(report)
+    assert "re_secret_token" not in payload
+    assert "SecKeychainAddGenericPassword" not in payload
+
+
+def test_status_briefing_leads_with_backend_failure(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("resend", repo=repo, token="re_secret_token")
+    config_path = repo / ".mb" / "connect.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["providers"]["resend"]["secrets"]["api_key"]["backend"] = "macos-keychain"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    _fake_security(monkeypatch, returncode=51, stderr=_KEYCHAIN_AUTH_STDERR)
+
+    check = connect_mod.doctor_check(repo)
+
+    assert check["ok"] is False
+    assert "credential backend is unhealthy" in check["detail"]
+    assert "Do not reset or delete the login keychain" in check["repair"]
+
+
+def test_keychain_health_reports_locked_without_raw_output(monkeypatch) -> None:
+    _fake_security(
+        monkeypatch,
+        returncode=36,
+        stderr="security: SecKeychainCopySettings: User interaction is not allowed.",
+    )
+
+    health = connect_mod.credential_backend_health("macos-keychain")
+
+    assert health["ok"] is False
+    assert health["state"] == "keychain_locked"
+    assert health["repair_command"].startswith("security unlock-keychain")
+    assert "User interaction is not allowed" not in json.dumps(health)
+
+
 def test_auto_secret_backend_prefers_keyring_over_macos_security(monkeypatch) -> None:
     class FakeKeyring:
         pass
