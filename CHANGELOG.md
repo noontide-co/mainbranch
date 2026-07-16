@@ -11,6 +11,31 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-07-16
+
+This release makes `mb connect` distinguish an unhealthy local credential
+backend from a genuinely missing provider secret, so a locked or
+password-desynced macOS login Keychain is reported and repaired instead of
+being misread as a missing key.
+
+### Fixed
+
+- `mb connect` now classifies macOS Keychain failures into sanitized reason
+  codes (`keychain_locked`, `keychain_auth_failed`, `keychain_unavailable`)
+  from the `security` exit code and known phrases, and never prints raw
+  `security` output, which can echo the command's own arguments.
+- Credential reads separate an absent secret (Keychain reports item-not-found)
+  from a backend that could not answer; provider status gains a
+  `backend_unavailable` state distinct from `missing_secret`.
+- `mb connect doctor` runs a read-only credential-backend health check before
+  recommending provider reconnection, and the `mb status` briefing leads with a
+  backend failure when one is present. The check is skipped when no provider is
+  connected. Repair guidance recommends unlocking or resyncing the login
+  keychain and warns against resetting it.
+- A `mb connect` attempt that fails on the credential backend now stores
+  nothing and leaves repo metadata unchanged, so it can no longer leave a
+  provider reporting `connected: true` next to a secret that was never stored.
+
 ## [0.5.0] - 2026-07-08
 
 This release hardens Main Branch's local state writes and runtime repair paths
