@@ -1772,6 +1772,20 @@ def test_doctor_checks_keychain_health_before_provider_reconnect(
     assert "SecKeychainAddGenericPassword" not in payload
 
 
+def test_doctor_skips_backend_check_when_no_provider_connected(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    # An unhealthy Keychain must not warn when nothing depends on it yet.
+    _fake_security(monkeypatch, returncode=51, stderr=_KEYCHAIN_AUTH_STDERR)
+
+    report = connect_mod.doctor(repo)
+
+    names = {check["name"] for check in report["checks"]}
+    assert "credential-backend" not in names
+
+
 def test_status_briefing_leads_with_backend_failure(tmp_path: Path, monkeypatch) -> None:
     _local_secret_env(monkeypatch, tmp_path)
     repo = tmp_path / "biz"

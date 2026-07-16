@@ -2773,9 +2773,6 @@ def doctor(repo: str | Path = ".") -> dict[str, Any]:
     github = github_context(repo)
     status = status_all(repo, github=github)
     github = status["github"]
-    # Backend health is checked before any provider repair is suggested: a
-    # locked Keychain makes "reconnect the provider" advice unfollowable.
-    backend = credential_backend_health()
     checks = [
         {
             "name": "github-context",
@@ -2786,28 +2783,36 @@ def doctor(repo: str | Path = ".") -> dict[str, Any]:
             "repair_command": github["repair_command"],
             "safe_to_share": True,
         },
-        {
-            "name": "credential-backend",
-            "ok": bool(backend["ok"]),
-            "state": backend["state"],
-            "summary": backend["summary"],
-            "repair": backend["repair"],
-            "repair_command": backend["repair_command"],
-            "safe_to_share": True,
-        },
-        *[
+    ]
+    # Backend health is checked before any provider repair is suggested: a
+    # locked Keychain makes "reconnect the provider" advice unfollowable. Only
+    # when a provider is actually connected, so a fresh repo does not warn
+    # about a backend nothing depends on yet.
+    if status["summary"]["configured"] > 0:
+        backend = credential_backend_health()
+        checks.append(
             {
-                "name": f"provider:{item['provider']}",
-                "provider": item["provider"],
-                "ok": bool(item["ok"]),
-                "state": item["state"],
-                "summary": item["summary"],
-                "repair": item["repair"],
-                "repair_command": item["repair_command"],
+                "name": "credential-backend",
+                "ok": bool(backend["ok"]),
+                "state": backend["state"],
+                "summary": backend["summary"],
+                "repair": backend["repair"],
+                "repair_command": backend["repair_command"],
                 "safe_to_share": True,
             }
-            for item in status["providers"]
-        ],
+        )
+    checks += [
+        {
+            "name": f"provider:{item['provider']}",
+            "provider": item["provider"],
+            "ok": bool(item["ok"]),
+            "state": item["state"],
+            "summary": item["summary"],
+            "repair": item["repair"],
+            "repair_command": item["repair_command"],
+            "safe_to_share": True,
+        }
+        for item in status["providers"]
     ]
     return {
         "ok": all(check["ok"] for check in checks),
