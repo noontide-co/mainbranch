@@ -157,7 +157,7 @@ jobs:
           path: dist/
 
       - name: Publish via trusted publisher
-        uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
 
   linear-release:
     name: Sync Linear release
@@ -179,7 +179,7 @@ jobs:
           echo "name=${{ needs.release-metadata.outputs.name }}" >> "$GITHUB_OUTPUT"
 
       - name: Sync issues into Linear release
-        uses: linear/linear-release-action@3858a5d7892435dc63302ac76b0cdb587435caa9 # v0.14.6
+        uses: linear/linear-release-action@17b8c24f8ceb2b98cabaf1965ff83c55dd596fac # v0.15.1
         with:
           access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
           command: sync
@@ -187,7 +187,7 @@ jobs:
           version: ${{ steps.meta.outputs.tag }}
 
       - name: Mark Linear release as released
-        uses: linear/linear-release-action@3858a5d7892435dc63302ac76b0cdb587435caa9 # v0.14.6
+        uses: linear/linear-release-action@17b8c24f8ceb2b98cabaf1965ff83c55dd596fac # v0.15.1
         with:
           access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
           command: complete
