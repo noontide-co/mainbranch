@@ -26,6 +26,7 @@ from mb.credential_store import (
     SecretProbe,
     SecretStore,
     backend_repair,
+    new_credential_deadline,
     select_secret_backend,
 )
 from mb.durable import atomic_write_text
@@ -1025,16 +1026,20 @@ def connect_provider(
     _validate_key_shape(provider, token, metadata)
     config = _read_config(target)
     repo_id = _ensure_repo_id(config, target)
-    store = SecretStore(secret_backend)
+    credential_deadline = new_credential_deadline()
+    providers = config["providers"]
+    existing_entry = providers.get(provider.id)
+    existing_entry = existing_entry if isinstance(existing_entry, dict) else {}
 
     secrets: dict[str, dict[str, str]] = {}
     required = list(provider.required_secrets)
     if required:
         primary = required[0]
         if token:
+            store = SecretStore(secret_backend)
             ref = _secret_ref(repo_id, provider.id, primary)
             try:
-                store.set(ref, token)
+                store.set(ref, token, deadline=credential_deadline)
             except KeychainError as exc:
                 # Fail before any metadata is written, so a backend outage
                 # cannot leave `connected: true` next to an unstored secret.
@@ -1046,12 +1051,37 @@ def connect_provider(
                 ) from exc
             secrets[primary] = {"ref": ref, "backend": store.backend}
         else:
-            secrets[primary] = {
-                "ref": _secret_ref(repo_id, provider.id, primary),
-                "backend": store.backend,
-            }
+            raw_existing_secrets = existing_entry.get("secrets")
+            existing_secrets = (
+                raw_existing_secrets if isinstance(raw_existing_secrets, dict) else {}
+            )
+            raw_primary = existing_secrets.get(primary)
+            existing_primary = raw_primary if isinstance(raw_primary, dict) else {}
+            existing_ref = str(existing_primary.get("ref") or "")
+            if existing_ref:
+                existing_backend = str(existing_primary.get("backend") or "local-file")
+                # Tokenless reconnects may update safe metadata or scope, but
+                # they cannot migrate a secret. Validate and retain the exact
+                # recorded store/ref instead of orphaning the existing value.
+                store = SecretStore(existing_backend)
+                secrets = {
+                    str(field): {
+                        str(key): str(value)
+                        for key, value in raw_secret.items()
+                        if key in {"ref", "backend"}
+                    }
+                    for field, raw_secret in existing_secrets.items()
+                    if isinstance(raw_secret, dict)
+                }
+            else:
+                store = SecretStore(secret_backend)
+                secrets[primary] = {
+                    "ref": _secret_ref(repo_id, provider.id, primary),
+                    "backend": store.backend,
+                }
+    else:
+        store = SecretStore(secret_backend)
 
-    providers = config["providers"]
     providers[provider.id] = {
         "provider": provider.id,
         "connected": True,
@@ -1074,7 +1104,11 @@ def connect_provider(
             )
         )
     path = _write_config(target, config)
-    status = status_provider(provider.id, target)
+    status = status_provider(
+        provider.id,
+        target,
+        _credential_deadline=credential_deadline,
+    )
     return {
         "ok": status["state"] not in {"missing_secret", BACKEND_FAILURE_STATE},
         "ready": bool(status["ok"]),
@@ -1094,7 +1128,13 @@ def connect_provider(
     }
 
 
-def _secret_statuses(provider: Provider, entry: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+def _secret_statuses(
+    provider: Provider,
+    entry: dict[str, Any],
+    *,
+    deadline: float | None = None,
+    probes: dict[str, SecretProbe] | None = None,
+) -> tuple[dict[str, Any], list[str]]:
     secrets: dict[str, dict[str, Any]] = {}
     missing: list[str] = []
     stored_secrets = entry.get("secrets") if isinstance(entry.get("secrets"), dict) else {}
@@ -1103,7 +1143,9 @@ def _secret_statuses(provider: Provider, entry: dict[str, Any]) -> tuple[dict[st
         raw = raw if isinstance(raw, dict) else {}
         ref = str(raw.get("ref") or "")
         backend = str(raw.get("backend") or "local-file")
-        probe = _probe_secret_ref(backend, ref)
+        probe = probes.get(field) if probes is not None else None
+        if probe is None:
+            probe = _probe_secret_ref(backend, ref, deadline=deadline)
         if not probe.present:
             missing.append(field)
         secrets[field] = {
@@ -1116,11 +1158,11 @@ def _secret_statuses(provider: Provider, entry: dict[str, Any]) -> tuple[dict[st
     return secrets, missing
 
 
-def _probe_secret_ref(backend: str, ref: str) -> SecretProbe:
+def _probe_secret_ref(backend: str, ref: str, *, deadline: float | None = None) -> SecretProbe:
     """Probe stored metadata without letting a foreign backend crash status."""
 
     try:
-        return SecretStore(backend).probe(ref)
+        return SecretStore(backend).probe(ref, deadline=deadline)
     except (CredentialStoreError, ValueError):
         return SecretProbe("", False, False, "backend_incompatible")
 
@@ -1135,8 +1177,10 @@ def _backend_failure_reason(secrets: dict[str, Any]) -> str:
     return ""
 
 
-def _unhydrated_status(provider: Provider, entry: dict[str, Any]) -> dict[str, Any]:
-    secrets, missing = _secret_statuses(provider, entry)
+def _unhydrated_status(
+    provider: Provider, entry: dict[str, Any], *, deadline: float | None = None
+) -> dict[str, Any]:
+    secrets, missing = _secret_statuses(provider, entry, deadline=deadline)
     raw_metadata = entry.get("metadata")
     metadata: dict[str, Any] = raw_metadata if isinstance(raw_metadata, dict) else {}
     backend_reason = _backend_failure_reason(secrets)
@@ -1206,6 +1250,8 @@ def status_provider(
     *,
     which_func: Which | None = None,
     command_runner: CommandRunner | None = None,
+    _credential_deadline: float | None = None,
+    _secret_probes: dict[str, SecretProbe] | None = None,
 ) -> dict[str, Any]:
     provider = resolve_provider(provider_id, repo)
     target = Path(repo).resolve()
@@ -1216,7 +1262,7 @@ def status_provider(
     if not isinstance(entry, dict):
         user_entry = _user_scope_provider_entry(repo_id, provider.id)
         if user_entry is not None:
-            return _unhydrated_status(provider, user_entry)
+            return _unhydrated_status(provider, user_entry, deadline=_credential_deadline)
     if provider.id == "meta":
         prereq_state = _meta_prerequisite_state(
             which_func=which_func,
@@ -1238,7 +1284,9 @@ def status_provider(
         raw_secret = raw_secret if isinstance(raw_secret, dict) else {}
         ref = str(raw_secret.get("ref") or "")
         backend = str(raw_secret.get("backend") or "local-file")
-        probe = _probe_secret_ref(backend, ref)
+        probe = _secret_probes.get("access_token") if _secret_probes is not None else None
+        if probe is None:
+            probe = _probe_secret_ref(backend, ref, deadline=_credential_deadline)
         secret_present = probe.present
         meta_backend_reason = "" if probe.backend_ok else (probe.reason or "keychain_unavailable")
         validation_state = str(meta_validation.get("state") or "unvalidated")
@@ -1340,7 +1388,12 @@ def status_provider(
             "validation": {"state": "not_connected", "checked_at": "", "summary": ""},
         }
 
-    secrets, missing = _secret_statuses(provider, entry)
+    secrets, missing = _secret_statuses(
+        provider,
+        entry,
+        deadline=_credential_deadline,
+        probes=_secret_probes,
+    )
 
     raw_metadata = entry.get("metadata")
     metadata: dict[str, Any] = raw_metadata if isinstance(raw_metadata, dict) else {}
@@ -1452,13 +1505,24 @@ def hydrate(
     }
 
 
-def _entry_secret_probe(entry: dict[str, Any], field: str) -> SecretProbe:
+def _entry_secret_probe(
+    entry: dict[str, Any], field: str, *, deadline: float | None = None
+) -> SecretProbe:
     stored_secrets = entry.get("secrets") if isinstance(entry.get("secrets"), dict) else {}
     raw = stored_secrets.get(field) if isinstance(stored_secrets, dict) else None
     raw = raw if isinstance(raw, dict) else {}
     ref = str(raw.get("ref") or "")
     backend = str(raw.get("backend") or "local-file")
-    return _probe_secret_ref(backend, ref)
+    return _probe_secret_ref(backend, ref, deadline=deadline)
+
+
+def _entry_secret_probes(
+    provider: Provider, entry: dict[str, Any], *, deadline: float | None = None
+) -> dict[str, SecretProbe]:
+    return {
+        field: _entry_secret_probe(entry, field, deadline=deadline)
+        for field in provider.required_secrets
+    }
 
 
 def _entry_secret_value(entry: dict[str, Any], field: str) -> str:
@@ -2047,13 +2111,23 @@ def test_provider(
     target = Path(repo).resolve()
     config = _read_config(target)
     entry = config["providers"].get(provider.id)
+    deadline = new_credential_deadline()
+    probes = (
+        _entry_secret_probes(provider, entry, deadline=deadline) if isinstance(entry, dict) else {}
+    )
     status = status_provider(
         provider.id,
         target,
         which_func=which_func,
         command_runner=command_runner,
+        _credential_deadline=deadline,
+        _secret_probes=probes,
     )
-    if not isinstance(entry, dict) or status["state"] in {"not_connected", "missing_secret"}:
+    if not isinstance(entry, dict) or status["state"] in {
+        "not_connected",
+        "missing_secret",
+        BACKEND_FAILURE_STATE,
+    }:
         return {"ok": False, "provider": provider.id, "status": status, "safe_to_share": True}
 
     if not provider.required_secrets:
@@ -2065,17 +2139,12 @@ def test_provider(
             "safe_to_share": True,
         }
     else:
-        secret = _stored_secret(provider, entry)
+        secret = probes[provider.required_secrets[0]].value
         if not secret:
             return {
                 "ok": False,
                 "provider": provider.id,
-                "status": status_provider(
-                    provider.id,
-                    target,
-                    which_func=which_func,
-                    command_runner=command_runner,
-                ),
+                "status": status,
                 "safe_to_share": True,
             }
         raw_metadata = entry.get("metadata")
@@ -2120,6 +2189,8 @@ def test_provider(
         target,
         which_func=which_func,
         command_runner=command_runner,
+        _credential_deadline=deadline,
+        _secret_probes=probes,
     )
     return {
         "ok": bool(validation["ok"]),
@@ -2137,6 +2208,7 @@ def status_all(
     github: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     target = Path(repo).resolve()
+    deadline = new_credential_deadline()
     config = _read_config(target)
     identity = _repo_identity(target)
     repo_id = str(config.get("repo_id") or identity["repo_id"])
@@ -2155,12 +2227,12 @@ def status_all(
     providers = []
     for provider in PROVIDERS:
         if include_all or provider.id in configured:
-            providers.append(status_provider(provider.id, target))
+            providers.append(status_provider(provider.id, target, _credential_deadline=deadline))
     custom_ids = sorted(
         provider_id for provider_id in configured if _is_custom_provider_id(provider_id)
     )
     for provider_id in custom_ids:
-        providers.append(status_provider(provider_id, target))
+        providers.append(status_provider(provider_id, target, _credential_deadline=deadline))
     connected = [item for item in providers if item["connected"]]
     broken = [item for item in connected if not item["ok"]]
     unvalidated = [item for item in connected if item["state"] == "unvalidated"]
@@ -2500,11 +2572,30 @@ def _configured_backend_health(status: dict[str, Any]) -> dict[str, Any] | None:
     backends = _configured_credential_backends(status)
     if not backends:
         return None
-    reports = [credential_backend_health(backend) for backend in backends]
-    failed = next((report for report in reports if not report["ok"]), None)
-    if failed is not None:
-        return failed
-    names = ", ".join(str(report["backend"]) for report in reports)
+    raw_providers = status.get("providers")
+    providers = raw_providers if isinstance(raw_providers, list) else []
+    for raw_provider in providers:
+        provider = raw_provider if isinstance(raw_provider, dict) else {}
+        raw_secrets = provider.get("secrets")
+        secrets = raw_secrets if isinstance(raw_secrets, dict) else {}
+        for raw_secret in secrets.values():
+            secret = raw_secret if isinstance(raw_secret, dict) else {}
+            if secret.get("backend_ok", True):
+                continue
+            reason = str(secret.get("backend_state") or "keychain_unavailable")
+            detail = _backend_repair(reason)
+            return {
+                "backend": str(secret.get("backend") or "unknown"),
+                "ok": False,
+                "state": reason,
+                "summary": detail["summary"],
+                "repair": detail["repair"],
+                "repair_command": detail["repair_command"],
+                "safe_to_share": True,
+            }
+    # The per-provider probes already proved each configured backend answered.
+    # Re-probing here would multiply the command's native-store deadline.
+    names = ", ".join(backends)
     return {
         "backend": names,
         "ok": True,

@@ -13,6 +13,7 @@ import os
 import platform
 import subprocess
 import sys
+import time
 from contextlib import suppress
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -115,6 +116,12 @@ def backend_repair(reason: str) -> dict[str, str]:
     return BACKEND_REPAIRS.get(reason, BACKEND_REPAIRS["keychain_unavailable"])
 
 
+def new_credential_deadline() -> float:
+    """Return one monotonic deadline shared by an aggregate credential command."""
+
+    return time.monotonic() + CREDENTIAL_HELPER_TIMEOUT_SECONDS
+
+
 class CredentialStoreError(RuntimeError):
     """A sanitized credential-store failure safe to show to an operator."""
 
@@ -174,11 +181,11 @@ class SecretStore:
     def __init__(self, backend: str | None = None) -> None:
         self.backend = select_secret_backend(backend)
 
-    def set(self, ref: str, value: str) -> None:
+    def set(self, ref: str, value: str, *, deadline: float | None = None) -> None:
         if self.backend == "local-file":
             _local_set(ref, value)
             return
-        result = _run_helper(self.backend, "set", ref=ref, value=value)
+        result = _run_helper(self.backend, "set", ref=ref, value=value, deadline=deadline)
         state = str(result.get("state") or "unavailable")
         if state != "ready":
             raise CredentialStoreError(_reason_for(self.backend, state))
@@ -186,7 +193,7 @@ class SecretStore:
     def get(self, ref: str) -> str:
         return self.probe(ref).value
 
-    def probe(self, ref: str) -> SecretProbe:
+    def probe(self, ref: str, *, deadline: float | None = None) -> SecretProbe:
         if not ref:
             return SecretProbe("", False, True, "")
         if self.backend == "local-file":
@@ -197,7 +204,7 @@ class SecretStore:
             if ref not in data:
                 return SecretProbe("", False, True, "")
             return SecretProbe(data[ref], True, True, "")
-        result = _run_helper(self.backend, "get", ref=ref)
+        result = _run_helper(self.backend, "get", ref=ref, deadline=deadline)
         state = str(result.get("state") or "unavailable")
         if state == "missing":
             return SecretProbe("", False, True, "")
@@ -208,7 +215,7 @@ class SecretStore:
             return SecretProbe("", False, False, _reason_for(self.backend, "unavailable"))
         return SecretProbe(value, True, True, "")
 
-    def health(self) -> dict[str, Any]:
+    def health(self, *, deadline: float | None = None) -> dict[str, Any]:
         reason = ""
         if self.backend == "local-file":
             try:
@@ -216,7 +223,7 @@ class SecretStore:
             except CredentialStoreError as exc:
                 reason = exc.reason
         else:
-            result = _run_helper(self.backend, "health")
+            result = _run_helper(self.backend, "health", deadline=deadline)
             state = str(result.get("state") or "unavailable")
             if state != "ready":
                 reason = _reason_for(self.backend, state)
@@ -281,10 +288,17 @@ def _run_helper(
     *,
     ref: str = "",
     value: str | None = None,
+    deadline: float | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {"ref": ref}
     if value is not None:
         payload["value"] = value
+    timeout = float(CREDENTIAL_HELPER_TIMEOUT_SECONDS)
+    if deadline is not None:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return {"state": "timed-out"}
+        timeout = min(timeout, remaining)
     try:
         completed = subprocess.run(
             [sys.executable, "-m", "mb._credential_helper", backend, action],
@@ -293,7 +307,7 @@ def _run_helper(
             stderr=subprocess.DEVNULL,
             text=True,
             input=json.dumps(payload),
-            timeout=CREDENTIAL_HELPER_TIMEOUT_SECONDS,
+            timeout=timeout,
         )
     except subprocess.TimeoutExpired:
         return {"state": "timed-out"}

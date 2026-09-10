@@ -285,6 +285,27 @@ def _secret_service_items(collection: Any, ref: str) -> list[Any]:
     return list(collection.search_items({"service": SERVICE_NAME, "username": ref}))
 
 
+def _secret_service_item(items: list[Any]) -> Any | None:
+    """Choose one compatible item without depending on service search order."""
+
+    if not items:
+        return None
+    if len(items) == 1:
+        return items[0]
+    by_application: dict[str, list[Any]] = {}
+    for item in items:
+        attributes = item.get_attributes()
+        application = str(attributes.get("application") or "")
+        by_application.setdefault(application, []).append(item)
+    for application in ("mainbranch", "Python keyring library"):
+        matches = by_application.get(application, [])
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise RuntimeError("ambiguous credential items")
+    raise RuntimeError("ambiguous credential items")
+
+
 def _secret_service_state(exc: BaseException) -> str:
     name = type(exc).__name__.lower()
     if "locked" in name or "prompt" in name or "cancel" in name:
@@ -310,15 +331,22 @@ def _secret_service(action: str, payload: dict[str, Any]) -> tuple[str, str | No
     items = _secret_service_items(collection, ref)
     if any(item.is_locked() for item in items):
         return "locked", None
+    item = _secret_service_item(items)
     if action == "get":
-        if not items:
+        if item is None:
             return "missing", None
-        secret = items[0].get_secret()
+        secret = item.get_secret()
         return "ready", bytes(secret).decode("utf-8")
     if action == "set":
         value = payload.get("value")
         if not isinstance(value, str):
             return "unavailable", None
+        if item is not None:
+            # Update the matched item in place. In particular, preserve the
+            # attributes on legacy Python keyring items instead of creating a
+            # second record whose application attribute differs.
+            item.set_secret(value.encode("utf-8"))
+            return "ready", None
         collection.create_item(
             f"Main Branch credential ({ref})",
             {
