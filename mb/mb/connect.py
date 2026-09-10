@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import hashlib
-import importlib
 import json
 import os
-import platform
 import re
 import shutil
 import subprocess
@@ -19,15 +17,21 @@ from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any
 
 import yaml
 
+from mb.credential_store import (
+    CredentialStoreError,
+    SecretProbe,
+    SecretStore,
+    backend_repair,
+    select_secret_backend,
+)
 from mb.durable import atomic_write_text
 
 CONFIG_RELATIVE_PATH = Path(".mb") / "connect.yaml"
 USER_SCOPE_RELATIVE_PATH = Path("connect") / "user-scope.yaml"
-SERVICE_NAME = "mainbranch"
 SENSITIVE_KEY_PARTS = ("token", "secret", "password", "credential", "api_key", "apikey", "key")
 SAFE_METADATA_KEYS = {"token_type", "token_scope", "api_token_type"}
 CONNECT_SCOPES = {"repo", "user"}
@@ -49,79 +53,17 @@ SECRET_PHRASE_RE = re.compile(
 )
 BEARER_SECRET_RE = re.compile(r"(?i)\bbearer[ \t]+[^\s,;]+")
 
-# `security` exit codes we can act on. Item-not-found means the Keychain
-# answered and the provider secret is simply absent; the others mean the
-# Keychain itself could not serve the request.
-KEYCHAIN_RC_ITEM_NOT_FOUND = 44
-KEYCHAIN_RC_INTERACTION_NOT_ALLOWED = 36
-KEYCHAIN_RC_AUTH_FAILED = 51
-
-KEYCHAIN_RESET_WARNING = (
-    "Do not reset or delete the login keychain — that destroys every credential "
-    "already stored in it."
-)
-BACKEND_REPAIRS: dict[str, dict[str, str]] = {
-    "keychain_locked": {
-        "summary": "The macOS login Keychain is locked, so credentials cannot be read or written.",
-        "repair": (
-            "Unlock it with `security unlock-keychain ~/Library/Keychains/login.keychain-db`, "
-            "or open Keychain Access and unlock the `login` keychain, then rerun the connect "
-            f"command. {KEYCHAIN_RESET_WARNING}"
-        ),
-        "repair_command": "security unlock-keychain ~/Library/Keychains/login.keychain-db",
-    },
-    "keychain_auth_failed": {
-        "summary": (
-            "The macOS login Keychain rejected the unlock passphrase, so credentials "
-            "cannot be read or written."
-        ),
-        "repair": (
-            "The login keychain password is usually out of sync with the account password. "
-            "Unlock `login` in Keychain Access with the older password, then use "
-            'Edit > Change Password for Keychain "login" to resync it. '
-            f"{KEYCHAIN_RESET_WARNING}"
-        ),
-        "repair_command": "security unlock-keychain ~/Library/Keychains/login.keychain-db",
-    },
-    "keychain_unavailable": {
-        "summary": "The macOS Keychain did not answer, so credentials cannot be read or written.",
-        "repair": (
-            "Check login Keychain health with "
-            "`security show-keychain-info ~/Library/Keychains/login.keychain-db`, unlock it if "
-            f"needed, then rerun the connect command. {KEYCHAIN_RESET_WARNING}"
-        ),
-        "repair_command": "security show-keychain-info ~/Library/Keychains/login.keychain-db",
-    },
-    "keyring_unavailable": {
-        "summary": "The Python keyring backend is unavailable, so credentials cannot be stored.",
-        "repair": (
-            "Install or repair a keyring backend, or set "
-            "`MB_CONNECT_SECRET_BACKEND=local-file` to store credentials outside the repo."
-        ),
-        "repair_command": "",
-    },
-}
 BACKEND_FAILURE_STATE = "backend_unavailable"
 
 
 def _backend_repair(reason: str) -> dict[str, str]:
     """Sanitized summary/repair for a credential-backend reason code."""
 
-    return BACKEND_REPAIRS.get(reason, BACKEND_REPAIRS["keychain_unavailable"])
+    return backend_repair(reason)
 
 
-class KeychainError(RuntimeError):
-    """Raised when the OS credential backend itself fails.
-
-    Carries a sanitized ``reason`` classification. The message is built from
-    the reason table below, never from raw ``security`` output, so no
-    credential value or raw command argument can reach a terminal or log.
-    """
-
-    def __init__(self, reason: str, message: str = "") -> None:
-        detail = _backend_repair(reason)
-        super().__init__(message or f"{detail['summary']} {detail['repair']}")
-        self.reason = reason
+KeychainError = CredentialStoreError
+_select_secret_backend = select_secret_backend
 
 
 class ConfigBoundaryError(ValueError):
@@ -925,242 +867,6 @@ def _meta_repair(state: str, missing: list[str] | None = None) -> dict[str, str]
     }
 
 
-class SecretProbe(NamedTuple):
-    """Result of reading one ref: value plus backend health, never an error blob."""
-
-    value: str
-    present: bool
-    backend_ok: bool
-    reason: str
-
-
-class SecretStore:
-    """Best-effort local secret storage outside the repo."""
-
-    def __init__(self, backend: str | None = None) -> None:
-        self.backend = backend or _select_secret_backend()
-
-    def set(self, ref: str, value: str) -> None:
-        if self.backend == "macos-keychain":
-            try:
-                _macos_set(ref, value)
-            except (OSError, subprocess.SubprocessError) as exc:
-                raise KeychainError("keychain_unavailable") from exc
-            return
-        if self.backend == "keyring":
-            module = _keyring_module()
-            if module is None:
-                raise KeychainError("keyring_unavailable")
-            try:
-                module.set_password(SERVICE_NAME, ref, value)
-            except Exception as exc:
-                raise KeychainError("keyring_unavailable") from exc
-            return
-        _local_set(ref, value)
-
-    def get(self, ref: str) -> str:
-        return self.probe(ref).value
-
-    def probe(self, ref: str) -> SecretProbe:
-        """Read ``ref`` and report whether the backend answered at all.
-
-        An absent provider secret and an unhealthy credential backend both
-        used to read back as an empty string, which is what made a locked
-        Keychain look like `missing_secret`. Callers that need to tell those
-        apart read ``backend_ok``/``reason``.
-        """
-
-        if not ref:
-            return SecretProbe("", False, True, "")
-        if self.backend == "macos-keychain":
-            value, reason = _macos_probe(ref)
-            return SecretProbe(value, bool(value), not reason, reason)
-        if self.backend == "keyring":
-            module = _keyring_module()
-            if module is None:
-                return SecretProbe("", False, False, "keyring_unavailable")
-            try:
-                value = module.get_password(SERVICE_NAME, ref)
-            except Exception:
-                return SecretProbe("", False, False, "keyring_unavailable")
-            text = str(value or "")
-            return SecretProbe(text, bool(text), True, "")
-        value = _local_get(ref)
-        return SecretProbe(value, bool(value), True, "")
-
-    def health(self) -> dict[str, Any]:
-        """Read-only probe of the credential backend itself.
-
-        Runs before Main Branch tells an operator to reconnect a provider, so
-        a locked login Keychain is never misreported as a missing key.
-        """
-
-        reason = ""
-        if self.backend == "macos-keychain":
-            reason = _macos_keychain_health()
-        elif self.backend == "keyring" and _keyring_module() is None:
-            reason = "keyring_unavailable"
-        detail = _backend_repair(reason)
-        return {
-            "backend": self.backend,
-            "ok": not reason,
-            "state": reason or "ready",
-            "summary": detail["summary"]
-            if reason
-            else f"Credential backend {self.backend} is ready.",
-            "repair": detail["repair"] if reason else "",
-            "repair_command": detail["repair_command"] if reason else "",
-            "safe_to_share": True,
-        }
-
-    def boundary(self) -> str:
-        if self.backend == "macos-keychain":
-            return "stored in the macOS Keychain"
-        if self.backend == "keyring":
-            return "stored through the Python keyring backend"
-        return f"stored outside the repo in {_local_secret_path()}"
-
-
-def _select_secret_backend() -> str:
-    requested = os.environ.get("MB_CONNECT_SECRET_BACKEND", "auto").strip().lower()
-    if requested in {"macos-keychain", "keyring", "local-file"}:
-        return requested
-    if _keyring_module() is not None:
-        return "keyring"
-    if platform.system() == "Darwin" and shutil.which("security"):
-        return "macos-keychain"
-    return "local-file"
-
-
-def _keyring_module() -> Any | None:
-    try:
-        return importlib.import_module("keyring")
-    except ImportError:
-        return None
-
-
-def _classify_keychain_failure(returncode: int, stderr: str) -> str:
-    """Map a failed ``security`` call to a sanitized reason code.
-
-    Matching is on well-known phrases and exit codes only. The raw text is
-    read here and discarded — it never reaches the returned value, because
-    `security` echoes its own argv on some errors.
-    """
-
-    text = (stderr or "").lower()
-    if "passphrase" in text or "password you entered" in text or "authenticat" in text:
-        return "keychain_auth_failed"
-    if "interaction is not allowed" in text or "locked" in text or "cancel" in text:
-        return "keychain_locked"
-    if returncode == KEYCHAIN_RC_AUTH_FAILED:
-        return "keychain_auth_failed"
-    if returncode == KEYCHAIN_RC_INTERACTION_NOT_ALLOWED:
-        return "keychain_locked"
-    return "keychain_unavailable"
-
-
-def _macos_set(ref: str, value: str) -> None:
-    result = subprocess.run(
-        [
-            "security",
-            "add-generic-password",
-            "-a",
-            ref,
-            "-s",
-            SERVICE_NAME,
-            "-w",
-            value,
-            "-U",
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    if result.returncode != 0:
-        raise KeychainError(_classify_keychain_failure(result.returncode, result.stderr or ""))
-
-
-def _macos_probe(ref: str) -> tuple[str, str]:
-    """Return ``(value, reason)`` for one keychain ref.
-
-    ``reason`` is empty when the Keychain answered, including the item-not-
-    found answer, which means the backend is healthy and the provider secret
-    is genuinely absent.
-    """
-
-    try:
-        result = subprocess.run(
-            ["security", "find-generic-password", "-a", ref, "-s", SERVICE_NAME, "-w"],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return "", "keychain_unavailable"
-    if result.returncode == KEYCHAIN_RC_ITEM_NOT_FOUND:
-        return "", ""
-    if result.returncode != 0:
-        return "", _classify_keychain_failure(result.returncode, result.stderr or "")
-    return result.stdout.rstrip("\n"), ""
-
-
-def _macos_keychain_health() -> str:
-    """Return a reason code for an unhealthy login Keychain, else ``""``."""
-
-    try:
-        result = subprocess.run(
-            ["security", "show-keychain-info"],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return "keychain_unavailable"
-    if result.returncode == 0:
-        return ""
-    return _classify_keychain_failure(result.returncode, result.stderr or "")
-
-
-def _local_secret_path() -> Path:
-    return _home() / "secrets" / "connect.json"
-
-
-def _read_local_secrets() -> dict[str, str]:
-    path = _local_secret_path()
-    if not path.exists():
-        return {}
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    if not isinstance(raw, dict):
-        return {}
-    return {str(key): str(value) for key, value in raw.items()}
-
-
-def _write_local_secrets(data: dict[str, str]) -> None:
-    path = _local_secret_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with suppress(OSError):
-        path.parent.chmod(0o700)
-    atomic_write_text(path, json.dumps(data, indent=2, sort_keys=True) + "\n")
-    with suppress(OSError):
-        path.chmod(0o600)
-
-
-def _local_set(ref: str, value: str) -> None:
-    data = _read_local_secrets()
-    data[ref] = value
-    _write_local_secrets(data)
-
-
-def _local_get(ref: str) -> str:
-    return _read_local_secrets().get(ref, "")
-
-
 def _parse_metadata(pairs: list[str]) -> dict[str, str]:
     metadata: dict[str, str] = {}
     for pair in pairs:
@@ -1367,11 +1073,6 @@ def connect_provider(
                 entry=providers[provider.id],
             )
         )
-    rotated_sibling_refs, stale_sibling_refs = (
-        _sync_sibling_refs(provider, token, current_ref=secrets[required[0]]["ref"])
-        if token and required
-        else ([], [])
-    )
     path = _write_config(target, config)
     status = status_provider(provider.id, target)
     return {
@@ -1384,48 +1085,13 @@ def connect_provider(
         "hydrated": normalized_scope == "user",
         "credential_backend": store.backend,
         "credential_boundary": store.boundary(),
-        "rotated_sibling_refs": rotated_sibling_refs,
-        "stale_sibling_refs": stale_sibling_refs,
+        # Kept as empty compatibility fields for callers from earlier releases.
+        # Credentials are repo_id-scoped and must never rotate another business.
+        "rotated_sibling_refs": [],
+        "stale_sibling_refs": [],
         "setup": _meta_setup() if provider.id == "meta" else {},
         "status": status,
     }
-
-
-def _sync_sibling_refs(
-    provider: Provider, token: str, *, current_ref: str
-) -> tuple[list[str], list[str]]:
-    """Rotate every sibling keychain ref for ``provider`` to ``token``.
-
-    A provider connected from several repos (main checkout, worktrees, other
-    business repos) holds one keychain ref per repo id. Rotating from one
-    repo previously updated only that repo's ref; scheduled jobs resolving
-    the others kept the stale token silently. Sibling refs are discovered
-    from user scope; refs are hashes and safe to report — the token never
-    is. Returns (rotated, still_stale) ref lists.
-    """
-    rotated: list[str] = []
-    stale: list[str] = []
-    data = _read_user_scope()
-    for raw_repo in data["repos"].values():
-        repo_entry = raw_repo if isinstance(raw_repo, dict) else {}
-        raw_entries = repo_entry.get("providers")
-        entries: dict[str, Any] = raw_entries if isinstance(raw_entries, dict) else {}
-        raw_entry = entries.get(provider.id)
-        entry = raw_entry if isinstance(raw_entry, dict) else {}
-        stored = entry.get("secrets") if isinstance(entry.get("secrets"), dict) else {}
-        for raw_secret in stored.values() if isinstance(stored, dict) else []:
-            secret = raw_secret if isinstance(raw_secret, dict) else {}
-            ref = str(secret.get("ref") or "")
-            backend = str(secret.get("backend") or "local-file")
-            if not ref or ref == current_ref or ref in rotated or ref in stale:
-                continue
-            try:
-                SecretStore(backend).set(ref, token)
-            except RuntimeError:
-                stale.append(ref)
-            else:
-                rotated.append(ref)
-    return rotated, stale
 
 
 def _secret_statuses(provider: Provider, entry: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
@@ -1437,7 +1103,7 @@ def _secret_statuses(provider: Provider, entry: dict[str, Any]) -> tuple[dict[st
         raw = raw if isinstance(raw, dict) else {}
         ref = str(raw.get("ref") or "")
         backend = str(raw.get("backend") or "local-file")
-        probe = SecretStore(backend).probe(ref)
+        probe = _probe_secret_ref(backend, ref)
         if not probe.present:
             missing.append(field)
         secrets[field] = {
@@ -1448,6 +1114,15 @@ def _secret_statuses(provider: Provider, entry: dict[str, Any]) -> tuple[dict[st
             "backend_state": probe.reason or "ready",
         }
     return secrets, missing
+
+
+def _probe_secret_ref(backend: str, ref: str) -> SecretProbe:
+    """Probe stored metadata without letting a foreign backend crash status."""
+
+    try:
+        return SecretStore(backend).probe(ref)
+    except (CredentialStoreError, ValueError):
+        return SecretProbe("", False, False, "backend_incompatible")
 
 
 def _backend_failure_reason(secrets: dict[str, Any]) -> str:
@@ -1563,7 +1238,7 @@ def status_provider(
         raw_secret = raw_secret if isinstance(raw_secret, dict) else {}
         ref = str(raw_secret.get("ref") or "")
         backend = str(raw_secret.get("backend") or "local-file")
-        probe = SecretStore(backend).probe(ref)
+        probe = _probe_secret_ref(backend, ref)
         secret_present = probe.present
         meta_backend_reason = "" if probe.backend_ok else (probe.reason or "keychain_unavailable")
         validation_state = str(meta_validation.get("state") or "unvalidated")
@@ -1777,13 +1452,17 @@ def hydrate(
     }
 
 
-def _entry_secret_value(entry: dict[str, Any], field: str) -> str:
+def _entry_secret_probe(entry: dict[str, Any], field: str) -> SecretProbe:
     stored_secrets = entry.get("secrets") if isinstance(entry.get("secrets"), dict) else {}
     raw = stored_secrets.get(field) if isinstance(stored_secrets, dict) else None
     raw = raw if isinstance(raw, dict) else {}
     ref = str(raw.get("ref") or "")
     backend = str(raw.get("backend") or "local-file")
-    return SecretStore(backend).get(ref) if ref else ""
+    return _probe_secret_ref(backend, ref)
+
+
+def _entry_secret_value(entry: dict[str, Any], field: str) -> str:
+    return _entry_secret_probe(entry, field).value
 
 
 def _stored_secret(provider: Provider, entry: dict[str, Any]) -> str:
@@ -1821,11 +1500,26 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
             "field": field,
             "source": "",
             "token": "",
+            "state": "not_connected",
+            "backend_state": "",
             "error": f"{provider.name} is not connected",
             "repair_command": repair_command,
         }
-    token = _entry_secret_value(entry, field)
-    if not token:
+    probe = _entry_secret_probe(entry, field)
+    if not probe.backend_ok:
+        detail = _backend_repair(probe.reason)
+        return {
+            "ok": False,
+            "provider": provider.id,
+            "field": field,
+            "source": source,
+            "token": "",
+            "state": BACKEND_FAILURE_STATE,
+            "backend_state": probe.reason,
+            "error": detail["summary"],
+            "repair_command": detail["repair_command"],
+        }
+    if not probe.present:
         repair_command = _connect_command(provider, token_stdin=True)
         return {
             "ok": False,
@@ -1833,7 +1527,9 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
             "field": field,
             "source": source,
             "token": "",
-            "error": f"{provider.name} credential is missing or unreadable from the secret store",
+            "state": "missing_secret",
+            "backend_state": "ready",
+            "error": f"{provider.name} credential is missing from the secret store",
             "repair_command": repair_command,
         }
     return {
@@ -1841,7 +1537,9 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
         "provider": provider.id,
         "field": field,
         "source": source,
-        "token": token,
+        "token": probe.value,
+        "state": "ready",
+        "backend_state": "ready",
         "error": "",
         "repair_command": "",
     }
@@ -2766,7 +2464,56 @@ def doctor_check(repo: str | Path = ".", *, status: dict[str, Any] | None = None
 def credential_backend_health(backend: str | None = None) -> dict[str, Any]:
     """Read-only health probe of the local credential backend."""
 
-    return SecretStore(backend).health()
+    try:
+        return SecretStore(backend).health()
+    except (CredentialStoreError, ValueError) as exc:
+        reason = exc.reason if isinstance(exc, CredentialStoreError) else "backend_incompatible"
+        detail = _backend_repair(reason)
+        return {
+            "backend": str(backend or "auto"),
+            "ok": False,
+            "state": reason,
+            "summary": detail["summary"],
+            "repair": detail["repair"],
+            "repair_command": detail["repair_command"],
+            "safe_to_share": True,
+        }
+
+
+def _configured_credential_backends(status: dict[str, Any]) -> list[str]:
+    backends: set[str] = set()
+    raw_providers = status.get("providers")
+    providers = raw_providers if isinstance(raw_providers, list) else []
+    for raw_provider in providers:
+        provider = raw_provider if isinstance(raw_provider, dict) else {}
+        raw_secrets = provider.get("secrets")
+        secrets = raw_secrets if isinstance(raw_secrets, dict) else {}
+        for raw_secret in secrets.values():
+            secret = raw_secret if isinstance(raw_secret, dict) else {}
+            backend = str(secret.get("backend") or "")
+            if backend:
+                backends.add(backend)
+    return sorted(backends)
+
+
+def _configured_backend_health(status: dict[str, Any]) -> dict[str, Any] | None:
+    backends = _configured_credential_backends(status)
+    if not backends:
+        return None
+    reports = [credential_backend_health(backend) for backend in backends]
+    failed = next((report for report in reports if not report["ok"]), None)
+    if failed is not None:
+        return failed
+    names = ", ".join(str(report["backend"]) for report in reports)
+    return {
+        "backend": names,
+        "ok": True,
+        "state": "ready",
+        "summary": f"Configured credential backend(s) are ready: {names}.",
+        "repair": "",
+        "repair_command": "",
+        "safe_to_share": True,
+    }
 
 
 def doctor(repo: str | Path = ".") -> dict[str, Any]:
@@ -2788,8 +2535,8 @@ def doctor(repo: str | Path = ".") -> dict[str, Any]:
     # locked Keychain makes "reconnect the provider" advice unfollowable. Only
     # when a provider is actually connected, so a fresh repo does not warn
     # about a backend nothing depends on yet.
-    if status["summary"]["configured"] > 0:
-        backend = credential_backend_health()
+    backend = _configured_backend_health(status)
+    if backend is not None:
         checks.append(
             {
                 "name": "credential-backend",
@@ -3288,4 +3035,11 @@ def read_stdin_token() -> str:
             "Paste the credential, then press Ctrl-D on a new line to finish.",
             file=sys.stderr,
         )
-    return sys.stdin.read().strip()
+    value = sys.stdin.read()
+    # Treat one final line ending as the stdin transport delimiter. Preserve
+    # every other leading, trailing, and embedded character exactly.
+    if value.endswith("\r\n"):
+        return value[:-2]
+    if value.endswith("\n"):
+        return value[:-1]
+    return value
