@@ -42,6 +42,11 @@ MB_CONNECT_SECRET_BACKEND=local-file mb connect cloudflare --token-stdin
 Existing metadata labeled `keyring` is read through the matching native
 adapter; new connections record the native backend name.
 
+The public `--token` option remains as deprecated input compatibility. A value
+supplied there is visible in the caller's process arguments. Main Branch never
+uses that option in generated commands or internal helper invocation; use
+`--token-stdin` for real credentials.
+
 `mb connect token <provider>` is the scripted read path. It prints the raw token
 to stdout and nothing else. Use it only in pipes or local scripts that need the
 credential; do not paste its output into chat, docs, issues, PRs, or tracked
@@ -125,8 +130,9 @@ mb connect mercury --custom --token-stdin
 A missing provider secret and an unusable secret backend are different
 problems, and only the first is fixed by reconnecting. Main Branch reports
 locked, unavailable, incompatible, and timed-out stores as sanitized backend
-states. Every native call runs in a helper process with an eight-second
-deadline; unattended reads suppress operating-system unlock UI.
+states. Every native call runs in a helper process, and an aggregate status,
+test, or doctor command shares one eight-second credential-store deadline;
+unattended reads suppress operating-system unlock UI.
 
 On macOS, unlock the login Keychain interactively inside the reader's owning
 user security session, then leave that session running:
@@ -160,9 +166,10 @@ unattended reader.
 
 A connect attempt that fails on the backend stores nothing and leaves repo
 metadata unchanged. Replacement updates an existing Keychain item in place,
-and Secret Service uses its replacement contract; Main Branch never
-delete-before-adds an existing credential. Helper stderr and raw exceptions are
-discarded.
+and Secret Service updates a matched item in place while preserving its
+attributes, including legacy Python keyring attributes. New Secret Service
+items use its replacement contract. Main Branch never delete-before-adds an
+existing credential. Helper stderr and raw exceptions are discarded.
 
 Reconnecting an already configured custom provider also works without
 `--custom`, but keeping the flag in repair output makes the command safe to

@@ -24,11 +24,12 @@ storage. Auto selection chooses the macOS login Keychain on macOS and the
 existing Secret Service default collection on Linux. It never chooses the
 plaintext local file automatically.
 
-Run every native operation in a killable helper with a fixed deadline. Send
-credential refs and values through stdin/stdout JSON, never process arguments,
-and discard helper stderr and raw exceptions. Reads must suppress unlock or
-access-approval UI and return sanitized missing, locked, unavailable,
-incompatible, or timed-out states.
+Run every native operation in a killable helper with a fixed deadline, and
+share one credential-store deadline across aggregate commands. Send credential
+refs and values through stdin/stdout JSON, never process arguments, and discard
+helper stderr and raw exceptions. Reads must suppress unlock or access-approval
+UI and return sanitized missing, locked, unavailable, incompatible, or
+timed-out states.
 
 On macOS, use Security.framework directly. Update existing generic-password
 items with `SecItemUpdate`; add only when the exact service/account item is
@@ -37,7 +38,9 @@ broaden the ACL to every application.
 
 On Linux, use SecretStorage directly. Use only the existing default collection,
 check collection and item lock state, never call unlock, and use Secret
-Service's replacement contract. SecretStorage is a Linux-only dependency.
+Service's in-place item update for existing records. Preserve matched legacy
+Python keyring attributes; use the replacement contract when creating a new
+record. SecretStorage is a Linux-only dependency.
 
 ## Identity And Resolution
 
@@ -50,6 +53,13 @@ Legacy `keyring` metadata maps to the matching native adapter because the
 existing macOS and Secret Service records use the same service/account shape.
 Explicit `local-file` remains available for compatibility and tests, but a
 malformed file is an unavailable store and is never silently overwritten.
+Tokenless reconnects preserve and validate an existing ref/backend because a
+store migration requires a new secret value.
+
+The public `--token` option remains deprecated compatibility input and can
+expose caller-supplied values in argv. Main Branch does not use it in generated
+commands or internal helper calls; those paths use stdin. Removing the public
+option requires a separate compatibility decision.
 
 ## Operating Boundary
 
