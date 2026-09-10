@@ -472,6 +472,31 @@ def test_tokenless_reconnect_rejects_incompatible_matching_user_scope_backend(
     assert not (fresh / ".mb" / "connect.yaml").exists()
 
 
+def test_supplied_repo_token_ignores_corrupt_user_scope(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _local_env(monkeypatch, tmp_path)
+    repo = tmp_path / "business"
+    repo.mkdir()
+    user_scope_path = tmp_path / "home" / connect_mod.USER_SCOPE_RELATIVE_PATH
+    user_scope_path.parent.mkdir(parents=True)
+    user_scope_path.write_text("{not-yaml\n", encoding="utf-8")
+    monkeypatch.setattr(connect_mod, "_git_output", lambda repo, args: "")
+
+    result = connect_mod.connect_provider(
+        "cloudflare",
+        repo,
+        token="fixture-token",
+        secret_backend="local-file",
+        scope="repo",
+    )
+
+    assert result["ok"] is True
+    assert result["scope"] == "repo"
+    assert connect_mod.read_token("cloudflare", repo)["token"] == "fixture-token"
+    assert user_scope_path.read_text(encoding="utf-8") == "{not-yaml\n"
+
+
 def test_repo_backend_outage_never_falls_back_to_user_scope(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

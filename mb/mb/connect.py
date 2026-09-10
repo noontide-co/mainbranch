@@ -1029,7 +1029,7 @@ def connect_provider(
     credential_deadline = new_credential_deadline()
     providers = config["providers"]
     raw_existing_entry = providers.get(provider.id)
-    if provider.id not in providers:
+    if not token and provider.id not in providers:
         raw_existing_entry = _user_scope_provider_entry(repo_id, provider.id)
     existing_entry = raw_existing_entry if isinstance(raw_existing_entry, dict) else {}
 
