@@ -14,8 +14,9 @@ APIs, and niche SaaS tools before Main Branch has native wrappers.
 
 - Provider metadata lives in `.mb/connect.yaml`, so setup state is durable and
   inspectable.
-- Secret values live outside git through `SecretStore` backends such as macOS
-  Keychain, Python keyring, or local file storage.
+- Secret values live outside git through one credential-store interface. Auto
+  selection uses the macOS login Keychain or Linux Secret Service and never
+  silently falls back to a plaintext local file.
 - `mb connect token <provider>` gives scripts one narrow credential read path
   that prints only the token to stdout.
 - `status`, `doctor`, `list`, `identity`, `hygiene`, and `test` give agents
@@ -34,15 +35,20 @@ APIs, and niche SaaS tools before Main Branch has native wrappers.
 - Custom providers had no identity schema, so agents could see "connected" but
   not the safe role of the account, such as `operating_cash_source`.
 - Docs did not show the full finance-token lifecycle or safe script pattern.
+- Same-provider rotation treated every user-scope repo as a sibling and could
+  rewrite another business's credential. User-scope fallback was already
+  `repo_id`-indexed; rotation now preserves the same boundary.
+- A desktop-unlocked macOS Keychain did not imply that an already-running
+  remote security session was unlocked.
 
 ## Lifecycle
 
 1. **Declare.** Choose a provider id and record safe intent metadata.
    Built-ins use the registry; custom providers use `--custom`.
 2. **Store secret.** Store token material through `--token-stdin`,
-   provider-native auth, Keychain, keyring, local secret store, 1Password, or a
-   current-process environment command. Never commit `.env` files or paste raw
-   tokens into docs, issues, logs, or workpapers.
+   provider-native auth, the native OS credential store, an explicitly selected
+   legacy local file, or a current-process environment command. Never commit
+   `.env` files or paste raw tokens into docs, issues, logs, or workpapers.
 3. **Smoke test.** Run `mb connect test <provider>` when a safe read-only probe
    exists. For custom providers without a probe, credential presence can mark
    local readiness, but it does not prove provider API behavior.
@@ -50,8 +56,8 @@ APIs, and niche SaaS tools before Main Branch has native wrappers.
    from guessing: role, access level, data domain, auth state, account label,
    workspace, environment, or provider-specific ids when safe for the repo.
 5. **Use token in scripts.** Scripts call `mb connect token <provider>` and
-   keep stdout in memory or a pipe. They do not echo tokens, enable shell trace,
-   write env files, or commit raw exports.
+   keep its exact stdout in memory or a pipe. They do not put tokens in child
+   argv, echo them, enable shell trace, write env files, or commit raw exports.
 6. **Rotate or repair.** Missing or stale secrets report a reconnect command.
    For custom providers, repair output includes `--custom --token-stdin`.
 7. **Audit and hygiene.** `mb connect doctor`, `mb connect status --all`,
@@ -125,16 +131,19 @@ Approval-gated every time:
   user scope.
 - Custom provider identity metadata is surfaced by `mb connect identity`.
 - `docs/connect.md` includes Mercury-style Keychain setup and safe token use.
+- Credential access is bounded behind native macOS and Linux adapters with
+  sanitized missing, locked, unavailable, incompatible, and timeout states.
+- User-scope fallback remains `repo_id`-indexed, and rotation no longer changes
+  a same-named provider belonging to another business.
 
 ## Issue-Ready Follow-Ups
 
-- Add explicit secret-backend diagnostics: selected backend, backend
-  availability, Keychain/keyring read failure state, and repair commands.
 - Add `mb connect rotate <provider>` as a clearer alias over reconnecting with
-  `--token-stdin`, including sibling-ref rotation evidence.
+  `--token-stdin`, preserving the selected business's `repo_id` boundary.
 - Add finance-provider metadata validation warnings for raw-looking account
   numbers, missing `access_level`, and missing `data_domain`.
-- Add optional 1Password command integration for token reads without teaching
-  committed `.env` files.
+- Add an optional 1Password service-account reference adapter without teaching
+  committed `.env` files. Vault selection, service-account credentials, and
+  unattended bootstrap remain operator-owned.
 - Add native read-only wrappers only after one provider has public-safe smoke
   evidence and a privacy-bounded output contract.

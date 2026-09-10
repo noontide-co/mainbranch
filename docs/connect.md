@@ -25,12 +25,22 @@ Tracked repo metadata must not include:
 - raw provider exports;
 - account-private finance, customer, member, payroll, legal, or tax data.
 
-By default, Main Branch selects the safest available local secret backend. On
-macOS that is usually Keychain. You can force a backend for setup or testing:
+By default, Main Branch selects the native secure store for the current host:
+the macOS login Keychain or the Linux Secret Service default collection. It
+never falls back automatically to plaintext storage. Unknown selectors and
+metadata naming a backend from another operating system fail closed.
+
+Use an explicit backend only for controlled setup or tests:
 
 ```bash
 MB_CONNECT_SECRET_BACKEND=macos-keychain mb connect cloudflare --token-stdin
+MB_CONNECT_SECRET_BACKEND=secret-service mb connect cloudflare --token-stdin
+MB_CONNECT_SECRET_BACKEND=local-file mb connect cloudflare --token-stdin
 ```
+
+`local-file` is a legacy compatibility option and must be selected explicitly.
+Existing metadata labeled `keyring` is read through the matching native
+adapter; new connections record the native backend name.
 
 `mb connect token <provider>` is the scripted read path. It prints the raw token
 to stdout and nothing else. Use it only in pipes or local scripts that need the
@@ -78,26 +88,29 @@ Read the token for a local importer or scheduled collector:
 mb connect token mercury
 ```
 
-In a shell script, capture the token without echoing it. Keep shell tracing off
-around secret reads.
+In a local script, keep the token in memory and out of child-process arguments.
+The token command writes the exact credential text with no added newline.
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-set +x
+```python
+import subprocess
+import urllib.request
 
-token="$(mb connect token mercury)"
-curl --fail --silent --show-error \
-  --header "Authorization: Bearer ${token}" \
-  "https://api.example.invalid/accounts" \
-  > /tmp/mercury-accounts.json
-
-unset token
+token = subprocess.run(
+    ["mb", "connect", "token", "mercury"],
+    check=True,
+    capture_output=True,
+).stdout.decode()
+request = urllib.request.Request(
+    "https://api.example.invalid/accounts",
+    headers={"Authorization": f"Bearer {token}"},
+)
+with urllib.request.urlopen(request, timeout=10) as response:
+    payload = response.read()
 ```
 
-Do not use `set -x`, `echo "$token"`, committed `.env` files, or logs that
-print request headers. Raw exports should go to a private finance workspace or
-an ignored local staging path, not to a public repo.
+Do not place a credential in a command argument, use `set -x`, echo it, write a
+committed `.env` file, or log request headers. Raw exports should go to a private
+workspace or an ignored local staging path, not to a public repo.
 
 If metadata exists but the secret is missing, Main Branch reports
 `missing_secret` and gives a reconnect command that includes `--custom`, for
@@ -110,30 +123,46 @@ mb connect mercury --custom --token-stdin
 ## When the credential backend itself is unhealthy
 
 A missing provider secret and an unusable secret backend are different
-problems, and only the first is fixed by reconnecting. When the backend cannot
-answer — most often a locked macOS login Keychain, or one whose password is out
-of sync with the account password — Main Branch reports the provider state as
-`backend_unavailable` rather than `missing_secret`, and `mb connect doctor`
-reports a failed `credential-backend` check with a `keychain_locked` or
-`keychain_auth_failed` state before it suggests reconnecting anything.
+problems, and only the first is fixed by reconnecting. Main Branch reports
+locked, unavailable, incompatible, and timed-out stores as sanitized backend
+states. Every native call runs in a helper process with an eight-second
+deadline; unattended reads suppress operating-system unlock UI.
 
-Repair the backend first:
+On macOS, unlock the login Keychain interactively inside the reader's owning
+user security session, then leave that session running:
 
 ```bash
 mb connect doctor --json
 security unlock-keychain ~/Library/Keychains/login.keychain-db
 ```
 
-If the login keychain rejects the passphrase, unlock it in Keychain Access with
-the older password and resync it with Edit > Change Password for Keychain
-"login". Do not reset or delete the login keychain — that destroys every
-credential already stored in it, for Main Branch and for every other app.
+A desktop unlock does not necessarily unlock an already-running remote security
+session. Scheduled macOS readers should run as a user `LaunchAgent` in the
+logged-in user's GUI launchd domain; Main Branch does not install a daemon,
+broker, or launchd job. A new security session or reboot can require another
+interactive unlock in that owning session.
+
+Keychain item access control is separate from Keychain lock state. A new item
+trusts the installed Python application identity that created it. Reads from a
+different or reinstalled interpreter can require a one-time Access Control
+addition in Keychain Access or reprovisioning from the intended stable `mb`
+install. An item ACL that trusts only `/usr/bin/security` does not authorize the
+native reader, which runs inside the Python interpreter named by the installed
+`mb` executable's shebang. Provisioning must add that exact interpreter as a
+trusted application without granting access to every application. Main Branch
+fails closed instead of opening that approval dialog. Never reset or delete the
+login keychain to repair one item.
+
+On Linux, Main Branch uses the existing Secret Service default collection. It
+checks collection and item lock state and never calls an unlock method. Unlock
+the collection in the user's desktop keyring application before starting the
+unattended reader.
 
 A connect attempt that fails on the backend stores nothing and leaves repo
-metadata unchanged, so it cannot leave a provider reading `connected: true`
-next to a secret that was never written. Main Branch classifies the failure
-from the `security` exit code and a small set of known phrases; raw `security`
-output is never printed, because it can echo the command's own arguments.
+metadata unchanged. Replacement updates an existing Keychain item in place,
+and Secret Service uses its replacement contract; Main Branch never
+delete-before-adds an existing credential. Helper stderr and raw exceptions are
+discarded.
 
 Reconnecting an already configured custom provider also works without
 `--custom`, but keeping the flag in repair output makes the command safe to
@@ -145,6 +174,9 @@ For rotation, run the same command with the new token:
 MB_CONNECT_SECRET_BACKEND=macos-keychain \
   mb connect mercury --custom --token-stdin
 ```
+
+Rotation updates only the selected business's `repo_id`-scoped reference. A
+same-named provider in another business is not a sibling and is never rewritten.
 
 Then verify readiness without printing the token:
 
@@ -186,3 +218,17 @@ mb connect hydrate --repo .
 ```
 
 Secret material remains outside git in both repo and user scope.
+
+User-scope lookup is indexed by `repo_id`. Worktrees and scheduled jobs for the
+same business can reuse the entry; another business with the same provider id
+cannot.
+
+## External 1Password option
+
+Main Branch does not yet implement a 1Password credential-store adapter. An
+operator may use an existing 1Password CLI or service-account workflow outside
+`mb` and pipe a selected field into `mb connect ... --token-stdin`, keeping the
+value in memory and off argv. Vault choice, service-account creation, token
+storage, desktop integration approval, and reapproval remain operator-owned
+bootstrap. An unlocked desktop integration is not evidence that unattended
+access will remain available.
