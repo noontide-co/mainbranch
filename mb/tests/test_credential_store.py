@@ -382,6 +382,96 @@ def test_tokenless_reconnect_rejects_incompatible_recorded_backend(
     assert path.read_text(encoding="utf-8") == before
 
 
+def test_tokenless_reconnect_preserves_matching_user_scope_ref_and_backend(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _local_env(monkeypatch, tmp_path)
+    canonical = tmp_path / "canonical"
+    fresh = tmp_path / "fresh"
+    canonical.mkdir()
+    fresh.mkdir()
+
+    def fake_git(repo: Path, args: list[str]) -> str:
+        if args == ["config", "--get", "remote.origin.url"]:
+            return "git@github.com:acme/business.git"
+        return ""
+
+    monkeypatch.setattr(connect_mod, "_git_output", fake_git)
+    connect_mod.connect_provider(
+        "cloudflare",
+        canonical,
+        token="fixture-token",
+        scope="user",
+    )
+    user_scope_path = tmp_path / "home" / connect_mod.USER_SCOPE_RELATIVE_PATH
+    user_scope = yaml.safe_load(user_scope_path.read_text(encoding="utf-8"))
+    repo_id = next(iter(user_scope["repos"]))
+    expected_secret = user_scope["repos"][repo_id]["providers"]["cloudflare"]["secrets"][
+        "api_token"
+    ]
+    monkeypatch.delenv("MB_CONNECT_SECRET_BACKEND", raising=False)
+    monkeypatch.setattr(store_mod.platform, "system", lambda: "Darwin")  # type: ignore[attr-defined]
+    monkeypatch.setattr(
+        store_mod,
+        "_run_helper",
+        lambda backend, action, **kwargs: {"state": "missing"},
+    )
+
+    result = connect_mod.connect_provider(
+        "cloudflare",
+        fresh,
+        metadata_pairs=["account_id=fixture-account"],
+    )
+    fresh_config = yaml.safe_load((fresh / ".mb" / "connect.yaml").read_text(encoding="utf-8"))
+
+    assert fresh_config["providers"]["cloudflare"]["secrets"]["api_token"] == expected_secret
+    assert result["credential_backend"] == "local-file"
+    assert connect_mod.read_token("cloudflare", fresh)["token"] == "fixture-token"
+
+
+def test_tokenless_reconnect_rejects_incompatible_matching_user_scope_backend(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _local_env(monkeypatch, tmp_path)
+    canonical = tmp_path / "canonical"
+    fresh = tmp_path / "fresh"
+    canonical.mkdir()
+    fresh.mkdir()
+
+    def fake_git(repo: Path, args: list[str]) -> str:
+        if args == ["config", "--get", "remote.origin.url"]:
+            return "git@github.com:acme/business.git"
+        return ""
+
+    monkeypatch.setattr(connect_mod, "_git_output", fake_git)
+    connect_mod.connect_provider(
+        "cloudflare",
+        canonical,
+        token="fixture-token",
+        scope="user",
+    )
+    user_scope_path = tmp_path / "home" / connect_mod.USER_SCOPE_RELATIVE_PATH
+    user_scope = yaml.safe_load(user_scope_path.read_text(encoding="utf-8"))
+    repo_id = next(iter(user_scope["repos"]))
+    user_scope["repos"][repo_id]["providers"]["cloudflare"]["secrets"]["api_token"]["backend"] = (
+        "secret-service"
+    )
+    user_scope_path.write_text(yaml.safe_dump(user_scope), encoding="utf-8")
+    monkeypatch.delenv("MB_CONNECT_SECRET_BACKEND", raising=False)
+    monkeypatch.setattr(store_mod.platform, "system", lambda: "Darwin")  # type: ignore[attr-defined]
+    monkeypatch.setattr(
+        store_mod,
+        "_run_helper",
+        lambda backend, action, **kwargs: {"state": "missing"},
+    )
+
+    with pytest.raises(store_mod.CredentialStoreError) as exc_info:
+        connect_mod.connect_provider("cloudflare", fresh)
+
+    assert exc_info.value.reason == "backend_incompatible"
+    assert not (fresh / ".mb" / "connect.yaml").exists()
+
+
 def test_repo_backend_outage_never_falls_back_to_user_scope(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

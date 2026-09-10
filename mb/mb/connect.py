@@ -1028,8 +1028,10 @@ def connect_provider(
     repo_id = _ensure_repo_id(config, target)
     credential_deadline = new_credential_deadline()
     providers = config["providers"]
-    existing_entry = providers.get(provider.id)
-    existing_entry = existing_entry if isinstance(existing_entry, dict) else {}
+    raw_existing_entry = providers.get(provider.id)
+    if provider.id not in providers:
+        raw_existing_entry = _user_scope_provider_entry(repo_id, provider.id)
+    existing_entry = raw_existing_entry if isinstance(raw_existing_entry, dict) else {}
 
     secrets: dict[str, dict[str, str]] = {}
     required = list(provider.required_secrets)
