@@ -11,6 +11,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-09-11
+
+This release makes `mb connect` resolve each business's own credential through
+one bounded credential store, so unattended status, token, and doctor runs
+finish on a deadline instead of hanging on an operating-system unlock prompt.
+
 ### Security
 
 - `mb connect` now routes macOS Keychain and Linux Secret Service operations
