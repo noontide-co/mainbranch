@@ -1663,7 +1663,7 @@ def connect_cmd(
                 typer.echo(f"repair: {result['repair_command']}", err=True)
             raise typer.Exit(1)
         # The token is the entire stdout contract; nothing else may print here.
-        typer.echo(result["token"])
+        typer.echo(result["token"], nl=False)
         raise typer.Exit(0)
     if target == "test":
         if not provider:
@@ -1701,8 +1701,8 @@ def connect_cmd(
         credential_source = "stdin"
     if from_env and not secret_value and provider_info.required_secrets:
         for env_var in provider_info.env_vars:
-            value = os.environ.get(env_var, "").strip()
-            if value:
+            value = os.environ.get(env_var, "")
+            if value != "":
                 secret_value = value
                 credential_source = "env"
                 consumed_env_var = env_var

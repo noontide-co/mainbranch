@@ -14,6 +14,7 @@ import yaml
 from typer.testing import CliRunner
 
 from mb import connect as connect_mod
+from mb import credential_store as credential_store_mod
 from mb.cli import app
 
 runner = CliRunner()
@@ -1606,56 +1607,13 @@ def test_doctor_and_status_include_integration_state(tmp_path: Path, monkeypatch
     assert status_payload["integrations"]["summary"]["healthy"] == 1
 
 
-def test_macos_keychain_backend_uses_security(monkeypatch) -> None:
-    calls: list[list[str]] = []
-
-    def fake_run(args: list[str], **kwargs: Any) -> Any:
-        calls.append(args)
-
-        class Result:
-            returncode = 0
-            stdout = ""
-
-        return Result()
-
-    monkeypatch.setattr(connect_mod.subprocess, "run", fake_run)  # type: ignore[attr-defined]
-
-    store = connect_mod.SecretStore("macos-keychain")
-    store.set("mainbranch://test/cloudflare/api_token", "cf-token")
-
-    assert calls
-    assert calls[0][:3] == ["security", "add-generic-password", "-a"]
-    assert "cf-token" in calls[0]
-
-
-def _fake_security(
-    monkeypatch, *, returncode: int, stderr: str = "", stdout: str = ""
-) -> list[list[str]]:
-    """Drive every `security` call through a failing test double."""
-
-    calls: list[list[str]] = []
-
-    def fake_run(args: list[str], **kwargs: Any) -> Any:
-        calls.append(args)
-
-        class Result:
-            pass
-
-        Result.returncode = returncode  # type: ignore[attr-defined]
-        Result.stdout = stdout  # type: ignore[attr-defined]
-        Result.stderr = stderr  # type: ignore[attr-defined]
-        return Result()
-
-    monkeypatch.setattr(connect_mod.subprocess, "run", fake_run)  # type: ignore[attr-defined]
-    return calls
-
-
-# `security` echoes its own invocation on failure; the passphrase error below
-# is the shape reported for a login keychain whose password is out of sync.
-_KEYCHAIN_AUTH_STDERR = (
-    "security: SecKeychainAddGenericPassword <NULL>: "
-    "The user name or passphrase you entered is not correct."
-)
+def _fake_native_store(monkeypatch, state: str) -> None:
+    monkeypatch.setattr(credential_store_mod.platform, "system", lambda: "Darwin")  # type: ignore[attr-defined]
+    monkeypatch.setattr(
+        credential_store_mod,
+        "_run_helper",
+        lambda backend, action, **kwargs: {"state": state},
+    )
 
 
 def test_macos_keychain_write_failure_reports_sanitized_auth_classification(
@@ -1663,7 +1621,7 @@ def test_macos_keychain_write_failure_reports_sanitized_auth_classification(
 ) -> None:
     monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
     monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
-    _fake_security(monkeypatch, returncode=51, stderr=_KEYCHAIN_AUTH_STDERR)
+    _fake_native_store(monkeypatch, "auth-failed")
     repo = tmp_path / "biz"
     repo.mkdir()
 
@@ -1672,12 +1630,11 @@ def test_macos_keychain_write_failure_reports_sanitized_auth_classification(
 
     message = str(excinfo.value)
     assert excinfo.value.reason == "keychain_auth_failed"
-    assert "rejected the unlock passphrase" in message
+    assert "rejected credential access" in message
     assert "Nothing was stored" in message
     assert "Do not reset or delete the login keychain" in message
     assert "re_secret_token" not in message
-    assert "add-generic-password" not in message
-    assert "SecKeychainAddGenericPassword" not in message
+    assert "auth-failed" not in message
 
 
 def test_macos_keychain_write_failure_leaves_no_partial_metadata(
@@ -1685,7 +1642,7 @@ def test_macos_keychain_write_failure_leaves_no_partial_metadata(
 ) -> None:
     monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
     monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
-    _fake_security(monkeypatch, returncode=51, stderr=_KEYCHAIN_AUTH_STDERR)
+    _fake_native_store(monkeypatch, "auth-failed")
     repo = tmp_path / "biz"
     repo.mkdir()
 
@@ -1712,7 +1669,7 @@ def test_locked_keychain_status_distinguishes_backend_failure_from_missing_secre
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     config["providers"]["resend"]["secrets"]["api_key"]["backend"] = "macos-keychain"
     config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
-    _fake_security(monkeypatch, returncode=51, stderr=_KEYCHAIN_AUTH_STDERR)
+    _fake_native_store(monkeypatch, "auth-failed")
 
     status = connect_mod.status_provider("resend", repo)
 
@@ -1734,11 +1691,7 @@ def test_missing_keychain_item_still_reports_missing_secret(tmp_path: Path, monk
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     config["providers"]["resend"]["secrets"]["api_key"]["backend"] = "macos-keychain"
     config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
-    _fake_security(
-        monkeypatch,
-        returncode=44,
-        stderr="security: SecKeychainSearchCopyNext: The specified item could not be found.",
-    )
+    _fake_native_store(monkeypatch, "missing")
 
     status = connect_mod.status_provider("resend", repo)
 
@@ -1758,7 +1711,7 @@ def test_doctor_checks_keychain_health_before_provider_reconnect(
     config["providers"]["resend"]["secrets"]["api_key"]["backend"] = "macos-keychain"
     config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
     monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
-    _fake_security(monkeypatch, returncode=51, stderr=_KEYCHAIN_AUTH_STDERR)
+    _fake_native_store(monkeypatch, "auth-failed")
 
     report = connect_mod.doctor(repo)
 
@@ -1769,7 +1722,7 @@ def test_doctor_checks_keychain_health_before_provider_reconnect(
     assert report["ok"] is False
     payload = json.dumps(report)
     assert "re_secret_token" not in payload
-    assert "SecKeychainAddGenericPassword" not in payload
+    assert "auth-failed" not in payload
 
 
 def test_doctor_skips_backend_check_when_no_provider_connected(tmp_path: Path, monkeypatch) -> None:
@@ -1778,7 +1731,7 @@ def test_doctor_skips_backend_check_when_no_provider_connected(tmp_path: Path, m
     repo = tmp_path / "biz"
     repo.mkdir()
     # An unhealthy Keychain must not warn when nothing depends on it yet.
-    _fake_security(monkeypatch, returncode=51, stderr=_KEYCHAIN_AUTH_STDERR)
+    _fake_native_store(monkeypatch, "auth-failed")
 
     report = connect_mod.doctor(repo)
 
@@ -1795,7 +1748,7 @@ def test_status_briefing_leads_with_backend_failure(tmp_path: Path, monkeypatch)
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     config["providers"]["resend"]["secrets"]["api_key"]["backend"] = "macos-keychain"
     config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
-    _fake_security(monkeypatch, returncode=51, stderr=_KEYCHAIN_AUTH_STDERR)
+    _fake_native_store(monkeypatch, "auth-failed")
 
     check = connect_mod.doctor_check(repo)
 
@@ -1805,30 +1758,21 @@ def test_status_briefing_leads_with_backend_failure(tmp_path: Path, monkeypatch)
 
 
 def test_keychain_health_reports_locked_without_raw_output(monkeypatch) -> None:
-    _fake_security(
-        monkeypatch,
-        returncode=36,
-        stderr="security: SecKeychainCopySettings: User interaction is not allowed.",
-    )
+    _fake_native_store(monkeypatch, "locked")
 
     health = connect_mod.credential_backend_health("macos-keychain")
 
     assert health["ok"] is False
     assert health["state"] == "keychain_locked"
     assert health["repair_command"].startswith("security unlock-keychain")
-    assert "User interaction is not allowed" not in json.dumps(health)
+    assert "remote session" in health["repair"]
 
 
-def test_auto_secret_backend_prefers_keyring_over_macos_security(monkeypatch) -> None:
-    class FakeKeyring:
-        pass
-
+def test_auto_secret_backend_selects_native_macos_adapter(monkeypatch) -> None:
     monkeypatch.delenv("MB_CONNECT_SECRET_BACKEND", raising=False)
-    monkeypatch.setattr("mb.connect.platform.system", lambda: "Darwin")
-    monkeypatch.setattr("mb.connect.shutil.which", lambda name: "/usr/bin/security")
-    monkeypatch.setattr(connect_mod, "_keyring_module", lambda: FakeKeyring())
+    monkeypatch.setattr(credential_store_mod.platform, "system", lambda: "Darwin")  # type: ignore[attr-defined]
 
-    assert connect_mod._select_secret_backend() == "keyring"
+    assert connect_mod._select_secret_backend() == "macos-keychain"
 
 
 def test_connect_token_prints_secret_to_stdout(tmp_path: Path, monkeypatch) -> None:
@@ -1840,7 +1784,7 @@ def test_connect_token_prints_secret_to_stdout(tmp_path: Path, monkeypatch) -> N
     result = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
 
     assert result.exit_code == 0
-    assert result.stdout == "cf-test-token\n"
+    assert result.stdout == "cf-test-token"
 
 
 def test_connect_token_falls_back_to_user_scope(tmp_path: Path, monkeypatch) -> None:
@@ -1853,7 +1797,7 @@ def test_connect_token_falls_back_to_user_scope(tmp_path: Path, monkeypatch) -> 
     result = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
 
     assert result.exit_code == 0
-    assert result.stdout == "cf-user-token\n"
+    assert result.stdout == "cf-user-token"
 
 
 def test_connect_token_not_connected_fails(tmp_path: Path, monkeypatch) -> None:
@@ -1879,7 +1823,7 @@ def test_connect_token_missing_stored_secret_fails(tmp_path: Path, monkeypatch) 
 
     assert result.exit_code == 1
     assert result.stdout == ""
-    assert "missing or unreadable" in result.stderr
+    assert "credential is missing from the secret store" in result.stderr
 
 
 def test_connect_token_requires_provider(tmp_path: Path, monkeypatch) -> None:
@@ -1939,11 +1883,11 @@ def test_connect_stripe_and_resend_store_and_read_back(tmp_path: Path, monkeypat
 
     stripe_token = runner.invoke(app, ["connect", "token", "stripe", "--repo", str(repo)])
     assert stripe_token.exit_code == 0
-    assert stripe_token.stdout == "sk_test_fixture_not_real\n"
+    assert stripe_token.stdout == "sk_test_fixture_not_real"
 
     resend_token = runner.invoke(app, ["connect", "token", "resend", "--repo", str(repo)])
     assert resend_token.exit_code == 0
-    assert resend_token.stdout == "re_fixture_not_real\n"
+    assert resend_token.stdout == "re_fixture_not_real"
 
     status = connect_mod.status_provider("stripe", repo)
     assert status["metadata"]["mode"] == "test"
@@ -2160,7 +2104,7 @@ def test_connect_custom_provider_missing_secret_surfaces_repair(
     token = runner.invoke(app, ["connect", "token", "mercury", "--repo", str(repo)])
     assert token.exit_code == 1
     assert token.stdout == ""
-    assert "missing or unreadable" in token.stderr
+    assert "credential is missing from the secret store" in token.stderr
     assert "repair: mb connect mercury --custom --token-stdin" in token.stderr
 
     doctor = runner.invoke(app, ["connect", "doctor", "--repo", str(repo), "--json"])
@@ -2255,7 +2199,7 @@ def test_connect_custom_rejects_bad_slug(tmp_path: Path, monkeypatch) -> None:
     assert "lowercase letters, digits, and hyphens" in result.stderr
 
 
-def test_rotation_syncs_sibling_refs_across_repos(tmp_path: Path, monkeypatch) -> None:
+def test_rotation_never_rewrites_same_provider_in_another_repo(tmp_path: Path, monkeypatch) -> None:
     _local_secret_env(monkeypatch, tmp_path)
     repo_a = tmp_path / "biz-a"
     repo_b = tmp_path / "biz-b"
@@ -2269,11 +2213,11 @@ def test_rotation_syncs_sibling_refs_across_repos(tmp_path: Path, monkeypatch) -
         "cloudflare", repo=repo_a, token="cf-new-token", scope="user"
     )
 
-    assert len(result["rotated_sibling_refs"]) == 1
+    assert result["rotated_sibling_refs"] == []
     assert result["stale_sibling_refs"] == []
     token_b = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo_b)])
     assert token_b.exit_code == 0
-    assert token_b.stdout == "cf-new-token\n"
+    assert token_b.stdout == "cf-old-token"
 
 
 def test_rotation_does_not_touch_other_providers(tmp_path: Path, monkeypatch) -> None:
@@ -2292,7 +2236,7 @@ def test_rotation_does_not_touch_other_providers(tmp_path: Path, monkeypatch) ->
 
     assert result["rotated_sibling_refs"] == []
     token_b = runner.invoke(app, ["connect", "token", "apify", "--repo", str(repo_b)])
-    assert token_b.stdout == "apify-token\n"
+    assert token_b.stdout == "apify-token"
 
 
 # --- credential hygiene (mb connect hygiene) -------------------------------

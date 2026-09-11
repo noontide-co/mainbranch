@@ -37,6 +37,7 @@ dependencies = [
   "typer>=0.12",
   "pyyaml>=6.0",
   "rich>=13.0",
+  "SecretStorage>=3.5; sys_platform == 'linux'",
 ]
 
 [project.optional-dependencies]

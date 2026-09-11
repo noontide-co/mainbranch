@@ -11,6 +11,42 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Security
+
+- `mb connect` now routes macOS Keychain and Linux Secret Service operations
+  through a killable native helper with a fixed deadline. Aggregate status,
+  test, and doctor operations share one credential-store deadline. Credential
+  values and refs travel through stdin/stdout JSON instead of process
+  arguments; raw helper stderr and exceptions are discarded, and unattended
+  reads suppress operating-system unlock UI.
+- Automatic backend selection now fails closed: macOS selects Keychain, Linux
+  selects Secret Service, unknown or cross-platform selectors are rejected,
+  and plaintext `local-file` storage is explicit compatibility behavior only.
+
+### Fixed
+
+- Rotating a provider updates only the selected business's `repo_id`-scoped
+  credential. It no longer rewrites a same-named provider in another business;
+  repo-indexed user-scope fallback for worktrees and scheduled jobs remains.
+- Credential reads and stdin/env intake preserve exact text, and `mb connect
+  token` no longer appends a newline. Failed replacement preserves the previous
+  native-store value; malformed explicit local files are reported and never
+  silently overwritten.
+- Tokenless reconnects retain and validate the existing secret ref/backend
+  instead of silently moving metadata to the host default. Linux rotation
+  updates matched legacy Python keyring items in place rather than creating a
+  duplicate with different attributes.
+- Status, token, and doctor now distinguish missing, locked, unavailable,
+  incompatible, and timed-out credential stores without falling back to a user
+  entry after a repo-scoped backend failure.
+
+### Dependencies
+
+- Added `SecretStorage>=3.5` on Linux only for direct access to the existing
+  Secret Service default collection. The adapter checks locks without calling
+  unlock; legacy `keyring` metadata maps to the matching native adapter and
+  matched legacy items keep their original attributes.
+
 ## [0.5.1] - 2026-07-16
 
 This release makes `mb connect` distinguish an unhealthy local credential

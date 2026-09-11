@@ -147,7 +147,9 @@ Deduplicated and tagged against open issues. Items marked [exists] should absorb
 1. Generic/custom provider path in `mb connect` plus first-class Stripe and Resend providers — the operator's first instinct was mb both times, and the entire money/email credential lifecycle ran outside it. Include prompt-based hidden-input secret intake with key-shape/mode validation (test vs live prefixes, refuse empties). [new]
 2. Scope manifests per provider workflow + a doctor probe that maps API denials to exact current dashboard permission names; capability dossier scaffolded at setup and verified by doctor. [exists: #817]
 3. `mb connect token <provider>` read path for scheduled/headless agents, ending raw keychain reads and source-grepping. [exists: #812]
-4. Token rotation syncs all sibling keychain refs. [exists: #807]
+4. Token rotation needs an explicit repo boundary. Cross-`repo_id` sibling
+   syncing is unsafe; #959 preserves repo-indexed fallback while preventing
+   rotation from rewriting another business's credential. [supersedes #807]
 5. Refresh-token storage and guided OAuth bootstrap for Google-class providers; store canonical business identities (page, ad account, pixel) as connect metadata so agents never infer identity from live provider state. [new]
 
 **Verification and money-path safety**
