@@ -6,6 +6,7 @@ import io
 import json
 import subprocess
 import sys
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -591,7 +592,7 @@ def test_status_all_shares_one_aggregate_credential_deadline(
     path.write_text(yaml.safe_dump(config), encoding="utf-8")
     monkeypatch.setattr(store_mod.platform, "system", lambda: "Darwin")  # type: ignore[attr-defined]
     clock = iter([0.0, 0.0, 9.0])
-    monkeypatch.setattr(store_mod.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(time, "monotonic", lambda: next(clock))
     calls = 0
 
     def unavailable(args: list[str], **kwargs: Any) -> SimpleNamespace:
