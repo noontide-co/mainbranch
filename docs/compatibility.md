@@ -272,13 +272,15 @@ Which install modes `mb update` upgrades for you:
 |---|---|
 | `pipx` | Runs `pipx upgrade mainbranch` automatically. |
 | Git clone | Runs `git pull --ff-only origin main` automatically. |
-| `uv` tool install | Prints `uv tool install mainbranch@latest` and runs it only after you answer yes at an interactive prompt. Use `@latest` rather than `uv tool upgrade`: it also clears an exact-version pin left by an earlier `uv tool install mainbranch==X`. |
-| Any other wheel install (for example `pip install mainbranch`) | Prints `pip install --upgrade mainbranch` for you to run in the environment that owns the install. |
+| `uv` tool install | Prints `uv tool install mainbranch@latest` and runs it only after you answer yes at an interactive prompt. Use `@latest` rather than `uv tool upgrade`: it also clears an exact-version pin left by an earlier `uv tool install mainbranch==X`. Agent surfaces are refreshed either way. |
+| Any other wheel install (for example `pip install mainbranch`) | Prints `pip install --upgrade mainbranch` for you to run in the environment that owns the install. Agent surfaces are refreshed either way. |
 
-`mb update` never replaces an install without an explicit yes. When it cannot
-upgrade automatically it exits 0 and carries the command in `next_actions`, so
+`mb update` never replaces a uv tool install without an explicit yes. When it
+cannot upgrade the package automatically it still refreshes this repo's agent
+surfaces, exits 0, and carries the upgrade command in `next_actions`, so
 `mb update --json` and `mb update --check` are safe in automation and never run
-an installer.
+an installer. Read `upgrade_performed` rather than the exit code to learn
+whether the package itself changed.
 Inside Claude Code, `/mb-update` calls `mb update` for this mechanical step and keeps
 ownership of the human-readable "what's new" summary. Codex users should open a
 fresh Codex thread after an update so refreshed global skills are loaded.
