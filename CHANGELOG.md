@@ -11,6 +11,34 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- `mb connect test` no longer reports `ready` for a provider that has no
+  validation probe. `ready` now means a provider call actually confirmed the
+  credential. A stored credential Main Branch cannot check reads as
+  `stored, unverified`, and `mb connect doctor` and `mb status` grade it as a
+  warning instead of a pass. Cloudflare, Apify, and Meta still reach `ready`
+  when their probe passes. Custom providers get the same treatment.
+
+### Added
+
+- `mb connect test <provider>` and `mb connect status --json` expose three
+  separate facts per provider: `stored` (a credential resolved from the
+  backend), `provider_verified` (a provider call confirmed it), and
+  `verified_at` (when the credential last worked, `""` if never).
+  `mb connect status` gains an `unverified` count alongside `needs_repair`.
+
+### Changed
+
+- Provider metadata written before this release recorded `validation.state:
+  ready` without recording whether a provider was actually called, so it now
+  reads as `stored, unverified` until `mb connect test` runs once more. The
+  metadata keeps working and nothing is rewritten; providers with a real probe
+  return to `ready` after one re-test.
+- `mb connect test`, `mb connect status`, and `mb connect doctor` exit 1 for a
+  stored-but-unverified provider, where an unprobed provider previously
+  exited 0.
+
 ## [0.5.2] - 2026-09-11
 
 This release makes `mb connect` resolve each business's own credential through
