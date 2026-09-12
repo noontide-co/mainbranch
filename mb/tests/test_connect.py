@@ -2807,9 +2807,18 @@ def test_connect_custom_provider_reports_stored_unverified(tmp_path: Path, monke
 def test_connect_metadata_only_provider_stays_ready_without_provider_verified(
     tmp_path: Path, monkeypatch
 ) -> None:
+    """Pin the shape of a provider with no `required_secrets`.
+
+    The readiness invariant is scoped: for a provider WITH required secrets,
+    `ready` requires `provider_verified`. hledger has none, sends nothing to a
+    provider, and therefore has no credential to confirm. It keeps reporting
+    `ready` from repo-local metadata with `stored` and `provider_verified`
+    false, rather than faking a provider call it never made.
+    """
     _local_secret_env(monkeypatch, tmp_path)
     repo = tmp_path / "biz"
     repo.mkdir()
+    assert connect_mod.provider_map()["hledger"].required_secrets == ()
     connect_mod.connect_provider(
         "hledger",
         repo=repo,
@@ -2818,14 +2827,31 @@ def test_connect_metadata_only_provider_stays_ready_without_provider_verified(
 
     tested = connect_mod.test_provider("hledger", repo)
 
-    # hledger stores no credential at all, so there is nothing to verify with a
-    # provider. Its readiness is about repo-local metadata and is unchanged;
-    # `stored` and `provider_verified` stay false rather than being faked true.
     assert tested["ok"] is True
     assert tested["status"]["state"] == "ready"
     assert tested["stored"] is False
     assert tested["provider_verified"] is False
     assert tested["verified_at"] == ""
+
+    # The same shape on the status surface, not just the test result.
+    status = connect_mod.status_provider("hledger", repo)
+    assert status["state"] == "ready"
+    assert status["ok"] is True
+    assert status["stored"] is False
+    assert status["provider_verified"] is False
+    assert status["verified_at"] == ""
+    assert status["repair_command"] == ""
+
+    # It counts as healthy, not as unverified, and doctor passes it.
+    aggregate = connect_mod.status_all(repo)
+    assert aggregate["ok"] is True
+    assert aggregate["summary"]["healthy"] == 1
+    assert aggregate["summary"]["unverified"] == 0
+    assert connect_mod.doctor_check(repo)["ok"] is True
+
+    checks = {check["name"]: check for check in connect_mod.doctor(repo)["checks"]}
+    assert checks["provider:hledger"]["ok"] is True
+    assert checks["provider:hledger"]["state"] == "ready"
 
 
 def _legacy_ready_entry(repo: Path, provider_id: str) -> None:

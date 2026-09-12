@@ -14,11 +14,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 ### Fixed
 
 - `mb connect test` no longer reports `ready` for a provider that has no
-  validation probe. `ready` now means a provider call actually confirmed the
-  credential. A stored credential Main Branch cannot check reads as
-  `stored, unverified`, and `mb connect doctor` and `mb status` grade it as a
-  warning instead of a pass. Cloudflare, Apify, and Meta still reach `ready`
+  validation probe. For a provider with `required_secrets`, `ready` and
+  `ok: true` now require `provider_verified: true` — a provider call actually
+  confirmed the credential. A stored credential Main Branch cannot check reads
+  as `stored, unverified`, and `mb connect doctor` and `mb status` grade it as
+  a warning instead of a pass. Cloudflare, Apify, and Meta still reach `ready`
   when their probe passes. Custom providers get the same treatment.
+  A provider with no `required_secrets`, such as `hledger`, is outside that
+  invariant: it sends nothing to a provider, so it keeps reporting `ready` from
+  repo-local metadata with `stored: false` and `provider_verified: false`.
 
 ### Added
 
@@ -30,11 +34,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
-- Provider metadata written before this release recorded `validation.state:
-  ready` without recording whether a provider was actually called, so it now
-  reads as `stored, unverified` until `mb connect test` runs once more. The
-  metadata keeps working and nothing is rewritten; providers with a real probe
-  return to `ready` after one re-test.
+- **Existing connections read as `stored, unverified` until re-tested.**
+  Provider metadata written before this release recorded `validation.state:
+  ready` without recording whether a provider was actually called, so that
+  `ready` is not evidence of a successful call and is not inherited. Every
+  connected provider reports `stored, unverified` until `mb connect test` runs
+  once more, including Cloudflare, Apify, and Meta. The metadata keeps working
+  and nothing is rewritten; a provider with a real probe returns to `ready`
+  after that single re-test.
 - `mb connect test`, `mb connect status`, and `mb connect doctor` exit 1 for a
   stored-but-unverified provider, where an unprobed provider previously
   exited 0.

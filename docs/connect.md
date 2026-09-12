@@ -67,18 +67,28 @@ per provider:
   keeps the earlier timestamp after a later failure, because when a credential
   last worked stays true even once it stops working.
 
-A provider reaches `ready` only when `provider_verified` is true. Cloudflare,
-Apify, and Meta have real probes. Every other built-in provider, and every
-custom provider, reports `stored, unverified`: the credential is present and
-readable, and nothing has checked that it works. `mb connect doctor` and
-`mb status` grade that as a warning, not a pass.
+The invariant, stated precisely: **for a provider with `required_secrets`,
+`ready` and `ok: true` require `provider_verified: true`.** Cloudflare, Apify,
+and Meta have real probes. Every other built-in provider, and every custom
+provider, reports `stored, unverified`: the credential is present and readable,
+and nothing has checked that it works. `mb connect doctor` and `mb status` grade
+that as a warning, not a pass.
+
+The scoping matters. A provider with no `required_secrets` sends nothing to a
+provider, so there is no credential to confirm and `provider_verified` stays
+false. Such a provider is not covered by the invariant and keeps reporting
+`ready` from its repo-local metadata — see below. Claiming `provider_verified`
+for it would be the same overclaim this behavior exists to remove.
 
 There is no repair command for `stored, unverified`. Rerunning `mb connect
 test` records the same answer, so confirm the credential in the provider's own
 dashboard, or let the first real workflow run be the check.
 
 A provider that needs no credential at all, such as `hledger`, still reports
-`ready` from repo-local metadata, with `stored` and `provider_verified` false.
+`ready` from repo-local metadata, with `stored: false` and
+`provider_verified: false`. Its readiness is a statement about repo-local
+metadata, never about a provider call. Read `provider_verified` as "a provider
+call confirmed a stored credential", not as "this provider is unhealthy".
 
 Metadata written before this behavior existed recorded `ready` without
 recording whether a provider was called, so it reads as `stored, unverified`
