@@ -576,7 +576,7 @@ def _provider_card(provider_id: str, name: str, provider: dict[str, Any]) -> dic
     return {
         "id": provider_id,
         "name": name,
-        "state": _safe_text(provider.get("state")),
+        "state": _safe_text(connect_mod.state_label(str(provider.get("state") or ""))),
         "ok": bool(provider.get("ok")),
         "summary": _safe_text(provider.get("summary")),
         "repair": _safe_text(provider.get("repair_command") or provider.get("repair")),
