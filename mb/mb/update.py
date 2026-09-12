@@ -36,6 +36,20 @@ CLONE_UPDATE_COMMAND = ["git", "pull", "--ff-only", "origin", "main"]
 # left behind by an earlier `uv tool install mainbranch==X` (#963).
 UV_UPDATE_COMMAND = ["uv", "tool", "install", f"{PACKAGE_NAME}@latest"]
 UV_UPDATE_COMMAND_TEXT = "uv tool install mainbranch@latest"
+UV_MANUAL_MESSAGE = (
+    "Main Branch was installed as a uv tool. Upgrading replaces the installed "
+    "command, so it only runs after an explicit yes at an interactive prompt. "
+    "The command below is yours to run, or run `mb update` from a terminal to "
+    "be asked."
+)
+UV_DECLINED_MESSAGE = (
+    "Left the installed Main Branch alone. The command below is yours to run "
+    "whenever you want the upgrade."
+)
+WHEEL_MANUAL_MESSAGE = (
+    "Main Branch does not upgrade a plain wheel install for you. The command "
+    "below is yours to run from the environment that owns this install."
+)
 UV_TOOL_DIR_COMMAND = ["uv", "tool", "dir"]
 UV_TOOL_DIR_TIMEOUT_SECONDS = 10.0
 PIP_UPDATE_COMMAND_TEXT = "pip install --upgrade mainbranch"
@@ -180,24 +194,28 @@ def _confirm_uv_update(command: str, root: Path | None) -> bool:
     return answer in {"y", "yes"}
 
 
-def _manual_update_result(
+def _note_manual_update(
     result: dict[str, Any],
     *,
     command: str,
     message: str,
-) -> dict[str, Any]:
-    """Report a command the operator can run instead of dead-ending (#963).
+) -> None:
+    """Hand the operator the command that works instead of dead-ending (#963).
 
-    `ok` stays true: nothing failed, and the operator is handed the one command
-    that works. `upgrade_performed` stays false so no caller reads this as an
-    applied update.
+    `ok` stays true: nothing failed. `upgrade_performed` stays false so no
+    caller reads this as an applied update. `new_version` reports what PyPI
+    actually offers rather than echoing the installed version, so `mb update
+    --json` and the `/mb-update` skill cannot read this as "already current".
+
+    This records the outcome; it does not end the run. Refreshing agent
+    surfaces needs no package upgrade, so the manual paths continue into the
+    same surface refresh every other mode gets.
     """
-    result["new_version"] = result["old_version"]
+    result["new_version"] = _latest_pypi_version() or result["old_version"]
     result["manual_update_command"] = command
     result["warnings"].append(message)
     if command not in result["next_actions"]:
         result["next_actions"].append(command)
-    return result
 
 
 def _looks_like_pipx_package_spec_parse_failure(
@@ -552,18 +570,7 @@ def run(
         refresh_surfaces=refresh_surfaces,
     )
 
-    if mode == "wheel":
-        return _manual_update_result(
-            result,
-            command=PIP_UPDATE_COMMAND_TEXT,
-            message=(
-                "Main Branch was installed from a wheel that Main Branch does not "
-                "upgrade for you. Run the command below from the environment that "
-                "owns this install, then run `mb update` again to refresh skills."
-            ),
-        )
-
-    if mode not in {"pipx", "clone", "uv"}:
+    if mode not in {"pipx", "clone", "uv", "wheel"}:
         result["ok"] = False
         result["new_version"] = result["old_version"]
         result["errors"].append(
@@ -574,11 +581,23 @@ def run(
 
     if check:
         if mode == "uv":
-            result["new_version"] = _latest_pypi_version() or result["old_version"]
             result["actions"] = [
                 f"would run `{UV_UPDATE_COMMAND_TEXT}` after an explicit yes",
             ]
-            result["next_actions"].append(UV_UPDATE_COMMAND_TEXT)
+            _note_manual_update(
+                result,
+                command=UV_UPDATE_COMMAND_TEXT,
+                message=UV_MANUAL_MESSAGE,
+            )
+        elif mode == "wheel":
+            result["actions"] = [
+                f"would leave this install alone; `{PIP_UPDATE_COMMAND_TEXT}` is yours to run",
+            ]
+            _note_manual_update(
+                result,
+                command=PIP_UPDATE_COMMAND_TEXT,
+                message=WHEEL_MANUAL_MESSAGE,
+            )
         elif mode == "pipx":
             result["new_version"] = _latest_pypi_version() or result["old_version"]
             result["actions"] = [
@@ -669,38 +688,34 @@ def run(
             result["next_actions"].append(UV_UPDATE_COMMAND_TEXT)
             return result
         wants_prompt = _is_interactive_terminal() if interactive is None else interactive
-        if not wants_prompt:
-            return _manual_update_result(
-                result,
-                command=UV_UPDATE_COMMAND_TEXT,
-                message=(
-                    "Main Branch was installed as a uv tool. Upgrading replaces the "
-                    "installed command, so it only runs after an explicit yes at an "
-                    "interactive prompt. Run the command below yourself, or run "
-                    "`mb update` from a terminal to be asked."
-                ),
-            )
-        approved = (confirm or _confirm_uv_update)(UV_UPDATE_COMMAND_TEXT, root)
+        approved = False
+        if wants_prompt:
+            approved = (confirm or _confirm_uv_update)(UV_UPDATE_COMMAND_TEXT, root)
+            if not approved:
+                result["actions"].append(f"declined `{UV_UPDATE_COMMAND_TEXT}`")
         if not approved:
-            result["actions"].append(f"declined `{UV_UPDATE_COMMAND_TEXT}`")
-            return _manual_update_result(
+            _note_manual_update(
                 result,
                 command=UV_UPDATE_COMMAND_TEXT,
-                message=(
-                    "Left the installed Main Branch alone. Run the command below "
-                    "whenever you want the upgrade."
-                ),
+                message=UV_DECLINED_MESSAGE if wants_prompt else UV_MANUAL_MESSAGE,
             )
-        upgrade = _run_command(UV_UPDATE_COMMAND)
-        result["actions"].append(f"ran `{UV_UPDATE_COMMAND_TEXT}`")
-        if upgrade.returncode != 0:
-            result["ok"] = False
-            result["new_version"] = result["old_version"]
-            result["errors"].append(_command_error(UV_UPDATE_COMMAND_TEXT, upgrade))
-            result["next_actions"].append(UV_UPDATE_COMMAND_TEXT)
-            return result
-        result["new_version"] = _version_from_mb_command() or result["old_version"]
-        result["upgrade_performed"] = True
+        else:
+            upgrade = _run_command(UV_UPDATE_COMMAND)
+            result["actions"].append(f"ran `{UV_UPDATE_COMMAND_TEXT}`")
+            if upgrade.returncode != 0:
+                result["ok"] = False
+                result["new_version"] = result["old_version"]
+                result["errors"].append(_command_error(UV_UPDATE_COMMAND_TEXT, upgrade))
+                result["next_actions"].append(UV_UPDATE_COMMAND_TEXT)
+                return result
+            result["new_version"] = _version_from_mb_command() or result["old_version"]
+            result["upgrade_performed"] = True
+    elif mode == "wheel":
+        _note_manual_update(
+            result,
+            command=PIP_UPDATE_COMMAND_TEXT,
+            message=WHEEL_MANUAL_MESSAGE,
+        )
     else:
         if root is None:
             result["ok"] = False
@@ -791,8 +806,14 @@ def render_human(result: dict[str, Any]) -> None:
             print("would skip agent surface refresh")
     elif result.get("ok") and result.get("manual_update_command"):
         print(f"install mode: {mode}")
-        print(f"version: {old}")
-        print("Main Branch did not change this install.")
+        print(f"version: {old} -> {new}")
+        print("Main Branch did not upgrade this install.")
+        if refresh_surfaces:
+            print(f"refreshed {count} skill link(s)")
+            if result.get("codex_repaired"):
+                print("refreshed Codex global skills")
+        else:
+            print("skipped agent surface refresh")
         for action in result.get("next_actions", []):
             print(f"next: {action}")
     elif result.get("ok"):
