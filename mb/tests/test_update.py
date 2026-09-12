@@ -784,7 +784,6 @@ def test_update_rejects_unknown_install_mode(monkeypatch: Any, tmp_path: Path) -
     assert result["mode"] == "source"
     assert result["new_version"] == result["old_version"]
     assert "unsupported install mode" in result["errors"][0]
-    assert update_mod.PIP_UPDATE_COMMAND_TEXT in result["next_actions"]
 
 
 def test_update_wheel_install_gets_pip_guidance_instead_of_refusal(
@@ -878,8 +877,7 @@ def test_update_uv_non_interactive_prints_command_and_exits_zero(
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
-    monkeypatch.setattr(update_mod, "shutil", shutil)
-    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
 
     result = update_mod.run(repo=tmp_path / "biz", interactive=False, confirm=refuse_confirm)
@@ -893,7 +891,7 @@ def test_update_uv_non_interactive_prints_command_and_exits_zero(
 def test_update_uv_json_never_prompts(monkeypatch: Any, tmp_path: Path) -> None:
     monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
-    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
 
     def explode(*args: Any, **kwargs: Any) -> None:
         raise AssertionError("`--json` must never run a command or prompt")
@@ -923,7 +921,7 @@ def test_update_uv_declined_prompt_leaves_install_alone(monkeypatch: Any, tmp_pa
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
-    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
 
     result = update_mod.run(repo=tmp_path / "biz", interactive=True, confirm=decline)
@@ -953,7 +951,7 @@ def test_update_uv_accepted_prompt_runs_install_then_relinks(
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
-    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
 
     result = update_mod.run(
@@ -976,7 +974,7 @@ def test_update_uv_install_failure_surfaces_command(monkeypatch: Any, tmp_path: 
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
-    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
 
     result = update_mod.run(
@@ -994,7 +992,7 @@ def test_update_uv_install_failure_surfaces_command(monkeypatch: Any, tmp_path: 
 def test_update_uv_missing_binary_returns_error(monkeypatch: Any, tmp_path: Path) -> None:
     monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
-    monkeypatch.setattr(update_mod.shutil, "which", lambda name: None)
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: None)
 
     result = update_mod.run(
         repo=tmp_path / "biz",
@@ -1022,7 +1020,7 @@ def test_update_uses_uv_tool_list_when_path_detection_is_inconclusive(
 
 
 def test_uv_tool_list_reads_package_lines_not_entry_points(monkeypatch: Any) -> None:
-    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(
         update_mod,
         "_run_command",
@@ -1035,7 +1033,7 @@ def test_uv_tool_list_reads_package_lines_not_entry_points(monkeypatch: Any) -> 
 
 
 def test_uv_tool_list_ignores_unrelated_tools(monkeypatch: Any) -> None:
-    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(
         update_mod,
         "_run_command",
@@ -1058,7 +1056,7 @@ def test_update_pipx_mode_still_upgrades_automatically(monkeypatch: Any, tmp_pat
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
-    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
 
     result = update_mod.run(repo=tmp_path / "biz")

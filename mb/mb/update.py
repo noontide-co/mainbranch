@@ -38,7 +38,6 @@ UV_UPDATE_COMMAND_TEXT = "uv tool install mainbranch@latest"
 UV_TOOL_LIST_COMMAND = ["uv", "tool", "list"]
 UV_TOOL_LIST_TIMEOUT_SECONDS = 10.0
 PIP_UPDATE_COMMAND_TEXT = "pip install --upgrade mainbranch"
-AUTOMATIC_MODES = ("pipx", "clone")
 GITHUB_RELEASE_API_URL_TEMPLATE = (
     "https://api.github.com/repos/noontide-co/mainbranch/releases/tags/oe-v{version}"
 )
@@ -565,9 +564,9 @@ def run(
         result["ok"] = False
         result["new_version"] = result["old_version"]
         result["errors"].append(
-            f"unsupported install mode: {mode}. Expected a pipx install or git clone."
+            f"unsupported install mode: {mode}. Expected a pipx install, a uv tool "
+            "install, another wheel install, or a git clone."
         )
-        result["next_actions"].append(PIP_UPDATE_COMMAND_TEXT)
         return result
 
     if check:

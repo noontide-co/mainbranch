@@ -70,8 +70,8 @@ def _isolate_uv_tool_roots(tmp_path: Path, monkeypatch) -> Path:
     monkeypatch.delenv("PIPX_HOME", raising=False)
     monkeypatch.delenv("UV_TOOL_DIR", raising=False)
     monkeypatch.delenv("XDG_DATA_HOME", raising=False)
-    monkeypatch.setattr(engine_mod.Path, "home", staticmethod(lambda: tmp_path / "home"))
-    monkeypatch.setattr(engine_mod.sys, "executable", str(tmp_path / "elsewhere" / "python3"))
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setattr("mb.engine.sys.executable", str(tmp_path / "elsewhere" / "python3"))
     monkeypatch.setattr(engine_mod, "source_engine_root", lambda: None)
     return tools
 
@@ -113,11 +113,7 @@ def test_install_mode_detects_uv_tool_install_from_interpreter_path(
 ) -> None:
     tools = _isolate_uv_tool_roots(tmp_path, monkeypatch)
     monkeypatch.setenv("UV_TOOL_DIR", str(tools))
-    monkeypatch.setattr(
-        engine_mod.sys,
-        "executable",
-        str(tools / "mainbranch" / "bin" / "python3"),
-    )
+    monkeypatch.setattr("mb.engine.sys.executable", str(tools / "mainbranch" / "bin" / "python3"))
     monkeypatch.setattr(engine_mod, "packaged_engine_root", lambda: tmp_path / "elsewhere" / "mb")
 
     assert engine_mod.install_mode() == "uv"
