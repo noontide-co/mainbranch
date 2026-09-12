@@ -949,8 +949,15 @@ def looks_like_uv_tool_install(
 ) -> bool:
     """True when this install lives inside a ``uv tool install`` environment.
 
-    A uv tool install puts both the engine payload and the interpreter under
-    ``<uv tool dir>/<package>/``, so either path is enough to identify it (#963).
+    The engine payload under ``<uv tool dir>/<package>/`` is the signal that
+    carries detection (#963).
+
+    ``sys.executable`` is checked too, but it only fires on Windows, where venv
+    interpreters are copies. On macOS and Linux a uv tool venv's ``bin/python``
+    is a symlink out to the uv-managed base interpreter under ``uv/python/``,
+    and containment is checked after ``.resolve()``, so that candidate cannot
+    match there — and cannot produce a false positive either.
+
     Pass ``tool_roots`` to test against a tool directory reported by uv itself
     instead of the documented defaults.
     """

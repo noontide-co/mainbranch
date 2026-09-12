@@ -108,9 +108,13 @@ def test_install_mode_detects_uv_tool_install_from_default_home_root(
     assert engine_mod.install_mode() == "uv"
 
 
-def test_install_mode_detects_uv_tool_install_from_interpreter_path(
+def test_install_mode_detects_uv_tool_install_from_copied_interpreter(
     tmp_path: Path, monkeypatch
 ) -> None:
+    # Models the Windows layout, where a venv interpreter is a copy inside the
+    # tool directory. On macOS and Linux `bin/python` symlinks out to the
+    # uv-managed base interpreter, so this candidate cannot fire there and the
+    # engine-root check carries detection.
     tools = _isolate_uv_tool_roots(tmp_path, monkeypatch)
     monkeypatch.setenv("UV_TOOL_DIR", str(tools))
     monkeypatch.setattr("mb.engine.sys.executable", str(tools / "mainbranch" / "bin" / "python3"))
