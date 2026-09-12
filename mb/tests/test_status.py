@@ -2655,6 +2655,43 @@ def test_status_drift_aligns_unhealthy_integrations_with_readiness(
     assert any("mb connect test cloudflare" in action for action in readiness["next_actions"])
 
 
+def test_status_reports_stored_unverified_integration_without_calling_it_ready(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    provider = {
+        "provider": "resend",
+        "name": "Resend",
+        "ok": False,
+        "connected": True,
+        "state": connect_mod.UNVERIFIED_STATE,
+        "stored": True,
+        "provider_verified": False,
+        "verified_at": "",
+        "repair": "Confirm the Resend credential in the provider's own dashboard.",
+        "repair_command": "",
+    }
+    report = status_mod.run(path=str(repo), update_marker=False)
+    report["integrations"]["providers"] = [provider]
+    report["integrations"]["summary"] = {
+        "configured": 1,
+        "healthy": 0,
+        "needs_repair": 0,
+        "unvalidated": 0,
+        "unverified": 1,
+    }
+
+    drift = status_mod._drift(report)
+    readiness = status_mod._readiness(report)
+
+    # Its own signal, not a repair item: there is no command that fixes it.
+    assert any(item["id"] == "unverified_integrations" for item in drift["items"])
+    assert not any(item["id"] == "unhealthy_integrations" for item in drift["items"])
+    assert not any("Repair resend integration" in action for action in readiness["next_actions"])
+
+
 def test_status_detects_non_business_repo(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
     report = status_mod.run(path=str(tmp_path))

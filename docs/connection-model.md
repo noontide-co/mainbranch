@@ -40,6 +40,9 @@ APIs, and niche SaaS tools before Main Branch has native wrappers.
   `repo_id`-indexed; rotation now preserves the same boundary.
 - A desktop-unlocked macOS Keychain did not imply that an already-running
   remote security session was unlocked.
+- `ready` was reported for providers that were never called, so it meant "a
+  credential is stored" rather than "this credential works". Storage and
+  verification are now separate facts.
 
 ## Lifecycle
 
@@ -50,8 +53,10 @@ APIs, and niche SaaS tools before Main Branch has native wrappers.
    legacy local file, or a current-process environment command. Never commit
    `.env` files or paste raw tokens into docs, issues, logs, or workpapers.
 3. **Smoke test.** Run `mb connect test <provider>` when a safe read-only probe
-   exists. For custom providers without a probe, credential presence can mark
-   local readiness, but it does not prove provider API behavior.
+   exists. Without a probe, the credential reports `stored, unverified`:
+   present and readable, with nothing claiming it works. Only a provider call
+   sets `provider_verified` and reaches `ready`. See
+   [connect.md](connect.md#stored-is-not-verified).
 4. **Record identity metadata.** Record non-secret facts that prevent agents
    from guessing: role, access level, data domain, auth state, account label,
    workspace, environment, or provider-specific ids when safe for the repo.
@@ -72,7 +77,8 @@ Safe to commit:
 - account label when it does not expose a private account number;
 - secret backend name and secret ref;
 - role, access level, data domain, auth state, environment, and source system;
-- validation state, timestamps, and repair commands.
+- validation state, whether a provider call confirmed the credential, the
+  timestamp of the last successful call, other timestamps, and repair commands.
 
 Keep private:
 

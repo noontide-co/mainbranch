@@ -135,6 +135,44 @@ def test_doctor_spine_section_grades_declared_position(tmp_path: Path, monkeypat
     assert by_name["revisit-trigger"]["state"] == "ok"
 
 
+def test_doctor_spine_queryability_survives_testing_the_credential(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Running `mb connect test` must not make the spine grade worse.
+
+    Agent-queryability asks whether the agent can read the spine, which needs a
+    stored, readable credential — not a verified one. A probe-less store settles
+    at `stored_unverified`, and grading that below `unvalidated` would punish the
+    operator for checking, then advise reconnecting a credential that is fine.
+    """
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    from mb import connect as connect_mod
+    from mb import doctor as doctor_mod
+
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("resend", repo=repo, token="re_fixture_key")
+    spine_mod.declare(repo, store="resend", lenses=[], gaps=[], revisit="first gap")
+
+    before = {check["name"]: check for check in doctor_mod._spine_section(repo)["checks"]}[
+        "agent-queryability"
+    ]
+    assert before["state"] == "ok"
+
+    connect_mod.test_provider("resend", repo)
+
+    after = {check["name"]: check for check in doctor_mod._spine_section(repo)["checks"]}[
+        "agent-queryability"
+    ]
+    assert after["state"] == "ok"
+    # Human phrasing, not the raw state token.
+    assert "stored, unverified" in after["summary"]
+    assert "stored_unverified" not in after["summary"]
+    # And no advice to reconnect a credential that is fine.
+    assert "mb connect resend" not in after["summary"]
+
+
 def test_doctor_spine_section_intentional_none_is_ok(tmp_path: Path) -> None:
     from mb import doctor as doctor_mod
 

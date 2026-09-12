@@ -4231,11 +4231,35 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
                 "safe_to_share": True,
             }
         )
-    broken_integrations = [
+    connected_integrations = [
         item
         for item in (report.get("integrations") or {}).get("providers", [])
-        if item.get("connected") and not item.get("ok")
+        if item.get("connected")
     ]
+    unverified_integrations = [
+        item for item in connected_integrations if item.get("state") == connect_mod.UNVERIFIED_STATE
+    ]
+    broken_integrations = [
+        item
+        for item in connected_integrations
+        if not item.get("ok") and item.get("state") != connect_mod.UNVERIFIED_STATE
+    ]
+    if unverified_integrations:
+        items.append(
+            {
+                "id": "unverified_integrations",
+                "severity": "warn",
+                "summary": (
+                    f"{len(unverified_integrations)} declared integration(s) have a stored "
+                    "credential that has never been confirmed with the provider."
+                ),
+                "evidence": [
+                    f"{item['provider']}:{item['state']}" for item in unverified_integrations[:5]
+                ],
+                "repair": str(unverified_integrations[0].get("repair") or ""),
+                "safe_to_share": True,
+            }
+        )
     if broken_integrations:
         items.append(
             {
@@ -4443,7 +4467,9 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
     integration_repairs = [
         item
         for item in (report.get("integrations") or {}).get("providers", [])
-        if item.get("connected") and not item["ok"]
+        if item.get("connected")
+        and not item["ok"]
+        and item.get("state") != connect_mod.UNVERIFIED_STATE
     ]
     for item in integration_repairs[:3]:
         command = str(item.get("repair_command") or "mb connect doctor")
@@ -4788,12 +4814,15 @@ def render_human(
 
     integration_summary = integrations["summary"]
     if integration_summary["configured"]:
-        console.print(
+        integration_line = (
             "[bold]Integrations[/bold] "
             f"configured {integration_summary['configured']}  "
             f"healthy {integration_summary['healthy']}  "
             f"needs repair {integration_summary['needs_repair']}"
         )
+        if integration_summary.get("unverified"):
+            integration_line += f"  unverified {integration_summary['unverified']}"
+        console.print(integration_line)
         for item in integrations.get("providers", []):
             if not item["ok"] and verbose:
                 console.print(

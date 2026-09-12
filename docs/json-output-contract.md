@@ -34,7 +34,12 @@ path.
   surface. This is separate from any command-specific `schema` field.
 - `mb_command`: the `mb` command surface that emitted the JSON. The field is
   prefixed so commands can keep existing domain keys such as `command`.
-- `ok`: boolean success flag suitable for automation.
+- `ok`: boolean success flag suitable for automation. It answers "is this
+  healthy", which is not always the same question as the process exit code,
+  which answers "is there something you can act on". `mb connect` deliberately
+  reports `ok: false` while exiting 0 for a stored-but-unverified provider that
+  has no validation probe, because nothing the operator can run would change it;
+  see [connect.md](connect.md#what-the-exit-code-means).
 - `result_status`: concise machine-readable envelope state, currently `ok` or
   `error`. Commands may still expose their own domain `status` field with
   command-specific values such as `ready`, `valid`, `committed`, or structured

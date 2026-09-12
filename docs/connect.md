@@ -55,6 +55,72 @@ files.
 The product model behind this surface lives in
 [connection-model.md](connection-model.md).
 
+## Stored Is Not Verified
+
+`mb connect test` and `mb connect status --json` report three separate facts
+per provider:
+
+- `stored`: a credential resolved from the credential backend.
+- `provider_verified`: a provider call actually confirmed that credential.
+  `false` when Main Branch has no safe read-only probe for the provider.
+- `verified_at`: when the credential last worked. `""` if it never has. It
+  keeps the earlier timestamp after a later failure, because when a credential
+  last worked stays true even once it stops working.
+
+The invariant, stated precisely: **for a provider with `required_secrets`,
+`ready` and `ok: true` require `provider_verified: true`.** Cloudflare, Apify,
+and Meta have real probes. Every other built-in provider, and every custom
+provider, reports `stored, unverified`: the credential is present and readable,
+and nothing has checked that it works. `mb connect doctor` and `mb status` grade
+that as a warning, not a pass.
+
+The scoping matters. A provider with no `required_secrets` sends nothing to a
+provider, so there is no credential to confirm and `provider_verified` stays
+false. Such a provider is not covered by the invariant and keeps reporting
+`ready` from its repo-local metadata — see below. Claiming `provider_verified`
+for it would be the same overclaim this behavior exists to remove.
+
+There is no repair command for `stored, unverified` on a provider with no
+probe. Rerunning `mb connect test` records the same answer, so confirm the
+credential in the provider's own dashboard, or let the first real workflow run
+be the check.
+
+### What the exit code means
+
+An exit code from `mb connect test`, `mb connect status`, and `mb connect
+doctor` answers one question: **is there something you can act on?** All three
+surfaces answer it the same way, so there is no lenient command to run instead.
+
+| Situation | Exit |
+| --- | --- |
+| `unvalidated`, `invalid`, `missing_secret`, credential-backend failure | 1 |
+| `stored, unverified` on a provider **with** a probe | 1 — run `mb connect test` |
+| `stored, unverified` on a provider **with no** probe | 0 — nothing to run |
+| `ready` | 0 |
+
+The table covers provider readiness. `mb connect doctor` also checks GitHub
+context and credential-backend health, and either can still exit 1 on its own —
+both name a command to run.
+
+The probe-less case exits 0 on purpose. A red that nobody can clear gets
+ignored, and these providers can never turn green until a probe exists
+upstream. Only the process exit softens: the provider still reports
+`ok: false`, doctor still grades it `warn`, and the verification fields stay
+truthful. Each provider carries `has_probe` in `mb connect status --json`, and
+`mb connect doctor` names the connected providers that lack one so the gap is
+visible and fixable upstream.
+
+A provider that needs no credential at all, such as `hledger`, still reports
+`ready` from repo-local metadata, with `stored: false` and
+`provider_verified: false`. Its readiness is a statement about repo-local
+metadata, never about a provider call. Read `provider_verified` as "a provider
+call confirmed a stored credential", not as "this provider is unhealthy".
+
+Metadata written before this behavior existed recorded `ready` without
+recording whether a provider was called, so it reads as `stored, unverified`
+until `mb connect test` runs once more. Nothing is rewritten, and a provider
+with a real probe returns to `ready` after one re-test.
+
 ## Custom Providers
 
 Use `--custom` when the provider is not in the built-in registry yet. Custom
