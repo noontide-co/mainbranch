@@ -619,3 +619,18 @@ def test_every_copy_of_the_update_result_table_handles_a_manual_upgrade() -> Non
         if "manual_update_command" not in path.read_text(encoding="utf-8")
     ]
     assert missing == [], missing
+
+    # The row also has to branch on the version inside itself. A manual path
+    # always sets `manual_update_command`, including when the operator is
+    # current, so a row that only knows "did not upgrade" forbids the one true
+    # answer on the common path.
+    unbranched = []
+    for path in copies:
+        row = next(
+            line
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.startswith("| `manual_update_command`")
+        )
+        if not ("old_version != new_version" in row and "old_version == new_version" in row):
+            unbranched.append(str(path.relative_to(repo_root)))
+    assert unbranched == [], unbranched

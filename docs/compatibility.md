@@ -277,9 +277,10 @@ Which install modes `mb update` upgrades for you:
 
 `mb update` never replaces a uv tool install without an explicit yes. When it
 cannot upgrade the package automatically it still refreshes your agent
-surfaces, exits 0, and carries the upgrade command in `next_actions`. Read
-`upgrade_performed` rather than the exit code to learn whether the package
-itself changed.
+surfaces, exits 0, and carries the upgrade command in `next_actions`, so
+`mb update --json` and `mb update --check` are safe in automation and never run
+an installer. Read `upgrade_performed` rather than the exit code to learn
+whether the package itself changed.
 
 **`mb update` writes, on every install mode.** The surface refresh is not
 scoped to the business repo. It touches:
