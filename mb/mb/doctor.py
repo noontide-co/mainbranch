@@ -341,7 +341,9 @@ def _dossier_verify_section(repo: Path) -> dict[str, Any]:
             ok = bool(result.get("ok"))
             raw_status = result.get("status")
             status: dict[str, Any] = raw_status if isinstance(raw_status, dict) else {}
-            state_text = str(status.get("state") or ("ready" if ok else "failed"))
+            state_text = connect_mod.state_label(
+                str(status.get("state") or ("ready" if ok else "failed"))
+            )
             checks.append(
                 {
                     "name": provider_label,
@@ -421,25 +423,32 @@ def _spine_section(repo: Path) -> dict[str, Any]:
             }
         )
     else:
-        if status.get("ok") or str(status.get("state")) in {"unvalidated", "ready"}:
+        state_text = connect_mod.state_label(str(status.get("state") or ""))
+        if status.get("ok") or str(status.get("state")) in {
+            "unvalidated",
+            "ready",
+            connect_mod.UNVERIFIED_STATE,
+        }:
             checks.append(
                 {
                     "name": "agent-queryability",
                     "state": "ok",
-                    "summary": (
-                        f"{store} credentialed via mb connect (state: {status.get('state')})"
-                    ),
+                    "summary": f"{store} credentialed via mb connect (state: {state_text})",
                 }
             )
         else:
+            # Prefer the provider's own guidance. Falling straight to a generic
+            # reconnect told operators to replace credentials that were fine.
+            repair_hint = str(
+                status.get("repair_command") or status.get("repair") or f"mb connect {store}"
+            )
             checks.append(
                 {
                     "name": "agent-queryability",
                     "state": "warn",
                     "summary": (
                         f"{store} declared as the spine but not agent-queryable "
-                        f"(state: {status.get('state')}); repair: "
-                        f"{status.get('repair_command') or f'mb connect {store}'}"
+                        f"(state: {state_text}); repair: {repair_hint}"
                     ),
                 }
             )
