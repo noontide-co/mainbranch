@@ -11,6 +11,19 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- `mb update` no longer dead-ends installs that are neither pipx nor a git
+  clone. A `uv tool install mainbranch` install is now reported as install mode
+  `uv`, and `mb update` offers to run `uv tool install mainbranch@latest` —
+  the form that also clears an exact-version pin — after an explicit yes at an
+  interactive prompt. Non-interactive runs (`--json`, `--check`, no terminal,
+  or a declined prompt) print the command and exit 0 instead of failing. Any
+  other wheel install gets `pip install --upgrade mainbranch` guidance instead
+  of `unsupported install mode: wheel`. The command is carried in
+  `next_actions` in `--json`, not only in `errors`. pipx and clone behavior is
+  unchanged.
+
 ## [0.5.2] - 2026-09-11
 
 This release makes `mb connect` resolve each business's own credential through

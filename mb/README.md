@@ -36,7 +36,7 @@ mb --version
 | `mb graph` | Walk linked_research / linked_decisions / supersedes; emit Graphviz DOT to stdout. `--open` shells to `dot` + `open`. |
 | `mb similar-bets` | Find similar past bets and offer outcomes from repo truth. |
 | `mb checkpoint` | Plan or save a business-readable git checkpoint. |
-| `mb update` | Refresh the Main Branch engine according to install mode (`pipx` upgrade or clone `git pull`) and repair skill links. `--check` dry-runs; `--json` emits an envelope. |
+| `mb update` | Refresh the Main Branch engine according to install mode and repair skill links. `pipx` and clone installs upgrade automatically; a `uv` tool install upgrades only after an explicit yes; any other wheel install gets the upgrade command printed. `--check` dry-runs; `--json` emits an envelope. |
 | `mb pulse install` | Install an operator-owned daily pulse wrapper. |
 | `mb leads grade` | Grade lead batches and calculate eligible-lead CPL beside raw CPL. |
 | `mb ledger init` | Create the what's-working creative ledger structure. |

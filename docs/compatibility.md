@@ -12,7 +12,8 @@ for those surfaces.
 | Linux | Supported for `mb`; supported when Claude Code is installed | CI runs the Python package on Linux. Claude Code must be installed separately. |
 | Windows | Experimental | Not tested in CI. Use WSL2 for the closest supported path. |
 | Python | 3.10, 3.11, 3.12 | CI gates all three versions. |
-| Install mode | `pipx install mainbranch` | Official public install path. |
+| Install mode | `pipx install mainbranch` | Official public install path. `mb update` upgrades it for you. |
+| Other install modes | `uv tool install mainbranch`, `pip install mainbranch` | Work, but are not the documented path. `mb update` upgrades a uv tool install only after an explicit yes, and prints the upgrade command for any other wheel install. |
 | Developer mode | Git clone | For contributors who want to edit the engine or skills. |
 | Agent runtime | Claude Code | Supported through the Main Branch plugin (`claude plugin marketplace add noontide-co/mainbranch`, then enable). The plugin is the primary rail and works in both the Claude Desktop app and the terminal `claude` CLI; it survives git worktrees. Project-local slash-skill wiring remains a fallback. Cloud/web Claude sessions cannot load plugins. |
 | Codex CLI | Supported | Fresh business repos include `AGENTS.md`; global Main Branch `mb-*` skills install once per user under `~/.codex/skills` and route through deterministic `mb` facts. `mb workflow list --runtime codex` exposes supported, pending, and unsupported workflow surfaces. |
@@ -258,12 +259,26 @@ business repo:
 mb update
 ```
 
-`mb update` detects whether Main Branch is a `pipx` install or source checkout,
-runs the appropriate update path, and then runs the explicit surface-refresh
-path by default: Claude Code skill links/guidance plus Codex global skills and
-repo `AGENTS.md` from the upgraded `mb` executable. Use `mb update --check` for
-a dry-run, `mb update --json` for automation, and `--no-refresh-surfaces` only
-when deliberately updating the package without touching runtime surfaces.
+`mb update` detects the install mode, runs the update path that mode supports,
+and then runs the explicit surface-refresh path by default: Claude Code skill
+links/guidance plus Codex global skills and repo `AGENTS.md` from the upgraded
+`mb` executable. Use `mb update --check` for a dry-run, `mb update --json` for
+automation, and `--no-refresh-surfaces` only when deliberately updating the
+package without touching runtime surfaces.
+
+Which install modes `mb update` upgrades for you:
+
+| Install mode | What `mb update` does |
+|---|---|
+| `pipx` | Runs `pipx upgrade mainbranch` automatically. |
+| Git clone | Runs `git pull --ff-only origin main` automatically. |
+| `uv` tool install | Prints `uv tool install mainbranch@latest` and runs it only after you answer yes at an interactive prompt. Use `@latest` rather than `uv tool upgrade`: it also clears an exact-version pin left by an earlier `uv tool install mainbranch==X`. |
+| Any other wheel install (for example `pip install mainbranch`) | Prints `pip install --upgrade mainbranch` for you to run in the environment that owns the install. |
+
+`mb update` never replaces an install without an explicit yes. When it cannot
+upgrade automatically it exits 0 and carries the command in `next_actions`, so
+`mb update --json` and `mb update --check` are safe in automation and never run
+an installer.
 Inside Claude Code, `/mb-update` calls `mb update` for this mechanical step and keeps
 ownership of the human-readable "what's new" summary. Codex users should open a
 fresh Codex thread after an update so refreshed global skills are loaded.
