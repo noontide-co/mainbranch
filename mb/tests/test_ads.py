@@ -41,14 +41,53 @@ def _ready_meta_repo(tmp_path: Path, monkeypatch, *, include_business_id: bool =
     config_path = repo / ".mb" / "connect.yaml"
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     meta = config["providers"]["meta"]
+    # A verified-ready Meta connection: the read-only smoke actually ran and
+    # passed. `mb ads` reads live account facts only from that, so the fixture
+    # has to record the provider call, not just the word "ready".
     meta["validation"] = {
+        "state": "ready",
+        "checked_at": "2026-05-13T00:00:00Z",
+        "provider_verified": True,
+        "verified_at": "2026-05-13T00:00:00Z",
+        "summary": "Meta read-only account smoke passed.",
+        "safe_to_share": True,
+    }
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+    return repo
+
+
+def test_ads_meta_summary_refuses_live_data_when_meta_is_unverified(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """An unverified Meta credential must not yield live ad account facts.
+
+    Meta has a probe, so this is actionable: the summary names
+    `mb connect test meta` rather than sending the operator to manual notes.
+    """
+    repo = _ready_meta_repo(tmp_path, monkeypatch)
+    config_path = repo / ".mb" / "connect.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    # Metadata shaped the way releases through 0.5.2 wrote it: "ready", with no
+    # record of a provider call.
+    config["providers"]["meta"]["validation"] = {
         "state": "ready",
         "checked_at": "2026-05-13T00:00:00Z",
         "summary": "Meta read-only account smoke passed.",
         "safe_to_share": True,
     }
     config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
-    return repo
+    calls: list[list[str]] = []
+    monkeypatch.setattr(connect_mod, "_run_command", _fake_meta_runner(calls))
+
+    result = runner.invoke(app, ["ads", "meta", "summary", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["state"] == connect_mod.UNVERIFIED_STATE
+    assert payload["next_actions"] == ["mb connect test meta"]
+    # No live account read happened.
+    assert calls == []
 
 
 def _fake_meta_runner(calls: list[list[str]]):

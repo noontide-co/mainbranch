@@ -725,13 +725,15 @@ def test_connect_user_scope_validation_updates_hydration_source(
     hydrated = connect_mod.hydrate(disposable, provider_id="postiz")
     after = connect_mod.status_provider("postiz", disposable)
 
-    assert tested["ok"] is True
+    assert tested["ok"] is False
     assert hydrated["ok"] is True
-    assert after["state"] == "ready"
+    assert after["state"] == connect_mod.UNVERIFIED_STATE
+    assert after["stored"] is True
+    assert after["provider_verified"] is False
     assert (
         after["validation"]["summary"]
-        == "Postiz has no automated safe validation probe yet; local credential presence "
-        "was confirmed."
+        == "Postiz has a stored credential, but Main Branch has no automated way to "
+        "confirm it works with the provider."
     )
 
 
@@ -1238,7 +1240,7 @@ def test_connect_test_account_token_requires_account_id(tmp_path: Path, monkeypa
     assert payload["validation"]["upstream"]["response_received"] is False
 
 
-def test_connect_test_no_probe_provider_reaches_ready_without_loop(
+def test_connect_test_no_probe_provider_reports_stored_unverified_without_loop(
     tmp_path: Path, monkeypatch
 ) -> None:
     _local_secret_env(monkeypatch, tmp_path)
@@ -1248,20 +1250,27 @@ def test_connect_test_no_probe_provider_reaches_ready_without_loop(
 
     result = runner.invoke(app, ["connect", "test", "google", "--repo", str(repo), "--json"])
 
+    # Exit 0: Google has no probe, so there is nothing the operator can run.
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
-    assert payload["ok"] is True
-    assert payload["status"]["state"] == "ready"
+    assert payload["ok"] is False
+    assert payload["stored"] is True
+    assert payload["provider_verified"] is False
+    assert payload["verified_at"] == ""
+    assert payload["status"]["state"] == connect_mod.UNVERIFIED_STATE
+    # No repair command: rerunning `mb connect test` would record the same
+    # unverified answer, so pointing back at it would be a loop.
     assert payload["status"]["repair_command"] == ""
-    assert "no automated safe validation probe" in payload["validation"]["summary"]
+    assert "no automated way to confirm it works" in payload["validation"]["summary"]
     assert "google-token" not in result.stdout
 
     status = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
     assert status.exit_code == 0
     status_payload = json.loads(status.stdout)
-    assert status_payload["summary"]["healthy"] == 1
+    assert status_payload["summary"]["healthy"] == 0
     assert status_payload["summary"]["needs_repair"] == 0
-    assert status_payload["providers"][0]["state"] == "ready"
+    assert status_payload["summary"]["unverified"] == 1
+    assert status_payload["providers"][0]["state"] == connect_mod.UNVERIFIED_STATE
 
 
 def test_connect_test_transient_provider_failure_stays_unvalidated(
@@ -2012,8 +2021,8 @@ def test_connect_custom_provider_roundtrip(tmp_path: Path, monkeypatch) -> None:
     assert status["state"] == "unvalidated"
 
     tested = connect_mod.test_provider("dataforseo", repo)
-    assert tested["ok"] is True
-    assert tested["status"]["state"] == "ready"
+    assert tested["ok"] is False
+    assert tested["status"]["state"] == connect_mod.UNVERIFIED_STATE
 
     single_status = runner.invoke(
         app, ["connect", "status", "dataforseo", "--repo", str(repo), "--json"]
@@ -2021,24 +2030,25 @@ def test_connect_custom_provider_roundtrip(tmp_path: Path, monkeypatch) -> None:
     assert single_status.exit_code == 0
     single_status_payload = json.loads(single_status.stdout)
     assert single_status_payload["provider"] == "dataforseo"
-    assert single_status_payload["state"] == "ready"
+    assert single_status_payload["state"] == connect_mod.UNVERIFIED_STATE
 
     aggregate = connect_mod.status_all(repo, include_all=True)
     aggregate_by_id = {item["provider"]: item for item in aggregate["providers"]}
-    assert aggregate_by_id["dataforseo"]["state"] == "ready"
+    assert aggregate_by_id["dataforseo"]["state"] == connect_mod.UNVERIFIED_STATE
     assert aggregate["summary"]["configured"] == 1
-    assert aggregate["summary"]["healthy"] == 1
+    assert aggregate["summary"]["healthy"] == 0
+    assert aggregate["summary"]["unverified"] == 1
 
     doctor = connect_mod.doctor(repo)
     checks = {check["name"]: check for check in doctor["checks"]}
-    assert checks["provider:dataforseo"]["state"] == "ready"
+    assert checks["provider:dataforseo"]["state"] == connect_mod.UNVERIFIED_STATE
 
     listed = connect_mod.list_providers(repo)
     listed_by_id = {provider["id"]: provider for provider in listed["providers"]}
     assert listed_by_id["cloudflare"]["custom"] is False
     assert listed_by_id["dataforseo"]["custom"] is True
     assert listed_by_id["dataforseo"]["category"] == "custom"
-    assert listed_by_id["dataforseo"]["state"] == "ready"
+    assert listed_by_id["dataforseo"]["state"] == connect_mod.UNVERIFIED_STATE
     assert listed["custom_providers"][0]["id"] == "dataforseo"
 
     reconnect = runner.invoke(
@@ -2170,8 +2180,10 @@ def test_connect_user_scope_custom_provider_hydrates_and_reads(tmp_path: Path, m
     assert secret not in (disposable / ".mb" / "connect.yaml").read_text(encoding="utf-8")
 
     tested = connect_mod.test_provider("mercury", disposable)
-    assert tested["ok"] is True
-    assert tested["status"]["state"] == "ready"
+    assert tested["ok"] is False
+    assert tested["status"]["state"] == connect_mod.UNVERIFIED_STATE
+    assert tested["stored"] is True
+    assert tested["provider_verified"] is False
 
 
 def test_connect_unknown_provider_hints_custom(tmp_path: Path, monkeypatch) -> None:
@@ -2570,3 +2582,625 @@ def test_hygiene_surfaces_unscannable_files_loudly(tmp_path: Path) -> None:
     # Skipped surface must be called out, not silently treated as clean.
     assert "could not be scanned" in result["summary"]
     assert result["surfaces_skipped"]
+
+
+# --- stored vs verified (issue 962) ----------------------------------------
+#
+# `stored`, `provider_verified`, and `verified_at` are three separate facts.
+# Every simulated provider response below is a local stub; no test in this
+# block makes a real network call or reads a real credential.
+
+
+def _simulated_passing_probe(monkeypatch) -> list[str]:
+    """Stub a successful provider probe. Simulated: never calls the network."""
+    calls: list[str] = []
+
+    def fake_http(url: str, headers=None, **kwargs) -> dict[str, Any]:
+        calls.append(url)
+        return {
+            "ok": True,
+            "state": "ready",
+            "summary": "Cloudflare credential validated with provider (simulated).",
+            "safe_to_share": True,
+            "upstream": {
+                "endpoint_family": kwargs["endpoint_family"],
+                "http_status": 200,
+                "response_received": True,
+                "error_codes": [],
+                "error_messages": [],
+                "safe_to_share": True,
+            },
+        }
+
+    monkeypatch.setattr(connect_mod, "_http_get_json", fake_http)
+    return calls
+
+
+def _simulated_failing_probe(monkeypatch) -> None:
+    """Stub a rejected provider probe. Simulated: never calls the network."""
+
+    def fake_http(url: str, headers=None, **kwargs) -> dict[str, Any]:
+        return {
+            "ok": False,
+            "state": "invalid",
+            "summary": "Cloudflare rejected the credential (simulated).",
+            "repair": "Replace the credential.",
+            "repair_command": "mb connect cloudflare --token-stdin",
+            "safe_to_share": True,
+            "upstream": {
+                "endpoint_family": kwargs["endpoint_family"],
+                "http_status": 401,
+                "response_received": True,
+                "error_codes": [1000],
+                "error_messages": [],
+                "safe_to_share": True,
+            },
+        }
+
+    monkeypatch.setattr(connect_mod, "_http_get_json", fake_http)
+
+
+def test_connect_test_probe_provider_reaches_ready_and_records_verified_at(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "cloudflare", "--repo", str(repo), "--token", "cf-test-token"])
+    calls = _simulated_passing_probe(monkeypatch)
+
+    tested = connect_mod.test_provider("cloudflare", repo)
+
+    assert calls, "the probe provider must actually call the provider"
+    assert tested["ok"] is True
+    assert tested["stored"] is True
+    assert tested["provider_verified"] is True
+    assert tested["verified_at"] == tested["validation"]["checked_at"]
+    assert tested["status"]["state"] == "ready"
+    assert tested["status"]["provider_verified"] is True
+    assert tested["status"]["verified_at"] == tested["verified_at"]
+
+    status = connect_mod.status_all(repo)
+    assert status["ok"] is True
+    assert status["summary"]["healthy"] == 1
+    assert status["summary"]["unverified"] == 0
+
+
+def test_connect_test_failed_probe_keeps_the_earlier_verified_at(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "cloudflare", "--repo", str(repo), "--token", "cf-test-token"])
+    _simulated_passing_probe(monkeypatch)
+    first = connect_mod.test_provider("cloudflare", repo)
+    assert first["provider_verified"] is True
+
+    _simulated_failing_probe(monkeypatch)
+    second = connect_mod.test_provider("cloudflare", repo)
+
+    # `verified_at` records when the credential last worked, which stays true
+    # after a later rejection; `provider_verified` is about right now.
+    assert second["ok"] is False
+    assert second["provider_verified"] is False
+    assert second["verified_at"] == first["verified_at"]
+    assert second["status"]["state"] == "invalid"
+
+
+def test_connect_status_json_exposes_stored_verified_and_verified_at(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "resend", "--repo", str(repo), "--token", "re_fixture_key"])
+    runner.invoke(app, ["connect", "test", "resend", "--repo", str(repo)])
+
+    status = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+
+    assert status.exit_code == 0
+    provider = json.loads(status.stdout)["providers"][0]
+    assert provider["stored"] is True
+    assert provider["provider_verified"] is False
+    assert provider["verified_at"] == ""
+    assert provider["ok"] is False
+    assert provider["state"] == connect_mod.UNVERIFIED_STATE
+    assert "re_fixture_key" not in status.stdout
+
+
+def test_connect_status_not_connected_provider_reports_nothing_stored(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    status = connect_mod.status_provider("resend", repo)
+
+    assert status["state"] == "not_connected"
+    assert status["stored"] is False
+    assert status["provider_verified"] is False
+    assert status["verified_at"] == ""
+
+
+def test_connect_doctor_grades_stored_unverified_as_warning_not_pass(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "resend", "--repo", str(repo), "--token", "re_fixture_key"])
+    runner.invoke(app, ["connect", "test", "resend", "--repo", str(repo)])
+
+    doctor = connect_mod.doctor(repo)
+    checks = {check["name"]: check for check in doctor["checks"]}
+    assert checks["provider:resend"]["ok"] is False
+    assert checks["provider:resend"]["state"] == connect_mod.UNVERIFIED_STATE
+
+    # `mb status` consumes this check; it must not read as a pass either.
+    check = connect_mod.doctor_check(repo)
+    assert check["ok"] is False
+    assert check["severity"] == "warn"
+    assert "cannot verify" in check["detail"]
+    assert "resend" in check["detail"]
+
+    rendered = runner.invoke(app, ["connect", "doctor", "--repo", str(repo)])
+    # The grade stays `warn`; only the process exit softens, and here the exit
+    # is 1 only because this fixture is not a git repo (github-context).
+    assert "provider:resend: stored, unverified" in rendered.stdout
+    assert "ready" not in rendered.stdout.split("provider:resend")[1]
+
+
+def test_connect_status_all_counts_unverified_apart_from_needs_repair(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "resend", "--repo", str(repo), "--token", "re_fixture_key"])
+    runner.invoke(app, ["connect", "test", "resend", "--repo", str(repo)])
+    runner.invoke(app, ["connect", "postiz", "--repo", str(repo), "--token", "postiz-token"])
+
+    status = connect_mod.status_all(repo)
+    summary = status["summary"]
+
+    # An unverified credential is not "broken": nothing is known to be wrong
+    # with it, and no repair command would change that. `unvalidated` keeps its
+    # old meaning ("`mb connect test` has not been run") and still counts as
+    # something to repair, because running the test does change it.
+    assert summary["configured"] == 2
+    assert summary["healthy"] == 0
+    assert summary["unverified"] == 1
+    assert summary["unvalidated"] == 1
+    assert summary["needs_repair"] == 1
+    assert [item["provider"] for item in status["providers"] if not item["ok"]] == [
+        "resend",
+        "postiz",
+    ]
+    assert status["ok"] is False
+
+
+def test_connect_custom_provider_reports_stored_unverified(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(
+        app,
+        ["connect", "mercury", "--custom", "--repo", str(repo), "--token", "custom-fixture-token"],
+    )
+
+    tested = connect_mod.test_provider("mercury", repo)
+
+    # Custom providers ride the same no-probe branch as built-ins.
+    assert tested["ok"] is False
+    assert tested["stored"] is True
+    assert tested["provider_verified"] is False
+    assert tested["verified_at"] == ""
+    assert tested["status"]["state"] == connect_mod.UNVERIFIED_STATE
+    assert tested["status"]["repair_command"] == ""
+    assert "custom-fixture-token" not in json.dumps(tested)
+
+    doctor = connect_mod.doctor(repo)
+    checks = {check["name"]: check for check in doctor["checks"]}
+    assert checks["provider:mercury"]["ok"] is False
+
+
+def test_connect_metadata_only_provider_stays_ready_without_provider_verified(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Pin the shape of a provider with no `required_secrets`.
+
+    The readiness invariant is scoped: for a provider WITH required secrets,
+    `ready` requires `provider_verified`. hledger has none, sends nothing to a
+    provider, and therefore has no credential to confirm. It keeps reporting
+    `ready` from repo-local metadata with `stored` and `provider_verified`
+    false, rather than faking a provider call it never made.
+    """
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    assert connect_mod.provider_map()["hledger"].required_secrets == ()
+    connect_mod.connect_provider(
+        "hledger",
+        repo=repo,
+        metadata_pairs=["journal_path=.mb/private/books/main.journal"],
+    )
+
+    tested = connect_mod.test_provider("hledger", repo)
+
+    assert tested["ok"] is True
+    assert tested["status"]["state"] == "ready"
+    assert tested["stored"] is False
+    assert tested["provider_verified"] is False
+    assert tested["verified_at"] == ""
+
+    # The same shape on the status surface, not just the test result.
+    status = connect_mod.status_provider("hledger", repo)
+    assert status["state"] == "ready"
+    assert status["ok"] is True
+    assert status["stored"] is False
+    assert status["provider_verified"] is False
+    assert status["verified_at"] == ""
+    assert status["repair_command"] == ""
+
+    # It counts as healthy, not as unverified, and doctor passes it.
+    aggregate = connect_mod.status_all(repo)
+    assert aggregate["ok"] is True
+    assert aggregate["summary"]["healthy"] == 1
+    assert aggregate["summary"]["unverified"] == 0
+    assert connect_mod.doctor_check(repo)["ok"] is True
+
+    checks = {check["name"]: check for check in connect_mod.doctor(repo)["checks"]}
+    assert checks["provider:hledger"]["ok"] is True
+    assert checks["provider:hledger"]["state"] == "ready"
+
+
+def _legacy_ready_entry(repo: Path, provider_id: str) -> None:
+    """Write a 0.5.2-shaped entry: `validation.state: ready`, no verified facts."""
+    config = yaml.safe_load((repo / ".mb" / "connect.yaml").read_text(encoding="utf-8"))
+    config["providers"][provider_id]["validation"] = {
+        "state": "ready",
+        "checked_at": "2026-09-01T00:00:00+00:00",
+        "summary": "legacy 0.5.2 validation entry",
+        "safe_to_share": True,
+    }
+    config["providers"][provider_id]["last_checked_at"] = "2026-09-01T00:00:00+00:00"
+    (repo / ".mb" / "connect.yaml").write_text(yaml.safe_dump(config), encoding="utf-8")
+
+
+def test_connect_status_reads_legacy_ready_metadata_as_unverified(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "cloudflare", "--repo", str(repo), "--token", "cf-test-token"])
+    _legacy_ready_entry(repo, "cloudflare")
+
+    status = connect_mod.status_provider("cloudflare", repo)
+
+    # 0.5.2 wrote `ready` for probed and unprobed providers alike, so the word
+    # alone is not evidence of a provider call. Absent `provider_verified`
+    # fails closed: the entry keeps working, it just stops claiming verified.
+    assert status["state"] == connect_mod.UNVERIFIED_STATE
+    assert status["ok"] is False
+    assert status["stored"] is True
+    assert status["provider_verified"] is False
+    assert status["verified_at"] == ""
+    # Cloudflare has a probe, so the legacy entry is actionable: run the test.
+    assert status["repair_command"] == "mb connect test cloudflare"
+    assert connect_mod.provider_needs_action(status) is True
+
+
+def test_connect_test_reverifies_legacy_ready_metadata(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "cloudflare", "--repo", str(repo), "--token", "cf-test-token"])
+    _legacy_ready_entry(repo, "cloudflare")
+    _simulated_passing_probe(monkeypatch)
+
+    tested = connect_mod.test_provider("cloudflare", repo)
+
+    # One re-test is the whole upgrade cost for a provider that has a probe.
+    assert tested["ok"] is True
+    assert tested["provider_verified"] is True
+    assert tested["verified_at"] == tested["validation"]["checked_at"]
+    assert tested["status"]["state"] == "ready"
+
+
+def test_connect_meta_legacy_ready_metadata_reads_as_unverified(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    _connect_meta_ready_prereqs(monkeypatch)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(
+        app,
+        [
+            "connect",
+            "meta",
+            "--repo",
+            str(repo),
+            "--token",
+            "meta-fixture-token",
+            "--metadata",
+            "ad_account_id=act_123",
+        ],
+    )
+    _legacy_ready_entry(repo, "meta")
+
+    status = connect_mod.status_provider("meta", repo)
+
+    assert status["state"] == connect_mod.UNVERIFIED_STATE
+    assert status["ok"] is False
+    assert status["provider_verified"] is False
+
+
+# --- exit-code contract -----------------------------------------------------
+#
+# An exit code means "there is something you can act on". A red nobody can
+# clear gets ignored, and a probe-less provider can never turn green until a
+# probe exists upstream.
+
+
+def _simulate_ready_github(monkeypatch) -> None:
+    """Stub GitHub context so doctor exit codes isolate the provider rule."""
+    monkeypatch.setattr(
+        connect_mod,
+        "github_context",
+        lambda repo, **kwargs: {
+            "ok": True,
+            "state": "ready",
+            "summary": "simulated GitHub context",
+            "repair": "",
+            "repair_command": "",
+            "safe_to_share": True,
+        },
+    )
+
+
+def test_probe_provider_set_matches_validate_with_provider(tmp_path: Path, monkeypatch) -> None:
+    """`PROBE_PROVIDERS` must match what `_validate_with_provider` really probes.
+
+    The exit-code contract turns on this set. Drift either hides a provider
+    behind a permanent exit 0 or raises a red nobody can clear.
+    """
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        lambda url, headers=None, **kwargs: {
+            "ok": True,
+            "state": "ready",
+            "summary": "simulated provider response",
+            "safe_to_share": True,
+            "upstream": {
+                "endpoint_family": kwargs["endpoint_family"],
+                "safe_to_share": True,
+            },
+        },
+    )
+    monkeypatch.setattr(connect_mod, "_meta_prerequisite_state", lambda **kwargs: "")
+
+    def fake_run(args, cwd=None, timeout=5.0, *, env=None):
+        return {"ok": True, "returncode": 0, "stdout": "{}\n", "stderr": ""}
+
+    for provider in connect_mod.PROVIDERS:
+        if not provider.required_secrets:
+            continue
+        result = connect_mod._validate_with_provider(
+            provider,
+            "simulated-token",
+            {"ad_account_id": "act_test", "account_id": "0" * 32},
+            repo=tmp_path,
+            which_func=_fake_meta_which,
+            command_runner=fake_run,
+        )
+        probed = result["state"] != connect_mod.UNVERIFIED_STATE
+        assert probed is connect_mod.has_provider_probe(provider.id), provider.id
+
+    # Every id in the set is a real registered provider.
+    assert connect_mod.PROBE_PROVIDERS.issubset({p.id for p in connect_mod.PROVIDERS})
+
+    # Custom providers are never in the set.
+    assert connect_mod.has_provider_probe("mercury") is False
+
+
+def test_provider_needs_action_splits_on_whether_a_probe_exists() -> None:
+    unverified = {"ok": False, "state": connect_mod.UNVERIFIED_STATE}
+
+    # Actionable: a probe exists, so `mb connect test` is a real next step.
+    assert connect_mod.provider_needs_action({**unverified, "provider": "cloudflare"}) is True
+    assert connect_mod.provider_needs_action({**unverified, "provider": "apify"}) is True
+    assert connect_mod.provider_needs_action({**unverified, "provider": "meta"}) is True
+
+    # Not actionable: nothing the operator runs can verify these.
+    assert connect_mod.provider_needs_action({**unverified, "provider": "resend"}) is False
+    assert connect_mod.provider_needs_action({**unverified, "provider": "mercury"}) is False
+
+    # Every other unhealthy state stays actionable.
+    for state in ("unvalidated", "invalid", "missing_secret", connect_mod.BACKEND_FAILURE_STATE):
+        assert (
+            connect_mod.provider_needs_action({"ok": False, "state": state, "provider": "resend"})
+            is True
+        ), state
+
+    assert connect_mod.provider_needs_action({"ok": True, "state": "ready"}) is False
+
+
+def test_connect_probeless_unverified_exits_zero_on_all_three_surfaces(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    _simulate_ready_github(monkeypatch)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "resend", "--repo", str(repo), "--token", "re_fixture_key"])
+
+    tested = runner.invoke(app, ["connect", "test", "resend", "--repo", str(repo)])
+    aggregate = runner.invoke(app, ["connect", "status", "--repo", str(repo)])
+    every = runner.invoke(app, ["connect", "status", "--all", "--repo", str(repo)])
+    single = runner.invoke(app, ["connect", "status", "resend", "--repo", str(repo)])
+    doctor = runner.invoke(app, ["connect", "doctor", "--repo", str(repo)])
+
+    assert tested.exit_code == 0
+    assert aggregate.exit_code == 0
+    assert every.exit_code == 0
+    assert single.exit_code == 0
+    assert doctor.exit_code == 0
+
+    # The exit softens; the grade and the facts do not.
+    payload = json.loads(
+        runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"]).stdout
+    )
+    provider = payload["providers"][0]
+    assert provider["ok"] is False
+    assert provider["state"] == connect_mod.UNVERIFIED_STATE
+    assert provider["has_probe"] is False
+    assert provider["provider_verified"] is False
+    assert payload["ok"] is False
+    assert payload["summary"]["actionable"] == 0
+    assert "stored, unverified" in doctor.stdout
+
+
+def test_connect_probe_capable_unverified_exits_one_on_all_three_surfaces(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    _simulate_ready_github(monkeypatch)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "cloudflare", "--repo", str(repo), "--token", "cf-test-token"])
+    _legacy_ready_entry(repo, "cloudflare")
+
+    aggregate = runner.invoke(app, ["connect", "status", "--repo", str(repo)])
+    single = runner.invoke(app, ["connect", "status", "cloudflare", "--repo", str(repo)])
+    doctor = runner.invoke(app, ["connect", "doctor", "--repo", str(repo)])
+
+    assert aggregate.exit_code == 1
+    assert single.exit_code == 1
+    assert doctor.exit_code == 1
+
+    payload = json.loads(
+        runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"]).stdout
+    )
+    assert payload["providers"][0]["has_probe"] is True
+    assert payload["summary"]["actionable"] == 1
+    # Exit 1 always names something to run; the probe-less case never does.
+    assert payload["providers"][0]["repair_command"] == "mb connect test cloudflare"
+
+    # Running the probe is the action, and it resolves the exit either way.
+    _simulated_failing_probe(monkeypatch)
+    rejected = runner.invoke(app, ["connect", "test", "cloudflare", "--repo", str(repo)])
+    assert rejected.exit_code == 1
+
+    _simulated_passing_probe(monkeypatch)
+    accepted = runner.invoke(app, ["connect", "test", "cloudflare", "--repo", str(repo)])
+    assert accepted.exit_code == 0
+    assert runner.invoke(app, ["connect", "doctor", "--repo", str(repo)]).exit_code == 0
+
+
+def test_connect_doctor_hint_names_providers_without_a_probe(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    _simulate_ready_github(monkeypatch)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "resend", "--repo", str(repo), "--token", "re_fixture_key"])
+    runner.invoke(app, ["connect", "postiz", "--repo", str(repo), "--token", "postiz-token"])
+    runner.invoke(app, ["connect", "cloudflare", "--repo", str(repo), "--token", "cf-test-token"])
+    connect_mod.connect_provider(
+        "hledger", repo=repo, metadata_pairs=["journal_path=.mb/private/books/main.journal"]
+    )
+
+    report = connect_mod.doctor(repo)
+
+    # Named so the gap is fixable upstream instead of silently permanent.
+    assert report["probe_gap"]["providers"] == ["postiz", "resend"]
+    assert "no automated probe" in report["probe_gap"]["summary"]
+    # cloudflare has a probe; hledger stores no credential to probe.
+    assert "cloudflare" not in report["probe_gap"]["providers"]
+    assert "hledger" not in report["probe_gap"]["providers"]
+
+    rendered = runner.invoke(app, ["connect", "doctor", "--repo", str(repo)])
+    assert "no provider probe: postiz, resend" in rendered.stdout
+
+
+def test_connect_status_all_exits_zero_when_nothing_is_connected(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """`--all` lists providers nobody asked for; those are not problems.
+
+    `--all` enumerates every built-in provider, so a brand-new repo shows nine
+    `not_connected` entries. Letting those drive the exit made the surface most
+    likely to be scripted return 1 on a healthy repo.
+    """
+    _local_secret_env(monkeypatch, tmp_path)
+    _simulate_ready_github(monkeypatch)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    every = runner.invoke(app, ["connect", "status", "--all", "--repo", str(repo)])
+    aggregate = runner.invoke(app, ["connect", "status", "--repo", str(repo)])
+
+    assert every.exit_code == 0
+    assert aggregate.exit_code == 0
+
+    payload = json.loads(
+        runner.invoke(app, ["connect", "status", "--all", "--repo", str(repo), "--json"]).stdout
+    )
+    assert payload["summary"]["configured"] == 0
+    assert payload["summary"]["actionable"] == 0
+    assert any(item["state"] == "not_connected" for item in payload["providers"])
+
+
+def test_connect_status_all_still_exits_one_for_a_connected_actionable_provider(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Scoping to connected providers must not mute a real problem under `--all`."""
+    _local_secret_env(monkeypatch, tmp_path)
+    _simulate_ready_github(monkeypatch)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "postiz", "--repo", str(repo), "--token", "postiz-token"])
+
+    every = runner.invoke(app, ["connect", "status", "--all", "--repo", str(repo)])
+
+    assert every.exit_code == 1
+
+
+def test_connect_doctor_check_detail_matches_its_repair_line(tmp_path: Path, monkeypatch) -> None:
+    """The detail must not say "cannot verify" about a provider with a probe."""
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "cloudflare", "--repo", str(repo), "--token", "cf-test-token"])
+    _legacy_ready_entry(repo, "cloudflare")
+
+    check = connect_mod.doctor_check(repo)
+
+    assert check["ok"] is False
+    assert check["severity"] == "warn"
+    assert check["repair_command"] == "mb connect test cloudflare"
+    assert "never confirmed with the provider (cloudflare)" in check["detail"]
+    assert "cannot verify" not in check["detail"]
+
+
+def test_connect_doctor_check_detail_separates_testable_from_unverifiable(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    runner.invoke(app, ["connect", "cloudflare", "--repo", str(repo), "--token", "cf-test-token"])
+    _legacy_ready_entry(repo, "cloudflare")
+    runner.invoke(app, ["connect", "resend", "--repo", str(repo), "--token", "re_fixture_key"])
+    runner.invoke(app, ["connect", "test", "resend", "--repo", str(repo)])
+
+    check = connect_mod.doctor_check(repo)
+
+    # Both halves named, and the actionable one leads with the command to run.
+    assert "never confirmed with the provider (cloudflare)" in check["detail"]
+    assert "Main Branch cannot verify (resend)" in check["detail"]
+    assert check["repair_command"] == "mb connect test cloudflare"

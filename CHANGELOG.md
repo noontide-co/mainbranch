@@ -11,6 +11,53 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- `mb connect test` no longer reports `ready` for a provider that has no
+  validation probe. For a provider with `required_secrets`, `ready` and
+  `ok: true` now require `provider_verified: true` — a provider call actually
+  confirmed the credential. A stored credential Main Branch cannot check reads
+  as `stored, unverified`, and `mb connect doctor` and `mb status` grade it as
+  a warning instead of a pass. Cloudflare, Apify, and Meta still reach `ready`
+  when their probe passes. Custom providers get the same treatment.
+  A provider with no `required_secrets`, such as `hledger`, is outside that
+  invariant: it sends nothing to a provider, so it keeps reporting `ready` from
+  repo-local metadata with `stored: false` and `provider_verified: false`.
+
+### Added
+
+- `mb connect test <provider>` and `mb connect status --json` expose three
+  separate facts per provider: `stored` (a credential resolved from the
+  backend), `provider_verified` (a provider call confirmed it), and
+  `verified_at` (when the credential last worked, `""` if never).
+  `mb connect status` gains an `unverified` count alongside `needs_repair`.
+
+### Changed
+
+- **Existing connections read as `stored, unverified` until re-tested.**
+  Provider metadata written before this release recorded `validation.state:
+  ready` without recording whether a provider was actually called, so that
+  `ready` is not evidence of a successful call and is not inherited. Every
+  connected provider reports `stored, unverified` until `mb connect test` runs
+  once more, including Cloudflare, Apify, and Meta. The metadata keeps working
+  and nothing is rewritten; a provider with a real probe returns to `ready`
+  after that single re-test.
+- An exit code from `mb connect test`, `mb connect status`, and `mb connect
+  doctor` now means "there is something you can act on", and all three surfaces
+  answer the same way. Exit 1 for `unvalidated`, `invalid`, `missing_secret`, a
+  credential-backend failure, and for a `stored, unverified` provider that has
+  a probe (Cloudflare, Apify, Meta) — running `mb connect test` is a real next
+  step. Exit 0 for a `stored, unverified` provider with no probe, because
+  nothing the operator runs can verify it until a probe exists upstream. A red
+  that nobody can clear gets ignored, and probe-less providers can never turn
+  green, so the exit softens while the per-provider `ok: false`, the doctor
+  `warn` grade, and the verification fields stay truthful in JSON and in human
+  output.
+- `mb connect doctor` names which connected providers have no probe, so the gap
+  is visible and fixable upstream rather than silently permanent. Each provider
+  in `mb connect status --json` carries `has_probe`, and the status summary
+  carries an `actionable` count.
+
 ## [0.5.2] - 2026-09-11
 
 This release makes `mb connect` resolve each business's own credential through

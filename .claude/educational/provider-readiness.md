@@ -102,7 +102,12 @@ read smoke is not approval to mutate the account.
 - `missing_secret` means metadata exists but the local secret is missing.
 - `missing_metadata` means the token exists but a safe local identifier, such as
   `ad_account_id`, is missing.
-- `unvalidated` means a credential is stored, but it has not been tested.
+- `unvalidated` means a credential is stored, but `mb connect test` has not
+  been run on it.
+- `stored_unverified` means a credential is stored and readable, but Main
+  Branch has no safe automated check that it works with the provider. Running
+  `mb connect test` again cannot change it; confirm the credential in the
+  provider's own dashboard, or let the first real workflow run be the check.
 - `needs_hydration` means this repo has provider setup in user scope, but the
   current workspace needs `mb connect hydrate --repo .` before local readiness
   commands can use it.
@@ -111,7 +116,12 @@ read smoke is not approval to mutate the account.
 - `auth_failed` and `read_smoke_failed` mean auth or read-only smoke failed
   without exposing raw provider output.
 - `invalid` means validation failed and the credential should be replaced.
-- `ready` means the safest available check passed.
+- `ready` means the safest available check for that provider passed. For a
+  provider that requires a credential, that means a provider call actually
+  confirmed it, and a provider with no probe never reaches `ready` — it reports
+  `stored_unverified` instead. A provider that requires no credential, such as
+  `hledger`, sends nothing to a provider, so its `ready` is about repo-local
+  metadata and its `provider_verified` stays `false`.
 
 Secrets stay outside the business repo. `.mb/connect.yaml` stores only safe
 metadata, labels, secret references, and last-check facts, and is gitignored by
