@@ -55,6 +55,30 @@ SECRET_PHRASE_RE = re.compile(
 BEARER_SECRET_RE = re.compile(r"(?i)\bbearer[ \t]+[^\s,;]+")
 
 BACKEND_FAILURE_STATE = "backend_unavailable"
+# A credential is stored and readable, but no provider call has ever confirmed
+# it works. Distinct from `unvalidated` ("`mb connect test` has not been run"):
+# running the test again cannot clear this state when the provider has no probe.
+UNVERIFIED_STATE = "stored_unverified"
+
+
+def _provider_verified(validation: dict[str, Any]) -> bool:
+    """Read the "a provider call confirmed this credential" fact, failing closed.
+
+    Releases through 0.5.2 recorded ``state: ready`` for providers that were
+    never probed, so an absent ``provider_verified`` key is not evidence of a
+    successful provider call. Absent reads as unverified until `mb connect test`
+    records the fact, which costs one re-test and never overclaims readiness.
+    """
+    return validation.get("provider_verified") is True
+
+
+def _verified_at(validation: dict[str, Any]) -> str:
+    """Timestamp of the last *successful* provider call, or "" if never.
+
+    Preserved across a later failure: it records when the credential last
+    worked, which stays true even when the current check fails.
+    """
+    return str(validation.get("verified_at") or "")
 
 
 def _backend_repair(reason: str) -> dict[str, str]:
@@ -706,6 +730,26 @@ def _secret_ref(repo_id: str, provider_id: str, field: str) -> str:
     return f"mainbranch://{digest}/{provider_id}/{field}"
 
 
+def _unverified_repair(provider: Provider) -> dict[str, str]:
+    """Guidance for a stored credential Main Branch cannot verify itself.
+
+    Deliberately has no ``repair_command``: rerunning `mb connect test` would
+    record the same unverified result, so pointing at it would be busywork
+    dressed as a fix.
+    """
+    return {
+        "summary": (
+            f"{provider.name} has a stored credential, but Main Branch has no "
+            "automated way to confirm it works with the provider."
+        ),
+        "repair": (
+            f"Confirm the {provider.name} credential in the provider's own dashboard, "
+            "or treat the first real workflow run as the check."
+        ),
+        "repair_command": "",
+    }
+
+
 def _repair(
     provider: Provider,
     state: str,
@@ -765,6 +809,8 @@ def _repair(
             "repair": f"Run `mb connect test {provider.id}`.",
             "repair_command": f"mb connect test {provider.id}",
         }
+    if state == UNVERIFIED_STATE:
+        return _unverified_repair(provider)
     if state == "invalid":
         return {
             "summary": f"{provider.name} validation failed without exposing the provider response.",
@@ -1204,12 +1250,17 @@ def _unhydrated_status(
         }
         state = "needs_hydration"
         ok = False
+    raw_validation = entry.get("validation")
+    stored_validation: dict[str, Any] = raw_validation if isinstance(raw_validation, dict) else {}
     return {
         "provider": provider.id,
         "name": provider.name,
         "connected": True,
         "ok": ok,
         "state": state,
+        "stored": bool(provider.required_secrets) and not missing and not backend_reason,
+        "provider_verified": _provider_verified(stored_validation),
+        "verified_at": _verified_at(stored_validation),
         "summary": repair["summary"],
         "repair": repair["repair"],
         "repair_command": repair["repair_command"],
@@ -1221,7 +1272,13 @@ def _unhydrated_status(
         "scope": "user",
         "user_scope_available": True,
         "hydrated": False,
-        "validation": {"state": state, "checked_at": "", "summary": repair["summary"]},
+        "validation": {
+            "state": state,
+            "checked_at": "",
+            "provider_verified": _provider_verified(stored_validation),
+            "verified_at": _verified_at(stored_validation),
+            "summary": repair["summary"],
+        },
     }
 
 
@@ -1291,6 +1348,7 @@ def status_provider(
             probe = _probe_secret_ref(backend, ref, deadline=_credential_deadline)
         secret_present = probe.present
         meta_backend_reason = "" if probe.backend_ok else (probe.reason or "keychain_unavailable")
+        meta_stored = bool(secret_present and not meta_backend_reason)
         validation_state = str(meta_validation.get("state") or "unvalidated")
         if prereq_state:
             state = prereq_state
@@ -1307,9 +1365,13 @@ def status_provider(
         elif not str(meta_metadata.get("ad_account_id") or "").strip():
             state = "missing_metadata"
             ok = False
-        elif validation_state == "ready":
+        elif validation_state == "ready" and _provider_verified(meta_validation):
             state = "ready"
             ok = True
+        elif validation_state == "ready":
+            # Recorded ready without a recorded provider call (pre-0.5.3).
+            state = UNVERIFIED_STATE
+            ok = False
         elif validation_state in {
             "waiting_for_admin_approval",
             "auth_failed",
@@ -1336,6 +1398,9 @@ def status_provider(
             "connected": bool(isinstance(entry, dict) and raw_entry.get("connected", False)),
             "ok": ok,
             "state": state,
+            "stored": meta_stored,
+            "provider_verified": _provider_verified(meta_validation),
+            "verified_at": _verified_at(meta_validation),
             "summary": repair["summary"],
             "repair": repair["repair"],
             "repair_command": repair["repair_command"],
@@ -1359,6 +1424,8 @@ def status_provider(
             "validation": {
                 "state": str(meta_validation.get("state") or state),
                 "checked_at": str(meta_validation.get("checked_at") or ""),
+                "provider_verified": _provider_verified(meta_validation),
+                "verified_at": _verified_at(meta_validation),
                 "summary": str(meta_validation.get("summary") or ""),
                 "upstream": meta_validation.get("upstream")
                 if isinstance(meta_validation.get("upstream"), dict)
@@ -1376,6 +1443,9 @@ def status_provider(
             "connected": False,
             "ok": False,
             "state": "not_connected",
+            "stored": False,
+            "provider_verified": False,
+            "verified_at": "",
             "summary": repair["summary"],
             "repair": repair["repair"],
             "repair_command": repair["repair_command"],
@@ -1387,7 +1457,13 @@ def status_provider(
             "scope": "repo",
             "user_scope_available": False,
             "hydrated": False,
-            "validation": {"state": "not_connected", "checked_at": "", "summary": ""},
+            "validation": {
+                "state": "not_connected",
+                "checked_at": "",
+                "provider_verified": False,
+                "verified_at": "",
+                "summary": "",
+            },
         }
 
     secrets, missing = _secret_statuses(
@@ -1402,6 +1478,9 @@ def status_provider(
     raw_validation = entry.get("validation")
     validation: dict[str, Any] = raw_validation if isinstance(raw_validation, dict) else {}
     backend_reason = _backend_failure_reason(secrets)
+    # "stored" is about credential material only: a provider that needs no
+    # secret (hledger) has nothing stored, even though it can still be ready.
+    stored = bool(provider.required_secrets) and not missing and not backend_reason
     if backend_reason:
         state = BACKEND_FAILURE_STATE
         ok = False
@@ -1413,11 +1492,17 @@ def status_provider(
         ok = True
     else:
         validation_state = str(validation.get("state") or "unvalidated")
-        if validation_state == "ready":
+        if validation_state == "invalid":
+            state = "invalid"
+            ok = False
+        elif _provider_verified(validation):
             state = "ready"
             ok = True
-        elif validation_state == "invalid":
-            state = "invalid"
+        elif validation_state in {"ready", UNVERIFIED_STATE}:
+            # A check ran but never confirmed the credential with the provider.
+            # Pre-0.5.3 metadata reaches here too: it recorded "ready" without
+            # recording a provider call, so it is read as unverified.
+            state = UNVERIFIED_STATE
             ok = False
         else:
             state = "unvalidated"
@@ -1429,6 +1514,9 @@ def status_provider(
         "connected": bool(entry.get("connected", False)),
         "ok": ok,
         "state": state,
+        "stored": stored,
+        "provider_verified": _provider_verified(validation),
+        "verified_at": _verified_at(validation),
         "summary": repair["summary"],
         "repair": repair["repair"],
         "repair_command": repair["repair_command"],
@@ -1443,6 +1531,8 @@ def status_provider(
         "validation": {
             "state": str(validation.get("state") or state),
             "checked_at": str(validation.get("checked_at") or ""),
+            "provider_verified": _provider_verified(validation),
+            "verified_at": _verified_at(validation),
             "summary": str(validation.get("summary") or ""),
             "upstream": validation.get("upstream")
             if isinstance(validation.get("upstream"), dict)
@@ -1860,6 +1950,9 @@ def _meta_validation_result(
         "ok": ok,
         "state": state,
         "checked_at": checked_at,
+        # Meta's only success path is a passing read-only account smoke, which
+        # is a real provider call.
+        "provider_verified": ok,
         "summary": summary,
         "repair": repair,
         "repair_command": repair_command,
@@ -2080,20 +2173,26 @@ def _validate_with_provider(
             command_runner=command_runner,
         )
     else:
+        # No safe read-only probe exists for this provider, so the only fact
+        # available is that a credential is stored. Saying "ready" here would
+        # claim a provider call that never happened.
         return {
-            "ok": True,
-            "state": "ready",
+            "ok": False,
+            "state": UNVERIFIED_STATE,
             "checked_at": checked_at,
+            "provider_verified": False,
             "summary": (
-                f"{provider.name} has no automated safe validation probe yet; "
-                "local credential presence was confirmed."
+                f"{provider.name} has a stored credential, but Main Branch has no "
+                "automated way to confirm it works with the provider."
             ),
+            "repair": _unverified_repair(provider)["repair"],
             "safe_to_share": True,
         }
     return {
         "ok": bool(result["ok"]),
         "state": str(result["state"]),
         "checked_at": checked_at,
+        "provider_verified": bool(result["ok"]),
         "summary": str(result["summary"]),
         "repair": str(result.get("repair") or ""),
         "repair_command": str(result.get("repair_command") or ""),
@@ -2130,13 +2229,25 @@ def test_provider(
         "missing_secret",
         BACKEND_FAILURE_STATE,
     }:
-        return {"ok": False, "provider": provider.id, "status": status, "safe_to_share": True}
+        return {
+            "ok": False,
+            "provider": provider.id,
+            "stored": bool(status.get("stored")),
+            "provider_verified": bool(status.get("provider_verified")),
+            "verified_at": str(status.get("verified_at") or ""),
+            "status": status,
+            "safe_to_share": True,
+        }
 
     if not provider.required_secrets:
+        # Nothing is stored and nothing can be verified with a provider: this
+        # readiness is about repo-local metadata, so it never sets
+        # `provider_verified`.
         validation = {
             "ok": True,
             "state": "ready",
             "checked_at": _now(),
+            "provider_verified": False,
             "summary": f"{provider.name} uses repo-local metadata and has no secret to validate.",
             "safe_to_share": True,
         }
@@ -2146,6 +2257,9 @@ def test_provider(
             return {
                 "ok": False,
                 "provider": provider.id,
+                "stored": bool(status.get("stored")),
+                "provider_verified": bool(status.get("provider_verified")),
+                "verified_at": str(status.get("verified_at") or ""),
                 "status": status,
                 "safe_to_share": True,
             }
@@ -2160,9 +2274,15 @@ def test_provider(
             command_runner=command_runner,
         )
 
+    raw_previous = entry.get("validation")
+    previous: dict[str, Any] = raw_previous if isinstance(raw_previous, dict) else {}
+    provider_verified = bool(validation.get("provider_verified"))
+    verified_at = validation["checked_at"] if provider_verified else _verified_at(previous)
     entry["validation"] = {
         "state": validation["state"],
         "checked_at": validation["checked_at"],
+        "provider_verified": provider_verified,
+        "verified_at": verified_at,
         "summary": validation["summary"],
         "safe_to_share": True,
     }
@@ -2197,6 +2317,9 @@ def test_provider(
     return {
         "ok": bool(validation["ok"]),
         "provider": provider.id,
+        "stored": bool(status.get("stored")),
+        "provider_verified": provider_verified,
+        "verified_at": verified_at,
         "validation": entry["validation"],
         "status": status,
         "safe_to_share": True,
@@ -2236,10 +2359,15 @@ def status_all(
     for provider_id in custom_ids:
         providers.append(status_provider(provider_id, target, _credential_deadline=deadline))
     connected = [item for item in providers if item["connected"]]
-    broken = [item for item in connected if not item["ok"]]
+    unverified = [item for item in connected if item["state"] == UNVERIFIED_STATE]
+    # A stored-but-unverified provider is not broken: nothing is known to be
+    # wrong with it and no repair command would change that. Counting it
+    # separately keeps `needs_repair` meaning "there is something to fix",
+    # while `ok` still refuses to call the repo fully healthy.
+    broken = [item for item in connected if not item["ok"] and item["state"] != UNVERIFIED_STATE]
     unvalidated = [item for item in connected if item["state"] == "unvalidated"]
     return {
-        "ok": not broken,
+        "ok": not broken and not unverified,
         "repo": str(target),
         "config_path": str(_checked_config_path(target)),
         "repo_id": repo_id,
@@ -2252,6 +2380,7 @@ def status_all(
             "healthy": len([item for item in connected if item["ok"]]),
             "needs_repair": len(broken),
             "unvalidated": len(unvalidated),
+            "unverified": len(unverified),
         },
     }
 
@@ -2524,10 +2653,26 @@ def doctor_check(repo: str | Path = ".", *, status: dict[str, Any] | None = None
             "repair_command": str(first.get("repair_command") or "mb connect doctor"),
             "safe_to_share": True,
         }
+    if summary.get("unverified"):
+        unverified = [item for item in status["providers"] if item["state"] == UNVERIFIED_STATE]
+        names = ", ".join(item["provider"] for item in unverified[:3])
+        first = unverified[0] if unverified else {}
+        return {
+            "name": "integration-credentials",
+            "ok": False,
+            "detail": (
+                f"{summary['unverified']} of {summary['configured']} connected provider(s) "
+                f"have a stored credential Main Branch cannot verify ({names})."
+            ),
+            "severity": "warn",
+            "repair": str(first.get("repair") or ""),
+            "repair_command": str(first.get("repair_command") or ""),
+            "safe_to_share": True,
+        }
     return {
         "name": "integration-credentials",
         "ok": True,
-        "detail": f"{summary['healthy']} connected provider(s) ready",
+        "detail": f"{summary['healthy']} connected provider(s) verified ready",
         "severity": "ok",
         "repair": "",
         "repair_command": "",
@@ -3002,13 +3147,21 @@ def render_plan(result: dict[str, Any]) -> None:
             print(f"   next: {step['next_command']}")
 
 
+def state_label(state: str) -> str:
+    """Human phrasing for a provider state. JSON keeps the machine value."""
+    return "stored, unverified" if state == UNVERIFIED_STATE else state
+
+
 def render_status(result: dict[str, Any]) -> None:
     summary = result["summary"]
     print(f"mb connect status  {result['repo']}")
-    print(
+    line = (
         f"configured: {summary['configured']}  "
         f"healthy: {summary['healthy']}  needs repair: {summary['needs_repair']}"
     )
+    if summary.get("unverified"):
+        line += f"  unverified: {summary['unverified']}"
+    print(line)
     github = result.get("github") or {}
     if github:
         state = "ok" if github.get("ok") else "warn"
@@ -3021,7 +3174,7 @@ def render_status(result: dict[str, Any]) -> None:
     for item in result["providers"]:
         state = "ok" if item["ok"] else "warn"
         label = f" ({item['account_label']})" if item["account_label"] else ""
-        print(f"  {state}  {item['provider']}{label}: {item['state']}")
+        print(f"  {state}  {item['provider']}{label}: {state_label(item['state'])}")
         if item["repair_command"]:
             print(f"       next: {item['repair_command']}")
 
@@ -3029,7 +3182,9 @@ def render_status(result: dict[str, Any]) -> None:
 def render_provider_status(result: dict[str, Any]) -> None:
     state = "ok" if result["ok"] else "warn"
     label = f" ({result['account_label']})" if result["account_label"] else ""
-    print(f"mb connect status {result['provider']}{label}: {state} ({result['state']})")
+    print(
+        f"mb connect status {result['provider']}{label}: {state} ({state_label(result['state'])})"
+    )
     if result.get("summary"):
         print(f"summary: {result['summary']}")
     if result.get("repair_command"):
@@ -3040,7 +3195,7 @@ def render_doctor(result: dict[str, Any]) -> None:
     print(f"mb connect doctor  {result['repo']}")
     for check in result["checks"]:
         state = "ok" if check["ok"] else "warn"
-        print(f"  {state}  {check['name']}: {check['state']}")
+        print(f"  {state}  {check['name']}: {state_label(check['state'])}")
         if check["repair_command"]:
             print(f"       next: {check['repair_command']}")
 
@@ -3048,7 +3203,7 @@ def render_doctor(result: dict[str, Any]) -> None:
 def render_test_result(result: dict[str, Any]) -> None:
     status = result["status"]
     state = "ok" if result["ok"] else "warn"
-    print(f"mb connect test {result['provider']}: {state} ({status['state']})")
+    print(f"mb connect test {result['provider']}: {state} ({state_label(status['state'])})")
     validation = result.get("validation") or status.get("validation") or {}
     summary = validation.get("summary")
     if summary:
