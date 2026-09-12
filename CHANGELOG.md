@@ -17,9 +17,9 @@ This release makes `mb connect` say what it actually checked, and makes
 `mb update` work on every install mode. A credential Main Branch has not
 confirmed with the provider now reads as `stored, unverified` instead of
 `ready`, and an exit code from the connect surfaces means there is something
-you can act on. A `uv tool install` or `pip install` of Main Branch is
-offered the upgrade command that actually works, after an explicit yes,
-instead of being told its install mode is unsupported.
+you can act on. A `uv tool install` is offered its upgrade and runs
+it only after an explicit yes; a `pip install` is handed the command to run
+itself. Neither is told its install mode is unsupported.
 
 ### Fixed
 
@@ -38,11 +38,12 @@ instead of being told its install mode is unsupported.
   `uv`, and `mb update` offers to run `uv tool install mainbranch@latest` —
   the form that also clears an exact-version pin — after an explicit yes at an
   interactive prompt. Non-interactive runs (`--json`, `--check`, no terminal,
-  or a declined prompt) print the command and exit 0 instead of failing. Any
+  or a declined prompt) print the command and exit 0 instead of failing; a detected uv install whose
+  `uv` binary is missing is the one exception, and it still names the command. Any
   other wheel install gets `pip install --upgrade mainbranch` guidance instead
   of `unsupported install mode: wheel`. The command is carried in
-  `next_actions` in `--json`, not only in `errors`. These paths still refresh
-  agent surfaces, and report the version PyPI offers, so neither `mb update`
+  `next_actions` in `--json`, not only in `errors`. These paths (other than `--check`) still
+  refresh agent surfaces, and report the version PyPI offers, so neither `mb update`
   nor `/mb-update` can read as "already up to date" on an install that is
   behind. Read the new `upgrade_performed` key, not the exit code, to learn
   whether the package itself changed. pipx and clone behavior is unchanged.
