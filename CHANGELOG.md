@@ -11,6 +11,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-09-12
+
+This release makes `mb connect` say what it actually checked, and makes
+`mb update` work on every install mode. A credential Main Branch has not
+confirmed with the provider now reads as `stored, unverified` instead of
+`ready`, and an exit code from the connect surfaces means there is something
+you can act on. A `uv tool install` or `pip install` of Main Branch is
+offered the upgrade command that actually works, after an explicit yes,
+instead of being told its install mode is unsupported.
+
 ### Fixed
 
 - `mb connect test` no longer reports `ready` for a provider that has no
