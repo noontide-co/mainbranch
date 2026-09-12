@@ -276,11 +276,24 @@ Which install modes `mb update` upgrades for you:
 | Any other wheel install (for example `pip install mainbranch`) | Prints `pip install --upgrade mainbranch` for you to run in the environment that owns the install. Agent surfaces are refreshed either way. |
 
 `mb update` never replaces a uv tool install without an explicit yes. When it
-cannot upgrade the package automatically it still refreshes this repo's agent
-surfaces, exits 0, and carries the upgrade command in `next_actions`, so
-`mb update --json` and `mb update --check` are safe in automation and never run
-an installer. Read `upgrade_performed` rather than the exit code to learn
-whether the package itself changed.
+cannot upgrade the package automatically it still refreshes your agent
+surfaces, exits 0, and carries the upgrade command in `next_actions`. Read
+`upgrade_performed` rather than the exit code to learn whether the package
+itself changed.
+
+**`mb update` writes, on every install mode.** The surface refresh is not
+scoped to the business repo. It touches:
+
+- this repo's Claude Code wiring under `.claude/`;
+- this repo's `AGENTS.md`;
+- your per-user Codex skill bundle under `~/.codex/skills`.
+
+Those writes are conditional repairs, so a repo and a skill bundle that are
+already current see no change on disk. Use `--no-refresh-surfaces` to update
+the package without touching any of them, and `mb update --check` when you want
+the facts and no writes at all: `--check` never runs an installer and never
+refreshes a surface.
+
 Inside Claude Code, `/mb-update` calls `mb update` for this mechanical step and keeps
 ownership of the human-readable "what's new" summary. Codex users should open a
 fresh Codex thread after an update so refreshed global skills are loaded.

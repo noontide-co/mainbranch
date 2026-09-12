@@ -22,11 +22,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   other wheel install gets `pip install --upgrade mainbranch` guidance instead
   of `unsupported install mode: wheel`. The command is carried in
   `next_actions` in `--json`, not only in `errors`. These paths still refresh
-  this repo's Claude Code and Codex surfaces, and report the version PyPI
-  offers, so neither `mb update` nor `/mb-update` can read as "already up to
-  date" on an install that is behind. Read the new `upgrade_performed` key,
-  not the exit code, to learn whether the package itself changed. pipx and
-  clone behavior is unchanged.
+  agent surfaces, and report the version PyPI offers, so neither `mb update`
+  nor `/mb-update` can read as "already up to date" on an install that is
+  behind. Read the new `upgrade_performed` key, not the exit code, to learn
+  whether the package itself changed. pipx and clone behavior is unchanged.
+- `mb update` is a write command on every install mode. Unless you pass
+  `--no-refresh-surfaces`, it refreshes this repo's `.claude/` wiring and
+  `AGENTS.md` and your per-user Codex skills under `~/.codex/skills`, whether
+  or not the package itself was upgraded. This is what pipx and clone installs
+  have always done; uv and wheel installs now join it rather than erroring out.
+  `mb update --check` remains the read-only probe: no installer, no surface
+  writes.
 
 ## [0.5.2] - 2026-09-11
 
