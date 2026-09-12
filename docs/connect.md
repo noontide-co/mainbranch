@@ -80,9 +80,35 @@ false. Such a provider is not covered by the invariant and keeps reporting
 `ready` from its repo-local metadata — see below. Claiming `provider_verified`
 for it would be the same overclaim this behavior exists to remove.
 
-There is no repair command for `stored, unverified`. Rerunning `mb connect
-test` records the same answer, so confirm the credential in the provider's own
-dashboard, or let the first real workflow run be the check.
+There is no repair command for `stored, unverified` on a provider with no
+probe. Rerunning `mb connect test` records the same answer, so confirm the
+credential in the provider's own dashboard, or let the first real workflow run
+be the check.
+
+### What the exit code means
+
+An exit code from `mb connect test`, `mb connect status`, and `mb connect
+doctor` answers one question: **is there something you can act on?** All three
+surfaces answer it the same way, so there is no lenient command to run instead.
+
+| Situation | Exit |
+| --- | --- |
+| `unvalidated`, `invalid`, `missing_secret`, credential-backend failure | 1 |
+| `stored, unverified` on a provider **with** a probe | 1 — run `mb connect test` |
+| `stored, unverified` on a provider **with no** probe | 0 — nothing to run |
+| `ready` | 0 |
+
+The table covers provider readiness. `mb connect doctor` also checks GitHub
+context and credential-backend health, and either can still exit 1 on its own —
+both name a command to run.
+
+The probe-less case exits 0 on purpose. A red that nobody can clear gets
+ignored, and these providers can never turn green until a probe exists
+upstream. Only the process exit softens: the provider still reports
+`ok: false`, doctor still grades it `warn`, and the verification fields stay
+truthful. Each provider carries `has_probe` in `mb connect status --json`, and
+`mb connect doctor` names the connected providers that lack one so the gap is
+visible and fixable upstream.
 
 A provider that needs no credential at all, such as `hledger`, still reports
 `ready` from repo-local metadata, with `stored: false` and

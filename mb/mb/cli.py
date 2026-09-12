@@ -1596,7 +1596,13 @@ def connect_cmd(
             connect_mod.render_provider_status(result)
         else:
             connect_mod.render_status(result)
-        raise typer.Exit(0 if result["ok"] else 1)
+        if provider:
+            needs_action = connect_mod.provider_needs_action(result)
+        else:
+            needs_action = any(
+                connect_mod.provider_needs_action(item) for item in result["providers"]
+            )
+        raise typer.Exit(1 if needs_action else 0)
     if target == "doctor":
         try:
             result = connect_mod.doctor(repo)
@@ -1609,7 +1615,7 @@ def connect_cmd(
             typer.echo(json.dumps(result, indent=2))
         else:
             connect_mod.render_doctor(result)
-        raise typer.Exit(0 if result["ok"] else 1)
+        raise typer.Exit(1 if result["needs_action"] else 0)
     if target == "hygiene":
         result = connect_mod.scan_credential_hygiene(repo)
         if json_out:
@@ -1678,7 +1684,7 @@ def connect_cmd(
             typer.echo(json.dumps(result, indent=2))
         else:
             connect_mod.render_test_result(result)
-        raise typer.Exit(0 if result["ok"] else 1)
+        raise typer.Exit(1 if connect_mod.provider_needs_action(result["status"]) else 0)
     if provider:
         typer.echo(f"mb connect: unexpected extra argument {provider!r}", err=True)
         raise typer.Exit(2)

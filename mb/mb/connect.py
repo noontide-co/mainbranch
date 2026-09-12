@@ -61,6 +61,35 @@ BACKEND_FAILURE_STATE = "backend_unavailable"
 UNVERIFIED_STATE = "stored_unverified"
 
 
+# Providers with a real read-only probe in `_validate_with_provider`. Kept as
+# one named set because the exit-code contract turns on it: a provider with a
+# probe can be verified by running `mb connect test`, and one without cannot be
+# verified by anything the operator runs.
+# `test_probe_provider_set_matches_validate_with_provider` guards the drift.
+PROBE_PROVIDERS: frozenset[str] = frozenset({"cloudflare", "apify", "meta"})
+
+
+def has_provider_probe(provider_id: str) -> bool:
+    """Can Main Branch confirm this provider's credential by calling it?"""
+    return provider_id in PROBE_PROVIDERS
+
+
+def provider_needs_action(item: dict[str, Any]) -> bool:
+    """Is there something the operator can actually do about this provider?
+
+    Process exit codes answer this question rather than "is everything
+    verified". A red that nobody can clear gets ignored, and a probe-less
+    provider can never turn green until a probe exists upstream, so it warns
+    without failing. Everything else that is not `ok` is actionable: run the
+    test, replace the credential, or fix the backend.
+    """
+    if item.get("ok"):
+        return False
+    if item.get("state") == UNVERIFIED_STATE:
+        return has_provider_probe(str(item.get("provider") or ""))
+    return True
+
+
 def _provider_verified(validation: dict[str, Any]) -> bool:
     """Read the "a provider call confirmed this credential" fact, failing closed.
 
@@ -731,12 +760,25 @@ def _secret_ref(repo_id: str, provider_id: str, field: str) -> str:
 
 
 def _unverified_repair(provider: Provider) -> dict[str, str]:
-    """Guidance for a stored credential Main Branch cannot verify itself.
+    """Guidance for a stored credential no provider call has confirmed.
 
-    Deliberately has no ``repair_command``: rerunning `mb connect test` would
-    record the same unverified result, so pointing at it would be busywork
-    dressed as a fix.
+    Split on whether a probe exists, so guidance matches the exit code: a
+    provider that exits 1 always names something to run, and a provider that
+    exits 0 never sends the operator after a fix that cannot work.
     """
+    if has_provider_probe(provider.id):
+        # Reachable through metadata that recorded readiness without recording
+        # a provider call. Running the probe is a real next step.
+        return {
+            "summary": (
+                f"{provider.name} has a stored credential whose readiness was recorded "
+                "without a provider call."
+            ),
+            "repair": f"Run `mb connect test {provider.id}` to confirm it with the provider.",
+            "repair_command": f"mb connect test {provider.id}",
+        }
+    # No probe exists, so rerunning `mb connect test` would record the same
+    # unverified result. Pointing at it would be busywork dressed as a fix.
     return {
         "summary": (
             f"{provider.name} has a stored credential, but Main Branch has no "
@@ -779,6 +821,11 @@ def _repair(
             "repair": validation_repair,
             "repair_command": validation_repair_command,
         }
+    if state == UNVERIFIED_STATE:
+        # Ahead of the Meta special-case: `_meta_repair` has no answer for this
+        # state, and `_unverified_repair` is already probe-aware, so Meta gets
+        # "run `mb connect test meta`" rather than a generic fallback.
+        return _unverified_repair(provider)
     if provider.id == "meta":
         return _meta_repair(state, missing)
     missing_fields = ", ".join(missing or provider.required_secrets)
@@ -809,8 +856,6 @@ def _repair(
             "repair": f"Run `mb connect test {provider.id}`.",
             "repair_command": f"mb connect test {provider.id}",
         }
-    if state == UNVERIFIED_STATE:
-        return _unverified_repair(provider)
     if state == "invalid":
         return {
             "summary": f"{provider.name} validation failed without exposing the provider response.",
@@ -1259,6 +1304,7 @@ def _unhydrated_status(
         "ok": ok,
         "state": state,
         "stored": bool(provider.required_secrets) and not missing and not backend_reason,
+        "has_probe": has_provider_probe(provider.id),
         "provider_verified": _provider_verified(stored_validation),
         "verified_at": _verified_at(stored_validation),
         "summary": repair["summary"],
@@ -1399,6 +1445,7 @@ def status_provider(
             "ok": ok,
             "state": state,
             "stored": meta_stored,
+            "has_probe": has_provider_probe(provider.id),
             "provider_verified": _provider_verified(meta_validation),
             "verified_at": _verified_at(meta_validation),
             "summary": repair["summary"],
@@ -1444,6 +1491,7 @@ def status_provider(
             "ok": False,
             "state": "not_connected",
             "stored": False,
+            "has_probe": has_provider_probe(provider.id),
             "provider_verified": False,
             "verified_at": "",
             "summary": repair["summary"],
@@ -1515,6 +1563,7 @@ def status_provider(
         "ok": ok,
         "state": state,
         "stored": stored,
+        "has_probe": has_provider_probe(provider.id),
         "provider_verified": _provider_verified(validation),
         "verified_at": _verified_at(validation),
         "summary": repair["summary"],
@@ -2381,6 +2430,7 @@ def status_all(
             "needs_repair": len(broken),
             "unvalidated": len(unvalidated),
             "unverified": len(unverified),
+            "actionable": len([item for item in connected if provider_needs_action(item)]),
         },
     }
 
@@ -2754,6 +2804,31 @@ def _configured_backend_health(status: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def _probe_gap(status: dict[str, Any]) -> dict[str, Any]:
+    """Connected providers Main Branch has no way to verify.
+
+    Surfaced so a permanent `stored, unverified` reads as a known upstream gap
+    that someone can close by writing a probe, rather than as a mystery the
+    operator keeps trying to fix locally.
+    """
+    providers = sorted(
+        str(item.get("provider") or "")
+        for item in status.get("providers") or []
+        if item.get("connected") and item.get("secrets") and not item.get("has_probe")
+    )
+    if not providers:
+        return {"providers": [], "summary": "", "safe_to_share": True}
+    return {
+        "providers": providers,
+        "summary": (
+            f"{len(providers)} connected provider(s) have no automated probe "
+            f"({', '.join(providers[:3])}); Main Branch cannot verify them until one "
+            "exists upstream, so they warn without failing."
+        ),
+        "safe_to_share": True,
+    }
+
+
 def doctor(repo: str | Path = ".") -> dict[str, Any]:
     github = github_context(repo)
     status = status_all(repo, github=github)
@@ -2799,8 +2874,15 @@ def doctor(repo: str | Path = ".") -> dict[str, Any]:
         }
         for item in status["providers"]
     ]
+    # `ok` stays truthful: it is false whenever anything is unverified. The
+    # exit code is a separate question — see `provider_needs_action`.
+    needs_action = any(
+        not check["ok"] for check in checks if not str(check["name"]).startswith("provider:")
+    ) or any(provider_needs_action(item) for item in status["providers"])
     return {
         "ok": all(check["ok"] for check in checks),
+        "needs_action": needs_action,
+        "probe_gap": _probe_gap(status),
         "repo": status["repo"],
         "checks": checks,
         "integrations": status,
@@ -3198,6 +3280,10 @@ def render_doctor(result: dict[str, Any]) -> None:
         print(f"  {state}  {check['name']}: {state_label(check['state'])}")
         if check["repair_command"]:
             print(f"       next: {check['repair_command']}")
+    probe_gap = result.get("probe_gap") or {}
+    if probe_gap.get("providers"):
+        print(f"  note  no provider probe: {', '.join(probe_gap['providers'])}")
+        print(f"       {probe_gap['summary']}")
 
 
 def render_test_result(result: dict[str, Any]) -> None:
