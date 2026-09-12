@@ -21,8 +21,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   or a declined prompt) print the command and exit 0 instead of failing. Any
   other wheel install gets `pip install --upgrade mainbranch` guidance instead
   of `unsupported install mode: wheel`. The command is carried in
-  `next_actions` in `--json`, not only in `errors`. pipx and clone behavior is
-  unchanged.
+  `next_actions` in `--json`, not only in `errors`. These paths still refresh
+  this repo's Claude Code and Codex surfaces, and report the version PyPI
+  offers, so neither `mb update` nor `/mb-update` can read as "already up to
+  date" on an install that is behind. Read the new `upgrade_performed` key,
+  not the exit code, to learn whether the package itself changed. pipx and
+  clone behavior is unchanged.
 
 ## [0.5.2] - 2026-09-11
 
