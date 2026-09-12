@@ -1599,8 +1599,13 @@ def connect_cmd(
         if provider:
             needs_action = connect_mod.provider_needs_action(result)
         else:
+            # Scoped to connected providers: with `--all`, the list includes
+            # every built-in provider the business never connected, and a
+            # provider nobody asked for is not something to act on.
             needs_action = any(
-                connect_mod.provider_needs_action(item) for item in result["providers"]
+                connect_mod.provider_needs_action(item)
+                for item in result["providers"]
+                if item.get("connected")
             )
         raise typer.Exit(1 if needs_action else 0)
     if target == "doctor":
