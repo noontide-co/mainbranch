@@ -942,15 +942,21 @@ def _under(path: Path, parent: Path) -> bool:
     return True
 
 
-def looks_like_uv_tool_install(root: Path | None = None) -> bool:
+def looks_like_uv_tool_install(
+    root: Path | None = None,
+    *,
+    tool_roots: list[Path] | None = None,
+) -> bool:
     """True when this install lives inside a ``uv tool install`` environment.
 
     A uv tool install puts both the engine payload and the interpreter under
     ``<uv tool dir>/<package>/``, so either path is enough to identify it (#963).
+    Pass ``tool_roots`` to test against a tool directory reported by uv itself
+    instead of the documented defaults.
     """
     candidates = [root if root is not None else engine_root(), Path(sys.executable)]
     paths = [candidate for candidate in candidates if candidate is not None]
-    for tool_root in uv_tool_roots():
+    for tool_root in uv_tool_roots() if tool_roots is None else tool_roots:
         package_root = tool_root / PACKAGE_NAME
         if any(_under(path, package_root) for path in paths):
             return True

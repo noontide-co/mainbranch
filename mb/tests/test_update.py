@@ -89,16 +89,16 @@ def plugin_rail_wired(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-# Captured before the autouse stub below replaces it, so the parser itself can
+# Captured before the autouse stub below replaces it, so the probe itself can
 # still be unit tested.
-_REAL_UV_TOOL_LIST_NAMES_PACKAGE = update_mod._uv_tool_list_names_package
+_REAL_UV_TOOL_DIR_HOLDS_THIS_INSTALL = update_mod._uv_tool_dir_holds_this_install
 
 
 @pytest.fixture(autouse=True)
-def uv_tool_list_quiet(monkeypatch: pytest.MonkeyPatch) -> None:
-    # `mb update` consults `uv tool list` when path detection is inconclusive.
-    # Tests must never read the developer's or CI runner's real uv tools.
-    monkeypatch.setattr(update_mod, "_uv_tool_list_names_package", lambda: False)
+def uv_tool_dir_quiet(monkeypatch: pytest.MonkeyPatch) -> None:
+    # `mb update` asks uv for its tool directory when path detection is
+    # inconclusive. Tests must never read the developer's or CI runner's uv.
+    monkeypatch.setattr(update_mod, "_uv_tool_dir_holds_this_install", lambda: False)
 
 
 def _completed(
@@ -1005,11 +1005,11 @@ def test_update_uv_missing_binary_returns_error(monkeypatch: Any, tmp_path: Path
     assert "uv tool install mainbranch@latest" in result["next_actions"]
 
 
-def test_update_uses_uv_tool_list_when_path_detection_is_inconclusive(
+def test_update_uses_uv_tool_dir_when_path_detection_is_inconclusive(
     monkeypatch: Any, tmp_path: Path
 ) -> None:
     monkeypatch.setattr(update_mod, "install_mode", lambda: "wheel")
-    monkeypatch.setattr(update_mod, "_uv_tool_list_names_package", lambda: True)
+    monkeypatch.setattr(update_mod, "_uv_tool_dir_holds_this_install", lambda: True)
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
     monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
 
@@ -1019,28 +1019,41 @@ def test_update_uses_uv_tool_list_when_path_detection_is_inconclusive(
     assert "uv tool install mainbranch@latest" in result["next_actions"]
 
 
-def test_uv_tool_list_reads_package_lines_not_entry_points(monkeypatch: Any) -> None:
+def _uv_tool_dir_probe(monkeypatch: Any, tool_root: Path, engine: Path) -> bool:
     monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(
         update_mod,
         "_run_command",
-        lambda args, *, cwd=None, timeout=0.0: _completed(
-            args, stdout="ruff v0.16.7\n- ruff\nmainbranch v0.5.2\n- mb\n"
-        ),
+        lambda args, *, cwd=None, timeout=0.0: _completed(args, stdout=f"{tool_root}\n"),
     )
+    monkeypatch.setattr(update_mod, "engine_root", lambda: engine)
+    return _REAL_UV_TOOL_DIR_HOLDS_THIS_INSTALL()
 
-    assert _REAL_UV_TOOL_LIST_NAMES_PACKAGE() is True
+
+def test_uv_tool_dir_matches_an_install_under_the_reported_root(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    tool_root = tmp_path / "relocated" / "tools"
+    engine = tool_root / "mainbranch" / "lib" / "site-packages" / "mb" / "_engine"
+
+    assert _uv_tool_dir_probe(monkeypatch, tool_root, engine) is True
 
 
-def test_uv_tool_list_ignores_unrelated_tools(monkeypatch: Any) -> None:
-    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
-    monkeypatch.setattr(
-        update_mod,
-        "_run_command",
-        lambda args, *, cwd=None, timeout=0.0: _completed(args, stdout="ruff v0.16.7\n- ruff\n"),
-    )
+def test_uv_tool_dir_does_not_claim_an_unrelated_venv(monkeypatch: Any, tmp_path: Path) -> None:
+    # The regression that `uv tool list` could not catch: this machine has a uv
+    # tool install of Main Branch, but the running install is a plain
+    # `pip install mainbranch` virtualenv somewhere else entirely.
+    tool_root = tmp_path / "relocated" / "tools"
+    (tool_root / "mainbranch").mkdir(parents=True)
+    engine = tmp_path / "project" / ".venv" / "lib" / "site-packages" / "mb" / "_engine"
 
-    assert _REAL_UV_TOOL_LIST_NAMES_PACKAGE() is False
+    assert _uv_tool_dir_probe(monkeypatch, tool_root, engine) is False
+
+
+def test_uv_tool_dir_probe_is_quiet_when_uv_is_absent(monkeypatch: Any) -> None:
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: None)
+
+    assert _REAL_UV_TOOL_DIR_HOLDS_THIS_INSTALL() is False
 
 
 def test_update_pipx_mode_still_upgrades_automatically(monkeypatch: Any, tmp_path: Path) -> None:

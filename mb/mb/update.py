@@ -22,6 +22,7 @@ from mb.engine import (
     claude_mainbranch_plugin_status,
     engine_root,
     install_mode,
+    looks_like_uv_tool_install,
     plugin_wiring_status,
 )
 from mb.freshness import (
@@ -35,8 +36,8 @@ CLONE_UPDATE_COMMAND = ["git", "pull", "--ff-only", "origin", "main"]
 # left behind by an earlier `uv tool install mainbranch==X` (#963).
 UV_UPDATE_COMMAND = ["uv", "tool", "install", f"{PACKAGE_NAME}@latest"]
 UV_UPDATE_COMMAND_TEXT = "uv tool install mainbranch@latest"
-UV_TOOL_LIST_COMMAND = ["uv", "tool", "list"]
-UV_TOOL_LIST_TIMEOUT_SECONDS = 10.0
+UV_TOOL_DIR_COMMAND = ["uv", "tool", "dir"]
+UV_TOOL_DIR_TIMEOUT_SECONDS = 10.0
 PIP_UPDATE_COMMAND_TEXT = "pip install --upgrade mainbranch"
 GITHUB_RELEASE_API_URL_TEMPLATE = (
     "https://api.github.com/repos/noontide-co/mainbranch/releases/tags/oe-v{version}"
@@ -132,33 +133,35 @@ def _is_interactive_terminal() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def _uv_tool_list_names_package() -> bool:
-    """True when `uv tool list` reports Main Branch as an installed uv tool.
+def _uv_tool_dir_holds_this_install() -> bool:
+    """True when uv's own tool directory contains the running install.
 
-    Path detection in `install_mode()` covers the documented uv tool roots.
-    This is the fallback for an operator whose tool root is somewhere else,
-    and it runs only on the `mb update` path so diagnostics stay subprocess-free.
+    `install_mode()` checks the documented uv tool roots by path. An operator
+    can move that root, so ask uv where it actually is — but still require that
+    *this* engine root or interpreter lives under it.
+
+    `uv tool list` cannot answer that question. It names installed tools without
+    paths, so on a machine that has a uv tool install of Main Branch it also
+    matches an unrelated `pip install mainbranch` virtualenv, and would hand
+    that operator a command that upgrades a different install (#963).
+
+    Runs only on the `mb update` path, so diagnostics stay subprocess-free.
     """
     if shutil.which("uv") is None:
         return False
-    listed = _run_command(UV_TOOL_LIST_COMMAND, timeout=UV_TOOL_LIST_TIMEOUT_SECONDS)
-    if listed.returncode != 0:
+    located = _run_command(UV_TOOL_DIR_COMMAND, timeout=UV_TOOL_DIR_TIMEOUT_SECONDS)
+    if located.returncode != 0:
         return False
-    for line in listed.stdout.splitlines():
-        entry = line.strip()
-        # Entry-point lines are indented and prefixed with "- "; package lines
-        # read "mainbranch v0.5.2".
-        if not entry or entry.startswith("-"):
-            continue
-        if entry.split()[0] == PACKAGE_NAME:
-            return True
-    return False
+    tool_root = located.stdout.strip()
+    if not tool_root:
+        return False
+    return looks_like_uv_tool_install(engine_root(), tool_roots=[Path(tool_root)])
 
 
 def _resolve_install_mode() -> str:
-    """Install mode for update decisions, with the uv tool-list fallback."""
+    """Install mode for update decisions, asking uv for its real tool root."""
     mode = install_mode()
-    if mode == "wheel" and _uv_tool_list_names_package():
+    if mode == "wheel" and _uv_tool_dir_holds_this_install():
         return "uv"
     return mode
 
