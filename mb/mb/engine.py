@@ -22,6 +22,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from datetime import datetime, timezone
 from importlib import resources
 from pathlib import Path
@@ -911,6 +912,64 @@ def link_status(repo: str | Path) -> dict[str, Any]:
     }
 
 
+PACKAGE_NAME = "mainbranch"
+
+
+def uv_tool_roots() -> list[Path]:
+    """Directories uv keeps tool virtualenvs in, most specific first.
+
+    uv resolves its tool directory from ``UV_TOOL_DIR``, then
+    ``$XDG_DATA_HOME/uv/tools``, then ``~/.local/share/uv/tools``. Checking all
+    three keeps detection correct for operators who relocate the tool root
+    without paying for a ``uv tool dir`` subprocess on every diagnostic call.
+    """
+    roots: list[Path] = []
+    tool_dir = os.environ.get("UV_TOOL_DIR", "").strip()
+    if tool_dir:
+        roots.append(Path(tool_dir).expanduser())
+    data_home = os.environ.get("XDG_DATA_HOME", "").strip()
+    if data_home:
+        roots.append(Path(data_home).expanduser() / "uv" / "tools")
+    roots.append(Path.home() / ".local" / "share" / "uv" / "tools")
+    return roots
+
+
+def _under(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except (OSError, ValueError):
+        return False
+    return True
+
+
+def looks_like_uv_tool_install(
+    root: Path | None = None,
+    *,
+    tool_roots: list[Path] | None = None,
+) -> bool:
+    """True when this install lives inside a ``uv tool install`` environment.
+
+    The engine payload under ``<uv tool dir>/<package>/`` is the signal that
+    carries detection (#963).
+
+    ``sys.executable`` is checked too, but it only fires on Windows, where venv
+    interpreters are copies. On macOS and Linux a uv tool venv's ``bin/python``
+    is a symlink out to the uv-managed base interpreter under ``uv/python/``,
+    and containment is checked after ``.resolve()``, so that candidate cannot
+    match there — and cannot produce a false positive either.
+
+    Pass ``tool_roots`` to test against a tool directory reported by uv itself
+    instead of the documented defaults.
+    """
+    candidates = [root if root is not None else engine_root(), Path(sys.executable)]
+    paths = [candidate for candidate in candidates if candidate is not None]
+    for tool_root in uv_tool_roots() if tool_roots is None else tool_roots:
+        package_root = tool_root / PACKAGE_NAME
+        if any(_under(path, package_root) for path in paths):
+            return True
+    return False
+
+
 def install_mode() -> str:
     """Best-effort install mode label for diagnostics and skill prose."""
     root = engine_root()
@@ -922,6 +981,8 @@ def install_mode() -> str:
         prefix = Path(pipx_home).expanduser() if pipx_home else None
         if "pipx" in root_text or (prefix is not None and str(prefix) in root_text):
             return "pipx"
+        if looks_like_uv_tool_install(root):
+            return "uv"
         return "wheel"
     if (root / ".git").exists():
         return "clone"

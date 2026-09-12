@@ -2572,8 +2572,19 @@ def update_cmd(
     ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
-    """Refresh Main Branch according to its install mode."""
-    result = update_mod.run(repo=repo, check=check, refresh_surfaces=refresh_surfaces)
+    """Refresh Main Branch according to its install mode.
+
+    Upgraded automatically: pipx installs and git clones. A uv tool install is
+    upgraded only after you answer yes to an interactive prompt. Any other wheel
+    install (for example `pip install mainbranch`) prints the upgrade command to
+    run yourself. `--check` and `--json` never run an installer.
+    """
+    result = update_mod.run(
+        repo=repo,
+        check=check,
+        refresh_surfaces=refresh_surfaces,
+        interactive=False if json_out else None,
+    )
     if json_out:
         typer.echo(json.dumps(result, indent=2))
     else:

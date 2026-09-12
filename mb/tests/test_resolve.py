@@ -58,3 +58,84 @@ def test_install_mode_does_not_treat_empty_pipx_home_as_prefix(tmp_path: Path, m
     monkeypatch.setattr(engine_mod, "source_engine_root", lambda: None)
 
     assert engine_mod.install_mode() == "wheel"
+
+
+def _uv_engine_root(tools: Path) -> Path:
+    return tools / "mainbranch" / "lib" / "python3.12" / "site-packages" / "mb" / "_engine"
+
+
+def _isolate_uv_tool_roots(tmp_path: Path, monkeypatch) -> Path:
+    """Point every uv tool root lookup at a fake tools dir under tmp_path."""
+    tools = tmp_path / "uv" / "tools"
+    monkeypatch.delenv("PIPX_HOME", raising=False)
+    monkeypatch.delenv("UV_TOOL_DIR", raising=False)
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setattr("mb.engine.sys.executable", str(tmp_path / "elsewhere" / "python3"))
+    monkeypatch.setattr(engine_mod, "source_engine_root", lambda: None)
+    return tools
+
+
+def test_install_mode_detects_uv_tool_install_from_uv_tool_dir(tmp_path: Path, monkeypatch) -> None:
+    tools = _isolate_uv_tool_roots(tmp_path, monkeypatch)
+    monkeypatch.setenv("UV_TOOL_DIR", str(tools))
+    root = _uv_engine_root(tools)
+    monkeypatch.setattr(engine_mod, "packaged_engine_root", lambda: root)
+
+    assert engine_mod.install_mode() == "uv"
+
+
+def test_install_mode_detects_uv_tool_install_from_xdg_data_home(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _isolate_uv_tool_roots(tmp_path, monkeypatch)
+    data_home = tmp_path / "data"
+    monkeypatch.setenv("XDG_DATA_HOME", str(data_home))
+    root = _uv_engine_root(data_home / "uv" / "tools")
+    monkeypatch.setattr(engine_mod, "packaged_engine_root", lambda: root)
+
+    assert engine_mod.install_mode() == "uv"
+
+
+def test_install_mode_detects_uv_tool_install_from_default_home_root(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _isolate_uv_tool_roots(tmp_path, monkeypatch)
+    tools = tmp_path / "home" / ".local" / "share" / "uv" / "tools"
+    root = _uv_engine_root(tools)
+    monkeypatch.setattr(engine_mod, "packaged_engine_root", lambda: root)
+
+    assert engine_mod.install_mode() == "uv"
+
+
+def test_install_mode_detects_uv_tool_install_from_copied_interpreter(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # Models the Windows layout, where a venv interpreter is a copy inside the
+    # tool directory. On macOS and Linux `bin/python` symlinks out to the
+    # uv-managed base interpreter, so this candidate cannot fire there and the
+    # engine-root check carries detection.
+    tools = _isolate_uv_tool_roots(tmp_path, monkeypatch)
+    monkeypatch.setenv("UV_TOOL_DIR", str(tools))
+    monkeypatch.setattr("mb.engine.sys.executable", str(tools / "mainbranch" / "bin" / "python3"))
+    monkeypatch.setattr(engine_mod, "packaged_engine_root", lambda: tmp_path / "elsewhere" / "mb")
+
+    assert engine_mod.install_mode() == "uv"
+
+
+def test_install_mode_keeps_plain_wheel_outside_uv_tool_roots(tmp_path: Path, monkeypatch) -> None:
+    tools = _isolate_uv_tool_roots(tmp_path, monkeypatch)
+    monkeypatch.setenv("UV_TOOL_DIR", str(tools))
+    root = tmp_path / "project" / ".venv" / "lib" / "site-packages" / "mb" / "_engine"
+    monkeypatch.setattr(engine_mod, "packaged_engine_root", lambda: root)
+
+    assert engine_mod.install_mode() == "wheel"
+
+
+def test_install_mode_does_not_claim_uv_for_another_uv_tool(tmp_path: Path, monkeypatch) -> None:
+    tools = _isolate_uv_tool_roots(tmp_path, monkeypatch)
+    monkeypatch.setenv("UV_TOOL_DIR", str(tools))
+    root = tools / "other-tool" / "lib" / "site-packages" / "mb" / "_engine"
+    monkeypatch.setattr(engine_mod, "packaged_engine_root", lambda: root)
+
+    assert engine_mod.install_mode() == "wheel"
