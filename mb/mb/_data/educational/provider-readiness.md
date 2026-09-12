@@ -116,8 +116,12 @@ read smoke is not approval to mutate the account.
 - `auth_failed` and `read_smoke_failed` mean auth or read-only smoke failed
   without exposing raw provider output.
 - `invalid` means validation failed and the credential should be replaced.
-- `ready` means a provider call actually confirmed the credential. Providers
-  with no probe never reach it; they report `stored_unverified` instead.
+- `ready` means the safest available check for that provider passed. For a
+  provider that requires a credential, that means a provider call actually
+  confirmed it, and a provider with no probe never reaches `ready` — it reports
+  `stored_unverified` instead. A provider that requires no credential, such as
+  `hledger`, sends nothing to a provider, so its `ready` is about repo-local
+  metadata and its `provider_verified` stays `false`.
 
 Secrets stay outside the business repo. `.mb/connect.yaml` stores only safe
 metadata, labels, secret references, and last-check facts, and is gitignored by
