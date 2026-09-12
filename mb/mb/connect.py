@@ -2705,14 +2705,25 @@ def doctor_check(repo: str | Path = ".", *, status: dict[str, Any] | None = None
         }
     if summary.get("unverified"):
         unverified = [item for item in status["providers"] if item["state"] == UNVERIFIED_STATE]
-        names = ", ".join(item["provider"] for item in unverified[:3])
-        first = unverified[0] if unverified else {}
+        # Split on whether a probe exists, so the detail never contradicts the
+        # repair line sitting next to it. Providers that can be verified lead,
+        # because those are the ones with something to run.
+        testable = [item for item in unverified if item.get("has_probe")]
+        untestable = [item for item in unverified if not item.get("has_probe")]
+        first = (testable or unverified)[0]
+        parts = []
+        if testable:
+            names = ", ".join(item["provider"] for item in testable[:3])
+            parts.append(f"{len(testable)} never confirmed with the provider ({names})")
+        if untestable:
+            names = ", ".join(item["provider"] for item in untestable[:3])
+            parts.append(f"{len(untestable)} Main Branch cannot verify ({names})")
         return {
             "name": "integration-credentials",
             "ok": False,
             "detail": (
                 f"{summary['unverified']} of {summary['configured']} connected provider(s) "
-                f"have a stored credential Main Branch cannot verify ({names})."
+                f"have an unverified credential: {'; '.join(parts)}."
             ),
             "severity": "warn",
             "repair": str(first.get("repair") or ""),
