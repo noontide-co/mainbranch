@@ -32,7 +32,7 @@ Handle the JSON result:
 
 | Result | What to say |
 |---|---|
-| `"ok": true`, `"upgrade_performed": false`, `manual_update_command` set | Check this row first. Main Branch did **not** upgrade itself: this install mode is not one the CLI upgrades for you. Say so, read `manual_update_command` out verbatim as the command for the user to run themselves, and show the warning. Do not say "already up to date". Skill links were still refreshed. |
+| `manual_update_command` is set (whatever `"ok"` says) | **Check this row first.** Main Branch did **not** upgrade itself: this install mode is not one the CLI upgrades for you. Say so, read `manual_update_command` out verbatim as the command for the user to run themselves, and show the warning. Never say "already up to date" or "Updated Main Branch". Skill links were still refreshed. If `"ok"` is also false that refresh failed: show the first error too, but still give them the command — do not fall through to the repair copy below, which assumes a pipx install. |
 | `"ok": true`, `old_version != new_version` | "Updated Main Branch and refreshed skill links." |
 | `"ok": true`, `old_version == new_version` | "Main Branch is already up to date." |
 | `"ok": false` | Show the first error and the repair copy below. |

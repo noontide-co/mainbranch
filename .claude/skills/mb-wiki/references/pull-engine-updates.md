@@ -16,6 +16,7 @@ mb update --repo . --json 2>&1
 
 | Result | What to say |
 |--------|-------------|
+| `manual_update_command` is set (whatever `"ok"` says) | **Check this row first.** Main Branch did **not** upgrade itself — this install mode is not one the CLI upgrades for you. Say so, read `manual_update_command` out verbatim as the command for the user to run themselves, and never say "Updated Main Branch" or "already up to date". Skill links were still refreshed. If `"ok"` is also false that refresh failed: show the error too, but still give them the command. |
 | JSON `"ok": true`, old_version == new_version | Say nothing |
 | JSON `"ok": true`, old_version != new_version | "Updated Main Branch and refreshed skill links." |
 | Invalid JSON or missing engine root | "Couldn't find Main Branch. Run `mb skill link --repo .`, then restart Claude." |

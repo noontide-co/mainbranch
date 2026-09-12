@@ -590,3 +590,32 @@ def test_skill_validate_cli_json_and_exit_codes(
     payload = json.loads(result.stdout)
     assert payload["mode"] == "all"
     assert payload["summary"]["failed"] == 1
+
+
+def test_every_copy_of_the_update_result_table_handles_a_manual_upgrade() -> None:
+    """`mb update` can report a manual path on every uv and wheel install.
+
+    Seven bundled files duplicate the `mb update --json` result table. When
+    `new_version` reports what PyPI offers, a copy that only knows the
+    `old_version != new_version` row tells the operator "Updated Main Branch"
+    on a run that upgraded nothing (#963). Keyed on `manual_update_command`
+    rather than `ok` so a failed surface refresh cannot hide the command.
+
+    Collapsing these copies into one shared reference is tracked separately;
+    until then this keeps them from drifting apart again.
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    claimed_update = "Updated Main Branch and refreshed skill links."
+    copies = sorted(
+        path
+        for path in repo_root.joinpath(".claude").rglob("*.md")
+        if claimed_update in path.read_text(encoding="utf-8")
+    )
+
+    assert len(copies) == 7, [str(path.relative_to(repo_root)) for path in copies]
+    missing = [
+        str(path.relative_to(repo_root))
+        for path in copies
+        if "manual_update_command" not in path.read_text(encoding="utf-8")
+    ]
+    assert missing == [], missing
