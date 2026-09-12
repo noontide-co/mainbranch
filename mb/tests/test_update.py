@@ -89,6 +89,18 @@ def plugin_rail_wired(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
+# Captured before the autouse stub below replaces it, so the parser itself can
+# still be unit tested.
+_REAL_UV_TOOL_LIST_NAMES_PACKAGE = update_mod._uv_tool_list_names_package
+
+
+@pytest.fixture(autouse=True)
+def uv_tool_list_quiet(monkeypatch: pytest.MonkeyPatch) -> None:
+    # `mb update` consults `uv tool list` when path detection is inconclusive.
+    # Tests must never read the developer's or CI runner's real uv tools.
+    monkeypatch.setattr(update_mod, "_uv_tool_list_names_package", lambda: False)
+
+
 def _completed(
     args: list[str],
     *,
@@ -763,15 +775,299 @@ def test_update_check_current_release_still_exposes_notes_url(
 
 
 def test_update_rejects_unknown_install_mode(monkeypatch: Any, tmp_path: Path) -> None:
-    monkeypatch.setattr(update_mod, "install_mode", lambda: "wheel")
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "source")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
 
     result = update_mod.run(repo=tmp_path / "biz")
 
     assert result["ok"] is False
-    assert result["mode"] == "wheel"
+    assert result["mode"] == "source"
     assert result["new_version"] == result["old_version"]
     assert "unsupported install mode" in result["errors"][0]
+    assert update_mod.PIP_UPDATE_COMMAND_TEXT in result["next_actions"]
+
+
+def test_update_wheel_install_gets_pip_guidance_instead_of_refusal(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        return _completed(args)
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "wheel")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(repo=tmp_path / "biz")
+
+    assert result["ok"] is True
+    assert result["mode"] == "wheel"
+    assert result["errors"] == []
+    assert result["upgrade_performed"] is False
+    assert result["manual_update_command"] == "pip install --upgrade mainbranch"
+    assert "pip install --upgrade mainbranch" in result["next_actions"]
+    assert calls == []
+
+
+def test_update_wheel_install_json_exits_zero_with_next_action(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "wheel")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+
+    invoked = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--json"])
+
+    assert invoked.exit_code == 0
+    payload = json.loads(invoked.stdout)
+    assert payload["errors"] == []
+    assert "pip install --upgrade mainbranch" in payload["next_actions"]
+
+
+def test_update_uv_check_names_command_without_running_installer(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        return _completed(args)
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
+    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start"])
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    assert result["ok"] is True
+    assert result["mode"] == "uv"
+    assert result["new_version"] == "9.9.9"
+    assert "uv tool install mainbranch@latest" in result["next_actions"]
+    assert any("would run `uv tool install mainbranch@latest`" in a for a in result["actions"])
+    assert calls == []
+
+
+def test_update_uv_check_json_exits_zero_with_next_action(monkeypatch: Any, tmp_path: Path) -> None:
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
+
+    invoked = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--check", "--json"])
+
+    assert invoked.exit_code == 0
+    payload = json.loads(invoked.stdout)
+    assert payload["mode"] == "uv"
+    assert payload["errors"] == []
+    assert "uv tool install mainbranch@latest" in payload["next_actions"]
+
+
+def test_update_uv_non_interactive_prints_command_and_exits_zero(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        return _completed(args)
+
+    def refuse_confirm(command: str, root: Path | None) -> bool:
+        raise AssertionError("non-interactive update must never prompt")
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "shutil", shutil)
+    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(repo=tmp_path / "biz", interactive=False, confirm=refuse_confirm)
+
+    assert result["ok"] is True
+    assert result["upgrade_performed"] is False
+    assert "uv tool install mainbranch@latest" in result["next_actions"]
+    assert calls == []
+
+
+def test_update_uv_json_never_prompts(monkeypatch: Any, tmp_path: Path) -> None:
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+
+    def explode(*args: Any, **kwargs: Any) -> None:
+        raise AssertionError("`--json` must never run a command or prompt")
+
+    monkeypatch.setattr(update_mod, "_run_command", explode)
+    monkeypatch.setattr(update_mod, "_confirm_uv_update", explode)
+
+    invoked = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--json"])
+
+    assert invoked.exit_code == 0
+    payload = json.loads(invoked.stdout)
+    assert payload["upgrade_performed"] is False
+    assert "uv tool install mainbranch@latest" in payload["next_actions"]
+
+
+def test_update_uv_declined_prompt_leaves_install_alone(monkeypatch: Any, tmp_path: Path) -> None:
+    calls: list[list[str]] = []
+    asked: list[str] = []
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        return _completed(args)
+
+    def decline(command: str, root: Path | None) -> bool:
+        asked.append(command)
+        return False
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(repo=tmp_path / "biz", interactive=True, confirm=decline)
+
+    assert asked == ["uv tool install mainbranch@latest"]
+    assert result["ok"] is True
+    assert result["upgrade_performed"] is False
+    assert result["new_version"] == result["old_version"]
+    assert "uv tool install mainbranch@latest" in result["next_actions"]
+    assert calls == []
+
+
+def test_update_uv_accepted_prompt_runs_install_then_relinks(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        if args[:3] == ["mb", "skill", "link"]:
+            return _completed(args, stdout=json.dumps({"ok": True, "linked": ["mb-start"]}))
+        if args[:3] == ["mb", "doctor", "repair"]:
+            return _codex_repair_completed(args)
+        if args[1:] == ["--version"]:
+            return _completed(args, stdout="mb 9.9.9\n")
+        return _completed(args)
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(
+        repo=tmp_path / "biz",
+        interactive=True,
+        confirm=lambda command, root: True,
+    )
+
+    assert result["ok"] is True
+    assert result["upgrade_performed"] is True
+    assert result["new_version"] == "9.9.9"
+    assert ["uv", "tool", "install", "mainbranch@latest"] in calls
+    assert result["skills_relinked_count"] == 1
+    assert any("ran `uv tool install mainbranch@latest`" in a for a in result["actions"])
+
+
+def test_update_uv_install_failure_surfaces_command(monkeypatch: Any, tmp_path: Path) -> None:
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        return _completed(args, returncode=1, stderr="network unreachable")
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(
+        repo=tmp_path / "biz",
+        interactive=True,
+        confirm=lambda command, root: True,
+    )
+
+    assert result["ok"] is False
+    assert result["upgrade_performed"] is False
+    assert "network unreachable" in result["errors"][0]
+    assert "uv tool install mainbranch@latest" in result["next_actions"]
+
+
+def test_update_uv_missing_binary_returns_error(monkeypatch: Any, tmp_path: Path) -> None:
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod.shutil, "which", lambda name: None)
+
+    result = update_mod.run(
+        repo=tmp_path / "biz",
+        interactive=True,
+        confirm=lambda command, root: True,
+    )
+
+    assert result["ok"] is False
+    assert "`uv` is not on PATH" in result["errors"][0]
+    assert "uv tool install mainbranch@latest" in result["next_actions"]
+
+
+def test_update_uses_uv_tool_list_when_path_detection_is_inconclusive(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "wheel")
+    monkeypatch.setattr(update_mod, "_uv_tool_list_names_package", lambda: True)
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    assert result["mode"] == "uv"
+    assert "uv tool install mainbranch@latest" in result["next_actions"]
+
+
+def test_uv_tool_list_reads_package_lines_not_entry_points(monkeypatch: Any) -> None:
+    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(
+        update_mod,
+        "_run_command",
+        lambda args, *, cwd=None, timeout=0.0: _completed(
+            args, stdout="ruff v0.16.7\n- ruff\nmainbranch v0.5.2\n- mb\n"
+        ),
+    )
+
+    assert _REAL_UV_TOOL_LIST_NAMES_PACKAGE() is True
+
+
+def test_uv_tool_list_ignores_unrelated_tools(monkeypatch: Any) -> None:
+    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(
+        update_mod,
+        "_run_command",
+        lambda args, *, cwd=None, timeout=0.0: _completed(args, stdout="ruff v0.16.7\n- ruff\n"),
+    )
+
+    assert _REAL_UV_TOOL_LIST_NAMES_PACKAGE() is False
+
+
+def test_update_pipx_mode_still_upgrades_automatically(monkeypatch: Any, tmp_path: Path) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        if args[:3] == ["mb", "skill", "link"]:
+            return _completed(args, stdout=json.dumps({"ok": True, "linked": ["mb-start"]}))
+        if args[:3] == ["mb", "doctor", "repair"]:
+            return _codex_repair_completed(args)
+        return _completed(args, stdout="mb 9.9.9\n")
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(repo=tmp_path / "biz")
+
+    assert result["ok"] is True
+    assert result["upgrade_performed"] is True
+    assert result["manual_update_command"] == ""
+    assert ["pipx", "upgrade", "mainbranch"] in calls
+    assert not any(args[:2] == ["uv", "tool"] for args in calls)
 
 
 def test_update_pipx_missing_binary_returns_error(monkeypatch: Any, tmp_path: Path) -> None:
@@ -1148,3 +1444,53 @@ def test_update_check_uses_planned_version_for_plugin_status(
     assert result["plugin_rail"]["install"]["expected_version"] == "9.9.9"
     assert any("expects 9.9.9" in warning for warning in result["warnings"])
     assert engine_mod.PLUGIN_INSTALL_COMMAND in result["next_actions"]
+
+
+@pytest.mark.parametrize(
+    ("answer", "expected"),
+    [("y", True), ("Y", True), ("yes", True), ("", False), ("n", False), ("sure", False)],
+)
+def test_confirm_uv_update_defaults_to_no(
+    monkeypatch: Any, capsys: Any, tmp_path: Path, answer: str, expected: bool
+) -> None:
+    monkeypatch.setattr("builtins.input", lambda prompt="": answer)
+
+    approved = update_mod._confirm_uv_update(
+        update_mod.UV_UPDATE_COMMAND_TEXT, tmp_path / "_engine"
+    )
+
+    assert approved is expected
+    out = capsys.readouterr().out
+    assert "uv tool install mainbranch@latest" in out
+    assert str(tmp_path / "_engine") in out
+
+
+def test_confirm_uv_update_treats_interrupted_input_as_no(monkeypatch: Any) -> None:
+    def interrupted(prompt: str = "") -> str:
+        raise EOFError
+
+    monkeypatch.setattr("builtins.input", interrupted)
+
+    assert update_mod._confirm_uv_update(update_mod.UV_UPDATE_COMMAND_TEXT, None) is False
+
+
+def test_update_render_human_manual_path_names_the_command(capsys: Any) -> None:
+    update_mod.render_human(
+        {
+            "ok": True,
+            "check": False,
+            "mode": "uv",
+            "old_version": "0.5.2",
+            "new_version": "0.5.2",
+            "upgrade_performed": False,
+            "manual_update_command": update_mod.UV_UPDATE_COMMAND_TEXT,
+            "next_actions": [update_mod.UV_UPDATE_COMMAND_TEXT],
+            "warnings": ["Main Branch was installed as a uv tool."],
+            "errors": [],
+        }
+    )
+
+    output = capsys.readouterr().out
+    assert "install mode: uv" in output
+    assert "Main Branch did not change this install." in output
+    assert "next: uv tool install mainbranch@latest" in output
