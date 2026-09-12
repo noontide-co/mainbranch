@@ -275,7 +275,9 @@ Which install modes `mb update` upgrades for you:
 | `uv` tool install | Prints `uv tool install mainbranch@latest` and runs it only after you answer yes at an interactive prompt. Use `@latest` rather than `uv tool upgrade`: it also clears an exact-version pin left by an earlier `uv tool install mainbranch==X`. Agent surfaces are refreshed either way. |
 | Any other wheel install (for example `pip install mainbranch`) | Prints `pip install --upgrade mainbranch` for you to run in the environment that owns the install. Agent surfaces are refreshed either way. |
 
-`mb update` never replaces a uv tool install without an explicit yes. When it
+`mb update` never replaces a uv tool install without an explicit yes. An install of 0.5.2 or earlier as a uv tool predates uv
+detection and reports `unsupported install mode: wheel`; those operators run
+`uv tool install mainbranch@latest` themselves once to reach 0.5.3 or later. When it
 cannot upgrade the package automatically it still refreshes your agent
 surfaces, exits 0, and carries the upgrade command in `next_actions`, so
 `mb update --json` and `mb update --check` are safe in automation and never run
