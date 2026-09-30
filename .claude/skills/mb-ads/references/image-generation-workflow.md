@@ -773,7 +773,7 @@ final asset.
 
 | Format | Dimensions | Use |
 |--------|-----------|-----|
-| 1:1 (square) | 1920×1920 | Facebook feed, Instagram feed |
+| 4:5 (feed) | 1440×1800 | Facebook and Instagram feeds |
 | 9:16 (vertical) | 1080×1920 | Stories, Reels, full-screen mobile |
 
 ### Python Post-Processing
@@ -799,46 +799,34 @@ that all providers expose the same provenance, watermarking, or C2PA behavior.
 
 ---
 
-## Format Pair: 1:1 + 9:16
+## Format Pair: 4:5 + 9:16
 
-For Meta-first static creative, plan the default pair as **1:1 (square)** and
-**9:16 (vertical)**. Treat placement specs as provider-specific; check current
-platform requirements before launch.
-
-`facebook_feed_portrait_4x5` is a concept-planning preset for feed creative and
-nearest-provider-size selection. Do not claim exact Meta upload/export support
-from the preset alone.
+For Meta static creative, plan the default pair as **4:5** (Feeds) and
+**9:16** (Stories and Reels). Both go into one creative through placement rules.
+1:1 remains accepted on Feeds; use the `facebook_feed_square_1x1` preset only
+when a placement or reused asset needs it. Treat placement specs as
+provider-specific and check current platform requirements before launch.
 
 ### Design Strategy
 
-Design the **9:16 vertical first** with all critical content (hook text, product, key visual) in the **center 1:1 safe zone**:
+Compose each ratio for its placement rather than cropping one from the other:
 
-```
-┌──────────────┐
-│  TOP MARGIN  │  ← UI overlays (progress bar, account icon)
-│              │
-│ ┌──────────┐ │
-│ │          │ │
-│ │  CENTER  │ │  ← All critical content HERE
-│ │  1:1     │ │  ← This extracts as the square version
-│ │  ZONE    │ │
-│ │          │ │
-│ └──────────┘ │
-│              │
-│ BOTTOM MARGIN│  ← UI overlays (caption, CTA, likes)
-└──────────────┘
-```
+- **9:16:** product, hook text and disclosures between 14% and 65% of the
+  height; the top 14% and bottom 35% sit under Meta's interface and hold the
+  scene's own background, not a flat block.
+- **4:5:** the whole product in frame with margin; words on a flat area.
 
-**One design → two uploads.** The 9:16 is the full creative. The 1:1 is a center crop. Context or atmosphere fills the top/bottom margins.
+When one generation must serve both, generate the 9:16 with the critical
+content inside the 4:5 centre band, then crop the 4:5 from it and check both
+against the composition rules in [ad-media-specs.md](ad-media-specs.md).
 
 ### Prompt Strategy for Format Pair
 
-For each concept, generate ONE 9:16 image. Prompt should specify:
-- Critical content centered vertically
-- Atmospheric/contextual elements at top and bottom margins
-- Aspect ratio: `"aspect_ratio": "9:16"` or `"resolution": "1080x1920px"`
-
-Then center-crop to 1:1 in post-processing.
+For each concept, generate the 9:16 and the 4:5 (or the 9:16 with a 4:5 crop
+planned). Prompts should specify:
+- Critical content inside the safe band for its ratio
+- Atmospheric/contextual elements in the margins
+- Aspect ratio: `"aspect_ratio": "9:16"` / `"4:5"` or the matching resolution
 
 ---
 
@@ -941,7 +929,7 @@ For a typical ad campaign with 5 angles (15 images):
       - Each agent reads its prompt(s) from prompts.json
       - Reads visual-style.md for brand context
       - Generates 9:16 image via the selected provider/model
-      - Post-processes: resize, JPEG compress, center-crop for 1:1
+      - Post-processes: resize, JPEG compress, and the 4:5 feed version
       - Verifies file(s) exist on disk
       - Returns: file path(s) + status (success/fail) + cost
 5. Synthesize: collect all image agent results, retry any failures,

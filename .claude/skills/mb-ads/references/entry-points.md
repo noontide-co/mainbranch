@@ -24,6 +24,8 @@ Real ad workflows don't fit neat categories. Someone might have images but need 
 | "Check my ad performance" | Account Check | Read-only account context -- insights, winners/losers | Required |
 | "Launch ads", "paid traffic plan", "Google Ads launch" | Launch Plan | Readiness, policy, keyword, budget, approval plan | Plan-only |
 | "Check launch", "continue or kill", "how are ads doing" | Launch Check | Status/outcomes/manual exports, continue/change/stop call | Read-only |
+| "Weekly pack", "next Meta pack", "build this week's ads" | Launch Plan (pack) | Text slots + media specs + names + PAUSED build checklist ([meta-pack-loop.md](meta-pack-loop.md)) | Plan-only |
+| "Daily read", "stop rules", "day-14 verdict", "Google Ads daily check" | Launch Check (scored) | Stop rules and verdicts ([meta-pack-loop.md](meta-pack-loop.md)) or the Google rubric ([google-ads-check.md](google-ads-check.md)) | Read-only |
 | "Give me 50 creative variations" | Hook Library | Bulk generation (flexible quantity) | No |
 | "Give me 5 variations of this winning ad" | Performance Iteration | Pull winner + generate variants | Read-only |
 | "Make me video scripts" | Video Scripts | Full video script pipeline | No |
@@ -154,6 +156,10 @@ Where `{type}` maps from the entry point:
 - Hook Library → `creative-variations`
 - Video Scripts → `video-ads`
 - Video Repurpose → `video-repurpose`
+
+Meta packs live inside the push they serve, one record per pack:
+`pushes/<push>/packs/p<NN>-<slug>.md`, with Meta object names from
+[naming-and-utm.md](naming-and-utm.md).
 
 ---
 

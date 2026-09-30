@@ -11,6 +11,27 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- `/mb-ads` carries what a live ecommerce store learned running Meta and
+  Google Ads through agent skills. The additions are new reference pages:
+  - `meta-pack-loop.md`: the weekly Meta pack loop, stop and scale rules,
+    day-14 verdicts and the retro;
+  - `meta-api-behaviours.md`: what Meta does to ads and creatives, a
+    read-back checklist, and the rails a future write adapter must keep;
+  - `meta-text-slots.md`: five text slots per ad, hooks, pairing and a
+    fresh-agent edit;
+  - `ad-media-specs.md`: sizes, the 9:16 safe area and composition rules,
+    with a media gate;
+  - `naming-and-utm.md`: ad names and UTM tags;
+  - `google-ads-check.md`: a scored daily and weekly Google Ads check.
+
+  Main Branch still makes no changes to ad accounts.
+- The default Meta image pair is now 4:5 for Feeds plus 9:16 for Stories and
+  Reels. It replaces 1:1 plus 9:16.
+- A static ad's hook is now a complete first sentence within 44 characters,
+  which is all Reels shows. A short primary text stays under 125 characters.
+
 ## [0.5.3] - 2026-09-12
 
 This release makes `mb connect` say what it actually checked, and makes

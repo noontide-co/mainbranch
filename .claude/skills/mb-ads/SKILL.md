@@ -318,6 +318,8 @@ Detect what the user wants from natural language. Route internally to the right 
 | "launch ads", "paid traffic plan", "Google Ads launch", "$X/day for Y days" | Launch Plan | Provider-safe plan/check mode, no account mutation |
 | "analytics", "instrumentation", "GA4", "Google Analytics", "GTM", "Meta pixel", "HubSpot form", "Calendly", "booking link", "form test" | Instrumentation | Route through `/mb-site` and `mb site check`; no provider mutation |
 | "check launch", "how are ads doing", "continue or kill" | Launch Check | Read status/outcomes/operator exports, recommend continue/change/stop |
+| "weekly pack", "daily read", "stop rules", "day-14 verdict" | Launch Plan / Check | Meta pack loop: [references/meta-pack-loop.md](references/meta-pack-loop.md) |
+| "Google Ads daily check", "search terms", "negatives" | Launch Check | Scored rubric: [references/google-ads-check.md](references/google-ads-check.md) |
 | "Check my ad performance", "what's working" | Account Check | Read-only Meta Ads context if `mb connect` and runtime tools are ready |
 | "Give me 5 variations of this winning ad" | Performance Iteration | Pull winner + generate variants if account context is ready |
 | "What's working before we create?" | Pre-Gen Account Check | Account overview + creative audit if account context is ready |
@@ -406,7 +408,7 @@ are additive; mix established angles with any newly codified ones.
 
 ## Mode: Static Ads
 
-Create campaign batches with image prompts + ad copy. Each batch = 5-6 angles, each angle = 3 image creatives (graphic, lo-fi, interrupt). Hook = 123-135 chars, no questions, no "you/your" in first 3 lines, no emojis. 5 ad styles (Deep, UGC, DR, Pattern Interrupt, Testimonial). Format pair: 1:1 + 9:16.
+Create campaign batches with image prompts + ad copy. Each batch = 5-6 angles, each angle = 3 image creatives (graphic, lo-fi, interrupt). Hook = a complete first sentence within 44 chars (Reels), short primary under 125, no yes/no questions at the viewer, no "you/your" in first 3 lines, no emojis. 5 ad styles (Deep, UGC, DR, Pattern Interrupt, Testimonial). Format pair: 4:5 + 9:16 ([references/ad-media-specs.md](references/ad-media-specs.md)). Meta text slots, names and UTMs: [references/meta-text-slots.md](references/meta-text-slots.md), [references/naming-and-utm.md](references/naming-and-utm.md).
 
 See **[references/mode-static-ads.md](references/mode-static-ads.md)** for the full workflow: campaign structure, hook formulas, copywriting batch sequence, ad styles by length, image prompt types, and the file save convention.
 
@@ -455,16 +457,8 @@ See **[references/post-generation-pipeline.md](references/post-generation-pipeli
 
 ## Compliance (All Modes)
 
-**Never say:**
-- Cures/treats/heals [condition]
-- Guaranteed results
-- Will eliminate [problem]
-
-**Safe to say:**
-- Many have found this helpful
-- Supports/complements existing approach
-- Framework for understanding
-- Education and guidance
+**Never say:** cures/treats/heals [condition], guaranteed results, will eliminate [problem].
+**Safe to say:** many have found this helpful, supports/complements an existing approach, a framework for understanding, education and guidance.
 
 ## Quality Checklist (All Copy Modes)
 
@@ -474,7 +468,7 @@ Before saving any batch, verify:
 |-------|-------------|
 | **Anchor specificity** | Every hook/variation has at least one offer-specific anchor |
 | **Cold traffic language** | No insider jargon — would a stranger understand in 3 seconds? |
-| **Hook length** | 123-135 characters for static ad hooks |
+| **Hook length** | First sentence complete within 44 characters; short primary under 125 |
 | **No questions** | Hooks don't start with yes/no questions |
 | **No you/your** | First 3 lines avoid direct address |
 | **Angle diversity** | Each concept uses a genuinely different psychological entry point |

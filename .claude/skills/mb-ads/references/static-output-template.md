@@ -7,7 +7,7 @@ Use this structure for campaign batch outputs.
 - **Part 1: Image Prompts** - Generate all images first (line 25)
 - **Part 2: Ad Copy** - Copy for Ads Manager (line 70)
 - **Naming Conventions** - File and image naming (line 174)
-- **Format Pair: 1:1 + 9:16** - Vertical-first design strategy (line 191)
+- **Format Pair: 4:5 + 9:16** - One composition per placement
 
 ---
 
@@ -32,7 +32,7 @@ Destination: {CTA URL}
 
 # PART 1: IMAGE PROMPTS
 
-Generate all images first. Design 9:16 vertical first, then center-crop for 1:1 square.
+Generate all images first. Make a 4:5 for Feeds and a 9:16 for Stories and Reels, each composed for its placement.
 
 ---
 
@@ -117,14 +117,14 @@ intentionally_uses: []
 reason: "{why the concept avoids generic ad imagery or why a soft-avoid pattern is intentional}"
 ```
 
-**Vertical (1080×1920) — design this first:**
+**Feed (1440×1800, 4:5):**
 ```text
-{Full prompt for 9:16 vertical. Place critical content (headline, product, key visual) in center 1:1 zone. Fill top/bottom margins with atmospheric/contextual elements.}
+{Full prompt for the 4:5 feed image. Whole product in frame with margin; words on a flat area.}
 ```
 
-**Square (1920×1920) — center-crop from vertical:**
+**Vertical (1080×1920, 9:16):**
 ```text
-{Center-crop the vertical to extract the 1:1 safe zone at 1920×1920.}
+{Full prompt for 9:16 vertical. Product, headline and key visual between 14% and 65% of the height. Fill top/bottom with the scene's own background, not a flat block.}
 ```
 
 ---
@@ -159,7 +159,7 @@ Copy and paste into Ads Manager after images are ready.
 
 ### Primary 1 — Deep Ad (~500 words)
 
-**Hook:** {123-135 chars}
+**Hook:** {complete first sentence, 44 chars or fewer}
 
 ```text
 {Full primary text}
@@ -272,33 +272,21 @@ Copy and paste into Ads Manager after images are ready.
 
 ---
 
-## Format Pair: 1:1 + 9:16
+## Format Pair: 4:5 + 9:16
 
-For Meta-first static creative, plan a default pair: **1:1 (square)** and
-**9:16 (vertical)**. Verify current Ads Manager placement specs before launch.
-Use 4:5 only as a concept-planning preset unless the current provider/upload
-surface supports it for the selected placement.
-
-### Design Strategy
-
-Design the **9:16 vertical first** with critical content in the **center 1:1 safe zone**. Then center-crop for the square version. One design → two uploads.
-
-### Prompt Approach
-
-1. **9:16 prompt** (1080×1920) — Full creative with critical content centered
-2. **1:1 extraction** — Center-crop the 9:16 to 1920×1920
-
-**Standard 9:16 prompt directive:**
-```text
-Aspect ratio 9:16, resolution 1080x1920. Place all critical content (headline, product, key visual) in the center 1:1 zone. Fill top and bottom margins with atmospheric/contextual elements. Keep text and important elements centered vertically between 25% and 70% from top to stay within safe zones.
-```
+For Meta static creative, the default pair is **4:5** (Feeds, 1440×1800
+minimum) and **9:16** (Stories and Reels, 1080×1920). Compose each for its
+placement rather than cropping one from the other. Keep product, words and
+disclosures between 14% and 65% of the 9:16 height. Full specs, composition
+rules and the media gate: [ad-media-specs.md](ad-media-specs.md).
 
 ### Post-Processing (When Using An Image Provider)
 
 If a provider generated the image:
 - Record the raw output dimensions and format
-- Resize to 1080×1920 (9:16) and 1920×1920 (1:1 center-crop)
+- Resize to 1440×1800 (4:5) and 1080×1920 (9:16); never upscale product detail
 - Convert PNG → JPEG, compress under 300KB
+- Name files by ad name plus `-45` / `-916` once the ad is named ([naming-and-utm.md](naming-and-utm.md))
 - See `image-generation-workflow.md` for full pipeline
 
 ---
@@ -336,8 +324,8 @@ Approval state: {draft/reviewed/approved}
 
 | File | Angle | Style | Format | Prompt Key | Retries | Notes |
 |------|-------|-------|--------|------------|---------|-------|
-| 001_01_graphic_square.jpg | Authority | Graphic | 1:1 | 001_01_graphic | 0 | Center crop |
+| 001_01_graphic_feed.jpg | Authority | Graphic | 4:5 | 001_01_graphic | 0 | Feed composition |
 | 001_01_graphic_vertical.jpg | Authority | Graphic | 9:16 | 001_01_graphic | 0 | Full vertical |
-| 001_02_lofi_square.jpg | Social Proof | Lo-fi | 1:1 | 001_02_lofi | 1 | Manual review needed |
+| 001_02_lofi_feed.jpg | Social Proof | Lo-fi | 4:5 | 001_02_lofi | 1 | Manual review needed |
 | ... | ... | ... | ... | ... | ... | ... |
 ```

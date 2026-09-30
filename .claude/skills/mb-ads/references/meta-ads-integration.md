@@ -22,9 +22,10 @@ Meta Ads AI Connectors has two surfaces:
   supported chat clients. Treat it as forward-looking for Claude Code until the
   OAuth handshake is proven there.
 
-Meta's package metadata classifies `meta-ads` 1.0.1 as Alpha and requires
-Python 3.12+. Expect setup and command details to move over the next few
-months.
+Meta's package metadata classified `meta-ads` 1.0.1 as Alpha and requires
+Python 3.12+. A dogfood business ran 1.2.0 (Graph v24.0) in September 2026.
+Expect setup and command details to keep moving; what Meta did to real objects
+is recorded in [meta-api-behaviours.md](meta-api-behaviours.md).
 
 Main Branch support level is read-only readiness: the official path and setup
 requirements are known, and `mb connect test meta` can validate local token,
@@ -127,8 +128,8 @@ Triggered lazily at `/mb-think` or `/mb-ads` when the topic is ads-related:
 
 ## First Account Summary Surface
 
-The first product surface should be a compact read-only account summary, not a
-raw reporting import. The proposed command is:
+The first product surface is a compact read-only account summary, not a raw
+reporting import:
 
 ```bash
 mb ads meta summary --repo <BUSINESS_REPO> --window 7d --json
@@ -208,7 +209,10 @@ Before any future write operation exists, Main Branch needs:
 4. PAUSED-by-default campaign/ad/ad-set creation preserved;
 5. no budget changes without a separate approval gate.
 
-Until those conditions are met, write operations are roadmap only.
+Until those conditions are met, write operations are roadmap only. The rails
+any future write adapter must keep, and the read-back checklist, are in
+[meta-api-behaviours.md](meta-api-behaviours.md#adapter-rails). The operating
+loop around a build is [meta-pack-loop.md](meta-pack-loop.md).
 
 ---
 
@@ -221,6 +225,9 @@ Preserve these constraints in setup and repair copy:
 - Global output flags belong before the subcommand: use `meta -o json ads ...`.
 - Campaign and ad set creation default to PAUSED. Activation remains a separate
   operator action.
+- The raw `--bodies` / `--images` creative form builds a dynamic creative, and
+  `standard_enhancements` is refused; see
+  [meta-api-behaviours.md](meta-api-behaviours.md).
 - Creating fresh creatives can require the Meta Developer App to be in Live
   Mode; document this because the CLI docs do not surface it clearly.
 - Store tokens through `SecretStore`; keep only safe metadata and validation

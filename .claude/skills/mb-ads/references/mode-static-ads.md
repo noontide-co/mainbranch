@@ -19,14 +19,19 @@ Campaign Batch 001
 
 ## Hook Rules (Non-Negotiable)
 
-**Hook = 123-135 characters** (visible before "See more" on Facebook).
+**The first sentence is the hook: complete within 44 characters** (all that
+Reels shows). The short primary stays under 125 characters so it shows whole in
+the feed; longer primaries open with the same hook. Slot plan and hook craft:
+[meta-text-slots.md](meta-text-slots.md).
 
-- No questions (binary "no" response)
+- No yes/no questions at the viewer. A question is fine only when it is about
+  the product or is the buyer's own first-person question
 - No "you/your" in first 3 lines
 - No emojis
 - Pack customer language into the hook
 
-**Hook Formulas:**
+**Hook Formulas** (they shape the first 125 characters; open with a short
+sentence that stands alone within 44):
 1. **Transformation:** "How [Resonance] go from [Pain] to [Benefit] using [Approach]"
 2. **Even Without:** "Here's how even [Resonance] (without [Challenge]) are [Benefit]"
 3. **Eliminates:** "This [Approach] eliminates [Pain 1], [Pain 2], without [Challenge]"
@@ -82,9 +87,9 @@ platform: meta
 | Interrupt | Pattern interrupt, scroll-stopping, contrarian |
 | Text Overlay | Background-only for text overlay (used with creative variation copy) |
 
-**Default Meta format pair: 1:1 + 9:16** — For Meta-first static
-creative, design 9:16 first with critical content in the center 1:1 safe zone,
-then center-crop for square. Treat placement specs as provider-specific and
+**Default Meta format pair: 4:5 + 9:16** — 4:5 for Feeds, 9:16 for
+Stories and Reels, composed for each placement with the product and words inside
+the 9:16 safe area. See [ad-media-specs.md](ad-media-specs.md). Treat placement specs as provider-specific and
 check current platform requirements before launch.
 
 See [static-output-template.md](static-output-template.md) for full output format.
