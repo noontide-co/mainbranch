@@ -31,6 +31,7 @@ and any future adapter; see [Adapter Rails](#adapter-rails).
 - **Copying an ad duplicates its creative**, and Meta appends a date-hash to
   every creative name. Don't read creative names as pack names. *stored*
 - **Names freeze at first publish.** Rename before publishing, never after.
+  *reported*
 
 ## Defaults That Turn Things On
 
@@ -59,9 +60,9 @@ and any future adapter; see [Adapter Rails](#adapter-rails).
 - Which features stay on is the business's decision. Record it in a decision
   file and check every feature against it on read-back. A safe default is
   every feature OPT_OUT, then turn on only what the operator chose.
-- Relevant comments (`inline_comment`) set by API may not survive processing
-  (above). If the operator wants it on, set it in Ads Manager until a read-back
-  after processing shows the API value holding.
+- If a feature the business chose reads back off after processing, record it
+  and decide with the operator where to set it; an Ads Manager save makes a new
+  creative and a new review (above).
 
 ## Placements, Text and Media
 
@@ -101,7 +102,8 @@ and any future adapter; see [Adapter Rails](#adapter-rails).
   *stored*
 - Catalog product ids can exceed 2^53. Keep them as strings in any tool that
   parses JSON numbers as doubles.
-- A position is required on an image and refused on a video.
+- Image tags carry a position (x/y); Meta stored a video's tag with no
+  position. *stored*; video tags not yet delivered.
 - Refused on carousels and on feeds that mix images and videos: one creative
   per media type.
 - Instagram shows a tag only once the product is approved for shopping. Read

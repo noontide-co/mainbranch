@@ -214,7 +214,7 @@ selected_source_bites:
     visual_translation: tangled red thread becoming one clean branch map
 post_processing_plan:
   status: planned_not_implemented
-  resize_target: 1080x1350
+  resize_target: 1440x1800
   overlay_expected: true
   overlay_method: future_deterministic_overlay_step
   export_format: png_source_then_jpeg_or_png_final
@@ -225,14 +225,14 @@ placement_presets:
     aspect_ratio: 4:5
     nearest_provider_size: 1024x1536
     recommended_generation_size: 1440x1800
-    final_export_size: 1080x1350
+    final_export_size: 1440x1800
     safe_zone:
       top: 10%
       bottom: 10%
       sides: 10%
       notes: Keep focal point and overlay text inside conservative feed margins.
     deterministic_overlay_expected: true
-    source_boundary: Aspect ratio checked against public Meta guidance; pixel sizes are planning defaults. Verify current Ads Manager specs before launch.
+    source_boundary: Default Meta feed format (with 9:16 for Stories/Reels); 1440x1800 minimum per ad-media-specs.md. Verify current Ads Manager specs before launch.
     validation: Preview in Meta Ads Manager before launch.
   facebook_feed_square_1x1:
     aspect_ratio: 1:1
@@ -1036,11 +1036,11 @@ assets:
 {batch}_{sequence}_{style}_{format}.jpg
 
 Examples:
-001_01_graphic_square.jpg
+001_01_graphic_feed.jpg
 001_01_graphic_vertical.jpg
-001_02_lofi_square.jpg
-001_03_interrupt_square.jpg
-001_04_oneliner_square.jpg
+001_02_lofi_feed.jpg
+001_03_interrupt_feed.jpg
+001_04_oneliner_feed.jpg
 ```
 
 ---

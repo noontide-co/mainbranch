@@ -78,18 +78,19 @@ Keep the agreed negatives as a plain list in the business repo (one word or
 phrase per line), and let a search term count as junk when it contains one as a
 whole word.
 
-## Act, Then Report
+## Prepare Actions, Then Report
 
-1. **Act only where red says so and a standing go covers it.** Agree the
-   standing go with the operator up front, in a decision file. A typical one:
-   - alone: pause by the stop rules, add negatives already on the agreed list,
-     undo settings drift from the approved plan;
+1. **Prepare actions only where red says so and a standing go covers it.**
+   Agree the standing go with the operator up front, in a decision file. A
+   typical one:
+   - covered by the standing go: pause by the stop rules, and add negatives
+     already on the agreed list;
    - operator: budgets, bids, new campaigns or keywords, new negative words,
-     conversion-action changes, billing.
+     conversion-action changes, settings changes, billing.
 
-   Main Branch itself doesn't mutate Google Ads. These actions are the
-   operator's, or an approved tool's under the standing go. Read every change
-   back after a reload.
+   Pausing and adding negatives are account writes. They need the operator, or
+   a write tool the operator approved for exactly those actions. Main Branch
+   itself doesn't mutate Google Ads. Read every change back after a reload.
 2. **Everything else is a proposal** with the number behind it.
 3. **Report in owner language:** status, spend (yesterday and since launch),
    clicks, carts, sales, the tracking verdict (T1-T5), what changed, what needs

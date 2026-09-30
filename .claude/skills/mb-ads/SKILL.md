@@ -469,7 +469,7 @@ Before saving any batch, verify:
 | **Anchor specificity** | Every hook/variation has at least one offer-specific anchor |
 | **Cold traffic language** | No insider jargon — would a stranger understand in 3 seconds? |
 | **Hook length** | First sentence complete within 44 characters; short primary under 125 |
-| **No questions** | Hooks don't start with yes/no questions |
+| **Questions** | A question only about the product or in the buyer's own first-person voice; never one aimed at the viewer |
 | **No you/your** | First 3 lines avoid direct address |
 | **Angle diversity** | Each concept uses a genuinely different psychological entry point |
 | **Voice match** | Copy matches `voice.md` tone (if available) |
