@@ -65,6 +65,8 @@ checking GitHub.
 
 ## Quick Start
 
+First-time setup is in [CONTRIBUTING.md](CONTRIBUTING.md#local-setup).
+
 For normal repo validation:
 
 ```bash

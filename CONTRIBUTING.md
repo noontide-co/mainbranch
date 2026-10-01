@@ -45,6 +45,32 @@ Each commit body bullet-lists changes in THAT commit. A reviewer reading `git lo
 
 ---
 
+## Local setup
+
+You need Python 3.10 or newer. Check with `python3 --version`; if it is older
+(macOS ships 3.9), use a newer interpreter in the first command, for example
+`python3.12 -m venv .venv`. From a fresh clone:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+cd mb
+pip install -e ".[dev]"
+```
+
+That installs `mb` in editable mode with the tools the checks use (ruff, mypy,
+pytest). Keep the virtual environment active when you run the gate below;
+`scripts/check.sh` uses whichever `python3` is first on your `PATH`.
+
+To run one test file while you work:
+
+```bash
+cd mb
+pytest tests/test_<area>.py -q
+```
+
+---
+
 ## Pre-push gate
 
 Run the repo gate from the repository root before pushing:
