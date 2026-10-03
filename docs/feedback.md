@@ -19,8 +19,9 @@ Each call appends one JSON line to
 ```
 
 - `command` is what you passed with `--command`, or `null`.
-- `repo_kind` is `hub` when the line was written from a business repo, else
-  `unknown`.
+- `repo_kind` is `hub`, `child`, `engine` or `none`, from the same repo
+  classifier the launch screen, `mb doctor` and `mb checkpoint` use. It is
+  `unknown` only if classification itself fails.
 - `text`, `command` and a refusal's `rule` are scrubbed before they are
   written. Secret-shaped values become `<redacted>`: key=value and JSON
   `"key": "value"` pairs whose key names a token, secret, password, key,

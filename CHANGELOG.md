@@ -45,8 +45,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - `mb feedback "<text>"` logs friction with `mb` to a local file in the user
   state directory (`~/.local/state/mainbranch/feedback.jsonl`, or under
   `XDG_STATE_HOME`). Each line records the time, mb version, the command it is
-  about (`--command`), the repo kind and the text. Secret-shaped values and
-  absolute paths are scrubbed before writing. Nothing is sent anywhere. (#986)
+  about (`--command`), the repo kind (hub, child, engine or none) and the text.
+  Secret-shaped values and absolute paths are scrubbed before writing. Nothing
+  is sent anywhere. (#986)
 - When `mb connect` refuses its local metadata at the repo boundary, it logs a
   `refusal` line with the rule and the command, never the refused value.
   `MB_FEEDBACK_LOG=0` turns this off. (#986)

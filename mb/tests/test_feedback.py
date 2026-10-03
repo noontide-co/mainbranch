@@ -44,7 +44,7 @@ def test_feedback_appends_one_line_under_xdg_state_home(state_home: Path, tmp_pa
     assert entry["kind"] == "feedback"
     assert entry["command"] == "mb connect test"
     assert entry["text"] == "status said ready but test failed"
-    assert entry["repo_kind"] in {"hub", "unknown"}
+    assert entry["repo_kind"] in {"hub", "child", "engine", "none"}
     assert isinstance(entry["mb_version"], str) and entry["mb_version"]
     assert str(entry["time"]).endswith("Z")
     assert set(entry) == {"schema", "kind", "time", "mb_version", "command", "repo_kind", "text"}
@@ -526,3 +526,56 @@ def test_suite_never_writes_the_real_feedback_file(
     assert feedback_mod.feedback_path().is_relative_to(tmp_path_factory.getbasetemp())
     assert feedback_mod.record_refusal("test.isolation", "mb connect")
     assert feedback_mod.feedback_path().is_file()
+
+
+def _make_repo(root: Path, kind: str) -> Path:
+    repo = root / kind
+    repo.mkdir()
+    if kind == "hub":
+        (repo / "core").mkdir()
+        (repo / "CLAUDE.md").write_text("# Hub\n", encoding="utf-8")
+    elif kind == "child":
+        (repo / "research").mkdir()
+        (repo / "CLAUDE.md").write_text("# App\n", encoding="utf-8")
+        (repo / ".mainbranch").mkdir()
+        (repo / ".mainbranch" / "repo.json").write_text(
+            json.dumps(
+                {
+                    "schema": "mb.child_repo.v0",
+                    "role": "product",
+                    "github_owner": "example-co",
+                    "repo_name": "app",
+                    "parent": {"github_owner": "example-co", "repo_name": "example"},
+                }
+            ),
+            encoding="utf-8",
+        )
+    elif kind == "engine":
+        (repo / "mb" / "mb").mkdir(parents=True)
+        (repo / "mb" / "pyproject.toml").write_text("[project]\n", encoding="utf-8")
+        (repo / "mb" / "mb" / "cli.py").write_text("", encoding="utf-8")
+    return repo
+
+
+@pytest.mark.parametrize("kind", ["hub", "child", "engine", "none"])
+def test_repo_kind_comes_from_the_shared_classifier(
+    state_home: Path, tmp_path: Path, kind: str
+) -> None:
+    repo = _make_repo(tmp_path, kind)
+    result = runner.invoke(app, ["feedback", "noted", "--repo", str(repo), "--json"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["entry"]["repo_kind"] == kind
+    assert feedback_mod.record_refusal("test.kind", "mb connect", repo=repo)
+    assert _lines(state_home)[-1]["repo_kind"] == kind
+
+
+def test_repo_kind_is_unknown_when_the_classifier_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from mb import topology
+
+    def broken(repo: object) -> dict[str, str]:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(topology, "classify_repo", broken)
+    assert feedback_mod.repo_kind(tmp_path) == "unknown"

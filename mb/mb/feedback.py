@@ -26,7 +26,6 @@ from typing import Any
 
 from mb import __version__
 from mb.durable import atomic_write_text, state_lock
-from mb.freshness import looks_like_business_repo
 
 SCHEMA_VERSION = 1
 FEEDBACK_FILENAME = "feedback.jsonl"
@@ -160,15 +159,17 @@ def scrub(text: str) -> str:
 
 
 def repo_kind(repo: str | Path = ".") -> str:
-    """Classify the repo a line was written from.
+    """Classify the repo a line was written from: hub, child, engine or none.
 
-    One function so the classifier can be swapped for ``topology.classify_repo``
-    once it lands; until then a business repo reads as ``hub`` and anything
-    else as ``unknown``.
+    Uses the shared classifier, so feedback agrees with the launch screen,
+    ``mb doctor`` and ``mb checkpoint``. ``unknown`` only when the classifier
+    itself fails; logging never fails on it.
     """
+    from mb.topology import classify_repo
+
     try:
-        return "hub" if looks_like_business_repo(Path(repo).resolve()) else "unknown"
-    except OSError:
+        return str(classify_repo(Path(repo).resolve())["kind"])
+    except Exception:  # noqa: BLE001 - a log line must not fail on classification
         return "unknown"
 
 
