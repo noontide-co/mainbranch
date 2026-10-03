@@ -40,14 +40,22 @@ _SINCE_RE = re.compile(r"^\s*(\d+)\s*([hdw])\s*$", re.IGNORECASE)
 # Home directories of any user, in case text quotes another account's path.
 _OTHER_HOME_RE = re.compile(r"(?<![\w~])(?:/Users|/home)/[^/\s\"'`]+")
 _PATH_CHARS = r"[^\s\"'`<>|(),;]"
-# Windows drive paths with either slash, and UNC shares.
+# A quoted absolute path, consumed through its closing quote so a space inside
+# it does not leave the rest behind. Unix paths need a second segment so a
+# quoted ``"/mb-start"`` survives.
+_QUOTED_PATH_RE = re.compile(r"([\"'])((?:/[^\"'\n/]+/|[A-Za-z]:[\\/]|\\\\|//)[^\"'\n]*)\1")
+# Windows drive paths with either slash, and UNC shares with either slash. A
+# ``//`` after a colon or a word character is a URL, not a share.
 _WINDOWS_PATH_RE = re.compile(
-    rf"(?<![\w])[A-Za-z]:[\\/]{_PATH_CHARS}*|(?<![\w\\])\\\\[^\s\\\"'`<>|]+\\{_PATH_CHARS}*"
+    rf"(?<![\w])[A-Za-z]:[\\/]{_PATH_CHARS}*"
+    rf"|(?<![\w\\])\\\\[^\s\\\"'`<>|]+\\{_PATH_CHARS}*"
+    rf"|(?<![\w:/])//[^\s/\"'`<>|]+/{_PATH_CHARS}*"
 )
-# Any absolute Unix path with at least two segments. A slash after a word
-# character, a colon or another slash is part of a URL or a relative path,
-# and a lone ``/mb-start`` is a slash command, so neither is touched.
-_UNIX_PATH_RE = re.compile(rf"(?<![\w:/.~\\-])/(?:[^\s/\"'`<>|(),;]+/)+{_PATH_CHARS}*")
+# Any absolute Unix path with at least two segments, including one right after
+# a colon in error prose (``failed:/srv/x/y``). A URL's ``://`` is followed by a
+# second slash, which no path segment starts with, so URLs are untouched; so
+# are relative paths and a lone ``/mb-start`` slash command.
+_UNIX_PATH_RE = re.compile(rf"(?<![\w/.~\\-])/(?:[^\s/\"'`<>|(),;]+/)+{_PATH_CHARS}*")
 
 
 def state_dir() -> Path:
@@ -84,6 +92,7 @@ def _scrub_paths(text: str) -> str:
     home = str(Path.home())
     if home and home not in {"/", "\\"}:
         text = text.replace(home, "~")
+    text = _QUOTED_PATH_RE.sub(r"\1<local-path>\1", text)
     text = _WINDOWS_PATH_RE.sub("<local-path>", text)
     text = _OTHER_HOME_RE.sub("~", text)
     return _UNIX_PATH_RE.sub("<local-path>", text)

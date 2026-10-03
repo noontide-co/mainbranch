@@ -386,6 +386,10 @@ PATH_SHAPES = {
     "windows_forward": ("C:/Users/someone/biz/notes.md", "someone"),
     "windows_other_drive": ("D:/work/acme/notes.md", "acme"),
     "unc": ("\\\\fileserver\\share\\biz\\notes.md", "fileserver"),
+    "colon_prose": ("failed:/srv/private-project/config.yaml", "private-project"),
+    "unc_forward": ("//fileserver/private-project/config.yaml", "fileserver"),
+    "quoted_with_space": ('"/srv/private project/config.yaml"', "project/config"),
+    "quoted_windows_space": ("'C:\\Program Files\\private-project\\x.cfg'", "private-project"),
 }
 
 

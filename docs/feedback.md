@@ -24,14 +24,17 @@ Each call appends one JSON line to
   `unknown` only if classification itself fails.
 - `text`, `command` and a refusal's `rule` are scrubbed before they are
   written. Secret-shaped values become `<redacted>`: key=value and JSON
-  `"key": "value"` pairs whose key names a token, secret, password, key,
-  credential or signature (including environment names such as
-  `GITHUB_TOKEN`), Bearer and Basic credentials, URL passwords
-  (`scheme://user:<redacted>@host`), and provider token families such as
-  GitHub's `ghp_`/`ghs_`, Slack, OpenAI and AWS key ids. Home directory paths
-  become `~`. Any other absolute path (Unix, Windows drive with either
-  slash, or UNC share) becomes `<local-path>`; URLs and slash commands such as
-  `/mb-start` are left alone.
+  `"key": "value"` pairs whose key ends in a secret word such as token,
+  secret, password, api key, credential or signature (so `GITHUB_TOKEN` and
+  `client_secret` are redacted, `token_count` and `max_tokens` are not), with a
+  quoted value redacted through its closing quote; Bearer and Basic
+  credentials; URL passwords (`scheme://user:<redacted>@host`); and provider
+  token families such as GitHub's `ghp_`/`ghs_`, Slack, OpenAI and AWS key ids.
+  Home directory paths become `~`. Any other absolute path becomes
+  `<local-path>`: Unix paths (also right after a colon, as in
+  `failed:/srv/...`), Windows drive paths with either slash, UNC shares with
+  either slash, and quoted paths through their closing quote. URLs, relative
+  paths and slash commands such as `/mb-start` are left alone.
 
 Write a credential-free summary in your own words and pass only the command
 name to `--command`. The scrubber is a backstop, not permission to paste a
