@@ -1513,7 +1513,7 @@ def connect_cmd(
         "",
         help=(
             "Provider to connect, or `list` / `plan` / `status` / `doctor` / `hygiene` / "
-            "`identity` / `test` / `exec` / `token` / `hydrate`."
+            "`identity` / `test` / `exec` / `rotate` / `token` / `hydrate`."
         ),
     ),
     provider: str = typer.Argument(
@@ -1561,6 +1561,14 @@ def connect_cmd(
         "",
         "--env",
         help="With `mb connect exec`, the variable that carries the secret into the command.",
+    ),
+    source: str = typer.Option(
+        "",
+        "--source",
+        help=(
+            "Non-secret reference to where the credential lives, such as "
+            "op://vault/item/field. Stored as metadata so `mb connect rotate` can re-read it."
+        ),
     ),
     print_token: bool = typer.Option(
         False,
@@ -1708,6 +1716,27 @@ def connect_cmd(
             if outcome["repair_command"]:
                 typer.echo(f"repair: {outcome['repair_command']}", err=True)
         raise typer.Exit(outcome["returncode"])
+    if target == "rotate":
+        if not provider:
+            typer.echo("mb connect rotate: provider required", err=True)
+            raise typer.Exit(2)
+        try:
+            result = connect_mod.rotate_provider(provider, repo)
+        except connect_mod.ConfigBoundaryError as exc:
+            _connect_boundary_exit("mb connect rotate", exc)
+        except ValueError as exc:
+            typer.echo(f"mb connect rotate: {exc}", err=True)
+            raise typer.Exit(2) from exc
+        except RuntimeError as exc:
+            typer.echo(f"mb connect rotate: {exc}", err=True)
+            raise typer.Exit(1) from exc
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            connect_mod.render_rotate_result(result)
+        if not result["stored"]:
+            raise typer.Exit(1)
+        raise typer.Exit(1 if connect_mod.provider_needs_action(result["status"]) else 0)
     if target == "token":
         if not provider:
             typer.echo("mb connect token: provider required", err=True)
@@ -1805,6 +1834,7 @@ def connect_cmd(
             metadata_pairs=metadata,
             scope=scope,
             custom=custom,
+            source=source,
         )
         result["credential_source"] = {
             "type": credential_source if secret_value else "missing",

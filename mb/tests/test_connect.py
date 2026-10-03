@@ -3550,3 +3550,195 @@ def test_status_hides_hand_edited_secret_values(tmp_path: Path, monkeypatch) -> 
     assert "zone_label" not in status["metadata"]
     assert status["metadata"]["zone_id"] == "abc123"
     assert leaked not in json.dumps(status)
+
+
+def _fake_op(value: str = "cf-rotated-token", *, ok: bool = True, stderr: str = ""):
+    calls: list[list[str]] = []
+
+    def run(args, cwd=None, timeout=5.0, *, env=None):
+        calls.append(list(args))
+        return {
+            "ok": ok,
+            "returncode": 0 if ok else 1,
+            "stdout": value if ok else "",
+            "stderr": stderr,
+        }
+
+    return run, calls
+
+
+def _ok_http(monkeypatch) -> None:
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        lambda url, headers=None, **kwargs: {
+            "ok": True,
+            "state": "ready",
+            "summary": "simulated provider response",
+            "safe_to_share": True,
+            "upstream": {"endpoint_family": kwargs["endpoint_family"], "safe_to_share": True},
+        },
+    )
+
+
+def test_connect_source_is_stored_and_merges_existing_metadata(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "cloudflare", repo=repo, token="cf-test-token", metadata_pairs=["zone_id=abc123"]
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            "cloudflare",
+            "--source",
+            "op://Business/Cloudflare/credential",
+            "--repo",
+            str(repo),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    metadata = json.loads(result.stdout)["status"]["metadata"]
+    assert metadata == {"zone_id": "abc123", "source": "op://Business/Cloudflare/credential"}
+    assert connect_mod.read_token("cloudflare", repo)["token"] == "cf-test-token"
+
+
+def test_connect_source_refuses_a_secret_value(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    leaked = FAKE_SECRET_VALUES["credential_prefix:sk_"]
+
+    result = runner.invoke(
+        app, ["connect", "stripe", "--source", leaked, "--repo", str(repo)], input=""
+    )
+
+    assert result.exit_code == 2
+    assert "--source looks like a secret" in result.stderr
+    assert leaked not in result.output
+
+
+def test_rotate_reads_op_ref_stores_and_probes(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    _ok_http(monkeypatch)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "cloudflare",
+        repo=repo,
+        token="cf-old-token",
+        account_label="Main",
+        metadata_pairs=["zone_id=abc123"],
+        source="op://Business/Cloudflare/credential",
+    )
+    run, calls = _fake_op("cf-rotated-token\n")
+
+    result = connect_mod.rotate_provider(
+        "cloudflare", repo, which_func=lambda name: f"/usr/bin/{name}", command_runner=run
+    )
+
+    assert calls == [["op", "read", "--no-newline", "op://Business/Cloudflare/credential"]]
+    assert result["ok"] is True
+    assert result["provider_verified"] is True
+    assert connect_mod.read_token("cloudflare", repo)["token"] == "cf-rotated-token"
+    status = connect_mod.status_provider("cloudflare", repo)
+    assert status["account_label"] == "Main"
+    assert status["metadata"]["zone_id"] == "abc123"
+    assert "cf-rotated-token" not in json.dumps(result)
+    assert "cf-old-token" not in json.dumps(result)
+
+
+def test_rotate_cli_json_never_carries_the_secret(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    _ok_http(monkeypatch)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "cloudflare",
+        repo=repo,
+        token="cf-old-token",
+        source="op://Business/Cloudflare/credential",
+    )
+    run, _calls = _fake_op("cf-rotated-token")
+    monkeypatch.setattr(connect_mod, "_run_command", run)
+    monkeypatch.setattr(connect_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+
+    result = runner.invoke(app, ["connect", "rotate", "cloudflare", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["provider_verified"] is True
+    assert "cf-rotated-token" not in result.output
+
+
+def test_rotate_without_source_explains(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+
+    result = runner.invoke(app, ["connect", "rotate", "cloudflare", "--repo", str(repo)])
+
+    assert result.exit_code == 2
+    assert "no recorded source" in result.stderr
+    assert "--source op://vault/item/field" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("source", "which", "ok", "stderr", "rule"),
+    [
+        ("vault://elsewhere/item", "/usr/bin/op", True, "", "rotate_unsupported_source"),
+        ("op://Business/Item/field", None, True, "", "rotate_op_missing"),
+        (
+            "op://Business/Item/field",
+            "/usr/bin/op",
+            False,
+            "[ERROR] You are not currently signed in.",
+            "rotate_op_signed_out",
+        ),
+        (
+            "op://Business/Item/field",
+            "/usr/bin/op",
+            False,
+            "item not found",
+            "rotate_op_read_failed",
+        ),
+    ],
+)
+def test_rotate_refusals(
+    source: str,
+    which: str | None,
+    ok: bool,
+    stderr: str,
+    rule: str,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token", source=source)
+    run, _calls = _fake_op(ok=ok, stderr=stderr)
+
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        connect_mod.rotate_provider(
+            "cloudflare", repo, which_func=lambda name: which, command_runner=run
+        )
+
+    assert caught.value.rule == rule
+    assert connect_mod.read_token("cloudflare", repo)["token"] == "cf-test-token"
+
+
+def test_rotate_not_connected(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        connect_mod.rotate_provider("cloudflare", repo)
+
+    assert caught.value.rule == "rotate_not_connected"

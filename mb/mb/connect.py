@@ -1248,8 +1248,15 @@ def connect_provider(
     secret_backend: str | None = None,
     scope: str = "repo",
     custom: bool = False,
+    source: str = "",
 ) -> dict[str, Any]:
-    """Connect a provider by writing repo metadata and local secrets."""
+    """Connect a provider by writing repo metadata and local secrets.
+
+    ``source`` is a non-secret reference to where the credential lives, such
+    as ``op://vault/item/field``; it is stored as ``metadata.source`` so
+    `mb connect rotate` can read the credential again. When ``source`` is the
+    only metadata given, the existing metadata is kept and the source added.
+    """
 
     if custom:
         provider = normalize_provider(provider_id, allow_custom=True)
@@ -1261,7 +1268,9 @@ def connect_provider(
         raise ValueError("scope must be repo or user")
     target = Path(repo).resolve()
     metadata = _parse_metadata(metadata_pairs or [])
-    _validate_key_shape(provider, token, metadata)
+    source = source.strip()
+    if source:
+        _check_source_ref(source)
     config = _read_config(target)
     repo_id = _ensure_repo_id(config, target)
     credential_deadline = new_credential_deadline()
@@ -1270,6 +1279,13 @@ def connect_provider(
     if not token and provider.id not in providers:
         raw_existing_entry = _user_scope_provider_entry(repo_id, provider.id)
     existing_entry = raw_existing_entry if isinstance(raw_existing_entry, dict) else {}
+    if source:
+        if not metadata_pairs:
+            raw_existing_metadata = existing_entry.get("metadata")
+            if isinstance(raw_existing_metadata, dict):
+                metadata = {str(key): str(value) for key, value in raw_existing_metadata.items()}
+        metadata["source"] = source
+    _validate_key_shape(provider, token, metadata)
 
     secrets: dict[str, dict[str, str]] = {}
     required = list(provider.required_secrets)
@@ -2011,6 +2027,140 @@ def stdout_exposes_secret(stream: Any = None) -> bool:
     except (AttributeError, OSError, ValueError):
         return True
     return stat.S_ISFIFO(mode)
+
+
+ONEPASSWORD_REF_PREFIX = "op://"
+ROTATE_READ_TIMEOUT_SECONDS = 60.0
+
+
+def _check_source_ref(source: str) -> None:
+    """A source is a pointer to the secret, never the secret itself."""
+    rule = metadata_value_rule(source)
+    if rule:
+        _refuse(
+            "source_secret_value",
+            f"--source looks like a secret (rule: {rule}), not a reference to one. "
+            "Nothing was stored. Pass a reference such as op://vault/item/field.",
+        )
+
+
+def _connected_entry(provider: Provider, repo: Path) -> tuple[dict[str, Any] | None, str]:
+    config = _read_config(repo)
+    entry = config["providers"].get(provider.id)
+    if isinstance(entry, dict):
+        return entry, "repo"
+    repo_id = str(config.get("repo_id") or _repo_identity(repo)["repo_id"])
+    user_entry = _user_scope_provider_entry(repo_id, provider.id)
+    if isinstance(user_entry, dict):
+        return user_entry, "user"
+    return None, ""
+
+
+def _read_onepassword_ref(
+    ref: str,
+    *,
+    which_func: Which | None = None,
+    command_runner: CommandRunner | None = None,
+) -> str:
+    """Read one secret with `op read`. The value is returned, never printed."""
+    which = which_func or shutil.which
+    run = command_runner or _run_command
+    if not which("op"):
+        _refuse(
+            "rotate_op_missing",
+            "the 1Password CLI (`op`) is not installed or not on PATH. Install it and "
+            "sign in (`op signin`), then rerun `mb connect rotate`.",
+        )
+    result = run(["op", "read", "--no-newline", ref], None, ROTATE_READ_TIMEOUT_SECONDS)
+    if not result.get("ok"):
+        stderr = str(result.get("stderr") or "").lower()
+        if any(marker in stderr for marker in ("signed in", "sign in", "signin")):
+            _refuse(
+                "rotate_op_signed_out",
+                "the 1Password CLI is not signed in. Run `op signin` (or unlock the "
+                "1Password app), then rerun `mb connect rotate`.",
+            )
+        _refuse(
+            "rotate_op_read_failed",
+            f"`op read` could not read the recorded source (exit {result.get('returncode')}). "
+            "Check the op:// reference with `mb connect status`, then rerun.",
+        )
+    value = str(result.get("stdout") or "")
+    if value.endswith("\n"):
+        value = value[:-1]
+    if not value:
+        _refuse(
+            "rotate_empty_value",
+            "the recorded source returned an empty value. Nothing was stored.",
+        )
+    return value
+
+
+def rotate_provider(
+    provider_id: str,
+    repo: str | Path = ".",
+    *,
+    which_func: Which | None = None,
+    command_runner: CommandRunner | None = None,
+) -> dict[str, Any]:
+    """Re-read a credential from its recorded source, store it, then probe it."""
+    provider = resolve_provider(provider_id, repo)
+    target = Path(repo).resolve()
+    if not provider.required_secrets:
+        _refuse("rotate_no_secret", f"{provider.name} stores no secret to rotate.")
+    entry, _where = _connected_entry(provider, target)
+    if entry is None:
+        _refuse(
+            "rotate_not_connected",
+            f"{provider.name} is not connected. Connect it with a source first: "
+            f"`{_connect_command(provider, token_stdin=True)} --source op://vault/item/field`.",
+        )
+    raw_metadata = entry.get("metadata")
+    metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
+    source = str(metadata.get("source") or "").strip()
+    if not source:
+        _refuse(
+            "rotate_no_source",
+            f"{provider.name} has no recorded source, so Main Branch does not know where "
+            "to read the new credential from. Record one with "
+            f"`mb connect {provider.id} --source op://vault/item/field`, or reconnect "
+            f"the new credential with `{_connect_command(provider, token_stdin=True)}`.",
+        )
+    if not source.startswith(ONEPASSWORD_REF_PREFIX):
+        _refuse(
+            "rotate_unsupported_source",
+            "mb connect rotate reads only 1Password references (op://...). For any other "
+            f"source, reconnect with `{_connect_command(provider, token_stdin=True)}`.",
+        )
+    secret = _read_onepassword_ref(source, which_func=which_func, command_runner=command_runner)
+    raw_secrets = entry.get("secrets")
+    secrets = raw_secrets if isinstance(raw_secrets, dict) else {}
+    raw_primary = secrets.get(provider.required_secrets[0])
+    primary = raw_primary if isinstance(raw_primary, dict) else {}
+    backend = str(primary.get("backend") or "") or None
+    connected = connect_provider(
+        provider.id,
+        target,
+        token=secret,
+        account_label=str(entry.get("account_label") or ""),
+        metadata_pairs=[f"{key}={value}" for key, value in metadata.items()],
+        secret_backend=backend,
+        scope=str(entry.get("scope") or "repo"),
+        custom=provider.category == "custom",
+    )
+    tested = test_provider(
+        provider.id, target, which_func=which_func, command_runner=command_runner
+    )
+    return {
+        "ok": bool(connected["ok"]) and bool(tested["ok"]),
+        "provider": provider.id,
+        "source_kind": "1password",
+        "stored": bool(connected["ok"]),
+        "provider_verified": bool(tested.get("provider_verified")),
+        "validation": tested.get("validation") or {},
+        "status": tested["status"],
+        "safe_to_share": True,
+    }
 
 
 def _provider_error_summary(provider_name: str, upstream: dict[str, Any]) -> str:
@@ -3579,6 +3729,12 @@ def render_test_result(result: dict[str, Any]) -> None:
         print("provider: " + "  ".join(details))
     if status.get("repair_command"):
         print(f"next: {status['repair_command']}")
+
+
+def render_rotate_result(result: dict[str, Any]) -> None:
+    stored = "stored" if result["stored"] else "not stored"
+    print(f"mb connect rotate {result['provider']}: re-read from 1Password, {stored}")
+    render_test_result(result)
 
 
 def render_hydrate_result(result: dict[str, Any]) -> None:
