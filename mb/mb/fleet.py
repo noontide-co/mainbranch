@@ -497,6 +497,28 @@ def _read_problem(read: dict[str, Any]) -> str:
     return ""
 
 
+def _check_runs(github: GitHub, full: str, sha: str) -> dict[str, Any]:
+    """Aggregate every page of check runs; ``unknown`` if any page fails."""
+    unknown = {"state": "unknown", "total": 0, "failing": []}
+    status, pages = github.json(
+        f"repos/{full}/commits/{sha}/check-runs?per_page=100", paginate=True
+    )
+    if status != 200 or not isinstance(pages, list) or not pages:
+        return unknown
+    runs: list[Any] = []
+    expected = 0
+    for page in pages:
+        if not isinstance(page, dict) or not isinstance(page.get("check_runs"), list):
+            return unknown
+        runs.extend(page["check_runs"])
+        total = page.get("total_count")
+        if isinstance(total, int):
+            expected = max(expected, total)
+    if len(runs) < expected:
+        return unknown
+    return _ci_state(runs)
+
+
 def read_repo(github: GitHub, full: str, now: datetime) -> dict[str, Any]:
     """Read one repo's facts through the GitHub API. Never raises on API errors."""
     facts: dict[str, Any] = {"repo": full, "errors": []}
@@ -522,11 +544,9 @@ def read_repo(github: GitHub, full: str, now: datetime) -> dict[str, Any]:
                 committed_at = str(committer.get("date") or "")
     facts["main_committed_at"] = committed_at
     if sha:
-        status, runs = github.json(f"repos/{full}/commits/{sha}/check-runs?per_page=100")
-        if status == 200 and isinstance(runs, dict):
-            facts["ci"] = _ci_state(list(runs.get("check_runs") or []))
-        else:
-            facts["ci"] = {"state": "unknown", "total": 0, "failing": []}
+        facts["ci"] = _check_runs(github, full, sha)
+        if facts["ci"]["state"] == "unknown":
+            facts["errors"].append("check runs on the default branch not fully readable")
     else:
         facts["errors"].append(f"default branch {branch!r} not readable")
         facts["ci"] = {"state": "unknown", "total": 0, "failing": []}

@@ -241,6 +241,10 @@ PAGES = {
 }
 
 
+class Pages(list[tuple[int, Any]]):
+    """Several pages of one paginated endpoint: (status, body) per page."""
+
+
 class FakeGh:
     def __init__(self, responses: dict[str, tuple[int, Any]]) -> None:
         self.responses = responses
@@ -251,6 +255,13 @@ class FakeGh:
         assert args[:3] == ["api", "--method", "GET"], "fleet must only GET"
         path = args[-1]
         status, body = self.responses.get(path, (404, None))
+        if isinstance(body, Pages):
+            # gh api --paginate fails as a whole when any page fails.
+            failed = [page_status for page_status, _ in body if page_status != 200]
+            if failed:
+                return 1, "", f"gh: Server Error (HTTP {failed[0]})"
+            pages = [page for _, page in body]
+            return 0, json.dumps(pages if "--slurp" in args else pages[0]), ""
         if status != 200:
             return 1, "", f"gh: Not Found (HTTP {status})"
         if "--slurp" in args:
@@ -432,6 +443,63 @@ def test_malformed_package_and_descriptor_are_errors(
     rows = _rows(cache)
     assert rows["example-co/workshop-site:"]["framework"]["state"] == "malformed"
     assert rows["example-co/app:"]["sites_state"] == "malformed"
+
+
+def _check_run_pages(*pages: tuple[int, Any]) -> dict[str, tuple[int, Any]]:
+    responses = dict(GH)
+    responses[f"repos/example-co/app/commits/{MAIN_APP}/check-runs?per_page=100"] = (
+        200,
+        Pages(pages),
+    )
+    return responses
+
+
+FIRST_RUNS_PAGE = {
+    "total_count": 101,
+    "check_runs": [
+        {"name": f"job-{index}", "status": "completed", "conclusion": "success"}
+        for index in range(100)
+    ],
+}
+
+
+@needs_tomllib
+def test_ci_reads_every_check_run_page(tmp_path: Path, cloudflare_creds: None) -> None:
+    second = {
+        "total_count": 101,
+        "check_runs": [{"name": "deploy", "status": "completed", "conclusion": "failure"}],
+    }
+    responses = _check_run_pages((200, FIRST_RUNS_PAGE), (200, second))
+
+    _, cache, fake = _refresh(tmp_path, FakeGh(responses))
+
+    ci = _rows(cache)["example-co/app:"]["ci"]
+    assert ci == {"state": "failure", "total": 101, "failing": ["deploy"]}
+    check_args = [args for args in fake.seen if "check-runs" in args[-1] and "/app/" in args[-1]]
+    assert check_args and "--paginate" in check_args[0]
+
+
+@needs_tomllib
+def test_ci_is_unknown_when_a_check_run_page_fails(tmp_path: Path, cloudflare_creds: None) -> None:
+    responses = _check_run_pages((200, FIRST_RUNS_PAGE), (502, None))
+
+    result, cache, _ = _refresh(tmp_path, FakeGh(responses))
+
+    assert _rows(cache)["example-co/app:"]["ci"]["state"] == "unknown"
+    assert not result["ok"]
+    assert any(
+        "example-co/app: check runs on the default branch not fully readable" in error
+        for error in result["errors"]
+    )
+
+
+@needs_tomllib
+def test_ci_is_unknown_when_pages_are_missing(tmp_path: Path, cloudflare_creds: None) -> None:
+    responses = _check_run_pages((200, FIRST_RUNS_PAGE))
+
+    _, cache, _ = _refresh(tmp_path, FakeGh(responses))
+
+    assert _rows(cache)["example-co/app:"]["ci"]["state"] == "unknown"
 
 
 @needs_tomllib

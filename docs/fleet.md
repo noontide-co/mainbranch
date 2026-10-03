@@ -79,7 +79,8 @@ Edit this file by hand. `mb fleet hubs list` shows what mb understood.
    `git+https://…#<sha>`, `file:../engine`). The newest semver tag of the engine
    repo is read so a pin can be flagged as behind it.
 4. Main's SHA, its commit time and the check runs on it come from the GitHub
-   API.
+   API. Every page of check runs is read; when any page fails, `ci.state` is
+   `unknown` and the refresh reports an error.
 5. For a hub with a Cloudflare connection, the current production deployment of
    every Pages project is read once. A site uses the project named in its
    `deploy.project`. A repo with no `sites` list falls back to a project with
