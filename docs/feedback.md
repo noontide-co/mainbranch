@@ -23,18 +23,33 @@ Each call appends one JSON line to
   classifier the launch screen, `mb doctor` and `mb checkpoint` use. It is
   `unknown` only if classification itself fails.
 - `text`, `command` and a refusal's `rule` are scrubbed before they are
-  written. Secret-shaped values become `<redacted>`: key=value and JSON
-  `"key": "value"` pairs whose key ends in a secret word such as token,
-  secret, password, api key, credential or signature (so `GITHUB_TOKEN` and
-  `client_secret` are redacted, `token_count` and `max_tokens` are not), with a
-  quoted value redacted through its closing quote; Bearer and Basic
-  credentials; URL passwords (`scheme://user:<redacted>@host`); and provider
-  token families such as GitHub's `ghp_`/`ghs_`, Slack, OpenAI and AWS key ids.
-  Home directory paths become `~`. Any other absolute path becomes
-  `<local-path>`: Unix paths (also right after a colon, as in
-  `failed:/srv/...`), Windows drive paths with either slash, UNC shares with
-  either slash, and quoted paths through their closing quote. URLs, relative
-  paths and slash commands such as `/mb-start` are left alone.
+  written. The scrubber is defence in depth, so the default is to redact:
+  - A `key=value`, `key: value`, JSON `"key": "value"` or `--key value` pair is
+    redacted when any segment of the key (split on `_`, `-`, `.` and case
+    changes) is a secret word: token, secret, password, passwd, pwd,
+    passphrase, apikey, credential, auth, authorization, signature, sig,
+    session, cookie or bearer, or the pairs api+key, private+key and
+    access+key. So `access_token_v2`, `client_secret_new` and
+    `password_confirmation` are redacted. A short allowlist of harmless
+    metadata keys keeps its values: `token_count`, `tokens_used`,
+    `max_tokens`, `max_output_tokens`, `input_tokens`, `output_tokens`,
+    `total_tokens`, `token_type`, `token_limit` and `tokenizer`.
+  - Quoted values are read by matching the opening quote to its closing twin,
+    across lines and honouring backslash escapes; adjacent quoted and bare
+    fragments (`"a"'b'c`) are one value; an unterminated quote is redacted to
+    the end of the field.
+  - Bearer and Basic credentials, URL passwords
+    (`scheme://user:<redacted>@host`) and provider token families such as
+    GitHub's `ghp_`/`ghs_`, Slack, OpenAI and AWS key ids are redacted
+    anywhere.
+  - Home directory paths become `~`. Every other absolute path becomes
+    `<local-path>`: Unix paths (also right after a colon, as in
+    `failed:/srv/...`), `file:///` URLs, Windows drive paths with either
+    slash, UNC shares with either slash, and quoted paths, read with the same
+    quote matching. URLs, relative paths and slash commands such as
+    `/mb-start` are left alone.
+  - Known limit: a share written as `scheme://server/share` cannot be told
+    apart from a URL, so it is left as written. Do not paste one.
 
 Write a credential-free summary in your own words and pass only the command
 name to `--command`. The scrubber is a backstop, not permission to paste a

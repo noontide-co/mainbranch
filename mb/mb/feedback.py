@@ -8,14 +8,14 @@ can turn into issues. Credential and safety refusals log themselves through
 ``record_refusal``.
 
 Nothing here sends anything anywhere. Every line is scrubbed before it is
-written: secret-shaped text is redacted with connect's patterns and home
-directory paths become ``~``. A refusal line carries the rule that fired and
-the command, never the refused value.
+written (``mb.feedback_scrub``): secret-shaped values are redacted, home
+directory paths become ``~`` and other absolute paths ``<local-path>``. A
+refusal line carries the rule that fired and the command, never the refused
+value.
 """
 
 from __future__ import annotations
 
-import functools
 import json
 import os
 import re
@@ -24,7 +24,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from mb import __version__
+from mb import __version__, feedback_scrub
 from mb.durable import atomic_write_text, state_lock
 
 SCHEMA_VERSION = 1
@@ -37,25 +37,6 @@ DEFAULT_SINCE = "7d"
 MAX_SINCE = timedelta(days=36500)
 
 _SINCE_RE = re.compile(r"^\s*(\d+)\s*([hdw])\s*$", re.IGNORECASE)
-# Home directories of any user, in case text quotes another account's path.
-_OTHER_HOME_RE = re.compile(r"(?<![\w~])(?:/Users|/home)/[^/\s\"'`]+")
-_PATH_CHARS = r"[^\s\"'`<>|(),;]"
-# A quoted absolute path, consumed through its closing quote so a space inside
-# it does not leave the rest behind. Unix paths need a second segment so a
-# quoted ``"/mb-start"`` survives.
-_QUOTED_PATH_RE = re.compile(r"([\"'])((?:/[^\"'\n/]+/|[A-Za-z]:[\\/]|\\\\|//)[^\"'\n]*)\1")
-# Windows drive paths with either slash, and UNC shares with either slash. A
-# ``//`` after a colon or a word character is a URL, not a share.
-_WINDOWS_PATH_RE = re.compile(
-    rf"(?<![\w])[A-Za-z]:[\\/]{_PATH_CHARS}*"
-    rf"|(?<![\w\\])\\\\[^\s\\\"'`<>|]+\\{_PATH_CHARS}*"
-    rf"|(?<![\w:/])//[^\s/\"'`<>|]+/{_PATH_CHARS}*"
-)
-# Any absolute Unix path with at least two segments, including one right after
-# a colon in error prose (``failed:/srv/x/y``). A URL's ``://`` is followed by a
-# second slash, which no path segment starts with, so URLs are untouched; so
-# are relative paths and a lone ``/mb-start`` slash command.
-_UNIX_PATH_RE = re.compile(rf"(?<![\w/.~\\-])/(?:[^\s/\"'`<>|(),;]+/)+{_PATH_CHARS}*")
 
 
 def state_dir() -> Path:
@@ -88,95 +69,12 @@ def refusal_logging_enabled() -> bool:
     return os.environ.get(LOG_ENV_VAR, "").strip().lower() not in {"0", "false", "no", "off"}
 
 
-def _scrub_paths(text: str) -> str:
-    home = str(Path.home())
-    if home and home not in {"/", "\\"}:
-        text = text.replace(home, "~")
-    text = _QUOTED_PATH_RE.sub(r"\1<local-path>\1", text)
-    text = _WINDOWS_PATH_RE.sub("<local-path>", text)
-    text = _OTHER_HOME_RE.sub("~", text)
-    return _UNIX_PATH_RE.sub("<local-path>", text)
-
-
-# Key names that mark the value beside them as a secret. The key must end in
-# the secret word (optionally ``_key``/``_value``/``_hash``), so ``GITHUB_TOKEN``
-# and ``client_secret`` count while ``token_count``, ``max_tokens``, ``author``
-# and ``design`` do not.
-_SECRET_KEY = (
-    r"[A-Za-z0-9_.-]*?(?:token|secret|passw(?:or)?d|passphrase|pwd|api[_-]?key|"
-    r"credentials?|authorization|auth|private[_-]?key|access[_-]?key|signature|sig)"
-    r"(?:[_.-]?(?:key|value|hash))?(?![A-Za-z0-9_.-])"
-)
-# A value: a whole double- or single-quoted string (escapes and the other quote
-# allowed, an unterminated one runs to the end of the line), or a bare word.
-_SECRET_VALUE = r"(?:\"(?:[^\"\\\n]|\\.)*\"?|'(?:[^'\\\n]|\\.)*'?|[^\s\"',;&]+)"
-_SECRET_PAIR_RE = re.compile(
-    rf"(?i)(?<![A-Za-z0-9_.-])([\"']?)({_SECRET_KEY})\1(\s*[:=]\s*)({_SECRET_VALUE})"
-)
-
-
-def _redact_pair(match: re.Match[str]) -> str:
-    value = match.group(4)
-    quote = value[0] if value[0] in "\"'" else ""
-    return (
-        f"{match.group(1)}{match.group(2)}{match.group(1)}{match.group(3)}{quote}<redacted>{quote}"
-    )
-
-
-# Run before the pair rule, which would otherwise take ``Basic`` or ``Bearer``
-# as the value and leave the credential after it.
-_CREDENTIAL_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"(?i)\b((?:basic|bearer)\s+)[A-Za-z0-9+/=._~-]{8,}"), r"\1<redacted>"),
-    # scheme://user:password@host
-    (re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://[^\s:/@]+:)[^\s@/]+@"), r"\1<redacted>@"),
-)
-_TOKEN_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
-    # Provider token families, including GitHub's underscore family.
-    (
-        re.compile(
-            r"(?<![\w-])(?:gh[pousr]_|github_pat_|glpat-|xox[abposr]-|"
-            r"sk-(?:proj-|live-|test-)?|sk_(?:live|test)_|rk_(?:live|test)_|hf_|npm_|"
-            r"pypi-|AIza|fal-)[A-Za-z0-9_-]{8,}"
-        ),
-        "<redacted>",
-    ),
-    (re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"), "<redacted>"),
-)
-
-
-@functools.cache
-def _credential_token_re() -> re.Pattern[str]:
-    from mb.connect import CREDENTIAL_VALUE_PREFIXES
-
-    return re.compile(
-        r"(?<![\w-])(?:"
-        + "|".join(re.escape(prefix) for prefix in CREDENTIAL_VALUE_PREFIXES)
-        + r")[A-Za-z0-9_\-]{8,}"
-    )
-
-
 def scrub(text: str) -> str:
-    """Redact secret-shaped values and absolute paths from ``text``.
+    """Redact secrets and absolute paths from ``text`` and cap its length.
 
-    Home-directory paths become ``~``; any other absolute Unix, Windows drive
-    or UNC path becomes ``<local-path>``. URLs are left alone.
+    See ``mb.feedback_scrub`` for the rules: the default is to redact.
     """
-    # Imported here so connect can call ``record_refusal`` without an import cycle.
-    from mb.connect import SECRET_REPLACEMENT, _redact_sensitive_text
-    from mb.issue import QUERY_SECRET_RE, TOKEN_RE
-
-    cleaned = text
-    for pattern, replacement in _CREDENTIAL_RULES:
-        cleaned = pattern.sub(replacement, cleaned)
-    # key=value, "key": "value", GITHUB_TOKEN=..., ?client_secret=...
-    cleaned = _SECRET_PAIR_RE.sub(_redact_pair, cleaned)
-    for pattern, replacement in _TOKEN_RULES:
-        cleaned = pattern.sub(replacement, cleaned)
-    cleaned = _redact_sensitive_text(cleaned)
-    cleaned = _credential_token_re().sub(SECRET_REPLACEMENT, cleaned)
-    cleaned = TOKEN_RE.sub(SECRET_REPLACEMENT, cleaned)
-    cleaned = QUERY_SECRET_RE.sub(lambda match: f"{match.group(1)}{SECRET_REPLACEMENT}", cleaned)
-    cleaned = _scrub_paths(cleaned)
+    cleaned = feedback_scrub.scrub(text)
     if len(cleaned) > MAX_TEXT_CHARS:
         cleaned = cleaned[:MAX_TEXT_CHARS] + " [truncated]"
     return cleaned
