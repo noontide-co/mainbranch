@@ -213,6 +213,9 @@ The v1 envelope is present on:
 - `mb onboard --json`
 - `mb onboard status --json`
 - `mb onboard plan --json`
+- `mb fleet refresh --json`
+- `mb fleet status --json`
+- `mb fleet hubs list --json`
 
 Future commands should use the same shared metadata when they add or revise
 `--json` output. Avoid moving existing payloads under a new `data` key unless a

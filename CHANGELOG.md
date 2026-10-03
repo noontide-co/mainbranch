@@ -11,6 +11,33 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- `mb fleet refresh` and `mb fleet status [--json]`: a read-only view of every
+  site across the hubs listed in a user-level `fleet.toml`. One row per site
+  shows its framework and version (or the engine ref it pins), main's CI state
+  and SHA, the commit its Cloudflare Pages production deploy came from, whether
+  that deploy was uploaded from a dirty tree and how far it is behind main, and
+  days since the last commit. Each repo also shows its open Dependabot alerts by
+  severity and its open Dependabot pull requests. `refresh` reads GitHub through
+  `gh` and Cloudflare through the hub's `mb connect` credential and caches one
+  snapshot in SQLite; `status` reads only the cache. `mb fleet hubs list` shows
+  the hub list. Needs Python 3.11 or newer. See `docs/fleet.md`. (#984)
+- An optional `sites` list in `.mainbranch/repo.json` (`mb.child_repo.v0`)
+  describes a repo that holds several sites: slug, name, folder, domains,
+  deploy target and lifecycle. Older `mb` ignores it. `mb site check --site
+  <slug>` checks one of them. (#984)
+
+### Fixed
+
+- `mb site check` compares a site's recorded parent with the business repo's
+  git `origin` remote when the business repo has no `.mainbranch/repo.json`, so
+  a copied site that still names another business is caught there too. (#915)
+- A product or site repo that carries a descriptor is no longer mistaken for a
+  hub because it also keeps `CLAUDE.md` and `research/`. One classifier now
+  decides hub, child, engine or neither for the launch screen, `mb doctor` and
+  `mb checkpoint`; doctor and checkpoint accept child repos. (#984)
+
 ### Changed
 
 - `/mb-ads` carries what a live ecommerce store learned running Meta and
