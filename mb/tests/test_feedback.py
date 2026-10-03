@@ -309,3 +309,58 @@ def test_feedback_scrubs_other_absolute_paths_and_url_secrets(state_home: Path) 
     assert "C:\\work" not in entry["text"]
     assert "abcd1234efgh" not in entry["text"]
     assert entry["text"].count("<local-path>") == 2
+
+
+# Synthetic canary only; never a real credential.
+CANARY = "Zq7canary" + "0123456789abcdef"
+
+SECRET_SHAPES = {
+    "assignment": f"token={CANARY}",
+    "bearer": f"Authorization: Bearer {CANARY}",
+    "json_double_quoted": f'{{"token": "{CANARY}"}}',
+    "json_single_quoted": f"{{'api_key': '{CANARY}'}}",
+    "json_client_secret": f'{{"client_secret":"{CANARY}"}}',
+    "env_assignment": f"GITHUB_TOKEN={CANARY}",
+    "env_export_quoted": f'export AWS_SECRET_ACCESS_KEY="{CANARY}"',
+    "env_prefixed_key": f"STRIPE_API_KEY={CANARY}",
+    "ghp": f"ghp_{CANARY}",
+    "ghs": f"ghs_{CANARY}",
+    "gho": f"gho_{CANARY}",
+    "ghu": f"ghu_{CANARY}",
+    "ghr": f"ghr_{CANARY}",
+    "github_pat": f"github_pat_{CANARY}",
+    "openai_project": f"sk-proj-{CANARY}",
+    "slack": f"xoxb-{CANARY}",
+    "aws_key_id": "AKIA" + "Z7Q" * 5 + "Z",
+    "url_token": f"https://x.test/cb?token={CANARY}",
+    "url_access_token": f"https://x.test/cb?access_token={CANARY}",
+    "url_api_key": f"https://x.test/cb?api_key={CANARY}",
+    "url_client_secret": f"https://x.test/cb?client_id=abc&client_secret={CANARY}",
+    "url_signature": f"https://x.test/f?X-Amz-Signature={CANARY}",
+    "url_userinfo": f"https://someone:{CANARY}@x.test/repo.git",
+    "dsn_userinfo": f"postgres://app:{CANARY}@db.internal:5432/main",
+    "basic_auth": f"Authorization: Basic {CANARY}",
+}
+
+
+def _secret_leaks(value: str) -> bool:
+    return CANARY in value or "Z7QZ7QZ7Q" in value
+
+
+@pytest.mark.parametrize("shape", sorted(SECRET_SHAPES))
+def test_every_secret_shape_is_scrubbed_in_every_field(state_home: Path, shape: str) -> None:
+    hostile = f"mb connect said {SECRET_SHAPES[shape]} then stopped"
+    feedback_mod.record(hostile, command=f"mb connect {SECRET_SHAPES[shape]}")
+    assert feedback_mod.record_refusal(hostile, hostile)
+    raw = _log(state_home).read_text(encoding="utf-8")
+    assert not _secret_leaks(raw), shape
+    for entry in _lines(state_home):
+        for field in ("text", "command", "rule"):
+            assert not _secret_leaks(str(entry.get(field) or "")), (shape, field)
+
+
+def test_scrub_keeps_ordinary_urls_and_words() -> None:
+    text = (
+        "see https://github.com/noontide-co/mainbranch/issues/986?tab=comments and the token flow"
+    )
+    assert feedback_mod.scrub(text) == text

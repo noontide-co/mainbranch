@@ -21,9 +21,18 @@ Each call appends one JSON line to
 - `command` is what you passed with `--command`, or `null`.
 - `repo_kind` is `hub` when the line was written from a business repo, else
   `unknown`.
-- `text` is scrubbed before it is written. Secret-shaped values become
-  `<redacted>` (the patterns `mb connect` and `mb issue` already use), home
-  directory paths become `~`, and other absolute paths become `<local-path>`.
+- `text`, `command` and a refusal's `rule` are scrubbed before they are
+  written. Secret-shaped values become `<redacted>`: key=value and JSON
+  `"key": "value"` pairs whose key names a token, secret, password, key,
+  credential or signature (including environment names such as
+  `GITHUB_TOKEN`), Bearer and Basic credentials, URL passwords
+  (`scheme://user:<redacted>@host`), and provider token families such as
+  GitHub's `ghp_`/`ghs_`, Slack, OpenAI and AWS key ids. Home directory paths
+  become `~`, and other absolute paths become `<local-path>`.
+
+Write a credential-free summary in your own words and pass only the command
+name to `--command`. The scrubber is a backstop, not permission to paste a
+command line with its arguments.
 
 The file is created with owner-only permissions. Add `--json` for the shared
 [result envelope](json-output-contract.md) (`mainbranch.feedback.v1`).

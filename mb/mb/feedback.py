@@ -80,6 +80,41 @@ def _replace_home(text: str) -> str:
     return _OTHER_HOME_RE.sub("~", text)
 
 
+# Key names that mark the value beside them as a secret. ``auth`` and ``sig``
+# only count as whole words so ``author`` and ``design`` stay readable.
+_SECRET_KEY = (
+    r"[A-Za-z0-9_.-]*(?:token|secret|passw(?:or)?d|pwd|api[_-]?key|credentials?|"
+    r"authorization|auth(?![a-z])|private[_-]?key|access[_-]?key|signature|sig(?![a-z]))"
+    r"[A-Za-z0-9_.-]*"
+)
+_SECRET_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
+    # Before the key rule, which would otherwise take ``Basic`` or ``Bearer`` as the value.
+    (re.compile(r"(?i)\b((?:basic|bearer)\s+)[A-Za-z0-9+/=._~-]{8,}"), r"\1<redacted>"),
+    # scheme://user:password@host
+    (re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://[^\s:/@]+:)[^\s@/]+@"), r"\1<redacted>@"),
+    # "token": "value" and 'api_key': 'value'
+    (
+        re.compile(rf"(?i)([\"'])({_SECRET_KEY})\1(\s*:\s*)([\"'])[^\"'\n]*\4"),
+        r"\1\2\1\3\4<redacted>\4",
+    ),
+    # GITHUB_TOKEN=value, export X_SECRET="value", ?client_secret=value
+    (
+        re.compile(rf"(?i)(?<![A-Za-z0-9_.-])({_SECRET_KEY})(\s*[:=]\s*)([\"']?)[^\s\"',;&]+\3"),
+        r"\1\2\3<redacted>\3",
+    ),
+    # Provider token families, including GitHub's underscore family.
+    (
+        re.compile(
+            r"(?<![\w-])(?:gh[pousr]_|github_pat_|glpat-|xox[abposr]-|"
+            r"sk-(?:proj-|live-|test-)?|sk_(?:live|test)_|rk_(?:live|test)_|hf_|npm_|"
+            r"pypi-|AIza|fal-)[A-Za-z0-9_-]{8,}"
+        ),
+        "<redacted>",
+    ),
+    (re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"), "<redacted>"),
+)
+
+
 @functools.cache
 def _credential_token_re() -> re.Pattern[str]:
     from mb.connect import CREDENTIAL_VALUE_PREFIXES
@@ -101,7 +136,10 @@ def scrub(text: str) -> str:
     from mb.connect import SECRET_REPLACEMENT, _redact_sensitive_text
     from mb.issue import ABSOLUTE_PATH_RE, QUERY_SECRET_RE, TOKEN_RE
 
-    cleaned = _redact_sensitive_text(text)
+    cleaned = text
+    for pattern, replacement in _SECRET_RULES:
+        cleaned = pattern.sub(replacement, cleaned)
+    cleaned = _redact_sensitive_text(cleaned)
     cleaned = _credential_token_re().sub(SECRET_REPLACEMENT, cleaned)
     cleaned = TOKEN_RE.sub(SECRET_REPLACEMENT, cleaned)
     cleaned = QUERY_SECRET_RE.sub(lambda match: f"{match.group(1)}{SECRET_REPLACEMENT}", cleaned)
