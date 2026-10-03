@@ -2175,10 +2175,19 @@ def site_check_cmd(
         "--repo",
         help="Business repo with offer and provider metadata.",
     ),
+    site: str = typer.Option(
+        "",
+        "--site",
+        help="Check one site from the repo's .mainbranch/repo.json sites list.",
+    ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Check paid-traffic measurement readiness without mutating provider accounts."""
-    result = site_mod.check(site_repo, business_repo=business_repo or None)
+    try:
+        result = site_mod.check(site_repo, business_repo=business_repo or None, site_slug=site)
+    except site_mod.UnknownSiteError as exc:
+        typer.echo(f"mb site check: {exc}", err=True)
+        raise typer.Exit(2) from exc
     if json_out:
         typer.echo(json.dumps(result, indent=2))
     else:
