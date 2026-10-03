@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -35,7 +36,14 @@ from mb.durable import atomic_write_text
 CONFIG_RELATIVE_PATH = Path(".mb") / "connect.yaml"
 USER_SCOPE_RELATIVE_PATH = Path("connect") / "user-scope.yaml"
 SENSITIVE_KEY_PARTS = ("token", "secret", "password", "credential", "api_key", "apikey", "key")
-SAFE_METADATA_KEYS = {"token_type", "token_scope", "api_token_type"}
+SAFE_METADATA_KEYS = {
+    "token_type",
+    "token_scope",
+    "api_token_type",
+    "key_name",
+    "onepassword_item",
+    "source",
+}
 CONNECT_SCOPES = {"repo", "user"}
 VALIDATION_TIMEOUT_SECONDS = 8
 SECRET_REPLACEMENT = "<redacted>"
@@ -492,6 +500,8 @@ def _safe_identity_metadata(metadata: dict[str, Any]) -> dict[str, str]:
         lowered = key.lower().replace("-", "_")
         if key in recorded or value is None or value == "":
             continue
+        if metadata_value_rule(str(value)):
+            continue
         if lowered not in SAFE_METADATA_KEYS and any(
             part in lowered for part in SENSITIVE_KEY_PARTS
         ):
@@ -515,9 +525,12 @@ def _safe_status_metadata(metadata: dict[str, Any]) -> dict[str, str]:
         if raw_value is None or raw_value == "":
             continue
         value = str(raw_value)
-        flagged, _reason = _classify_credential_value(key, value)
-        if flagged or _metadata_key_looks_sensitive(key):
+        if metadata_value_rule(value):
             continue
+        if key.lower().replace("-", "_") not in SAFE_METADATA_KEYS:
+            flagged, _reason = _classify_credential_value(key, value)
+            if flagged or _metadata_key_looks_sensitive(key):
+                continue
         recorded[key] = value
     return recorded
 
@@ -977,21 +990,134 @@ def _meta_repair(state: str, missing: list[str] | None = None) -> dict[str, str]
     }
 
 
+# Public prefixes that mark a credential value. A metadata value starting with
+# one of these, followed by more token characters, is refused at intake.
+METADATA_SECRET_PREFIXES: tuple[str, ...] = (
+    "sk_",
+    "rk_",
+    "pk_live_",
+    "whsec_",
+    "re_",
+    "sk-",
+    "ghp_",
+    "gho_",
+    "ghu_",
+    "ghs_",
+    "ghr_",
+    "github_pat_",
+    "glpat-",
+    "xox",
+    "AKIA",
+    "AIza",
+    "cfat_",
+)
+_METADATA_PREFIX_TAIL_RE = re.compile(r"^[A-Za-z0-9_\-]{8,}$")
+_JWT_RE = re.compile(r"^eyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]*$")
+_TOKEN_CHARSET_RE = re.compile(r"^[A-Za-z0-9+/=_.\-]+$")
+METADATA_ENTROPY_MIN_LENGTH = 24
+METADATA_ENTROPY_MIN_BITS = 3.5
+# Share of adjacent characters that change class (upper, lower, digit, other).
+# Random tokens sit near 0.6; CamelCase labels such as "AcmeMainWorkspace2026"
+# sit near 0.3, because words are long same-class runs.
+METADATA_MIN_CLASS_SWITCH_RATIO = 0.4
+
+
+def _shannon_bits_per_char(value: str) -> float:
+    counts: dict[str, int] = {}
+    for char in value:
+        counts[char] = counts.get(char, 0) + 1
+    total = len(value)
+    return -sum((count / total) * math.log2(count / total) for count in counts.values())
+
+
+def _char_class(char: str) -> str:
+    if char.isupper():
+        return "upper"
+    if char.islower():
+        return "lower"
+    if char.isdigit():
+        return "digit"
+    return "other"
+
+
+def _class_switch_ratio(value: str) -> float:
+    if len(value) < 2:
+        return 0.0
+    switches = sum(
+        _char_class(left) != _char_class(right)
+        for left, right in zip(value[:-1], value[1:], strict=True)
+    )
+    return switches / (len(value) - 1)
+
+
+def metadata_value_rule(value: str) -> str:
+    """Name the secret-shape rule a metadata value trips, or "" when it is safe.
+
+    Judges the value, never the key: a label under a key called ``key_name``
+    is fine, and a live key under an innocent key name is not. The returned
+    rule name is safe to show; the value never is.
+    """
+    candidate = value.strip()
+    if candidate.lower().startswith("bearer "):
+        return "bearer_credential"
+    if (
+        _looks_like_env_reference(candidate)
+        or _looks_like_placeholder(candidate)
+        or _looks_like_iso_datetime(candidate)
+    ):
+        return ""
+    for prefix in METADATA_SECRET_PREFIXES:
+        tail = candidate[len(prefix) :]
+        # The tail must look generated (a digit or a capital somewhere), so a
+        # word such as "re_engagement" is not mistaken for a key.
+        if (
+            candidate.startswith(prefix)
+            and _METADATA_PREFIX_TAIL_RE.fullmatch(tail)
+            and any(char.isdigit() or char.isupper() for char in tail)
+        ):
+            return f"credential_prefix:{prefix}"
+    if _JWT_RE.fullmatch(candidate):
+        return "jwt_shape"
+    # Long random-looking strings: mixed case plus digits, frequent character
+    # class changes, enough entropy, and nothing but token characters. Hex
+    # ids, UUIDs, numeric ids, URLs, emails, lowercase paths and CamelCase
+    # labels fall outside this on purpose.
+    if (
+        len(candidate) >= METADATA_ENTROPY_MIN_LENGTH
+        and _TOKEN_CHARSET_RE.fullmatch(candidate)
+        and any(char.isupper() for char in candidate)
+        and any(char.islower() for char in candidate)
+        and any(char.isdigit() for char in candidate)
+        and _class_switch_ratio(candidate) >= METADATA_MIN_CLASS_SWITCH_RATIO
+        and _shannon_bits_per_char(candidate) >= METADATA_ENTROPY_MIN_BITS
+    ):
+        return "high_entropy"
+    return ""
+
+
 def _parse_metadata(pairs: list[str]) -> dict[str, str]:
     metadata: dict[str, str] = {}
     for pair in pairs:
         if "=" not in pair:
-            raise ValueError(f"metadata must be key=value, got {pair!r}")
+            # Echo the key part only: a bare secret pasted without `=` must
+            # not come back in the error.
+            _refuse(
+                "metadata_format",
+                "metadata must be key=value; one --metadata argument has no `=`.",
+            )
         key, value = pair.split("=", 1)
         key = key.strip()
         value = value.strip()
         if not key:
-            raise ValueError("metadata keys cannot be empty")
-        lowered = key.lower().replace("-", "_")
-        if lowered not in SAFE_METADATA_KEYS and any(
-            part in lowered for part in SENSITIVE_KEY_PARTS
-        ):
-            raise ValueError(f"metadata key {key!r} looks sensitive; use --token/--token-stdin")
+            _refuse("metadata_format", "metadata keys cannot be empty")
+        rule = metadata_value_rule(value)
+        if rule:
+            _refuse(
+                "metadata_secret_value",
+                f"metadata value for {key!r} looks like a secret (rule: {rule}). "
+                "Nothing was stored. Pass the credential with --token-stdin; "
+                "metadata holds labels and ids only.",
+            )
         metadata[key] = value
     return metadata
 
@@ -1091,21 +1217,24 @@ def _validate_key_shape(provider: Provider, token: str, metadata: dict[str, str]
     if not token.startswith(provider.key_prefixes):
         shapes = ", ".join(f"{prefix}…" for prefix in provider.key_prefixes)
         slot = provider.required_secrets[0] if provider.required_secrets else "credential"
-        raise ValueError(
+        _refuse(
+            "key_shape",
             f"the {provider.name} {slot} does not match the expected key shape "
-            f"({shapes}). Nothing was stored; check the value and reconnect."
+            f"({shapes}). Nothing was stored; check the value and reconnect.",
         )
     if provider.id == "stripe":
         mode = str(metadata.get("mode") or "").strip().lower()
         if mode == "live" and token.startswith(("sk_test_", "rk_test_")):
-            raise ValueError(
+            _refuse(
+                "stripe_mode_mismatch",
                 "metadata says mode=live but the key is a Stripe TEST key. "
-                "Nothing was stored; fix the mode or the key and reconnect."
+                "Nothing was stored; fix the mode or the key and reconnect.",
             )
         if mode == "test" and token.startswith(("sk_live_", "rk_live_")):
-            raise ValueError(
+            _refuse(
+                "stripe_mode_mismatch",
                 "metadata says mode=test but the key is a Stripe LIVE key. "
-                "Nothing was stored; fix the mode or the key and reconnect."
+                "Nothing was stored; fix the mode or the key and reconnect.",
             )
 
 

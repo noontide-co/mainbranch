@@ -3435,3 +3435,118 @@ def test_connect_doctor_check_detail_separates_testable_from_unverifiable(
     assert "never confirmed with the provider (cloudflare)" in check["detail"]
     assert "Main Branch cannot verify (resend)" in check["detail"]
     assert check["repair_command"] == "mb connect test cloudflare"
+
+
+# Fake values in the shape of each rule. None of these is a real credential.
+FAKE_SECRET_VALUES = {
+    "credential_prefix:sk_": "sk_test_" + "F4k3v4lu3F4k3",
+    "credential_prefix:rk_": "rk_live_" + "F4k3v4lu3F4k3",
+    "credential_prefix:pk_live_": "pk_live_" + "F4k3v4lu3F4k3",
+    "credential_prefix:ghp_": "ghp_" + "F4k3" * 9,
+    "credential_prefix:github_pat_": "github_pat_" + "11F4K3_f4k3v4lu3",
+    "credential_prefix:xox": "xoxb-" + "1111-2222-f4k3",
+    "credential_prefix:AKIA": "AKIA" + "F4K3F4K3F4K3F4K3",
+    "jwt_shape": "eyJhbGciOiJub25lIn0.eyJzdWIiOiJmYWtlIn0.",
+    "high_entropy": "Q2hhbmdlTWVQbGVhc2U4ZjNrMjlYcVdlUnR5VWlPcA",
+    "bearer_credential": "Bearer f4k3",
+}
+
+
+@pytest.mark.parametrize(("rule", "value"), sorted(FAKE_SECRET_VALUES.items()))
+def test_metadata_refuses_secret_values_and_never_echoes_them(
+    rule: str, value: str, tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        ["connect", "cloudflare", "--metadata", f"zone_label={value}", "--repo", str(repo)],
+    )
+
+    assert result.exit_code == 2
+    assert f"rule: {rule}" in result.stderr
+    assert "'zone_label'" in result.stderr
+    assert value not in result.output
+    assert not (repo / ".mb" / "connect.yaml").exists()
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        connect_mod._parse_metadata([f"zone_label={value}"])
+    assert caught.value.rule == "metadata_secret_value"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "0" * 32,
+        "3f2a9c1e7b4d4e0f9a8b7c6d5e4f3a2b",
+        "123e4567-e89b-12d3-a456-426614174000",
+        "act_1234567890",
+        "123456789",
+        "op://Business/Stripe restricted/credential",
+        "https://example.com/Path/To/Thing123",
+        "owner@example.com",
+        "Main Stripe restricted key",
+        "core/finance/books.journal",
+        "re_engagement",
+        "AcmeCorpProductionWorkspace01",
+        "pk_test_publishable",
+        "${STRIPE_API_KEY}",
+        "2026-10-03",
+    ],
+)
+def test_metadata_accepts_ids_labels_and_references(value: str) -> None:
+    assert connect_mod.metadata_value_rule(value) == ""
+
+
+def test_metadata_key_names_alone_never_refuse(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = connect_mod.connect_provider(
+        "stripe",
+        repo=repo,
+        token="sk_test_fixture",
+        metadata_pairs=[
+            "key_name=Main restricted key",
+            "onepassword_item=Stripe restricted",
+            "source=op://Business/Stripe/credential",
+            "api_key_label=checkout",
+            "mode=test",
+        ],
+    )
+
+    stored = result["status"]["metadata"]
+    assert stored["key_name"] == "Main restricted key"
+    assert stored["onepassword_item"] == "Stripe restricted"
+    assert stored["source"] == "op://Business/Stripe/credential"
+    assert "source" in connect_mod.SAFE_METADATA_KEYS
+
+
+def test_metadata_without_equals_does_not_echo_the_argument() -> None:
+    bare = "sk_live_" + "F4k3v4lu3F4k3"
+
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        connect_mod._parse_metadata([bare])
+
+    assert caught.value.rule == "metadata_format"
+    assert bare not in str(caught.value)
+
+
+def test_status_hides_hand_edited_secret_values(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+    config_path = repo / ".mb" / "connect.yaml"
+    config = yaml.safe_load(config_path.read_text())
+    leaked = FAKE_SECRET_VALUES["credential_prefix:sk_"]
+    config["providers"]["cloudflare"]["metadata"] = {"zone_label": leaked, "zone_id": "abc123"}
+    config_path.write_text(yaml.safe_dump(config))
+
+    status = connect_mod.status_provider("cloudflare", repo)
+
+    assert "zone_label" not in status["metadata"]
+    assert status["metadata"]["zone_id"] == "abc123"
+    assert leaked not in json.dumps(status)
