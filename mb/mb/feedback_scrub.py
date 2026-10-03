@@ -98,6 +98,13 @@ _YAML_HEADER_TAIL_RE = re.compile(
 )
 # Properties before an inline value: ``key: !!str &a value``.
 _YAML_INLINE_PROPERTIES_RE = re.compile(r"(?:(?:!<[^>\n]*>|![^\s]*|&[^\s]+)[ \t]+)+")
+# An explicit key, ``? key``, and the ``:`` line that carries its value.
+_YAML_EXPLICIT_KEY_RE = re.compile(
+    rf"(?:^|(?<=[ \t]))\?[ \t]+([\"']?)({_KEY})\1[ \t]*(?:#[^\n]*)?\r?$"
+)
+_YAML_EXPLICIT_VALUE_RE = re.compile(r"[ \t]*:(?=[ \t]|\r?$)")
+# First characters of an inline value that is not a plain scalar.
+_YAML_NOT_PLAIN = frozenset("\"'`{[|>*#")
 _SEGMENT_RE = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+")
 # Characters that end a bare (unquoted) value.
 _VALUE_STOP = frozenset(";&,)]}<>|")
@@ -190,6 +197,30 @@ def value_end(text: str, start: int) -> int:
     return index
 
 
+def flow_end(text: str, start: int) -> int:
+    """Index just past the ``{...}``/``[...]`` YAML flow collection at ``start``.
+
+    Nested brackets are counted across lines; a quote that opens a scalar (after
+    a bracket, comma, colon or whitespace) is skipped with ``quoted_end``. An
+    unclosed collection runs to the end of ``text``.
+    """
+    depth = 0
+    index = start
+    while index < len(text):
+        char = text[index]
+        if char in "{[":
+            depth += 1
+        elif char in "}]":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+        elif char in QUOTES and text[index - 1] in " \t\r\n{[,:":
+            index = quoted_end(text, index)
+            continue
+        index += 1
+    return len(text)
+
+
 def key_segments(key: str) -> list[str]:
     return [
         segment.lower()
@@ -231,7 +262,11 @@ def _redact_values(
             properties = _YAML_INLINE_PROPERTIES_RE.match(text, start)
             if properties:
                 start = properties.end()
-        end = value_end(text, start)
+            end = flow_end(text, start) if text[start : start + 1] in ("{", "[") else None
+        else:
+            end = None
+        if end is None:
+            end = value_end(text, start)
         if end == start:
             search_from = match.end()
             continue
@@ -283,28 +318,114 @@ def _indent(line: str) -> int:
     return len(line) - len(line.lstrip(" \t"))
 
 
-def _is_yaml_secret_header(line: str) -> bool:
-    """Is ``line`` a secret ``key:`` whose value sits on the indented lines below?
+def _yaml_secret_header(line: str) -> tuple[str, int] | None:
+    """Classify a line that opens a secret YAML value: ``(kind, key column)``.
 
-    The key may carry a tag, an anchor, a ``|``/``>`` indicator with chomping
-    and indent digits, and a trailing comment; nothing else may follow it.
+    ``block``: the value sits on the lines below. After the colon there may be
+    a tag, an anchor, a ``|``/``>`` indicator with chomping and indent digits,
+    and a trailing comment, and nothing else. ``plain``: an inline plain
+    scalar, which may continue on lines more indented than the key line.
     """
     for match in _YAML_KEY_RE.finditer(line):
-        if is_secret_key(match.group(2)) and _YAML_HEADER_TAIL_RE.match(line, match.end()):
-            return True
-    return False
+        if not is_secret_key(match.group(2)):
+            continue
+        if _YAML_HEADER_TAIL_RE.match(line, match.end()):
+            return "block", match.start()
+        start = match.end()
+        while start < len(line) and line[start] in " \t":
+            start += 1
+        properties = _YAML_INLINE_PROPERTIES_RE.match(line, start)
+        if properties:
+            start = properties.end()
+        if line[start : start + 1] not in _YAML_NOT_PLAIN:
+            return "plain", match.start()
+        return None
+    return None
 
 
 def _is_comment(line: str) -> bool:
     return line.lstrip(" \t").startswith("#")
 
 
-def _redact_yaml_blocks(text: str) -> str:
-    """Redact every line under a secret YAML key whose value is a block.
+def _is_dash(line: str) -> bool:
+    stripped = line.strip()
+    return stripped == "-" or stripped.startswith("- ")
 
-    The block is each following line more indented than the key line, with
-    blank and comment lines inside it, up to the first line at the key's
-    indentation or less. A comment line at any indentation does not end it.
+
+def _block_end(lines: list[str], index: int, base: int, dash_columns: tuple[int, ...]) -> int:
+    """Index just past the last line of the block that starts at ``lines[index]``.
+
+    The block is every line more indented than ``base``, with blank and
+    comment lines inside it. A ``- `` item at one of ``dash_columns`` (an
+    indentless sequence) belongs to it too. The first other line at
+    ``base`` or less ends it. Returns ``index`` when the block is empty.
+    """
+    end = index
+    last_content = index
+    while end < len(lines):
+        current = lines[end]
+        if current.strip() and (
+            _indent(current) > base or (_indent(current) in dash_columns and _is_dash(current))
+        ):
+            last_content = end + 1
+        elif current.strip() and not _is_comment(current):
+            break
+        end += 1
+    return last_content
+
+
+def _redacted_line(base: int, last: str) -> str:
+    return " " * (base + 2) + REDACTED + ("\r" if last.endswith("\r") else "")
+
+
+def _explicit_value(lines: list[str], index: int, out: list[str]) -> int:
+    """Redact the ``:`` value of a secret ``? key``; return the next line index."""
+    value = index
+    while value < len(lines) and (not lines[value].strip() or _is_comment(lines[value])):
+        value += 1
+    if value == len(lines):
+        return index
+    match = _YAML_EXPLICIT_VALUE_RE.match(lines[value])
+    if match is None:
+        return index
+    out.extend(lines[index:value])
+    line = lines[value]
+    base = _indent(line)
+    if _YAML_HEADER_TAIL_RE.match(line, match.end()):
+        out.append(line)
+        last = _block_end(lines, value + 1, base, (base,))
+        if last > value + 1:
+            out.append(_redacted_line(base, lines[last - 1]))
+        return max(last, value + 1)
+    rest = "\n".join(lines[value:])
+    start = match.end()
+    while rest[start : start + 1] in (" ", "\t"):
+        start += 1
+    properties = _YAML_INLINE_PROPERTIES_RE.match(rest, start)
+    if properties:
+        start = properties.end()
+    if rest[start : start + 1] in ("{", "["):
+        # A flow collection may close on any line; skip whole lines up to it.
+        last = value + 1 + rest.count("\n", 0, flow_end(rest, start))
+    else:
+        last = value + 1
+    last = _block_end(lines, last, base, ())
+    out.append(line[: match.end()] + " " + REDACTED + ("\r" if line.endswith("\r") else ""))
+    if last > value + 1:
+        out.append(_redacted_line(base, lines[last - 1]))
+    return max(last, value + 1)
+
+
+def _redact_yaml_blocks(text: str) -> str:
+    """Redact the lines that belong to a secret YAML value.
+
+    - ``key:`` with its value below: every following line more indented than
+      the key line, plus ``- `` items at the key's own column (an indentless
+      sequence), with blank and comment lines inside, up to the first other
+      line at the key's indentation or less.
+    - ``key: plain value``: the continuation lines more indented than the key
+      line (the inline value itself is left to the value rule).
+    - ``? key`` then ``: value``: the value line and its continuation.
     """
     lines = text.split("\n")
     out: list[str] = []
@@ -313,22 +434,20 @@ def _redact_yaml_blocks(text: str) -> str:
         line = lines[index]
         out.append(line)
         index += 1
-        if not _is_yaml_secret_header(line):
+        explicit = _YAML_EXPLICIT_KEY_RE.search(line)
+        if explicit and is_secret_key(explicit.group(2)):
+            index = _explicit_value(lines, index, out)
             continue
+        header = _yaml_secret_header(line)
+        if header is None:
+            continue
+        kind, column = header
         base = _indent(line)
-        end = index
-        last_content = index
-        while end < len(lines):
-            current = lines[end]
-            if current.strip() and _indent(current) > base:
-                last_content = end + 1
-            elif current.strip() and not _is_comment(current):
-                break
-            end += 1
-        if last_content > index:
-            ending = "\r" if lines[last_content - 1].endswith("\r") else ""
-            out.append(" " * (base + 2) + REDACTED + ending)
-            index = last_content
+        dash_columns = (base, column) if kind == "block" else ()
+        last = _block_end(lines, index, base, dash_columns)
+        if last > index:
+            out.append(_redacted_line(base, lines[last - 1]))
+            index = last
     return "\n".join(out)
 
 

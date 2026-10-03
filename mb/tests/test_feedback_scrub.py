@@ -266,6 +266,50 @@ def test_yaml_block_stops_at_the_key_indentation() -> None:
     assert scrubbed.endswith("\nname: kept")
 
 
+# --- Round 6: indentless sequences, flow collections, plain continuations, ? keys
+
+YAML_ROUND6_SHAPES = {
+    "indentless_sequence": f"credentials:\n- {CANARY}\n- other\nnext: 1",
+    "indentless_nested_items": (
+        f"config:\n  tokens: # rotated\n  - name: a\n    value: {CANARY}\n  size: 2"
+    ),
+    "flow_map_nested": f"credentials: {{primary: {{user: u, pass: {CANARY}}}}}",
+    "flow_map_with_props": f"auth: !!map &a {{primary: '{CANARY}'}}",
+    "flow_sequence_multiline": f"secrets: [\n  a,\n  {CANARY}\n]",
+    "plain_continuation": f"password: first\n  {CANARY}\nname: kept",
+    "plain_continuation_tagged": f"password: !!str first\n  {CANARY}",
+    "plain_continuation_list_item": f"- token: abc\n    {CANARY}\n- name: kept",
+    "explicit_key_inline": f"? password\n: {CANARY}",
+    "explicit_key_block": f"? api_key\n:\n  {CANARY}",
+    "explicit_key_comment_flow": f"? token # k\n: [a,\n  {CANARY}]",
+    "explicit_key_in_list": f"- ? secret\n  : {CANARY}",
+}
+YAML_ROUND6_BENIGN = [
+    "items:\n- a\n- b\nnext: 1",
+    "config: {name: x, size: 2}",
+    "description: first line\n  second line\nname: y",
+    "? name\n: value",
+]
+
+
+@pytest.mark.parametrize("case", sorted(YAML_ROUND6_SHAPES))
+def test_round6_yaml_case_is_redacted_in_all_four_fields(state: Path, case: str) -> None:
+    for index, value in enumerate(_stored_fields(state, YAML_ROUND6_SHAPES[case])):
+        assert CANARY not in value, (case, index)
+
+
+@pytest.mark.parametrize("text", YAML_ROUND6_BENIGN)
+def test_round6_ordinary_yaml_is_unchanged(text: str) -> None:
+    assert feedback_mod.scrub(text) == text
+
+
+def test_round6_blocks_stop_at_sibling_keys() -> None:
+    for shape in ("plain_continuation", "plain_continuation_list_item"):
+        scrubbed = feedback_mod.scrub(YAML_ROUND6_SHAPES[shape])
+        assert scrubbed.endswith("name: kept"), shape
+    assert feedback_mod.scrub(YAML_ROUND6_SHAPES["indentless_sequence"]).endswith("\nnext: 1")
+
+
 # --- Round 4: linear time ----------------------------------------------------
 
 TIMING_FAMILIES = {
@@ -283,6 +327,9 @@ TIMING_FAMILIES = {
     "header_names": "X-Api-Key: " * 363,
     "yaml_keys": "password:\n" * 400,
     "yaml_headers": "token: !!str &a |2- # c\n" * 167,
+    "yaml_flow": "token: {" * 500,
+    "yaml_explicit": "? token\n" * 500,
+    "yaml_indentless": "token:\n- a\n" * 364,
     "path_segments": "/a" * 2000,
     "escaped_spaces": "\\ " * 2000,
     "long_key": "a" * 3999 + ":",

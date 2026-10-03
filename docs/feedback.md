@@ -53,7 +53,10 @@ Each call appends one JSON line to
     indented than the key, with blank and comment lines inside it. The key may
     carry a tag (`!!str`, `!<...>`), an anchor (`&name`), chomping and indent
     digits (`|-`, `>+2`) and a trailing `# comment`. A tag or anchor before an
-    inline value does not hide the value.
+    inline value does not hide the value. Also redacted: `- ` items at the
+    key's own indentation (an indentless sequence), a whole `{...}` or `[...]`
+    flow collection across lines, a plain value's continuation lines, and the
+    `:` value of an explicit `? key`.
   - Escaped characters (`\ `, `\;`) are part of a bare value. A secret flag
     (`--password`, `--api-key`, any flag with a secret segment) loses its next
     argument even when it starts with `-` or sits on the next line.
