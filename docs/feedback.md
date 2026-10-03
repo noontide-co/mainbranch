@@ -78,3 +78,14 @@ a review. Sending, telemetry, and filing issues automatically are out of scope.
 
 `clear --before <date>` removes entries older than the date, plus any
 unreadable lines.
+
+## Exit codes
+
+`0` on success. `2` for a usage error: empty text, an unknown subcommand
+argument, `--kind` other than `feedback` or `refusal`, an unreadable `--since`
+or one longer than 100 years (`invalid_since`), or a missing or unreadable
+`--before` (`missing_before`, `invalid_date`). `1` when the file cannot be
+read or written (`feedback_read_failed`, `feedback_write_failed`,
+`feedback_clear_failed`). With `--json`, every failure returns the result
+envelope with `ok: false` and a scrubbed message. Unreadable lines in the file
+are skipped and counted as `skipped_lines`; they never fail a command.

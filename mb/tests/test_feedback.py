@@ -249,7 +249,7 @@ def test_rollup_empty_and_bad_since(state_home: Path) -> None:
     assert "No feedback or refusals in this window." in result.stdout
     bad = runner.invoke(app, ["feedback", "rollup", "--since", "lately", "--json"])
     assert bad.exit_code == 2
-    assert json.loads(bad.stdout)["errors"][0]["code"] == "invalid_date"
+    assert json.loads(bad.stdout)["errors"][0]["code"] == "invalid_since"
 
 
 def test_list_newest_with_filters(state_home: Path) -> None:
@@ -473,3 +473,46 @@ def test_record_after_partial_tail_is_still_readable(state_home: Path) -> None:
     assert [entry["text"] for entry in entries] == ["before", "after the crash"]
     assert skipped == 1
     assert path.read_bytes().endswith(b"\n")
+
+
+@pytest.mark.parametrize("since", ["1000000000d", "99999999999h", "9999999w", "36501d"])
+def test_oversized_since_is_a_structured_error(state_home: Path, since: str) -> None:
+    for sub in ("rollup", "list"):
+        result = runner.invoke(app, ["feedback", sub, "--since", since, "--json"])
+        assert result.exit_code == 2, result.output
+        payload = json.loads(result.stdout)
+        assert payload["mb_command"] == f"mb feedback {sub}"
+        assert payload["errors"][0]["code"] == "invalid_since"
+
+
+@pytest.mark.parametrize("sub", [["list"], ["rollup"], ["clear", "--before", "2026-10-01"]])
+def test_unreadable_log_is_a_structured_scrubbed_error(state_home: Path, sub: list[str]) -> None:
+    _log(state_home).mkdir(parents=True)  # a directory where the file should be
+    result = runner.invoke(app, ["feedback", *sub, "--json"])
+    assert result.exit_code == 1, result.output
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["errors"][0]["code"] in {"feedback_read_failed", "feedback_clear_failed"}
+    assert str(state_home) not in result.stdout
+    human = runner.invoke(app, ["feedback", *sub])
+    assert human.exit_code == 1
+    assert "Traceback" not in human.output and str(state_home) not in human.output
+
+
+def test_clear_disk_full_is_a_structured_scrubbed_error(
+    state_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    feedback_mod.record("keep me")
+    target = _log(state_home)
+
+    def disk_full(path: Path, text: str, **_: object) -> None:
+        raise OSError(28, "No space left on device", str(path))
+
+    monkeypatch.setattr(feedback_mod, "atomic_write_text", disk_full)
+    result = runner.invoke(app, ["feedback", "clear", "--before", "2026-10-01", "--json"])
+    assert result.exit_code == 1, result.output
+    payload = json.loads(result.stdout)
+    assert payload["errors"][0]["code"] == "feedback_clear_failed"
+    assert "No space left on device" in payload["errors"][0]["message"]
+    assert str(target) not in result.stdout
+    assert [entry["text"] for entry in _lines(state_home)] == ["keep me"]

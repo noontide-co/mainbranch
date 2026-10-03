@@ -502,9 +502,13 @@ def feedback_cmd(
                 )
             result = feedback_mod.record(" ".join(args), command=about or None, repo=repo)
     except ValueError as exc:
-        usage_error("invalid_date", str(exc))
+        code = "invalid_date" if target == "clear" else "invalid_since"
+        usage_error(code, feedback_mod.scrub(str(exc)))
     if json_out:
         typer.echo(_json_payload(result, command=command, schema_name=schema_name))
+    elif not result["ok"]:
+        for error in result.get("errors", []):
+            typer.echo(f"{command}: {error['message']}", err=True)
     elif target == "rollup":
         typer.echo(result["markdown"], nl=False)
     elif target == "list":

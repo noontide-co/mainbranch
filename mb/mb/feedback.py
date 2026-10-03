@@ -35,6 +35,7 @@ SUBCOMMANDS = ("rollup", "list", "clear")
 KINDS = ("feedback", "refusal")
 MAX_TEXT_CHARS = 4000
 DEFAULT_SINCE = "7d"
+MAX_SINCE = timedelta(days=36500)
 
 _SINCE_RE = re.compile(r"^\s*(\d+)\s*([hdw])\s*$", re.IGNORECASE)
 # Home directories of any user, in case text quotes another account's path.
@@ -183,6 +184,22 @@ def _clean_label(value: str | None) -> str:
     return scrub(" ".join((value or "").split()))[:200]
 
 
+def _storage_error(code: str, action: str, exc: OSError, target: Path) -> dict[str, Any]:
+    """A structured error for a failed read or write, with no path in it."""
+    if isinstance(exc, TimeoutError):
+        reason = "timed out waiting for the feedback file lock"
+    else:
+        reason = exc.strerror or type(exc).__name__
+    return {
+        "ok": False,
+        "errors": [
+            {"code": code, "message": scrub(f"could not {action} the feedback file: {reason}")}
+        ],
+        "path": display_path(target),
+        "safe_to_share": True,
+    }
+
+
 def _append(entry: dict[str, Any], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     line = json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n"
@@ -228,18 +245,8 @@ def record(
     }
     try:
         _append(entry, target)
-    except (OSError, TimeoutError) as exc:
-        return {
-            "ok": False,
-            "errors": [
-                {
-                    "code": "feedback_write_failed",
-                    "message": scrub(f"could not write the feedback file: {exc.strerror or exc}"),
-                }
-            ],
-            "path": display_path(target),
-            "safe_to_share": True,
-        }
+    except OSError as exc:
+        return _storage_error("feedback_write_failed", "write", exc, target)
     return {
         "ok": True,
         "entry": entry,
@@ -343,10 +350,10 @@ def parse_since(value: str, *, now: datetime | None = None) -> datetime:
     if match:
         amount = int(match.group(1))
         unit = match.group(2).lower()
-        delta = {"h": timedelta(hours=amount), "d": timedelta(days=amount)}.get(
-            unit, timedelta(weeks=amount)
-        )
-        return current - delta
+        hours = amount * {"h": 1, "d": 24, "w": 168}[unit]
+        if hours > MAX_SINCE.total_seconds() / 3600:
+            raise ValueError(f"--since {value.strip()} is longer than 100 years")
+        return current - timedelta(hours=hours)
     return _parse_date(value)
 
 
@@ -381,8 +388,11 @@ def list_entries(
 ) -> dict[str, Any]:
     """Return the newest ``limit`` entries, optionally filtered by window and kind."""
     target = path or feedback_path()
-    entries, skipped = read_entries(target)
     cutoff = parse_since(since, now=now) if since else None
+    try:
+        entries, skipped = read_entries(target)
+    except OSError as exc:
+        return _storage_error("feedback_read_failed", "read", exc, target)
     selected = _since_filter(entries, cutoff)
     if kind:
         selected = [item for item in selected if item.get("kind") == kind]
@@ -409,8 +419,11 @@ def rollup(
 ) -> dict[str, Any]:
     """Group entries in the window by kind, command and rule, with counts."""
     target = path or feedback_path()
-    entries, skipped = read_entries(target)
     cutoff = parse_since(since, now=now)
+    try:
+        entries, skipped = read_entries(target)
+    except OSError as exc:
+        return _storage_error("feedback_read_failed", "read", exc, target)
     selected = _since_filter(entries, cutoff)
     groups: dict[tuple[str, str, str], dict[str, Any]] = {}
     for item in selected:
@@ -525,12 +538,17 @@ def clear(*, before: str, path: Path | None = None) -> dict[str, Any]:
             "kept": 0,
             "safe_to_share": True,
         }
-    with state_lock(target):
-        entries, skipped = read_entries(target)
-        kept = [item for item in entries if (_parse_time(item["time"]) or cutoff) >= cutoff]
-        removed = len(entries) - len(kept)
-        text = "".join(json.dumps(item, ensure_ascii=False, sort_keys=True) + "\n" for item in kept)
-        atomic_write_text(target, text)
+    try:
+        with state_lock(target):
+            entries, skipped = read_entries(target)
+            kept = [item for item in entries if (_parse_time(item["time"]) or cutoff) >= cutoff]
+            removed = len(entries) - len(kept)
+            text = "".join(
+                json.dumps(item, ensure_ascii=False, sort_keys=True) + "\n" for item in kept
+            )
+            atomic_write_text(target, text)
+    except OSError as exc:
+        return _storage_error("feedback_clear_failed", "rewrite", exc, target)
     return {
         "ok": True,
         "path": display_path(target),
@@ -543,10 +561,6 @@ def clear(*, before: str, path: Path | None = None) -> dict[str, Any]:
 
 
 def render_record(result: dict[str, Any]) -> None:
-    if not result["ok"]:
-        for error in result["errors"]:
-            print(f"mb feedback: {error['message']}")
-        return
     print(f"Saved to {result['path']} (local only; nothing was sent).")
     print("Run `mb feedback rollup` to see this week's friction grouped by command.")
 
