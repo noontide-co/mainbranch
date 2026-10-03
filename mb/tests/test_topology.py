@@ -841,3 +841,125 @@ def test_looks_like_business_repo_is_hub_only(tmp_path: Path) -> None:
     assert looks_like_business_repo(hub)
     assert not looks_like_business_repo(child)
 
+
+# ---------------------------------------------------------------------------
+# sites in mb.child_repo.v0 (#984)
+# ---------------------------------------------------------------------------
+
+
+def test_descriptor_sites_are_normalized(tmp_path: Path) -> None:
+    repo = tmp_path / "acme-sites"
+    (repo / "clients" / "alpha").mkdir(parents=True)
+    _write_descriptor(
+        repo,
+        {
+            "schema": "mb.child_repo.v0",
+            "role": "site",
+            "sites": [
+                {
+                    "slug": "alpha",
+                    "display_name": "Alpha",
+                    "dir": "clients/alpha",
+                    "domains": ["alpha.example"],
+                    "deploy": {"provider": "cloudflare-pages", "project": "alpha"},
+                    "lifecycle": "active",
+                }
+            ],
+        },
+    )
+
+    descriptor = topology.read_child_descriptor(repo)
+
+    assert descriptor["ok"]
+    assert descriptor["sites_errors"] == []
+    assert descriptor["sites"] == [
+        {
+            "slug": "alpha",
+            "display_name": "Alpha",
+            "dir": "clients/alpha",
+            "domains": ["alpha.example"],
+            "deploy": {"provider": "cloudflare-pages", "project": "alpha"},
+            "lifecycle": "active",
+        }
+    ]
+
+
+def test_descriptor_without_sites_is_unchanged(tmp_path: Path) -> None:
+    repo = tmp_path / "site"
+    repo.mkdir()
+    _write_descriptor(repo, {"schema": "mb.child_repo.v0", "role": "site"})
+
+    descriptor = topology.read_child_descriptor(repo)
+
+    assert descriptor["ok"]
+    assert descriptor["sites"] == []
+    assert descriptor["sites_errors"] == []
+
+
+def test_descriptor_sites_validation_errors(tmp_path: Path) -> None:
+    repo = tmp_path / "acme-sites"
+    (repo / "clients" / "alpha").mkdir(parents=True)
+    _write_descriptor(
+        repo,
+        {
+            "schema": "mb.child_repo.v0",
+            "role": "site",
+            "sites": [
+                {"slug": "alpha", "dir": "clients/alpha"},
+                {"slug": "alpha", "dir": "clients/alpha"},
+                {"slug": "beta", "dir": "/abs/beta"},
+                {"slug": "gamma", "dir": "../outside"},
+                {"slug": "delta", "dir": "clients/missing"},
+                {"slug": "eps", "data_path": "clients/alpha"},
+                {"slug": "zeta", "domains": "zeta.example"},
+                {"slug": "eta", "deploy": {"provider": "cloudflare-pages", "api_token": "x"}},
+                {"slug": "theta", "display_name": 3},
+                {"slug": "iota", "lifecycle": "forever"},
+            ],
+        },
+    )
+
+    descriptor = topology.read_child_descriptor(repo)
+    errors = "\n".join(descriptor["sites_errors"])
+
+    # Still a valid descriptor: older readers ignore sites, so a bad list must
+    # not turn a child into a non-child.
+    assert descriptor["ok"]
+    assert [site["slug"] for site in descriptor["sites"]] == ["alpha"]
+    assert "sites[alpha].slug is not unique" in errors
+    assert "sites[beta].dir must be relative" in errors
+    assert "sites[gamma].dir must stay inside" in errors
+    assert "sites[delta].dir does not exist" in errors
+    assert "sites[eps].data_path looks sensitive" in errors
+    assert "sites[zeta].domains must be a list of strings" in errors
+    assert "sites[eta].deploy.api_token is not a known deploy field" in errors
+    assert "sites[theta].display_name must be a string" in errors
+    assert "sites[iota].lifecycle 'forever'" in errors
+    assert topology.classify_repo(repo)["kind"] == "child"
+    view = topology.collect(repo)
+    codes = [finding["code"] for finding in view["findings"]]
+    assert "topology_descriptor_sites_invalid" in codes
+
+
+def test_parse_descriptor_text_skips_dir_existence() -> None:
+    text = json.dumps(
+        {
+            "schema": "mb.child_repo.v0",
+            "role": "site",
+            "sites": [{"slug": "alpha", "dir": "clients/alpha"}],
+        }
+    )
+
+    descriptor = topology.parse_descriptor_text(text)
+
+    assert descriptor["sites"][0]["dir"] == "clients/alpha"
+    assert descriptor["sites_errors"] == []
+    assert topology.parse_descriptor_text("[1]")["error"] == "not a JSON object"
+
+
+def test_parse_registry_text_matches_read_registry(tmp_path: Path) -> None:
+    repo = tmp_path / "hub"
+    repo.mkdir()
+    _write_registry(repo, _valid_registry())
+
+    assert topology.parse_registry_text(_valid_registry()) == topology.read_registry(repo)
