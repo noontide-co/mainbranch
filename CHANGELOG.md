@@ -27,6 +27,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   describes a repo that holds several sites: slug, name, folder, domains,
   deploy target and lifecycle. Older `mb` ignores it. `mb site check --site
   <slug>` checks one of them. (#984)
+- `mb connect exec <provider> [--env NAME] -- <command>` runs one command with
+  the stored credential in its environment only. No shell; the secret is never
+  printed, logged or returned in JSON; the exit code is the command's own.
+  Default variables: `CLOUDFLARE_API_TOKEN`, `STRIPE_API_KEY`, `GITHUB_TOKEN`,
+  and `MB_SECRET` for every other provider.
+- `mb connect <provider> --source op://vault/item/field` records where a
+  credential lives, and `mb connect rotate <provider>` re-reads it with the
+  1Password CLI, stores it and runs the provider probe.
+- Read-only probes for Stripe (allowed or refused per probed resource, so a
+  restricted key's reach is visible), GitHub (token kind and classic token
+  scopes) and GA4 (the configured `property_id`). GitHub and GA4 are now
+  built-in providers.
 
 ### Fixed
 
@@ -39,6 +51,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `mb checkpoint`; doctor and checkpoint accept child repos. (#984)
 
 ### Changed
+
+- `mb connect token` refuses to print to a terminal or a pipe unless `--print`
+  is passed, and points at `exec`. Redirecting to a file with `--print` still
+  works for scripts that need the raw value.
+- `mb connect --metadata` judges the value, not the key name: a value with a
+  credential prefix, a JWT shape, a bearer string or a high-entropy token
+  shape is refused and the rule is named, never the value. Labels such as
+  `key_name`, `onepassword_item` and `source` are accepted.
 
 - `/mb-ads` carries what a live ecommerce store learned running Meta and
   Google Ads through agent skills. The additions are new reference pages:

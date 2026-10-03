@@ -47,10 +47,49 @@ supplied there is visible in the caller's process arguments. Main Branch never
 uses that option in generated commands or internal helper invocation; use
 `--token-stdin` for real credentials.
 
-`mb connect token <provider>` is the scripted read path. It prints the raw token
-to stdout and nothing else. Use it only in pipes or local scripts that need the
-credential; do not paste its output into chat, docs, issues, PRs, or tracked
-files.
+## Using a Credential: `exec`
+
+`mb connect exec <provider> [--env NAME] -- <command> [args...]` runs one
+command with the stored credential in that command's environment and nowhere
+else:
+
+```bash
+mb connect exec stripe -- stripe products list --limit 3
+mb connect exec cloudflare -- npx wrangler pages deployment list
+mb connect exec mercury --env MERCURY_TOKEN -- python3 scripts/import.py
+```
+
+- No shell is involved: the words after `--` are the program and its
+  arguments, exactly as given.
+- The secret is never printed, logged, or returned in JSON. stdin, stdout and
+  stderr belong to the command.
+- The exit code is the command's own; a command killed by a signal exits
+  `128 + signal`, as in a shell. `mb connect exec` itself exits 1 when the
+  credential cannot be read, 2 for a refused request, and 127 when the
+  command is not found.
+- Default variable names: `CLOUDFLARE_API_TOKEN` for Cloudflare,
+  `STRIPE_API_KEY` for Stripe, `GITHUB_TOKEN` for GitHub, and `MB_SECRET` for
+  every other provider, custom ids included. `--env` overrides it.
+- `--repo` selects the business repo, and a user-scoped connection resolves
+  from a worktree as it does for `status`.
+
+This is the path agents and scripts should use. What the command prints is
+still the command's business: avoid commands that echo their environment.
+
+## Raw Read: `token`
+
+`mb connect token <provider>` prints the raw credential with no added newline.
+It refuses, with exit 2, when stdout is a terminal or a pipe, because both put
+the secret into some other process's text: a transcript, a log, a variable
+an agent later prints. The refusal points at `exec`. A script that must write
+the raw value to a file can still do so explicitly:
+
+```bash
+mb connect token stripe --print > "$private_tmp/stripe-key"
+```
+
+`--print` also lifts the refusal for a terminal or a pipe. Use it only when
+nothing reading that output is an agent or a log.
 
 The product model behind this surface lives in
 [connection-model.md](connection-model.md).
@@ -69,8 +108,9 @@ per provider:
 
 The invariant, stated precisely: **for a provider with `required_secrets`,
 `ready` and `ok: true` require `provider_verified: true`.** Cloudflare, Apify,
-and Meta have real probes. Every other built-in provider, and every custom
-provider, reports `stored, unverified`: the credential is present and readable,
+Meta, Stripe, GitHub and GA4 have real probes (see [Probes](#probes)). Every
+other built-in provider, and every custom provider, reports
+`stored, unverified`: the credential is present and readable,
 and nothing has checked that it works. `mb connect doctor` and `mb status` grade
 that as a warning, not a pass.
 
@@ -121,6 +161,60 @@ recording whether a provider was called, so it reads as `stored, unverified`
 until `mb connect test` runs once more. Nothing is rewritten, and a provider
 with a real probe returns to `ready` after one re-test.
 
+## Probes
+
+Every probe is a read-only GET. Response bodies are never returned or stored;
+only the outcome, the HTTP status, and the facts listed here.
+
+| Provider | Probe | Extra facts recorded |
+| --- | --- | --- |
+| Cloudflare | token verify (user or account token) | none |
+| Apify | current user | none |
+| Meta | Meta's Ads CLI read smoke | per-command results |
+| Stripe | list products, prices, customers and charges (`limit=1`) and read the balance | `scopes`: `allowed`, `refused` or `unknown` per resource |
+| GitHub | authenticated user | `token_kind`; `token_scopes` for classic tokens |
+| GA4 | the configured property, from the Admin API | none |
+
+Stripe: a 2xx means the key may read that resource, a 403 means the key is
+valid but restricted from it, and a 401 on any probe means Stripe rejected the
+key itself. A restricted key that reads products and prices but not customers
+is `ready`, with the refusals named in the summary and in `scopes`.
+
+GitHub: classic tokens report their scopes through the `X-OAuth-Scopes`
+header. GitHub does not list a fine-grained or app token's permissions through
+the API, so the probe says so instead of guessing. The GitHub entry stores its
+token in an `api_key` slot, which keeps a GitHub token connected earlier with
+`--custom` readable.
+
+GA4: the probe needs the numeric property id as metadata. Without it the test
+reports `unvalidated` and names the command:
+
+```bash
+mb connect ga4 --token-stdin --metadata property_id=<property-id>
+mb connect test ga4
+```
+
+The GA4 credential is an OAuth access token with Analytics read scope.
+
+## Metadata Is Judged by Value
+
+`--metadata key=value` is for labels and ids. A value that looks like a secret
+is refused, and nothing is stored. The rules:
+
+- `credential_prefix:<prefix>`: a known public credential prefix (for example
+  `sk_`, `rk_`, `pk_live_`, `whsec_`, `ghp_`, `github_pat_`, `xox`, `AKIA`)
+  followed by a generated-looking tail;
+- `jwt_shape`: three dot-separated base64url segments starting `eyJ`;
+- `bearer_credential`: a value starting `Bearer `;
+- `high_entropy`: 24 or more token characters with mixed case and digits that
+  change character class often and carry enough entropy.
+
+Hex ids, UUIDs, numeric ids, URLs, emails, paths, `op://` references,
+`${VAR}` references and CamelCase labels pass. The key name alone never
+refuses, so labels such as `key_name=Main restricted key` or
+`onepassword_item=Stripe restricted` are fine. The refusal names the rule and
+the key, never the value.
+
 ## Custom Providers
 
 Use `--custom` when the provider is not in the built-in registry yet. Custom
@@ -153,27 +247,23 @@ mb connect list --json
 mb connect identity --json
 ```
 
-Read the token for a local importer or scheduled collector:
+Run a local importer or scheduled collector with the token in its
+environment:
 
 ```bash
-mb connect token mercury
+mb connect exec mercury --env MERCURY_TOKEN -- python3 scripts/import_mercury.py
 ```
 
-In a local script, keep the token in memory and out of child-process arguments.
-The token command writes the exact credential text with no added newline.
+The script reads the variable and keeps the token in memory and out of
+child-process arguments:
 
 ```python
-import subprocess
+import os
 import urllib.request
 
-token = subprocess.run(
-    ["mb", "connect", "token", "mercury"],
-    check=True,
-    capture_output=True,
-).stdout.decode()
 request = urllib.request.Request(
     "https://api.example.invalid/accounts",
-    headers={"Authorization": f"Bearer {token}"},
+    headers={"Authorization": f"Bearer {os.environ['MERCURY_TOKEN']}"},
 )
 with urllib.request.urlopen(request, timeout=10) as response:
     payload = response.read()
@@ -251,6 +341,32 @@ MB_CONNECT_SECRET_BACKEND=macos-keychain \
 Rotation updates only the selected business's `repo_id`-scoped reference. A
 same-named provider in another business is not a sibling and is never rewritten.
 
+### Rotate from a recorded source
+
+Record where the credential lives once, as a non-secret reference:
+
+```bash
+op read "op://Business/Stripe restricted/credential" \
+  | mb connect stripe --token-stdin --source "op://Business/Stripe restricted/credential"
+```
+
+`--source` stores the reference as `metadata.source`. Given on its own, with
+no `--metadata`, it keeps the existing metadata and adds the source. A source
+that looks like a secret itself is refused.
+
+After the key is rolled in the provider and updated in 1Password:
+
+```bash
+mb connect rotate stripe
+```
+
+`rotate` re-reads the credential with `op read <ref>` (no shell; the value is
+never printed), stores it through the same path as a connect, keeps the
+account label, metadata, scope and backend, and runs the provider probe. The
+exit code follows `mb connect test`. It refuses, with exit 2 and the next
+step, when no source is recorded, when the source is not an `op://`
+reference, when the 1Password CLI is missing, and when it is not signed in.
+
 Then verify readiness without printing the token:
 
 ```bash
@@ -301,7 +417,8 @@ cannot.
 Main Branch does not yet implement a 1Password credential-store adapter. An
 operator may use an existing 1Password CLI or service-account workflow outside
 `mb` and pipe a selected field into `mb connect ... --token-stdin`, keeping the
-value in memory and off argv. Vault choice, service-account creation, token
+value in memory and off argv. Recording the reference with `--source` lets
+`mb connect rotate` repeat that read later. Vault choice, service-account creation, token
 storage, desktop integration approval, and reapproval remain operator-owned
 bootstrap. An unlocked desktop integration is not evidence that unattended
 access will remain available.
