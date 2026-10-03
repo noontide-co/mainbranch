@@ -24,7 +24,9 @@ a URL, so it is left as written.
 
 from __future__ import annotations
 
+import bisect
 import functools
+import itertools
 import re
 from pathlib import Path
 
@@ -103,6 +105,11 @@ _YAML_EXPLICIT_KEY_RE = re.compile(
     rf"(?:^|(?<=[ \t]))\?[ \t]+([\"']?)({_KEY})\1[ \t]*(?:#[^\n]*)?\r?$"
 )
 _YAML_EXPLICIT_VALUE_RE = re.compile(r"[ \t]*:(?=[ \t]|\r?$)")
+# What may precede a key for its column to be the YAML indentation: only
+# indentation and ``- `` list markers, not prose.
+_YAML_KEY_PREFIX_RE = re.compile(r"[ \t]*(?:-[ \t]+)*")
+# A plain scalar's trailing comment.
+_YAML_PLAIN_COMMENT_RE = re.compile(r"[ \t]+#")
 # First characters of an inline value that is not a plain scalar.
 _YAML_NOT_PLAIN = frozenset("\"'`{[|>*#")
 _SEGMENT_RE = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+")
@@ -201,8 +208,9 @@ def flow_end(text: str, start: int) -> int:
     """Index just past the ``{...}``/``[...]`` YAML flow collection at ``start``.
 
     Nested brackets are counted across lines; a quote that opens a scalar (after
-    a bracket, comma, colon or whitespace) is skipped with ``quoted_end``. An
-    unclosed collection runs to the end of ``text``.
+    a bracket, comma, colon or whitespace) is skipped with ``quoted_end``, and
+    a `` #`` comment runs to the end of its line, so its brackets do not count.
+    An unclosed collection runs to the end of ``text``.
     """
     depth = 0
     index = start
@@ -217,6 +225,11 @@ def flow_end(text: str, start: int) -> int:
         elif char in QUOTES and text[index - 1] in " \t\r\n{[,:":
             index = quoted_end(text, index)
             continue
+        elif char == "#" and text[index - 1] in " \t\r\n":
+            line_end = text.find("\n", index)
+            if line_end < 0:
+                break
+            index = line_end
         index += 1
     return len(text)
 
@@ -229,6 +242,7 @@ def key_segments(key: str) -> list[str]:
     ]
 
 
+@functools.lru_cache(maxsize=4096)
 def is_secret_key(key: str) -> bool:
     segments = key_segments(key)
     if "_".join(segments) in ALLOWED_KEYS:
@@ -318,19 +332,24 @@ def _indent(line: str) -> int:
     return len(line) - len(line.lstrip(" \t"))
 
 
-def _yaml_secret_header(line: str) -> tuple[str, int] | None:
-    """Classify a line that opens a secret YAML value: ``(kind, key column)``.
+def _yaml_secret_header(line: str) -> tuple[str, int, int] | None:
+    """Classify a line that opens a secret YAML value: ``(kind, base, value start)``.
 
     ``block``: the value sits on the lines below. After the colon there may be
     a tag, an anchor, a ``|``/``>`` indicator with chomping and indent digits,
     and a trailing comment, and nothing else. ``plain``: an inline plain
-    scalar, which may continue on lines more indented than the key line.
+    scalar starting at ``value start``, which may continue on lines more
+    indented than ``base``. ``base`` is the key's column when only
+    indentation and ``- `` markers precede it, else the line's indentation
+    (prose before the key).
     """
     for match in _YAML_KEY_RE.finditer(line):
         if not is_secret_key(match.group(2)):
             continue
+        prefix = _YAML_KEY_PREFIX_RE.match(line)
+        base = match.start() if prefix and prefix.end() == match.start() else _indent(line)
         if _YAML_HEADER_TAIL_RE.match(line, match.end()):
-            return "block", match.start()
+            return "block", base, match.end()
         start = match.end()
         while start < len(line) and line[start] in " \t":
             start += 1
@@ -338,9 +357,16 @@ def _yaml_secret_header(line: str) -> tuple[str, int] | None:
         if properties:
             start = properties.end()
         if line[start : start + 1] not in _YAML_NOT_PLAIN:
-            return "plain", match.start()
+            return "plain", base, start
         return None
     return None
+
+
+def _without_plain_value(line: str, start: int) -> str:
+    """``line`` with its plain value from ``start`` replaced, keeping a comment."""
+    comment = _YAML_PLAIN_COMMENT_RE.search(line, start)
+    tail = line[comment.start() :] if comment else ("\r" if line.endswith("\r") else "")
+    return line[:start] + REDACTED + tail
 
 
 def _is_comment(line: str) -> bool:
@@ -378,7 +404,9 @@ def _redacted_line(base: int, last: str) -> str:
     return " " * (base + 2) + REDACTED + ("\r" if last.endswith("\r") else "")
 
 
-def _explicit_value(lines: list[str], index: int, out: list[str]) -> int:
+def _explicit_value(
+    text: str, lines: list[str], starts: list[int], index: int, out: list[str]
+) -> int:
     """Redact the ``:`` value of a secret ``? key``; return the next line index."""
     value = index
     while value < len(lines) and (not lines[value].strip() or _is_comment(lines[value])):
@@ -397,16 +425,16 @@ def _explicit_value(lines: list[str], index: int, out: list[str]) -> int:
         if last > value + 1:
             out.append(_redacted_line(base, lines[last - 1]))
         return max(last, value + 1)
-    rest = "\n".join(lines[value:])
     start = match.end()
-    while rest[start : start + 1] in (" ", "\t"):
+    while line[start : start + 1] in (" ", "\t"):
         start += 1
-    properties = _YAML_INLINE_PROPERTIES_RE.match(rest, start)
+    properties = _YAML_INLINE_PROPERTIES_RE.match(line, start)
     if properties:
         start = properties.end()
-    if rest[start : start + 1] in ("{", "["):
+    if line[start : start + 1] in ("{", "["):
         # A flow collection may close on any line; skip whole lines up to it.
-        last = value + 1 + rest.count("\n", 0, flow_end(rest, start))
+        close = flow_end(text, starts[value] + start)
+        last = bisect.bisect_right(starts, close - 1)
     else:
         last = value + 1
     last = _block_end(lines, last, base, ())
@@ -423,29 +451,33 @@ def _redact_yaml_blocks(text: str) -> str:
       the key line, plus ``- `` items at the key's own column (an indentless
       sequence), with blank and comment lines inside, up to the first other
       line at the key's indentation or less.
-    - ``key: plain value``: the continuation lines more indented than the key
-      line (the inline value itself is left to the value rule).
+    - ``key: plain value`` that continues on more-indented lines: the whole
+      first-line value (keeping a trailing comment) and the continuation.
+      A single-line value is left to the value rule.
     - ``? key`` then ``: value``: the value line and its continuation.
     """
     lines = text.split("\n")
+    starts = list(itertools.accumulate((len(line) + 1 for line in lines[:-1]), initial=0))
     out: list[str] = []
     index = 0
     while index < len(lines):
         line = lines[index]
         out.append(line)
         index += 1
-        explicit = _YAML_EXPLICIT_KEY_RE.search(line)
+        explicit = _YAML_EXPLICIT_KEY_RE.search(line) if "?" in line else None
         if explicit and is_secret_key(explicit.group(2)):
-            index = _explicit_value(lines, index, out)
+            index = _explicit_value(text, lines, starts, index, out)
             continue
         header = _yaml_secret_header(line)
         if header is None:
             continue
-        kind, column = header
-        base = _indent(line)
-        dash_columns = (base, column) if kind == "block" else ()
+        kind, base, start = header
+        dash_columns = (base, _indent(line)) if kind == "block" else ()
         last = _block_end(lines, index, base, dash_columns)
         if last > index:
+            if kind == "plain":
+                # The value continues below, so all of its first line is value.
+                out[-1] = _without_plain_value(line, start)
             out.append(_redacted_line(base, lines[last - 1]))
             index = last
     return "\n".join(out)
@@ -479,13 +511,20 @@ def scrub_secrets(text: str) -> str:
     return QUERY_SECRET_RE.sub(lambda match: f"{match.group(1)}{REDACTED}", text)
 
 
+_QUOTE_RE = re.compile("[\"'`]")
+
+
 def _scrub_quoted_paths(text: str) -> str:
     out: list[str] = []
     position = 0
     index = 0
-    while index < len(text):
+    while True:
+        quote = _QUOTE_RE.search(text, index)
+        if quote is None:
+            break
+        index = quote.start()
         char = text[index]
-        opens = char in QUOTES and (index == 0 or not text[index - 1].isalnum())
+        opens = index == 0 or not text[index - 1].isalnum()
         if not opens or not _QUOTED_PATH_START_RE[char].match(text, index + 1):
             index += 1
             continue

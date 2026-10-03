@@ -310,6 +310,64 @@ def test_round6_blocks_stop_at_sibling_keys() -> None:
     assert feedback_mod.scrub(YAML_ROUND6_SHAPES["indentless_sequence"]).endswith("\nnext: 1")
 
 
+# --- Round 7: flow comments, whole plain first lines, list-item columns ------
+
+CANARY_2 = "S3c0ndF4k3Value"
+YAML_ROUND7_SHAPES = {
+    "flow_comment_brace": f"credentials: {{primary: {CANARY}, # }}\n  secondary: {CANARY_2}\n}}",
+    "flow_comment_bracket": f"tokens: [{CANARY}, # ] closes?\n  {CANARY_2}\n]",
+    "plain_multiword_continued": f"password: first {CANARY}\n  {CANARY_2}",
+    "plain_multiword_tagged": f"password: !!str first {CANARY}\n  {CANARY_2}",
+    "plain_multiword_comment": f"password: first {CANARY}\n  {CANARY_2} # old",
+    "plain_multiword_list_item": f"- password: first {CANARY}\n    {CANARY_2}\n  name: kept",
+}
+YAML_ROUND7_KEPT = {
+    "list_item_sibling": "items:\n- password: first\n  name: kept",
+    "list_item_sibling_continued": f"items:\n- password: first\n    {CANARY}\n  name: kept",
+    "list_item_block_sibling": f"- password: |\n    {CANARY}\n  name: kept",
+    "nested_list_item_sibling": f"a:\n  - - token: first\n        {CANARY}\n      name: kept",
+}
+
+
+def _without_canaries(value: str) -> bool:
+    return CANARY not in value and CANARY_2 not in value
+
+
+@pytest.mark.parametrize("case", sorted(YAML_ROUND7_SHAPES))
+def test_round7_yaml_case_is_redacted_in_all_four_fields(state: Path, case: str) -> None:
+    for index, value in enumerate(_stored_fields(state, YAML_ROUND7_SHAPES[case])):
+        assert _without_canaries(value), (case, index)
+
+
+@pytest.mark.parametrize("case", sorted(YAML_ROUND7_KEPT))
+def test_round7_list_item_sibling_is_kept(state: Path, case: str) -> None:
+    text = YAML_ROUND7_KEPT[case]
+    scrubbed = feedback_mod.scrub(text)
+    assert scrubbed.endswith("name: kept"), case
+    for index, value in enumerate(_stored_fields(state, text)):
+        assert _without_canaries(value), (case, index)
+
+
+def test_round7_prose_before_the_key_still_redacts_continuation(state: Path) -> None:
+    text = f"the config had password: first {CANARY}\n  {CANARY_2}"
+    for index, value in enumerate(_stored_fields(state, text)):
+        assert _without_canaries(value), index
+
+
+def test_round7_explicit_keys_are_linear() -> None:
+    import time
+
+    from mb import feedback_scrub
+
+    # 256 KiB: linear work takes well under a second; re-joining the remaining
+    # text for every explicit key (the round 6 shape) took several.
+    text = ("? password\n: first\n" * 14000)[:262144]
+    feedback_scrub.scrub("warm")
+    started = time.perf_counter()
+    feedback_scrub.scrub(text)
+    assert time.perf_counter() - started < 2.0
+
+
 # --- Round 4: linear time ----------------------------------------------------
 
 TIMING_FAMILIES = {
@@ -330,6 +388,7 @@ TIMING_FAMILIES = {
     "yaml_flow": "token: {" * 500,
     "yaml_explicit": "? token\n" * 500,
     "yaml_indentless": "token:\n- a\n" * 364,
+    "yaml_explicit_inline": "? password\n: first\n" * 211,
     "path_segments": "/a" * 2000,
     "escaped_spaces": "\\ " * 2000,
     "long_key": "a" * 3999 + ":",
