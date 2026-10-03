@@ -2045,6 +2045,76 @@ def test_connect_exec_signal_exit_maps_to_shell_convention(tmp_path: Path, monke
     assert outcome["returncode"] == 143
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="ENOEXEC needs a POSIX exec")
+def test_connect_exec_launch_failure_never_prints_secret(tmp_path: Path, monkeypatch) -> None:
+    """A real `mb` process launching an executable text file with no shebang.
+
+    exec fails with ENOEXEC. The fake credential must not reach stdout or
+    stderr, whatever Typer, Click and Rich versions are installed.
+    """
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    fake_secret = "cf-fixture-enoexec-0000"
+    connect_mod.connect_provider("cloudflare", repo=repo, token=fake_secret)
+    script = tmp_path / "no-shebang"
+    script.write_text("echo this file has no interpreter line\n")
+    script.chmod(0o755)
+
+    completed = subprocess.run(
+        [sys.executable, "-m", "mb", "connect", "exec", "cloudflare", "--repo", str(repo)]
+        + ["--", str(script)],
+        capture_output=True,
+        text=True,
+        env=dict(os.environ),
+        check=False,
+        timeout=120,
+    )
+
+    assert completed.returncode == 126, completed.stderr
+    assert fake_secret not in completed.stdout
+    assert fake_secret not in completed.stderr
+    assert "Traceback" not in completed.stderr
+    assert "could not be started (ENOEXEC)" in completed.stderr
+
+
+def test_connect_exec_other_launch_oserror_is_sanitized(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-fixture-oserror-0000")
+
+    def fake_run(args, **kwargs):
+        raise OSError(7, f"Argument list too long: {kwargs['env']['CLOUDFLARE_API_TOKEN']}")
+
+    outcome = connect_mod.exec_with_secret("cloudflare", ["child"], repo, runner=fake_run)
+
+    assert outcome["returncode"] == 126
+    assert outcome["error"] == "command could not be started (E2BIG): child"
+    assert "cf-fixture-oserror-0000" not in json.dumps(outcome)
+
+
+def test_connect_unexpected_error_hides_details(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    def explode(*args, **kwargs):
+        raise KeyError("cf-fixture-crash-0000")
+
+    monkeypatch.setattr(connect_mod, "exec_with_secret", explode)
+
+    result = runner.invoke(
+        app, ["connect", "exec", "cloudflare", "--repo", str(repo), "--", "true"]
+    )
+
+    assert result.exit_code == 1
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert "unexpected error (KeyError)" in result.output
+    assert "cf-fixture-crash-0000" not in result.output
+    assert app.pretty_exceptions_show_locals is False
+
+
 def test_connect_exec_refusals_and_failures(tmp_path: Path, monkeypatch) -> None:
     _local_secret_env(monkeypatch, tmp_path)
     repo = tmp_path / "biz"

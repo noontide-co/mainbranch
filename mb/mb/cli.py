@@ -7,13 +7,15 @@ because that's the working pattern.
 
 from __future__ import annotations
 
+import functools
 import json
 import math
 import os
 import sys
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import Any, NoReturn, TypeVar
 
 import typer
 
@@ -63,6 +65,9 @@ app = typer.Typer(
     no_args_is_help=False,
     invoke_without_command=True,
     add_completion=False,
+    # Some supported Typer versions print every frame's local variables in a
+    # crash traceback, which for `mb connect` includes stored credentials.
+    pretty_exceptions_show_locals=False,
 )
 
 skill_app = typer.Typer(
@@ -1507,7 +1512,36 @@ def issue_open_cmd(
     raise typer.Exit(0 if result["ok"] else 1)
 
 
+_F = TypeVar("_F", bound=Callable[..., Any])
+
+
+def _no_secret_traceback(func: _F) -> _F:
+    """Turn an unexpected error into a one-line message with no traceback.
+
+    Credential-bearing commands hold secrets in local variables. Whether a
+    crash traceback prints them depends on the installed Typer, Click and
+    Rich, so these commands never let one reach the excepthook.
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return func(*args, **kwargs)
+        except (typer.Exit, typer.Abort):
+            raise
+        except Exception as exc:
+            typer.echo(
+                f"mb {func.__name__.removesuffix('_cmd')}: unexpected error "
+                f"({type(exc).__name__}); details are hidden because they may hold a secret",
+                err=True,
+            )
+            raise typer.Exit(1) from None
+
+    return wrapper  # type: ignore[return-value]
+
+
 @app.command("connect")
+@_no_secret_traceback
 def connect_cmd(
     target: str = typer.Argument(
         "",

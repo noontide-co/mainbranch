@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import math
@@ -2060,6 +2061,14 @@ def exec_with_secret(
     except PermissionError:
         outcome["returncode"] = 126
         outcome["error"] = f"command is not executable: {command[0]}"
+        return outcome
+    except OSError as exc:
+        # ENOEXEC (a text file without a shebang) and every other launch
+        # failure. Only the errno name goes out: the exception's own text or
+        # a traceback could carry the child environment.
+        outcome["returncode"] = 126
+        reason = errno.errorcode.get(exc.errno or 0, "OSError")
+        outcome["error"] = f"command could not be started ({reason}): {command[0]}"
         return outcome
     returncode = int(completed.returncode)
     # A child killed by a signal reports -N; shells report 128+N.
