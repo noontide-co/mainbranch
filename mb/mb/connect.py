@@ -1020,36 +1020,50 @@ def _meta_repair(state: str, missing: list[str] | None = None) -> dict[str, str]
     }
 
 
-# Public prefixes that mark a credential value. A metadata value starting with
-# one of these, followed by more token characters, is refused at intake.
-METADATA_SECRET_PREFIXES: tuple[str, ...] = (
-    "sk_",
-    "rk_",
-    "pk_live_",
-    "whsec_",
-    "re_",
-    "sk-",
-    "ghp_",
-    "gho_",
-    "ghu_",
-    "ghs_",
-    "ghr_",
-    "github_pat_",
-    "glpat-",
-    "xox",
-    "AKIA",
-    "AIza",
-    "cfat_",
+# Public credential grammars, one per provider family: the prefix plus the
+# shape of the generated part. Each is matched in full, so a word that merely
+# shares a prefix ("re_engagement", "pk_test_publishable") is not a key, and a
+# real-shaped key is caught whatever its characters ("ghp_" plus lowercase).
+# The rule name keeps the prefix so a refusal says which family matched.
+METADATA_SECRET_GRAMMARS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("sk_", re.compile(r"sk_(?:live|test)_[A-Za-z0-9]{8,}")),
+    ("rk_", re.compile(r"rk_(?:live|test)_[A-Za-z0-9]{8,}")),
+    ("pk_live_", re.compile(r"pk_live_[A-Za-z0-9]{8,}")),
+    ("whsec_", re.compile(r"whsec_[A-Za-z0-9+/=]{16,}")),
+    ("re_", re.compile(r"re_[A-Za-z0-9]{8}_[A-Za-z0-9]{16,}")),
+    ("sk-", re.compile(r"sk-[A-Za-z0-9_\-]{20,}")),
+    ("ghp_", re.compile(r"ghp_[A-Za-z0-9]{30,}")),
+    ("gho_", re.compile(r"gho_[A-Za-z0-9]{30,}")),
+    ("ghu_", re.compile(r"ghu_[A-Za-z0-9]{30,}")),
+    ("ghs_", re.compile(r"ghs_[A-Za-z0-9]{30,}")),
+    ("ghr_", re.compile(r"ghr_[A-Za-z0-9]{30,}")),
+    ("github_pat_", re.compile(r"github_pat_[A-Za-z0-9_]{16,}")),
+    ("glpat-", re.compile(r"glpat-[A-Za-z0-9_\-]{20,}")),
+    ("xox", re.compile(r"xox[abposr]-[A-Za-z0-9\-]{10,}")),
+    ("AKIA", re.compile(r"(?:AKIA|ASIA)[A-Z0-9]{16}")),
+    ("AIza", re.compile(r"AIza[A-Za-z0-9_\-]{35}")),
+    ("cfat_", re.compile(r"cfat_[A-Za-z0-9_\-]{20,}")),
 )
-_METADATA_PREFIX_TAIL_RE = re.compile(r"^[A-Za-z0-9_\-]{8,}$")
 _JWT_RE = re.compile(r"^eyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]*$")
+# "Bearer <anything>" as the whole value, or "Bearer <long token>" after a
+# label; "bearer" inside an ordinary phrase is not a credential.
+_BEARER_RE = re.compile(r"^bearer\s+\S|\sbearer\s+[A-Za-z0-9._~+/=\-]{16,}", re.IGNORECASE)
 _TOKEN_CHARSET_RE = re.compile(r"^[A-Za-z0-9+/=_.\-]+$")
+# Split a value into words so a credential behind a short label ("note: <key>")
+# is judged on its own. `://` stays whole so URLs and op:// references do not
+# break into fragments.
+_METADATA_WORD_SPLIT_RE = re.compile(r"[\s,;]+|[:=](?!//)")
 METADATA_ENTROPY_MIN_LENGTH = 24
 METADATA_ENTROPY_MIN_BITS = 3.5
-# Share of adjacent characters that change class (upper, lower, digit, other).
-# Random tokens sit near 0.6; CamelCase labels such as "AcmeMainWorkspace2026"
-# sit near 0.3, because words are long same-class runs.
-METADATA_MIN_CLASS_SWITCH_RATIO = 0.4
+# CamelCase and digit segments: "AcmeProd2026" -> Acme, Prod, 2026.
+_METADATA_SEGMENT_RE = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|[0-9]+")
+_METADATA_VERSION_TAIL_RE = re.compile(r"[A-Z][0-9]{1,3}$")
+_VOWELS = frozenset("aeiouyAEIOUY")
+# Share of segments that look generated rather than written. Labels are made
+# of words ("Us", "Api", "Name", "2026") and score near 0; random tokens break
+# into single letters, vowel-less runs and lone digits and score well above.
+# Miss rates for this threshold are measured in docs/connect.md.
+METADATA_MIN_GENERATED_SEGMENT_SHARE = 0.3
 
 
 def _shannon_bits_per_char(value: str) -> float:
@@ -1060,35 +1074,62 @@ def _shannon_bits_per_char(value: str) -> float:
     return -sum((count / total) * math.log2(count / total) for count in counts.values())
 
 
-def _char_class(char: str) -> str:
-    if char.isupper():
-        return "upper"
-    if char.islower():
-        return "lower"
-    if char.isdigit():
-        return "digit"
-    return "other"
+def _generated_segment_share(value: str) -> float:
+    """Share of CamelCase/digit segments that do not read as words.
 
-
-def _class_switch_ratio(value: str) -> float:
-    if len(value) < 2:
+    A segment counts as generated when it is a single letter, a letter run
+    with no vowel, or a lone digit. A trailing version such as ``V2`` counts
+    as a word.
+    """
+    body = value
+    version = _METADATA_VERSION_TAIL_RE.search(value)
+    if version:
+        body = value[: version.start()]
+    segments = _METADATA_SEGMENT_RE.findall(body)
+    total = len(segments) + (1 if version else 0)
+    if not total:
         return 0.0
-    switches = sum(
-        _char_class(left) != _char_class(right)
-        for left, right in zip(value[:-1], value[1:], strict=True)
-    )
-    return switches / (len(value) - 1)
+    generated = 0
+    for segment in segments:
+        if segment.isdigit():
+            generated += len(segment) == 1
+        elif len(segment) == 1 or not any(char in _VOWELS for char in segment):
+            generated += 1
+    return generated / total
+
+
+def _word_secret_rule(word: str) -> str:
+    for prefix, grammar in METADATA_SECRET_GRAMMARS:
+        if grammar.fullmatch(word):
+            return f"credential_prefix:{prefix}"
+    if _JWT_RE.fullmatch(word):
+        return "jwt_shape"
+    # Long random-looking strings: mixed case, nothing but token characters,
+    # enough entropy, and segments that do not read as words. Hex ids, UUIDs,
+    # numeric ids, URLs, emails, lowercase paths and CamelCase labels fall
+    # outside this on purpose.
+    if (
+        len(word) >= METADATA_ENTROPY_MIN_LENGTH
+        and _TOKEN_CHARSET_RE.fullmatch(word)
+        and any(char.isupper() for char in word)
+        and any(char.islower() for char in word)
+        and _shannon_bits_per_char(word) >= METADATA_ENTROPY_MIN_BITS
+        and _generated_segment_share(word) >= METADATA_MIN_GENERATED_SEGMENT_SHARE
+    ):
+        return "high_entropy"
+    return ""
 
 
 def metadata_value_rule(value: str) -> str:
     """Name the secret-shape rule a metadata value trips, or "" when it is safe.
 
     Judges the value, never the key: a label under a key called ``key_name``
-    is fine, and a live key under an innocent key name is not. The returned
-    rule name is safe to show; the value never is.
+    is fine, and a live key under an innocent key name is not. The value is
+    judged whole and word by word, so a short label in front of a key does
+    not hide it. The returned rule name is safe to show; the value never is.
     """
     candidate = value.strip()
-    if candidate.lower().startswith("bearer "):
+    if _BEARER_RE.search(candidate):
         return "bearer_credential"
     if (
         _looks_like_env_reference(candidate)
@@ -1096,32 +1137,13 @@ def metadata_value_rule(value: str) -> str:
         or _looks_like_iso_datetime(candidate)
     ):
         return ""
-    for prefix in METADATA_SECRET_PREFIXES:
-        tail = candidate[len(prefix) :]
-        # The tail must look generated (a digit or a capital somewhere), so a
-        # word such as "re_engagement" is not mistaken for a key.
-        if (
-            candidate.startswith(prefix)
-            and _METADATA_PREFIX_TAIL_RE.fullmatch(tail)
-            and any(char.isdigit() or char.isupper() for char in tail)
-        ):
-            return f"credential_prefix:{prefix}"
-    if _JWT_RE.fullmatch(candidate):
-        return "jwt_shape"
-    # Long random-looking strings: mixed case plus digits, frequent character
-    # class changes, enough entropy, and nothing but token characters. Hex
-    # ids, UUIDs, numeric ids, URLs, emails, lowercase paths and CamelCase
-    # labels fall outside this on purpose.
-    if (
-        len(candidate) >= METADATA_ENTROPY_MIN_LENGTH
-        and _TOKEN_CHARSET_RE.fullmatch(candidate)
-        and any(char.isupper() for char in candidate)
-        and any(char.islower() for char in candidate)
-        and any(char.isdigit() for char in candidate)
-        and _class_switch_ratio(candidate) >= METADATA_MIN_CLASS_SWITCH_RATIO
-        and _shannon_bits_per_char(candidate) >= METADATA_ENTROPY_MIN_BITS
-    ):
-        return "high_entropy"
+    words = [candidate, *(w for w in _METADATA_WORD_SPLIT_RE.split(candidate) if w)]
+    for word in words:
+        if _looks_like_env_reference(word) or _looks_like_placeholder(word):
+            continue
+        rule = _word_secret_rule(word)
+        if rule:
+            return rule
     return ""
 
 

@@ -202,15 +202,34 @@ The GA4 credential is an OAuth access token with Analytics read scope.
 ## Metadata Is Judged by Value
 
 `--metadata key=value` is for labels and ids. A value that looks like a secret
-is refused, and nothing is stored. The rules:
+is refused, and nothing is stored. The value is judged whole and word by
+word, so a short label in front of a key (`note: <key>`) does not hide it. The
+rules:
 
-- `credential_prefix:<prefix>`: a known public credential prefix (for example
-  `sk_`, `rk_`, `pk_live_`, `whsec_`, `ghp_`, `github_pat_`, `xox`, `AKIA`)
-  followed by a generated-looking tail;
+- `credential_prefix:<prefix>`: a public credential grammar matched in full,
+  prefix and generated part together (for example `sk_live_`/`sk_test_`,
+  `rk_`, `pk_live_`, `whsec_`, Resend `re_<8>_<16+>`, `ghp_` and the other
+  GitHub token prefixes, `github_pat_`, `glpat-`, `xox?-`, `AKIA`, `AIza`).
+  A word that only shares a prefix, such as `re_engagement` or
+  `pk_test_publishable`, passes;
 - `jwt_shape`: three dot-separated base64url segments starting `eyJ`;
-- `bearer_credential`: a value starting `Bearer `;
-- `high_entropy`: 24 or more token characters with mixed case and digits that
-  change character class often and carry enough entropy.
+- `bearer_credential`: a value starting `Bearer `, or `Bearer <long token>`
+  after a label;
+- `high_entropy`: 24 or more token characters, mixed case, enough entropy, and
+  at least 30% of its CamelCase/digit segments look generated (a single
+  letter, a letter run with no vowel, or a lone digit). Labels are made of
+  words, so `UsEuUkCaAuNzApiKeyName2026` and `HTTPSRedirectCheckerProdV2`
+  pass.
+
+Measured limits of `high_entropy`, 10,000 random values each from
+`random.Random(987)` (the test `test_metadata_high_entropy_miss_rates_match_docs`
+keeps these numbers current): it misses 33 of 10,000 (0.33%) 24-character
+alphanumeric values, 37 of 10,000 (0.37%) 24-character base64-alphabet values
+and 168 of 10,000 (1.68%) 40-character mixed-case values with no digits.
+Values shorter than 24 characters, and all-lowercase or all-uppercase random
+strings, are not judged by entropy at all: hex ids and UUIDs look the same.
+Metadata is a label field, not a secret scanner; pass credentials with
+`--token-stdin`.
 
 Hex ids, UUIDs, numeric ids, URLs, emails, paths, `op://` references,
 `${VAR}` references and CamelCase labels pass. The key name alone never

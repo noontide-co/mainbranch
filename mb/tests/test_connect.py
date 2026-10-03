@@ -5,8 +5,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import random
 import shutil
 import stat
+import string
 import subprocess
 import sys
 import urllib.request
@@ -3565,10 +3567,69 @@ def test_metadata_refuses_secret_values_and_never_echoes_them(
         "pk_test_publishable",
         "${STRIPE_API_KEY}",
         "2026-10-03",
+        "AcmeProductionWorkspace2026",
+        "UsEuUkCaAuNzApiKeyName2026",
+        "UsCaMxBrArClPeCoLatamRegionKey",
+        "HTTPSRedirectCheckerProdV2",
+        "SpringLaunchCampaign2026Q2EU",
+        "AbTestVariantBHeadlineShortV2",
+        "MyAPIKeyForStagingEnvironment",
+        "owner@example.invalid",
+        "https://example.invalid/Path/To/Thing123",
+        "op://ReviewVault/ExampleItem/credential",
+        "2026-10-03T12:00:00Z",
+        "Main restricted key",
+        "Main bearer token reader",
+        "note: renewed after the October audit",
+        "re_engagement_campaign_2026",
     ],
 )
 def test_metadata_accepts_ids_labels_and_references(value: str) -> None:
     assert connect_mod.metadata_value_rule(value) == ""
+
+
+# Fake values only. Each was missed before the provider grammars, the word
+# split and the segment heuristic.
+@pytest.mark.parametrize(
+    ("value", "rule"),
+    [
+        ("ghp_" + "f4k3" * 9, "credential_prefix:ghp_"),
+        ("ghp_" + "a" * 36, "credential_prefix:ghp_"),
+        ("note: " + "sk_live_" + "F4k3v4lu3F4k3", "credential_prefix:sk_"),
+        ("note:" + "ghp_" + "f4k3" * 9, "credential_prefix:ghp_"),
+        ("key for ci " + "Qx7Lm2Pz9Rt4Vb8Nc1Kd6Hs3", "high_entropy"),
+        ("old key, " + "Bearer " + "F4k3T0k3nV4lu3F4k3T0k3n", "bearer_credential"),
+        ("QwErTyUiOpAsDfGhJkLzXcVbNmQwErTyUiOpAsDf", "high_entropy"),
+        ("re_" + "F4k3ab12" + "_" + "F4k3v4lu3F4k3v4lu3", "credential_prefix:re_"),
+    ],
+)
+def test_metadata_refuses_previous_blind_spots(value: str, rule: str) -> None:
+    assert connect_mod.metadata_value_rule(value) == rule
+
+
+def _random_values(alphabet: str, length: int, count: int = 10_000) -> list[str]:
+    rng = random.Random(987)
+    return ["".join(rng.choice(alphabet) for _ in range(length)) for _ in range(count)]
+
+
+def test_metadata_high_entropy_miss_rates_match_docs() -> None:
+    """The miss rates published in docs/connect.md, measured with a fixed seed."""
+    alnum = string.ascii_letters + string.digits
+    measured = {
+        "alnum24": _random_values(alnum, 24),
+        "base64_24": _random_values(alnum + "+/", 24),
+        "letters40": _random_values(string.ascii_letters, 40),
+    }
+    missed = {
+        name: sum(1 for value in values if not connect_mod.metadata_value_rule(value))
+        for name, values in measured.items()
+    }
+
+    assert missed == {"alnum24": 33, "base64_24": 37, "letters40": 168}
+    docs = (Path(__file__).resolve().parents[2] / "docs" / "connect.md").read_text()
+    assert "33 of 10,000" in docs
+    assert "37 of 10,000" in docs
+    assert "168 of 10,000" in docs
 
 
 def test_metadata_key_names_alone_never_refuse(tmp_path: Path, monkeypatch) -> None:
