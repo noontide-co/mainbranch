@@ -3586,6 +3586,12 @@ def test_metadata_refuses_secret_values_and_never_echoes_them(
         "Main bearer token reader",
         "note: renewed after the October audit",
         "re_engagement_campaign_2026",
+        "CloudflareR2StorageBucket",
+        "B2BMarketingCampaignOctober2026",
+        "S3ProductionBucketUsWest2",
+        "https://example.invalid/?campaign=CloudflareR2StorageBucket",
+        "https://example.invalid/?campaign=SpringLaunch&region=us-west-2#top",
+        "note: https://example.invalid/?campaign=CloudflareR2StorageBucket",
     ],
 )
 def test_metadata_accepts_ids_labels_and_references(value: str) -> None:
@@ -3609,6 +3615,25 @@ def test_metadata_accepts_ids_labels_and_references(value: str) -> None:
 )
 def test_metadata_refuses_previous_blind_spots(value: str, rule: str) -> None:
     assert connect_mod.metadata_value_rule(value) == rule
+
+
+# A fake 40-character token. Inside a URL it is judged on its own, wherever
+# the URL puts it.
+_URL_FAKE_TOKEN = "Qx7Lm2Pz9Rt4Vb8Nc1Kd6Hs3Wy5Jf0Gt8Rn2Ls4M"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        f"https://example.invalid/?token={_URL_FAKE_TOKEN}",
+        f"https://example.invalid/?campaign=SpringLaunch&token={_URL_FAKE_TOKEN}",
+        f"note: https://example.invalid/?token={_URL_FAKE_TOKEN}",
+        f"https://example.invalid/callback#access_token={_URL_FAKE_TOKEN}",
+        f"https://reader:{_URL_FAKE_TOKEN}@example.invalid/",
+    ],
+)
+def test_metadata_refuses_token_inside_url(value: str) -> None:
+    assert connect_mod.metadata_value_rule(value) == "high_entropy"
 
 
 def _random_values(alphabet: str, length: int, count: int = 10_000) -> list[str]:

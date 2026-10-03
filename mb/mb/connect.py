@@ -1050,15 +1050,29 @@ _JWT_RE = re.compile(r"^eyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]*$
 _BEARER_RE = re.compile(r"^bearer\s+\S|\sbearer\s+[A-Za-z0-9._~+/=\-]{16,}", re.IGNORECASE)
 _TOKEN_CHARSET_RE = re.compile(r"^[A-Za-z0-9+/=_.\-]+$")
 # Split a value into words so a credential behind a short label ("note: <key>")
-# is judged on its own. `://` stays whole so URLs and op:// references do not
-# break into fragments.
-_METADATA_WORD_SPLIT_RE = re.compile(r"[\s,;]+|[:=](?!//)")
+# is judged on its own: first on spaces, commas and semicolons, then on `:`
+# and `=`. Structured references (URLs, op:// refs, emails) are not split on
+# `:`/`=`; a URL's query values are judged one by one instead.
+_METADATA_CHUNK_SPLIT_RE = re.compile(r"[\s,;]+")
+_METADATA_LABEL_SPLIT_RE = re.compile(r"[:=]")
+_METADATA_URL_START_RE = re.compile(r"(?<![A-Za-z0-9+.\-])[A-Za-z][A-Za-z0-9+.\-]*://")
+_METADATA_EMAIL_RE = re.compile(r"^[^@\s:=/]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
 METADATA_ENTROPY_MIN_LENGTH = 24
 METADATA_ENTROPY_MIN_BITS = 3.5
 # CamelCase and digit segments: "AcmeProd2026" -> Acme, Prod, 2026.
 _METADATA_SEGMENT_RE = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|[0-9]+")
 _METADATA_VERSION_TAIL_RE = re.compile(r"[A-Z][0-9]{1,3}$")
 _VOWELS = frozenset("aeiouyAEIOUY")
+# Abbreviations with digits between words ("CloudflareR2Storage",
+# "B2BMarketing"): capital and digit segments that together form a short code.
+_METADATA_CODE_PART_RE = re.compile(r"[A-Z]+|[0-9]+")
+_METADATA_CODE_MAX_LENGTH = 4
+# At the start or end of a value only the tightest code shape counts ("S3",
+# "B2B"), next to a word of at least this many letters.
+_METADATA_EDGE_CODE_RE = re.compile(r"[A-Z][0-9]{1,2}[A-Z]?")
+_METADATA_EDGE_WORD_MIN_LENGTH = 6
+_METADATA_WORD_RE = re.compile(r"[A-Z][a-z]{3,}")
+_METADATA_CONSONANT_RUN_RE = re.compile(r"[^aeiouyAEIOUY]{4,}")
 # Share of segments that look generated rather than written. Labels are made
 # of words ("Us", "Api", "Name", "2026") and score near 0; random tokens break
 # into single letters, vowel-less runs and lone digits and score well above.
@@ -1074,23 +1088,78 @@ def _shannon_bits_per_char(value: str) -> float:
     return -sum((count / total) * math.log2(count / total) for count in counts.values())
 
 
+def _reads_as_word(segment: str) -> bool:
+    """A capitalised, pronounceable word of four or more letters."""
+    if not _METADATA_WORD_RE.fullmatch(segment):
+        return False
+    vowels = sum(char in _VOWELS for char in segment)
+    return vowels * 10 >= 3 * len(segment) and not _METADATA_CONSONANT_RUN_RE.search(segment)
+
+
+def _merge_metadata_codes(segments: list[str]) -> list[str | None]:
+    """Replace short letter-digit codes between words with ``None`` (a word).
+
+    "CloudflareR2Storage" segments as Cloudflare, R, 2, Storage; R and 2 read
+    as generated on their own. Merged, R2 sits between two real words and
+    counts as one word. Random tokens rarely put a code between pronounceable
+    words, so the miss rates in docs/connect.md hold.
+    """
+    merged: list[str | None] = []
+    index = 0
+    while index < len(segments):
+        if not _METADATA_CODE_PART_RE.fullmatch(segments[index]):
+            merged.append(segments[index])
+            index += 1
+            continue
+        end = index
+        while end < len(segments) and _METADATA_CODE_PART_RE.fullmatch(segments[end]):
+            end += 1
+        run = segments[index:end]
+        code = "".join(run)
+        left = segments[index - 1] if index > 0 else None
+        right = segments[end] if end < len(segments) else None
+        if left is not None and right is not None:
+            beside_words = _reads_as_word(left) and _reads_as_word(right)
+        else:
+            neighbour = left if left is not None else right
+            beside_words = (
+                neighbour is not None
+                and _reads_as_word(neighbour)
+                and len(neighbour) >= _METADATA_EDGE_WORD_MIN_LENGTH
+                and bool(_METADATA_EDGE_CODE_RE.fullmatch(code))
+            )
+        if (
+            len(run) > 1
+            and len(code) <= _METADATA_CODE_MAX_LENGTH
+            and any(char.isdigit() for char in code)
+            and beside_words
+        ):
+            merged.append(None)
+        else:
+            merged.extend(run)
+        index = end
+    return merged
+
+
 def _generated_segment_share(value: str) -> float:
     """Share of CamelCase/digit segments that do not read as words.
 
     A segment counts as generated when it is a single letter, a letter run
-    with no vowel, or a lone digit. A trailing version such as ``V2`` counts
-    as a word.
+    with no vowel, or a lone digit. A trailing version such as ``V2`` and a
+    short code between words such as ``R2`` or ``B2B`` count as words.
     """
     body = value
     version = _METADATA_VERSION_TAIL_RE.search(value)
     if version:
         body = value[: version.start()]
-    segments = _METADATA_SEGMENT_RE.findall(body)
+    segments = _merge_metadata_codes(_METADATA_SEGMENT_RE.findall(body))
     total = len(segments) + (1 if version else 0)
     if not total:
         return 0.0
     generated = 0
     for segment in segments:
+        if segment is None:
+            continue
         if segment.isdigit():
             generated += len(segment) == 1
         elif len(segment) == 1 or not any(char in _VOWELS for char in segment):
@@ -1120,6 +1189,34 @@ def _word_secret_rule(word: str) -> str:
     return ""
 
 
+def _metadata_words(value: str) -> list[str]:
+    """The words of a metadata value that are judged one by one.
+
+    A URL stays whole and contributes its decoded query and fragment values
+    and any password, so ``?campaign=<label>`` is judged as the label and
+    ``?token=<key>`` as the key. An email or env reference stays whole.
+    Anything else is split on ``:`` and ``=`` so "note: <key>" is caught.
+    """
+    words: list[str] = []
+    for chunk in _METADATA_CHUNK_SPLIT_RE.split(value):
+        if _METADATA_EMAIL_RE.fullmatch(chunk) or _looks_like_env_reference(chunk):
+            words.append(chunk)
+            continue
+        url = _METADATA_URL_START_RE.search(chunk)
+        label = chunk[: url.start()] if url else chunk
+        words.extend(word for word in _METADATA_LABEL_SPLIT_RE.split(label) if word)
+        if url:
+            reference = chunk[url.start() :]
+            words.append(reference)
+            parsed = urllib.parse.urlsplit(reference)
+            pairs = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+            pairs += urllib.parse.parse_qsl(parsed.fragment, keep_blank_values=True)
+            words.extend(item for pair in pairs for item in pair if item)
+            if parsed.password:
+                words.append(urllib.parse.unquote(parsed.password))
+    return words
+
+
 def metadata_value_rule(value: str) -> str:
     """Name the secret-shape rule a metadata value trips, or "" when it is safe.
 
@@ -1137,7 +1234,7 @@ def metadata_value_rule(value: str) -> str:
         or _looks_like_iso_datetime(candidate)
     ):
         return ""
-    words = [candidate, *(w for w in _METADATA_WORD_SPLIT_RE.split(candidate) if w)]
+    words = [candidate, *_metadata_words(candidate)]
     for word in words:
         if _looks_like_env_reference(word) or _looks_like_placeholder(word):
             continue

@@ -219,7 +219,14 @@ rules:
   at least 30% of its CamelCase/digit segments look generated (a single
   letter, a letter run with no vowel, or a lone digit). Labels are made of
   words, so `UsEuUkCaAuNzApiKeyName2026` and `HTTPSRedirectCheckerProdV2`
-  pass.
+  pass. A short letter-digit code between words counts as a word, so
+  `CloudflareR2StorageBucket`, `B2BMarketingCampaignOctober2026` and
+  `S3ProductionBucketUsWest2` pass too.
+
+A value is judged whole and word by word. URLs, emails and env references
+stay whole; a URL's query and fragment values and any password are judged
+one by one, so `?campaign=CloudflareR2StorageBucket` passes and a token in
+`?token=` is refused.
 
 Measured limits of `high_entropy`, 10,000 random values each from
 `random.Random(987)` (the test `test_metadata_high_entropy_miss_rates_match_docs`
