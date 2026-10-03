@@ -30,6 +30,7 @@ from mb import connect as connect_mod
 from mb import dashboard as dashboard_mod
 from mb import doctor as doctor_mod
 from mb import educational as educational_mod
+from mb import feedback as feedback_mod
 from mb import fleet as fleet_mod
 from mb import graph as graph_mod
 from mb import image_rail as image_rail_mod
@@ -429,6 +430,49 @@ def ledger_init_cmd(
     else:
         ledger_mod.render_init(result)
     raise typer.Exit(0 if result["ok"] else 1)
+
+
+FEEDBACK_WORDS_ARGUMENT = typer.Argument(
+    None,
+    help=("What went wrong, in plain words."),
+)
+
+
+@app.command("feedback")
+def feedback_cmd(
+    words: list[str] = FEEDBACK_WORDS_ARGUMENT,
+    about: str = typer.Option(
+        "",
+        "--command",
+        help="The mb command the feedback is about, for example 'mb connect test'.",
+    ),
+    repo: str = typer.Option(".", "--repo", help="Repo the feedback was written from."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Log mb friction to a local file. Nothing is sent."""
+    args = list(words or [])
+    command = "mb feedback"
+    schema_name = "mainbranch.feedback.v1"
+    if not args:
+        message = 'say what went wrong, for example: mb feedback "status said X, expected Y"'
+        if json_out:
+            typer.echo(
+                _json_error_payload(
+                    command=command, schema_name=schema_name, code="empty_feedback", message=message
+                )
+            )
+        else:
+            typer.echo(f"{command}: {message}", err=True)
+        raise typer.Exit(2)
+    result = feedback_mod.record(" ".join(args), command=about or None, repo=repo)
+    if json_out:
+        typer.echo(_json_payload(result, command=command, schema_name=schema_name))
+    else:
+        feedback_mod.render_record(result)
+    if not result["ok"]:
+        codes = {error.get("code") for error in result.get("errors", [])}
+        raise typer.Exit(2 if "empty_feedback" in codes else 1)
+    raise typer.Exit(0)
 
 
 leads_app = typer.Typer(
