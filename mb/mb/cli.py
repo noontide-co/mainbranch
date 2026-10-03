@@ -719,6 +719,7 @@ def _is_interactive_terminal() -> bool:
 
 
 def _connect_boundary_exit(command: str, exc: ValueError) -> NoReturn:
+    feedback_mod.record_refusal("connect.config_boundary", command)
     typer.echo(f"{command}: {exc}", err=True)
     raise typer.Exit(2) from exc
 

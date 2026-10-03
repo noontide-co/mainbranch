@@ -4,10 +4,13 @@ Agents and operators hit friction in ``mb``: a refused command, a confusing
 message, a missing probe. ``mb feedback "<text>"`` appends one JSON line to a
 local file in the user state directory so the friction survives the session,
 and ``mb feedback rollup`` turns the file into a Markdown draft a maintainer
-can turn into issues.
+can turn into issues. Credential and safety refusals log themselves through
+``record_refusal``.
+
 Nothing here sends anything anywhere. Every line is scrubbed before it is
 written: secret-shaped text is redacted with connect's patterns and home
-directory paths become ``~``.
+directory paths become ``~``. A refusal line carries the rule that fired and
+the command, never the refused value.
 """
 
 from __future__ import annotations
@@ -27,6 +30,7 @@ from mb.freshness import looks_like_business_repo
 
 SCHEMA_VERSION = 1
 FEEDBACK_FILENAME = "feedback.jsonl"
+LOG_ENV_VAR = "MB_FEEDBACK_LOG"
 SUBCOMMANDS = ("rollup", "list", "clear")
 KINDS = ("feedback", "refusal")
 MAX_TEXT_CHARS = 4000
@@ -63,6 +67,10 @@ def display_path(path: Path) -> str:
         except ValueError:
             pass
     return scrub(str(path))
+
+
+def refusal_logging_enabled() -> bool:
+    return os.environ.get(LOG_ENV_VAR, "").strip().lower() not in {"0", "false", "no", "off"}
 
 
 def _replace_home(text: str) -> str:
@@ -186,6 +194,37 @@ def record(
         "sent": False,
         "safe_to_share": True,
     }
+
+
+def record_refusal(
+    rule: str,
+    command: str,
+    *,
+    repo: str | Path = ".",
+    path: Path | None = None,
+) -> bool:
+    """Append a ``kind: refusal`` line for a credential or safety boundary.
+
+    Callers pass the rule that fired and the command, never the refused value.
+    Logging is best effort: it never raises and never changes the refusal.
+    ``MB_FEEDBACK_LOG=0`` turns it off. Returns whether a line was written.
+    """
+    if not refusal_logging_enabled():
+        return False
+    try:
+        entry = {
+            "schema": SCHEMA_VERSION,
+            "kind": "refusal",
+            "time": _iso(_now()),
+            "mb_version": __version__,
+            "command": _clean_label(command) or None,
+            "rule": _clean_label(rule) or "unknown",
+            "repo_kind": repo_kind(repo),
+        }
+        _append(entry, path or feedback_path())
+    except Exception:  # noqa: BLE001 - logging must never break the refusal itself
+        return False
+    return True
 
 
 def _iter_lines(path: Path) -> Iterator[dict[str, Any] | None]:

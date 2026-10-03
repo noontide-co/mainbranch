@@ -1,4 +1,4 @@
-"""`mb feedback` — local friction log and rollup (#986)."""
+"""`mb feedback` — local friction log, rollup and self-logged refusals (#986)."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ NOW = datetime(2026, 10, 3, 12, 0, tzinfo=timezone.utc)
 def state_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     state = tmp_path / "state"
     monkeypatch.setenv("XDG_STATE_HOME", str(state))
+    monkeypatch.delenv("MB_FEEDBACK_LOG", raising=False)
     return state
 
 
@@ -113,6 +114,60 @@ def test_feedback_replaces_home_paths(
 def test_feedback_file_is_private(state_home: Path) -> None:
     runner.invoke(app, ["feedback", "hello"])
     assert _log(state_home).stat().st_mode & 0o777 == 0o600
+
+
+def test_record_refusal_logs_rule_and_command_only(state_home: Path) -> None:
+    assert feedback_mod.record_refusal("connect.metadata_sensitive", "mb connect meta")
+    [entry] = _lines(state_home)
+    assert entry["kind"] == "refusal"
+    assert entry["rule"] == "connect.metadata_sensitive"
+    assert entry["command"] == "mb connect meta"
+    assert "text" not in entry
+
+
+def test_record_refusal_opt_out(state_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MB_FEEDBACK_LOG", "0")
+    assert feedback_mod.record_refusal("connect.config_boundary", "mb connect") is False
+    assert not _log(state_home).exists()
+
+
+def test_record_refusal_never_raises(state_home: Path) -> None:
+    state_home.mkdir(parents=True)
+    (state_home / "mainbranch").write_text("not a directory", encoding="utf-8")
+    assert feedback_mod.record_refusal("connect.config_boundary", "mb connect") is False
+
+
+def test_connect_boundary_exit_logs_refusal_without_message(
+    state_home: Path, tmp_path: Path
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "elsewhere").mkdir()
+    (repo / ".mb").symlink_to(repo / "elsewhere")
+    result = runner.invoke(app, ["connect", "list", "--repo", str(repo)])
+    assert result.exit_code == 2
+    [entry] = _lines(state_home)
+    assert entry == {
+        "schema": 1,
+        "kind": "refusal",
+        "time": entry["time"],
+        "mb_version": entry["mb_version"],
+        "command": "mb connect list",
+        "rule": "connect.config_boundary",
+        "repo_kind": entry["repo_kind"],
+    }
+
+
+def test_connect_boundary_exit_respects_opt_out(
+    state_home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MB_FEEDBACK_LOG", "0")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "elsewhere").mkdir()
+    (repo / ".mb").symlink_to(repo / "elsewhere")
+    assert runner.invoke(app, ["connect", "list", "--repo", str(repo)]).exit_code == 2
+    assert not _log(state_home).exists()
 
 
 def _seed(state: Path) -> Path:
