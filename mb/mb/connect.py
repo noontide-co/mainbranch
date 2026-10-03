@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import urllib.error
@@ -17,7 +18,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 import yaml
 
@@ -67,6 +68,23 @@ UNVERIFIED_STATE = "stored_unverified"
 # verified by anything the operator runs.
 # `test_probe_provider_set_matches_validate_with_provider` guards the drift.
 PROBE_PROVIDERS: frozenset[str] = frozenset({"cloudflare", "apify", "meta"})
+
+
+class ConnectRefusal(ValueError):
+    """A connect policy refused an action. ``rule`` names the policy, never a value."""
+
+    def __init__(self, rule: str, message: str) -> None:
+        super().__init__(message)
+        self.rule = rule
+
+
+def _refuse(rule: str, message: str) -> NoReturn:
+    """Raise every connect refusal from one place.
+
+    ``rule`` is a stable machine name for the policy that fired; ``message``
+    tells the operator what to do instead. Neither ever carries a secret value.
+    """
+    raise ConnectRefusal(rule, message)
 
 
 def has_provider_probe(provider_id: str) -> bool:
@@ -1769,6 +1787,101 @@ def read_metadata(provider_id: str, repo: str | Path = ".") -> dict[str, str]:
     if not isinstance(metadata, dict):
         return {}
     return _safe_status_metadata(metadata)
+
+
+# Environment variable `mb connect exec` sets when `--env` is not given. These
+# are the names each provider's own CLI reads; anything else gets MB_SECRET.
+EXEC_DEFAULT_ENV: dict[str, str] = {
+    "cloudflare": "CLOUDFLARE_API_TOKEN",
+    "stripe": "STRIPE_API_KEY",
+    "github": "GITHUB_TOKEN",
+}
+EXEC_FALLBACK_ENV = "MB_SECRET"
+ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def exec_env_name(provider_id: str, override: str = "") -> str:
+    """Name of the variable that carries the secret into the child."""
+    name = override.strip() or EXEC_DEFAULT_ENV.get(provider_id, EXEC_FALLBACK_ENV)
+    if not ENV_NAME_RE.fullmatch(name):
+        _refuse(
+            "exec_env_name",
+            "--env must be a shell variable name: letters, digits and underscores, "
+            "not starting with a digit.",
+        )
+    return name
+
+
+def exec_with_secret(
+    provider_id: str,
+    command: list[str],
+    repo: str | Path = ".",
+    *,
+    env_name: str = "",
+    runner: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
+) -> dict[str, Any]:
+    """Run ``command`` with the stored credential in its environment only.
+
+    No shell is involved and stdin, stdout and stderr are inherited, so the
+    secret travels in the child's environment and nowhere else: it is never
+    printed, logged, or put in the returned dict. ``returncode`` is the
+    child's own exit code.
+    """
+    if not command:
+        _refuse(
+            "exec_no_command",
+            "mb connect exec needs a command after `--`, for example "
+            "`mb connect exec stripe -- stripe products list`.",
+        )
+    result = read_token(provider_id, repo)
+    name = exec_env_name(str(result["provider"]), env_name)
+    outcome: dict[str, Any] = {
+        "ok": False,
+        "provider": result["provider"],
+        "env_name": name,
+        "returncode": 1,
+        "error": "",
+        "repair_command": "",
+    }
+    if not result["ok"]:
+        outcome["error"] = result["error"]
+        outcome["repair_command"] = result["repair_command"]
+        return outcome
+    env = dict(os.environ)
+    env[name] = result["token"]
+    try:
+        completed = runner(command, env=env, check=False)
+    except FileNotFoundError:
+        outcome["returncode"] = 127
+        outcome["error"] = f"command not found: {command[0]}"
+        return outcome
+    except PermissionError:
+        outcome["returncode"] = 126
+        outcome["error"] = f"command is not executable: {command[0]}"
+        return outcome
+    returncode = int(completed.returncode)
+    # A child killed by a signal reports -N; shells report 128+N.
+    outcome["returncode"] = 128 - returncode if returncode < 0 else returncode
+    outcome["ok"] = outcome["returncode"] == 0
+    return outcome
+
+
+def stdout_exposes_secret(stream: Any = None) -> bool:
+    """Would a raw secret written to ``stream`` land somewhere an agent reads?
+
+    A terminal is read by whoever (or whatever) is watching it, and a pipe
+    feeds the secret into another process's text, which is how secrets end up
+    in agent transcripts. A redirect to a file is the one scripted path that
+    stays allowed. When the descriptor cannot be inspected, assume exposure.
+    """
+    target = stream if stream is not None else sys.stdout
+    try:
+        if target.isatty():
+            return True
+        mode = os.fstat(target.fileno()).st_mode
+    except (AttributeError, OSError, ValueError):
+        return True
+    return stat.S_ISFIFO(mode)
 
 
 def _provider_error_summary(provider_name: str, upstream: dict[str, Any]) -> str:

@@ -524,7 +524,7 @@ def test_repo_backend_outage_never_falls_back_to_user_scope(
     assert result["backend_state"] == "keychain_locked"
     assert "user-token" not in json.dumps(result)
 
-    cli = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
+    cli = runner.invoke(app, ["connect", "token", "cloudflare", "--print", "--repo", str(repo)])
     assert cli.exit_code == 1
     assert cli.stdout == ""
     assert "login Keychain is locked" in cli.stderr
@@ -632,7 +632,7 @@ def test_token_stdin_and_stdout_preserve_whitespace(
         ["connect", "mercury", "--custom", "--repo", str(repo), "--token-stdin"],
         input=value + "\n",
     )
-    read = runner.invoke(app, ["connect", "token", "mercury", "--repo", str(repo)])
+    read = runner.invoke(app, ["connect", "token", "mercury", "--print", "--repo", str(repo)])
 
     assert connected.exit_code == 0
     assert read.exit_code == 0
@@ -652,7 +652,7 @@ def test_environment_credential_preserves_whitespace(
         app,
         ["connect", "cloudflare", "--repo", str(repo), "--from-env"],
     )
-    read = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
+    read = runner.invoke(app, ["connect", "token", "cloudflare", "--print", "--repo", str(repo)])
 
     assert connected.exit_code == 0
     assert read.stdout == value

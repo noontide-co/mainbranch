@@ -567,6 +567,11 @@ workflow_app = typer.Typer(
 )
 app.add_typer(workflow_app, name="workflow")
 
+CONNECT_EXEC_COMMAND_ARGUMENT = typer.Argument(
+    None,
+    help="With `mb connect exec <provider> --`, the command to run and its arguments.",
+    show_default=False,
+)
 CONNECT_METADATA_OPTION = typer.Option(
     [],
     "--metadata",
@@ -1508,13 +1513,14 @@ def connect_cmd(
         "",
         help=(
             "Provider to connect, or `list` / `plan` / `status` / `doctor` / `hygiene` / "
-            "`identity` / `test` / `token` / `hydrate`."
+            "`identity` / `test` / `exec` / `token` / `hydrate`."
         ),
     ),
     provider: str = typer.Argument(
         "",
         help="Provider for subcommands such as `mb connect test <provider>`.",
     ),
+    command: list[str] = CONNECT_EXEC_COMMAND_ARGUMENT,
     repo: str = typer.Option(".", "--repo", help="Business repo whose metadata is updated."),
     account_label: str = typer.Option("", "--account", "--label", help="Human account label."),
     scope: str = typer.Option(
@@ -1551,9 +1557,23 @@ def connect_cmd(
         "--all",
         help="With `mb connect status`, include providers not connected yet.",
     ),
+    env_name: str = typer.Option(
+        "",
+        "--env",
+        help="With `mb connect exec`, the variable that carries the secret into the command.",
+    ),
+    print_token: bool = typer.Option(
+        False,
+        "--print",
+        help="With `mb connect token`, print even when stdout is a terminal or a pipe.",
+    ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Connect provider credentials without committing secrets."""
+    command = command or []
+    if command and target != "exec":
+        typer.echo(f"mb connect: unexpected extra argument {command[0]!r}", err=True)
+        raise typer.Exit(2)
     if not target:
         try:
             result = connect_mod.list_providers(repo)
@@ -1665,6 +1685,29 @@ def connect_cmd(
         else:
             connect_mod.render_hydrate_result(result)
         raise typer.Exit(0 if result["ok"] else 1)
+    if target == "exec":
+        if not provider:
+            typer.echo("mb connect exec: provider required", err=True)
+            raise typer.Exit(2)
+        if json_out:
+            typer.echo(
+                "mb connect exec: --json is not supported; the command's own output is passed "
+                "through",
+                err=True,
+            )
+            raise typer.Exit(2)
+        try:
+            outcome = connect_mod.exec_with_secret(provider, command, repo, env_name=env_name)
+        except connect_mod.ConfigBoundaryError as exc:
+            _connect_boundary_exit("mb connect exec", exc)
+        except ValueError as exc:
+            typer.echo(f"mb connect exec: {exc}", err=True)
+            raise typer.Exit(2) from exc
+        if outcome["error"]:
+            typer.echo(f"mb connect exec: {outcome['error']}", err=True)
+            if outcome["repair_command"]:
+                typer.echo(f"repair: {outcome['repair_command']}", err=True)
+        raise typer.Exit(outcome["returncode"])
     if target == "token":
         if not provider:
             typer.echo("mb connect token: provider required", err=True)
@@ -1676,6 +1719,15 @@ def connect_cmd(
             )
             raise typer.Exit(2)
         try:
+            if not print_token and connect_mod.stdout_exposes_secret():
+                connect_mod._refuse(
+                    "token_print",
+                    "refusing to print the secret to a terminal or a pipe, where it lands "
+                    "in a transcript. Run the command with it instead: "
+                    f"`mb connect exec {provider} -- <command>`. A script that must write "
+                    f"the raw value to a file can use `mb connect token {provider} --print "
+                    "> file`.",
+                )
             result = connect_mod.read_token(provider, repo)
         except ValueError as exc:
             typer.echo(f"mb connect token: {exc}", err=True)
